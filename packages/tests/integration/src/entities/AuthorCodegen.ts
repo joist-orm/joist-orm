@@ -75,6 +75,9 @@ import {
   Tag,
   TagId,
   tagMeta,
+  TaskNew,
+  TaskNewId,
+  taskNewMeta,
   User,
   UserId,
   userMeta,
@@ -146,6 +149,7 @@ export interface AuthorOpts {
   schedules?: AuthorSchedule[];
   books?: Book[];
   comments?: Comment[];
+  tasks?: TaskNew[];
   tags?: Tag[];
 }
 
@@ -159,6 +163,7 @@ export interface AuthorIdsOpts {
   scheduleIds?: AuthorScheduleId[] | null;
   bookIds?: BookId[] | null;
   commentIds?: CommentId[] | null;
+  taskIds?: TaskNewId[] | null;
   tagIds?: TagId[] | null;
 }
 
@@ -199,6 +204,7 @@ export interface AuthorFilter {
   schedules?: EntityFilter<AuthorSchedule, AuthorScheduleId, FilterOf<AuthorSchedule>, null | undefined>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  tasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
@@ -239,6 +245,7 @@ export interface AuthorGraphQLFilter {
   schedules?: EntityGraphQLFilter<AuthorSchedule, AuthorScheduleId, GraphQLFilterOf<AuthorSchedule>, null | undefined>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  tasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
 
@@ -581,6 +588,18 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
       "comments",
       "parent",
       "parent_author_id",
+      undefined,
+    );
+  }
+
+  get tasks(): Collection<Author, TaskNew> {
+    const { relations } = getOrmField(this);
+    return relations.tasks ??= hasMany(
+      this as any as Author,
+      taskNewMeta,
+      "tasks",
+      "specialNewAuthor",
+      "special_new_author_id",
       undefined,
     );
   }

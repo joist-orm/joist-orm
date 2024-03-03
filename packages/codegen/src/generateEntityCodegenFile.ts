@@ -2,6 +2,7 @@ import { camelCase, pascalCase } from "change-case";
 import { Code, code, imp, joinCode } from "ts-poet";
 import { DbMetadata, EntityDbMetadata, EnumField, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
 import { Config } from "./config";
+import { getStiEntities } from "./index";
 import { keywords } from "./keywords";
 import {
   BaseEntity,
@@ -30,15 +31,16 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
-  ReactiveField,
   PersistedAsyncReference,
   PolymorphicReference,
   ProjectEntity,
+  ReactiveField,
   SSAssert,
   TaggedId,
   ValueFilter,
   ValueGraphQLFilter,
   Zod,
+  cannotBeUpdated,
   cleanStringValue,
   failNoIdYet,
   getField,
@@ -53,6 +55,7 @@ import {
   isEntity,
   isLoaded,
   loadLens,
+  mustBeSubType,
   newChangesProxy,
   newRequiredRule,
   setField,
@@ -371,7 +374,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     : "";
 
   // Set up the codegen artifacts to extend from the base type if necessary
-  const baseEntity = meta.baseClassName ? dbMeta.entities.find((e) => e.name === meta.baseClassName)! : undefined;
+  const baseEntity = dbMeta.entities.find((e) => e.name === meta.baseClassName);
   const subEntities = dbMeta.entities.filter((e) => e.baseClassName === meta.name);
   const base = baseEntity?.entity.type ?? code`${BaseEntity}<${EntityManager}, ${idType}>`;
   const maybeBaseFields = baseEntity ? code`extends ${imp(baseEntity.name + "Fields@./entities")}` : "";
@@ -480,7 +483,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
     export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
 
-    ${generateDefaultValidationRules(meta, configName)}
+    ${generateDefaultValidationRules(dbMeta, meta, configName)}
     
     export abstract class ${entityName}Codegen extends ${base} implements ${ProjectEntity} {
       static defaultValues: object = {
@@ -635,13 +638,31 @@ function generateDefaultValues(config: Config, meta: EntityDbMetadata): Code[] {
   return [...primitives, ...enums, ...pgEnums];
 }
 
-function generateDefaultValidationRules(meta: EntityDbMetadata, configName: string): Code[] {
+function generateDefaultValidationRules(db: DbMetadata, meta: EntityDbMetadata, configName: string): Code[] {
+  // Add required rules for all not-null columns
   const fields = [...meta.primitives, ...meta.enums, ...meta.manyToOnes, ...meta.polymorphics];
-  return fields
+  const rules = fields
     .filter((p) => p.notNull)
     .map(({ fieldName }) => {
       return code`${configName}.addRule(${newRequiredRule}("${fieldName}"));`;
     });
+  // Add STI discriminator cannot change
+  if (meta.stiDiscriminatorField) {
+    const field = meta.enums.find((e) => e.fieldName === meta.stiDiscriminatorField) ?? fail("STI field not found");
+    rules.push(code`${configName}.addRule(${cannotBeUpdated}("${field.fieldName}"));`);
+  }
+  // Add STI type must match
+  const stiEntities = getStiEntities(db.entities);
+  if (stiEntities.size > 0) {
+    for (const m2o of meta.manyToOnes) {
+      // The `m2o.otherEntity` may already be pointing at the subtype, but stiEntities has subtypes in it as well...
+      const target = stiEntities.get(m2o.otherEntity.name);
+      if (target && m2o.otherEntity.name !== target.base.name) {
+        rules.push(code`${configName}.addRule("${m2o.fieldName}" ,${mustBeSubType}("${m2o.fieldName}"));`);
+      }
+    }
+  }
+  return rules;
 }
 
 // Make our opts type
@@ -655,7 +676,10 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   });
   const enums = meta.enums.map((field) => {
     const { fieldName, enumType, notNull, isArray } = field;
-    if (isArray) {
+    if (meta.stiDiscriminatorField === fieldName) {
+      // Don't include the discriminator as an opt b/c we'll infer it from the instance type
+      return code``;
+    } else if (isArray) {
       // Arrays are always optional and we'll default to `[]`
       return code`${fieldName}?: ${enumType}[];`;
     } else {

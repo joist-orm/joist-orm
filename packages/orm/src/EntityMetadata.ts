@@ -20,6 +20,9 @@ export function getMetadata<T extends Entity>(
 /**
  * Runtime metadata about an entity.
  *
+ * The `joist-codegen` step will generate this by reading the database schema at build/codegen
+ * time, along with any customizations in `joist-config.json`.
+ *
  * Note: This has no generic, like `T extends Entity`, because `Entity<IdType>` i.e. with
  * an unknown string/id type, causes issues when we want to generically mix `EntityMetadata`
  * of different types, that even liberally using `EntityMetadata<any>` did not avoid.
@@ -34,6 +37,11 @@ export interface EntityMetadata<T extends Entity = any> {
   tableName: string;
   /** If we're a subtype, our immediate base type's name, e.g. for `SmallPublisher` this would be `Publisher`. */
   baseType: string | undefined;
+  inheritanceType?: "sti" | "cti" | undefined;
+  /** Indicates the field to use to derive which subtype to instantiate; only set on the base meta. */
+  stiDiscriminatorField?: string;
+  /** The discriminator enum value for this subtype; only set on sub metas. */
+  stiDiscriminatorValue?: number;
   tagName: string;
   fields: Record<string, Field>;
   allFields: Record<string, Field & { aliasSuffix: string }>;
@@ -88,7 +96,7 @@ export type EnumField = {
   fieldName: string;
   fieldIdName: undefined;
   required: boolean;
-  enumDetailType: { getValues(): ReadonlyArray<unknown> };
+  enumDetailType: { getValues(): ReadonlyArray<unknown>; findById(id: any): unknown };
   serde: FieldSerde;
   immutable: boolean;
 };

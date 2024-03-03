@@ -53,6 +53,21 @@
     "PublisherGroup": { "relations": { "critics": { "large": true } }, "tag": "pg" },
     "SmallPublisher": { "fields": { "allAuthorNames": { "derived": "async" } }, "tag": "p" },
     "Tag": { "relations": { "authors": { "large": true } }, "tag": "t" },
+    "Task": {
+      "fields": {
+        "specialNewField": { "stiType": "TaskNew" },
+        "specialOldField": { "stiNotNull": true, "stiType": "TaskOld" },
+        "type": { "stiDiscriminator": { "NEW": "TaskNew", "OLD": "TaskOld" } }
+      },
+      "relations": { "specialNewAuthor": { "stiType": "TaskNew" } },
+      "tag": "task"
+    },
+    "TaskItem": {
+      "relations": { "newTask": { "stiType": "TaskNew" }, "oldTask": { "stiType": "TaskOld" } },
+      "tag": "ti"
+    },
+    "TaskNew": { "tag": "task" },
+    "TaskOld": { "tag": "task" },
     "User": {
       "fields": {
         "ipAddress": { "type": "IpAddress@src/entities/types" },
@@ -63,5 +78,5 @@
     }
   },
   "entitiesDirectory": "./src/entities",
-  "version": "1.145.0"
+  "version": "1.146.0"
 }

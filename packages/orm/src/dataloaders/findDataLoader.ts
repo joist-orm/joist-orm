@@ -34,7 +34,7 @@ export function findDataLoader<T extends Entity>(
 
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
-  const batchKey = getBatchKeyFromGenericStructure(query);
+  const batchKey = getBatchKeyFromGenericStructure(meta, query);
 
   return em.getLoader(
     "find",
@@ -308,10 +308,14 @@ function ensureUnderLimit(em: EntityManager, rows: unknown[]): void {
   }
 }
 
-export function getBatchKeyFromGenericStructure(query: ParsedFindQuery): string {
+export function getBatchKeyFromGenericStructure(meta: EntityMetadata, query: ParsedFindQuery): string {
   // Clone b/c parseFindQuery does not deep copy complex conditions, i.e. `a.firstName.eq(...)`
   const clone = structuredClone(query);
   stripValues(clone);
+  if (meta.stiDiscriminatorValue) {
+    // Include the meta b/c STI queries for different subtypes will look identical
+    (clone as any).meta = meta.type;
+  }
   // We could use `whereFilterHash` too if it's faster?
   return JSON.stringify(clone);
 }

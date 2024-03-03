@@ -288,4 +288,27 @@ export function up(b: MigrationBuilder): void {
     author_id: foreignKey("authors", { notNull: true }),
     overview: "text",
   });
+
+  createEnumTable(b, "task_type", [
+    ["OLD", "Old"],
+    ["NEW", "New"],
+  ]);
+
+  // For testing single-table inheritance
+  createEntityTable(b, "tasks", {
+    type_id: foreignKey("task_type", { notNull: false }),
+    duration_in_days: { type: "int", notNull: true },
+    // NewTask columns
+    special_new_field: { type: "int", notNull: false },
+    special_new_author_id: foreignKey("authors", { notNull: false }),
+    // OldTask columns
+    special_old_field: { type: "int", notNull: false },
+  });
+
+  // For testing single-table inheritance
+  createEntityTable(b, "task_items", {
+    old_task_id: foreignKey("tasks", { notNull: false }),
+    new_task_id: foreignKey("tasks", { notNull: false }),
+    task_id: foreignKey("tasks", { notNull: false }),
+  });
 }

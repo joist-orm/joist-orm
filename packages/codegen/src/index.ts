@@ -2,14 +2,14 @@ import { ConnectionConfig, newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
 import pgStructure from "pg-structure";
 import { saveFiles } from "ts-poet";
-import { DbMetadata, EntityDbMetadata, failIfOverlappingFieldNames } from "./EntityDbMetadata";
+import { DbMetadata, EntityDbMetadata, failIfOverlappingFieldNames, makeEntity } from "./EntityDbMetadata";
 import { assignTags } from "./assignTags";
 import { maybeRunTransforms } from "./codemods";
 import { Config, loadConfig, warnInvalidConfigEntries, writeConfig } from "./config";
 import { generateFiles } from "./generate";
 import { createFlushFunction } from "./generateFlushFunction";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
-import { isEntityTable, isJoinTable, mapSimpleDbTypeToTypescriptType } from "./utils";
+import { fail, isEntityTable, isJoinTable, mapSimpleDbTypeToTypescriptType } from "./utils";
 
 export {
   DbMetadata,
@@ -107,7 +107,154 @@ async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMet
     .map((table) => new EntityDbMetadata(config, table, enums));
   const totalTables = db.tables.length;
   const joinTables = db.tables.filter((t) => isJoinTable(config, t)).map((t) => t.name);
+  setClassTableInheritance(entities);
+  expandSingleTableInheritance(config, entities);
+  rewriteSingleTableForeignKeys(config, entities);
   return { entities, enums, pgEnums, totalTables, joinTables };
+}
+
+/** Ensure CTI base types have their inheritanceType set. */
+function setClassTableInheritance(entities: EntityDbMetadata[]): void {
+  const ctiBaseNames: string[] = [];
+  for (const entity of entities) {
+    if (entity.baseClassName) ctiBaseNames.push(entity.baseClassName);
+  }
+  for (const entity of entities) {
+    if (ctiBaseNames.includes(entity.name)) entity.inheritanceType = "cti";
+  }
+}
+
+/** Expands STI tables into multiple entities, so they get separate `SubTypeCodegen.ts` & `SubType.ts` files. */
+function expandSingleTableInheritance(config: Config, entities: EntityDbMetadata[]): void {
+  for (const entity of entities) {
+    const [fieldName, stiField] =
+      Object.entries(config.entities[entity.name]?.fields || {}).find(([, f]) => !!f.stiDiscriminator) ?? [];
+    if (fieldName && stiField && stiField.stiDiscriminator) {
+      entity.inheritanceType = "sti";
+      // Ensure we have an enum field so that we can bake the STI discriminators into the metadata.ts file
+      const enumField =
+        entity.enums.find((e) => e.fieldName === fieldName) ??
+        fail(`No enum column found for ${entity.name}.${fieldName}, which is required to use singleTableInheritance`);
+      entity.stiDiscriminatorField = enumField.fieldName;
+      for (const [enumCode, subTypeName] of Object.entries(stiField.stiDiscriminator)) {
+        // Find all the base entity's fields that belong to us
+        const subTypeFields = [
+          ...Object.entries(config.entities[entity.name]?.fields ?? {}),
+          ...Object.entries(config.entities[entity.name]?.relations ?? {}),
+        ].filter(([, f]) => f.stiType === subTypeName);
+        const subTypeFieldNames = subTypeFields.map(([name]) => name);
+
+        // Make fields as required
+        function maybeRequired<T extends { notNull: boolean; fieldName: string }>(field: T): T {
+          const config = subTypeFields.find(([name]) => name === field.fieldName)?.[1]!;
+          if (config.stiNotNull) field.notNull = true;
+          return field;
+        }
+
+        // Synthesize an entity for this STI sub-entity
+        const subEntity: EntityDbMetadata = {
+          name: subTypeName,
+          entity: makeEntity(subTypeName),
+          tableName: entity.tableName,
+          primaryKey: entity.primaryKey,
+          primitives: entity.primitives.filter((f) => subTypeFieldNames.includes(f.fieldName)).map(maybeRequired),
+          enums: entity.enums.filter((f) => subTypeFieldNames.includes(f.fieldName)).map(maybeRequired),
+          pgEnums: entity.pgEnums.filter((f) => subTypeFieldNames.includes(f.fieldName)).map(maybeRequired),
+          manyToOnes: entity.manyToOnes.filter((f) => subTypeFieldNames.includes(f.fieldName)).map(maybeRequired),
+          oneToManys: entity.oneToManys.filter((f) => subTypeFieldNames.includes(f.fieldName)),
+          largeOneToManys: entity.largeOneToManys.filter((f) => subTypeFieldNames.includes(f.fieldName)),
+          oneToOnes: entity.oneToOnes.filter((f) => subTypeFieldNames.includes(f.fieldName)),
+          manyToManys: entity.manyToManys.filter((f) => subTypeFieldNames.includes(f.fieldName)),
+          largeManyToManys: entity.largeManyToManys.filter((f) => subTypeFieldNames.includes(f.fieldName)),
+          polymorphics: entity.polymorphics.filter((f) => subTypeFieldNames.includes(f.fieldName)),
+          tagName: entity.tagName,
+          createdAt: undefined,
+          updatedAt: undefined,
+          deletedAt: undefined,
+          baseClassName: entity.name,
+          inheritanceType: "sti",
+          stiDiscriminatorValue: (
+            enumField.enumRows.find((r) => r.code === enumCode) ??
+            fail(`No enum row found for ${entity.name}.${fieldName}.${enumCode}`)
+          ).id,
+          abstract: false,
+          invalidDeferredFK: false,
+        };
+
+        // Now strip all the subclass fields from the base class
+        entity.primitives = entity.primitives.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.enums = entity.enums.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.pgEnums = entity.pgEnums.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.manyToOnes = entity.manyToOnes.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.oneToManys = entity.oneToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.largeOneToManys = entity.largeOneToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.oneToOnes = entity.oneToOnes.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.manyToManys = entity.manyToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.largeManyToManys = entity.largeManyToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.polymorphics = entity.polymorphics.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+
+        entities.push(subEntity);
+      }
+    }
+  }
+}
+
+type StiEntityMap = Map<string, { base: EntityDbMetadata; subTypes: EntityDbMetadata[] }>;
+let stiEntities: StiEntityMap;
+
+export function getStiEntities(entities: EntityDbMetadata[]): StiEntityMap {
+  if (stiEntities) return stiEntities;
+  stiEntities = new Map();
+  for (const entity of entities) {
+    if (entity.inheritanceType === "sti" && entity.stiDiscriminatorField) {
+      const base = entity;
+      const subTypes = entities.filter((s) => s.baseClassName === entity.name && s !== entity);
+      stiEntities.set(entity.name, { base, subTypes });
+      // Allow looking up by subType name
+      for (const subType of subTypes) {
+        stiEntities.set(subType.name, { base, subTypes: [] });
+      }
+    }
+  }
+  return stiEntities;
+}
+
+/** Finds FKs pointing to the base table and, if configured, rewrites them to point to the sub-tables. */
+function rewriteSingleTableForeignKeys(config: Config, entities: EntityDbMetadata[]): void {
+  // See if we even have any STI tables
+  const stiEntities = getStiEntities(entities);
+  if (stiEntities.size === 0) return;
+  for (const entity of entities) {
+    // m2os
+    for (const m2o of entity.manyToOnes) {
+      const target = stiEntities.get(m2o.otherEntity.name);
+      // See if the user has configured this specific m2o FK as a different subtype
+      const stiType = config.entities[entity.name]?.relations?.[m2o.fieldName]?.stiType;
+      if (target && stiType) {
+        const { subTypes } = target;
+        m2o.otherEntity = (
+          subTypes.find((s) => s.name === stiType) ??
+          fail(`Could not find STI type '${stiType}' in ${subTypes.map((s) => s.name)}`)
+        ).entity;
+      }
+    }
+    // o2ms
+    for (const o2m of entity.oneToManys) {
+      // See if our otherField is only in a specific STI subtype
+      const target = stiEntities.get(o2m.otherEntity.name);
+      if (target && target.base.inheritanceType === "sti") {
+        // Ensure the incoming FK is not in the base type, and find the 1st subtype (eventually N subtypes?)
+        const otherField = target.subTypes.find(
+          (st) =>
+            !target.base.manyToOnes.some((m) => m.fieldName === o2m.otherFieldName) &&
+            st.manyToOnes.some((m) => m.fieldName === o2m.otherFieldName),
+        );
+        if (otherField) {
+          o2m.otherEntity = otherField.entity;
+        }
+      }
+    }
+  }
 }
 
 function maybeSetDatabaseUrl(config: Config): void {

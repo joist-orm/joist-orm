@@ -49,6 +49,21 @@ export function insertAuthor(row: {
   });
 }
 
+export function insertTask(row: {
+  id?: number;
+  type: "OLD" | "NEW";
+  special_new_field?: number | null;
+  special_old_field?: number | null;
+  duration_in_days?: number;
+}) {
+  const { type, ...rest } = row;
+  return testDriver.insert("tasks", {
+    type_id: type === "OLD" ? 1 : 2,
+    duration_in_days: 0,
+    ...rest,
+  });
+}
+
 export function insertBook(row: {
   id?: number;
   title: string;

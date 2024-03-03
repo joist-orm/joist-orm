@@ -67,6 +67,7 @@ export {
   cannotBeUpdated,
   maxValueRule,
   minValueRule,
+  mustBeSubType,
   newRequiredRule,
   rangeValueRule,
 } from "./rules";
@@ -122,6 +123,10 @@ export function setOpts<T extends Entity>(
 
       // If ignoreUndefined is set, we treat undefined as a noop
       if (partial && _value === undefined) {
+        return;
+      }
+      // Ignore the STI discriminator, em.register will set this accordingly
+      if (meta.inheritanceType === "sti" && getBaseMeta(meta).stiDiscriminatorField === key) {
         return;
       }
       // We let optional opts fields be `| null` for convenience, and convert to undefined.
@@ -278,7 +283,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
       // clauses.
       Object.entries(b.fields).forEach(([name, field]) => {
         // We use `b0` because that is what addTablePerClassJoinsAndClassTag uses to join in the base table
-        m.allFields[name] = { ...field, aliasSuffix: "_b0" };
+        m.allFields[name] = { ...field, aliasSuffix: b.inheritanceType === "cti" ? "_b0" : "" };
       });
     }
   });
@@ -301,9 +306,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
     Object.values(meta.fields)
       .filter((f) => f.kind === "primitive" || (f.kind === "m2o" && f.derived === "async"))
       .forEach((field) => {
-        const ap = (getFakeInstance(meta) as any)[field.fieldName] as
-          | ReactiveFieldImpl<any, any, any>
-          | undefined;
+        const ap = (getFakeInstance(meta) as any)[field.fieldName] as ReactiveFieldImpl<any, any, any> | undefined;
         // We might have an async property configured in joist-config.json that has not yet
         // been made a `hasReactiveField` in the entity file, so avoid continuing
         // if we don't actually have a property/loadHint available.

@@ -18,6 +18,9 @@ const fieldConfig = z
     zodSchema: z.optional(z.string()),
     type: z.optional(z.string()),
     serde: z.optional(z.string()),
+    stiDiscriminator: z.optional(z.record(z.string(), z.string())),
+    stiType: z.optional(z.string()),
+    stiNotNull: z.optional(z.boolean()),
   })
   .strict();
 
@@ -28,6 +31,8 @@ const relationConfig = z
     polymorphic: z.optional(z.union([z.literal("notNull"), z.literal(true)])),
     large: z.optional(z.boolean()),
     orderBy: z.optional(z.string()),
+    stiType: z.optional(z.string()),
+    stiNotNull: z.optional(z.boolean()),
   })
   .strict();
 
@@ -122,7 +127,7 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
     const [entity] = entities;
 
     // Check fields
-    const fields = [...entity.primitives, ...entity.manyToOnes];
+    const fields = [...entity.primitives, ...entity.manyToOnes, ...entity.enums];
     for (const [name, config] of Object.entries(entityConfig.fields || {})) {
       if (config.ignore) continue;
       const field = fields.find((f) => f.fieldName === name);

@@ -1,0 +1,28 @@
+extend type Mutation {
+  saveTaskOld(input: SaveTaskOldInput!): SaveTaskOldResult!
+}
+
+type TaskOld {
+  id: ID!
+  specialOldField: Int
+  type: String!
+  durationInDays: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  newTaskTaskItems: [TaskItem!]!
+  oldTaskTaskItems: [TaskItem!]!
+  taskTaskItems: [TaskItem!]!
+  specialNewAuthor: Author
+}
+
+input SaveTaskOldInput {
+  id: ID
+  specialOldField: Int
+  type: String
+  durationInDays: Int
+  specialNewAuthorId: ID
+}
+
+type SaveTaskOldResult {
+  taskOld: TaskOld!
+}

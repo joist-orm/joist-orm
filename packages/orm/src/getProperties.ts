@@ -20,7 +20,8 @@ import { asConcreteCstr } from "./index";
  * checks.
  */
 export function getProperties(meta: EntityMetadata): Record<string, any> {
-  const key = meta.tableName;
+  // If meta is an STI subtype, give it a different key
+  const key = meta.stiDiscriminatorValue ? `${meta.tableName}:${meta.stiDiscriminatorValue}` : meta.tableName;
   if (propertiesCache[key]) {
     return propertiesCache[key];
   }

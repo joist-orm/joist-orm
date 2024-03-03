@@ -2,6 +2,7 @@ import { getOrmField } from "../BaseEntity";
 import { Entity } from "../Entity";
 import {
   EntityMetadata,
+  Field,
   PrimitiveField,
   getBaseAndSelfMetas,
   getBaseSelfAndSubMetas,
@@ -43,10 +44,18 @@ export function generateOps(todos: Record<string, Todo>): Ops {
 
 function addInserts(ops: Ops, todo: Todo): void {
   if (todo.inserts.length > 0) {
+    // If we have subtypes, this todo.metadata will always be the base type
     const meta = todo.metadata;
     if (meta.subTypes.length > 0) {
-      for (const [meta, group] of groupEntitiesByTable(todo.inserts)) {
-        ops.inserts.push(newInsertOp(meta, group));
+      if (meta.inheritanceType === "cti") {
+        // Insert into each of the CTI tables
+        for (const [meta, group] of groupEntitiesByTable(todo.inserts)) {
+          ops.inserts.push(newInsertOp(meta, group));
+        }
+      } else if (meta.inheritanceType === "sti") {
+        ops.inserts.push(newStiInsertOp(meta, todo.inserts));
+      } else {
+        throw new Error(`Found ${meta.tableName} subTypes without a known inheritanceType ${meta.inheritanceType}`);
       }
     } else {
       ops.inserts.push(newInsertOp(meta, todo.inserts));
@@ -62,13 +71,40 @@ function newInsertOp(meta: EntityMetadata, entities: Entity[]): InsertOp {
   return { tableName: meta.tableName, columns, rows };
 }
 
+function newStiInsertOp(root: EntityMetadata, entities: Entity[]): InsertOp {
+  // Get the unique set of subtypes
+  const subTypes = new Set<EntityMetadata>();
+  for (const e of entities) subTypes.add(getMetadata(e));
+  // All the root fields (including id)
+  const fields: Field[] = Object.values(root.fields);
+  // Then the subtype fields that haven't been seen yet (subtypes have the root fields + can share non-root fields)
+  for (const st of subTypes) {
+    for (const f of Object.values(st.fields)) {
+      if (!fields.some((f2) => f2.fieldName === f.fieldName)) {
+        fields.push(f);
+      }
+    }
+  }
+  const columns = fields.filter(hasSerde).flatMap((f) => f.serde.columns);
+  // And then collect the same bindings across each STI
+  const rows = collectBindings(entities, columns);
+  return { tableName: root.tableName, columns, rows };
+}
+
 function addUpdates(ops: Ops, todo: Todo): void {
   if (todo.updates.length > 0) {
     const meta = todo.metadata;
     if (meta.subTypes.length > 0) {
-      for (const [meta, group] of groupEntitiesByTable(todo.updates)) {
-        const op = newUpdateOp(meta, group);
+      if (meta.inheritanceType === "cti") {
+        for (const [meta, group] of groupEntitiesByTable(todo.updates)) {
+          const op = newUpdateOp(meta, group);
+          if (op) ops.updates.push(op);
+        }
+      } else if (meta.inheritanceType === "sti") {
+        const op = newUpdateOp(meta, todo.updates);
         if (op) ops.updates.push(op);
+      } else {
+        throw new Error(`Found ${meta.tableName} subTypes without a known inheritanceType ${meta.inheritanceType}`);
       }
     } else {
       const op = newUpdateOp(meta, todo.updates);
@@ -106,7 +142,16 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     }
   }
 
-  const columns: Array<Column & BindingColumn> = Object.values(meta.fields)
+  const columns: Array<Column & BindingColumn> = (
+    meta.inheritanceType === "sti"
+      ? // Hack this one handling of STI into here...
+        getBaseSelfAndSubMetas(meta).flatMap((meta) =>
+          meta.stiDiscriminatorField
+            ? Object.values(meta.fields)
+            : Object.values(meta.fields).filter((f) => f.fieldName !== "id"),
+        )
+      : Object.values(meta.fields)
+  )
     .filter((f) => changedFields.has(f.fieldName))
     .filter(hasSerde)
     .flatMap((f) => f.serde.columns);

@@ -2,7 +2,7 @@ import { groupBy, isPlainObject } from "joist-utils";
 import { aliasMgmt, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
-import { EntityMetadata } from "./EntityMetadata";
+import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
 import { abbreviation } from "./QueryBuilder";
 import { visitConditions } from "./QueryVisitor";
 import {
@@ -169,6 +169,8 @@ export function parseFindQuery(
     // Maybe only do this if we're the primary, or have a field that needs it?
     if (needsClassPerTableJoins(meta)) {
       addTablePerClassJoinsAndClassTag(query, meta, alias, join === "primary");
+    } else if (needsStiDiscriminator(meta)) {
+      addStiSubtypeFilter(inlineConditions, meta, alias);
     }
 
     maybeAddNotSoftDeleted(meta, alias);
@@ -963,7 +965,23 @@ export function joinClauses(joins: ParsedTable[]): string[] {
 }
 
 function needsClassPerTableJoins(meta: EntityMetadata): boolean {
-  return meta.subTypes.length > 0 || meta.baseTypes.length > 0;
+  return meta.inheritanceType === "cti" && (meta.subTypes.length > 0 || meta.baseTypes.length > 0);
+}
+
+function needsStiDiscriminator(meta: EntityMetadata): boolean {
+  return meta.inheritanceType === "sti" && !meta.stiDiscriminatorField;
+}
+
+function addStiSubtypeFilter(conditions: ColumnCondition[], subtypeMeta: EntityMetadata, alias: string): void {
+  const baseMeta = getBaseMeta(subtypeMeta);
+  const column = baseMeta.fields[baseMeta.stiDiscriminatorField!].serde?.columns[0]!;
+  conditions.push({
+    kind: "column",
+    alias,
+    column: column.columnName,
+    dbType: column.dbType,
+    cond: { kind: "eq", value: subtypeMeta.stiDiscriminatorValue },
+  });
 }
 
 /** Converts a search term like `foo bar` into a SQL `like` pattern like `%foo%bar%`. */

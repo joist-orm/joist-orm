@@ -27,7 +27,7 @@ export function findCountDataLoader<T extends Entity>(
 
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
-  const batchKey = getBatchKeyFromGenericStructure(query);
+  const batchKey = getBatchKeyFromGenericStructure(meta, query);
 
   return em.getLoader(
     "find-count",

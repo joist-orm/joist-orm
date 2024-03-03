@@ -2,6 +2,7 @@ import { Entity } from "./Entity";
 import { Changes, EntityChanges } from "./changes";
 import { getField } from "./fields";
 import { ReactiveHint } from "./reactiveHints";
+import { ManyToOneReferenceImpl } from "./relations";
 import { MaybePromise, groupBy, maybePromiseThen } from "./utils";
 
 /**
@@ -87,6 +88,20 @@ type CannotBeUpdatedRule<T extends Entity> = ValidationRule<T> & { field: string
 
 export function isCannotBeUpdatedRule(rule: Function): rule is CannotBeUpdatedRule<any> {
   return "field" in rule && "immutable" in rule;
+}
+
+/** For STI, enforces subtype-specific relations/FKs at runtime. */
+export function mustBeSubType<T extends Entity, K extends keyof Changes<T> & string>(
+  relationName: K,
+): ValidationRule<T> {
+  return (entity) => {
+    const m2o = (entity as any)[relationName] as ManyToOneReferenceImpl<any, any, any>;
+    const other = m2o.get;
+    const otherCstr = m2o.otherMeta.cstr;
+    if (other && !(other instanceof otherCstr)) {
+      return `${other} must be a ${otherCstr.name}`;
+    }
+  };
 }
 
 function errorMessage(errors: ValidationError[]): string {

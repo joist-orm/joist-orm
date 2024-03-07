@@ -41,6 +41,7 @@ const config: Config = {
         { type: "doc", docId: "testing/test-factories", position: "left", label: "Testing" },
         { type: "doc", docId: "faq", position: "left", label: "FAQ" },
         { href: "https://github.com/stephenh/joist-ts", label: "GitHub", position: "right" },
+        { href: "https://www.youtube.com/@joist-orm", label: "YouTube", position: "right" },
         { href: "https://discord.gg/ky9VTQugqu", label: "Discord", position: "right" },
       ],
     },

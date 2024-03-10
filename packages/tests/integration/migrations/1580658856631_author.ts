@@ -67,6 +67,12 @@ export function up(b: MigrationBuilder): void {
     ["BLUE", "Blue"],
   ]);
 
+  // For testing derived enums via Author.rangeOfBooks
+  createEnumTable(b, "book_range", [
+    ["FEW", "A Few"],
+    ["LOT", "A Lot"],
+  ]);
+
   // Testing native pg enums
   b.createType("favorite_shape", ["circle", "square", "triangle"]);
 
@@ -78,6 +84,8 @@ export function up(b: MigrationBuilder): void {
     initials: { type: "varchar(255)", notNull: true },
     // for testing async derived values
     number_of_books: { type: "integer", notNull: true },
+    // for testing async derived enums
+    range_of_books: foreignKey("book_range", { notNull: false}),
     // for testing async derived value via a polymorphic reference
     book_comments: { type: "text", notNull: false },
     // for testing nullable booleans

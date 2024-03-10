@@ -9,6 +9,16 @@ type AdvanceStatusDetail {
   name: String!
 }
 
+enum BookRange {
+  FEW
+  LOT
+}
+
+type BookRangeDetail {
+  code: BookRange!
+  name: String!
+}
+
 enum Color {
   RED
   GREEN
@@ -66,6 +76,7 @@ type TaskTypeDetail {
 
 type AllEnumDetails {
   advanceStatus: [AdvanceStatusDetail!]!
+  bookRange: [BookRangeDetail!]!
   color: [ColorDetail!]!
   imageType: [ImageTypeDetail!]!
   publisherSize: [PublisherSizeDetail!]!

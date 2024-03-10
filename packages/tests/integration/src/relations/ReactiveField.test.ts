@@ -1,6 +1,6 @@
 import { insertAuthor, insertBook, insertBookReview, select, update } from "@src/entities/inserts";
 import { knex, newEntityManager } from "@src/testEm";
-import { Author, Book, BookReview, newAuthor, newBook, newBookReview, newComment } from "../entities";
+import {Author, Book, BookRange, BookReview, newAuthor, newBook, newBookReview, newComment} from "../entities";
 
 describe("ReactiveField", () => {
   it("can repopulate a changed tree", async () => {
@@ -34,6 +34,18 @@ describe("ReactiveField", () => {
     const rows = await select("authors");
     expect(rows[0].number_of_books).toEqual(1);
   });
+
+
+  it("can have async derived enums", async () => {
+    const em = newEntityManager();
+    const a1 = new Author(em, { firstName: "a1" });
+    new Book(em, { title: "b1", author: a1 });
+    await em.flush();
+    expect(a1.rangeOfBooks.get).toEqual(BookRange.Few);
+    const rows = await select("authors");
+    expect(rows[0].range_of_books).toEqual(1);
+  });
+
 
   it("can access async derived values if loaded", async () => {
     const em = newEntityManager();

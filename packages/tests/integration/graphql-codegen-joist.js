@@ -6,6 +6,7 @@ const mappers = {
   AuthorStat: "src/entities#AuthorStat",
   Book: "src/entities#Book",
   BookAdvance: "src/entities#BookAdvance",
+  BookRangeDetail: "src/entities#BookRange",
   BookReview: "src/entities#BookReview",
   Child: "src/entities#Child",
   ChildGroup: "src/entities#ChildGroup",
@@ -35,6 +36,7 @@ const mappers = {
 
 const enumValues = {
   AdvanceStatus: "src/entities#AdvanceStatus",
+  BookRange: "src/entities#BookRange",
   Color: "src/entities#Color",
   ImageType: "src/entities#ImageType",
   PublisherSize: "src/entities#PublisherSize",

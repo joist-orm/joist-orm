@@ -3,8 +3,8 @@ import {
   AsyncProperty,
   Collection,
   Loaded,
-  ReactiveField,
   PersistedAsyncReference,
+  ReactiveField,
   Reference,
   cannotBeUpdated,
   getEm,
@@ -13,13 +13,13 @@ import {
   hasManyDerived,
   hasManyThrough,
   hasOneDerived,
-  hasReactiveField,
   hasPersistedAsyncReference,
   hasReactiveAsyncProperty,
+  hasReactiveField,
   isDefined,
   withLoaded,
 } from "joist-orm";
-import { AuthorCodegen, Book, BookReview, Comment, bookMeta, authorConfig as config } from "./entities";
+import { AuthorCodegen, Book, BookRange, BookReview, Comment, bookMeta, authorConfig as config } from "./entities";
 
 export class Author extends AuthorCodegen {
   readonly reviews: Collection<Author, BookReview> = hasManyThrough((author) => author.books.reviews);
@@ -100,10 +100,8 @@ export class Author extends AuthorCodegen {
     },
   );
 
-  readonly nickNamesUpper: ReactiveField<Author, string[]> = hasReactiveField(
-    "nickNamesUpper",
-    "nickNames",
-    (a) => (a.nickNames ?? []).map((n) => n.toUpperCase()),
+  readonly nickNamesUpper: ReactiveField<Author, string[]> = hasReactiveField("nickNamesUpper", "nickNames", (a) =>
+    (a.nickNames ?? []).map((n) => n.toUpperCase()),
   );
 
   public transientFields = {
@@ -185,6 +183,11 @@ export class Author extends AuthorCodegen {
       return a.books.get.length;
     },
   );
+
+  /** Example of a derived async enum. */
+  readonly rangeOfBooks: ReactiveField<Author, BookRange> = hasReactiveField("rangeOfBooks", ["books"], (a) => {
+    return a.books.get.length > 10 ? BookRange.Lot : BookRange.Few;
+  });
 
   /** Example of a derived async property that can be calculated via a populate hint through a polymorphic reference. */
   readonly bookComments: ReactiveField<Author, string> = hasReactiveField(

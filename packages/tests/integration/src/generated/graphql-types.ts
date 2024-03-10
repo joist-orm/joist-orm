@@ -6,7 +6,7 @@ import {
   Author,
   AuthorStat,
   Book,
-  BookAdvance,
+  BookAdvance, BookRange,
   BookReview,
   Color,
   Comment,
@@ -135,6 +135,11 @@ export type Resolvers = {
   ColorDetail: {
     code: (root: Color) => string;
     name: (root: Color) => string;
+  };
+
+  BookRangeDetail: {
+    code: (root: BookRange) => string;
+    name: (root: BookRange) => string;
   };
 
   TaskTypeDetail: {

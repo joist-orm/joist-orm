@@ -304,7 +304,12 @@ export function configureMetadata(metas: EntityMetadata[]): void {
 
     // Look for reactive async derived values rules to reverse
     Object.values(meta.fields)
-      .filter((f) => f.kind === "primitive" || (f.kind === "m2o" && f.derived === "async"))
+      .filter(
+        (f) =>
+          f.kind === "primitive" ||
+          (f.kind === "m2o" && f.derived === "async") ||
+          (f.kind === "enum" && f.derived === "async"),
+      )
       .forEach((field) => {
         const ap = (getFakeInstance(meta) as any)[field.fieldName] as ReactiveFieldImpl<any, any, any> | undefined;
         // We might have an async property configured in joist-config.json that has not yet

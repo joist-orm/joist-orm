@@ -331,6 +331,7 @@ describe("EntityManager.reactiveRules", () => {
       { cstr, name: "numberOfPublicReviews2", fields: ["author"], path: ["author"] },
       { cstr, name: "tagsOfAllBooks", fields: ["author", "tags"], path: ["author"] },
       { cstr, name: "search", fields: ["author", "title"], path: ["author"] },
+      { cstr, name: "rangeOfBooks", fields: ["author"], path: ["author"] },
       { cstr, name: "favoriteBook", fields: ["author"], path: ["author"] },
       { cstr, name: "isPublic", fields: ["author"], path: ["reviews"] },
     ]);

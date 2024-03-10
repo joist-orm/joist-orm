@@ -141,7 +141,6 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
             case "primaryKey":
               return [[f.fieldName, this.idMaybe || null]];
             case "enum":
-              return [[f.fieldName, (this as any)[f.fieldName] || null]];
             case "primitive":
               if (f.derived === "async") {
                 // Use the raw value instead of the ReactiveField

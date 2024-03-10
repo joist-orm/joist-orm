@@ -1,3 +1,10 @@
+# [1.147.0](https://github.com/stephenh/joist-ts/compare/v1.146.0...v1.147.0) (2024-03-10)
+
+
+### Features
+
+* Support reactive enum fields. ([#968](https://github.com/stephenh/joist-ts/issues/968)) ([25d2b1c](https://github.com/stephenh/joist-ts/commit/25d2b1c4266f3a42cce1781a38aada8a30b83f80))
+
 # [1.146.0](https://github.com/stephenh/joist-ts/compare/v1.145.0...v1.146.0) (2024-03-03)
 
 

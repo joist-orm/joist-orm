@@ -8,5 +8,5 @@
   },
   "entitiesDirectory": "./src/entities",
   "idType": "untagged-string",
-  "version": "1.146.1"
+  "version": "1.147.0"
 }

@@ -1198,6 +1198,7 @@ describe("EntityManager", () => {
       nickNamesUpper: null,
       numberOfAtoms: null,
       numberOfBooks: null,
+      rangeOfBooks: null,
       numberOfPublicReviews: null,
       numberOfPublicReviews2: null,
       tagsOfAllBooks: null,

@@ -115,6 +115,7 @@ export type EnumField = Field & {
   columnName: string;
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
+  derived:  "sync" | "async" | false;
   enumName: string;
   enumType: Import;
   enumDetailType: Import;
@@ -458,6 +459,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
     columnName,
     columnType,
     columnDefault: column.default,
+    derived: fieldDerived(config, entity, fieldName) as EnumField["derived"],
     enumName,
     enumType,
     enumDetailType,
@@ -487,6 +489,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
     columnName,
     columnType,
     columnDefault: column.default,
+    derived: fieldDerived(config, entity, fieldName) as EnumField["derived"],
     enumName,
     enumType,
     enumDetailType,
@@ -518,7 +521,6 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
 }
 
 function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): ManyToOneField {
-  let invalid = false;
   const column = r.foreignKey.columns[0];
   const columnName = column.name;
   const dbType = r.foreignKey.columns[0].type.shortName!;

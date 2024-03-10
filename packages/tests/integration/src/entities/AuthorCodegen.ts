@@ -55,6 +55,7 @@ import {
   BookId,
   bookMeta,
   BookOrder,
+  BookRange,
   Color,
   ColorDetails,
   Colors,
@@ -116,6 +117,7 @@ export interface AuthorFields {
   search: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  rangeOfBooks: { kind: "enum"; type: BookRange; nullable: undefined };
   favoriteColors: { kind: "enum"; type: Color[]; nullable: never };
   favoriteShape: { kind: "enum"; type: FavoriteShape; nullable: undefined; native: true };
   mentor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
@@ -138,6 +140,7 @@ export interface AuthorOpts {
   quotes?: Quotes | null;
   numberOfAtoms?: bigint | null;
   deletedAt?: Date | null;
+  rangeOfBooks?: BookRange | null;
   favoriteColors?: Color[];
   favoriteShape?: FavoriteShape | null;
   mentor?: Author | AuthorId | null;
@@ -192,6 +195,7 @@ export interface AuthorFilter {
   search?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  rangeOfBooks?: ValueFilter<BookRange, null>;
   favoriteColors?: ValueFilter<Color[], null>;
   favoriteShape?: ValueFilter<FavoriteShape, null>;
   mentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
@@ -233,6 +237,7 @@ export interface AuthorGraphQLFilter {
   search?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  rangeOfBooks?: ValueGraphQLFilter<BookRange>;
   favoriteColors?: ValueGraphQLFilter<Color[]>;
   favoriteShape?: ValueGraphQLFilter<FavoriteShape>;
   mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
@@ -274,6 +279,7 @@ export interface AuthorOrder {
   search?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  rangeOfBooks?: OrderBy;
   favoriteColors?: OrderBy;
   favoriteShape?: OrderBy;
   mentor?: AuthorOrder;
@@ -464,6 +470,16 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   get updatedAt(): Date {
     return getField(this, "updatedAt");
+  }
+
+  abstract readonly rangeOfBooks: ReactiveField<Author, BookRange | undefined>;
+
+  get isFew(): boolean {
+    return getField(this, "rangeOfBooks") === BookRange.Few;
+  }
+
+  get isLot(): boolean {
+    return getField(this, "rangeOfBooks") === BookRange.Lot;
   }
 
   get favoriteColors(): Color[] {

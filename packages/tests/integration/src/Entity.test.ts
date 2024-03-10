@@ -72,174 +72,181 @@ describe("Entity", () => {
     const author = await em.load(Author, "1");
     const copy = deepCopyAndNormalize(author);
     expect(copy).toMatchInlineSnapshot(`
-      {
-        "allPublisherAuthorNames": {
-          "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
-          "opts": {
-            "isReactive": true,
-          },
-        },
-        "bookComments": {
-          "fieldName": "bookComments",
-          "fn": {},
-          "reactiveHint": {
-            "books": {
-              "comments": "text",
-            },
-          },
-        },
-        "booksTitles": {
-          "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
-        },
-        "booksWithTitle": {
-          "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
-        },
-        "favoriteBook": {
-          "_isLoaded": false,
-          "fieldName": "favoriteBook",
-          "fn": {},
-          "loadPromise": undefined,
-          "loaded": undefined,
-          "reactiveHint": {
-            "books": {
-              "reviews_ro": "rating",
-            },
-          },
-          "undefined": null,
-        },
-        "latestComment": {
-          "loadPromise": undefined,
-          "opts": {
-            "get": {},
-            "isLoaded": {},
-            "load": {},
-          },
-          "undefined": null,
-        },
-        "latestComment2": {
-          "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
-          "opts": {
-            "isReactive": true,
-          },
-        },
-        "latestComments": {
-          "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
-          "opts": {},
-        },
-        "nickNamesUpper": {
-          "fieldName": "nickNamesUpper",
-          "fn": {},
-          "reactiveHint": "nickNames",
-        },
-        "numberOfBooks": {
-          "fieldName": "numberOfBooks",
-          "fn": {},
-          "reactiveHint": [
-            "books",
-            "firstName",
-          ],
-        },
-        "numberOfBooks2": {
-          "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
-          "opts": {
-            "isReactive": true,
-          },
-        },
-        "numberOfPublicReviews": {
-          "fieldName": "numberOfPublicReviews",
-          "fn": {},
-          "reactiveHint": {
-            "books": {
-              "reviews": [
-                "isPublic",
-                "isPublic2",
-                "rating",
-              ],
-            },
-          },
-        },
-        "numberOfPublicReviews2": {
-          "fieldName": "numberOfPublicReviews2",
-          "fn": {},
-          "reactiveHint": {
-            "books": {
-              "reviews": [
-                "isPublic",
-                "isTest",
-                "rating",
-              ],
-            },
-          },
-        },
-        "reviewedBooks": {
-          "loadPromise": undefined,
-          "opts": {
-            "add": {},
-            "get": {},
-            "isLoaded": {},
-            "load": {},
-            "remove": {},
-            "set": {},
-          },
-        },
-        "reviews": {
-          "loadPromise": undefined,
-          "opts": {
-            "get": {},
-            "isLoaded": {},
-            "load": {},
-          },
-        },
-        "search": {
-          "fieldName": "search",
-          "fn": {},
-          "reactiveHint": {
-            "books": "title",
-            "firstName": {},
-          },
-        },
-        "tagsOfAllBooks": {
-          "fieldName": "tagsOfAllBooks",
-          "fn": {},
-          "reactiveHint": {
-            "books": {
-              "tags": "name",
-            },
-          },
-        },
-        "transientFields": {
-          "afterCommitIdIsSet": false,
-          "afterCommitIsDeletedEntity": false,
-          "afterCommitIsNewEntity": false,
-          "afterCommitRan": false,
-          "afterValidationRan": false,
-          "ageRuleInvoked": 0,
-          "beforeCommitRan": false,
-          "beforeCreateRan": false,
-          "beforeDeleteRan": false,
-          "beforeFlushRan": false,
-          "beforeUpdateRan": false,
-          "bookCommentsCalcInvoked": 0,
-          "deleteDuringFlush": false,
-          "firstIsNotLastNameRuleInvoked": 0,
-          "graduatedRuleInvoked": 0,
-          "mentorRuleInvoked": 0,
-          "numberOfBooksCalcInvoked": 0,
-          "setGraduatedInFlush": false,
-        },
-      }
+     {
+       "allPublisherAuthorNames": {
+         "fn": {},
+         "loadPromise": undefined,
+         "loaded": false,
+         "opts": {
+           "isReactive": true,
+         },
+       },
+       "bookComments": {
+         "fieldName": "bookComments",
+         "fn": {},
+         "reactiveHint": {
+           "books": {
+             "comments": "text",
+           },
+         },
+       },
+       "booksTitles": {
+         "fn": {},
+         "loadPromise": undefined,
+         "loaded": false,
+       },
+       "booksWithTitle": {
+         "fn": {},
+         "loadPromise": undefined,
+         "loaded": false,
+       },
+       "favoriteBook": {
+         "_isLoaded": false,
+         "fieldName": "favoriteBook",
+         "fn": {},
+         "loadPromise": undefined,
+         "loaded": undefined,
+         "reactiveHint": {
+           "books": {
+             "reviews_ro": "rating",
+           },
+         },
+         "undefined": null,
+       },
+       "latestComment": {
+         "loadPromise": undefined,
+         "opts": {
+           "get": {},
+           "isLoaded": {},
+           "load": {},
+         },
+         "undefined": null,
+       },
+       "latestComment2": {
+         "fn": {},
+         "loadPromise": undefined,
+         "loaded": false,
+         "opts": {
+           "isReactive": true,
+         },
+       },
+       "latestComments": {
+         "fn": {},
+         "loadPromise": undefined,
+         "loaded": false,
+         "opts": {},
+       },
+       "nickNamesUpper": {
+         "fieldName": "nickNamesUpper",
+         "fn": {},
+         "reactiveHint": "nickNames",
+       },
+       "numberOfBooks": {
+         "fieldName": "numberOfBooks",
+         "fn": {},
+         "reactiveHint": [
+           "books",
+           "firstName",
+         ],
+       },
+       "numberOfBooks2": {
+         "fn": {},
+         "loadPromise": undefined,
+         "loaded": false,
+         "opts": {
+           "isReactive": true,
+         },
+       },
+       "numberOfPublicReviews": {
+         "fieldName": "numberOfPublicReviews",
+         "fn": {},
+         "reactiveHint": {
+           "books": {
+             "reviews": [
+               "isPublic",
+               "isPublic2",
+               "rating",
+             ],
+           },
+         },
+       },
+       "numberOfPublicReviews2": {
+         "fieldName": "numberOfPublicReviews2",
+         "fn": {},
+         "reactiveHint": {
+           "books": {
+             "reviews": [
+               "isPublic",
+               "isTest",
+               "rating",
+             ],
+           },
+         },
+       },
+       "rangeOfBooks": {
+         "fieldName": "rangeOfBooks",
+         "fn": {},
+         "reactiveHint": [
+           "books",
+         ],
+       },
+       "reviewedBooks": {
+         "loadPromise": undefined,
+         "opts": {
+           "add": {},
+           "get": {},
+           "isLoaded": {},
+           "load": {},
+           "remove": {},
+           "set": {},
+         },
+       },
+       "reviews": {
+         "loadPromise": undefined,
+         "opts": {
+           "get": {},
+           "isLoaded": {},
+           "load": {},
+         },
+       },
+       "search": {
+         "fieldName": "search",
+         "fn": {},
+         "reactiveHint": {
+           "books": "title",
+           "firstName": {},
+         },
+       },
+       "tagsOfAllBooks": {
+         "fieldName": "tagsOfAllBooks",
+         "fn": {},
+         "reactiveHint": {
+           "books": {
+             "tags": "name",
+           },
+         },
+       },
+       "transientFields": {
+         "afterCommitIdIsSet": false,
+         "afterCommitIsDeletedEntity": false,
+         "afterCommitIsNewEntity": false,
+         "afterCommitRan": false,
+         "afterValidationRan": false,
+         "ageRuleInvoked": 0,
+         "beforeCommitRan": false,
+         "beforeCreateRan": false,
+         "beforeDeleteRan": false,
+         "beforeFlushRan": false,
+         "beforeUpdateRan": false,
+         "bookCommentsCalcInvoked": 0,
+         "deleteDuringFlush": false,
+         "firstIsNotLastNameRuleInvoked": 0,
+         "graduatedRuleInvoked": 0,
+         "mentorRuleInvoked": 0,
+         "numberOfBooksCalcInvoked": 0,
+         "setGraduatedInFlush": false,
+       },
+     }
     `);
   });
 });

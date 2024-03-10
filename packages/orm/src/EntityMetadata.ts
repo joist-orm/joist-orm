@@ -96,6 +96,7 @@ export type EnumField = {
   fieldName: string;
   fieldIdName: undefined;
   required: boolean;
+  derived: "sync" | "async" | false;
   enumDetailType: { getValues(): ReadonlyArray<unknown>; findById(id: any): unknown };
   serde: FieldSerde;
   immutable: boolean;

@@ -33,6 +33,7 @@ type Author {
   nickNames: String
   graphqlOnlyField(arg: Int): Int!
   tasks: [Task!]!
+  rangeOfBooks: BookRangeDetail
 }
 
 input SaveAuthorInput {
@@ -57,6 +58,7 @@ input SaveAuthorInput {
   favoriteBookId: ID
   numberOfAtoms: Int
   nickNames: String
+  rangeOfBooks: BookRange
 }
 
 type SaveAuthorResult {

@@ -19,6 +19,7 @@
         "numberOfPublicReviews": { "derived": "async" },
         "numberOfPublicReviews2": { "derived": "async" },
         "quotes": { "superstruct": "quotes@src/entities/types" },
+        "rangeOfBooks": { "derived": "async" },
         "search": { "derived": "async" },
         "tagsOfAllBooks": { "derived": "async" },
         "tsSearch": { "ignore": true },
@@ -78,5 +79,5 @@
     }
   },
   "entitiesDirectory": "./src/entities",
-  "version": "1.146.0"
+  "version": "1.147.0"
 }

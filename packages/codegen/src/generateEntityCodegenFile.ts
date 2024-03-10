@@ -162,23 +162,41 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   meta.enums
     .filter((e) => !e.isArray)
     .forEach((e) => {
-      const { fieldName, enumType, enumDetailType, enumDetailsType, notNull, enumRows } = e;
+      const { fieldName, enumType, enumDetailType, enumDetailsType, notNull, enumRows, derived } = e;
       const maybeOptional = notNull ? "" : " | undefined";
       const getByCode = code`${enumDetailType}.getByCode(this.${fieldName})`;
-      const getter = code`
-        get ${fieldName}(): ${enumType}${maybeOptional} {
-          return ${getField}(this, "${fieldName}");
-        }
 
-        get ${fieldName}Details(): ${enumDetailsType}${maybeOptional} {
-          return ${notNull ? getByCode : code`this.${fieldName} ? ${getByCode} : undefined`};
-        }
-     `;
-      const setter = code`
-        set ${fieldName}(${fieldName}: ${enumType}${maybeOptional}) {
-          ${setField}(this, "${fieldName}", ${fieldName});
-        }
-      `;
+      let getter: Code;
+      if (derived === "async") {
+        getter = code`
+          abstract readonly ${fieldName}: ${ReactiveField}<${entity.name}, ${enumType}${maybeOptional}>;
+       `;
+      } else if (derived === "sync") {
+        getter = code`
+          abstract get ${fieldName}(): ${enumType}${maybeOptional};
+       `;
+      } else {
+        getter = code`
+          get ${fieldName}(): ${enumType}${maybeOptional} {
+            return ${getField}(this, "${fieldName}");
+          }
+
+          get ${fieldName}Details(): ${enumDetailsType}${maybeOptional} {
+            return ${notNull ? getByCode : code`this.${fieldName} ? ${getByCode} : undefined`};
+          }
+       `;
+      }
+
+      let setter: Code;
+      if (derived) {
+        setter = code``;
+      } else {
+        setter = code`
+          set ${fieldName}(${fieldName}: ${enumType}${maybeOptional}) {
+            ${setField}(this, "${fieldName}", ${fieldName});
+          }
+        `;
+      }
 
       const codes = new Set(enumRows.map((r) => r.code));
       const shouldPrefixAccessors = meta.enums

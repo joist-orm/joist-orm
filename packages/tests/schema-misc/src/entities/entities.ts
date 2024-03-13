@@ -15,5 +15,9 @@ export * from "./Book";
 export * from "./DatabaseOwner";
 export * from "./Painting";
 
-export * from "./factories";
+export * from "./Artist.factories";
+export * from "./Author.factories";
+export * from "./Book.factories";
+export * from "./DatabaseOwner.factories";
+export * from "./Painting.factories";
 export * from "./codegen/metadata";

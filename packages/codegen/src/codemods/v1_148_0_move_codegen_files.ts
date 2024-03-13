@@ -9,7 +9,7 @@ export const v1_148_0_move_codegen_files: Codemod = {
   run: async (config) => {
     const allFiles = await readExistingFiles(config);
     for (const file of allFiles) {
-      const remove = file === "metadata.ts" || file.endsWith("Codegen.ts");
+      const remove = file === "metadata.ts" || file === "factories.ts" || file.endsWith("Codegen.ts");
       if (remove) {
         await rm(config.entitiesDirectory + "/" + file);
       } else if (file.endsWith("*.ts")) {

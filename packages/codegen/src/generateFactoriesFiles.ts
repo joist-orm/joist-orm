@@ -7,7 +7,7 @@ const EntityManager = imp("t:EntityManager@./entities");
 
 export function generateFactoriesFiles(entities: EntityDbMetadata[]): CodegenFile[] {
   // One-time create an Author.factories.ts for each entity
-  const entityFiles = entities.map(({ entity }) => {
+  return entities.map(({ entity }) => {
     const name = pascalCase(entity.name);
     const contents = code`
       export function new${name}(
@@ -18,13 +18,4 @@ export function generateFactoriesFiles(entities: EntityDbMetadata[]): CodegenFil
       }`;
     return { name: `./${entity.name}.factories.ts`, contents, overwrite: false };
   });
-
-  // Everytime create a factories.ts that exports the others
-  const factoriesFile = {
-    name: "./factories.ts",
-    contents: code`${entities.map(({ entity }) => code`export * from "./${entity.name}.factories";`)}`,
-    overwrite: true,
-  };
-
-  return [...entityFiles, factoriesFile];
 }

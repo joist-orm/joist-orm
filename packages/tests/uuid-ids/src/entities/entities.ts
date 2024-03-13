@@ -10,5 +10,6 @@ export * from "./codegen/BookCodegen";
 export * from "./Author";
 export * from "./Book";
 
-export * from "./factories";
+export * from "./Author.factories";
+export * from "./Book.factories";
 export * from "./codegen/metadata";

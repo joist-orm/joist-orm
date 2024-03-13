@@ -15,6 +15,7 @@ export function generateEntitiesFile(
   // immediately resolve the `Publisher` symbol. Assume only 1 level of inheritance for now.
   const baseClasses = entities.filter((e) => e.baseClassName === undefined);
   const subClasses = entities.filter((e) => e.baseClassName !== undefined);
+
   return code`
     // organize-imports-ignore
 
@@ -39,7 +40,9 @@ export function generateEntitiesFile(
     ${subClasses.map((meta) => {
       return `export * from "./${meta.entity.name}";`;
     })}
-    export * from "./factories";
+    ${entities.map(({ entity }) => {
+      return `export * from "./${entity.name}.factories";`;
+    })}
     export * from "./codegen/metadata";
   `;
 }

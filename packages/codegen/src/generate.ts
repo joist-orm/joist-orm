@@ -114,7 +114,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
   const indexFile: CodegenFile = {
     name: "./index.ts",
     contents: code`export * from "./entities"`,
-    overwrite: true,
+    overwrite: false,
   };
 
   // Look for modules to require and call the exported `.run(EntityDbMetadata[], Table[])` method

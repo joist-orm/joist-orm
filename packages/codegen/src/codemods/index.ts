@@ -7,7 +7,7 @@ import { v1_143_0_rename_derived_async_property } from "./v1_143_0_rename_derive
 import { v1_148_0_move_codegen_files } from "./v1_148_0_move_codegen_files";
 
 export async function maybeRunTransforms(config: Config): Promise<void> {
-  const confVersion = "1.147.0"; // config.version;
+  const confVersion = config.version;
   const thisVersion = getThisVersion();
   if (semver.eq(confVersion, thisVersion)) {
     return;

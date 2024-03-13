@@ -29,7 +29,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
       const hasEntityFile = files.includes(`${entityName}.ts`);
       return [
         {
-          name: `${entityName}Codegen.ts`,
+          name: `./codegen/${entityName}Codegen.ts`,
           contents: generateEntityCodegenFile(config, dbMeta, meta),
           overwrite: true,
         },
@@ -48,7 +48,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
       const enumName = tableToEntityName(config, enumData.table);
       return [
         {
-          name: `${enumName}.ts`,
+          name: `./codegen/${enumName}.ts`,
           contents: generateEnumFile(config, enumData, enumName),
           overwrite: true,
         },
@@ -59,7 +59,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     .map((enumData) => {
       return [
         {
-          name: `${enumData.name}.ts`,
+          name: `./codegen/${enumData.name}.ts`,
           contents: generatePgEnumFile(config, enumData),
           overwrite: true,
         },
@@ -73,7 +73,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
   const invalidEntities = entities.filter((e) => e.invalidDeferredFK);
 
   const metadataFile: CodegenFile = {
-    name: "./metadata.ts",
+    name: "./codegen/metadata.ts",
     contents: code`
     ${
       invalidEntities.length > 0
@@ -103,7 +103,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const entitiesFile: CodegenFile = {
-    name: "./entities.ts",
+    name: "./codegen/entities.ts",
     contents: generateEntitiesFile(config, entities, enumsTables, Object.values(pgEnums)),
     overwrite: true,
     toStringOpts: { dprintOptions: { "module.sortExportDeclarations": "maintain" } },
@@ -112,9 +112,9 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
   const factoriesFiles: CodegenFile[] = generateFactoriesFiles(entities);
 
   const indexFile: CodegenFile = {
-    name: "./index.ts",
+    name: "./codegen/index.ts",
     contents: code`export * from "./entities"`,
-    overwrite: false,
+    overwrite: true,
   };
 
   // Look for modules to require and call the exported `.run(EntityDbMetadata[], Table[])` method

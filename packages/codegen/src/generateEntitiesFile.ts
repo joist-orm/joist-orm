@@ -28,18 +28,18 @@ export function generateEntitiesFile(
       return `export * from "./${meta.entity.name}Codegen";`;
     })}
     ${baseClasses.map((meta) => {
-      return `export * from "./${meta.entity.name}";`;
+      return `export * from "../${meta.entity.name}";`;
     })}
     ${subClasses.map((meta) => {
       return `export * from "./${meta.entity.name}Codegen";`;
     })}
     ${subClasses.map((meta) => {
-      return `export * from "./${meta.entity.name}";`;
+      return `export * from "../${meta.entity.name}";`;
     })}
     ${pgEnums.map((meta) => {
       return `export * from "./${meta.name}";`;
     })}
-    export * from "./factories";
+    export * from "../factories";
     export * from "./metadata";
   `;
 }

@@ -1,7 +1,5 @@
 import { EnumMetadata } from "joist-orm";
 
-console.trace("DEFINED PublisherType");
-
 export enum PublisherType {
   Small = "SMALL",
   Big = "BIG",

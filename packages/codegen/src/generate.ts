@@ -103,7 +103,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const entitiesFile: CodegenFile = {
-    name: "./codegen/entities.ts",
+    name: "./entities.ts",
     contents: generateEntitiesFile(config, entities, enumsTables, Object.values(pgEnums)),
     overwrite: true,
     toStringOpts: { dprintOptions: { "module.sortExportDeclarations": "maintain" } },
@@ -112,7 +112,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
   const factoriesFiles: CodegenFile[] = generateFactoriesFiles(entities);
 
   const indexFile: CodegenFile = {
-    name: "./codegen/index.ts",
+    name: "./index.ts",
     contents: code`export * from "./entities"`,
     overwrite: true,
   };

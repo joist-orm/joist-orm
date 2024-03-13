@@ -22,24 +22,24 @@ export function generateEntitiesFile(
     // when the subclasses extend the base classes, see:
     // https://medium.com/visual-development/how-to-fix-nasty-circular-dependency-issues-once-and-for-all-in-javascript-typescript-a04c987cf0de
     ${enums.map((table) => {
-      return `export * from "./${tableToEntityName(config, table)}";`;
-    })}
-    ${baseClasses.map((meta) => {
-      return `export * from "./${meta.entity.name}Codegen";`;
-    })}
-    ${baseClasses.map((meta) => {
-      return `export * from "../${meta.entity.name}";`;
-    })}
-    ${subClasses.map((meta) => {
-      return `export * from "./${meta.entity.name}Codegen";`;
-    })}
-    ${subClasses.map((meta) => {
-      return `export * from "../${meta.entity.name}";`;
+      return `export * from "./codegen/${tableToEntityName(config, table)}";`;
     })}
     ${pgEnums.map((meta) => {
-      return `export * from "./${meta.name}";`;
+      return `export * from "./codegen/${meta.name}";`;
     })}
-    export * from "../factories";
-    export * from "./metadata";
+    ${baseClasses.map((meta) => {
+      return `export * from "./codegen/${meta.entity.name}Codegen";`;
+    })}
+    ${baseClasses.map((meta) => {
+      return `export * from "./${meta.entity.name}";`;
+    })}
+    ${subClasses.map((meta) => {
+      return `export * from "./codegen/${meta.entity.name}Codegen";`;
+    })}
+    ${subClasses.map((meta) => {
+      return `export * from "./${meta.entity.name}";`;
+    })}
+    export * from "./factories";
+    export * from "./codegen/metadata";
   `;
 }

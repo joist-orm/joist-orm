@@ -41,7 +41,7 @@ export function generateEntitiesFile(
       return `export * from "./${meta.entity.name}";`;
     })}
     ${entities.map(({ entity }) => {
-      return `export * from "./${entity.name}.factories";`;
+      return `export * from "./factories/new${entity.name}";`;
     })}
     export * from "./codegen/metadata";
   `;

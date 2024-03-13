@@ -9,6 +9,6 @@ export * from "./codegen/BookCodegen";
 export * from "./Author";
 export * from "./Book";
 
-export * from "./Author.factories";
-export * from "./Book.factories";
+export * from "./factories/newAuthor";
+export * from "./factories/newBook";
 export * from "./codegen/metadata";

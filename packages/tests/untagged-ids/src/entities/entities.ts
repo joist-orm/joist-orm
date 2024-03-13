@@ -11,7 +11,7 @@ export * from "./Author";
 export * from "./Book";
 export * from "./Comment";
 
-export * from "./Author.factories";
-export * from "./Book.factories";
-export * from "./Comment.factories";
+export * from "./factories/newAuthor";
+export * from "./factories/newBook";
+export * from "./factories/newComment";
 export * from "./codegen/metadata";

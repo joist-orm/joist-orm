@@ -12,11 +12,12 @@ export const v1_148_0_move_codegen_files: Codemod = {
       const remove = file === "metadata.ts" || file.endsWith("Codegen.ts");
       if (remove) {
         await rm(config.entitiesDirectory + "/" + file);
-      }
-      // Enum files are moving too
-      const contents = await readFile(config.entitiesDirectory + "/" + file);
-      if (contents.includes("const details: Record")) {
-        await rm(config.entitiesDirectory + "/" + file);
+      } else if (file.endsWith("*.ts")) {
+        // Enum files are moving too
+        const contents = await readFile(config.entitiesDirectory + "/" + file);
+        if (contents.includes("const details: Record")) {
+          await rm(config.entitiesDirectory + "/" + file);
+        }
       }
     }
   },

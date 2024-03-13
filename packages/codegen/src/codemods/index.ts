@@ -4,6 +4,7 @@ import { maybeAdjustForLocalDevelopment } from "../adjustVersion";
 import { Config } from "../config";
 import { Codemod } from "./Codemod";
 import { v1_143_0_rename_derived_async_property } from "./v1_143_0_rename_derived_async_property";
+import { v1_148_0_move_codegen_files } from "./v1_148_0_move_codegen_files";
 
 export async function maybeRunTransforms(config: Config): Promise<void> {
   const confVersion = config.version;
@@ -59,5 +60,7 @@ export function getThisVersion(): string {
 }
 
 function findApplyableCodemods(prevVersion: string): Codemod[] {
-  return [v1_143_0_rename_derived_async_property].filter((t) => semver.lt(prevVersion, t.version));
+  return [v1_143_0_rename_derived_async_property, v1_148_0_move_codegen_files].filter((t) =>
+    semver.lt(prevVersion, t.version),
+  );
 }

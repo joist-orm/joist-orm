@@ -1,6 +1,4 @@
-import { PublisherType } from "@src/entities/PublisherType";
-import { SmallPublisher } from "@src/entities/SmallPublisher";
-
+import { PublisherType, SmallPublisher } from "@src/entities";
 import { newEntityManager } from "@src/testEm";
 
 describe("Publisher", () => {

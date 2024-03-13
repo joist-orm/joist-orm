@@ -48,7 +48,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
       const enumName = tableToEntityName(config, enumData.table);
       return [
         {
-          name: `./codegen/${enumName}.ts`,
+          name: `./enums/${enumName}.ts`,
           contents: generateEnumFile(config, enumData, enumName),
           overwrite: true,
         },
@@ -59,7 +59,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     .map((enumData) => {
       return [
         {
-          name: `./codegen/${enumData.name}.ts`,
+          name: `./enums/${enumData.name}.ts`,
           contents: generatePgEnumFile(config, enumData),
           overwrite: true,
         },

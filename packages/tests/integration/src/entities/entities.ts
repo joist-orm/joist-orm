@@ -3,14 +3,14 @@
 // This file drives our import order to avoid undefined errors
 // when the subclasses extend the base classes, see:
 // https://medium.com/visual-development/how-to-fix-nasty-circular-dependency-issues-once-and-for-all-in-javascript-typescript-a04c987cf0de
-export * from "./codegen/AdvanceStatus";
-export * from "./codegen/BookRange";
-export * from "./codegen/Color";
-export * from "./codegen/ImageType";
-export * from "./codegen/PublisherSize";
-export * from "./codegen/PublisherType";
-export * from "./codegen/TaskType";
-export * from "./codegen/FavoriteShape";
+export * from "./enums/AdvanceStatus";
+export * from "./enums/BookRange";
+export * from "./enums/Color";
+export * from "./enums/ImageType";
+export * from "./enums/PublisherSize";
+export * from "./enums/PublisherType";
+export * from "./enums/TaskType";
+export * from "./enums/FavoriteShape";
 export * from "./codegen/AuthorCodegen";
 export * from "./codegen/AuthorScheduleCodegen";
 export * from "./codegen/AuthorStatCodegen";

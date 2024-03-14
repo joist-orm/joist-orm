@@ -1,3 +1,10 @@
+# [1.148.0](https://github.com/stephenh/joist-ts/compare/v1.147.0...v1.148.0) (2024-03-14)
+
+
+### Features
+
+* Reorganize codegen files ([#970](https://github.com/stephenh/joist-ts/issues/970)) ([b5bf745](https://github.com/stephenh/joist-ts/commit/b5bf745faa29e4edfc6663423d0693766fd15188))
+
 # [1.147.0](https://github.com/stephenh/joist-ts/compare/v1.146.0...v1.147.0) (2024-03-10)
 
 

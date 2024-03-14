@@ -1,7 +1,4 @@
-import { newAuthor } from "@src/entities/Author.factories";
-import { Book } from "@src/entities/Book";
-import { newBook } from "@src/entities/Book.factories";
-import { BookStatus, BookStatusDetails } from "@src/entities/BookStatus";
+import { Book, BookStatus, BookStatusDetails, newAuthor, newBook } from "@src/entities";
 import { insertAuthor } from "@src/entities/inserts";
 import { insert, newEntityManager } from "@src/setupDbTests";
 

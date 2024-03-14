@@ -765,10 +765,10 @@ export function makeEntity(entityName: string): Entity {
     type: entityType(entityName),
     metaName: metaName(entityName),
     metaType: metaType(entityName),
-    idType: imp(`${entityName}Id@./entities`, { definedIn: `./${entityName}Codegen` }),
-    orderType: imp(`${entityName}Order@./entities`, { definedIn: `./${entityName}Codegen` }),
-    optsType: imp(`${entityName}Opts@./entities`, { definedIn: `./${entityName}Codegen` }),
-    configConst: imp(`${camelCase(entityName)}Config@./entities`, { definedIn: `./${entityName}Codegen` }),
+    idType: imp(`${entityName}Id@./entities`, { definedIn: `./codegen/${entityName}Codegen` }),
+    orderType: imp(`${entityName}Order@./entities`, { definedIn: `./codegen/${entityName}Codegen` }),
+    optsType: imp(`${entityName}Opts@./entities`, { definedIn: `./codegen/${entityName}Codegen` }),
+    configConst: imp(`${camelCase(entityName)}Config@./entities`, { definedIn: `./codegen/${entityName}Codegen` }),
   };
 }
 

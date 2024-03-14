@@ -1,10 +1,10 @@
-import fastglob from "fast-glob";
 import inquirer from "inquirer";
-import { run as jscodeshift } from "jscodeshift/src/Runner";
-import path from "path";
 import semver from "semver";
 import { maybeAdjustForLocalDevelopment } from "../adjustVersion";
 import { Config } from "../config";
+import { Codemod } from "./Codemod";
+import { v1_143_0_rename_derived_async_property } from "./v1_143_0_rename_derived_async_property";
+import { v1_148_0_move_codegen_files } from "./v1_148_0_move_codegen_files";
 
 export async function maybeRunTransforms(config: Config): Promise<void> {
   const confVersion = config.version;
@@ -13,15 +13,15 @@ export async function maybeRunTransforms(config: Config): Promise<void> {
     return;
   }
 
-  const todo = findPotentialTransforms(config, confVersion);
-  if (todo.length === 0) {
+  const mods = findApplyableCodemods(confVersion);
+  if (mods.length === 0) {
     // Nothing to do, but bump the version anyway
     config.version = thisVersion;
     return;
   }
 
   console.log(
-    `Your project is on Joist ${confVersion} and there are ${todo.length} codemods to help upgrade to ${thisVersion}.`,
+    `Your project is on Joist ${confVersion} and there are ${mods.length} codemods to help upgrade to ${thisVersion}.`,
   );
 
   const run = await inquirer.prompt({
@@ -37,22 +37,14 @@ export async function maybeRunTransforms(config: Config): Promise<void> {
   }
 
   // Otherwise run them
-  for await (const t of todo) {
+  for await (const mod of mods) {
     const run = await inquirer.prompt({
       name: "run",
       type: "confirm",
-      message: `Do you want to run ${t.description}?`,
+      message: `Do you want to run ${mod.description}?`,
     });
     if (!run) continue;
-
-    const transformPath = path.resolve(`${__dirname}/${t.name}.js`);
-    const paths = await fastglob(t.glob);
-    console.log(`Running ${transformPath} against ${paths.length} files`);
-    console.log(`There will be a lot of jscodeshift output after this...\n\n\n`);
-    await jscodeshift(transformPath, paths, {
-      verbose: true,
-      parser: "ts",
-    });
+    await mod.run(config);
   }
 
   console.log(`\n\n\nYou've been upgraded to ${thisVersion}!`);
@@ -62,19 +54,13 @@ export async function maybeRunTransforms(config: Config): Promise<void> {
 }
 
 export function getThisVersion(): string {
+  // Assume we're at `./node_modules/joist-codegen/build/index.js`, so `../../package.json`
+  // will be our own `joist-codegen/package.json` with the version the user has installed.
   return maybeAdjustForLocalDevelopment(require("../../package.json").version);
 }
 
-function findPotentialTransforms(config: Config, prevVersion: string): Codemod[] {
-  const transforms: Codemod[] = [
-    {
-      version: "1.143.0",
-      glob: `${config.entitiesDirectory}/*.ts`,
-      name: "v1_143_0_rename_derived_async_property",
-      description: "Rename `hasPersistedAsyncProperty` to `hasReactiveField`",
-    },
-  ];
-  return transforms.filter((t) => semver.lt(prevVersion, t.version));
+function findApplyableCodemods(prevVersion: string): Codemod[] {
+  return [v1_143_0_rename_derived_async_property, v1_148_0_move_codegen_files].filter((t) =>
+    semver.lt(prevVersion, t.version),
+  );
 }
-
-type Codemod = { glob: string; version: string; name: string; description: string };

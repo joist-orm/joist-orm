@@ -5,6 +5,7 @@ import { promises as fs } from "fs";
 import { groupBy } from "joist-utils";
 import { z } from "zod";
 import { getThisVersion } from "./codemods";
+import { getStiEntities } from "./index";
 import { fail, sortKeys, trueIfResolved } from "./utils";
 
 const jsonFormatter = createFromBuffer(getBuffer());
@@ -130,7 +131,14 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
     const fields = [...entity.primitives, ...entity.manyToOnes, ...entity.enums];
     for (const [name, config] of Object.entries(entityConfig.fields || {})) {
       if (config.ignore) continue;
-      const field = fields.find((f) => f.fieldName === name);
+      let field = fields.find((f) => f.fieldName === name);
+      // STI types might be in the base type
+      if (entity.stiDiscriminatorField) {
+        const stiEntities = getStiEntities(db.entities).get(entity.name)?.subTypes;
+        field = stiEntities
+          ?.flatMap((st) => [...st.primitives, ...st.manyToOnes, ...st.enums])
+          .find((f) => f.fieldName === name);
+      }
       if (!field) console.log(`WARNING: Found config for non-existent field ${entityName}.${name}`);
     }
 

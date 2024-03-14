@@ -1,5 +1,4 @@
-import { newAuthor } from "@src/entities/Author.factories";
-import { Book } from "@src/entities/Book";
+import { Book, newAuthor } from "@src/entities";
 import { newEntityManager } from "@src/setupDbTests";
 
 describe("EntityManager.number.find", () => {

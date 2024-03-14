@@ -15,6 +15,7 @@ export function generateEntitiesFile(
   // immediately resolve the `Publisher` symbol. Assume only 1 level of inheritance for now.
   const baseClasses = entities.filter((e) => e.baseClassName === undefined);
   const subClasses = entities.filter((e) => e.baseClassName !== undefined);
+
   return code`
     // organize-imports-ignore
 
@@ -22,24 +23,26 @@ export function generateEntitiesFile(
     // when the subclasses extend the base classes, see:
     // https://medium.com/visual-development/how-to-fix-nasty-circular-dependency-issues-once-and-for-all-in-javascript-typescript-a04c987cf0de
     ${enums.map((table) => {
-      return `export * from "./${tableToEntityName(config, table)}";`;
-    })}
-    ${baseClasses.map((meta) => {
-      return `export * from "./${meta.entity.name}Codegen";`;
-    })}
-    ${baseClasses.map((meta) => {
-      return `export * from "./${meta.entity.name}";`;
-    })}
-    ${subClasses.map((meta) => {
-      return `export * from "./${meta.entity.name}Codegen";`;
-    })}
-    ${subClasses.map((meta) => {
-      return `export * from "./${meta.entity.name}";`;
+      return `export * from "./enums/${tableToEntityName(config, table)}";`;
     })}
     ${pgEnums.map((meta) => {
-      return `export * from "./${meta.name}";`;
+      return `export * from "./enums/${meta.name}";`;
     })}
-    export * from "./factories";
-    export * from "./metadata";
+    ${baseClasses.map((meta) => {
+      return `export * from "./codegen/${meta.entity.name}Codegen";`;
+    })}
+    ${baseClasses.map((meta) => {
+      return `export * from "./${meta.entity.name}";`;
+    })}
+    ${subClasses.map((meta) => {
+      return `export * from "./codegen/${meta.entity.name}Codegen";`;
+    })}
+    ${subClasses.map((meta) => {
+      return `export * from "./${meta.entity.name}";`;
+    })}
+    ${entities.map(({ entity }) => {
+      return `export * from "./factories/new${entity.name}";`;
+    })}
+    export * from "./codegen/metadata";
   `;
 }

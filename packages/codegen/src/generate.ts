@@ -29,7 +29,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
       const hasEntityFile = files.includes(`${entityName}.ts`);
       return [
         {
-          name: `${entityName}Codegen.ts`,
+          name: `./codegen/${entityName}Codegen.ts`,
           contents: generateEntityCodegenFile(config, dbMeta, meta),
           overwrite: true,
         },
@@ -48,7 +48,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
       const enumName = tableToEntityName(config, enumData.table);
       return [
         {
-          name: `${enumName}.ts`,
+          name: `./enums/${enumName}.ts`,
           contents: generateEnumFile(config, enumData, enumName),
           overwrite: true,
         },
@@ -59,7 +59,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     .map((enumData) => {
       return [
         {
-          name: `${enumData.name}.ts`,
+          name: `./enums/${enumData.name}.ts`,
           contents: generatePgEnumFile(config, enumData),
           overwrite: true,
         },
@@ -73,7 +73,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
   const invalidEntities = entities.filter((e) => e.invalidDeferredFK);
 
   const metadataFile: CodegenFile = {
-    name: "./metadata.ts",
+    name: "./codegen/metadata.ts",
     contents: code`
     ${
       invalidEntities.length > 0

@@ -42,7 +42,7 @@ Joist's API of calling `config.addRule` is non-traditional in that validation ru
 
 This setup is intentional, because in the next section, it allows Joist to use reactive validation hints to discover when rules should run (i.e. when `Book.title` changes, re-run this specific `Author` validation rule), even if main entity (`Author`) hasn't been loaded from the database yet (or potentially the `Author` class has not even been instantiated yet).
 
-See [Issues 198](https://github.com/stephenh/joist-ts/issues/198) for tracking ideas around this.
+See [Issues 198](https://github.com/joist-orm/joist-orm/issues/198) for tracking ideas around this.
 
 :::
 

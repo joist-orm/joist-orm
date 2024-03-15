@@ -1438,7 +1438,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   ): DataLoader<K, V> {
     // If we wanted to, if not in a transaction, we could potentially do lookups against a global cache,
     // to achieve cross-request batching. Granted we'd need all DataLoaders to have caching disabled, see:
-    // https://github.com/stephenh/joist-ts/issues/629
+    // https://github.com/joist-orm/joist-orm/issues/629
     const loadersForKind = (this.#dataloaders[operation] ??= {});
     return getOrSet(loadersForKind, batchKey, () => new DataLoader(fn, opts));
   }

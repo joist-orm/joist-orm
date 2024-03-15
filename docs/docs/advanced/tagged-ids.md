@@ -122,6 +122,6 @@ If you're migrating an existing system to Joist, or just don't want to use tagge
 
 This will change the return value of `Author.id` from `"a:1"` to just `"1"`.
 
-Note the value is still a string; we've not added support for returning numbers yet, see [#368](https://github.com/stephenh/joist-ts/issues/368).
+Note the value is still a string; we've not added support for returning numbers yet, see [#368](https://github.com/joist-orm/joist-orm/issues/368).
 
 

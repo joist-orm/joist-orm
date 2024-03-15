@@ -109,6 +109,6 @@ On step 4, the `saveAuthor` request could specify "the user is saving `a:1`, but
 
 This approach would catch that User A is potentially writing over User B's changes, i.e. and fail User A's update with an `Oplock failure`.
 
-That said, this example is theoretical at this point, because Joist does not currently have a way to load an entity but then say you want the `updated_at` to be the prior/incoming `updated_at` / "as of" value. See [#204](https://github.com/stephenh/joist-ts/issues/204) for tracking that feature.
+That said, this example is theoretical at this point, because Joist does not currently have a way to load an entity but then say you want the `updated_at` to be the prior/incoming `updated_at` / "as of" value. See [#204](https://github.com/joist-orm/joist-orm/issues/204) for tracking that feature.
 
 

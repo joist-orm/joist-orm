@@ -95,6 +95,6 @@ const books = await em.loadFromQuery(Book, query);
 
 We're using Knex and `buildQuery` here because, currently, Joist's `em.find` syntax does not support raw query conditions.
 
-See [#699](https://github.com/stephenh/joist-ts/issues/699) which will add support for this.
+See [#699](https://github.com/joist-orm/joist-orm/issues/699) which will add support for this.
 
 :::

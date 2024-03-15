@@ -11,8 +11,8 @@ const config: Config = {
   baseUrl: "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
-  organizationName: "stephenh",
-  projectName: "joist-ts",
+  organizationName: "joist-orm",
+  projectName: "joist-orm",
   trailingSlash: false,
 
   presets: [
@@ -21,7 +21,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: require.resolve("./sidebars.js"),
-          editUrl: "https://github.com/stephen/joist-ts/edit/main/docs/",
+          editUrl: "https://github.com/joist-orm/joist-orm/edit/main/docs/",
         },
         blog: false,
         theme: { customCss: require.resolve("./src/css/custom.css") },
@@ -40,7 +40,7 @@ const config: Config = {
         { type: "doc", docId: "features/entity-manager", position: "left", label: "Features" },
         { type: "doc", docId: "testing/test-factories", position: "left", label: "Testing" },
         { type: "doc", docId: "faq", position: "left", label: "FAQ" },
-        { href: "https://github.com/stephenh/joist-ts", label: "GitHub", position: "right" },
+        { href: "https://github.com/joist-orm/joist-orm", label: "GitHub", position: "right" },
         { href: "https://www.youtube.com/@joist-orm", label: "YouTube", position: "right" },
         { href: "https://discord.gg/ky9VTQugqu", label: "Discord", position: "right" },
       ],
@@ -61,7 +61,7 @@ const config: Config = {
         {
           title: "Community",
           items: [
-            { label: "GitHub Discussions", href: "https://github.com/stephenh/joist-ts/discussions" },
+            { label: "GitHub Discussions", href: "https://github.com/joist-orm/joist-orm/discussions" },
             { label: "Discord", href: "https://discord.gg/ky9VTQugqu" },
           ],
         },

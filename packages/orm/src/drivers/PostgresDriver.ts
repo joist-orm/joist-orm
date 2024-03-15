@@ -98,7 +98,7 @@ export class PostgresDriver implements Driver {
     const ops = generateOps(todos);
 
     // Do INSERTs+UPDATEs first so that we avoid DELETE cascades invalidating oplocks
-    // See https://github.com/stephenh/joist-ts/issues/591
+    // See https://github.com/joist-orm/joist-orm/issues/591
     // We want 10k params maximum per batch insert
     const parameterLimit = 10_000;
     for (const insert of ops.inserts) {

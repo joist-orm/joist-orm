@@ -94,10 +94,10 @@ There are few limitations to Joist's current `jsonb` support:
 
 - Joist currently doesn't support querying / filtering against `jsonb` columns, i.e. in `EntityManager.find` clauses.
 
-  In theory this is doable, but just hasn't been implemented yet; Postgres supports quite a few operations on `jsonb` columns, so it might be somewhat involved. See [jsonb filtering support](https://github.com/stephenh/joist-ts/issues/230).
+  In theory this is doable, but just hasn't been implemented yet; Postgres supports quite a few operations on `jsonb` columns, so it might be somewhat involved. See [jsonb filtering support](https://github.com/joist-orm/joist-orm/issues/230).
 
   Instead, for now, can you use raw SQL/knex queries and use `EntityManager.loadFromQuery` to turn the low-level `authors` rows into `Author` entities.
 
 - Joist currently loads all columns for a row (i.e. `SELECT * FROM authors WHERE id IN (...)`), so if you have particularly large `jsonb` values in an entity's row, then any load of that entity will also return the `jsonb` data.
 
-  Eventually [lazy column support](https://github.com/stephenh/joist-ts/issues/178) should resolve this, and allow marking `jsonb` columns as lazy, such that they would not be automatically fetched with an entity unless explicitly requested as a load hint.
+  Eventually [lazy column support](https://github.com/joist-orm/joist-orm/issues/178) should resolve this, and allow marking `jsonb` columns as lazy, such that they would not be automatically fetched with an entity unless explicitly requested as a load hint.

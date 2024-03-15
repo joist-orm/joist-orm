@@ -118,7 +118,7 @@ Sometimes applications will choose to mock out all database calls, with the goal
 
 :::info
 
-Joist has explored an [InMemoryDriver](https://github.com/stephenh/joist-ts/blob/main/packages/orm/src/drivers/InMemoryDriver.ts), that could potentially achieve "no I/O calls during unit tests", with the idea that building this complexity into Joist itself might justify/amortize its expense, instead of complicating each application's architecture.
+Joist has explored an [InMemoryDriver](https://github.com/joist-orm/joist-orm/blob/main/packages/orm/src/drivers/InMemoryDriver.ts), that could potentially achieve "no I/O calls during unit tests", with the idea that building this complexity into Joist itself might justify/amortize its expense, instead of complicating each application's architecture.
 
 However, so far the `InMemoryDriver` is not actually 10x faster than real Postgres tests (it's maybe ~2-3x), and also does not support custom SQL queries, so for now its development is on pause. Rebooting it on top of [pg-mem](https://github.com/oguimbal/pg-mem) might be fun, to get custom SQL query support.
 

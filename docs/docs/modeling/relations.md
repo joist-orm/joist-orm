@@ -260,7 +260,7 @@ Both of these approaches have the same runtime behavior, i.e. under the hook `br
 
 Note that currently `hasOneThrough` and `hasManyThrough` load all the entities on the path between the current entity and the target(s), i.e. the above example pulls all the review's books, the book's authors, and the author's publisher into memory.
 
-We have an issue tracking optimizing this to avoid loading entities, see [Issue 524](https://github.com/stephenh/joist-ts/issues/524).
+We have an issue tracking optimizing this to avoid loading entities, see [Issue 524](https://github.com/joist-orm/joist-orm/issues/524).
 
 :::
 

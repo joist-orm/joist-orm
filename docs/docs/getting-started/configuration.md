@@ -278,7 +278,7 @@ Where:
 
    Currently, the `type` must be a [branded type](https://typescript.tv/best-practices/improve-your-type-safety-with-branded-types/) of the runtime type, b/c Joist will still instantiate the value with whatever it's schema-derived value is.
 
-   See [this discussion](https://github.com/stephenh/joist-ts/discussions/674#discussioncomment-6092907) for a future `serde` feature that would allow you to instantiate custom runtime values.
+   See [this discussion](https://github.com/joist-orm/joist-orm/discussions/674#discussioncomment-6092907) for a future `serde` feature that would allow you to instantiate custom runtime values.
 
 ### `entities.relations`
 

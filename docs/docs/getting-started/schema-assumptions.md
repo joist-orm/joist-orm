@@ -107,7 +107,7 @@ For example, if you want to strictly require `created_at` and `updated_at` on al
 
 :::tip
 
- If you have non-Joist clients that update entities tables, or use bulk/raw SQL updates, you can create triggers that mimic this functionality (but will not overwrite `INSERT`s / `UPDATE`s that do set the columns), see [joist-migration-utils](https://github.com/stephenh/joist-ts/blob/main/packages/migration-utils/src/utils.ts#L73).
+ If you have non-Joist clients that update entities tables, or use bulk/raw SQL updates, you can create triggers that mimic this functionality (but will not overwrite `INSERT`s / `UPDATE`s that do set the columns), see [joist-migration-utils](https://github.com/joist-orm/joist-orm/blob/main/packages/migration-utils/src/utils.ts#L73).
 
 (These methods use `node-pg-migrate`, but you can use whatever migration library you prefer to apply the DDL.)
 

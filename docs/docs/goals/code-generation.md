@@ -66,7 +66,7 @@ When running `npm run joist-codegen`, Joist will examine the database schema and
 
   This file is written out **only once** and is where custom business logic and validation rules can go, without it being over-written by the next time `joist-codegen` runs.
 
-- For each entity table, a factory file (`Author.factories.ts`)
+- For each entity table, a factory file (`newAuthor.ts`)
 
   This file provides tests with a succinct "one-liner" way to get a valid entity.
 

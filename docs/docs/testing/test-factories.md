@@ -3,21 +3,32 @@ title: Test Factories
 sidebar_position: 0
 ---
 
-Joist generates customizable factories for easily creating test data. The idea is very similar to generic tools like [Fishery](https://github.com/thoughtbot/fishery), but with deep/native integration with Joist.
+Joist generates customizable factories for easily creating test data, i.e. a test can easily create any entity, with all its required fields & dependencies transitively filled in, with a single line:
 
-The goal of factories are to provide tests with "valid by default" instances of entities, so that each test can focus solely on the state/behavior that is unique to its boundary case.
+```ts
+// Given an author...
+const a = newAuthor(em);
+```
+ 
+The approach is very similar to generic test factory tools like [Fishery](https://github.com/thoughtbot/fishery), but with deep/native integration with Joist.
+
+The goal of test factories are to provide tests (and only tests!) with "valid by default" instances of entities, so that each test can focus solely on the state/behavior that is unique to its boundary case.
 
 Joist also fundamentally assumes the database is reset between each test (see [Fast Database Resets](./fast-database-resets.md)), and so allowing tests to succinctly create the entire graph of entities they need is a key part of Joist's developer experience.
 
+:::tip
+
 Note that Joist's factories are **not intended to be used in production code**; they are only for quickly creating synthetic data in unit tests.
+
+:::
 
 ## Overview
 
-For example, given a `Book` entity, Joist will generate a `Book.factories.ts` file that looks like:
+For example, given a `Book` entity, Joist creates an initial `newBook.ts` file that looks like:
 
 ```typescript
 import { EntityManager, FactoryOpts, New, newTestInstance } from "joist-orm";
-import { Book } from "./entities";
+import { Book } from "../entities";
 
 export function newBook(em: EntityManager, opts: FactoryOpts<Book> = {}): New<Book> {
   return newTestInstance(em, Book, opts, {});
@@ -57,7 +68,10 @@ Factories can provide test suite-wide defaults, for example providing a default 
 
 ```typescript
 // Default Authors (only within tests) to age 40
-export function newAuthor(em: EntityManager, opts: FactoryOpts<Author> = {}): New<Author> {
+export function newAuthor(
+  em: EntityManager,
+  opts: FactoryOpts<Author> = {},
+): DeepNew<Author> {
   return newTestInstance(em, Author, opts, {
     age: 40,
   });
@@ -72,6 +86,12 @@ const a = newAuthor(em, { age: 30 });
 // Then we didn't use the default age
 expect(a.age).toEqual(30);
 ```
+
+:::tip
+
+This can be particularly helpful when you're adding a new field to an existing entity, and want all tests to have a default value for the new field, without updating every individual test.
+
+:::
 
 ### Unique Strings
 
@@ -160,7 +180,7 @@ const br = newBookReview(em, { use: a2 });
 If you have validation rules like "all `Author`s must have at least one `Book`", the `newAuthor` factory can create valid-by-default `Author`s by passing `books: [{}]`:
 
 ```typescript
-export function newAuthor(em: EntityManager, opts: FactoryOpts<Author> = {}): New<Author> {
+export function newAuthor(em: EntityManager, opts: FactoryOpts<Author> = {}): DeepNew<Author> {
   return newTestInstance(em, Author, opts, {
     // Every Author has at least one Book
     books: [{}],
@@ -204,7 +224,10 @@ Instead, Joist's factories allow you to add a custom `withSignedContract` opt to
 
 ```typescript
 // Add an optional `withSignedContract` opt
-export function newBook(em: EntityManager, opts: FactoryOpts<Book> & { withSignedContract?: boolean } = {}): New<Book> {
+export function newBook(
+  em: EntityManager,
+  opts: FactoryOpts<Book> & { withSignedContract?: boolean } = {},
+): New<Book> {
   return newTestInstance(em, Book, opts, {
     // Conditionally create the snippet when requested
     ...(opts.withSignedContract ? { author: { contracts: [{ signed: true, publisher: { type: "large" } }] } } : {}),
@@ -227,13 +250,13 @@ In general, we have two recommendations for this feature:
 
   Also, custom opts are a slippery slope to the seed data anti-pattern, where the seed data becomes so large & gnarly (because it's been tweaked over the years to support more and more disparate test cases), that the seed data becomes very brittle and can't be changed without failing a ton of tests.
 
-- Use prefixes like `with` and `and` in the names of custom opts, e.g. `withSignedContract` or `andSigned` to make it clear to readers that the opt is custom and not actually a regular database/entity field.
+- Use prefixes like `with` and `and` in the names of custom opts, e.g. `withSignedContract` or `andSigned` to make it clear to readers that the opt is custom to the factory and not actually a regular database/entity field.
 
 ### Disabling Factory Defaults
 
 Sometimes you'll have a test that wants to opt-out of the defaults provided by a factory.
 
-You can do this by using `useFactoryDefaults: false`, for example if `Author.factories.ts` establishes a default age of 40, you can ignore it by passing `useFactoryDefaults: false`:
+You can do this by using `useFactoryDefaults: false`, for example if `newAuthor.ts` establishes a default age of 40, you can ignore it by passing `useFactoryDefaults: false`:
 
 ```typescript
 // Ignore the default when creating an author
@@ -245,7 +268,7 @@ const br = newBookReview(em, {
 });
 ```
 
-Setting `useFactoryDefaults: false` ignores the defaults inside of `Author.factories.ts`, `Book.factories.ts`, etc., but it does not disable Joist's fundamental "required fields must always be set" defaults.
+Setting `useFactoryDefaults: false` ignores the defaults inside of `newAuthor.ts`, `newBook.ts`, etc., but it does not disable Joist's fundamental "required fields must always be set" defaults.
 
 If you want to disable those as well, you can use `useFactoryDefaults: "none"`:
 
@@ -266,7 +289,7 @@ For example, instead of the factory having "not actually universally required/us
 
 :::
 
-## `async` Free Assertions
+## DeepNew / `async` Free Assertions
 
 In production code, Joist relations must be accessed asynchronously, i.e. either with `load()` calls or `populate` preloads:
 
@@ -279,7 +302,9 @@ const b2 = await em.load(Book, "b:2", "author");
 const a2 = book.author.get;
 ```
 
-However, because in tests we "just know" there is not that much data, and the factories control the instantiation of entities, we can make the assumption that all relations are loaded by default. So factories return a `DeepNew` type that marks all relations as loaded:
+However, because in tests we "just know" there is a) not that much data, and b) the factories control the instantiation of all entities, we can make the assumption that all relations are loaded already.
+
+So factories return a special `DeepNew` type that marks all relations as loaded:
 
 ```typescript
 it("some test", async () => {
@@ -303,11 +328,11 @@ Also see Joist's [toMatchEntity](./entity-matcher.md), which provides another er
 
 :::
 
-## `useExisting` option
+## Singletons with the `useExisting` option
 
-Sometimes with factories, even though a test has already called `newSomeEntity` to create a new `SomeEntity` be created, within the factory code, you realize that, due to the business logic/constraints of your domain model, the entity being requested actually already exists.
+Sometimes when a test has just called `newAuthor`, we want the factory to realize that, due to unique constraints/business logic specific to `Author`, that the appropriate `Author` instance the test is asking for already exists.
 
-An example is schemas with "enum-like" entities. Enum-like entities are user-added rows in the database, but still have enum-like behavior like "there should be only one of these 'types' for the given (name, parent, etc.) set of values", potentially backed by database-level unique constrains.
+An example is schemas with "enum-like" or "singleton" entities. Enum-like entities are user-added rows in the database (they are not a true `enum`), but still have enum-like behavior like "there should be only one of these entities for the given (name, parent, etc.) set of values", potentially backed by database-level unique constrains.
 
 An example might be a `PublisherType` entity that is effectively unique on a `name` column, where the desired behavior is:
 
@@ -322,7 +347,7 @@ newPublisher(em, { type: { name: "large" } });
 
 In these situations, you effectively want your factory to "scan existing entities" and look for an entity that matches the test's requested opts.
 
-To do this, you can use the `useExisting` flag on `newTestInstance`, which is a lambda that returns "does the request opts match this existing PublisherType"?:
+To do this, you can use the `useExisting` flag on `newTestInstance`, which is a lambda that returns "does the test's requested opts match this existing `PublisherType`"?:
 
 ```ts
 export function newPublisherType(

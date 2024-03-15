@@ -1,9 +1,38 @@
-import { cannotBeUpdated, Collection, CustomCollection, getEm, isLoaded, Loaded } from "joist-orm";
-import { publisherConfig as config, Image, ImageType, ImageTypes, PublisherCodegen, PublisherType } from "./entities";
+import {
+  cannotBeUpdated,
+  Collection,
+  CustomCollection,
+  getEm,
+  hasReactiveQueryField,
+  isLoaded,
+  Loaded,
+  ReactiveField,
+} from "joist-orm";
+import {
+  BookReview,
+  publisherConfig as config,
+  Image,
+  ImageType,
+  ImageTypes,
+  PublisherCodegen,
+  PublisherType,
+} from "./entities";
 
 const allImagesHint = { images: [], authors: { image: [], books: "image" } } as const;
 
 export abstract class Publisher extends PublisherCodegen {
+  /** Example of a reactive query. */
+  readonly numberOfBookReviews: ReactiveField<Publisher, number> = hasReactiveQueryField(
+    "numberOfBookReviews",
+    // this hint will recalc + be available on `p`
+    "id",
+    // this hint will recalc + not be available on `p`
+    { authors: { books: "reviews" } },
+    // This is N+1 safe
+    (p) => p.em.findCount(BookReview, { book: { author: { publisher: p.id } } }),
+  );
+
+  // Example of a custom collection that can add/remove
   readonly allImages: Collection<Publisher, Image> = new CustomCollection(this, {
     load: (entity, opts) => entity.populate({ hint: allImagesHint, ...opts }),
     get: (entity) => {

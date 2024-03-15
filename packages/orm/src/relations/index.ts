@@ -14,7 +14,6 @@ export {
   isLoadedOneToOneReference,
   isOneToOneReference,
 } from "./OneToOneReference";
-export { ReactiveField, hasReactiveField, isReactiveField } from "./ReactiveField";
 export {
   PersistedAsyncReference,
   PersistedAsyncReferenceImpl,
@@ -26,6 +25,8 @@ export {
   hasOnePolymorphic,
   isPolymorphicReference,
 } from "./PolymorphicReference";
+export { ReactiveField, hasReactiveField, isReactiveField } from "./ReactiveField";
+export { hasReactiveQueryField, isReactiveQueryField } from "./ReactiveQueryField";
 export { LoadedReference, Reference, isLoadedReference, isReference } from "./Reference";
 export { Relation, isRelation } from "./Relation";
 export { AsyncMethod, LoadedMethod, hasAsyncMethod } from "./hasAsyncMethod";

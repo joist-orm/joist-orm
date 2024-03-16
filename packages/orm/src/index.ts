@@ -1,13 +1,13 @@
 import { getOrmField } from "./BaseEntity";
 import { Entity, EntityOrmField } from "./Entity";
 import { EntityConstructor, EntityManager, MaybeAbstractEntityConstructor, OptsOf, TaggedId } from "./EntityManager";
-import { EntityMetadata, getBaseAndSelfMetas, getBaseMeta, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getBaseMeta, getMetadata } from "./EntityMetadata";
 import { setBooted } from "./config";
 import { setSyncDefaults } from "./defaults";
 import { getFakeInstance, getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { isAllSqlPaths } from "./loadLens";
-import { convertToLoadHint, reverseReactiveHint } from "./reactiveHints";
+import { reverseReactiveHint } from "./reactiveHints";
 import { PersistedAsyncReferenceImpl, Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
@@ -324,6 +324,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
           const reversals = reverseReactiveHint(meta.cstr, meta.cstr, ap.reactiveHint);
           reversals.forEach(({ entity, path, fields }) => {
             getMetadata(entity).config.__data.reactiveDerivedValues.push({
+              kind: ap instanceof ReactiveQueryFieldImpl ? "query" : "field",
               cstr: meta.cstr,
               name: field.fieldName,
               path,

@@ -4,7 +4,7 @@ import { getMetadata } from "../EntityMetadata";
 import { getField, isFieldSet, setField } from "../fields";
 import { ReactiveField, deepNormalizeHint, isLoaded } from "../index";
 import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
-import { mergeNormalizedHints, tryResolve } from "../utils";
+import { mergeNormalizedHints } from "../utils";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
 import { AsyncPropertyT } from "./hasAsyncProperty";
 
@@ -64,24 +64,24 @@ export class ReactiveQueryFieldImpl<T extends Entity, H1 extends ReactiveHint<T>
   }
 
   load(opts?: { forceReload?: boolean }): Promise<V> {
-    if (!this.isSet || opts?.forceReload) {
-      return (this.#loadPromise ??= this.entity.em
-        .populate(this.entity, { hint: this.loadHint } as any)
-        .then(() => this.fn(this.entity as Reacted<T, H1>))
-        .then((newValue) => {
-          setField(this.entity, this.fieldName, newValue);
-          this.#loadPromise = undefined;
-          this.#loaded = true;
-          return newValue;
-        })
-        .catch((e) => {
-          // If we blow up calling `this.fn` i.e. due to a NoIdError, we want to make
-          // sure that the next `.load` call tries again.
-          this.#loadPromise = undefined;
-          throw e;
-        }));
-    }
-    return tryResolve(() => this.get);
+    // if (!this.isSet || opts?.forceReload) {
+    return (this.#loadPromise ??= this.entity.em
+      .populate(this.entity, { hint: this.loadHint } as any)
+      .then(() => this.fn(this.entity as Reacted<T, H1>))
+      .then((newValue) => {
+        setField(this.entity, this.fieldName, newValue);
+        this.#loadPromise = undefined;
+        this.#loaded = true;
+        return newValue;
+      })
+      .catch((e) => {
+        // If we blow up calling `this.fn` i.e. due to a NoIdError, we want to make
+        // sure that the next `.load` call tries again.
+        this.#loadPromise = undefined;
+        throw e;
+      }));
+    // }
+    // return tryResolve(() => this.get);
   }
 
   /** Returns the previously-calculated value. */

@@ -5,6 +5,7 @@ import { NoIdError } from "./index";
 import { followReverseHint } from "./reactiveHints";
 import { Relation } from "./relations";
 import { AbstractPropertyImpl } from "./relations/AbstractPropertyImpl";
+import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
 
 /**
  * Manages the reactivity of tracking which source fields have changed and finding/recalculating
@@ -119,13 +120,17 @@ export class ReactionsManager {
    *
    * We also do this in a loop to handle reactive fields depending on other reactive fields.
    */
-  async recalcPendingDerivedValues() {
+  async recalcPendingDerivedValues(kind: "reactiveFields" | "reactiveQueries") {
     let scanPending = true;
     let loops = 0;
     while (scanPending) {
       scanPending = false;
       const relations = await Promise.all(
         [...this.pendingFieldReactions.entries()].map(async ([rf, pending]) => {
+          // Skip reactive queries until post-flush
+          if (kind === "reactiveFields" && rf.kind === "query") return [];
+          if (kind === "reactiveQueries" && rf.kind === "field") return [];
+
           // Copy pending and clear it
           const todo = [...pending.todo];
           pending.todo.clear();

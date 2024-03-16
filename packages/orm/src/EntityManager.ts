@@ -1102,14 +1102,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       // that would NPE their logic anyway).
       await this.cascadeDeletes();
       // Recalc before we run hooks, so the hooks will see the latest calculated values.
-      await this.#rm.recalcPendingDerivedValues();
+      await this.#rm.recalcPendingDerivedValues("reactiveFields");
     });
 
     const hooksInvoked: Set<Entity> = new Set();
     let pendingEntities = this.entities.filter((e) => e.isPendingFlush);
     const now = getNow();
 
-    try {
+    const runHooksOnPendingEntities = async () => {
       while (pendingEntities.length > 0) {
         // Run hooks in a series of loops until things "settle down"
         await this.#fl.allowWrites(async () => {
@@ -1129,7 +1129,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           // The hooks could have deleted this-loop or prior-loop entities, so re-cascade again.
           await this.cascadeDeletes();
           // The hooks could have changed fields, so recalc again.
-          await this.#rm.recalcPendingDerivedValues();
+          await this.#rm.recalcPendingDerivedValues("reactiveFields");
 
           if (this.#rm.hasFieldsPendingAssignedIds) {
             await this.assignNewIds();
@@ -1140,12 +1140,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           pendingEntities = this.entities.filter((e) => e.isPendingFlush && !hooksInvoked.has(e));
         });
       }
+    };
 
+    // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
+    await runHooksOnPendingEntities();
+
+    try {
       // Recreate todos now that we've run hooks and recalculated fields so know
       // the full set of entities that will be INSERT/UPDATE/DELETE-d in the database.
-      const entitiesToFlush = [...hooksInvoked];
-      const entityTodos = createTodos(entitiesToFlush);
-      const joinRowTodos = combineJoinRows(this.#joinRows);
+      let entitiesToFlush = [...hooksInvoked];
+      let entityTodos = createTodos(entitiesToFlush);
+      let joinRowTodos = combineJoinRows(this.#joinRows);
 
       if (!skipValidation) {
         try {
@@ -1167,9 +1172,30 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         // serialization anomalies. (Although should we? Maybe we should run the flush hooks
         // in this same transaction just as a matter of principle / safest default.)
         await this.driver.transaction(this, async () => {
-          await this.driver.flushEntities(this, entityTodos);
-          await this.driver.flushJoinTables(this, joinRowTodos);
-          await beforeCommit(this.ctx, entityTodos);
+          do {
+            await this.driver.flushEntities(this, entityTodos);
+            await this.driver.flushJoinTables(this, joinRowTodos);
+            await beforeCommit(this.ctx, entityTodos);
+
+            // Update the `__orm` to reflect the new state
+            for (const e of entitiesToFlush) {
+              if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
+              getOrmField(e).resetAfterFlushed();
+            }
+
+            // Now that we've flushed changes, recalc queries
+            await this.#fl.allowWrites(() => this.#rm.recalcPendingDerivedValues("reactiveQueries"));
+            // See if RQFs changed anything
+            pendingEntities = this.entities.filter((e) => e.isPendingFlush);
+            if (pendingEntities.length > 0) {
+              hooksInvoked.clear();
+              await runHooksOnPendingEntities();
+              entitiesToFlush = [...hooksInvoked];
+              entityTodos = createTodos(entitiesToFlush);
+            } else {
+              entityTodos = {};
+            }
+          } while (Object.keys(entityTodos).length > 0);
         });
 
         // TODO: This is really "after flush" if we're being called from a transaction that
@@ -1408,8 +1434,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         }),
     );
 
-    // `.load()` recalculated the immediate relations, go ahead and recalc any downstream fields
-    await this.#rm.recalcPendingDerivedValues();
+    // `.load()` recalculated the immediate relations, go ahead and recalc any downstream fields.
+    // We'll still defer ReactiveQueryFields to the em.flush loop.
+    await this.#rm.recalcPendingDerivedValues("reactiveFields");
   }
 
   public beforeTransaction(fn: HookFn) {

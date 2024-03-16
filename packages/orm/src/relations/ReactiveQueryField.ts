@@ -1,6 +1,5 @@
 import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
-import { getEmInternalApi } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { getField, isFieldSet, setField } from "../fields";
 import { ReactiveField, deepNormalizeHint, isLoaded } from "../index";
@@ -65,33 +64,32 @@ export class ReactiveQueryFieldImpl<T extends Entity, H1 extends ReactiveHint<T>
   }
 
   load(opts?: { forceReload?: boolean }): Promise<V> {
-    if (!this.isLoaded || opts?.forceReload) {
-      return (this.#loadPromise ??= this.entity.em.populate(this.entity, { hint: this.loadHint } as any).then(() => {
-        this.#loadPromise = undefined;
-        this.#loaded = true;
-        // Go through `this.get` so that `setField` is called to set our latest value
-        return this.get;
-      }));
+    if (!this.isSet || opts?.forceReload) {
+      return (this.#loadPromise ??= this.entity.em
+        .populate(this.entity, { hint: this.loadHint } as any)
+        .then(() => this.fn(this.entity as Reacted<T, H1>))
+        .then((newValue) => {
+          setField(this.entity, this.fieldName, newValue);
+          this.#loadPromise = undefined;
+          this.#loaded = true;
+          return newValue;
+        })
+        .catch((e) => {
+          // If we blow up calling `this.fn` i.e. due to a NoIdError, we want to make
+          // sure that the next `.load` call tries again.
+          this.#loadPromise = undefined;
+          throw e;
+        }));
     }
     return tryResolve(() => this.get);
   }
 
-  /** Returns either the latest calculated value (if loaded) or the previously-calculated value (if not loaded). */
+  /** Returns the previously-calculated value. */
   get get(): V {
-    const { fn } = this;
-    // Check #loaded to make sure we don't revert to stale values if our subgraph has been changed since
-    // the last `.load()`. It's better to fail and tell the user.
-    if (this.#loaded || this.isLoaded) {
-      const newValue = fn(this.entity as Reacted<T, H1>);
-      // It's cheap to set this every time we're called, i.e. even if it's not the
-      // official "being called during em.flush" update (...unless we're accessing it
-      // during the validate phase of `em.flush`, then skip it to avoid tripping up
-      // the "cannot change entities during flush" logic.)
-      if (!getEmInternalApi(this.entity.em).isValidating) {
-        setField(this.entity, this.fieldName, newValue);
-      }
-      return newValue as any;
-    } else if (this.isSet) {
+    // Regular ReactiveFields repeatedly call their `fn` lambda to calculate the value, to ensure
+    // they always return the latest/correct value, but because ReactiveQueryFields are fundamentally
+    // calculated from DB queries, we can only return the previously-calculated value, if set.
+    if (this.isSet) {
       return this.fieldValue;
     } else {
       throw new Error(`${this.fieldName} has not been derived yet`);

@@ -163,6 +163,7 @@ export function reverseReactiveHint<T extends Entity>(
             return { entity, fields, path: [...path, otherFieldName] };
           });
         }
+        case "primaryKey":
         case "primitive":
         case "enum":
           if (!isReadOnly) {
@@ -263,11 +264,12 @@ export function convertToLoadHint<T extends Entity>(meta: EntityMetadata, hint: 
           mergeNormalizedHints(loadHint, { [key]: convertToLoadHint(field.otherMetadata(), subHint) });
           break;
         case "primitive":
+        case "enum":
           if (field.derived === "async") {
             mergeNormalizedHints(loadHint, { [key]: {} });
           }
           continue;
-        case "enum":
+        case "primaryKey":
           continue;
         default:
           throw new Error(`Invalid reactive hint ${meta.tableName} ${JSON.stringify(hint)}`);

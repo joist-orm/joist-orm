@@ -47,6 +47,7 @@ export function up(b: MigrationBuilder): void {
     latitude: { type: "numeric(9, 6)", notNull: false },
     longitude: { type: "numeric(9, 6)", notNull: false },
     huge_number: { type: "numeric(17, 0)", notNull: false },
+    number_of_book_reviews: { type: "integer" },
     // for testing table-per-class o2ms
     group_id: foreignKey("publisher_groups", { notNull: false }),
   });
@@ -85,7 +86,7 @@ export function up(b: MigrationBuilder): void {
     // for testing async derived values
     number_of_books: { type: "integer", notNull: true },
     // for testing async derived enums
-    range_of_books: foreignKey("book_range", { notNull: false}),
+    range_of_books: foreignKey("book_range", { notNull: false }),
     // for testing async derived value via a polymorphic reference
     book_comments: { type: "text", notNull: false },
     // for testing nullable booleans

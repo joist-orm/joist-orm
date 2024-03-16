@@ -8,9 +8,10 @@ import { getFakeInstance, getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { isAllSqlPaths } from "./loadLens";
 import { convertToLoadHint, reverseReactiveHint } from "./reactiveHints";
-import { Reference } from "./relations";
+import { PersistedAsyncReferenceImpl, Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
+import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
 import { isCannotBeUpdatedRule } from "./rules";
 import { fail } from "./utils";
 
@@ -302,7 +303,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
       }
     });
 
-    // Look for reactive async derived values rules to reverse
+    // Look for ReactiveFields to reverse
     Object.values(meta.fields)
       .filter(
         (f) =>
@@ -311,17 +312,15 @@ export function configureMetadata(metas: EntityMetadata[]): void {
           (f.kind === "enum" && f.derived === "async"),
       )
       .forEach((field) => {
-        const ap = (getFakeInstance(meta) as any)[field.fieldName] as ReactiveFieldImpl<any, any, any> | undefined;
+        const ap = (getFakeInstance(meta) as any)[field.fieldName] as
+          | ReactiveFieldImpl<any, any, any>
+          | ReactiveQueryFieldImpl<any, any, any, any>
+          | PersistedAsyncReferenceImpl<any, any, any, any>
+          | undefined;
         // We might have an async property configured in joist-config.json that has not yet
         // been made a `hasReactiveField` in the entity file, so avoid continuing
         // if we don't actually have a property/loadHint available.
         if (ap?.reactiveHint) {
-          // Cache the load hint so that we don't constantly re-calc it on instantiation.
-          const loadHint = convertToLoadHint(meta, ap.reactiveHint);
-          getBaseAndSelfMetas(meta).forEach(
-            (m) => (m.config.__data.cachedReactiveLoadHints[field.fieldName] = loadHint),
-          );
-
           const reversals = reverseReactiveHint(meta.cstr, meta.cstr, ap.reactiveHint);
           reversals.forEach(({ entity, path, fields }) => {
             getMetadata(entity).config.__data.reactiveDerivedValues.push({

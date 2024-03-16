@@ -5,7 +5,6 @@ import { NoIdError } from "./index";
 import { followReverseHint } from "./reactiveHints";
 import { Relation } from "./relations";
 import { AbstractPropertyImpl } from "./relations/AbstractPropertyImpl";
-import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
 
 /**
  * Manages the reactivity of tracking which source fields have changed and finding/recalculating
@@ -111,6 +110,10 @@ export class ReactionsManager {
    */
   isMaybePendingRecalc(entity: Entity, fieldName: string): boolean {
     return this.getDirtyFields(getMetadata(entity)).has(fieldName);
+  }
+
+  hasPendingReactiveQueries(): boolean {
+    return [...this.pendingFieldReactions.keys()].some((rf) => rf.kind === "query");
   }
 
   /**

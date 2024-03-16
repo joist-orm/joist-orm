@@ -1177,21 +1177,26 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
             await this.driver.flushJoinTables(this, joinRowTodos);
             await beforeCommit(this.ctx, entityTodos);
 
-            // Update the `__orm` to reflect the new state
-            for (const e of entitiesToFlush) {
-              if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
-              getOrmField(e).resetAfterFlushed();
-            }
-
-            // Now that we've flushed changes, recalc queries
-            await this.#fl.allowWrites(() => this.#rm.recalcPendingDerivedValues("reactiveQueries"));
-            // See if RQFs changed anything
-            pendingEntities = this.entities.filter((e) => e.isPendingFlush);
-            if (pendingEntities.length > 0) {
-              hooksInvoked.clear();
-              await runHooksOnPendingEntities();
-              entitiesToFlush = [...hooksInvoked];
-              entityTodos = createTodos(entitiesToFlush);
+            // Now that we've flushed, look for ReactiveQueries that need to be recalculated
+            if (this.#rm.hasPendingReactiveQueries()) {
+              // Reset dirty so that we don't re-flush anything we just performed
+              for (const e of entitiesToFlush) {
+                if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
+                getOrmField(e).resetAfterFlushed();
+              }
+              await this.#fl.allowWrites(() => this.#rm.recalcPendingDerivedValues("reactiveQueries"));
+              // See if any RQFs actually changed...
+              pendingEntities = this.entities.filter((e) => e.isPendingFlush);
+              if (pendingEntities.length > 0) {
+                // If they did, run the hooks on them
+                hooksInvoked.clear();
+                await runHooksOnPendingEntities();
+                entitiesToFlush = [...hooksInvoked];
+                entityTodos = createTodos(entitiesToFlush);
+                // Need to ...re-validate...
+              } else {
+                entityTodos = {};
+              }
             } else {
               entityTodos = {};
             }

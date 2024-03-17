@@ -140,8 +140,7 @@ describe("Inheritance", () => {
     await em.flush();
     expect(sp.beforeFlushRan).toBe(true);
     expect(sp.beforeCreateRan).toBe(true);
-    // This runs now because of the 2nd ReactiveQueryField flush...
-    expect(sp.beforeUpdateRan).toBe(true);
+    expect(sp.beforeUpdateRan).toBe(false);
     expect(sp.beforeDeleteRan).toBe(false);
     expect(sp.afterValidationRan).toBe(true);
     expect(sp.afterCommitRan).toBe(true);

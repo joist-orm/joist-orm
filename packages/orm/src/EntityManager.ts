@@ -1106,11 +1106,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     });
 
     const createdThenDeleted: Set<Entity> = new Set();
+    const hooksInvoked: Set<Entity> = new Set();
     const now = getNow();
 
-    const runHooksOnPendingEntities = async () => {
-      const hooksInvoked: Set<Entity> = new Set();
-      let pendingEntities = this.entities.filter((e) => e.isPendingFlush);
+    const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
+      // Even if we're re-flushing an entity for a ReactiveQueries, don't run hooks on it twice
+      let pendingEntities = this.entities.filter((e) => e.isPendingFlush && !hooksInvoked.has(e));
       while (pendingEntities.length > 0) {
         // Run hooks in a series of loops until things "settle down"
         await this.#fl.allowWrites(async () => {
@@ -1143,11 +1144,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       }
       // We might have invoked hooks that immediately deleted an entity (weird but allowed); if so,
       // filter it out so that we don't flush it, but keep track for later fixing up it's `#orm.deleted` field.
-      return [...hooksInvoked].filter((e) => {
-        const createThenDelete = e.isDeletedEntity && e.isNewEntity;
-        if (createThenDelete) createdThenDeleted.add(e);
-        return !createThenDelete;
-      });
+      return this.entities
+        .filter((e) => e.isPendingFlush)
+        .filter((e) => {
+          const createThenDelete = e.isDeletedEntity && e.isNewEntity;
+          if (createThenDelete) createdThenDeleted.add(e);
+          return !createThenDelete;
+        });
     };
 
     try {

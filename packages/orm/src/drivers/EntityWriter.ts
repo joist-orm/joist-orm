@@ -166,7 +166,14 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     columns.push({
       columnName: "__original_updated_at",
       dbType: "timestamptz",
-      dbValue: (data, originalData) => originalData[updatedAt],
+      dbValue: (data, originalData) => {
+        // We use `??` here in case we're updating an entity twice, i.e.:
+        // 1. Load the entity w/updatedAt=jan1
+        // 2. We mutate and em.flush, set updatedAt=jan2, originalAt=jan1
+        // 3. the `UPDATE` succeeds and so the db value is now jan2
+        // 4. we issue another `UPDATE` without having bumped updatedAt
+        return originalData[updatedAt] ?? data[updatedAt];
+      },
     });
   }
 

@@ -1182,7 +1182,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
               // Reset all flushed entities to we only flush net-new changes
               for (const e of entitiesToFlush) {
                 if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
-                getOrmField(e).resetAfterFlushed();
+                getOrmField(e).resetAfterFlushed(true);
               }
               // Actually do the recalc
               await this.#fl.allowWrites(() => this.#rm.recalcPendingDerivedValues("reactiveQueries"));

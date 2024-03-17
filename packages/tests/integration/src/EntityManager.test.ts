@@ -1227,6 +1227,7 @@ describe("EntityManager", () => {
       latitude: 12,
       longitude: 14,
       allAuthorNames: "1",
+      numberOfBookReviews: null,
       group: null,
       hugeNumber: null,
       size: null,

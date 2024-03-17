@@ -1,5 +1,5 @@
 import { getOrmField } from "./BaseEntity";
-import { Entity, EntityOrmField } from "./Entity";
+import { Entity } from "./Entity";
 import { EntityConstructor, EntityManager, MaybeAbstractEntityConstructor, OptsOf, TaggedId } from "./EntityManager";
 import { EntityMetadata, getBaseMeta, getMetadata } from "./EntityMetadata";
 import { setBooted } from "./config";
@@ -210,8 +210,8 @@ export function setOpts<T extends Entity>(
   }
 }
 
-export function ensureNotDeleted(entity: Entity, ignore?: EntityOrmField["deleted"]): void {
-  if (entity.isDeletedEntity && (ignore === undefined || getOrmField(entity).deleted !== ignore)) {
+export function ensureNotDeleted(entity: Entity, ignore?: "pending"): void {
+  if (entity.isDeletedEntity && (ignore === undefined || getOrmField(entity).deleted === "deleted")) {
     fail(`${entity} is marked as deleted`);
   }
 }

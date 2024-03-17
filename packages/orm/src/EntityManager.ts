@@ -1141,8 +1141,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           pendingEntities = this.entities.filter((e) => e.isPendingFlush && !hooksInvoked.has(e));
         });
       }
-      // This is pretty ugly, but `allEntities` will have created-but-immediately-deleted entities
-      // in it, and we want to avoid calling afterCommit
+      // We might have invoked hooks that immediately deleted an entity (weird but allowed); if so,
+      // filter it out so that we don't flush it, but keep track for later fixing up it's `#orm.deleted` field.
       return [...hooksInvoked].filter((e) => {
         const createThenDelete = e.isDeletedEntity && e.isNewEntity;
         if (createThenDelete) createdThenDeleted.add(e);

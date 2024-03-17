@@ -1105,6 +1105,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       await this.#rm.recalcPendingDerivedValues("reactiveFields");
     });
 
+    const createdThenDeleted: Set<Entity> = new Set();
     const now = getNow();
 
     const runHooksOnPendingEntities = async () => {
@@ -1142,7 +1143,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       }
       // This is pretty ugly, but `allEntities` will have created-but-immediately-deleted entities
       // in it, and we want to avoid calling afterCommit
-      return [...hooksInvoked].filter((e) => !(e.isDeletedEntity && e.isNewEntity));
+      return [...hooksInvoked].filter((e) => {
+        const createThenDelete = e.isDeletedEntity && e.isNewEntity;
+        if (createThenDelete) createdThenDeleted.add(e);
+        return !createThenDelete;
+      });
     };
 
     try {
@@ -1222,6 +1227,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         this.#dataloaders = {};
         this.#rm.clear();
       }
+
+      // Fixup the `deleted` field on entities that were created then immediately deleted
+      for (const e of createdThenDeleted) getOrmField(e).deleted = "deleted";
 
       return [...allFlushedEntities];
     } catch (e) {

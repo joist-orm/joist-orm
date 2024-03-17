@@ -1209,7 +1209,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 
         // TODO: This is really "after flush" if we're being called from a transaction that
         // is going to make multiple `em.flush()` calls?
-        await afterCommit(this.ctx, allEntities);
+        await afterCommit(
+          this.ctx,
+          // This is pretty ugly, but `allEntities` will have created-but-immediately-deleted entities
+          // in it, and we want to avoid calling afterCommit
+          allEntities.filter((e) => !(e.isDeletedEntity && (e.isNewEntity || getOrmField(e).wasNew))),
+        );
 
         // Update the `__orm` to reflect the new state
         for (const e of allEntities) {

@@ -233,6 +233,8 @@ describe("EntityManager", () => {
     // And the sequence value did not get ticked
     const { rows } = await knex.raw("SELECT nextval('authors_id_seq')");
     expect(rows[0].nextval).toBe("1");
+    // And we didn't run afterCommit b/c it never touched the db
+    expect(a.transientFields.afterCommitRan).toBe(false);
   });
 
   it("createdAt / updatedAt are always non-null", async () => {

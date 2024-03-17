@@ -1179,20 +1179,25 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 
             // Now that we've flushed, look for ReactiveQueries that need to be recalculated
             if (this.#rm.hasPendingReactiveQueries()) {
-              // Reset dirty so that we don't re-flush anything we just performed
+              // Reset all flushed entities to we only flush net-new changes
               for (const e of entitiesToFlush) {
                 if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
                 getOrmField(e).resetAfterFlushed();
               }
+              // Actually do the recalc
               await this.#fl.allowWrites(() => this.#rm.recalcPendingDerivedValues("reactiveQueries"));
               // See if any RQFs actually changed...
               pendingEntities = this.entities.filter((e) => e.isPendingFlush);
               if (pendingEntities.length > 0) {
-                // If they did, run the hooks on them
+                // If they did, run the hooks on them.
+                // This is contentious, because it means an entity that was already-flushed, and then also changed
+                // by a ReactiveQueryField, and so flushed again, will have it's hooked invoked twice during
+                // a single `em.flush`.
                 hooksInvoked.clear();
                 await runHooksOnPendingEntities();
                 entitiesToFlush = [...hooksInvoked];
                 entityTodos = createTodos(entitiesToFlush);
+                // ...what about joinRowTodos?...
                 // Need to ...re-validate...
               } else {
                 entityTodos = {};

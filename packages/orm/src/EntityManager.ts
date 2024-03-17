@@ -1149,7 +1149,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       const allFlushedEntities: Set<Entity> = new Set();
 
       // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
-      const entitiesToFlush = await runHooksOnPendingEntities();
+      let entitiesToFlush = await runHooksOnPendingEntities();
       for (const e of entitiesToFlush) allFlushedEntities.add(e);
 
       // Recreate todos now that we've run hooks and recalculated fields so know
@@ -1189,14 +1189,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
               }
               // Actually do the recalc
               await this.#fl.allowWrites(() => this.#rm.recalcPendingDerivedValues("reactiveQueries"));
-              // See if any RQFs actually changed...
+              // See if any RQFs actually changed any entities.
               // If they did, run the hooks on them.
               // This is contentious, because it means an entity that was already-flushed, and then also changed
               // by a ReactiveQueryField, and so flushed again, will have it's hooked invoked twice during
               // a single `em.flush`.
-              const nextSet = await runHooksOnPendingEntities();
-              for (const e of nextSet) allFlushedEntities.add(e);
-              entityTodos = createTodos(nextSet);
+              entitiesToFlush = await runHooksOnPendingEntities();
+              for (const e of entitiesToFlush) allFlushedEntities.add(e);
+              entityTodos = createTodos(entitiesToFlush);
               // ...what about joinRowTodos?...
               // Need to ...re-validate...
             } else {

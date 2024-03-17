@@ -121,6 +121,7 @@ export async function insertPublisher(row: {
   longitude?: string | number;
   latitude?: string | number;
   huge_number?: string | number;
+  number_of_book_reviews?: number;
   size_id?: number;
   group_id?: number;
   city?: string;

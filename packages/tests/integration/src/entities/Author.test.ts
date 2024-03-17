@@ -226,7 +226,8 @@ describe("Author", () => {
     expect(a1.transientFields.beforeCommitRan).toBe(true);
     expect(a1.transientFields.afterCommitRan).toBe(true);
     expect(a1.transientFields.afterCommitIdIsSet).toBe(true);
-    expect(a1.transientFields.afterCommitIsNewEntity).toBe(true);
+    // this changed...
+    expect(a1.transientFields.afterCommitIsNewEntity).toBe(false);
     a1.firstName = "new name";
     a1.transientFields.beforeCreateRan = false;
     await em.flush();

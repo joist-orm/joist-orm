@@ -1140,14 +1140,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           pendingEntities = this.entities.filter((e) => e.isPendingFlush && !hooksInvoked.has(e));
         });
       }
-      return [...hooksInvoked];
+      // This is pretty ugly, but `allEntities` will have created-but-immediately-deleted entities
+      // in it, and we want to avoid calling afterCommit
+      return [...hooksInvoked].filter((e) => !(e.isDeletedEntity && e.isNewEntity));
     };
 
     try {
       const allFlushedEntities: Set<Entity> = new Set();
 
       // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
-      let entitiesToFlush = await runHooksOnPendingEntities();
+      const entitiesToFlush = await runHooksOnPendingEntities();
       for (const e of entitiesToFlush) allFlushedEntities.add(e);
 
       // Recreate todos now that we've run hooks and recalculated fields so know
@@ -1178,8 +1180,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           do {
             await this.driver.flushEntities(this, entityTodos);
             await this.driver.flushJoinTables(this, joinRowTodos);
-            await beforeCommit(this.ctx, entityTodos);
-
             // Now that we've flushed, look for ReactiveQueries that need to be recalculated
             if (this.#rm.hasPendingReactiveQueries()) {
               // Reset all flushed entities to we only flush net-new changes
@@ -1194,30 +1194,26 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
               // This is contentious, because it means an entity that was already-flushed, and then also changed
               // by a ReactiveQueryField, and so flushed again, will have it's hooked invoked twice during
               // a single `em.flush`.
-              entitiesToFlush = await runHooksOnPendingEntities();
-              for (const e of entitiesToFlush) allFlushedEntities.add(e);
-              entityTodos = createTodos(entitiesToFlush);
+              const nextSet = await runHooksOnPendingEntities();
+              for (const e of nextSet) allFlushedEntities.add(e);
+              entityTodos = createTodos(nextSet);
               // ...what about joinRowTodos?...
               // Need to ...re-validate...
             } else {
+              // Exit the loop
               entityTodos = {};
             }
           } while (Object.keys(entityTodos).length > 0);
+          // Run `beforeCommit once right before COMMIT
+          await beforeCommit(this.ctx, allFlushedEntities);
         });
-
-        const allEntities = [...allFlushedEntities];
 
         // TODO: This is really "after flush" if we're being called from a transaction that
         // is going to make multiple `em.flush()` calls?
-        await afterCommit(
-          this.ctx,
-          // This is pretty ugly, but `allEntities` will have created-but-immediately-deleted entities
-          // in it, and we want to avoid calling afterCommit
-          allEntities.filter((e) => !(e.isDeletedEntity && (e.isNewEntity || getOrmField(e).wasNew))),
-        );
+        await afterCommit(this.ctx, allFlushedEntities);
 
         // Update the `__orm` to reflect the new state
-        for (const e of allEntities) {
+        for (const e of allFlushedEntities) {
           if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
           getOrmField(e).resetAfterFlushed();
         }
@@ -1736,12 +1732,12 @@ function afterValidation(ctx: unknown, todos: Record<string, Todo>): Promise<unk
   return runHookOnTodos(ctx, "afterValidation", todos, ["inserts", "updates"]);
 }
 
-function beforeCommit(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHookOnTodos(ctx, "beforeCommit", todos, ["inserts", "updates", "deletes"]);
+function beforeCommit(ctx: unknown, entities: Set<EntityW>): Promise<unknown> {
+  return runHook(ctx, "beforeCommit", [...entities]);
 }
 
-function afterCommit(ctx: unknown, entities: EntityW[]): Promise<unknown> {
-  return runHook(ctx, "afterCommit", entities);
+function afterCommit(ctx: unknown, entities: Set<EntityW>): Promise<unknown> {
+  return runHook(ctx, "afterCommit", [...entities]);
 }
 
 function coerceError(entity: Entity, maybeError: ValidationRuleResult<any>): ValidationError[] {

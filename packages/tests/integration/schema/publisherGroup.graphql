@@ -9,11 +9,13 @@ type PublisherGroup {
   updatedAt: DateTime!
   publishers: [Publisher!]!
   critics: [Critic!]!
+  numberOfBookReviews: Int
 }
 
 input SavePublisherGroupInput {
   id: ID
   name: String
+  numberOfBookReviews: Int
 }
 
 type SavePublisherGroupResult {

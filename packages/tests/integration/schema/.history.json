@@ -199,7 +199,7 @@
     "type",
     "updatedAt"
   ],
-  "PublisherGroup": ["createdAt", "critics", "id", "name", "publishers", "updatedAt"],
+  "PublisherGroup": ["createdAt", "critics", "id", "name", "numberOfBookReviews", "publishers", "updatedAt"],
   "SaveAdminUserInput": ["authorManyToOneId", "bio", "email", "favoritePublisherId", "id", "name", "role"],
   "SaveAdminUserResult": ["adminUser"],
   "SaveAuthorInput": [
@@ -301,7 +301,7 @@
   "SaveParentGroupResult": ["parentGroup"],
   "SaveParentItemInput": ["id", "name", "parentGroupId"],
   "SaveParentItemResult": ["parentItem"],
-  "SavePublisherGroupInput": ["id", "name"],
+  "SavePublisherGroupInput": ["id", "name", "numberOfBookReviews"],
   "SavePublisherGroupResult": ["publisherGroup"],
   "SavePublisherInput": [
     "createdAt",

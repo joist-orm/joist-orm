@@ -38,7 +38,11 @@ export function up(b: MigrationBuilder): void {
   });
 
   // Used for PublisherGroup.publishers to test table-per-class o2ms
-  createEntityTable(b, "publisher_groups", { name: "text" });
+  createEntityTable(b, "publisher_groups", {
+    name: "text",
+    // For testing ReactiveFields that depend on ReactiveQueryFields
+    number_of_book_reviews: { type: "int" },
+  });
 
   createEntityTable(b, "publishers", {
     name: { type: "varchar(255)", notNull: true },

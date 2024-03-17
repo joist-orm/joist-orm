@@ -152,7 +152,7 @@ export function insertTag(row: { id?: number; name: string }) {
   return testDriver.insert("tags", row);
 }
 
-export function insertPublisherGroup(row: { id?: number; name: string }) {
+export function insertPublisherGroup(row: { id?: number; name: string; number_of_book_reviews?: number }) {
   return testDriver.insert("publisher_groups", row);
 }
 

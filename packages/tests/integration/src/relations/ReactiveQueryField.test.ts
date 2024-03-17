@@ -1,6 +1,13 @@
-import { insertAuthor, insertBook, insertBookReview, insertPublisher, select } from "@src/entities/inserts";
+import {
+  insertAuthor,
+  insertBook,
+  insertBookReview,
+  insertPublisher,
+  insertPublisherGroup,
+  select,
+} from "@src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
-import { Publisher, newBookReview, newLargePublisher } from "../entities";
+import { Book, BookReview, Publisher, newBookReview, newLargePublisher } from "../entities";
 
 describe("ReactiveQueryField", () => {
   it("can calculate on new insert", async () => {
@@ -40,5 +47,22 @@ describe("ReactiveQueryField", () => {
     expect(queries).toContain(
       `select count(distinct "br".id) as count from book_reviews as br inner join books as b on br.book_id = b.id inner join authors as a on b.author_id = a.id where b.deleted_at is null and a.deleted_at is null and a.publisher_id = $1 limit $2`,
     );
+  });
+
+  it("can recalc dependent reactive fields", async () => {
+    // Given an existing PublisherGroup with a valid value
+    await insertPublisherGroup({ name: "pg1", number_of_book_reviews: 1 });
+    await insertPublisher({ id: 1, name: "p1", number_of_book_reviews: 1, group_id: 1 });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 1 });
+    // When we create a new book review
+    const em = newEntityManager();
+    const b = await em.load(Book, "b:1");
+    em.create(BookReview, { book: b, rating: 4 });
+    await em.flush();
+    // Then both the Publisher and PublisherGroup are updated
+    expect((await select("publishers"))[0]).toMatchObject({ number_of_book_reviews: 2 });
+    expect((await select("publisher_groups"))[0]).toMatchObject({ number_of_book_reviews: 2 });
   });
 });

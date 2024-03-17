@@ -1142,10 +1142,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       }
     };
 
-    // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
-    await runHooksOnPendingEntities();
-
     try {
+      // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
+      await runHooksOnPendingEntities();
+
       // Recreate todos now that we've run hooks and recalculated fields so know
       // the full set of entities that will be INSERT/UPDATE/DELETE-d in the database.
       let entitiesToFlush = [...hooksInvoked];

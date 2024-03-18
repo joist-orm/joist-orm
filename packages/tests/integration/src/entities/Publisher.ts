@@ -30,7 +30,7 @@ export abstract class Publisher extends PublisherCodegen {
     "id",
     // this hint will recalc + not be available on `p`
     { authors: { books: "reviews" } },
-    // This is N+1 safe
+    // findCount is N+1 safe
     (p) => p.em.findCount(BookReview, { book: { author: { publisher: p.id } } }),
   );
 

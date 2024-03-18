@@ -56,6 +56,8 @@ describe("ReactiveQueryField", () => {
     // Then we immediately see the recalc
     expect(p.numberOfBookReviews.get).toBe(1);
     await em.flush();
+    // And we only loaded the Publisher (and Author for a separate ReactiveField) into memory
+    expect(em.entities.length).toBe(2);
     // And the value is updated in the database
     expect((await select("publishers"))[0]).toMatchObject({
       id: 1,

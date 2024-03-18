@@ -137,7 +137,6 @@ describe("Inheritance", () => {
     expect(sp.afterCommitRan).toBe(false);
     expect(sp.afterValidationRan).toBe(false);
     expect(sp.beforeDeleteRan).toBe(false);
-    console.log("FLUSH ONE");
     await em.flush();
     expect(sp.beforeFlushRan).toBe(true);
     expect(sp.beforeCreateRan).toBe(true);
@@ -147,12 +146,10 @@ describe("Inheritance", () => {
     expect(sp.afterCommitRan).toBe(true);
     sp.name = "new name";
     sp.beforeCreateRan = false;
-    console.log("FLUSH TWO");
     await em.flush();
     expect(sp.beforeCreateRan).toBe(false);
     expect(sp.beforeUpdateRan).toBe(true);
     em.delete(sp);
-    console.log("FLUSH THREE");
     await em.flush();
     expect(sp.beforeDeleteRan).toBe(true);
   });

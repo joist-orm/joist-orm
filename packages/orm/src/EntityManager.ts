@@ -1111,20 +1111,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 
     const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
       // If we're looping for ReactiveQueryFields, don't run hooks on entities twice
-      const alreadyRanHooks = new Set<Entity>();
-      let pendingEntities = this.entities.filter((e) => {
-        if (e.isPendingFlush) {
-          if (hooksInvoked.has(e)) {
-            alreadyRanHooks.add(e);
-            return false;
-          }
-          return true;
-        }
-        return false;
-      });
+      const [pendingEntities, alreadyRanHooks] = getPendingWithoutAlreadyRan(this.entities, hooksInvoked);
 
-      // If we're looping for ReactiveQueryField, make sure to bump updatedAt
-      // each time to avoid triggers "helpfully" bumping it for us.
+      // If we're re-looping for ReactiveQueryField, make sure to bump updatedAt
+      // each time, so that for an INSERT-then-UPDATE the triggers don't think the
+      // UPDATE forgot to self-bump updatedAt, and then "helpfully" bump it for us.
       if (alreadyRanHooks.size > 0) {
         maybeBumpUpdatedAt(createTodos([...alreadyRanHooks]), now);
       }
@@ -1950,4 +1941,19 @@ function setStiDiscriminatorValue(baseMeta: EntityMetadata, entity: Entity): voi
   } else {
     (entity as any)[baseMeta.stiDiscriminatorField!] = undefined;
   }
+}
+
+function getPendingWithoutAlreadyRan(entities: readonly Entity[], hooksInvoked: Set<Entity>): [Entity[], Set<Entity>] {
+  const pendingEntities = [];
+  const alreadyRanHooks = new Set<Entity>();
+  for (const e of entities) {
+    if (e.isPendingFlush) {
+      if (hooksInvoked.has(e)) {
+        alreadyRanHooks.add(e);
+      } else {
+        pendingEntities.push(e);
+      }
+    }
+  }
+  return [pendingEntities, alreadyRanHooks];
 }

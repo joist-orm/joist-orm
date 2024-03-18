@@ -62,11 +62,8 @@ export class Author extends AuthorCodegen {
     "numberOfPublicReviews",
     { books: { reviews: ["isPublic", "isPublic2", "rating"] } },
     (a) => {
-      // Break this out for easier debugging when things break
-      const books = a.books.get;
       const reviews = a.books.get.flatMap((b) => b.reviews.get);
       const filtered = reviews.filter((r) => r.isPublic.get && r.isPublic2.get && r.rating > 0);
-      // console.log(a, books, reviews, filtered, filtered.length);
       return filtered.length;
     },
   );

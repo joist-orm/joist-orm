@@ -132,7 +132,7 @@ export class ReactionsManager {
         [...this.pendingFieldReactions.entries()].map(async ([rf, pending]) => {
           // Skip reactive queries until post-flush
           if (kind === "reactiveFields" && rf.kind === "query") return [];
-          if (kind === "reactiveQueries" && rf.kind === "field") return [];
+          if (kind === "reactiveQueries" && rf.kind === "populate") return [];
 
           // Copy pending and clear it
           const todo = [...pending.todo];

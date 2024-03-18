@@ -226,7 +226,7 @@ export interface ReactiveRule {
  * a `ReactiveFields` with fields `["title"]`, path `books`, and name `displayName`.
  */
 export interface ReactiveField {
-  kind: "field" | "query";
+  kind: "populate" | "query";
   /** The fields on this source entity that would trigger the downstream field's recalc. */
   fields: string[];
   /** The constructor of downstream entity that owns the derived field. */

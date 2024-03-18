@@ -324,7 +324,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
           const reversals = reverseReactiveHint(meta.cstr, meta.cstr, ap.reactiveHint);
           reversals.forEach(({ entity, path, fields }) => {
             getMetadata(entity).config.__data.reactiveDerivedValues.push({
-              kind: ap instanceof ReactiveQueryFieldImpl ? "query" : "field",
+              kind: ap instanceof ReactiveQueryFieldImpl ? "query" : "populate",
               cstr: meta.cstr,
               name: field.fieldName,
               path,

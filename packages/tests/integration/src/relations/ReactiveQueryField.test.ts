@@ -82,4 +82,32 @@ describe("ReactiveQueryField", () => {
     expect((await select("publishers"))[0]).toMatchObject({ number_of_book_reviews: 2 });
     expect((await select("publisher_groups"))[0]).toMatchObject({ number_of_book_reviews: 2 });
   });
+
+  it("is validated after changing", async () => {
+    // Given an existing PublisherGroup with a valid value
+    await insertPublisherGroup({ name: "pg1", number_of_book_reviews: 1 });
+    await insertPublisher({ id: 1, name: "p1", number_of_book_reviews: 1, group_id: 1 });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    // And there is 1 existing review
+    await insertBookReview({ book_id: 1, rating: 1 });
+    // When we create a 3 more book reviews (which will trip a validation rule)
+    const em = newEntityManager();
+    const b = await em.load(Book, "b:1");
+    em.create(BookReview, { book: b, rating: 4 });
+    em.create(BookReview, { book: b, rating: 4 });
+    em.create(BookReview, { book: b, rating: 4 });
+    // And we also load the publisher to change the name, to show the rule really
+    // is evaluated twice during a single em.flush
+    const p = await em.load(Publisher, "p:1");
+    p.name = "four";
+    // Then the flush fails
+    await expect(em.flush()).rejects.toThrow("Publisher 'four' cannot have 4 books");
+    // And its because the rule was validation twice
+    expect(p.transientFields.numberOfBookReviewEvals).toBe(2);
+    // And none of the changes persisted
+    expect((await select("publishers"))[0]).toMatchObject({ number_of_book_reviews: 1 });
+    expect((await select("publisher_groups"))[0]).toMatchObject({ number_of_book_reviews: 1 });
+    expect(await select("book_reviews")).toHaveLength(1);
+  });
 });

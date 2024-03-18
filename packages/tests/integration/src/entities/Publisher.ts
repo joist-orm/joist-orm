@@ -21,6 +21,8 @@ import {
 const allImagesHint = { images: [], authors: { image: [], books: "image" } } as const;
 
 export abstract class Publisher extends PublisherCodegen {
+  transientFields = { numberOfBookReviewEvals: 0 };
+
   /** Example of a reactive query. */
   readonly numberOfBookReviews: ReactiveField<Publisher, number> = hasReactiveQueryField(
     "numberOfBookReviews",
@@ -94,6 +96,14 @@ config.addRule({ authors: "numberOfBooks" }, (p) => {
   const sum = p.authors.get.map((a) => a.numberOfBooks.get).reduce((a, b) => a + b, 0);
   if (sum === 15) {
     return "A publisher cannot have 15 books";
+  }
+});
+
+// Example of a reactive rule being fired by a ReactiveQueryField
+config.addRule(["name", "numberOfBookReviews"], (p) => {
+  p.transientFields.numberOfBookReviewEvals++;
+  if (p.name === "four" && p.numberOfBookReviews.get === 4) {
+    return "Publisher 'four' cannot have 4 books";
   }
 });
 

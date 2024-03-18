@@ -1170,6 +1170,19 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         });
     };
 
+    const runValidation = async (entityTodos: Record<string, Todo>, joinRowTodos: any) => {
+      try {
+        this.#isValidating = true;
+        // Run simple rules first b/c it includes not-null/required rules, so that then when we run
+        // `validateReactiveRules` next, the lambdas won't see invalid entities.
+        await validateSimpleRules(entityTodos);
+        await validateReactiveRules(entityTodos, joinRowTodos);
+      } finally {
+        this.#isValidating = false;
+      }
+      await afterValidation(this.ctx, entityTodos);
+    };
+
     try {
       const allFlushedEntities: Set<Entity> = new Set();
 
@@ -1181,18 +1194,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       // the full set of entities that will be INSERT/UPDATE/DELETE-d in the database.
       let entityTodos = createTodos(entitiesToFlush);
       let joinRowTodos = combineJoinRows(this.#joinRows);
-
       if (!skipValidation) {
-        try {
-          this.#isValidating = true;
-          // Run simple rules first b/c it includes not-null/required rules, so that then when we run
-          // `validateReactiveRules` next, the lambdas won't see invalid entities.
-          await validateSimpleRules(entityTodos);
-          await validateReactiveRules(entityTodos, joinRowTodos);
-        } finally {
-          this.#isValidating = false;
-        }
-        await afterValidation(this.ctx, entityTodos);
+        await runValidation(entityTodos, joinRowTodos);
       }
 
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
@@ -1226,7 +1229,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
               // updated_at, and bump it themselves, which could cause a subsequent error.
               now = getNow();
               // ...what about joinRowTodos?...
-              // Need to ...re-validate...
+              await runValidation(entityTodos, joinRowTodos);
             } else {
               // Exit the loop
               entityTodos = {};

@@ -1107,13 +1107,30 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 
     const createdThenDeleted: Set<Entity> = new Set();
     const hooksInvoked: Set<Entity> = new Set();
-    const now = getNow();
+    let now = getNow();
 
     const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
-      // Even if we're re-flushing an entity for a ReactiveQueries, don't run hooks on it twice
-      let pendingEntities = this.entities.filter((e) => e.isPendingFlush && !hooksInvoked.has(e));
+      // If we're looping for ReactiveQueryFields, don't run hooks on entities twice
+      const alreadyRanHooks = new Set<Entity>();
+      let pendingEntities = this.entities.filter((e) => {
+        if (e.isPendingFlush) {
+          if (hooksInvoked.has(e)) {
+            alreadyRanHooks.add(e);
+            return false;
+          }
+          return true;
+        }
+        return false;
+      });
+
+      // If we're looping for ReactiveQueryField, make sure to bump updatedAt
+      // each time to avoid triggers "helpfully" bumping it for us.
+      if (alreadyRanHooks.size > 0) {
+        maybeBumpUpdatedAt(createTodos([...alreadyRanHooks]), now);
+      }
+
+      // Run hooks in a series of loops until things "settle down"
       while (pendingEntities.length > 0) {
-        // Run hooks in a series of loops until things "settle down"
         await this.#fl.allowWrites(async () => {
           // Run our hooks
           let todos = createTodos(pendingEntities);
@@ -1205,6 +1222,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
               entitiesToFlush = await runHooksOnPendingEntities();
               for (const e of entitiesToFlush) allFlushedEntities.add(e);
               entityTodos = createTodos(entitiesToFlush);
+              // Advance `now` so that our triggers don't think our UPDATEs are forgetting to self-bump
+              // updated_at, and bump it themselves, which could cause a subsequent error.
+              now = getNow();
               // ...what about joinRowTodos?...
               // Need to ...re-validate...
             } else {

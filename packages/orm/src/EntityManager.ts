@@ -1114,22 +1114,25 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 
     const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
       if (hookLoops++ >= 10) throw new Error("runHooksOnPendingEntities has ran 10 iterations, aborting");
-
+      const pendingFlush: Set<Entity> = new Set();
+      const pendingHooks: Set<Entity> = new Set();
       // If we're looping for ReactiveQueryFields, don't run hooks on entities twice
-      let [pendingEntities, alreadyRanHooks] = getPendingWithoutAlreadyRan(this.entities, hooksInvoked);
+      const alreadyRanHooks = new Set<Entity>();
+
+      getPending(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
 
       // If we're re-looping for ReactiveQueryField, make sure to bump updatedAt
       // each time, so that for an INSERT-then-UPDATE the triggers don't think the
-      // UPDATE forgot to self-bump updatedAt, and then "helpfully" bump it for us.
+      // UPDATE forgot to self-bump updatedAt, and then "helpfully" bump it for us<Entity>.
       if (alreadyRanHooks.size > 0) {
         maybeBumpUpdatedAt(createTodos([...alreadyRanHooks]), now);
       }
 
       // Run hooks in a series of loops until things "settle down"
-      while (pendingEntities.length > 0) {
+      while (pendingHooks.size > 0) {
         await this.#fl.allowWrites(async () => {
           // Run our hooks
-          let todos = createTodos(pendingEntities);
+          let todos = createTodos([...pendingHooks]);
           await setAsyncDefaults(this.ctx, todos);
           maybeBumpUpdatedAt(todos, now);
           await beforeCreate(this.ctx, todos);
@@ -1151,19 +1154,19 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
             await this.#rm.recalcRelationsPendingAssignedIds();
           }
 
-          for (const e of pendingEntities) hooksInvoked.add(e);
-          pendingEntities = this.entities.filter((e) => e.isPendingFlush && !hooksInvoked.has(e));
+          for (const e of pendingHooks) hooksInvoked.add(e);
+          pendingHooks.clear();
+          // See if the hooks mutated any new, not-yet-hooksInvoked entities
+          getPending(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
         });
       }
       // We might have invoked hooks that immediately deleted an entity (weird but allowed); if so,
       // filter it out so that we don't flush it, but keep track for later fixing up it's `#orm.deleted` field.
-      return this.entities
-        .filter((e) => e.isPendingFlush)
-        .filter((e) => {
-          const createThenDelete = e.isDeletedEntity && e.isNewEntity;
-          if (createThenDelete) createdThenDeleted.add(e);
-          return !createThenDelete;
-        });
+      return [...pendingFlush].filter((e) => {
+        const createThenDelete = e.isDeletedEntity && e.isNewEntity;
+        if (createThenDelete) createdThenDeleted.add(e);
+        return !createThenDelete;
+      });
     };
 
     const runValidation = async (entityTodos: Record<string, Todo>, joinRowTodos: any) => {
@@ -1945,17 +1948,21 @@ function setStiDiscriminatorValue(baseMeta: EntityMetadata, entity: Entity): voi
   }
 }
 
-function getPendingWithoutAlreadyRan(entities: readonly Entity[], hooksInvoked: Set<Entity>): [Entity[], Set<Entity>] {
-  const pendingEntities = [];
-  const alreadyRanHooks = new Set<Entity>();
+function getPending<Entity extends EntityW>(
+  entities: readonly Entity[],
+  hooksInvoked: Set<Entity>,
+  pendingFlush: Set<Entity>,
+  pendingHooks: Set<Entity>,
+  alreadyRanHooks: Set<Entity>,
+): void {
   for (const e of entities) {
     if (e.isPendingFlush) {
       if (hooksInvoked.has(e)) {
-        alreadyRanHooks.add(e);
+        if (!pendingFlush.has(e)) alreadyRanHooks.add(e);
       } else {
-        pendingEntities.push(e);
+        pendingHooks.add(e);
       }
+      pendingFlush.add(e);
     }
   }
-  return [pendingEntities, alreadyRanHooks];
 }

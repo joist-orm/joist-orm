@@ -1106,12 +1106,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     });
 
     const createdThenDeleted: Set<Entity> = new Set();
+    // We'll only invoke hooks once/entity (the 1st time that entity goes through runHooksOnPendingEntities)
     const hooksInvoked: Set<Entity> = new Set();
+    // Make sure two ReactiveQueryFields don't ping-pong each other forever
+    let hookLoops = 0;
     let now = getNow();
 
     const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
+      if (hookLoops++ >= 10) throw new Error("runHooksOnPendingEntities has ran 10 iterations, aborting");
+
       // If we're looping for ReactiveQueryFields, don't run hooks on entities twice
-      const [pendingEntities, alreadyRanHooks] = getPendingWithoutAlreadyRan(this.entities, hooksInvoked);
+      let [pendingEntities, alreadyRanHooks] = getPendingWithoutAlreadyRan(this.entities, hooksInvoked);
 
       // If we're re-looping for ReactiveQueryField, make sure to bump updatedAt
       // each time, so that for an INSERT-then-UPDATE the triggers don't think the
@@ -1208,13 +1213,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
               }
               // Actually do the recalc
               await this.#fl.allowWrites(() => this.#rm.recalcPendingDerivedValues("reactiveQueries"));
-              // See if any RQFs actually changed any entities.
-              // If they did, run the hooks on them.
-              // This is contentious, because it means an entity that was already-flushed, and then also changed
-              // by a ReactiveQueryField, and so flushed again, will have it's hooked invoked twice during
-              // a single `em.flush`.
+              // See if any RQFs actually changed any entities. If they did, run the hooks on them.
               entitiesToFlush = await runHooksOnPendingEntities();
               for (const e of entitiesToFlush) allFlushedEntities.add(e);
+              // Recreate `entityTodos` against the only-the-just-changed entities
               entityTodos = createTodos(entitiesToFlush);
               // Advance `now` so that our triggers don't think our UPDATEs are forgetting to self-bump
               // updated_at, and bump it themselves, which could cause a subsequent error.

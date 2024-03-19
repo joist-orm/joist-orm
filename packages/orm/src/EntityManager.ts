@@ -1216,14 +1216,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
               }
               // Actually do the recalc
               await this.#fl.allowWrites(() => this.#rm.recalcPendingDerivedValues("reactiveQueries"));
+              // Advance `now` so that our triggers don't think our UPDATEs are forgetting to self-bump
+              // updated_at, and bump it themselves, which could cause a subsequent error.
+              now = getNow();
               // See if any RQFs actually changed any entities. If they did, run the hooks on them.
               entitiesToFlush = await runHooksOnPendingEntities();
               for (const e of entitiesToFlush) allFlushedEntities.add(e);
               // Recreate `entityTodos` against the only-the-just-changed entities
               entityTodos = createTodos(entitiesToFlush);
-              // Advance `now` so that our triggers don't think our UPDATEs are forgetting to self-bump
-              // updated_at, and bump it themselves, which could cause a subsequent error.
-              now = getNow();
               // ...what about joinRowTodos?...
               await runValidation(entityTodos, joinRowTodos);
             } else {

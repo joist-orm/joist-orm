@@ -1114,12 +1114,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 
     const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
       if (hookLoops++ >= 10) throw new Error("runHooksOnPendingEntities has ran 10 iterations, aborting");
+      // Any dirty entities we find, even if we skipped firing their hooks on this loop
       const pendingFlush: Set<Entity> = new Set();
+      // Subset of pendingFlush entities that we will run hooks on
       const pendingHooks: Set<Entity> = new Set();
-      // If we're looping for ReactiveQueryFields, don't run hooks on entities twice
+      // Subset of pendingFlush entities that had hooks invoked in a prior `runHooksOnPendingEntities`
       const alreadyRanHooks = new Set<Entity>();
 
-      getPending(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
+      findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
 
       // If we're re-looping for ReactiveQueryField, make sure to bump updatedAt
       // each time, so that for an INSERT-then-UPDATE the triggers don't think the
@@ -1157,7 +1159,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           for (const e of pendingHooks) hooksInvoked.add(e);
           pendingHooks.clear();
           // See if the hooks mutated any new, not-yet-hooksInvoked entities
-          getPending(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
+          findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
         });
       }
       // We might have invoked hooks that immediately deleted an entity (weird but allowed); if so,
@@ -1948,7 +1950,7 @@ function setStiDiscriminatorValue(baseMeta: EntityMetadata, entity: Entity): voi
   }
 }
 
-function getPending<Entity extends EntityW>(
+function findPendingFlushEntities<Entity extends EntityW>(
   entities: readonly Entity[],
   hooksInvoked: Set<Entity>,
   pendingFlush: Set<Entity>,
@@ -1957,10 +1959,10 @@ function getPending<Entity extends EntityW>(
 ): void {
   for (const e of entities) {
     if (e.isPendingFlush) {
-      if (hooksInvoked.has(e)) {
-        if (!pendingFlush.has(e)) alreadyRanHooks.add(e);
-      } else {
+      if (!hooksInvoked.has(e)) {
         pendingHooks.add(e);
+      } else {
+        alreadyRanHooks.add(e);
       }
       pendingFlush.add(e);
     }

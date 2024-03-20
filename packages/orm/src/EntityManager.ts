@@ -1125,7 +1125,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 
       // If we're re-looping for ReactiveQueryField, make sure to bump updatedAt
       // each time, so that for an INSERT-then-UPDATE the triggers don't think the
-      // UPDATE forgot to self-bump updatedAt, and then "helpfully" bump it for us<Entity>.
+      // UPDATE forgot to self-bump updatedAt, and then "helpfully" bump it for us.
       if (alreadyRanHooks.size > 0) {
         maybeBumpUpdatedAt(createTodos([...alreadyRanHooks]), now);
       }
@@ -1162,8 +1162,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
         });
       }
-      // We might have invoked hooks that immediately deleted an entity (weird but allowed); if so,
-      // filter it out so that we don't flush it, but keep track for later fixing up it's `#orm.deleted` field.
+      // We might have invoked hooks that immediately deleted a new entity (weird but allowed);
+      // if so, filter it out so that we don't flush it, but keep track for later fixing up
+      // it's `#orm.deleted` field.
       return [...pendingFlush].filter((e) => {
         const createThenDelete = e.isDeletedEntity && e.isNewEntity;
         if (createThenDelete) createdThenDeleted.add(e);

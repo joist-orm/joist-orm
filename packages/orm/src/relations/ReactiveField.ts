@@ -4,7 +4,7 @@ import { getEmInternalApi } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { getField, isFieldSet, setField } from "../fields";
 import { isLoaded } from "../index";
-import { Reacted, ReactiveHint } from "../reactiveHints";
+import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { tryResolve } from "../utils";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
 import { AsyncPropertyT } from "./hasAsyncProperty";
@@ -144,16 +144,15 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   }
 
   get loadHint(): any {
-    return getMetadata(this.entity).config.__data.cachedReactiveLoadHints[this.fieldName];
+    const meta = getMetadata(this.entity);
+    return (meta.config.__data.cachedReactiveLoadHints[this.fieldName] ??= convertToLoadHint(meta, this.reactiveHint));
   }
 
   [AsyncPropertyT] = undefined as any as T;
 }
 
 /** Type guard utility for determining if an entity field is an AsyncProperty. */
-export function isReactiveField(
-  maybeAsyncProperty: any,
-): maybeAsyncProperty is ReactiveField<any, any> {
+export function isReactiveField(maybeAsyncProperty: any): maybeAsyncProperty is ReactiveField<any, any> {
   return maybeAsyncProperty instanceof ReactiveFieldImpl;
 }
 

@@ -228,11 +228,13 @@ describe("EntityManager", () => {
     const a = new Author(em, { firstName: "a1" });
     em.delete(a);
     await em.flush();
-    // We still issue a BEGIN/COMMIT, which is fine/doesn't matter
-    expect(queries).toEqual(["BEGIN;", "COMMIT;"]);
+    // Then we didn't issue any queries
+    expect(queries).toEqual([]);
     // And the sequence value did not get ticked
     const { rows } = await knex.raw("SELECT nextval('authors_id_seq')");
     expect(rows[0].nextval).toBe("1");
+    // And we didn't run afterCommit b/c it never touched the db
+    expect(a.transientFields.afterCommitRan).toBe(false);
   });
 
   it("createdAt / updatedAt are always non-null", async () => {
@@ -1227,6 +1229,7 @@ describe("EntityManager", () => {
       latitude: 12,
       longitude: 14,
       allAuthorNames: "1",
+      numberOfBookReviews: null,
       group: null,
       hugeNumber: null,
       size: null,

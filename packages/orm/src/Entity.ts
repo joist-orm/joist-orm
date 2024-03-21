@@ -47,8 +47,14 @@ export class EntityOrmField {
   data: Record<string, any>;
   /** A bag to keep the original values, lazily populated as fields are mutated. */
   originalData: Record<any, any> = {};
-  /** Whether our entity has been deleted or not. */
-  deleted?: "pending" | "deleted";
+  /**
+   * Whether our entity has been deleted or not.
+   *
+   * - `pending` means we've been marked for deletion via `em.delete` but not issued a `DELETE`
+   * - `flushed` means we've flushed a `DELETE` but `em.flush` hasn't fully completed yet, likely due to ReactiveQueryField calcs
+   * - `deleted` means we've been flushed and `em.flush` has completed
+   */
+  deleted?: "pending" | "deleted" | "flushed";
   /** Whether our entity is new or not. */
   isNew: boolean = true;
   /** Whether our entity should flush regardless of any other changes. */
@@ -71,13 +77,13 @@ export class EntityOrmField {
     }
   }
 
-  resetAfterFlushed() {
+  resetAfterFlushed(isCalculatingReactiveQueryFields: boolean = false) {
     this.originalData = {};
     this.isTouched = false;
     this.wasNew ||= this.isNew;
     this.isNew = false;
-    if (this.deleted === "pending") {
-      this.deleted = "deleted";
+    if (this.deleted === "pending" || this.deleted === "flushed") {
+      this.deleted = isCalculatingReactiveQueryFields ? "flushed" : "deleted";
     }
   }
 }

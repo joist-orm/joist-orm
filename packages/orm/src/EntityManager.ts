@@ -1102,19 +1102,39 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       // that would NPE their logic anyway).
       await this.cascadeDeletes();
       // Recalc before we run hooks, so the hooks will see the latest calculated values.
-      await this.#rm.recalcPendingDerivedValues();
+      await this.#rm.recalcPendingDerivedValues("reactiveFields");
     });
 
+    const createdThenDeleted: Set<Entity> = new Set();
+    // We'll only invoke hooks once/entity (the 1st time that entity goes through runHooksOnPendingEntities)
     const hooksInvoked: Set<Entity> = new Set();
-    let pendingEntities = this.entities.filter((e) => e.isPendingFlush);
-    const now = getNow();
+    // Make sure two ReactiveQueryFields don't ping-pong each other forever
+    let hookLoops = 0;
+    let now = getNow();
 
-    try {
-      while (pendingEntities.length > 0) {
-        // Run hooks in a series of loops until things "settle down"
+    const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
+      if (hookLoops++ >= 10) throw new Error("runHooksOnPendingEntities has ran 10 iterations, aborting");
+      // Any dirty entities we find, even if we skipped firing their hooks on this loop
+      const pendingFlush: Set<Entity> = new Set();
+      // Subset of pendingFlush entities that we will run hooks on
+      const pendingHooks: Set<Entity> = new Set();
+      // Subset of pendingFlush entities that had hooks invoked in a prior `runHooksOnPendingEntities`
+      const alreadyRanHooks = new Set<Entity>();
+
+      findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
+
+      // If we're re-looping for ReactiveQueryField, make sure to bump updatedAt
+      // each time, so that for an INSERT-then-UPDATE the triggers don't think the
+      // UPDATE forgot to self-bump updatedAt, and then "helpfully" bump it for us.
+      if (alreadyRanHooks.size > 0) {
+        maybeBumpUpdatedAt(createTodos([...alreadyRanHooks]), now);
+      }
+
+      // Run hooks in a series of loops until things "settle down"
+      while (pendingHooks.size > 0) {
         await this.#fl.allowWrites(async () => {
           // Run our hooks
-          let todos = createTodos(pendingEntities);
+          let todos = createTodos([...pendingHooks]);
           await setAsyncDefaults(this.ctx, todos);
           maybeBumpUpdatedAt(todos, now);
           await beforeCreate(this.ctx, todos);
@@ -1129,35 +1149,55 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           // The hooks could have deleted this-loop or prior-loop entities, so re-cascade again.
           await this.cascadeDeletes();
           // The hooks could have changed fields, so recalc again.
-          await this.#rm.recalcPendingDerivedValues();
+          await this.#rm.recalcPendingDerivedValues("reactiveFields");
 
           if (this.#rm.hasFieldsPendingAssignedIds) {
             await this.assignNewIds();
             await this.#rm.recalcRelationsPendingAssignedIds();
           }
 
-          for (const e of pendingEntities) hooksInvoked.add(e);
-          pendingEntities = this.entities.filter((e) => e.isPendingFlush && !hooksInvoked.has(e));
+          for (const e of pendingHooks) hooksInvoked.add(e);
+          pendingHooks.clear();
+          // See if the hooks mutated any new, not-yet-hooksInvoked entities
+          findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
         });
       }
+      // We might have invoked hooks that immediately deleted a new entity (weird but allowed);
+      // if so, filter it out so that we don't flush it, but keep track for later fixing up
+      // it's `#orm.deleted` field.
+      return [...pendingFlush].filter((e) => {
+        const createThenDelete = e.isDeletedEntity && e.isNewEntity;
+        if (createThenDelete) createdThenDeleted.add(e);
+        return !createThenDelete;
+      });
+    };
+
+    const runValidation = async (entityTodos: Record<string, Todo>, joinRowTodos: any) => {
+      try {
+        this.#isValidating = true;
+        // Run simple rules first b/c it includes not-null/required rules, so that then when we run
+        // `validateReactiveRules` next, the lambdas won't see invalid entities.
+        await validateSimpleRules(entityTodos);
+        await validateReactiveRules(entityTodos, joinRowTodos);
+      } finally {
+        this.#isValidating = false;
+      }
+      await afterValidation(this.ctx, entityTodos);
+    };
+
+    try {
+      const allFlushedEntities: Set<Entity> = new Set();
+
+      // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
+      let entitiesToFlush = await runHooksOnPendingEntities();
+      for (const e of entitiesToFlush) allFlushedEntities.add(e);
 
       // Recreate todos now that we've run hooks and recalculated fields so know
       // the full set of entities that will be INSERT/UPDATE/DELETE-d in the database.
-      const entitiesToFlush = [...hooksInvoked];
-      const entityTodos = createTodos(entitiesToFlush);
-      const joinRowTodos = combineJoinRows(this.#joinRows);
-
+      let entityTodos = createTodos(entitiesToFlush);
+      let joinRowTodos = combineJoinRows(this.#joinRows);
       if (!skipValidation) {
-        try {
-          this.#isValidating = true;
-          // Run simple rules first b/c it includes not-null/required rules, so that then when we run
-          // `validateReactiveRules` next, the lambdas won't see invalid entities.
-          await validateSimpleRules(entityTodos);
-          await validateReactiveRules(entityTodos, joinRowTodos);
-        } finally {
-          this.#isValidating = false;
-        }
-        await afterValidation(this.ctx, entityTodos);
+        await runValidation(entityTodos, joinRowTodos);
       }
 
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
@@ -1167,28 +1207,56 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         // serialization anomalies. (Although should we? Maybe we should run the flush hooks
         // in this same transaction just as a matter of principle / safest default.)
         await this.driver.transaction(this, async () => {
-          await this.driver.flushEntities(this, entityTodos);
-          await this.driver.flushJoinTables(this, joinRowTodos);
-          await beforeCommit(this.ctx, entityTodos);
+          do {
+            await this.driver.flushEntities(this, entityTodos);
+            await this.driver.flushJoinTables(this, joinRowTodos);
+            // Now that we've flushed, look for ReactiveQueries that need to be recalculated
+            if (this.#rm.hasPendingReactiveQueries()) {
+              // Reset all flushed entities to we only flush net-new changes
+              for (const e of entitiesToFlush) {
+                if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
+                getOrmField(e).resetAfterFlushed(true);
+              }
+              // Actually do the recalc
+              await this.#fl.allowWrites(() => this.#rm.recalcPendingDerivedValues("reactiveQueries"));
+              // Advance `now` so that our triggers don't think our UPDATEs are forgetting to self-bump
+              // updated_at, and bump it themselves, which could cause a subsequent error.
+              now = getNow();
+              // See if any RQFs actually changed any entities. If they did, run the hooks on them.
+              entitiesToFlush = await runHooksOnPendingEntities();
+              for (const e of entitiesToFlush) allFlushedEntities.add(e);
+              // Recreate `entityTodos` against the only-the-just-changed entities
+              entityTodos = createTodos(entitiesToFlush);
+              // ...what about joinRowTodos?...
+              await runValidation(entityTodos, joinRowTodos);
+            } else {
+              // Exit the loop
+              entityTodos = {};
+            }
+          } while (Object.keys(entityTodos).length > 0);
+          // Run `beforeCommit once right before COMMIT
+          await beforeCommit(this.ctx, allFlushedEntities);
         });
 
         // TODO: This is really "after flush" if we're being called from a transaction that
         // is going to make multiple `em.flush()` calls?
-        await afterCommit(this.ctx, entityTodos);
+        await afterCommit(this.ctx, allFlushedEntities);
 
         // Update the `__orm` to reflect the new state
-        for (const e of entitiesToFlush) {
-          if (e.isNewEntity && !e.isDeletedEntity) {
-            this.#entityIndex.set(e.idTagged, e);
-          }
+        for (const e of allFlushedEntities) {
+          if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
           getOrmField(e).resetAfterFlushed();
         }
+
         // Reset the find caches b/c data will have changed in the db
         this.#dataloaders = {};
         this.#rm.clear();
       }
 
-      return entitiesToFlush;
+      // Fixup the `deleted` field on entities that were created then immediately deleted
+      for (const e of createdThenDeleted) getOrmField(e).deleted = "deleted";
+
+      return [...allFlushedEntities];
     } catch (e) {
       if (e && typeof e === "object" && "constraint" in e && typeof e.constraint === "string") {
         const message = constraintNameToValidationError[e.constraint];
@@ -1408,8 +1476,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         }),
     );
 
-    // `.load()` recalculated the immediate relations, go ahead and recalc any downstream fields
-    await this.#rm.recalcPendingDerivedValues();
+    // `.load()` recalculated the immediate relations, go ahead and recalc any downstream fields.
+    // We'll still defer ReactiveQueryFields to the em.flush loop.
+    await this.#rm.recalcPendingDerivedValues("reactiveFields");
   }
 
   public beforeTransaction(fn: HookFn) {
@@ -1649,21 +1718,24 @@ export function afterTransaction(em: EntityManager, knex: Knex.Transaction): Pro
   return Promise.all(getEmInternalApi(em).hooks.afterTransaction.map((fn) => fn(em, knex)));
 }
 
-async function runHook(
+async function runHookOnTodos(
   ctx: unknown,
   hook: EntityHook,
   todos: Record<string, Todo>,
   keys: ("inserts" | "deletes" | "updates")[],
 ): Promise<void> {
-  const p = Object.values(todos).flatMap((todo) => {
-    return keys
-      .flatMap((k) => todo[k].filter((e) => k === "deletes" || !e.isDeletedEntity))
-      .flatMap((entity) => {
-        const hookFns = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.hooks[hook]);
-        // Use an explicit `async` here to ensure all hooks are promises, i.e. so that a non-promise
-        // hook blowing up doesn't orphan the others .
-        return hookFns.map(async (fn) => fn(entity, ctx as any));
-      });
+  const entities = Object.values(todos).flatMap((todo) => {
+    return keys.flatMap((k) => todo[k].filter((e) => k === "deletes" || !e.isDeletedEntity));
+  });
+  return runHook(ctx, hook, entities);
+}
+
+async function runHook(ctx: unknown, hook: EntityHook, entities: EntityW[]): Promise<void> {
+  const p = entities.flatMap((entity) => {
+    const hookFns = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.hooks[hook]);
+    // Use an explicit `async` here to ensure all hooks are promises, i.e. so that a non-promise
+    // hook blowing up doesn't orphan the others .
+    return hookFns.map(async (fn) => fn(entity, ctx as any));
   });
   // Use `allSettled` so that even if 1 hook blows up, we don't orphan other hooks mid-flush
   const rejects = (await Promise.allSettled(p)).filter((r) => r.status === "rejected");
@@ -1674,31 +1746,31 @@ async function runHook(
 }
 
 function beforeDelete(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHook(ctx, "beforeDelete", todos, ["deletes"]);
+  return runHookOnTodos(ctx, "beforeDelete", todos, ["deletes"]);
 }
 
 function beforeFlush(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHook(ctx, "beforeFlush", todos, ["inserts", "updates"]);
+  return runHookOnTodos(ctx, "beforeFlush", todos, ["inserts", "updates"]);
 }
 
 function beforeCreate(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHook(ctx, "beforeCreate", todos, ["inserts"]);
+  return runHookOnTodos(ctx, "beforeCreate", todos, ["inserts"]);
 }
 
 function beforeUpdate(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHook(ctx, "beforeUpdate", todos, ["updates"]);
+  return runHookOnTodos(ctx, "beforeUpdate", todos, ["updates"]);
 }
 
 function afterValidation(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHook(ctx, "afterValidation", todos, ["inserts", "updates"]);
+  return runHookOnTodos(ctx, "afterValidation", todos, ["inserts", "updates"]);
 }
 
-function beforeCommit(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHook(ctx, "beforeCommit", todos, ["inserts", "updates", "deletes"]);
+function beforeCommit(ctx: unknown, entities: Set<EntityW>): Promise<unknown> {
+  return runHook(ctx, "beforeCommit", [...entities]);
 }
 
-function afterCommit(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHook(ctx, "afterCommit", todos, ["inserts", "updates", "deletes"]);
+function afterCommit(ctx: unknown, entities: Set<EntityW>): Promise<unknown> {
+  return runHook(ctx, "afterCommit", [...entities]);
 }
 
 function coerceError(entity: Entity, maybeError: ValidationRuleResult<any>): ValidationError[] {
@@ -1876,5 +1948,24 @@ function setStiDiscriminatorValue(baseMeta: EntityMetadata, entity: Entity): voi
     (entity as any)[baseMeta.stiDiscriminatorField!] = code;
   } else {
     (entity as any)[baseMeta.stiDiscriminatorField!] = undefined;
+  }
+}
+
+function findPendingFlushEntities<Entity extends EntityW>(
+  entities: readonly Entity[],
+  hooksInvoked: Set<Entity>,
+  pendingFlush: Set<Entity>,
+  pendingHooks: Set<Entity>,
+  alreadyRanHooks: Set<Entity>,
+): void {
+  for (const e of entities) {
+    if (e.isPendingFlush) {
+      if (!hooksInvoked.has(e)) {
+        pendingHooks.add(e);
+      } else {
+        alreadyRanHooks.add(e);
+      }
+      pendingFlush.add(e);
+    }
   }
 }

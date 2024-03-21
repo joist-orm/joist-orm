@@ -20,6 +20,7 @@ type SmallPublisher {
   comments: [Comment!]!
   images: [Image!]!
   tags: [Tag!]!
+  numberOfBookReviews: Int
 }
 
 input SaveSmallPublisherInput {

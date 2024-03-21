@@ -29,6 +29,7 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
+  ReactiveField,
   setField,
   setOpts,
   TaggedId,
@@ -80,6 +81,7 @@ export interface PublisherFields {
   latitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   longitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   hugeNumber: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: true };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   size: { kind: "enum"; type: PublisherSize; nullable: undefined };
@@ -117,6 +119,7 @@ export interface PublisherFilter {
   latitude?: ValueFilter<number, null>;
   longitude?: ValueFilter<number, null>;
   hugeNumber?: ValueFilter<number, null>;
+  numberOfBookReviews?: ValueFilter<number, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   size?: ValueFilter<PublisherSize, null>;
@@ -135,6 +138,7 @@ export interface PublisherGraphQLFilter {
   latitude?: ValueGraphQLFilter<number>;
   longitude?: ValueGraphQLFilter<number>;
   hugeNumber?: ValueGraphQLFilter<number>;
+  numberOfBookReviews?: ValueGraphQLFilter<number>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   size?: ValueGraphQLFilter<PublisherSize>;
@@ -153,6 +157,7 @@ export interface PublisherOrder {
   latitude?: OrderBy;
   longitude?: OrderBy;
   hugeNumber?: OrderBy;
+  numberOfBookReviews?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   size?: OrderBy;
@@ -243,6 +248,8 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   set hugeNumber(hugeNumber: number | undefined) {
     setField(this, "hugeNumber", hugeNumber);
   }
+
+  abstract readonly numberOfBookReviews: ReactiveField<Publisher, number | undefined>;
 
   get createdAt(): Date {
     return getField(this, "createdAt");

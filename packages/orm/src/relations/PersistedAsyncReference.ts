@@ -18,7 +18,7 @@ import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { IdOf } from "../EntityManager";
 import { getField, setField } from "../fields";
-import { Reacted, ReactiveHint } from "../reactiveHints";
+import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";
 import { Reference, ReferenceN } from "./Reference";
@@ -250,7 +250,8 @@ export class PersistedAsyncReferenceImpl<
   }
 
   get loadHint(): any {
-    return getMetadata(this.entity).config.__data.cachedReactiveLoadHints[this.fieldName];
+    const meta = getMetadata(this.entity);
+    return (meta.config.__data.cachedReactiveLoadHints[this.fieldName] ??= convertToLoadHint(meta, this.reactiveHint));
   }
 
   // private impl

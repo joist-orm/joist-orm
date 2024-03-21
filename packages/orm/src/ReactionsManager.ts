@@ -112,6 +112,10 @@ export class ReactionsManager {
     return this.getDirtyFields(getMetadata(entity)).has(fieldName);
   }
 
+  hasPendingReactiveQueries(): boolean {
+    return [...this.pendingFieldReactions.keys()].some((rf) => rf.kind === "query");
+  }
+
   /**
    * Given source `ReactiveField` "reverse indexes" that have been queued as dirty by calls
    * to setters, `em.register`, or `em.delete`, asynchronously walks/crawls to the downstream
@@ -119,13 +123,17 @@ export class ReactionsManager {
    *
    * We also do this in a loop to handle reactive fields depending on other reactive fields.
    */
-  async recalcPendingDerivedValues() {
+  async recalcPendingDerivedValues(kind: "reactiveFields" | "reactiveQueries") {
     let scanPending = true;
     let loops = 0;
     while (scanPending) {
       scanPending = false;
       const relations = await Promise.all(
         [...this.pendingFieldReactions.entries()].map(async ([rf, pending]) => {
+          // Skip reactive queries until post-flush
+          if (kind === "reactiveFields" && rf.kind === "query") return [];
+          if (kind === "reactiveQueries" && rf.kind === "populate") return [];
+
           // Copy pending and clear it
           const todo = [...pending.todo];
           pending.todo.clear();

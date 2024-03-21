@@ -27,6 +27,7 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
+  ReactiveField,
   setField,
   setOpts,
   TaggedId,
@@ -53,6 +54,7 @@ export type PublisherGroupId = Flavor<string, PublisherGroup>;
 export interface PublisherGroupFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: true };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
 }
@@ -69,6 +71,7 @@ export interface PublisherGroupIdsOpts {
 export interface PublisherGroupFilter {
   id?: ValueFilter<PublisherGroupId, never> | null;
   name?: ValueFilter<string, null>;
+  numberOfBookReviews?: ValueFilter<number, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
@@ -77,6 +80,7 @@ export interface PublisherGroupFilter {
 export interface PublisherGroupGraphQLFilter {
   id?: ValueGraphQLFilter<PublisherGroupId>;
   name?: ValueGraphQLFilter<string>;
+  numberOfBookReviews?: ValueGraphQLFilter<number>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
@@ -85,6 +89,7 @@ export interface PublisherGroupGraphQLFilter {
 export interface PublisherGroupOrder {
   id?: OrderBy;
   name?: OrderBy;
+  numberOfBookReviews?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
 }
@@ -137,6 +142,8 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   set name(name: string | undefined) {
     setField(this, "name", cleanStringValue(name));
   }
+
+  abstract readonly numberOfBookReviews: ReactiveField<PublisherGroup, number | undefined>;
 
   get createdAt(): Date {
     return getField(this, "createdAt");

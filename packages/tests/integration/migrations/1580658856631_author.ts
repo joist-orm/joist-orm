@@ -38,7 +38,11 @@ export function up(b: MigrationBuilder): void {
   });
 
   // Used for PublisherGroup.publishers to test table-per-class o2ms
-  createEntityTable(b, "publisher_groups", { name: "text" });
+  createEntityTable(b, "publisher_groups", {
+    name: "text",
+    // For testing ReactiveFields that depend on ReactiveQueryFields
+    number_of_book_reviews: { type: "int" },
+  });
 
   createEntityTable(b, "publishers", {
     name: { type: "varchar(255)", notNull: true },
@@ -47,6 +51,7 @@ export function up(b: MigrationBuilder): void {
     latitude: { type: "numeric(9, 6)", notNull: false },
     longitude: { type: "numeric(9, 6)", notNull: false },
     huge_number: { type: "numeric(17, 0)", notNull: false },
+    number_of_book_reviews: { type: "integer" },
     // for testing table-per-class o2ms
     group_id: foreignKey("publisher_groups", { notNull: false }),
   });
@@ -85,7 +90,7 @@ export function up(b: MigrationBuilder): void {
     // for testing async derived values
     number_of_books: { type: "integer", notNull: true },
     // for testing async derived enums
-    range_of_books: foreignKey("book_range", { notNull: false}),
+    range_of_books: foreignKey("book_range", { notNull: false }),
     // for testing async derived value via a polymorphic reference
     book_comments: { type: "text", notNull: false },
     // for testing nullable booleans

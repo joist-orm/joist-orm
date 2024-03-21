@@ -166,7 +166,7 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     columns.push({
       columnName: "__original_updated_at",
       dbType: "timestamptz",
-      dbValue: (data, originalData) => originalData[updatedAt],
+      dbValue: (_, originalData) => originalData[updatedAt],
     });
   }
 

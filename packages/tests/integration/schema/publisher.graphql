@@ -13,6 +13,7 @@ type Publisher {
   type: PublisherType
   group: PublisherGroup
   tags: [Tag!]!
+  numberOfBookReviews: Int
 }
 
 input SavePublisherInput {

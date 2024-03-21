@@ -226,7 +226,9 @@ describe("Author", () => {
     expect(a1.transientFields.beforeCommitRan).toBe(true);
     expect(a1.transientFields.afterCommitRan).toBe(true);
     expect(a1.transientFields.afterCommitIdIsSet).toBe(true);
-    expect(a1.transientFields.afterCommitIsNewEntity).toBe(true);
+    // Because we had a ReactiveQueryField to calc, and so flushed twice, the author no
+    // longer looked new when we called afterCommit.
+    expect(a1.transientFields.afterCommitIsNewEntity).toBe(false);
     a1.firstName = "new name";
     a1.transientFields.beforeCreateRan = false;
     await em.flush();

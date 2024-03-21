@@ -1,3 +1,10 @@
+# [1.149.0](https://github.com/joist-orm/joist-orm/compare/v1.148.0...v1.149.0) (2024-03-21)
+
+
+### Features
+
+* Add ReactiveQueryField ([#976](https://github.com/joist-orm/joist-orm/issues/976)) ([9f3b2dd](https://github.com/joist-orm/joist-orm/commit/9f3b2ddbc82c244d2dafdf786154bd11003f20ca))
+
 # [1.148.0](https://github.com/joist-orm/joist-orm/compare/v1.147.0...v1.148.0) (2024-03-14)
 
 

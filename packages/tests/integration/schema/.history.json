@@ -9,6 +9,7 @@
     "id",
     "likedComments",
     "name",
+    "originalEmail",
     "role",
     "updatedAt"
   ],
@@ -85,6 +86,7 @@
     "image",
     "notes",
     "order",
+    "originalOrder",
     "reviews",
     "tags",
     "title",
@@ -200,7 +202,16 @@
     "updatedAt"
   ],
   "PublisherGroup": ["createdAt", "critics", "id", "name", "numberOfBookReviews", "publishers", "updatedAt"],
-  "SaveAdminUserInput": ["authorManyToOneId", "bio", "email", "favoritePublisherId", "id", "name", "role"],
+  "SaveAdminUserInput": [
+    "authorManyToOneId",
+    "bio",
+    "email",
+    "favoritePublisherId",
+    "id",
+    "name",
+    "originalEmail",
+    "role"
+  ],
   "SaveAdminUserResult": ["adminUser"],
   "SaveAuthorInput": [
     "address",
@@ -254,7 +265,17 @@
   "SaveAuthorStatResult": ["authorStat"],
   "SaveBookAdvanceInput": ["bookId", "createdAt", "id", "publisherId", "status", "updatedAt"],
   "SaveBookAdvanceResult": ["bookAdvance"],
-  "SaveBookInput": ["authorId", "createdAt", "deletedAt", "id", "notes", "order", "title", "updatedAt"],
+  "SaveBookInput": [
+    "authorId",
+    "createdAt",
+    "deletedAt",
+    "id",
+    "notes",
+    "order",
+    "originalOrder",
+    "title",
+    "updatedAt"
+  ],
   "SaveBookResult": ["book"],
   "SaveBookReviewInput": ["bookId", "createdAt", "criticId", "id", "isPublic", "rating", "updatedAt"],
   "SaveBookReviewResult": ["bookReview"],
@@ -341,7 +362,7 @@
   "SaveTaskOldInput": ["durationInDays", "id", "specialNewAuthorId", "specialOldField", "type"],
   "SaveTaskOldResult": ["taskOld"],
   "SaveTaskResult": ["task"],
-  "SaveUserInput": ["authorManyToOneId", "bio", "email", "favoritePublisherId", "id", "name"],
+  "SaveUserInput": ["authorManyToOneId", "bio", "email", "favoritePublisherId", "id", "name", "originalEmail"],
   "SaveUserResult": ["user"],
   "SmallPublisher": [
     "allAuthorNames",
@@ -413,6 +434,7 @@
     "id",
     "likedComments",
     "name",
+    "originalEmail",
     "updatedAt"
   ],
   "UserFavoritePublisher": ["LargePublisher", "SmallPublisher"]

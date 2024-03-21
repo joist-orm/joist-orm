@@ -245,6 +245,8 @@ export function up(b: MigrationBuilder): void {
     // For testing polymorphic references to subclasses
     favorite_publisher_small_id: foreignKey("small_publishers", { notNull: false }),
     favorite_publisher_large_id: foreignKey("large_publishers", { notNull: false }),
+    // for testing default values of required-but-not-defaulted columns
+    original_email: { type: "varchar(255)", notNull: true },
   });
 
   // For testing subclasses with their own rules...

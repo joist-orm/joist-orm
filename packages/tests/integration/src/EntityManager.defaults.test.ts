@@ -1,5 +1,5 @@
 import { noValue } from "joist-orm";
-import { newAuthor, newBook } from "src/entities/index";
+import { newAuthor, newBook, newUser } from "src/entities";
 import { select } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
@@ -10,6 +10,14 @@ describe("EntityManager.defaults", () => {
     const b = newBook(em, { title: "Book 1" });
     // Then the synchronous default was immediately applied
     expect(b.notes).toBe("Notes for Book 1");
+  });
+
+  it("can default a required synchronous field", async () => {
+    const em = newEntityManager();
+    // Create a new user with a defaulted original email
+    const u = newUser(em, { email: "foo@foo.com" });
+    // Then the factory didn't default our value as `originalEmail`
+    expect(u.originalEmail).toBe("foo@foo.com");
   });
 
   it("does not overwrite existing sync default", async () => {

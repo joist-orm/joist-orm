@@ -95,10 +95,12 @@ export function insertUser(row: {
   favorite_publisher_small_id?: number;
   favorite_publisher_large_id?: number;
 }) {
+  const { email = `${row.name}@example.com`, ...rest } = row;
   return testDriver.insert("users", {
-    email: `${row.name}@example.com`,
+    email,
+    original_email: email,
     password: "password",
-    ...row,
+    ...rest,
   });
 }
 

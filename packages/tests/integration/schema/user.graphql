@@ -13,6 +13,7 @@ type User {
   likedComments: [Comment!]!
   bio: String!
   favoritePublisher: UserFavoritePublisher
+  originalEmail: String!
 }
 
 input SaveUserInput {
@@ -22,6 +23,7 @@ input SaveUserInput {
   authorManyToOneId: ID
   bio: String
   favoritePublisherId: ID
+  originalEmail: String
 }
 
 type SaveUserResult {

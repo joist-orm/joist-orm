@@ -109,7 +109,21 @@ export async function createOrUpdatePartial<T extends Entity>(
         const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
         return [name, entity];
       }
-    } else if (field.kind === "o2m" || field.kind === "m2m" || field.kind === "o2o") {
+    } else if (field.kind === "o2o") {
+      if (value === undefined) {
+        return [name, undefined];
+      }
+      relationsToLoad.push(field.fieldName);
+      let entity: any;
+      if (!value || isEntity(value)) {
+        entity = value;
+      } else if (isKey(value)) {
+        entity = await em.load(field.otherMetadata().cstr, value);
+      } else {
+        entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
+      }
+      return [name, entity];
+    } else if (field.kind === "o2m" || field.kind === "m2m") {
       // Look for one-to-many/many-to-many partials
 
       // `null` is handled later, and treated as `[]`, which needs the collection loaded
@@ -152,11 +166,7 @@ export async function createOrUpdatePartial<T extends Entity>(
           }
         }),
       );
-      return [
-        name,
-        // Unwrap & keep null for o2o fields
-        field.kind === "o2o" ? (value === null ? null : entities[0]) : entities,
-      ];
+      return [name, entities];
     } else {
       return [name, value];
     }

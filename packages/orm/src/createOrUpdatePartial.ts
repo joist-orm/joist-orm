@@ -2,7 +2,7 @@ import { Entity, isEntity } from "./Entity";
 import { EntityManager, IdOf, MaybeAbstractEntityConstructor, OptIdsOf, OptsOf, isKey } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
 import { PartialOrNull, asConcreteCstr, getConstructorFromTaggedId, getProperties } from "./index";
-import { NullOrDefinedOr } from "./utils";
+import { NullOrDefinedOr, toArray } from "./utils";
 
 /**
  * The type for `EntityManager.createOrUpdateUnsafe` that allows "upsert"-ish behavior.
@@ -48,7 +48,7 @@ export async function createOrUpdatePartial<T extends Entity>(
   const { id, ...others } = opts as any;
   const meta = getMetadata(constructor);
   const isNew = id === null || id === undefined;
-  const collectionsToLoad: string[] = [];
+  const relationsToLoad: string[] = [];
 
   // The values in others might be themselves partials, so walk through and resolve them to entities.
   const p = Object.entries(others).map(async ([key, value]) => {
@@ -109,6 +109,20 @@ export async function createOrUpdatePartial<T extends Entity>(
         const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
         return [name, entity];
       }
+    } else if (field.kind === "o2o") {
+      if (value === undefined) {
+        return [name, undefined];
+      }
+      relationsToLoad.push(field.fieldName);
+      let entity: any;
+      if (!value || isEntity(value)) {
+        entity = value;
+      } else if (isKey(value)) {
+        entity = await em.load(field.otherMetadata().cstr, value);
+      } else {
+        entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
+      }
+      return [name, entity];
     } else if (field.kind === "o2m" || field.kind === "m2m") {
       // Look for one-to-many/many-to-many partials
 
@@ -122,37 +136,37 @@ export async function createOrUpdatePartial<T extends Entity>(
       const allowDelete = !field.otherMetadata().fields["delete"];
       const allowRemove = !field.otherMetadata().fields["remove"];
       const allowOp = !field.otherMetadata().fields["op"];
-      collectionsToLoad.push(field.fieldName);
+      relationsToLoad.push(field.fieldName);
 
-      const entities = !value
-        ? []
-        : (value as Array<any>).map(async (value) => {
-            if (!value || isEntity(value)) {
+      const entities = await Promise.all(
+        toArray(value).map(async (value: any) => {
+          if (!value || isEntity(value)) {
+            return value;
+          } else if (isKey(value)) {
+            return await em.load(field.otherMetadata().cstr, value);
+          } else {
+            // Look for `delete: true/false` and `remove: true/false` markers
+            const deleteMarker: any = allowDelete && value["delete"];
+            const removeMarker: any = allowRemove && value["remove"];
+            const opMarker: any = allowOp && value["op"];
+            // If this is the incremental marker, just leave it in as-is so that setOpts can see it
+            if (opMarker === "incremental") {
               return value;
-            } else if (isKey(value)) {
-              return await em.load(field.otherMetadata().cstr, value);
-            } else {
-              // Look for `delete: true/false` and `remove: true/false` markers
-              const deleteMarker: any = allowDelete && value["delete"];
-              const removeMarker: any = allowRemove && value["remove"];
-              const opMarker: any = allowOp && value["op"];
-              // If this is the incremental marker, just leave it in as-is so that setOpts can see it
-              if (opMarker === "incremental") {
-                return value;
-              }
-              // Remove the markers, regardless of true/false, before recursing into createOrUpdatePartial to avoid unknown fields
-              if (deleteMarker !== undefined) delete value.delete;
-              if (removeMarker !== undefined) delete value.remove;
-              if (opMarker !== undefined) delete value.op;
-              const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
-              // Put the markers back for setOpts to find
-              if (deleteMarker === true) entity.delete = true;
-              if (removeMarker === true) entity.remove = true;
-              if (opMarker) entity.op = opMarker;
-              return entity;
             }
-          });
-      return [name, await Promise.all(entities)];
+            // Remove the markers, regardless of true/false, before recursing into createOrUpdatePartial to avoid unknown fields
+            if (deleteMarker !== undefined) delete value.delete;
+            if (removeMarker !== undefined) delete value.remove;
+            if (opMarker !== undefined) delete value.op;
+            const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
+            // Put the markers back for setOpts to find
+            if (deleteMarker === true) entity.delete = true;
+            if (removeMarker === true) entity.remove = true;
+            if (opMarker) entity.op = opMarker;
+            return entity;
+          }
+        }),
+      );
+      return [name, entities];
     } else {
       return [name, value];
     }
@@ -169,7 +183,7 @@ export async function createOrUpdatePartial<T extends Entity>(
     // for a parent's mutation to control the lifecycle of a child entity (i.e. line items).
     // Musing: Maybe this should happen implicitly, like if a LineItem.parent is set to null, that
     // LineItem knows to just `em.delete` itself? Instead of relying on hints from GraphQL mutations.
-    await Promise.all(collectionsToLoad.map((fieldName) => (entity as any)[fieldName].load()));
+    await Promise.all(relationsToLoad.map((fieldName) => (entity as any)[fieldName].load()));
     entity.setPartial(_opts);
     return entity;
   }

@@ -1,3 +1,10 @@
+## [1.149.1](https://github.com/joist-orm/joist-orm/compare/v1.149.0...v1.149.1) (2024-03-21)
+
+
+### Bug Fixes
+
+* Fix not loading o2os in createOrUpdatePartial. ([#977](https://github.com/joist-orm/joist-orm/issues/977)) ([440658f](https://github.com/joist-orm/joist-orm/commit/440658f646669cc9ed1c9d7afcb8c86004ad50a9))
+
 # [1.149.0](https://github.com/joist-orm/joist-orm/compare/v1.148.0...v1.149.0) (2024-03-21)
 
 

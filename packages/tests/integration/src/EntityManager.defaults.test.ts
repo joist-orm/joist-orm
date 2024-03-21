@@ -16,7 +16,7 @@ describe("EntityManager.defaults", () => {
     const em = newEntityManager();
     // Create a new user with a defaulted original email
     const u = newUser(em, { email: "foo@foo.com" });
-    // Then the synchronous default was immediately applied
+    // Then the factory didn't default our value as `originalEmail`
     expect(u.originalEmail).toBe("foo@foo.com");
   });
 

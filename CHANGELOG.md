@@ -1,3 +1,10 @@
+## [1.149.2](https://github.com/joist-orm/joist-orm/compare/v1.149.1...v1.149.2) (2024-03-21)
+
+
+### Bug Fixes
+
+* Factories shouldn't fill in fields w/defaults. ([#979](https://github.com/joist-orm/joist-orm/issues/979)) ([59f382b](https://github.com/joist-orm/joist-orm/commit/59f382be3a3bf1a63ff74251b80d9bdaea9a6215))
+
 ## [1.149.1](https://github.com/joist-orm/joist-orm/compare/v1.149.0...v1.149.1) (2024-03-21)
 
 

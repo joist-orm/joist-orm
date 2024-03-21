@@ -711,7 +711,10 @@ export type ParsedValueFilter<V> =
   | { kind: "between"; value: [V, V] };
 
 /**
- * Parses the many/hodgepdoge (ergonomic!) patterns of value filters into a `ParsedValueFilter`.
+ * Parses the many/hodgepdoge (ergonomic!) patterns of value filters into a `ParsedValueFilter[]`.
+ *
+ * Note we return an array because filter might be a `ValueGraphQLFilter` that is allowed to have
+ * multiple conditions, i.e. `{ lt: 10, gt: 5 }`.
  */
 export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFilter<V>[] {
   if (filter === null) {

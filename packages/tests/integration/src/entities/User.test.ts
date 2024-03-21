@@ -21,6 +21,7 @@ describe("User", () => {
       name: "a1",
       email: "test@test.com",
       password: PasswordValue.fromPlainText(PASSWORD),
+      originalEmail: "test@test.com",
     });
     await expect(em.flush()).resolves.toEqual([a1]);
     await expect(a1.password?.encoded).toEqual(PASSWORD_ENCODED);

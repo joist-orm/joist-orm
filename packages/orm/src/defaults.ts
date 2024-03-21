@@ -1,7 +1,13 @@
 import { Entity } from "./Entity";
-import { getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
 import { Todo } from "./Todo";
 import { isLoadedReference } from "./relations/index";
+
+export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolean {
+  return getBaseAndSelfMetas(meta).some(
+    (m) => fieldName in m.config.__data.syncDefaults || fieldName in m.config.__data.asyncDefaults,
+  );
+}
 
 /** Run the sync defaults for `entity`. */
 export function setSyncDefaults(entity: Entity): void {

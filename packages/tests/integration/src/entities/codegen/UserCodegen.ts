@@ -78,6 +78,7 @@ export interface UserFields {
   ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: undefined; derived: false };
   password: { kind: "primitive"; type: PasswordValue; unique: false; nullable: undefined; derived: false };
   bio: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  originalEmail: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
@@ -90,6 +91,7 @@ export interface UserOpts {
   ipAddress?: IpAddress | null;
   password?: PasswordValue | null;
   bio?: string;
+  originalEmail: string;
   authorManyToOne?: Author | AuthorId | null;
   favoritePublisher?: UserFavoritePublisher;
   createdComments?: Comment[];
@@ -110,6 +112,7 @@ export interface UserFilter {
   ipAddress?: ValueFilter<IpAddress, null>;
   password?: ValueFilter<PasswordValue, null>;
   bio?: ValueFilter<string, never>;
+  originalEmail?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
@@ -125,6 +128,7 @@ export interface UserGraphQLFilter {
   ipAddress?: ValueGraphQLFilter<IpAddress>;
   password?: ValueGraphQLFilter<PasswordValue>;
   bio?: ValueGraphQLFilter<string>;
+  originalEmail?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
@@ -140,6 +144,7 @@ export interface UserOrder {
   ipAddress?: OrderBy;
   password?: OrderBy;
   bio?: OrderBy;
+  originalEmail?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   authorManyToOne?: AuthorOrder;
@@ -150,6 +155,7 @@ export const userConfig = new ConfigApi<User, Context>();
 userConfig.addRule(newRequiredRule("name"));
 userConfig.addRule(newRequiredRule("email"));
 userConfig.addRule(newRequiredRule("bio"));
+userConfig.addRule(newRequiredRule("originalEmail"));
 userConfig.addRule(newRequiredRule("createdAt"));
 userConfig.addRule(newRequiredRule("updatedAt"));
 
@@ -232,6 +238,14 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   set bio(bio: string) {
     setField(this, "bio", bio);
+  }
+
+  get originalEmail(): string {
+    return getField(this, "originalEmail");
+  }
+
+  set originalEmail(originalEmail: string) {
+    setField(this, "originalEmail", cleanStringValue(originalEmail));
   }
 
   get createdAt(): Date {

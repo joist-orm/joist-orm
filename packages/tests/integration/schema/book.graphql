@@ -16,6 +16,7 @@ type Book {
   deletedAt: DateTime
   favoriteBookAuthors: [Author!]!
   notes: String
+  originalOrder: Int!
 }
 
 input SaveBookInput {
@@ -27,6 +28,7 @@ input SaveBookInput {
   authorId: ID
   deletedAt: DateTime
   notes: String
+  originalOrder: Int
 }
 
 type SaveBookResult {

@@ -23,6 +23,7 @@ import {
   isManyToOneField,
   isOneToOneField,
 } from "./EntityMetadata";
+import { hasDefaultValue } from "./defaults";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
 import { assertNever } from "./utils";
@@ -120,7 +121,7 @@ export function newTestInstance<T extends Entity>(
 
       // Don't fill in required fields if told not to
       const ignoreAllDefaults = "useFactoryDefaults" in opts && opts.useFactoryDefaults === "none";
-      const required = field.required && !ignoreAllDefaults;
+      const required = field.required && !ignoreAllDefaults && !hasDefaultValue(meta, fieldName);
 
       if (
         field.kind === "primitive" &&

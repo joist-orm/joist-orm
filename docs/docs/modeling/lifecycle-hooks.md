@@ -5,6 +5,8 @@ sidebar_position: 4
 
 Joist supports hooks that can run business logic at varies stages in an entity's lifecycle, for example to implement business logic like "when an `Author` entity is updated, always do x/y/z".
 
+Hooks are not immediately ran on `em.create` or entity modifications, and only run as part of `em.flush()` because `em.flush()` is an async method, and this allows hooks to themselves have async behavior, i.e. load additional entities from the database.
+
 ### Setup
 
 All hooks are set up by the entity's `config` API:
@@ -19,7 +21,7 @@ config.beforeCreate("books", (a, { em }) => {
   if (a.books.get.length === 0) {
     em.create(Book, { author: a, status: BookStatus.Draft });
   }
-})
+});
 ```
 
 :::info
@@ -40,51 +42,55 @@ However, being added via the `config` API has a few benefits:
 
 3. It's trivial to reuse hook logic across entities without relying on multiple inheritance.
 
-    For example, we could have a method like `addSoftDeleteHooks(config)` that, for any given entity's config, adds some shared business logic to the entity.
+   For example, we could have a method like `addSoftDeleteHooks(config)` that, for any given entity's config, adds some shared business logic to the entity.
 
 :::
 
 ### Available Hooks
 
-Joist supports the following hooks, listed in the order that they are fired:
+Joist supports the following hooks, listed in the order that they are fired during `em.flush`:
 
-* `beforeCreate` fired when an entity is created / `INSERT`-d for the first time
-* `beforeUpdate` fired when an entity is updated / `UPDATE`-d
-* `beforeFlush` fired when an entity is either created or updated (but not deleted)
-* `beforeDelete` fired when an entity is deleted / `DELETE`-d
-* `afterValidation` fired after an entity is created or updated, and all validation rules have passed
-* `beforeCommit` fired when an entity is created, or updated, or deleted and the transaction is about to commit, can abort the transaction by throwing an error
-* `afterCommit` fired when an entity is created, or updated, or deleted and the transaction has committed
+- `beforeCreate` fired when an entity is created / `INSERT`-d for the first time
+- `beforeUpdate` fired when an entity is updated / `UPDATE`-d
+- `beforeFlush` fired when an entity is either created or updated (but not deleted)
+- `beforeDelete` fired when an entity is deleted / `DELETE`-d
+- `afterValidation` fired after an entity is created or updated, and all validation rules have passed
+- `beforeCommit` fired when an entity is created, or updated, or deleted and the transaction is about to commit, can abort the transaction by throwing an error
+- `afterCommit` fired when an entity is created, or updated, or deleted and the transaction has committed
 
 ### Allowed Behavior
 
-Hooks are allowed to create/update/delete other entities.
+`beforeCreate`, `beforeUpdate`, `beforeFlush`, and `beforeDelete` hooks are allowed to create/update/delete other entities.
 
-For example, a new `Author` can `em.create` a new `Book` in an `Author.beforeCreate` hook.  Or a deleted `Author` could `em.delete` its `Book`s in an `Author.beforeDelete` hook.
+For example, a new `Author` can use a `beforeCreate` hook to automatically `em.create` the author's first/default `Book`. Or a deleted `Author` could `em.delete` its `Book`s in an `Author.beforeDelete` hook (Joist also has a dedicated `config.cascadeDelete` API, but `beforeDelete` can handle more custom behavior).
 
 Any entities that are created/updated/deleted by a hook will themselves have their appropriate hooks ran, although only if those entity's hooks have not already been run (to avoid cycles of a book-touches-author/author-touches-book infinitely recursing).
+
+`afterValidation`, `beforeCommit`, and `afterCommit` are not allowed to mutate entities.
 
 #### Wire Calls
 
 Making RPC calls to 3rd party systems can be problematic, and so we recommend:
 
-* Do not make RPC calls from any non-`afterCommit` hook.
+- Do not make RPC calls from any non-`afterCommit` hook.
 
-  It is very likely that hooks will run but then your `em.flush` later fails due to unrelated validation rules, at which point your transaction/changes won't be committed and you've likely made an unnecessary/incorrect wire call.
+  It is very likely that hooks (like `beforeFlush`) will run, but then your `em.flush` later fails due to validation rules, at which point your transaction/changes won't be committed, and you've likely made an unnecessary/incorrect wire call.
 
-  (Any non-`afterCommit` hook also will not have ids assigned yet for newly-created entities, and often these ids are necessary for communicating with the 3rd party system.)
-
-* Only pragmatically make wire calls in the `afterCommit` hook.
+- Only pragmatically make wire calls in the `afterCommit` hook.
 
   While `afterCommit` is the "safest" place to make a wire call, because it's only called after the transaction has been committed, there is still a chance that either a) `em.flush` commits but the machine crashes before running `afterCommit`, or b) your `afterCommit` fails but now will not retry.
 
-Because of these wrinkles, our general recommendation is to use a [job drain](https://brandur.org/job-drain) pattern, where hooks only create "intentions" of work to be done (background jobs), this intention is atomically saved to the database in the same transaction as your business logic (for an example a `jobs` table), and then you have a separate background job runner that handles invoking (and retrying if necessary) the intended action of calling/syncing with the 3rd party system.
+Because of these wrinkles, our best advice is to use the [job drain](https://brandur.org/job-drain) pattern, and use a `beforeCommit` hook to transactionally enqueue jobs in your primary database.
+
+The `beforeCommit` hook runs after entities have been `INSERT`d or `UPDATE`d, and so will have access to entity ids, which can be used for background job parameters/payloads. 
+
+These background jobs create "intentions of work to be done", and since the job is atomically saved to the database in the same transaction as your business logic writes (for example inserting a `sendOnboardingEmail` job into the `jobs` table and `INSERT`ing a new `authors` row), they are both guaranteed to complete or not-complete. And then the background job runner can separately invoke (and retry if necessary) the intended action of calling/syncing with the 3rd party system.
 
 ### Hooks vs. Validation Rules
 
 Hooks run before validation rules, and are allowed to mutate entities that may currently be invalid.
 
-Valiation rules run after hooks, and are not allowed to mutate entities: they must be side effect free.
+Validation rules run after hooks, and are not allowed to mutate entities: they must be side effect free.
 
 For example, you could have a validation rule of "Author must have at least one book", and a hook that "creates a default book for new authors", and when you do `em.create(Author)` without any books, then first the hook would run and create a single book, such that when the validation rule runs, it passes.
 
@@ -96,14 +102,13 @@ Validation rules are only ran once per `em.flush`, and only after all hooks, and
 
 The term "transitively-ran" hooks describes the scenario of:
 
-* An endpoint/user code creates 5 new `Author` entities and calls `em.flush`
-* `em.flush` "runs hooks" (`beforeCreate` and `beforeFlush`) for all 5 new `Author`s entities
-* Each `Author`'s `beforeCreate` hook creates a new draft `Book` entity
-* `em.flush` notices the newly-created `Book` entities, and so "runs hooks again", but only against the 5 `Book` entities
+- An endpoint/user code creates 5 new `Author` entities and calls `em.flush`
+- `em.flush` "runs hooks" (`beforeCreate` and `beforeFlush`) for all 5 new `Author`s entities
+- Each `Author`'s `beforeCreate` hook creates a new draft `Book` entity
+- `em.flush` notices the newly-created `Book` entities, and so "runs hooks again", but only against the 5 `Book` entities
 
 So, this process is transitive as mutating the initial set of entities may cause, via custom logic in hooks, a subsequent set of entities to be mutated, which themselves might cause an additional set of entities to be mutated, until the process "settles".
 
 Note that because `em.flush` marks which entities have had hooks ran, and will not invoke hooks twice on a given entity, this process is guaranteed to finish, i.e. there is not a risk of infinite loops between hooks.
 
 :::
-

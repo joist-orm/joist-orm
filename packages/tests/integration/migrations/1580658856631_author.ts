@@ -326,4 +326,7 @@ export function up(b: MigrationBuilder): void {
     new_task_id: foreignKey("tasks", { notNull: false }),
     task_id: foreignKey("tasks", { notNull: false }),
   });
+
+  // For testing m2m relations into STI tables
+  createManyToManyTable(b, "tasks_to_publishers", "tasks", "publishers");
 }

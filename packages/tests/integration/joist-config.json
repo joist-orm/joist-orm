@@ -60,6 +60,7 @@
     "Tag": { "relations": { "authors": { "large": true } }, "tag": "t" },
     "Task": {
       "fields": {
+        "publishers": { "stiType": "TaskOld" },
         "specialNewField": { "stiType": "TaskNew" },
         "specialOldField": { "stiNotNull": true, "stiType": "TaskOld" },
         "type": { "stiDiscriminator": { "NEW": "TaskNew", "OLD": "TaskOld" } }
@@ -83,5 +84,5 @@
     }
   },
   "entitiesDirectory": "./src/entities",
-  "version": "1.149.1"
+  "version": "1.149.2"
 }

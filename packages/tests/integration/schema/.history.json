@@ -142,6 +142,7 @@
     "numberOfBookReviews",
     "size",
     "tags",
+    "tasks",
     "type",
     "updatedAt",
     "users"
@@ -198,6 +199,7 @@
     "smallPublisher",
     "tag",
     "tags",
+    "tasks",
     "type",
     "updatedAt"
   ],
@@ -381,6 +383,7 @@
     "numberOfBookReviews",
     "size",
     "tags",
+    "tasks",
     "type",
     "updatedAt",
     "users"
@@ -392,6 +395,7 @@
     "id",
     "newTaskTaskItems",
     "oldTaskTaskItems",
+    "publishers",
     "specialNewAuthor",
     "specialNewField",
     "specialOldField",
@@ -406,6 +410,7 @@
     "id",
     "newTaskTaskItems",
     "oldTaskTaskItems",
+    "publishers",
     "specialNewAuthor",
     "specialNewField",
     "taskTaskItems",
@@ -418,6 +423,7 @@
     "id",
     "newTaskTaskItems",
     "oldTaskTaskItems",
+    "publishers",
     "specialNewAuthor",
     "specialOldField",
     "taskTaskItems",

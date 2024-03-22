@@ -21,6 +21,7 @@ type LargePublisher {
   tags: [Tag!]!
   critics: [Critic!]!
   numberOfBookReviews: Int
+  tasks: [Task!]!
 }
 
 input SaveLargePublisherInput {

@@ -13,6 +13,7 @@ type TaskOld {
   oldTaskTaskItems: [TaskItem!]!
   taskTaskItems: [TaskItem!]!
   specialNewAuthor: Author
+  publishers: [Publisher!]!
 }
 
 input SaveTaskOldInput {

@@ -21,6 +21,7 @@ type SmallPublisher {
   images: [Image!]!
   tags: [Tag!]!
   numberOfBookReviews: Int
+  tasks: [Task!]!
 }
 
 input SaveSmallPublisherInput {

@@ -1,11 +1,18 @@
 import {
   Changes,
+  Collection,
   ConfigApi,
+  EntityFilter,
+  EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
   failNoIdYet,
+  FilterOf,
   Flavor,
   getField,
+  getOrmField,
+  GraphQLFilterOf,
+  hasManyToMany,
   isLoaded,
   Lens,
   Loaded,
@@ -28,6 +35,9 @@ import {
   Entity,
   EntityManager,
   newTaskOld,
+  Publisher,
+  PublisherId,
+  publisherMeta,
   Task,
   TaskFields,
   TaskFilter,
@@ -48,17 +58,21 @@ export interface TaskOldFields extends TaskFields {
 
 export interface TaskOldOpts extends TaskOpts {
   specialOldField: number;
+  publishers?: Publisher[];
 }
 
 export interface TaskOldIdsOpts extends TaskIdsOpts {
+  publisherIds?: PublisherId[] | null;
 }
 
 export interface TaskOldFilter extends TaskFilter {
   specialOldField?: ValueFilter<number, never>;
+  publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
 }
 
 export interface TaskOldGraphQLFilter extends TaskGraphQLFilter {
   specialOldField?: ValueGraphQLFilter<number>;
+  publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
 }
 
 export interface TaskOldOrder extends TaskOrder {
@@ -146,5 +160,18 @@ export abstract class TaskOldCodegen extends Task implements Entity {
 
   isLoaded<H extends LoadHint<TaskOld>>(hint: H): this is Loaded<TaskOld | Task, H> {
     return isLoaded(this as any as TaskOld, hint);
+  }
+
+  get publishers(): Collection<TaskOld, Publisher> {
+    const { relations } = getOrmField(this);
+    return relations.publishers ??= hasManyToMany(
+      this as any as TaskOld,
+      "tasks_to_publishers",
+      "publishers",
+      "task_id",
+      publisherMeta,
+      "tasks",
+      "publisher_id",
+    );
   }
 }

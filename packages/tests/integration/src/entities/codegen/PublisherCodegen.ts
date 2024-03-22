@@ -71,6 +71,9 @@ import {
   Tag,
   TagId,
   tagMeta,
+  TaskOld,
+  TaskOldId,
+  taskOldMeta,
 } from "../entities";
 
 export type PublisherId = Flavor<string, Publisher>;
@@ -102,6 +105,7 @@ export interface PublisherOpts {
   comments?: Comment[];
   images?: Image[];
   tags?: Tag[];
+  tasks?: TaskOld[];
 }
 
 export interface PublisherIdsOpts {
@@ -111,6 +115,7 @@ export interface PublisherIdsOpts {
   commentIds?: CommentId[] | null;
   imageIds?: ImageId[] | null;
   tagIds?: TagId[] | null;
+  taskIds?: TaskOldId[] | null;
 }
 
 export interface PublisherFilter {
@@ -130,6 +135,7 @@ export interface PublisherFilter {
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   images?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
+  tasks?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null | undefined>;
 }
 
 export interface PublisherGraphQLFilter {
@@ -149,6 +155,7 @@ export interface PublisherGraphQLFilter {
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   images?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
+  tasks?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null | undefined>;
 }
 
 export interface PublisherOrder {
@@ -399,6 +406,19 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
       tagMeta,
       "publishers",
       "tag_id",
+    );
+  }
+
+  get tasks(): Collection<Publisher, TaskOld> {
+    const { relations } = getOrmField(this);
+    return relations.tasks ??= hasManyToMany(
+      this as any as Publisher,
+      "tasks_to_publishers",
+      "tasks",
+      "publisher_id",
+      taskOldMeta,
+      "publishers",
+      "task_id",
     );
   }
 }

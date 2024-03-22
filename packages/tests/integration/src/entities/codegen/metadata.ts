@@ -642,6 +642,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined, immutable: false },
     "images": { kind: "o2m", fieldName: "images", fieldIdName: "imageIds", required: false, otherMetadata: () => imageMeta, otherFieldName: "publisher", serde: undefined, immutable: false },
     "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, otherMetadata: () => tagMeta, otherFieldName: "publishers", serde: undefined, immutable: false, joinTableName: "publishers_to_tags", columnNames: ["publisher_id", "tag_id"] },
+    "tasks": { kind: "m2m", fieldName: "tasks", fieldIdName: "taskIds", required: false, otherMetadata: () => taskOldMeta, otherFieldName: "publishers", serde: undefined, immutable: false, joinTableName: "tasks_to_publishers", columnNames: ["publisher_id", "task_id"] },
   },
   allFields: {},
   orderBy: undefined,
@@ -875,6 +876,7 @@ export const taskOldMeta: EntityMetadata<TaskOld> = {
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("task", "id", "id", "int"), immutable: true },
     "specialOldField": { kind: "primitive", fieldName: "specialOldField", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("specialOldField", "special_old_field", "int"), immutable: false },
+    "publishers": { kind: "m2m", fieldName: "publishers", fieldIdName: "publisherIds", required: false, otherMetadata: () => publisherMeta, otherFieldName: "tasks", serde: undefined, immutable: false, joinTableName: "tasks_to_publishers", columnNames: ["task_id", "publisher_id"] },
   },
   allFields: {},
   orderBy: undefined,

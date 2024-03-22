@@ -5,7 +5,7 @@ import { saveFiles } from "ts-poet";
 import { DbMetadata, EntityDbMetadata, failIfOverlappingFieldNames, makeEntity } from "./EntityDbMetadata";
 import { assignTags } from "./assignTags";
 import { maybeRunTransforms } from "./codemods";
-import { Config, loadConfig, warnInvalidConfigEntries, writeConfig } from "./config";
+import { Config, loadConfig, stripStiPlaceholders, warnInvalidConfigEntries, writeConfig } from "./config";
 import { generateFiles } from "./generate";
 import { createFlushFunction } from "./generateFlushFunction";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
@@ -47,8 +47,6 @@ async function main() {
 
   // Assign any new tags and write them back to the config file
   assignTags(config, dbMetadata);
-  // bumpVersion(config);
-  await writeConfig(config);
 
   // Do some warnings
   for (const entity of entities) failIfOverlappingFieldNames(entity);
@@ -57,6 +55,9 @@ async function main() {
 
   // Finally actually generate the files (even if we found a fatal error)
   await generateAndSaveFiles(config, dbMetadata);
+
+  stripStiPlaceholders(config, entities);
+  await writeConfig(config);
 
   if (loggedFatal) {
     throw new Error("A warning was generated during codegen");
@@ -224,6 +225,7 @@ function rewriteSingleTableForeignKeys(config: Config, entities: EntityDbMetadat
   // See if we even have any STI tables
   const stiEntities = getStiEntities(entities);
   if (stiEntities.size === 0) return;
+  // Scan for other entities/relations that point to the STI table
   for (const entity of entities) {
     // m2os
     for (const m2o of entity.manyToOnes) {
@@ -240,7 +242,6 @@ function rewriteSingleTableForeignKeys(config: Config, entities: EntityDbMetadat
     }
     // o2ms
     for (const o2m of entity.oneToManys) {
-      // See if our otherField is only in a specific STI subtype
       const target = stiEntities.get(o2m.otherEntity.name);
       if (target && target.base.inheritanceType === "sti") {
         // Ensure the incoming FK is not in the base type, and find the 1st subtype (eventually N subtypes?)
@@ -251,6 +252,21 @@ function rewriteSingleTableForeignKeys(config: Config, entities: EntityDbMetadat
         );
         if (otherField) {
           o2m.otherEntity = otherField.entity;
+        }
+      }
+    }
+    // m2ms
+    for (const m2m of entity.manyToManys) {
+      const target = stiEntities.get(m2m.otherEntity.name);
+      if (target && target.base.inheritanceType === "sti") {
+        // Ensure the incoming FK is not in the base type, and find the 1st subtype (eventually N subtypes?)
+        const otherField = target.subTypes.find(
+          (st) =>
+            !target.base.manyToManys.some((m) => m.fieldName === m2m.otherFieldName) &&
+            st.manyToManys.some((m) => m.fieldName === m2m.otherFieldName),
+        );
+        if (otherField) {
+          m2m.otherEntity = otherField.entity;
         }
       }
     }

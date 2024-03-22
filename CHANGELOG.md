@@ -1,3 +1,10 @@
+## [1.149.3](https://github.com/joist-orm/joist-orm/compare/v1.149.2...v1.149.3) (2024-03-22)
+
+
+### Bug Fixes
+
+* Fix STI m2m relations ([#981](https://github.com/joist-orm/joist-orm/issues/981)) ([e7e2569](https://github.com/joist-orm/joist-orm/commit/e7e25696988a59fec6b566bd13bc068f3c217a3d))
+
 ## [1.149.2](https://github.com/joist-orm/joist-orm/compare/v1.149.1...v1.149.2) (2024-03-21)
 
 

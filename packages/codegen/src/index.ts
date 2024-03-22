@@ -5,7 +5,7 @@ import { saveFiles } from "ts-poet";
 import { DbMetadata, EntityDbMetadata, failIfOverlappingFieldNames, makeEntity } from "./EntityDbMetadata";
 import { assignTags } from "./assignTags";
 import { maybeRunTransforms } from "./codemods";
-import { Config, loadConfig, warnInvalidConfigEntries, writeConfig } from "./config";
+import { Config, loadConfig, stripStiPlaceholders, warnInvalidConfigEntries, writeConfig } from "./config";
 import { generateFiles } from "./generate";
 import { createFlushFunction } from "./generateFlushFunction";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
@@ -47,8 +47,6 @@ async function main() {
 
   // Assign any new tags and write them back to the config file
   assignTags(config, dbMetadata);
-  // bumpVersion(config);
-  await writeConfig(config);
 
   // Do some warnings
   for (const entity of entities) failIfOverlappingFieldNames(entity);
@@ -57,6 +55,9 @@ async function main() {
 
   // Finally actually generate the files (even if we found a fatal error)
   await generateAndSaveFiles(config, dbMetadata);
+
+  stripStiPlaceholders(config, entities);
+  await writeConfig(config);
 
   if (loggedFatal) {
     throw new Error("A warning was generated during codegen");

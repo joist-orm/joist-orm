@@ -1,6 +1,6 @@
 import { createFromBuffer } from "@dprint/formatter";
 import { getBuffer } from "@dprint/json";
-import { DbMetadata, Entity } from "EntityDbMetadata";
+import { DbMetadata, Entity, EntityDbMetadata } from "EntityDbMetadata";
 import { promises as fs } from "fs";
 import { groupBy } from "joist-utils";
 import { z } from "zod";
@@ -239,6 +239,17 @@ export async function writeConfig(config: Config): Promise<void> {
   const input = JSON.stringify(sorted);
   const content = jsonFormatter.formatText("test.json", input);
   await fs.writeFile(configPath, content);
+}
+
+export function stripStiPlaceholders(config: Config, entities: EntityDbMetadata[]): void {
+  // Defacto (with today's setup) the config of STI entities lives on the base entity,
+  // so don't write confusing subtype-specific entries into the config file.
+  // ...hopefully we don't have any code accidentally looking for the STI config...
+  for (const entity of entities) {
+    if (entity.inheritanceType === "sti" && entity.stiDiscriminatorValue) {
+      delete config.entities[entity.name];
+    }
+  }
 }
 
 /** Applies defaults to the timestamp config. */

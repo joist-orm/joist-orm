@@ -72,8 +72,6 @@
       "relations": { "newTask": { "stiType": "TaskNew" }, "oldTask": { "stiType": "TaskOld" } },
       "tag": "ti"
     },
-    "TaskNew": { "tag": "task" },
-    "TaskOld": { "tag": "task" },
     "User": {
       "fields": {
         "ipAddress": { "type": "IpAddress@src/entities/types" },
@@ -84,5 +82,5 @@
     }
   },
   "entitiesDirectory": "./src/entities",
-  "version": "1.149.2"
+  "version": "1.149.3"
 }

@@ -76,7 +76,7 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
   };
 
   constructor(em: EntityManager, opts: DatabaseOwnerOpts) {
-    super(em, databaseOwnerMeta, opts);
+    super(em, opts);
     setOpts(this as any as DatabaseOwner, opts, { calledFromConstructor: true });
   }
 

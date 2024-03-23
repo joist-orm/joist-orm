@@ -141,7 +141,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   };
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
-    super(em, bookReviewMeta, opts);
+    super(em, opts);
     setOpts(this as any as BookReview, opts, { calledFromConstructor: true });
   }
 

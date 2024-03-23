@@ -195,13 +195,8 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   };
 
   constructor(em: EntityManager, opts: PublisherOpts) {
-    if (arguments.length === 3) {
-      // @ts-ignore
-      super(em, arguments[1], arguments[2]);
-    } else {
-      super(em, publisherMeta, opts);
-      setOpts(this as any as Publisher, opts, { calledFromConstructor: true });
-    }
+    super(em, opts);
+    setOpts(this as any as Publisher, opts, { calledFromConstructor: true });
 
     if (this.constructor === Publisher && !(em as any).fakeInstance) {
       throw new Error(`Publisher ${typeof opts === "string" ? opts : ""} must be instantiated via a subtype`);

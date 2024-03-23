@@ -137,7 +137,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   };
 
   constructor(em: EntityManager, opts: CriticOpts) {
-    super(em, criticMeta, opts);
+    super(em, opts);
     setOpts(this as any as Critic, opts, { calledFromConstructor: true });
   }
 

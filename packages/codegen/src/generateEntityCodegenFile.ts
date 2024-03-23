@@ -407,38 +407,13 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     }`
     : "";
 
-  let cstr;
-  if (baseEntity) {
-    cstr = code`
-      constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
-        // @ts-ignore
-        super(em, ${metadata}, opts);
-        ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
-        ${maybePreventBaseTypeInstantiation}
-      }
-    `;
-  } else if (subEntities.length > 0) {
-    cstr = code`
-      constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
-        if (arguments.length === 3) {
-          // @ts-ignore
-          super(em, arguments[1], arguments[2]);
-        } else {
-          super(em, ${metadata}, opts);
-          ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
-        }
-        ${maybePreventBaseTypeInstantiation}
-      }
-    `;
-  } else {
-    cstr = code`
-      constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
-        super(em, ${metadata}, opts);
-        ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
-        ${maybePreventBaseTypeInstantiation}
-      }
-    `;
-  }
+  const cstr = code`
+    constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
+      super(em, opts);
+      ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
+      ${maybePreventBaseTypeInstantiation}
+    }
+  `;
 
   let maybeOtherTypeChanges;
   if (subEntities.length > 0) {

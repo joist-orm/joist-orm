@@ -110,7 +110,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   };
 
   constructor(em: EntityManager, opts: PaintingOpts) {
-    super(em, paintingMeta, opts);
+    super(em, opts);
     setOpts(this as any as Painting, opts, { calledFromConstructor: true });
   }
 

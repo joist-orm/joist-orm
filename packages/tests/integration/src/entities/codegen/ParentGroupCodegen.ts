@@ -112,7 +112,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   };
 
   constructor(em: EntityManager, opts: ParentGroupOpts) {
-    super(em, parentGroupMeta, opts);
+    super(em, opts);
     setOpts(this as any as ParentGroup, opts, { calledFromConstructor: true });
   }
 

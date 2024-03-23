@@ -313,4 +313,10 @@ describe("SingleTableInheritance", () => {
     // @ts-expect-error
     expect(nt.specialNewField.toString()).toBe("2");
   });
+
+  it("subtypes use defaults from the base type", async () => {
+    const em = newEntityManager();
+    const ot = newTaskOld(em, {});
+    expect(ot.durationInDays).toBe(10);
+  });
 });

@@ -1,3 +1,10 @@
+# [1.151.0](https://github.com/joist-orm/joist-orm/compare/v1.150.2...v1.151.0) (2024-03-23)
+
+
+### Features
+
+* Rename PersistedAsyncRefernece to ReactiveReference. ([#986](https://github.com/joist-orm/joist-orm/issues/986)) ([963d484](https://github.com/joist-orm/joist-orm/commit/963d484bd58eb67965bc03d9d2865f6eafd5a8c9))
+
 ## [1.150.2](https://github.com/joist-orm/joist-orm/compare/v1.150.1...v1.150.2) (2024-03-23)
 
 

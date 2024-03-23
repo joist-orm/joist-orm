@@ -7,7 +7,6 @@ import {
   ReactiveField,
   Reference,
   cannotBeUpdated,
-  getEm,
   hasAsyncMethod,
   hasAsyncProperty,
   hasManyDerived,
@@ -46,7 +45,7 @@ export class Author extends AuthorCodegen {
       // needs a Loaded<Book, "reviews"> or will throw
       remove: (author, book) => {
         const loaded = book as Loaded<Book, "reviews">;
-        loaded.reviews.get.forEach((r) => getEm(author).delete(r));
+        loaded.reviews.get.forEach((r) => author.em.delete(r));
       },
     },
   );

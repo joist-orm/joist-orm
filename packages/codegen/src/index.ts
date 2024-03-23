@@ -231,7 +231,7 @@ function rewriteSingleTableForeignKeys(config: Config, entities: EntityDbMetadat
     for (const m2o of entity.manyToOnes) {
       const target = stiEntities.get(m2o.otherEntity.name);
       // See if the user has configured this specific m2o FK as a different subtype
-      const stiType = config.entities[entity.name]?.relations?.[m2o.fieldName]?.stiType;
+      const stiType = config.entities[entity.name]?.fields?.[m2o.fieldName]?.stiType;
       if (target && stiType) {
         const { subTypes } = target;
         m2o.otherEntity = (

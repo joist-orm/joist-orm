@@ -60,18 +60,15 @@
     "Tag": { "relations": { "authors": { "large": true } }, "tag": "t" },
     "Task": {
       "fields": {
-        "publishers": { "stiType": "TaskOld" },
+        "specialNewAuthor": { "stiType": "TaskNew" },
         "specialNewField": { "stiType": "TaskNew" },
         "specialOldField": { "stiNotNull": true, "stiType": "TaskOld" },
         "type": { "stiDiscriminator": { "NEW": "TaskNew", "OLD": "TaskOld" } }
       },
-      "relations": { "specialNewAuthor": { "stiType": "TaskNew" } },
+      "relations": { "publishers": { "stiType": "TaskOld" } },
       "tag": "task"
     },
-    "TaskItem": {
-      "relations": { "newTask": { "stiType": "TaskNew" }, "oldTask": { "stiType": "TaskOld" } },
-      "tag": "ti"
-    },
+    "TaskItem": { "fields": { "newTask": { "stiType": "TaskNew" }, "oldTask": { "stiType": "TaskOld" } }, "tag": "ti" },
     "User": {
       "fields": {
         "ipAddress": { "type": "IpAddress@src/entities/types" },

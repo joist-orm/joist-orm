@@ -5,7 +5,7 @@ import {
   LoadHint,
   NestedLoadHint,
   normalizeHint,
-  PersistedAsyncReferenceImpl,
+  ReactiveReferenceImpl,
 } from "joist-orm";
 import { canPreload } from "./canPreload";
 
@@ -29,7 +29,7 @@ export function partitionHint(
       if (p && p.loadHint) {
         // Maybe we could have `PersistedAsyncReferenceImpl` internally/dynamically return us the right
         // load hint, instead of special casing it like this? Like it could internally check "needs calc?"
-        if (p instanceof PersistedAsyncReferenceImpl) {
+        if (p instanceof ReactiveReferenceImpl) {
           // Instead of using p.loadHint, we'll just follow the FK in the database and go to the subHint
           const [_sql, _non] = partitionHint(p.otherMeta, subHint);
           deepMerge(((sql ??= {})[key] ??= {}), _sql ?? {});

@@ -32,8 +32,8 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
-  PersistedAsyncReference,
   ReactiveField,
+  ReactiveReference,
   setField,
   setOpts,
   TaggedId,
@@ -310,7 +310,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     factoryOptsType: Parameters<typeof newAuthor>[1];
   };
 
-  abstract readonly favoriteBook: PersistedAsyncReference<Author, Book, undefined>;
+  abstract readonly favoriteBook: ReactiveReference<Author, Book, undefined>;
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, opts);

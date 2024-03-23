@@ -84,4 +84,4 @@ export const MaybeAbstractEntityConstructor = imp("MaybeAbstractEntityConstructo
 export const deTagId = imp("deTagId@joist-orm");
 export const toIdOf = imp("toIdOf@joist-orm");
 export const ReactiveField = imp("ReactiveField@joist-orm");
-export const PersistedAsyncReference = imp("PersistedAsyncReference@joist-orm");
+export const ReactiveReference = imp("ReactiveReference@joist-orm");

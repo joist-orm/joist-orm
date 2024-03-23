@@ -3,7 +3,7 @@ import { IdOf, TaggedId } from "../EntityManager";
 import { CustomReference } from "./CustomReference";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
 import { OneToOneReferenceImpl } from "./OneToOneReference";
-import { PersistedAsyncReferenceImpl } from "./PersistedAsyncReference";
+import { ReactiveReferenceImpl } from "./ReactiveReference";
 import { PolymorphicReferenceImpl } from "./PolymorphicReference";
 import { Relation } from "./Relation";
 
@@ -56,7 +56,7 @@ export function isReference(maybeReference: any): maybeReference is Reference<an
   return (
     maybeReference instanceof OneToOneReferenceImpl ||
     maybeReference instanceof ManyToOneReferenceImpl ||
-    maybeReference instanceof PersistedAsyncReferenceImpl ||
+    maybeReference instanceof ReactiveReferenceImpl ||
     maybeReference instanceof CustomReference ||
     maybeReference instanceof PolymorphicReferenceImpl
   );

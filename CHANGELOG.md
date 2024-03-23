@@ -1,3 +1,10 @@
+# [1.150.0](https://github.com/joist-orm/joist-orm/compare/v1.149.4...v1.150.0) (2024-03-23)
+
+
+### Features
+
+* Unify database/config default handling. ([#983](https://github.com/joist-orm/joist-orm/issues/983)) ([a5e35e4](https://github.com/joist-orm/joist-orm/commit/a5e35e40826cc359b1093d6cdf726527b46f70da))
+
 ## [1.149.4](https://github.com/joist-orm/joist-orm/compare/v1.149.3...v1.149.4) (2024-03-23)
 
 

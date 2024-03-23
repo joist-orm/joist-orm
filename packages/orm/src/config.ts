@@ -165,17 +165,19 @@ export class ConfigApi<T extends Entity, C> {
       ctx: C,
     ) => FieldsOf<T>[K] extends EntityField ? MaybePromise<FieldsOf<T>[K]["type"] | undefined> : never,
   ): void;
-  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(fieldName: K, hintOrFn: any, fn?: any): void {
+  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(fieldName: K, hintOrFnOrValue: any, fn?: any): void {
     this.ensurePreBoot();
     if (fn) {
+      // If we're called once by the codegen, and again by the user, override the syncDefault
+      delete this.__data.syncDefaults[fieldName];
       this.__data.asyncDefaults[fieldName] = async (entity: T, ctx: C) => {
         // Ideally we'd convert this once outside `fn`, but we don't have `metadata` yet
-        const loadHint = convertToLoadHint(getMetadata(entity), hintOrFn);
+        const loadHint = convertToLoadHint(getMetadata(entity), hintOrFnOrValue);
         const loaded = await entity.em.populate(entity, loadHint);
         return fn(loaded, ctx);
       };
     } else {
-      this.__data.syncDefaults[fieldName] = hintOrFn;
+      this.__data.syncDefaults[fieldName] = hintOrFnOrValue;
     }
   }
 

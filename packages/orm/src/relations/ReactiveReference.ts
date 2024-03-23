@@ -24,7 +24,7 @@ import { failIfNewEntity, failNoId } from "./ManyToOneReference";
 import { Reference, ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
 
-export interface PersistedAsyncReference<T extends Entity, U extends Entity, N extends never | undefined>
+export interface ReactiveReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends Reference<T, U, N> {
   isLoaded: boolean;
   isSet: boolean;
@@ -51,7 +51,7 @@ export interface PersistedAsyncReference<T extends Entity, U extends Entity, N e
   idUntaggedIfSet: string | undefined;
 }
 
-export function hasPersistedAsyncReference<
+export function hasReactiveReference<
   T extends Entity,
   U extends Entity,
   const H extends ReactiveHint<T>,
@@ -61,19 +61,19 @@ export function hasPersistedAsyncReference<
   fieldName: keyof T & string,
   hint: H,
   fn: (entity: Reacted<T, H>) => U | N,
-): PersistedAsyncReference<T, U, N> {
+): ReactiveReference<T, U, N> {
   const entity = currentlyInstantiatingEntity as T;
-  return new PersistedAsyncReferenceImpl<T, U, H, N>(entity, fieldName, otherMeta, hint, fn);
+  return new ReactiveReferenceImpl<T, U, H, N>(entity, fieldName, otherMeta, hint, fn);
 }
 
-export class PersistedAsyncReferenceImpl<
+export class ReactiveReferenceImpl<
     T extends Entity,
     U extends Entity,
     H extends ReactiveHint<T>,
     N extends never | undefined,
   >
   extends AbstractRelationImpl<T, U>
-  implements PersistedAsyncReference<T, U, N>
+  implements ReactiveReference<T, U, N>
 {
   readonly #fieldName: keyof T & string;
   readonly #otherMeta: EntityMetadata;

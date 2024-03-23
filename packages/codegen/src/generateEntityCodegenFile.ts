@@ -31,10 +31,10 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
-  PersistedAsyncReference,
   PolymorphicReference,
   ProjectEntity,
   ReactiveField,
+  ReactiveReference,
   SSAssert,
   TaggedId,
   ValueFilter,
@@ -289,7 +289,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     const maybeOptional = notNull ? "never" : "undefined";
     if (m2o.derived === "async") {
       const line = code`
-        abstract readonly ${fieldName}: ${PersistedAsyncReference}<${entity.name}, ${otherEntity.type}, ${maybeOptional}>;
+        abstract readonly ${fieldName}: ${ReactiveReference}<${entity.name}, ${otherEntity.type}, ${maybeOptional}>;
       `;
       return { kind: "abstract", line } as const;
     }

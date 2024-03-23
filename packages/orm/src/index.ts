@@ -1,6 +1,6 @@
 import { getOrmField } from "./BaseEntity";
 import { Entity } from "./Entity";
-import { EntityConstructor, EntityManager, MaybeAbstractEntityConstructor, OptsOf, TaggedId } from "./EntityManager";
+import { EntityConstructor, MaybeAbstractEntityConstructor, OptsOf, TaggedId } from "./EntityManager";
 import { EntityMetadata, getBaseMeta, getMetadata } from "./EntityMetadata";
 import { setBooted } from "./config";
 import { setSyncDefaults } from "./defaults";
@@ -8,7 +8,7 @@ import { getFakeInstance, getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { isAllSqlPaths } from "./loadLens";
 import { reverseReactiveHint } from "./reactiveHints";
-import { PersistedAsyncReferenceImpl, Reference } from "./relations";
+import { ReactiveReferenceImpl, Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
@@ -315,7 +315,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
         const ap = (getFakeInstance(meta) as any)[field.fieldName] as
           | ReactiveFieldImpl<any, any, any>
           | ReactiveQueryFieldImpl<any, any, any, any>
-          | PersistedAsyncReferenceImpl<any, any, any, any>
+          | ReactiveReferenceImpl<any, any, any, any>
           | undefined;
         // We might have an async property configured in joist-config.json that has not yet
         // been made a `hasReactiveField` in the entity file, so avoid continuing

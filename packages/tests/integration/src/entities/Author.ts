@@ -3,7 +3,7 @@ import {
   AsyncProperty,
   Collection,
   Loaded,
-  PersistedAsyncReference,
+  ReactiveReference,
   ReactiveField,
   Reference,
   cannotBeUpdated,
@@ -12,7 +12,7 @@ import {
   hasManyDerived,
   hasManyThrough,
   hasOneDerived,
-  hasPersistedAsyncReference,
+  hasReactiveReference,
   hasReactiveAsyncProperty,
   hasReactiveField,
   isDefined,
@@ -198,7 +198,7 @@ export class Author extends AuthorCodegen {
     },
   );
 
-  readonly favoriteBook: PersistedAsyncReference<Author, Book, undefined> = hasPersistedAsyncReference(
+  readonly favoriteBook: ReactiveReference<Author, Book, undefined> = hasReactiveReference(
     bookMeta,
     "favoriteBook",
     { books: { reviews_ro: "rating" } },

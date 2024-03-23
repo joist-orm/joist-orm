@@ -58,7 +58,7 @@ import {
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";
 import { followReverseHint } from "./reactiveHints";
-import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
+import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { MaybePromise, assertNever, fail, getOrSet, partition, toArray } from "./utils";
@@ -730,7 +730,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         if (
           value instanceof ManyToOneReferenceImpl ||
           value instanceof PolymorphicReferenceImpl ||
-          value instanceof PersistedAsyncReferenceImpl
+          value instanceof ReactiveReferenceImpl
         ) {
           // What's the existing entity? Have we cloned it?
           const existingIdOrEntity = getField(clone, fieldName);
@@ -1843,7 +1843,7 @@ async function crawl<T extends Entity>(
             if (related) {
               await crawl(found, [related], nested, opts);
             }
-          } else if (relation instanceof PersistedAsyncReferenceImpl) {
+          } else if (relation instanceof ReactiveReferenceImpl) {
             const relatedEntities: readonly Entity[] = await relation.load();
             await crawl(found, relatedEntities, nested, opts);
           } else {
@@ -1879,7 +1879,7 @@ function getCascadeDeleteRelations(entity: Entity): AbstractRelationImpl<any, an
 }
 
 function isCustomRelation(r: AbstractRelationImpl<any, any>): boolean {
-  return r instanceof CustomCollection || r instanceof CustomReference || r instanceof PersistedAsyncReferenceImpl;
+  return r instanceof CustomCollection || r instanceof CustomReference || r instanceof ReactiveReferenceImpl;
 }
 
 function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Date): void {

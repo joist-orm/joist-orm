@@ -24,7 +24,7 @@ describe("SingleTableInheritance", () => {
       type_id: 1,
       special_new_field: null,
       special_old_field: 1,
-      duration_in_days: 0,
+      duration_in_days: 10,
     });
   });
 
@@ -38,7 +38,7 @@ describe("SingleTableInheritance", () => {
       type_id: 2,
       special_new_field: 1,
       special_old_field: null,
-      duration_in_days: 0,
+      duration_in_days: 10,
     });
   });
 
@@ -142,42 +142,42 @@ describe("SingleTableInheritance", () => {
       {
         id: 1,
         type_id: null,
-        duration_in_days: 0,
+        duration_in_days: 10,
         special_new_field: null,
         special_old_field: null,
       },
       {
         id: 2,
         type_id: null,
-        duration_in_days: 0,
+        duration_in_days: 10,
         special_new_field: null,
         special_old_field: null,
       },
       {
         id: 3,
         type_id: 1,
-        duration_in_days: 0,
+        duration_in_days: 10,
         special_new_field: null,
         special_old_field: 0,
       },
       {
         id: 4,
         type_id: 1,
-        duration_in_days: 0,
+        duration_in_days: 10,
         special_new_field: null,
         special_old_field: 1,
       },
       {
         id: 5,
         type_id: 2,
-        duration_in_days: 0,
+        duration_in_days: 10,
         special_new_field: null,
         special_old_field: null,
       },
       {
         id: 6,
         type_id: 2,
-        duration_in_days: 0,
+        duration_in_days: 10,
         special_new_field: 2,
         special_old_field: null,
       },

@@ -15,7 +15,7 @@ describe("Book", () => {
     const em = newEntityManager();
     const a1 = em.create(Author, { firstName: "a1" });
     const b1 = em.create(Book, { title: "b1", author: a1 });
-    expect(b1.order).toEqual(1);
+    expect(b1.notes).toEqual("Notes for b1");
   });
 
   it("does not reset default values on load", async () => {

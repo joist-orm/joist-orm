@@ -1,3 +1,10 @@
+## [1.149.4](https://github.com/joist-orm/joist-orm/compare/v1.149.3...v1.149.4) (2024-03-23)
+
+
+### Bug Fixes
+
+* Fix STI config warnings ([#982](https://github.com/joist-orm/joist-orm/issues/982)) ([1ebd9be](https://github.com/joist-orm/joist-orm/commit/1ebd9be5e30803e67d8345eaaaedd05b46a679b1))
+
 ## [1.149.3](https://github.com/joist-orm/joist-orm/compare/v1.149.2...v1.149.3) (2024-03-22)
 
 

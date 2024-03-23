@@ -2,7 +2,6 @@ import {
   cannotBeUpdated,
   Collection,
   CustomCollection,
-  getEm,
   hasReactiveQueryField,
   isLoaded,
   Loaded,
@@ -64,7 +63,7 @@ export abstract class Publisher extends PublisherCodegen {
     remove: (entity, value) => {
       const allImages = (entity as Loaded<Publisher, "allImages">).allImages;
       if (allImages.get.includes(value)) {
-        getEm(entity).delete(value);
+        entity.em.delete(value);
       }
     },
     isLoaded: () => isLoaded(this, allImagesHint as any),

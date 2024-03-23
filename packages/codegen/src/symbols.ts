@@ -64,7 +64,6 @@ export const Loaded = imp("Loaded@joist-orm");
 export const isLoaded = imp("isLoaded@joist-orm");
 export const getOrmField = imp("getOrmField@joist-orm");
 export const isEntity = imp("isEntity@joist-orm");
-export const getEm = imp("getEm@joist-orm");
 export const loadLens = imp("loadLens@joist-orm");
 export const hasOneThrough = imp("hasOneThrough@joist-orm");
 export const hasMany = imp("hasMany@joist-orm");

@@ -336,10 +336,6 @@ export function configureMetadata(metas: EntityMetadata[]): void {
   });
 }
 
-export function getEm(entity: Entity): EntityManager<any> {
-  return entity.em;
-}
-
 export function getRelations(entity: Entity): AbstractRelationImpl<any, any>[] {
   return Object.entries(getProperties(getMetadata(entity)))
     .filter(([, v]) => v instanceof AbstractRelationImpl)

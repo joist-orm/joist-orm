@@ -149,7 +149,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   };
 
   constructor(em: EntityManager, opts: AuthorStatOpts) {
-    super(em, authorStatMeta, opts);
+    super(em, opts);
     setOpts(this as any as AuthorStat, opts, { calledFromConstructor: true });
   }
 

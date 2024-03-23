@@ -98,8 +98,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   };
 
   constructor(em: EntityManager, opts: TaskOldOpts) {
-    // @ts-ignore
-    super(em, taskOldMeta, opts);
+    super(em, opts);
     setOpts(this as any as TaskOld, opts, { calledFromConstructor: true });
   }
 

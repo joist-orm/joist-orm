@@ -104,8 +104,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   };
 
   constructor(em: EntityManager, opts: SmallPublisherOpts) {
-    // @ts-ignore
-    super(em, smallPublisherMeta, opts);
+    super(em, opts);
     setOpts(this as any as SmallPublisher, opts, { calledFromConstructor: true });
   }
 

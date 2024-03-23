@@ -118,7 +118,7 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
   };
 
   constructor(em: EntityManager, opts: ParentItemOpts) {
-    super(em, parentItemMeta, opts);
+    super(em, opts);
     setOpts(this as any as ParentItem, opts, { calledFromConstructor: true });
   }
 

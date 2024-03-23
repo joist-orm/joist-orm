@@ -108,7 +108,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   };
 
   constructor(em: EntityManager, opts: CommentOpts) {
-    super(em, commentMeta, opts);
+    super(em, opts);
     setOpts(this as any as Comment, opts, { calledFromConstructor: true });
   }
 

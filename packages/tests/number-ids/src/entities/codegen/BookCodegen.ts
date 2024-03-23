@@ -100,7 +100,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, number> impl
   };
 
   constructor(em: EntityManager, opts: BookOpts) {
-    super(em, bookMeta, opts);
+    super(em, opts);
     setOpts(this as any as Book, opts, { calledFromConstructor: true });
   }
 

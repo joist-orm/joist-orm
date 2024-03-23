@@ -120,7 +120,7 @@ export abstract class ChildItemCodegen extends BaseEntity<EntityManager, string>
   };
 
   constructor(em: EntityManager, opts: ChildItemOpts) {
-    super(em, childItemMeta, opts);
+    super(em, opts);
     setOpts(this as any as ChildItem, opts, { calledFromConstructor: true });
   }
 

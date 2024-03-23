@@ -129,7 +129,7 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   };
 
   constructor(em: EntityManager, opts: ChildGroupOpts) {
-    super(em, childGroupMeta, opts);
+    super(em, opts);
     setOpts(this as any as ChildGroup, opts, { calledFromConstructor: true });
   }
 

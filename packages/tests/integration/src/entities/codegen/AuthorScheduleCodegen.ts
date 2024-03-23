@@ -109,7 +109,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   };
 
   constructor(em: EntityManager, opts: AuthorScheduleOpts) {
-    super(em, authorScheduleMeta, opts);
+    super(em, opts);
     setOpts(this as any as AuthorSchedule, opts, { calledFromConstructor: true });
   }
 

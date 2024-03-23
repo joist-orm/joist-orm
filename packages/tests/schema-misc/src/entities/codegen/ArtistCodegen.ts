@@ -103,7 +103,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   };
 
   constructor(em: EntityManager, opts: ArtistOpts) {
-    super(em, artistMeta, opts);
+    super(em, opts);
     setOpts(this as any as Artist, opts, { calledFromConstructor: true });
   }
 

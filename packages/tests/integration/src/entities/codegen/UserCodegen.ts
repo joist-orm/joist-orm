@@ -175,13 +175,8 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   };
 
   constructor(em: EntityManager, opts: UserOpts) {
-    if (arguments.length === 3) {
-      // @ts-ignore
-      super(em, arguments[1], arguments[2]);
-    } else {
-      super(em, userMeta, opts);
-      setOpts(this as any as User, opts, { calledFromConstructor: true });
-    }
+    super(em, opts);
+    setOpts(this as any as User, opts, { calledFromConstructor: true });
   }
 
   get id(): UserId {

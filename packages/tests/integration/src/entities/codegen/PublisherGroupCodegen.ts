@@ -114,7 +114,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   };
 
   constructor(em: EntityManager, opts: PublisherGroupOpts) {
-    super(em, publisherGroupMeta, opts);
+    super(em, opts);
     setOpts(this as any as PublisherGroup, opts, { calledFromConstructor: true });
   }
 

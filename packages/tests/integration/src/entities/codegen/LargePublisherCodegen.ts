@@ -103,8 +103,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   };
 
   constructor(em: EntityManager, opts: LargePublisherOpts) {
-    // @ts-ignore
-    super(em, largePublisherMeta, opts);
+    super(em, opts);
     setOpts(this as any as LargePublisher, opts, { calledFromConstructor: true });
   }
 

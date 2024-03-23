@@ -85,8 +85,7 @@ export abstract class AdminUserCodegen extends User implements Entity {
   };
 
   constructor(em: EntityManager, opts: AdminUserOpts) {
-    // @ts-ignore
-    super(em, adminUserMeta, opts);
+    super(em, opts);
     setOpts(this as any as AdminUser, opts, { calledFromConstructor: true });
   }
 

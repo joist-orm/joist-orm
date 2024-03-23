@@ -138,7 +138,7 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   };
 
   constructor(em: EntityManager, opts: ImageOpts) {
-    super(em, imageMeta, opts);
+    super(em, opts);
     setOpts(this as any as Image, opts, { calledFromConstructor: true });
   }
 

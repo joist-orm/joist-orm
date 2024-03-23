@@ -110,7 +110,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   };
 
   constructor(em: EntityManager, opts: CriticColumnOpts) {
-    super(em, criticColumnMeta, opts);
+    super(em, opts);
     setOpts(this as any as CriticColumn, opts, { calledFromConstructor: true });
   }
 

@@ -123,7 +123,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   };
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
-    super(em, bookAdvanceMeta, opts);
+    super(em, opts);
     setOpts(this as any as BookAdvance, opts, { calledFromConstructor: true });
   }
 

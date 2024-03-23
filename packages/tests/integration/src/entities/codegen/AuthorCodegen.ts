@@ -313,7 +313,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   abstract readonly favoriteBook: PersistedAsyncReference<Author, Book, undefined>;
 
   constructor(em: EntityManager, opts: AuthorOpts) {
-    super(em, authorMeta, opts);
+    super(em, opts);
     setOpts(this as any as Author, opts, { calledFromConstructor: true });
   }
 

@@ -124,7 +124,7 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
   };
 
   constructor(em: EntityManager, opts: TaskItemOpts) {
-    super(em, taskItemMeta, opts);
+    super(em, opts);
     setOpts(this as any as TaskItem, opts, { calledFromConstructor: true });
   }
 

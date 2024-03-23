@@ -1,3 +1,10 @@
+## [1.150.1](https://github.com/joist-orm/joist-orm/compare/v1.150.0...v1.150.1) (2024-03-23)
+
+
+### Bug Fixes
+
+* Simplify constructors. ([#984](https://github.com/joist-orm/joist-orm/issues/984)) ([577b0a5](https://github.com/joist-orm/joist-orm/commit/577b0a5d6099906845e1b24252cd206630576a61))
+
 # [1.150.0](https://github.com/joist-orm/joist-orm/compare/v1.149.4...v1.150.0) (2024-03-23)
 
 

@@ -149,6 +149,11 @@ export class ConfigApi<T extends Entity, C> {
   /** Adds a synchronous default for `fieldName`. */
   setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(
     fieldName: K,
+    value: FieldsOf<T>[K] extends EntityField ? FieldsOf<T>[K]["type"] | FieldsOf<T>[K]["nullable"] : never,
+  ): void;
+  /** Adds a synchronous default for `fieldName`. */
+  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(
+    fieldName: K,
     fn: (entity: T) => FieldsOf<T>[K] extends EntityField ? FieldsOf<T>[K]["type"] | FieldsOf<T>[K]["nullable"] : never,
   ): void;
   /** Adds an asynchronous default for `fieldName`. */
@@ -252,7 +257,7 @@ export class ConfigData<T extends Entity, C> {
     afterCommit: [],
   };
   /** Synchronous defaults for this entity type, invoked on `em.create`. */
-  syncDefaults: Record<string, (entity: T) => void> = {};
+  syncDefaults: Record<string, ((entity: T) => void) | unknown> = {};
   /** Asynchronous defaults for this entity type, invoked on `em.flush`. */
   asyncDefaults: Record<string, (entity: T, ctx: C) => MaybePromise<T>> = {};
 

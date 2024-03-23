@@ -71,7 +71,6 @@ export const adminUserConfig = new ConfigApi<AdminUser, Context>();
 adminUserConfig.addRule(newRequiredRule("role"));
 
 export abstract class AdminUserCodegen extends User implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "u";
   static readonly metadata: EntityMetadata<AdminUser>;
 
@@ -87,7 +86,7 @@ export abstract class AdminUserCodegen extends User implements Entity {
 
   constructor(em: EntityManager, opts: AdminUserOpts) {
     // @ts-ignore
-    super(em, adminUserMeta, AdminUserCodegen.defaultValues, opts);
+    super(em, adminUserMeta, opts);
     setOpts(this as any as AdminUser, opts, { calledFromConstructor: true });
   }
 

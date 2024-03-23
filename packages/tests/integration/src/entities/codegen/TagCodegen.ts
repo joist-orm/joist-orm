@@ -103,7 +103,6 @@ tagConfig.addRule(newRequiredRule("createdAt"));
 tagConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class TagCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "t";
   static readonly metadata: EntityMetadata<Tag>;
 
@@ -118,7 +117,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   };
 
   constructor(em: EntityManager, opts: TagOpts) {
-    super(em, tagMeta, TagCodegen.defaultValues, opts);
+    super(em, tagMeta, opts);
     setOpts(this as any as Tag, opts, { calledFromConstructor: true });
   }
 

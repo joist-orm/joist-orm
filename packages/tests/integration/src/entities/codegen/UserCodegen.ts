@@ -158,9 +158,9 @@ userConfig.addRule(newRequiredRule("bio"));
 userConfig.addRule(newRequiredRule("originalEmail"));
 userConfig.addRule(newRequiredRule("createdAt"));
 userConfig.addRule(newRequiredRule("updatedAt"));
+userConfig.setDefault("bio", "");
 
 export abstract class UserCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = { bio: "" };
   static readonly tagName = "u";
   static readonly metadata: EntityMetadata<User>;
 
@@ -175,11 +175,11 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   };
 
   constructor(em: EntityManager, opts: UserOpts) {
-    if (arguments.length === 4) {
+    if (arguments.length === 3) {
       // @ts-ignore
-      super(em, arguments[1], { ...arguments[2], ...UserCodegen.defaultValues }, arguments[3]);
+      super(em, arguments[1], arguments[2]);
     } else {
-      super(em, userMeta, UserCodegen.defaultValues, opts);
+      super(em, userMeta, opts);
       setOpts(this as any as User, opts, { calledFromConstructor: true });
     }
   }

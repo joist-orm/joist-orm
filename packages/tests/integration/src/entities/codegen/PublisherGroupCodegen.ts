@@ -100,7 +100,6 @@ publisherGroupConfig.addRule(newRequiredRule("createdAt"));
 publisherGroupConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "pg";
   static readonly metadata: EntityMetadata<PublisherGroup>;
 
@@ -115,7 +114,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   };
 
   constructor(em: EntityManager, opts: PublisherGroupOpts) {
-    super(em, publisherGroupMeta, PublisherGroupCodegen.defaultValues, opts);
+    super(em, publisherGroupMeta, opts);
     setOpts(this as any as PublisherGroup, opts, { calledFromConstructor: true });
   }
 

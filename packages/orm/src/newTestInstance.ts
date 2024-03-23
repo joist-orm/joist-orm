@@ -129,8 +129,7 @@ export function newTestInstance<T extends Entity>(
         !field.derived &&
         !field.protected
       ) {
-        const codegenDefault = getCodegenDefault(cstr, field.fieldName);
-        return [fieldName, codegenDefault ?? defaultValueForField(em, cstr, field)];
+        return [fieldName, defaultValueForField(em, cstr, field)];
       } else if (field.kind === "m2o" && !field.derived) {
         // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
         // then look in `use` and for an "obvious" there-is-only-one default (even for optional fields)
@@ -156,8 +155,7 @@ export function newTestInstance<T extends Entity>(
           }
         }
       } else if (field.kind === "enum" && required) {
-        const codegenDefault = getCodegenDefault(cstr, field.fieldName);
-        return [fieldName, codegenDefault ?? field.enumDetailType.getValues()[0]];
+        return [fieldName, field.enumDetailType.getValues()[0]];
       } else if (field.kind === "poly" && required) {
         return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
       }
@@ -697,18 +695,6 @@ function mergeOpts(meta: EntityMetadata, testOpts: Record<string, any>, factoryO
     }
   });
   return opts;
-}
-
-function getCodegenDefault(cstr: any, fieldName: string): any {
-  const m = getMetadata(cstr);
-  if (!m.baseType) {
-    return (m.cstr as any).defaultValues[fieldName];
-  } else {
-    // Look for defaults for fields in base types
-    return getBaseAndSelfMetas(m)
-      .map((m) => (m.cstr as any).defaultValues[fieldName])
-      .filter((v) => v !== undefined)[0];
-  }
 }
 
 // As we branch out to children, going down the tree, give each branch its own playground of entities

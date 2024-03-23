@@ -84,7 +84,6 @@ export interface TaskNewOrder extends TaskOrder {
 export const taskNewConfig = new ConfigApi<TaskNew, Context>();
 
 export abstract class TaskNewCodegen extends Task implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "task";
   static readonly metadata: EntityMetadata<TaskNew>;
 
@@ -100,7 +99,7 @@ export abstract class TaskNewCodegen extends Task implements Entity {
 
   constructor(em: EntityManager, opts: TaskNewOpts) {
     // @ts-ignore
-    super(em, taskNewMeta, TaskNewCodegen.defaultValues, opts);
+    super(em, taskNewMeta, opts);
     setOpts(this as any as TaskNew, opts, { calledFromConstructor: true });
   }
 

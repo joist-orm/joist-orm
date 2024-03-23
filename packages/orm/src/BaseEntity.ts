@@ -35,12 +35,12 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   }
   readonly #orm!: EntityOrmField;
 
-  protected constructor(em: EM, metadata: any, defaultValues: object, optsOrId: any) {
+  protected constructor(em: EM, metadata: any, optsOrId: any) {
     // Only do em.register for em.create-d entities, otherwise defer to hydrate to em.register
     if (typeof optsOrId === "string") {
-      this.#orm = new EntityOrmField(em, metadata, undefined);
+      this.#orm = new EntityOrmField(em, metadata, false);
     } else {
-      this.#orm = new EntityOrmField(em, metadata, defaultValues);
+      this.#orm = new EntityOrmField(em, metadata, true);
       em.register(this);
     }
     currentlyInstantiatingEntity = this;

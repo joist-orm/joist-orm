@@ -106,7 +106,6 @@ childItemConfig.addRule(newRequiredRule("childGroup"));
 childItemConfig.addRule(newRequiredRule("parentItem"));
 
 export abstract class ChildItemCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "ci";
   static readonly metadata: EntityMetadata<ChildItem>;
 
@@ -121,7 +120,7 @@ export abstract class ChildItemCodegen extends BaseEntity<EntityManager, string>
   };
 
   constructor(em: EntityManager, opts: ChildItemOpts) {
-    super(em, childItemMeta, ChildItemCodegen.defaultValues, opts);
+    super(em, childItemMeta, opts);
     setOpts(this as any as ChildItem, opts, { calledFromConstructor: true });
   }
 

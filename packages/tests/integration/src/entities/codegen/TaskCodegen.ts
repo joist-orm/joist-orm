@@ -111,7 +111,6 @@ taskConfig.addRule(newRequiredRule("updatedAt"));
 taskConfig.addRule(cannotBeUpdated("type"));
 
 export abstract class TaskCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "task";
   static readonly metadata: EntityMetadata<Task>;
 
@@ -126,11 +125,11 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   };
 
   constructor(em: EntityManager, opts: TaskOpts) {
-    if (arguments.length === 4) {
+    if (arguments.length === 3) {
       // @ts-ignore
-      super(em, arguments[1], { ...arguments[2], ...TaskCodegen.defaultValues }, arguments[3]);
+      super(em, arguments[1], arguments[2]);
     } else {
-      super(em, taskMeta, TaskCodegen.defaultValues, opts);
+      super(em, taskMeta, opts);
       setOpts(this as any as Task, opts, { calledFromConstructor: true });
     }
   }

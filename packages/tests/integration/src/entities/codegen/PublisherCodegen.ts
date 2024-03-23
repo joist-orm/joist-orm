@@ -178,9 +178,9 @@ publisherConfig.addRule(newRequiredRule("name"));
 publisherConfig.addRule(newRequiredRule("createdAt"));
 publisherConfig.addRule(newRequiredRule("updatedAt"));
 publisherConfig.addRule(newRequiredRule("type"));
+publisherConfig.setDefault("type", PublisherType.Big);
 
 export abstract class PublisherCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = { type: PublisherType.Big };
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<Publisher>;
 
@@ -195,11 +195,11 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   };
 
   constructor(em: EntityManager, opts: PublisherOpts) {
-    if (arguments.length === 4) {
+    if (arguments.length === 3) {
       // @ts-ignore
-      super(em, arguments[1], { ...arguments[2], ...PublisherCodegen.defaultValues }, arguments[3]);
+      super(em, arguments[1], arguments[2]);
     } else {
-      super(em, publisherMeta, PublisherCodegen.defaultValues, opts);
+      super(em, publisherMeta, opts);
       setOpts(this as any as Publisher, opts, { calledFromConstructor: true });
     }
 

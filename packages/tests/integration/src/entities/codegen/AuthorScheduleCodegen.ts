@@ -95,7 +95,6 @@ authorScheduleConfig.addRule(newRequiredRule("updatedAt"));
 authorScheduleConfig.addRule(newRequiredRule("author"));
 
 export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "authorSchedule";
   static readonly metadata: EntityMetadata<AuthorSchedule>;
 
@@ -110,7 +109,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   };
 
   constructor(em: EntityManager, opts: AuthorScheduleOpts) {
-    super(em, authorScheduleMeta, AuthorScheduleCodegen.defaultValues, opts);
+    super(em, authorScheduleMeta, opts);
     setOpts(this as any as AuthorSchedule, opts, { calledFromConstructor: true });
   }
 

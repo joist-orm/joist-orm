@@ -371,8 +371,6 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const configName = `${camelCase(entityName)}Config`;
   const metadata = imp(`${camelCase(entityName)}Meta@./entities`);
 
-  const defaultValues = generateDefaultValues(config, meta);
-
   const contextType = config.contextType ? imp(config.contextType) : "{}";
   const factoryMethod = imp(`new${entity.name}@./entities`);
 
@@ -414,7 +412,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     cstr = code`
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
         // @ts-ignore
-        super(em, ${metadata}, ${entityName}Codegen.defaultValues, opts);
+        super(em, ${metadata}, opts);
         ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
         ${maybePreventBaseTypeInstantiation}
       }
@@ -422,11 +420,11 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   } else if (subEntities.length > 0) {
     cstr = code`
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
-        if (arguments.length === 4) {
+        if (arguments.length === 3) {
           // @ts-ignore
-          super(em, arguments[1], { ...arguments[2], ...${entityName}Codegen.defaultValues }, arguments[3]);
+          super(em, arguments[1], arguments[2]);
         } else {
-          super(em, ${metadata}, ${entityName}Codegen.defaultValues, opts);
+          super(em, ${metadata}, opts);
           ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
         }
         ${maybePreventBaseTypeInstantiation}
@@ -435,7 +433,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   } else {
     cstr = code`
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
-        super(em, ${metadata}, ${entityName}Codegen.defaultValues, opts);
+        super(em, ${metadata}, opts);
         ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
         ${maybePreventBaseTypeInstantiation}
       }
@@ -502,11 +500,9 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
 
     ${generateDefaultValidationRules(dbMeta, meta, configName)}
+    ${generateDefaultValues(config, meta, configName)};
     
     export abstract class ${entityName}Codegen extends ${base} implements ${ProjectEntity} {
-      static defaultValues: object = {
-        ${defaultValues}
-      };
       static readonly tagName = "${tagName}";
       static readonly metadata: ${EntityMetadata}<${entity.type}>;
 
@@ -634,16 +630,16 @@ function generatePolymorphicTypes(meta: EntityDbMetadata) {
   ]);
 }
 
-function generateDefaultValues(config: Config, meta: EntityDbMetadata): Code[] {
+function generateDefaultValues(config: Config, meta: EntityDbMetadata, configName: string): Code[] {
   const primitives = meta.primitives
     .filter((field) => fieldHasDefaultValue(field))
     .map(({ fieldName, columnDefault }) => {
-      return code`${fieldName}: ${columnDefault},`;
+      return code`${configName}.setDefault("${fieldName}", ${columnDefault});`;
     });
   const pgEnums = meta.pgEnums
     .filter((field) => !!field.columnDefault)
     .map(({ fieldName, columnDefault }) => {
-      return code`${fieldName}: ${columnDefault},`;
+      return code`${configName}.setDefault("${fieldName}", ${columnDefault});`;
     });
   const enums = meta.enums
     .filter((field) => !!field.columnDefault && !field.isArray)
@@ -651,7 +647,7 @@ function generateDefaultValues(config: Config, meta: EntityDbMetadata): Code[] {
       const defaultRow =
         enumRows.find((r) => r.id === Number(columnDefault)) ||
         fail(`Invalid default value ${columnDefault} for ${meta.tableName}.${columnName}`);
-      return code`${fieldName}: ${enumType}.${pascalCase(defaultRow.code)},`;
+      return code`${configName}.setDefault("${fieldName}", ${enumType}.${pascalCase(defaultRow.code)});`;
     });
   return [...primitives, ...enums, ...pgEnums];
 }

@@ -84,7 +84,6 @@ export const taskOldConfig = new ConfigApi<TaskOld, Context>();
 taskOldConfig.addRule(newRequiredRule("specialOldField"));
 
 export abstract class TaskOldCodegen extends Task implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "task";
   static readonly metadata: EntityMetadata<TaskOld>;
 
@@ -100,7 +99,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
 
   constructor(em: EntityManager, opts: TaskOldOpts) {
     // @ts-ignore
-    super(em, taskOldMeta, TaskOldCodegen.defaultValues, opts);
+    super(em, taskOldMeta, opts);
     setOpts(this as any as TaskOld, opts, { calledFromConstructor: true });
   }
 

@@ -133,7 +133,7 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
       if (config.ignore) continue;
       let field = fields.find((f) => f.fieldName === name);
       // STI types might be in the base type
-      if (entity.stiDiscriminatorField) {
+      if (!field && entity.stiDiscriminatorField) {
         const stiEntities = getStiEntities(db.entities).get(entity.name)?.subTypes;
         field = stiEntities
           ?.flatMap((st) => [...st.primitives, ...st.manyToOnes, ...st.enums])
@@ -152,7 +152,21 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
       ...entity.polymorphics,
     ];
     for (const [name, config] of Object.entries(entityConfig.relations || {})) {
-      const relation = relations.find((r) => r.fieldName === name);
+      let relation = relations.find((r) => r.fieldName === name);
+      // STI types might be in the base type
+      if (!relation && entity.stiDiscriminatorField) {
+        const stiEntities = getStiEntities(db.entities).get(entity.name)?.subTypes;
+        relation = stiEntities
+          ?.flatMap((entity) => [
+            ...entity.oneToManys,
+            ...entity.manyToManys,
+            ...entity.oneToOnes,
+            ...entity.largeOneToManys,
+            ...entity.largeManyToManys,
+            ...entity.polymorphics,
+          ])
+          ?.find((f) => f.fieldName === name);
+      }
       if (!relation) console.log(`WARNING: Found config for non-existent relation ${entityName}.${name}`);
     }
   }

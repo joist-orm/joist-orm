@@ -110,7 +110,6 @@ taskItemConfig.addRule("newTask", mustBeSubType("newTask"));
 taskItemConfig.addRule("oldTask", mustBeSubType("oldTask"));
 
 export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "ti";
   static readonly metadata: EntityMetadata<TaskItem>;
 
@@ -125,7 +124,7 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
   };
 
   constructor(em: EntityManager, opts: TaskItemOpts) {
-    super(em, taskItemMeta, TaskItemCodegen.defaultValues, opts);
+    super(em, taskItemMeta, opts);
     setOpts(this as any as TaskItem, opts, { calledFromConstructor: true });
   }
 

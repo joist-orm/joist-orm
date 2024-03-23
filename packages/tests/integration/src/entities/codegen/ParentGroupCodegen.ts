@@ -98,7 +98,6 @@ parentGroupConfig.addRule(newRequiredRule("createdAt"));
 parentGroupConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "parentGroup";
   static readonly metadata: EntityMetadata<ParentGroup>;
 
@@ -113,7 +112,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   };
 
   constructor(em: EntityManager, opts: ParentGroupOpts) {
-    super(em, parentGroupMeta, ParentGroupCodegen.defaultValues, opts);
+    super(em, parentGroupMeta, opts);
     setOpts(this as any as ParentGroup, opts, { calledFromConstructor: true });
   }
 

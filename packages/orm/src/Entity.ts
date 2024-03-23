@@ -63,17 +63,16 @@ export class EntityOrmField {
   wasNew: boolean = false;
 
   /** Creates the `#orm` field; defaultValues is only provided when instantiating new entities. */
-  constructor(em: EntityManager, metadata: EntityMetadata, defaultValues: Record<any, any> | undefined) {
+  constructor(em: EntityManager, metadata: EntityMetadata, isNew: boolean) {
     this.em = em;
     this.metadata = metadata;
-    if (defaultValues) {
-      // Our default values are driven from the database `DEFAULT`s, so we can use it for the row
-      this.data = { ...defaultValues };
-      this.row = { ...defaultValues };
+    if (isNew) {
+      this.isNew = true;
+      this.data = {};
+      this.row = {};
     } else {
       this.isNew = false;
       this.data = {};
-      // em.hydrate will populate this.row
     }
   }
 

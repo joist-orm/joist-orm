@@ -96,7 +96,6 @@ paintingConfig.addRule(newRequiredRule("updatedAt"));
 paintingConfig.addRule(newRequiredRule("artist"));
 
 export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<Painting>;
 
@@ -111,7 +110,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   };
 
   constructor(em: EntityManager, opts: PaintingOpts) {
-    super(em, paintingMeta, PaintingCodegen.defaultValues, opts);
+    super(em, paintingMeta, opts);
     setOpts(this as any as Painting, opts, { calledFromConstructor: true });
   }
 

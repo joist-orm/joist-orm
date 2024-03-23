@@ -123,7 +123,6 @@ commentConfig.addRule(newRequiredRule("updatedAt"));
 commentConfig.addRule(newRequiredRule("parent"));
 
 export abstract class CommentCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "comment";
   static readonly metadata: EntityMetadata<Comment>;
 
@@ -138,7 +137,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   };
 
   constructor(em: EntityManager, opts: CommentOpts) {
-    super(em, commentMeta, CommentCodegen.defaultValues, opts);
+    super(em, commentMeta, opts);
     setOpts(this as any as Comment, opts, { calledFromConstructor: true });
   }
 

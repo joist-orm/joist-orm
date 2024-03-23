@@ -149,6 +149,11 @@ export class ConfigApi<T extends Entity, C> {
   /** Adds a synchronous default for `fieldName`. */
   setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(
     fieldName: K,
+    value: FieldsOf<T>[K] extends EntityField ? FieldsOf<T>[K]["type"] | FieldsOf<T>[K]["nullable"] : never,
+  ): void;
+  /** Adds a synchronous default for `fieldName`. */
+  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(
+    fieldName: K,
     fn: (entity: T) => FieldsOf<T>[K] extends EntityField ? FieldsOf<T>[K]["type"] | FieldsOf<T>[K]["nullable"] : never,
   ): void;
   /** Adds an asynchronous default for `fieldName`. */
@@ -160,17 +165,19 @@ export class ConfigApi<T extends Entity, C> {
       ctx: C,
     ) => FieldsOf<T>[K] extends EntityField ? MaybePromise<FieldsOf<T>[K]["type"] | undefined> : never,
   ): void;
-  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(fieldName: K, hintOrFn: any, fn?: any): void {
+  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(fieldName: K, hintOrFnOrValue: any, fn?: any): void {
     this.ensurePreBoot();
     if (fn) {
+      // If we're called once by the codegen, and again by the user, override the syncDefault
+      delete this.__data.syncDefaults[fieldName];
       this.__data.asyncDefaults[fieldName] = async (entity: T, ctx: C) => {
         // Ideally we'd convert this once outside `fn`, but we don't have `metadata` yet
-        const loadHint = convertToLoadHint(getMetadata(entity), hintOrFn);
+        const loadHint = convertToLoadHint(getMetadata(entity), hintOrFnOrValue);
         const loaded = await entity.em.populate(entity, loadHint);
         return fn(loaded, ctx);
       };
     } else {
-      this.__data.syncDefaults[fieldName] = hintOrFn;
+      this.__data.syncDefaults[fieldName] = hintOrFnOrValue;
     }
   }
 
@@ -252,7 +259,7 @@ export class ConfigData<T extends Entity, C> {
     afterCommit: [],
   };
   /** Synchronous defaults for this entity type, invoked on `em.create`. */
-  syncDefaults: Record<string, (entity: T) => void> = {};
+  syncDefaults: Record<string, ((entity: T) => void) | unknown> = {};
   /** Asynchronous defaults for this entity type, invoked on `em.flush`. */
   asyncDefaults: Record<string, (entity: T, ctx: C) => MaybePromise<T>> = {};
 

@@ -115,7 +115,6 @@ childGroupConfig.addRule(newRequiredRule("childGroupId"));
 childGroupConfig.addRule(newRequiredRule("parentGroup"));
 
 export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "cg";
   static readonly metadata: EntityMetadata<ChildGroup>;
 
@@ -130,7 +129,7 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   };
 
   constructor(em: EntityManager, opts: ChildGroupOpts) {
-    super(em, childGroupMeta, ChildGroupCodegen.defaultValues, opts);
+    super(em, childGroupMeta, opts);
     setOpts(this as any as ChildGroup, opts, { calledFromConstructor: true });
   }
 

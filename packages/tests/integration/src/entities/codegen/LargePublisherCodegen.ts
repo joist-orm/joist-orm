@@ -89,7 +89,6 @@ export interface LargePublisherOrder extends PublisherOrder {
 export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
 
 export abstract class LargePublisherCodegen extends Publisher implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<LargePublisher>;
 
@@ -105,7 +104,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
 
   constructor(em: EntityManager, opts: LargePublisherOpts) {
     // @ts-ignore
-    super(em, largePublisherMeta, LargePublisherCodegen.defaultValues, opts);
+    super(em, largePublisherMeta, opts);
     setOpts(this as any as LargePublisher, opts, { calledFromConstructor: true });
   }
 

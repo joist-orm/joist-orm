@@ -91,7 +91,6 @@ childConfig.addRule(newRequiredRule("createdAt"));
 childConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class ChildCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "child";
   static readonly metadata: EntityMetadata<Child>;
 
@@ -106,7 +105,7 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
   };
 
   constructor(em: EntityManager, opts: ChildOpts) {
-    super(em, childMeta, ChildCodegen.defaultValues, opts);
+    super(em, childMeta, opts);
     setOpts(this as any as Child, opts, { calledFromConstructor: true });
   }
 

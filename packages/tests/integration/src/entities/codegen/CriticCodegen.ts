@@ -123,7 +123,6 @@ criticConfig.addRule(newRequiredRule("createdAt"));
 criticConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class CriticCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "c";
   static readonly metadata: EntityMetadata<Critic>;
 
@@ -138,7 +137,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   };
 
   constructor(em: EntityManager, opts: CriticOpts) {
-    super(em, criticMeta, CriticCodegen.defaultValues, opts);
+    super(em, criticMeta, opts);
     setOpts(this as any as Critic, opts, { calledFromConstructor: true });
   }
 

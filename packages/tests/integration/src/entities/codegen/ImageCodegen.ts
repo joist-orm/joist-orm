@@ -124,7 +124,6 @@ imageConfig.addRule(newRequiredRule("updatedAt"));
 imageConfig.addRule(newRequiredRule("type"));
 
 export abstract class ImageCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "i";
   static readonly metadata: EntityMetadata<Image>;
 
@@ -139,7 +138,7 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   };
 
   constructor(em: EntityManager, opts: ImageOpts) {
-    super(em, imageMeta, ImageCodegen.defaultValues, opts);
+    super(em, imageMeta, opts);
     setOpts(this as any as Image, opts, { calledFromConstructor: true });
   }
 

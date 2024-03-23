@@ -90,7 +90,6 @@ export const smallPublisherConfig = new ConfigApi<SmallPublisher, Context>();
 smallPublisherConfig.addRule(newRequiredRule("city"));
 
 export abstract class SmallPublisherCodegen extends Publisher implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<SmallPublisher>;
 
@@ -106,7 +105,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
 
   constructor(em: EntityManager, opts: SmallPublisherOpts) {
     // @ts-ignore
-    super(em, smallPublisherMeta, SmallPublisherCodegen.defaultValues, opts);
+    super(em, smallPublisherMeta, opts);
     setOpts(this as any as SmallPublisher, opts, { calledFromConstructor: true });
   }
 

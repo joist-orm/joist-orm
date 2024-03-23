@@ -127,7 +127,6 @@ bookReviewConfig.addRule(newRequiredRule("updatedAt"));
 bookReviewConfig.addRule(newRequiredRule("book"));
 
 export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "br";
   static readonly metadata: EntityMetadata<BookReview>;
 
@@ -142,7 +141,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   };
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
-    super(em, bookReviewMeta, BookReviewCodegen.defaultValues, opts);
+    super(em, bookReviewMeta, opts);
     setOpts(this as any as BookReview, opts, { calledFromConstructor: true });
   }
 

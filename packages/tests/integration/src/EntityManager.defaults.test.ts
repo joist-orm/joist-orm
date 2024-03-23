@@ -31,16 +31,17 @@ describe("EntityManager.defaults", () => {
   it("can default an asynchronous field", async () => {
     const em = newEntityManager();
     // Given we create two books with their own author
-    const b1 = newBook(em, { author: {}, order: undefined });
-    const b2 = newBook(em, { author: {}, order: undefined });
-    // And we kept the factory from applying the default
+    const a = newAuthor(em);
+    const b1 = newBook(em, { author: a, order: undefined });
+    const b2 = newBook(em, { author: a, order: undefined });
+    // And the factory/sync default didn't get applied
     expect(b1.order).toBeUndefined();
     expect(b2.order).toBeUndefined();
     // When we flush
     await em.flush();
     // Then the async default kicked in
-    expect(b1.order).toBe(1);
-    expect(b2.order).toBe(1);
+    expect(b1.order).toBe(2);
+    expect(b2.order).toBe(2);
   });
 
   it("can default an asynchronous m2o field", async () => {

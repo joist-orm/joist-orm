@@ -62,7 +62,6 @@ export const databaseOwnerConfig = new ConfigApi<DatabaseOwner, Context>();
 databaseOwnerConfig.addRule(newRequiredRule("name"));
 
 export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "do";
   static readonly metadata: EntityMetadata<DatabaseOwner>;
 
@@ -77,7 +76,7 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
   };
 
   constructor(em: EntityManager, opts: DatabaseOwnerOpts) {
-    super(em, databaseOwnerMeta, DatabaseOwnerCodegen.defaultValues, opts);
+    super(em, databaseOwnerMeta, opts);
     setOpts(this as any as DatabaseOwner, opts, { calledFromConstructor: true });
   }
 

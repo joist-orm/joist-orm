@@ -12,9 +12,9 @@ export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolea
 /** Run the sync defaults for `entity`. */
 export function setSyncDefaults(entity: Entity): void {
   getBaseAndSelfMetas(getMetadata(entity)).forEach((m) => {
-    for (const [field, fn] of Object.entries(m.config.__data.syncDefaults)) {
+    for (const [field, maybeFn] of Object.entries(m.config.__data.syncDefaults)) {
       if ((entity as any)[field] === undefined) {
-        (entity as any)[field] = fn(entity);
+        (entity as any)[field] = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
       }
     }
   });

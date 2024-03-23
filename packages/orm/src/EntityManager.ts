@@ -72,7 +72,6 @@ import { MaybePromise, assertNever, fail, getOrSet, partition, toArray } from ".
 export interface EntityConstructor<T> {
   new (em: EntityManager<any, any>, opts: any): T;
 
-  defaultValues: object;
   // Use any for now to pass the `.includes` test in `EntityConstructor.test.ts`. We could
   // probably do some sort of `tagOf(T)` look up, similar to filter types, which would return
   // either the string literal for a real `T`, or `any` if using `EntityConstructor<any>`.

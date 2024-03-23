@@ -89,7 +89,6 @@ artistConfig.addRule(newRequiredRule("createdAt"));
 artistConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "artist";
   static readonly metadata: EntityMetadata<Artist>;
 
@@ -104,7 +103,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   };
 
   constructor(em: EntityManager, opts: ArtistOpts) {
-    super(em, artistMeta, ArtistCodegen.defaultValues, opts);
+    super(em, artistMeta, opts);
     setOpts(this as any as Artist, opts, { calledFromConstructor: true });
   }
 

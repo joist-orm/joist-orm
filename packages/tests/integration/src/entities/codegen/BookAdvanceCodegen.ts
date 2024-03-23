@@ -109,7 +109,6 @@ bookAdvanceConfig.addRule(newRequiredRule("book"));
 bookAdvanceConfig.addRule(newRequiredRule("publisher"));
 
 export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = {};
   static readonly tagName = "ba";
   static readonly metadata: EntityMetadata<BookAdvance>;
 
@@ -124,7 +123,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   };
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
-    super(em, bookAdvanceMeta, BookAdvanceCodegen.defaultValues, opts);
+    super(em, bookAdvanceMeta, opts);
     setOpts(this as any as BookAdvance, opts, { calledFromConstructor: true });
   }
 

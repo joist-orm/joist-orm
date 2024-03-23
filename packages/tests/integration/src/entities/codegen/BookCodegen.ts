@@ -154,9 +154,9 @@ bookConfig.addRule(newRequiredRule("order"));
 bookConfig.addRule(newRequiredRule("createdAt"));
 bookConfig.addRule(newRequiredRule("updatedAt"));
 bookConfig.addRule(newRequiredRule("author"));
+bookConfig.setDefault("order", 1);
 
 export abstract class BookCodegen extends BaseEntity<EntityManager, string> implements Entity {
-  static defaultValues: object = { order: 1 };
   static readonly tagName = "b";
   static readonly metadata: EntityMetadata<Book>;
 
@@ -171,7 +171,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   };
 
   constructor(em: EntityManager, opts: BookOpts) {
-    super(em, bookMeta, BookCodegen.defaultValues, opts);
+    super(em, bookMeta, opts);
     setOpts(this as any as Book, opts, { calledFromConstructor: true });
   }
 

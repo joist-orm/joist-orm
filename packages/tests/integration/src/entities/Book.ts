@@ -46,7 +46,7 @@ config.addRule({ author: "numberOfBooks2" }, (b) => {
 config.setDefault("notes", (b) => `Notes for ${b.title}`);
 
 /** Example of an asynchronous default. */
-config.setDefault("order", { author: "books" }, (b) => b.author.get.books.get.length);
+config.setDefault("order", { author: "books" }, (b) => b.author.get?.books.get.length);
 
 /** Example of an asynchronous default that returns an entity. */
 config.setDefault("author", "title", async (b, { em }) => {

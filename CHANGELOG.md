@@ -1,3 +1,10 @@
+## [1.150.2](https://github.com/joist-orm/joist-orm/compare/v1.150.1...v1.150.2) (2024-03-23)
+
+
+### Bug Fixes
+
+* Remove legacy getEm method. ([#985](https://github.com/joist-orm/joist-orm/issues/985)) ([e5d52a5](https://github.com/joist-orm/joist-orm/commit/e5d52a57568bc2c0b5b32ab4f7fa63aa294924d2))
+
 ## [1.150.1](https://github.com/joist-orm/joist-orm/compare/v1.150.0...v1.150.1) (2024-03-23)
 
 

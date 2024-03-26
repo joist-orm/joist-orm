@@ -1778,6 +1778,7 @@ describe("EntityManager.queries", () => {
           { alias: "c", column: "parent_book_id", dbType: "int", cond: { kind: "is-null" } },
           { alias: "c", column: "parent_book_review_id", dbType: "int", cond: { kind: "is-null" } },
           { alias: "c", column: "parent_publisher_id", dbType: "int", cond: { kind: "is-null" } },
+          { alias: "c", column: "parent_task_id", dbType: "int", cond: { kind: "is-null" } },
         ],
       },
       orderBys: [expect.anything()],

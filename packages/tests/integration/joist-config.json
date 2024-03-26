@@ -70,7 +70,6 @@
         "parentOldTask": { "stiType": "TaskOld" },
         "publishers": { "stiType": "TaskOld" },
         "specialNewAuthor": { "stiType": "TaskNew" },
-        "parentOldTask": { "stiType": "TaskOld" },
         "tasks": { "stiType": "TaskOld" }
       },
       "tag": "task"
@@ -86,5 +85,5 @@
     }
   },
   "entitiesDirectory": "./src/entities",
-  "version": "1.151.3"
+  "version": "1.151.4"
 }

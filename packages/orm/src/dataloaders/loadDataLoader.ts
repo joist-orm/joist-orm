@@ -18,7 +18,7 @@ export function loadDataLoader<T extends Entity>(
   return em.getLoader("load", meta.type, async (loads) => {
     const keys = loads.map((l) => keyToNumber(meta, l.entity));
     const alias = abbreviation(meta.tableName);
-    const query: ParsedFindQuery = {
+    const query = {
       selects: [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
       condition: {
@@ -27,7 +27,7 @@ export function loadDataLoader<T extends Entity>(
         conditions: [{ kind: "column", alias, column: "id", dbType: meta.idDbType, cond: { kind: "in", value: keys } }],
       },
       orderBys: [{ alias, column: "id", order: "ASC" }],
-    };
+    } satisfies ParsedFindQuery;
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
     // Inject preloading joins into the query if enabled
     const { preloader } = getEmInternalApi(em);

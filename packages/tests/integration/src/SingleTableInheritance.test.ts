@@ -26,6 +26,10 @@ describe("SingleTableInheritance", () => {
       special_old_field: 1,
       duration_in_days: 10,
     });
+
+    const em2 = newEntityManager();
+    const ot = await em2.load(Task, "task:1");
+    expect(ot).toBeInstanceOf(TaskOld);
   });
 
   it("can create a TaskNew", async () => {
@@ -40,6 +44,10 @@ describe("SingleTableInheritance", () => {
       special_old_field: null,
       duration_in_days: 10,
     });
+
+    const em2 = newEntityManager();
+    const ot = await em2.load("task:1");
+    expect(ot).toBeInstanceOf(TaskNew);
   });
 
   it("can instantiate a TaskOld", async () => {

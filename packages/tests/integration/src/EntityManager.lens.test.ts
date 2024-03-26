@@ -179,7 +179,7 @@ describe("EntityManager.lens", () => {
       expect(em.entities.length).toBe(2);
 
       expect(lastQuery()).toMatchInlineSnapshot(
-        `"select "i".*, i.id as id, "b".id as __source_id from images as i inner join authors as a on a.id = i.author_id inner join books as b on b.author_id = a.id where a.deleted_at is null and b.deleted_at is null and b.id = any($1) order by i.id ASC limit $2"`,
+        `"select "i".*, "b".id as __source_id from images as i inner join authors as a on a.id = i.author_id inner join books as b on b.author_id = a.id where a.deleted_at is null and b.deleted_at is null and b.id = any($1) order by i.id ASC limit $2"`,
       );
     });
 
@@ -236,7 +236,7 @@ describe("EntityManager.lens", () => {
       expect(em.entities.length).toBe(2);
 
       expect(lastQuery()).toMatchInlineSnapshot(
-        `"select "b".*, b.id as id, "a".publisher_id as __source_id from books as b inner join authors as a on a.id = b.author_id where a.deleted_at is null and a.publisher_id = any($1) order by b.title ASC, b.id ASC limit $2"`,
+        `"select "b".*, "a".publisher_id as __source_id from books as b inner join authors as a on a.id = b.author_id where a.deleted_at is null and a.publisher_id = any($1) order by b.title ASC, b.id ASC limit $2"`,
       );
     });
 

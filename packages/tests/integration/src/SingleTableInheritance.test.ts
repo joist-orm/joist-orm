@@ -230,8 +230,6 @@ describe("SingleTableInheritance", () => {
   it("reports the right properties", () => {
     expect(Object.keys(getProperties(Task.metadata))).toMatchInlineSnapshot(`
      [
-       "newTaskTaskItems",
-       "oldTaskTaskItems",
        "taskTaskItems",
      ]
     `);
@@ -239,15 +237,14 @@ describe("SingleTableInheritance", () => {
      [
        "specialNewAuthor",
        "newTaskTaskItems",
-       "oldTaskTaskItems",
        "taskTaskItems",
      ]
     `);
     expect(Object.keys(getProperties(TaskOld.metadata))).toMatchInlineSnapshot(`
      [
-       "publishers",
-       "newTaskTaskItems",
+       "comments",
        "oldTaskTaskItems",
+       "publishers",
        "taskTaskItems",
      ]
     `);

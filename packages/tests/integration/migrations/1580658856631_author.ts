@@ -329,4 +329,9 @@ export function up(b: MigrationBuilder): void {
 
   // For testing m2m relations into STI tables
   createManyToManyTable(b, "tasks_to_publishers", "tasks", "publishers");
+
+  // For testing polys to subtypes of STI tables
+  addColumns(b, "comments", {
+    parent_task_id: foreignKey("tasks", { notNull: false }),
+  });
 }

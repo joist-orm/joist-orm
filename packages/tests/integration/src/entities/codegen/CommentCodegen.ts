@@ -50,6 +50,7 @@ import {
   EntityManager,
   newComment,
   Publisher,
+  TaskOld,
   User,
   UserId,
   userMeta,
@@ -58,9 +59,9 @@ import {
 
 export type CommentId = Flavor<string, Comment>;
 
-export type CommentParent = Author | Book | BookReview | Publisher;
+export type CommentParent = Author | Book | BookReview | Publisher | TaskOld;
 export function getCommentParentConstructors(): MaybeAbstractEntityConstructor<CommentParent>[] {
-  return [Author, Book, BookReview, Publisher];
+  return [Author, Book, BookReview, Publisher, TaskOld];
 }
 export function isCommentParent(maybeEntity: unknown): maybeEntity is CommentParent {
   return isEntity(maybeEntity) && getCommentParentConstructors().some((type) => maybeEntity instanceof type);

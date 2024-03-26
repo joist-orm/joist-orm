@@ -65,10 +65,15 @@
         "specialOldField": { "stiNotNull": true, "stiType": "TaskOld" },
         "type": { "stiDiscriminator": { "NEW": "TaskNew", "OLD": "TaskOld" } }
       },
-      "relations": { "publishers": { "stiType": "TaskOld" } },
+      "relations": {
+        "comments": { "stiType": "TaskOld" },
+        "newTaskTaskItems": { "stiType": "TaskNew" },
+        "oldTaskTaskItems": { "stiType": "TaskOld" },
+        "publishers": { "stiType": "TaskOld" }
+      },
       "tag": "task"
     },
-    "TaskItem": { "fields": { "newTask": { "stiType": "TaskNew" }, "oldTask": { "stiType": "TaskOld" } }, "tag": "ti" },
+    "TaskItem": { "tag": "ti" },
     "User": {
       "fields": {
         "ipAddress": { "type": "IpAddress@src/entities/types" },

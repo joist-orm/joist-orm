@@ -15,6 +15,7 @@ type Task {
   taskTaskItems: [TaskItem!]!
   specialNewAuthor: Author
   publishers: [Publisher!]!
+  comments: [Comment!]!
 }
 
 input SaveTaskInput {

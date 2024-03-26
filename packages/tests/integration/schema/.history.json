@@ -110,7 +110,7 @@
   "ChildGroup": ["childGroupId", "childItems", "createdAt", "id", "name", "parentGroup", "updatedAt"],
   "ChildItem": ["childGroup", "createdAt", "id", "name", "parentItem", "updatedAt"],
   "Comment": ["createdAt", "id", "likedByUsers", "parent", "text", "updatedAt", "user"],
-  "CommentParent": ["Author", "Book", "BookReview", "Publisher"],
+  "CommentParent": ["Author", "Book", "BookReview", "Publisher", "TaskOld"],
   "Critic": [
     "bookReviews",
     "createdAt",
@@ -390,6 +390,7 @@
   ],
   "Tag": ["books", "createdAt", "id", "name", "publishers", "updatedAt"],
   "Task": [
+    "comments",
     "createdAt",
     "durationInDays",
     "id",
@@ -405,6 +406,7 @@
   ],
   "TaskItem": ["createdAt", "id", "newTask", "oldTask", "task", "updatedAt"],
   "TaskNew": [
+    "comments",
     "createdAt",
     "durationInDays",
     "id",
@@ -418,6 +420,7 @@
     "updatedAt"
   ],
   "TaskOld": [
+    "comments",
     "createdAt",
     "durationInDays",
     "id",

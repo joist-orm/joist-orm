@@ -23,4 +23,4 @@ type SaveCommentResult {
   comment: Comment!
 }
 
-union CommentParent = Author | Book | BookReview | Publisher
+union CommentParent = Author | Book | BookReview | Publisher | TaskOld

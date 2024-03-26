@@ -1,3 +1,10 @@
+## [1.151.2](https://github.com/joist-orm/joist-orm/compare/v1.151.1...v1.151.2) (2024-03-26)
+
+
+### Bug Fixes
+
+* Move ReactiveRelation config into relations. ([#991](https://github.com/joist-orm/joist-orm/issues/991)) ([7afab05](https://github.com/joist-orm/joist-orm/commit/7afab059e4a430116cae9467720e9b980db6d505))
+
 ## [1.151.1](https://github.com/joist-orm/joist-orm/compare/v1.151.0...v1.151.1) (2024-03-26)
 
 

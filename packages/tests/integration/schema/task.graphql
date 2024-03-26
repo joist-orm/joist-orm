@@ -16,6 +16,8 @@ type Task {
   specialNewAuthor: Author
   publishers: [Publisher!]!
   comments: [Comment!]!
+  parentOldTask: Task
+  tasks: [Task!]!
 }
 
 input SaveTaskInput {
@@ -25,6 +27,7 @@ input SaveTaskInput {
   specialNewField: Int
   specialOldField: Int
   specialNewAuthorId: ID
+  parentOldTaskId: ID
 }
 
 type SaveTaskResult {

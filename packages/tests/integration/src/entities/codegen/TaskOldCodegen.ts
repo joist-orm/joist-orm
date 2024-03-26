@@ -14,11 +14,14 @@ import {
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
+  hasOne,
   isLoaded,
   Lens,
   Loaded,
   LoadHint,
   loadLens,
+  ManyToOneReference,
+  mustBeSubType,
   newChangesProxy,
   newRequiredRule,
   OptsOf,
@@ -61,42 +64,53 @@ export type TaskOldId = Flavor<string, TaskOld> & Flavor<string, "Task">;
 export interface TaskOldFields extends TaskFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   specialOldField: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  parentOldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
 }
 
 export interface TaskOldOpts extends TaskOpts {
   specialOldField: number;
+  parentOldTask?: TaskOld | TaskOldId | null;
   comments?: Comment[];
   oldTaskTaskItems?: TaskItem[];
+  tasks?: TaskOld[];
   publishers?: Publisher[];
 }
 
 export interface TaskOldIdsOpts extends TaskIdsOpts {
+  parentOldTaskId?: TaskOldId | null;
   commentIds?: CommentId[] | null;
   oldTaskTaskItemIds?: TaskItemId[] | null;
+  taskIds?: TaskOldId[] | null;
   publisherIds?: PublisherId[] | null;
 }
 
 export interface TaskOldFilter extends TaskFilter {
   specialOldField?: ValueFilter<number, never>;
+  parentOldTask?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   oldTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
+  tasks?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null | undefined>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
 }
 
 export interface TaskOldGraphQLFilter extends TaskGraphQLFilter {
   specialOldField?: ValueGraphQLFilter<number>;
+  parentOldTask?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   oldTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
+  tasks?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null | undefined>;
   publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
 }
 
 export interface TaskOldOrder extends TaskOrder {
   specialOldField?: OrderBy;
+  parentOldTask?: TaskOldOrder;
 }
 
 export const taskOldConfig = new ConfigApi<TaskOld, Context>();
 
 taskOldConfig.addRule(newRequiredRule("specialOldField"));
+taskOldConfig.addRule("parentOldTask", mustBeSubType("parentOldTask"));
 
 export abstract class TaskOldCodegen extends Task implements Entity {
   static readonly tagName = "task";
@@ -197,6 +211,23 @@ export abstract class TaskOldCodegen extends Task implements Entity {
       "old_task_id",
       undefined,
     );
+  }
+
+  get tasks(): Collection<TaskOld, TaskOld> {
+    const { relations } = getOrmField(this);
+    return relations.tasks ??= hasMany(
+      this as any as TaskOld,
+      taskOldMeta,
+      "tasks",
+      "parentOldTask",
+      "parent_old_task_id",
+      undefined,
+    );
+  }
+
+  get parentOldTask(): ManyToOneReference<TaskOld, TaskOld, undefined> {
+    const { relations } = getOrmField(this);
+    return relations.parentOldTask ??= hasOne(this as any as TaskOld, taskOldMeta, "parentOldTask", "tasks");
   }
 
   get publishers(): Collection<TaskOld, Publisher> {

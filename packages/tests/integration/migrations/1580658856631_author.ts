@@ -318,6 +318,8 @@ export function up(b: MigrationBuilder): void {
     special_new_author_id: foreignKey("authors", { notNull: false }),
     // OldTask columns
     special_old_field: { type: "int", notNull: false },
+    // Self-referential but only for a subtype
+    parent_old_task_id: foreignKey("tasks", { notNull: false }),
   });
 
   // For testing single-table inheritance

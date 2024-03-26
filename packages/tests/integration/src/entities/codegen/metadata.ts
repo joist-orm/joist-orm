@@ -879,8 +879,10 @@ export const taskOldMeta: EntityMetadata<TaskOld> = {
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("task", "id", "id", "int"), immutable: true },
     "specialOldField": { kind: "primitive", fieldName: "specialOldField", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("specialOldField", "special_old_field", "int"), immutable: false },
+    "parentOldTask": { kind: "m2o", fieldName: "parentOldTask", fieldIdName: "parentOldTaskId", derived: false, required: false, otherMetadata: () => taskOldMeta, otherFieldName: "tasks", serde: new KeySerde("task", "parentOldTask", "parent_old_task_id", "int"), immutable: false },
     "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined, immutable: false },
     "oldTaskTaskItems": { kind: "o2m", fieldName: "oldTaskTaskItems", fieldIdName: "oldTaskTaskItemIds", required: false, otherMetadata: () => taskItemMeta, otherFieldName: "oldTask", serde: undefined, immutable: false },
+    "tasks": { kind: "o2m", fieldName: "tasks", fieldIdName: "taskIds", required: false, otherMetadata: () => taskOldMeta, otherFieldName: "parentOldTask", serde: undefined, immutable: false },
     "publishers": { kind: "m2m", fieldName: "publishers", fieldIdName: "publisherIds", required: false, otherMetadata: () => publisherMeta, otherFieldName: "tasks", serde: undefined, immutable: false, joinTableName: "tasks_to_publishers", columnNames: ["task_id", "publisher_id"] },
   },
   allFields: {},

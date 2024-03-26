@@ -90,6 +90,21 @@ describe("SingleTableInheritance", () => {
     await expect(em.find(Task, { specialNewField: 1 })).rejects.toThrow("Field 'specialNewField' not found on tasks");
   });
 
+  it("supports self-referential FKs to a subtype", async () => {
+    const em = newEntityManager();
+    const nt = newTaskNew(em);
+    const ot = newTaskOld(em);
+    const ot2 = newTaskOld(em, { parentOldTask: ot });
+    // @ts-expect-error
+    expect(nt.parentOldTask).toBeUndefined();
+    expect(ot.parentOldTask).toBeDefined();
+    // @ts-expect-error
+    expect(nt.tasks).toBeUndefined();
+    expect(ot.tasks).toBeDefined();
+    await em.flush();
+    expect(ot).toMatchEntity({ tasks: [ot2] });
+  });
+
   it("only adds subtype fields to correct subtype", async () => {
     const em = newEntityManager();
     // @ts-expect-error
@@ -242,8 +257,10 @@ describe("SingleTableInheritance", () => {
     `);
     expect(Object.keys(getProperties(TaskOld.metadata))).toMatchInlineSnapshot(`
      [
+       "parentOldTask",
        "comments",
        "oldTaskTaskItems",
+       "tasks",
        "publishers",
        "taskTaskItems",
      ]

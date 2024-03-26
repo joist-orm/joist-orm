@@ -60,7 +60,6 @@
     "Tag": { "relations": { "authors": { "large": true } }, "tag": "t" },
     "Task": {
       "fields": {
-        "specialNewAuthor": { "stiType": "TaskNew" },
         "specialNewField": { "stiType": "TaskNew" },
         "specialOldField": { "stiNotNull": true, "stiType": "TaskOld" },
         "type": { "stiDiscriminator": { "NEW": "TaskNew", "OLD": "TaskOld" } }
@@ -69,7 +68,10 @@
         "comments": { "stiType": "TaskOld" },
         "newTaskTaskItems": { "stiType": "TaskNew" },
         "oldTaskTaskItems": { "stiType": "TaskOld" },
-        "publishers": { "stiType": "TaskOld" }
+        "parentOldTask": { "stiType": "TaskOld" },
+        "publishers": { "stiType": "TaskOld" },
+        "specialNewAuthor": { "stiType": "TaskNew" },
+        "tasks": { "stiType": "TaskOld" }
       },
       "tag": "task"
     },

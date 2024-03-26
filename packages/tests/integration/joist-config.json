@@ -70,7 +70,6 @@
         "parentOldTask": { "stiType": "TaskOld" },
         "publishers": { "stiType": "TaskOld" },
         "specialNewAuthor": { "stiType": "TaskNew" },
-        "parentOldTask": { "stiType": "TaskOld" },
         "tasks": { "stiType": "TaskOld" }
       },
       "tag": "task"

@@ -168,9 +168,8 @@ export function parseFindQuery(
     }
 
     // Maybe only do this if we're the primary, or have a field that needs it?
-    if (needsClassPerTableJoins(meta)) {
-      addTablePerClassJoinsAndClassTag(query, meta, alias, join === "primary");
-    } else if (needsStiDiscriminator(meta)) {
+    addTablePerClassJoinsAndClassTag(query, meta, alias, join === "primary");
+    if (needsStiDiscriminator(meta)) {
       addStiSubtypeFilter(inlineConditions, meta, alias);
     }
 
@@ -866,6 +865,7 @@ export function addTablePerClassJoinsAndClassTag(
   alias: string,
   isPrimary: boolean,
 ): void {
+  if (!needsClassPerTableJoins(meta)) return;
   const { selects, tables } = query;
   // When `.load(SmallPublisher)` is called, join in base tables like `Publisher`
   meta.baseTypes.forEach((bt, i) => {

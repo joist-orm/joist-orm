@@ -54,7 +54,7 @@ describe("SingleTableInheritance", () => {
     });
     expect(queries).toMatchInlineSnapshot(`
      [
-       "select t.* from tasks as t where t.type_id = $1 order by t.id ASC limit $2",
+       "select t.* from tasks as t where t.type_id = $1 and t.deleted_at is null order by t.id ASC limit $2",
      ]
     `);
   });
@@ -332,5 +332,20 @@ describe("SingleTableInheritance", () => {
     const em = newEntityManager();
     const ot = newTaskOld(em, {});
     expect(ot.durationInDays).toBe(10);
+  });
+
+  it("filters out soft-deletes when querying by subtype", async () => {
+    const em = newEntityManager();
+    newTaskOld(em, { deletedAt: new Date() });
+    await em.flush();
+    expect(await em.find(TaskOld, {})).toMatchEntity([]);
+  });
+
+  it("filters out soft-deletes from collections", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em);
+    newTaskNew(em, { deletedAt: new Date(), specialNewAuthor: a });
+    await em.flush();
+    expect(a.tasks.get).toMatchEntity([]);
   });
 });

@@ -132,6 +132,7 @@
     "country",
     "createdAt",
     "critics",
+    "deletedAt",
     "group",
     "hugeNumber",
     "id",
@@ -186,6 +187,7 @@
     "bookAdvances",
     "comments",
     "createdAt",
+    "deletedAt",
     "group",
     "hugeNumber",
     "id",
@@ -305,6 +307,7 @@
   "SaveImageResult": ["image"],
   "SaveLargePublisherInput": [
     "country",
+    "deletedAt",
     "groupId",
     "hugeNumber",
     "id",
@@ -328,6 +331,7 @@
   "SavePublisherGroupResult": ["publisherGroup"],
   "SavePublisherInput": [
     "createdAt",
+    "deletedAt",
     "groupId",
     "hugeNumber",
     "id",
@@ -343,6 +347,7 @@
   "SaveSmallPublisherInput": [
     "allAuthorNames",
     "city",
+    "deletedAt",
     "groupId",
     "hugeNumber",
     "id",
@@ -357,6 +362,7 @@
   "SaveTagInput": ["createdAt", "id", "name", "updatedAt"],
   "SaveTagResult": ["tag"],
   "SaveTaskInput": [
+    "deletedAt",
     "durationInDays",
     "id",
     "parentOldTaskId",
@@ -367,9 +373,25 @@
   ],
   "SaveTaskItemInput": ["id", "newTaskId", "oldTaskId", "taskId"],
   "SaveTaskItemResult": ["taskItem"],
-  "SaveTaskNewInput": ["durationInDays", "id", "parentOldTaskId", "specialNewAuthorId", "specialNewField", "type"],
+  "SaveTaskNewInput": [
+    "deletedAt",
+    "durationInDays",
+    "id",
+    "parentOldTaskId",
+    "specialNewAuthorId",
+    "specialNewField",
+    "type"
+  ],
   "SaveTaskNewResult": ["taskNew"],
-  "SaveTaskOldInput": ["durationInDays", "id", "parentOldTaskId", "specialNewAuthorId", "specialOldField", "type"],
+  "SaveTaskOldInput": [
+    "deletedAt",
+    "durationInDays",
+    "id",
+    "parentOldTaskId",
+    "specialNewAuthorId",
+    "specialOldField",
+    "type"
+  ],
   "SaveTaskOldResult": ["taskOld"],
   "SaveTaskResult": ["task"],
   "SaveUserInput": ["authorManyToOneId", "bio", "email", "favoritePublisherId", "id", "name", "originalEmail"],
@@ -381,6 +403,7 @@
     "city",
     "comments",
     "createdAt",
+    "deletedAt",
     "group",
     "hugeNumber",
     "id",
@@ -400,6 +423,7 @@
   "Task": [
     "comments",
     "createdAt",
+    "deletedAt",
     "durationInDays",
     "id",
     "newTaskTaskItems",
@@ -418,6 +442,7 @@
   "TaskNew": [
     "comments",
     "createdAt",
+    "deletedAt",
     "durationInDays",
     "id",
     "newTaskTaskItems",
@@ -434,6 +459,7 @@
   "TaskOld": [
     "comments",
     "createdAt",
+    "deletedAt",
     "durationInDays",
     "id",
     "newTaskTaskItems",

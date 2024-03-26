@@ -63,4 +63,11 @@ describe("EntityManager.ctiQueries", () => {
     expect(sps).toMatchEntity([{}, {}]);
     expect(lps).toMatchEntity([]);
   });
+
+  it.skip("finds filters out soft-deleted entities", async () => {
+    await insertPublisher({ id: 1, name: "sp1", deleted_at: new Date() });
+    const em = newEntityManager();
+    const sps = await em.find(SmallPublisher, {});
+    expect(sps).toMatchEntity([]);
+  });
 });

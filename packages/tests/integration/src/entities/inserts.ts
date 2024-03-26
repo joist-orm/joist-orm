@@ -128,6 +128,7 @@ export async function insertPublisher(row: {
   group_id?: number;
   city?: string;
   updated_at?: Date;
+  deleted_at?: Date;
 }) {
   await testDriver.insert("publishers", row);
   await testDriver.insert("small_publishers", { id: row.id ?? 1, city: row.city ?? "city" });

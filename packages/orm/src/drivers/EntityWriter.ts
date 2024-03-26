@@ -128,7 +128,9 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
 
   // We may have loaded a1 and a2, and changed a1.firstName, and a2.lastName, but either one
   // might be missing the other's changed fields in it's lazy-initialized data field...
-  const { updatedAt } = meta.timestampFields;
+  // (Use `?` because subtypes won't have the updatedAt, and it will be handled by the base type
+  // `newUpdateUp`--except STI where we're doing it all in one go, probably needs checked here.)
+  const updatedAt = meta.timestampFields?.updatedAt;
   changedFields.add("id");
   if (updatedAt) changedFields.add(updatedAt);
   for (const entity of entities) {

@@ -55,6 +55,7 @@ export type TaskId = Flavor<string, Task>;
 export interface TaskFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   durationInDays: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   type: { kind: "enum"; type: TaskType; nullable: undefined };
@@ -62,6 +63,7 @@ export interface TaskFields {
 
 export interface TaskOpts {
   durationInDays: number;
+  deletedAt?: Date | null;
   taskTaskItems?: TaskItem[];
 }
 
@@ -72,6 +74,7 @@ export interface TaskIdsOpts {
 export interface TaskFilter {
   id?: ValueFilter<TaskId, never> | null;
   durationInDays?: ValueFilter<number, never>;
+  deletedAt?: ValueFilter<Date, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   type?: ValueFilter<TaskType, null>;
@@ -81,6 +84,7 @@ export interface TaskFilter {
 export interface TaskGraphQLFilter {
   id?: ValueGraphQLFilter<TaskId>;
   durationInDays?: ValueGraphQLFilter<number>;
+  deletedAt?: ValueGraphQLFilter<Date>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   type?: ValueGraphQLFilter<TaskType>;
@@ -90,6 +94,7 @@ export interface TaskGraphQLFilter {
 export interface TaskOrder {
   id?: OrderBy;
   durationInDays?: OrderBy;
+  deletedAt?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   type?: OrderBy;
@@ -145,6 +150,14 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
     setField(this, "durationInDays", durationInDays);
   }
 
+  get deletedAt(): Date | undefined {
+    return getField(this, "deletedAt");
+  }
+
+  set deletedAt(deletedAt: Date | undefined) {
+    setField(this, "deletedAt", deletedAt);
+  }
+
   get createdAt(): Date {
     return getField(this, "createdAt");
   }
@@ -183,6 +196,10 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
 
   get changes(): Changes<Task, keyof FieldsOf<Task> | keyof FieldsOf<TaskNew> | keyof FieldsOf<TaskOld>> {
     return newChangesProxy(this) as any;
+  }
+
+  get isSoftDeletedEntity(): boolean {
+    return this.deletedAt !== undefined;
   }
 
   load<U, V>(fn: (lens: Lens<Task>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {

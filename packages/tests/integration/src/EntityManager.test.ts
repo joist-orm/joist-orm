@@ -1236,6 +1236,7 @@ describe("EntityManager", () => {
       type: PublisherType.Big,
       createdAt: expect.anything(),
       updatedAt: expect.anything(),
+      deletedAt: null,
     });
   });
 

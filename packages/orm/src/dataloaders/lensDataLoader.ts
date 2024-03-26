@@ -1,7 +1,14 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager, MaybeAbstractEntityConstructor, TaggedId } from "../EntityManager";
-import { EntityMetadata, ManyToOneField, OneToManyField, OneToOneField, getMetadata } from "../EntityMetadata";
+import {
+  EntityMetadata,
+  ManyToOneField,
+  OneToManyField,
+  OneToOneField,
+  getBaseMeta,
+  getMetadata,
+} from "../EntityMetadata";
 import { abbreviation } from "../QueryBuilder";
 import {
   ColumnCondition,
@@ -67,8 +74,9 @@ export function lensDataLoader<T extends Entity>(
     maybeAddOrderBy(query, target, alias);
 
     function maybeAddNotSoftDeleted(other: EntityMetadata, alias: string): void {
-      if (other.timestampFields.deletedAt) {
-        const column = other.allFields[other.timestampFields.deletedAt].serde?.columns[0]!;
+      const { deletedAt } = getBaseMeta(other).timestampFields;
+      if (deletedAt) {
+        const column = other.allFields[deletedAt].serde?.columns[0]!;
         conditions.push({
           kind: "column",
           alias,

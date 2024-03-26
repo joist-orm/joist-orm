@@ -129,12 +129,13 @@ export function parseFindQuery(
   }
 
   function filterSoftDeletes(meta: EntityMetadata): boolean {
-    return softDeletes === "exclude" && !!meta.timestampFields.deletedAt;
+    // We don't support CTI soft-delete filtering yet
+    return softDeletes === "exclude" && !!getBaseMeta(meta).timestampFields.deletedAt && meta.inheritanceType !== "cti";
   }
 
   function maybeAddNotSoftDeleted(meta: EntityMetadata, alias: string): void {
     if (filterSoftDeletes(meta)) {
-      const column = meta.allFields[meta.timestampFields.deletedAt!].serde?.columns[0]!;
+      const column = meta.allFields[getBaseMeta(meta).timestampFields.deletedAt!].serde?.columns[0]!;
       inlineConditions.push({
         kind: "column",
         alias,
@@ -915,8 +916,9 @@ export function maybeAddNotSoftDeleted(
   alias: string,
   softDeletes: "include" | "exclude",
 ): void {
-  if (softDeletes === "exclude" && meta.timestampFields.deletedAt) {
-    const column = meta.allFields[meta.timestampFields.deletedAt].serde?.columns[0]!;
+  const { deletedAt } = getBaseMeta(meta).timestampFields;
+  if (softDeletes === "exclude" && deletedAt) {
+    const column = meta.allFields[deletedAt].serde?.columns[0]!;
     conditions.push({
       kind: "column",
       alias,

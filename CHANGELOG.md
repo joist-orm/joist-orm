@@ -1,3 +1,10 @@
+## [1.151.3](https://github.com/joist-orm/joist-orm/compare/v1.151.2...v1.151.3) (2024-03-26)
+
+
+### Bug Fixes
+
+* Fix em.find deletedAt filtering on STI subtypes. ([#992](https://github.com/joist-orm/joist-orm/issues/992)) ([ce9668a](https://github.com/joist-orm/joist-orm/commit/ce9668a5f7a32fe9ea735ff8c9bed577665d8a5a))
+
 ## [1.151.2](https://github.com/joist-orm/joist-orm/compare/v1.151.1...v1.151.2) (2024-03-26)
 
 

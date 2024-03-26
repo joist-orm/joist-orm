@@ -32,7 +32,9 @@ const relationConfig = z
     polymorphic: z.optional(z.union([z.literal("notNull"), z.literal(true)])),
     large: z.optional(z.boolean()),
     orderBy: z.optional(z.string()),
+    // Allow pushing m2o/m2m/o2o relations in a base type (Task) down to a subtype (TaskOld)
     stiType: z.optional(z.string()),
+    // Allow marking STI-subtype m2o Fks as required
     stiNotNull: z.optional(z.boolean()),
   })
   .strict();

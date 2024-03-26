@@ -227,11 +227,12 @@ function rewriteSingleTableForeignKeys(config: Config, entities: EntityDbMetadat
   if (stiEntities.size === 0) return;
   // Scan for other entities/relations that point to the STI table
   for (const entity of entities) {
-    // m2os
+    // m2os -- Look for `entity.task_id` FKs pointing at `Task` and, if configured, rewrite them to point at `TaskOld`
     for (const m2o of entity.manyToOnes) {
       const target = stiEntities.get(m2o.otherEntity.name);
-      // See if the user has configured this specific m2o FK as a different subtype
-      const stiType = config.entities[entity.name]?.fields?.[m2o.fieldName]?.stiType;
+      const base = target?.base.entity.name;
+      // See if the user has pushed `Task.entities` down to a subtype
+      const stiType = base && config.entities[base]?.relations?.[m2o.otherFieldName]?.stiType;
       if (target && stiType) {
         const { subTypes } = target;
         m2o.otherEntity = (
@@ -240,7 +241,23 @@ function rewriteSingleTableForeignKeys(config: Config, entities: EntityDbMetadat
         ).entity;
       }
     }
-    // o2ms
+    // polys -- Look for `entity.parent_task_id` FKs pointing at `Task` and, if configured, rewrite them to point at `TaskOld`
+    for (const poly of entity.polymorphics) {
+      for (const comp of poly.components) {
+        const target = stiEntities.get(comp.otherEntity.name);
+        const base = target?.base.entity.name;
+        // See if the user has pushed `Task.entities` down to a subtype
+        const stiType = base && config.entities[base]?.relations?.[comp.otherFieldName]?.stiType;
+        if (target && stiType) {
+          const { subTypes } = target;
+          comp.otherEntity = (
+            subTypes.find((s) => s.name === stiType) ??
+            fail(`Could not find STI type '${stiType}' in ${subTypes.map((s) => s.name)}`)
+          ).entity;
+        }
+      }
+    }
+    // o2ms -- Look for `entity.tasks` collections loading `task.entity_id`, but entity has been pushed down to `TaskOld`
     for (const o2m of entity.oneToManys) {
       const target = stiEntities.get(o2m.otherEntity.name);
       if (target && target.base.inheritanceType === "sti") {
@@ -255,7 +272,7 @@ function rewriteSingleTableForeignKeys(config: Config, entities: EntityDbMetadat
         }
       }
     }
-    // m2ms
+    // m2ms -- Look for `entity.tasks` collections loading m2m rows, but `entity` has been pushed down to `TaskOld`
     for (const m2m of entity.manyToManys) {
       const target = stiEntities.get(m2m.otherEntity.name);
       if (target && target.base.inheritanceType === "sti") {

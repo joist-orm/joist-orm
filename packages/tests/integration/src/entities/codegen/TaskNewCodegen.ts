@@ -1,5 +1,6 @@
 import {
   Changes,
+  Collection,
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
@@ -11,6 +12,7 @@ import {
   getField,
   getOrmField,
   GraphQLFilterOf,
+  hasMany,
   hasOne,
   isLoaded,
   Lens,
@@ -43,6 +45,9 @@ import {
   TaskFilter,
   TaskGraphQLFilter,
   TaskIdsOpts,
+  TaskItem,
+  TaskItemId,
+  taskItemMeta,
   TaskNew,
   taskNewMeta,
   TaskOpts,
@@ -60,20 +65,24 @@ export interface TaskNewFields extends TaskFields {
 export interface TaskNewOpts extends TaskOpts {
   specialNewField?: number | null;
   specialNewAuthor?: Author | AuthorId | null;
+  newTaskTaskItems?: TaskItem[];
 }
 
 export interface TaskNewIdsOpts extends TaskIdsOpts {
   specialNewAuthorId?: AuthorId | null;
+  newTaskTaskItemIds?: TaskItemId[] | null;
 }
 
 export interface TaskNewFilter extends TaskFilter {
   specialNewField?: ValueFilter<number, null>;
   specialNewAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
+  newTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
 }
 
 export interface TaskNewGraphQLFilter extends TaskGraphQLFilter {
   specialNewField?: ValueGraphQLFilter<number>;
   specialNewAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  newTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
 }
 
 export interface TaskNewOrder extends TaskOrder {
@@ -158,6 +167,18 @@ export abstract class TaskNewCodegen extends Task implements Entity {
 
   isLoaded<H extends LoadHint<TaskNew>>(hint: H): this is Loaded<TaskNew | Task, H> {
     return isLoaded(this as any as TaskNew, hint);
+  }
+
+  get newTaskTaskItems(): Collection<TaskNew, TaskItem> {
+    const { relations } = getOrmField(this);
+    return relations.newTaskTaskItems ??= hasMany(
+      this as any as TaskNew,
+      taskItemMeta,
+      "newTaskTaskItems",
+      "newTask",
+      "new_task_id",
+      undefined,
+    );
   }
 
   get specialNewAuthor(): ManyToOneReference<TaskNew, Author, undefined> {

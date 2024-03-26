@@ -12,6 +12,7 @@ import {
   getField,
   getOrmField,
   GraphQLFilterOf,
+  hasMany,
   hasManyToMany,
   isLoaded,
   Lens,
@@ -32,6 +33,9 @@ import {
 } from "joist-orm";
 import { Context } from "src/context";
 import {
+  Comment,
+  CommentId,
+  commentMeta,
   Entity,
   EntityManager,
   newTaskOld,
@@ -43,6 +47,9 @@ import {
   TaskFilter,
   TaskGraphQLFilter,
   TaskIdsOpts,
+  TaskItem,
+  TaskItemId,
+  taskItemMeta,
   TaskOld,
   taskOldMeta,
   TaskOpts,
@@ -58,20 +65,28 @@ export interface TaskOldFields extends TaskFields {
 
 export interface TaskOldOpts extends TaskOpts {
   specialOldField: number;
+  comments?: Comment[];
+  oldTaskTaskItems?: TaskItem[];
   publishers?: Publisher[];
 }
 
 export interface TaskOldIdsOpts extends TaskIdsOpts {
+  commentIds?: CommentId[] | null;
+  oldTaskTaskItemIds?: TaskItemId[] | null;
   publisherIds?: PublisherId[] | null;
 }
 
 export interface TaskOldFilter extends TaskFilter {
   specialOldField?: ValueFilter<number, never>;
+  comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  oldTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
 }
 
 export interface TaskOldGraphQLFilter extends TaskGraphQLFilter {
   specialOldField?: ValueGraphQLFilter<number>;
+  comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  oldTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
 }
 
@@ -158,6 +173,30 @@ export abstract class TaskOldCodegen extends Task implements Entity {
 
   isLoaded<H extends LoadHint<TaskOld>>(hint: H): this is Loaded<TaskOld | Task, H> {
     return isLoaded(this as any as TaskOld, hint);
+  }
+
+  get comments(): Collection<TaskOld, Comment> {
+    const { relations } = getOrmField(this);
+    return relations.comments ??= hasMany(
+      this as any as TaskOld,
+      commentMeta,
+      "comments",
+      "parent",
+      "parent_task_id",
+      undefined,
+    );
+  }
+
+  get oldTaskTaskItems(): Collection<TaskOld, TaskItem> {
+    const { relations } = getOrmField(this);
+    return relations.oldTaskTaskItems ??= hasMany(
+      this as any as TaskOld,
+      taskItemMeta,
+      "oldTaskTaskItems",
+      "oldTask",
+      "old_task_id",
+      undefined,
+    );
   }
 
   get publishers(): Collection<TaskOld, Publisher> {

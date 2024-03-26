@@ -302,8 +302,12 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
         newRelation.add(this.entity);
       } else if (newRelation instanceof OneToManyLargeCollection) {
         newRelation.add(this.entity);
-      } else {
+      } else if (newRelation) {
         newRelation.set(this.entity, { percolating: true });
+      } else {
+        // Something is wrong, we should always have a relation, but instead
+        // of blowing up here, let this finish b/c it will probably turn into
+        // a validation error.
       }
     } else if (typeof id === "string") {
       // Other is not loaded in memory, but cache it in case our other side is later loaded

@@ -1,3 +1,10 @@
+## [1.151.4](https://github.com/joist-orm/joist-orm/compare/v1.151.3...v1.151.4) (2024-03-26)
+
+
+### Bug Fixes
+
+* Fix em.load getting wrong STI type. ([#993](https://github.com/joist-orm/joist-orm/issues/993)) ([2fd633e](https://github.com/joist-orm/joist-orm/commit/2fd633e0458c41daef9c37f76bdc5bb939071d99))
+
 ## [1.151.3](https://github.com/joist-orm/joist-orm/compare/v1.151.2...v1.151.3) (2024-03-26)
 
 

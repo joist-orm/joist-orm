@@ -1,3 +1,10 @@
+## [1.151.1](https://github.com/joist-orm/joist-orm/compare/v1.151.0...v1.151.1) (2024-03-26)
+
+
+### Bug Fixes
+
+* Support polys that point to STI subtypes. ([#988](https://github.com/joist-orm/joist-orm/issues/988)) ([400b8de](https://github.com/joist-orm/joist-orm/commit/400b8de0288902981e1d313cb3319c5725a99bfa))
+
 # [1.151.0](https://github.com/joist-orm/joist-orm/compare/v1.150.2...v1.151.0) (2024-03-23)
 
 

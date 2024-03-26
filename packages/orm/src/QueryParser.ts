@@ -129,7 +129,8 @@ export function parseFindQuery(
   }
 
   function filterSoftDeletes(meta: EntityMetadata): boolean {
-    return softDeletes === "exclude" && !!getBaseMeta(meta).timestampFields.deletedAt;
+    // We don't support CTI soft-delete filtering yet
+    return softDeletes === "exclude" && !!getBaseMeta(meta).timestampFields.deletedAt && meta.inheritanceType !== "cti";
   }
 
   function maybeAddNotSoftDeleted(meta: EntityMetadata, alias: string): void {

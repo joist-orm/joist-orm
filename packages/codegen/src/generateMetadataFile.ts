@@ -30,6 +30,16 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
   const maybeInheritanceType = meta.inheritanceType ? `inheritanceType: "${meta.inheritanceType}",` : "";
   const maybeStiColumn = meta.stiDiscriminatorField ? `stiDiscriminatorField: "${meta.stiDiscriminatorField}",` : "";
   const maybeStiValue = meta.stiDiscriminatorValue ? `stiDiscriminatorValue: ${meta.stiDiscriminatorValue},` : "";
+  // Force subtype `timestampFields` to be `undefined` to ensure all runtime code is reading from the baseMeta values.
+  const maybeTimestampConfig = meta.baseClassName
+    ? code`undefined!`
+    : code`
+    {
+      createdAt: ${q(createdAt?.fieldName)},
+      updatedAt: ${q(updatedAt?.fieldName)},
+      deletedAt: ${q(deletedAt?.fieldName)},
+    }
+  `;
 
   return code`
     export const ${entity.metaName}: ${EntityMetadata}<${entity.name}> = {
@@ -43,11 +53,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       fields: ${fields},
       allFields: {},
       orderBy: ${q(config.entities[meta.name]?.orderBy)},
-      timestampFields: {
-        createdAt: ${q(createdAt?.fieldName)},
-        updatedAt: ${q(updatedAt?.fieldName)},
-        deletedAt: ${q(deletedAt?.fieldName)},
-      },
+      timestampFields: ${maybeTimestampConfig},
       config: ${entity.configConst},
       factory: ${imp(`new${entity.name}@./entities`)},
       baseTypes: [],

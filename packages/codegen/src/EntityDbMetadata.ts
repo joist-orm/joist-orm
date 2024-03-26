@@ -7,11 +7,12 @@ import {
   Config,
   fieldTypeConfig,
   getTimestampConfig,
-  isAsyncDerived,
-  isDerived,
   isFieldIgnored,
+  isGetterField,
   isLargeCollection,
   isProtected,
+  isReactiveField,
+  isReactiveReference,
   ormMaintainedFields,
   serdeConfig,
   superstructConfig,
@@ -115,7 +116,7 @@ export type EnumField = Field & {
   columnName: string;
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
-  derived:  "sync" | "async" | false;
+  derived: "sync" | "async" | false;
   enumName: string;
   enumType: Import;
   enumDetailType: Import;
@@ -284,7 +285,7 @@ export class EntityDbMetadata {
       .filter((r) => !isOneToOneRelation(r))
       .map((r) => newOneToMany(config, this.entity, r))
       // Do not generate o2m for persisted async derived fields
-      .filter((f) => !isAsyncDerived(config, f.otherEntity, f.otherFieldName))
+      .filter((f) => !isReactiveReference(config, f.otherEntity, f.otherFieldName))
       .filter((f) => !f.ignore);
     this.oneToManys = allOneToManys.filter((f) => !f.isLargeCollection);
     this.largeOneToManys = allOneToManys.filter((f) => f.isLargeCollection);
@@ -425,9 +426,9 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
 function fieldDerived(config: Config, entity: Entity, fieldName: string): PrimitiveField["derived"] {
   if (ormMaintainedFields.includes(fieldName)) {
     return "orm";
-  } else if (isDerived(config, entity, fieldName)) {
+  } else if (isGetterField(config, entity, fieldName)) {
     return "sync";
-  } else if (isAsyncDerived(config, entity, fieldName)) {
+  } else if (isReactiveField(config, entity, fieldName)) {
     return "async";
   } else {
     return false;
@@ -435,7 +436,7 @@ function fieldDerived(config: Config, entity: Entity, fieldName: string): Primit
 }
 
 function fkFieldDerived(config: Config, entity: Entity, fieldName: string): ManyToOneField["derived"] {
-  if (isAsyncDerived(config, entity, fieldName)) {
+  if (isReactiveReference(config, entity, fieldName)) {
     return "async";
   } else {
     return false;

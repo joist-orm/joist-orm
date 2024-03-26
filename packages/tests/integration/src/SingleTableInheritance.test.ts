@@ -242,8 +242,10 @@ describe("SingleTableInheritance", () => {
     `);
     expect(Object.keys(getProperties(TaskOld.metadata))).toMatchInlineSnapshot(`
      [
+       "parentOldTask",
        "comments",
        "oldTaskTaskItems",
+       "tasks",
        "publishers",
        "taskTaskItems",
      ]

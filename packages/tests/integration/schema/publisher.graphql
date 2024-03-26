@@ -15,6 +15,7 @@ type Publisher {
   tags: [Tag!]!
   numberOfBookReviews: Int
   tasks: [Task!]!
+  deletedAt: DateTime
 }
 
 input SavePublisherInput {
@@ -28,6 +29,7 @@ input SavePublisherInput {
   hugeNumber: Int
   type: PublisherType
   groupId: ID
+  deletedAt: DateTime
 }
 
 type SavePublisherResult {

@@ -85,6 +85,7 @@ export interface PublisherFields {
   longitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   hugeNumber: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: true };
+  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   size: { kind: "enum"; type: PublisherSize; nullable: undefined };
@@ -97,6 +98,7 @@ export interface PublisherOpts {
   latitude?: number | null;
   longitude?: number | null;
   hugeNumber?: number | null;
+  deletedAt?: Date | null;
   size?: PublisherSize | null;
   type?: PublisherType;
   group?: PublisherGroup | PublisherGroupId | null;
@@ -125,6 +127,7 @@ export interface PublisherFilter {
   longitude?: ValueFilter<number, null>;
   hugeNumber?: ValueFilter<number, null>;
   numberOfBookReviews?: ValueFilter<number, null>;
+  deletedAt?: ValueFilter<Date, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   size?: ValueFilter<PublisherSize, null>;
@@ -145,6 +148,7 @@ export interface PublisherGraphQLFilter {
   longitude?: ValueGraphQLFilter<number>;
   hugeNumber?: ValueGraphQLFilter<number>;
   numberOfBookReviews?: ValueGraphQLFilter<number>;
+  deletedAt?: ValueGraphQLFilter<Date>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   size?: ValueGraphQLFilter<PublisherSize>;
@@ -165,6 +169,7 @@ export interface PublisherOrder {
   longitude?: OrderBy;
   hugeNumber?: OrderBy;
   numberOfBookReviews?: OrderBy;
+  deletedAt?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   size?: OrderBy;
@@ -253,6 +258,14 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   abstract readonly numberOfBookReviews: ReactiveField<Publisher, number | undefined>;
 
+  get deletedAt(): Date | undefined {
+    return getField(this, "deletedAt");
+  }
+
+  set deletedAt(deletedAt: Date | undefined) {
+    setField(this, "deletedAt", deletedAt);
+  }
+
   get createdAt(): Date {
     return getField(this, "createdAt");
   }
@@ -314,6 +327,10 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
     keyof FieldsOf<Publisher> | keyof FieldsOf<LargePublisher> | keyof FieldsOf<SmallPublisher>
   > {
     return newChangesProxy(this) as any;
+  }
+
+  get isSoftDeletedEntity(): boolean {
+    return this.deletedAt !== undefined;
   }
 
   load<U, V>(fn: (lens: Lens<Publisher>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {

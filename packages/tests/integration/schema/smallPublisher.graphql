@@ -22,6 +22,7 @@ type SmallPublisher {
   tags: [Tag!]!
   numberOfBookReviews: Int
   tasks: [Task!]!
+  deletedAt: DateTime
 }
 
 input SaveSmallPublisherInput {
@@ -34,6 +35,7 @@ input SaveSmallPublisherInput {
   size: PublisherSize
   type: PublisherType
   groupId: ID
+  deletedAt: DateTime
 }
 
 type SaveSmallPublisherResult {

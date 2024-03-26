@@ -54,6 +54,8 @@ export function up(b: MigrationBuilder): void {
     number_of_book_reviews: { type: "integer" },
     // for testing table-per-class o2ms
     group_id: foreignKey("publisher_groups", { notNull: false }),
+    // for testing soft-delete with CTI tables
+    deleted_at: { type: "timestamptz", notNull: false },
   });
 
   // Create two subclass tables
@@ -320,6 +322,8 @@ export function up(b: MigrationBuilder): void {
     special_old_field: { type: "int", notNull: false },
     // Self-referential but only for a subtype
     parent_old_task_id: foreignKey("tasks", { notNull: false }),
+    // For testing soft-delete on STI tables
+    deleted_at: { type: "timestamptz", notNull: false },
   });
 
   // For testing single-table inheritance

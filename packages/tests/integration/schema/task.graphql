@@ -18,6 +18,7 @@ type Task {
   comments: [Comment!]!
   parentOldTask: Task
   tasks: [Task!]!
+  deletedAt: DateTime
 }
 
 input SaveTaskInput {
@@ -28,6 +29,7 @@ input SaveTaskInput {
   specialOldField: Int
   specialNewAuthorId: ID
   parentOldTaskId: ID
+  deletedAt: DateTime
 }
 
 type SaveTaskResult {

@@ -22,6 +22,7 @@ type LargePublisher {
   critics: [Critic!]!
   numberOfBookReviews: Int
   tasks: [Task!]!
+  deletedAt: DateTime
 }
 
 input SaveLargePublisherInput {
@@ -34,6 +35,7 @@ input SaveLargePublisherInput {
   size: PublisherSize
   type: PublisherType
   groupId: ID
+  deletedAt: DateTime
 }
 
 type SaveLargePublisherResult {

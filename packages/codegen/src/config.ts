@@ -12,6 +12,7 @@ const jsonFormatter = createFromBuffer(getBuffer());
 
 const fieldConfig = z
   .object({
+    // For getters & ReactiveFields
     derived: z.optional(z.union([z.literal("sync"), z.literal("async")])),
     protected: z.optional(z.boolean()),
     ignore: z.optional(z.boolean()),
@@ -29,6 +30,8 @@ export type FieldConfig = z.infer<typeof fieldConfig>;
 
 const relationConfig = z
   .object({
+    // For ReactiveReferences
+    derived: z.optional(z.literal("async")),
     polymorphic: z.optional(z.union([z.literal("notNull"), z.literal(true)])),
     large: z.optional(z.boolean()),
     orderBy: z.optional(z.string()),
@@ -130,22 +133,21 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
     const [entity] = entities;
 
     // Check fields
-    const fields = [...entity.primitives, ...entity.manyToOnes, ...entity.enums];
+    const fields = [...entity.primitives, ...entity.enums];
     for (const [name, config] of Object.entries(entityConfig.fields || {})) {
       if (config.ignore) continue;
       let field = fields.find((f) => f.fieldName === name);
       // STI types might be in the base type
       if (!field && entity.stiDiscriminatorField) {
         const stiEntities = getStiEntities(db.entities).get(entity.name)?.subTypes;
-        field = stiEntities
-          ?.flatMap((st) => [...st.primitives, ...st.manyToOnes, ...st.enums])
-          .find((f) => f.fieldName === name);
+        field = stiEntities?.flatMap((st) => [...st.primitives, ...st.enums]).find((f) => f.fieldName === name);
       }
       if (!field) console.log(`WARNING: Found config for non-existent field ${entityName}.${name}`);
     }
 
     // Check relations
     const relations = [
+      ...entity.manyToOnes,
       ...entity.oneToManys,
       ...entity.manyToManys,
       ...entity.oneToOnes,
@@ -160,6 +162,7 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
         const stiEntities = getStiEntities(db.entities).get(entity.name)?.subTypes;
         relation = stiEntities
           ?.flatMap((entity) => [
+            ...entity.manyToOnes,
             ...entity.oneToManys,
             ...entity.manyToManys,
             ...entity.oneToOnes,
@@ -174,12 +177,16 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
   }
 }
 
-export function isDerived(config: Config, entity: Entity, fieldName: string): boolean {
+export function isGetterField(config: Config, entity: Entity, fieldName: string): boolean {
   return config.entities[entity.name]?.fields?.[fieldName]?.derived === "sync";
 }
 
-export function isAsyncDerived(config: Config, entity: Entity, fieldName: string): boolean {
+export function isReactiveField(config: Config, entity: Entity, fieldName: string): boolean {
   return config.entities[entity.name]?.fields?.[fieldName]?.derived === "async";
+}
+
+export function isReactiveReference(config: Config, entity: Entity, fieldName: string): boolean {
+  return config.entities[entity.name]?.relations?.[fieldName]?.derived === "async";
 }
 
 export function isProtected(config: Config, entity: Entity, fieldName: string): boolean {

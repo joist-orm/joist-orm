@@ -8,7 +8,6 @@
         "address": { "superstruct": "address@src/entities/types" },
         "bookComments": { "derived": "async" },
         "businessAddress": { "zodSchema": "AddressSchema@src/entities/types" },
-        "favoriteBook": { "derived": "async" },
         "ignoreEnumFk": { "ignore": true },
         "ignoreEnumFkRequiredWithDefault": { "ignore": true },
         "ignoreUsedToBeUseful": { "ignore": true },
@@ -25,7 +24,7 @@
         "tsSearch": { "ignore": true },
         "wasEverPopular": { "protected": true }
       },
-      "relations": { "books": { "orderBy": "order" } },
+      "relations": { "books": { "orderBy": "order" }, "favoriteBook": { "derived": "async" } },
       "tag": "a"
     },
     "AuthorSchedule": { "tag": "authorSchedule" },

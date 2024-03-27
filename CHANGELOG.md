@@ -1,3 +1,10 @@
+## [1.151.6](https://github.com/joist-orm/joist-orm/compare/v1.151.5...v1.151.6) (2024-03-27)
+
+
+### Bug Fixes
+
+* Restore soft-deleting filters on CTI base types. ([#995](https://github.com/joist-orm/joist-orm/issues/995)) ([36e9251](https://github.com/joist-orm/joist-orm/commit/36e9251002d12eedbeb5960070cd59e519f2d192))
+
 ## [1.151.5](https://github.com/joist-orm/joist-orm/compare/v1.151.4...v1.151.5) (2024-03-27)
 
 

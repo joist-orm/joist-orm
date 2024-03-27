@@ -63,8 +63,9 @@ describe("ReactiveQueryField", () => {
       id: 1,
       number_of_book_reviews: 1,
     });
+    console.log(queries)
     expect(queries).toContain(
-      `select count(distinct "br".id) as count from book_reviews as br inner join books as b on br.book_id = b.id inner join authors as a on b.author_id = a.id where b.deleted_at is null and a.deleted_at is null and a.publisher_id = $1 limit $2`,
+      `select distinct count(distinct "br".id) as count from book_reviews as br inner join books as b on br.book_id = b.id inner join authors as a on b.author_id = a.id left outer join publishers as p on a.publisher_id = p.id where b.deleted_at is null and a.deleted_at is null and p.deleted_at is null and p.id = $1 limit $2`,
     );
   });
 

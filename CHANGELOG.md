@@ -1,3 +1,10 @@
+## [1.151.5](https://github.com/joist-orm/joist-orm/compare/v1.151.4...v1.151.5) (2024-03-27)
+
+
+### Bug Fixes
+
+* Fix subtypes not running reactive rules. ([#994](https://github.com/joist-orm/joist-orm/issues/994)) ([5053b0f](https://github.com/joist-orm/joist-orm/commit/5053b0f14e567f544cf76425ed0bacd441a53a9e))
+
 ## [1.151.4](https://github.com/joist-orm/joist-orm/compare/v1.151.3...v1.151.4) (2024-03-26)
 
 

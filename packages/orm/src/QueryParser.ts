@@ -128,13 +128,8 @@ export function parseFindQuery(
     return i === 0 ? abbrev : `${abbrev}${i}`;
   }
 
-  function filterSoftDeletes(meta: EntityMetadata): boolean {
-    // We don't support CTI soft-delete filtering yet
-    return softDeletes === "exclude" && !!getBaseMeta(meta).timestampFields.deletedAt && meta.inheritanceType !== "cti";
-  }
-
   function maybeAddNotSoftDeleted(meta: EntityMetadata, alias: string): void {
-    if (filterSoftDeletes(meta)) {
+    if (filterSoftDeletes(meta, softDeletes)) {
       const column = meta.allFields[getBaseMeta(meta).timestampFields.deletedAt!].serde?.columns[0]!;
       inlineConditions.push({
         kind: "column",
@@ -215,7 +210,7 @@ export function parseFindQuery(
           // Probe the filter and see if it's just an id (...and not soft deleted), if so we can avoid the join
           if (!f) {
             // skip
-          } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata())) {
+          } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata(), softDeletes)) {
             const a = getAlias(field.otherMetadata().tableName);
             addTable(field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
           } else {
@@ -347,7 +342,7 @@ export function parseFindQuery(
           // Probe the filter and see if it's just an id, if so we can avoid the join
           if (!f) {
             // skip
-          } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata())) {
+          } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata(), softDeletes)) {
             const a = getAlias(field.otherMetadata().tableName);
             addTable(
               field.otherMetadata(),
@@ -916,9 +911,8 @@ export function maybeAddNotSoftDeleted(
   alias: string,
   softDeletes: "include" | "exclude",
 ): void {
-  const { deletedAt } = getBaseMeta(meta).timestampFields;
-  if (softDeletes === "exclude" && deletedAt) {
-    const column = meta.allFields[deletedAt].serde?.columns[0]!;
+  if (filterSoftDeletes(meta, softDeletes)) {
+    const column = meta.allFields[getBaseMeta(meta).timestampFields.deletedAt!].serde?.columns[0]!;
     conditions.push({
       kind: "column",
       alias,
@@ -927,6 +921,15 @@ export function maybeAddNotSoftDeleted(
       cond: { kind: "is-null" },
     });
   }
+}
+
+function filterSoftDeletes(meta: EntityMetadata, softDeletes: "include" | "exclude"): boolean {
+  return (
+    softDeletes === "exclude" &&
+    !!getBaseMeta(meta).timestampFields.deletedAt &&
+    // We don't support CTI subtype soft-delete filtering yet
+    (meta.inheritanceType !== "cti" || meta.baseTypes.length === 0)
+  );
 }
 
 function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter | undefined {

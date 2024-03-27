@@ -298,7 +298,14 @@ export function configureMetadata(metas: EntityMetadata[]): void {
         // For each reversal, tell its config about the reverse hint to force-re-validate
         // the original rule's instance any time it changes.
         reversals.forEach(({ entity, path, fields }) => {
-          getMetadata(entity).config.__data.reactiveRules.push({ cstr: meta.cstr, name, fields, path, fn });
+          getMetadata(entity).config.__data.reactiveRules.push({
+            source: entity,
+            cstr: meta.cstr,
+            name,
+            fields,
+            path,
+            fn,
+          });
         });
       }
     });

@@ -1,14 +1,14 @@
 import { getProperties } from "joist-orm";
 import {
+  Task,
+  TaskNew,
+  TaskOld,
+  TaskType,
   newAuthor,
   newTask,
   newTaskItem,
   newTaskNew,
   newTaskOld,
-  Task,
-  TaskNew,
-  TaskOld,
-  TaskType,
 } from "src/entities";
 import { insertTask, select } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
@@ -147,8 +147,8 @@ describe("SingleTableInheritance", () => {
     const t2 = newTaskOld(em);
     const t3 = newTaskNew(em);
     await em.flush();
-    expect(t2.transientFields.oldHookRan).toBe(true);
-    expect(t3.transientFields.newHookRan).toBe(true);
+    expect(t2.transientFields.oldSimpleRuleRan).toBe(true);
+    expect(t3.transientFields.newSimpleRuleRan).toBe(true);
   });
 
   it("can bulk-create tasks of each type", async () => {
@@ -355,5 +355,14 @@ describe("SingleTableInheritance", () => {
     newTaskNew(em, { deletedAt: new Date(), specialNewAuthor: a });
     await em.flush();
     expect(a.tasks.get).toMatchEntity([]);
+  });
+
+  it("runs reactive validation rules", async () => {
+    const em = newEntityManager();
+    const ot = newTaskOld(em, {});
+    const nt = newTaskNew(em, {});
+    await em.flush();
+    expect(ot.transientFields.oldReactiveRuleRan).toBe(true);
+    expect(nt.transientFields.newReactiveRuleRan).toBe(true);
   });
 });

@@ -214,6 +214,8 @@ export function resetBootFlag(): void {
  * a `ReactiveRule` with fields `["title"]`, path `books`, and rule `ruleFn`.
  */
 export interface ReactiveRule {
+  /** The source we're reacting to, specifically which base/subtype cstr. */
+  source: MaybeAbstractEntityConstructor<any>;
   /** The fields on this source entity that would trigger the downstream rule's eval. */
   fields: string[];
   /** The constructor of downstream entity that owns the reactive rule. */

@@ -44,6 +44,7 @@ import {
   assertIdIsTagged,
   getBaseAndSelfMetas,
   getBaseMeta,
+  getBaseSelfAndSubMetas,
   getConstructorFromTaggedId,
   getMetadata,
   getRelationEntries,
@@ -1639,14 +1640,16 @@ async function validateReactiveRules(
   const p1 = Object.values(todos).flatMap((todo) => {
     const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
-    const rules = getBaseAndSelfMetas(todo.metadata).flatMap((m) => m.config.__data.reactiveRules);
+    const rules = getBaseSelfAndSubMetas(todo.metadata).flatMap((m) => m.config.__data.reactiveRules);
     return rules.map((rule) => {
       // Of all changed entities of this type, how many specifically trigger this rule?
       const triggered = entities.filter(
         (e) =>
-          e.isNewEntity ||
-          e.isDeletedEntity ||
-          ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f)),
+          // If the rule is for a different subtype, skip it
+          e instanceof rule.source &&
+          (e.isNewEntity ||
+            e.isDeletedEntity ||
+            ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f))),
       );
       // From these "triggered" entities, queue the "found"/owner entity to rerun this rule
       return followAndQueue(triggered, rule);

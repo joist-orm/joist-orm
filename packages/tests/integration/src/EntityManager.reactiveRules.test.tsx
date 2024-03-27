@@ -14,7 +14,7 @@ import {
 } from "@src/entities";
 import { insertAuthor, insertBook, insertBookToTag, insertTag, select } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
-import { getMetadata } from "joist-orm";
+import { getMetadata, MaybeAbstractEntityConstructor } from "joist-orm";
 
 const sm = expect.stringMatching;
 
@@ -210,60 +210,65 @@ describe("EntityManager.reactiveRules", () => {
   });
 
   it.withCtx("creates the right reactive rules", async () => {
-    const cstr = expect.any(Function);
     const fn = expect.any(Function);
-    expect(getMetadata(Author).config.__data.reactiveRules).toEqual([
+    expect(getReactiveRules(Author)).toMatchObject([
       // Author's firstName/book.title validation rule
-      { cstr, name: sm(/Author.ts:\d+/), fields: ["firstName"], path: [], fn },
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["firstName"], path: [], fn },
       // Author's "cannot have 13 books" rules
-      { cstr, name: sm(/Author.ts:\d+/), fields: [], path: [], fn },
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: [], path: [], fn },
       // Author's noop mentor rule
-      { cstr, name: sm(/Author.ts:\d+/), fields: ["mentor"], path: [], fn },
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["mentor"], path: [], fn },
       // Author's graduated rule that runs on hook changes
-      { cstr, name: sm(/Author.ts:\d+/), fields: ["graduated"], path: [], fn },
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["graduated"], path: [], fn },
       // Author's immutable age rule (w/o age listed b/c it is immutable, but still needs to fire on create)
-      { cstr, name: sm(/Author.ts:\d+/), fields: [], path: [], fn },
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: [], path: [], fn },
       // Book's noop author.firstName rule, only depends on firstName
-      { cstr, name: sm(/Book.ts:\d+/), fields: ["firstName"], path: ["books"], fn },
+      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["firstName"], path: ["books"], fn },
       // Book's "too many colors" rule, only depends on favoriteColors, not firstName:ro
-      { cstr, name: sm(/Book.ts:\d+/), fields: ["favoriteColors"], path: ["books"], fn },
+      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["favoriteColors"], path: ["books"], fn },
       // Publisher's "cannot have 13 authors" rule
-      { cstr, name: sm(/Publisher.ts:\d+/), fields: ["publisher"], path: ["publisher"], fn },
+      { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher"], path: ["publisher"], fn },
       // Publisher's numberOfBooks2 "cannot have 13 books" rule
-      { cstr, name: sm(/Publisher.ts:\d+/), fields: ["publisher"], path: ["publisher"], fn },
+      { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher"], path: ["publisher"], fn },
       // Publisher's numberOfBooks "cannot have 15 books" rule
-      { cstr, name: sm(/Publisher.ts:\d+/), fields: ["publisher", "numberOfBooks"], path: ["publisher"], fn },
+      { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher", "numberOfBooks"], path: ["publisher"], fn },
       // SmallPublisher's "cannot have >5 authors" rule
-      { cstr, name: sm(/Publisher.ts:\d+/), fields: ["publisher"], path: ["publisher"], fn },
+      { cstr: "SmallPublisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher"], path: ["publisher"], fn },
     ]);
 
-    expect(getMetadata(Book).config.__data.reactiveRules).toEqual([
+    expect(getReactiveRules(Book)).toMatchObject([
       // Author's firstName/book.title validation rule
-      { cstr, name: sm(/Author.ts:\d+/), fields: ["author", "title"], path: ["author"], fn },
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["author", "title"], path: ["author"], fn },
       // Author's "cannot have 13 books" rule
-      { cstr, name: sm(/Author.ts:\d+/), fields: ["author"], path: ["author"], fn },
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["author"], path: ["author"], fn },
       // Book's noop rule on author.firstName, if author changes
-      { cstr, name: sm(/Book.ts:\d+/), fields: ["author"], path: [], fn },
+      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["author"], path: [], fn },
       // Book's "too many colors" rule, if author changes
-      { cstr, name: sm(/Book.ts:\d+/), fields: ["author"], path: [], fn },
+      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["author"], path: [], fn },
       // Book's "reviewsRuleInvoked", when BookReview.book is immutable field
-      { cstr, name: sm(/Book.ts:\d+/), fields: [], path: [], fn },
+      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: [], path: [], fn },
       // Book's "numberOfBooks2" rule (this book + other books)
-      { cstr, name: sm(/Book.ts:\d+/), fields: ["author"], path: [], fn },
-      { cstr, name: sm(/Book.ts:\d+/), fields: ["author", "title"], path: ["author", "books"], fn },
+      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["author"], path: [], fn },
+      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["author", "title"], path: ["author", "books"], fn },
       // The tags <= 3 rule
-      { cstr, name: sm(/Book.ts:\d+/), fields: ["tags"], path: [], fn },
+      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["tags"], path: [], fn },
       // Publisher's numberOfBooks2 "cannot have 13 books" rule
-      { cstr, name: sm(/Publisher.ts:\d+/), fields: ["author", "title"], path: ["author", "publisher"], fn },
+      {
+        cstr: "Publisher",
+        name: sm(/Publisher.ts:\d+/),
+        fields: ["author", "title"],
+        path: ["author", "publisher"],
+        fn,
+      },
     ]);
 
-    expect(getMetadata(BookReview).config.__data.reactiveRules).toEqual([
+    expect(getReactiveRules(BookReview)).toMatchObject([
       // Book's "reviewsRuleInvoked", when BookReview.book is immutable field
-      { cstr, name: sm(/Book.ts:\d+/), fields: [], path: ["book"], fn },
+      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: [], path: ["book"], fn },
     ]);
 
-    expect(getMetadata(SmallPublisher).config.__data.reactiveRules).toEqual([
-      { cstr: SmallPublisher, name: sm(/SmallPublisher.ts:\d+/), fields: [], path: [], fn },
+    expect(getReactiveRules(SmallPublisher)).toMatchObject([
+      { cstr: "SmallPublisher", name: sm(/SmallPublisher.ts:\d+/), fields: [], path: [], fn },
     ]);
   });
 
@@ -337,7 +342,13 @@ describe("EntityManager.reactiveRules", () => {
       { kind: "query", cstr, name: "numberOfBookReviews", fields: ["author"], path: ["author", "publisher"] },
     ]);
     expect(getMetadata(BookReview).config.__data.reactiveDerivedValues).toEqual([
-      { kind: "populate", cstr, name: "numberOfPublicReviews", fields: ["isPublic", "rating"], path: ["book", "author"] },
+      {
+        kind: "populate",
+        cstr,
+        name: "numberOfPublicReviews",
+        fields: ["isPublic", "rating"],
+        path: ["book", "author"],
+      },
       {
         kind: "populate",
         cstr,
@@ -584,3 +595,10 @@ describe("EntityManager.reactiveRules", () => {
     });
   });
 });
+
+function getReactiveRules(cstr: MaybeAbstractEntityConstructor<any>): any[] {
+  return getMetadata(cstr).config.__data.reactiveRules.map((rule) => {
+    const { source, cstr, ...rest } = rule;
+    return { source: source.name, cstr: cstr.name, ...rest };
+  });
+}

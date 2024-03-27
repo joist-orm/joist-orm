@@ -64,7 +64,14 @@ describe("EntityManager.ctiQueries", () => {
     expect(lps).toMatchEntity([]);
   });
 
-  it.skip("finds filters out soft-deleted entities", async () => {
+  it("finds filters out soft-deleted entities if querying base table", async () => {
+    await insertPublisher({ id: 1, name: "sp1", deleted_at: new Date() });
+    const em = newEntityManager();
+    const sps = await em.find(Publisher, {});
+    expect(sps).toMatchEntity([]);
+  });
+
+  it.skip("finds filters out soft-deleted entities if querying child table", async () => {
     await insertPublisher({ id: 1, name: "sp1", deleted_at: new Date() });
     const em = newEntityManager();
     const sps = await em.find(SmallPublisher, {});

@@ -129,8 +129,12 @@ export function parseFindQuery(
   }
 
   function filterSoftDeletes(meta: EntityMetadata): boolean {
-    // We don't support CTI soft-delete filtering yet
-    return softDeletes === "exclude" && !!getBaseMeta(meta).timestampFields.deletedAt && meta.inheritanceType !== "cti";
+    return (
+      softDeletes === "exclude" &&
+      !!getBaseMeta(meta).timestampFields.deletedAt &&
+      // We don't support CTI subtype soft-delete filtering yet
+      (meta.inheritanceType !== "cti" || meta.baseTypes.length === 0)
+    );
   }
 
   function maybeAddNotSoftDeleted(meta: EntityMetadata, alias: string): void {

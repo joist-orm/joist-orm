@@ -820,7 +820,10 @@ describe("EntityManager.queries", () => {
       tables: [{ alias: "p", table: "publishers", join: "primary" }, expect.anything(), expect.anything()],
       condition: {
         op: "and",
-        conditions: [{ alias: "p", column: "id", dbType: "int", cond: { kind: "in", value: [1, 2] } }],
+        conditions: [
+          { alias: "p", column: "deleted_at", dbType: "timestamp with time zone", cond: { kind: "is-null" } },
+          { alias: "p", column: "id", dbType: "int", cond: { kind: "in", value: [1, 2] } },
+        ],
       },
       orderBys: [expect.anything()],
     });
@@ -832,10 +835,10 @@ describe("EntityManager.queries", () => {
 
     const em = newEntityManager();
     const where = { id: ["p:1", "p:2"] } satisfies PublisherFilter;
-    const pubs = await em.find(Publisher, where);
+    const pubs = await em.find(Publisher, where, opts);
     expect(pubs.length).toEqual(2);
 
-    expect(parseFindQuery(pm, where)).toMatchObject({
+    expect(parseFindQuery(pm, where, opts)).toMatchObject({
       selects: [`p.*`, "p_s0.*", "p_s1.*", `p.id as id`, expect.anything()],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
@@ -856,10 +859,10 @@ describe("EntityManager.queries", () => {
 
     const em = newEntityManager();
     const where = { id: { in: ["1", "2"] } } satisfies PublisherFilter;
-    const pubs = await em.find(Publisher, where);
+    const pubs = await em.find(Publisher, where, opts);
     expect(pubs.length).toEqual(2);
 
-    expect(parseFindQuery(pm, where)).toMatchObject({
+    expect(parseFindQuery(pm, where, opts)).toMatchObject({
       selects: [`p.*`, "p_s0.*", "p_s1.*", `p.id as id`, expect.anything()],
       tables: [{ alias: "p", table: "publishers", join: "primary" }, expect.anything(), expect.anything()],
       condition: {
@@ -876,11 +879,11 @@ describe("EntityManager.queries", () => {
 
     const em = newEntityManager();
     const where = { size: PublisherSize.Large } satisfies PublisherFilter;
-    const pubs = await em.find(Publisher, where);
+    const pubs = await em.find(Publisher, where, opts);
     expect(pubs.length).toEqual(1);
     expect(pubs[0].name).toEqual("p2");
 
-    expect(parseFindQuery(pm, where)).toMatchObject({
+  expect(parseFindQuery(pm, where, opts)).toMatchObject({
       selects: [
         `p.*`,
         "p_s0.*",
@@ -911,7 +914,7 @@ describe("EntityManager.queries", () => {
     expect(pubs.length).toEqual(1);
     expect(pubs[0].name).toEqual("p1");
 
-    expect(parseFindQuery(pm, where)).toMatchObject({
+    expect(parseFindQuery(pm, where, opts)).toMatchObject({
       selects: [`p.*`, "p_s0.*", "p_s1.*", `p.id as id`, expect.anything()],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },

@@ -1,3 +1,10 @@
+## [1.151.7](https://github.com/joist-orm/joist-orm/compare/v1.151.6...v1.151.7) (2024-03-29)
+
+
+### Bug Fixes
+
+* Let entityResolver pick up base type relations. ([#996](https://github.com/joist-orm/joist-orm/issues/996)) ([bf49a5c](https://github.com/joist-orm/joist-orm/commit/bf49a5ca77075da3e657d54fa56ed2391ee079f1))
+
 ## [1.151.6](https://github.com/joist-orm/joist-orm/compare/v1.151.5...v1.151.6) (2024-03-27)
 
 

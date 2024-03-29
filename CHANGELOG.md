@@ -1,3 +1,10 @@
+## [1.151.10](https://github.com/joist-orm/joist-orm/compare/v1.151.9...v1.151.10) (2024-03-29)
+
+
+### Bug Fixes
+
+* Fix workspaces foreach in releae. ([eb1b667](https://github.com/joist-orm/joist-orm/commit/eb1b6675527502dc8c2e0aa527404cbffa4d9c7c))
+
 ## [1.151.9](https://github.com/joist-orm/joist-orm/compare/v1.151.8...v1.151.9) (2024-03-29)
 
 

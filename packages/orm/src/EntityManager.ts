@@ -752,9 +752,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     return Array.isArray(entityOrArray)
       ? entityOrArray
           .filter((original) => entityToClone.has(original))
-          .map((original) => entityToClone.get(original) as Loaded<T, H>)
+          .map((original) => entityToClone.get(original) as unknown as Loaded<T, H>)
       : clones[0]
-        ? (clones[0][1] as Loaded<T, H>)
+        ? (clones[0][1] as unknown as Loaded<T, H>)
         : fail("no entities were cloned given the provided options");
   }
 

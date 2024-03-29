@@ -1,8 +1,7 @@
 import { Entity } from "./Entity";
-import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, PrimitiveField, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
 import { Todo } from "./Todo";
 import { setField } from "./fields";
-import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
 import { isLoadedReference } from "./relations/index";
 
 export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolean {
@@ -15,10 +14,10 @@ export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolea
 export function setSyncDefaults(entity: Entity): void {
   getBaseAndSelfMetas(getMetadata(entity)).forEach((m) => {
     for (const [field, maybeFn] of Object.entries(m.config.__data.syncDefaults)) {
-      if ((entity as any)[field] === undefined) {
-        (entity as any)[field] = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
-      } else if ((entity as any)[field] instanceof ReactiveQueryFieldImpl) {
+      if (m.fields[field].kind === "primitive" && (m.fields[field] as PrimitiveField)["derived"] === "async") {
         setField(entity, field, maybeFn);
+      } else if ((entity as any)[field] === undefined) {
+        (entity as any)[field] = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
       }
     }
   });

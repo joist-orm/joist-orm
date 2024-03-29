@@ -1,3 +1,10 @@
+## [1.151.9](https://github.com/joist-orm/joist-orm/compare/v1.151.8...v1.151.9) (2024-03-29)
+
+
+### Bug Fixes
+
+* Fixed setSyncDefaults handling of async derived fields ([#1000](https://github.com/joist-orm/joist-orm/issues/1000)) ([13a7284](https://github.com/joist-orm/joist-orm/commit/13a7284fa50172fe2500620b985a7b44d593f857))
+
 ## [1.151.8](https://github.com/joist-orm/joist-orm/compare/v1.151.7...v1.151.8) (2024-03-29)
 
 

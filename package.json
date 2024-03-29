@@ -4,10 +4,10 @@
   "scripts": {
     "build": "tspc --build",
     "semantic-release": "semantic-release",
-    "migrate": "yarn workspaces foreach run migrate",
-    "codegen": "yarn workspaces foreach run codegen",
-    "format": "yarn workspaces foreach run format",
-    "test": "yarn workspaces foreach run test",
+    "migrate": "yarn workspaces foreach --all run migrate",
+    "codegen": "yarn workspaces foreach --all run codegen",
+    "format": "yarn workspaces foreach --all run format",
+    "test": "yarn workspaces foreach --all run test",
     "docker": "docker-compose build",
     "db": "docker compose up db --wait && docker compose exec db ./reset.sh && yarn migrate && yarn codegen",
     "psql": "docker compose exec db ./console.sh"

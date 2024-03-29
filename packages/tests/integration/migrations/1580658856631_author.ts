@@ -41,7 +41,7 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "publisher_groups", {
     name: "text",
     // For testing ReactiveFields that depend on ReactiveQueryFields
-    number_of_book_reviews: { type: "int" },
+    number_of_book_reviews: { type: "int", notNull: true },
   });
 
   createEntityTable(b, "publishers", {
@@ -51,7 +51,7 @@ export function up(b: MigrationBuilder): void {
     latitude: { type: "numeric(9, 6)", notNull: false },
     longitude: { type: "numeric(9, 6)", notNull: false },
     huge_number: { type: "numeric(17, 0)", notNull: false },
-    number_of_book_reviews: { type: "integer" },
+    number_of_book_reviews: { type: "integer", notNull: true, default: 0 },
     // for testing table-per-class o2ms
     group_id: foreignKey("publisher_groups", { notNull: false }),
     // for testing soft-delete with CTI tables

@@ -567,24 +567,15 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
 function fieldHasDefaultValue(field: PrimitiveField | EnumField): boolean {
   let { columnDefault } = field;
-
-  // if there's no default at all, return false
+  // If there's no default at all, return false
   if (columnDefault === null) {
     return false;
   }
-
-  // even though default is defined as a number | boolean | string | null in reality pg-structure
-  // only ever returns a string | null so we make sure of that here
+  // Even though default is defined as a `number | boolean | string | null`, in reality pg-structure
+  // only ever returns a `string | null`, so we handle that here
   columnDefault = columnDefault.toString();
-
-  // if this value should be set elsewhere, return false
-  if (field.kind === "primitive" && field.derived !== false) {
-    return false;
-  }
-
   const fieldType = field.kind === "primitive" ? field.fieldType : "number";
-
-  // try to validate that we actually got a primitive value and not arbitrary SQL
+  // Try to validate that we actually got a primitive value and not arbitrary SQL
   return (
     (fieldType === "number" && !isNaN(parseInt(columnDefault))) ||
     (fieldType === "bigint" && !isNaN(parseInt(columnDefault))) ||

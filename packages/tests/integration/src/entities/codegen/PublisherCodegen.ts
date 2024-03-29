@@ -84,7 +84,7 @@ export interface PublisherFields {
   latitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   longitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   hugeNumber: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
-  numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: true };
+  numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -126,7 +126,7 @@ export interface PublisherFilter {
   latitude?: ValueFilter<number, null>;
   longitude?: ValueFilter<number, null>;
   hugeNumber?: ValueFilter<number, null>;
-  numberOfBookReviews?: ValueFilter<number, null>;
+  numberOfBookReviews?: ValueFilter<number, never>;
   deletedAt?: ValueFilter<Date, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
@@ -180,9 +180,11 @@ export interface PublisherOrder {
 export const publisherConfig = new ConfigApi<Publisher, Context>();
 
 publisherConfig.addRule(newRequiredRule("name"));
+publisherConfig.addRule(newRequiredRule("numberOfBookReviews"));
 publisherConfig.addRule(newRequiredRule("createdAt"));
 publisherConfig.addRule(newRequiredRule("updatedAt"));
 publisherConfig.addRule(newRequiredRule("type"));
+publisherConfig.setDefault("numberOfBookReviews", 0);
 publisherConfig.setDefault("type", PublisherType.Big);
 
 export abstract class PublisherCodegen extends BaseEntity<EntityManager, string> implements Entity {
@@ -256,7 +258,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
     setField(this, "hugeNumber", hugeNumber);
   }
 
-  abstract readonly numberOfBookReviews: ReactiveField<Publisher, number | undefined>;
+  abstract readonly numberOfBookReviews: ReactiveField<Publisher, number>;
 
   get deletedAt(): Date | undefined {
     return getField(this, "deletedAt");

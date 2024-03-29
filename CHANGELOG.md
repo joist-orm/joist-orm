@@ -1,3 +1,10 @@
+## [1.151.8](https://github.com/joist-orm/joist-orm/compare/v1.151.7...v1.151.8) (2024-03-29)
+
+
+### Bug Fixes
+
+* Fix ReactiveQueryFields on not-null columns ([#997](https://github.com/joist-orm/joist-orm/issues/997)) ([6a9e00a](https://github.com/joist-orm/joist-orm/commit/6a9e00ae5b353b7153ca8cfee14626f64b2c3eaa))
+
 ## [1.151.7](https://github.com/joist-orm/joist-orm/compare/v1.151.6...v1.151.7) (2024-03-29)
 
 

@@ -37,14 +37,14 @@
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^9.2.6",
     "@semantic-release/release-notes-generator": "^12.1.0",
-    "@tsconfig/node20": "^20.1.2",
+    "@tsconfig/node20": "^20.1.4",
     "env-cmd": "^10.1.0",
     "semantic-release": "^22.0.12",
-    "ts-patch": "^3.1.1",
-    "typescript-transform-paths": "^3.4.6"
+    "ts-patch": "^3.1.2",
+    "typescript-transform-paths": "^3.4.7"
   },
   "dependencies": {
-    "typescript": "^5.3.3"
+    "typescript": "^5.4.3"
   },
   "packageManager": "yarn@4.1.1"
 }

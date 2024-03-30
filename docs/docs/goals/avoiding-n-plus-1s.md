@@ -5,7 +5,7 @@ sidebar_position: 2
 
 Joist is built on Facebook's [dataloader](https://github.com/graphql/dataloader) library, which means Joist avoids N+1s in a fundamental, systematic way that just works.
 
-This foundation comes Joist's roots as an ORM for GraphQL backends, which are particularly prone to N+1s (see below), but is a boon to any system (REST, GRPC, etc.). 
+This foundation comes from Joist's roots as an ORM for GraphQL backends, which are particularly prone to N+1s (see below), but is a boon to any system (REST, GRPC, etc.). 
 
 ## N+1s: Lazy Loading in a Loop
 
@@ -68,7 +68,7 @@ With Joist, you don't have to worry anymore: if you use populate hints, that's g
 
 ### Common/Tedious Pitfall
 
-N+1s have fundamentally plagued ORMs, in any language, because the defacto ORM approach of "relations are just methods on an object" (i.e. `author1.getBooks()` or `book1.getAuthor()`) causes a **leaky abstraction** because the method calls are not super-cheap in-memory accesses (like most method calls), but instead actually expensive I/O calls.
+N+1s have fundamentally plagued ORMs, in any language, because the de facto ORM approach of "relations are just methods on an object" (i.e. `author1.getBooks()` or `book1.getAuthor()`) causes a **leaky abstraction** because the method calls are not super-cheap in-memory accesses (like most method calls), but instead actually expensive I/O calls.
 
 Methods that issue I/O calls are powerful, however they are almost too ergonomic: it's very natural for programmers to, given a list of objects, loop over those objects and access their methods.
 
@@ -93,15 +93,15 @@ This `include(:reviews)` resolves the performance issue, but relies on the progr
 
 Joist is able to avoid N+1s **without preload hints** by leveraging Facebook's [dataloader](https://github.com/graphql/dataloader) library to automatically batch multiple `load` operations into single SQL statements.
 
-Dataloader leverages JavaScript's synchronous/single-thread model, which is where when JavaScript evaluates the `book.reviews.load()` method inside of `books.map`:
+Dataloader leverages JavaScript's synchronous/single-thread model, which is where JavaScript evaluates the `book.reviews.load()` method inside of `books.map`:
 
 ```typescript
-await Proimse.all(books.map(async (book) => {
+await Promise.all(books.map(async (book) => {
   const reviews = await book.reviews.load();
 }));
 ```
 
-The `book.reviews.load` method is fundamentally not allowed make an immediate SQL call, because it would block the event loop.
+The `book.reviews.load` method is fundamentally not allowed to make an immediate SQL call, because it would block the event loop.
 
 Instead, the `load` method is forced to return a `Promise`, handle the I/O off the thread, and then later return the `reviews` that have been loaded.
 

@@ -958,7 +958,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     // I'm tempted to throw an error here, because at least internal callers should ideally pre-check
     // that `list > 0` and `Object.keys(hint).length > 0` before calling `populate`, just as an optimization.
     // But since it's a public API, we should just early exit.
-    const list = toArray(entityOrList).filter((e) => e !== undefined && !e.isDeletedEntity);
+    const list = toArray(entityOrList).filter((e) => {
+      // Check `isDeletedAndFlushed` so that pending-delete entities are still populated,
+      // because their hooks might do `getWithDeleted` calls and expect them to be loaded.
+      return e !== undefined && !getOrmField(e).isDeletedAndFlushed
+    });
     if (list.length === 0) {
       return !fn ? (entityOrList as any) : fn(entityOrList as any);
     }

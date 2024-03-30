@@ -1,3 +1,10 @@
+## [1.151.12](https://github.com/joist-orm/joist-orm/compare/v1.151.11...v1.151.12) (2024-03-30)
+
+
+### Bug Fixes
+
+* Rename EntityOrmField to InstanceData ([#1003](https://github.com/joist-orm/joist-orm/issues/1003)) ([d6f819c](https://github.com/joist-orm/joist-orm/commit/d6f819c92beb0873e9a59ed73102d740aca43392))
+
 ## [1.151.11](https://github.com/joist-orm/joist-orm/compare/v1.151.10...v1.151.11) (2024-03-30)
 
 

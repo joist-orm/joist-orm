@@ -1,6 +1,6 @@
 {
   "name": "joist-test-utils",
-  "version": "1.151.11",
+  "version": "1.151.12",
   "license": "MIT",
   "main": "build/index.js",
   "types": "build/index.d.ts",

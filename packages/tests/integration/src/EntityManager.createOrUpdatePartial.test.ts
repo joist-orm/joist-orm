@@ -177,7 +177,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
         id: "a:1",
         image: null,
       });
-      expect((await a1.image.load())).toBeUndefined();
+      expect(await a1.image.load()).toBeUndefined();
     });
   });
 

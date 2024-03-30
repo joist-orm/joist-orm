@@ -231,7 +231,13 @@ describe("EntityManager.reactiveRules", () => {
       // Publisher's numberOfBooks2 "cannot have 13 books" rule
       { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher"], path: ["publisher"], fn },
       // Publisher's numberOfBooks "cannot have 15 books" rule
-      { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher", "numberOfBooks"], path: ["publisher"], fn },
+      {
+        cstr: "Publisher",
+        name: sm(/Publisher.ts:\d+/),
+        fields: ["publisher", "numberOfBooks"],
+        path: ["publisher"],
+        fn,
+      },
       // SmallPublisher's "cannot have >5 authors" rule
       { cstr: "SmallPublisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher"], path: ["publisher"], fn },
     ]);

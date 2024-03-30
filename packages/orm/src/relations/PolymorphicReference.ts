@@ -263,8 +263,9 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   public toString(): string {
     return `PolymorphicReference(entity: ${this.entity}, fieldName: ${
       this.fieldName
-    }, otherType: ${this.currentComponent?.otherMetadata().type}, otherFieldName: ${this.currentComponent
-      ?.otherFieldName}, id: ${this.id})`;
+    }, otherType: ${this.currentComponent?.otherMetadata().type}, otherFieldName: ${
+      this.currentComponent?.otherFieldName
+    }, id: ${this.id})`;
   }
 
   private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {

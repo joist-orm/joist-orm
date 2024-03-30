@@ -6,7 +6,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   Flavor,
   getField,
@@ -97,7 +96,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   static readonly tagName = "c";
   static readonly metadata: EntityMetadata<Comment>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: CommentFilter;
     gqlFilterType: CommentGraphQLFilter;
     orderType: CommentOrder;

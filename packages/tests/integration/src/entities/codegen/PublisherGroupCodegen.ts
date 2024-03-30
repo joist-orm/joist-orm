@@ -7,7 +7,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
@@ -104,7 +103,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   static readonly tagName = "pg";
   static readonly metadata: EntityMetadata<PublisherGroup>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: PublisherGroupFilter;
     gqlFilterType: PublisherGroupGraphQLFilter;
     orderType: PublisherGroupOrder;

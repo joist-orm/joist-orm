@@ -6,7 +6,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
@@ -108,7 +107,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   static readonly tagName = "b";
   static readonly metadata: EntityMetadata<Book>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: BookFilter;
     gqlFilterType: BookGraphQLFilter;
     orderType: BookOrder;

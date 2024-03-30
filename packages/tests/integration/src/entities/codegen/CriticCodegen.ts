@@ -7,7 +7,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
@@ -126,7 +125,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   static readonly tagName = "c";
   static readonly metadata: EntityMetadata<Critic>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: CriticFilter;
     gqlFilterType: CriticGraphQLFilter;
     orderType: CriticOrder;

@@ -6,7 +6,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
@@ -99,7 +98,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<Painting>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: PaintingFilter;
     gqlFilterType: PaintingGraphQLFilter;
     orderType: PaintingOrder;

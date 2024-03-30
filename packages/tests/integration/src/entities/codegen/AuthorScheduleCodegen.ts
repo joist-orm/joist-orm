@@ -6,7 +6,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
@@ -98,7 +97,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   static readonly tagName = "authorSchedule";
   static readonly metadata: EntityMetadata<AuthorSchedule>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: AuthorScheduleFilter;
     gqlFilterType: AuthorScheduleGraphQLFilter;
     orderType: AuthorScheduleOrder;

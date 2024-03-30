@@ -7,7 +7,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FieldsOf,
   FilterOf,
@@ -111,7 +110,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   static readonly tagName = "task";
   static readonly metadata: EntityMetadata<Task>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: TaskFilter;
     gqlFilterType: TaskGraphQLFilter;
     orderType: TaskOrder;

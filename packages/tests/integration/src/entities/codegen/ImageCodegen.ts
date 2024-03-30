@@ -6,7 +6,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
@@ -127,7 +126,7 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   static readonly tagName = "i";
   static readonly metadata: EntityMetadata<Image>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: ImageFilter;
     gqlFilterType: ImageGraphQLFilter;
     orderType: ImageOrder;

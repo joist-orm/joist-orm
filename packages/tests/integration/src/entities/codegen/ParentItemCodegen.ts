@@ -7,7 +7,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
@@ -107,7 +106,7 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
   static readonly tagName = "pi";
   static readonly metadata: EntityMetadata<ParentItem>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: ParentItemFilter;
     gqlFilterType: ParentItemGraphQLFilter;
     orderType: ParentItemOrder;

@@ -7,7 +7,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
@@ -92,7 +91,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   static readonly tagName = "artist";
   static readonly metadata: EntityMetadata<Artist>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: ArtistFilter;
     gqlFilterType: ArtistGraphQLFilter;
     orderType: ArtistOrder;

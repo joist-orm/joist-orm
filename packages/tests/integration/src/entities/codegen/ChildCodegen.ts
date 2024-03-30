@@ -7,7 +7,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
@@ -94,7 +93,7 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
   static readonly tagName = "child";
   static readonly metadata: EntityMetadata<Child>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: ChildFilter;
     gqlFilterType: ChildGraphQLFilter;
     orderType: ChildOrder;

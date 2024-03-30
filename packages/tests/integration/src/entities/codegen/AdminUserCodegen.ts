@@ -3,7 +3,6 @@ import {
   cleanStringValue,
   ConfigApi,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   Flavor,
   getField,
@@ -74,7 +73,7 @@ export abstract class AdminUserCodegen extends User implements Entity {
   static readonly tagName = "u";
   static readonly metadata: EntityMetadata<AdminUser>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: AdminUserFilter;
     gqlFilterType: AdminUserGraphQLFilter;
     orderType: AdminUserOrder;

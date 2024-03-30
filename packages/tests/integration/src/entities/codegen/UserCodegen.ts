@@ -7,7 +7,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FieldsOf,
   FilterOf,
@@ -164,7 +163,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   static readonly tagName = "u";
   static readonly metadata: EntityMetadata<User>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: UserFilter;
     gqlFilterType: UserGraphQLFilter;
     orderType: UserOrder;

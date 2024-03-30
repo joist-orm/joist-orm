@@ -7,7 +7,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
@@ -106,7 +105,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   static readonly tagName = "t";
   static readonly metadata: EntityMetadata<Tag>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: TagFilter;
     gqlFilterType: TagGraphQLFilter;
     orderType: TagOrder;

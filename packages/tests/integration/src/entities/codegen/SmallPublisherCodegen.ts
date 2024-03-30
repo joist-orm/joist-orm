@@ -6,7 +6,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
@@ -93,7 +92,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<SmallPublisher>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: SmallPublisherFilter;
     gqlFilterType: SmallPublisherGraphQLFilter;
     orderType: SmallPublisherOrder;

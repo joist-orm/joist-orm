@@ -4,7 +4,6 @@ import {
   cleanStringValue,
   ConfigApi,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   Flavor,
   getField,
@@ -65,7 +64,7 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
   static readonly tagName = "do";
   static readonly metadata: EntityMetadata<DatabaseOwner>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: DatabaseOwnerFilter;
     gqlFilterType: DatabaseOwnerGraphQLFilter;
     orderType: DatabaseOwnerOrder;

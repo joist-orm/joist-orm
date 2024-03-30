@@ -4,7 +4,7 @@ import { getOrmField } from "./BaseEntity";
 import { setAsyncDefaults } from "./defaults";
 import { getField, setField } from "./fields";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
-import { Entity, EntityOrmField, Entity as EntityW, IdType, isEntity } from "./Entity";
+import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
 import { JoinRows } from "./JoinRows";
 import { ReactionsManager } from "./ReactionsManager";
@@ -54,7 +54,7 @@ import {
   parseFindQuery,
   setOpts,
   tagId,
-  toTaggedId,
+  toTaggedId, EntityOrmField,
 } from "./index";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";

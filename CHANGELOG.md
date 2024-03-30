@@ -1,3 +1,10 @@
+## [1.151.11](https://github.com/joist-orm/joist-orm/compare/v1.151.10...v1.151.11) (2024-03-30)
+
+
+### Bug Fixes
+
+* Preserve changed/new state for beforeCommit w/RQFs. ([#1002](https://github.com/joist-orm/joist-orm/issues/1002)) ([e877926](https://github.com/joist-orm/joist-orm/commit/e877926b703282b0b2e0174710a4076bb6a50d4e))
+
 ## [1.151.10](https://github.com/joist-orm/joist-orm/compare/v1.151.9...v1.151.10) (2024-03-29)
 
 

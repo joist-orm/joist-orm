@@ -112,11 +112,17 @@ export class EntityOrmField {
   }
 
   /** This is our internal "is pending flush", which is aware of RQF micro-flush loops. */
-  get pendingOperation(): "insert" | "update" | "delete" | "none" {
+  get pendingOperation(): "insert" | "update" | "delete" | "none" | "created-then-deleted" {
     if (this.#deleted) {
-      // Skip entities that were created and them immediately `em.delete`-d; granted this is
+      // Mark entities that were created and them immediately `em.delete`-d; granted this is
       // probably rare, but we shouldn't run hooks or have the driver try and delete these.
-      return this.#deleted === "pending" && !this.#new ? "delete" : "none";
+      // Note that we return them, instead of skipping entirely, so that fixupCreatedThenDeleted
+      // can later be called.
+      return this.#deleted === "pending" && this.#new
+        ? "created-then-deleted"
+        : this.#deleted === "pending"
+          ? "delete"
+          : "none";
     } else if (this.#new === "pending") {
       // Per ^, if `#new === flushed`, we fall through to check if micro-flush UPDATEs are required
       return "insert";
@@ -146,6 +152,7 @@ export class EntityOrmField {
   }
 
   fixupCreatedThenDeleted(): void {
+    // Ideally we could do this via `resetAfterFlushed`?
     this.#deleted = "deleted";
   }
 

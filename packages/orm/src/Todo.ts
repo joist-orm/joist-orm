@@ -1,4 +1,5 @@
 /** The operations for a given entity type, so they can be executed in bulk. */
+import { getOrmField } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { JoinRow, JoinRows } from "./JoinRows";
@@ -22,18 +23,19 @@ export class Todo {
 export function createTodos(entities: readonly Entity[]): Record<string, Todo> {
   const todos: Record<string, Todo> = {};
   for (const entity of entities) {
-    if (entity.isPendingFlush) {
+    const op = getOrmField(entity).pendingOperation;
+    if (op !== "none") {
       const todo = getTodo(todos, entity);
-      if (entity.isPendingDelete) {
-        // Skip entities that were created and them immediately `em.delete`-d; granted this is
-        // probably rare, but we shouldn't run hooks or have the driver try and delete these.
-        if (!entity.isNewEntity) {
+      switch (op) {
+        case "insert":
+          todo.inserts.push(entity);
+          break;
+        case "update":
+          todo.updates.push(entity);
+          break;
+        case "delete":
           todo.deletes.push(entity);
-        }
-      } else if (entity.isNewEntity) {
-        todo.inserts.push(entity);
-      } else {
-        todo.updates.push(entity);
+          break;
       }
     }
   }

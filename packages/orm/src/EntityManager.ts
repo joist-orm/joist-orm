@@ -958,7 +958,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     // I'm tempted to throw an error here, because at least internal callers should ideally pre-check
     // that `list > 0` and `Object.keys(hint).length > 0` before calling `populate`, just as an optimization.
     // But since it's a public API, we should just early exit.
-    const list = toArray(entityOrList).filter((e) => e !== undefined && (e.isPendingDelete || !e.isDeletedEntity));
+    const list = toArray(entityOrList).filter((e) => e !== undefined && !e.isDeletedEntity);
     if (list.length === 0) {
       return !fn ? (entityOrList as any) : fn(entityOrList as any);
     }
@@ -1055,11 +1055,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
    */
   delete(entity: Entity): void {
     // Early return if already deleted.
-    const orm = getOrmField(entity);
-    if (orm.deleted) {
-      return;
-    }
-    orm.deleted = "pending";
+    const changed = getOrmField(entity).markDeleted();
+    if (!changed) return;
     // Any derived fields that read this entity will need recalc-d
     this.#rm.queueAllDownstreamFields(entity);
     // Synchronously unhook the entity if the relations are loaded
@@ -1215,7 +1212,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
               // Reset all flushed entities to we only flush net-new changes
               for (const e of entitiesToFlush) {
                 if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
-                getOrmField(e).resetAfterFlushed(true);
+                getOrmField(e).resetForRqfLoop();
               }
               // Actually do the recalc
               await this.#fl.allowWrites(() => this.#rm.recalcPendingDerivedValues("reactiveQueries"));
@@ -1254,7 +1251,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       }
 
       // Fixup the `deleted` field on entities that were created then immediately deleted
-      for (const e of createdThenDeleted) getOrmField(e).deleted = "deleted";
+      for (const e of createdThenDeleted) getOrmField(e).fixupCreatedThenDeleted();
 
       return [...allFlushedEntities];
     } catch (e) {
@@ -1325,7 +1322,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       // preloader cache, if in use, it doesn't actually get each relation into a loaded state.)
       const [custom, builtin] = partition(
         entities
-          .filter((e) => e && getOrmField(e).deleted === undefined)
+          .filter((e) => e && !getOrmField(e).isDeletedEntity)
           .flatMap((entity) => getRelations(entity!).filter((r) => deepLoad || r.isLoaded)),
         isCustomRelation,
       );
@@ -1961,7 +1958,7 @@ function findPendingFlushEntities<Entity extends EntityW>(
   alreadyRanHooks: Set<Entity>,
 ): void {
   for (const e of entities) {
-    if (e.isPendingFlush) {
+    if (getOrmField(e).pendingOperation !== "none") {
       if (!hooksInvoked.has(e)) {
         pendingHooks.add(e);
       } else {

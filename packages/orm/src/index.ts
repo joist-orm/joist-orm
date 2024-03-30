@@ -211,7 +211,7 @@ export function setOpts<T extends Entity>(
 }
 
 export function ensureNotDeleted(entity: Entity, ignore?: "pending"): void {
-  if (entity.isDeletedEntity && (ignore === undefined || getOrmField(entity).deleted === "deleted")) {
+  if (entity.isDeletedEntity && (ignore === undefined || getOrmField(entity).isDeletedAndFlushed)) {
     fail(`${entity} is marked as deleted`);
   }
 }

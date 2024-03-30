@@ -335,7 +335,7 @@ describe("OneToManyCollection", () => {
     // And getWithDeleted still shows both b1 and b2
     expect(b1.reviews.getWithDeleted.length).toBe(2);
     // And r1 is marked for deletion
-    expect(r1.isPendingDelete).toBe(true);
+    expect(r1.isDeletedEntity).toBe(true);
     await em.flush();
     const rows = await select("book_reviews");
     expect(rows.length).toEqual(1);

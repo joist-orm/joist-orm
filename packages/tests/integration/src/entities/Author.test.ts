@@ -612,7 +612,7 @@ describe("Author", () => {
     // And b2 still knows that author is/was its parent
     expect(b2.author.get).toBe(a);
     // Even though its deleted
-    expect(b2.isPendingDelete).toBe(true);
+    expect(b2.isDeletedEntity).toBe(true);
   });
 
   it("isLoaded returns correctly when a field is nullable", async () => {

@@ -118,7 +118,7 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
   // to always use the same fields, to take advantage of Prepared Statements.
   const changedFields = new Set<string>();
   for (const entity of entities) {
-    Object.keys(getOrmField(entity).originalData).forEach((key) => changedFields.add(key));
+    for (const fieldName of getOrmField(entity).changedFields) changedFields.add(fieldName);
   }
   // Sometimes with derived fields, an instance will be marked as an update, but if the derived field hasn't
   // actually changed, it'll be a noop, so just short-circuit if it looks like that happened. Unless touched.

@@ -61,7 +61,9 @@ export function getThisVersion(): string {
 }
 
 function findApplyableCodemods(prevVersion: string): Codemod[] {
-  return [v1_143_0_rename_derived_async_property, v1_148_0_move_codegen_files, v1_151_0_rename_derived_reference].filter(
-    (t) => semver.lt(prevVersion, t.version),
-  );
+  return [
+    v1_143_0_rename_derived_async_property,
+    v1_148_0_move_codegen_files,
+    v1_151_0_rename_derived_reference,
+  ].filter((t) => semver.lt(prevVersion, t.version));
 }

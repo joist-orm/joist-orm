@@ -1,16 +1,16 @@
 import { IdType } from "./Entity";
 import { getField } from "./fields";
 import {
-  deTagId,
   Entity,
   EntityManager,
   InstanceData,
-  getMetadata,
-  isEntity,
-  keyToNumber,
   OptsOf,
   PartialOrNull,
   TaggedId,
+  deTagId,
+  getMetadata,
+  isEntity,
+  keyToNumber,
 } from "./index";
 
 export let currentlyInstantiatingEntity: Entity | undefined;

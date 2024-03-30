@@ -3,8 +3,8 @@ import { IdOf, TaggedId } from "../EntityManager";
 import { CustomReference } from "./CustomReference";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
 import { OneToOneReferenceImpl } from "./OneToOneReference";
-import { ReactiveReferenceImpl } from "./ReactiveReference";
 import { PolymorphicReferenceImpl } from "./PolymorphicReference";
+import { ReactiveReferenceImpl } from "./ReactiveReference";
 import { Relation } from "./Relation";
 
 // Exported and used in sub-interfaces/types per https://stackoverflow.com/a/70437874/355031

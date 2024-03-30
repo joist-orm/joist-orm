@@ -6,7 +6,8 @@ import {
   Author,
   AuthorStat,
   Book,
-  BookAdvance, BookRange,
+  BookAdvance,
+  BookRange,
   BookReview,
   Color,
   Comment,
@@ -62,7 +63,6 @@ export type SmallPublisherResolvers = {
   city: Resolver<SmallPublisher, any, string>;
   group: Resolver<SmallPublisher, any, PublisherGroup>;
   authors: Resolver<SmallPublisher, any, Author[]>;
-
 };
 export type PublisherGroupResolvers = {
   name: Resolver<PublisherGroup, any, string | undefined>;

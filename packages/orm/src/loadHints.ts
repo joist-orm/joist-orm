@@ -30,40 +30,42 @@ type DeepLoadHint<T extends Entity> = NestedLoadHint<T> & { [deepLoad]: true };
 type MaybeBaseType = any;
 
 /** Marks a given `T[K]` field as the loaded/synchronous version of the collection. */
-export type MarkLoaded<T extends Entity, P, UH = {}> = P extends OneToOneReference<MaybeBaseType, infer U>
-  ? LoadedOneToOneReference<T, Loaded<U, UH>>
-  : P extends Reference<MaybeBaseType, infer U, infer N>
-    ? LoadedReference<T, Loaded<U, UH>, N>
-    : P extends Collection<MaybeBaseType, infer U>
-      ? LoadedCollection<T, Loaded<U, UH>>
-      : P extends AsyncProperty<MaybeBaseType, infer V>
-        ? // prettier-ignore
-          [V] extends [(infer U extends Entity) | undefined]
+export type MarkLoaded<T extends Entity, P, UH = {}> =
+  P extends OneToOneReference<MaybeBaseType, infer U>
+    ? LoadedOneToOneReference<T, Loaded<U, UH>>
+    : P extends Reference<MaybeBaseType, infer U, infer N>
+      ? LoadedReference<T, Loaded<U, UH>, N>
+      : P extends Collection<MaybeBaseType, infer U>
+        ? LoadedCollection<T, Loaded<U, UH>>
+        : P extends AsyncProperty<MaybeBaseType, infer V>
+          ? // prettier-ignore
+            [V] extends [(infer U extends Entity) | undefined]
     ? LoadedProperty<T, Loaded<U, UH> | Exclude<V, U>>
     : V extends readonly (infer U extends Entity)[]
     ? LoadedProperty<T, Loaded<U, UH>[]>
     : LoadedProperty<T, V>
-        : P extends AsyncMethod<T, infer A, infer V>
-          ? LoadedMethod<T, A, V>
-          : unknown;
+          : P extends AsyncMethod<T, infer A, infer V>
+            ? LoadedMethod<T, A, V>
+            : unknown;
 
 /** A version of MarkLoaded the uses `DeepLoadHint` for tests. */
-type MarkDeepLoaded<T extends Entity, P> = P extends OneToOneReference<MaybeBaseType, infer U>
-  ? LoadedOneToOneReference<T, Loaded<U, DeepLoadHint<U>>>
-  : P extends Reference<MaybeBaseType, infer U, infer N>
-    ? LoadedReference<T, Loaded<U, DeepLoadHint<U>>, N>
-    : P extends Collection<MaybeBaseType, infer U>
-      ? LoadedCollection<T, Loaded<U, DeepLoadHint<U>>>
-      : P extends AsyncProperty<MaybeBaseType, infer V>
-        ? // prettier-ignore
-          [V] extends [(infer U extends Entity) | undefined]
+type MarkDeepLoaded<T extends Entity, P> =
+  P extends OneToOneReference<MaybeBaseType, infer U>
+    ? LoadedOneToOneReference<T, Loaded<U, DeepLoadHint<U>>>
+    : P extends Reference<MaybeBaseType, infer U, infer N>
+      ? LoadedReference<T, Loaded<U, DeepLoadHint<U>>, N>
+      : P extends Collection<MaybeBaseType, infer U>
+        ? LoadedCollection<T, Loaded<U, DeepLoadHint<U>>>
+        : P extends AsyncProperty<MaybeBaseType, infer V>
+          ? // prettier-ignore
+            [V] extends [(infer U extends Entity) | undefined]
     ? LoadedProperty<T, Loaded<U, DeepLoadHint<U>> | Exclude<V, U>>
     : V extends readonly (infer U extends Entity)[]
     ? LoadedProperty<T, Loaded<U, DeepLoadHint<U>>[]>
     : LoadedProperty<T, V>
-        : P extends AsyncMethod<T, infer A, infer V>
-          ? LoadedMethod<T, A, V>
-          : unknown;
+          : P extends AsyncMethod<T, infer A, infer V>
+            ? LoadedMethod<T, A, V>
+            : unknown;
 
 /**
  * A helper type for `New` that marks every `Reference` and `LoadedCollection` in `T` as loaded.
@@ -78,21 +80,22 @@ type MarkDeepLoaded<T extends Entity, P> = P extends OneToOneReference<MaybeBase
  * Note that this is also purposefully broken out of `New` because of some weirdness
  * around type narrowing that wasn't working when inlined into `New`.
  */
-type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] extends NullOrDefinedOr<infer OK>
-  ? OK extends Entity
-    ? T[K] extends OneToOneReference<T, infer U>
-      ? LoadedOneToOneReference<T, U>
-      : T[K] extends Reference<T, infer U, infer N>
-        ? LoadedReference<T, OK, N>
-        : never
-    : OK extends Array<infer OU>
-      ? OU extends Entity
-        ? T[K] extends Collection<T, infer U>
-          ? LoadedCollection<T, OU>
+type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> =
+  O[K] extends NullOrDefinedOr<infer OK>
+    ? OK extends Entity
+      ? T[K] extends OneToOneReference<T, infer U>
+        ? LoadedOneToOneReference<T, U>
+        : T[K] extends Reference<T, infer U, infer N>
+          ? LoadedReference<T, OK, N>
           : never
+      : OK extends Array<infer OU>
+        ? OU extends Entity
+          ? T[K] extends Collection<T, infer U>
+            ? LoadedCollection<T, OU>
+            : never
+          : T[K]
         : T[K]
-      : T[K]
-  : never;
+    : never;
 
 /**
  * Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities where
@@ -143,17 +146,18 @@ export type Loadable<T extends Entity> = {
  * Note that we usually return entities, but for AsyncProperties it could be
  * a calculated primitive value like number or string.
  */
-export type LoadableValue<V> = V extends Reference<any, infer U, any>
-  ? U
-  : V extends Collection<any, infer U>
+export type LoadableValue<V> =
+  V extends Reference<any, infer U, any>
     ? U
-    : V extends AsyncMethod<any, any, infer V>
-      ? V
-      : V extends AsyncProperty<any, infer P>
-        ? // If the AsyncProperty returns `Comment | undefined`, then we want to return `Comment`
-          // prettier-ignore
-          P extends (infer U extends Entity) | undefined ? U : P
-        : never;
+    : V extends Collection<any, infer U>
+      ? U
+      : V extends AsyncMethod<any, any, infer V>
+        ? V
+        : V extends AsyncProperty<any, infer P>
+          ? // If the AsyncProperty returns `Comment | undefined`, then we want to return `Comment`
+            // prettier-ignore
+            P extends (infer U extends Entity) | undefined ? U : P
+          : never;
 
 /**
  *  A load hint of a single key, multiple keys, or nested keys and sub-hints.

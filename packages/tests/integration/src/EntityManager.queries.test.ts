@@ -883,7 +883,7 @@ describe("EntityManager.queries", () => {
     expect(pubs.length).toEqual(1);
     expect(pubs[0].name).toEqual("p2");
 
-  expect(parseFindQuery(pm, where, opts)).toMatchObject({
+    expect(parseFindQuery(pm, where, opts)).toMatchObject({
       selects: [
         `p.*`,
         "p_s0.*",

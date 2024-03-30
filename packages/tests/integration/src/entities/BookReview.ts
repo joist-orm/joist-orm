@@ -1,14 +1,14 @@
 import {
   AsyncProperty,
+  ReactiveField,
+  Reference,
   cannotBeUpdated,
   hasOneDerived,
   hasOneThrough,
-  hasReactiveField,
   hasReactiveAsyncProperty,
-  ReactiveField,
-  Reference,
+  hasReactiveField,
 } from "joist-orm";
-import { Author, BookReviewCodegen, bookReviewConfig as config, Publisher } from "./entities";
+import { Author, BookReviewCodegen, Publisher, bookReviewConfig as config } from "./entities";
 
 export class BookReview extends BookReviewCodegen {
   // Currently this infers as Reference<BookReview, Author, undefined> --> it should be never...
@@ -39,13 +39,9 @@ export class BookReview extends BookReviewCodegen {
   );
 
   // Used to test dependent reactivity
-  readonly isTest: ReactiveField<BookReview, boolean> = hasReactiveField(
-    "isTest",
-    { comment: "text" },
-    (review) => {
-      return !!review.comment.get?.text?.includes("Test");
-    },
-  );
+  readonly isTest: ReactiveField<BookReview, boolean> = hasReactiveField("isTest", { comment: "text" }, (review) => {
+    return !!review.comment.get?.text?.includes("Test");
+  });
 
   // Used to test reactivity to hasReactiveAsyncProperty results changing.
   readonly isPublic2: AsyncProperty<BookReview, boolean> = hasReactiveAsyncProperty({ comment: "text" }, (review) => {

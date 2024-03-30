@@ -13,11 +13,8 @@ type PromiseFnLike<U> = () => PromiseLike<U>;
 // instead of `Foo[] | undefined[]`.
 //
 // When `P extends ReadonlyArray, i.e. we're in flatMap mode, we're also in filter undefined mode.
-type MaybeArray<P, V> = P extends ReadonlyArray<any>
-  ? [V] extends [ReadonlyArray<infer U>]
-    ? DropUndefined<U>[]
-    : DropUndefined<V>[]
-  : V;
+type MaybeArray<P, V> =
+  P extends ReadonlyArray<any> ? ([V] extends [ReadonlyArray<infer U>] ? DropUndefined<U>[] : DropUndefined<V>[]) : V;
 
 /** Given a type T that we come across in the path, de-array it to continue our flatMap-ish semantics. */
 type MaybeDropArray<T> = T extends ReadonlyArray<infer U> ? U : T;

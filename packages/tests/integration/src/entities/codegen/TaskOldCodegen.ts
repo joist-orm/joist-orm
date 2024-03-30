@@ -9,7 +9,7 @@ import {
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -189,7 +189,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   }
 
   get comments(): Collection<TaskOld, Comment> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.comments ??= hasMany(
       this as any as TaskOld,
       commentMeta,
@@ -201,7 +201,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   }
 
   get oldTaskTaskItems(): Collection<TaskOld, TaskItem> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.oldTaskTaskItems ??= hasMany(
       this as any as TaskOld,
       taskItemMeta,
@@ -213,7 +213,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   }
 
   get tasks(): Collection<TaskOld, TaskOld> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.tasks ??= hasMany(
       this as any as TaskOld,
       taskOldMeta,
@@ -225,12 +225,12 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   }
 
   get parentOldTask(): ManyToOneReference<TaskOld, TaskOld, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.parentOldTask ??= hasOne(this as any as TaskOld, taskOldMeta, "parentOldTask", "tasks");
   }
 
   get publishers(): Collection<TaskOld, Publisher> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.publishers ??= hasManyToMany(
       this as any as TaskOld,
       "tasks_to_publishers",

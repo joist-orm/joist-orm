@@ -11,7 +11,7 @@ import {
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -266,7 +266,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get advances(): Collection<Book, BookAdvance> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.advances ??= hasMany(
       this as any as Book,
       bookAdvanceMeta,
@@ -278,12 +278,12 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get reviews(): Collection<Book, BookReview> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.reviews ??= hasMany(this as any as Book, bookReviewMeta, "reviews", "book", "book_id", undefined);
   }
 
   get comments(): Collection<Book, Comment> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.comments ??= hasMany(
       this as any as Book,
       commentMeta,
@@ -295,12 +295,12 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get author(): ManyToOneReference<Book, Author, never> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
   }
 
   get currentDraftAuthor(): OneToOneReference<Book, Author> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.currentDraftAuthor ??= hasOneToOne(
       this as any as Book,
       authorMeta,
@@ -311,12 +311,12 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get image(): OneToOneReference<Book, Image> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.image ??= hasOneToOne(this as any as Book, imageMeta, "image", "book", "book_id");
   }
 
   get tags(): Collection<Book, Tag> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.tags ??= hasManyToMany(
       this as any as Book,
       "books_to_tags",

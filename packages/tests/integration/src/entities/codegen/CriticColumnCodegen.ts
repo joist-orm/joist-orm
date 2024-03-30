@@ -10,7 +10,7 @@ import {
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -182,7 +182,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   }
 
   get critic(): ManyToOneReference<CriticColumn, Critic, never> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.critic ??= hasOne(this as any as CriticColumn, criticMeta, "critic", "criticColumn");
   }
 }

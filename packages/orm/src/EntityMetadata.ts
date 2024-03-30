@@ -1,4 +1,4 @@
-import { getOrmField } from "./BaseEntity";
+import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityManager, MaybeAbstractEntityConstructor, TimestampFields } from "./EntityManager";
 import { ConfigApi } from "./config";
@@ -13,7 +13,7 @@ export function getMetadata<T extends Entity>(
 ): EntityMetadata {
   if (!param) throw new Error(`Cannot getMetadata of ${param}`);
   return (
-    typeof param === "function" ? (param as any).metadata : "cstr" in param ? param : getOrmField(param).metadata
+    typeof param === "function" ? (param as any).metadata : "cstr" in param ? param : getInstanceData(param).metadata
   ) as EntityMetadata;
 }
 

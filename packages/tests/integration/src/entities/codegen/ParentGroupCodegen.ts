@@ -11,7 +11,7 @@ import {
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -182,7 +182,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   }
 
   get childGroups(): Collection<ParentGroup, ChildGroup> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.childGroups ??= hasMany(
       this as any as ParentGroup,
       childGroupMeta,
@@ -194,7 +194,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   }
 
   get parentItems(): Collection<ParentGroup, ParentItem> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.parentItems ??= hasMany(
       this as any as ParentGroup,
       parentItemMeta,

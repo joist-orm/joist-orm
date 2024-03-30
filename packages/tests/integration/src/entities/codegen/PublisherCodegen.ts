@@ -12,7 +12,7 @@ import {
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -357,7 +357,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get authors(): Collection<Publisher, Author> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.authors ??= hasMany(
       this as any as Publisher,
       authorMeta,
@@ -369,7 +369,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get bookAdvances(): Collection<Publisher, BookAdvance> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.bookAdvances ??= hasMany(
       this as any as Publisher,
       bookAdvanceMeta,
@@ -381,7 +381,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get comments(): Collection<Publisher, Comment> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.comments ??= hasMany(
       this as any as Publisher,
       commentMeta,
@@ -393,7 +393,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get images(): Collection<Publisher, Image> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.images ??= hasMany(
       this as any as Publisher,
       imageMeta,
@@ -405,12 +405,12 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get group(): ManyToOneReference<Publisher, PublisherGroup, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.group ??= hasOne(this as any as Publisher, publisherGroupMeta, "group", "publishers");
   }
 
   get tags(): Collection<Publisher, Tag> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.tags ??= hasManyToMany(
       this as any as Publisher,
       "publishers_to_tags",
@@ -423,7 +423,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get tasks(): Collection<Publisher, TaskOld> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.tasks ??= hasManyToMany(
       this as any as Publisher,
       "tasks_to_publishers",

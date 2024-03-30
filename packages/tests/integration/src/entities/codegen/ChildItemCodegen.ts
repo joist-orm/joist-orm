@@ -10,7 +10,7 @@ import {
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -190,12 +190,12 @@ export abstract class ChildItemCodegen extends BaseEntity<EntityManager, string>
   }
 
   get childGroup(): ManyToOneReference<ChildItem, ChildGroup, never> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.childGroup ??= hasOne(this as any as ChildItem, childGroupMeta, "childGroup", "childItems");
   }
 
   get parentItem(): ManyToOneReference<ChildItem, ParentItem, never> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.parentItem ??= hasOne(this as any as ChildItem, parentItemMeta, "parentItem", "childItems");
   }
 }

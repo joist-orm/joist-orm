@@ -9,7 +9,7 @@ import {
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -169,7 +169,7 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   }
 
   get newTaskTaskItems(): Collection<TaskNew, TaskItem> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.newTaskTaskItems ??= hasMany(
       this as any as TaskNew,
       taskItemMeta,
@@ -181,7 +181,7 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   }
 
   get specialNewAuthor(): ManyToOneReference<TaskNew, Author, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.specialNewAuthor ??= hasOne(this as any as TaskNew, authorMeta, "specialNewAuthor", "tasks");
   }
 }

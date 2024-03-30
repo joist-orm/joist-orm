@@ -1,4 +1,4 @@
-import { getOrmField } from "./BaseEntity";
+import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
@@ -13,7 +13,7 @@ import { ensureNotDeleted, maybeResolveReferenceToId } from "./index";
  */
 export function getField(entity: Entity, fieldName: string): any {
   // We may not have converted the database column value into domain values yet
-  const { data, row } = getOrmField(entity);
+  const { data, row } = getInstanceData(entity);
   if (fieldName in data) {
     return data[fieldName];
   } else {
@@ -30,7 +30,7 @@ export function isChangeableField(entity: Entity, fieldName: string): boolean {
 
 /** Returns whether `fieldName` has been set, even if it's undefined, on `entity`. */
 export function isFieldSet(entity: Entity, fieldName: string): boolean {
-  const { data } = getOrmField(entity);
+  const { data } = getInstanceData(entity);
   if (fieldName in data) return true;
   // Avoid calling `getField` on new entities because it populates the field as a side effect.
   if (entity.isNewEntity) return false;
@@ -54,7 +54,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
   getEmInternalApi(em).checkWritesAllowed();
 
-  const { data, originalData, flushedData } = getOrmField(entity);
+  const { data, originalData, flushedData } = getInstanceData(entity);
 
   // If a `set` occurs during the rqf-loop, copy the last-flushed value to flushedData.
   // Then our `pendingOperation` logic can tell "do we need another micro-flush?" separately

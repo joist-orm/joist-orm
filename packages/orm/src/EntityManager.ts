@@ -1,6 +1,6 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
-import { getOrmField } from "./BaseEntity";
+import { getInstanceData } from "./BaseEntity";
 import { setAsyncDefaults } from "./defaults";
 import { getField, setField } from "./fields";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
@@ -80,7 +80,7 @@ export interface EntityConstructor<T> {
   metadata: EntityMetadata;
   /** Returns the private `InstanceData` for the given entity. */
   // This isn't really necessary but prevents type errors with unions like `Author | Book`
-  getOrmField(entity: Entity): InstanceData;
+  getInstanceData(entity: Entity): InstanceData;
 }
 
 /** Options for the auto-batchable `em.find` queries, i.e. limit & offset aren't allowed. */
@@ -963,7 +963,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     const list = toArray(entityOrList).filter((e) => {
       // Check `isDeletedAndFlushed` so that pending-delete entities are still populated,
       // because their hooks might do `getWithDeleted` calls and expect them to be loaded.
-      return e !== undefined && !getOrmField(e).isDeletedAndFlushed
+      return e !== undefined && !getInstanceData(e).isDeletedAndFlushed
     });
     if (list.length === 0) {
       return !fn ? (entityOrList as any) : fn(entityOrList as any);
@@ -1037,7 +1037,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     if (entity.isNewEntity) {
       const baseMeta = getBaseMeta(getMetadata(entity));
       const { createdAt, updatedAt } = baseMeta.timestampFields;
-      const { data } = getOrmField(entity);
+      const { data } = getInstanceData(entity);
       if (createdAt) data[createdAt] = new Date();
       if (updatedAt) data[updatedAt] = new Date();
       // Set the discriminator for STI
@@ -1061,7 +1061,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
    */
   delete(entity: Entity): void {
     // Early return if already deleted.
-    const alreadyMarked = getOrmField(entity).markDeleted();
+    const alreadyMarked = getInstanceData(entity).markDeleted();
     if (!alreadyMarked) return;
     // Any derived fields that read this entity will need recalc-d
     this.#rm.queueAllDownstreamFields(entity);
@@ -1218,7 +1218,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
               // Reset all flushed entities to we only flush net-new changes
               for (const e of entitiesToFlush) {
                 if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
-                getOrmField(e).resetForRqfLoop();
+                getInstanceData(e).resetForRqfLoop();
               }
               // Actually do the recalc
               await this.#fl.allowWrites(() => this.#rm.recalcPendingDerivedValues("reactiveQueries"));
@@ -1248,7 +1248,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         // Update the `#orm` field to reflect the new state
         for (const e of allFlushedEntities) {
           if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
-          getOrmField(e).resetAfterFlushed();
+          getInstanceData(e).resetAfterFlushed();
         }
 
         // Reset the find caches b/c data will have changed in the db
@@ -1257,7 +1257,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       }
 
       // Fixup the `deleted` field on entities that were created then immediately deleted
-      for (const e of createdThenDeleted) getOrmField(e).fixupCreatedThenDeleted();
+      for (const e of createdThenDeleted) getInstanceData(e).fixupCreatedThenDeleted();
 
       return [...allFlushedEntities];
     } catch (e) {
@@ -1328,7 +1328,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       // preloader cache, if in use, it doesn't actually get each relation into a loaded state.)
       const [custom, builtin] = partition(
         entities
-          .filter((e) => e && !getOrmField(e).isDeletedEntity)
+          .filter((e) => e && !getInstanceData(e).isDeletedEntity)
           .flatMap((entity) => getRelations(entity!).filter((r) => deepLoad || r.isLoaded)),
         isCustomRelation,
       );
@@ -1407,7 +1407,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         const meta = findConcreteMeta(maybeBaseMeta, row);
         // Pass id as a hint that we're in hydrate mode
         entity = new (asConcreteCstr(meta.cstr))(this, taggedId) as T;
-        getOrmField(entity).row = row;
+        getInstanceData(entity).row = row;
 
         // This is a mini copy-paste of em.register that doesn't re-findExistingInstance
         this.#entityIndex.set(taggedId, entity as any);
@@ -1420,7 +1420,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         // Usually if the entity already exists, we don't write over it, but in this case
         // we assume that `EntityManager.refresh` is telling us to explicitly load the
         // latest data.
-        const { data } = getOrmField(entity);
+        const { data } = getInstanceData(entity);
         for (const f of Object.values(meta.allFields)) {
           f.serde?.setOnEntity(data, row);
         }
@@ -1442,7 +1442,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   public touch(entity: EntityW): void;
   public touch(entities: EntityW[]): void;
   public touch(entityOrEntities: EntityW | EntityW[]): void {
-    for (const entity of toArray(entityOrEntities)) getOrmField(entity).isTouched = true;
+    for (const entity of toArray(entityOrEntities)) getInstanceData(entity).isTouched = true;
   }
 
   /**
@@ -1897,7 +1897,7 @@ function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Date): void {
         // bump's timestamp isn't actually different from the current value, and skip treating
         // it has changed. This is technically true, but this will break the oplock SQL generation,
         // so force the field to be dirty.
-        const orm = getOrmField(e);
+        const orm = getInstanceData(e);
         orm.originalData[updatedAt] = getField(e, updatedAt);
         orm.data[updatedAt] = now;
       }
@@ -1964,7 +1964,7 @@ function findPendingFlushEntities<Entity extends EntityW>(
   alreadyRanHooks: Set<Entity>,
 ): void {
   for (const e of entities) {
-    if (getOrmField(e).pendingOperation !== "none") {
+    if (getInstanceData(e).pendingOperation !== "none") {
       if (!hooksInvoked.has(e)) {
         pendingHooks.add(e);
       } else {

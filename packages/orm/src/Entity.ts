@@ -43,5 +43,5 @@ export interface Entity {
  * created it, so we can set the OneToManyCollection to loaded.
  */
 export function isOrWasNew(entity: Entity): boolean {
-  return entity.isNewEntity || BaseEntity.getOrmField(entity).wasNew;
+  return entity.isNewEntity || BaseEntity.getInstanceData(entity).wasNew;
 }

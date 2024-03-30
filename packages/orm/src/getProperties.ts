@@ -1,4 +1,4 @@
-import { getOrmField } from "./BaseEntity";
+import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityMetadata } from "./EntityMetadata";
 import { asConcreteCstr } from "./index";
@@ -65,7 +65,7 @@ export function getFakeInstance(meta: EntityMetadata): Entity {
   return (fakeInstances[meta.cstr.name] ??= new (asConcreteCstr(meta.cstr))(
     {
       register: (entity: any) => {
-        const orm = getOrmField(entity);
+        const orm = getInstanceData(entity);
         (orm as any).metadata = meta;
         orm.data = {};
       },

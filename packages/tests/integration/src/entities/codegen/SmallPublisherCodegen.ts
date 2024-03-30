@@ -10,7 +10,7 @@ import {
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -170,7 +170,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   }
 
   get users(): Collection<SmallPublisher, User> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.users ??= hasMany(
       this as any as SmallPublisher,
       userMeta,

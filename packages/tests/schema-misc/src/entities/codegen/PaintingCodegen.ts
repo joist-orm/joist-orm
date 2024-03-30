@@ -10,7 +10,7 @@ import {
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -180,7 +180,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get artist(): ManyToOneReference<Painting, Artist, never> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.artist ??= hasOne(this as any as Painting, artistMeta, "artist", "paintings");
   }
 }

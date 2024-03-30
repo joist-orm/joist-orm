@@ -13,7 +13,7 @@ import {
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -195,7 +195,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get books(): Collection<Author, Book> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "authorId", undefined);
   }
 }

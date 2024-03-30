@@ -11,7 +11,7 @@ import {
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -181,7 +181,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get paintings(): Collection<Artist, Painting> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.paintings ??= hasMany(
       this as any as Artist,
       paintingMeta,

@@ -1,4 +1,4 @@
-import { getOrmField } from "./BaseEntity";
+import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityConstructor, MaybeAbstractEntityConstructor, OptsOf, TaggedId } from "./EntityManager";
 import { EntityMetadata, getBaseMeta, getMetadata } from "./EntityMetadata";
@@ -19,7 +19,7 @@ export const testing = { isAllSqlPaths };
 export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner";
 export * from "./Aliases";
-export { BaseEntity, getOrmField } from "./BaseEntity";
+export { BaseEntity, getInstanceData } from "./BaseEntity";
 export { Entity, IdType, isEntity } from "./Entity";
 export * from "./EntityFields";
 export * from "./EntityFilter";
@@ -212,7 +212,7 @@ export function setOpts<T extends Entity>(
 }
 
 export function ensureNotDeleted(entity: Entity, ignore?: "pending"): void {
-  if (entity.isDeletedEntity && (ignore === undefined || getOrmField(entity).isDeletedAndFlushed)) {
+  if (entity.isDeletedEntity && (ignore === undefined || getInstanceData(entity).isDeletedAndFlushed)) {
     fail(`${entity} is marked as deleted`);
   }
 }

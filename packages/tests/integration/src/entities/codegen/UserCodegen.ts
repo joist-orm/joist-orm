@@ -12,7 +12,7 @@ import {
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -282,7 +282,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get createdComments(): Collection<User, Comment> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.createdComments ??= hasMany(
       this as any as User,
       commentMeta,
@@ -294,12 +294,12 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get authorManyToOne(): ManyToOneReference<User, Author, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.authorManyToOne ??= hasOne(this as any as User, authorMeta, "authorManyToOne", "userOneToOne");
   }
 
   get likedComments(): Collection<User, Comment> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.likedComments ??= hasManyToMany(
       this as any as User,
       "users_to_comments",
@@ -312,7 +312,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get favoritePublisher(): PolymorphicReference<User, UserFavoritePublisher, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.favoritePublisher ??= hasOnePolymorphic(this as any as User, "favoritePublisher");
   }
 }

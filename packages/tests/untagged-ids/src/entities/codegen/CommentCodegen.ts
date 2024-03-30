@@ -9,7 +9,7 @@ import {
   failNoIdYet,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   hasOnePolymorphic,
   IdOf,
   isEntity,
@@ -178,7 +178,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get parent(): PolymorphicReference<Comment, CommentParent, never> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.parent ??= hasOnePolymorphic(this as any as Comment, "parent");
   }
 }

@@ -12,7 +12,7 @@ import {
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -224,7 +224,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get taskTaskItems(): Collection<Task, TaskItem> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.taskTaskItems ??= hasMany(
       this as any as Task,
       taskItemMeta,

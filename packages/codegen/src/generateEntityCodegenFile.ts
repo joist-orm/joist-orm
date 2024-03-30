@@ -43,7 +43,7 @@ import {
   cleanStringValue,
   failNoIdYet,
   getField,
-  getOrmField,
+  getInstanceData,
   hasLargeMany,
   hasLargeManyToMany,
   hasMany,
@@ -554,7 +554,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         } else {
           return code`
             get ${r.fieldName}(): ${r.decl} {
-              const { relations } = ${getOrmField}(this);
+              const { relations } = ${getInstanceData}(this);
               return relations.${r.fieldName} ??= ${r.init};
             }
           `;

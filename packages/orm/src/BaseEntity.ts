@@ -20,8 +20,8 @@ export let currentlyInstantiatingEntity: Entity | undefined;
  *
  * This should be treated as an internal API and may change without notice.
  */
-export function getOrmField(entity: Entity): InstanceData {
-  return BaseEntity.getOrmField(entity);
+export function getInstanceData(entity: Entity): InstanceData {
+  return BaseEntity.getInstanceData(entity);
 }
 
 /**
@@ -30,7 +30,7 @@ export function getOrmField(entity: Entity): InstanceData {
  * Currently, this just adds the `.load(lensFn)` method for declarative reference traversal.
  */
 export abstract class BaseEntity<EM extends EntityManager, I extends IdType = IdType> implements Entity {
-  public static getOrmField(entity: Entity): InstanceData {
+  public static getInstanceData(entity: Entity): InstanceData {
     return (entity as BaseEntity<any>).#orm;
   }
   readonly #orm!: InstanceData;

@@ -30,6 +30,7 @@ import {
   ExpressionFilter,
   FilterWithAlias,
   GraphQLFilterWithAlias,
+  InstanceData,
   Lens,
   ManyToManyCollection,
   OneToManyCollection,
@@ -54,7 +55,7 @@ import {
   parseFindQuery,
   setOpts,
   tagId,
-  toTaggedId, InstanceData,
+  toTaggedId,
 } from "./index";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";
@@ -963,7 +964,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     const list = toArray(entityOrList).filter((e) => {
       // Check `isDeletedAndFlushed` so that pending-delete entities are still populated,
       // because their hooks might do `getWithDeleted` calls and expect them to be loaded.
-      return e !== undefined && !getInstanceData(e).isDeletedAndFlushed
+      return e !== undefined && !getInstanceData(e).isDeletedAndFlushed;
     });
     if (list.length === 0) {
       return !fn ? (entityOrList as any) : fn(entityOrList as any);

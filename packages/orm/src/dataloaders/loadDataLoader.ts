@@ -49,7 +49,7 @@ export function loadDataLoader<T extends Entity>(
       if (entity === undefined) {
         const existingEntity = em.findExistingInstance<T>(id);
         if (existingEntity) {
-          getOrmField(existingEntity).markDeleteBecauseNotFound();
+          getOrmField(existingEntity).markDeletedBecauseNotFound();
         }
       }
       return entity;

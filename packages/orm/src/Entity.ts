@@ -98,12 +98,12 @@ export class EntityOrmField {
 
   /** Our public-facing `isNewEntity`. */
   get isNewEntity(): boolean {
-    return !!this.#new;
+    return this.#new !== undefined;
   }
 
   /** Our public-facing `isDeletedEntity`. */
   get isDeletedEntity(): boolean {
-    return !!this.#deleted;
+    return this.#deleted !== undefined;
   }
 
   /** Our public-facing `isDirtyEntity`. */
@@ -132,13 +132,13 @@ export class EntityOrmField {
   }
 
   /** Called when an `em.load` tries to find the entity and it's just gone from the db. */
-  markDeleteBecauseNotFound(): void {
+  markDeletedBecauseNotFound(): void {
     this.#deleted = "deleted";
   }
 
   /** Called by `em.delete`, returns true if this is new information. */
   markDeleted(): boolean {
-    if (!this.#deleted) {
+    if (this.#deleted === undefined) {
       this.#deleted = "pending";
       return true;
     }

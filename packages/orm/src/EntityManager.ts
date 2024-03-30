@@ -1059,8 +1059,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
    */
   delete(entity: Entity): void {
     // Early return if already deleted.
-    const changed = getOrmField(entity).markDeleted();
-    if (!changed) return;
+    const alreadyMarked = getOrmField(entity).markDeleted();
+    if (!alreadyMarked) return;
     // Any derived fields that read this entity will need recalc-d
     this.#rm.queueAllDownstreamFields(entity);
     // Synchronously unhook the entity if the relations are loaded

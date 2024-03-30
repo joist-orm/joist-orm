@@ -15,7 +15,6 @@ import {
   EntityGraphQLFilter,
   EntityManager,
   EntityMetadata,
-  EntityOrmField,
   FieldsOf,
   FilterOf,
   Flavor,
@@ -481,7 +480,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       static readonly tagName = "${tagName}";
       static readonly metadata: ${EntityMetadata}<${entity.type}>;
 
-      declare readonly __orm: ${EntityOrmField} & {
+      declare readonly __orm: {
         filterType: ${entityName}Filter;
         gqlFilterType: ${entityName}GraphQLFilter;
         orderType: ${entityName}Order;

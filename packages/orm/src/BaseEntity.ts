@@ -4,7 +4,7 @@ import {
   deTagId,
   Entity,
   EntityManager,
-  EntityOrmField,
+  InstanceData,
   getMetadata,
   isEntity,
   keyToNumber,
@@ -20,7 +20,7 @@ export let currentlyInstantiatingEntity: Entity | undefined;
  *
  * This should be treated as an internal API and may change without notice.
  */
-export function getOrmField(entity: Entity): EntityOrmField {
+export function getOrmField(entity: Entity): InstanceData {
   return BaseEntity.getOrmField(entity);
 }
 
@@ -30,17 +30,17 @@ export function getOrmField(entity: Entity): EntityOrmField {
  * Currently, this just adds the `.load(lensFn)` method for declarative reference traversal.
  */
 export abstract class BaseEntity<EM extends EntityManager, I extends IdType = IdType> implements Entity {
-  public static getOrmField(entity: Entity): EntityOrmField {
+  public static getOrmField(entity: Entity): InstanceData {
     return (entity as BaseEntity<any>).#orm;
   }
-  readonly #orm!: EntityOrmField;
+  readonly #orm!: InstanceData;
 
   protected constructor(em: EM, optsOrId: any) {
     // Only do em.register for em.create-d entities, otherwise defer to hydrate to em.register
     if (typeof optsOrId === "string") {
-      this.#orm = new EntityOrmField(em, (this.constructor as any).metadata, false);
+      this.#orm = new InstanceData(em, (this.constructor as any).metadata, false);
     } else {
-      this.#orm = new EntityOrmField(em, (this.constructor as any).metadata, true);
+      this.#orm = new InstanceData(em, (this.constructor as any).metadata, true);
       em.register(this);
     }
     currentlyInstantiatingEntity = this;

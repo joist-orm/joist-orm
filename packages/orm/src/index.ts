@@ -28,7 +28,7 @@ export * from "./EntityManager";
 export * from "./EntityMetadata";
 export { EnumMetadata } from "./EnumMetadata";
 export { EntityOrId, HintNode } from "./HintTree";
-export { EntityOrmField } from "./InstanceData";
+export { InstanceData } from "./InstanceData";
 export * from "./QueryBuilder";
 export * from "./QueryParser";
 export * from "./changes";

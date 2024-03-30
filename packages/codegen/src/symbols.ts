@@ -12,7 +12,6 @@ export const Reference = imp("Reference@joist-orm");
 export const Collection = imp("Collection@joist-orm");
 export const LargeCollection = imp("LargeCollection@joist-orm");
 export const OneToManyCollection = imp("OneToManyCollection@joist-orm");
-export const EntityOrmField = imp("EntityOrmField@joist-orm");
 export const JoistEntityManager = imp("EntityManager@joist-orm");
 export const EntityMetadata = imp("EntityMetadata@joist-orm");
 export const EnumMetadata = imp("EnumMetadata@joist-orm");

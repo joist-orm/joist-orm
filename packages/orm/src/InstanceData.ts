@@ -2,7 +2,7 @@ import { EntityManager } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 
 /** The `#orm` metadata field we track on each instance. */
-export class EntityOrmField {
+export class InstanceData {
   /** All entities must be associated to an `EntityManager` to handle lazy loading/etc. */
   readonly em: EntityManager;
   /** A pointer to our entity type's metadata. */

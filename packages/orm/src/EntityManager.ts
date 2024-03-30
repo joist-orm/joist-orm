@@ -54,7 +54,7 @@ import {
   parseFindQuery,
   setOpts,
   tagId,
-  toTaggedId, EntityOrmField,
+  toTaggedId, InstanceData,
 } from "./index";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";
@@ -78,7 +78,9 @@ export interface EntityConstructor<T> {
   // either the string literal for a real `T`, or `any` if using `EntityConstructor<any>`.
   tagName: any;
   metadata: EntityMetadata;
-  getOrmField(entity: Entity): EntityOrmField;
+  /** Returns the private `InstanceData` for the given entity. */
+  // This isn't really necessary but prevents type errors with unions like `Author | Book`
+  getOrmField(entity: Entity): InstanceData;
 }
 
 /** Options for the auto-batchable `em.find` queries, i.e. limit & offset aren't allowed. */

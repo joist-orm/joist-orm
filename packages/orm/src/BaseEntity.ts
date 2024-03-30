@@ -84,23 +84,15 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
    * is no longer new; this only flips to `false` after the `flush` transaction has been committed.
    */
   get isNewEntity(): boolean {
-    return this.#orm.isNew;
+    return this.#orm.isNewEntity;
   }
 
   get isDeletedEntity(): boolean {
-    return this.#orm.deleted !== undefined;
+    return this.#orm.isDeletedEntity;
   }
 
   get isDirtyEntity(): boolean {
-    return Object.keys(this.#orm.originalData).length > 0;
-  }
-
-  get isPendingFlush(): boolean {
-    return this.isNewEntity || this.isDirtyEntity || this.isPendingDelete || this.#orm.isTouched;
-  }
-
-  get isPendingDelete(): boolean {
-    return this.#orm.deleted === "pending";
+    return this.#orm.isDirtyEntity;
   }
 
   toString(): string {

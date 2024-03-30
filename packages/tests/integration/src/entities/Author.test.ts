@@ -226,9 +226,7 @@ describe("Author", () => {
     expect(a1.transientFields.beforeCommitRan).toBe(true);
     expect(a1.transientFields.afterCommitRan).toBe(true);
     expect(a1.transientFields.afterCommitIdIsSet).toBe(true);
-    // Because we had a ReactiveQueryField to calc, and so flushed twice, the author no
-    // longer looked new when we called afterCommit.
-    expect(a1.transientFields.afterCommitIsNewEntity).toBe(false);
+    expect(a1.transientFields.afterCommitIsNewEntity).toBe(true);
     a1.firstName = "new name";
     a1.transientFields.beforeCreateRan = false;
     await em.flush();
@@ -612,7 +610,7 @@ describe("Author", () => {
     // And b2 still knows that author is/was its parent
     expect(b2.author.get).toBe(a);
     // Even though its deleted
-    expect(b2.isPendingDelete).toBe(true);
+    expect(b2.isDeletedEntity).toBe(true);
   });
 
   it("isLoaded returns correctly when a field is nullable", async () => {

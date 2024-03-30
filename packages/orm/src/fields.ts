@@ -54,7 +54,29 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
   getEmInternalApi(em).checkWritesAllowed();
 
-  const { data, originalData } = getOrmField(entity);
+  const { data, originalData, flushedData } = getOrmField(entity);
+
+  // If a `set` occurs during the rqf-loop, copy the last-flushed value to flushedData.
+  // Then our `pendingOperation` logic can tell "do we need another micro-flush?" separately
+  // from our public-facing changed fields logic.
+  if (flushedData) {
+    // Get the currentValue, which is what we should have flushed to the db
+    const currentValue = getField(entity, fieldName);
+    if (fieldName in flushedData) {
+      // We've already copied the last-micro-flush value into flushedData,
+      // are we changing back to that? If so, we won't need another micro-flush.
+      if (equalOrSameEntity(flushedData[fieldName], newValue)) {
+        delete flushedData[fieldName];
+      } else {
+        // Otherwise just let data[fieldName] get the even-newer value, and keep
+        // flushedData[fieldName] as the last-micro-flushed value.
+      }
+    } else if (!equalOrSameEntity(currentValue, newValue)) {
+      // This is the 1st rqf-loop change for this field, so let data[fieldName]
+      // get the even newer value, but keep the last-micro-flushed value in flushedData.
+      flushedData[fieldName] = currentValue;
+    }
+  }
 
   // "Un-dirty" our originalData if newValue is reverting to originalData
   if (fieldName in originalData) {

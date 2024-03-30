@@ -10,7 +10,7 @@ import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import { Book, BookReview, Publisher, newBookReview, newLargePublisher } from "../entities";
 
 describe("ReactiveQueryField", () => {
-  it("can calculate on new insert two", async () => {
+  it("skips UPDATE after INSERT if value hasn't changed", async () => {
     const em = newEntityManager();
     newLargePublisher(em);
     await em.flush();
@@ -28,7 +28,7 @@ describe("ReactiveQueryField", () => {
     `);
   });
 
-  it("can calculate on new insert", async () => {
+  it("issues UPDATE after initial INSERT with calculated value", async () => {
     const em = newEntityManager();
     newLargePublisher(em);
     newBookReview(em);
@@ -54,6 +54,22 @@ describe("ReactiveQueryField", () => {
        "select * from "publishers" order by "id" asc",
      ]
     `);
+  });
+
+  it("preserves correct changed data to beforeCommit hooks", async () => {
+    const em = newEntityManager();
+    const p = newLargePublisher(em);
+    newBookReview(em);
+    await em.flush();
+    expect(p.transientFields.wasNewInBeforeCommit).toBe(true);
+    expect(p.transientFields.changedInBeforeCommit).toEqual([
+      "id",
+      "createdAt",
+      "updatedAt",
+      "name",
+      "numberOfBookReviews",
+      "type",
+    ]);
   });
 
   it("can em.recalc to update the value", async () => {

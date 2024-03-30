@@ -541,7 +541,7 @@ describe("EntityManager", () => {
     // When we refresh the entity
     await em.refresh(a1);
     // Then we're marked as deleted
-    expect(getOrmField(a1).deleted).toEqual("deleted");
+    expect(getOrmField(a1).isDeletedAndFlushed).toBe(true);
     expect(a1.isDeletedEntity).toEqual(true);
   });
 

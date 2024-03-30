@@ -20,7 +20,11 @@ import {
 const allImagesHint = { images: [], authors: { image: [], books: "image" } } as const;
 
 export abstract class Publisher extends PublisherCodegen {
-  transientFields = { numberOfBookReviewEvals: 0 };
+  transientFields = {
+    numberOfBookReviewEvals: 0,
+    wasNewInBeforeCommit: undefined as boolean | undefined,
+    changedInBeforeCommit: [] as string[],
+  };
 
   /** Example of a reactive query. */
   readonly numberOfBookReviews: ReactiveField<Publisher, number> = hasReactiveQueryField(
@@ -108,3 +112,9 @@ config.addRule(["name", "numberOfBookReviews"], (p) => {
 
 // Example of an abstract/base CTI cascade deleting
 config.cascadeDelete("bookAdvances");
+
+/** For testing beforeCommits observe the right data with RQFs. */
+config.beforeCommit((p) => {
+  p.transientFields.wasNewInBeforeCommit = p.isNewEntity;
+  p.transientFields.changedInBeforeCommit = [...p.changes.fields];
+});

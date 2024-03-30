@@ -432,11 +432,7 @@ export const commentMeta: EntityMetadata<Comment> = {
       fieldName: "parent",
       fieldIdName: "parentId",
       required: true,
-      components: [{ otherMetadata: () => authorMeta, otherFieldName: "comments", columnName: "parent_author_id" }, { otherMetadata: () => bookMeta, otherFieldName: "comments", columnName: "parent_book_id" }, {
-        otherMetadata: () => bookReviewMeta,
-        otherFieldName: "comment",
-        columnName: "parent_book_review_id",
-      }, {
+      components: [{ otherMetadata: () => authorMeta, otherFieldName: "comments", columnName: "parent_author_id" }, { otherMetadata: () => bookMeta, otherFieldName: "comments", columnName: "parent_book_id" }, { otherMetadata: () => bookReviewMeta, otherFieldName: "comment", columnName: "parent_book_review_id" }, {
         otherMetadata: () => publisherMeta,
         otherFieldName: "comments",
         columnName: "parent_publisher_id",

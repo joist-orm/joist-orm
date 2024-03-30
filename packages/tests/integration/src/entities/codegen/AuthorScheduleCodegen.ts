@@ -6,12 +6,11 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -98,7 +97,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   static readonly tagName = "authorSchedule";
   static readonly metadata: EntityMetadata<AuthorSchedule>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: AuthorScheduleFilter;
     gqlFilterType: AuthorScheduleGraphQLFilter;
     orderType: AuthorScheduleOrder;
@@ -185,7 +184,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   get author(): ManyToOneReference<AuthorSchedule, Author, never> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.author ??= hasOne(this as any as AuthorSchedule, authorMeta, "author", "schedules");
   }
 }

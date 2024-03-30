@@ -7,12 +7,11 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -94,7 +93,7 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
   static readonly tagName = "child";
   static readonly metadata: EntityMetadata<Child>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: ChildFilter;
     gqlFilterType: ChildGraphQLFilter;
     orderType: ChildOrder;
@@ -176,7 +175,7 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get groups(): Collection<Child, ChildGroup> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.groups ??= hasMany(
       this as any as Child,
       childGroupMeta,

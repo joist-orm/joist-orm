@@ -5,12 +5,11 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -113,7 +112,7 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
   static readonly tagName = "ti";
   static readonly metadata: EntityMetadata<TaskItem>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: TaskItemFilter;
     gqlFilterType: TaskItemGraphQLFilter;
     orderType: TaskItemOrder;
@@ -187,17 +186,17 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get newTask(): ManyToOneReference<TaskItem, TaskNew, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.newTask ??= hasOne(this as any as TaskItem, taskNewMeta, "newTask", "newTaskTaskItems");
   }
 
   get oldTask(): ManyToOneReference<TaskItem, TaskOld, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.oldTask ??= hasOne(this as any as TaskItem, taskOldMeta, "oldTask", "oldTaskTaskItems");
   }
 
   get task(): ManyToOneReference<TaskItem, Task, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.task ??= hasOne(this as any as TaskItem, taskMeta, "task", "taskTaskItems");
   }
 }

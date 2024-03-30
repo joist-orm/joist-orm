@@ -1,7 +1,7 @@
-import { getField, isChangeableField } from "./fields";
-import { getOrmField } from "./BaseEntity";
+import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { FieldsOf, IdOf, OptsOf, isId } from "./EntityManager";
+import { getField, isChangeableField } from "./fields";
 import { Field, getConstructorFromTaggedId, getMetadata } from "./index";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
@@ -61,10 +61,10 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
         return (
           entity.isNewEntity
             ? // Cloning sometimes leaves unset keys in data as undefined, so drop them
-              Object.entries(getOrmField(entity).data)
+              Object.entries(getInstanceData(entity).data)
                 .filter(([, value]) => value !== undefined)
                 .map(([key]) => key)
-            : Object.keys(getOrmField(entity).originalData)
+            : Object.keys(getInstanceData(entity).originalData)
         ) as (keyof OptsOf<T>)[];
       } else if (typeof p === "symbol") {
         throw new Error(`Unsupported call to ${String(p)}`);
@@ -74,7 +74,7 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
         throw new Error(`Invalid changes field ${p}`);
       }
 
-      const { originalData, data } = getOrmField(entity);
+      const { originalData, data } = getInstanceData(entity);
       // If `p` is in originalData, always respect that, even if it's undefined
       const originalValue = p in originalData ? originalData[p] : getField(entity, p as any);
       // Use `__orm.data[p] !== undefined` instead of `p in entity.__orm.data` because if a new (or cloned) entity

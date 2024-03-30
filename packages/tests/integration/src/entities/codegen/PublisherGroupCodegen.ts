@@ -7,12 +7,11 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasLargeMany,
   hasMany,
@@ -104,7 +103,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   static readonly tagName = "pg";
   static readonly metadata: EntityMetadata<PublisherGroup>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: PublisherGroupFilter;
     gqlFilterType: PublisherGroupGraphQLFilter;
     orderType: PublisherGroupOrder;
@@ -190,7 +189,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   get publishers(): Collection<PublisherGroup, Publisher> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.publishers ??= hasMany(
       this as any as PublisherGroup,
       publisherMeta,
@@ -202,7 +201,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   get critics(): LargeCollection<PublisherGroup, Critic> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.critics ??= hasLargeMany(
       this as any as PublisherGroup,
       criticMeta,

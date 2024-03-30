@@ -7,12 +7,11 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -92,7 +91,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   static readonly tagName = "artist";
   static readonly metadata: EntityMetadata<Artist>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: ArtistFilter;
     gqlFilterType: ArtistGraphQLFilter;
     orderType: ArtistOrder;
@@ -182,7 +181,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get paintings(): Collection<Artist, Painting> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.paintings ??= hasMany(
       this as any as Artist,
       paintingMeta,

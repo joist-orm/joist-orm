@@ -7,12 +7,11 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasOne,
   hasOneToOne,
@@ -130,7 +129,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   static readonly tagName = "br";
   static readonly metadata: EntityMetadata<BookReview>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: BookReviewFilter;
     gqlFilterType: BookReviewGraphQLFilter;
     orderType: BookReviewOrder;
@@ -216,17 +215,17 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   }
 
   get book(): ManyToOneReference<BookReview, Book, never> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.book ??= hasOne(this as any as BookReview, bookMeta, "book", "reviews");
   }
 
   get critic(): ManyToOneReference<BookReview, Critic, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.critic ??= hasOne(this as any as BookReview, criticMeta, "critic", "bookReviews");
   }
 
   get comment(): OneToOneReference<BookReview, Comment> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.comment ??= hasOneToOne(
       this as any as BookReview,
       commentMeta,

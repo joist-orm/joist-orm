@@ -7,12 +7,11 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -91,7 +90,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, number> im
   static readonly tagName = "a";
   static readonly metadata: EntityMetadata<Author>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: AuthorFilter;
     gqlFilterType: AuthorGraphQLFilter;
     orderType: AuthorOrder;
@@ -181,7 +180,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, number> im
   }
 
   get books(): Collection<Author, Book> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", undefined);
   }
 }

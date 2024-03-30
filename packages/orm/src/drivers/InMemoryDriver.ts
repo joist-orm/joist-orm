@@ -1,5 +1,5 @@
 import { Knex } from "knex";
-import { getOrmField } from "../BaseEntity";
+import { getInstanceData } from "../BaseEntity";
 import { ValueFilter } from "../EntityFilter";
 import { EntityManager } from "../EntityManager";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
@@ -84,7 +84,7 @@ export class InMemoryDriver implements Driver {
         .filter((e) => e.id === undefined)
         .forEach((i) => {
           const id = this.nextId(todo.metadata.tableName);
-          getOrmField(i).data["id"] = keyToTaggedId(todo.metadata, id);
+          getInstanceData(i).data["id"] = keyToTaggedId(todo.metadata, id);
           this.rowsOfTable(todo.metadata.tableName)[id] = {};
         });
     });
@@ -101,7 +101,7 @@ export class InMemoryDriver implements Driver {
       [...todo.updates, ...todo.inserts].forEach((u) => {
         this.onQuery();
         // TODO Do this in EntityManager instead of the drivers
-        getOrmField(u).data["updatedAt"] = updatedAt;
+        getInstanceData(u).data["updatedAt"] = updatedAt;
         const id = deTagId(todo.metadata, u.id);
         const row: Record<string, any> = {};
         Object.values(todo.metadata.fields)
@@ -109,7 +109,7 @@ export class InMemoryDriver implements Driver {
           .flatMap((f) => f.serde.columns.map((c) => [f, c] as const))
           .forEach(([, c]) => {
             // Kinda surprised mapToDb doesn't work here...
-            row[c.columnName] = c.dbValue(getOrmField(u).data) ?? null;
+            row[c.columnName] = c.dbValue(getInstanceData(u).data) ?? null;
           });
         this.rowsOfTable(todo.metadata.tableName)[id] = row;
       });

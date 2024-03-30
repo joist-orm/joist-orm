@@ -20,7 +20,7 @@ import {
   Loaded,
   MaybeAbstractEntityConstructor,
   OptsOf,
-  getOrmField,
+  getInstanceData,
   sameEntity,
 } from "joist-orm";
 import {
@@ -541,7 +541,7 @@ describe("EntityManager", () => {
     // When we refresh the entity
     await em.refresh(a1);
     // Then we're marked as deleted
-    expect(getOrmField(a1).isDeletedAndFlushed).toBe(true);
+    expect(getInstanceData(a1).isDeletedAndFlushed).toBe(true);
     expect(a1.isDeletedEntity).toEqual(true);
   });
 
@@ -691,7 +691,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     a1.firstName = "a1";
-    expect(getOrmField(a1).originalData).toEqual({});
+    expect(getInstanceData(a1).originalData).toEqual({});
   });
 
   it("ignores date sets of the same value", async () => {
@@ -700,7 +700,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     a1.graduated = jan1;
-    expect(getOrmField(a1).originalData).toEqual({});
+    expect(getInstanceData(a1).originalData).toEqual({});
   });
 
   it("cannot flush while another flush is in progress", async () => {
@@ -1393,11 +1393,11 @@ describe("EntityManager", () => {
       expect(a1.isDirtyEntity).toBe(false);
       expect(a1.isNewEntity).toBe(false);
       expect(a1.isDeletedEntity).toBe(false);
-      expect(getOrmField(a1).isTouched).toBe(true);
+      expect(getInstanceData(a1).isTouched).toBe(true);
       // But when we flush
       const result = await em.flush();
       expect(result).toEqual([a1]);
-      expect(getOrmField(a1).isTouched).toBe(false);
+      expect(getInstanceData(a1).isTouched).toBe(false);
       // Then the hooks were ran
       expect(a1.transientFields).toMatchObject({
         beforeFlushRan: true,

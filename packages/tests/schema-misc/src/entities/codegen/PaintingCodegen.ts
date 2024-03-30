@@ -6,12 +6,11 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -99,7 +98,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<Painting>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: PaintingFilter;
     gqlFilterType: PaintingGraphQLFilter;
     orderType: PaintingOrder;
@@ -181,7 +180,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get artist(): ManyToOneReference<Painting, Artist, never> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.artist ??= hasOne(this as any as Painting, artistMeta, "artist", "paintings");
   }
 }

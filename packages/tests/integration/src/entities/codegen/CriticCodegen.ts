@@ -7,12 +7,11 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -126,7 +125,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   static readonly tagName = "c";
   static readonly metadata: EntityMetadata<Critic>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: CriticFilter;
     gqlFilterType: CriticGraphQLFilter;
     orderType: CriticOrder;
@@ -208,7 +207,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get bookReviews(): Collection<Critic, BookReview> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.bookReviews ??= hasMany(
       this as any as Critic,
       bookReviewMeta,
@@ -220,7 +219,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get favoriteLargePublisher(): ManyToOneReference<Critic, LargePublisher, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.favoriteLargePublisher ??= hasOne(
       this as any as Critic,
       largePublisherMeta,
@@ -230,12 +229,12 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get group(): ManyToOneReference<Critic, PublisherGroup, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.group ??= hasOne(this as any as Critic, publisherGroupMeta, "group", "critics");
   }
 
   get criticColumn(): OneToOneReference<Critic, CriticColumn> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.criticColumn ??= hasOneToOne(
       this as any as Critic,
       criticColumnMeta,

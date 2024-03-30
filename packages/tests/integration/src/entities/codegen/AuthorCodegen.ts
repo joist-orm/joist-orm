@@ -9,12 +9,11 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -300,7 +299,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   static readonly tagName = "a";
   static readonly metadata: EntityMetadata<Author>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: AuthorFilter;
     gqlFilterType: AuthorGraphQLFilter;
     orderType: AuthorOrder;
@@ -564,7 +563,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get authors(): Collection<Author, Author> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.authors ??= hasMany(
       this as any as Author,
       authorMeta,
@@ -576,7 +575,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get schedules(): Collection<Author, AuthorSchedule> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.schedules ??= hasMany(
       this as any as Author,
       authorScheduleMeta,
@@ -588,7 +587,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get books(): Collection<Author, Book> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", {
       "field": "order",
       "direction": "ASC",
@@ -596,7 +595,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get comments(): Collection<Author, Comment> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.comments ??= hasMany(
       this as any as Author,
       commentMeta,
@@ -608,7 +607,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get tasks(): Collection<Author, TaskNew> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.tasks ??= hasMany(
       this as any as Author,
       taskNewMeta,
@@ -620,12 +619,12 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get mentor(): ManyToOneReference<Author, Author, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.mentor ??= hasOne(this as any as Author, authorMeta, "mentor", "authors");
   }
 
   get currentDraftBook(): ManyToOneReference<Author, Book, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.currentDraftBook ??= hasOne(
       this as any as Author,
       bookMeta,
@@ -635,17 +634,17 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get publisher(): ManyToOneReference<Author, Publisher, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.publisher ??= hasOne(this as any as Author, publisherMeta, "publisher", "authors");
   }
 
   get image(): OneToOneReference<Author, Image> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.image ??= hasOneToOne(this as any as Author, imageMeta, "image", "author", "author_id");
   }
 
   get userOneToOne(): OneToOneReference<Author, User> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.userOneToOne ??= hasOneToOne(
       this as any as Author,
       userMeta,
@@ -656,7 +655,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get tags(): Collection<Author, Tag> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.tags ??= hasManyToMany(
       this as any as Author,
       "authors_to_tags",

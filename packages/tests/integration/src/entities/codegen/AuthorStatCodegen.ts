@@ -4,7 +4,6 @@ import {
   cleanStringValue,
   ConfigApi,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   Flavor,
   getField,
@@ -138,7 +137,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   static readonly tagName = "as";
   static readonly metadata: EntityMetadata<AuthorStat>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: AuthorStatFilter;
     gqlFilterType: AuthorStatGraphQLFilter;
     orderType: AuthorStatOrder;

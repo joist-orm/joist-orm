@@ -7,13 +7,12 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FieldsOf,
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -111,7 +110,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   static readonly tagName = "task";
   static readonly metadata: EntityMetadata<Task>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: TaskFilter;
     gqlFilterType: TaskGraphQLFilter;
     orderType: TaskOrder;
@@ -225,7 +224,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get taskTaskItems(): Collection<Task, TaskItem> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.taskTaskItems ??= hasMany(
       this as any as Task,
       taskItemMeta,

@@ -6,12 +6,11 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -93,7 +92,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<SmallPublisher>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: SmallPublisherFilter;
     gqlFilterType: SmallPublisherGraphQLFilter;
     orderType: SmallPublisherOrder;
@@ -171,7 +170,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   }
 
   get users(): Collection<SmallPublisher, User> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.users ??= hasMany(
       this as any as SmallPublisher,
       userMeta,

@@ -6,12 +6,11 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -127,7 +126,7 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   static readonly tagName = "i";
   static readonly metadata: EntityMetadata<Image>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: ImageFilter;
     gqlFilterType: ImageGraphQLFilter;
     orderType: ImageOrder;
@@ -233,17 +232,17 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get author(): ManyToOneReference<Image, Author, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.author ??= hasOne(this as any as Image, authorMeta, "author", "image");
   }
 
   get book(): ManyToOneReference<Image, Book, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.book ??= hasOne(this as any as Image, bookMeta, "book", "image");
   }
 
   get publisher(): ManyToOneReference<Image, Publisher, undefined> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.publisher ??= hasOne(this as any as Image, publisherMeta, "publisher", "images");
   }
 }

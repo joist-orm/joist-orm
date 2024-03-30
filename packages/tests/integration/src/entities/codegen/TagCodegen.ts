@@ -7,12 +7,11 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasLargeManyToMany,
   hasManyToMany,
@@ -106,7 +105,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   static readonly tagName = "t";
   static readonly metadata: EntityMetadata<Tag>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: TagFilter;
     gqlFilterType: TagGraphQLFilter;
     orderType: TagOrder;
@@ -185,7 +184,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get books(): Collection<Tag, Book> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.books ??= hasManyToMany(
       this as any as Tag,
       "books_to_tags",
@@ -198,7 +197,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get publishers(): Collection<Tag, Publisher> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.publishers ??= hasManyToMany(
       this as any as Tag,
       "publishers_to_tags",
@@ -211,7 +210,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get authors(): LargeCollection<Tag, Author> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.authors ??= hasLargeManyToMany(
       this as any as Tag,
       "authors_to_tags",

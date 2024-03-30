@@ -6,11 +6,10 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   hasOnePolymorphic,
   IdOf,
   isEntity,
@@ -97,7 +96,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   static readonly tagName = "c";
   static readonly metadata: EntityMetadata<Comment>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: CommentFilter;
     gqlFilterType: CommentGraphQLFilter;
     orderType: CommentOrder;
@@ -179,7 +178,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get parent(): PolymorphicReference<Comment, CommentParent, never> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.parent ??= hasOnePolymorphic(this as any as Comment, "parent");
   }
 }

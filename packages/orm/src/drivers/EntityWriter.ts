@@ -1,4 +1,4 @@
-import { getOrmField } from "../BaseEntity";
+import { getInstanceData } from "../BaseEntity";
 import { Entity } from "../Entity";
 import {
   EntityMetadata,
@@ -118,11 +118,11 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
   // to always use the same fields, to take advantage of Prepared Statements.
   const changedFields = new Set<string>();
   for (const entity of entities) {
-    for (const fieldName of getOrmField(entity).changedFields) changedFields.add(fieldName);
+    for (const fieldName of getInstanceData(entity).changedFields) changedFields.add(fieldName);
   }
   // Sometimes with derived fields, an instance will be marked as an update, but if the derived field hasn't
   // actually changed, it'll be a noop, so just short-circuit if it looks like that happened. Unless touched.
-  if (changedFields.size === 0 && !entities.some((e) => getOrmField(e).isTouched)) {
+  if (changedFields.size === 0 && !entities.some((e) => getInstanceData(e).isTouched)) {
     return undefined;
   }
 
@@ -134,7 +134,7 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
   changedFields.add("id");
   if (updatedAt) changedFields.add(updatedAt);
   for (const entity of entities) {
-    const { data } = getOrmField(entity);
+    const { data } = getInstanceData(entity);
     for (const key of changedFields) {
       // Check isChangeableField because we might be updating the base `publishers` table
       // and `originalData` might have fields from a subclass `large_publishers` table.
@@ -217,7 +217,7 @@ interface BindingColumn {
 function collectBindings(entities: Entity[], columns: BindingColumn[]): any[][] {
   const rows = [];
   for (const entity of entities) {
-    const { data, originalData } = getOrmField(entity);
+    const { data, originalData } = getInstanceData(entity);
     const bindings = [];
     for (const column of columns) {
       bindings.push(column.dbValue(data, originalData) ?? null);

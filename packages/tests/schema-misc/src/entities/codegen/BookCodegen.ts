@@ -6,12 +6,11 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  EntityOrmField,
   failNoIdYet,
   FilterOf,
   Flavor,
   getField,
-  getOrmField,
+  getInstanceData,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -79,7 +78,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   static readonly tagName = "b";
   static readonly metadata: EntityMetadata<Book>;
 
-  declare readonly __orm: EntityOrmField & {
+  declare readonly __orm: {
     filterType: BookFilter;
     gqlFilterType: BookGraphQLFilter;
     orderType: BookOrder;
@@ -150,7 +149,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get author(): ManyToOneReference<Book, Author, never> {
-    const { relations } = getOrmField(this);
+    const { relations } = getInstanceData(this);
     return relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
   }
 }

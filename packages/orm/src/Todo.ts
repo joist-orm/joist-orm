@@ -1,5 +1,5 @@
 /** The operations for a given entity type, so they can be executed in bulk. */
-import { getOrmField } from "./BaseEntity";
+import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { JoinRow, JoinRows } from "./JoinRows";
@@ -23,7 +23,7 @@ export class Todo {
 export function createTodos(entities: readonly Entity[]): Record<string, Todo> {
   const todos: Record<string, Todo> = {};
   for (const entity of entities) {
-    const op = getOrmField(entity).pendingOperation;
+    const op = getInstanceData(entity).pendingOperation;
     if (op !== "none") {
       const todo = getTodo(todos, entity);
       switch (op) {

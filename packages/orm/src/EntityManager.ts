@@ -1243,7 +1243,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         // is going to make multiple `em.flush()` calls?
         await afterCommit(this.ctx, allFlushedEntities);
 
-        // Update the `__orm` to reflect the new state
+        // Update the `#orm` field to reflect the new state
         for (const e of allFlushedEntities) {
           if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
           getOrmField(e).resetAfterFlushed();

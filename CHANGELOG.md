@@ -1,3 +1,10 @@
+## [1.151.13](https://github.com/joist-orm/joist-orm/compare/v1.151.12...v1.151.13) (2024-03-31)
+
+
+### Bug Fixes
+
+* Fix setDefault calls made from subtypes. ([#1005](https://github.com/joist-orm/joist-orm/issues/1005)) ([e57c0a9](https://github.com/joist-orm/joist-orm/commit/e57c0a9395fef1d16f15037901b97dee504a64a3))
+
 ## [1.151.12](https://github.com/joist-orm/joist-orm/compare/v1.151.11...v1.151.12) (2024-03-30)
 
 

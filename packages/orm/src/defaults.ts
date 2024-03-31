@@ -14,7 +14,12 @@ export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolea
 export function setSyncDefaults(entity: Entity): void {
   getBaseAndSelfMetas(getMetadata(entity)).forEach((m) => {
     for (const [field, maybeFn] of Object.entries(m.config.__data.syncDefaults)) {
-      if (m.fields[field].kind === "primitive" && (m.fields[field] as PrimitiveField)["derived"] === "async") {
+      // Use allFields in case a subtype sets a default for one of its base fields
+      if (m.allFields[field].kind === "primitive" && (m.allFields[field] as PrimitiveField)["derived"] === "async") {
+        // If this is a ReactiveQueryField, we want to push in a default, but setOpts is called
+        // from the codegen constructor, so the user-defined `hasReactiveQueryField` fields will
+        // not have been initialized yet (i.e. `entity[field]` will be undefined and not yet an
+        // `instanceof ReactiveQueryField`). Thankfully we can just use setField.
         setField(entity, field, maybeFn);
       } else if ((entity as any)[field] === undefined) {
         (entity as any)[field] = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;

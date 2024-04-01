@@ -1,6 +1,15 @@
-import { insertAuthor, insertBook, insertBookReview, insertComment, select } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookReview, insertComment, insertTask, select } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
-import { Book, BookReview, Comment, isCommentParent, newAdminUser, newBook, newSmallPublisher } from "../entities";
+import {
+  Book,
+  BookReview,
+  Comment,
+  Task,
+  isCommentParent,
+  newAdminUser,
+  newBook,
+  newSmallPublisher, TaskOld,
+} from "../entities";
 
 describe("PolymorphicReference", () => {
   it("can load a foreign key", async () => {
@@ -83,6 +92,21 @@ describe("PolymorphicReference", () => {
     const [row] = await select("comments");
     expect(row.parent_book_id).toBeNull();
     expect(row.parent_book_review_id).toEqual(1);
+  });
+
+  it("can save changes to a foreign key pointing to a sub type", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "t1", author_id: 1 });
+    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertTask({ type: "OLD" });
+
+    const em = newEntityManager();
+    const comment = await em.load(Comment, "comment:1");
+    comment.parent.set(await em.load(TaskOld, "task:1"));
+    await em.flush();
+
+    const [row] = await select("comments");
+    expect(row.parent_task_id).toEqual(1);
   });
 
   it("throws when trying to set an entity of the wrong type", async () => {

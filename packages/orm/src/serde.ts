@@ -1,4 +1,4 @@
-import { Field, PolymorphicField, SerdeField } from "./EntityMetadata";
+import { Field, getBaseMeta, PolymorphicField, SerdeField } from "./EntityMetadata";
 import {
   EntityMetadata,
   getConstructorFromTaggedId,
@@ -6,6 +6,7 @@ import {
   keyToTaggedId,
   maybeResolveReferenceToId,
 } from "./index";
+import { groupBy } from "./utils";
 
 export function hasSerde(field: Field): field is SerdeField {
   return !!field.serde;
@@ -228,6 +229,14 @@ export class PolymorphicKeySerde implements FieldSerde {
   // Lazy b/c we use PolymorphicField which we can't access in our cstr
   get columns(): Array<Column & { otherMetadata: () => EntityMetadata }> {
     const { fieldName } = this;
+
+    // If our poly has multiple components from the same base type, i.e.
+    // `parent_small_publisher_id` and `parent_large_publisher_id`, then we
+    // need slightly different logic...
+    const hasMultipleComponentsWithSameBaseType = [
+      ...groupBy(this.field.components, (comp) => getBaseMeta(comp.otherMetadata()).type).values(),
+    ].some((group) => group.length > 1);
+
     return this.field.components.map((comp) => ({
       columnName: comp.columnName,
       dbType: "int",
@@ -236,7 +245,13 @@ export class PolymorphicKeySerde implements FieldSerde {
       dbValue(data: any): any {
         const id = maybeResolveReferenceToId(data[fieldName]);
         const cstr = id ? getConstructorFromTaggedId(id) : undefined;
-        return cstr === comp.otherMetadata().cstr ? keyToNumber(comp.otherMetadata(), id) : undefined;
+        // We'll have multiple columns, i.e. [parent_author_id, parent_book_id], and each column
+        // will only return a value if the `id` matches its type, i.e. `parent_author_id=a:1` will
+        // return 1, but `parent_book_id` will return null.
+        const idAppliesToThisColumn = hasMultipleComponentsWithSameBaseType
+          ? cstr === comp.otherMetadata().cstr
+          : cstr === getBaseMeta(comp.otherMetadata()).cstr;
+        return idAppliesToThisColumn ? keyToNumber(comp.otherMetadata(), id) : undefined;
       },
       mapToDb(value: any): any {
         return keyToNumber(comp.otherMetadata(), maybeResolveReferenceToId(value));

@@ -1,3 +1,10 @@
+## [1.151.14](https://github.com/joist-orm/joist-orm/compare/v1.151.13...v1.151.14) (2024-04-01)
+
+
+### Bug Fixes
+
+* Fix polys being too strict on the subtype matching. ([#1006](https://github.com/joist-orm/joist-orm/issues/1006)) ([5c2d9da](https://github.com/joist-orm/joist-orm/commit/5c2d9daf89ed4adcfcbae39f7198dc0b090521dc))
+
 ## [1.151.13](https://github.com/joist-orm/joist-orm/compare/v1.151.12...v1.151.13) (2024-03-31)
 
 

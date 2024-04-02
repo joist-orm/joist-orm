@@ -17,6 +17,7 @@ import {
   Reference,
 } from "./relations";
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
+import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
 import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
 import { fail, mergeNormalizedHints } from "./utils";
 
@@ -71,6 +72,16 @@ export type Reacted<T extends Entity, H> = Entity & {
   /** Allow detecting if a reactive change is due to nuances like `hasUpdated` or `hasChanged`. */
   changes: Changes<T, keyof FieldsOf<T>, keyof NormalizeHint<T, H>>;
 } & MaybeTransientFields<T>;
+
+/**
+ * A reactive hint that only allows fields immediately on the entity, i.e. no nested hints.
+ *
+ * This is used by `ReactiveGetter`s to guarantee that their lambda functions will
+ * always be `.get`-able and hence not need loading.
+ */
+export type ShallowReactiveHint<T extends Entity> =
+  | (keyof FieldsOf<T> & string)
+  | ReadonlyArray<keyof FieldsOf<T> & string>;
 
 /** If the domain model has transient fields, allow reactive behavior to see it, i.e. don't run validation rules for special operations. */
 export type MaybeTransientFields<T> = "transientFields" extends keyof T
@@ -174,10 +185,11 @@ export function reverseReactiveHint<T extends Entity>(
           throw new Error(`Invalid hint in ${rootType.name}.ts hint ${JSON.stringify(hint)}`);
       }
     } else {
-      // We only need to look for ReactiveAsyncProperties here, because PersistedAsyncProperties
-      // have primitive fields that will be handled in the ^ code. Note that we don't specifically
-      // handle them ^, because the EntityManager.flush loop will notice their primitive values
-      // changing, and kicking off any downstream reactive fields as necessary.
+      // We only need to look for ReactiveAsyncProperties here, because ReactiveFields & ReactiveReferences
+      // have underlying primitive fields that, when/if they change, will be handled in the ^ code.
+      //
+      // I.e. we specifically don't need to handle RFs & RRs ^, because the EntityManager.flush loop will
+      // notice their primitive values changing, and kicking off any downstream reactive fields as necessary.
       const p = getProperties(meta)[key];
       if (p instanceof AsyncPropertyImpl) {
         if (!p.reactiveHint) {
@@ -187,6 +199,8 @@ export function reverseReactiveHint<T extends Entity>(
             )}, please use hasReactiveAsyncProperty instead`,
           );
         }
+        return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false);
+      } else if (p instanceof ReactiveGetterImpl) {
         return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false);
       } else {
         throw new Error(`Invalid hint in ${rootType.name}.ts ${JSON.stringify(hint)}`);

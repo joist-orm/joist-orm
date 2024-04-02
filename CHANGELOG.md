@@ -1,3 +1,10 @@
+## [1.152.1](https://github.com/joist-orm/joist-orm/compare/v1.152.0...v1.152.1) (2024-04-02)
+
+
+### Bug Fixes
+
+* added support for ReactiveGetter to Reactable and entityResolver ([#1011](https://github.com/joist-orm/joist-orm/issues/1011)) ([f9634e5](https://github.com/joist-orm/joist-orm/commit/f9634e531eca1b29bc7574124fb90c6e7458588f))
+
 # [1.152.0](https://github.com/joist-orm/joist-orm/compare/v1.151.14...v1.152.0) (2024-04-02)
 
 

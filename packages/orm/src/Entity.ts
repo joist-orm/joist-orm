@@ -29,19 +29,3 @@ export interface Entity {
    */
   toString(): string;
 }
-
-/**
- * Returns true if the entity is new or was new in this EM.
- *
- * This is primarily used for lazy-initializing relations, i.e. if:
- *
- * - A new `Author` is created
- * - We `em.flush` the author to the database
- * - Then `a1.books` is accessed for the first time
- *
- * We can have a high-confidence that `a1` has no books, because we just
- * created it, so we can set the OneToManyCollection to loaded.
- */
-export function isOrWasNew(entity: Entity): boolean {
-  return entity.isNewEntity || BaseEntity.getInstanceData(entity).wasNew;
-}

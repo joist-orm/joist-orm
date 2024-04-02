@@ -4,6 +4,7 @@ import {
   Entity,
   EntityMetadata,
   getEmInternalApi,
+  getInstanceData,
   getMetadata,
   IdOf,
   ManyToManyField,
@@ -11,7 +12,6 @@ import {
 } from "../";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
-import { isOrWasNew } from "../Entity";
 import { maybeAdd, maybeRemove, remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
@@ -62,7 +62,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   ) {
     super(entity);
     this.#fieldName = fieldName;
-    if (isOrWasNew(entity)) {
+    if (getInstanceData(entity).isOrWasNew) {
       this.#loaded = [];
     }
   }

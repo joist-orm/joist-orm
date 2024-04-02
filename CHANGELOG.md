@@ -1,3 +1,10 @@
+# [1.152.0](https://github.com/joist-orm/joist-orm/compare/v1.151.14...v1.152.0) (2024-04-02)
+
+
+### Features
+
+* Add ReactiveGetters. ([#1008](https://github.com/joist-orm/joist-orm/issues/1008)) ([4341f94](https://github.com/joist-orm/joist-orm/commit/4341f942a708194453d5fa0b3a1f9d08fcdb1921))
+
 ## [1.151.14](https://github.com/joist-orm/joist-orm/compare/v1.151.13...v1.151.14) (2024-04-01)
 
 

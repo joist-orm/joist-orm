@@ -87,7 +87,7 @@ export class InstanceData {
       // probably rare, but we shouldn't run hooks or have the driver try and delete these.
       // Note that we return them, instead of skipping entirely, so that fixupCreatedThenDeleted
       // can later be called.
-      return this.#deleted === Operation.Pending && this.#new
+      return this.#deleted === Operation.Pending && this.#new === Operation.Pending
         ? "created-then-deleted"
         : this.#deleted === Operation.Pending
           ? "delete"
@@ -149,7 +149,7 @@ export class InstanceData {
 
 /** An enum to track our insert/delete state progression. */
 enum Operation {
-  Pending,
-  Flushed,
-  Complete,
+  Pending = 1,
+  Flushed = 2,
+  Complete = 3,
 }

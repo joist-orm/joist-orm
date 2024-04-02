@@ -1,4 +1,4 @@
-import { Entity, isEntity, isOrWasNew } from "../Entity";
+import { Entity, isEntity } from "../Entity";
 import { IdOf, TaggedId, sameEntity } from "../EntityManager";
 import { PolymorphicFieldComponent, getMetadata } from "../EntityMetadata";
 import { getField, setField } from "../fields";
@@ -9,6 +9,7 @@ import {
   ensureNotDeleted,
   fail,
   getConstructorFromTaggedId,
+  getInstanceData,
   maybeGetConstructorFromReference,
   maybeResolveReferenceToId,
 } from "../index";
@@ -73,7 +74,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   ) {
     super(entity);
     this.field = getMetadata(entity).allFields[this.fieldName] as PolymorphicField;
-    if (isOrWasNew(entity)) {
+    if (getInstanceData(entity).isOrWasNew) {
       this._isLoaded = true;
     }
   }

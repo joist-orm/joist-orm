@@ -24,20 +24,18 @@ export class InstanceData {
    * - `flushed` means we've flushed a `DELETE` but `em.flush` hasn't fully completed yet, likely due to ReactiveQueryField calcs
    * - `deleted` means we've been flushed and `em.flush` has completed
    */
-  #deleted?: "pending" | "deleted" | "flushed";
+  #deleted?: Operation;
   /** Whether our entity is new or not. */
-  #new?: "pending" | "flushed";
+  #new?: Operation;
   /** Whether our entity should flush regardless of any other changes. */
   isTouched: boolean = false;
-  /** Whether we were created in this EM, even if we've since been flushed. */
-  wasNew: boolean = false;
 
   /** Creates the `#orm` field. */
   constructor(em: EntityManager, metadata: EntityMetadata, isNew: boolean) {
     this.em = em;
     this.metadata = metadata;
     if (isNew) {
-      this.#new = "pending";
+      this.#new = Operation.Pending;
       this.data = {};
       this.row = {};
       this.flushedData = undefined;
@@ -51,24 +49,25 @@ export class InstanceData {
   /** If `em.flush` has detected a dirty RQF, reset our internal dirty state, w/o reseting our external-dirty state. */
   resetForRqfLoop() {
     this.flushedData = {};
-    if (this.#new === "pending") this.#new = "flushed";
-    if (this.#deleted === "pending") this.#deleted = "flushed";
+    if (this.#new === Operation.Pending) this.#new = Operation.Flushed;
+    if (this.#deleted === Operation.Pending) this.#deleted = Operation.Flushed;
   }
 
   resetAfterFlushed() {
     this.originalData = {};
     this.flushedData = undefined;
     this.isTouched = false;
-    this.wasNew ||= !!this.#new;
-    this.#new = undefined;
-    if (this.#deleted === "pending" || this.#deleted === "flushed") {
-      this.#deleted = "deleted";
+    if (this.#new === Operation.Pending || this.#new === Operation.Flushed) {
+      this.#new = Operation.Complete;
+    }
+    if (this.#deleted === Operation.Pending || this.#deleted === Operation.Flushed) {
+      this.#deleted = Operation.Complete;
     }
   }
 
   /** Our public-facing `isNewEntity`. */
   get isNewEntity(): boolean {
-    return this.#new !== undefined;
+    return this.#new !== undefined && this.#new !== Operation.Complete;
   }
 
   /** Our public-facing `isDeletedEntity`. */
@@ -83,17 +82,17 @@ export class InstanceData {
 
   /** This is our internal "is pending flush", which is aware of RQF micro-flush loops. */
   get pendingOperation(): "insert" | "update" | "delete" | "none" | "created-then-deleted" {
-    if (this.#deleted) {
+    if (this.#deleted !== undefined) {
       // Mark entities that were created and them immediately `em.delete`-d; granted this is
       // probably rare, but we shouldn't run hooks or have the driver try and delete these.
       // Note that we return them, instead of skipping entirely, so that fixupCreatedThenDeleted
       // can later be called.
-      return this.#deleted === "pending" && this.#new
+      return this.#deleted === Operation.Pending && this.#new
         ? "created-then-deleted"
-        : this.#deleted === "pending"
+        : this.#deleted === Operation.Pending
           ? "delete"
           : "none";
-    } else if (this.#new === "pending") {
+    } else if (this.#new === Operation.Pending) {
       // Per ^, if `#new === flushed`, we fall through to check if micro-flush UPDATEs are required
       return "insert";
     } else if (this.flushedData) {
@@ -109,13 +108,13 @@ export class InstanceData {
 
   /** Called when an `em.load` tries to find the entity and it's just gone from the db. */
   markDeletedBecauseNotFound(): void {
-    this.#deleted = "deleted";
+    this.#deleted = Operation.Complete;
   }
 
   /** Called by `em.delete`, returns true if this is new information. */
   markDeleted(): boolean {
     if (this.#deleted === undefined) {
-      this.#deleted = "pending";
+      this.#deleted = Operation.Pending;
       return true;
     }
     return false;
@@ -123,10 +122,34 @@ export class InstanceData {
 
   fixupCreatedThenDeleted(): void {
     // Ideally we could do this via `resetAfterFlushed`?
-    this.#deleted = "deleted";
+    this.#deleted = Operation.Complete;
   }
 
   get isDeletedAndFlushed(): boolean {
-    return this.#deleted === "deleted";
+    return this.#deleted === Operation.Complete;
   }
+
+  /**
+   * Returns true if the entity is new or was new in this EM.
+   *
+   * This is primarily used for lazy-initializing relations, i.e. if:
+   *
+   * - A new `Author` is created
+   * - We `em.flush` the author to the database
+   * - Then `a1.books` is accessed for the first time
+   *
+   * We can have a high-confidence that `a1` has no books, because we just
+   * created it, so we can set the OneToManyCollection to loaded.
+   */
+  get isOrWasNew(): boolean {
+    // #new will be left as `complete`
+    return this.#new !== undefined;
+  }
+}
+
+/** An enum to track our insert/delete state progression. */
+enum Operation {
+  Pending,
+  Flushed,
+  Complete,
 }

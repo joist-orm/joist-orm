@@ -1,6 +1,5 @@
 import { oneToManyDataLoader } from "../dataloaders/oneToManyDataLoader";
 import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
-import { isOrWasNew } from "../Entity";
 import {
   Collection,
   ensureNotDeleted,
@@ -8,6 +7,7 @@ import {
   EntityMetadata,
   getBaseAndSelfMetas,
   getEmInternalApi,
+  getInstanceData,
   getMetadata,
   IdOf,
   maybeResolveReferenceToId,
@@ -59,7 +59,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     super(entity);
     this.#fieldName = fieldName;
     this.#orderBy = orderBy;
-    if (isOrWasNew(entity)) {
+    if (getInstanceData(entity).isOrWasNew) {
       this.loaded = [];
     }
   }

@@ -1,4 +1,4 @@
-import { Entity, isEntity, isOrWasNew } from "../Entity";
+import { Entity, isEntity } from "../Entity";
 import { IdOf, TaggedId, getEmInternalApi, sameEntity } from "../EntityManager";
 import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
 import { getField, setField } from "../fields";
@@ -11,6 +11,7 @@ import {
   ensureNotDeleted,
   ensureTagged,
   fail,
+  getInstanceData,
   maybeResolveReferenceToId,
   toIdOf,
   toTaggedId,
@@ -84,7 +85,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   ) {
     super(entity);
     this.#fieldName = fieldName;
-    if (isOrWasNew(entity)) {
+    if (getInstanceData(entity).isOrWasNew) {
       this._isLoaded = true;
     }
   }

@@ -15,6 +15,7 @@ import {
   isLoadedReference,
   isManyToOneField,
   isOneToManyField,
+  isReactiveGetter,
   isReference,
   LoadHint,
   ManyToManyField,
@@ -24,6 +25,7 @@ import {
   OneToOneField,
   PolymorphicField,
   PrimaryKeyField,
+  ReactiveGetter,
   Reference,
 } from "joist-orm";
 import { Resolver } from "./context";
@@ -53,13 +55,15 @@ export type EntityResolver<T extends Entity> = {
           ? Resolver<T, Record<string, any>, U>
           : T[P] extends AsyncProperty<any, infer V>
             ? Resolver<T, Record<string, any>, V>
-            : T[P] extends Promise<infer V>
+            : T[P] extends ReactiveGetter<any, infer V>
               ? Resolver<T, Record<string, any>, V>
-              : T[P] extends () => Promise<infer V>
+              : T[P] extends Promise<infer V>
                 ? Resolver<T, Record<string, any>, V>
-                : T[P] extends () => infer V
+                : T[P] extends () => Promise<infer V>
                   ? Resolver<T, Record<string, any>, V>
-                  : Resolver<T, Record<string, any>, T[P]>;
+                  : T[P] extends () => infer V
+                    ? Resolver<T, Record<string, any>, V>
+                    : Resolver<T, Record<string, any>, T[P]>;
 };
 
 /**
@@ -159,6 +163,8 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
       if (typeof property === "function") {
         // Support methods like `async name(): Promise<string>`
         return (property as Function).apply(entity);
+      } else if (isReactiveGetter(property)) {
+        return property.get;
       } else if (isReference(property) || isCollection(property) || isAsyncProperty(property)) {
         if (isLoadedReference(property) || isLoadedCollection(property) || isLoadedAsyncProperty(property)) {
           return property.get;

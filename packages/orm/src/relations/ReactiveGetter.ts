@@ -54,3 +54,8 @@ export class ReactiveGetterImpl<T extends Entity, const H extends ShallowReactiv
 
   [AsyncPropertyT] = undefined as any as T;
 }
+
+/** Type guard utility for determining if an entity field is an AsyncProperty. */
+export function isReactiveGetter(maybeReactiveGetter: any): maybeReactiveGetter is ReactiveGetter<any, any> {
+  return maybeReactiveGetter instanceof ReactiveGetterImpl;
+}

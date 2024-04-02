@@ -88,6 +88,7 @@ describe("Entity", () => {
            "books": {
              "comments": "text",
            },
+           "hasLowerCaseFirstName": {},
          },
        },
        "booksTitles": {
@@ -113,6 +114,7 @@ describe("Entity", () => {
          },
          "undefined": null,
        },
+       "hasLowerCaseFirstName": {},
        "latestComment": {
          "loadPromise": undefined,
          "opts": {

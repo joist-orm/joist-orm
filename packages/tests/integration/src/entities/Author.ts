@@ -4,6 +4,7 @@ import {
   Collection,
   Loaded,
   ReactiveField,
+  ReactiveGetter,
   ReactiveReference,
   Reference,
   cannotBeUpdated,
@@ -14,6 +15,7 @@ import {
   hasOneDerived,
   hasReactiveAsyncProperty,
   hasReactiveField,
+  hasReactiveGetter,
   hasReactiveReference,
   isDefined,
   withLoaded,
@@ -188,7 +190,8 @@ export class Author extends AuthorCodegen {
   /** Example of a derived async property that can be calculated via a populate hint through a polymorphic reference. */
   readonly bookComments: ReactiveField<Author, string> = hasReactiveField(
     "bookComments",
-    { books: { comments: "text" } },
+    // ...and throw in hasLowerCaseFirstName to test ReactiveGetters
+    { books: { comments: "text" }, hasLowerCaseFirstName: {} },
     (a) => {
       a.transientFields.bookCommentsCalcInvoked++;
       return a.books.get
@@ -246,6 +249,13 @@ export class Author extends AuthorCodegen {
   // explicitly called, vs. AsyncProperties that implicitly call `.get` whenever loaded.
   readonly booksTitles: AsyncMethod<Author, [], string> = hasAsyncMethod("books", (a) =>
     a.books.get.map((b) => b.title).join(", "),
+  );
+
+  // Example of a reactive getter that can always be gotten
+  readonly hasLowerCaseFirstName: ReactiveGetter<Author, boolean> = hasReactiveGetter(
+    "hasLowerCaseFirstName",
+    "firstName",
+    (a) => a.firstName.toLowerCase() === a.firstName,
   );
 }
 

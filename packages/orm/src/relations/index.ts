@@ -21,6 +21,7 @@ export {
   isPolymorphicReference,
 } from "./PolymorphicReference";
 export { ReactiveField, hasReactiveField, isReactiveField } from "./ReactiveField";
+export { ReactiveGetter, hasReactiveGetter } from "./ReactiveGetter";
 export { hasReactiveQueryField, isReactiveQueryField } from "./ReactiveQueryField";
 export { ReactiveReference, ReactiveReferenceImpl, hasReactiveReference } from "./ReactiveReference";
 export { LoadedReference, Reference, isLoadedReference, isReference } from "./Reference";

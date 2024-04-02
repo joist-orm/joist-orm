@@ -14,6 +14,7 @@ import {
   LoadedReference,
   ManyToManyCollection,
   OneToOneReference,
+  ReactiveGetter,
   Reference,
 } from "./relations";
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
@@ -22,7 +23,17 @@ import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
 import { fail, mergeNormalizedHints } from "./utils";
 
 /** The keys in `T` that rules & hooks can react to. */
-export type Reactable<T extends Entity> = FieldsOf<T> & Loadable<T> & SuffixedFieldsOf<T> & SuffixedLoadable<T>;
+export type Reactable<T extends Entity> = FieldsOf<T> &
+  Loadable<T> &
+  Gettable<T> &
+  SuffixedFieldsOf<T> &
+  SuffixedLoadable<T> &
+  SuffixedGettable<T>;
+
+type Gettable<T extends Entity> = {
+  -readonly [K in keyof T as GettableValue<T[K]> extends never ? never : K]: GettableValue<T[K]>;
+};
+type GettableValue<V> = V extends ReactiveGetter<any, infer P> ? P : never;
 
 /** The fields of `T` suffixed with `:ro` or `_ro`. */
 type SuffixedFieldsOf<T extends Entity> = {
@@ -31,6 +42,10 @@ type SuffixedFieldsOf<T extends Entity> = {
 
 type SuffixedLoadable<T extends Entity> = {
   [K in keyof Loadable<T> & string as `${K}${SuffixSeperator}ro`]: Loadable<T>[K];
+};
+
+type SuffixedGettable<T extends Entity> = {
+  [K in keyof Gettable<T> & string as `${K}${SuffixSeperator}ro`]: Gettable<T>[K];
 };
 
 /**

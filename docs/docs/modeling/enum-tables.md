@@ -1,6 +1,6 @@
 ---
 title: Enums
-sidebar_position: 6
+sidebar_position: 2
 ---
 
 Joist supports enum tables for modeling fields that can be set to a fixed number of values (i.e. a `state` field that can be `OPEN` or `CLOSED`, or a field `status` field that can be `ACTIVE`, `DRAFT`, `PENDING`, etc.)

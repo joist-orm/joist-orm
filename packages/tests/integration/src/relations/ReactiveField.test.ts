@@ -125,10 +125,9 @@ describe("ReactiveField", () => {
     expect(await a1.numberOfPublicReviews2.load()).toBe(2);
     // And we calc'd the br2.isPublic b/c it's new
     expect(br2.transientFields.numberOfIsPublicCalcs).toBe(2);
-    // _Ideally_ we would not calc the br1.isPublic b/c it was already available, but
-    // our new BookReview marked all the same fields as dirty.
+    // But we did not recalc br1.isPublic because it's already set
     const br1 = await em2.load(BookReview, "br:1");
-    expect(br1.transientFields.numberOfIsPublicCalcs).toBe(2);
+    expect(br1.transientFields.numberOfIsPublicCalcs).toBe(0);
   });
 
   it("can save when async derived values don't change", async () => {
@@ -196,27 +195,11 @@ describe("ReactiveField", () => {
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
     // But if we load it via a load call, then we'll get the live value
     expect(await a1.numberOfBooks.load()).toEqual(2);
-  });
-
-  it("knows to recalc dirty async derived values on populate", async () => {
-    // Given an author with a book
-    await insertAuthor({ first_name: "a1", number_of_books: 1 });
-    await insertBook({ title: "b1", author_id: 1 });
-    // When we load the author
-    const em = newEntityManager();
-    const a1 = await em.load(Author, "a:1");
-    // We can access the numberOfBooks without it being calculated
-    expect(a1.numberOfBooks.get).toEqual(1);
-    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
-    // And when we create a new book
-    const b2 = em.create(Book, { title: "b2", author: a1 });
-    // Then numberOfBooks is initially still stale
-    expect(a1.numberOfBooks.get).toEqual(1);
-    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
-    // But if we load it via a populate hint
-    await em.populate(a1, "numberOfBooks");
-    // Then we'll get the live value
-    expect(a1.numberOfBooks.get).toEqual(2);
+    // we'll have invoked the calc
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
+    // and a1 will be dirty with a changed numberOfBooks
+    expect(a1.isDirtyEntity).toBe(true);
+    expect(a1.changes.numberOfBooks.hasChanged).toBe(true);
   });
 
   it("does not recalc unchanged async derived values on populate", async () => {

@@ -1,3 +1,10 @@
+## [1.152.2](https://github.com/joist-orm/joist-orm/compare/v1.152.1...v1.152.2) (2024-04-04)
+
+
+### Bug Fixes
+
+* Updated populate to never load set reactive fields to avoid overly eagerly loading large amounts of data ([#1015](https://github.com/joist-orm/joist-orm/issues/1015)) ([2c6e37d](https://github.com/joist-orm/joist-orm/commit/2c6e37dd9c7448e442038ac8aebfa0ee4941b502))
+
 ## [1.152.1](https://github.com/joist-orm/joist-orm/compare/v1.152.0...v1.152.1) (2024-04-02)
 
 

@@ -25,7 +25,7 @@ describe("ReactiveField", () => {
     expect(await a.numberOfPublicReviews.load({ forceReload: true })).toBe(1);
   });
 
-  it("can have async derived values", async () => {
+  it("calcs reactive fields on create", async () => {
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
     new Book(em, { title: "b1", author: a1 });
@@ -35,7 +35,7 @@ describe("ReactiveField", () => {
     expect(rows[0].number_of_books).toEqual(1);
   });
 
-  it("can have async derived enums", async () => {
+  it("calcs reactive enums on create", async () => {
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
     new Book(em, { title: "b1", author: a1 });
@@ -45,13 +45,13 @@ describe("ReactiveField", () => {
     expect(rows[0].range_of_books).toEqual(1);
   });
 
-  it("can access async derived values if loaded", async () => {
+  it("can access reactive fields immediately without loading", async () => {
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
     expect(a1.numberOfBooks.get).toEqual(0);
   });
 
-  it("has async derived values automatically recalced", async () => {
+  it("recalcs when o2m relation updated", async () => {
     const em = newEntityManager();
     // Given an author with initially no books
     const a1 = new Author(em, { firstName: "a1" });
@@ -60,7 +60,7 @@ describe("ReactiveField", () => {
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
     // When we add a book
     new Book(em, { title: "b1", author: a1 });
-    // Then the author derived value is re-derived
+    // Then the author ReactiveField is recaled
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(1);
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(4);
@@ -68,7 +68,7 @@ describe("ReactiveField", () => {
     expect(rows[0].number_of_books).toEqual(1);
   });
 
-  it("has async derived values automatically updated when dependency recalculated", async () => {
+  it("can em.recalc to update a stale value", async () => {
     const em = newEntityManager();
     // Given an author with a book that has a review that should be public
     const a1 = new Author(em, { firstName: "a1", age: 22, graduated: new Date() });
@@ -105,10 +105,10 @@ describe("ReactiveField", () => {
     expect(a2.transientFields.beforeFlushRan).toBe(true);
   });
 
-  it("can load derived fields that depend on derived fields", async () => {
+  it("does not transitively load reactive fields used by other reactive fields", async () => {
     {
       const em = newEntityManager();
-      // Given an author with a derived field, numberOfPublicReviews2, that uses a derived field on BookReview, isPublic
+      // Given an author with a RF, numberOfPublicReviews2, that uses a RF on BookReview, isPublic
       const a1 = new Author(em, { firstName: "a1", age: 22, graduated: new Date() });
       const b1 = newBook(em, { author: a1 });
       const br = newBookReview(em, { rating: 1, book: b1 });
@@ -130,7 +130,7 @@ describe("ReactiveField", () => {
     expect(br1.transientFields.numberOfIsPublicCalcs).toBe(0);
   });
 
-  it("can save when async derived values don't change", async () => {
+  it("can save when reactive fields values don't change", async () => {
     const em = newEntityManager();
     // Given an author with a book
     const a1 = new Author(em, { firstName: "a1" });
@@ -147,7 +147,7 @@ describe("ReactiveField", () => {
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(3);
   });
 
-  it("can force async derived values to recalc", async () => {
+  it("can recalc RFs with em.recalc", async () => {
     const em = newEntityManager();
     // Given an author with a book
     const a1 = newAuthor(em, { firstName: "a1" });
@@ -162,7 +162,7 @@ describe("ReactiveField", () => {
     expect(a1.numberOfBooks.get).toEqual(0);
   });
 
-  it("can force sync derived values to recalc", async () => {
+  it("can recalc getters with em.recalc", async () => {
     // Given an author
     const em = newEntityManager();
     newAuthor(em);
@@ -178,7 +178,7 @@ describe("ReactiveField", () => {
     expect(await select("authors")).toMatchObject([{ initials: "a" }]);
   });
 
-  it("can force async derived values to recalc on load", async () => {
+  it("might be stale until being loaded by calling .load()", async () => {
     // Given an author with a book
     await insertAuthor({ first_name: "a1", number_of_books: 1 });
     await insertBook({ title: "b1", author_id: 1 });
@@ -202,7 +202,7 @@ describe("ReactiveField", () => {
     expect(a1.changes.numberOfBooks.hasChanged).toBe(true);
   });
 
-  it("does not recalc unchanged async derived values on populate", async () => {
+  it("is not loaded by em.populate() calls", async () => {
     // Given an author with a book
     await insertAuthor({ first_name: "a1", number_of_books: 1 });
     await insertBook({ title: "b1", author_id: 1 });
@@ -212,74 +212,77 @@ describe("ReactiveField", () => {
     // We can access the numberOfBooks without it being calculated
     expect(a1.numberOfBooks.get).toEqual(1);
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
-    // And if we load it via a populate hint
+    // And if we load it via a populate hint (i.e. some other RF that is including
+    // it as a dependency, without really wanting it to be fully loaded & recalced).
     await em.populate(a1, "numberOfBooks");
     // Then we still get the existing/correct value and did not recalc it
     expect(a1.numberOfBooks.get).toEqual(1);
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
   });
 
-  it("has async derived values triggered on both old and new value", async () => {
-    const em = newEntityManager();
-    // Given two authors
-    const a1 = new Author(em, { firstName: "a1" });
-    const a2 = new Author(em, { firstName: "a2" });
-    //  And a book that is originally associated with a1
-    const b1 = new Book(em, { title: "b1", author: a1 });
-    await em.flush();
-    expect(a1.numberOfBooks.get).toEqual(1);
-    expect(a2.numberOfBooks.get).toEqual(0);
-    // When we move the book to a2
-    b1.author.set(a2);
-    await em.flush();
-    // Then both derived values got updated
-    expect(a1.numberOfBooks.get).toEqual(0);
-    expect(a2.numberOfBooks.get).toEqual(1);
+  describe("dirty tracking", () => {
+    it("crawls both old & new values while reversing m2os", async () => {
+      const em = newEntityManager();
+      // Given two authors
+      const a1 = new Author(em, { firstName: "a1" });
+      const a2 = new Author(em, { firstName: "a2" });
+      //  And a book that is originally associated with a1
+      const b1 = new Book(em, { title: "b1", author: a1 });
+      await em.flush();
+      expect(a1.numberOfBooks.get).toEqual(1);
+      expect(a2.numberOfBooks.get).toEqual(0);
+      // When we move the book to a2
+      b1.author.set(a2);
+      await em.flush();
+      // Then both derived values got updated
+      expect(a1.numberOfBooks.get).toEqual(0);
+      expect(a2.numberOfBooks.get).toEqual(1);
+    });
+
+    it("crawls unloaded old values while reversing m2os", async () => {
+      const em = newEntityManager();
+      // Given a book & author already in the database
+      await insertAuthor({ first_name: "a1", number_of_books: 1 });
+      await insertBook({ title: "b1", author_id: 1 });
+      // When we make a new author for b1 (and a1 is not even in the UnitOfWork)
+      const a2 = new Author(em, { firstName: "a2" });
+      const b1 = await em.load(Book, "1");
+      b1.author.set(a2);
+      await em.flush();
+      // Then both authors derived values got updated
+      const rows = await select("authors");
+      expect(rows[0]).toMatchObject({ id: 1, number_of_books: 0 });
+      expect(rows[1]).toMatchObject({ id: 2, number_of_books: 1 });
+    });
+
+    it("crawls down through o2ms", async () => {
+      // Given an author is 21 but not graduated (so BookReview won't be published)
+      await insertAuthor({ first_name: "a1", age: 21 });
+      await insertBook({ title: "b1", author_id: 1 });
+      // And a new book review is created
+      const em = newEntityManager();
+      const b1 = await em.load(Book, "1");
+      em.create(BookReview, { rating: 1, book: b1 });
+      await em.flush();
+      // Then the review is initially private
+      const rows = await select("book_reviews");
+      expect(rows[0].is_public).toBe(false);
+
+      // And when the author graduates
+      const em2 = newEntityManager();
+      const a1 = await em2.load(Author, "1");
+      a1.graduated = new Date();
+      await em2.flush();
+      // Then the review is now public
+      const rows2 = await select("book_reviews");
+      expect(rows2[0].is_public).toBe(true);
+    });
   });
 
-  it("has async derived values triggered on both lazy-loaded old and new value", async () => {
-    const em = newEntityManager();
-    // Given a book & author already in the database
-    await insertAuthor({ first_name: "a1", number_of_books: 1 });
-    await insertBook({ title: "b1", author_id: 1 });
-    // When we make a new author for b1 (and a1 is not even in the UnitOfWork)
-    const a2 = new Author(em, { firstName: "a2" });
-    const b1 = await em.load(Book, "1");
-    b1.author.set(a2);
-    await em.flush();
-    // Then both authors derived values got updated
-    const rows = await select("authors");
-    expect(rows[0]).toMatchObject({ id: 1, number_of_books: 0 });
-    expect(rows[1]).toMatchObject({ id: 2, number_of_books: 1 });
-  });
-
-  it("cannot access async derived value before flush", async () => {
+  it("cannot access RFs before flush", async () => {
     await insertAuthor({ first_name: "a1", number_of_books: 1 });
     const em = newEntityManager();
     const br1 = newBookReview(em, { book: { author: "a:1" } });
     expect(() => br1.isPublic.get).toThrow("isPublic has not been derived yet");
-  });
-
-  it("can derive async fields across multiple hops", async () => {
-    // Given an author is 21 but not graduated (so won't be published)
-    await insertAuthor({ first_name: "a1", age: 21 });
-    await insertBook({ title: "b1", author_id: 1 });
-    // And a new book review is created
-    const em = newEntityManager();
-    const b1 = await em.load(Book, "1");
-    em.create(BookReview, { rating: 1, book: b1 });
-    await em.flush();
-    // Then the review is initially private
-    const rows = await select("book_reviews");
-    expect(rows[0].is_public).toBe(false);
-
-    // And when the author graduates
-    const em2 = newEntityManager();
-    const a1 = await em2.load(Author, "1");
-    a1.graduated = new Date();
-    await em2.flush();
-    // Then the review is now public
-    const rows2 = await select("book_reviews");
-    expect(rows2[0].is_public).toBe(true);
   });
 });

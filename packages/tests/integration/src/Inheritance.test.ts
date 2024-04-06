@@ -29,7 +29,7 @@ import {
   newUser,
 } from "./entities";
 
-import { newEntityManager, testDriver } from "@src/testEm";
+import { newEntityManager, queries, resetQueryCount, testDriver } from "@src/testEm";
 import { jan1 } from "joist-orm";
 
 describe("Inheritance", () => {
@@ -382,5 +382,20 @@ describe("Inheritance", () => {
     await em.flush();
     // Then the book was not deleted
     expect(b.isDeletedEntity).toBe(false);
+  });
+
+  it("supports columns that are shared across subtypes", async () => {
+    await insertPublisher({ id: 1, name: "sp1", shared_column: "sp1" });
+    await insertLargePublisher({ id: 2, name: "lp1", shared_column: "lp1" });
+    await insertLargePublisher({ id: 3, name: "lp2" });
+    const em = newEntityManager();
+    resetQueryCount();
+    const [sp1, lp1, lp2] = await em.find(Publisher, {}, { orderBy: { id: "ASC" } });
+    expect((sp1 as SmallPublisher).sharedColumn).toBe("sp1");
+    expect((lp1 as LargePublisher).sharedColumn).toBe("lp1");
+    expect((lp2 as LargePublisher).sharedColumn).toBe(undefined);
+    expect(queries[0]).toMatchInlineSnapshot(
+      `"select p.*, p_s0.*, p_s1.*, p.id as id, COALESCE(p_s0.shared_column, p_s1.shared_column) as shared_column, CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class from publishers as p left outer join large_publishers as p_s0 on p.id = p_s0.id left outer join small_publishers as p_s1 on p.id = p_s1.id where p.deleted_at is null order by p.id ASC limit $1"`,
+    );
   });
 });

@@ -141,6 +141,7 @@
     "longitude",
     "name",
     "numberOfBookReviews",
+    "sharedColumn",
     "size",
     "tags",
     "tasks",
@@ -315,6 +316,7 @@
     "latitude",
     "longitude",
     "name",
+    "sharedColumn",
     "size",
     "type"
   ],
@@ -355,6 +357,7 @@
     "latitude",
     "longitude",
     "name",
+    "sharedColumn",
     "size",
     "type"
   ],
@@ -412,6 +415,7 @@
     "longitude",
     "name",
     "numberOfBookReviews",
+    "sharedColumn",
     "size",
     "tags",
     "tasks",

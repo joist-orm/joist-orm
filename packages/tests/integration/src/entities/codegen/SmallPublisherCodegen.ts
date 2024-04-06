@@ -55,11 +55,13 @@ export type SmallPublisherId = Flavor<string, SmallPublisher> & Flavor<string, "
 export interface SmallPublisherFields extends PublisherFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   city: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   allAuthorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
 }
 
 export interface SmallPublisherOpts extends PublisherOpts {
   city: string;
+  sharedColumn?: string | null;
   users?: User[];
 }
 
@@ -69,18 +71,21 @@ export interface SmallPublisherIdsOpts extends PublisherIdsOpts {
 
 export interface SmallPublisherFilter extends PublisherFilter {
   city?: ValueFilter<string, never>;
+  sharedColumn?: ValueFilter<string, null>;
   allAuthorNames?: ValueFilter<string, null>;
   users?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
 }
 
 export interface SmallPublisherGraphQLFilter extends PublisherGraphQLFilter {
   city?: ValueGraphQLFilter<string>;
+  sharedColumn?: ValueGraphQLFilter<string>;
   allAuthorNames?: ValueGraphQLFilter<string>;
   users?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
 }
 
 export interface SmallPublisherOrder extends PublisherOrder {
   city?: OrderBy;
+  sharedColumn?: OrderBy;
   allAuthorNames?: OrderBy;
 }
 
@@ -129,6 +134,14 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
 
   set city(city: string) {
     setField(this, "city", cleanStringValue(city));
+  }
+
+  get sharedColumn(): string | undefined {
+    return getField(this, "sharedColumn");
+  }
+
+  set sharedColumn(sharedColumn: string | undefined) {
+    setField(this, "sharedColumn", cleanStringValue(sharedColumn));
   }
 
   abstract readonly allAuthorNames: ReactiveField<SmallPublisher, string | undefined>;

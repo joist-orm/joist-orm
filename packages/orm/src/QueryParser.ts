@@ -881,21 +881,41 @@ export function addTablePerClassJoinsAndClassTag(
   // it as a filter, but we only need to do the subtype joins + selects
   // if this is the primary table
   if (isPrimary) {
+    // Watch for subTypes that share column names. It'd be great to do
+    // this statically at codegen time, like a meta.sharedSubtypeColumns.
+    const stColumns: { stAlias: string; columnName: string }[] = [];
+
     // When `.load(Publisher)` is called, join in sub tables like `SmallPublisher` and `LargePublisher`
     meta.subTypes.forEach((st, i) => {
-      selects.push(`${alias}_s${i}.*`);
+      const stAlias = `${alias}_s${i}`;
+      selects.push(`${stAlias}.*`);
       tables.push({
-        alias: `${alias}_s${i}`,
+        alias: stAlias,
         table: st.tableName,
         join: "outer",
         col1: kqDot(alias, "id"),
         col2: `${alias}_s${i}.id`,
         distinct: false,
       });
+      for (const field of Object.values(st.fields)) {
+        if (field.fieldName !== "id" && field.serde) {
+          for (const c of field.serde?.columns) {
+            stColumns.push({ stAlias, columnName: c.columnName });
+          }
+        }
+      }
     });
 
     // Nominate a specific `id` column to avoid ambiguity
     selects.push(`${kq(alias)}.id as id`);
+
+    // Add an explicit coalesce for shared columns
+    Object.values(groupBy(stColumns, (c) => c.columnName))
+      .filter((columns) => columns.length > 1)
+      .forEach((columns) => {
+        const { columnName } = columns[0];
+        selects.push(`COALESCE(${columns.map((c) => `${c.stAlias}.${columnName}`).join(", ")}) as ${columnName}`);
+      });
 
     // If our meta has no subtypes, we're a left type and don't need a __class
     const cases = meta.subTypes.map((st, i) => `WHEN ${alias}_s${i}.id IS NOT NULL THEN '${st.type}'`);

@@ -55,10 +55,12 @@ export type LargePublisherId = Flavor<string, LargePublisher> & Flavor<string, "
 
 export interface LargePublisherFields extends PublisherFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   country: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
 }
 
 export interface LargePublisherOpts extends PublisherOpts {
+  sharedColumn?: string | null;
   country?: string | null;
   critics?: Critic[];
   users?: User[];
@@ -70,18 +72,21 @@ export interface LargePublisherIdsOpts extends PublisherIdsOpts {
 }
 
 export interface LargePublisherFilter extends PublisherFilter {
+  sharedColumn?: ValueFilter<string, null>;
   country?: ValueFilter<string, null>;
   critics?: EntityFilter<Critic, CriticId, FilterOf<Critic>, null | undefined>;
   users?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
 }
 
 export interface LargePublisherGraphQLFilter extends PublisherGraphQLFilter {
+  sharedColumn?: ValueGraphQLFilter<string>;
   country?: ValueGraphQLFilter<string>;
   critics?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, null | undefined>;
   users?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
 }
 
 export interface LargePublisherOrder extends PublisherOrder {
+  sharedColumn?: OrderBy;
   country?: OrderBy;
 }
 
@@ -120,6 +125,14 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
 
   get idTaggedMaybe(): TaggedId | undefined {
     return getField(this, "id");
+  }
+
+  get sharedColumn(): string | undefined {
+    return getField(this, "sharedColumn");
+  }
+
+  set sharedColumn(sharedColumn: string | undefined) {
+    setField(this, "sharedColumn", cleanStringValue(sharedColumn));
   }
 
   get country(): string | undefined {

@@ -23,6 +23,7 @@ type SmallPublisher {
   numberOfBookReviews: Int
   tasks: [Task!]!
   deletedAt: DateTime
+  sharedColumn: String
 }
 
 input SaveSmallPublisherInput {
@@ -36,6 +37,7 @@ input SaveSmallPublisherInput {
   type: PublisherType
   groupId: ID
   deletedAt: DateTime
+  sharedColumn: String
 }
 
 type SaveSmallPublisherResult {

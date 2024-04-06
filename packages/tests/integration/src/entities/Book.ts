@@ -49,10 +49,21 @@ config.setDefault("notes", (b) => `Notes for ${b.title}`);
 config.setDefault("order", { author: "books" }, (b) => b.author.get?.books.get.length);
 
 /** Example of an asynchronous default that returns an entity. */
-config.setDefault("author", "title", async (b, { em }) => {
-  // See if we have an author with the same name as the book title
-  return em.findOne(Author, { lastName: b.title });
-});
+config.setDefault(
+  "author",
+  {
+    // Elaborate hint to test returning a Reacted<Author>
+    tags: { publishers: "authors" },
+    title: {},
+  },
+  async (b, { em }) => {
+    // Test returning a Reacted<Author> can pass type check
+    const maybeAuthor = b.tags.get[0]?.publishers.get[0]?.authors.get[0];
+    if (maybeAuthor) return maybeAuthor;
+    // See if we have an author with the same name as the book title
+    return em.findOne(Author, { lastName: b.title });
+  },
+);
 
 config.cascadeDelete("reviews");
 

@@ -89,7 +89,7 @@ export type PrimitiveField = {
   serde: FieldSerde;
   immutable: boolean;
   citext?: boolean;
-  hasConfigDefault?: boolean;
+  default?: "schema" | "config";
 };
 
 export type EnumField = {
@@ -101,7 +101,7 @@ export type EnumField = {
   enumDetailType: { getValues(): ReadonlyArray<unknown>; findById(id: any): unknown };
   serde: FieldSerde;
   immutable: boolean;
-  hasConfigDefault?: boolean;
+  default?: "schema" | "config";
 };
 
 export type OneToManyField = {
@@ -136,7 +136,7 @@ export type ManyToOneField = {
   serde: FieldSerde;
   immutable: boolean;
   derived: "async" | false;
-  hasConfigDefault?: boolean;
+  default?: "schema" | "config";
 };
 
 export type ManyToManyField = {

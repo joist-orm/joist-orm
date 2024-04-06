@@ -96,7 +96,6 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
                   ? code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}[]", true)`
                   : code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
     const extras = columnType === "citext" ? code`citext: true,` : "";
-    const maybeConfigDefault = p.hasConfigDefault ? code`hasConfigDefault: true,` : "";
     fields[fieldName] = code`
       {
         kind: "primitive",
@@ -109,13 +108,13 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         serde: ${serdeType},
         immutable: false,
         ${extras}
-        ${maybeConfigDefault}
+        ${maybeDefault(p)}
       }`;
   });
 
   // Treat native enums as primitives
-  dbMetadata.pgEnums.forEach(({ columnName, fieldName, notNull, dbType, hasConfigDefault }) => {
-    const maybeConfigDefault = hasConfigDefault ? code`hasConfigDefault: true,` : "";
+  dbMetadata.pgEnums.forEach((p) => {
+    const { columnName, fieldName, notNull, dbType } = p;
     fields[fieldName] = code`
       {
         kind: "primitive",
@@ -127,15 +126,14 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         type: "string",
         serde: new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${dbType}"),
         immutable: false,
-        ${maybeConfigDefault}
+        ${maybeDefault(p)}
       }`;
   });
 
   dbMetadata.enums.forEach((field) => {
-    const { fieldName, enumDetailType, notNull, isArray, columnName, columnType, derived, hasConfigDefault } = field;
+    const { fieldName, enumDetailType, notNull, isArray, columnName, columnType, derived } = field;
     const serdeType = isArray ? EnumArrayFieldSerde : EnumFieldSerde;
     const columnTypeWithArray = `${columnType}${isArray ? "[]" : ""}`;
-    const maybeConfigDefault = hasConfigDefault ? code`hasConfigDefault: true,` : "";
     fields[fieldName] = code`
       {
         kind: "enum",
@@ -146,15 +144,14 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         enumDetailType: ${enumDetailType},
         serde: new ${serdeType}("${fieldName}", "${columnName}", "${columnTypeWithArray}", ${enumDetailType}),
         immutable: false,
-        ${maybeConfigDefault}
+        ${maybeDefault(field)}
       }
     `;
   });
 
   dbMetadata.manyToOnes.forEach((m2o) => {
-    const { fieldName, columnName, notNull, otherEntity, otherFieldName, derived, dbType, hasConfigDefault } = m2o;
+    const { fieldName, columnName, notNull, otherEntity, otherFieldName, derived, dbType } = m2o;
     const otherTagName = config.entities[otherEntity.name].tag;
-    const maybeConfigDefault = hasConfigDefault ? code`hasConfigDefault: true,` : "";
     fields[fieldName] = code`
       {
         kind: "m2o",
@@ -166,7 +163,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         otherFieldName: "${otherFieldName}",
         serde: new ${KeySerde}("${otherTagName}", "${fieldName}", "${columnName}", "${dbType}"),
         immutable: false,
-        ${maybeConfigDefault}
+        ${maybeDefault(m2o)}
       }
     `;
   });
@@ -260,4 +257,8 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
   });
 
   return fields;
+}
+
+function maybeDefault(f: { hasConfigDefault: boolean; columnDefault?: any }): Code | "" {
+  return f.hasConfigDefault ? code`default: "config",` : f.columnDefault ? code`default: "schema",` : "";
 }

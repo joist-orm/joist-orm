@@ -160,8 +160,12 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
 function ensureDefaultsSet(metas: EntityMetadata[]): void {
   for (const meta of metas) {
     for (const field of Object.values(meta.fields)) {
-      if ("hasConfigDefault" in field && !hasDefaultValue(meta, field.fieldName)) {
-        throw new Error(`Field ${meta.type}.${field.fieldName} is missing config.setDefault call`);
+      const shouldBeConfigDefault = "default" in field && field.default === "config";
+      const wasConfigCalled = hasDefaultValue(meta, field.fieldName);
+      if (shouldBeConfigDefault && !wasConfigCalled) {
+        throw new Error(
+          `Field ${meta.type}.${field.fieldName} is configured with hasConfigDefault=true in joist-config but is missing a config.setDefault`,
+        );
       }
     }
   }

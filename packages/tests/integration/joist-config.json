@@ -29,7 +29,12 @@
     },
     "AuthorSchedule": { "tag": "authorSchedule" },
     "AuthorStat": { "tag": "as" },
-    "Book": { "fields": { "notes": { "hasConfigDefault": true } }, "orderBy": "title", "tag": "b" },
+    "Book": {
+      "fields": { "notes": { "hasConfigDefault": true }, "order": { "hasConfigDefault": true } },
+      "orderBy": "title",
+      "relations": { "author": { "hasConfigDefault": true } },
+      "tag": "b"
+    },
     "BookAdvance": { "tag": "ba" },
     "BookReview": { "fields": { "isPublic": { "derived": "async" }, "isTest": { "derived": "async" } }, "tag": "br" },
     "Child": { "tag": "child" },

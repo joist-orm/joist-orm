@@ -1,3 +1,10 @@
+## [1.152.3](https://github.com/joist-orm/joist-orm/compare/v1.152.2...v1.152.3) (2024-04-06)
+
+
+### Bug Fixes
+
+* Fix columns shared across CTI subtypes. ([#1020](https://github.com/joist-orm/joist-orm/issues/1020)) ([340e0c6](https://github.com/joist-orm/joist-orm/commit/340e0c6c2982fc5120ca10c5aa3bdd7f5c56e47b)), closes [#1019](https://github.com/joist-orm/joist-orm/issues/1019)
+
 ## [1.152.2](https://github.com/joist-orm/joist-orm/compare/v1.152.1...v1.152.2) (2024-04-04)
 
 

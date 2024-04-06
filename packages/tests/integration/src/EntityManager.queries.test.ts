@@ -816,7 +816,7 @@ describe("EntityManager.queries", () => {
     expect(pubs.length).toEqual(2);
 
     expect(parseFindQuery(pm, where)).toMatchObject({
-      selects: [`p.*`, "p_s0.*", "p_s1.*", `p.id as id`, expect.anything()],
+      selects: [`p.*`, "p_s0.*", "p_s1.*", `p.id as id`, expect.stringContaining("shared_column"), expect.anything()],
       tables: [{ alias: "p", table: "publishers", join: "primary" }, expect.anything(), expect.anything()],
       condition: {
         op: "and",
@@ -839,7 +839,14 @@ describe("EntityManager.queries", () => {
     expect(pubs.length).toEqual(2);
 
     expect(parseFindQuery(pm, where, opts)).toMatchObject({
-      selects: [`p.*`, "p_s0.*", "p_s1.*", `p.id as id`, expect.anything()],
+      selects: [
+        `p.*`,
+        "p_s0.*",
+        "p_s1.*",
+        `p.id as id`,
+        expect.stringContaining("shared_column"),
+        expect.stringContaining("__class"),
+      ],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
         { alias: "p_s0", table: "large_publishers", join: "outer", col1: "p.id", col2: "p_s0.id", distinct: false },
@@ -863,7 +870,15 @@ describe("EntityManager.queries", () => {
     expect(pubs.length).toEqual(2);
 
     expect(parseFindQuery(pm, where, opts)).toMatchObject({
-      selects: [`p.*`, "p_s0.*", "p_s1.*", `p.id as id`, expect.anything()],
+      selects: [
+        `p.*`,
+        "p_s0.*",
+        "p_s1.*",
+        `p.id as id`,
+
+        expect.stringContaining("shared_column"),
+        expect.stringContaining("__class"),
+      ],
       tables: [{ alias: "p", table: "publishers", join: "primary" }, expect.anything(), expect.anything()],
       condition: {
         op: "and",
@@ -889,7 +904,8 @@ describe("EntityManager.queries", () => {
         "p_s0.*",
         "p_s1.*",
         `p.id as id`,
-        "CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class",
+        expect.stringContaining("shared_column"),
+        expect.stringContaining("__class"),
       ],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
@@ -915,7 +931,14 @@ describe("EntityManager.queries", () => {
     expect(pubs[0].name).toEqual("p1");
 
     expect(parseFindQuery(pm, where, opts)).toMatchObject({
-      selects: [`p.*`, "p_s0.*", "p_s1.*", `p.id as id`, expect.anything()],
+      selects: [
+        `p.*`,
+        "p_s0.*",
+        "p_s1.*",
+        `p.id as id`,
+        expect.stringContaining("shared_column"),
+        expect.stringContaining("__class"),
+      ],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
         { alias: "p_s0", table: "large_publishers", join: "outer", col1: "p.id", col2: "p_s0.id", distinct: false },

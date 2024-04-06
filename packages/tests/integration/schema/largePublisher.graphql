@@ -23,6 +23,7 @@ type LargePublisher {
   numberOfBookReviews: Int
   tasks: [Task!]!
   deletedAt: DateTime
+  sharedColumn: String
 }
 
 input SaveLargePublisherInput {
@@ -36,6 +37,7 @@ input SaveLargePublisherInput {
   type: PublisherType
   groupId: ID
   deletedAt: DateTime
+  sharedColumn: String
 }
 
 type SaveLargePublisherResult {

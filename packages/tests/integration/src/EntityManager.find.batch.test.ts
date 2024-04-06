@@ -32,6 +32,7 @@ describe("EntityManager.find.batch", () => {
       [
         `WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) )`,
         ` SELECT array_agg(_find.tag) as _tags, p.*, p_s0.*, p_s1.*, p.id as id,`,
+        ` COALESCE(p_s0.shared_column, p_s1.shared_column) as shared_column,`,
         ` CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class`,
         ` FROM publishers as p`,
         ` LEFT OUTER JOIN large_publishers p_s0 ON p.id = p_s0.id`,

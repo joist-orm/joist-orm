@@ -61,10 +61,14 @@ export function up(b: MigrationBuilder): void {
   // Create two subclass tables
   createSubTable(b, "publishers", "small_publishers", {
     city: { type: "text", notNull: true },
+    // For testing columns shared between CTI subtypes
+    shared_column: { type: "text" },
     // Used to test reactive fields that only exist on a subtype
     all_author_names: { type: "text" },
   });
   createSubTable(b, "publishers", "large_publishers", {
+    // For testing columns shared between CTI subtypes
+    shared_column: { type: "text" },
     country: "text",
   });
 

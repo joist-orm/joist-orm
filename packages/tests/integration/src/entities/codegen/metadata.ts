@@ -547,6 +547,7 @@ export const largePublisherMeta: EntityMetadata<LargePublisher> = {
   tableName: "large_publishers",
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("p", "id", "id", "int"), immutable: true },
+    "sharedColumn": { kind: "primitive", fieldName: "sharedColumn", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("sharedColumn", "shared_column", "text"), immutable: false },
     "country": { kind: "primitive", fieldName: "country", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("country", "country", "text"), immutable: false },
     "critics": { kind: "o2m", fieldName: "critics", fieldIdName: "criticIds", required: false, otherMetadata: () => criticMeta, otherFieldName: "favoriteLargePublisher", serde: undefined, immutable: false },
     "users": { kind: "o2m", fieldName: "users", fieldIdName: "userIds", required: false, otherMetadata: () => userMeta, otherFieldName: "favoritePublisher", serde: undefined, immutable: false },
@@ -696,6 +697,7 @@ export const smallPublisherMeta: EntityMetadata<SmallPublisher> = {
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("p", "id", "id", "int"), immutable: true },
     "city": { kind: "primitive", fieldName: "city", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("city", "city", "text"), immutable: false },
+    "sharedColumn": { kind: "primitive", fieldName: "sharedColumn", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("sharedColumn", "shared_column", "text"), immutable: false },
     "allAuthorNames": { kind: "primitive", fieldName: "allAuthorNames", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("allAuthorNames", "all_author_names", "text"), immutable: false },
     "users": { kind: "o2m", fieldName: "users", fieldIdName: "userIds", required: false, otherMetadata: () => userMeta, otherFieldName: "favoritePublisher", serde: undefined, immutable: false },
   },

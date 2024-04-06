@@ -71,7 +71,7 @@ export function insertBook(row: {
   deleted_at?: Date;
   order?: number;
 }) {
-  return testDriver.insert("books", row);
+  return testDriver.insert("books", { notes: "notes", ...row });
 }
 
 export function insertComment(row: {

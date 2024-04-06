@@ -1,3 +1,10 @@
+## [1.153.1](https://github.com/joist-orm/joist-orm/compare/v1.153.0...v1.153.1) (2024-04-06)
+
+
+### Bug Fixes
+
+* Update setDefault to allow returning a Reacted entity. ([#1022](https://github.com/joist-orm/joist-orm/issues/1022)) ([8ffcb18](https://github.com/joist-orm/joist-orm/commit/8ffcb18bd5e68bed66205ed9f9aab594e7ed5f61)), closes [#1018](https://github.com/joist-orm/joist-orm/issues/1018)
+
 # [1.153.0](https://github.com/joist-orm/joist-orm/compare/v1.152.3...v1.153.0) (2024-04-06)
 
 

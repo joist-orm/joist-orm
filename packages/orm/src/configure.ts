@@ -13,16 +13,43 @@ import { isCannotBeUpdatedRule } from "./rules";
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
 const tableToMetaMap = new Map<string, EntityMetadata>();
 
-/** Processes the metas for rules/reactivity based on the user's `config.*` calls. */
+/** Performs our boot-time initialization, i.e. hooking up reactivity. */
 export function configureMetadata(metas: EntityMetadata[]): void {
   setBooted();
+  populateConstructorMaps(metas);
+  setImmutableFields(metas);
+  hookUpBaseTypeAndSubTypes(metas);
+  reverseIndexReactivity(metas);
+}
 
-  // Do a first pass to flag immutable fields (which we'll use in reverseReactiveHint)
-  metas.forEach((meta) => {
+export function getConstructorFromTaggedId(id: TaggedId): MaybeAbstractEntityConstructor<any> {
+  const tag = tagFromId(id);
+  return tagToConstructorMap.get(tag) ?? fail(`Unknown tag: "${tag}" `);
+}
+
+export function getMetadataForTable(tableName: string): EntityMetadata {
+  return tableToMetaMap.get(tableName) ?? fail(`Unknown table ${tableName}`);
+}
+
+export function maybeGetConstructorFromReference(
+  value: string | Entity | Reference<any, any, any> | undefined,
+): MaybeAbstractEntityConstructor<any> | undefined {
+  const id = maybeResolveReferenceToId(value);
+  return id ? getConstructorFromTaggedId(id) : undefined;
+}
+
+function populateConstructorMaps(metas: EntityMetadata[]): void {
+  for (const meta of metas) {
     // Add each (root) constructor into our tag -> constructor map for future lookups
     if (!meta.baseType) tagToConstructorMap.set(meta.tagName, meta.cstr);
     // Same for tables, but include subclass tables
     tableToMetaMap.set(meta.tableName, meta);
+  }
+}
+
+// Do a first pass to flag immutable fields (which we'll use in reverseReactiveHint)
+function setImmutableFields(metas: EntityMetadata[]): void {
+  for (const meta of metas) {
     // Scan rules for cannotBeUpdated so that we can set `field.immutable`
     meta.config.__data.rules.forEach((rule) => {
       if (isCannotBeUpdatedRule(rule.fn) && rule.fn.immutable) {
@@ -33,8 +60,11 @@ export function configureMetadata(metas: EntityMetadata[]): void {
         field.immutable = true;
       }
     });
-  });
+  }
+}
 
+// Setup subTypes/baseTypes
+function hookUpBaseTypeAndSubTypes(metas: EntityMetadata[]): void {
   const metaByName = metas.reduce(
     (acc, m) => {
       acc[m.type] = m;
@@ -42,9 +72,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
     },
     {} as Record<string, EntityMetadata>,
   );
-
-  // Setup subTypes/baseTypes
-  metas.forEach((m) => {
+  for (const m of metas) {
     // This is basically m.fields.mapValues to assign the primary alias
     m.allFields = Object.fromEntries(
       Object.entries(m.fields).map(([name, field]) => [name, { ...field, aliasSuffix: "" }]),
@@ -68,10 +96,12 @@ export function configureMetadata(metas: EntityMetadata[]): void {
         m.allFields[name] = { ...field, aliasSuffix: b.inheritanceType === "cti" ? "_b0" : "" };
       });
     }
-  });
+  }
+}
 
-  // Now hook up our reactivity
-  metas.forEach((meta) => {
+// Now hook up our reactivity
+function reverseIndexReactivity(metas: EntityMetadata[]): void {
+  for (const meta of metas) {
     // Look for reactive validation rules to reverse
     meta.config.__data.rules.forEach(({ name, hint, fn }) => {
       if (hint) {
@@ -121,21 +151,5 @@ export function configureMetadata(metas: EntityMetadata[]): void {
           });
         }
       });
-  });
-}
-
-export function getConstructorFromTaggedId(id: TaggedId): MaybeAbstractEntityConstructor<any> {
-  const tag = tagFromId(id);
-  return tagToConstructorMap.get(tag) ?? fail(`Unknown tag: "${tag}" `);
-}
-
-export function getMetadataForTable(tableName: string): EntityMetadata {
-  return tableToMetaMap.get(tableName) ?? fail(`Unknown table ${tableName}`);
-}
-
-export function maybeGetConstructorFromReference(
-  value: string | Entity | Reference<any, any, any> | undefined,
-): MaybeAbstractEntityConstructor<any> | undefined {
-  const id = maybeResolveReferenceToId(value);
-  return id ? getConstructorFromTaggedId(id) : undefined;
+  }
 }

@@ -23,6 +23,7 @@ const fieldConfig = z
     stiDiscriminator: z.optional(z.record(z.string(), z.string())),
     stiType: z.optional(z.string()),
     stiNotNull: z.optional(z.boolean()),
+    hasDefault: z.optional(z.boolean()),
   })
   .strict();
 

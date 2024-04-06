@@ -1,3 +1,10 @@
+## [1.153.2](https://github.com/joist-orm/joist-orm/compare/v1.153.1...v1.153.2) (2024-04-06)
+
+
+### Bug Fixes
+
+* Restore maybeGetConstructor export. ([#1023](https://github.com/joist-orm/joist-orm/issues/1023)) ([de538cd](https://github.com/joist-orm/joist-orm/commit/de538cdc006722d4dc1755aa84ddea49fadb724b))
+
 ## [1.153.1](https://github.com/joist-orm/joist-orm/compare/v1.153.0...v1.153.1) (2024-04-06)
 
 

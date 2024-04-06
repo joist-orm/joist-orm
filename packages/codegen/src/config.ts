@@ -23,7 +23,8 @@ const fieldConfig = z
     stiDiscriminator: z.optional(z.record(z.string(), z.string())),
     stiType: z.optional(z.string()),
     stiNotNull: z.optional(z.boolean()),
-    hasDefault: z.optional(z.boolean()),
+    /** Whether the user will configure a default value for this field via `config.setDefault`. */
+    hasConfigDefault: z.optional(z.boolean()),
   })
   .strict();
 
@@ -204,6 +205,10 @@ export function superstructConfig(config: Config, entity: Entity, fieldName: str
 
 export function zodSchemaConfig(config: Config, entity: Entity, fieldName: string): string | undefined {
   return config.entities[entity.name]?.fields?.[fieldName]?.zodSchema;
+}
+
+export function hasConfigDefault(config: Config, entity: Entity, fieldName: string): boolean {
+  return config.entities[entity.name]?.fields?.[fieldName]?.hasConfigDefault ?? false;
 }
 
 export function fieldTypeConfig(config: Config, entity: Entity, fieldName: string): string | undefined {

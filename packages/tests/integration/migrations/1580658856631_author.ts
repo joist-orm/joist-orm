@@ -164,7 +164,8 @@ export function up(b: MigrationBuilder): void {
     author_id: foreignKey("authors", { notNull: true }),
     // for testing columns that are keywords (and testing default values)
     order: { type: "integer", notNull: true, default: 1 },
-    notes: { type: "text", notNull: false },
+    // for testing `NOT NULL` fields with `config.setDefault`s are not required
+    notes: { type: "text", notNull: true },
     deleted_at: { type: "timestamptz", notNull: false },
   });
 

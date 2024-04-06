@@ -2,6 +2,7 @@ import { Entity } from "./Entity";
 import { MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { setBooted } from "./config";
+import { hasDefaultValue } from "./defaults";
 import { getFakeInstance } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { reverseReactiveHint } from "./reactiveHints";
@@ -17,6 +18,7 @@ const tableToMetaMap = new Map<string, EntityMetadata>();
 export function configureMetadata(metas: EntityMetadata[]): void {
   setBooted();
   populateConstructorMaps(metas);
+  ensureDefaultsSet(metas);
   setImmutableFields(metas);
   hookUpBaseTypeAndSubTypes(metas);
   reverseIndexReactivity(metas);
@@ -151,5 +153,16 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
           });
         }
       });
+  }
+}
+
+/** If the joist-config.json says a field has a `setDefault` call, make sure it does. */
+function ensureDefaultsSet(metas: EntityMetadata[]): void {
+  for (const meta of metas) {
+    for (const field of Object.values(meta.fields)) {
+      if ("hasConfigDefault" in field && !hasDefaultValue(meta, field.fieldName)) {
+        throw new Error(`Field ${meta.type}.${field.fieldName} is missing config.setDefault call`);
+      }
+    }
   }
 }

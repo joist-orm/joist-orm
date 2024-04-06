@@ -7,6 +7,7 @@ import {
   Config,
   fieldTypeConfig,
   getTimestampConfig,
+  hasConfigDefault,
   isFieldIgnored,
   isGetterField,
   isLargeCollection,
@@ -109,6 +110,7 @@ export type PrimitiveField = Field & {
   zodSchema: Import | undefined;
   customSerde: Import | undefined;
   isArray: boolean;
+  hasConfigDefault: boolean;
 };
 
 export type EnumField = Field & {
@@ -124,6 +126,7 @@ export type EnumField = Field & {
   enumRows: EnumRow[];
   notNull: boolean;
   isArray: boolean;
+  hasConfigDefault: boolean;
 };
 
 export type PgEnumField = Field & {
@@ -137,6 +140,7 @@ export type PgEnumField = Field & {
   enumType: Import;
   enumValues: string[];
   notNull: boolean;
+  hasConfigDefault: boolean;
 };
 
 /** I.e. a `Book.author` reference pointing to an `Author`. */
@@ -149,6 +153,7 @@ export type ManyToOneField = Field & {
   notNull: boolean;
   isDeferredAndDeferrable: boolean;
   derived: "async" | false;
+  hasConfigDefault: boolean;
 };
 
 /** I.e. a `Author.books` collection. */
@@ -420,6 +425,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
     zodSchema: fieldType === "Object" && zodSchema ? Import.from(zodSchema) : undefined,
     customSerde: customSerde ? serdeType(customSerde) : undefined,
     isArray: array,
+    hasConfigDefault: hasConfigDefault(config, entity, fieldName),
   };
 }
 
@@ -469,6 +475,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
     ignore,
     enumRows: enums[r.targetTable.name].rows,
     isArray: false,
+    hasConfigDefault: hasConfigDefault(config, entity, fieldName),
   };
 }
 
@@ -499,6 +506,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
     ignore,
     enumRows: enums[enumTable].rows,
     isArray: true,
+    hasConfigDefault: hasConfigDefault(config, entity, fieldName),
   };
 }
 
@@ -518,6 +526,7 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
     notNull: column.notNull,
     columnDefault: column.default,
     ignore: isFieldIgnored(config, entity, fieldName, column.notNull, column.default !== null),
+    hasConfigDefault: hasConfigDefault(config, entity, fieldName),
   };
 }
 
@@ -546,6 +555,7 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
     derived,
     dbType,
     isDeferredAndDeferrable,
+    hasConfigDefault: hasConfigDefault(config, entity, fieldName),
   };
 }
 

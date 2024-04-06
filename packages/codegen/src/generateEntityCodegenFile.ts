@@ -1,7 +1,16 @@
 import { camelCase, pascalCase } from "change-case";
 import { Code, code, imp, joinCode } from "ts-poet";
-import { DbMetadata, EntityDbMetadata, EnumField, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
-import { Config } from "./config";
+import {
+  DbMetadata,
+  Entity,
+  EntityDbMetadata,
+  EnumField,
+  ManyToOneField,
+  PgEnumField,
+  PrimitiveField,
+  PrimitiveTypescriptType,
+} from "./EntityDbMetadata";
+import { Config, hasConfigDefault } from "./config";
 import { getStiEntities } from "./index";
 import { keywords } from "./keywords";
 import {
@@ -564,7 +573,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   `;
 }
 
-function fieldHasDefaultValue(field: PrimitiveField | EnumField): boolean {
+function fieldHasDefaultValue(field: PrimitiveField | EnumField | PgEnumField): boolean {
   let { columnDefault } = field;
   // If there's no default at all, return false
   if (columnDefault === null) {
@@ -651,7 +660,7 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
     if (derived) {
       return code``;
     }
-    return code`${fieldName}${maybeOptionalOrDefault(field)}: ${fieldType}${maybeUnionNull(notNull)};`;
+    return code`${fieldName}${maybeOptionalOrDefault(config, meta.entity, field)}: ${fieldType}${maybeUnionNull(notNull)};`;
   });
   const enums = meta.enums.map((field) => {
     const { fieldName, enumType, notNull, isArray } = field;
@@ -662,11 +671,12 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
       // Arrays are always optional and we'll default to `[]`
       return code`${fieldName}?: ${enumType}[];`;
     } else {
-      return code`${fieldName}${maybeOptionalOrDefault(field)}: ${enumType}${maybeUnionNull(notNull)};`;
+      return code`${fieldName}${maybeOptionalOrDefault(config, meta.entity, field)}: ${enumType}${maybeUnionNull(notNull)};`;
     }
   });
-  const pgEnums = meta.pgEnums.map(({ fieldName, enumType, notNull }) => {
-    return code`${fieldName}${maybeOptional(notNull)}: ${enumType}${maybeUnionNull(notNull)};`;
+  const pgEnums = meta.pgEnums.map((field) => {
+    const { fieldName, enumType, notNull } = field;
+    return code`${fieldName}${maybeOptionalOrDefault(config, meta.entity, field)}: ${enumType}${maybeUnionNull(notNull)};`;
   });
   const m2o = meta.manyToOnes
     .filter(({ derived }) => !derived)
@@ -840,8 +850,17 @@ function maybeOptional(notNull: boolean): string {
   return notNull ? "" : "?";
 }
 
-function maybeOptionalOrDefault(field: PrimitiveField | EnumField): string {
-  return field.notNull && !fieldHasDefaultValue(field) ? "" : "?";
+/** Makes the field required if there is a `NOT NULL` and no db-or-config default. */
+function maybeOptionalOrDefault(
+  config: Config,
+  entity: Entity,
+  field: PrimitiveField | EnumField | PgEnumField | ManyToOneField,
+): string {
+  return field.notNull &&
+    !(field.kind !== "m2o" && fieldHasDefaultValue(field)) &&
+    !hasConfigDefault(config, entity, field.fieldName)
+    ? ""
+    : "?";
 }
 
 function maybeUnionNull(notNull: boolean): string {

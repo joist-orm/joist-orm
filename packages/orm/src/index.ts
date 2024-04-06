@@ -26,7 +26,7 @@ export * from "./QueryBuilder";
 export * from "./QueryParser";
 export * from "./changes";
 export { ConfigApi, EntityHook } from "./config";
-export { configureMetadata, getConstructorFromTaggedId } from "./configure";
+export { configureMetadata, getConstructorFromTaggedId, maybeGetConstructorFromReference } from "./configure";
 export { DeepPartialOrNull } from "./createOrUpdatePartial";
 export * from "./drivers";
 export { getField, isChangeableField, isFieldSet, setField } from "./fields";

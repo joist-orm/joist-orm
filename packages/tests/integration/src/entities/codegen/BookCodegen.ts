@@ -71,6 +71,7 @@ export interface BookFields {
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   order: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   notes: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  acknowledgements: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -81,6 +82,7 @@ export interface BookOpts {
   title: string;
   order?: number;
   notes?: string;
+  acknowledgements?: string | null;
   deletedAt?: Date | null;
   author: Author | AuthorId;
   currentDraftAuthor?: Author | null;
@@ -106,6 +108,7 @@ export interface BookFilter {
   title?: ValueFilter<string, never>;
   order?: ValueFilter<number, never>;
   notes?: ValueFilter<string, never>;
+  acknowledgements?: ValueFilter<string, null>;
   deletedAt?: ValueFilter<Date, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
@@ -123,6 +126,7 @@ export interface BookGraphQLFilter {
   title?: ValueGraphQLFilter<string>;
   order?: ValueGraphQLFilter<number>;
   notes?: ValueGraphQLFilter<string>;
+  acknowledgements?: ValueGraphQLFilter<string>;
   deletedAt?: ValueGraphQLFilter<Date>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
@@ -140,6 +144,7 @@ export interface BookOrder {
   title?: OrderBy;
   order?: OrderBy;
   notes?: OrderBy;
+  acknowledgements?: OrderBy;
   deletedAt?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
@@ -213,6 +218,14 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   set notes(notes: string) {
     setField(this, "notes", cleanStringValue(notes));
+  }
+
+  get acknowledgements(): string | undefined {
+    return getField(this, "acknowledgements");
+  }
+
+  set acknowledgements(acknowledgements: string | undefined) {
+    setField(this, "acknowledgements", cleanStringValue(acknowledgements));
   }
 
   get deletedAt(): Date | undefined {

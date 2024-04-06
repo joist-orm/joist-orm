@@ -62,7 +62,7 @@ class Author extends AuthorCodegen {
 }
 ```
 
-Or derived fields that will be reactively calculated (and updated in the database) when their dependencies change (see [Derived Fields](../modeling/derived-fields.md)):
+Or derived fields that will be reactively calculated (and updated in the database) when their dependencies change (see [Reactive Fields](../modeling/reactive-fields)):
 
 ```typescript
 class Author extends AuthorCodegen {

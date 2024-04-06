@@ -225,7 +225,7 @@ Besides the core relations discovered from the schema's foreign keys, Joist lets
 
 These custom relations are great for defining relationships between *entities* in your domain model, like how `Author` might relate to `BookReview`.
 
-If you'd like to define custom *non-entity* fields, like derived numbers or strings, see [Derived Fields](./derived-fields).
+If you'd like to define custom *non-entity* fields, like derived numbers or strings, see [Derived Fields](./derived-properties.md).
 
 :::
 

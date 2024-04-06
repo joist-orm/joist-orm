@@ -1,6 +1,6 @@
 ---
 title: Lifecycle Hooks
-sidebar_position: 4
+sidebar_position: 6
 ---
 
 Joist supports hooks that can run business logic at varies stages in an entity's lifecycle, for example to implement business logic like "when an `Author` entity is updated, always do x/y/z".

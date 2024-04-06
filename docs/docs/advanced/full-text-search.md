@@ -7,7 +7,7 @@ Postgres has rich support for [full text search functionality](https://www.postg
 
 One of the challenges of implementing a Postgres `tsvector` search index is keeping the index data in sync with changes, especially across tables. Consider a search endpoint for `Books`, in addition to being able to search for the `Book` by `title`, we may also want to search for the `Book` by the related `Author` `name`.
 
-The conventional approach would be to use triggers to react to updates and keep the index in sync, but Joist can improve on the ergonomics of this approach through the use of [Persisted Derived Fields](../modeling/derived-fields.md).
+The conventional approach would be to use triggers to react to updates and keep the index in sync, but Joist can improve on the ergonomics of this approach through the use of [Reactive Fields](../modeling/reactive-fields.md).
 
 ## Adding Search Index Columns
 
@@ -44,9 +44,9 @@ Even though two columns looks odd here, so far we've found it to be the best sol
 
 :::
 
-## Configuring the Persisted Field
+## Configuring the Reactive Field
 
-We'll now set up the `Book.search` field as an [Asynchronous Persisted Derived Field](../modeling/derived-fields.md#asynchronous-persisted-fields) within `joist-config.json`:
+We'll now set up the `Book.search` field as an [Reactive Field](../modeling/reactive-fields.md) within `joist-config.json`:
 
 ```json
 {

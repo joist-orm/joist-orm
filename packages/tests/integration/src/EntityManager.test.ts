@@ -1232,6 +1232,7 @@ describe("EntityManager", () => {
       numberOfBookReviews: null,
       group: null,
       hugeNumber: null,
+      sharedColumn: null,
       size: null,
       type: PublisherType.Big,
       createdAt: expect.anything(),

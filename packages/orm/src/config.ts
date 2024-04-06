@@ -146,24 +146,33 @@ export class ConfigApi<T extends Entity, C> {
     this.addHook("afterCommit", fn);
   }
 
-  /** Adds a synchronous default for `fieldName`. */
-  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(
+  /** Adds a synchronous default for `fieldName` to a hard-coded `value`. */
+  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string, F = FieldsOf<T>[K]>(
     fieldName: K,
-    value: FieldsOf<T>[K] extends EntityField ? FieldsOf<T>[K]["type"] | FieldsOf<T>[K]["nullable"] : never,
+    // Allow returning undefined to mean "no default"
+    value: F extends EntityField ? F["type"] : never,
   ): void;
-  /** Adds a synchronous default for `fieldName`. */
-  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(
+  /** Adds a synchronous default for `fieldName` to the result of simple sync lambda. */
+  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string, F = FieldsOf<T>[K]>(
     fieldName: K,
-    fn: (entity: T) => FieldsOf<T>[K] extends EntityField ? FieldsOf<T>[K]["type"] | FieldsOf<T>[K]["nullable"] : never,
+    // ...this doesn't technically declare what other fields of `entity` we depend on,
+    // which ideally we want to drive "which default to set first?" precedence decisions.
+    fn: (entity: T) => F extends EntityField ? F["type"] | undefined : never,
   ): void;
-  /** Adds an asynchronous default for `fieldName`. */
-  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string, const H extends ReactiveHint<T>>(
+  /** Adds an asynchronous default for `fieldName` to the result of a hinted lambda. */
+  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string, const H extends ReactiveHint<T>, F = FieldsOf<T>[K]>(
     fieldName: K,
+    // We use a ReactiveHint so that we get field-level dependencies that means someday
+    // we could drive "which default to set first?" precedence decisions.
     hint: H,
     fn: (
       entity: Reacted<T, H>,
       ctx: C,
-    ) => FieldsOf<T>[K] extends EntityField ? MaybePromise<FieldsOf<T>[K]["type"] | undefined> : never,
+    ) => F extends { kind: "m2o"; type: infer T extends Entity }
+      ? MaybePromise<T | Reacted<T, {}> | undefined>
+      : F extends EntityField
+        ? MaybePromise<F["type"] | undefined>
+        : never,
   ): void;
   setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(fieldName: K, hintOrFnOrValue: any, fn?: any): void {
     this.ensurePreBoot();

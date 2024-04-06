@@ -2070,7 +2070,7 @@ describe("EntityManager.queries", () => {
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
     // When we query for books with a null book.notes column
-    const where = { books: { notes: null } } satisfies AuthorFilter;
+    const where = { books: { acknowledgements: null } } satisfies AuthorFilter;
     const authors = await em.find(Author, where);
     // Then we only get back the 1st author
     expect(authors).toMatchEntity([{ firstName: "a1" }]);
@@ -2100,7 +2100,7 @@ describe("EntityManager.queries", () => {
           {
             op: "and",
             conditions: [
-              { alias: "b", column: "notes", dbType: "text", cond: { kind: "is-null" } },
+              { alias: "b", column: "acknowledgements", dbType: "text", cond: { kind: "is-null" } },
               { alias: "b", column: "id", dbType: "int", cond: { kind: "not-null" } },
             ],
           },

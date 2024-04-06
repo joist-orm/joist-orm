@@ -73,6 +73,7 @@
     "updatedAt"
   ],
   "Book": [
+    "acknowledgements",
     "advances",
     "author",
     "book",
@@ -271,6 +272,7 @@
   "SaveBookAdvanceInput": ["bookId", "createdAt", "id", "publisherId", "status", "updatedAt"],
   "SaveBookAdvanceResult": ["bookAdvance"],
   "SaveBookInput": [
+    "acknowledgements",
     "authorId",
     "createdAt",
     "deletedAt",

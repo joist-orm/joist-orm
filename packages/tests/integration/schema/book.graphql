@@ -17,6 +17,7 @@ type Book {
   favoriteBookAuthors: [Author!]!
   notes: String
   originalOrder: Int!
+  acknowledgements: String
 }
 
 input SaveBookInput {
@@ -29,6 +30,7 @@ input SaveBookInput {
   deletedAt: DateTime
   notes: String
   originalOrder: Int
+  acknowledgements: String
 }
 
 type SaveBookResult {

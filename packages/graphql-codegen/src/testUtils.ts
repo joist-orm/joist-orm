@@ -31,6 +31,7 @@ export function newPrimitiveField(fieldName: string, opts: Partial<PrimitiveFiel
     zodSchema: undefined,
     customSerde: undefined,
     isArray: false,
+    hasConfigDefault: false,
     ...opts,
   };
 }
@@ -82,6 +83,7 @@ export function newEnumField(fieldName: string, opts: Partial<EnumField> = {}): 
     notNull: true,
     enumRows: [],
     isArray: false,
+    hasConfigDefault: false,
     ...opts,
   };
 }

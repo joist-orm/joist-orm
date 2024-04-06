@@ -23,6 +23,8 @@ const fieldConfig = z
     stiDiscriminator: z.optional(z.record(z.string(), z.string())),
     stiType: z.optional(z.string()),
     stiNotNull: z.optional(z.boolean()),
+    /** Whether the user will configure a default value for this field via `config.setDefault`. */
+    hasConfigDefault: z.optional(z.boolean()),
   })
   .strict();
 
@@ -37,8 +39,10 @@ const relationConfig = z
     orderBy: z.optional(z.string()),
     // Allow pushing m2o/m2m/o2o relations in a base type (Task) down to a subtype (TaskOld)
     stiType: z.optional(z.string()),
-    // Allow marking STI-subtype m2o Fks as required
+    // Allow marking STI-subtype m2o FKs as required
     stiNotNull: z.optional(z.boolean()),
+    /** Whether the user will configure a default value for this field via `config.setDefault`. */
+    hasConfigDefault: z.optional(z.boolean()),
   })
   .strict();
 
@@ -203,6 +207,15 @@ export function superstructConfig(config: Config, entity: Entity, fieldName: str
 
 export function zodSchemaConfig(config: Config, entity: Entity, fieldName: string): string | undefined {
   return config.entities[entity.name]?.fields?.[fieldName]?.zodSchema;
+}
+
+export function hasConfigDefault(config: Config, entity: Entity, fieldName: string): boolean {
+  // Cheat and handle both fields and relations
+  return (
+    config.entities[entity.name]?.fields?.[fieldName]?.hasConfigDefault ??
+    config.entities[entity.name]?.relations?.[fieldName]?.hasConfigDefault ??
+    false
+  );
 }
 
 export function fieldTypeConfig(config: Config, entity: Entity, fieldName: string): string | undefined {

@@ -108,11 +108,13 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         serde: ${serdeType},
         immutable: false,
         ${extras}
+        ${maybeDefault(p)}
       }`;
   });
 
   // Treat native enums as primitives
-  dbMetadata.pgEnums.forEach(({ columnName, fieldName, notNull, dbType }) => {
+  dbMetadata.pgEnums.forEach((p) => {
+    const { columnName, fieldName, notNull, dbType } = p;
     fields[fieldName] = code`
       {
         kind: "primitive",
@@ -124,10 +126,12 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         type: "string",
         serde: new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${dbType}"),
         immutable: false,
+        ${maybeDefault(p)}
       }`;
   });
 
-  dbMetadata.enums.forEach(({ fieldName, enumDetailType, notNull, isArray, columnName, columnType, derived }) => {
+  dbMetadata.enums.forEach((field) => {
+    const { fieldName, enumDetailType, notNull, isArray, columnName, columnType, derived } = field;
     const serdeType = isArray ? EnumArrayFieldSerde : EnumFieldSerde;
     const columnTypeWithArray = `${columnType}${isArray ? "[]" : ""}`;
     fields[fieldName] = code`
@@ -140,6 +144,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         enumDetailType: ${enumDetailType},
         serde: new ${serdeType}("${fieldName}", "${columnName}", "${columnTypeWithArray}", ${enumDetailType}),
         immutable: false,
+        ${maybeDefault(field)}
       }
     `;
   });
@@ -158,6 +163,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         otherFieldName: "${otherFieldName}",
         serde: new ${KeySerde}("${otherTagName}", "${fieldName}", "${columnName}", "${dbType}"),
         immutable: false,
+        ${maybeDefault(m2o)}
       }
     `;
   });
@@ -251,4 +257,8 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
   });
 
   return fields;
+}
+
+function maybeDefault(f: { hasConfigDefault: boolean; columnDefault?: any }): Code | "" {
+  return f.hasConfigDefault ? code`default: "config",` : f.columnDefault ? code`default: "schema",` : "";
 }

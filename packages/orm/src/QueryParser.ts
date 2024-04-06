@@ -5,14 +5,8 @@ import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
 import { abbreviation } from "./QueryBuilder";
 import { visitConditions } from "./QueryVisitor";
-import {
-  Column,
-  getConstructorFromTaggedId,
-  getMetadataForTable,
-  isDefined,
-  keyToNumber,
-  maybeResolveReferenceToId,
-} from "./index";
+import { getMetadataForTable } from "./configure";
+import { Column, getConstructorFromTaggedId, isDefined, keyToNumber, maybeResolveReferenceToId } from "./index";
 import { kq, kqDot } from "./keywords";
 import { assertNever, fail, partition } from "./utils";
 

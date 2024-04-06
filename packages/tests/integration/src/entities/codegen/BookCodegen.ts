@@ -70,7 +70,8 @@ export interface BookFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   order: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  notes: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  notes: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  acknowledgements: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -80,7 +81,8 @@ export interface BookFields {
 export interface BookOpts {
   title: string;
   order?: number;
-  notes?: string | null;
+  notes?: string;
+  acknowledgements?: string | null;
   deletedAt?: Date | null;
   author: Author | AuthorId;
   currentDraftAuthor?: Author | null;
@@ -105,7 +107,8 @@ export interface BookFilter {
   id?: ValueFilter<BookId, never> | null;
   title?: ValueFilter<string, never>;
   order?: ValueFilter<number, never>;
-  notes?: ValueFilter<string, null>;
+  notes?: ValueFilter<string, never>;
+  acknowledgements?: ValueFilter<string, null>;
   deletedAt?: ValueFilter<Date, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
@@ -123,6 +126,7 @@ export interface BookGraphQLFilter {
   title?: ValueGraphQLFilter<string>;
   order?: ValueGraphQLFilter<number>;
   notes?: ValueGraphQLFilter<string>;
+  acknowledgements?: ValueGraphQLFilter<string>;
   deletedAt?: ValueGraphQLFilter<Date>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
@@ -140,6 +144,7 @@ export interface BookOrder {
   title?: OrderBy;
   order?: OrderBy;
   notes?: OrderBy;
+  acknowledgements?: OrderBy;
   deletedAt?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
@@ -150,6 +155,7 @@ export const bookConfig = new ConfigApi<Book, Context>();
 
 bookConfig.addRule(newRequiredRule("title"));
 bookConfig.addRule(newRequiredRule("order"));
+bookConfig.addRule(newRequiredRule("notes"));
 bookConfig.addRule(newRequiredRule("createdAt"));
 bookConfig.addRule(newRequiredRule("updatedAt"));
 bookConfig.addRule(newRequiredRule("author"));
@@ -206,12 +212,20 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
     setField(this, "order", order);
   }
 
-  get notes(): string | undefined {
+  get notes(): string {
     return getField(this, "notes");
   }
 
-  set notes(notes: string | undefined) {
+  set notes(notes: string) {
     setField(this, "notes", cleanStringValue(notes));
+  }
+
+  get acknowledgements(): string | undefined {
+    return getField(this, "acknowledgements");
+  }
+
+  set acknowledgements(acknowledgements: string | undefined) {
+    setField(this, "acknowledgements", cleanStringValue(acknowledgements));
   }
 
   get deletedAt(): Date | undefined {

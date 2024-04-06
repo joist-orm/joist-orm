@@ -1,3 +1,10 @@
+# [1.153.0](https://github.com/joist-orm/joist-orm/compare/v1.152.3...v1.153.0) (2024-04-06)
+
+
+### Features
+
+* Add hasConfigDefault flag for optional types ([#1021](https://github.com/joist-orm/joist-orm/issues/1021)) ([142c56e](https://github.com/joist-orm/joist-orm/commit/142c56e9ac05e3c4f3b8fbf4b8ee22dd83734e2b))
+
 ## [1.152.3](https://github.com/joist-orm/joist-orm/compare/v1.152.2...v1.152.3) (2024-04-06)
 
 

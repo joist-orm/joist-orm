@@ -13,10 +13,7 @@
     "declarationMap": true,
     "outDir": "./build",
     "rootDir": "./",
-    "baseUrl": "./",
-    "paths": {
-      "@src/*": ["src/*"]
-    }
+    "baseUrl": "./"
   },
   "references": [
     { "path": "../../codegen" },

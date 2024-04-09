@@ -5,8 +5,10 @@ import { EntityDbMetadata } from "./EntityDbMetadata";
 export function generateEntityFile(meta: EntityDbMetadata): Code {
   const entityName = meta.entity.name;
   const codegenClass = imp(`${entityName}Codegen@./entities`);
+  const esmExt = config.esm ? '/index.js' : '';
+
   return code`
-    import { ${meta.entity.configConst.symbol} as config } from "./entities";
+    import { ${meta.entity.configConst.symbol} as config } from "./entities${esmExt}}";
 
     export class ${entityName} extends ${codegenClass} {}
 

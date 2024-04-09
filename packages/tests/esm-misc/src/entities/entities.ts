@@ -4,20 +4,20 @@
 // when the subclasses extend the base classes, see:
 // https://medium.com/visual-development/how-to-fix-nasty-circular-dependency-issues-once-and-for-all-in-javascript-typescript-a04c987cf0de
 
-export * from "./codegen/ArtistCodegen";
-export * from "./codegen/AuthorCodegen";
-export * from "./codegen/BookCodegen";
-export * from "./codegen/DatabaseOwnerCodegen";
-export * from "./codegen/PaintingCodegen";
-export * from "./Artist";
-export * from "./Author";
-export * from "./Book";
-export * from "./DatabaseOwner";
-export * from "./Painting";
+export * from "./codegen/ArtistCodegen.js";
+export * from "./codegen/AuthorCodegen.js";
+export * from "./codegen/BookCodegen.js";
+export * from "./codegen/DatabaseOwnerCodegen.js";
+export * from "./codegen/PaintingCodegen.js";
+export * from "./Artist.js";
+export * from "./Author.js";
+export * from "./Book.js";
+export * from "./DatabaseOwner.js";
+export * from "./Painting.js";
 
-export * from "./factories/newArtist";
-export * from "./factories/newAuthor";
-export * from "./factories/newBook";
-export * from "./factories/newDatabaseOwner";
-export * from "./factories/newPainting";
-export * from "./codegen/metadata";
+export * from "./factories/newArtist.js";
+export * from "./factories/newAuthor.js";
+export * from "./factories/newBook.js";
+export * from "./factories/newDatabaseOwner.js";
+export * from "./factories/newPainting.js";
+export * from "./codegen/metadata.js";

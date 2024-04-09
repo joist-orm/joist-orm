@@ -10920,7 +10920,7 @@ __metadata:
     pluralize: "npm:^8.0.0"
     prettier: "npm:3.2.5"
     prettier-plugin-organize-imports: "npm:^3.2.4"
-    ts-poet: "npm:^6.7.0"
+    ts-poet: "npm:^6.8.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:^5.4.3"
   languageName: unknown
@@ -17757,15 +17757,6 @@ __metadata:
     ts-patch: bin/ts-patch.js
     tspc: bin/tspc.js
   checksum: 10/d738f51f1a7d16249ef82212a8dec8391c02812dde0f1dfdcd6bfc22b96bf99efd89c560172544f6339ab05083ccc9be895168915e4c7c0a8f019496728137ce
-  languageName: node
-  linkType: hard
-
-"ts-poet@npm:^6.7.0":
-  version: 6.7.0
-  resolution: "ts-poet@npm:6.7.0"
-  dependencies:
-    dprint-node: "npm:^1.0.8"
-  checksum: 10/563f50a50f89423cabf0a00ec8bf020112814ded877170b177947c84a4698385a1b9eefd3a3eb4e19a4284e37f3ad1b28c5387f36bcfb7e2a242a621a2d6943b
   languageName: node
   linkType: hard
 

@@ -36,8 +36,8 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
         ...(hasEntityFile
           ? []
           : [
-              { name: `${entityName}.ts`, contents: generateEntityFile(meta), overwrite: false },
-              { name: `${entityName}.test.ts`, contents: generateEntityTestFile(meta), overwrite: false },
+              { name: `${entityName}.ts`, contents: generateEntityFile(config, meta), overwrite: false },
+              { name: `${entityName}.test.ts`, contents: generateEntityTestFile(config, meta), overwrite: false },
             ]),
       ];
     })
@@ -113,7 +113,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
 
   const indexFile: CodegenFile = {
     name: "./index.ts",
-    contents: code`export * from "./entities"`,
+    contents: code`export * from "./entities${config.esm ? '.js' : ''}"`,
     overwrite: false,
   };
 

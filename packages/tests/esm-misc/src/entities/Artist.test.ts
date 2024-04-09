@@ -1,4 +1,4 @@
-import { newArtist } from "./entities";
+import { newArtist } from "./entities.js";
 
 describe("Artist", () => {
   it("works", async () => {

@@ -1,4 +1,4 @@
-import { newDatabaseOwner } from "./entities";
+import { newDatabaseOwner } from "./entities.js";
 
 describe("DatabaseOwner", () => {
   it("works", async () => {

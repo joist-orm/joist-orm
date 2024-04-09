@@ -1,4 +1,4 @@
-import { newPainting } from "./entities";
+import { newPainting } from "./entities.js";
 
 describe("Painting", () => {
   it("works", async () => {

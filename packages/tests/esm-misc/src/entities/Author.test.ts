@@ -1,4 +1,4 @@
-import { newAuthor } from "./entities";
+import { newAuthor } from "./entities.js";
 
 describe("Author", () => {
   it("works", async () => {

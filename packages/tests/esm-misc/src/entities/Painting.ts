@@ -1,6 +1,6 @@
 import { PaintingCodegen } from "./entities";
 
-import { paintingConfig as config } from "./entities";
+import { paintingConfig as config } from "./entities.js";
 
 export class Painting extends PaintingCodegen {}
 

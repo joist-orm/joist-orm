@@ -1,4 +1,4 @@
-import { newBook } from "./entities";
+import { newBook } from "./entities.js";
 
 describe("Book", () => {
   it("works", async () => {

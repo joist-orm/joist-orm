@@ -1,6 +1,6 @@
 import { BookCodegen } from "./entities";
 
-import { bookConfig as config } from "./entities";
+import { bookConfig as config } from "./entities.js";
 
 export class Book extends BookCodegen {}
 

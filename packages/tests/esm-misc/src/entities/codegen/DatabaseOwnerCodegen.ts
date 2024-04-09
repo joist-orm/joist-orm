@@ -24,7 +24,7 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
+import { Context } from "../../context.js";
 import { DatabaseOwner, databaseOwnerMeta, Entity, EntityManager, newDatabaseOwner } from "../entities";
 
 export type DatabaseOwnerId = Flavor<string, DatabaseOwner>;

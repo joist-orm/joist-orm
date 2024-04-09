@@ -1,6 +1,6 @@
 {
   "codegenPlugins": [],
-  "contextType": "Context@src/context",
+  "contextType": "Context@../../context.js",
   "databaseUrl": "postgres://joist:local@localhost:5435/schema_misc",
   "entities": {
     "Artist": { "tag": "artist" },

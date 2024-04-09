@@ -1,4 +1,4 @@
-import { DatabaseOwnerCodegen } from "./entities.ts";
+import { DatabaseOwnerCodegen } from "./entities.js";
 
 import { databaseOwnerConfig as config } from "./entities.js";
 

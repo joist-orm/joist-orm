@@ -1,4 +1,4 @@
-import { PaintingCodegen } from "./entities.ts";
+import { PaintingCodegen } from "./entities.js";
 
 import { paintingConfig as config } from "./entities.js";
 

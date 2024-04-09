@@ -1,4 +1,4 @@
-import { ArtistCodegen } from "./entities.ts";
+import { ArtistCodegen } from "./entities.js";
 
 import { artistConfig as config } from "./entities.js";
 

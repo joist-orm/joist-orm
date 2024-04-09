@@ -1,4 +1,4 @@
-import { AuthorCodegen } from "./entities";
+import { AuthorCodegen } from "./entities.ts";
 
 import { authorConfig as config } from "./entities.js";
 

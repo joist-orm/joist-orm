@@ -71,7 +71,7 @@ export async function generateAndSaveFiles(config: Config, dbMeta: DbMetadata): 
     toolName: "joist-codegen",
     directory: config.entitiesDirectory,
     files,
-    toStringOpts: { importExtensions: config.esm && 'js' }
+    toStringOpts: { importExtensions: config.esm ? 'js' : false }
   });
 }
 

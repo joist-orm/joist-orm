@@ -42,7 +42,7 @@ import {
   newPainting,
   Painting,
   paintingMeta,
-} from "../entities";
+} from "../entities.js";
 
 export type PaintingId = Flavor<string, Painting>;
 

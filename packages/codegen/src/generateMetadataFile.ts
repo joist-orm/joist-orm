@@ -55,7 +55,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       orderBy: ${q(config.entities[meta.name]?.orderBy)},
       timestampFields: ${maybeTimestampConfig},
       config: ${entity.configConst},
-      factory: ${imp(`new${entity.name}@./entities`)},
+      factory: ${imp(`new${entity.name}@./entities.ts`)},
       baseTypes: [],
       subTypes: [],
     };

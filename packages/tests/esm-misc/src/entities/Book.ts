@@ -1,4 +1,4 @@
-import { BookCodegen } from "./entities";
+import { BookCodegen } from "./entities.ts";
 
 import { bookConfig as config } from "./entities.js";
 

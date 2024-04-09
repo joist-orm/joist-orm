@@ -3,7 +3,7 @@ import { code, CodegenFile, imp } from "ts-poet";
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import { DeepNew, FactoryOpts, newTestInstance } from "./symbols";
 
-const EntityManager = imp("t:EntityManager@./entities");
+const EntityManager = imp("t:EntityManager@./entities.ts");
 
 export function generateFactoriesFiles(entities: EntityDbMetadata[]): CodegenFile[] {
   // One-time create an ./factories/newAuthor.ts for each entity

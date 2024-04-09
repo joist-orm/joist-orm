@@ -5,7 +5,7 @@ import {Config} from "./config";
 /** Creates the placeholder file for our per-entity custom business logic in. */
 export function generateEntityFile(config: Config, meta: EntityDbMetadata): Code {
   const entityName = meta.entity.name;
-  const codegenClass = imp(`${entityName}Codegen@./entities`);
+  const codegenClass = imp(`${entityName}Codegen@./entities.ts`);
   const esmExt = config.esm ? '.js' : '';
 
   return code`

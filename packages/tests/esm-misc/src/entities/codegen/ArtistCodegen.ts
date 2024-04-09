@@ -32,7 +32,16 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "../../context.js";
-import { Artist, artistMeta, Entity, EntityManager, newArtist, Painting, PaintingId, paintingMeta } from "../entities";
+import {
+  Artist,
+  artistMeta,
+  Entity,
+  EntityManager,
+  newArtist,
+  Painting,
+  PaintingId,
+  paintingMeta,
+} from "../entities.js";
 
 export type ArtistId = Flavor<string, Artist>;
 

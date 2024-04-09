@@ -112,6 +112,8 @@ export const config = z
     /** The type of entity `id` fields; defaults to `tagged-string`. */
     idType: z.optional(z.union([z.literal("tagged-string"), z.literal("untagged-string"), z.literal("number")])),
 
+    esm: z.optional(z.boolean()),
+
     // The version of Joist that generated this config.
     version: z.string().default("0.0.0"),
   })

@@ -39,16 +39,23 @@ import {
   EntityManager,
   newTaskNew,
   Task,
-  TaskFields,
-  TaskFilter,
-  TaskGraphQLFilter,
-  TaskIdsOpts,
   TaskItem,
   taskItemMeta,
   TaskNew,
   taskNewMeta,
 } from "../entities";
-import type { AuthorId, AuthorOrder, Entity, TaskItemId, TaskOpts, TaskOrder } from "../entities";
+import type {
+  AuthorId,
+  AuthorOrder,
+  Entity,
+  TaskFields,
+  TaskFilter,
+  TaskGraphQLFilter,
+  TaskIdsOpts,
+  TaskItemId,
+  TaskOpts,
+  TaskOrder,
+} from "../entities";
 
 export type TaskNewId = Flavor<string, TaskNew> & Flavor<string, "Task">;
 

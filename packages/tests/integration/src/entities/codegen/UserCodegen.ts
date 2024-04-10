@@ -43,7 +43,7 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { IpAddress, PasswordValue } from "src/entities/types";
+import type { IpAddress, PasswordValue } from "src/entities/types";
 import {
   AdminUser,
   Author,

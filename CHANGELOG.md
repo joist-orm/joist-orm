@@ -1,3 +1,10 @@
+## [1.154.1](https://github.com/joist-orm/joist-orm/compare/v1.154.0...v1.154.1) (2024-04-10)
+
+
+### Bug Fixes
+
+* Bump ts-poet. ([#1028](https://github.com/joist-orm/joist-orm/issues/1028)) ([817c162](https://github.com/joist-orm/joist-orm/commit/817c162eec72a2dc63a9039c5bfa369972d6ea91))
+
 # [1.154.0](https://github.com/joist-orm/joist-orm/compare/v1.153.2...v1.154.0) (2024-04-10)
 
 

@@ -10892,7 +10892,7 @@ __metadata:
     prettier-plugin-organize-imports: "npm:^3.2.4"
     semver: "npm:^7.5.4"
     ts-node-dev: "npm:^2.0.0"
-    ts-poet: "npm:^6.8.0"
+    ts-poet: "npm:^6.8.1"
     tsconfig-paths: "npm:^4.2.0"
     tsx: "npm:^4.7.1"
     typescript: "npm:^5.4.3"
@@ -10920,7 +10920,7 @@ __metadata:
     pluralize: "npm:^8.0.0"
     prettier: "npm:3.2.5"
     prettier-plugin-organize-imports: "npm:^3.2.4"
-    ts-poet: "npm:^6.8.0"
+    ts-poet: "npm:^6.8.1"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:^5.4.3"
   languageName: unknown
@@ -17760,12 +17760,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-poet@npm:^6.8.0":
-  version: 6.8.0
-  resolution: "ts-poet@npm:6.8.0"
+"ts-poet@npm:^6.8.1":
+  version: 6.8.1
+  resolution: "ts-poet@npm:6.8.1"
   dependencies:
     dprint-node: "npm:^1.0.8"
-  checksum: 10/af1c39adcf86f02997ef47119a32170e94e1c34ef2cf03434f740096615cb4341e0ed770e6ffd02046d08a5d23a7da48ffb4d0278891c975e88c6cb5271e0011
+  checksum: 10/bbf15caa91dfd9e36a4d9ba7fc2db1a461664c0f7bb1717a51847e13c896f3afc94d6e53adc40879e1083b8d9c6d32d0e2ef2a2a2f817db65cb73b92c5d59ef4
   languageName: node
   linkType: hard
 

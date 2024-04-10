@@ -823,7 +823,7 @@ function zodSchemaType(s: string): Code {
 }
 
 function userFieldTypeType(s: string): Import {
-  return Import.from(s);
+  return Import.from(`t:${s}`);
 }
 
 function serdeType(s: string): Import {

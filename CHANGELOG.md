@@ -1,3 +1,10 @@
+# [1.155.0](https://github.com/joist-orm/joist-orm/compare/v1.154.1...v1.155.0) (2024-04-10)
+
+
+### Features
+
+* ensure codegen output meets `verbatimModuleSyntax` expectations ([#1029](https://github.com/joist-orm/joist-orm/issues/1029)) ([56ca1a1](https://github.com/joist-orm/joist-orm/commit/56ca1a1763961e15eee56e434bc04377745ae991))
+
 ## [1.154.1](https://github.com/joist-orm/joist-orm/compare/v1.154.0...v1.154.1) (2024-04-10)
 
 

@@ -1,3 +1,10 @@
+## [1.155.2](https://github.com/joist-orm/joist-orm/compare/v1.155.1...v1.155.2) (2024-04-10)
+
+
+### Bug Fixes
+
+* directly import entities from metadata.ts, support top level await ([#1032](https://github.com/joist-orm/joist-orm/issues/1032)) ([bbee996](https://github.com/joist-orm/joist-orm/commit/bbee996c1421afd959153c0518917569e41207df))
+
 ## [1.155.1](https://github.com/joist-orm/joist-orm/compare/v1.155.0...v1.155.1) (2024-04-10)
 
 

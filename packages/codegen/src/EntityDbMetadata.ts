@@ -455,9 +455,9 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
   const columnType = (column.type.shortName || column.type.name) as DatabaseColumnType;
   const fieldName = enumFieldName(column.name);
   const enumName = tableToEntityName(config, r.targetTable);
-  const enumType = imp(`${enumName}@./entities`);
-  const enumDetailType = imp(`${plural(enumName)}@./entities`);
-  const enumDetailsType = imp(`${enumName}Details@./entities`);
+  const enumType = imp(`${enumName}@./entities.ts`);
+  const enumDetailType = imp(`${plural(enumName)}@./entities.ts`);
+  const enumDetailsType = imp(`${enumName}Details@./entities.ts`);
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
   return {
@@ -486,9 +486,9 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
   // Find the enum table name via the comment hint (instead of a FK constraint), and strip the enum= prefix
   const enumTable = column.comment!.replace("enum=", "");
   const enumName = (enums[enumTable] || fail(`Could not find enum ${enumTable}`)).name;
-  const enumType = imp(`${enumName}@./entities`);
-  const enumDetailType = imp(`${plural(enumName)}@./entities`);
-  const enumDetailsType = imp(`${enumName}Details@./entities`);
+  const enumType = imp(`${enumName}@./entities.ts`);
+  const enumDetailType = imp(`${plural(enumName)}@./entities.ts`);
+  const enumDetailsType = imp(`${enumName}Details@./entities.ts`);
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
   return {
@@ -514,7 +514,7 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
   const fieldName = primitiveFieldName(column.name);
   const columnName = column.name;
   const enumName = pascalCase(column.type.name);
-  const enumType = imp(`${enumName}@./entities`);
+  const enumType = imp(`${enumName}@./entities.ts`);
   return {
     kind: "pg-enum",
     fieldName,
@@ -776,10 +776,10 @@ export function makeEntity(entityName: string): Entity {
     type: entityType(entityName),
     metaName: metaName(entityName),
     metaType: metaType(entityName),
-    idType: imp(`${entityName}Id@./entities`, { definedIn: `./codegen/${entityName}Codegen` }),
-    orderType: imp(`${entityName}Order@./entities`, { definedIn: `./codegen/${entityName}Codegen` }),
-    optsType: imp(`${entityName}Opts@./entities`, { definedIn: `./codegen/${entityName}Codegen` }),
-    configConst: imp(`${camelCase(entityName)}Config@./entities`, { definedIn: `./codegen/${entityName}Codegen` }),
+    idType: imp(`${entityName}Id@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
+    orderType: imp(`${entityName}Order@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
+    optsType: imp(`${entityName}Opts@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
+    configConst: imp(`${camelCase(entityName)}Config@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
   };
 }
 
@@ -788,11 +788,11 @@ function metaName(entityName: string): string {
 }
 
 function metaType(entityName: string): Import {
-  return imp(`${metaName(entityName)}@./entities`);
+  return imp(`${metaName(entityName)}@./entities.ts`);
 }
 
 function entityType(entityName: string): Import {
-  return imp(`${entityName}@./entities`);
+  return imp(`${entityName}@./entities.ts`);
 }
 
 function mapType(tableName: string, columnName: string, dbColumnType: DatabaseColumnType): PrimitiveTypescriptType {

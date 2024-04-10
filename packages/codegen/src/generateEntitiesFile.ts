@@ -16,6 +16,8 @@ export function generateEntitiesFile(
   const baseClasses = entities.filter((e) => e.baseClassName === undefined);
   const subClasses = entities.filter((e) => e.baseClassName !== undefined);
 
+  const esmExt = config.esm ? '.js' : '';
+
   return code`
     // organize-imports-ignore
 
@@ -26,23 +28,23 @@ export function generateEntitiesFile(
       return `export * from "./enums/${tableToEntityName(config, table)}";`;
     })}
     ${pgEnums.map((meta) => {
-      return `export * from "./enums/${meta.name}";`;
+      return `export * from "./enums/${meta.name}${esmExt}";`;
     })}
     ${baseClasses.map((meta) => {
-      return `export * from "./codegen/${meta.entity.name}Codegen";`;
+      return `export * from "./codegen/${meta.entity.name}Codegen${esmExt}";`;
     })}
     ${baseClasses.map((meta) => {
-      return `export * from "./${meta.entity.name}";`;
+      return `export * from "./${meta.entity.name}${esmExt}";`;
     })}
     ${subClasses.map((meta) => {
-      return `export * from "./codegen/${meta.entity.name}Codegen";`;
+      return `export * from "./codegen/${meta.entity.name}Codegen${esmExt}";`;
     })}
     ${subClasses.map((meta) => {
-      return `export * from "./${meta.entity.name}";`;
+      return `export * from "./${meta.entity.name}${esmExt}";`;
     })}
     ${entities.map(({ entity }) => {
-      return `export * from "./factories/new${entity.name}";`;
+      return `export * from "./factories/new${entity.name}${esmExt}";`;
     })}
-    export * from "./codegen/metadata";
+    export * from "./codegen/metadata${esmExt}";
   `;
 }

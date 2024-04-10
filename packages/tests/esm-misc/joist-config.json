@@ -1,15 +1,10 @@
 {
   "codegenPlugins": [],
-  "contextType": "Context@src/context",
-  "databaseUrl": "postgres://joist:local@localhost:5435/schema_misc",
-  "entities": {
-    "Artist": { "tag": "artist" },
-    "Author": { "tag": "a" },
-    "Book": { "tag": "b" },
-    "DatabaseOwner": { "tag": "do" },
-    "Painting": { "tag": "p" }
-  },
+  "contextType": "Context@../../context.js",
+  "databaseUrl": "postgres://joist:local@localhost:5435/esm",
+  "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
   "entitiesDirectory": "./src/entities",
+  "esm": true,
   "ignoredTables": ["pgmigrations"],
   "timestampColumns": {
     "createdAt": { "names": ["created_at", "createdAt"], "required": false },

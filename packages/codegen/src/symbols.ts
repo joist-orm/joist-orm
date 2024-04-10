@@ -1,7 +1,7 @@
 import { imp } from "ts-poet";
 
-export const ProjectEntity = imp(`Entity@./entities`);
-export const EntityManager = imp("EntityManager@./entities");
+export const ProjectEntity = imp(`Entity@./entities.ts`);
+export const EntityManager = imp("EntityManager@./entities.ts");
 
 export const ConfigApi = imp("ConfigApi@joist-orm");
 export const FieldStatus = imp("FieldStatus@joist-orm");

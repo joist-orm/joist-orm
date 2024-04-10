@@ -377,10 +377,10 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const relations = [o2m, lo2m, m2o, o2o, m2m, lm2m, polymorphic].flat();
 
   const configName = `${camelCase(entityName)}Config`;
-  const metadata = imp(`${camelCase(entityName)}Meta@./entities`);
+  const metadata = imp(`${camelCase(entityName)}Meta@./entities.ts`);
 
   const contextType = config.contextType ? imp(config.contextType) : "{}";
-  const factoryMethod = imp(`new${entity.name}@./entities`);
+  const factoryMethod = imp(`new${entity.name}@./entities.ts`);
 
   // If we're not tagged-strings, detag on the way out of id
   const idMaybeCode =
@@ -401,11 +401,11 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const baseEntity = dbMeta.entities.find((e) => e.name === meta.baseClassName);
   const subEntities = dbMeta.entities.filter((e) => e.baseClassName === meta.name);
   const base = baseEntity?.entity.type ?? code`${BaseEntity}<${EntityManager}, ${idType}>`;
-  const maybeBaseFields = baseEntity ? code`extends ${imp(baseEntity.name + "Fields@./entities")}` : "";
+  const maybeBaseFields = baseEntity ? code`extends ${imp(baseEntity.name + "Fields@./entities.ts")}` : "";
   const maybeBaseOpts = baseEntity ? code`extends ${baseEntity.entity.optsType}` : "";
-  const maybeBaseIdOpts = baseEntity ? code`extends ${imp(baseEntity.name + "IdsOpts@./entities")}` : "";
-  const maybeBaseFilter = baseEntity ? code`extends ${imp(baseEntity.name + "Filter@./entities")}` : "";
-  const maybeBaseGqlFilter = baseEntity ? code`extends ${imp(baseEntity.name + "GraphQLFilter@./entities")}` : "";
+  const maybeBaseIdOpts = baseEntity ? code`extends ${imp(baseEntity.name + "IdsOpts@./entities.ts")}` : "";
+  const maybeBaseFilter = baseEntity ? code`extends ${imp(baseEntity.name + "Filter@./entities.ts")}` : "";
+  const maybeBaseGqlFilter = baseEntity ? code`extends ${imp(baseEntity.name + "GraphQLFilter@./entities.ts")}` : "";
   const maybeBaseOrder = baseEntity ? code`extends ${baseEntity.entity.orderType}` : "";
   const maybeBaseId = baseEntity ? code` & Flavor<${idType}, "${baseEntity.name}">` : "";
   const maybePreventBaseTypeInstantiation = meta.abstract

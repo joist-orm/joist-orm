@@ -10892,7 +10892,7 @@ __metadata:
     prettier-plugin-organize-imports: "npm:^3.2.4"
     semver: "npm:^7.5.4"
     ts-node-dev: "npm:^2.0.0"
-    ts-poet: "npm:^6.7.0"
+    ts-poet: "npm:^6.8.0"
     tsconfig-paths: "npm:^4.2.0"
     tsx: "npm:^4.7.1"
     typescript: "npm:^5.4.3"
@@ -10920,7 +10920,7 @@ __metadata:
     pluralize: "npm:^8.0.0"
     prettier: "npm:3.2.5"
     prettier-plugin-organize-imports: "npm:^3.2.4"
-    ts-poet: "npm:^6.7.0"
+    ts-poet: "npm:^6.8.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:^5.4.3"
   languageName: unknown
@@ -11044,6 +11044,30 @@ __metadata:
     prettier: "npm:^3.2.5"
     prettier-plugin-organize-imports: "npm:^3.2.4"
     ts-node-dev: "npm:^2.0.0"
+    tsconfig-paths: "npm:^4.2.0"
+    typescript: "npm:^5.4.3"
+  languageName: unknown
+  linkType: soft
+
+"joist-tests-esm-misc@workspace:packages/tests/esm-misc":
+  version: 0.0.0-use.local
+  resolution: "joist-tests-esm-misc@workspace:packages/tests/esm-misc"
+  dependencies:
+    "@swc/core": "npm:^1.4.11"
+    "@swc/jest": "npm:^0.2.36"
+    "@types/jest": "npm:^29.5.12"
+    "@types/node": "npm:^20.10.5"
+    jest: "npm:30.0.0-alpha.3"
+    jest-junit: "npm:^16.0.0"
+    joist-codegen: "workspace:*"
+    joist-migration-utils: "workspace:*"
+    joist-orm: "workspace:*"
+    joist-test-utils: "workspace:*"
+    node-pg-migrate: "npm:^6.2.2"
+    prettier: "npm:^3.2.5"
+    prettier-plugin-organize-imports: "npm:^3.2.4"
+    superstruct: "npm:0.15.5"
+    ts-node: "npm:^10.9.2"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:^5.4.3"
   languageName: unknown
@@ -17736,12 +17760,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-poet@npm:^6.7.0":
-  version: 6.7.0
-  resolution: "ts-poet@npm:6.7.0"
+"ts-poet@npm:^6.8.0":
+  version: 6.8.0
+  resolution: "ts-poet@npm:6.8.0"
   dependencies:
     dprint-node: "npm:^1.0.8"
-  checksum: 10/563f50a50f89423cabf0a00ec8bf020112814ded877170b177947c84a4698385a1b9eefd3a3eb4e19a4284e37f3ad1b28c5387f36bcfb7e2a242a621a2d6943b
+  checksum: 10/af1c39adcf86f02997ef47119a32170e94e1c34ef2cf03434f740096615cb4341e0ed770e6ffd02046d08a5d23a7da48ffb4d0278891c975e88c6cb5271e0011
   languageName: node
   linkType: hard
 

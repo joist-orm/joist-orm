@@ -10,6 +10,7 @@
     "composite": true,
     "sourceMap": true,
     "declaration": true,
+    "verbatimModuleSyntax": true,
     "declarationMap": true,
     "outDir": "./build",
     "rootDir": "./",

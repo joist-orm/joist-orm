@@ -1,36 +1,38 @@
 import {
   BaseEntity,
-  Changes,
   ConfigApi,
+  failNoIdYet,
+  getField,
+  getInstanceData,
+  hasOne,
+  isLoaded,
+  loadLens,
+  newChangesProxy,
+  newRequiredRule,
+  setField,
+  setOpts,
+  toIdOf,
+} from "joist-orm";
+import type {
+  Changes,
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  failNoIdYet,
   FilterOf,
   Flavor,
-  getField,
-  getInstanceData,
   GraphQLFilterOf,
-  hasOne,
-  isLoaded,
   Lens,
   Loaded,
   LoadHint,
-  loadLens,
   ManyToOneReference,
-  newChangesProxy,
-  newRequiredRule,
   OptsOf,
   OrderBy,
   PartialOrNull,
-  setField,
-  setOpts,
   TaggedId,
-  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
+import type { Context } from "src/context";
 import {
   AdvanceStatus,
   AdvanceStatusDetails,
@@ -38,17 +40,13 @@ import {
   Book,
   BookAdvance,
   bookAdvanceMeta,
-  BookId,
   bookMeta,
-  BookOrder,
-  Entity,
   EntityManager,
   newBookAdvance,
   Publisher,
-  PublisherId,
   publisherMeta,
-  PublisherOrder,
 } from "../entities";
+import type { BookId, BookOrder, Entity, PublisherId, PublisherOrder } from "../entities";
 
 export type BookAdvanceId = Flavor<string, BookAdvance>;
 

@@ -10,5 +10,5 @@
     "createdAt": { "names": ["created_at", "createdAt"], "required": false },
     "updatedAt": { "names": ["updated_at", "updatedAt"], "required": false }
   },
-  "version": "1.153.3"
+  "version": "1.154.0"
 }

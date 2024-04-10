@@ -67,7 +67,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     })
     .reduce(merge, []);
 
-  const contextType = config.contextType ? imp(config.contextType) : "{}";
+  const contextType = config.contextType ? imp(`t:${config.contextType}`) : "{}";
 
   // We want to hard-stop the app from booting if there are any invalid deferred FKs
   const invalidEntities = entities.filter((e) => e.invalidDeferredFK);

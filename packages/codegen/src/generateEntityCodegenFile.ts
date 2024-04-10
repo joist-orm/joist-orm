@@ -379,7 +379,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const configName = `${camelCase(entityName)}Config`;
   const metadata = imp(`${camelCase(entityName)}Meta@./entities.ts`);
 
-  const contextType = config.contextType ? imp(config.contextType) : "{}";
+  const contextType = config.contextType ? imp(`t:${config.contextType}`) : "{}";
   const factoryMethod = imp(`new${entity.name}@./entities.ts`);
 
   // If we're not tagged-strings, detag on the way out of id

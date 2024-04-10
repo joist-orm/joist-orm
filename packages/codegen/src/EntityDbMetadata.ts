@@ -776,9 +776,9 @@ export function makeEntity(entityName: string): Entity {
     type: entityType(entityName),
     metaName: metaName(entityName),
     metaType: metaType(entityName),
-    idType: imp(`${entityName}Id@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
-    orderType: imp(`${entityName}Order@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
-    optsType: imp(`${entityName}Opts@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
+    idType: imp(`t:${entityName}Id@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
+    orderType: imp(`t:${entityName}Order@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
+    optsType: imp(`t:${entityName}Opts@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
     configConst: imp(`${camelCase(entityName)}Config@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
   };
 }

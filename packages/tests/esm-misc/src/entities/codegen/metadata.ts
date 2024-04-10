@@ -1,5 +1,6 @@
-import { configureMetadata, Entity as Entity2, EntityManager as EntityManager1, EntityMetadata, KeySerde, PrimitiveSerde } from "joist-orm";
-import { Context } from "../../context.js";
+import { configureMetadata, EntityManager as EntityManager1, KeySerde, PrimitiveSerde } from "joist-orm";
+import type { Entity as Entity2, EntityMetadata } from "joist-orm";
+import type { Context } from "../../context.js";
 import { Author, authorConfig, Book, bookConfig, newAuthor, newBook } from "../entities.js";
 
 export class EntityManager extends EntityManager1<Context, Entity> {}

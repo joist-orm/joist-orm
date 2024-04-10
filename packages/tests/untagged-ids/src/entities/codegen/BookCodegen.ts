@@ -1,53 +1,43 @@
 import {
   BaseEntity,
-  Changes,
   cleanStringValue,
-  Collection,
   ConfigApi,
-  EntityFilter,
-  EntityGraphQLFilter,
-  EntityMetadata,
   failNoIdYet,
-  FilterOf,
-  Flavor,
   getField,
   getInstanceData,
-  GraphQLFilterOf,
   hasMany,
   hasOne,
   isLoaded,
+  loadLens,
+  newChangesProxy,
+  newRequiredRule,
+  setField,
+  setOpts,
+  toIdOf,
+} from "joist-orm";
+import type {
+  Changes,
+  Collection,
+  EntityFilter,
+  EntityGraphQLFilter,
+  EntityMetadata,
+  FilterOf,
+  Flavor,
+  GraphQLFilterOf,
   Lens,
   Loaded,
   LoadHint,
-  loadLens,
   ManyToOneReference,
-  newChangesProxy,
-  newRequiredRule,
   OptsOf,
   OrderBy,
   PartialOrNull,
-  setField,
-  setOpts,
   TaggedId,
-  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
-import {
-  Author,
-  AuthorId,
-  authorMeta,
-  AuthorOrder,
-  Book,
-  bookMeta,
-  Comment,
-  CommentId,
-  commentMeta,
-  Entity,
-  EntityManager,
-  newBook,
-} from "../entities";
+import type { Context } from "src/context";
+import { Author, authorMeta, Book, bookMeta, Comment, commentMeta, EntityManager, newBook } from "../entities";
+import type { AuthorId, AuthorOrder, CommentId, Entity } from "../entities";
 
 export type BookId = Flavor<string, Book>;
 

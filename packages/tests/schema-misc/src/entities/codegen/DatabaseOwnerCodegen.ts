@@ -1,31 +1,34 @@
 import {
   BaseEntity,
-  Changes,
   cleanStringValue,
   ConfigApi,
-  EntityMetadata,
   failNoIdYet,
-  Flavor,
   getField,
   isLoaded,
-  Lens,
-  Loaded,
-  LoadHint,
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  setField,
+  setOpts,
+  toIdOf,
+} from "joist-orm";
+import type {
+  Changes,
+  EntityMetadata,
+  Flavor,
+  Lens,
+  Loaded,
+  LoadHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
-  setField,
-  setOpts,
   TaggedId,
-  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
-import { DatabaseOwner, databaseOwnerMeta, Entity, EntityManager, newDatabaseOwner } from "../entities";
+import type { Context } from "src/context";
+import { DatabaseOwner, databaseOwnerMeta, EntityManager, newDatabaseOwner } from "../entities";
+import type { Entity } from "../entities";
 
 export type DatabaseOwnerId = Flavor<string, DatabaseOwner>;
 

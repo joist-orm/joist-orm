@@ -1,33 +1,34 @@
 import {
-  Changes,
   cleanStringValue,
   ConfigApi,
-  EntityMetadata,
   failNoIdYet,
-  Flavor,
   getField,
   isLoaded,
-  Lens,
-  Loaded,
-  LoadHint,
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  setField,
+  setOpts,
+  toIdOf,
+} from "joist-orm";
+import type {
+  Changes,
+  EntityMetadata,
+  Flavor,
+  Lens,
+  Loaded,
+  LoadHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
-  setField,
-  setOpts,
   TaggedId,
-  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
+import type { Context } from "src/context";
 import {
   AdminUser,
   adminUserMeta,
-  Entity,
   EntityManager,
   newAdminUser,
   User,
@@ -35,9 +36,8 @@ import {
   UserFilter,
   UserGraphQLFilter,
   UserIdsOpts,
-  UserOpts,
-  UserOrder,
 } from "../entities";
+import type { Entity, UserOpts, UserOrder } from "../entities";
 
 export type AdminUserId = Flavor<string, AdminUser> & Flavor<string, "User">;
 

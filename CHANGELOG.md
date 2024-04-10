@@ -1,3 +1,10 @@
+## [1.155.1](https://github.com/joist-orm/joist-orm/compare/v1.155.0...v1.155.1) (2024-04-10)
+
+
+### Bug Fixes
+
+* additional missing type imports ([#1030](https://github.com/joist-orm/joist-orm/issues/1030)) ([1881631](https://github.com/joist-orm/joist-orm/commit/1881631187d96d3a9e645a79865678790b94f8e8))
+
 # [1.155.0](https://github.com/joist-orm/joist-orm/compare/v1.154.1...v1.155.0) (2024-04-10)
 
 

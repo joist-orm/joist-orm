@@ -3,6 +3,7 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   getInstanceData,
   hasMany,
@@ -12,7 +13,9 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -152,12 +155,23 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof ParentItemFields>(key: K): FieldType<ParentItemFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<ParentItemFields> & keyof ParentItemFields>(
+    key: K,
+    value: FieldType<ParentItemFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<ParentItemOpts>): void {
-    setOpts(this as any as ParentItem, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<ParentItemOpts>): void {
-    setOpts(this as any as ParentItem, opts as OptsOf<ParentItem>, { partial: true });
+    setOpts(this as any, opts as OptsOf<ParentItem>, { partial: true });
   }
 
   get changes(): Changes<ParentItem> {

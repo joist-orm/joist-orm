@@ -3,6 +3,7 @@ import { getField } from "./fields";
 import {
   Entity,
   EntityManager,
+  FieldsOf,
   InstanceData,
   OptsOf,
   PartialOrNull,
@@ -69,6 +70,10 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   get idUntagged(): string {
     return deTagId(getMetadata(this), this.id);
   }
+
+  abstract getFieldValue(key: string): any;
+
+  abstract setFieldValue(fieldName: string, value: unknown): void;
 
   abstract set(values: Partial<OptsOf<Entity>>): void;
 

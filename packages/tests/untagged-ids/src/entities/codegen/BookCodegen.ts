@@ -3,6 +3,7 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   getInstanceData,
   hasMany,
@@ -12,7 +13,9 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -144,12 +147,23 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof BookFields>(key: K): FieldType<BookFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<BookFields> & keyof BookFields>(
+    key: K,
+    value: FieldType<BookFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<BookOpts>): void {
-    setOpts(this as any as Book, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<BookOpts>): void {
-    setOpts(this as any as Book, opts as OptsOf<Book>, { partial: true });
+    setOpts(this as any, opts as OptsOf<Book>, { partial: true });
   }
 
   get changes(): Changes<Book> {

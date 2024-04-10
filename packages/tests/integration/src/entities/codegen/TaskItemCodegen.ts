@@ -2,6 +2,7 @@ import {
   BaseEntity,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   getInstanceData,
   hasOne,
@@ -10,7 +11,9 @@ import {
   mustBeSubType,
   newChangesProxy,
   newRequiredRule,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -147,12 +150,23 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof TaskItemFields>(key: K): FieldType<TaskItemFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<TaskItemFields> & keyof TaskItemFields>(
+    key: K,
+    value: FieldType<TaskItemFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<TaskItemOpts>): void {
-    setOpts(this as any as TaskItem, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<TaskItemOpts>): void {
-    setOpts(this as any as TaskItem, opts as OptsOf<TaskItem>, { partial: true });
+    setOpts(this as any, opts as OptsOf<TaskItem>, { partial: true });
   }
 
   get changes(): Changes<TaskItem> {

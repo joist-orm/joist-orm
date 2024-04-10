@@ -1,3 +1,5 @@
+import { IdOf } from "./EntityManager";
+
 /** All the fields for an entity in the `FieldsOf` / `EntityField` format. */
 export type EntityFields<T> = {
   [K in keyof T]: EntityField;
@@ -19,3 +21,11 @@ export type SettableFields<F> = {
         ? F[K]
         : never;
 };
+
+export type FieldType<F, K extends keyof F> = F[K] extends { kind: "primitive"; type: infer T; nullable: infer N }
+  ? T | N
+  : F[K] extends { kind: "enum"; type: infer T; nullable: infer N }
+    ? T | N
+    : F[K] extends { kind: "m2o"; type: infer E; nullable: infer N }
+      ? IdOf<E> | N
+      : never;

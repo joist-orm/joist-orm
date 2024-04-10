@@ -2,6 +2,7 @@ import {
   BaseEntity,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   getInstanceData,
   hasOne,
@@ -10,7 +11,9 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -172,12 +175,23 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
     return getField(this, "status") === AdvanceStatus.Paid;
   }
 
+  getFieldValue<K extends keyof BookAdvanceFields>(key: K): FieldType<BookAdvanceFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<BookAdvanceFields> & keyof BookAdvanceFields>(
+    key: K,
+    value: FieldType<BookAdvanceFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<BookAdvanceOpts>): void {
-    setOpts(this as any as BookAdvance, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<BookAdvanceOpts>): void {
-    setOpts(this as any as BookAdvance, opts as OptsOf<BookAdvance>, { partial: true });
+    setOpts(this as any, opts as OptsOf<BookAdvance>, { partial: true });
   }
 
   get changes(): Changes<BookAdvance> {

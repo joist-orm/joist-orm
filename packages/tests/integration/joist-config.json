@@ -90,5 +90,5 @@
     }
   },
   "entitiesDirectory": "./src/entities",
-  "version": "1.155.2"
+  "version": "1.156.0"
 }

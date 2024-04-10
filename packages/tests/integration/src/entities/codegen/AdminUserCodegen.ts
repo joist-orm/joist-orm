@@ -2,13 +2,16 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   isLoaded,
   loadLens,
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -102,12 +105,23 @@ export abstract class AdminUserCodegen extends User implements Entity {
     setField(this, "role", cleanStringValue(role));
   }
 
+  getFieldValue<K extends keyof AdminUserFields>(key: K): FieldType<AdminUserFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<AdminUserFields> & keyof AdminUserFields>(
+    key: K,
+    value: FieldType<AdminUserFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<AdminUserOpts>): void {
-    setOpts(this as any as AdminUser, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<AdminUserOpts>): void {
-    setOpts(this as any as AdminUser, opts as OptsOf<AdminUser>, { partial: true });
+    setOpts(this as any, opts as OptsOf<AdminUser>, { partial: true });
   }
 
   get changes(): Changes<AdminUser> {

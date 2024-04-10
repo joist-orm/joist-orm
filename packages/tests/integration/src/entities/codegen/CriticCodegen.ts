@@ -3,6 +3,7 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   getInstanceData,
   hasMany,
@@ -13,7 +14,9 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -176,12 +179,23 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof CriticFields>(key: K): FieldType<CriticFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<CriticFields> & keyof CriticFields>(
+    key: K,
+    value: FieldType<CriticFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<CriticOpts>): void {
-    setOpts(this as any as Critic, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<CriticOpts>): void {
-    setOpts(this as any as Critic, opts as OptsOf<Critic>, { partial: true });
+    setOpts(this as any, opts as OptsOf<Critic>, { partial: true });
   }
 
   get changes(): Changes<Critic> {

@@ -3,6 +3,7 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   getInstanceData,
   hasOne,
@@ -11,7 +12,9 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -193,12 +196,23 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
     return getField(this, "type") === ImageType.PublisherImage;
   }
 
+  getFieldValue<K extends keyof ImageFields>(key: K): FieldType<ImageFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<ImageFields> & keyof ImageFields>(
+    key: K,
+    value: FieldType<ImageFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<ImageOpts>): void {
-    setOpts(this as any as Image, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<ImageOpts>): void {
-    setOpts(this as any as Image, opts as OptsOf<Image>, { partial: true });
+    setOpts(this as any, opts as OptsOf<Image>, { partial: true });
   }
 
   get changes(): Changes<Image> {

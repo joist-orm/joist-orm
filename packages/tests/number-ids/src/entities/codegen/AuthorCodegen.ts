@@ -3,6 +3,7 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   getInstanceData,
   hasMany,
@@ -11,7 +12,9 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -148,12 +151,23 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, number> im
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof AuthorFields>(key: K): FieldType<AuthorFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<AuthorFields> & keyof AuthorFields>(
+    key: K,
+    value: FieldType<AuthorFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<AuthorOpts>): void {
-    setOpts(this as any as Author, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<AuthorOpts>): void {
-    setOpts(this as any as Author, opts as OptsOf<Author>, { partial: true });
+    setOpts(this as any, opts as OptsOf<Author>, { partial: true });
   }
 
   get changes(): Changes<Author> {

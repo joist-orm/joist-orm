@@ -29,7 +29,7 @@ export { ConfigApi, EntityHook } from "./config";
 export { configureMetadata, getConstructorFromTaggedId, maybeGetConstructorFromReference } from "./configure";
 export { DeepPartialOrNull } from "./createOrUpdatePartial";
 export * from "./drivers";
-export { getField, isChangeableField, isFieldSet, setField } from "./fields";
+export { getField, isChangeableField, isFieldSet, setField, setFieldValue } from "./fields";
 export * from "./getProperties";
 export * from "./keys";
 export { kq, kqDot, kqStar } from "./keywords";

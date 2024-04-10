@@ -3,6 +3,7 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   getInstanceData,
   hasMany,
@@ -15,7 +16,9 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -249,12 +252,23 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof UserFields>(key: K): FieldType<UserFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<UserFields> & keyof UserFields>(
+    key: K,
+    value: FieldType<UserFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<UserOpts>): void {
-    setOpts(this as any as User, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<UserOpts>): void {
-    setOpts(this as any as User, opts as OptsOf<User>, { partial: true });
+    setOpts(this as any, opts as OptsOf<User>, { partial: true });
   }
 
   get changes(): Changes<User, keyof FieldsOf<User> | keyof FieldsOf<AdminUser>> {

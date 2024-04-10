@@ -3,6 +3,7 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   getInstanceData,
   hasLargeManyToMany,
@@ -12,7 +13,9 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -152,12 +155,23 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof TagFields>(key: K): FieldType<TagFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<TagFields> & keyof TagFields>(
+    key: K,
+    value: FieldType<TagFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<TagOpts>): void {
-    setOpts(this as any as Tag, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<TagOpts>): void {
-    setOpts(this as any as Tag, opts as OptsOf<Tag>, { partial: true });
+    setOpts(this as any, opts as OptsOf<Tag>, { partial: true });
   }
 
   get changes(): Changes<Tag> {

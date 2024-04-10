@@ -1,4 +1,4 @@
-import { EntityManager, OptsOf, TaggedId } from "./EntityManager";
+import { EntityManager, FieldsOf, OptsOf, TaggedId } from "./EntityManager";
 import { BaseEntity, PartialOrNull } from "./index";
 
 export function isEntity(maybeEntity: unknown): maybeEntity is Entity {
@@ -19,6 +19,8 @@ export interface Entity {
   readonly isNewEntity: boolean;
   readonly isDeletedEntity: boolean;
   readonly isDirtyEntity: boolean;
+  getFieldValue(fieldName: string): any;
+  setFieldValue(fieldName: string, value: unknown): void;
   set(opts: Partial<OptsOf<this>>): void;
   setPartial(values: PartialOrNull<OptsOf<this>>): void;
   /**

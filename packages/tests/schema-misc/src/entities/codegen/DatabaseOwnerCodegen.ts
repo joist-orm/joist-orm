@@ -3,13 +3,16 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   isLoaded,
   loadLens,
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -106,12 +109,23 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
     setField(this, "name", cleanStringValue(name));
   }
 
+  getFieldValue<K extends keyof DatabaseOwnerFields>(key: K): FieldType<DatabaseOwnerFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<DatabaseOwnerFields> & keyof DatabaseOwnerFields>(
+    key: K,
+    value: FieldType<DatabaseOwnerFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<DatabaseOwnerOpts>): void {
-    setOpts(this as any as DatabaseOwner, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<DatabaseOwnerOpts>): void {
-    setOpts(this as any as DatabaseOwner, opts as OptsOf<DatabaseOwner>, { partial: true });
+    setOpts(this as any, opts as OptsOf<DatabaseOwner>, { partial: true });
   }
 
   get changes(): Changes<DatabaseOwner> {

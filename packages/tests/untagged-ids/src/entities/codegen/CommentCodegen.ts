@@ -3,6 +3,7 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   getInstanceData,
   hasOnePolymorphic,
@@ -12,7 +13,9 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -146,12 +149,23 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof CommentFields>(key: K): FieldType<CommentFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<CommentFields> & keyof CommentFields>(
+    key: K,
+    value: FieldType<CommentFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<CommentOpts>): void {
-    setOpts(this as any as Comment, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<CommentOpts>): void {
-    setOpts(this as any as Comment, opts as OptsOf<Comment>, { partial: true });
+    setOpts(this as any, opts as OptsOf<Comment>, { partial: true });
   }
 
   get changes(): Changes<Comment> {

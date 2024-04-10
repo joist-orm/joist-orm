@@ -24,6 +24,7 @@ import {
   EntityGraphQLFilter,
   EntityManager,
   EntityMetadata,
+  FieldType,
   FieldsOf,
   FilterOf,
   Flavor,
@@ -44,6 +45,7 @@ import {
   ReactiveField,
   ReactiveReference,
   SSAssert,
+  SettableFields,
   TaggedId,
   ValueFilter,
   ValueGraphQLFilter,
@@ -62,6 +64,7 @@ import {
   hasOneToOne,
   isEntity,
   isLoaded,
+  setFieldValue,
   loadLens,
   mustBeSubType,
   newChangesProxy,
@@ -527,12 +530,25 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
       ${primitives}
 
+      getFieldValue<K extends keyof ${entityName}Fields>(
+        key: K
+      ): ${FieldType}<${entityName}Fields, K> {
+        return ${getField}(this as any, key);  
+      }
+
+      setFieldValue<K extends keyof ${SettableFields}<${entityName}Fields> & keyof ${entityName}Fields>(
+        key: K,
+        value: ${FieldType}<${entityName}Fields, K>,
+      ): void {
+        ${setFieldValue}(this, key, value);
+      }
+
       set(opts: Partial<${entityName}Opts>): void {
-        ${setOpts}(this as any as ${entityName}, opts);
+        ${setOpts}(this as any, opts);
       }
 
       setPartial(opts: ${PartialOrNull}<${entityName}Opts>): void {
-        ${setOpts}(this as any as ${entityName}, opts as ${OptsOf}<${entityName}>, { partial: true });
+        ${setOpts}(this as any, opts as ${OptsOf}<${entityName}>, { partial: true });
       }
 
       get changes(): ${Changes}<${entityName}${maybeOtherTypeChanges}> {

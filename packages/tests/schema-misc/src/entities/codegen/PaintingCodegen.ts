@@ -3,6 +3,7 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   getInstanceData,
   hasOne,
@@ -11,7 +12,9 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -138,12 +141,23 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof PaintingFields>(key: K): FieldType<PaintingFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<PaintingFields> & keyof PaintingFields>(
+    key: K,
+    value: FieldType<PaintingFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<PaintingOpts>): void {
-    setOpts(this as any as Painting, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<PaintingOpts>): void {
-    setOpts(this as any as Painting, opts as OptsOf<Painting>, { partial: true });
+    setOpts(this as any, opts as OptsOf<Painting>, { partial: true });
   }
 
   get changes(): Changes<Painting> {

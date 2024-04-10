@@ -3,6 +3,7 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   getInstanceData,
   hasLargeMany,
@@ -12,7 +13,9 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -153,12 +156,23 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof PublisherGroupFields>(key: K): FieldType<PublisherGroupFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<PublisherGroupFields> & keyof PublisherGroupFields>(
+    key: K,
+    value: FieldType<PublisherGroupFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<PublisherGroupOpts>): void {
-    setOpts(this as any as PublisherGroup, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<PublisherGroupOpts>): void {
-    setOpts(this as any as PublisherGroup, opts as OptsOf<PublisherGroup>, { partial: true });
+    setOpts(this as any, opts as OptsOf<PublisherGroup>, { partial: true });
   }
 
   get changes(): Changes<PublisherGroup> {

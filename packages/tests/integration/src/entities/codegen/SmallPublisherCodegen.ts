@@ -2,6 +2,7 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   getInstanceData,
   hasMany,
@@ -10,7 +11,9 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -150,12 +153,23 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
 
   abstract readonly allAuthorNames: ReactiveField<SmallPublisher, string | undefined>;
 
+  getFieldValue<K extends keyof SmallPublisherFields>(key: K): FieldType<SmallPublisherFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<SmallPublisherFields> & keyof SmallPublisherFields>(
+    key: K,
+    value: FieldType<SmallPublisherFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<SmallPublisherOpts>): void {
-    setOpts(this as any as SmallPublisher, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<SmallPublisherOpts>): void {
-    setOpts(this as any as SmallPublisher, opts as OptsOf<SmallPublisher>, { partial: true });
+    setOpts(this as any, opts as OptsOf<SmallPublisher>, { partial: true });
   }
 
   get changes(): Changes<SmallPublisher> {

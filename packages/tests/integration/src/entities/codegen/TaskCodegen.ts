@@ -3,6 +3,7 @@ import {
   cannotBeUpdated,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   getInstanceData,
   hasMany,
@@ -11,7 +12,9 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -186,12 +189,23 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
     return getField(this, "type") === TaskType.New;
   }
 
+  getFieldValue<K extends keyof TaskFields>(key: K): FieldType<TaskFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<TaskFields> & keyof TaskFields>(
+    key: K,
+    value: FieldType<TaskFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<TaskOpts>): void {
-    setOpts(this as any as Task, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<TaskOpts>): void {
-    setOpts(this as any as Task, opts as OptsOf<Task>, { partial: true });
+    setOpts(this as any, opts as OptsOf<Task>, { partial: true });
   }
 
   get changes(): Changes<Task, keyof FieldsOf<Task> | keyof FieldsOf<TaskNew> | keyof FieldsOf<TaskOld>> {

@@ -2,6 +2,7 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
+  FieldType,
   getField,
   getInstanceData,
   hasMany,
@@ -9,7 +10,9 @@ import {
   loadLens,
   newChangesProxy,
   setField,
+  setFieldValue,
   setOpts,
+  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -147,12 +150,23 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
     setField(this, "country", cleanStringValue(country));
   }
 
+  getFieldValue<K extends keyof LargePublisherFields>(key: K): FieldType<LargePublisherFields, K> {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SettableFields<LargePublisherFields> & keyof LargePublisherFields>(
+    key: K,
+    value: FieldType<LargePublisherFields, K>,
+  ): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<LargePublisherOpts>): void {
-    setOpts(this as any as LargePublisher, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<LargePublisherOpts>): void {
-    setOpts(this as any as LargePublisher, opts as OptsOf<LargePublisher>, { partial: true });
+    setOpts(this as any, opts as OptsOf<LargePublisher>, { partial: true });
   }
 
   get changes(): Changes<LargePublisher> {

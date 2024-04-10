@@ -38,16 +38,21 @@ import {
   EntityManager,
   newSmallPublisher,
   Publisher,
-  PublisherFields,
-  PublisherFilter,
-  PublisherGraphQLFilter,
-  PublisherIdsOpts,
   SmallPublisher,
   smallPublisherMeta,
   User,
   userMeta,
 } from "../entities";
-import type { Entity, PublisherOpts, PublisherOrder, UserId } from "../entities";
+import type {
+  Entity,
+  PublisherFields,
+  PublisherFilter,
+  PublisherGraphQLFilter,
+  PublisherIdsOpts,
+  PublisherOpts,
+  PublisherOrder,
+  UserId,
+} from "../entities";
 
 export type SmallPublisherId = Flavor<string, SmallPublisher> & Flavor<string, "Publisher">;
 

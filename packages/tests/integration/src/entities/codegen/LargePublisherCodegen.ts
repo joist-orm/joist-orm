@@ -40,14 +40,20 @@ import {
   largePublisherMeta,
   newLargePublisher,
   Publisher,
+  User,
+  userMeta,
+} from "../entities";
+import type {
+  CriticId,
+  Entity,
   PublisherFields,
   PublisherFilter,
   PublisherGraphQLFilter,
   PublisherIdsOpts,
-  User,
-  userMeta,
+  PublisherOpts,
+  PublisherOrder,
+  UserId,
 } from "../entities";
-import type { CriticId, Entity, PublisherOpts, PublisherOrder, UserId } from "../entities";
 
 export type LargePublisherId = Flavor<string, LargePublisher> & Flavor<string, "Publisher">;
 

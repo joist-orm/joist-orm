@@ -44,16 +44,23 @@ import {
   Publisher,
   publisherMeta,
   Task,
-  TaskFields,
-  TaskFilter,
-  TaskGraphQLFilter,
-  TaskIdsOpts,
   TaskItem,
   taskItemMeta,
   TaskOld,
   taskOldMeta,
 } from "../entities";
-import type { CommentId, Entity, PublisherId, TaskItemId, TaskOpts, TaskOrder } from "../entities";
+import type {
+  CommentId,
+  Entity,
+  PublisherId,
+  TaskFields,
+  TaskFilter,
+  TaskGraphQLFilter,
+  TaskIdsOpts,
+  TaskItemId,
+  TaskOpts,
+  TaskOrder,
+} from "../entities";
 
 export type TaskOldId = Flavor<string, TaskOld> & Flavor<string, "Task">;
 

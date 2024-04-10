@@ -1,40 +1,40 @@
 import {
-  Changes,
   cleanStringValue,
-  Collection,
   ConfigApi,
+  failNoIdYet,
+  getField,
+  getInstanceData,
+  hasMany,
+  isLoaded,
+  loadLens,
+  newChangesProxy,
+  setField,
+  setOpts,
+  toIdOf,
+} from "joist-orm";
+import type {
+  Changes,
+  Collection,
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  failNoIdYet,
   FilterOf,
   Flavor,
-  getField,
-  getInstanceData,
   GraphQLFilterOf,
-  hasMany,
-  isLoaded,
   Lens,
   Loaded,
   LoadHint,
-  loadLens,
-  newChangesProxy,
   OptsOf,
   OrderBy,
   PartialOrNull,
-  setField,
-  setOpts,
   TaggedId,
-  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
+import type { Context } from "src/context";
 import {
   Critic,
-  CriticId,
   criticMeta,
-  Entity,
   EntityManager,
   LargePublisher,
   largePublisherMeta,
@@ -44,12 +44,10 @@ import {
   PublisherFilter,
   PublisherGraphQLFilter,
   PublisherIdsOpts,
-  PublisherOpts,
-  PublisherOrder,
   User,
-  UserId,
   userMeta,
 } from "../entities";
+import type { CriticId, Entity, PublisherOpts, PublisherOrder, UserId } from "../entities";
 
 export type LargePublisherId = Flavor<string, LargePublisher> & Flavor<string, "Publisher">;
 

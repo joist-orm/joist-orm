@@ -1,52 +1,50 @@
 import {
   BaseEntity,
-  Changes,
   cleanStringValue,
   ConfigApi,
+  failNoIdYet,
+  getField,
+  getInstanceData,
+  hasOne,
+  isLoaded,
+  loadLens,
+  newChangesProxy,
+  newRequiredRule,
+  setField,
+  setOpts,
+  toIdOf,
+} from "joist-orm";
+import type {
+  Changes,
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  failNoIdYet,
   FilterOf,
   Flavor,
-  getField,
-  getInstanceData,
   GraphQLFilterOf,
-  hasOne,
-  isLoaded,
   Lens,
   Loaded,
   LoadHint,
-  loadLens,
   ManyToOneReference,
-  newChangesProxy,
-  newRequiredRule,
   OptsOf,
   OrderBy,
   PartialOrNull,
-  setField,
-  setOpts,
   TaggedId,
-  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
+import type { Context } from "src/context";
 import {
   ChildGroup,
-  ChildGroupId,
   childGroupMeta,
-  ChildGroupOrder,
   ChildItem,
   childItemMeta,
-  Entity,
   EntityManager,
   newChildItem,
   ParentItem,
-  ParentItemId,
   parentItemMeta,
-  ParentItemOrder,
 } from "../entities";
+import type { ChildGroupId, ChildGroupOrder, Entity, ParentItemId, ParentItemOrder } from "../entities";
 
 export type ChildItemId = Flavor<string, ChildItem>;
 

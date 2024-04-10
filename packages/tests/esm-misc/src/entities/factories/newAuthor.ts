@@ -1,4 +1,5 @@
-import { DeepNew, FactoryOpts, newTestInstance } from "joist-orm";
+import { newTestInstance } from "joist-orm";
+import type { DeepNew, FactoryOpts } from "joist-orm";
 import { Author } from "../entities.js";
 import type { EntityManager } from "../entities.js";
 

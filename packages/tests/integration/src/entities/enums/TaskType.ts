@@ -1,4 +1,4 @@
-import { EnumMetadata } from "joist-orm";
+import type { EnumMetadata } from "joist-orm";
 
 export enum TaskType {
   Old = "OLD",

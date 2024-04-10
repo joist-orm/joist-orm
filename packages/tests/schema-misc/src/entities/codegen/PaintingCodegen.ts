@@ -1,48 +1,41 @@
 import {
   BaseEntity,
-  Changes,
   cleanStringValue,
   ConfigApi,
+  failNoIdYet,
+  getField,
+  getInstanceData,
+  hasOne,
+  isLoaded,
+  loadLens,
+  newChangesProxy,
+  newRequiredRule,
+  setField,
+  setOpts,
+  toIdOf,
+} from "joist-orm";
+import type {
+  Changes,
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
-  failNoIdYet,
   FilterOf,
   Flavor,
-  getField,
-  getInstanceData,
   GraphQLFilterOf,
-  hasOne,
-  isLoaded,
   Lens,
   Loaded,
   LoadHint,
-  loadLens,
   ManyToOneReference,
-  newChangesProxy,
-  newRequiredRule,
   OptsOf,
   OrderBy,
   PartialOrNull,
-  setField,
-  setOpts,
   TaggedId,
-  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
-import {
-  Artist,
-  ArtistId,
-  artistMeta,
-  ArtistOrder,
-  Entity,
-  EntityManager,
-  newPainting,
-  Painting,
-  paintingMeta,
-} from "../entities";
+import type { Context } from "src/context";
+import { Artist, artistMeta, EntityManager, newPainting, Painting, paintingMeta } from "../entities";
+import type { ArtistId, ArtistOrder, Entity } from "../entities";
 
 export type PaintingId = Flavor<string, Painting>;
 

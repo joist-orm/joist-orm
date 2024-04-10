@@ -1,39 +1,42 @@
 import {
   BaseEntity,
-  Changes,
   cleanStringValue,
   ConfigApi,
-  EntityFilter,
-  EntityGraphQLFilter,
-  EntityMetadata,
   failNoIdYet,
-  Flavor,
   getField,
   getInstanceData,
   hasOnePolymorphic,
-  IdOf,
   isEntity,
   isLoaded,
+  loadLens,
+  newChangesProxy,
+  newRequiredRule,
+  setField,
+  setOpts,
+  toIdOf,
+} from "joist-orm";
+import type {
+  Changes,
+  EntityFilter,
+  EntityGraphQLFilter,
+  EntityMetadata,
+  Flavor,
+  IdOf,
   Lens,
   Loaded,
   LoadHint,
-  loadLens,
   MaybeAbstractEntityConstructor,
-  newChangesProxy,
-  newRequiredRule,
   OptsOf,
   OrderBy,
   PartialOrNull,
   PolymorphicReference,
-  setField,
-  setOpts,
   TaggedId,
-  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
-import { Author, Book, Comment, commentMeta, Entity, EntityManager, newComment } from "../entities";
+import type { Context } from "src/context";
+import { Author, Book, Comment, commentMeta, EntityManager, newComment } from "../entities";
+import type { Entity } from "../entities";
 
 export type CommentId = Flavor<string, Comment>;
 

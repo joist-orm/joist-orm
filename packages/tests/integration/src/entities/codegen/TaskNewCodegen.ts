@@ -1,42 +1,41 @@
 import {
-  Changes,
-  Collection,
   ConfigApi,
-  EntityFilter,
-  EntityGraphQLFilter,
-  EntityMetadata,
   failNoIdYet,
-  FilterOf,
-  Flavor,
   getField,
   getInstanceData,
-  GraphQLFilterOf,
   hasMany,
   hasOne,
   isLoaded,
+  loadLens,
+  newChangesProxy,
+  setField,
+  setOpts,
+  toIdOf,
+} from "joist-orm";
+import type {
+  Changes,
+  Collection,
+  EntityFilter,
+  EntityGraphQLFilter,
+  EntityMetadata,
+  FilterOf,
+  Flavor,
+  GraphQLFilterOf,
   Lens,
   Loaded,
   LoadHint,
-  loadLens,
   ManyToOneReference,
-  newChangesProxy,
   OptsOf,
   OrderBy,
   PartialOrNull,
-  setField,
-  setOpts,
   TaggedId,
-  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
+import type { Context } from "src/context";
 import {
   Author,
-  AuthorId,
   authorMeta,
-  AuthorOrder,
-  Entity,
   EntityManager,
   newTaskNew,
   Task,
@@ -45,13 +44,11 @@ import {
   TaskGraphQLFilter,
   TaskIdsOpts,
   TaskItem,
-  TaskItemId,
   taskItemMeta,
   TaskNew,
   taskNewMeta,
-  TaskOpts,
-  TaskOrder,
 } from "../entities";
+import type { AuthorId, AuthorOrder, Entity, TaskItemId, TaskOpts, TaskOrder } from "../entities";
 
 export type TaskNewId = Flavor<string, TaskNew> & Flavor<string, "Task">;
 

@@ -43,7 +43,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
 
   return code`
     export const ${entity.metaName}: ${EntityMetadata}<${entity.name}> = {
-      cstr: ${entity.type},
+      cstr: ${entity.typeForMetadataFile},
       type: "${entity.name}",
       baseType: ${maybeBaseType}, ${maybeInheritanceType} ${maybeStiColumn} ${maybeStiValue}
       idType: "${config.idType ?? "tagged-string"}",

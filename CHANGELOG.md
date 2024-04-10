@@ -1,3 +1,10 @@
+# [1.154.0](https://github.com/joist-orm/joist-orm/compare/v1.153.2...v1.154.0) (2024-04-10)
+
+
+### Features
+
+* esm codegen ([#1025](https://github.com/joist-orm/joist-orm/issues/1025)) ([dd86298](https://github.com/joist-orm/joist-orm/commit/dd8629817bc3ca0f0c751209df70ea2fc7598c1d))
+
 ## [1.153.2](https://github.com/joist-orm/joist-orm/compare/v1.153.1...v1.153.2) (2024-04-06)
 
 

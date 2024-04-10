@@ -1,7 +1,12 @@
 import { configureMetadata, EntityManager as EntityManager1, KeySerde, PrimitiveSerde } from "joist-orm";
 import type { Entity as Entity2, EntityMetadata } from "joist-orm";
 import type { Context } from "src/context";
-import { Artist, artistConfig, Author, authorConfig, Book, bookConfig, DatabaseOwner, databaseOwnerConfig, newArtist, newAuthor, newBook, newDatabaseOwner, newPainting, Painting, paintingConfig } from "../entities";
+import { Artist } from "../Artist";
+import { Author } from "../Author";
+import { Book } from "../Book";
+import { DatabaseOwner } from "../DatabaseOwner";
+import { Painting } from "../Painting";
+import { artistConfig, authorConfig, bookConfig, databaseOwnerConfig, newArtist, newAuthor, newBook, newDatabaseOwner, newPainting, paintingConfig } from "../entities";
 
 export class EntityManager extends EntityManager1<Context, Entity> {}
 

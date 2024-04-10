@@ -1,7 +1,9 @@
 import { configureMetadata, EntityManager as EntityManager1, EnumFieldSerde, KeySerde, PrimitiveSerde } from "joist-orm";
 import type { Entity as Entity2, EntityMetadata } from "joist-orm";
 import type { Context } from "src/context";
-import { Author, authorConfig, Book, bookConfig, BookStatuses, newAuthor, newBook } from "../entities";
+import { Author } from "../Author";
+import { Book } from "../Book";
+import { authorConfig, bookConfig, BookStatuses, newAuthor, newBook } from "../entities";
 
 export class EntityManager extends EntityManager1<Context, Entity> {}
 

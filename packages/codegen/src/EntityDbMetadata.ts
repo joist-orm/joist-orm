@@ -45,6 +45,8 @@ export type Entity = {
   name: string;
   /** The symbol pointing to the entity itself. */
   type: Import;
+  /** The symbol pointing to the entity itself, directly rather than via entities.ts */
+  typeForMetadataFile: Import;
   /** The name of the entity's runtime metadata const. */
   metaName: string;
   /** The symbol pointing to the entity's runtime metadata const. */
@@ -774,6 +776,7 @@ export function makeEntity(entityName: string): Entity {
   return {
     name: entityName,
     type: entityType(entityName),
+    typeForMetadataFile: entityTypeForMetadataFile(entityName),
     metaName: metaName(entityName),
     metaType: metaType(entityName),
     idType: imp(`t:${entityName}Id@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
@@ -793,6 +796,10 @@ function metaType(entityName: string): Import {
 
 function entityType(entityName: string): Import {
   return imp(`${entityName}@./entities.ts`);
+}
+
+function entityTypeForMetadataFile(entityName: string): Import {
+  return imp(`${entityName}@./${entityName}.ts`);
 }
 
 function mapType(tableName: string, columnName: string, dbColumnType: DatabaseColumnType): PrimitiveTypescriptType {

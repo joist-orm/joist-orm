@@ -3,7 +3,6 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
-  FieldType,
   getField,
   getInstanceData,
   hasLargeMany,
@@ -15,7 +14,6 @@ import {
   setField,
   setFieldValue,
   setOpts,
-  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -40,26 +38,17 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  Critic,
-  criticMeta,
-  EntityManager,
-  newPublisherGroup,
-  Publisher,
-  PublisherGroup,
-  publisherGroupMeta,
-  publisherMeta,
-} from "../entities";
+import { Critic, criticMeta, EntityManager, newPublisherGroup, Publisher, PublisherGroup, publisherGroupMeta, publisherMeta } from "../entities";
 import type { Entity, PublisherId } from "../entities";
 
 export type PublisherGroupId = Flavor<string, PublisherGroup>;
 
 export interface PublisherGroupFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; value: string | undefined; derived: false };
+  numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; value: number | never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
 }
 
 export interface PublisherGroupOpts {
@@ -156,14 +145,11 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
     return getField(this, "updatedAt");
   }
 
-  getFieldValue<K extends keyof PublisherGroupFields>(key: K): FieldType<PublisherGroupFields, K> {
+  getFieldValue<K extends keyof PublisherGroupFields>(key: K): PublisherGroupFields[K]["value"] {
     return getField(this as any, key);
   }
 
-  setFieldValue<K extends keyof SettableFields<PublisherGroupFields> & keyof PublisherGroupFields>(
-    key: K,
-    value: FieldType<PublisherGroupFields, K>,
-  ): void {
+  setFieldValue<K extends keyof PublisherGroupFields>(key: K, value: PublisherGroupFields[K]["value"]): void {
     setFieldValue(this, key, value);
   }
 
@@ -184,14 +170,9 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   populate<H extends LoadHint<PublisherGroup>>(hint: H): Promise<Loaded<PublisherGroup, H>>;
-  populate<H extends LoadHint<PublisherGroup>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<PublisherGroup, H>>;
+  populate<H extends LoadHint<PublisherGroup>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<PublisherGroup, H>>;
   populate<H extends LoadHint<PublisherGroup>, V>(hint: H, fn: (pg: Loaded<PublisherGroup, H>) => V): Promise<V>;
-  populate<H extends LoadHint<PublisherGroup>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (pg: Loaded<PublisherGroup, H>) => V,
-  ): Promise<V>;
+  populate<H extends LoadHint<PublisherGroup>, V>(opts: { hint: H; forceReload?: boolean }, fn: (pg: Loaded<PublisherGroup, H>) => V): Promise<V>;
   populate<H extends LoadHint<PublisherGroup>, V>(
     hintOrOpts: any,
     fn?: (pg: Loaded<PublisherGroup, H>) => V,
@@ -205,24 +186,11 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
 
   get publishers(): Collection<PublisherGroup, Publisher> {
     const { relations } = getInstanceData(this);
-    return relations.publishers ??= hasMany(
-      this as any as PublisherGroup,
-      publisherMeta,
-      "publishers",
-      "group",
-      "group_id",
-      undefined,
-    );
+    return relations.publishers ??= hasMany(this as any as PublisherGroup, publisherMeta, "publishers", "group", "group_id", undefined);
   }
 
   get critics(): LargeCollection<PublisherGroup, Critic> {
     const { relations } = getInstanceData(this);
-    return relations.critics ??= hasLargeMany(
-      this as any as PublisherGroup,
-      criticMeta,
-      "critics",
-      "group",
-      "group_id",
-    );
+    return relations.critics ??= hasLargeMany(this as any as PublisherGroup, criticMeta, "critics", "group", "group_id");
   }
 }

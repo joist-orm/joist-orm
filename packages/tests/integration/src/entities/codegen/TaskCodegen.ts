@@ -3,7 +3,6 @@ import {
   cannotBeUpdated,
   ConfigApi,
   failNoIdYet,
-  FieldType,
   getField,
   getInstanceData,
   hasMany,
@@ -14,7 +13,6 @@ import {
   setField,
   setFieldValue,
   setOpts,
-  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -38,30 +36,18 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  EntityManager,
-  newTask,
-  Task,
-  TaskItem,
-  taskItemMeta,
-  taskMeta,
-  TaskNew,
-  TaskOld,
-  TaskType,
-  TaskTypeDetails,
-  TaskTypes,
-} from "../entities";
+import { EntityManager, newTask, Task, TaskItem, taskItemMeta, taskMeta, TaskNew, TaskOld, TaskType, TaskTypeDetails, TaskTypes } from "../entities";
 import type { Entity, TaskItemId } from "../entities";
 
 export type TaskId = Flavor<string, Task>;
 
 export interface TaskFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  durationInDays: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  type: { kind: "enum"; type: TaskType; nullable: undefined };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  durationInDays: { kind: "primitive"; type: number; unique: false; nullable: never; value: number | never; derived: false };
+  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; value: Date | undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  type: { kind: "enum"; type: TaskType; nullable: undefined; value: TaskType | undefined };
 }
 
 export interface TaskOpts {
@@ -189,14 +175,11 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
     return getField(this, "type") === TaskType.New;
   }
 
-  getFieldValue<K extends keyof TaskFields>(key: K): FieldType<TaskFields, K> {
+  getFieldValue<K extends keyof TaskFields>(key: K): TaskFields[K]["value"] {
     return getField(this as any, key);
   }
 
-  setFieldValue<K extends keyof SettableFields<TaskFields> & keyof TaskFields>(
-    key: K,
-    value: FieldType<TaskFields, K>,
-  ): void {
+  setFieldValue<K extends keyof TaskFields>(key: K, value: TaskFields[K]["value"]): void {
     setFieldValue(this, key, value);
   }
 
@@ -223,14 +206,8 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   populate<H extends LoadHint<Task>>(hint: H): Promise<Loaded<Task, H>>;
   populate<H extends LoadHint<Task>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Task, H>>;
   populate<H extends LoadHint<Task>, V>(hint: H, fn: (task: Loaded<Task, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Task>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (task: Loaded<Task, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Task>, V>(
-    hintOrOpts: any,
-    fn?: (task: Loaded<Task, H>) => V,
-  ): Promise<Loaded<Task, H> | V> {
+  populate<H extends LoadHint<Task>, V>(opts: { hint: H; forceReload?: boolean }, fn: (task: Loaded<Task, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Task>, V>(hintOrOpts: any, fn?: (task: Loaded<Task, H>) => V): Promise<Loaded<Task, H> | V> {
     return this.em.populate(this as any as Task, hintOrOpts, fn);
   }
 
@@ -240,13 +217,6 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
 
   get taskTaskItems(): Collection<Task, TaskItem> {
     const { relations } = getInstanceData(this);
-    return relations.taskTaskItems ??= hasMany(
-      this as any as Task,
-      taskItemMeta,
-      "taskTaskItems",
-      "task",
-      "task_id",
-      undefined,
-    );
+    return relations.taskTaskItems ??= hasMany(this as any as Task, taskItemMeta, "taskTaskItems", "task", "task_id", undefined);
   }
 }

@@ -3,7 +3,6 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
-  FieldType,
   getField,
   getInstanceData,
   hasMany,
@@ -15,7 +14,6 @@ import {
   setField,
   setFieldValue,
   setOpts,
-  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -45,11 +43,11 @@ import type { AuthorId, AuthorOrder, CommentId, Entity } from "../entities";
 export type BookId = Flavor<string, Book>;
 
 export interface BookFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  author: { kind: "m2o"; type: Author; nullable: never; derived: false };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never; value: never };
+  title: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  author: { kind: "m2o"; type: Author; nullable: never; value: AuthorId | never; derived: false };
 }
 
 export interface BookOpts {
@@ -147,14 +145,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
     return getField(this, "updatedAt");
   }
 
-  getFieldValue<K extends keyof BookFields>(key: K): FieldType<BookFields, K> {
+  getFieldValue<K extends keyof BookFields>(key: K): BookFields[K]["value"] {
     return getField(this as any, key);
   }
 
-  setFieldValue<K extends keyof SettableFields<BookFields> & keyof BookFields>(
-    key: K,
-    value: FieldType<BookFields, K>,
-  ): void {
+  setFieldValue<K extends keyof BookFields>(key: K, value: BookFields[K]["value"]): void {
     setFieldValue(this, key, value);
   }
 
@@ -177,10 +172,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   populate<H extends LoadHint<Book>>(hint: H): Promise<Loaded<Book, H>>;
   populate<H extends LoadHint<Book>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Book, H>>;
   populate<H extends LoadHint<Book>, V>(hint: H, fn: (b: Loaded<Book, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Book>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (b: Loaded<Book, H>) => V,
-  ): Promise<V>;
+  populate<H extends LoadHint<Book>, V>(opts: { hint: H; forceReload?: boolean }, fn: (b: Loaded<Book, H>) => V): Promise<V>;
   populate<H extends LoadHint<Book>, V>(hintOrOpts: any, fn?: (b: Loaded<Book, H>) => V): Promise<Loaded<Book, H> | V> {
     return this.em.populate(this as any as Book, hintOrOpts, fn);
   }
@@ -191,14 +183,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   get comments(): Collection<Book, Comment> {
     const { relations } = getInstanceData(this);
-    return relations.comments ??= hasMany(
-      this as any as Book,
-      commentMeta,
-      "comments",
-      "parent",
-      "parent_book_id",
-      undefined,
-    );
+    return relations.comments ??= hasMany(this as any as Book, commentMeta, "comments", "parent", "parent_book_id", undefined);
   }
 
   get author(): ManyToOneReference<Book, Author, never> {

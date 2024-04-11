@@ -3,7 +3,6 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
-  FieldType,
   getField,
   getInstanceData,
   hasMany,
@@ -14,7 +13,6 @@ import {
   setField,
   setFieldValue,
   setOpts,
-  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -43,11 +41,11 @@ import type { Entity, PaintingId } from "../entities";
 export type ArtistId = Flavor<string, Artist>;
 
 export interface ArtistFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  lastName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never; value: never };
+  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  lastName: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
 }
 
 export interface ArtistOpts {
@@ -152,14 +150,11 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
     return getField(this, "updatedAt");
   }
 
-  getFieldValue<K extends keyof ArtistFields>(key: K): FieldType<ArtistFields, K> {
+  getFieldValue<K extends keyof ArtistFields>(key: K): ArtistFields[K]["value"] {
     return getField(this as any, key);
   }
 
-  setFieldValue<K extends keyof SettableFields<ArtistFields> & keyof ArtistFields>(
-    key: K,
-    value: FieldType<ArtistFields, K>,
-  ): void {
+  setFieldValue<K extends keyof ArtistFields>(key: K, value: ArtistFields[K]["value"]): void {
     setFieldValue(this, key, value);
   }
 
@@ -182,14 +177,8 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   populate<H extends LoadHint<Artist>>(hint: H): Promise<Loaded<Artist, H>>;
   populate<H extends LoadHint<Artist>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Artist, H>>;
   populate<H extends LoadHint<Artist>, V>(hint: H, fn: (artist: Loaded<Artist, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Artist>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (artist: Loaded<Artist, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Artist>, V>(
-    hintOrOpts: any,
-    fn?: (artist: Loaded<Artist, H>) => V,
-  ): Promise<Loaded<Artist, H> | V> {
+  populate<H extends LoadHint<Artist>, V>(opts: { hint: H; forceReload?: boolean }, fn: (artist: Loaded<Artist, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Artist>, V>(hintOrOpts: any, fn?: (artist: Loaded<Artist, H>) => V): Promise<Loaded<Artist, H> | V> {
     return this.em.populate(this as any as Artist, hintOrOpts, fn);
   }
 
@@ -199,13 +188,6 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
 
   get paintings(): Collection<Artist, Painting> {
     const { relations } = getInstanceData(this);
-    return relations.paintings ??= hasMany(
-      this as any as Artist,
-      paintingMeta,
-      "paintings",
-      "artist",
-      "artistId",
-      undefined,
-    );
+    return relations.paintings ??= hasMany(this as any as Artist, paintingMeta, "paintings", "artist", "artistId", undefined);
   }
 }

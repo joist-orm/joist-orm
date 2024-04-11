@@ -3,7 +3,6 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
-  FieldType,
   getField,
   getInstanceData,
   hasMany,
@@ -16,7 +15,6 @@ import {
   setField,
   setFieldValue,
   setOpts,
-  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -55,25 +53,17 @@ import {
   PublisherGroup,
   publisherGroupMeta,
 } from "../entities";
-import type {
-  BookReviewId,
-  CriticColumnId,
-  Entity,
-  LargePublisherId,
-  LargePublisherOrder,
-  PublisherGroupId,
-  PublisherGroupOrder,
-} from "../entities";
+import type { BookReviewId, CriticColumnId, Entity, LargePublisherId, LargePublisherOrder, PublisherGroupId, PublisherGroupOrder } from "../entities";
 
 export type CriticId = Flavor<string, Critic>;
 
 export interface CriticFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  favoriteLargePublisher: { kind: "m2o"; type: LargePublisher; nullable: undefined; derived: false };
-  group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  favoriteLargePublisher: { kind: "m2o"; type: LargePublisher; nullable: undefined; value: LargePublisherId | undefined; derived: false };
+  group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; value: PublisherGroupId | undefined; derived: false };
 }
 
 export interface CriticOpts {
@@ -179,14 +169,11 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
     return getField(this, "updatedAt");
   }
 
-  getFieldValue<K extends keyof CriticFields>(key: K): FieldType<CriticFields, K> {
+  getFieldValue<K extends keyof CriticFields>(key: K): CriticFields[K]["value"] {
     return getField(this as any, key);
   }
 
-  setFieldValue<K extends keyof SettableFields<CriticFields> & keyof CriticFields>(
-    key: K,
-    value: FieldType<CriticFields, K>,
-  ): void {
+  setFieldValue<K extends keyof CriticFields>(key: K, value: CriticFields[K]["value"]): void {
     setFieldValue(this, key, value);
   }
 
@@ -209,14 +196,8 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   populate<H extends LoadHint<Critic>>(hint: H): Promise<Loaded<Critic, H>>;
   populate<H extends LoadHint<Critic>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Critic, H>>;
   populate<H extends LoadHint<Critic>, V>(hint: H, fn: (c: Loaded<Critic, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Critic>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (c: Loaded<Critic, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Critic>, V>(
-    hintOrOpts: any,
-    fn?: (c: Loaded<Critic, H>) => V,
-  ): Promise<Loaded<Critic, H> | V> {
+  populate<H extends LoadHint<Critic>, V>(opts: { hint: H; forceReload?: boolean }, fn: (c: Loaded<Critic, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Critic>, V>(hintOrOpts: any, fn?: (c: Loaded<Critic, H>) => V): Promise<Loaded<Critic, H> | V> {
     return this.em.populate(this as any as Critic, hintOrOpts, fn);
   }
 
@@ -226,24 +207,12 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
 
   get bookReviews(): Collection<Critic, BookReview> {
     const { relations } = getInstanceData(this);
-    return relations.bookReviews ??= hasMany(
-      this as any as Critic,
-      bookReviewMeta,
-      "bookReviews",
-      "critic",
-      "critic_id",
-      undefined,
-    );
+    return relations.bookReviews ??= hasMany(this as any as Critic, bookReviewMeta, "bookReviews", "critic", "critic_id", undefined);
   }
 
   get favoriteLargePublisher(): ManyToOneReference<Critic, LargePublisher, undefined> {
     const { relations } = getInstanceData(this);
-    return relations.favoriteLargePublisher ??= hasOne(
-      this as any as Critic,
-      largePublisherMeta,
-      "favoriteLargePublisher",
-      "critics",
-    );
+    return relations.favoriteLargePublisher ??= hasOne(this as any as Critic, largePublisherMeta, "favoriteLargePublisher", "critics");
   }
 
   get group(): ManyToOneReference<Critic, PublisherGroup, undefined> {
@@ -253,12 +222,6 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
 
   get criticColumn(): OneToOneReference<Critic, CriticColumn> {
     const { relations } = getInstanceData(this);
-    return relations.criticColumn ??= hasOneToOne(
-      this as any as Critic,
-      criticColumnMeta,
-      "criticColumn",
-      "critic",
-      "critic_id",
-    );
+    return relations.criticColumn ??= hasOneToOne(this as any as Critic, criticColumnMeta, "criticColumn", "critic", "critic_id");
   }
 }

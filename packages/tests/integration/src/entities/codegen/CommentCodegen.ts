@@ -3,7 +3,6 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
-  FieldType,
   getField,
   getInstanceData,
   hasManyToMany,
@@ -17,7 +16,6 @@ import {
   setField,
   setFieldValue,
   setOpts,
-  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -44,19 +42,7 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  Author,
-  Book,
-  BookReview,
-  Comment,
-  commentMeta,
-  EntityManager,
-  newComment,
-  Publisher,
-  TaskOld,
-  User,
-  userMeta,
-} from "../entities";
+import { Author, Book, BookReview, Comment, commentMeta, EntityManager, newComment, Publisher, TaskOld, User, userMeta } from "../entities";
 import type { Entity, UserId, UserOrder } from "../entities";
 
 export type CommentId = Flavor<string, Comment>;
@@ -70,12 +56,12 @@ export function isCommentParent(maybeEntity: unknown): maybeEntity is CommentPar
 }
 
 export interface CommentFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  text: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  user: { kind: "m2o"; type: User; nullable: undefined; derived: false };
-  parent: { kind: "poly"; type: CommentParent; nullable: never };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  text: { kind: "primitive"; type: string; unique: false; nullable: undefined; value: string | undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  user: { kind: "m2o"; type: User; nullable: undefined; value: UserId | undefined; derived: false };
+  parent: { kind: "poly"; type: CommentParent; nullable: never; value: string | never };
 }
 
 export interface CommentOpts {
@@ -176,14 +162,11 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
     return getField(this, "updatedAt");
   }
 
-  getFieldValue<K extends keyof CommentFields>(key: K): FieldType<CommentFields, K> {
+  getFieldValue<K extends keyof CommentFields>(key: K): CommentFields[K]["value"] {
     return getField(this as any, key);
   }
 
-  setFieldValue<K extends keyof SettableFields<CommentFields> & keyof CommentFields>(
-    key: K,
-    value: FieldType<CommentFields, K>,
-  ): void {
+  setFieldValue<K extends keyof CommentFields>(key: K, value: CommentFields[K]["value"]): void {
     setFieldValue(this, key, value);
   }
 
@@ -206,14 +189,8 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   populate<H extends LoadHint<Comment>>(hint: H): Promise<Loaded<Comment, H>>;
   populate<H extends LoadHint<Comment>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Comment, H>>;
   populate<H extends LoadHint<Comment>, V>(hint: H, fn: (comment: Loaded<Comment, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Comment>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (comment: Loaded<Comment, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Comment>, V>(
-    hintOrOpts: any,
-    fn?: (comment: Loaded<Comment, H>) => V,
-  ): Promise<Loaded<Comment, H> | V> {
+  populate<H extends LoadHint<Comment>, V>(opts: { hint: H; forceReload?: boolean }, fn: (comment: Loaded<Comment, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Comment>, V>(hintOrOpts: any, fn?: (comment: Loaded<Comment, H>) => V): Promise<Loaded<Comment, H> | V> {
     return this.em.populate(this as any as Comment, hintOrOpts, fn);
   }
 

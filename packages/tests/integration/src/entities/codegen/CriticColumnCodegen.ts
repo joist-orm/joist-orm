@@ -3,7 +3,6 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
-  FieldType,
   getField,
   getInstanceData,
   hasOne,
@@ -14,7 +13,6 @@ import {
   setField,
   setFieldValue,
   setOpts,
-  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -43,11 +41,11 @@ import type { CriticId, CriticOrder, Entity } from "../entities";
 export type CriticColumnId = Flavor<string, CriticColumn>;
 
 export interface CriticColumnFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  critic: { kind: "m2o"; type: Critic; nullable: never; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  critic: { kind: "m2o"; type: Critic; nullable: never; value: CriticId | never; derived: false };
 }
 
 export interface CriticColumnOpts {
@@ -141,14 +139,11 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
     return getField(this, "updatedAt");
   }
 
-  getFieldValue<K extends keyof CriticColumnFields>(key: K): FieldType<CriticColumnFields, K> {
+  getFieldValue<K extends keyof CriticColumnFields>(key: K): CriticColumnFields[K]["value"] {
     return getField(this as any, key);
   }
 
-  setFieldValue<K extends keyof SettableFields<CriticColumnFields> & keyof CriticColumnFields>(
-    key: K,
-    value: FieldType<CriticColumnFields, K>,
-  ): void {
+  setFieldValue<K extends keyof CriticColumnFields>(key: K, value: CriticColumnFields[K]["value"]): void {
     setFieldValue(this, key, value);
   }
 
@@ -169,18 +164,10 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   }
 
   populate<H extends LoadHint<CriticColumn>>(hint: H): Promise<Loaded<CriticColumn, H>>;
-  populate<H extends LoadHint<CriticColumn>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<CriticColumn, H>>;
+  populate<H extends LoadHint<CriticColumn>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<CriticColumn, H>>;
   populate<H extends LoadHint<CriticColumn>, V>(hint: H, fn: (cc: Loaded<CriticColumn, H>) => V): Promise<V>;
-  populate<H extends LoadHint<CriticColumn>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (cc: Loaded<CriticColumn, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<CriticColumn>, V>(
-    hintOrOpts: any,
-    fn?: (cc: Loaded<CriticColumn, H>) => V,
-  ): Promise<Loaded<CriticColumn, H> | V> {
+  populate<H extends LoadHint<CriticColumn>, V>(opts: { hint: H; forceReload?: boolean }, fn: (cc: Loaded<CriticColumn, H>) => V): Promise<V>;
+  populate<H extends LoadHint<CriticColumn>, V>(hintOrOpts: any, fn?: (cc: Loaded<CriticColumn, H>) => V): Promise<Loaded<CriticColumn, H> | V> {
     return this.em.populate(this as any as CriticColumn, hintOrOpts, fn);
   }
 

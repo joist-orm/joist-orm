@@ -3,7 +3,6 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
-  FieldType,
   getField,
   isLoaded,
   loadLens,
@@ -12,7 +11,6 @@ import {
   setField,
   setFieldValue,
   setOpts,
-  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -36,8 +34,8 @@ import type { Entity } from "../entities";
 export type DatabaseOwnerId = Flavor<string, DatabaseOwner>;
 
 export interface DatabaseOwnerFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
 }
 
 export interface DatabaseOwnerOpts {
@@ -109,14 +107,11 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
     setField(this, "name", cleanStringValue(name));
   }
 
-  getFieldValue<K extends keyof DatabaseOwnerFields>(key: K): FieldType<DatabaseOwnerFields, K> {
+  getFieldValue<K extends keyof DatabaseOwnerFields>(key: K): DatabaseOwnerFields[K]["value"] {
     return getField(this as any, key);
   }
 
-  setFieldValue<K extends keyof SettableFields<DatabaseOwnerFields> & keyof DatabaseOwnerFields>(
-    key: K,
-    value: FieldType<DatabaseOwnerFields, K>,
-  ): void {
+  setFieldValue<K extends keyof DatabaseOwnerFields>(key: K, value: DatabaseOwnerFields[K]["value"]): void {
     setFieldValue(this, key, value);
   }
 
@@ -137,13 +132,8 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
   }
 
   populate<H extends LoadHint<DatabaseOwner>>(hint: H): Promise<Loaded<DatabaseOwner, H>>;
-  populate<H extends LoadHint<DatabaseOwner>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<DatabaseOwner, H>>;
-  populate<H extends LoadHint<DatabaseOwner>, V>(
-    hint: H,
-    fn: (databaseOwner: Loaded<DatabaseOwner, H>) => V,
-  ): Promise<V>;
+  populate<H extends LoadHint<DatabaseOwner>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<DatabaseOwner, H>>;
+  populate<H extends LoadHint<DatabaseOwner>, V>(hint: H, fn: (databaseOwner: Loaded<DatabaseOwner, H>) => V): Promise<V>;
   populate<H extends LoadHint<DatabaseOwner>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (databaseOwner: Loaded<DatabaseOwner, H>) => V,

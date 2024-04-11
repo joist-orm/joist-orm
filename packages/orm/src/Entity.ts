@@ -19,7 +19,7 @@ export interface Entity {
   readonly isNewEntity: boolean;
   readonly isDeletedEntity: boolean;
   readonly isDirtyEntity: boolean;
-  getFieldValue(fieldName: string): any;
+  getFieldValue(fieldName: string): unknown;
   setFieldValue(fieldName: string, value: unknown): void;
   set(opts: Partial<OptsOf<this>>): void;
   setPartial(values: PartialOrNull<OptsOf<this>>): void;

@@ -2,7 +2,6 @@ import {
   BaseEntity,
   ConfigApi,
   failNoIdYet,
-  FieldType,
   getField,
   getInstanceData,
   hasOne,
@@ -13,7 +12,6 @@ import {
   setField,
   setFieldValue,
   setOpts,
-  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -54,12 +52,12 @@ import type { BookId, BookOrder, Entity, PublisherId, PublisherOrder } from "../
 export type BookAdvanceId = Flavor<string, BookAdvance>;
 
 export interface BookAdvanceFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  status: { kind: "enum"; type: AdvanceStatus; nullable: never };
-  book: { kind: "m2o"; type: Book; nullable: never; derived: false };
-  publisher: { kind: "m2o"; type: Publisher; nullable: never; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  status: { kind: "enum"; type: AdvanceStatus; nullable: never; value: AdvanceStatus | never };
+  book: { kind: "m2o"; type: Book; nullable: never; value: BookId | never; derived: false };
+  publisher: { kind: "m2o"; type: Publisher; nullable: never; value: PublisherId | never; derived: false };
 }
 
 export interface BookAdvanceOpts {
@@ -175,14 +173,11 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
     return getField(this, "status") === AdvanceStatus.Paid;
   }
 
-  getFieldValue<K extends keyof BookAdvanceFields>(key: K): FieldType<BookAdvanceFields, K> {
+  getFieldValue<K extends keyof BookAdvanceFields>(key: K): BookAdvanceFields[K]["value"] {
     return getField(this as any, key);
   }
 
-  setFieldValue<K extends keyof SettableFields<BookAdvanceFields> & keyof BookAdvanceFields>(
-    key: K,
-    value: FieldType<BookAdvanceFields, K>,
-  ): void {
+  setFieldValue<K extends keyof BookAdvanceFields>(key: K, value: BookAdvanceFields[K]["value"]): void {
     setFieldValue(this, key, value);
   }
 
@@ -205,14 +200,8 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   populate<H extends LoadHint<BookAdvance>>(hint: H): Promise<Loaded<BookAdvance, H>>;
   populate<H extends LoadHint<BookAdvance>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<BookAdvance, H>>;
   populate<H extends LoadHint<BookAdvance>, V>(hint: H, fn: (ba: Loaded<BookAdvance, H>) => V): Promise<V>;
-  populate<H extends LoadHint<BookAdvance>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (ba: Loaded<BookAdvance, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<BookAdvance>, V>(
-    hintOrOpts: any,
-    fn?: (ba: Loaded<BookAdvance, H>) => V,
-  ): Promise<Loaded<BookAdvance, H> | V> {
+  populate<H extends LoadHint<BookAdvance>, V>(opts: { hint: H; forceReload?: boolean }, fn: (ba: Loaded<BookAdvance, H>) => V): Promise<V>;
+  populate<H extends LoadHint<BookAdvance>, V>(hintOrOpts: any, fn?: (ba: Loaded<BookAdvance, H>) => V): Promise<Loaded<BookAdvance, H> | V> {
     return this.em.populate(this as any as BookAdvance, hintOrOpts, fn);
   }
 

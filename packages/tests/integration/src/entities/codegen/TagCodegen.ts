@@ -3,7 +3,6 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
-  FieldType,
   getField,
   getInstanceData,
   hasLargeManyToMany,
@@ -15,7 +14,6 @@ import {
   setField,
   setFieldValue,
   setOpts,
-  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -39,27 +37,16 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  Author,
-  authorMeta,
-  Book,
-  bookMeta,
-  EntityManager,
-  newTag,
-  Publisher,
-  publisherMeta,
-  Tag,
-  tagMeta,
-} from "../entities";
+import { Author, authorMeta, Book, bookMeta, EntityManager, newTag, Publisher, publisherMeta, Tag, tagMeta } from "../entities";
 import type { BookId, Entity, PublisherId } from "../entities";
 
 export type TagId = Flavor<string, Tag>;
 
 export interface TagFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
 }
 
 export interface TagOpts {
@@ -155,14 +142,11 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
     return getField(this, "updatedAt");
   }
 
-  getFieldValue<K extends keyof TagFields>(key: K): FieldType<TagFields, K> {
+  getFieldValue<K extends keyof TagFields>(key: K): TagFields[K]["value"] {
     return getField(this as any, key);
   }
 
-  setFieldValue<K extends keyof SettableFields<TagFields> & keyof TagFields>(
-    key: K,
-    value: FieldType<TagFields, K>,
-  ): void {
+  setFieldValue<K extends keyof TagFields>(key: K, value: TagFields[K]["value"]): void {
     setFieldValue(this, key, value);
   }
 
@@ -185,10 +169,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   populate<H extends LoadHint<Tag>>(hint: H): Promise<Loaded<Tag, H>>;
   populate<H extends LoadHint<Tag>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Tag, H>>;
   populate<H extends LoadHint<Tag>, V>(hint: H, fn: (t: Loaded<Tag, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Tag>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (t: Loaded<Tag, H>) => V,
-  ): Promise<V>;
+  populate<H extends LoadHint<Tag>, V>(opts: { hint: H; forceReload?: boolean }, fn: (t: Loaded<Tag, H>) => V): Promise<V>;
   populate<H extends LoadHint<Tag>, V>(hintOrOpts: any, fn?: (t: Loaded<Tag, H>) => V): Promise<Loaded<Tag, H> | V> {
     return this.em.populate(this as any as Tag, hintOrOpts, fn);
   }
@@ -199,15 +180,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
 
   get books(): Collection<Tag, Book> {
     const { relations } = getInstanceData(this);
-    return relations.books ??= hasManyToMany(
-      this as any as Tag,
-      "books_to_tags",
-      "books",
-      "tag_id",
-      bookMeta,
-      "tags",
-      "book_id",
-    );
+    return relations.books ??= hasManyToMany(this as any as Tag, "books_to_tags", "books", "tag_id", bookMeta, "tags", "book_id");
   }
 
   get publishers(): Collection<Tag, Publisher> {
@@ -225,14 +198,6 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
 
   get authors(): LargeCollection<Tag, Author> {
     const { relations } = getInstanceData(this);
-    return relations.authors ??= hasLargeManyToMany(
-      this as any as Tag,
-      "authors_to_tags",
-      "authors",
-      "tag_id",
-      authorMeta,
-      "tags",
-      "author_id",
-    );
+    return relations.authors ??= hasLargeManyToMany(this as any as Tag, "authors_to_tags", "authors", "tag_id", authorMeta, "tags", "author_id");
   }
 }

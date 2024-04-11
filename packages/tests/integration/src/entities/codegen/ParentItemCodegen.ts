@@ -3,7 +3,6 @@ import {
   cleanStringValue,
   ConfigApi,
   failNoIdYet,
-  FieldType,
   getField,
   getInstanceData,
   hasMany,
@@ -15,7 +14,6 @@ import {
   setField,
   setFieldValue,
   setOpts,
-  SettableFields,
   toIdOf,
 } from "joist-orm";
 import type {
@@ -39,26 +37,17 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  ChildItem,
-  childItemMeta,
-  EntityManager,
-  newParentItem,
-  ParentGroup,
-  parentGroupMeta,
-  ParentItem,
-  parentItemMeta,
-} from "../entities";
+import { ChildItem, childItemMeta, EntityManager, newParentItem, ParentGroup, parentGroupMeta, ParentItem, parentItemMeta } from "../entities";
 import type { ChildItemId, Entity, ParentGroupId, ParentGroupOrder } from "../entities";
 
 export type ParentItemId = Flavor<string, ParentItem>;
 
 export interface ParentItemFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  parentGroup: { kind: "m2o"; type: ParentGroup; nullable: never; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; value: string | undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  parentGroup: { kind: "m2o"; type: ParentGroup; nullable: never; value: ParentGroupId | never; derived: false };
 }
 
 export interface ParentItemOpts {
@@ -155,14 +144,11 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
     return getField(this, "updatedAt");
   }
 
-  getFieldValue<K extends keyof ParentItemFields>(key: K): FieldType<ParentItemFields, K> {
+  getFieldValue<K extends keyof ParentItemFields>(key: K): ParentItemFields[K]["value"] {
     return getField(this as any, key);
   }
 
-  setFieldValue<K extends keyof SettableFields<ParentItemFields> & keyof ParentItemFields>(
-    key: K,
-    value: FieldType<ParentItemFields, K>,
-  ): void {
+  setFieldValue<K extends keyof ParentItemFields>(key: K, value: ParentItemFields[K]["value"]): void {
     setFieldValue(this, key, value);
   }
 
@@ -185,14 +171,8 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
   populate<H extends LoadHint<ParentItem>>(hint: H): Promise<Loaded<ParentItem, H>>;
   populate<H extends LoadHint<ParentItem>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<ParentItem, H>>;
   populate<H extends LoadHint<ParentItem>, V>(hint: H, fn: (pi: Loaded<ParentItem, H>) => V): Promise<V>;
-  populate<H extends LoadHint<ParentItem>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (pi: Loaded<ParentItem, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<ParentItem>, V>(
-    hintOrOpts: any,
-    fn?: (pi: Loaded<ParentItem, H>) => V,
-  ): Promise<Loaded<ParentItem, H> | V> {
+  populate<H extends LoadHint<ParentItem>, V>(opts: { hint: H; forceReload?: boolean }, fn: (pi: Loaded<ParentItem, H>) => V): Promise<V>;
+  populate<H extends LoadHint<ParentItem>, V>(hintOrOpts: any, fn?: (pi: Loaded<ParentItem, H>) => V): Promise<Loaded<ParentItem, H> | V> {
     return this.em.populate(this as any as ParentItem, hintOrOpts, fn);
   }
 
@@ -202,14 +182,7 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
 
   get childItems(): Collection<ParentItem, ChildItem> {
     const { relations } = getInstanceData(this);
-    return relations.childItems ??= hasMany(
-      this as any as ParentItem,
-      childItemMeta,
-      "childItems",
-      "parentItem",
-      "parent_item_id",
-      undefined,
-    );
+    return relations.childItems ??= hasMany(this as any as ParentItem, childItemMeta, "childItems", "parentItem", "parent_item_id", undefined);
   }
 
   get parentGroup(): ManyToOneReference<ParentItem, ParentGroup, never> {

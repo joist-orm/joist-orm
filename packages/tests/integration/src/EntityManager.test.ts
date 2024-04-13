@@ -328,14 +328,14 @@ describe("EntityManager", () => {
     expect(a1.isPopular).toBeUndefined();
   });
 
-  it.unlessInMemory("can load custom queries", async () => {
+  it("can load custom queries", async () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
     const em = newEntityManager();
     const authors = await em.loadFromQuery(Author, knex.select("*").from("authors"));
     expect(authors.length).toEqual(1);
   });
 
-  it.unlessInMemory("can load custom queries and maintain identity", async () => {
+  it("can load custom queries and maintain identity", async () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
@@ -343,14 +343,14 @@ describe("EntityManager", () => {
     expect(authors[0]).toStrictEqual(a1);
   });
 
-  it.unlessInMemory("can load custom queries and populate", async () => {
+  it("can load custom queries and populate", async () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
     const em = newEntityManager();
     const authors = await em.loadFromQuery(Author, knex.select("*").from("authors"), "books");
     expect(authors[0].books.get).toEqual([]);
   });
 
-  it.unlessInMemory("can load from rows", async () => {
+  it("can load from rows", async () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
     const em = newEntityManager();
     const rows = await knex.select("*").from("authors");
@@ -669,14 +669,14 @@ describe("EntityManager", () => {
     expect(a1.firstName).toEqual("a1");
   });
 
-  it.unlessInMemory("can hydrate from custom queries ", async () => {
+  it("can hydrate from custom queries ", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     const [a1] = em.hydrate(Author, await knex.select("*").from("authors"));
     expect(a1.firstName).toEqual("a1");
   });
 
-  it.unlessInMemory("can hydrate into an existing instance", async () => {
+  it("can hydrate into an existing instance", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");

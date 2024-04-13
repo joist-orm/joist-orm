@@ -6,7 +6,6 @@
     { "path": "./packages/migration-utils" },
     { "path": "./packages/orm" },
     { "path": "./packages/plugins/join-preloading" },
-    { "path": "./packages/plugins/rebac-auth" },
     { "path": "./packages/tests/integration" },
     { "path": "./packages/tests/number-ids" },
     { "path": "./packages/tests/schema-misc" },

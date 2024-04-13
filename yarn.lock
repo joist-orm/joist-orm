@@ -11011,26 +11011,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"joist-plugin-rebac-auth@workspace:packages/plugins/rebac-auth":
-  version: 0.0.0-use.local
-  resolution: "joist-plugin-rebac-auth@workspace:packages/plugins/rebac-auth"
-  dependencies:
-    "@swc/core": "npm:^1.4.11"
-    "@swc/jest": "npm:^0.2.36"
-    "@types/jest": "npm:^29.5.12"
-    "@types/node": "npm:^20.10.5"
-    graphql: "npm:^16.8.1"
-    jest: "npm:30.0.0-alpha.3"
-    joist-orm: "workspace:*"
-    joist-test-utils: "workspace:*"
-    joist-tests-integration: "workspace:*"
-    prettier: "npm:^3.2.5"
-    prettier-plugin-organize-imports: "npm:^3.2.4"
-    tsconfig-paths: "npm:^4.2.0"
-    typescript: "npm:^5.4.3"
-  languageName: unknown
-  linkType: soft
-
 "joist-test-utils@workspace:*, joist-test-utils@workspace:packages/test-utils":
   version: 0.0.0-use.local
   resolution: "joist-test-utils@workspace:packages/test-utils"
@@ -11073,7 +11053,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"joist-tests-integration@workspace:*, joist-tests-integration@workspace:packages/tests/integration":
+"joist-tests-integration@workspace:packages/tests/integration":
   version: 0.0.0-use.local
   resolution: "joist-tests-integration@workspace:packages/tests/integration"
   dependencies:

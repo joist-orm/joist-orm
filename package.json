@@ -21,7 +21,6 @@
     "packages/migration-utils",
     "packages/orm",
     "packages/plugins/join-preloading",
-    "packages/plugins/rebac-auth",
     "packages/utils",
     "packages/test-utils",
     "packages/tests/integration",

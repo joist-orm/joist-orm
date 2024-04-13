@@ -21,7 +21,6 @@ for dir in . ./packages/codegen \
   ./packages/graphql-resolver-utils \
   ./packages/migration-utils \
   ./packages/plugins/join-preloading \
-  ./packages/plugins/rebac-auth \
   ./packages/orm \
   ./packages/utils \
   ./packages/test-utils

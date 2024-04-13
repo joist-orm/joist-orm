@@ -12,6 +12,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -49,11 +50,11 @@ export function isCommentParent(maybeEntity: unknown): maybeEntity is CommentPar
 }
 
 export interface CommentFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  text: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  parent: { kind: "poly"; type: CommentParent; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never; value: never };
+  text: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  parent: { kind: "poly"; type: CommentParent; nullable: never; value: string | never };
 }
 
 export interface CommentOpts {
@@ -146,12 +147,20 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof CommentFields>(key: K): CommentFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof CommentFields>(key: K, value: CommentFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<CommentOpts>): void {
-    setOpts(this as any as Comment, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<CommentOpts>): void {
-    setOpts(this as any as Comment, opts as OptsOf<Comment>, { partial: true });
+    setOpts(this as any, opts as OptsOf<Comment>, { partial: true });
   }
 
   get changes(): Changes<Comment> {
@@ -165,14 +174,8 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   populate<H extends LoadHint<Comment>>(hint: H): Promise<Loaded<Comment, H>>;
   populate<H extends LoadHint<Comment>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Comment, H>>;
   populate<H extends LoadHint<Comment>, V>(hint: H, fn: (c: Loaded<Comment, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Comment>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (c: Loaded<Comment, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Comment>, V>(
-    hintOrOpts: any,
-    fn?: (c: Loaded<Comment, H>) => V,
-  ): Promise<Loaded<Comment, H> | V> {
+  populate<H extends LoadHint<Comment>, V>(opts: { hint: H; forceReload?: boolean }, fn: (c: Loaded<Comment, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Comment>, V>(hintOrOpts: any, fn?: (c: Loaded<Comment, H>) => V): Promise<Loaded<Comment, H> | V> {
     return this.em.populate(this as any as Comment, hintOrOpts, fn);
   }
 

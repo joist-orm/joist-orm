@@ -9,6 +9,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -33,21 +34,21 @@ import type { Entity } from "../entities";
 export type AuthorStatId = Flavor<string, AuthorStat>;
 
 export interface AuthorStatFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  smallint: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  integer: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  nullableInteger: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
-  bigint: { kind: "primitive"; type: bigint; unique: false; nullable: never; derived: false };
-  decimal: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  real: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  smallserial: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  serial: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  bigserial: { kind: "primitive"; type: bigint; unique: false; nullable: never; derived: false };
-  doublePrecision: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  nullableText: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  json: { kind: "primitive"; type: Object; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  smallint: { kind: "primitive"; type: number; unique: false; nullable: never; value: number | never; derived: false };
+  integer: { kind: "primitive"; type: number; unique: false; nullable: never; value: number | never; derived: false };
+  nullableInteger: { kind: "primitive"; type: number; unique: false; nullable: undefined; value: number | undefined; derived: false };
+  bigint: { kind: "primitive"; type: bigint; unique: false; nullable: never; value: bigint | never; derived: false };
+  decimal: { kind: "primitive"; type: number; unique: false; nullable: never; value: number | never; derived: false };
+  real: { kind: "primitive"; type: number; unique: false; nullable: never; value: number | never; derived: false };
+  smallserial: { kind: "primitive"; type: number; unique: false; nullable: never; value: number | never; derived: false };
+  serial: { kind: "primitive"; type: number; unique: false; nullable: never; value: number | never; derived: false };
+  bigserial: { kind: "primitive"; type: bigint; unique: false; nullable: never; value: bigint | never; derived: false };
+  doublePrecision: { kind: "primitive"; type: number; unique: false; nullable: never; value: number | never; derived: false };
+  nullableText: { kind: "primitive"; type: string; unique: false; nullable: undefined; value: string | undefined; derived: false };
+  json: { kind: "primitive"; type: Object; unique: false; nullable: undefined; value: Object | undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
 }
 
 export interface AuthorStatOpts {
@@ -275,12 +276,20 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof AuthorStatFields>(key: K): AuthorStatFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof AuthorStatFields>(key: K, value: AuthorStatFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<AuthorStatOpts>): void {
-    setOpts(this as any as AuthorStat, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<AuthorStatOpts>): void {
-    setOpts(this as any as AuthorStat, opts as OptsOf<AuthorStat>, { partial: true });
+    setOpts(this as any, opts as OptsOf<AuthorStat>, { partial: true });
   }
 
   get changes(): Changes<AuthorStat> {
@@ -294,14 +303,8 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   populate<H extends LoadHint<AuthorStat>>(hint: H): Promise<Loaded<AuthorStat, H>>;
   populate<H extends LoadHint<AuthorStat>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<AuthorStat, H>>;
   populate<H extends LoadHint<AuthorStat>, V>(hint: H, fn: (as: Loaded<AuthorStat, H>) => V): Promise<V>;
-  populate<H extends LoadHint<AuthorStat>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (as: Loaded<AuthorStat, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<AuthorStat>, V>(
-    hintOrOpts: any,
-    fn?: (as: Loaded<AuthorStat, H>) => V,
-  ): Promise<Loaded<AuthorStat, H> | V> {
+  populate<H extends LoadHint<AuthorStat>, V>(opts: { hint: H; forceReload?: boolean }, fn: (as: Loaded<AuthorStat, H>) => V): Promise<V>;
+  populate<H extends LoadHint<AuthorStat>, V>(hintOrOpts: any, fn?: (as: Loaded<AuthorStat, H>) => V): Promise<Loaded<AuthorStat, H> | V> {
     return this.em.populate(this as any as AuthorStat, hintOrOpts, fn);
   }
 

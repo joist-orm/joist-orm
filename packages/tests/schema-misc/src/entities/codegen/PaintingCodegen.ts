@@ -11,6 +11,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -40,11 +41,11 @@ import type { ArtistId, ArtistOrder, Entity } from "../entities";
 export type PaintingId = Flavor<string, Painting>;
 
 export interface PaintingFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  artist: { kind: "m2o"; type: Artist; nullable: never; derived: false };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never; value: never };
+  title: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  artist: { kind: "m2o"; type: Artist; nullable: never; value: ArtistId | never; derived: false };
 }
 
 export interface PaintingOpts {
@@ -138,12 +139,20 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof PaintingFields>(key: K): PaintingFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof PaintingFields>(key: K, value: PaintingFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<PaintingOpts>): void {
-    setOpts(this as any as Painting, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<PaintingOpts>): void {
-    setOpts(this as any as Painting, opts as OptsOf<Painting>, { partial: true });
+    setOpts(this as any, opts as OptsOf<Painting>, { partial: true });
   }
 
   get changes(): Changes<Painting> {
@@ -157,14 +166,8 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   populate<H extends LoadHint<Painting>>(hint: H): Promise<Loaded<Painting, H>>;
   populate<H extends LoadHint<Painting>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Painting, H>>;
   populate<H extends LoadHint<Painting>, V>(hint: H, fn: (p: Loaded<Painting, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Painting>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (p: Loaded<Painting, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Painting>, V>(
-    hintOrOpts: any,
-    fn?: (p: Loaded<Painting, H>) => V,
-  ): Promise<Loaded<Painting, H> | V> {
+  populate<H extends LoadHint<Painting>, V>(opts: { hint: H; forceReload?: boolean }, fn: (p: Loaded<Painting, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Painting>, V>(hintOrOpts: any, fn?: (p: Loaded<Painting, H>) => V): Promise<Loaded<Painting, H> | V> {
     return this.em.populate(this as any as Painting, hintOrOpts, fn);
   }
 

@@ -1,12 +1,4 @@
-import {
-  AdvanceStatuses,
-  BookRanges,
-  Colors,
-  ImageTypes,
-  PublisherSizes,
-  PublisherTypes,
-  TaskTypes,
-} from "src/entities";
+import { AdvanceStatuses, BookRanges, Colors, ImageTypes, PublisherSizes, PublisherTypes, TaskTypes } from "src/entities";
 import { Resolvers } from "src/generated/graphql-types";
 
 type EnumDetails =

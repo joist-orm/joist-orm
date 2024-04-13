@@ -15,6 +15,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -70,17 +71,17 @@ export function isUserFavoritePublisher(maybeEntity: unknown): maybeEntity is Us
 }
 
 export interface UserFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  email: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: undefined; derived: false };
-  password: { kind: "primitive"; type: PasswordValue; unique: false; nullable: undefined; derived: false };
-  bio: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  originalEmail: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
-  favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: undefined };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  email: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: undefined; value: IpAddress | undefined; derived: false };
+  password: { kind: "primitive"; type: PasswordValue; unique: false; nullable: undefined; value: PasswordValue | undefined; derived: false };
+  bio: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  originalEmail: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; value: AuthorId | undefined; derived: false };
+  favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: undefined; value: string | undefined };
 }
 
 export interface UserOpts {
@@ -249,12 +250,20 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof UserFields>(key: K): UserFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof UserFields>(key: K, value: UserFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<UserOpts>): void {
-    setOpts(this as any as User, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<UserOpts>): void {
-    setOpts(this as any as User, opts as OptsOf<User>, { partial: true });
+    setOpts(this as any, opts as OptsOf<User>, { partial: true });
   }
 
   get changes(): Changes<User, keyof FieldsOf<User> | keyof FieldsOf<AdminUser>> {
@@ -268,10 +277,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   populate<H extends LoadHint<User>>(hint: H): Promise<Loaded<User, H>>;
   populate<H extends LoadHint<User>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<User, H>>;
   populate<H extends LoadHint<User>, V>(hint: H, fn: (u: Loaded<User, H>) => V): Promise<V>;
-  populate<H extends LoadHint<User>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (u: Loaded<User, H>) => V,
-  ): Promise<V>;
+  populate<H extends LoadHint<User>, V>(opts: { hint: H; forceReload?: boolean }, fn: (u: Loaded<User, H>) => V): Promise<V>;
   populate<H extends LoadHint<User>, V>(hintOrOpts: any, fn?: (u: Loaded<User, H>) => V): Promise<Loaded<User, H> | V> {
     return this.em.populate(this as any as User, hintOrOpts, fn);
   }
@@ -282,14 +288,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   get createdComments(): Collection<User, Comment> {
     const { relations } = getInstanceData(this);
-    return relations.createdComments ??= hasMany(
-      this as any as User,
-      commentMeta,
-      "createdComments",
-      "user",
-      "user_id",
-      undefined,
-    );
+    return relations.createdComments ??= hasMany(this as any as User, commentMeta, "createdComments", "user", "user_id", undefined);
   }
 
   get authorManyToOne(): ManyToOneReference<User, Author, undefined> {

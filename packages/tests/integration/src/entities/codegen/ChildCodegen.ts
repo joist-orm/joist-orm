@@ -11,6 +11,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -40,10 +41,10 @@ import type { ChildGroupId, Entity } from "../entities";
 export type ChildId = Flavor<string, Child>;
 
 export interface ChildFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; value: string | undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
 }
 
 export interface ChildOpts {
@@ -134,12 +135,20 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof ChildFields>(key: K): ChildFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof ChildFields>(key: K, value: ChildFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<ChildOpts>): void {
-    setOpts(this as any as Child, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<ChildOpts>): void {
-    setOpts(this as any as Child, opts as OptsOf<Child>, { partial: true });
+    setOpts(this as any, opts as OptsOf<Child>, { partial: true });
   }
 
   get changes(): Changes<Child> {
@@ -153,14 +162,8 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
   populate<H extends LoadHint<Child>>(hint: H): Promise<Loaded<Child, H>>;
   populate<H extends LoadHint<Child>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Child, H>>;
   populate<H extends LoadHint<Child>, V>(hint: H, fn: (child: Loaded<Child, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Child>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (child: Loaded<Child, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Child>, V>(
-    hintOrOpts: any,
-    fn?: (child: Loaded<Child, H>) => V,
-  ): Promise<Loaded<Child, H> | V> {
+  populate<H extends LoadHint<Child>, V>(opts: { hint: H; forceReload?: boolean }, fn: (child: Loaded<Child, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Child>, V>(hintOrOpts: any, fn?: (child: Loaded<Child, H>) => V): Promise<Loaded<Child, H> | V> {
     return this.em.populate(this as any as Child, hintOrOpts, fn);
   }
 
@@ -170,13 +173,6 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
 
   get groups(): Collection<Child, ChildGroup> {
     const { relations } = getInstanceData(this);
-    return relations.groups ??= hasMany(
-      this as any as Child,
-      childGroupMeta,
-      "groups",
-      "childGroupId",
-      "child_id_group_id",
-      undefined,
-    );
+    return relations.groups ??= hasMany(this as any as Child, childGroupMeta, "groups", "childGroupId", "child_id_group_id", undefined);
   }
 }

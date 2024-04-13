@@ -12,6 +12,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -53,12 +54,12 @@ import type { ChildId, ChildItemId, ChildOrder, Entity, ParentGroupId, ParentGro
 export type ChildGroupId = Flavor<string, ChildGroup>;
 
 export interface ChildGroupFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  childGroupId: { kind: "m2o"; type: Child; nullable: never; derived: false };
-  parentGroup: { kind: "m2o"; type: ParentGroup; nullable: never; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; value: string | undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  childGroupId: { kind: "m2o"; type: Child; nullable: never; value: ChildId | never; derived: false };
+  parentGroup: { kind: "m2o"; type: ParentGroup; nullable: never; value: ParentGroupId | never; derived: false };
 }
 
 export interface ChildGroupOpts {
@@ -161,12 +162,20 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof ChildGroupFields>(key: K): ChildGroupFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof ChildGroupFields>(key: K, value: ChildGroupFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<ChildGroupOpts>): void {
-    setOpts(this as any as ChildGroup, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<ChildGroupOpts>): void {
-    setOpts(this as any as ChildGroup, opts as OptsOf<ChildGroup>, { partial: true });
+    setOpts(this as any, opts as OptsOf<ChildGroup>, { partial: true });
   }
 
   get changes(): Changes<ChildGroup> {
@@ -180,14 +189,8 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   populate<H extends LoadHint<ChildGroup>>(hint: H): Promise<Loaded<ChildGroup, H>>;
   populate<H extends LoadHint<ChildGroup>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<ChildGroup, H>>;
   populate<H extends LoadHint<ChildGroup>, V>(hint: H, fn: (cg: Loaded<ChildGroup, H>) => V): Promise<V>;
-  populate<H extends LoadHint<ChildGroup>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (cg: Loaded<ChildGroup, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<ChildGroup>, V>(
-    hintOrOpts: any,
-    fn?: (cg: Loaded<ChildGroup, H>) => V,
-  ): Promise<Loaded<ChildGroup, H> | V> {
+  populate<H extends LoadHint<ChildGroup>, V>(opts: { hint: H; forceReload?: boolean }, fn: (cg: Loaded<ChildGroup, H>) => V): Promise<V>;
+  populate<H extends LoadHint<ChildGroup>, V>(hintOrOpts: any, fn?: (cg: Loaded<ChildGroup, H>) => V): Promise<Loaded<ChildGroup, H> | V> {
     return this.em.populate(this as any as ChildGroup, hintOrOpts, fn);
   }
 
@@ -197,14 +200,7 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
 
   get childItems(): Collection<ChildGroup, ChildItem> {
     const { relations } = getInstanceData(this);
-    return relations.childItems ??= hasMany(
-      this as any as ChildGroup,
-      childItemMeta,
-      "childItems",
-      "childGroup",
-      "child_group_id",
-      undefined,
-    );
+    return relations.childItems ??= hasMany(this as any as ChildGroup, childItemMeta, "childItems", "childGroup", "child_group_id", undefined);
   }
 
   get childGroupId(): ManyToOneReference<ChildGroup, Child, never> {

@@ -11,6 +11,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -42,12 +43,12 @@ import type { BookId, Entity } from "../entities";
 export type AuthorId = Flavor<string, Author>;
 
 export interface AuthorFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  delete: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined; value: string | undefined; derived: false };
+  delete: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; value: boolean | undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
 }
 
 export interface AuthorOpts {
@@ -163,12 +164,20 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof AuthorFields>(key: K): AuthorFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof AuthorFields>(key: K, value: AuthorFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<AuthorOpts>): void {
-    setOpts(this as any as Author, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<AuthorOpts>): void {
-    setOpts(this as any as Author, opts as OptsOf<Author>, { partial: true });
+    setOpts(this as any, opts as OptsOf<Author>, { partial: true });
   }
 
   get changes(): Changes<Author> {
@@ -182,14 +191,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   populate<H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>>;
   populate<H extends LoadHint<Author>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Author, H>>;
   populate<H extends LoadHint<Author>, V>(hint: H, fn: (a: Loaded<Author, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Author>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (a: Loaded<Author, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Author>, V>(
-    hintOrOpts: any,
-    fn?: (a: Loaded<Author, H>) => V,
-  ): Promise<Loaded<Author, H> | V> {
+  populate<H extends LoadHint<Author>, V>(opts: { hint: H; forceReload?: boolean }, fn: (a: Loaded<Author, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Author>, V>(hintOrOpts: any, fn?: (a: Loaded<Author, H>) => V): Promise<Loaded<Author, H> | V> {
     return this.em.populate(this as any as Author, hintOrOpts, fn);
   }
 

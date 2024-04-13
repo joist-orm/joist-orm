@@ -8,6 +8,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -32,8 +33,8 @@ import type { Entity, UserFields, UserFilter, UserGraphQLFilter, UserIdsOpts, Us
 export type AdminUserId = Flavor<string, AdminUser> & Flavor<string, "User">;
 
 export interface AdminUserFields extends UserFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  role: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  role: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
 }
 
 export interface AdminUserOpts extends UserOpts {
@@ -102,12 +103,20 @@ export abstract class AdminUserCodegen extends User implements Entity {
     setField(this, "role", cleanStringValue(role));
   }
 
+  getFieldValue<K extends keyof AdminUserFields>(key: K): AdminUserFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof AdminUserFields>(key: K, value: AdminUserFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<AdminUserOpts>): void {
-    setOpts(this as any as AdminUser, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<AdminUserOpts>): void {
-    setOpts(this as any as AdminUser, opts as OptsOf<AdminUser>, { partial: true });
+    setOpts(this as any, opts as OptsOf<AdminUser>, { partial: true });
   }
 
   get changes(): Changes<AdminUser> {
@@ -121,14 +130,8 @@ export abstract class AdminUserCodegen extends User implements Entity {
   populate<H extends LoadHint<AdminUser>>(hint: H): Promise<Loaded<AdminUser, H>>;
   populate<H extends LoadHint<AdminUser>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<AdminUser, H>>;
   populate<H extends LoadHint<AdminUser>, V>(hint: H, fn: (u: Loaded<AdminUser, H>) => V): Promise<V>;
-  populate<H extends LoadHint<AdminUser>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (u: Loaded<AdminUser, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<AdminUser>, V>(
-    hintOrOpts: any,
-    fn?: (u: Loaded<AdminUser, H>) => V,
-  ): Promise<Loaded<AdminUser, H> | V> {
+  populate<H extends LoadHint<AdminUser>, V>(opts: { hint: H; forceReload?: boolean }, fn: (u: Loaded<AdminUser, H>) => V): Promise<V>;
+  populate<H extends LoadHint<AdminUser>, V>(hintOrOpts: any, fn?: (u: Loaded<AdminUser, H>) => V): Promise<Loaded<AdminUser, H> | V> {
     return this.em.populate(this as any as AdminUser, hintOrOpts, fn);
   }
 

@@ -9,6 +9,7 @@ import {
   loadLens,
   newChangesProxy,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -33,17 +34,7 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  Author,
-  authorMeta,
-  EntityManager,
-  newTaskNew,
-  Task,
-  TaskItem,
-  taskItemMeta,
-  TaskNew,
-  taskNewMeta,
-} from "../entities";
+import { Author, authorMeta, EntityManager, newTaskNew, Task, TaskItem, taskItemMeta, TaskNew, taskNewMeta } from "../entities";
 import type {
   AuthorId,
   AuthorOrder,
@@ -60,9 +51,9 @@ import type {
 export type TaskNewId = Flavor<string, TaskNew> & Flavor<string, "Task">;
 
 export interface TaskNewFields extends TaskFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  specialNewField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
-  specialNewAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  specialNewField: { kind: "primitive"; type: number; unique: false; nullable: undefined; value: number | undefined; derived: false };
+  specialNewAuthor: { kind: "m2o"; type: Author; nullable: undefined; value: AuthorId | undefined; derived: false };
 }
 
 export interface TaskNewOpts extends TaskOpts {
@@ -138,12 +129,20 @@ export abstract class TaskNewCodegen extends Task implements Entity {
     setField(this, "specialNewField", specialNewField);
   }
 
+  getFieldValue<K extends keyof TaskNewFields>(key: K): TaskNewFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof TaskNewFields>(key: K, value: TaskNewFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<TaskNewOpts>): void {
-    setOpts(this as any as TaskNew, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<TaskNewOpts>): void {
-    setOpts(this as any as TaskNew, opts as OptsOf<TaskNew>, { partial: true });
+    setOpts(this as any, opts as OptsOf<TaskNew>, { partial: true });
   }
 
   get changes(): Changes<TaskNew> {
@@ -157,14 +156,8 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   populate<H extends LoadHint<TaskNew>>(hint: H): Promise<Loaded<TaskNew, H>>;
   populate<H extends LoadHint<TaskNew>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<TaskNew, H>>;
   populate<H extends LoadHint<TaskNew>, V>(hint: H, fn: (task: Loaded<TaskNew, H>) => V): Promise<V>;
-  populate<H extends LoadHint<TaskNew>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (task: Loaded<TaskNew, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<TaskNew>, V>(
-    hintOrOpts: any,
-    fn?: (task: Loaded<TaskNew, H>) => V,
-  ): Promise<Loaded<TaskNew, H> | V> {
+  populate<H extends LoadHint<TaskNew>, V>(opts: { hint: H; forceReload?: boolean }, fn: (task: Loaded<TaskNew, H>) => V): Promise<V>;
+  populate<H extends LoadHint<TaskNew>, V>(hintOrOpts: any, fn?: (task: Loaded<TaskNew, H>) => V): Promise<Loaded<TaskNew, H> | V> {
     return this.em.populate(this as any as TaskNew, hintOrOpts, fn);
   }
 
@@ -174,14 +167,7 @@ export abstract class TaskNewCodegen extends Task implements Entity {
 
   get newTaskTaskItems(): Collection<TaskNew, TaskItem> {
     const { relations } = getInstanceData(this);
-    return relations.newTaskTaskItems ??= hasMany(
-      this as any as TaskNew,
-      taskItemMeta,
-      "newTaskTaskItems",
-      "newTask",
-      "new_task_id",
-      undefined,
-    );
+    return relations.newTaskTaskItems ??= hasMany(this as any as TaskNew, taskItemMeta, "newTaskTaskItems", "newTask", "new_task_id", undefined);
   }
 
   get specialNewAuthor(): ManyToOneReference<TaskNew, Author, undefined> {

@@ -11,6 +11,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -40,11 +41,11 @@ import type { AuthorId, AuthorOrder, Entity } from "../entities";
 export type AuthorScheduleId = Flavor<string, AuthorSchedule>;
 
 export interface AuthorScheduleFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  overview: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  author: { kind: "m2o"; type: Author; nullable: never; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  overview: { kind: "primitive"; type: string; unique: false; nullable: undefined; value: string | undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  author: { kind: "m2o"; type: Author; nullable: never; value: AuthorId | never; derived: false };
 }
 
 export interface AuthorScheduleOpts {
@@ -137,12 +138,20 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof AuthorScheduleFields>(key: K): AuthorScheduleFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof AuthorScheduleFields>(key: K, value: AuthorScheduleFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<AuthorScheduleOpts>): void {
-    setOpts(this as any as AuthorSchedule, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<AuthorScheduleOpts>): void {
-    setOpts(this as any as AuthorSchedule, opts as OptsOf<AuthorSchedule>, { partial: true });
+    setOpts(this as any, opts as OptsOf<AuthorSchedule>, { partial: true });
   }
 
   get changes(): Changes<AuthorSchedule> {
@@ -154,13 +163,8 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   populate<H extends LoadHint<AuthorSchedule>>(hint: H): Promise<Loaded<AuthorSchedule, H>>;
-  populate<H extends LoadHint<AuthorSchedule>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<AuthorSchedule, H>>;
-  populate<H extends LoadHint<AuthorSchedule>, V>(
-    hint: H,
-    fn: (authorSchedule: Loaded<AuthorSchedule, H>) => V,
-  ): Promise<V>;
+  populate<H extends LoadHint<AuthorSchedule>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<AuthorSchedule, H>>;
+  populate<H extends LoadHint<AuthorSchedule>, V>(hint: H, fn: (authorSchedule: Loaded<AuthorSchedule, H>) => V): Promise<V>;
   populate<H extends LoadHint<AuthorSchedule>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (authorSchedule: Loaded<AuthorSchedule, H>) => V,

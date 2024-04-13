@@ -13,6 +13,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -67,33 +68,23 @@ import {
   TaskOld,
   taskOldMeta,
 } from "../entities";
-import type {
-  AuthorId,
-  BookAdvanceId,
-  CommentId,
-  Entity,
-  ImageId,
-  PublisherGroupId,
-  PublisherGroupOrder,
-  TagId,
-  TaskOldId,
-} from "../entities";
+import type { AuthorId, BookAdvanceId, CommentId, Entity, ImageId, PublisherGroupId, PublisherGroupOrder, TagId, TaskOldId } from "../entities";
 
 export type PublisherId = Flavor<string, Publisher>;
 
 export interface PublisherFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  latitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
-  longitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
-  hugeNumber: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
-  numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
-  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  size: { kind: "enum"; type: PublisherSize; nullable: undefined };
-  type: { kind: "enum"; type: PublisherType; nullable: never };
-  group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  latitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; value: number | undefined; derived: false };
+  longitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; value: number | undefined; derived: false };
+  hugeNumber: { kind: "primitive"; type: number; unique: false; nullable: undefined; value: number | undefined; derived: false };
+  numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; value: number | never; derived: true };
+  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; value: Date | undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  size: { kind: "enum"; type: PublisherSize; nullable: undefined; value: PublisherSize | undefined };
+  type: { kind: "enum"; type: PublisherType; nullable: never; value: PublisherType | never };
+  group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; value: PublisherGroupId | undefined; derived: false };
 }
 
 export interface PublisherOpts {
@@ -319,18 +310,23 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
     return getField(this, "type") === PublisherType.Big;
   }
 
+  getFieldValue<K extends keyof PublisherFields>(key: K): PublisherFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof PublisherFields>(key: K, value: PublisherFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<PublisherOpts>): void {
-    setOpts(this as any as Publisher, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<PublisherOpts>): void {
-    setOpts(this as any as Publisher, opts as OptsOf<Publisher>, { partial: true });
+    setOpts(this as any, opts as OptsOf<Publisher>, { partial: true });
   }
 
-  get changes(): Changes<
-    Publisher,
-    keyof FieldsOf<Publisher> | keyof FieldsOf<LargePublisher> | keyof FieldsOf<SmallPublisher>
-  > {
+  get changes(): Changes<Publisher, keyof FieldsOf<Publisher> | keyof FieldsOf<LargePublisher> | keyof FieldsOf<SmallPublisher>> {
     return newChangesProxy(this) as any;
   }
 
@@ -345,14 +341,8 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   populate<H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>>;
   populate<H extends LoadHint<Publisher>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Publisher, H>>;
   populate<H extends LoadHint<Publisher>, V>(hint: H, fn: (p: Loaded<Publisher, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Publisher>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (p: Loaded<Publisher, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Publisher>, V>(
-    hintOrOpts: any,
-    fn?: (p: Loaded<Publisher, H>) => V,
-  ): Promise<Loaded<Publisher, H> | V> {
+  populate<H extends LoadHint<Publisher>, V>(opts: { hint: H; forceReload?: boolean }, fn: (p: Loaded<Publisher, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Publisher>, V>(hintOrOpts: any, fn?: (p: Loaded<Publisher, H>) => V): Promise<Loaded<Publisher, H> | V> {
     return this.em.populate(this as any as Publisher, hintOrOpts, fn);
   }
 
@@ -362,50 +352,22 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get authors(): Collection<Publisher, Author> {
     const { relations } = getInstanceData(this);
-    return relations.authors ??= hasMany(
-      this as any as Publisher,
-      authorMeta,
-      "authors",
-      "publisher",
-      "publisher_id",
-      undefined,
-    );
+    return relations.authors ??= hasMany(this as any as Publisher, authorMeta, "authors", "publisher", "publisher_id", undefined);
   }
 
   get bookAdvances(): Collection<Publisher, BookAdvance> {
     const { relations } = getInstanceData(this);
-    return relations.bookAdvances ??= hasMany(
-      this as any as Publisher,
-      bookAdvanceMeta,
-      "bookAdvances",
-      "publisher",
-      "publisher_id",
-      undefined,
-    );
+    return relations.bookAdvances ??= hasMany(this as any as Publisher, bookAdvanceMeta, "bookAdvances", "publisher", "publisher_id", undefined);
   }
 
   get comments(): Collection<Publisher, Comment> {
     const { relations } = getInstanceData(this);
-    return relations.comments ??= hasMany(
-      this as any as Publisher,
-      commentMeta,
-      "comments",
-      "parent",
-      "parent_publisher_id",
-      undefined,
-    );
+    return relations.comments ??= hasMany(this as any as Publisher, commentMeta, "comments", "parent", "parent_publisher_id", undefined);
   }
 
   get images(): Collection<Publisher, Image> {
     const { relations } = getInstanceData(this);
-    return relations.images ??= hasMany(
-      this as any as Publisher,
-      imageMeta,
-      "images",
-      "publisher",
-      "publisher_id",
-      undefined,
-    );
+    return relations.images ??= hasMany(this as any as Publisher, imageMeta, "images", "publisher", "publisher_id", undefined);
   }
 
   get group(): ManyToOneReference<Publisher, PublisherGroup, undefined> {
@@ -415,15 +377,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get tags(): Collection<Publisher, Tag> {
     const { relations } = getInstanceData(this);
-    return relations.tags ??= hasManyToMany(
-      this as any as Publisher,
-      "publishers_to_tags",
-      "tags",
-      "publisher_id",
-      tagMeta,
-      "publishers",
-      "tag_id",
-    );
+    return relations.tags ??= hasManyToMany(this as any as Publisher, "publishers_to_tags", "tags", "publisher_id", tagMeta, "publishers", "tag_id");
   }
 
   get tasks(): Collection<Publisher, TaskOld> {

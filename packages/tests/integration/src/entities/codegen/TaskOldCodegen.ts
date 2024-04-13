@@ -12,6 +12,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -65,9 +66,9 @@ import type {
 export type TaskOldId = Flavor<string, TaskOld> & Flavor<string, "Task">;
 
 export interface TaskOldFields extends TaskFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  specialOldField: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  parentOldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  specialOldField: { kind: "primitive"; type: number; unique: false; nullable: never; value: number | never; derived: false };
+  parentOldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; value: TaskOldId | undefined; derived: false };
 }
 
 export interface TaskOldOpts extends TaskOpts {
@@ -158,12 +159,20 @@ export abstract class TaskOldCodegen extends Task implements Entity {
     setField(this, "specialOldField", specialOldField);
   }
 
+  getFieldValue<K extends keyof TaskOldFields>(key: K): TaskOldFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof TaskOldFields>(key: K, value: TaskOldFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<TaskOldOpts>): void {
-    setOpts(this as any as TaskOld, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<TaskOldOpts>): void {
-    setOpts(this as any as TaskOld, opts as OptsOf<TaskOld>, { partial: true });
+    setOpts(this as any, opts as OptsOf<TaskOld>, { partial: true });
   }
 
   get changes(): Changes<TaskOld> {
@@ -177,14 +186,8 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   populate<H extends LoadHint<TaskOld>>(hint: H): Promise<Loaded<TaskOld, H>>;
   populate<H extends LoadHint<TaskOld>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<TaskOld, H>>;
   populate<H extends LoadHint<TaskOld>, V>(hint: H, fn: (task: Loaded<TaskOld, H>) => V): Promise<V>;
-  populate<H extends LoadHint<TaskOld>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (task: Loaded<TaskOld, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<TaskOld>, V>(
-    hintOrOpts: any,
-    fn?: (task: Loaded<TaskOld, H>) => V,
-  ): Promise<Loaded<TaskOld, H> | V> {
+  populate<H extends LoadHint<TaskOld>, V>(opts: { hint: H; forceReload?: boolean }, fn: (task: Loaded<TaskOld, H>) => V): Promise<V>;
+  populate<H extends LoadHint<TaskOld>, V>(hintOrOpts: any, fn?: (task: Loaded<TaskOld, H>) => V): Promise<Loaded<TaskOld, H> | V> {
     return this.em.populate(this as any as TaskOld, hintOrOpts, fn);
   }
 
@@ -194,38 +197,17 @@ export abstract class TaskOldCodegen extends Task implements Entity {
 
   get comments(): Collection<TaskOld, Comment> {
     const { relations } = getInstanceData(this);
-    return relations.comments ??= hasMany(
-      this as any as TaskOld,
-      commentMeta,
-      "comments",
-      "parent",
-      "parent_task_id",
-      undefined,
-    );
+    return relations.comments ??= hasMany(this as any as TaskOld, commentMeta, "comments", "parent", "parent_task_id", undefined);
   }
 
   get oldTaskTaskItems(): Collection<TaskOld, TaskItem> {
     const { relations } = getInstanceData(this);
-    return relations.oldTaskTaskItems ??= hasMany(
-      this as any as TaskOld,
-      taskItemMeta,
-      "oldTaskTaskItems",
-      "oldTask",
-      "old_task_id",
-      undefined,
-    );
+    return relations.oldTaskTaskItems ??= hasMany(this as any as TaskOld, taskItemMeta, "oldTaskTaskItems", "oldTask", "old_task_id", undefined);
   }
 
   get tasks(): Collection<TaskOld, TaskOld> {
     const { relations } = getInstanceData(this);
-    return relations.tasks ??= hasMany(
-      this as any as TaskOld,
-      taskOldMeta,
-      "tasks",
-      "parentOldTask",
-      "parent_old_task_id",
-      undefined,
-    );
+    return relations.tasks ??= hasMany(this as any as TaskOld, taskOldMeta, "tasks", "parentOldTask", "parent_old_task_id", undefined);
   }
 
   get parentOldTask(): ManyToOneReference<TaskOld, TaskOld, undefined> {

@@ -11,6 +11,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -34,27 +35,18 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  ChildGroup,
-  childGroupMeta,
-  ChildItem,
-  childItemMeta,
-  EntityManager,
-  newChildItem,
-  ParentItem,
-  parentItemMeta,
-} from "../entities";
+import { ChildGroup, childGroupMeta, ChildItem, childItemMeta, EntityManager, newChildItem, ParentItem, parentItemMeta } from "../entities";
 import type { ChildGroupId, ChildGroupOrder, Entity, ParentItemId, ParentItemOrder } from "../entities";
 
 export type ChildItemId = Flavor<string, ChildItem>;
 
 export interface ChildItemFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  childGroup: { kind: "m2o"; type: ChildGroup; nullable: never; derived: false };
-  parentItem: { kind: "m2o"; type: ParentItem; nullable: never; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; value: string | undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  childGroup: { kind: "m2o"; type: ChildGroup; nullable: never; value: ChildGroupId | never; derived: false };
+  parentItem: { kind: "m2o"; type: ParentItem; nullable: never; value: ParentItemId | never; derived: false };
 }
 
 export interface ChildItemOpts {
@@ -153,12 +145,20 @@ export abstract class ChildItemCodegen extends BaseEntity<EntityManager, string>
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof ChildItemFields>(key: K): ChildItemFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof ChildItemFields>(key: K, value: ChildItemFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<ChildItemOpts>): void {
-    setOpts(this as any as ChildItem, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<ChildItemOpts>): void {
-    setOpts(this as any as ChildItem, opts as OptsOf<ChildItem>, { partial: true });
+    setOpts(this as any, opts as OptsOf<ChildItem>, { partial: true });
   }
 
   get changes(): Changes<ChildItem> {
@@ -172,14 +172,8 @@ export abstract class ChildItemCodegen extends BaseEntity<EntityManager, string>
   populate<H extends LoadHint<ChildItem>>(hint: H): Promise<Loaded<ChildItem, H>>;
   populate<H extends LoadHint<ChildItem>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<ChildItem, H>>;
   populate<H extends LoadHint<ChildItem>, V>(hint: H, fn: (ci: Loaded<ChildItem, H>) => V): Promise<V>;
-  populate<H extends LoadHint<ChildItem>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (ci: Loaded<ChildItem, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<ChildItem>, V>(
-    hintOrOpts: any,
-    fn?: (ci: Loaded<ChildItem, H>) => V,
-  ): Promise<Loaded<ChildItem, H> | V> {
+  populate<H extends LoadHint<ChildItem>, V>(opts: { hint: H; forceReload?: boolean }, fn: (ci: Loaded<ChildItem, H>) => V): Promise<V>;
+  populate<H extends LoadHint<ChildItem>, V>(hintOrOpts: any, fn?: (ci: Loaded<ChildItem, H>) => V): Promise<Loaded<ChildItem, H> | V> {
     return this.em.populate(this as any as ChildItem, hintOrOpts, fn);
   }
 

@@ -2,7 +2,21 @@ import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
-import { ensureNotDeleted, maybeResolveReferenceToId } from "./index";
+import {ensureNotDeleted, fail, isManyToOneReference, maybeResolveReferenceToId} from "./index";
+
+/**
+ * Sets the current value of `fieldName` to `value`, while also ensuring that any relations
+ * are properly set.
+ */
+export function setFieldValue(entity: Entity, fieldName: string, value: any): void {
+  getField(entity, fieldName);
+  const maybeRef = (entity as any)[fieldName];
+  if (isManyToOneReference(maybeRef)) {
+    maybeRef.set(value);
+  } else {
+    setField(entity, fieldName, value);
+  }
+}
 
 /**
  * Returns the current value of `fieldName`, this is an internal method that should
@@ -17,7 +31,7 @@ export function getField(entity: Entity, fieldName: string): any {
   if (fieldName in data) {
     return data[fieldName];
   } else {
-    const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
+    const serde = getMetadata(entity).allFields[fieldName]?.serde ?? fail(`Invalid field ${fieldName}`);
     serde.setOnEntity(data, row);
     return data[fieldName];
   }

@@ -11,6 +11,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -40,11 +41,11 @@ import type { CriticId, CriticOrder, Entity } from "../entities";
 export type CriticColumnId = Flavor<string, CriticColumn>;
 
 export interface CriticColumnFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  critic: { kind: "m2o"; type: Critic; nullable: never; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  critic: { kind: "m2o"; type: Critic; nullable: never; value: CriticId | never; derived: false };
 }
 
 export interface CriticColumnOpts {
@@ -138,12 +139,20 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof CriticColumnFields>(key: K): CriticColumnFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof CriticColumnFields>(key: K, value: CriticColumnFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<CriticColumnOpts>): void {
-    setOpts(this as any as CriticColumn, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<CriticColumnOpts>): void {
-    setOpts(this as any as CriticColumn, opts as OptsOf<CriticColumn>, { partial: true });
+    setOpts(this as any, opts as OptsOf<CriticColumn>, { partial: true });
   }
 
   get changes(): Changes<CriticColumn> {
@@ -155,18 +164,10 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   }
 
   populate<H extends LoadHint<CriticColumn>>(hint: H): Promise<Loaded<CriticColumn, H>>;
-  populate<H extends LoadHint<CriticColumn>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<CriticColumn, H>>;
+  populate<H extends LoadHint<CriticColumn>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<CriticColumn, H>>;
   populate<H extends LoadHint<CriticColumn>, V>(hint: H, fn: (cc: Loaded<CriticColumn, H>) => V): Promise<V>;
-  populate<H extends LoadHint<CriticColumn>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (cc: Loaded<CriticColumn, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<CriticColumn>, V>(
-    hintOrOpts: any,
-    fn?: (cc: Loaded<CriticColumn, H>) => V,
-  ): Promise<Loaded<CriticColumn, H> | V> {
+  populate<H extends LoadHint<CriticColumn>, V>(opts: { hint: H; forceReload?: boolean }, fn: (cc: Loaded<CriticColumn, H>) => V): Promise<V>;
+  populate<H extends LoadHint<CriticColumn>, V>(hintOrOpts: any, fn?: (cc: Loaded<CriticColumn, H>) => V): Promise<Loaded<CriticColumn, H> | V> {
     return this.em.populate(this as any as CriticColumn, hintOrOpts, fn);
   }
 

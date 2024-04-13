@@ -11,6 +11,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -54,14 +55,14 @@ import type { AuthorId, AuthorOrder, BookId, BookOrder, Entity, PublisherId, Pub
 export type ImageId = Flavor<string, Image>;
 
 export interface ImageFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  fileName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  type: { kind: "enum"; type: ImageType; nullable: never };
-  author: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
-  book: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
-  publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  fileName: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  type: { kind: "enum"; type: ImageType; nullable: never; value: ImageType | never };
+  author: { kind: "m2o"; type: Author; nullable: undefined; value: AuthorId | undefined; derived: false };
+  book: { kind: "m2o"; type: Book; nullable: undefined; value: BookId | undefined; derived: false };
+  publisher: { kind: "m2o"; type: Publisher; nullable: undefined; value: PublisherId | undefined; derived: false };
 }
 
 export interface ImageOpts {
@@ -193,12 +194,20 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
     return getField(this, "type") === ImageType.PublisherImage;
   }
 
+  getFieldValue<K extends keyof ImageFields>(key: K): ImageFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof ImageFields>(key: K, value: ImageFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<ImageOpts>): void {
-    setOpts(this as any as Image, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<ImageOpts>): void {
-    setOpts(this as any as Image, opts as OptsOf<Image>, { partial: true });
+    setOpts(this as any, opts as OptsOf<Image>, { partial: true });
   }
 
   get changes(): Changes<Image> {
@@ -212,14 +221,8 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   populate<H extends LoadHint<Image>>(hint: H): Promise<Loaded<Image, H>>;
   populate<H extends LoadHint<Image>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Image, H>>;
   populate<H extends LoadHint<Image>, V>(hint: H, fn: (i: Loaded<Image, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Image>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (i: Loaded<Image, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Image>, V>(
-    hintOrOpts: any,
-    fn?: (i: Loaded<Image, H>) => V,
-  ): Promise<Loaded<Image, H> | V> {
+  populate<H extends LoadHint<Image>, V>(opts: { hint: H; forceReload?: boolean }, fn: (i: Loaded<Image, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Image>, V>(hintOrOpts: any, fn?: (i: Loaded<Image, H>) => V): Promise<Loaded<Image, H> | V> {
     return this.em.populate(this as any as Image, hintOrOpts, fn);
   }
 

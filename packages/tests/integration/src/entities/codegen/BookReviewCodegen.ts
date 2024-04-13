@@ -11,6 +11,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -38,31 +39,20 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  Book,
-  bookMeta,
-  BookReview,
-  bookReviewMeta,
-  Comment,
-  commentMeta,
-  Critic,
-  criticMeta,
-  EntityManager,
-  newBookReview,
-} from "../entities";
+import { Book, bookMeta, BookReview, bookReviewMeta, Comment, commentMeta, Critic, criticMeta, EntityManager, newBookReview } from "../entities";
 import type { BookId, BookOrder, CommentId, CriticId, CriticOrder, Entity } from "../entities";
 
 export type BookReviewId = Flavor<string, BookReview>;
 
 export interface BookReviewFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  rating: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  isPublic: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: true };
-  isTest: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: true };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  book: { kind: "m2o"; type: Book; nullable: never; derived: false };
-  critic: { kind: "m2o"; type: Critic; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  rating: { kind: "primitive"; type: number; unique: false; nullable: never; value: number | never; derived: false };
+  isPublic: { kind: "primitive"; type: boolean; unique: false; nullable: never; value: boolean | never; derived: true };
+  isTest: { kind: "primitive"; type: boolean; unique: false; nullable: never; value: boolean | never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  book: { kind: "m2o"; type: Book; nullable: never; value: BookId | never; derived: false };
+  critic: { kind: "m2o"; type: Critic; nullable: undefined; value: CriticId | undefined; derived: false };
 }
 
 export interface BookReviewOpts {
@@ -177,12 +167,20 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof BookReviewFields>(key: K): BookReviewFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof BookReviewFields>(key: K, value: BookReviewFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<BookReviewOpts>): void {
-    setOpts(this as any as BookReview, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<BookReviewOpts>): void {
-    setOpts(this as any as BookReview, opts as OptsOf<BookReview>, { partial: true });
+    setOpts(this as any, opts as OptsOf<BookReview>, { partial: true });
   }
 
   get changes(): Changes<BookReview> {
@@ -196,14 +194,8 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   populate<H extends LoadHint<BookReview>>(hint: H): Promise<Loaded<BookReview, H>>;
   populate<H extends LoadHint<BookReview>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<BookReview, H>>;
   populate<H extends LoadHint<BookReview>, V>(hint: H, fn: (br: Loaded<BookReview, H>) => V): Promise<V>;
-  populate<H extends LoadHint<BookReview>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (br: Loaded<BookReview, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<BookReview>, V>(
-    hintOrOpts: any,
-    fn?: (br: Loaded<BookReview, H>) => V,
-  ): Promise<Loaded<BookReview, H> | V> {
+  populate<H extends LoadHint<BookReview>, V>(opts: { hint: H; forceReload?: boolean }, fn: (br: Loaded<BookReview, H>) => V): Promise<V>;
+  populate<H extends LoadHint<BookReview>, V>(hintOrOpts: any, fn?: (br: Loaded<BookReview, H>) => V): Promise<Loaded<BookReview, H> | V> {
     return this.em.populate(this as any as BookReview, hintOrOpts, fn);
   }
 
@@ -223,12 +215,6 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
 
   get comment(): OneToOneReference<BookReview, Comment> {
     const { relations } = getInstanceData(this);
-    return relations.comment ??= hasOneToOne(
-      this as any as BookReview,
-      commentMeta,
-      "comment",
-      "parent",
-      "parent_book_review_id",
-    );
+    return relations.comment ??= hasOneToOne(this as any as BookReview, commentMeta, "comment", "parent", "parent_book_review_id");
   }
 }

@@ -10,6 +10,7 @@ import {
   mustBeSubType,
   newChangesProxy,
   newRequiredRule,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -33,29 +34,18 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  EntityManager,
-  newTaskItem,
-  Task,
-  TaskItem,
-  taskItemMeta,
-  taskMeta,
-  TaskNew,
-  taskNewMeta,
-  TaskOld,
-  taskOldMeta,
-} from "../entities";
+import { EntityManager, newTaskItem, Task, TaskItem, taskItemMeta, taskMeta, TaskNew, taskNewMeta, TaskOld, taskOldMeta } from "../entities";
 import type { Entity, TaskId, TaskNewId, TaskNewOrder, TaskOldId, TaskOldOrder, TaskOrder } from "../entities";
 
 export type TaskItemId = Flavor<string, TaskItem>;
 
 export interface TaskItemFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  newTask: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
-  oldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
-  task: { kind: "m2o"; type: Task; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  newTask: { kind: "m2o"; type: TaskNew; nullable: undefined; value: TaskNewId | undefined; derived: false };
+  oldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; value: TaskOldId | undefined; derived: false };
+  task: { kind: "m2o"; type: Task; nullable: undefined; value: TaskId | undefined; derived: false };
 }
 
 export interface TaskItemOpts {
@@ -147,12 +137,20 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof TaskItemFields>(key: K): TaskItemFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof TaskItemFields>(key: K, value: TaskItemFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<TaskItemOpts>): void {
-    setOpts(this as any as TaskItem, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<TaskItemOpts>): void {
-    setOpts(this as any as TaskItem, opts as OptsOf<TaskItem>, { partial: true });
+    setOpts(this as any, opts as OptsOf<TaskItem>, { partial: true });
   }
 
   get changes(): Changes<TaskItem> {
@@ -166,14 +164,8 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
   populate<H extends LoadHint<TaskItem>>(hint: H): Promise<Loaded<TaskItem, H>>;
   populate<H extends LoadHint<TaskItem>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<TaskItem, H>>;
   populate<H extends LoadHint<TaskItem>, V>(hint: H, fn: (ti: Loaded<TaskItem, H>) => V): Promise<V>;
-  populate<H extends LoadHint<TaskItem>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (ti: Loaded<TaskItem, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<TaskItem>, V>(
-    hintOrOpts: any,
-    fn?: (ti: Loaded<TaskItem, H>) => V,
-  ): Promise<Loaded<TaskItem, H> | V> {
+  populate<H extends LoadHint<TaskItem>, V>(opts: { hint: H; forceReload?: boolean }, fn: (ti: Loaded<TaskItem, H>) => V): Promise<V>;
+  populate<H extends LoadHint<TaskItem>, V>(hintOrOpts: any, fn?: (ti: Loaded<TaskItem, H>) => V): Promise<Loaded<TaskItem, H> | V> {
     return this.em.populate(this as any as TaskItem, hintOrOpts, fn);
   }
 

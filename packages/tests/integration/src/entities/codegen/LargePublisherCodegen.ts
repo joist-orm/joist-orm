@@ -9,6 +9,7 @@ import {
   loadLens,
   newChangesProxy,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -32,17 +33,7 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  Critic,
-  criticMeta,
-  EntityManager,
-  LargePublisher,
-  largePublisherMeta,
-  newLargePublisher,
-  Publisher,
-  User,
-  userMeta,
-} from "../entities";
+import { Critic, criticMeta, EntityManager, LargePublisher, largePublisherMeta, newLargePublisher, Publisher, User, userMeta } from "../entities";
 import type {
   CriticId,
   Entity,
@@ -58,9 +49,9 @@ import type {
 export type LargePublisherId = Flavor<string, LargePublisher> & Flavor<string, "Publisher">;
 
 export interface LargePublisherFields extends PublisherFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  country: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; value: string | undefined; derived: false };
+  country: { kind: "primitive"; type: string; unique: false; nullable: undefined; value: string | undefined; derived: false };
 }
 
 export interface LargePublisherOpts extends PublisherOpts {
@@ -147,12 +138,20 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
     setField(this, "country", cleanStringValue(country));
   }
 
+  getFieldValue<K extends keyof LargePublisherFields>(key: K): LargePublisherFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof LargePublisherFields>(key: K, value: LargePublisherFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<LargePublisherOpts>): void {
-    setOpts(this as any as LargePublisher, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<LargePublisherOpts>): void {
-    setOpts(this as any as LargePublisher, opts as OptsOf<LargePublisher>, { partial: true });
+    setOpts(this as any, opts as OptsOf<LargePublisher>, { partial: true });
   }
 
   get changes(): Changes<LargePublisher> {
@@ -164,18 +163,10 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   populate<H extends LoadHint<LargePublisher>>(hint: H): Promise<Loaded<LargePublisher, H>>;
-  populate<H extends LoadHint<LargePublisher>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<LargePublisher, H>>;
+  populate<H extends LoadHint<LargePublisher>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<LargePublisher, H>>;
   populate<H extends LoadHint<LargePublisher>, V>(hint: H, fn: (p: Loaded<LargePublisher, H>) => V): Promise<V>;
-  populate<H extends LoadHint<LargePublisher>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (p: Loaded<LargePublisher, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<LargePublisher>, V>(
-    hintOrOpts: any,
-    fn?: (p: Loaded<LargePublisher, H>) => V,
-  ): Promise<Loaded<LargePublisher, H> | V> {
+  populate<H extends LoadHint<LargePublisher>, V>(opts: { hint: H; forceReload?: boolean }, fn: (p: Loaded<LargePublisher, H>) => V): Promise<V>;
+  populate<H extends LoadHint<LargePublisher>, V>(hintOrOpts: any, fn?: (p: Loaded<LargePublisher, H>) => V): Promise<Loaded<LargePublisher, H> | V> {
     return this.em.populate(this as any as LargePublisher, hintOrOpts, fn);
   }
 

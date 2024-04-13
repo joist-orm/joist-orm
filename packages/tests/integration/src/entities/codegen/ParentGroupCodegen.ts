@@ -11,6 +11,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -34,25 +35,16 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  ChildGroup,
-  childGroupMeta,
-  EntityManager,
-  newParentGroup,
-  ParentGroup,
-  parentGroupMeta,
-  ParentItem,
-  parentItemMeta,
-} from "../entities";
+import { ChildGroup, childGroupMeta, EntityManager, newParentGroup, ParentGroup, parentGroupMeta, ParentItem, parentItemMeta } from "../entities";
 import type { ChildGroupId, Entity, ParentItemId } from "../entities";
 
 export type ParentGroupId = Flavor<string, ParentGroup>;
 
 export interface ParentGroupFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; value: string | undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; value: Date | never; derived: true };
 }
 
 export interface ParentGroupOpts {
@@ -147,12 +139,20 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
     return getField(this, "updatedAt");
   }
 
+  getFieldValue<K extends keyof ParentGroupFields>(key: K): ParentGroupFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof ParentGroupFields>(key: K, value: ParentGroupFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<ParentGroupOpts>): void {
-    setOpts(this as any as ParentGroup, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<ParentGroupOpts>): void {
-    setOpts(this as any as ParentGroup, opts as OptsOf<ParentGroup>, { partial: true });
+    setOpts(this as any, opts as OptsOf<ParentGroup>, { partial: true });
   }
 
   get changes(): Changes<ParentGroup> {
@@ -166,10 +166,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   populate<H extends LoadHint<ParentGroup>>(hint: H): Promise<Loaded<ParentGroup, H>>;
   populate<H extends LoadHint<ParentGroup>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<ParentGroup, H>>;
   populate<H extends LoadHint<ParentGroup>, V>(hint: H, fn: (parentGroup: Loaded<ParentGroup, H>) => V): Promise<V>;
-  populate<H extends LoadHint<ParentGroup>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (parentGroup: Loaded<ParentGroup, H>) => V,
-  ): Promise<V>;
+  populate<H extends LoadHint<ParentGroup>, V>(opts: { hint: H; forceReload?: boolean }, fn: (parentGroup: Loaded<ParentGroup, H>) => V): Promise<V>;
   populate<H extends LoadHint<ParentGroup>, V>(
     hintOrOpts: any,
     fn?: (parentGroup: Loaded<ParentGroup, H>) => V,
@@ -183,25 +180,11 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
 
   get childGroups(): Collection<ParentGroup, ChildGroup> {
     const { relations } = getInstanceData(this);
-    return relations.childGroups ??= hasMany(
-      this as any as ParentGroup,
-      childGroupMeta,
-      "childGroups",
-      "parentGroup",
-      "parent_group_id",
-      undefined,
-    );
+    return relations.childGroups ??= hasMany(this as any as ParentGroup, childGroupMeta, "childGroups", "parentGroup", "parent_group_id", undefined);
   }
 
   get parentItems(): Collection<ParentGroup, ParentItem> {
     const { relations } = getInstanceData(this);
-    return relations.parentItems ??= hasMany(
-      this as any as ParentGroup,
-      parentItemMeta,
-      "parentItems",
-      "parentGroup",
-      "parent_group_id",
-      undefined,
-    );
+    return relations.parentItems ??= hasMany(this as any as ParentGroup, parentItemMeta, "parentItems", "parentGroup", "parent_group_id", undefined);
   }
 }

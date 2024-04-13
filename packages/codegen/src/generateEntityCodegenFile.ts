@@ -67,6 +67,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "./symbols";
@@ -401,11 +402,13 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const baseEntity = dbMeta.entities.find((e) => e.name === meta.baseClassName);
   const subEntities = dbMeta.entities.filter((e) => e.baseClassName === meta.name);
   const base = baseEntity?.entity.type ?? code`${BaseEntity}<${EntityManager}, ${idType}>`;
-  const maybeBaseFields = baseEntity ? code`extends ${imp('t:' + baseEntity.name + "Fields@./entities.ts")}` : "";
+  const maybeBaseFields = baseEntity ? code`extends ${imp("t:" + baseEntity.name + "Fields@./entities.ts")}` : "";
   const maybeBaseOpts = baseEntity ? code`extends ${baseEntity.entity.optsType}` : "";
-  const maybeBaseIdOpts = baseEntity ? code`extends ${imp('t:' + baseEntity.name + "IdsOpts@./entities.ts")}` : "";
-  const maybeBaseFilter = baseEntity ? code`extends ${imp('t:' + baseEntity.name + "Filter@./entities.ts")}` : "";
-  const maybeBaseGqlFilter = baseEntity ? code`extends ${imp('t:' + baseEntity.name + "GraphQLFilter@./entities.ts")}` : "";
+  const maybeBaseIdOpts = baseEntity ? code`extends ${imp("t:" + baseEntity.name + "IdsOpts@./entities.ts")}` : "";
+  const maybeBaseFilter = baseEntity ? code`extends ${imp("t:" + baseEntity.name + "Filter@./entities.ts")}` : "";
+  const maybeBaseGqlFilter = baseEntity
+    ? code`extends ${imp("t:" + baseEntity.name + "GraphQLFilter@./entities.ts")}`
+    : "";
   const maybeBaseOrder = baseEntity ? code`extends ${baseEntity.entity.orderType}` : "";
   const maybeBaseId = baseEntity ? code` & Flavor<${idType}, "${baseEntity.name}">` : "";
   const maybePreventBaseTypeInstantiation = meta.abstract
@@ -527,12 +530,25 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
       ${primitives}
 
+      getFieldValue<K extends keyof ${entityName}Fields>(
+        key: K
+      ): ${entityName}Fields[K]["value"] {
+        return ${getField}(this as any, key);  
+      }
+
+      setFieldValue<K extends keyof ${entityName}Fields>(
+        key: K,
+        value: ${entityName}Fields[K]["value"],
+      ): void {
+        ${setFieldValue}(this, key, value);
+      }
+
       set(opts: Partial<${entityName}Opts>): void {
-        ${setOpts}(this as any as ${entityName}, opts);
+        ${setOpts}(this as any, opts);
       }
 
       setPartial(opts: ${PartialOrNull}<${entityName}Opts>): void {
-        ${setOpts}(this as any as ${entityName}, opts as ${OptsOf}<${entityName}>, { partial: true });
+        ${setOpts}(this as any, opts as ${OptsOf}<${entityName}>, { partial: true });
       }
 
       get changes(): ${Changes}<${entityName}${maybeOtherTypeChanges}> {
@@ -701,33 +717,34 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
 
 // Make our fields type
 function generateFieldsType(config: Config, meta: EntityDbMetadata): Code[] {
-  const id = code`id: { kind: "primitive"; type: ${meta.primaryKey.fieldType}; unique: ${true}; nullable: never };`;
+  const id = code`id: { kind: "primitive"; type: ${meta.primaryKey.fieldType}; unique: ${true}; nullable: never; value: never };`;
   const primitives = meta.primitives.map((field) => {
     const { fieldName, fieldType, notNull, unique, derived } = field;
-    return code`${fieldName}: { kind: "primitive"; type: ${fieldType}; unique: ${unique}; nullable: ${undefinedOrNever(
-      notNull,
-    )}, derived: ${derived !== false} };`;
+    const uOrNever = undefinedOrNever(notNull);
+    return code`${fieldName}: { kind: "primitive"; type: ${fieldType}; unique: ${unique}; nullable: ${uOrNever}; value: ${fieldType} | ${uOrNever}; derived: ${derived !== false} };`;
   });
   const enums = meta.enums.map((field) => {
     const { fieldName, enumType, notNull, isArray } = field;
     if (isArray) {
       // Arrays are always optional and we'll default to `[]`
-      return code`${fieldName}: { kind: "enum"; type: ${enumType}[]; nullable: never };`;
+      return code`${fieldName}: { kind: "enum"; type: ${enumType}[]; nullable: never; value: never  };`;
     } else {
-      return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${undefinedOrNever(notNull)} };`;
+      const uOrNever = undefinedOrNever(notNull);
+      return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${uOrNever}; value: ${enumType} | ${uOrNever} };`;
     }
   });
   const pgEnums = meta.pgEnums.map(({ fieldName, enumType, notNull }) => {
     const nullable = undefinedOrNever(notNull);
-    return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${nullable}; native: true };`;
+    return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${nullable}; native: true; value: never  };`;
   });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull, derived }) => {
-    return code`${fieldName}: { kind: "m2o"; type: ${otherEntity.type}; nullable: ${undefinedOrNever(
-      notNull,
-    )}, derived: ${derived !== false} };`;
+    const uOrNever = undefinedOrNever(notNull);
+    return code`${fieldName}: { kind: "m2o"; type: ${otherEntity.type}; nullable: ${uOrNever}; value: ${otherEntity.idType} | ${uOrNever}; derived: ${derived !== false} };`;
   });
   const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
-    return code`${fieldName}: { kind: "poly"; type: ${fieldType}; nullable: ${undefinedOrNever(notNull)} };`;
+    const uOrNever = undefinedOrNever(notNull);
+    const genericIdType = config.idType === "number" ? "number" : "string";
+    return code`${fieldName}: { kind: "poly"; type: ${fieldType}; nullable: ${uOrNever}; value: ${genericIdType} | ${uOrNever}; }`;
   });
   return [id, ...primitives, ...enums, ...pgEnums, ...m2o, ...polys];
 }

@@ -10,6 +10,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
+  setFieldValue,
   setOpts,
   toIdOf,
 } from "joist-orm";
@@ -34,15 +35,7 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  EntityManager,
-  newSmallPublisher,
-  Publisher,
-  SmallPublisher,
-  smallPublisherMeta,
-  User,
-  userMeta,
-} from "../entities";
+import { EntityManager, newSmallPublisher, Publisher, SmallPublisher, smallPublisherMeta, User, userMeta } from "../entities";
 import type {
   Entity,
   PublisherFields,
@@ -57,10 +50,10 @@ import type {
 export type SmallPublisherId = Flavor<string, SmallPublisher> & Flavor<string, "Publisher">;
 
 export interface SmallPublisherFields extends PublisherFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  city: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  allAuthorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never; value: never };
+  city: { kind: "primitive"; type: string; unique: false; nullable: never; value: string | never; derived: false };
+  sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; value: string | undefined; derived: false };
+  allAuthorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; value: string | undefined; derived: true };
 }
 
 export interface SmallPublisherOpts extends PublisherOpts {
@@ -150,12 +143,20 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
 
   abstract readonly allAuthorNames: ReactiveField<SmallPublisher, string | undefined>;
 
+  getFieldValue<K extends keyof SmallPublisherFields>(key: K): SmallPublisherFields[K]["value"] {
+    return getField(this as any, key);
+  }
+
+  setFieldValue<K extends keyof SmallPublisherFields>(key: K, value: SmallPublisherFields[K]["value"]): void {
+    setFieldValue(this, key, value);
+  }
+
   set(opts: Partial<SmallPublisherOpts>): void {
-    setOpts(this as any as SmallPublisher, opts);
+    setOpts(this as any, opts);
   }
 
   setPartial(opts: PartialOrNull<SmallPublisherOpts>): void {
-    setOpts(this as any as SmallPublisher, opts as OptsOf<SmallPublisher>, { partial: true });
+    setOpts(this as any, opts as OptsOf<SmallPublisher>, { partial: true });
   }
 
   get changes(): Changes<SmallPublisher> {
@@ -167,18 +168,10 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   }
 
   populate<H extends LoadHint<SmallPublisher>>(hint: H): Promise<Loaded<SmallPublisher, H>>;
-  populate<H extends LoadHint<SmallPublisher>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<SmallPublisher, H>>;
+  populate<H extends LoadHint<SmallPublisher>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<SmallPublisher, H>>;
   populate<H extends LoadHint<SmallPublisher>, V>(hint: H, fn: (p: Loaded<SmallPublisher, H>) => V): Promise<V>;
-  populate<H extends LoadHint<SmallPublisher>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (p: Loaded<SmallPublisher, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<SmallPublisher>, V>(
-    hintOrOpts: any,
-    fn?: (p: Loaded<SmallPublisher, H>) => V,
-  ): Promise<Loaded<SmallPublisher, H> | V> {
+  populate<H extends LoadHint<SmallPublisher>, V>(opts: { hint: H; forceReload?: boolean }, fn: (p: Loaded<SmallPublisher, H>) => V): Promise<V>;
+  populate<H extends LoadHint<SmallPublisher>, V>(hintOrOpts: any, fn?: (p: Loaded<SmallPublisher, H>) => V): Promise<Loaded<SmallPublisher, H> | V> {
     return this.em.populate(this as any as SmallPublisher, hintOrOpts, fn);
   }
 

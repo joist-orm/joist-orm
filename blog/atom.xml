@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://joist-orm.io/blog</id>
+    <title>Joist Blog</title>
+    <updated>2024-04-13T00:00:00.000Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://joist-orm.io/blog"/>
+    <subtitle>Joist Blog</subtitle>
+    <entry>
+        <title type="html"><![CDATA[Welcome]]></title>
+        <id>https://joist-orm.io/blog/welcome-blog</id>
+        <link href="https://joist-orm.io/blog/welcome-blog"/>
+        <updated>2024-04-13T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[First post on the Joist blog.]]></summary>
+        <content type="html"><![CDATA[<p>Hello! This is just a "Hello World" post to show the Joist blog, using <a href="https://docusaurus.io/" target="_blank" rel="noopener noreferrer"><strong>Docusaurus</strong></a>, is working <!-- -->🎉<!-- -->.</p>]]></content>
+        <author>
+            <name>Stephen Haberman</name>
+            <uri>https://github.com/stephenh</uri>
+        </author>
+    </entry>
+</feed>

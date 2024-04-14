@@ -1,3 +1,10 @@
+## [1.155.5](https://github.com/joist-orm/joist-orm/compare/v1.155.4...v1.155.5) (2024-04-14)
+
+
+### Bug Fixes
+
+* Try use yarn to set versions. ([#1039](https://github.com/joist-orm/joist-orm/issues/1039)) ([50d369d](https://github.com/joist-orm/joist-orm/commit/50d369d9623791b3698f36f019eed19e7d05c5b6))
+
 ## [1.155.4](https://github.com/joist-orm/joist-orm/compare/v1.155.3...v1.155.4) (2024-04-14)
 
 

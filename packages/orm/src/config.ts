@@ -205,7 +205,7 @@ export class ConfigApi<T extends Entity, C> {
   private ensurePreBoot(name: string, op: string): void {
     if (booted) {
       // Detect if this is NextJS and we're in a hot-reload situation
-      if (isRunningInNextjs()) {
+      if (isRunningInNextJs()) {
         // Reset our bag of config data to collect only the new rules/hooks
         this.__data = new ConfigData();
         booted = false;
@@ -216,8 +216,8 @@ export class ConfigApi<T extends Entity, C> {
   }
 }
 
-function isRunningInNextjs(): boolean {
-  return "__NEXT_DATA__" in globalThis;
+function isRunningInNextJs(): boolean {
+  return "__NEXT_HTTP_AGENT" in globalThis || "__NEXT_HTTPS_AGENT" in globalThis;
 }
 
 /**

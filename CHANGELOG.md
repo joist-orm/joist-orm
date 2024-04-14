@@ -1,3 +1,10 @@
+## [1.155.3](https://github.com/joist-orm/joist-orm/compare/v1.155.2...v1.155.3) (2024-04-14)
+
+
+### Bug Fixes
+
+* Detect running in NextJS. ([#1037](https://github.com/joist-orm/joist-orm/issues/1037)) ([4009adf](https://github.com/joist-orm/joist-orm/commit/4009adf5063af6bd5569a1f8abab030fbd6b0bf0))
+
 ## [1.155.2](https://github.com/joist-orm/joist-orm/compare/v1.155.1...v1.155.2) (2024-04-10)
 
 

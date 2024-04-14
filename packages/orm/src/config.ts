@@ -29,6 +29,13 @@ export const constraintNameToValidationError: Record<string, string> = {};
 
 let booted = false;
 
+/**
+ * Called at the end of `configureMetadata` to indicate the boot process is complete.
+ *
+ * We use this flag to prevent users from mistakenly calling `config` methods after the boot
+ * process is complete, i.e. from hooks or other post-boot invocations, where the calls are
+ * not guaranteed to work because Joist's reactivity graph has already been initialized.
+ */
 export function setBooted(): void {
   booted = true;
 }
@@ -45,7 +52,7 @@ export class ConfigApi<T extends Entity, C> {
    * need to check the constraint by hand ahead of time, before calling `em.flush`.
    */
   addConstraintMessage(constraintName: string, validationError: string) {
-    this.ensurePreBoot();
+    this.ensurePreBoot(getCallerName(), "addConstraintMessage");
     constraintNameToValidationError[constraintName] = validationError;
   }
 
@@ -63,9 +70,9 @@ export class ConfigApi<T extends Entity, C> {
   addRule<H extends ReactiveHint<T>>(hint: H, rule: ValidationRule<Reacted<T, H>>): void;
   addRule(rule: ValidationRule<T>): void;
   addRule(ruleOrHint: ValidationRule<T> | any, maybeRule?: ValidationRule<any>): void {
-    this.ensurePreBoot();
     // Keep the name for easy debugging/tracing later
     const name = getCallerName();
+    this.ensurePreBoot(name, "addRule");
     if (typeof ruleOrHint === "function") {
       const fn = ruleOrHint;
       this.__data.rules.push({ name, fn, hint: undefined });
@@ -86,12 +93,12 @@ export class ConfigApi<T extends Entity, C> {
 
   /** Deletes any entity/entities pointed to by `relation` when this entity is deleted. */
   cascadeDelete(relation: keyof RelationsIn<T> & LoadHint<T>): void {
-    this.ensurePreBoot();
+    this.ensurePreBoot(getCallerName(), "cascadeDelete");
     this.__data.cascadeDeleteFields.push(relation);
   }
 
   private addHook(hook: EntityHook, ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>) {
-    this.ensurePreBoot();
+    this.ensurePreBoot(getCallerName(), "addHook");
     if (typeof ruleOrHint === "function") {
       this.__data.hooks[hook].push(ruleOrHint);
     } else {
@@ -175,7 +182,7 @@ export class ConfigApi<T extends Entity, C> {
         : never,
   ): void;
   setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(fieldName: K, hintOrFnOrValue: any, fn?: any): void {
-    this.ensurePreBoot();
+    this.ensurePreBoot(getCallerName(), "setDefault");
     if (fn) {
       // If we're called once by the codegen, and again by the user, override the syncDefault
       delete this.__data.syncDefaults[fieldName];
@@ -195,11 +202,22 @@ export class ConfigApi<T extends Entity, C> {
    * until the user is ready to use it. */
   placeholder(): void {}
 
-  private ensurePreBoot(): void {
+  private ensurePreBoot(name: string, op: string): void {
     if (booted) {
-      throw new Error("This call must be made before calling `configureMetadata`");
+      // Detect if this is NextJS and we're in a hot-reload situation
+      if (isRunningInNextjs()) {
+        // Reset our bag of config data to collect only the new rules/hooks
+        this.__data = new ConfigData();
+        booted = false;
+      } else {
+        throw new Error(`config.${op} call ${name} must only be called on boot, before calling \`configureMetadata\`.`);
+      }
     }
   }
+}
+
+function isRunningInNextjs(): boolean {
+  return "__NEXT_DATA__" in globalThis;
 }
 
 /**

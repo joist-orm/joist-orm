@@ -1,3 +1,10 @@
+## [1.155.6](https://github.com/joist-orm/joist-orm/compare/v1.155.5...v1.155.6) (2024-04-14)
+
+
+### Bug Fixes
+
+* Plugins should use a peer dependency. ([#1040](https://github.com/joist-orm/joist-orm/issues/1040)) ([98ee91b](https://github.com/joist-orm/joist-orm/commit/98ee91ba2380688db672272c905f461e89b70a20)), closes [#1036](https://github.com/joist-orm/joist-orm/issues/1036)
+
 ## [1.155.5](https://github.com/joist-orm/joist-orm/compare/v1.155.4...v1.155.5) (2024-04-14)
 
 

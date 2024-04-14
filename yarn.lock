@@ -11182,14 +11182,14 @@ __metadata:
     "@swc/jest": "npm:^0.2.36"
     "@types/jest": "npm:^29.5.12"
     "@types/node": "npm:^20.12.7"
-    graphql: "npm:^16.8.1"
     jest: "npm:30.0.0-alpha.3"
-    joist-orm: "workspace:*"
     joist-test-utils: "workspace:*"
     prettier: "npm:^3.2.5"
     prettier-plugin-organize-imports: "npm:^3.2.4"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:^5.4.5"
+  peerDependencies:
+    joist-orm: "workspace:*"
   languageName: unknown
   linkType: soft
 

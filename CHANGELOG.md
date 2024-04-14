@@ -1,3 +1,10 @@
+## [1.155.4](https://github.com/joist-orm/joist-orm/compare/v1.155.3...v1.155.4) (2024-04-14)
+
+
+### Bug Fixes
+
+* Fix hot reloading in Next 14 ([#1038](https://github.com/joist-orm/joist-orm/issues/1038)) ([fc91e71](https://github.com/joist-orm/joist-orm/commit/fc91e719fb147f28ea4b348588f549318a5de60d))
+
 ## [1.155.3](https://github.com/joist-orm/joist-orm/compare/v1.155.2...v1.155.3) (2024-04-14)
 
 

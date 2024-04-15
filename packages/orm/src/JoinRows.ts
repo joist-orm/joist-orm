@@ -1,3 +1,4 @@
+import { getMetadata } from "index";
 import { Entity } from "./Entity";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo } from "./Todo";
@@ -20,6 +21,7 @@ export class JoinRows {
     if (!e1) throw new Error(`Cannot add a m2m row with an entity that is ${e1}`);
     if (!e2) throw new Error(`Cannot add a m2m row with an entity that is ${e2}`);
     const { columnName, otherColumnName } = m2m;
+    const { em } = this.m2m.entity;
     const existing = this.rows.find((r) => r[columnName] === e1 && r[otherColumnName] === e2);
     if (existing) {
       existing.deleted = false;
@@ -29,6 +31,8 @@ export class JoinRows {
     }
     this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
     this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
+    if (getMetadata(e1).config.__data.touchOnChange.has(m2m.fieldName)) em.touch(e1);
+    if (getMetadata(e2).config.__data.touchOnChange.has(m2m.otherFieldName)) em.touch(e2);
   }
 
   /** Adds a new remove to this table. */

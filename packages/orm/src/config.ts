@@ -90,6 +90,11 @@ export class ConfigApi<T extends Entity, C> {
     this.__data.cascadeDeleteFields.push(relation);
   }
 
+  touchOnChange(relation: keyof RelationsIn<T> & LoadHint<T>): void {
+    this.ensurePreBoot();
+    this.__data.touchOnChange.add(relation);
+  }
+
   private addHook(hook: EntityHook, ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>) {
     this.ensurePreBoot();
     if (typeof ruleOrHint === "function") {
@@ -279,6 +284,7 @@ export class ConfigData<T extends Entity, C> {
   // An array of the reactive fields that depend on this entity
   reactiveDerivedValues: ReactiveField[] = [];
   cascadeDeleteFields: Array<keyof RelationsIn<T>> = [];
+  touchOnChange: Set<keyof RelationsIn<T>> = new Set();
   // Constantly converting reactive hints to load hints is expense, so cache them here
   cachedReactiveLoadHints: Record<string, any> = {};
 }

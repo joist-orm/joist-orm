@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { Entity, EntityManager, isEntity } from "joist-orm";
 import { fail } from "joist-utils";
 import { Context } from "./context";

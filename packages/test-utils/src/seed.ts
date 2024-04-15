@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { EntityManager, newPgConnectionConfig, PostgresDriver } from "joist-orm";
 import { knex as createKnex } from "knex";
 

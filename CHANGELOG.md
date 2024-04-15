@@ -1,3 +1,10 @@
+# [1.156.0](https://github.com/joist-orm/joist-orm/compare/v1.155.6...v1.156.0) (2024-04-15)
+
+
+### Features
+
+* Add a seed function ([#1041](https://github.com/joist-orm/joist-orm/issues/1041)) ([1a1d3b2](https://github.com/joist-orm/joist-orm/commit/1a1d3b2953314c59764cc171d7c23b0b5b1e11dc))
+
 ## [1.155.6](https://github.com/joist-orm/joist-orm/compare/v1.155.5...v1.155.6) (2024-04-14)
 
 

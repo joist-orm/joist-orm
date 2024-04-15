@@ -1,6 +1,6 @@
 {
   "name": "joist-orm",
-  "version": "1.155.2",
+  "version": "1.156.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -28,15 +28,15 @@
     "pg-types": "^4.0.2"
   },
   "devDependencies": {
-    "@swc/core": "^1.4.11",
+    "@swc/core": "^1.4.13",
     "@swc/jest": "^0.2.36",
     "@types/jest": "^29.5.12",
-    "@types/node": "^20.10.5",
+    "@types/node": "^20.12.7",
     "jest": "30.0.0-alpha.3",
     "prettier": "^3.2.5",
     "prettier-plugin-organize-imports": "^3.2.4",
     "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.4.3"
+    "typescript": "^5.4.5"
   }
 }

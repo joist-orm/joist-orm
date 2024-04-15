@@ -569,6 +569,10 @@ type DeepPartialOpts<T extends Entity> = AllowRelationsOrPartials<OptsOf<T>>;
 /** What a factory can accept for a given entity. */
 export type FactoryEntityOpt<T extends Entity> =
   | T
+  // The ability to use an id, like `newAuthor(em, { publisher: "p:1" })` is not necessarily
+  // on purpose, but the AuthorOpts already have `publisher: Publisher | PublisherId` in them,
+  // so `newTestInstance` has to handle this typing anyway, unless we explicitly go out of our
+  // way to remove the `PublisherId` from the Opts type.
   | IdOf<T>
   | (ActualFactoryOpts<T> & { useFactoryDefaults?: boolean | "none" });
 

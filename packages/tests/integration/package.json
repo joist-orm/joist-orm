@@ -24,15 +24,15 @@
     "joist-graphql-resolver-utils": "workspace:*",
     "joist-orm": "workspace:*",
     "joist-plugin-join-preloading": "workspace:*",
-    "mitata": "^0.1.6"
+    "mitata": "^0.1.11"
   },
   "devDependencies": {
     "@graphql-tools/graphql-file-loader": "^8.0.1",
     "@graphql-tools/load": "^8.0.2",
-    "@swc/core": "^1.4.11",
+    "@swc/core": "^1.4.13",
     "@swc/jest": "^0.2.36",
     "@types/jest": "^29.5.12",
-    "@types/node": "^20.10.5",
+    "@types/node": "^20.12.7",
     "env-cmd": "^10.1.0",
     "jest": "30.0.0-alpha.3",
     "jest-junit": "^16.0.0",
@@ -46,8 +46,8 @@
     "prettier-plugin-organize-imports": "^3.2.4",
     "superstruct": "0.15.5",
     "tsconfig-paths": "^4.2.0",
-    "tsx": "^4.7.1",
-    "typescript": "^5.4.3",
+    "tsx": "^4.7.2",
+    "typescript": "^5.4.5",
     "zod": "^3.22.4"
   }
 }

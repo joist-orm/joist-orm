@@ -1,3 +1,38 @@
+# [1.156.0](https://github.com/joist-orm/joist-orm/compare/v1.155.6...v1.156.0) (2024-04-15)
+
+
+### Features
+
+* Add a seed function ([#1041](https://github.com/joist-orm/joist-orm/issues/1041)) ([1a1d3b2](https://github.com/joist-orm/joist-orm/commit/1a1d3b2953314c59764cc171d7c23b0b5b1e11dc))
+
+## [1.155.6](https://github.com/joist-orm/joist-orm/compare/v1.155.5...v1.155.6) (2024-04-14)
+
+
+### Bug Fixes
+
+* Plugins should use a peer dependency. ([#1040](https://github.com/joist-orm/joist-orm/issues/1040)) ([98ee91b](https://github.com/joist-orm/joist-orm/commit/98ee91ba2380688db672272c905f461e89b70a20)), closes [#1036](https://github.com/joist-orm/joist-orm/issues/1036)
+
+## [1.155.5](https://github.com/joist-orm/joist-orm/compare/v1.155.4...v1.155.5) (2024-04-14)
+
+
+### Bug Fixes
+
+* Try use yarn to set versions. ([#1039](https://github.com/joist-orm/joist-orm/issues/1039)) ([50d369d](https://github.com/joist-orm/joist-orm/commit/50d369d9623791b3698f36f019eed19e7d05c5b6))
+
+## [1.155.4](https://github.com/joist-orm/joist-orm/compare/v1.155.3...v1.155.4) (2024-04-14)
+
+
+### Bug Fixes
+
+* Fix hot reloading in Next 14 ([#1038](https://github.com/joist-orm/joist-orm/issues/1038)) ([fc91e71](https://github.com/joist-orm/joist-orm/commit/fc91e719fb147f28ea4b348588f549318a5de60d))
+
+## [1.155.3](https://github.com/joist-orm/joist-orm/compare/v1.155.2...v1.155.3) (2024-04-14)
+
+
+### Bug Fixes
+
+* Detect running in NextJS. ([#1037](https://github.com/joist-orm/joist-orm/issues/1037)) ([4009adf](https://github.com/joist-orm/joist-orm/commit/4009adf5063af6bd5569a1f8abab030fbd6b0bf0))
+
 ## [1.155.2](https://github.com/joist-orm/joist-orm/compare/v1.155.1...v1.155.2) (2024-04-10)
 
 

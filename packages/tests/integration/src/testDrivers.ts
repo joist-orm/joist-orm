@@ -1,5 +1,5 @@
 import { recordQuery } from "@src/testEm";
-import { Driver, InMemoryDriver, PostgresDriver } from "joist-orm";
+import { Driver, PostgresDriver } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import { Knex, knex as createKnex } from "knex";
 
@@ -69,46 +69,4 @@ export class PostgresTestDriver implements TestDriver {
   async count(tableName: string): Promise<number> {
     return (await this.knex.select("*").from(tableName)).length;
   }
-}
-
-export class InMemoryTestDriver implements TestDriver {
-  public driver;
-  public knex = null!;
-  public isInMemory = true;
-
-  constructor() {
-    this.driver = new InMemoryDriver(() => {
-      recordQuery("...not implemented for InMemoryDriver");
-    });
-  }
-
-  async beforeEach() {
-    this.driver.clear();
-  }
-
-  async destroy() {}
-
-  async select(tableName: string): Promise<readonly any[]> {
-    return this.driver.select(tableName);
-  }
-
-  async insert(tableName: string, row: Record<string, any>): Promise<void> {
-    this.driver.insert(tableName, { ...triggers(), ...row });
-  }
-
-  async update(tableName: string, row: Record<string, any>): Promise<void> {
-    this.driver.update(tableName, row);
-  }
-
-  async delete(tableName: string, id: number): Promise<void> {
-    this.driver.delete(tableName, id);
-  }
-
-  async count(tableName: string) {
-    return this.driver.select(tableName).length;
-  }
-}
-
-function triggers(): any {
-  return { created_at: new Date(), updated_at: new Date() };
 }

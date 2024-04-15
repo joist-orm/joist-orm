@@ -23,7 +23,9 @@ const config: Config = {
           sidebarPath: require.resolve("./sidebars.js"),
           editUrl: "https://github.com/joist-orm/joist-orm/edit/main/docs/",
         },
-        blog: false,
+        blog: {
+          path: "./blog",
+        },
         theme: { customCss: require.resolve("./src/css/custom.css") },
       } satisfies Preset.Options,
     ],
@@ -40,6 +42,7 @@ const config: Config = {
         { type: "doc", docId: "features/entity-manager", position: "left", label: "Features" },
         { type: "doc", docId: "testing/test-factories", position: "left", label: "Testing" },
         { type: "doc", docId: "faq", position: "left", label: "FAQ" },
+        { to: "blog", label: "Blog", position: "left" }, // or position: 'right'
         { href: "https://github.com/joist-orm/joist-orm", label: "GitHub", position: "right" },
         { href: "https://www.youtube.com/@joist-orm", label: "YouTube", position: "right" },
         { href: "https://discord.gg/ky9VTQugqu", label: "Discord", position: "right" },

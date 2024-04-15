@@ -1,14 +1,11 @@
 import { EntityManager } from "@src/entities";
-import { InMemoryTestDriver, PostgresTestDriver, TestDriver } from "@src/testDrivers";
+import { PostgresTestDriver, TestDriver } from "@src/testDrivers";
 import { EntityManagerOpts } from "joist-orm";
 import { JsonAggregatePreloader } from "joist-plugin-join-preloading";
 import { Knex } from "knex";
 
-// Eventually set this via an env flag for dual CI builds, but for now just hard-coding
-export const inMemory = false;
-
 // Create a shared test context that tests can use, and also we'll use to auto-flush the db between tests.
-export let testDriver: TestDriver = inMemory ? new InMemoryTestDriver() : new PostgresTestDriver();
+export let testDriver: TestDriver = new PostgresTestDriver();
 export let knex: Knex = testDriver.knex;
 export let numberOfQueries = 0;
 export let queries: string[] = [];

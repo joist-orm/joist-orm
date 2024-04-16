@@ -1,5 +1,5 @@
 import { Entity } from "./Entity";
-import { FieldsOf, MaybeAbstractEntityConstructor, getEmInternalApi } from "./EntityManager";
+import { FieldsOf, MaybeAbstractEntityConstructor, RelationsOf, getEmInternalApi } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { Changes, FieldStatus, ManyToOneFieldStatus } from "./changes";
 import { isChangeableField } from "./fields";
@@ -85,7 +85,7 @@ export type Reacted<T extends Entity, H> = Entity & {
    */
   fullNonReactiveAccess: Loaded<T, H>;
   /** Allow detecting if a reactive change is due to nuances like `hasUpdated` or `hasChanged`. */
-  changes: Changes<T, keyof FieldsOf<T>, keyof NormalizeHint<T, H>>;
+  changes: Changes<T, keyof (FieldsOf<T> & RelationsOf<T>), keyof NormalizeHint<T, H>>;
 } & MaybeTransientFields<T>;
 
 /**

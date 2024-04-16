@@ -197,9 +197,9 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
 
   get changes(): Changes<
     Task,
-    keyof FieldsOf<Task> | keyof FieldsOf<TaskNew> | keyof FieldsOf<TaskOld>,
-    keyof FieldsOf<Task> | keyof FieldsOf<TaskNew> | keyof FieldsOf<TaskOld>,
-    keyof RelationsOf<Task> | keyof RelationsOf<TaskNew> | keyof RelationsOf<TaskOld>
+    | keyof (FieldsOf<Task> & RelationsOf<Task>)
+    | keyof (FieldsOf<TaskNew> & RelationsOf<TaskNew>)
+    | keyof (FieldsOf<TaskOld> & RelationsOf<TaskOld>)
   > {
     return newChangesProxy(this) as any;
   }

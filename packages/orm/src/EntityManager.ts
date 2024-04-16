@@ -145,7 +145,7 @@ type RelationsKeysOf<T> = {
 
 /** Return the Relation keys from `FooOpt` type, given a `Foo` entity */
 export type RelationsOf<T extends Entity> = {
-  [K in RelationsKeysOf<T>]: OptsOf<T>[K];
+  [K in RelationsKeysOf<T>]: NonNullable<OptsOf<T>[K]>;
 };
 
 /**

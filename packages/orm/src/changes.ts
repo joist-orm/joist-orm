@@ -38,9 +38,8 @@ export interface ManyToOneFieldStatus<T extends Entity> extends FieldStatus<IdOf
  *    i.e. `Publisher.changes` is typed as `Changes<Publisher, keyof Publisher | keyof SmallPub | keyof LargePub>`
  * @type R An optional list of restrictions, i.e for `Reacted` for to provide `changes` to its subset of fields.
  */
-export type Changes<T extends Entity, K = keyof FieldsOf<T>, R = K, J = keyof RelationsOf<T>> = {
-  fields: K[];
-  relations: J[];
+export type Changes<T extends Entity, K = keyof (FieldsOf<T> & RelationsOf<T>), R = K> = {
+  fields: NonNullable<K>[];
 } & {
   [P in keyof FieldsOf<T> & R]: FieldsOf<T>[P] extends { type: infer U | undefined }
     ? U extends Entity
@@ -68,7 +67,7 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
   return new Proxy(entity, {
     get(target, p: PropertyKey): FieldStatus<any> | ManyToOneFieldStatus<any> | (keyof OptsOf<T>)[] {
       if (p === "fields") {
-        return (
+        const fieldsChanged = (
           entity.isNewEntity
             ? // Cloning sometimes leaves unset keys in data as undefined, so drop them
               Object.entries(getInstanceData(entity).data)
@@ -76,9 +75,9 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
                 .map(([key]) => key)
             : Object.keys(getInstanceData(entity).originalData)
         ) as (keyof OptsOf<T>)[];
-      } else if (p === "relations") {
+
         // scan the join rows to get if the relation has any rows
-        const result: (keyof RelationsOf<T>)[] = [];
+        const m2mFieldsChanged: (keyof RelationsOf<T>)[] = [];
         const emApi = getEmInternalApi(entity.em);
         // we will report changes only on the many to many relations for now
         const m2mFields = Object.values(getMetadata(entity).allFields).filter(({ kind }) =>
@@ -89,10 +88,11 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
           const joinRow: any = emApi.joinRows(m2m);
           // rows is private so we cast this as any to access it
           if (joinRow.rows.length > 0) {
-            result.push(field.fieldName as keyof RelationsOf<T>);
+            m2mFieldsChanged.push(field.fieldName as keyof RelationsOf<T>);
           }
         }
-        return result;
+
+        return [...fieldsChanged, ...m2mFieldsChanged];
       } else if (typeof p === "symbol") {
         throw new Error(`Unsupported call to ${String(p)}`);
       }

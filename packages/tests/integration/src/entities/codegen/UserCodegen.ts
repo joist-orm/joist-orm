@@ -260,9 +260,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   get changes(): Changes<
     User,
-    keyof FieldsOf<User> | keyof FieldsOf<AdminUser>,
-    keyof FieldsOf<User> | keyof FieldsOf<AdminUser>,
-    keyof RelationsOf<User> | keyof RelationsOf<AdminUser>
+    keyof (FieldsOf<User> & RelationsOf<User>) | keyof (FieldsOf<AdminUser> & RelationsOf<AdminUser>)
   > {
     return newChangesProxy(this) as any;
   }

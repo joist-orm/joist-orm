@@ -38,6 +38,7 @@ import type {
   OrderBy,
   PartialOrNull,
   PolymorphicReference,
+  RelationsOf,
   TaggedId,
   ValueFilter,
   ValueGraphQLFilter,
@@ -257,7 +258,12 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
     setOpts(this as any as User, opts as OptsOf<User>, { partial: true });
   }
 
-  get changes(): Changes<User, keyof FieldsOf<User> | keyof FieldsOf<AdminUser>> {
+  get changes(): Changes<
+    User,
+    keyof FieldsOf<User> | keyof FieldsOf<AdminUser>,
+    keyof FieldsOf<User> | keyof FieldsOf<AdminUser>,
+    keyof RelationsOf<User> | keyof RelationsOf<AdminUser>
+  > {
     return newChangesProxy(this) as any;
   }
 

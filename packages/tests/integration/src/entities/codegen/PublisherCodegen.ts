@@ -34,6 +34,7 @@ import type {
   OrderBy,
   PartialOrNull,
   ReactiveField,
+  RelationsOf,
   TaggedId,
   ValueFilter,
   ValueGraphQLFilter,
@@ -329,7 +330,9 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get changes(): Changes<
     Publisher,
-    keyof FieldsOf<Publisher> | keyof FieldsOf<LargePublisher> | keyof FieldsOf<SmallPublisher>
+    keyof FieldsOf<Publisher> | keyof FieldsOf<LargePublisher> | keyof FieldsOf<SmallPublisher>,
+    keyof FieldsOf<Publisher> | keyof FieldsOf<LargePublisher> | keyof FieldsOf<SmallPublisher>,
+    keyof RelationsOf<Publisher> | keyof RelationsOf<LargePublisher> | keyof RelationsOf<SmallPublisher>
   > {
     return newChangesProxy(this) as any;
   }

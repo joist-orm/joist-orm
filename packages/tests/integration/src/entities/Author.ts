@@ -264,9 +264,10 @@ config.cascadeDelete("image");
 
 // Example of a trigger for a many to many field
 config.touchOnChange("tags");
-config.beforeFlush("tags", async (author) => {
+config.beforeFlush(async (author) => {
   if (author.changes.relations.includes("tags")) {
-    console.log("tags changed");
+    // This is an arbitrary example of a hook that could happen when tags change, so we can test it
+    author.firstName = "Tags Changed";
   }
 });
 

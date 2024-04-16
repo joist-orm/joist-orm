@@ -2,7 +2,14 @@ import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { FieldsOf, IdOf, OptsOf, isId } from "./EntityManager";
 import { getField, isChangeableField } from "./fields";
-import { Field, RelationsOf, getConstructorFromTaggedId, getEmInternalApi, getMetadata } from "./index";
+import {
+  Field,
+  ManyToManyCollection,
+  RelationsOf,
+  getConstructorFromTaggedId,
+  getEmInternalApi,
+  getMetadata,
+} from "./index";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
 export interface FieldStatus<T> {
@@ -70,11 +77,22 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
             : Object.keys(getInstanceData(entity).originalData)
         ) as (keyof OptsOf<T>)[];
       } else if (p === "relations") {
-        // scan the join rows to get if the relation has changed
+        // scan the join rows to get if the relation has any rows
+        const result: (keyof RelationsOf<T>)[] = [];
         const emApi = getEmInternalApi(entity.em);
-        const meta = getMetadata(entity);
-        console.log({ emApi, meta });
-        return [];
+        // we will report changes only on the many to many relations for now
+        const m2mFields = Object.values(getMetadata(entity).allFields).filter(({ kind }) =>
+          (["m2m"] as (typeof kind)[]).includes(kind),
+        );
+        for (const field of m2mFields) {
+          const m2m = entity[field.fieldName as keyof T] as ManyToManyCollection<any, any>;
+          const joinRow: any = emApi.joinRows(m2m);
+          // rows is private so we cast this as any to access it
+          if (joinRow.rows.length > 0) {
+            result.push(field.fieldName as keyof RelationsOf<T>);
+          }
+        }
+        return result;
       } else if (typeof p === "symbol") {
         throw new Error(`Unsupported call to ${String(p)}`);
       }

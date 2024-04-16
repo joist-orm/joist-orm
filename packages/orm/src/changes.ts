@@ -2,7 +2,7 @@ import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { FieldsOf, IdOf, OptsOf, isId } from "./EntityManager";
 import { getField, isChangeableField } from "./fields";
-import { Field, getConstructorFromTaggedId, getMetadata } from "./index";
+import { Field, RelationsOf, getConstructorFromTaggedId, getEmInternalApi, getMetadata } from "./index";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
 export interface FieldStatus<T> {
@@ -31,7 +31,10 @@ export interface ManyToOneFieldStatus<T extends Entity> extends FieldStatus<IdOf
  *    i.e. `Publisher.changes` is typed as `Changes<Publisher, keyof Publisher | keyof SmallPub | keyof LargePub>`
  * @type R An optional list of restrictions, i.e for `Reacted` for to provide `changes` to its subset of fields.
  */
-export type Changes<T extends Entity, K = keyof FieldsOf<T>, R = K> = { fields: K[] } & {
+export type Changes<T extends Entity, K = keyof FieldsOf<T>, R = K, J = keyof RelationsOf<T>> = {
+  fields: K[];
+  relations: J[];
+} & {
   [P in keyof FieldsOf<T> & R]: FieldsOf<T>[P] extends { type: infer U | undefined }
     ? U extends Entity
       ? ManyToOneFieldStatus<U>
@@ -66,6 +69,12 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
                 .map(([key]) => key)
             : Object.keys(getInstanceData(entity).originalData)
         ) as (keyof OptsOf<T>)[];
+      } else if (p === "relations") {
+        // scan the join rows to get if the relation has changed
+        const emApi = getEmInternalApi(entity.em);
+        const meta = getMetadata(entity);
+        console.log({ emApi, meta });
+        return [];
       } else if (typeof p === "symbol") {
         throw new Error(`Unsupported call to ${String(p)}`);
       }

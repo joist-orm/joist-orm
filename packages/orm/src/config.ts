@@ -98,7 +98,7 @@ export class ConfigApi<T extends Entity, C> {
   }
 
   touchOnChange(relation: keyof RelationsIn<T> & LoadHint<T>): void {
-    this.ensurePreBoot();
+    this.ensurePreBoot(getCallerName(), "touchOnChange");
     this.__data.touchOnChange.add(relation);
   }
 

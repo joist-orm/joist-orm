@@ -1,5 +1,5 @@
-import { getMetadata } from "index";
 import { Entity } from "./Entity";
+import { getMetadata } from "./EntityMetadata";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo } from "./Todo";
 import { keyToTaggedId } from "./keys";
@@ -31,8 +31,12 @@ export class JoinRows {
     }
     this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
     this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
-    if (getMetadata(e1).config.__data.touchOnChange.has(m2m.fieldName)) em.touch(e1);
-    if (getMetadata(e2).config.__data.touchOnChange.has(m2m.otherFieldName)) em.touch(e2);
+    if (getMetadata(e1).config.__data.touchOnChange.has(m2m.fieldName)) {
+      em.touch(e1);
+    }
+    if (getMetadata(e2).config.__data.touchOnChange.has(m2m.otherFieldName)) {
+      em.touch(e2);
+    }
   }
 
   /** Adds a new remove to this table. */

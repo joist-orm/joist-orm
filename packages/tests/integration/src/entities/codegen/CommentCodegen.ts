@@ -189,21 +189,21 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
     return loadLens(this as any as Comment, fn, opts);
   }
 
-  populate<H extends LoadHint<Comment>>(hint: H): Promise<Loaded<Comment, H>>;
-  populate<H extends LoadHint<Comment>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Comment, H>>;
-  populate<H extends LoadHint<Comment>, V>(hint: H, fn: (comment: Loaded<Comment, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Comment>, V>(
+  populate<const H extends LoadHint<Comment>>(hint: H): Promise<Loaded<Comment, H>>;
+  populate<const H extends LoadHint<Comment>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Comment, H>>;
+  populate<const H extends LoadHint<Comment>, V>(hint: H, fn: (comment: Loaded<Comment, H>) => V): Promise<V>;
+  populate<const H extends LoadHint<Comment>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (comment: Loaded<Comment, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<Comment>, V>(
+  populate<const H extends LoadHint<Comment>, V>(
     hintOrOpts: any,
     fn?: (comment: Loaded<Comment, H>) => V,
   ): Promise<Loaded<Comment, H> | V> {
     return this.em.populate(this as any as Comment, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<Comment>>(hint: H): this is Loaded<Comment, H> {
+  isLoaded<const H extends LoadHint<Comment>>(hint: H): this is Loaded<Comment, H> {
     return isLoaded(this as any as Comment, hint);
   }
 

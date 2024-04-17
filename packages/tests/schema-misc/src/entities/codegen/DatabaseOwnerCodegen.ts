@@ -122,26 +122,26 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
     return loadLens(this as any as DatabaseOwner, fn, opts);
   }
 
-  populate<H extends LoadHint<DatabaseOwner>>(hint: H): Promise<Loaded<DatabaseOwner, H>>;
-  populate<H extends LoadHint<DatabaseOwner>>(
+  populate<const H extends LoadHint<DatabaseOwner>>(hint: H): Promise<Loaded<DatabaseOwner, H>>;
+  populate<const H extends LoadHint<DatabaseOwner>>(
     opts: { hint: H; forceReload?: boolean },
   ): Promise<Loaded<DatabaseOwner, H>>;
-  populate<H extends LoadHint<DatabaseOwner>, V>(
+  populate<const H extends LoadHint<DatabaseOwner>, V>(
     hint: H,
     fn: (databaseOwner: Loaded<DatabaseOwner, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<DatabaseOwner>, V>(
+  populate<const H extends LoadHint<DatabaseOwner>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (databaseOwner: Loaded<DatabaseOwner, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<DatabaseOwner>, V>(
+  populate<const H extends LoadHint<DatabaseOwner>, V>(
     hintOrOpts: any,
     fn?: (databaseOwner: Loaded<DatabaseOwner, H>) => V,
   ): Promise<Loaded<DatabaseOwner, H> | V> {
     return this.em.populate(this as any as DatabaseOwner, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<DatabaseOwner>>(hint: H): this is Loaded<DatabaseOwner, H> {
+  isLoaded<const H extends LoadHint<DatabaseOwner>>(hint: H): this is Loaded<DatabaseOwner, H> {
     return isLoaded(this as any as DatabaseOwner, hint);
   }
 }

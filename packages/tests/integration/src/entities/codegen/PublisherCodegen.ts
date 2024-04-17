@@ -345,21 +345,23 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
     return loadLens(this as any as Publisher, fn, opts);
   }
 
-  populate<H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>>;
-  populate<H extends LoadHint<Publisher>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Publisher, H>>;
-  populate<H extends LoadHint<Publisher>, V>(hint: H, fn: (p: Loaded<Publisher, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Publisher>, V>(
+  populate<const H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>>;
+  populate<const H extends LoadHint<Publisher>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<Publisher, H>>;
+  populate<const H extends LoadHint<Publisher>, V>(hint: H, fn: (p: Loaded<Publisher, H>) => V): Promise<V>;
+  populate<const H extends LoadHint<Publisher>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (p: Loaded<Publisher, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<Publisher>, V>(
+  populate<const H extends LoadHint<Publisher>, V>(
     hintOrOpts: any,
     fn?: (p: Loaded<Publisher, H>) => V,
   ): Promise<Loaded<Publisher, H> | V> {
     return this.em.populate(this as any as Publisher, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<Publisher>>(hint: H): this is Loaded<Publisher, H> {
+  isLoaded<const H extends LoadHint<Publisher>>(hint: H): this is Loaded<Publisher, H> {
     return isLoaded(this as any as Publisher, hint);
   }
 

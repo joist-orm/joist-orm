@@ -269,18 +269,21 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
     return loadLens(this as any as User, fn, opts);
   }
 
-  populate<H extends LoadHint<User>>(hint: H): Promise<Loaded<User, H>>;
-  populate<H extends LoadHint<User>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<User, H>>;
-  populate<H extends LoadHint<User>, V>(hint: H, fn: (u: Loaded<User, H>) => V): Promise<V>;
-  populate<H extends LoadHint<User>, V>(
+  populate<const H extends LoadHint<User>>(hint: H): Promise<Loaded<User, H>>;
+  populate<const H extends LoadHint<User>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<User, H>>;
+  populate<const H extends LoadHint<User>, V>(hint: H, fn: (u: Loaded<User, H>) => V): Promise<V>;
+  populate<const H extends LoadHint<User>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (u: Loaded<User, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<User>, V>(hintOrOpts: any, fn?: (u: Loaded<User, H>) => V): Promise<Loaded<User, H> | V> {
+  populate<const H extends LoadHint<User>, V>(
+    hintOrOpts: any,
+    fn?: (u: Loaded<User, H>) => V,
+  ): Promise<Loaded<User, H> | V> {
     return this.em.populate(this as any as User, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<User>>(hint: H): this is Loaded<User, H> {
+  isLoaded<const H extends LoadHint<User>>(hint: H): this is Loaded<User, H> {
     return isLoaded(this as any as User, hint);
   }
 

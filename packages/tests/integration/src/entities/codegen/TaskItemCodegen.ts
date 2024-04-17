@@ -163,21 +163,21 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
     return loadLens(this as any as TaskItem, fn, opts);
   }
 
-  populate<H extends LoadHint<TaskItem>>(hint: H): Promise<Loaded<TaskItem, H>>;
-  populate<H extends LoadHint<TaskItem>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<TaskItem, H>>;
-  populate<H extends LoadHint<TaskItem>, V>(hint: H, fn: (ti: Loaded<TaskItem, H>) => V): Promise<V>;
-  populate<H extends LoadHint<TaskItem>, V>(
+  populate<const H extends LoadHint<TaskItem>>(hint: H): Promise<Loaded<TaskItem, H>>;
+  populate<const H extends LoadHint<TaskItem>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<TaskItem, H>>;
+  populate<const H extends LoadHint<TaskItem>, V>(hint: H, fn: (ti: Loaded<TaskItem, H>) => V): Promise<V>;
+  populate<const H extends LoadHint<TaskItem>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (ti: Loaded<TaskItem, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<TaskItem>, V>(
+  populate<const H extends LoadHint<TaskItem>, V>(
     hintOrOpts: any,
     fn?: (ti: Loaded<TaskItem, H>) => V,
   ): Promise<Loaded<TaskItem, H> | V> {
     return this.em.populate(this as any as TaskItem, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<TaskItem>>(hint: H): this is Loaded<TaskItem, H> {
+  isLoaded<const H extends LoadHint<TaskItem>>(hint: H): this is Loaded<TaskItem, H> {
     return isLoaded(this as any as TaskItem, hint);
   }
 

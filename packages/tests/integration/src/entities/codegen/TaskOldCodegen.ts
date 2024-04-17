@@ -174,21 +174,21 @@ export abstract class TaskOldCodegen extends Task implements Entity {
     return loadLens(this as any as TaskOld, fn, opts);
   }
 
-  populate<H extends LoadHint<TaskOld>>(hint: H): Promise<Loaded<TaskOld, H>>;
-  populate<H extends LoadHint<TaskOld>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<TaskOld, H>>;
-  populate<H extends LoadHint<TaskOld>, V>(hint: H, fn: (task: Loaded<TaskOld, H>) => V): Promise<V>;
-  populate<H extends LoadHint<TaskOld>, V>(
+  populate<const H extends LoadHint<TaskOld>>(hint: H): Promise<Loaded<TaskOld, H>>;
+  populate<const H extends LoadHint<TaskOld>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<TaskOld, H>>;
+  populate<const H extends LoadHint<TaskOld>, V>(hint: H, fn: (task: Loaded<TaskOld, H>) => V): Promise<V>;
+  populate<const H extends LoadHint<TaskOld>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (task: Loaded<TaskOld, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<TaskOld>, V>(
+  populate<const H extends LoadHint<TaskOld>, V>(
     hintOrOpts: any,
     fn?: (task: Loaded<TaskOld, H>) => V,
   ): Promise<Loaded<TaskOld, H> | V> {
     return this.em.populate(this as any as TaskOld, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<TaskOld>>(hint: H): this is Loaded<TaskOld | Task, H> {
+  isLoaded<const H extends LoadHint<TaskOld>>(hint: H): this is Loaded<TaskOld | Task, H> {
     return isLoaded(this as any as TaskOld, hint);
   }
 

@@ -139,8 +139,7 @@ describe("EntityManager.reactiveRules", () => {
       // Then we updated only the a:2 field
       expect(await select("authors")).toMatchObject([
         { id: 1, tags_of_all_books: "" },
-        // Updating this test now that we have another example of a new change detenction for m2m fields, updating this tag name when books relation changes
-        { id: 2, tags_of_all_books: "Books Changed" },
+        { id: 2, tags_of_all_books: "t1" },
       ]);
       // And we only needed to do 1 recalc
       expect(em.entities.filter((e) => e instanceof Author).length).toBe(1);

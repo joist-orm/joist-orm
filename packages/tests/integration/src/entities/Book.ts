@@ -81,7 +81,7 @@ config.addRule("tags", (b) => {
 // Example of a trigger for a many to many field
 config.touchOnChange("tags");
 config.beforeFlush(async (book) => {
-  if (book.changes.fields.includes("tags")) {
+  if (book.changes.fields.includes("tags") && book.title === "To be changed by hook") {
     // This is an arbitrary example of a hook that could happen when tags change, so we can test it
     book.title = "Tags Changed";
   }

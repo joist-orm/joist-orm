@@ -568,7 +568,7 @@ describe("ManyToManyCollection", () => {
 
   it("can identify changes on the many-to-many", async () => {
     const em = newEntityManager();
-    const book = newBook(em);
+    const book = newBook(em, { title: "To be changed by hook" });
     const t1 = newTag(em, { name: "t1" });
     await em.flush();
 

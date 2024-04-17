@@ -1,3 +1,10 @@
+## [1.156.1](https://github.com/joist-orm/joist-orm/compare/v1.156.0...v1.156.1) (2024-04-17)
+
+
+### Bug Fixes
+
+* Add TS 5.x const to entity populate methods. ([#790](https://github.com/joist-orm/joist-orm/issues/790)) ([f892242](https://github.com/joist-orm/joist-orm/commit/f892242e00c432419211ddfa0d7d94db9f828628))
+
 # [1.156.0](https://github.com/joist-orm/joist-orm/compare/v1.155.6...v1.156.0) (2024-04-15)
 
 

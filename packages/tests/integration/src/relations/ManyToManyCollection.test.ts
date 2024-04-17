@@ -568,14 +568,16 @@ describe("ManyToManyCollection", () => {
 
   it("can identify changes on the many-to-many", async () => {
     const em = newEntityManager();
-    const author = newAuthor(em);
+    const book = newBook(em);
     const t1 = newTag(em, { name: "t1" });
     await em.flush();
 
-    author.tags.add(t1);
+    book.tags.add(t1);
     await em.flush();
-    expect(author.tags.get).toHaveLength(1);
-    // this test assumes there is a hook that fires when the tags collection is modified, that sets the firstName to "Tags Changed"
-    expect(author.firstName).toBe("Tags Changed");
+    expect(book.tags.get).toHaveLength(1);
+    // this test assumes there is a hook that fires when the tags collection is modified, that sets the title of the book to "Tags Changed"
+    expect(book.title).toBe("Tags Changed");
+    // and another on the tags to change the tag name
+    expect(t1.name).toBe("Books Changed");
   });
 });

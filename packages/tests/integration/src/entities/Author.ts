@@ -262,15 +262,6 @@ export class Author extends AuthorCodegen {
 config.cascadeDelete("books");
 config.cascadeDelete("image");
 
-// Example of a trigger for a many to many field
-config.touchOnChange("tags");
-config.beforeFlush(async (author) => {
-  if (author.changes.fields.includes("tags")) {
-    // This is an arbitrary example of a hook that could happen when tags change, so we can test it
-    author.firstName = "Tags Changed";
-  }
-});
-
 // Example of a simple rule that runs on every flush
 config.addRule((a) => {
   a.transientFields.firstIsNotLastNameRuleInvoked++;

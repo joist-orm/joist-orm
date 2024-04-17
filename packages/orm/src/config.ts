@@ -97,7 +97,7 @@ export class ConfigApi<T extends Entity, C> {
     this.__data.cascadeDeleteFields.push(relation);
   }
 
-  touchOnChange(relation: keyof RelationsIn<T> & LoadHint<T>): void {
+  touchOnChange(relation: keyof RelationsIn<T>): void {
     this.ensurePreBoot(getCallerName(), "touchOnChange");
     this.__data.touchOnChange.add(relation);
   }

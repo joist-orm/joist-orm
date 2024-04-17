@@ -42,6 +42,7 @@ export class JoinRows {
   /** Adds a new remove to this table. */
   addRemove(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity): void {
     const { columnName, otherColumnName } = m2m;
+    const { em } = this.m2m.entity;
     const existing = this.rows.find((r) => r[columnName] === e1 && r[otherColumnName] === e2);
     if (existing) {
       if (!existing.id) {
@@ -55,6 +56,12 @@ export class JoinRows {
     }
     this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
     this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
+    if (getMetadata(e1).config.__data.touchOnChange.has(m2m.fieldName)) {
+      em.touch(e1);
+    }
+    if (getMetadata(e2).config.__data.touchOnChange.has(m2m.otherFieldName)) {
+      em.touch(e2);
+    }
   }
 
   /** Return any "old values" for a m2m collection that might need reactivity checks. */
@@ -120,6 +127,11 @@ export class JoinRows {
       return undefined;
     }
     return { m2m: this.m2m, newRows, deletedRows };
+  }
+
+  get hasChanges() {
+    const todos = this.toTodo();
+    return !!todos;
   }
 }
 

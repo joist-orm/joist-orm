@@ -80,9 +80,7 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
         const m2mFieldsChanged: (keyof RelationsOf<T>)[] = [];
         const emApi = getEmInternalApi(entity.em);
         // we will report changes only on the many to many relations for now
-        const m2mFields = Object.values(getMetadata(entity).allFields).filter(({ kind }) =>
-          (["m2m"] as (typeof kind)[]).includes(kind),
-        );
+        const m2mFields = Object.values(getMetadata(entity).allFields).filter((f) => f.kind === "m2m");
         for (const field of m2mFields) {
           const m2m = entity[field.fieldName as keyof T] as ManyToManyCollection<any, any>;
           const joinRow: any = emApi.joinRows(m2m);

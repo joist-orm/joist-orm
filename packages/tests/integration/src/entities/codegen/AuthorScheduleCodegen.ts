@@ -153,26 +153,26 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
     return loadLens(this as any as AuthorSchedule, fn, opts);
   }
 
-  populate<H extends LoadHint<AuthorSchedule>>(hint: H): Promise<Loaded<AuthorSchedule, H>>;
-  populate<H extends LoadHint<AuthorSchedule>>(
+  populate<const H extends LoadHint<AuthorSchedule>>(hint: H): Promise<Loaded<AuthorSchedule, H>>;
+  populate<const H extends LoadHint<AuthorSchedule>>(
     opts: { hint: H; forceReload?: boolean },
   ): Promise<Loaded<AuthorSchedule, H>>;
-  populate<H extends LoadHint<AuthorSchedule>, V>(
+  populate<const H extends LoadHint<AuthorSchedule>, V>(
     hint: H,
     fn: (authorSchedule: Loaded<AuthorSchedule, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<AuthorSchedule>, V>(
+  populate<const H extends LoadHint<AuthorSchedule>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (authorSchedule: Loaded<AuthorSchedule, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<AuthorSchedule>, V>(
+  populate<const H extends LoadHint<AuthorSchedule>, V>(
     hintOrOpts: any,
     fn?: (authorSchedule: Loaded<AuthorSchedule, H>) => V,
   ): Promise<Loaded<AuthorSchedule, H> | V> {
     return this.em.populate(this as any as AuthorSchedule, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<AuthorSchedule>>(hint: H): this is Loaded<AuthorSchedule, H> {
+  isLoaded<const H extends LoadHint<AuthorSchedule>>(hint: H): this is Loaded<AuthorSchedule, H> {
     return isLoaded(this as any as AuthorSchedule, hint);
   }
 

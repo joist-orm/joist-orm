@@ -1,3 +1,10 @@
+# [1.157.0](https://github.com/joist-orm/joist-orm/compare/v1.156.1...v1.157.0) (2024-04-17)
+
+
+### Features
+
+* Trigger hooks on m2m relation changes ([#1042](https://github.com/joist-orm/joist-orm/issues/1042)) ([90dcb1c](https://github.com/joist-orm/joist-orm/commit/90dcb1c9cbc2bde442acd77a45b28899af6c8fca))
+
 ## [1.156.1](https://github.com/joist-orm/joist-orm/compare/v1.156.0...v1.156.1) (2024-04-17)
 
 

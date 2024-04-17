@@ -193,21 +193,23 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     return loadLens(this as any as BookReview, fn, opts);
   }
 
-  populate<H extends LoadHint<BookReview>>(hint: H): Promise<Loaded<BookReview, H>>;
-  populate<H extends LoadHint<BookReview>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<BookReview, H>>;
-  populate<H extends LoadHint<BookReview>, V>(hint: H, fn: (br: Loaded<BookReview, H>) => V): Promise<V>;
-  populate<H extends LoadHint<BookReview>, V>(
+  populate<const H extends LoadHint<BookReview>>(hint: H): Promise<Loaded<BookReview, H>>;
+  populate<const H extends LoadHint<BookReview>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<BookReview, H>>;
+  populate<const H extends LoadHint<BookReview>, V>(hint: H, fn: (br: Loaded<BookReview, H>) => V): Promise<V>;
+  populate<const H extends LoadHint<BookReview>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (br: Loaded<BookReview, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<BookReview>, V>(
+  populate<const H extends LoadHint<BookReview>, V>(
     hintOrOpts: any,
     fn?: (br: Loaded<BookReview, H>) => V,
   ): Promise<Loaded<BookReview, H> | V> {
     return this.em.populate(this as any as BookReview, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<BookReview>>(hint: H): this is Loaded<BookReview, H> {
+  isLoaded<const H extends LoadHint<BookReview>>(hint: H): this is Loaded<BookReview, H> {
     return isLoaded(this as any as BookReview, hint);
   }
 

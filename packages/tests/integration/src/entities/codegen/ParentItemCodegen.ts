@@ -168,21 +168,23 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
     return loadLens(this as any as ParentItem, fn, opts);
   }
 
-  populate<H extends LoadHint<ParentItem>>(hint: H): Promise<Loaded<ParentItem, H>>;
-  populate<H extends LoadHint<ParentItem>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<ParentItem, H>>;
-  populate<H extends LoadHint<ParentItem>, V>(hint: H, fn: (pi: Loaded<ParentItem, H>) => V): Promise<V>;
-  populate<H extends LoadHint<ParentItem>, V>(
+  populate<const H extends LoadHint<ParentItem>>(hint: H): Promise<Loaded<ParentItem, H>>;
+  populate<const H extends LoadHint<ParentItem>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<ParentItem, H>>;
+  populate<const H extends LoadHint<ParentItem>, V>(hint: H, fn: (pi: Loaded<ParentItem, H>) => V): Promise<V>;
+  populate<const H extends LoadHint<ParentItem>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (pi: Loaded<ParentItem, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<ParentItem>, V>(
+  populate<const H extends LoadHint<ParentItem>, V>(
     hintOrOpts: any,
     fn?: (pi: Loaded<ParentItem, H>) => V,
   ): Promise<Loaded<ParentItem, H> | V> {
     return this.em.populate(this as any as ParentItem, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<ParentItem>>(hint: H): this is Loaded<ParentItem, H> {
+  isLoaded<const H extends LoadHint<ParentItem>>(hint: H): this is Loaded<ParentItem, H> {
     return isLoaded(this as any as ParentItem, hint);
   }
 

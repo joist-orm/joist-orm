@@ -545,15 +545,15 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         return ${loadLens}(this as any as ${entityName}, fn, opts);
       }
 
-      populate<H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>>;
-      populate<H extends ${LoadHint}<${entityName}>>(opts: { hint: H, forceReload?: boolean }): Promise<${Loaded}<${entityName}, H>>;
-      populate<H extends ${LoadHint}<${entityName}>, V>(hint: H, fn: (${varName}: Loaded<${entityName}, H>) => V): Promise<V>;
-      populate<H extends ${LoadHint}<${entityName}>, V>(opts: { hint: H, forceReload?: boolean }, fn: (${varName}: Loaded<${entityName}, H>) => V): Promise<V>;
-      populate<H extends ${LoadHint}<${entityName}>, V>(hintOrOpts: any, fn?: (${varName}: Loaded<${entityName}, H>) => V): Promise<${Loaded}<${entityName}, H> | V> {
+      populate<const H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>>;
+      populate<const H extends ${LoadHint}<${entityName}>>(opts: { hint: H, forceReload?: boolean }): Promise<${Loaded}<${entityName}, H>>;
+      populate<const H extends ${LoadHint}<${entityName}>, V>(hint: H, fn: (${varName}: Loaded<${entityName}, H>) => V): Promise<V>;
+      populate<const H extends ${LoadHint}<${entityName}>, V>(opts: { hint: H, forceReload?: boolean }, fn: (${varName}: Loaded<${entityName}, H>) => V): Promise<V>;
+      populate<const H extends ${LoadHint}<${entityName}>, V>(hintOrOpts: any, fn?: (${varName}: Loaded<${entityName}, H>) => V): Promise<${Loaded}<${entityName}, H> | V> {
         return this.em.populate(this as any as ${entityName}, hintOrOpts, fn);
       }
 
-      isLoaded<H extends ${LoadHint}<${entityName}>>(hint: H): this is ${Loaded}<${entityName}${maybeOtherLoaded}, H> {
+      isLoaded<const H extends ${LoadHint}<${entityName}>>(hint: H): this is ${Loaded}<${entityName}${maybeOtherLoaded}, H> {
         return ${isLoaded}(this as any as ${entityName}, hint);
       }
 

@@ -154,21 +154,21 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
     return loadLens(this as any as Painting, fn, opts);
   }
 
-  populate<H extends LoadHint<Painting>>(hint: H): Promise<Loaded<Painting, H>>;
-  populate<H extends LoadHint<Painting>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Painting, H>>;
-  populate<H extends LoadHint<Painting>, V>(hint: H, fn: (p: Loaded<Painting, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Painting>, V>(
+  populate<const H extends LoadHint<Painting>>(hint: H): Promise<Loaded<Painting, H>>;
+  populate<const H extends LoadHint<Painting>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Painting, H>>;
+  populate<const H extends LoadHint<Painting>, V>(hint: H, fn: (p: Loaded<Painting, H>) => V): Promise<V>;
+  populate<const H extends LoadHint<Painting>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (p: Loaded<Painting, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<Painting>, V>(
+  populate<const H extends LoadHint<Painting>, V>(
     hintOrOpts: any,
     fn?: (p: Loaded<Painting, H>) => V,
   ): Promise<Loaded<Painting, H> | V> {
     return this.em.populate(this as any as Painting, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<Painting>>(hint: H): this is Loaded<Painting, H> {
+  isLoaded<const H extends LoadHint<Painting>>(hint: H): this is Loaded<Painting, H> {
     return isLoaded(this as any as Painting, hint);
   }
 

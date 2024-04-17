@@ -118,21 +118,23 @@ export abstract class AdminUserCodegen extends User implements Entity {
     return loadLens(this as any as AdminUser, fn, opts);
   }
 
-  populate<H extends LoadHint<AdminUser>>(hint: H): Promise<Loaded<AdminUser, H>>;
-  populate<H extends LoadHint<AdminUser>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<AdminUser, H>>;
-  populate<H extends LoadHint<AdminUser>, V>(hint: H, fn: (u: Loaded<AdminUser, H>) => V): Promise<V>;
-  populate<H extends LoadHint<AdminUser>, V>(
+  populate<const H extends LoadHint<AdminUser>>(hint: H): Promise<Loaded<AdminUser, H>>;
+  populate<const H extends LoadHint<AdminUser>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<AdminUser, H>>;
+  populate<const H extends LoadHint<AdminUser>, V>(hint: H, fn: (u: Loaded<AdminUser, H>) => V): Promise<V>;
+  populate<const H extends LoadHint<AdminUser>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (u: Loaded<AdminUser, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<AdminUser>, V>(
+  populate<const H extends LoadHint<AdminUser>, V>(
     hintOrOpts: any,
     fn?: (u: Loaded<AdminUser, H>) => V,
   ): Promise<Loaded<AdminUser, H> | V> {
     return this.em.populate(this as any as AdminUser, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<AdminUser>>(hint: H): this is Loaded<AdminUser | User, H> {
+  isLoaded<const H extends LoadHint<AdminUser>>(hint: H): this is Loaded<AdminUser | User, H> {
     return isLoaded(this as any as AdminUser, hint);
   }
 }

@@ -177,21 +177,23 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
     return loadLens(this as any as ChildGroup, fn, opts);
   }
 
-  populate<H extends LoadHint<ChildGroup>>(hint: H): Promise<Loaded<ChildGroup, H>>;
-  populate<H extends LoadHint<ChildGroup>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<ChildGroup, H>>;
-  populate<H extends LoadHint<ChildGroup>, V>(hint: H, fn: (cg: Loaded<ChildGroup, H>) => V): Promise<V>;
-  populate<H extends LoadHint<ChildGroup>, V>(
+  populate<const H extends LoadHint<ChildGroup>>(hint: H): Promise<Loaded<ChildGroup, H>>;
+  populate<const H extends LoadHint<ChildGroup>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<ChildGroup, H>>;
+  populate<const H extends LoadHint<ChildGroup>, V>(hint: H, fn: (cg: Loaded<ChildGroup, H>) => V): Promise<V>;
+  populate<const H extends LoadHint<ChildGroup>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (cg: Loaded<ChildGroup, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<ChildGroup>, V>(
+  populate<const H extends LoadHint<ChildGroup>, V>(
     hintOrOpts: any,
     fn?: (cg: Loaded<ChildGroup, H>) => V,
   ): Promise<Loaded<ChildGroup, H> | V> {
     return this.em.populate(this as any as ChildGroup, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<ChildGroup>>(hint: H): this is Loaded<ChildGroup, H> {
+  isLoaded<const H extends LoadHint<ChildGroup>>(hint: H): this is Loaded<ChildGroup, H> {
     return isLoaded(this as any as ChildGroup, hint);
   }
 

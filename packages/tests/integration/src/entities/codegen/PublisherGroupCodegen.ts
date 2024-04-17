@@ -169,23 +169,23 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
     return loadLens(this as any as PublisherGroup, fn, opts);
   }
 
-  populate<H extends LoadHint<PublisherGroup>>(hint: H): Promise<Loaded<PublisherGroup, H>>;
-  populate<H extends LoadHint<PublisherGroup>>(
+  populate<const H extends LoadHint<PublisherGroup>>(hint: H): Promise<Loaded<PublisherGroup, H>>;
+  populate<const H extends LoadHint<PublisherGroup>>(
     opts: { hint: H; forceReload?: boolean },
   ): Promise<Loaded<PublisherGroup, H>>;
-  populate<H extends LoadHint<PublisherGroup>, V>(hint: H, fn: (pg: Loaded<PublisherGroup, H>) => V): Promise<V>;
-  populate<H extends LoadHint<PublisherGroup>, V>(
+  populate<const H extends LoadHint<PublisherGroup>, V>(hint: H, fn: (pg: Loaded<PublisherGroup, H>) => V): Promise<V>;
+  populate<const H extends LoadHint<PublisherGroup>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (pg: Loaded<PublisherGroup, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<PublisherGroup>, V>(
+  populate<const H extends LoadHint<PublisherGroup>, V>(
     hintOrOpts: any,
     fn?: (pg: Loaded<PublisherGroup, H>) => V,
   ): Promise<Loaded<PublisherGroup, H> | V> {
     return this.em.populate(this as any as PublisherGroup, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<PublisherGroup>>(hint: H): this is Loaded<PublisherGroup, H> {
+  isLoaded<const H extends LoadHint<PublisherGroup>>(hint: H): this is Loaded<PublisherGroup, H> {
     return isLoaded(this as any as PublisherGroup, hint);
   }
 

@@ -78,4 +78,14 @@ config.addRule("tags", (b) => {
   return b.tags.get.length === 3 ? "Cannot have exactly three tags" : undefined;
 });
 
+// Example of a trigger for a many to many field
+config.touchOnChange("tags");
+config.beforeFlush((book) => {
+  // this is an arbritrary logic to identify that this hook fired on unit tests, the relevant logic here is the `book.changes.fields.includes("tags")`
+  if (book.changes.fields.includes("tags") && book.title.includes("To be changed by hook")) {
+    // This is an arbitrary example of a hook that could happen when tags change, so we can test it
+    book.title = "Tags Changed";
+  }
+});
+
 function noop(_: any): void {}

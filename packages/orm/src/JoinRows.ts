@@ -1,4 +1,5 @@
 import { Entity } from "./Entity";
+import { getMetadata } from "./EntityMetadata";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo } from "./Todo";
 import { keyToTaggedId } from "./keys";
@@ -20,6 +21,7 @@ export class JoinRows {
     if (!e1) throw new Error(`Cannot add a m2m row with an entity that is ${e1}`);
     if (!e2) throw new Error(`Cannot add a m2m row with an entity that is ${e2}`);
     const { columnName, otherColumnName } = m2m;
+    const { em } = this.m2m.entity;
     const existing = this.rows.find((r) => r[columnName] === e1 && r[otherColumnName] === e2);
     if (existing) {
       existing.deleted = false;
@@ -29,11 +31,18 @@ export class JoinRows {
     }
     this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
     this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
+    if (getMetadata(e1).config.__data.touchOnChange.has(m2m.fieldName)) {
+      em.touch(e1);
+    }
+    if (getMetadata(e2).config.__data.touchOnChange.has(m2m.otherFieldName)) {
+      em.touch(e2);
+    }
   }
 
   /** Adds a new remove to this table. */
   addRemove(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity): void {
     const { columnName, otherColumnName } = m2m;
+    const { em } = this.m2m.entity;
     const existing = this.rows.find((r) => r[columnName] === e1 && r[otherColumnName] === e2);
     if (existing) {
       if (!existing.id) {
@@ -47,6 +56,12 @@ export class JoinRows {
     }
     this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
     this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
+    if (getMetadata(e1).config.__data.touchOnChange.has(m2m.fieldName)) {
+      em.touch(e1);
+    }
+    if (getMetadata(e2).config.__data.touchOnChange.has(m2m.otherFieldName)) {
+      em.touch(e2);
+    }
   }
 
   /** Return any "old values" for a m2m collection that might need reactivity checks. */
@@ -112,6 +127,11 @@ export class JoinRows {
       return undefined;
     }
     return { m2m: this.m2m, newRows, deletedRows };
+  }
+
+  get hasChanges() {
+    const todos = this.toTodo();
+    return !!todos;
   }
 }
 

@@ -30,6 +30,7 @@ import type {
   OptsOf,
   OrderBy,
   PartialOrNull,
+  RelationsOf,
   TaggedId,
   ValueFilter,
   ValueGraphQLFilter,
@@ -194,7 +195,12 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
     setOpts(this as any as Task, opts as OptsOf<Task>, { partial: true });
   }
 
-  get changes(): Changes<Task, keyof FieldsOf<Task> | keyof FieldsOf<TaskNew> | keyof FieldsOf<TaskOld>> {
+  get changes(): Changes<
+    Task,
+    | keyof (FieldsOf<Task> & RelationsOf<Task>)
+    | keyof (FieldsOf<TaskNew> & RelationsOf<TaskNew>)
+    | keyof (FieldsOf<TaskOld> & RelationsOf<TaskOld>)
+  > {
     return newChangesProxy(this) as any;
   }
 

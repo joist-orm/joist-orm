@@ -565,4 +565,58 @@ describe("ManyToManyCollection", () => {
     expect((user as any).comments).not.toBeDefined();
     expect(user.likedComments).toBeDefined();
   });
+
+  describe("can identify changes on the many-to-many", () => {
+    it("detects adds m2m - using factories", async () => {
+      const em = newEntityManager();
+      const book = newBook(em, { title: "To be changed by hook" });
+      const t1 = newTag(em, { name: "t1" });
+      await em.flush();
+
+      book.tags.add(t1);
+      await em.flush();
+      expect(book.tags.get).toHaveLength(1);
+      // this test assumes there is a hook that fires when the tags collection is modified, that sets the title of the book to "Tags Changed"
+      expect(book.title).toBe("Tags Changed");
+      // and another on the tags to change the tag name
+      expect(t1.name).toBe("Books Changed");
+    });
+
+    it("detects adds m2m - using insert and loads", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ id: 2, title: "To be changed by hook", author_id: 1 });
+      await insertTag({ id: 3, name: "t1" });
+      const em = newEntityManager();
+      const book = await em.load(Book, "2");
+      const tag = await em.load(Tag, "3");
+
+      book.tags.add(tag);
+      await em.flush();
+
+      // this test assumes there is a hook that fires when the tags collection is modified, that sets the title of the book to "Tags Changed"
+      expect(book.title).toBe("Tags Changed");
+      // and another on the tags to change the tag name
+      expect(tag.name).toBe("Books Changed");
+    });
+
+    it("detects remove m2m - using insert and loads", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ id: 2, title: "To be changed by hook 1", author_id: 1 });
+      await insertBook({ id: 3, title: "To be changed by hook 2", author_id: 1 });
+      await insertTag({ id: 4, name: "t1" });
+      await insertBookToTag({ id: 5, book_id: 2, tag_id: 4 });
+      await insertBookToTag({ id: 6, book_id: 3, tag_id: 4 });
+      const em = newEntityManager();
+      const book = await em.load(Book, "2");
+      const tag = await em.load(Tag, "4");
+
+      book.tags.remove(tag);
+      await em.flush();
+
+      // this test assumes there is a hook that fires when the tags collection is modified, that sets the title of the book to "Tags Changed"
+      expect(book.title).toBe("Tags Changed");
+      // and another on the tags to change the tag name
+      expect(tag.name).toBe("Books Changed");
+    });
+  });
 });

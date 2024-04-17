@@ -43,6 +43,7 @@ import {
   ProjectEntity,
   ReactiveField,
   ReactiveReference,
+  RelationsOf,
   SSAssert,
   TaggedId,
   ValueFilter,
@@ -401,11 +402,13 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const baseEntity = dbMeta.entities.find((e) => e.name === meta.baseClassName);
   const subEntities = dbMeta.entities.filter((e) => e.baseClassName === meta.name);
   const base = baseEntity?.entity.type ?? code`${BaseEntity}<${EntityManager}, ${idType}>`;
-  const maybeBaseFields = baseEntity ? code`extends ${imp('t:' + baseEntity.name + "Fields@./entities.ts")}` : "";
+  const maybeBaseFields = baseEntity ? code`extends ${imp("t:" + baseEntity.name + "Fields@./entities.ts")}` : "";
   const maybeBaseOpts = baseEntity ? code`extends ${baseEntity.entity.optsType}` : "";
-  const maybeBaseIdOpts = baseEntity ? code`extends ${imp('t:' + baseEntity.name + "IdsOpts@./entities.ts")}` : "";
-  const maybeBaseFilter = baseEntity ? code`extends ${imp('t:' + baseEntity.name + "Filter@./entities.ts")}` : "";
-  const maybeBaseGqlFilter = baseEntity ? code`extends ${imp('t:' + baseEntity.name + "GraphQLFilter@./entities.ts")}` : "";
+  const maybeBaseIdOpts = baseEntity ? code`extends ${imp("t:" + baseEntity.name + "IdsOpts@./entities.ts")}` : "";
+  const maybeBaseFilter = baseEntity ? code`extends ${imp("t:" + baseEntity.name + "Filter@./entities.ts")}` : "";
+  const maybeBaseGqlFilter = baseEntity
+    ? code`extends ${imp("t:" + baseEntity.name + "GraphQLFilter@./entities.ts")}`
+    : "";
   const maybeBaseOrder = baseEntity ? code`extends ${baseEntity.entity.orderType}` : "";
   const maybeBaseId = baseEntity ? code` & Flavor<${idType}, "${baseEntity.name}">` : "";
   const maybePreventBaseTypeInstantiation = meta.abstract
@@ -437,7 +440,12 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       // A3 will be 2 because the extra 3 breaks code written against A1.foo.
       //
       // So essentially we're pre-emptively our subtypes "3".
-      [code`, `, ...[meta, ...subEntities].map((e) => code`keyof ${FieldsOf}<${e.entity.type}>`)],
+      [
+        code`, `,
+        ...[meta, ...subEntities].map(
+          (e) => code`keyof (${FieldsOf}<${e.entity.type}> & ${RelationsOf}<${e.entity.type}>)`,
+        ),
+      ],
       { on: "|" },
     );
   } else {

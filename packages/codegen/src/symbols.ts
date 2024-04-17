@@ -40,6 +40,7 @@ export const setField = imp("setField@joist-orm");
 export const OrderBy = imp("t:OrderBy@joist-orm");
 export const OptsOf = imp("t:OptsOf@joist-orm");
 export const FieldsOf = imp("t:FieldsOf@joist-orm");
+export const RelationsOf = imp("t:RelationsOf@joist-orm");
 export const IdOf = imp("t:IdOf@joist-orm");
 export const PartialOrNull = imp("t:PartialOrNull@joist-orm");
 export const BooleanFilter = imp("t:BooleanFilter@joist-orm");

@@ -139,6 +139,15 @@ export type GraphQLFilterOf<T> = T extends { __orm: { gqlFilterType: infer Q } }
 /** Pulls the entity order type out of a given entity type T. */
 export type OrderOf<T> = T extends { __orm: { orderType: infer Q } } ? Q : never;
 
+type RelationsKeysOf<T> = {
+  [K in keyof OptsOf<T>]: OptsOf<T>[K] extends Entity[] | undefined ? K : never;
+}[keyof OptsOf<T>];
+
+/** Return the Relation keys from `FooOpt` type, given a `Foo` entity */
+export type RelationsOf<T extends Entity> = {
+  [K in RelationsKeysOf<T>]: NonNullable<OptsOf<T>[K]>;
+};
+
 /**
  * Returns the opts of the entity's `newEntity` factory method, as exists in the actual file.
  *

@@ -2,7 +2,14 @@ import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { FieldsOf, IdOf, OptsOf, isId } from "./EntityManager";
 import { getField, isChangeableField } from "./fields";
-import { Field, getConstructorFromTaggedId, getMetadata } from "./index";
+import {
+  Field,
+  ManyToManyCollection,
+  RelationsOf,
+  getConstructorFromTaggedId,
+  getEmInternalApi,
+  getMetadata,
+} from "./index";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
 export interface FieldStatus<T> {
@@ -31,7 +38,9 @@ export interface ManyToOneFieldStatus<T extends Entity> extends FieldStatus<IdOf
  *    i.e. `Publisher.changes` is typed as `Changes<Publisher, keyof Publisher | keyof SmallPub | keyof LargePub>`
  * @type R An optional list of restrictions, i.e for `Reacted` for to provide `changes` to its subset of fields.
  */
-export type Changes<T extends Entity, K = keyof FieldsOf<T>, R = K> = { fields: K[] } & {
+export type Changes<T extends Entity, K = keyof (FieldsOf<T> & RelationsOf<T>), R = K> = {
+  fields: NonNullable<K>[];
+} & {
   [P in keyof FieldsOf<T> & R]: FieldsOf<T>[P] extends { type: infer U | undefined }
     ? U extends Entity
       ? ManyToOneFieldStatus<U>
@@ -58,7 +67,7 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
   return new Proxy(entity, {
     get(target, p: PropertyKey): FieldStatus<any> | ManyToOneFieldStatus<any> | (keyof OptsOf<T>)[] {
       if (p === "fields") {
-        return (
+        const fieldsChanged = (
           entity.isNewEntity
             ? // Cloning sometimes leaves unset keys in data as undefined, so drop them
               Object.entries(getInstanceData(entity).data)
@@ -66,6 +75,21 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
                 .map(([key]) => key)
             : Object.keys(getInstanceData(entity).originalData)
         ) as (keyof OptsOf<T>)[];
+
+        // scan the join rows to get if the relation has any rows
+        const m2mFieldsChanged: (keyof RelationsOf<T>)[] = [];
+        const emApi = getEmInternalApi(entity.em);
+        // we will report changes only on the many to many relations for now
+        const m2mFields = Object.values(getMetadata(entity).allFields).filter((f) => f.kind === "m2m");
+        for (const field of m2mFields) {
+          const m2m = entity[field.fieldName as keyof T] as ManyToManyCollection<any, any>;
+          const joinRow = emApi.joinRows(m2m);
+          if (joinRow.hasChanges) {
+            m2mFieldsChanged.push(field.fieldName as keyof RelationsOf<T>);
+          }
+        }
+
+        return [...fieldsChanged, ...m2mFieldsChanged];
       } else if (typeof p === "symbol") {
         throw new Error(`Unsupported call to ${String(p)}`);
       }

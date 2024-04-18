@@ -1,8 +1,9 @@
 import { Entity } from "./Entity";
 import { getMetadata } from "./EntityMetadata";
-import { NormalizeHint, normalizeHint } from "./normalizeHints";
+import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint } from "./reactiveHints";
 import { AsyncMethod, AsyncProperty, Collection, ManyToOneReferenceImpl, ReactiveGetter, Reference } from "./relations";
+import {LoadHint} from "./loadHints";
 
 /**
  *  A JSON hint of a single key, multiple keys, or nested keys and sub-hints.
@@ -13,13 +14,11 @@ export type JsonHint<T extends Entity> =
   | (NestedJsonHint<T> | CustomJsonKeys<T>);
 
 type CustomJsonKeys<T> = {
-  [key: string]: (entity: T) => any;
+  [key: string]: (entity: T) => any | [hint: LoadHint<any>];
 };
 
 export type NestedJsonHint<T extends Entity> = {
   [K in keyof Jsonable<T>]?: Jsonable<T>[K] extends infer U extends Entity ? JsonHint<U> : {};
-  // [K in string]: K extends keyof Jsonable<T> ? (Jsonable<T>[K] extends infer U extends Entity ? JsonHint<U> : 2) : 3;
-  // [K in keyof Jsonable<T>]?: Jsonable<T>[K] extends infer U extends Entity ? JsonHint<U> : {};
 };
 
 /** The keys in `T` that we can put into a JSON payload. */
@@ -56,14 +55,17 @@ export async function toJSON<T extends Entity, const H extends JsonHint<T>>(
 export type JsonPayload<T, H> = {
   [K in keyof NormalizeHint<H>]: K extends keyof T
     ? T[K] extends Reference<any, infer U, any>
-      ? IsEmpty<NormalizeHint<H>[K]> extends true
-        ? string
-        : JsonPayload<U, NormalizeHint<H>[K]>
+      ? JsonPayloadReference<U, NormalizeHint<H>[K]>
       : T[K]
-    : NormalizeHint<H>[K];
+    : JsonPayloadCustom<NormalizeHint<H>[K]>;
 };
 
-type IsEmpty<T> = keyof T extends never ? true : false;
+// If the hint is empty, we just output the id as a string.
+type JsonPayloadReference<U, H> = IsEmpty<H> extends true ? string : JsonPayload<U, H>;
+
+type JsonPayloadCustom<H> = H extends (...args: any) => infer V ? UnwrapPromise<V> : H;
+
+type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
 async function copyToPayload(payload: any, entity: any, hint: object): Promise<void> {
   for (const [key, nestedHint] of Object.entries(hint)) {
@@ -95,3 +97,12 @@ function isPrimitive(value: any): boolean {
 }
 
 type DropUndefined<T> = T extends infer U extends Entity | undefined ? U : T;
+
+// A copy/paste of NormalizeHint w/o the `DropSuffix` stuff
+type NormalizeHint<H> = H extends string
+  ? Record<H, {}>
+  : H extends ReadonlyArray<any>
+    ? Record<H[number], {}>
+    : { [K in keyof H]: H[K] };
+
+type IsEmpty<T> = keyof T extends never ? true : false;

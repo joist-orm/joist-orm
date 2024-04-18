@@ -50,9 +50,11 @@ describe("Entity.json", () => {
       const a = await em.load(Author, "a:1");
       // Given a hint that recurses into the publisher
       const payload = await toJSON(a, { publisher: ["id", "name"] });
+      type T = typeof payload;
       // Then we output the nested keys
       expect(payload).toEqual({ publisher: { id: "p:1", name: "p1" } });
-      expectTypeOf<typeof payload>().toEqualTypeOf<{ publisher: { id: PublisherId; name: string } }>();
+      // ...why does toExpectTypeOf not work here?
+      expectTypeOf(payload).toMatchTypeOf<{ publisher: { id: PublisherId; name: string } }>();
     });
 
     it("can nest multiple levels", async () => {
@@ -62,13 +64,20 @@ describe("Entity.json", () => {
       const em = newEntityManager();
       const a = await em.load(Author, "a:1");
       // Given two levels of nesting
-      expect(await toJSON(a, { publisher: { name: {}, group: "name" } })).toEqual({
-        // Then we output the publisher child + group grandchild
+      const payload = await toJSON(a, { publisher: { name: {}, group: "name" } });
+      // Then we output the publisher child + group grandchild
+      expect(payload).toEqual({
         publisher: {
           name: "p1",
           group: { name: "pg1" },
         },
       });
+      expectTypeOf(payload).toMatchTypeOf<{
+        publisher: {
+          name: string;
+          group: { name: string | undefined };
+        };
+      }>();
     });
 
     it("can have custom names", async () => {
@@ -77,26 +86,22 @@ describe("Entity.json", () => {
       await insertAuthor({ first_name: "a1", publisher_id: 1 });
       const em = newEntityManager();
       const a = await em.load(Author, "a:1");
-      expect(
-        await toJSON(a, {
-          // Given a hint that has a `groupName` key that is not actually
-          // a property on the entity
-          publisher: {
-            id: {},
-            // And it's an async lambda that accepts the entity
-            groupName: async (p) => {
-              // ...and this code is kind of gross...
-              return (await p.populate("group")).group.get?.name;
-            },
-          },
-        }),
-      ).toEqual({
-        // Then we output the custom key
+      // Given a hint that has a `groupName` key that is not actually a property on the entity
+      const payload = await toJSON(a, {
         publisher: {
-          id: "p:1",
-          groupName: "pg1",
+          id: {},
+          // And it's an async lambda that accepts the entity
+          groupName: async (p) => {
+            // ...and this code is kind of gross...
+            return (await p.populate("group")).group.get?.name;
+          },
         },
       });
+      // Then we output the custom key
+      expect(payload).toEqual({
+        publisher: { id: "p:1", groupName: "pg1" },
+      });
+      expectTypeOf(payload).toMatchTypeOf<{ publisher: { id: PublisherId; groupName: string | undefined } }>();
     });
   });
 

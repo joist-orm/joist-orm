@@ -17,7 +17,7 @@
   ],
   "dependencies": {
     "@dprint/formatter": "^0.2.1",
-    "@dprint/json": "0.15.6",
+    "@dprint/json": "0.19.2",
     "@types/inquirer": "^8.2.10",
     "@types/jscodeshift": "^0.11.11",
     "@types/pluralize": "0.0.33",

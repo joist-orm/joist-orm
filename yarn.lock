@@ -2359,10 +2359,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@dprint/json@npm:0.15.6":
-  version: 0.15.6
-  resolution: "@dprint/json@npm:0.15.6"
-  checksum: 10/2ee8503124104d730977cf7071efd4432b405dd6b400b3cfc022279bc6f59193b9749828aa1a1e424607d3dac35788c2c3df05802f7e5078b4b98076a481e664
+"@dprint/json@npm:0.19.2":
+  version: 0.19.2
+  resolution: "@dprint/json@npm:0.19.2"
+  checksum: 10/e545b2372c979e0e1cada0f8cdf02c84322a682befdaff16ea8c563126cd8229deab62656046acda8477871fa3d78346ddf9fc1a4f273b2950fcb3a2db4e3033
   languageName: node
   linkType: hard
 
@@ -11052,7 +11052,7 @@ __metadata:
   resolution: "joist-codegen@workspace:packages/codegen"
   dependencies:
     "@dprint/formatter": "npm:^0.2.1"
-    "@dprint/json": "npm:0.15.6"
+    "@dprint/json": "npm:0.19.2"
     "@swc/jest": "npm:^0.2.36"
     "@types/inquirer": "npm:^8.2.10"
     "@types/jest": "npm:^29.5.12"
@@ -11088,7 +11088,7 @@ __metadata:
   resolution: "joist-graphql-codegen@workspace:packages/graphql-codegen"
   dependencies:
     "@dprint/formatter": "npm:^0.2.1"
-    "@dprint/json": "npm:0.15.6"
+    "@dprint/json": "npm:0.19.2"
     "@swc/core": "npm:^1.4.13"
     "@swc/jest": "npm:^0.2.36"
     "@types/jest": "npm:^29.5.12"

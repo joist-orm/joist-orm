@@ -1,5 +1,5 @@
 import { createFromBuffer } from "@dprint/formatter";
-import { getBuffer } from "@dprint/json";
+import { getPath } from "@dprint/json";
 import { DbMetadata, Entity, EntityDbMetadata } from "EntityDbMetadata";
 import { promises as fs } from "fs";
 import { groupBy } from "joist-utils";
@@ -7,8 +7,6 @@ import { z } from "zod";
 import { getThisVersion } from "./codemods";
 import { getStiEntities } from "./index";
 import { fail, sortKeys, trueIfResolved } from "./utils";
-
-const jsonFormatter = createFromBuffer(getBuffer());
 
 const fieldConfig = z
   .object({
@@ -272,6 +270,9 @@ export async function loadConfig(): Promise<Config> {
  * such that no changes to the config show up as noops to the scm.
  */
 export async function writeConfig(config: Config): Promise<void> {
+  const buffer = await fs.readFile(getPath());
+  const jsonFormatter = createFromBuffer(buffer);
+
   const sorted = sortKeys(config);
   delete sorted.__tableToEntityName;
   const input = JSON.stringify(sorted);

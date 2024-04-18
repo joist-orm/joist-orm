@@ -3,7 +3,6 @@ import { getMetadata } from "./EntityMetadata";
 import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint } from "./reactiveHints";
 import { AsyncMethod, AsyncProperty, Collection, ManyToOneReferenceImpl, ReactiveGetter, Reference } from "./relations";
-import {LoadHint} from "./loadHints";
 
 /**
  *  A JSON hint of a single key, multiple keys, or nested keys and sub-hints.
@@ -14,7 +13,7 @@ export type JsonHint<T extends Entity> =
   | (NestedJsonHint<T> | CustomJsonKeys<T>);
 
 type CustomJsonKeys<T> = {
-  [key: string]: (entity: T) => any | [hint: LoadHint<any>];
+  [key: string]: (entity: T) => any;
 };
 
 export type NestedJsonHint<T extends Entity> = {

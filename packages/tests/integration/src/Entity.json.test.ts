@@ -64,7 +64,9 @@ describe("Entity.json", () => {
       const em = newEntityManager();
       const a = await em.load(Author, "a:1");
       // Given two levels of nesting
-      const payload = await toJSON(a, { publisher: { name: {}, group: "name" } });
+      const payload = await toJSON(a, {
+        publisher: { name: {}, group: "name" },
+      });
       // Then we output the publisher child + group grandchild
       expect(payload).toEqual({
         publisher: {
@@ -101,7 +103,9 @@ describe("Entity.json", () => {
       expect(payload).toEqual({
         publisher: { id: "p:1", groupName: "pg1" },
       });
-      expectTypeOf(payload).toMatchTypeOf<{ publisher: { id: PublisherId; groupName: string | undefined } }>();
+      expectTypeOf(payload).toMatchTypeOf<{
+        publisher: { id: PublisherId; groupName: string | undefined };
+      }>();
     });
   });
 

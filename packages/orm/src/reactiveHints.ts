@@ -72,12 +72,12 @@ export type NestedReactiveHint<T extends Entity> = {
 
 /** Given an entity `T` that is being reacted with hint `H`, mark only the `H` attributes visible & populated. */
 export type Reacted<T extends Entity, H> = Entity & {
-  [K in keyof NormalizeHint<T, H> & keyof T]: T[K] extends OneToOneReference<any, infer U>
-    ? LoadedOneToOneReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
+  [K in keyof NormalizeHint<H> & keyof T]: T[K] extends OneToOneReference<any, infer U>
+    ? LoadedOneToOneReference<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
     : T[K] extends Reference<any, infer U, infer N>
-      ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
+      ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<H>[K]>, N>
       : T[K] extends Collection<any, infer U>
-        ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
+        ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
         : T[K] extends AsyncProperty<any, infer V>
           ? LoadedProperty<any, V>
           : T[K];
@@ -91,7 +91,7 @@ export type Reacted<T extends Entity, H> = Entity & {
    */
   fullNonReactiveAccess: Loaded<T, H>;
   /** Allow detecting if a reactive change is due to nuances like `hasUpdated` or `hasChanged`. */
-  changes: Changes<T, keyof (FieldsOf<T> & RelationsOf<T>), keyof NormalizeHint<T, H>>;
+  changes: Changes<T, keyof (FieldsOf<T> & RelationsOf<T>), keyof NormalizeHint<H>>;
 } & MaybeTransientFields<T>;
 
 /**

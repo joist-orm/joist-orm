@@ -178,9 +178,9 @@ export type NestedLoadHint<T extends Entity> = {
 
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
 export type Loaded<T extends Entity, H> = T & {
-  [K in keyof T & keyof NormalizeHint<T, H>]: H extends DeepLoadHint<T>
+  [K in keyof T & keyof NormalizeHint<H>]: H extends DeepLoadHint<T>
     ? MarkDeepLoaded<T, T[K]>
-    : MarkLoaded<T, T[K], NormalizeHint<T, H>[K]>;
+    : MarkLoaded<T, T[K], NormalizeHint<H>[K]>;
 };
 
 /** Recursively checks if the relations from a load hint are loaded on an entity. */

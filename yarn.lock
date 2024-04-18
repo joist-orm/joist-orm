@@ -8216,6 +8216,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"expect-type@npm:^0.19.0":
+  version: 0.19.0
+  resolution: "expect-type@npm:0.19.0"
+  checksum: 10/d1a389095eb082d81d3f4342caf360637c23867a52c63c46b582cd8dfc7c75458a78d9b53b770ed30d05698543c5c17390a58779d084436792e8c395384d61fe
+  languageName: node
+  linkType: hard
+
 "expect@npm:30.0.0-alpha.3":
   version: 30.0.0-alpha.3
   resolution: "expect@npm:30.0.0-alpha.3"
@@ -11395,6 +11402,7 @@ __metadata:
     "@semantic-release/release-notes-generator": "npm:^13.0.0"
     "@tsconfig/node20": "npm:^20.1.4"
     env-cmd: "npm:^10.1.0"
+    expect-type: "npm:^0.19.0"
     semantic-release: "npm:^23.0.8"
     ts-patch: "npm:^3.1.2"
     typescript: "npm:^5.4.5"

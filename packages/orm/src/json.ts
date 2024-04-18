@@ -1,6 +1,6 @@
 import { Entity } from "./Entity";
 import { getMetadata } from "./EntityMetadata";
-import { normalizeHint } from "./normalizeHints";
+import { NormalizeHint, normalizeHint } from "./normalizeHints";
 import { convertToLoadHint } from "./reactiveHints";
 import { AsyncMethod, AsyncProperty, Collection, ManyToOneReferenceImpl, ReactiveGetter, Reference } from "./relations";
 
@@ -42,13 +42,28 @@ export type JsonableValue<V> =
             ? P
             : V;
 
-export async function toJSON<T extends Entity, const H extends JsonHint<T>>(entity: T, hint: H): Promise<object> {
+export async function toJSON<T extends Entity, const H extends JsonHint<T>>(
+  entity: T,
+  hint: H,
+): Promise<JsonPayload<T, H>> {
   const loadHint = convertToLoadHint(getMetadata(entity), hint as any, true);
   await entity.em.populate(entity, loadHint);
   const json = {};
   await copyToPayload(json, entity, normalizeHint(hint as any));
-  return json;
+  return json as any;
 }
+
+export type JsonPayload<T, H> = {
+  [K in keyof NormalizeHint<H>]: K extends keyof T
+    ? T[K] extends Reference<any, infer U, any>
+      ? IsEmpty<NormalizeHint<H>[K]> extends true
+        ? string
+        : JsonPayload<U, NormalizeHint<H>[K]>
+      : T[K]
+    : NormalizeHint<H>[K];
+};
+
+type IsEmpty<T> = keyof T extends never ? true : false;
 
 async function copyToPayload(payload: any, entity: any, hint: object): Promise<void> {
   for (const [key, nestedHint] of Object.entries(hint)) {

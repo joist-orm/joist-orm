@@ -1,5 +1,6 @@
-import { Author, newAuthor } from "@src/entities";
+import { Author, AuthorId, FavoriteShape, newAuthor, PublisherId } from "@src/entities";
 import { newEntityManager } from "@src/testEm";
+import { expectTypeOf } from "expect-type";
 import { toJSON } from "joist-orm";
 import { insertAuthor, insertPublisher, insertPublisherGroup } from "src/entities/inserts";
 
@@ -7,18 +8,26 @@ describe("Entity.json", () => {
   it("can toJSON a primitive", async () => {
     const em = newEntityManager();
     const a = newAuthor(em);
-    expect(await toJSON(a, "firstName")).toEqual({ firstName: "a1" });
+    const payload = await toJSON(a, "firstName");
+    expect(payload).toEqual({ firstName: "a1" });
+    expectTypeOf(payload).toEqualTypeOf<{ firstName: string }>();
   });
 
   it("can toJSON multiple primitives", async () => {
     const em = newEntityManager();
     const a = newAuthor(em);
     await em.flush();
-    expect(await toJSON(a, ["id", "firstName", "favoriteShape"])).toEqual({
+    const payload = await toJSON(a, ["id", "firstName", "favoriteShape"]);
+    expect(payload).toEqual({
       id: "a:1",
       firstName: "a1",
       favoriteShape: undefined,
     });
+    expectTypeOf(payload).toEqualTypeOf<{
+      id: AuthorId;
+      firstName: string;
+      favoriteShape: FavoriteShape | undefined;
+    }>();
   });
 
   describe("m2o", () => {
@@ -28,10 +37,10 @@ describe("Entity.json", () => {
       const em = newEntityManager();
       const a = await em.load(Author, "a:1");
       // Given a hint of just the publisher key
-      expect(await toJSON(a, ["publisher"])).toEqual({
-        // Then we output only the id
-        publisher: "p:1",
-      });
+      const payload = await toJSON(a, ["publisher"]);
+      // Then we output only the id
+      expect(payload).toEqual({ publisher: "p:1" });
+      expectTypeOf(payload).toEqualTypeOf<{ publisher: string }>();
     });
 
     it("can nest the id and name", async () => {
@@ -40,10 +49,10 @@ describe("Entity.json", () => {
       const em = newEntityManager();
       const a = await em.load(Author, "a:1");
       // Given a hint that recurses into the publisher
-      expect(await toJSON(a, { publisher: ["id", "name"] })).toEqual({
-        // Then we output the nested keys
-        publisher: { id: "p:1", name: "p1" },
-      });
+      const payload = await toJSON(a, { publisher: ["id", "name"] });
+      // Then we output the nested keys
+      expect(payload).toEqual({ publisher: { id: "p:1", name: "p1" } });
+      expectTypeOf(payload).toEqualTypeOf<{ publisher: { id: PublisherId; name: string } }>();
     });
 
     it("can nest multiple levels", async () => {

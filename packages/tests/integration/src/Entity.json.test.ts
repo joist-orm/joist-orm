@@ -52,7 +52,7 @@ describe("Entity.json", () => {
       const payload = await toJSON(a, { publisher: ["id", "name"] });
       // Then we output the nested keys
       expect(payload).toEqual({ publisher: { id: "p:1", name: "p1" } });
-      expectTypeOf(payload).toEqualTypeOf<{ publisher: { id: PublisherId; name: string } }>();
+      expectTypeOf<typeof payload>().toEqualTypeOf<{ publisher: { id: PublisherId; name: string } }>();
     });
 
     it("can nest multiple levels", async () => {

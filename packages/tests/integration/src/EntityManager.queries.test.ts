@@ -55,6 +55,7 @@ import {
 } from "./entities";
 
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
+import { PasswordValue } from "src/entities/types";
 
 const am = getMetadata(Author);
 const bm = getMetadata(Book);
@@ -2961,6 +2962,14 @@ describe("EntityManager.queries", () => {
       expect(counts).toEqual([1, 1, 0]);
       expect(numberOfQueries).toBe(1);
     });
+  });
+
+  it("can find against serde values", async () => {
+    const password = PasswordValue.fromPlainText("asdf");
+    await insertUser({ name: "u1", password: password.encoded });
+    const em = newEntityManager();
+    const users = await em.find(User, { password });
+    expect(users.length).toBe(1);
   });
 });
 

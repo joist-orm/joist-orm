@@ -71,7 +71,7 @@ export class CustomSerdeAdapter implements FieldSerde {
   }
 
   mapToDb(value: any): any {
-    return value === null ? value : this.mapper.fromDb(value);
+    return value === null ? value : this.mapper.toDb(value);
   }
 
   mapFromJsonAgg(value: any): any {

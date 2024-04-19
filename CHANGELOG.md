@@ -1,3 +1,10 @@
+# [1.159.0](https://github.com/joist-orm/joist-orm/compare/v1.158.0...v1.159.0) (2024-04-19)
+
+
+### Features
+
+* Add config.afterMetadata hook. ([#1045](https://github.com/joist-orm/joist-orm/issues/1045)) ([1be5324](https://github.com/joist-orm/joist-orm/commit/1be5324b670bfd6e6d7eea02525a92519dcf6ce1))
+
 # [1.158.0](https://github.com/joist-orm/joist-orm/compare/v1.157.0...v1.158.0) (2024-04-19)
 
 

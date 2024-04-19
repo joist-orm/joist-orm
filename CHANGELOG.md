@@ -1,3 +1,10 @@
+## [1.160.2](https://github.com/joist-orm/joist-orm/compare/v1.160.1...v1.160.2) (2024-04-19)
+
+
+### Bug Fixes
+
+* Fix toJSON treating keys as hints ([#1050](https://github.com/joist-orm/joist-orm/issues/1050)) ([2a5cadc](https://github.com/joist-orm/joist-orm/commit/2a5cadc86c52ed7ca08089f407effef7e862beba))
+
 ## [1.160.1](https://github.com/joist-orm/joist-orm/compare/v1.160.0...v1.160.1) (2024-04-19)
 
 

@@ -1,8 +1,8 @@
-import { Author, AuthorId, FavoriteShape, newAuthor, PublisherId } from "@src/entities";
+import { Author, AuthorId, BookId, FavoriteShape, newAuthor, PublisherId } from "@src/entities";
 import { newEntityManager } from "@src/testEm";
 import { expectTypeOf } from "expect-type";
 import { toJSON } from "joist-orm";
-import { insertAuthor, insertPublisher, insertPublisherGroup } from "src/entities/inserts";
+import { insertAuthor, insertBook, insertPublisher, insertPublisherGroup } from "src/entities/inserts";
 
 describe("Entity.json", () => {
   it("can toJSON a primitive", async () => {
@@ -74,6 +74,7 @@ describe("Entity.json", () => {
           group: { name: "pg1" },
         },
       });
+      // And it's typed correctly
       expectTypeOf(payload).toMatchTypeOf<{
         publisher: {
           name: string;
@@ -109,9 +110,26 @@ describe("Entity.json", () => {
     });
   });
 
-  describe.skip("o2m", () => {
+  describe("o2m", () => {
     it("can be just the ids", async () => {});
 
-    it("can nest the id and name", async () => {});
+    it("can nest the id and name", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1 });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      // Given a hint that recurses into the publisher
+      const payload = await toJSON(a, { books: ["id", "title"] });
+      // Then we output the nested keys
+      expect(payload).toEqual({
+        books: [
+          { id: "b:1", title: "b1" },
+          { id: "b:2", title: "b2" },
+        ],
+      });
+      // ...why does toExpectTypeOf not work here?
+      expectTypeOf(payload).toMatchTypeOf<{ books: { id: BookId; title: string }[] }>();
+    });
   });
 });

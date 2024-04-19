@@ -2,7 +2,15 @@ import { Entity } from "./Entity";
 import { getMetadata } from "./EntityMetadata";
 import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint } from "./reactiveHints";
-import { AsyncMethod, AsyncProperty, Collection, ManyToOneReferenceImpl, ReactiveGetter, Reference } from "./relations";
+import {
+  AsyncMethod,
+  AsyncProperty,
+  Collection,
+  ManyToOneReferenceImpl,
+  OneToManyCollection,
+  ReactiveGetter,
+  Reference,
+} from "./relations";
 
 /**
  *  A JSON hint of a single key, multiple keys, or nested keys and sub-hints.
@@ -55,12 +63,16 @@ export type JsonPayload<T, H> = {
   [K in keyof NormalizeHint<H>]: K extends keyof T
     ? T[K] extends Reference<any, infer U, any>
       ? JsonPayloadReference<U, NormalizeHint<H>[K]>
-      : T[K]
+      : T[K] extends Collection<any, infer U>
+        ? JsonPayloadCollection<U, NormalizeHint<H>[K]>
+        : T[K]
     : JsonPayloadCustom<NormalizeHint<H>[K]>;
 };
 
 // If the hint is empty, we just output the id as a string.
 type JsonPayloadReference<U, H> = IsEmpty<H> extends true ? string : JsonPayload<U, H>;
+
+type JsonPayloadCollection<U, H> = IsEmpty<H> extends true ? string[] : JsonPayload<U, H>[];
 
 type JsonPayloadCustom<H> = H extends (...args: any) => infer V ? UnwrapPromise<V> : H;
 
@@ -71,6 +83,9 @@ async function copyToPayload(payload: any, entity: any, hint: object): Promise<v
     // Look for custom props
     if (!(key in entity)) {
       // Probably detect if this isn't a function...
+      if (typeof nestedHint !== "function") {
+        throw new Error(`Entity does not have a property ${key}`);
+      }
       payload[key] = await nestedHint(entity);
       continue;
     }
@@ -84,6 +99,14 @@ async function copyToPayload(payload: any, entity: any, hint: object): Promise<v
         await copyToPayload(payload[key], value.get, norm);
       } else {
         payload[key] = value.idMaybe;
+      }
+    } else if (value instanceof OneToManyCollection) {
+      payload[key] = [];
+      const norm = normalizeHint(nestedHint);
+      for (const item of value.get) {
+        const obj = {};
+        await copyToPayload(obj, item, norm);
+        payload[key].push(obj);
       }
     } else {
       throw new Error(`Unable to encode value ${value} to JSON`);

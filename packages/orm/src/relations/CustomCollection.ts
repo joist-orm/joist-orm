@@ -29,7 +29,7 @@ export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
  * abstractions like `hasManyThrough`, which are built on `CustomCollection`.
  */
 export class CustomCollection<T extends Entity, U extends Entity>
-  extends AbstractRelationImpl<T, U[]>
+  extends AbstractRelationImpl<T, readonly U[]>
   implements Collection<T, U>
 {
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because

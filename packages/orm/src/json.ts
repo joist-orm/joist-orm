@@ -2,20 +2,8 @@ import { Entity, isEntity } from "./Entity";
 import { getMetadata } from "./EntityMetadata";
 import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint } from "./reactiveHints";
-import {
-  AsyncMethod,
-  AsyncProperty,
-  Collection,
-  CustomCollection,
-  CustomReference,
-  ManyToManyCollection,
-  ManyToOneReferenceImpl,
-  OneToManyCollection,
-  OneToOneReferenceImpl,
-  ReactiveGetter,
-  ReactiveReferenceImpl,
-  Reference,
-} from "./relations";
+import { AsyncMethod, AsyncProperty, Collection, ReactiveGetter, Reference } from "./relations";
+import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
 import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
@@ -127,7 +115,11 @@ export type JsonPayload<T, H> = {
       ? JsonPayloadReference<U, NormalizeHint<H>[K]>
       : T[K] extends Collection<any, infer U>
         ? JsonPayloadCollection<U, NormalizeHint<H>[K]>
-        : T[K]
+        : T[K] extends AsyncProperty<any, infer U>
+          ? JsonPayloadProperty<U, NormalizeHint<H>[K]>
+          : T[K] extends ReactiveGetter<any, infer V>
+            ? V
+            : T[K]
     : JsonPayloadCustom<NormalizeHint<H>[K]>;
 };
 
@@ -135,6 +127,12 @@ export type JsonPayload<T, H> = {
 type JsonPayloadReference<U, H> = IsEmpty<H> extends true ? string : JsonPayload<U, H>;
 
 type JsonPayloadCollection<U, H> = IsEmpty<H> extends true ? string[] : JsonPayload<U, H>[];
+
+type JsonPayloadProperty<U, H> = U extends Entity | undefined
+  ? JsonPayloadReference<U, H>
+  : U extends Entity[] | undefined
+    ? JsonPayloadCollection<U, H>
+    : U;
 
 type JsonPayloadCustom<H> = H extends (...args: any) => infer V ? UnwrapPromise<V> : H;
 
@@ -147,50 +145,44 @@ async function copyToPayload(payload: Record<string, {}>, entity: any, hint: obj
     const nextHint = normalizeHint(nestedHint);
     // Look for custom props
     if (!(key in entity)) {
-      // Probably detect if this isn't a function...
       if (typeof nestedHint !== "function") {
         throw new Error(`Entity does not have a property ${key}`);
       }
       payload[key] = await nestedHint(entity);
-      continue;
-    }
-    const value = entity[key];
-    if (isPrimitive(value)) {
-      payload[key] = value;
-    } else if (
-      value instanceof ManyToOneReferenceImpl ||
-      value instanceof OneToOneReferenceImpl ||
-      value instanceof CustomReference ||
-      value instanceof ReactiveFieldImpl ||
-      value instanceof ReactiveReferenceImpl ||
-      value instanceof ReactiveGetterImpl ||
-      value instanceof ReactiveQueryFieldImpl ||
-      value instanceof AsyncPropertyImpl ||
-      value instanceof OneToManyCollection ||
-      value instanceof ManyToManyCollection ||
-      value instanceof CustomCollection
-    ) {
-      await copyToPayloadValue(payload, key, value.get, nextHint);
     } else {
-      throw new Error(`Unable to encode value ${value} to JSON`);
+      const value = entity[key];
+      if (isPrimitive(value)) {
+        payload[key] = value;
+      } else if (
+        value instanceof AbstractRelationImpl ||
+        value instanceof ReactiveFieldImpl ||
+        value instanceof ReactiveGetterImpl ||
+        value instanceof ReactiveQueryFieldImpl ||
+        value instanceof AsyncPropertyImpl
+      ) {
+        await copyToPayloadValue(payload, key, value.get, nextHint);
+      } else {
+        throw new Error(`Unable to encode value ${value} to JSON`);
+      }
     }
   }
 }
 
-async function copyToPayloadValue(payload: any, key: any, value: any, nextHint: any): Promise<void> {
-  if (value === undefined || value === null) {
+function copyToPayloadValue(payload: any, key: any, value: any, nextHint: any): Promise<unknown> | undefined {
+  if (value === undefined || value === null || isPrimitive(value)) {
     payload[key] = value;
   } else if (isEntity(value)) {
     if (nextHint && Object.keys(nextHint).length > 0) {
       payload[key] = {};
-      await copyToPayload(payload[key], value, nextHint);
+      return copyToPayload(payload[key], value, nextHint);
     } else {
       payload[key] = value.id;
     }
   } else if (Array.isArray(value)) {
     const list = [] as any[];
+    payload[key] = list;
     if (nextHint && Object.keys(nextHint).length > 0) {
-      await Promise.all(
+      return Promise.all(
         value.map(async (item, i) => {
           if (isEntity(item)) {
             list[i] = {};
@@ -205,7 +197,6 @@ async function copyToPayloadValue(payload: any, key: any, value: any, nextHint: 
       // This is assuming an array of entities...
       for (const item of value) list.push(item.id);
     }
-    payload[key] = list;
   } else {
     payload[key] = value;
   }

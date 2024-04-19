@@ -43,20 +43,13 @@ describe("Entity.json", () => {
     const a = newAuthor(em);
     await em.flush();
     const payload = await toJSON(a, {
-      // hasManyThrough
-      reviews: "rating",
-      // hasOneDerived
-      latestComment: "text",
-      // ReactiveField
-      numberOfPublicReviews: {},
-      // getter
-      initials: {},
-      // ReactiveReference
-      favoriteBook: "title",
-      // hasReactiveAsyncProperty
-      numberOfBooks2: {},
-      // ReactiveGetter
-      hasLowerCaseFirstName: {},
+      reviews: "rating", // hasManyThrough
+      latestComment: "text", // hasOneDerived
+      numberOfPublicReviews: {}, // ReactiveField
+      initials: {}, // getter
+      favoriteBook: "title", // ReactiveReference
+      numberOfBooks2: {}, // hasReactiveAsyncProperty
+      hasLowerCaseFirstName: {}, // ReactiveGetter
     });
     expect(payload).toEqual({
       favoriteBook: undefined,
@@ -67,6 +60,15 @@ describe("Entity.json", () => {
       numberOfPublicReviews: 0,
       reviews: [],
     });
+    expectTypeOf(payload).toMatchTypeOf<{
+      initials: string;
+      numberOfBooks2: number;
+      numberOfPublicReviews: number;
+      favoriteBook: { title: string } | undefined;
+      hasLowerCaseFirstName: boolean;
+      // latestComment: { text: string } | undefined;
+      reviews: { rating: number }[];
+    }>();
   });
 
   describe("m2o", () => {

@@ -112,3 +112,21 @@ So, this process is transitive as mutating the initial set of entities may cause
 Note that because `em.flush` marks which entities have had hooks ran, and will not invoke hooks twice on a given entity, this process is guaranteed to finish, i.e. there is not a risk of infinite loops between hooks.
 
 :::
+
+## afterMetadata
+
+`afterMetadata` is an additional hook that is not associated with an entity's lifecycle, but instead called once during the boot process.
+
+This can be useful if you want to set up hooks for multiple entities, but need to make sure all entity constructors have been defined (which happens incrementally during the `import` / `require` process).
+
+For example, if you're using polymorphic references and want to setup a hook for each entity in the union:
+
+```typescript
+/** Add rules to each of our polymorphic entities. */
+config.afterMetadata(() => {
+  getParentConstructors().forEach((cstr) => {
+    // Get each entity's config and add a hook
+    getMetadata(cstr).config.beforeCreate((e) => {});
+  });
+});
+```

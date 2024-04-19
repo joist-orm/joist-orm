@@ -30,13 +30,13 @@ import type {
   Flavor,
   GraphQLFilterOf,
   IdOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
   LoadHint,
   ManyToOneReference,
   MaybeAbstractEntityConstructor,
+  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -291,9 +291,9 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<User>>(hint: H): Promise<JsonPayload<User, H>>;
+  toJSON<const H extends NestedJsonHint<User>>(hint: H): Promise<JsonPayload<User, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get createdComments(): Collection<User, Comment> {

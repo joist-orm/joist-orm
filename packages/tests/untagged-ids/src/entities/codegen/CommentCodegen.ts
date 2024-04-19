@@ -23,12 +23,12 @@ import type {
   EntityMetadata,
   Flavor,
   IdOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
   LoadHint,
   MaybeAbstractEntityConstructor,
+  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -184,9 +184,9 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<Comment>>(hint: H): Promise<JsonPayload<Comment, H>>;
+  toJSON<const H extends NestedJsonHint<Comment>>(hint: H): Promise<JsonPayload<Comment, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get parent(): PolymorphicReference<Comment, CommentParent, never> {

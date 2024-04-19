@@ -22,12 +22,12 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
   LoadHint,
   ManyToOneReference,
+  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -212,9 +212,9 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<BookAdvance>>(hint: H): Promise<JsonPayload<BookAdvance, H>>;
+  toJSON<const H extends NestedJsonHint<BookAdvance>>(hint: H): Promise<JsonPayload<BookAdvance, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get book(): ManyToOneReference<BookAdvance, Book, never> {

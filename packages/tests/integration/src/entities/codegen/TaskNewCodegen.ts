@@ -22,12 +22,12 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
   LoadHint,
   ManyToOneReference,
+  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -176,9 +176,9 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<TaskNew>>(hint: H): Promise<JsonPayload<TaskNew, H>>;
+  toJSON<const H extends NestedJsonHint<TaskNew>>(hint: H): Promise<JsonPayload<TaskNew, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get newTaskTaskItems(): Collection<TaskNew, TaskItem> {

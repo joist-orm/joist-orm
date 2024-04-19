@@ -27,12 +27,12 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
   LoadHint,
   ManyToOneReference,
+  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -369,9 +369,9 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<Publisher>>(hint: H): Promise<JsonPayload<Publisher, H>>;
+  toJSON<const H extends NestedJsonHint<Publisher>>(hint: H): Promise<JsonPayload<Publisher, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get authors(): Collection<Publisher, Author> {

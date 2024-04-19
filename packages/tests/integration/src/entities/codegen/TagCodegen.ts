@@ -24,11 +24,11 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
   LoadHint,
+  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -204,9 +204,9 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<Tag>>(hint: H): Promise<JsonPayload<Tag, H>>;
+  toJSON<const H extends NestedJsonHint<Tag>>(hint: H): Promise<JsonPayload<Tag, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get authors(): Collection<Tag, Author> {

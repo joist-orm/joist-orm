@@ -265,6 +265,6 @@ describe("Entity.json", () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);
     const a2 = newAuthor(em);
-    expect(JSON.stringify({ foo: a1, bar: a2 })).toBe("asdf");
+    expect(JSON.stringify([a1, a2])).toBe(`[{"id":null},{"id":null}]`);
   });
 });

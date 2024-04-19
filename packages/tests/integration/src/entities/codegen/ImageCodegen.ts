@@ -23,12 +23,12 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
   LoadHint,
   ManyToOneReference,
+  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -231,9 +231,9 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<Image>>(hint: H): Promise<JsonPayload<Image, H>>;
+  toJSON<const H extends NestedJsonHint<Image>>(hint: H): Promise<JsonPayload<Image, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get author(): ManyToOneReference<Image, Author, undefined> {

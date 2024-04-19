@@ -82,8 +82,12 @@ export function insertComment(row: {
   parent_book_id?: number;
   parent_book_review_id?: number;
   parent_publisher_id?: number;
+  parent_tags?: string;
 }) {
-  return testDriver.insert("comments", row);
+  return testDriver.insert("comments", {
+    parent_tags: "",
+    ...row,
+  });
 }
 
 export function insertUser(row: {

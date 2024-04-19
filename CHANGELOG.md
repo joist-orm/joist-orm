@@ -1,3 +1,10 @@
+## [1.160.1](https://github.com/joist-orm/joist-orm/compare/v1.160.0...v1.160.1) (2024-04-19)
+
+
+### Bug Fixes
+
+* Fix querying against CustomSerde values. ([#1049](https://github.com/joist-orm/joist-orm/issues/1049)) ([e2ba761](https://github.com/joist-orm/joist-orm/commit/e2ba761f20ed973ecd8e34e60de7ae2824794987)), closes [#1048](https://github.com/joist-orm/joist-orm/issues/1048)
+
 # [1.160.0](https://github.com/joist-orm/joist-orm/compare/v1.159.0...v1.160.0) (2024-04-19)
 
 

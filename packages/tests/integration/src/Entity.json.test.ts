@@ -260,4 +260,11 @@ describe("Entity.json", () => {
     expect(payload).toEqual({ firstName: "a1" });
     expectTypeOf(payload).toEqualTypeOf<{ firstName: string }>();
   });
+
+  it("is not broken by JSON.stringify", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em);
+    const a2 = newAuthor(em);
+    expect(JSON.stringify({ foo: a1, bar: a2 })).toBe("asdf");
+  });
 });

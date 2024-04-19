@@ -1,5 +1,4 @@
 import { IdType } from "./Entity";
-import { getField } from "./fields";
 import {
   Entity,
   EntityManager,
@@ -9,7 +8,6 @@ import {
   TaggedId,
   deTagId,
   getMetadata,
-  isEntity,
   keyToNumber,
 } from "./index";
 
@@ -116,40 +114,14 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   }
 
   /**
-   * A very simple toJSON.
+   * A very simple toJSON that just returns the id.
    *
-   * This is not really meant as something you would actually put on the
-   * wire as an API response, but instead is to keep accidental/debugging
-   * JSON-ification of an Entity (i.e. by a logger like pino) to not
-   * recurse into all of our References/Collections/EntityManager/etc.
-   *
-   * That said, we do happen match Prisma's wire format to ease migration.
+   * This is for security reasons, to avoid accidentally logging sensitive data; you
+   * can specify more fields, and potentially nested return data, by using passing
+   * a {@link JsonHint} to `toJSON`.
    */
   public toJSON(): object {
-    return Object.fromEntries(
-      Object.values(getMetadata(this).allFields)
-        .map((f) => {
-          switch (f.kind) {
-            case "primaryKey":
-              return [[f.fieldName, this.idMaybe || null]];
-            case "enum":
-            case "primitive":
-              if (f.derived === "async") {
-                // Use the raw value instead of the ReactiveField
-                return [[f.fieldName, getField(this as any, f.fieldName) || null]];
-              } else {
-                return [[f.fieldName, (this as any)[f.fieldName] || null]];
-              }
-            case "m2o":
-              // Don't recurse into new entities b/c the point is to stay shallow
-              const value = (this as any)[f.fieldName].current();
-              return [[f.fieldName, isEntity(value) ? value.idMaybe || null : value || null]];
-            default:
-              return [];
-          }
-        })
-        .flat(1),
-    );
+    return { id: this.idMaybe || null };
   }
 
   [Symbol.toStringTag](): string {

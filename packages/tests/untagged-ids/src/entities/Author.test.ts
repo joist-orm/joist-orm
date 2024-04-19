@@ -46,7 +46,7 @@ describe("Author", () => {
     await em.flush();
     const b1 = em.create(Book, { title: "b1", author: a1.id });
     await em.flush();
-    expect(b1.toJSON()).toMatchObject({
+    expect(b1).toMatchEntity({
       id: "00000000-0000-0000-000b-000000000000",
       author: "a:00000000-0000-0000-000a-000000000000",
       title: "b1",

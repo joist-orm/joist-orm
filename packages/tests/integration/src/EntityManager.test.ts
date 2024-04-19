@@ -32,7 +32,6 @@ import {
   EntityManager,
   Publisher,
   PublisherSize,
-  PublisherType,
   Tag,
   newAuthor,
   newBook,
@@ -1170,75 +1169,6 @@ describe("EntityManager", () => {
   it("has a simple toJSON", async () => {
     const em = newEntityManager();
     expect(JSON.stringify(em)).toEqual(`"<EntityManager 0>"`);
-  });
-
-  it("has a simple toJSON for entities", async () => {
-    await insertAuthor({ first_name: "a1" });
-    const em = newEntityManager();
-    const a1 = await em.load(Author, "1");
-    a1.publisher.set(newPublisher(em, { name: "p1" }));
-    await em.flush();
-    expect(a1.toJSON()).toEqual({
-      id: "a:1",
-      address: null,
-      businessAddress: null,
-      age: null,
-      bookComments: null,
-      createdAt: expect.anything(),
-      currentDraftBook: null,
-      deletedAt: null,
-      favoriteBook: null,
-      favoriteColors: [],
-      favoriteShape: null,
-      firstName: "a1",
-      graduated: null,
-      initials: "a",
-      isPopular: null,
-      lastName: null,
-      mentor: null,
-      nickNames: null,
-      nickNamesUpper: null,
-      numberOfAtoms: null,
-      numberOfBooks: null,
-      rangeOfBooks: null,
-      numberOfPublicReviews: null,
-      numberOfPublicReviews2: null,
-      tagsOfAllBooks: null,
-      publisher: "p:1",
-      quotes: null,
-      search: null,
-      ssn: null,
-      updatedAt: expect.anything(),
-      wasEverPopular: null,
-    });
-  });
-
-  it("includes parent and child properties within toJSON", async () => {
-    await insertPublisher({ name: "a1" });
-    await insertAuthor({ first_name: "1" });
-    const em = newEntityManager();
-    const p1 = await em.load(Publisher, "1");
-    const a1 = await em.load(Author, "1");
-    a1.setPartial({ publisher: p1 });
-    p1.setPartial({ latitude: 12, longitude: 14 });
-    await em.flush();
-    expect(p1.toJSON()).toEqual({
-      id: "p:1",
-      city: "city",
-      name: "a1",
-      latitude: 12,
-      longitude: 14,
-      allAuthorNames: "1",
-      numberOfBookReviews: null,
-      group: null,
-      hugeNumber: null,
-      sharedColumn: null,
-      size: null,
-      type: PublisherType.Big,
-      createdAt: expect.anything(),
-      updatedAt: expect.anything(),
-      deletedAt: null,
-    });
   });
 
   it("cannot load too many entities", async () => {

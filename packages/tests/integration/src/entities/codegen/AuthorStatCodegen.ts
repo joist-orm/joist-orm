@@ -17,11 +17,11 @@ import type {
   Changes,
   EntityMetadata,
   Flavor,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
   LoadHint,
+  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -315,8 +315,8 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<AuthorStat>>(hint: H): Promise<JsonPayload<AuthorStat, H>>;
+  toJSON<const H extends NestedJsonHint<AuthorStat>>(hint: H): Promise<JsonPayload<AuthorStat, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 }

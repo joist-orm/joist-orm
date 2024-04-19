@@ -24,11 +24,11 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
   LoadHint,
+  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -190,9 +190,9 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<ParentGroup>>(hint: H): Promise<JsonPayload<ParentGroup, H>>;
+  toJSON<const H extends NestedJsonHint<ParentGroup>>(hint: H): Promise<JsonPayload<ParentGroup, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get childGroups(): Collection<ParentGroup, ChildGroup> {

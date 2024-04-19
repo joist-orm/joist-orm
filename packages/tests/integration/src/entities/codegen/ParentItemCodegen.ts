@@ -25,12 +25,12 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
   LoadHint,
   ManyToOneReference,
+  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -192,9 +192,9 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<ParentItem>>(hint: H): Promise<JsonPayload<ParentItem, H>>;
+  toJSON<const H extends NestedJsonHint<ParentItem>>(hint: H): Promise<JsonPayload<ParentItem, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get childItems(): Collection<ParentItem, ChildItem> {

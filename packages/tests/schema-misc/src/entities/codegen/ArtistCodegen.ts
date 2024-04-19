@@ -24,11 +24,11 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
   LoadHint,
+  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -187,9 +187,9 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<Artist>>(hint: H): Promise<JsonPayload<Artist, H>>;
+  toJSON<const H extends NestedJsonHint<Artist>>(hint: H): Promise<JsonPayload<Artist, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get paintings(): Collection<Artist, Painting> {

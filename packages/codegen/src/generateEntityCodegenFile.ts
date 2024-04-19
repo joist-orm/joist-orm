@@ -29,7 +29,6 @@ import {
   Flavor,
   GraphQLFilterOf,
   IdOf,
-  JsonHint,
   JsonPayload,
   LargeCollection,
   Lens,
@@ -37,6 +36,7 @@ import {
   Loaded,
   ManyToOneReference,
   MaybeAbstractEntityConstructor,
+  NestedJsonHint,
   OneToOneReference,
   OptsOf,
   OrderBy,
@@ -569,9 +569,9 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       }
 
       toJSON(): object;
-      toJSON<const H extends ${JsonHint}<${entityName}>>(hint: H): Promise<${JsonPayload}<${entityName}, H>>;
+      toJSON<const H extends ${NestedJsonHint}<${entityName}>>(hint: H): Promise<${JsonPayload}<${entityName}, H>>;
       toJSON(hint?: any): object {
-        return hint ? ${toJSON}(this, hint) : super.toJSON();
+        return !hint || typeof hint === "string" ? super.toJSON() : ${toJSON}(this, hint);
       }
 
       ${relations.map((r) => {

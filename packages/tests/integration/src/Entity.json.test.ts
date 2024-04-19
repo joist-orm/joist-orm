@@ -256,8 +256,15 @@ describe("Entity.json", () => {
   it("is available as a toJSON overload", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);
-    const payload = await a1.toJSON("firstName");
+    const payload = await a1.toJSON(["firstName"]);
     expect(payload).toEqual({ firstName: "a1" });
     expectTypeOf(payload).toEqualTypeOf<{ firstName: string }>();
+  });
+
+  it("is not broken by JSON.stringify", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em);
+    const a2 = newAuthor(em);
+    expect(JSON.stringify([a1, a2])).toBe(`[{"id":null},{"id":null}]`);
   });
 });

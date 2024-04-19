@@ -9,6 +9,7 @@ import {
   ManyToManyCollection,
   ManyToOneReferenceImpl,
   OneToManyCollection,
+  OneToOneReferenceImpl,
   ReactiveGetter,
   Reference,
 } from "./relations";
@@ -93,13 +94,13 @@ async function copyToPayload(payload: any, entity: any, hint: object): Promise<v
     const value = entity[key];
     if (isPrimitive(value)) {
       payload[key] = value;
-    } else if (value instanceof ManyToOneReferenceImpl) {
+    } else if (value instanceof ManyToOneReferenceImpl || value instanceof OneToOneReferenceImpl) {
       const norm = normalizeHint(nestedHint);
       if (norm && Object.keys(norm).length > 0) {
         payload[key] = {};
         await copyToPayload(payload[key], value.get, norm);
       } else {
-        payload[key] = value.idMaybe;
+        payload[key] = value.idIfSet;
       }
     } else if (value instanceof OneToManyCollection || value instanceof ManyToManyCollection) {
       payload[key] = [];

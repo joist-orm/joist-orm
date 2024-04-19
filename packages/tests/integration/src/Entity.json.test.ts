@@ -1,4 +1,4 @@
-import { Author, AuthorId, BookId, FavoriteShape, newAuthor, PublisherId } from "@src/entities";
+import { Author, AuthorId, BookId, FavoriteShape, ImageId, newAuthor, PublisherId } from "@src/entities";
 import { newEntityManager } from "@src/testEm";
 import { expectTypeOf } from "expect-type";
 import { toJSON } from "joist-orm";
@@ -6,6 +6,7 @@ import {
   insertAuthor,
   insertAuthorToTag,
   insertBook,
+  insertImage,
   insertPublisher,
   insertPublisherGroup,
   insertTag,
@@ -185,6 +186,28 @@ describe("Entity.json", () => {
         tags: [{ name: "t1" }, { name: "t2" }],
       });
       expectTypeOf(payload).toMatchTypeOf<{ tags: { name: string }[] }>();
+    });
+  });
+
+  describe("o2o", () => {
+    it("can be just the ids", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertImage({ type_id: 1, file_name: "f1", author_id: 1 });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      const payload = await toJSON(a, "image");
+      expect(payload).toEqual({ image: "i:1" });
+      expectTypeOf(payload).toMatchTypeOf<{ image: ImageId }>();
+    });
+
+    it("can nest the id and name", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertImage({ type_id: 1, file_name: "f1", author_id: 1 });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      const payload = await toJSON(a, { image: "fileName" });
+      expect(payload).toEqual({ image: { fileName: "f1" } });
+      expectTypeOf(payload).toMatchTypeOf<{ image: { fileName: string } }>();
     });
   });
 });

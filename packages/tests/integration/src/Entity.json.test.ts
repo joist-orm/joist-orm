@@ -66,7 +66,7 @@ describe("Entity.json", () => {
       numberOfPublicReviews: number;
       favoriteBook: { title: string } | undefined;
       hasLowerCaseFirstName: boolean;
-      // latestComment: { text: string } | undefined;
+      latestComment: { text: string | undefined } | undefined;
       reviews: { rating: number }[];
     }>();
   });

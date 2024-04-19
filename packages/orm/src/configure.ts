@@ -16,12 +16,19 @@ const tableToMetaMap = new Map<string, EntityMetadata>();
 
 /** Performs our boot-time initialization, i.e. hooking up reactivity. */
 export function configureMetadata(metas: EntityMetadata[]): void {
+  fireAfterMetadatas(metas);
   setBooted();
   populateConstructorMaps(metas);
   ensureDefaultsSet(metas);
   setImmutableFields(metas);
   hookUpBaseTypeAndSubTypes(metas);
   reverseIndexReactivity(metas);
+}
+
+function fireAfterMetadatas(metas: EntityMetadata[]): void {
+  for (const meta of metas) {
+    for (const fn of meta.config.__data.afterMetadataCallbacks) fn();
+  }
 }
 
 export function getConstructorFromTaggedId(id: TaggedId): MaybeAbstractEntityConstructor<any> {

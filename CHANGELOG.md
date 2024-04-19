@@ -1,3 +1,10 @@
+# [1.158.0](https://github.com/joist-orm/joist-orm/compare/v1.157.0...v1.158.0) (2024-04-19)
+
+
+### Features
+
+* Teach toJSON to create custom payloads. ([#1043](https://github.com/joist-orm/joist-orm/issues/1043)) ([77d4708](https://github.com/joist-orm/joist-orm/commit/77d470856998eb86f372c675781c4e56d41614c7))
+
 # [1.157.0](https://github.com/joist-orm/joist-orm/compare/v1.156.1...v1.157.0) (2024-04-17)
 
 

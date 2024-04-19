@@ -2,7 +2,14 @@ import { Author, AuthorId, BookId, FavoriteShape, newAuthor, PublisherId } from 
 import { newEntityManager } from "@src/testEm";
 import { expectTypeOf } from "expect-type";
 import { toJSON } from "joist-orm";
-import { insertAuthor, insertBook, insertPublisher, insertPublisherGroup } from "src/entities/inserts";
+import {
+  insertAuthor,
+  insertAuthorToTag,
+  insertBook,
+  insertPublisher,
+  insertPublisherGroup,
+  insertTag,
+} from "src/entities/inserts";
 
 describe("Entity.json", () => {
   it("can toJSON a primitive", async () => {
@@ -142,6 +149,42 @@ describe("Entity.json", () => {
         ],
       });
       expectTypeOf(payload).toMatchTypeOf<{ books: { id: BookId; title: string }[] }>();
+    });
+  });
+
+  describe("m2m", () => {
+    it("can be just the ids", async () => {
+      await insertTag({ name: "t1" });
+      await insertTag({ name: "t2" });
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+      await insertAuthorToTag({ author_id: 1, tag_id: 2 });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      // Given a hint that recurses into the tags
+      const payload = await toJSON(a, "tags");
+      // Then we output the nested keys
+      expect(payload).toEqual({
+        tags: ["t:1", "t:2"],
+      });
+      expectTypeOf(payload).toMatchTypeOf<{ tags: string[] }>();
+    });
+
+    it("can nest the id and name", async () => {
+      await insertTag({ name: "t1" });
+      await insertTag({ name: "t2" });
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+      await insertAuthorToTag({ author_id: 1, tag_id: 2 });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      // Given a hint that recurses into the tags
+      const payload = await toJSON(a, { tags: "name" });
+      // Then we output the nested keys
+      expect(payload).toEqual({
+        tags: [{ name: "t1" }, { name: "t2" }],
+      });
+      expectTypeOf(payload).toMatchTypeOf<{ tags: { name: string }[] }>();
     });
   });
 });

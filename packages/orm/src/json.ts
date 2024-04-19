@@ -6,6 +6,7 @@ import {
   AsyncMethod,
   AsyncProperty,
   Collection,
+  ManyToManyCollection,
   ManyToOneReferenceImpl,
   OneToManyCollection,
   ReactiveGetter,
@@ -100,7 +101,7 @@ async function copyToPayload(payload: any, entity: any, hint: object): Promise<v
       } else {
         payload[key] = value.idMaybe;
       }
-    } else if (value instanceof OneToManyCollection) {
+    } else if (value instanceof OneToManyCollection || value instanceof ManyToManyCollection) {
       payload[key] = [];
       const norm = normalizeHint(nestedHint);
       if (norm && Object.keys(norm).length > 0) {

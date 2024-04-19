@@ -1,4 +1,4 @@
-import { Entity } from "./Entity";
+import { Entity, isEntity } from "./Entity";
 import { getMetadata } from "./EntityMetadata";
 import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint } from "./reactiveHints";
@@ -6,13 +6,20 @@ import {
   AsyncMethod,
   AsyncProperty,
   Collection,
+  CustomCollection,
+  CustomReference,
   ManyToManyCollection,
   ManyToOneReferenceImpl,
   OneToManyCollection,
   OneToOneReferenceImpl,
   ReactiveGetter,
+  ReactiveReferenceImpl,
   Reference,
 } from "./relations";
+import { ReactiveFieldImpl } from "./relations/ReactiveField";
+import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
+import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
+import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
 
 /**
  * A JSON hint of a single key, multiple keys, or nested keys and sub-hints.
@@ -134,8 +141,10 @@ type JsonPayloadCustom<H> = H extends (...args: any) => infer V ? UnwrapPromise<
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
 /** Recursively copies the fields of `hint` from `entity` into the `payload`. */
-async function copyToPayload(payload: any, entity: any, hint: object): Promise<void> {
+async function copyToPayload(payload: Record<string, {}>, entity: any, hint: object): Promise<void> {
+  // Look at each key in the hint and determine
   for (const [key, nestedHint] of Object.entries(hint)) {
+    const nextHint = normalizeHint(nestedHint);
     // Look for custom props
     if (!(key in entity)) {
       // Probably detect if this isn't a function...
@@ -148,33 +157,57 @@ async function copyToPayload(payload: any, entity: any, hint: object): Promise<v
     const value = entity[key];
     if (isPrimitive(value)) {
       payload[key] = value;
-    } else if (value instanceof ManyToOneReferenceImpl || value instanceof OneToOneReferenceImpl) {
-      const norm = normalizeHint(nestedHint);
-      if (norm && Object.keys(norm).length > 0) {
-        payload[key] = {};
-        await copyToPayload(payload[key], value.get, norm);
-      } else {
-        payload[key] = value.idIfSet;
-      }
-    } else if (value instanceof OneToManyCollection || value instanceof ManyToManyCollection) {
-      const norm = normalizeHint(nestedHint);
-      if (norm && Object.keys(norm).length > 0) {
-        const objs = value.get.map(() => ({}));
-        await Promise.all(
-          value.get.map(async (item, i) => {
-            return copyToPayload(objs[i], item, norm);
-          }),
-        );
-        payload[key] = objs;
-      } else {
-        payload[key] = [];
-        for (const item of value.get) {
-          payload[key].push(item.id);
-        }
-      }
+    } else if (
+      value instanceof ManyToOneReferenceImpl ||
+      value instanceof OneToOneReferenceImpl ||
+      value instanceof CustomReference ||
+      value instanceof ReactiveFieldImpl ||
+      value instanceof ReactiveReferenceImpl ||
+      value instanceof ReactiveGetterImpl ||
+      value instanceof ReactiveQueryFieldImpl ||
+      value instanceof AsyncPropertyImpl ||
+      value instanceof OneToManyCollection ||
+      value instanceof ManyToManyCollection ||
+      value instanceof CustomCollection
+    ) {
+      await copyToPayloadValue(payload, key, value.get, nextHint);
     } else {
       throw new Error(`Unable to encode value ${value} to JSON`);
     }
+  }
+}
+
+async function copyToPayloadValue(payload: any, key: any, value: any, nextHint: any): Promise<void> {
+  if (value === undefined || value === null) {
+    payload[key] = value;
+  } else if (isEntity(value)) {
+    if (nextHint && Object.keys(nextHint).length > 0) {
+      payload[key] = {};
+      await copyToPayload(payload[key], value, nextHint);
+    } else {
+      payload[key] = value.id;
+    }
+  } else if (Array.isArray(value)) {
+    const list = [] as any[];
+    if (nextHint && Object.keys(nextHint).length > 0) {
+      await Promise.all(
+        value.map(async (item, i) => {
+          if (isEntity(item)) {
+            list[i] = {};
+            return copyToPayload(list[i], item, nextHint);
+          } else {
+            // This is probably undefined
+            list[i] = item;
+          }
+        }),
+      );
+    } else {
+      // This is assuming an array of entities...
+      for (const item of value) list.push(item.id);
+    }
+    payload[key] = list;
+  } else {
+    payload[key] = value;
   }
 }
 

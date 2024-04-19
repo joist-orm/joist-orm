@@ -38,6 +38,37 @@ describe("Entity.json", () => {
     }>();
   });
 
+  it("support misc types", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em);
+    await em.flush();
+    const payload = await toJSON(a, {
+      // hasManyThrough
+      reviews: "rating",
+      // hasOneDerived
+      latestComment: "text",
+      // ReactiveField
+      numberOfPublicReviews: {},
+      // getter
+      initials: {},
+      // ReactiveReference
+      favoriteBook: "title",
+      // hasReactiveAsyncProperty
+      numberOfBooks2: {},
+      // ReactiveGetter
+      hasLowerCaseFirstName: {},
+    });
+    expect(payload).toEqual({
+      favoriteBook: undefined,
+      hasLowerCaseFirstName: true,
+      initials: "a",
+      latestComment: undefined,
+      numberOfBooks2: 0,
+      numberOfPublicReviews: 0,
+      reviews: [],
+    });
+  });
+
   describe("m2o", () => {
     it("can be just the id", async () => {
       await insertPublisher({ name: "p1" });

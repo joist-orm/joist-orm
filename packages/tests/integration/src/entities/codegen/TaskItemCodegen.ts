@@ -12,6 +12,7 @@ import {
   newRequiredRule,
   setOpts,
   toIdOf,
+  toJSON,
 } from "joist-orm";
 import type {
   Changes,
@@ -21,6 +22,8 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
+  JsonHint,
+  JsonPayload,
   Lens,
   Loaded,
   LoadHint,
@@ -179,6 +182,12 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
 
   isLoaded<const H extends LoadHint<TaskItem>>(hint: H): this is Loaded<TaskItem, H> {
     return isLoaded(this as any as TaskItem, hint);
+  }
+
+  toJSON(): object;
+  toJSON<const H extends JsonHint<TaskItem>>(hint: H): Promise<JsonPayload<TaskItem, H>>;
+  toJSON(hint?: any): object {
+    return hint ? toJSON(this, hint) : super.toJSON();
   }
 
   get newTask(): ManyToOneReference<TaskItem, TaskNew, undefined> {

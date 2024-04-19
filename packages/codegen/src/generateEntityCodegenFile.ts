@@ -29,6 +29,8 @@ import {
   Flavor,
   GraphQLFilterOf,
   IdOf,
+  JsonHint,
+  JsonPayload,
   LargeCollection,
   Lens,
   LoadHint,
@@ -70,6 +72,7 @@ import {
   setField,
   setOpts,
   toIdOf,
+  toJSON,
 } from "./symbols";
 import { assertNever, fail, uncapitalize } from "./utils";
 
@@ -563,6 +566,12 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
       isLoaded<const H extends ${LoadHint}<${entityName}>>(hint: H): this is ${Loaded}<${entityName}${maybeOtherLoaded}, H> {
         return ${isLoaded}(this as any as ${entityName}, hint);
+      }
+
+      toJSON(): object;
+      toJSON<const H extends ${JsonHint}<${entityName}>>(hint: H): Promise<${JsonPayload}<${entityName}, H>>;
+      toJSON(hint?: any): object {
+        return hint ? ${toJSON}(this, hint) : super.toJSON();
       }
 
       ${relations.map((r) => {

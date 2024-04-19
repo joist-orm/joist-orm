@@ -32,6 +32,7 @@ export * from "./drivers";
 export { getField, isChangeableField, isFieldSet, setField } from "./fields";
 export * from "./getProperties";
 export * from "./keys";
+export * from "./json";
 export { kq, kqDot, kqStar } from "./keywords";
 export {
   DeepNew,

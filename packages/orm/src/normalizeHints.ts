@@ -3,7 +3,7 @@ import { LoadHint } from "./loadHints";
 import { ReactiveHint } from "./reactiveHints";
 
 /** Normalizes a `key | key[] | { key: nested }` hint into `{ key: nested }`. */
-export type NormalizeHint<T extends Entity, H> = H extends string
+export type NormalizeHint<H> = H extends string
   ? Record<DropSuffix<H>, {}>
   : H extends ReadonlyArray<any>
     ? Record<DropSuffix<H[number]>, {}>

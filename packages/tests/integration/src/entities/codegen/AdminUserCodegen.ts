@@ -10,11 +10,14 @@ import {
   setField,
   setOpts,
   toIdOf,
+  toJSON,
 } from "joist-orm";
 import type {
   Changes,
   EntityMetadata,
   Flavor,
+  JsonHint,
+  JsonPayload,
   Lens,
   Loaded,
   LoadHint,
@@ -136,5 +139,11 @@ export abstract class AdminUserCodegen extends User implements Entity {
 
   isLoaded<const H extends LoadHint<AdminUser>>(hint: H): this is Loaded<AdminUser | User, H> {
     return isLoaded(this as any as AdminUser, hint);
+  }
+
+  toJSON(): object;
+  toJSON<const H extends JsonHint<AdminUser>>(hint: H): Promise<JsonPayload<AdminUser, H>>;
+  toJSON(hint?: any): object {
+    return hint ? toJSON(this, hint) : super.toJSON();
   }
 }

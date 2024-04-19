@@ -26,6 +26,8 @@ export abstract class AbstractRelationImpl<T, U> extends AbstractPropertyImpl<T>
   /** Whether the relation from the preload cache, if preloaded. */
   abstract preload(): void;
 
+  abstract get get(): U | undefined;
+
   /**
    * Called when our entity has been `EntityManager.delete`'d _and_ `EntityManager.flush` is being called,
    * so we can unset any foreign keys to the being-deleted entity and clear out any pointers to it.

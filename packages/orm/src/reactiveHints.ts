@@ -23,16 +23,22 @@ import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
 import { fail, mergeNormalizedHints } from "./utils";
 
 /** The keys in `T` that rules & hooks can react to. */
-export type Reactable<T extends Entity> = FieldsOf<T> &
-  Loadable<T> &
-  Gettable<T> &
-  SuffixedFieldsOf<T> &
-  SuffixedLoadable<T> &
-  SuffixedGettable<T>;
+export type Reactable<T extends Entity> =
+  // This will be primitives + enums + m2os
+  FieldsOf<T> &
+    // We include `Loadable` so that we include hasReactiveAsyncProperties,
+    // which are reversable but won't be in any of our codegen types.
+    Loadable<T> &
+    Gettable<T> &
+    SuffixedFieldsOf<T> &
+    SuffixedLoadable<T> &
+    SuffixedGettable<T>;
 
-type Gettable<T extends Entity> = {
+/** Finds `hasReactiveGetters` which are not "loadable" b/c they're always loaded. */
+export type Gettable<T extends Entity> = {
   -readonly [K in keyof T as GettableValue<T[K]> extends never ? never : K]: GettableValue<T[K]>;
 };
+
 type GettableValue<V> = V extends ReactiveGetter<any, infer P> ? P : never;
 
 /** The fields of `T` suffixed with `:ro` or `_ro`. */
@@ -66,12 +72,12 @@ export type NestedReactiveHint<T extends Entity> = {
 
 /** Given an entity `T` that is being reacted with hint `H`, mark only the `H` attributes visible & populated. */
 export type Reacted<T extends Entity, H> = Entity & {
-  [K in keyof NormalizeHint<T, H> & keyof T]: T[K] extends OneToOneReference<any, infer U>
-    ? LoadedOneToOneReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
+  [K in keyof NormalizeHint<H> & keyof T]: T[K] extends OneToOneReference<any, infer U>
+    ? LoadedOneToOneReference<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
     : T[K] extends Reference<any, infer U, infer N>
-      ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
+      ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<H>[K]>, N>
       : T[K] extends Collection<any, infer U>
-        ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
+        ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
         : T[K] extends AsyncProperty<any, infer V>
           ? LoadedProperty<any, V>
           : T[K];
@@ -85,7 +91,7 @@ export type Reacted<T extends Entity, H> = Entity & {
    */
   fullNonReactiveAccess: Loaded<T, H>;
   /** Allow detecting if a reactive change is due to nuances like `hasUpdated` or `hasChanged`. */
-  changes: Changes<T, keyof (FieldsOf<T> & RelationsOf<T>), keyof NormalizeHint<T, H>>;
+  changes: Changes<T, keyof (FieldsOf<T> & RelationsOf<T>), keyof NormalizeHint<H>>;
 } & MaybeTransientFields<T>;
 
 /**
@@ -277,7 +283,11 @@ export async function followReverseHint(entities: Entity[], reverseHint: string[
 }
 
 /** Converts a normalized reactive `hint` into a load hint. */
-export function convertToLoadHint<T extends Entity>(meta: EntityMetadata, hint: ReactiveHint<T>): LoadHint<T> {
+export function convertToLoadHint<T extends Entity>(
+  meta: EntityMetadata,
+  hint: ReactiveHint<T>,
+  allowCustomKeys = false,
+): LoadHint<T> {
   const loadHint = {};
   // Process the hints individually instead of just calling Object.fromEntries so that
   // we can handle inlined reactive hints that overlap.
@@ -290,7 +300,7 @@ export function convertToLoadHint<T extends Entity>(meta: EntityMetadata, hint: 
         case "m2o":
         case "o2m":
         case "o2o":
-          mergeNormalizedHints(loadHint, { [key]: convertToLoadHint(field.otherMetadata(), subHint) });
+          mergeNormalizedHints(loadHint, { [key]: convertToLoadHint(field.otherMetadata(), subHint, allowCustomKeys) });
           break;
         case "primitive":
         case "enum":
@@ -306,8 +316,8 @@ export function convertToLoadHint<T extends Entity>(meta: EntityMetadata, hint: 
     } else {
       const p = getProperties(meta)[key];
       if (p && p.reactiveHint) {
-        mergeNormalizedHints(loadHint, convertToLoadHint(meta, p.reactiveHint));
-      } else {
+        mergeNormalizedHints(loadHint, convertToLoadHint(meta, p.reactiveHint, allowCustomKeys));
+      } else if (!allowCustomKeys) {
         fail(`Invalid reactive hint on ${meta.tableName} ${JSON.stringify(hint)}`);
       }
     }

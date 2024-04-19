@@ -14,6 +14,7 @@ import {
   setField,
   setOpts,
   toIdOf,
+  toJSON,
 } from "joist-orm";
 import type {
   Changes,
@@ -24,6 +25,8 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
+  JsonHint,
+  JsonPayload,
   LargeCollection,
   Lens,
   Loaded,
@@ -184,6 +187,12 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
 
   isLoaded<const H extends LoadHint<Tag>>(hint: H): this is Loaded<Tag, H> {
     return isLoaded(this as any as Tag, hint);
+  }
+
+  toJSON(): object;
+  toJSON<const H extends JsonHint<Tag>>(hint: H): Promise<JsonPayload<Tag, H>>;
+  toJSON(hint?: any): object {
+    return hint ? toJSON(this, hint) : super.toJSON();
   }
 
   get books(): Collection<Tag, Book> {

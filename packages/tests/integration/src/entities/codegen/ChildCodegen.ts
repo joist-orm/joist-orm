@@ -13,6 +13,7 @@ import {
   setField,
   setOpts,
   toIdOf,
+  toJSON,
 } from "joist-orm";
 import type {
   Changes,
@@ -23,6 +24,8 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
+  JsonHint,
+  JsonPayload,
   Lens,
   Loaded,
   LoadHint,
@@ -166,6 +169,12 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
 
   isLoaded<const H extends LoadHint<Child>>(hint: H): this is Loaded<Child, H> {
     return isLoaded(this as any as Child, hint);
+  }
+
+  toJSON(): object;
+  toJSON<const H extends JsonHint<Child>>(hint: H): Promise<JsonPayload<Child, H>>;
+  toJSON(hint?: any): object {
+    return hint ? toJSON(this, hint) : super.toJSON();
   }
 
   get groups(): Collection<Child, ChildGroup> {

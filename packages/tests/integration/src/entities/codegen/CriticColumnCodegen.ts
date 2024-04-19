@@ -13,6 +13,7 @@ import {
   setField,
   setOpts,
   toIdOf,
+  toJSON,
 } from "joist-orm";
 import type {
   Changes,
@@ -22,6 +23,8 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
+  JsonHint,
+  JsonPayload,
   Lens,
   Loaded,
   LoadHint,
@@ -172,6 +175,12 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
 
   isLoaded<const H extends LoadHint<CriticColumn>>(hint: H): this is Loaded<CriticColumn, H> {
     return isLoaded(this as any as CriticColumn, hint);
+  }
+
+  toJSON(): object;
+  toJSON<const H extends JsonHint<CriticColumn>>(hint: H): Promise<JsonPayload<CriticColumn, H>>;
+  toJSON(hint?: any): object {
+    return hint ? toJSON(this, hint) : super.toJSON();
   }
 
   get critic(): ManyToOneReference<CriticColumn, Critic, never> {

@@ -103,10 +103,16 @@ async function copyToPayload(payload: any, entity: any, hint: object): Promise<v
     } else if (value instanceof OneToManyCollection) {
       payload[key] = [];
       const norm = normalizeHint(nestedHint);
-      for (const item of value.get) {
-        const obj = {};
-        await copyToPayload(obj, item, norm);
-        payload[key].push(obj);
+      if (norm && Object.keys(norm).length > 0) {
+        for (const item of value.get) {
+          const obj = {};
+          await copyToPayload(obj, item, norm);
+          payload[key].push(obj);
+        }
+      } else {
+        for (const item of value.get) {
+          payload[key].push(item.id);
+        }
       }
     } else {
       throw new Error(`Unable to encode value ${value} to JSON`);

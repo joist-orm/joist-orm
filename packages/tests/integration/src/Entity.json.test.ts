@@ -111,7 +111,20 @@ describe("Entity.json", () => {
   });
 
   describe("o2m", () => {
-    it("can be just the ids", async () => {});
+    it("can be just the ids", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1 });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      // Given a hint that recurses into the publisher
+      const payload = await toJSON(a, "books");
+      // Then we output the nested keys
+      expect(payload).toEqual({
+        books: ["b:1", "b:2"],
+      });
+      expectTypeOf(payload).toMatchTypeOf<{ books: string[] }>();
+    });
 
     it("can nest the id and name", async () => {
       await insertAuthor({ first_name: "a1" });
@@ -128,7 +141,6 @@ describe("Entity.json", () => {
           { id: "b:2", title: "b2" },
         ],
       });
-      // ...why does toExpectTypeOf not work here?
       expectTypeOf(payload).toMatchTypeOf<{ books: { id: BookId; title: string }[] }>();
     });
   });

@@ -40,7 +40,11 @@
     "Child": { "tag": "child" },
     "ChildGroup": { "tag": "cg" },
     "ChildItem": { "tag": "ci" },
-    "Comment": { "relations": { "parent": { "polymorphic": "notNull" } }, "tag": "comment" },
+    "Comment": {
+      "fields": { "parentTags": { "derived": "async" } },
+      "relations": { "parent": { "polymorphic": "notNull" } },
+      "tag": "comment"
+    },
     "Critic": {
       "fields": {
         "ignoreFavouriteBook": { "ignore": true },
@@ -90,5 +94,5 @@
     }
   },
   "entitiesDirectory": "./src/entities",
-  "version": "1.158.0"
+  "version": "1.159.0"
 }

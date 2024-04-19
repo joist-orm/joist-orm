@@ -185,7 +185,7 @@ export function reverseReactiveHint<T extends Entity>(
             rootType,
             field.otherMetadata().cstr,
             subHint,
-            // For o2m/o2o, isReadOnly will only be true if the hint is using a `:ro` / `_ro` suffix,
+            // For o2m/o2o, isReadOnly will only be true if the hint is using a `hooktesthooktest:ro` / `_ro` suffix,
             // in which case we really do want to be read-only. But if isOtherReadOnly is true, then we
             // don't need to "react to the field changing" (which can't happen for immutable fields), but
             // we do need to react to children being created/deleted.

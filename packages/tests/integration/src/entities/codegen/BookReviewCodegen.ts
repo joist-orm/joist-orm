@@ -4,6 +4,7 @@ import {
   failNoIdYet,
   getField,
   getInstanceData,
+  hasManyToMany,
   hasOne,
   hasOneToOne,
   isLoaded,
@@ -19,6 +20,7 @@ import type {
   BooleanFilter,
   BooleanGraphQLFilter,
   Changes,
+  Collection,
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
@@ -52,8 +54,10 @@ import {
   criticMeta,
   EntityManager,
   newBookReview,
+  Tag,
+  tagMeta,
 } from "../entities";
-import type { BookId, BookOrder, CommentId, CriticId, CriticOrder, Entity } from "../entities";
+import type { BookId, BookOrder, CommentId, CriticId, CriticOrder, Entity, TagId } from "../entities";
 
 export type BookReviewId = Flavor<string, BookReview>;
 
@@ -73,12 +77,14 @@ export interface BookReviewOpts {
   book: Book | BookId;
   critic?: Critic | CriticId | null;
   comment?: Comment | null;
+  tags?: Tag[];
 }
 
 export interface BookReviewIdsOpts {
   bookId?: BookId | null;
   criticId?: CriticId | null;
   commentId?: CommentId | null;
+  tagIds?: TagId[] | null;
 }
 
 export interface BookReviewFilter {
@@ -91,6 +97,7 @@ export interface BookReviewFilter {
   book?: EntityFilter<Book, BookId, FilterOf<Book>, never>;
   critic?: EntityFilter<Critic, CriticId, FilterOf<Critic>, null>;
   comment?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
 export interface BookReviewGraphQLFilter {
@@ -103,6 +110,7 @@ export interface BookReviewGraphQLFilter {
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
   critic?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, null>;
   comment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
 
 export interface BookReviewOrder {
@@ -240,6 +248,19 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
       "comment",
       "parent",
       "parent_book_review_id",
+    );
+  }
+
+  get tags(): Collection<BookReview, Tag> {
+    const { relations } = getInstanceData(this);
+    return relations.tags ??= hasManyToMany(
+      this as any as BookReview,
+      "book_reviews_to_tags",
+      "tags",
+      "book_review_id",
+      tagMeta,
+      "bookReviews",
+      "tag_id",
     );
   }
 }

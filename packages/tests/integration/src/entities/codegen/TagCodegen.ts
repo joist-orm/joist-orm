@@ -44,14 +44,18 @@ import {
   authorMeta,
   Book,
   bookMeta,
+  BookReview,
+  bookReviewMeta,
   EntityManager,
   newTag,
   Publisher,
   publisherMeta,
   Tag,
   tagMeta,
+  Task,
+  taskMeta,
 } from "../entities";
-import type { BookId, Entity, PublisherId } from "../entities";
+import type { BookId, BookReviewId, Entity, PublisherId, TaskId } from "../entities";
 
 export type TagId = Flavor<string, Tag>;
 
@@ -65,12 +69,16 @@ export interface TagFields {
 export interface TagOpts {
   name: string;
   books?: Book[];
+  bookReviews?: BookReview[];
   publishers?: Publisher[];
+  tasks?: Task[];
 }
 
 export interface TagIdsOpts {
   bookIds?: BookId[] | null;
+  bookReviewIds?: BookReviewId[] | null;
   publisherIds?: PublisherId[] | null;
+  taskIds?: TaskId[] | null;
 }
 
 export interface TagFilter {
@@ -79,7 +87,9 @@ export interface TagFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  bookReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
+  tasks?: EntityFilter<Task, TaskId, FilterOf<Task>, null | undefined>;
 }
 
 export interface TagGraphQLFilter {
@@ -88,7 +98,9 @@ export interface TagGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  bookReviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
   publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
+  tasks?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null | undefined>;
 }
 
 export interface TagOrder {
@@ -208,6 +220,19 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
     );
   }
 
+  get bookReviews(): Collection<Tag, BookReview> {
+    const { relations } = getInstanceData(this);
+    return relations.bookReviews ??= hasManyToMany(
+      this as any as Tag,
+      "book_reviews_to_tags",
+      "bookReviews",
+      "tag_id",
+      bookReviewMeta,
+      "tags",
+      "book_review_id",
+    );
+  }
+
   get publishers(): Collection<Tag, Publisher> {
     const { relations } = getInstanceData(this);
     return relations.publishers ??= hasManyToMany(
@@ -218,6 +243,19 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
       publisherMeta,
       "tags",
       "publisher_id",
+    );
+  }
+
+  get tasks(): Collection<Tag, Task> {
+    const { relations } = getInstanceData(this);
+    return relations.tasks ??= hasManyToMany(
+      this as any as Tag,
+      "task_to_tags",
+      "tasks",
+      "tag_id",
+      taskMeta,
+      "tags",
+      "task_id",
     );
   }
 

@@ -6,6 +6,7 @@ import {
   getField,
   getInstanceData,
   hasMany,
+  hasManyToMany,
   isLoaded,
   loadLens,
   newChangesProxy,
@@ -42,6 +43,8 @@ import type { Context } from "src/context";
 import {
   EntityManager,
   newTask,
+  Tag,
+  tagMeta,
   Task,
   TaskItem,
   taskItemMeta,
@@ -52,7 +55,7 @@ import {
   TaskTypeDetails,
   TaskTypes,
 } from "../entities";
-import type { Entity, TaskItemId } from "../entities";
+import type { Entity, TagId, TaskItemId } from "../entities";
 
 export type TaskId = Flavor<string, Task>;
 
@@ -69,10 +72,12 @@ export interface TaskOpts {
   durationInDays: number;
   deletedAt?: Date | null;
   taskTaskItems?: TaskItem[];
+  tags?: Tag[];
 }
 
 export interface TaskIdsOpts {
   taskTaskItemIds?: TaskItemId[] | null;
+  tagIds?: TagId[] | null;
 }
 
 export interface TaskFilter {
@@ -83,6 +88,7 @@ export interface TaskFilter {
   updatedAt?: ValueFilter<Date, never>;
   type?: ValueFilter<TaskType, null>;
   taskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
+  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
 export interface TaskGraphQLFilter {
@@ -93,6 +99,7 @@ export interface TaskGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   type?: ValueGraphQLFilter<TaskType>;
   taskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
+  tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
 
 export interface TaskOrder {
@@ -248,6 +255,19 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
       "task",
       "task_id",
       undefined,
+    );
+  }
+
+  get tags(): Collection<Task, Tag> {
+    const { relations } = getInstanceData(this);
+    return relations.tags ??= hasManyToMany(
+      this as any as Task,
+      "task_to_tags",
+      "tags",
+      "task_id",
+      tagMeta,
+      "tasks",
+      "tag_id",
     );
   }
 }

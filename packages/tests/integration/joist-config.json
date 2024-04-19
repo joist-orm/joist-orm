@@ -40,7 +40,11 @@
     "Child": { "tag": "child" },
     "ChildGroup": { "tag": "cg" },
     "ChildItem": { "tag": "ci" },
-    "Comment": { "relations": { "parent": { "polymorphic": "notNull" } }, "tag": "comment" },
+    "Comment": {
+      "fields": { "parentTags": { "derived": "async" } },
+      "relations": { "parent": { "polymorphic": "notNull" } },
+      "tag": "comment"
+    },
     "Critic": {
       "fields": {
         "ignoreFavouriteBook": { "ignore": true },
@@ -61,7 +65,7 @@
       "tag": "pg"
     },
     "SmallPublisher": { "fields": { "allAuthorNames": { "derived": "async" } }, "tag": "p" },
-    "Tag": { "relations": { "authors": { "large": true } }, "tag": "t" },
+    "Tag": { "tag": "t" },
     "Task": {
       "fields": {
         "specialNewField": { "stiType": "TaskNew" },
@@ -90,5 +94,5 @@
     }
   },
   "entitiesDirectory": "./src/entities",
-  "version": "1.158.0"
+  "version": "1.160.0"
 }

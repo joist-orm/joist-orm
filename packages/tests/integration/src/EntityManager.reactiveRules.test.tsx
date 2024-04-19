@@ -333,39 +333,53 @@ describe("EntityManager.reactiveRules", () => {
     expect(em2.entities.length).toBe(2);
   });
 
-  it.withCtx("creates the right reactive derived values", async () => {
+  it.withCtx("creates the right reactive field targets", async () => {
     const cstr = expect.any(Function);
-    expect(getMetadata(Book).config.__data.reactiveDerivedValues).toEqual([
-      { kind: "populate", cstr, name: "numberOfBooks", fields: ["author"], path: ["author"] },
-      { kind: "populate", cstr, name: "bookComments", fields: ["author"], path: ["author"] },
-      { kind: "populate", cstr, name: "numberOfPublicReviews", fields: ["author"], path: ["author"] },
-      { kind: "populate", cstr, name: "numberOfPublicReviews2", fields: ["author"], path: ["author"] },
-      { kind: "populate", cstr, name: "tagsOfAllBooks", fields: ["author", "tags"], path: ["author"] },
-      { kind: "populate", cstr, name: "search", fields: ["author", "title"], path: ["author"] },
-      { kind: "populate", cstr, name: "rangeOfBooks", fields: ["author"], path: ["author"] },
-      { kind: "populate", cstr, name: "favoriteBook", fields: ["author"], path: ["author"] },
-      { kind: "populate", cstr, name: "isPublic", fields: ["author"], path: ["reviews"] },
-      { kind: "query", cstr, name: "numberOfBookReviews", fields: ["author"], path: ["author", "publisher"] },
+    expect(getReactiveFields(Book)).toEqual([
+      { kind: "populate", cstr: "Author", name: "numberOfBooks", fields: ["author"], path: ["author"] },
+      { kind: "populate", cstr: "Author", name: "bookComments", fields: ["author"], path: ["author"] },
+      { kind: "populate", cstr: "Author", name: "numberOfPublicReviews", fields: ["author"], path: ["author"] },
+      { kind: "populate", cstr: "Author", name: "numberOfPublicReviews2", fields: ["author"], path: ["author"] },
+      { kind: "populate", cstr: "Author", name: "tagsOfAllBooks", fields: ["author", "tags"], path: ["author"] },
+      { kind: "populate", cstr: "Author", name: "search", fields: ["author", "title"], path: ["author"] },
+      { kind: "populate", cstr: "Author", name: "rangeOfBooks", fields: ["author"], path: ["author"] },
+      { kind: "populate", cstr: "Author", name: "favoriteBook", fields: ["author"], path: ["author"] },
+      { kind: "populate", cstr: "BookReview", name: "isPublic", fields: ["author"], path: ["reviews"] },
+      { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["tags"], path: ["comments"] },
+      {
+        kind: "query",
+        cstr: "Publisher",
+        name: "numberOfBookReviews",
+        fields: ["author"],
+        path: ["author", "publisher"],
+      },
     ]);
-    expect(getMetadata(BookReview).config.__data.reactiveDerivedValues).toEqual([
+    expect(getReactiveFields(BookReview)).toEqual([
       {
         kind: "populate",
-        cstr,
+        cstr: "Author",
         name: "numberOfPublicReviews",
         fields: ["isPublic", "rating"],
         path: ["book", "author"],
       },
       {
         kind: "populate",
-        cstr,
+        cstr: "Author",
         name: "numberOfPublicReviews2",
         fields: ["isPublic", "isTest", "rating"],
         path: ["book", "author"],
       },
-      { kind: "populate", cstr, name: "favoriteBook", fields: ["rating"], path: ["book", "author"] },
-      { kind: "populate", cstr, name: "isPublic", fields: [], path: [] },
-      { kind: "populate", cstr, name: "isTest", fields: [], path: [] },
-      { kind: "query", cstr, name: "numberOfBookReviews", fields: [], path: ["book", "author", "publisher"] },
+      { kind: "populate", cstr: "Author", name: "favoriteBook", fields: ["rating"], path: ["book", "author"] },
+      { kind: "populate", cstr: "BookReview", name: "isPublic", fields: [], path: [] },
+      { kind: "populate", cstr: "BookReview", name: "isTest", fields: [], path: [] },
+      { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["tags"], path: ["comment"] },
+      {
+        kind: "query",
+        cstr: "Publisher",
+        name: "numberOfBookReviews",
+        fields: [],
+        path: ["book", "author", "publisher"],
+      },
     ]);
   });
 
@@ -606,5 +620,12 @@ function getReactiveRules(cstr: MaybeAbstractEntityConstructor<any>): any[] {
   return getMetadata(cstr).config.__data.reactiveRules.map((rule) => {
     const { source, cstr, ...rest } = rule;
     return { source: source.name, cstr: cstr.name, ...rest };
+  });
+}
+
+function getReactiveFields(cstr: MaybeAbstractEntityConstructor<any>): any[] {
+  return getMetadata(cstr).config.__data.reactiveDerivedValues.map((rule) => {
+    const { cstr, ...rest } = rule;
+    return { cstr: cstr.name, ...rest };
   });
 }

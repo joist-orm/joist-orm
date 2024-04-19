@@ -152,11 +152,26 @@ export function reverseReactiveHint<T extends Entity>(
             },
           );
         }
+        case "poly": {
+          if (!isReadOnly) {
+            fields.push(field.fieldName);
+          }
+          // A poly is basically multiple m2os glued together, so copy/paste the `case m2o` code
+          // above but do it for each component FK, and glue them together.
+          return field.components.flatMap((comp) => {
+            return reverseReactiveHint(rootType, comp.otherMetadata().cstr, subHint, undefined, false).map(
+              ({ entity, fields, path }) => {
+                return { entity, fields, path: [...path, comp.otherFieldName] };
+              },
+            );
+          });
+        }
         case "m2m": {
+          const otherField =
+            field.otherMetadata().allFields[field.otherFieldName] ??
+            fail(`No field ${field.otherMetadata().type}.${field.otherFieldName}`);
           const otherFieldName =
-            field.otherMetadata().allFields[field.otherFieldName].kind === "poly"
-              ? `${field.otherFieldName}@${meta.type}`
-              : field.otherFieldName;
+            otherField.kind === "poly" ? `${field.otherFieldName}@${meta.type}` : field.otherFieldName;
           // While o2m and o2o can watch for just FK changes by passing `reactForOtherSide` (the FK lives in the other
           // table), for m2m reactivity we push the collection name into the reactive hint, because it's effectively
           // "the other/reverse side", and JoinRows will trigger it explicitly instead of `setField` for non-m2m keys.
@@ -301,6 +316,23 @@ export function convertToLoadHint<T extends Entity>(
         case "o2m":
         case "o2o":
           mergeNormalizedHints(loadHint, { [key]: convertToLoadHint(field.otherMetadata(), subHint, allowCustomKeys) });
+          break;
+        case "poly":
+          // This is squinting a little bit, but when asked to convert a reactive hint to a load hint,
+          // we take the path of the 1st poly component. This should be fine b/c we don't support
+          // "forking" / divergent reactive hints, i.e. something like:
+          //
+          // { comment: { parent: { $author: ...authorhint..., $book: ...bookhint.. } } }
+          //
+          // And instead only support reactive hints that match/traverse all polys in the same way:
+          //
+          // { comment: { parent: fieldSharedByAllParentTypes } }
+          //
+          // Given this simplification, we're going to apply the same simplification to the load
+          // hint and just traverse down the 1st poly component.
+          mergeNormalizedHints(loadHint, {
+            [key]: convertToLoadHint(field.components[0].otherMetadata(), subHint, allowCustomKeys),
+          });
           break;
         case "primitive":
         case "enum":

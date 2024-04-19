@@ -6,6 +6,7 @@ type Comment {
   parent: CommentParent
   user: User!
   likedByUsers: [User!]!
+  parentTags: String!
 }
 
 extend type Mutation {
@@ -17,6 +18,7 @@ input SaveCommentInput {
   text: String
   parentId: ID
   userId: ID
+  parentTags: String
 }
 
 type SaveCommentResult {

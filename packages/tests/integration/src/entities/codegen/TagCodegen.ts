@@ -5,7 +5,6 @@ import {
   failNoIdYet,
   getField,
   getInstanceData,
-  hasLargeManyToMany,
   hasManyToMany,
   isLoaded,
   loadLens,
@@ -27,7 +26,6 @@ import type {
   GraphQLFilterOf,
   JsonHint,
   JsonPayload,
-  LargeCollection,
   Lens,
   Loaded,
   LoadHint,
@@ -55,7 +53,7 @@ import {
   Task,
   taskMeta,
 } from "../entities";
-import type { BookId, BookReviewId, Entity, PublisherId, TaskId } from "../entities";
+import type { AuthorId, BookId, BookReviewId, Entity, PublisherId, TaskId } from "../entities";
 
 export type TagId = Flavor<string, Tag>;
 
@@ -68,6 +66,7 @@ export interface TagFields {
 
 export interface TagOpts {
   name: string;
+  authors?: Author[];
   books?: Book[];
   bookReviews?: BookReview[];
   publishers?: Publisher[];
@@ -75,6 +74,7 @@ export interface TagOpts {
 }
 
 export interface TagIdsOpts {
+  authorIds?: AuthorId[] | null;
   bookIds?: BookId[] | null;
   bookReviewIds?: BookReviewId[] | null;
   publisherIds?: PublisherId[] | null;
@@ -86,6 +86,7 @@ export interface TagFilter {
   name?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   bookReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
@@ -97,6 +98,7 @@ export interface TagGraphQLFilter {
   name?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   bookReviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
   publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
@@ -207,6 +209,19 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
     return hint ? toJSON(this, hint) : super.toJSON();
   }
 
+  get authors(): Collection<Tag, Author> {
+    const { relations } = getInstanceData(this);
+    return relations.authors ??= hasManyToMany(
+      this as any as Tag,
+      "authors_to_tags",
+      "authors",
+      "tag_id",
+      authorMeta,
+      "tags",
+      "author_id",
+    );
+  }
+
   get books(): Collection<Tag, Book> {
     const { relations } = getInstanceData(this);
     return relations.books ??= hasManyToMany(
@@ -256,19 +271,6 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
       taskMeta,
       "tags",
       "task_id",
-    );
-  }
-
-  get authors(): LargeCollection<Tag, Author> {
-    const { relations } = getInstanceData(this);
-    return relations.authors ??= hasLargeManyToMany(
-      this as any as Tag,
-      "authors_to_tags",
-      "authors",
-      "tag_id",
-      authorMeta,
-      "tags",
-      "author_id",
     );
   }
 }

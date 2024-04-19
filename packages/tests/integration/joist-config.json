@@ -65,7 +65,7 @@
       "tag": "pg"
     },
     "SmallPublisher": { "fields": { "allAuthorNames": { "derived": "async" } }, "tag": "p" },
-    "Tag": { "relations": { "authors": { "large": true } }, "tag": "t" },
+    "Tag": { "tag": "t" },
     "Task": {
       "fields": {
         "specialNewField": { "stiType": "TaskNew" },

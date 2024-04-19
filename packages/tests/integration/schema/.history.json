@@ -426,7 +426,7 @@
     "updatedAt",
     "users"
   ],
-  "Tag": ["bookReviews", "books", "createdAt", "id", "name", "publishers", "tasks", "updatedAt"],
+  "Tag": ["authors", "bookReviews", "books", "createdAt", "id", "name", "publishers", "tasks", "updatedAt"],
   "Task": [
     "comments",
     "createdAt",

@@ -11,11 +11,14 @@ import {
   setField,
   setOpts,
   toIdOf,
+  toJSON,
 } from "joist-orm";
 import type {
   Changes,
   EntityMetadata,
   Flavor,
+  JsonHint,
+  JsonPayload,
   Lens,
   Loaded,
   LoadHint,
@@ -143,5 +146,11 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
 
   isLoaded<const H extends LoadHint<DatabaseOwner>>(hint: H): this is Loaded<DatabaseOwner, H> {
     return isLoaded(this as any as DatabaseOwner, hint);
+  }
+
+  toJSON(): object;
+  toJSON<const H extends JsonHint<DatabaseOwner>>(hint: H): Promise<JsonPayload<DatabaseOwner, H>>;
+  toJSON(hint?: any): object {
+    return hint ? toJSON(this, hint) : super.toJSON();
   }
 }

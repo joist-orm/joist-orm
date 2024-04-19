@@ -12,6 +12,7 @@ import {
   setField,
   setOpts,
   toIdOf,
+  toJSON,
 } from "joist-orm";
 import type {
   Changes,
@@ -21,6 +22,8 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
+  JsonHint,
+  JsonPayload,
   Lens,
   Loaded,
   LoadHint,
@@ -206,6 +209,12 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
 
   isLoaded<const H extends LoadHint<BookAdvance>>(hint: H): this is Loaded<BookAdvance, H> {
     return isLoaded(this as any as BookAdvance, hint);
+  }
+
+  toJSON(): object;
+  toJSON<const H extends JsonHint<BookAdvance>>(hint: H): Promise<JsonPayload<BookAdvance, H>>;
+  toJSON(hint?: any): object {
+    return hint ? toJSON(this, hint) : super.toJSON();
   }
 
   get book(): ManyToOneReference<BookAdvance, Book, never> {

@@ -14,6 +14,7 @@ import {
   setField,
   setOpts,
   toIdOf,
+  toJSON,
 } from "joist-orm";
 import type {
   Changes,
@@ -22,6 +23,8 @@ import type {
   EntityMetadata,
   Flavor,
   IdOf,
+  JsonHint,
+  JsonPayload,
   Lens,
   Loaded,
   LoadHint,
@@ -178,6 +181,12 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
 
   isLoaded<const H extends LoadHint<Comment>>(hint: H): this is Loaded<Comment, H> {
     return isLoaded(this as any as Comment, hint);
+  }
+
+  toJSON(): object;
+  toJSON<const H extends JsonHint<Comment>>(hint: H): Promise<JsonPayload<Comment, H>>;
+  toJSON(hint?: any): object {
+    return hint ? toJSON(this, hint) : super.toJSON();
   }
 
   get parent(): PolymorphicReference<Comment, CommentParent, never> {

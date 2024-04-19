@@ -1200,6 +1200,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 
     try {
       const allFlushedEntities: Set<Entity> = new Set();
+      const allFlushedJoinRowsResetFns: Set<() => void> = new Set();
 
       // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
       let entitiesToFlush = await runHooksOnPendingEntities();
@@ -1222,7 +1223,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         await this.driver.transaction(this, async () => {
           do {
             await this.driver.flushEntities(this, entityTodos);
-            await this.driver.flushJoinTables(this, joinRowTodos);
+            const { resetAfterFlushed } = await this.driver.flushJoinTables(this, joinRowTodos);
+            resetAfterFlushed && allFlushedJoinRowsResetFns.add(resetAfterFlushed);
             // Now that we've flushed, look for ReactiveQueries that need to be recalculated
             if (this.#rm.hasPendingReactiveQueries()) {
               // Reset all flushed entities to we only flush net-new changes
@@ -1260,6 +1262,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
           getInstanceData(e).resetAfterFlushed();
         }
+        // Update the joinRows refs to reflect the new state
+        allFlushedJoinRowsResetFns.forEach((resetFn) => resetFn());
 
         // Reset the find caches b/c data will have changed in the db
         this.#dataloaders = {};

@@ -580,6 +580,10 @@ describe("ManyToManyCollection", () => {
       expect(book.title).toBe("Tags Changed");
       // and another on the tags to change the tag name
       expect(t1.name).toBe("Books Changed");
+      // and we expect the state of the join rows to be clear after the flush but keep the relation loaded
+      const joinRows = (em as any).__api.joinRows({ joinTableName: "books_to_tags" });
+      expect(joinRows.hasChanges).toBe(false);
+      expect(joinRows.rows.length).toEqual(1);
     });
 
     it("detects adds m2m - using insert and loads", async () => {
@@ -597,6 +601,10 @@ describe("ManyToManyCollection", () => {
       expect(book.title).toBe("Tags Changed");
       // and another on the tags to change the tag name
       expect(tag.name).toBe("Books Changed");
+      // and we expect the state of the join rows to be clear after the flush but keep the relation loaded
+      const joinRows = (em as any).__api.joinRows({ joinTableName: "books_to_tags" });
+      expect(joinRows.hasChanges).toBe(false);
+      expect(joinRows.rows.length).toEqual(1);
     });
 
     it("detects remove m2m - using insert and loads", async () => {
@@ -617,6 +625,10 @@ describe("ManyToManyCollection", () => {
       expect(book.title).toBe("Tags Changed");
       // and another on the tags to change the tag name
       expect(tag.name).toBe("Books Changed");
+      // and we expect the state of the join rows to be clear after the flush but keep the relation loaded
+      const joinRows = (em as any).__api.joinRows({ joinTableName: "books_to_tags" });
+      expect(joinRows.hasChanges).toBe(false);
+      expect(joinRows.rows.length).toEqual(2);
     });
   });
 });

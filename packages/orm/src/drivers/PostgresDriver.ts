@@ -1,3 +1,4 @@
+import { JoinRow } from "JoinRows";
 import { Knex } from "knex";
 import { buildValuesCte } from "../dataloaders/findDataLoader";
 import {
@@ -130,8 +131,12 @@ export class PostgresDriver implements Driver {
     }
   }
 
-  async flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void> {
+  async flushJoinTables(
+    em: EntityManager,
+    joinRows: Record<string, JoinRowTodo>,
+  ): Promise<{ resetAfterFlushed: () => void }> {
     const knex = this.getMaybeInTxnKnex(em);
+    const resetAfterFlushedIds: { rows: JoinRow[]; index: number; id: number | undefined }[] = [];
     for await (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
       if (newRows.length > 0) {
         const sql = cleanSql(`
@@ -152,7 +157,7 @@ export class PostgresDriver implements Driver {
         });
         const { rows } = await knex.raw(sql, bindings);
         for (let i = 0; i < rows.length; i++) {
-          newRows[i].id = rows[i].id;
+          resetAfterFlushedIds.push({ rows: newRows, index: i, id: rows[i].id });
         }
       }
       if (deletedRows.length > 0) {
@@ -184,8 +189,14 @@ export class PostgresDriver implements Driver {
             await knex(joinTableName).del().whereIn([m2m.columnName, m2m.otherColumnName], data);
           }
         }
+
+        deletedRows.forEach((_r, index) => resetAfterFlushedIds.push({ rows: deletedRows, index, id: undefined }));
       }
     }
+
+    const resetAfterFlushed = () => resetAfterFlushedIds.forEach(({ rows, index, id }) => (rows[index].id = id));
+
+    return { resetAfterFlushed };
   }
 
   private getMaybeInTxnKnex(em: EntityManager): Knex {

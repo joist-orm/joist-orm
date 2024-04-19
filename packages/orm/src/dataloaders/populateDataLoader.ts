@@ -2,7 +2,16 @@ import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityMetadata } from "../EntityMetadata";
 import { HintNode, buildHintTree } from "../HintTree";
-import { AliasAssigner, EntityManager, ParsedFindQuery, getEmInternalApi, indexBy, keyToNumber, kqDot } from "../index";
+import {
+  AliasAssigner,
+  EntityManager,
+  ParsedFindQuery,
+  addTablePerClassJoinsAndClassTag,
+  getEmInternalApi,
+  indexBy,
+  keyToNumber,
+  kqDot,
+} from "../index";
 import { LoadHint } from "../loadHints";
 import { ReactiveFieldImpl } from "../relations/ReactiveField";
 import { toArray } from "../utils";
@@ -67,6 +76,9 @@ export function populateDataLoader(
               orderBys: [],
             };
             const hydrator = preloader.addPreloading(em, meta, layerNode, query);
+            // If we're selecting from small_publishers, join in our base class in case
+            // the preloader wants to join on a column like `publishers.group_id`
+            addTablePerClassJoinsAndClassTag(query, meta, alias, false);
             if (hydrator) {
               const rows = await em.driver.executeFind(em, query, {});
               const entitiesById = indexBy(entities, (e) => keyToNumber(meta, e.id));

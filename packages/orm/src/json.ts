@@ -15,7 +15,13 @@ import {
 } from "./relations";
 
 /**
- *  A JSON hint of a single key, multiple keys, or nested keys and sub-hints.
+ * A JSON hint of a single key, multiple keys, or nested keys and sub-hints.
+ *
+ * JSON hints are much like load hints/reactive hints:
+ *
+ * - Similar to load hints, they specify which relations should be loaded from the database
+ * - Similar to reactive hints, they include specific fields to output
+ * - Unlike either, they can include completely custom keys that are lambdas to generate custom values
  */
 export type JsonHint<T extends Entity> =
   | (keyof Jsonable<T> & string)
@@ -50,17 +56,64 @@ export type JsonableValue<V> =
             ? P
             : V;
 
+/**
+ * Provides an API to put an entity, or list of entities, into a JSON payload.
+ *
+ * The `hint` parameter is a JSON hint that describes what to include in the payload,
+ *
+ * - fields like `id`, `name`, etc.
+ * - relations like m2o, o2m, m2m, and o2o
+ *   - relations are allowed to provide nested hints, just like nested load hints
+ * - custom fields like `fullName: (entity) => entity.firstName + ' ' + entity.lastName`
+ */
 export async function toJSON<T extends Entity, const H extends JsonHint<T>>(
   entity: T,
   hint: H,
-): Promise<JsonPayload<T, H>> {
+): Promise<JsonPayload<T, H>>;
+/**
+ * Provides an API to put an entity, or list of entities, into a JSON payload.
+ *
+ * The `hint` parameter is a JSON hint that describes what to include in the payload,
+ *
+ * - fields like `id`, `name`, etc.
+ * - relations like m2o, o2m, m2m, and o2o
+ *   - relations are allowed to provide nested hints, just like nested load hints
+ * - custom fields like `fullName: (entity) => entity.firstName + ' ' + entity.lastName`
+ */
+export async function toJSON<T extends Entity, const H extends JsonHint<T>>(
+  entities: readonly T[],
+  hint: H,
+): Promise<JsonPayload<T, H>[]>;
+export async function toJSON<T extends Entity, const H extends JsonHint<T>>(
+  entityOrList: T | readonly T[],
+  hint: H,
+): Promise<JsonPayload<T, H> | JsonPayload<T, H>[]> {
+  // If called with a list, and nothing there, just early return
+  if (Array.isArray(entityOrList) && entityOrList.length === 0) return [];
+
+  // Otherwise probe to get our first entity
+  const entity = Array.isArray(entityOrList) ? entityOrList[0] : entityOrList;
   const loadHint = convertToLoadHint(getMetadata(entity), hint as any, true);
-  await entity.em.populate(entity, loadHint);
-  const json = {};
-  await copyToPayload(json, entity, normalizeHint(hint as any));
-  return json as any;
+  await entity.em.populate(entityOrList, loadHint);
+
+  if (Array.isArray(entityOrList)) {
+    const list = [];
+    for (const entity of entityOrList) {
+      const json = {};
+      await copyToPayload(json, entity, normalizeHint(hint as any));
+      list.push(json);
+    }
+    return list as any;
+  } else {
+    const json = {};
+    await copyToPayload(json, entity, normalizeHint(hint as any));
+    return json as any;
+  }
 }
 
+/**
+ * Statically types the return value of `toJSON` based on the given `hint`.
+ */
 export type JsonPayload<T, H> = {
   [K in keyof NormalizeHint<H>]: K extends keyof T
     ? T[K] extends Reference<any, infer U, any>
@@ -80,6 +133,7 @@ type JsonPayloadCustom<H> = H extends (...args: any) => infer V ? UnwrapPromise<
 
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
+/** Recursively copies the fields of `hint` from `entity` into the `payload`. */
 async function copyToPayload(payload: any, entity: any, hint: object): Promise<void> {
   for (const [key, nestedHint] of Object.entries(hint)) {
     // Look for custom props
@@ -103,15 +157,17 @@ async function copyToPayload(payload: any, entity: any, hint: object): Promise<v
         payload[key] = value.idIfSet;
       }
     } else if (value instanceof OneToManyCollection || value instanceof ManyToManyCollection) {
-      payload[key] = [];
       const norm = normalizeHint(nestedHint);
       if (norm && Object.keys(norm).length > 0) {
-        for (const item of value.get) {
-          const obj = {};
-          await copyToPayload(obj, item, norm);
-          payload[key].push(obj);
-        }
+        const objs = value.get.map(() => ({}));
+        await Promise.all(
+          value.get.map(async (item, i) => {
+            return copyToPayload(objs[i], item, norm);
+          }),
+        );
+        payload[key] = objs;
       } else {
+        payload[key] = [];
         for (const item of value.get) {
           payload[key].push(item.id);
         }

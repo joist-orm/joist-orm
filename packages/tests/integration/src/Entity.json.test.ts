@@ -210,4 +210,13 @@ describe("Entity.json", () => {
       expectTypeOf(payload).toMatchTypeOf<{ image: { fileName: string } }>();
     });
   });
+
+  it("works on lists", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em);
+    const a2 = newAuthor(em);
+    const payload = await toJSON([a1, a2], "firstName");
+    expect(payload).toEqual([{ firstName: "a1" }, { firstName: "a2" }]);
+    expectTypeOf(payload).toEqualTypeOf<{ firstName: string }[]>();
+  });
 });

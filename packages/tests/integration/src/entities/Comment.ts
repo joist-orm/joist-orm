@@ -6,7 +6,7 @@ export class Comment extends CommentCodegen {
     "parentTags",
     { parent: { tags: "name" } },
     (c) => {
-      return c.parent.get.tags.get.map((t) => t.name).join("-");
+      return c.parent.get?.tags.get.map((t) => t.name).join("-") ?? "-";
     },
   );
 }

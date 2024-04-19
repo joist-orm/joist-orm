@@ -630,5 +630,22 @@ describe("ManyToManyCollection", () => {
       expect(joinRows.hasChanges).toBe(false);
       expect(joinRows.rows.length).toEqual(2);
     });
+
+    it("detects adds m2m - until afterCommit", async () => {
+      const em = newEntityManager();
+      const book = newBook(em, { title: "To be changed by hook" });
+      const t1 = newTag(em, { name: "t1" });
+      await em.flush();
+
+      // This test assumes there is flag to be used on the test that should start as false
+      expect(book.afterCommitCheckTagsChanged).toBe(false);
+
+      // When we set the m2m relation
+      book.tags.add(t1);
+      await em.flush();
+
+      // This test assumes there is a hook that fires afterCommit that set this flag to true
+      expect(book.afterCommitCheckTagsChanged).toBe(true);
+    });
   });
 });

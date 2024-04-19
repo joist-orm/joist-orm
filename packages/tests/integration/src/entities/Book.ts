@@ -7,6 +7,7 @@ export class Book extends BookCodegen {
   reviewsRuleInvoked = 0;
   numberOfBooks2RuleInvoked = 0;
   authorSetWhenDeleteRuns: boolean | undefined = undefined;
+  afterCommitCheckTagsChanged = false;
 }
 
 config.addRule((book) => {
@@ -85,6 +86,13 @@ config.beforeFlush((book) => {
   if (book.changes.fields.includes("tags") && book.title.includes("To be changed by hook")) {
     // This is an arbitrary example of a hook that could happen when tags change, so we can test it
     book.title = "Tags Changed";
+  }
+});
+// Example to ensure the m2m changes are tracked until afterCommit is called
+config.afterCommit((book) => {
+  if (book.changes.fields.includes("tags")) {
+    // Arbitrary logic to identify that this hook fired on unit tests
+    book.afterCommitCheckTagsChanged = true;
   }
 });
 

@@ -1,3 +1,10 @@
+# [1.160.0](https://github.com/joist-orm/joist-orm/compare/v1.159.0...v1.160.0) (2024-04-19)
+
+
+### Features
+
+* Support reactivity through polys ([#1047](https://github.com/joist-orm/joist-orm/issues/1047)) ([2b36980](https://github.com/joist-orm/joist-orm/commit/2b369800c7ca9a342e07711be54dcf944c4896a7))
+
 # [1.159.0](https://github.com/joist-orm/joist-orm/compare/v1.158.0...v1.159.0) (2024-04-19)
 
 

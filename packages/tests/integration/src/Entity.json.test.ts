@@ -252,4 +252,12 @@ describe("Entity.json", () => {
     expect(payload).toEqual([{ firstName: "a1" }, { firstName: "a2" }]);
     expectTypeOf(payload).toEqualTypeOf<{ firstName: string }[]>();
   });
+
+  it("is available as a toJSON overload", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em);
+    const payload = await a1.toJSON("firstName");
+    expect(payload).toEqual({ firstName: "a1" });
+    expectTypeOf(payload).toEqualTypeOf<{ firstName: string }>();
+  });
 });

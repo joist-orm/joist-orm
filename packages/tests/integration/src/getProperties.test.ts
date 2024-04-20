@@ -1,5 +1,6 @@
 import { authorMeta, bookMeta, bookReviewMeta, imageMeta, publisherMeta } from "@src/entities";
 import {
+  AsyncPropertyImpl,
   CustomCollection,
   CustomReference,
   ManyToManyCollection,
@@ -16,6 +17,7 @@ describe("getProperties", () => {
       advances: expect.any(OneToManyCollection),
       reviews: expect.any(OneToManyCollection),
       comments: expect.any(OneToManyCollection),
+      commentParentInfo: expect.any(AsyncPropertyImpl),
       author: expect.any(ManyToOneReferenceImpl),
       authorSetWhenDeleteRuns: expect.any(UnknownProperty),
       currentDraftAuthor: expect.any(OneToOneReferenceImpl),

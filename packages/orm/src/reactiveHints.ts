@@ -1,6 +1,6 @@
 import { Entity } from "./Entity";
 import { FieldsOf, MaybeAbstractEntityConstructor, RelationsOf, getEmInternalApi } from "./EntityManager";
-import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
 import { Changes, FieldStatus, ManyToOneFieldStatus } from "./changes";
 import { isChangeableField } from "./fields";
 import { getProperties } from "./getProperties";
@@ -318,21 +318,17 @@ export function convertToLoadHint<T extends Entity>(
           mergeNormalizedHints(loadHint, { [key]: convertToLoadHint(field.otherMetadata(), subHint, allowCustomKeys) });
           break;
         case "poly":
-          // This is squinting a little bit, but when asked to convert a reactive hint to a load hint,
-          // we take the path of the 1st poly component. This should be fine b/c we don't support
-          // "forking" / divergent reactive hints, i.e. something like:
-          //
-          // { comment: { parent: { $author: ...authorhint..., $book: ...bookhint.. } } }
-          //
-          // And instead only support reactive hints that match/traverse all polys in the same way:
-          //
-          // { comment: { parent: fieldSharedByAllParentTypes } }
-          //
-          // Given this simplification, we're going to apply the same simplification to the load
-          // hint and just traverse down the 1st poly component.
-          mergeNormalizedHints(loadHint, {
-            [key]: convertToLoadHint(field.components[0].otherMetadata(), subHint, allowCustomKeys),
-          });
+          for (const comp of field.components) {
+            // Write `{ parent: { child@Type: hint } }` into the load hint
+            mergeNormalizedHints(loadHint, {
+              [key]: Object.fromEntries(
+                Object.entries(convertToLoadHint(comp.otherMetadata(), subHint, allowCustomKeys)).map(
+                  // Map the subHint keys to add in `@Type`
+                  ([subKey, subHint]) => [`${subKey}@${comp.otherMetadata().type}`, subHint],
+                ),
+              ),
+            });
+          }
           break;
         case "primitive":
         case "enum":
@@ -373,4 +369,26 @@ async function maybeLoadedPoly(loadPromise: Promise<Entity>, viaPolyType: string
     return loaded && getMetadata(loaded).type === viaPolyType ? loaded : undefined;
   }
   return loadPromise;
+}
+
+export function isPolyHint(key: string): boolean {
+  return key.includes("@");
+}
+
+export function splitPolyHintToKeyAndType(key: string): [string, string] {
+  const [k, type] = key.split("@");
+  return [k, type];
+}
+
+/** If this hint is a poly like `author@Book`, return the type, otherwise return undefined. */
+export function getRelationFromMaybePolyKey(entity: Entity, key: string): any {
+  if (isPolyHint(key)) {
+    const [realKey, typeName] = splitPolyHintToKeyAndType(key);
+    // Even though `entity[realKey]` might exist, if it's from a different poly type, we don't want it
+    const isApplicable = getBaseAndSelfMetas(getMetadata(entity)).some((meta) => meta.type === typeName);
+    if (!isApplicable) return undefined;
+    return (entity as any)[realKey];
+  } else {
+    return (entity as any)[key];
+  }
 }

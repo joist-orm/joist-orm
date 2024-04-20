@@ -1,3 +1,4 @@
+import { AsyncProperty, hasReactiveAsyncProperty } from "joist-orm";
 import { Author, BookCodegen, bookConfig as config } from "./entities";
 
 export class Book extends BookCodegen {
@@ -7,6 +8,12 @@ export class Book extends BookCodegen {
   reviewsRuleInvoked = 0;
   numberOfBooks2RuleInvoked = 0;
   authorSetWhenDeleteRuns: boolean | undefined = undefined;
+
+  /** For testing reacting to poly CommentParent properties. */
+  readonly commentParentInfo: AsyncProperty<Book, string> = hasReactiveAsyncProperty(
+    { reviews: "isPublic" },
+    (b) => `reviews=${b.reviews.get.filter((r) => r.isPublic.get).length}`,
+  );
 }
 
 config.addRule((book) => {

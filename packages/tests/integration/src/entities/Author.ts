@@ -240,6 +240,12 @@ export class Author extends AuthorCodegen {
     (author) => [...(author.publisher.get?.comments.get ?? []), ...author.comments.get],
   );
 
+  /** For testing reacting to poly CommentParent properties. */
+  readonly commentParentInfo: AsyncProperty<Author, string> = hasReactiveAsyncProperty(
+    "numberOfBooks",
+    (a) => `books=${a.numberOfBooks.get}`,
+  );
+
   readonly booksWithTitle: AsyncMethod<Author, [string], Book[]> = hasAsyncMethod("books", (a, title) =>
     // Include silly `title.trim().length > 0` check to ensure we're not called during `populate`
     title.trim().length > 0 ? a.books.get.filter((b) => b.title.includes(title)) : [],

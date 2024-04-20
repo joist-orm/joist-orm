@@ -48,6 +48,9 @@ export class BookReview extends BookReviewCodegen {
     review.transientFields.numberOfIsPublic2Calcs++;
     return !review.comment.get?.text?.includes("Ignore");
   });
+
+  /** For testing reacting to poly CommentParent properties. */
+  readonly commentParentInfo: AsyncProperty<BookReview, string> = hasReactiveAsyncProperty([], () => ``);
 }
 
 // Example of cannotBeUpdated on a m2o so "it won't be reactive" (but really is b/c of creates & deletes)

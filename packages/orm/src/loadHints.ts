@@ -1,6 +1,7 @@
 import { Entity } from "./Entity";
 import { OptsOf } from "./EntityManager";
 import { NormalizeHint } from "./normalizeHints";
+import { getRelationFromMaybePolyKey } from "./reactiveHints";
 import {
   AsyncMethod,
   AsyncProperty,
@@ -191,8 +192,8 @@ export function isLoaded<T extends Entity, H extends LoadHint<T>>(entity: T, hin
     return (hint as string[]).every((key) => (entity as any)[key].isLoaded);
   } else if (typeof hint === "object") {
     return Object.entries(hint as object).every(([key, nestedHint]) => {
-      const relation = (entity as any)[key];
-      if (typeof relation.load !== "function") return true;
+      const relation = getRelationFromMaybePolyKey(entity, key);
+      if (!relation || typeof relation.load !== "function") return true;
       if (relation.isLoaded) {
         const result = relation.get;
         return Array.isArray(result)

@@ -131,9 +131,31 @@ describe("reactiveHints", () => {
       });
     });
 
-    it("works with persisted derived fields", () => {
+    it("works with reactive fields", () => {
       expect(convertToLoadHint(getMetadata(BookReview), { isPublic: {} })).toStrictEqual({ isPublic: {} });
       expect(convertToLoadHint(getMetadata(BookReview), { isPublic_ro: {} })).toStrictEqual({ isPublic: {} });
+    });
+
+    it("works with reactive fields through polys with concrete relations", () => {
+      expect(convertToLoadHint(getMetadata(Comment), { parent: { tags: "name" } })).toEqual({
+        parent: {
+          "tags@Author": {},
+          "tags@Book": {},
+          "tags@BookReview": {},
+          "tags@Publisher": {},
+          "tags@TaskOld": {},
+        },
+      });
+    });
+
+    it("works with reactive fields through polys with logical relations", () => {
+      expect(convertToLoadHint(getMetadata(Comment), { parent: "commentParentInfo" })).toEqual({
+        parent: {
+          "numberOfBooks@Author": {},
+          "reviews@Book": { isPublic: {} },
+          "parentOldTask@TaskOld": {},
+        },
+      });
     });
 
     it("does not squash multiple expanded hints", () => {

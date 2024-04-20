@@ -3,6 +3,7 @@ import {
   insertAuthorToTag,
   insertBook,
   insertBookReview,
+  insertBookToTag,
   insertComment,
   insertTag,
   select,
@@ -307,6 +308,23 @@ describe("ReactiveField", () => {
     t1.name = "t11";
     await em.flush();
     const rows = await select("comments");
-    expect(rows[0]).toMatchObject({ parent_tags: "t11-t2" });
+    expect(rows[0]).toMatchObject({ parent_tags: "books=0-t11-t2" });
+  });
+
+  it("can react through polys on a different poly component", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ rating: 1, book_id: 1 });
+    await insertTag({ name: "t1" });
+    await insertTag({ name: "t2" });
+    await insertComment({ text: "c1", parent_book_id: 1 });
+    await insertBookToTag({ book_id: 1, tag_id: 1 });
+    await insertBookToTag({ book_id: 1, tag_id: 2 });
+    const em = newEntityManager();
+    const t1 = await em.load(Tag, "t:1");
+    t1.name = "t11";
+    await em.flush();
+    const rows = await select("comments");
+    expect(rows[0]).toMatchObject({ parent_tags: "reviews=1-t11-t2" });
   });
 });

@@ -4,9 +4,9 @@ import { CommentCodegen } from "./entities";
 export class Comment extends CommentCodegen {
   readonly parentTags: ReactiveField<Comment, string> = hasReactiveField(
     "parentTags",
-    { parent: { tags: "name" } },
+    { parent: { commentParentInfo: {}, tags: "name" } },
     (c) => {
-      return c.parent.get?.tags.get.map((t) => t.name).join("-") ?? "-";
+      return [c.parent.get?.commentParentInfo.get, ...c.parent.get?.tags.get.map((t) => t.name)].join("-");
     },
   );
 }

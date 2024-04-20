@@ -1,3 +1,10 @@
+## [1.160.3](https://github.com/joist-orm/joist-orm/compare/v1.160.2...v1.160.3) (2024-04-20)
+
+
+### Bug Fixes
+
+* Fix reactive poly against properties ([#1051](https://github.com/joist-orm/joist-orm/issues/1051)) ([ad2ae2c](https://github.com/joist-orm/joist-orm/commit/ad2ae2ce54e15be343dc5288131c63ab06720869))
+
 ## [1.160.2](https://github.com/joist-orm/joist-orm/compare/v1.160.1...v1.160.2) (2024-04-19)
 
 

@@ -72,6 +72,14 @@ describe("Entity", () => {
          "loadPromise": undefined,
          "loaded": false,
        },
+       "commentParentInfo": {
+         "fn": {},
+         "loadPromise": undefined,
+         "loaded": false,
+         "opts": {
+           "isReactive": true,
+         },
+       },
        "favoriteBook": {
          "_isLoaded": false,
          "fieldName": "favoriteBook",

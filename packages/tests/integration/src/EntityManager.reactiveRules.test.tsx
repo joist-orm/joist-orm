@@ -372,6 +372,7 @@ describe("EntityManager.reactiveRules", () => {
       { kind: "populate", cstr: "Author", name: "favoriteBook", fields: ["rating"], path: ["book", "author"] },
       { kind: "populate", cstr: "BookReview", name: "isPublic", fields: [], path: [] },
       { kind: "populate", cstr: "BookReview", name: "isTest", fields: [], path: [] },
+      { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["isPublic"], path: ["book", "comments"] },
       { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["tags"], path: ["comment"] },
       {
         kind: "query",

@@ -274,6 +274,7 @@ describe("SingleTableInheritance", () => {
        "publishers",
        "taskTaskItems",
        "tags",
+       "commentParentInfo",
      ]
     `);
   });

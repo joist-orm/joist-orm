@@ -322,10 +322,10 @@ export function convertToLoadHint<T extends Entity>(
             // Write `{ parent: { child@Type: hint } }` into the load hint
             mergeNormalizedHints(loadHint, {
               [key]: Object.fromEntries(
-                Object.entries(convertToLoadHint(comp.otherMetadata(), subHint, allowCustomKeys)).map(([key, hint]) => [
-                  `${key}@${comp.otherMetadata().type}`,
-                  hint,
-                ]),
+                Object.entries(convertToLoadHint(comp.otherMetadata(), subHint, allowCustomKeys)).map(
+                  // Map the subHint keys to add in `@Type`
+                  ([subKey, subHint]) => [`${subKey}@${comp.otherMetadata().type}`, subHint],
+                ),
               ),
             });
           }

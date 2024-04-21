@@ -24,9 +24,10 @@ export type JsonHint<T extends Entity> =
   | ReadonlyArray<keyof Jsonable<T> & string>
   | NestedJsonHint<T>;
 
-/** For object literals, we allow both regular keys & custom lambdas */
+/** For object literal/nested hints, we allow mapping both entity keys 1:1 & custom keys via a lambdas. */
 export type NestedJsonHint<T extends Entity> = EntityKeyJsonHint<T> | CustomJsonKeyHint<T>;
 
+/** Foreach `Jsonable` key, we can provide a sub-hint, or just a boolean to include/exclude. */
 export type EntityKeyJsonHint<T extends Entity> = {
   [K in keyof Jsonable<T>]?: (Jsonable<T>[K] extends infer U extends Entity ? JsonHint<U> : {}) | boolean;
 };
@@ -130,9 +131,10 @@ export type JsonPayload<T, H> = {
     : HK extends `${infer TK extends string & keyof T}Id`
       ? JsonPayloadKey<T, H, TK, HK>
       : HK extends `${infer SK extends string}Ids` // bookIds -> books
-        ? `${SK}s` extends keyof T
+        ? // Very naive singularization to see if the guessed bookIds -> books actually exists on T to map 1:1
+          `${SK}s` extends keyof T
           ? JsonPayloadKey<T, H, `${SK}s`, HK>
-          : 3
+          : JsonPayloadCustom<NormalizeHint<H>[HK]>
         : JsonPayloadCustom<NormalizeHint<H>[HK]>;
 };
 

@@ -28,11 +28,10 @@ export type JsonHint<T extends Entity> =
 export type NestedJsonHint<T extends Entity> = EntityKeyJsonHint<T> | CustomJsonKeyHint<T>;
 
 export type EntityKeyJsonHint<T extends Entity> = {
-  // | `${K}Ids` | `${K}Id`
-  [K in keyof Jsonable<T> as `${K}`]?: (Jsonable<T>[K] extends infer U extends Entity ? JsonHint<U> : {}) | boolean;
+  [K in keyof Jsonable<T>]?: (Jsonable<T>[K] extends infer U extends Entity ? JsonHint<U> : {}) | boolean;
 };
 
-type CustomJsonKeyHint<T> = {
+export type CustomJsonKeyHint<T> = {
   [key: string]: (entity: T) => any;
 };
 

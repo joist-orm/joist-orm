@@ -29,7 +29,8 @@ export type NestedJsonHint<T extends Entity> = EntityKeyJsonHint<T> | CustomJson
 
 /** Foreach `Jsonable` key, we can provide a sub-hint, or just a boolean to include/exclude. */
 export type EntityKeyJsonHint<T extends Entity> = {
-  [K in keyof Jsonable<T>]?: (Jsonable<T>[K] extends infer U extends Entity ? JsonHint<U> : {}) | boolean;
+  // The `as K` makes `bookIds` as a hint work...
+  [K in keyof Jsonable<T> as `${K}`]?: (Jsonable<T>[K] extends infer U extends Entity ? JsonHint<U> : {}) | boolean;
 };
 
 export type CustomJsonKeyHint<T> = {

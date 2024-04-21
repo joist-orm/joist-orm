@@ -1,4 +1,5 @@
 import { Entity, isEntity } from "./Entity";
+import { IdOf } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
 import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint } from "./reactiveHints";
@@ -28,7 +29,7 @@ type CustomJsonKeys<T> = {
 };
 
 export type NestedJsonHint<T extends Entity> = {
-  [K in keyof Jsonable<T>]?: Jsonable<T>[K] extends infer U extends Entity ? JsonHint<U> : {};
+  [K in keyof Jsonable<T>]?: (Jsonable<T>[K] extends infer U extends Entity ? JsonHint<U> : {}) | boolean;
 };
 
 /** The keys in `T` that we can put into a JSON payload. */
@@ -123,16 +124,30 @@ export type JsonPayload<T, H> = {
     : JsonPayloadCustom<NormalizeHint<H>[K]>;
 };
 
+// type JsonPayloadAttempt<T, K> =
+
 // If the hint is empty, we just output the id as a string.
 type JsonPayloadReference<U, H> = IsEmpty<H> extends true ? string : JsonPayload<U, H>;
 
-type JsonPayloadCollection<U, H> = IsEmpty<H> extends true ? string[] : JsonPayload<U, H>[];
+type JsonPayloadCollection<U extends Entity, H> =
+  // If this is `books: true`, use the id
+  H extends true
+    ? IdOf<U>[]
+    : // If this is `{}`, use the id
+      IsEmpty<H> extends true
+      ? IdOf<U>[]
+      : // Otherwise it's a nested hint
+        JsonPayload<U, H>[];
 
-type JsonPayloadProperty<U, H> = U extends Entity | undefined
-  ? JsonPayloadReference<U, H>
-  : U extends Entity[] | undefined
-    ? JsonPayloadCollection<U, H>
-    : U;
+type JsonPayloadProperty<P, H> =
+  // If an async property returns an entity, treat it like a reference
+  P extends Entity | undefined
+    ? JsonPayloadReference<P, H>
+    : // If an async property returns an entity[], treat it like a collection
+      P extends (infer U extends Entity)[] | undefined
+      ? JsonPayloadCollection<U, H>
+      : // Otherwise leave it as-is
+        P;
 
 type JsonPayloadCustom<H> = H extends (...args: any) => infer V ? UnwrapPromise<V> : H;
 
@@ -141,18 +156,26 @@ type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 /** Recursively copies the fields of `hint` from `entity` into the `payload`. */
 async function copyToPayload(payload: Record<string, {}>, entity: any, hint: object): Promise<void> {
   // Look at each key in the hint and determine
-  for (const [key, nestedHint] of Object.entries(hint)) {
+  for (const [payloadKey, nestedHint] of Object.entries(hint)) {
     const nextHint = normalizeHint(nestedHint);
-    // Look for custom props
-    if (!(key in entity)) {
-      if (typeof nestedHint !== "function") {
-        throw new Error(`Entity does not have a property ${key}`);
+    // Watch for `companyId`
+    let entityKey = payloadKey;
+    if (!(entityKey in entity)) {
+      const field = Object.values(getMetadata(entity).allFields).find((f) => f.fieldIdName === payloadKey);
+      if (field) {
+        entityKey = field.fieldName;
       }
-      payload[key] = await nestedHint(entity);
+    }
+    // Look for custom props
+    if (!(entityKey in entity)) {
+      if (typeof nestedHint !== "function") {
+        throw new Error(`Entity does not have a property ${payloadKey}`);
+      }
+      payload[payloadKey] = await nestedHint(entity);
     } else {
-      const value = entity[key];
+      const value = entity[entityKey];
       if (isPrimitive(value)) {
-        payload[key] = value;
+        payload[payloadKey] = value;
       } else if (
         value instanceof AbstractRelationImpl ||
         value instanceof ReactiveFieldImpl ||
@@ -160,7 +183,7 @@ async function copyToPayload(payload: Record<string, {}>, entity: any, hint: obj
         value instanceof ReactiveQueryFieldImpl ||
         value instanceof AsyncPropertyImpl
       ) {
-        await copyToPayloadValue(payload, key, value.get, nextHint);
+        await copyToPayloadValue(payload, payloadKey, value.get, nextHint);
       } else {
         throw new Error(`Unable to encode value ${value} to JSON`);
       }

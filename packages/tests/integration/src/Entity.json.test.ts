@@ -84,6 +84,18 @@ describe("Entity.json", () => {
       expectTypeOf(payload).toEqualTypeOf<{ publisher: string }>();
     });
 
+    it("can be just the id suffixed", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      // Given a hint of just the publisher key
+      const payload = await toJSON(a, { id: [], publisherId: [] });
+      // Then we output only the id
+      expect(payload).toEqual({ id: "a:1", publisherId: "p:1" });
+      expectTypeOf(payload).toEqualTypeOf<{ id: AuthorId; publisherId: PublisherId }>();
+    });
+
     it("can nest the id and name", async () => {
       await insertPublisher({ name: "p1" });
       await insertAuthor({ first_name: "a1", publisher_id: 1 });
@@ -266,5 +278,14 @@ describe("Entity.json", () => {
     const a1 = newAuthor(em);
     const a2 = newAuthor(em);
     expect(JSON.stringify([a1, a2])).toBe(`[{"id":null},{"id":null}]`);
+  });
+
+  it("can use true to enable fields", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em, { books: [{}, {}] });
+    await em.flush();
+    const payload = await a.toJSON({ firstName: true, books: true });
+    expect(payload).toEqual({ firstName: "a1", books: ["b:1", "b:2"] });
+    expectTypeOf(payload).toMatchTypeOf<{ firstName: string; books: BookId[] }>();
   });
 });

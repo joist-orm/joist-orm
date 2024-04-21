@@ -570,7 +570,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   toJSON(): object;
-  toJSON<const H extends NestedJsonHint<Author>>(hint: H): Promise<JsonPayload<Author, H>>;
+  toJSON<const H extends NestedJsonHint<Author> | (keyof this)[]>(hint: H): Promise<JsonPayload<Author, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }

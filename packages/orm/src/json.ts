@@ -22,15 +22,22 @@ import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
 export type JsonHint<T extends Entity> =
   | (keyof Jsonable<T> & string)
   | ReadonlyArray<keyof Jsonable<T> & string>
-  | (NestedJsonHint<T> | CustomJsonKeys<T>);
+  | NestedJsonHint<T>;
 
-type CustomJsonKeys<T> = {
+/** For object literals, we allow both regular keys & custom lambdas */
+export type NestedJsonHint<T extends Entity> = EntityKeyJsonHint<T> | CustomJsonKeyHint<T>;
+
+export type EntityKeyJsonHint<T extends Entity> = {
+  // | `${K}Ids` | `${K}Id`
+  [K in keyof Jsonable<T> as `${K}`]?: (Jsonable<T>[K] extends infer U extends Entity ? JsonHint<U> : {}) | boolean;
+};
+
+type CustomJsonKeyHint<T> = {
   [key: string]: (entity: T) => any;
 };
 
-export type NestedJsonHint<T extends Entity> = {
-  [K in keyof Jsonable<T>]?: (Jsonable<T>[K] extends infer U extends Entity ? JsonHint<U> : {}) | boolean;
-};
+/** We only accept object literals & arrays to `toJSON` to avoid a `JSON.stringify` oddity. */
+export type ToJsonHint<T extends Entity> = NestedJsonHint<T> | ReadonlyArray<keyof Jsonable<T> & string>;
 
 /** The keys in `T` that we can put into a JSON payload. */
 export type Jsonable<T extends Entity> = {
@@ -66,6 +73,7 @@ export async function toJSON<T extends Entity, const H extends JsonHint<T>>(
   entity: T,
   hint: H,
 ): Promise<JsonPayload<T, H>>;
+
 /**
  * Provides an API to put an entity, or list of entities, into a JSON payload.
  *
@@ -111,20 +119,27 @@ export async function toJSON<T extends Entity, const H extends JsonHint<T>>(
  * Statically types the return value of `toJSON` based on the given `hint`.
  */
 export type JsonPayload<T, H> = {
-  [K in keyof NormalizeHint<H>]: K extends keyof T
-    ? T[K] extends Reference<any, infer U, any>
-      ? JsonPayloadReference<U, NormalizeHint<H>[K]>
-      : T[K] extends Collection<any, infer U>
-        ? JsonPayloadCollection<U, NormalizeHint<H>[K]>
-        : T[K] extends AsyncProperty<any, infer U>
-          ? JsonPayloadProperty<U, NormalizeHint<H>[K]>
-          : T[K] extends ReactiveGetter<any, infer V>
-            ? V
-            : T[K]
-    : JsonPayloadCustom<NormalizeHint<H>[K]>;
+  [HK in keyof NormalizeHint<H> & string]: HK extends keyof T
+    ? JsonPayloadKey<T, H, HK, HK>
+    : HK extends `${infer TK extends string & keyof T}Id`
+      ? JsonPayloadKey<T, H, TK, HK>
+      : HK extends `${infer SK extends string}Ids` // bookIds -> books
+        ? `${SK}s` extends keyof T
+          ? JsonPayloadKey<T, H, `${SK}s`, HK>
+          : 3
+        : JsonPayloadCustom<NormalizeHint<H>[HK]>;
 };
 
-// type JsonPayloadAttempt<T, K> =
+type JsonPayloadKey<T, H, TK extends keyof T, HK extends keyof NormalizeHint<H>> =
+  T[TK] extends Reference<any, infer U, any>
+    ? JsonPayloadReference<U, NormalizeHint<H>[HK]>
+    : T[TK] extends Collection<any, infer U>
+      ? JsonPayloadCollection<U, NormalizeHint<H>[HK]>
+      : T[TK] extends AsyncProperty<any, infer U>
+        ? JsonPayloadProperty<U, NormalizeHint<H>[HK]>
+        : T[TK] extends ReactiveGetter<any, infer V>
+          ? V
+          : T[TK];
 
 // If the hint is empty, we just output the id as a string.
 type JsonPayloadReference<U, H> = IsEmpty<H> extends true ? string : JsonPayload<U, H>;

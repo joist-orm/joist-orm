@@ -1,4 +1,5 @@
 import { Entity, isEntity } from "./Entity";
+import { IdOf } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
 import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint } from "./reactiveHints";
@@ -21,15 +22,30 @@ import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
 export type JsonHint<T extends Entity> =
   | (keyof Jsonable<T> & string)
   | ReadonlyArray<keyof Jsonable<T> & string>
-  | (NestedJsonHint<T> | CustomJsonKeys<T>);
+  | NestedJsonHint<T>;
 
-type CustomJsonKeys<T> = {
+/** For object literal/nested hints, we allow mapping both entity keys 1:1 & custom keys via a lambdas. */
+export type NestedJsonHint<T extends Entity> = EntityKeyJsonHint<T> | CustomJsonKeyHint<T>;
+
+/** Foreach `Jsonable` key, we can provide a sub-hint, or just a boolean to include/exclude. */
+export type EntityKeyJsonHint<T extends Entity> = {
+  // The `as K` makes `bookIds` as a hint work...
+  [K in keyof Jsonable<T> as `${K}`]?: (Jsonable<T>[K] extends infer U extends Entity ? JsonHint<U> : {}) | boolean;
+};
+
+export type CustomJsonKeyHint<T> = {
   [key: string]: (entity: T) => any;
 };
 
-export type NestedJsonHint<T extends Entity> = {
-  [K in keyof Jsonable<T>]?: Jsonable<T>[K] extends infer U extends Entity ? JsonHint<U> : {};
-};
+/**
+ * Describes the JSON payload for `Entity.toJSON` to produce.
+ *
+ * - `["firstName", "lastName"]` will produce a JSON payload with just those fields
+ * - `{ author: { books: "title" } }` will produce a JSON payload with the author's books' titles
+ *
+ * We only accept object literals & arrays to `toJSON` to avoid a `JSON.stringify` oddity.
+ */
+export type ToJsonHint<T extends Entity> = NestedJsonHint<T> | ReadonlyArray<keyof Jsonable<T> & string>;
 
 /** The keys in `T` that we can put into a JSON payload. */
 export type Jsonable<T extends Entity> = {
@@ -65,6 +81,7 @@ export async function toJSON<T extends Entity, const H extends JsonHint<T>>(
   entity: T,
   hint: H,
 ): Promise<JsonPayload<T, H>>;
+
 /**
  * Provides an API to put an entity, or list of entities, into a JSON payload.
  *
@@ -110,29 +127,51 @@ export async function toJSON<T extends Entity, const H extends JsonHint<T>>(
  * Statically types the return value of `toJSON` based on the given `hint`.
  */
 export type JsonPayload<T, H> = {
-  [K in keyof NormalizeHint<H>]: K extends keyof T
-    ? T[K] extends Reference<any, infer U, any>
-      ? JsonPayloadReference<U, NormalizeHint<H>[K]>
-      : T[K] extends Collection<any, infer U>
-        ? JsonPayloadCollection<U, NormalizeHint<H>[K]>
-        : T[K] extends AsyncProperty<any, infer U>
-          ? JsonPayloadProperty<U, NormalizeHint<H>[K]>
-          : T[K] extends ReactiveGetter<any, infer V>
-            ? V
-            : T[K]
-    : JsonPayloadCustom<NormalizeHint<H>[K]>;
+  [HK in keyof NormalizeHint<H> & string]: HK extends keyof T
+    ? JsonPayloadKey<T, H, HK, HK>
+    : HK extends `${infer TK extends string & keyof T}Id`
+      ? JsonPayloadKey<T, H, TK, HK>
+      : HK extends `${infer SK extends string}Ids` // bookIds -> books
+        ? // Very naive singularization to see if the guessed bookIds -> books actually exists on T to map 1:1
+          `${SK}s` extends keyof T
+          ? JsonPayloadKey<T, H, `${SK}s`, HK>
+          : JsonPayloadCustom<NormalizeHint<H>[HK]>
+        : JsonPayloadCustom<NormalizeHint<H>[HK]>;
 };
+
+type JsonPayloadKey<T, H, TK extends keyof T, HK extends keyof NormalizeHint<H>> =
+  T[TK] extends Reference<any, infer U, any>
+    ? JsonPayloadReference<U, NormalizeHint<H>[HK]>
+    : T[TK] extends Collection<any, infer U>
+      ? JsonPayloadCollection<U, NormalizeHint<H>[HK]>
+      : T[TK] extends AsyncProperty<any, infer U>
+        ? JsonPayloadProperty<U, NormalizeHint<H>[HK]>
+        : T[TK] extends ReactiveGetter<any, infer V>
+          ? V
+          : T[TK];
 
 // If the hint is empty, we just output the id as a string.
 type JsonPayloadReference<U, H> = IsEmpty<H> extends true ? string : JsonPayload<U, H>;
 
-type JsonPayloadCollection<U, H> = IsEmpty<H> extends true ? string[] : JsonPayload<U, H>[];
+type JsonPayloadCollection<U extends Entity, H> =
+  // If this is `books: true`, use the id
+  H extends true
+    ? IdOf<U>[]
+    : // If this is `{}`, use the id
+      IsEmpty<H> extends true
+      ? IdOf<U>[]
+      : // Otherwise it's a nested hint
+        JsonPayload<U, H>[];
 
-type JsonPayloadProperty<U, H> = U extends Entity | undefined
-  ? JsonPayloadReference<U, H>
-  : U extends Entity[] | undefined
-    ? JsonPayloadCollection<U, H>
-    : U;
+type JsonPayloadProperty<P, H> =
+  // If an async property returns an entity, treat it like a reference
+  P extends Entity | undefined
+    ? JsonPayloadReference<P, H>
+    : // If an async property returns an entity[], treat it like a collection
+      P extends (infer U extends Entity)[] | undefined
+      ? JsonPayloadCollection<U, H>
+      : // Otherwise leave it as-is
+        P;
 
 type JsonPayloadCustom<H> = H extends (...args: any) => infer V ? UnwrapPromise<V> : H;
 
@@ -141,18 +180,26 @@ type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 /** Recursively copies the fields of `hint` from `entity` into the `payload`. */
 async function copyToPayload(payload: Record<string, {}>, entity: any, hint: object): Promise<void> {
   // Look at each key in the hint and determine
-  for (const [key, nestedHint] of Object.entries(hint)) {
+  for (const [payloadKey, nestedHint] of Object.entries(hint)) {
     const nextHint = normalizeHint(nestedHint);
-    // Look for custom props
-    if (!(key in entity)) {
-      if (typeof nestedHint !== "function") {
-        throw new Error(`Entity does not have a property ${key}`);
+    // Watch for `companyId`
+    let entityKey = payloadKey;
+    if (!(entityKey in entity)) {
+      const field = Object.values(getMetadata(entity).allFields).find((f) => f.fieldIdName === payloadKey);
+      if (field) {
+        entityKey = field.fieldName;
       }
-      payload[key] = await nestedHint(entity);
+    }
+    // Look for custom props
+    if (!(entityKey in entity)) {
+      if (typeof nestedHint !== "function") {
+        throw new Error(`Entity does not have a property ${payloadKey}`);
+      }
+      payload[payloadKey] = await nestedHint(entity);
     } else {
-      const value = entity[key];
+      const value = entity[entityKey];
       if (isPrimitive(value)) {
-        payload[key] = value;
+        payload[payloadKey] = value;
       } else if (
         value instanceof AbstractRelationImpl ||
         value instanceof ReactiveFieldImpl ||
@@ -160,7 +207,7 @@ async function copyToPayload(payload: Record<string, {}>, entity: any, hint: obj
         value instanceof ReactiveQueryFieldImpl ||
         value instanceof AsyncPropertyImpl
       ) {
-        await copyToPayloadValue(payload, key, value.get, nextHint);
+        await copyToPayloadValue(payload, payloadKey, value.get, nextHint);
       } else {
         throw new Error(`Unable to encode value ${value} to JSON`);
       }

@@ -26,11 +26,11 @@ import type {
   Lens,
   Loaded,
   LoadHint,
-  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -187,7 +187,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   toJSON(): object;
-  toJSON<const H extends NestedJsonHint<LargePublisher>>(hint: H): Promise<JsonPayload<LargePublisher, H>>;
+  toJSON<const H extends ToJsonHint<LargePublisher>>(hint: H): Promise<JsonPayload<LargePublisher, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }

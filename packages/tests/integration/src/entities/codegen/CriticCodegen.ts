@@ -31,12 +31,12 @@ import type {
   Loaded,
   LoadHint,
   ManyToOneReference,
-  NestedJsonHint,
   OneToOneReference,
   OptsOf,
   OrderBy,
   PartialOrNull,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -214,7 +214,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   toJSON(): object;
-  toJSON<const H extends NestedJsonHint<Critic>>(hint: H): Promise<JsonPayload<Critic, H>>;
+  toJSON<const H extends ToJsonHint<Critic>>(hint: H): Promise<JsonPayload<Critic, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }

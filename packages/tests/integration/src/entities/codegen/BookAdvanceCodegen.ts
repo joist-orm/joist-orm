@@ -27,11 +27,11 @@ import type {
   Loaded,
   LoadHint,
   ManyToOneReference,
-  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -212,7 +212,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   toJSON(): object;
-  toJSON<const H extends NestedJsonHint<BookAdvance>>(hint: H): Promise<JsonPayload<BookAdvance, H>>;
+  toJSON<const H extends ToJsonHint<BookAdvance>>(hint: H): Promise<JsonPayload<BookAdvance, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }

@@ -27,11 +27,11 @@ import type {
   Loaded,
   LoadHint,
   ManyToOneReference,
-  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -185,7 +185,7 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
   }
 
   toJSON(): object;
-  toJSON<const H extends NestedJsonHint<TaskItem>>(hint: H): Promise<JsonPayload<TaskItem, H>>;
+  toJSON<const H extends ToJsonHint<TaskItem>>(hint: H): Promise<JsonPayload<TaskItem, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }

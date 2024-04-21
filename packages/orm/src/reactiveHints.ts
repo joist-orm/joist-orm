@@ -307,8 +307,19 @@ export function convertToLoadHint<T extends Entity>(
   // Process the hints individually instead of just calling Object.fromEntries so that
   // we can handle inlined reactive hints that overlap.
   for (const [keyMaybeSuffix, subHint] of Object.entries(normalizeHint(hint))) {
-    const key = keyMaybeSuffix.replace(suffixRe, "");
-    const field = meta.allFields[key];
+    let key = keyMaybeSuffix.replace(suffixRe, "");
+    let field = meta.allFields[key];
+
+    // If `allowCustomKeys` is enabled, we're probably doing `toJSON`,
+    // so look for `companyId` & `companyIds` to turn into `company`
+    if (!field && allowCustomKeys) {
+      const realField = Object.values(meta.allFields).find((f) => f.fieldIdName === key);
+      if (realField) {
+        field = realField;
+        key = realField.fieldName;
+      }
+    }
+
     if (field) {
       switch (field.kind) {
         case "m2m":

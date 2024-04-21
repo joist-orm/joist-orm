@@ -1,3 +1,10 @@
+## [1.160.4](https://github.com/joist-orm/joist-orm/compare/v1.160.3...v1.160.4) (2024-04-21)
+
+
+### Bug Fixes
+
+* Support ids in toJSON ([#1052](https://github.com/joist-orm/joist-orm/issues/1052)) ([c17f72d](https://github.com/joist-orm/joist-orm/commit/c17f72dfec4208f674e97c68c028a0a0c16fbc28))
+
 ## [1.160.3](https://github.com/joist-orm/joist-orm/compare/v1.160.2...v1.160.3) (2024-04-20)
 
 

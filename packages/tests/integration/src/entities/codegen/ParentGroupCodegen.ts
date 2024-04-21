@@ -28,11 +28,11 @@ import type {
   Lens,
   Loaded,
   LoadHint,
-  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -190,7 +190,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   }
 
   toJSON(): object;
-  toJSON<const H extends NestedJsonHint<ParentGroup>>(hint: H): Promise<JsonPayload<ParentGroup, H>>;
+  toJSON<const H extends ToJsonHint<ParentGroup>>(hint: H): Promise<JsonPayload<ParentGroup, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }

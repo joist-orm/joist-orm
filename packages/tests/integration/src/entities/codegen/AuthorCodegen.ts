@@ -34,7 +34,6 @@ import type {
   Loaded,
   LoadHint,
   ManyToOneReference,
-  NestedJsonHint,
   OneToOneReference,
   OptsOf,
   OrderBy,
@@ -42,6 +41,7 @@ import type {
   ReactiveField,
   ReactiveReference,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -570,7 +570,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   toJSON(): object;
-  toJSON<const H extends NestedJsonHint<Author> | (keyof this)[]>(hint: H): Promise<JsonPayload<Author, H>>;
+  toJSON<const H extends ToJsonHint<Author>>(hint: H): Promise<JsonPayload<Author, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }

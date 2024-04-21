@@ -36,7 +36,14 @@ type CustomJsonKeyHint<T> = {
   [key: string]: (entity: T) => any;
 };
 
-/** We only accept object literals & arrays to `toJSON` to avoid a `JSON.stringify` oddity. */
+/**
+ * Describes the JSON payload for `Entity.toJSON` to produce.
+ *
+ * - `["firstName", "lastName"]` will produce a JSON payload with just those fields
+ * - `{ author: { books: "title" } }` will produce a JSON payload with the author's books' titles
+ *
+ * We only accept object literals & arrays to `toJSON` to avoid a `JSON.stringify` oddity.
+ */
 export type ToJsonHint<T extends Entity> = NestedJsonHint<T> | ReadonlyArray<keyof Jsonable<T> & string>;
 
 /** The keys in `T` that we can put into a JSON payload. */

@@ -36,13 +36,13 @@ import type {
   LoadHint,
   ManyToOneReference,
   MaybeAbstractEntityConstructor,
-  NestedJsonHint,
   OptsOf,
   OrderBy,
   PartialOrNull,
   PolymorphicReference,
   RelationsOf,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -291,7 +291,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   toJSON(): object;
-  toJSON<const H extends NestedJsonHint<User>>(hint: H): Promise<JsonPayload<User, H>>;
+  toJSON<const H extends ToJsonHint<User>>(hint: H): Promise<JsonPayload<User, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }

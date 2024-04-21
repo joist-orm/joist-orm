@@ -36,7 +36,6 @@ import {
   Loaded,
   ManyToOneReference,
   MaybeAbstractEntityConstructor,
-  NestedJsonHint,
   OneToOneReference,
   OptsOf,
   OrderBy,
@@ -48,6 +47,7 @@ import {
   RelationsOf,
   SSAssert,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
   Zod,
@@ -569,7 +569,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       }
 
       toJSON(): object;
-      toJSON<const H extends ${NestedJsonHint}<${entityName}>>(hint: H): Promise<${JsonPayload}<${entityName}, H>>;
+      toJSON<const H extends ${ToJsonHint}<${entityName}>>(hint: H): Promise<${JsonPayload}<${entityName}, H>>;
       toJSON(hint?: any): object {
         return !hint || typeof hint === "string" ? super.toJSON() : ${toJSON}(this, hint);
       }

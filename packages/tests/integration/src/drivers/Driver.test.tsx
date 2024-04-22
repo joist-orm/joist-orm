@@ -1,7 +1,7 @@
 import { Author, Book, newBook, newTag, Tag } from "@src/entities";
 import { insertAuthor, insertBook, insertBookToTag, insertTag, select } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
-import { getMetadata, setField } from "joist-orm";
+import { getMetadata, jan1DateTime, setField } from "joist-orm";
 
 // This will test whatever driver the test suite is currently being run against
 describe("Driver", () => {
@@ -31,7 +31,7 @@ describe("Driver", () => {
     // This is currently not passing in the main pg driver tests due to an op-lock error
     it.skip("can update", async () => {
       const jan1 = new Date(2000, 0, 1);
-      await insertAuthor({ first_name: "a1", updated_at: jan1 });
+      await insertAuthor({ first_name: "a1", updated_at: jan1DateTime });
 
       const em = newEntityManager();
       const author = new Author(em, { firstName: "a1" });

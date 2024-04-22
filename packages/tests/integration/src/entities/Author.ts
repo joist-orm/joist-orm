@@ -20,6 +20,7 @@ import {
   isDefined,
   withLoaded,
 } from "joist-orm";
+import { Temporal } from "temporal-polyfill";
 import { AuthorCodegen, Book, BookRange, BookReview, Comment, bookMeta, authorConfig as config } from "./entities";
 
 export class Author extends AuthorCodegen {
@@ -346,7 +347,7 @@ config.beforeFlush(async (author, ctx) => {
 config.beforeFlush(async (author) => {
   author.transientFields.beforeFlushRan = true;
   if (author.transientFields.setGraduatedInFlush) {
-    author.graduated = new Date();
+    author.graduated = Temporal.Now.plainDateISO();
   }
 });
 

@@ -1,4 +1,5 @@
-import { Field, getBaseMeta, PolymorphicField, SerdeField } from "./EntityMetadata";
+import { Temporal, toTemporalInstant } from "temporal-polyfill";
+import { Field, PolymorphicField, SerdeField, getBaseMeta } from "./EntityMetadata";
 import {
   EntityMetadata,
   getConstructorFromTaggedId,
@@ -91,7 +92,22 @@ export class PrimitiveSerde implements FieldSerde {
   ) {}
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
+    let value = maybeNullToUndefined(row[this.columnName]);
+    if (value instanceof Date) {
+      const zonedDateTime = toTemporalInstant.call(value).toZonedDateTimeISO("UTC");
+      switch (this.dbType) {
+        case "timestamp with time zone":
+          value = zonedDateTime;
+          break;
+        case "timestamp without time zone":
+          value = zonedDateTime.toPlainDateTime();
+          break;
+        case "date":
+          value = zonedDateTime.toPlainDate();
+          break;
+      }
+    }
+    data[this.fieldName] = value;
   }
 
   dbValue(data: any) {
@@ -99,14 +115,33 @@ export class PrimitiveSerde implements FieldSerde {
   }
 
   mapToDb(value: any) {
-    return value;
+    // I'm not sure how dates are sneaking in here, but it seems like mapToDb might be getting called on its own result?
+    if (value instanceof Date) return value;
+    switch (this.dbType) {
+      case "timestamp with time zone":
+        return new Date((value as Temporal.ZonedDateTime).epochMilliseconds);
+      case "timestamp without time zone":
+        return new Date((value as Temporal.PlainDateTime).toZonedDateTime("UTC").epochMilliseconds);
+      case "date":
+        return new Date((value as Temporal.PlainDate).toZonedDateTime("UTC").epochMilliseconds);
+      default:
+        return value;
+    }
   }
 
   mapFromJsonAgg(value: any): any {
     if (value === null) return value;
     // Super-hacky handling of de-JSON-ifying dates
-    if (this.dbType.includes("time") || this.dbType.includes("date")) return new Date(value);
-    return value;
+    switch (this.dbType) {
+      case "timestamp with time zone":
+        return toTemporalInstant.call(new Date(value)).toZonedDateTimeISO("UTC");
+      case "timestamp without time zone":
+        return toTemporalInstant.call(new Date(value)).toZonedDateTimeISO("UTC").toPlainDateTime();
+      case "date":
+        return toTemporalInstant.call(new Date(value)).toZonedDateTimeISO("UTC").toPlainDate();
+      default:
+        return value;
+    }
   }
 }
 

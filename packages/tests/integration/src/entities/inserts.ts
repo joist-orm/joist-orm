@@ -1,4 +1,5 @@
 import { testDriver } from "@src/testEm";
+import { Temporal } from "temporal-polyfill";
 
 // Note this test infrastructure exist solely to test Joist itself, i.e. to use
 // the low-level driver infra to setup/assert against data. Downstream applications
@@ -38,14 +39,14 @@ export function insertAuthor(row: {
   graduated?: any;
   number_of_atoms?: string;
   number_of_public_reviews?: number;
-  updated_at?: any;
-  deleted_at?: any;
+  updated_at?: Temporal.ZonedDateTime;
+  deleted_at?: Temporal.ZonedDateTime;
 }) {
   return testDriver.insert("authors", {
     initials: row.first_name[0],
     number_of_books: 0,
     tags_of_all_books: "",
-    ...row,
+    ...mapTemporals(row, "updated_at", "deleted_at"),
   });
 }
 
@@ -68,10 +69,10 @@ export function insertBook(row: {
   id?: number;
   title: string;
   author_id: number | null;
-  deleted_at?: Date;
+  deleted_at?: Temporal.ZonedDateTime;
   order?: number;
 }) {
-  return testDriver.insert("books", { notes: "notes", ...row });
+  return testDriver.insert("books", { notes: "notes", ...mapTemporals(row, "deleted_at") });
 }
 
 export function insertComment(row: {
@@ -132,11 +133,11 @@ export async function insertPublisher(row: {
   group_id?: number;
   city?: string;
   shared_column?: string;
-  updated_at?: Date;
-  deleted_at?: Date;
+  updated_at?: Temporal.ZonedDateTime;
+  deleted_at?: Temporal.ZonedDateTime;
 }) {
   const { shared_column, ...others } = row;
-  await testDriver.insert("publishers", others);
+  await testDriver.insert("publishers", mapTemporals(others, "updated_at", "deleted_at"));
   await testDriver.insert("small_publishers", {
     id: row.id ?? 1,
     city: row.city ?? "city",
@@ -155,10 +156,10 @@ export async function insertLargePublisher(row: {
   group_id?: number;
   shared_column?: string;
   country?: string;
-  updated_at?: Date;
+  updated_at?: Temporal.ZonedDateTime;
 }) {
   const { country = "country", shared_column, ...others } = row;
-  await testDriver.insert("publishers", others);
+  await testDriver.insert("publishers", mapTemporals(others, "updated_at"));
   await testDriver.insert("large_publishers", { id: row.id ?? 1, country, shared_column });
 }
 
@@ -229,4 +230,26 @@ export function countOfAuthors() {
 
 export function countOfBookReviews() {
   return testDriver.count("book_reviews");
+}
+
+type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyof T]>;
+function mapTemporals<
+  T extends Record<string, any>,
+  K extends keyof SubType<Required<T>, Temporal.PlainDateTime | Temporal.ZonedDateTime | Temporal.PlainDate>,
+>(row: T, ...keys: K[]) {
+  const mapped = keys
+    .filter((key) => key in row)
+    .map((key) => {
+      let value: any = row[key];
+      if (value instanceof Temporal.ZonedDateTime) {
+        return [key, new Date(value.epochMilliseconds)];
+      } else if (value instanceof Temporal.PlainDateTime) {
+        return [key, new Date(value.toZonedDateTime("UTC").epochMilliseconds)];
+      } else if (value instanceof Temporal.PlainDate) {
+        return [key, new Date(value.toZonedDateTime("UTC").epochMilliseconds)];
+      } else {
+        return [key, value];
+      }
+    });
+  return { ...row, ...Object.fromEntries(mapped) };
 }

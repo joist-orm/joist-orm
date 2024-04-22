@@ -25,7 +25,8 @@
     "knex": "^3.1.0",
     "object-hash": "^3.0.0",
     "pg": "^8.11.5",
-    "pg-types": "^4.0.2"
+    "pg-types": "^4.0.2",
+    "temporal-polyfill": "^0.2.4"
   },
   "devDependencies": {
     "@swc/core": "^1.4.13",

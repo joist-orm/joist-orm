@@ -44,6 +44,7 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
+import { Temporal } from "temporal-polyfill";
 import {
   Author,
   Book,
@@ -73,8 +74,8 @@ export interface CommentFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   parentTags: { kind: "primitive"; type: string; unique: false; nullable: never; derived: true };
   text: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   user: { kind: "m2o"; type: User; nullable: undefined; derived: false };
   parent: { kind: "poly"; type: CommentParent; nullable: never };
 }
@@ -96,8 +97,8 @@ export interface CommentFilter {
   id?: ValueFilter<CommentId, never> | null;
   parentTags?: ValueFilter<string, never>;
   text?: ValueFilter<string, null>;
-  createdAt?: ValueFilter<Date, never>;
-  updatedAt?: ValueFilter<Date, never>;
+  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   user?: EntityFilter<User, UserId, FilterOf<User>, null>;
   likedByUsers?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   parent?: EntityFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
@@ -107,8 +108,8 @@ export interface CommentGraphQLFilter {
   id?: ValueGraphQLFilter<CommentId>;
   parentTags?: ValueGraphQLFilter<string>;
   text?: ValueGraphQLFilter<string>;
-  createdAt?: ValueGraphQLFilter<Date>;
-  updatedAt?: ValueGraphQLFilter<Date>;
+  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   user?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null>;
   likedByUsers?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
@@ -175,11 +176,11 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
     setField(this, "text", cleanStringValue(text));
   }
 
-  get createdAt(): Date {
+  get createdAt(): Temporal.ZonedDateTime {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Date {
+  get updatedAt(): Temporal.ZonedDateTime {
     return getField(this, "updatedAt");
   }
 

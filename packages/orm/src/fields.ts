@@ -1,3 +1,4 @@
+import { Temporal } from "temporal-polyfill";
 import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
@@ -119,5 +120,9 @@ function equalArrays(a: any[], b: any[]): boolean {
 }
 
 function equal(a: any, b: any): boolean {
-  return a === b || (a instanceof Date && b instanceof Date && a.getTime() == b.getTime());
+  if (a === b) return true;
+  if (a instanceof Temporal.ZonedDateTime && b instanceof Temporal.ZonedDateTime) return a.equals(b);
+  if (a instanceof Temporal.PlainDateTime && b instanceof Temporal.PlainDateTime) return a.equals(b);
+  if (a instanceof Temporal.PlainDate && b instanceof Temporal.PlainDate) return a.equals(b);
+  return false;
 }

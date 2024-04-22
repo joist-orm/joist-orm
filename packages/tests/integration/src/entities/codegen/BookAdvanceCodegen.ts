@@ -35,6 +35,7 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
+import { Temporal } from "temporal-polyfill";
 import {
   AdvanceStatus,
   AdvanceStatusDetails,
@@ -54,8 +55,8 @@ export type BookAdvanceId = Flavor<string, BookAdvance>;
 
 export interface BookAdvanceFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   status: { kind: "enum"; type: AdvanceStatus; nullable: never };
   book: { kind: "m2o"; type: Book; nullable: never; derived: false };
   publisher: { kind: "m2o"; type: Publisher; nullable: never; derived: false };
@@ -74,8 +75,8 @@ export interface BookAdvanceIdsOpts {
 
 export interface BookAdvanceFilter {
   id?: ValueFilter<BookAdvanceId, never> | null;
-  createdAt?: ValueFilter<Date, never>;
-  updatedAt?: ValueFilter<Date, never>;
+  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   status?: ValueFilter<AdvanceStatus, never>;
   book?: EntityFilter<Book, BookId, FilterOf<Book>, never>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, never>;
@@ -83,8 +84,8 @@ export interface BookAdvanceFilter {
 
 export interface BookAdvanceGraphQLFilter {
   id?: ValueGraphQLFilter<BookAdvanceId>;
-  createdAt?: ValueGraphQLFilter<Date>;
-  updatedAt?: ValueGraphQLFilter<Date>;
+  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   status?: ValueGraphQLFilter<AdvanceStatus>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, never>;
@@ -142,11 +143,11 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
     return getField(this, "id");
   }
 
-  get createdAt(): Date {
+  get createdAt(): Temporal.ZonedDateTime {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Date {
+  get updatedAt(): Temporal.ZonedDateTime {
     return getField(this, "updatedAt");
   }
 

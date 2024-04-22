@@ -40,6 +40,7 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
+import { Temporal } from "temporal-polyfill";
 import {
   BookReview,
   bookReviewMeta,
@@ -69,8 +70,8 @@ export type CriticId = Flavor<string, Critic>;
 export interface CriticFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   favoriteLargePublisher: { kind: "m2o"; type: LargePublisher; nullable: undefined; derived: false };
   group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
 }
@@ -93,8 +94,8 @@ export interface CriticIdsOpts {
 export interface CriticFilter {
   id?: ValueFilter<CriticId, never> | null;
   name?: ValueFilter<string, never>;
-  createdAt?: ValueFilter<Date, never>;
-  updatedAt?: ValueFilter<Date, never>;
+  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   favoriteLargePublisher?: EntityFilter<LargePublisher, LargePublisherId, FilterOf<LargePublisher>, null>;
   group?: EntityFilter<PublisherGroup, PublisherGroupId, FilterOf<PublisherGroup>, null>;
   criticColumn?: EntityFilter<CriticColumn, CriticColumnId, FilterOf<CriticColumn>, null | undefined>;
@@ -104,8 +105,8 @@ export interface CriticFilter {
 export interface CriticGraphQLFilter {
   id?: ValueGraphQLFilter<CriticId>;
   name?: ValueGraphQLFilter<string>;
-  createdAt?: ValueGraphQLFilter<Date>;
-  updatedAt?: ValueGraphQLFilter<Date>;
+  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   favoriteLargePublisher?: EntityGraphQLFilter<LargePublisher, LargePublisherId, GraphQLFilterOf<LargePublisher>, null>;
   group?: EntityGraphQLFilter<PublisherGroup, PublisherGroupId, GraphQLFilterOf<PublisherGroup>, null>;
   criticColumn?: EntityGraphQLFilter<CriticColumn, CriticColumnId, GraphQLFilterOf<CriticColumn>, null | undefined>;
@@ -170,11 +171,11 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
     setField(this, "name", cleanStringValue(name));
   }
 
-  get createdAt(): Date {
+  get createdAt(): Temporal.ZonedDateTime {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Date {
+  get updatedAt(): Temporal.ZonedDateTime {
     return getField(this, "updatedAt");
   }
 

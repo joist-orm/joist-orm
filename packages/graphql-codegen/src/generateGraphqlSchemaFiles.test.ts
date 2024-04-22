@@ -1,4 +1,5 @@
 import { EntityDbMetadata } from "joist-codegen";
+import { code } from "ts-poet";
 import { generateGraphqlSchemaFiles } from "./generateGraphqlSchemaFiles";
 import { newEntityMetadata, newEnumField, newFs, newPrimitiveField } from "./testUtils";
 
@@ -253,9 +254,9 @@ describe("generateGraphqlSchemaFiles", () => {
           // With a regular field
           newPrimitiveField("firstName"),
           // And a timestamp field  with the `_at` convention
-          newPrimitiveField("createdAt", { fieldType: "Date" }),
+          newPrimitiveField("createdAt", { fieldType: code`Temporal.ZonedDateTime` }),
           // And also a date field with the `_date` convention
-          newPrimitiveField("startDate", { fieldType: "Date" }),
+          newPrimitiveField("startDate", { fieldType: code`Temporal.PlainDate` }),
         ],
       }),
     ];

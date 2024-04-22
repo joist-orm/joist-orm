@@ -37,6 +37,7 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
+import { Temporal } from "temporal-polyfill";
 import { Author, Book, Comment, commentMeta, EntityManager, newComment } from "../entities";
 import type { Entity } from "../entities";
 
@@ -53,8 +54,8 @@ export function isCommentParent(maybeEntity: unknown): maybeEntity is CommentPar
 export interface CommentFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   text: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   parent: { kind: "poly"; type: CommentParent; nullable: never };
 }
 
@@ -70,16 +71,16 @@ export interface CommentIdsOpts {
 export interface CommentFilter {
   id?: ValueFilter<CommentId, never> | null;
   text?: ValueFilter<string, never>;
-  createdAt?: ValueFilter<Date, never>;
-  updatedAt?: ValueFilter<Date, never>;
+  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   parent?: EntityFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
 }
 
 export interface CommentGraphQLFilter {
   id?: ValueGraphQLFilter<CommentId>;
   text?: ValueGraphQLFilter<string>;
-  createdAt?: ValueGraphQLFilter<Date>;
-  updatedAt?: ValueGraphQLFilter<Date>;
+  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
 }
 
@@ -140,11 +141,11 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
     setField(this, "text", cleanStringValue(text));
   }
 
-  get createdAt(): Date {
+  get createdAt(): Temporal.ZonedDateTime {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Date {
+  get updatedAt(): Temporal.ZonedDateTime {
     return getField(this, "updatedAt");
   }
 

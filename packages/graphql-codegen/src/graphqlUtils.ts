@@ -200,15 +200,10 @@ export function mapTypescriptTypeToGraphQLType(
       return "Boolean";
     case "number":
       return "Int";
-    case "Date":
-      // Joist doesn't yet have different `date` vs. `datetime` types (which is surprising...),
-      // but we do in GraphQL, so for now lean on the `..._at` suffix convention to know "DateTime".
-      if (fieldName.endsWith("At")) {
-        return "DateTime";
-      } else {
-        return "Date";
-      }
     default:
+      if (type instanceof Code && type.toString().startsWith("Temporal")) {
+        return type.toString().startsWith("Temporal.PlainDate") ? "Date" : "DateTime";
+      }
       // If this is a fancy import like a superstruct/something, we can't guess what it will be in GraphQL
       if (type instanceof Import || type instanceof Code) {
         return undefined;

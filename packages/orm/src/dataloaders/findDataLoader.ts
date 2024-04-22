@@ -1,5 +1,6 @@
 import DataLoader from "dataloader";
 import hash from "object-hash";
+import { Temporal } from "temporal-polyfill";
 import { isAlias } from "../Aliases";
 import { Entity, isEntity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
@@ -147,9 +148,14 @@ function replacer(v: any) {
   if (isEntity(v)) {
     // Use toString() instead of id so that new entities are kept separate, i.e. `Author#2`
     return v.toString();
-  }
-  // Strip out `{ as: ...alias proxy... }` from the `em.find` inline conditions
-  if (isAlias(v)) {
+  } else if (v instanceof Temporal.ZonedDateTime) {
+    return new Date(v.epochMilliseconds);
+  } else if (v instanceof Temporal.PlainDateTime) {
+    return new Date(v.toZonedDateTime("UTC").epochMilliseconds);
+  } else if (v instanceof Temporal.PlainDate) {
+    return new Date(v.toZonedDateTime("UTC").epochMilliseconds);
+    // Strip out `{ as: ...alias proxy... }` from the `em.find` inline conditions
+  } else if (isAlias(v)) {
     return "alias";
   }
   return v;

@@ -1,4 +1,5 @@
 import { isPlainObject } from "joist-utils";
+import { Temporal } from "temporal-polyfill";
 import { Entity, isEntity } from "./Entity";
 import {
   ActualFactoryOpts,
@@ -27,7 +28,6 @@ import { hasDefaultValue } from "./defaults";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
 import { assertNever } from "./utils";
-
 /**
  * DeepPartial-esque type specific to our `newTestInstance` factory.
  *
@@ -45,9 +45,12 @@ export type FactoryOpts<T extends Entity> = DeepPartialOpts<T> & {
 };
 
 // Chosen b/c it's a monday https://www.timeanddate.com/calendar/monthly.html?year=2018&month=1&country=1
-export const jan1 = new Date(2018, 0, 1);
-export const jan2 = new Date(2018, 0, 2);
-export const jan3 = new Date(2018, 0, 3);
+export const jan1 = Temporal.PlainDate.from("2018-01-01");
+export const jan2 = Temporal.PlainDate.from("2018-01-02");
+export const jan3 = Temporal.PlainDate.from("2018-01-03");
+export const jan1DateTime = jan1.toZonedDateTime("UTC");
+export const jan2DateTime = jan2.toZonedDateTime("UTC");
+export const jan3dateTime = jan3.toZonedDateTime("UTC");
 export let testDate = jan1;
 
 /**

@@ -1,3 +1,4 @@
+import { Temporal } from "temporal-polyfill";
 import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityConstructor, MaybeAbstractEntityConstructor, OptsOf } from "./EntityManager";
@@ -31,8 +32,8 @@ export { DeepPartialOrNull } from "./createOrUpdatePartial";
 export * from "./drivers";
 export { getField, isChangeableField, isFieldSet, setField } from "./fields";
 export * from "./getProperties";
-export * from "./keys";
 export * from "./json";
+export * from "./keys";
 export { kq, kqDot, kqStar } from "./keywords";
 export {
   DeepNew,
@@ -160,7 +161,7 @@ export function setOpts<T extends Entity>(
               if (v.op === "delete") {
                 // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
                 if (maybeSoftDelete) {
-                  v.set({ [maybeSoftDelete]: new Date() });
+                  v.set({ [maybeSoftDelete]: Temporal.Now.zonedDateTimeISO() });
                 } else {
                   entity.em.delete(v);
                 }

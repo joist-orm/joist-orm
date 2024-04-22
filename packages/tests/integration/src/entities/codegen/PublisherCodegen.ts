@@ -42,6 +42,7 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
+import { Temporal } from "temporal-polyfill";
 import {
   Author,
   authorMeta,
@@ -91,9 +92,9 @@ export interface PublisherFields {
   longitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   hugeNumber: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
-  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  deletedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   size: { kind: "enum"; type: PublisherSize; nullable: undefined };
   type: { kind: "enum"; type: PublisherType; nullable: never };
   group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
@@ -104,7 +105,7 @@ export interface PublisherOpts {
   latitude?: number | null;
   longitude?: number | null;
   hugeNumber?: number | null;
-  deletedAt?: Date | null;
+  deletedAt?: Temporal.ZonedDateTime | null;
   size?: PublisherSize | null;
   type?: PublisherType;
   group?: PublisherGroup | PublisherGroupId | null;
@@ -133,9 +134,9 @@ export interface PublisherFilter {
   longitude?: ValueFilter<number, null>;
   hugeNumber?: ValueFilter<number, null>;
   numberOfBookReviews?: ValueFilter<number, never>;
-  deletedAt?: ValueFilter<Date, null>;
-  createdAt?: ValueFilter<Date, never>;
-  updatedAt?: ValueFilter<Date, never>;
+  deletedAt?: ValueFilter<Temporal.ZonedDateTime, null>;
+  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   size?: ValueFilter<PublisherSize, null>;
   type?: ValueFilter<PublisherType, never>;
   group?: EntityFilter<PublisherGroup, PublisherGroupId, FilterOf<PublisherGroup>, null>;
@@ -154,9 +155,9 @@ export interface PublisherGraphQLFilter {
   longitude?: ValueGraphQLFilter<number>;
   hugeNumber?: ValueGraphQLFilter<number>;
   numberOfBookReviews?: ValueGraphQLFilter<number>;
-  deletedAt?: ValueGraphQLFilter<Date>;
-  createdAt?: ValueGraphQLFilter<Date>;
-  updatedAt?: ValueGraphQLFilter<Date>;
+  deletedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   size?: ValueGraphQLFilter<PublisherSize>;
   type?: ValueGraphQLFilter<PublisherType>;
   group?: EntityGraphQLFilter<PublisherGroup, PublisherGroupId, GraphQLFilterOf<PublisherGroup>, null>;
@@ -266,19 +267,19 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   abstract readonly numberOfBookReviews: ReactiveField<Publisher, number>;
 
-  get deletedAt(): Date | undefined {
+  get deletedAt(): Temporal.ZonedDateTime | undefined {
     return getField(this, "deletedAt");
   }
 
-  set deletedAt(deletedAt: Date | undefined) {
+  set deletedAt(deletedAt: Temporal.ZonedDateTime | undefined) {
     setField(this, "deletedAt", deletedAt);
   }
 
-  get createdAt(): Date {
+  get createdAt(): Temporal.ZonedDateTime {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Date {
+  get updatedAt(): Temporal.ZonedDateTime {
     return getField(this, "updatedAt");
   }
 

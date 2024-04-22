@@ -47,6 +47,7 @@ import type {
 import type { Context } from "src/context";
 import { Address, address, AddressSchema, Quotes, quotes } from "src/entities/types";
 import { assert } from "superstruct";
+import { Temporal } from "temporal-polyfill";
 import { z } from "zod";
 import {
   Author,
@@ -101,7 +102,7 @@ export interface AuthorFields {
   bookComments: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   isPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
   age: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
-  graduated: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
+  graduated: { kind: "primitive"; type: Temporal.PlainDate; unique: false; nullable: undefined; derived: false };
   nickNames: { kind: "primitive"; type: string[]; unique: false; nullable: undefined; derived: false };
   nickNamesUpper: { kind: "primitive"; type: string[]; unique: false; nullable: undefined; derived: true };
   wasEverPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
@@ -115,13 +116,13 @@ export interface AuthorFields {
   };
   quotes: { kind: "primitive"; type: Quotes; unique: false; nullable: undefined; derived: false };
   numberOfAtoms: { kind: "primitive"; type: bigint; unique: false; nullable: undefined; derived: false };
-  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
+  deletedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: undefined; derived: false };
   numberOfPublicReviews: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: true };
   numberOfPublicReviews2: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: true };
   tagsOfAllBooks: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   search: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   rangeOfBooks: { kind: "enum"; type: BookRange; nullable: undefined };
   favoriteColors: { kind: "enum"; type: Color[]; nullable: never };
   favoriteShape: { kind: "enum"; type: FavoriteShape; nullable: undefined; native: true };
@@ -137,14 +138,14 @@ export interface AuthorOpts {
   ssn?: string | null;
   isPopular?: boolean | null;
   age?: number | null;
-  graduated?: Date | null;
+  graduated?: Temporal.PlainDate | null;
   nickNames?: string[] | null;
   wasEverPopular?: boolean | null;
   address?: Address | null;
   businessAddress?: z.input<typeof AddressSchema> | null;
   quotes?: Quotes | null;
   numberOfAtoms?: bigint | null;
-  deletedAt?: Date | null;
+  deletedAt?: Temporal.ZonedDateTime | null;
   rangeOfBooks?: BookRange | null;
   favoriteColors?: Color[];
   favoriteShape?: FavoriteShape | null;
@@ -185,7 +186,7 @@ export interface AuthorFilter {
   bookComments?: ValueFilter<string, null>;
   isPopular?: BooleanFilter<null>;
   age?: ValueFilter<number, null>;
-  graduated?: ValueFilter<Date, null>;
+  graduated?: ValueFilter<Temporal.PlainDate, null>;
   nickNames?: ValueFilter<string[], null>;
   nickNamesUpper?: ValueFilter<string[], null>;
   wasEverPopular?: BooleanFilter<null>;
@@ -193,13 +194,13 @@ export interface AuthorFilter {
   businessAddress?: ValueFilter<z.input<typeof AddressSchema>, null>;
   quotes?: ValueFilter<Quotes, null>;
   numberOfAtoms?: ValueFilter<bigint, null>;
-  deletedAt?: ValueFilter<Date, null>;
+  deletedAt?: ValueFilter<Temporal.ZonedDateTime, null>;
   numberOfPublicReviews?: ValueFilter<number, null>;
   numberOfPublicReviews2?: ValueFilter<number, null>;
   tagsOfAllBooks?: ValueFilter<string, null>;
   search?: ValueFilter<string, null>;
-  createdAt?: ValueFilter<Date, never>;
-  updatedAt?: ValueFilter<Date, never>;
+  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   rangeOfBooks?: ValueFilter<BookRange, null>;
   favoriteColors?: ValueFilter<Color[], null>;
   favoriteShape?: ValueFilter<FavoriteShape, null>;
@@ -227,7 +228,7 @@ export interface AuthorGraphQLFilter {
   bookComments?: ValueGraphQLFilter<string>;
   isPopular?: BooleanGraphQLFilter;
   age?: ValueGraphQLFilter<number>;
-  graduated?: ValueGraphQLFilter<Date>;
+  graduated?: ValueGraphQLFilter<Temporal.PlainDate>;
   nickNames?: ValueGraphQLFilter<string[]>;
   nickNamesUpper?: ValueGraphQLFilter<string[]>;
   wasEverPopular?: BooleanGraphQLFilter;
@@ -235,13 +236,13 @@ export interface AuthorGraphQLFilter {
   businessAddress?: ValueGraphQLFilter<z.input<typeof AddressSchema>>;
   quotes?: ValueGraphQLFilter<Quotes>;
   numberOfAtoms?: ValueGraphQLFilter<bigint>;
-  deletedAt?: ValueGraphQLFilter<Date>;
+  deletedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   numberOfPublicReviews?: ValueGraphQLFilter<number>;
   numberOfPublicReviews2?: ValueGraphQLFilter<number>;
   tagsOfAllBooks?: ValueGraphQLFilter<string>;
   search?: ValueGraphQLFilter<string>;
-  createdAt?: ValueGraphQLFilter<Date>;
-  updatedAt?: ValueGraphQLFilter<Date>;
+  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   rangeOfBooks?: ValueGraphQLFilter<BookRange>;
   favoriteColors?: ValueGraphQLFilter<Color[]>;
   favoriteShape?: ValueGraphQLFilter<FavoriteShape>;
@@ -384,11 +385,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     setField(this, "age", age);
   }
 
-  get graduated(): Date | undefined {
+  get graduated(): Temporal.PlainDate | undefined {
     return getField(this, "graduated");
   }
 
-  set graduated(graduated: Date | undefined) {
+  set graduated(graduated: Temporal.PlainDate | undefined) {
     setField(this, "graduated", graduated);
   }
 
@@ -452,11 +453,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     setField(this, "numberOfAtoms", numberOfAtoms);
   }
 
-  get deletedAt(): Date | undefined {
+  get deletedAt(): Temporal.ZonedDateTime | undefined {
     return getField(this, "deletedAt");
   }
 
-  set deletedAt(deletedAt: Date | undefined) {
+  set deletedAt(deletedAt: Temporal.ZonedDateTime | undefined) {
     setField(this, "deletedAt", deletedAt);
   }
 
@@ -468,11 +469,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   abstract readonly search: ReactiveField<Author, string | undefined>;
 
-  get createdAt(): Date {
+  get createdAt(): Temporal.ZonedDateTime {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Date {
+  get updatedAt(): Temporal.ZonedDateTime {
     return getField(this, "updatedAt");
   }
 

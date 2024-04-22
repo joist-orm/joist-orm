@@ -1,4 +1,5 @@
 import { Knex } from "knex";
+import { Temporal } from "temporal-polyfill";
 import { buildValuesCte } from "../dataloaders/findDataLoader";
 import {
   afterTransaction,
@@ -200,7 +201,7 @@ function batchInsert(knex: Knex, op: InsertOp): Promise<unknown> {
     INSERT INTO "${tableName}" (${columns.map((c) => `"${c.columnName}"`).join(", ")})
     VALUES ${rows.map(() => `(${columns.map(() => `?`).join(", ")})`).join(",")}
   `);
-  const bindings = rows.flat();
+  const bindings = rows.flat().map(maybeConvertTemporalToDate);
   return knex.raw(sql, bindings);
 }
 
@@ -226,7 +227,7 @@ async function batchUpdate(knex: Knex, op: UpdateOp): Promise<void> {
     RETURNING ${kq(tableName)}.id
   `;
 
-  const bindings = rows.flat();
+  const bindings = rows.flat().map(maybeConvertTemporalToDate);
   const result = await knex.raw(cleanSql(sql), bindings);
 
   if (result.rows.length !== rows.length) {
@@ -239,4 +240,16 @@ async function batchUpdate(knex: Knex, op: UpdateOp): Promise<void> {
 async function batchDelete(knex: Knex, op: DeleteOp): Promise<void> {
   const { tableName, ids } = op;
   await knex(tableName).del().whereIn("id", ids);
+}
+
+function maybeConvertTemporalToDate(value: any): any {
+  if (value instanceof Temporal.ZonedDateTime) {
+    return new Date(value.epochMilliseconds);
+  } else if (value instanceof Temporal.PlainDateTime) {
+    return new Date(value.toZonedDateTime("UTC").epochMilliseconds);
+  } else if (value instanceof Temporal.PlainDate) {
+    return new Date(value.toZonedDateTime("UTC").epochMilliseconds);
+  } else {
+    return value;
+  }
 }

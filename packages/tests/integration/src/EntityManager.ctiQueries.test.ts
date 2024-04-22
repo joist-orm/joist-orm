@@ -2,6 +2,7 @@ import { LargePublisher, newSmallPublisher, Publisher, SmallPublisher } from "@s
 import { newEntityManager } from "@src/testEm";
 import { alias } from "joist-orm";
 import { insertPublisher } from "src/entities/inserts";
+import { Temporal } from "temporal-polyfill";
 
 describe("EntityManager.ctiQueries", () => {
   it("finds against child with simple parent filter", async () => {
@@ -65,14 +66,14 @@ describe("EntityManager.ctiQueries", () => {
   });
 
   it("finds filters out soft-deleted entities if querying base table", async () => {
-    await insertPublisher({ id: 1, name: "sp1", deleted_at: new Date() });
+    await insertPublisher({ id: 1, name: "sp1", deleted_at: Temporal.Now.zonedDateTimeISO() });
     const em = newEntityManager();
     const sps = await em.find(Publisher, {});
     expect(sps).toMatchEntity([]);
   });
 
   it.skip("finds filters out soft-deleted entities if querying child table", async () => {
-    await insertPublisher({ id: 1, name: "sp1", deleted_at: new Date() });
+    await insertPublisher({ id: 1, name: "sp1", deleted_at: Temporal.Now.zonedDateTimeISO() });
     const em = newEntityManager();
     const sps = await em.find(SmallPublisher, {});
     expect(sps).toMatchEntity([]);

@@ -11080,6 +11080,7 @@ __metadata:
     prettier: "npm:^3.2.5"
     prettier-plugin-organize-imports: "npm:^3.2.4"
     semver: "npm:^7.6.0"
+    temporal-polyfill: "npm:^0.2.4"
     ts-node-dev: "npm:^2.0.0"
     ts-poet: "npm:^6.8.1"
     tsconfig-paths: "npm:^4.2.0"
@@ -11175,6 +11176,7 @@ __metadata:
     pg-types: "npm:^4.0.2"
     prettier: "npm:^3.2.5"
     prettier-plugin-organize-imports: "npm:^3.2.4"
+    temporal-polyfill: "npm:^0.2.4"
     ts-node-dev: "npm:^2.0.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:^5.4.5"
@@ -17584,6 +17586,22 @@ __metadata:
   dependencies:
     rimraf: "npm:~2.6.2"
   checksum: 10/0a7f76b49637415bc391c3f6e69377cc4c38afac95132b4158fa711e77b70b082fe56fd886f9d11ffab9d148df181a105a93c8b618fb72266eeaa5e5ddbfe37f
+  languageName: node
+  linkType: hard
+
+"temporal-polyfill@npm:^0.2.4":
+  version: 0.2.4
+  resolution: "temporal-polyfill@npm:0.2.4"
+  dependencies:
+    temporal-spec: "npm:^0.2.4"
+  checksum: 10/8c4b9b93d7b6e628ffa8143e70ab27c279195e862e52f7350adcc30e09947e6a0495748b3ecd5c2474914396a5c436957132245b24a7b7cac7951267baea4638
+  languageName: node
+  linkType: hard
+
+"temporal-spec@npm:^0.2.4":
+  version: 0.2.4
+  resolution: "temporal-spec@npm:0.2.4"
+  checksum: 10/45a68e4f2324752e927976c624699c5cfcbe15d6e9c9558faa5811cc58ea1fb9cef06ec5e1617e40131b744ca16a0011309c877c242b24009562375b407f535b
   languageName: node
   linkType: hard
 

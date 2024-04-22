@@ -10,6 +10,7 @@ import {
   update,
 } from "@src/entities/inserts";
 import { knex, newEntityManager } from "@src/testEm";
+import { Temporal } from "temporal-polyfill";
 import { Author, Book, BookRange, BookReview, Tag, newAuthor, newBook, newBookReview, newComment } from "../entities";
 
 describe("ReactiveField", () => {
@@ -81,7 +82,7 @@ describe("ReactiveField", () => {
   it("can em.recalc to update a stale value", async () => {
     const em = newEntityManager();
     // Given an author with a book that has a review that should be public
-    const a1 = new Author(em, { firstName: "a1", age: 22, graduated: new Date() });
+    const a1 = new Author(em, { firstName: "a1", age: 22, graduated: Temporal.Now.plainDateISO() });
     const b1 = newBook(em, { author: a1 });
     const br = newBookReview(em, { rating: 1, book: b1 });
     const comment = newComment(em, { text: "", parent: br });
@@ -119,7 +120,7 @@ describe("ReactiveField", () => {
     {
       const em = newEntityManager();
       // Given an author with a RF, numberOfPublicReviews2, that uses a RF on BookReview, isPublic
-      const a1 = new Author(em, { firstName: "a1", age: 22, graduated: new Date() });
+      const a1 = new Author(em, { firstName: "a1", age: 22, graduated: Temporal.Now.plainDateISO() });
       const b1 = newBook(em, { author: a1 });
       const br = newBookReview(em, { rating: 1, book: b1 });
       newComment(em, { text: "", parent: br });
@@ -281,7 +282,7 @@ describe("ReactiveField", () => {
       // And when the author graduates
       const em2 = newEntityManager();
       const a1 = await em2.load(Author, "1");
-      a1.graduated = new Date();
+      a1.graduated = Temporal.Now.plainDateISO();
       await em2.flush();
       // Then the review is now public
       const rows2 = await select("book_reviews");

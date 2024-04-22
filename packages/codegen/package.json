@@ -32,6 +32,7 @@
     "pg-structure": "^7.15.2",
     "pluralize": "^8.0.0",
     "semver": "^7.6.0",
+    "temporal-polyfill": "^0.2.4",
     "ts-poet": "^6.8.1",
     "zod": "^3.22.4"
   },

@@ -2,6 +2,7 @@ import { pascalCase } from "change-case";
 import { isPlainObject } from "joist-utils";
 import { Table } from "pg-structure";
 import pluralize from "pluralize";
+import { code, imp } from "ts-poet";
 import { DatabaseColumnType, PrimitiveTypescriptType } from "./EntityDbMetadata";
 import { Config, getTimestampConfig } from "./config";
 
@@ -115,9 +116,11 @@ export function mapSimpleDbTypeToTypescriptType(dbType: DatabaseColumnType): Pri
     case "tsvector":
       return "string";
     case "timestamp with time zone":
+      return code`${imp("Temporal@temporal-polyfill")}.ZonedDateTime`;
     case "timestamp without time zone":
+      return code`${imp(`Temporal@temporal-polyfill`)}.PlainDateTime`;
     case "date":
-      return "Date";
+      return code`${imp(`Temporal@temporal-polyfill`)}.PlainDate`;
     case "jsonb":
       return "Object";
     default:

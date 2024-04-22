@@ -15,6 +15,7 @@ import {
 import { insertAuthor, insertBook, insertBookToTag, insertTag, select } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 import { getMetadata, MaybeAbstractEntityConstructor } from "joist-orm";
+import { Temporal } from "temporal-polyfill";
 
 const sm = expect.stringMatching;
 
@@ -550,13 +551,13 @@ describe("EntityManager.reactiveRules", () => {
       });
 
       it.withCtx("calculates on initial author save w/a matching book", async ({ em }) => {
-        newAuthor(em, { age: 40, graduated: new Date(), books: [{ reviews: [{ rating: 1 }] }] });
+        newAuthor(em, { age: 40, graduated: Temporal.Now.plainDateISO(), books: [{ reviews: [{ rating: 1 }] }] });
         await em.flush();
         expect(await select("authors")).toMatchObject([{ id: 1, number_of_public_reviews: 1 }]);
       });
 
       it.withCtx("calculates on new review", async ({ em }) => {
-        newAuthor(em, { age: 40, graduated: new Date(), books: [{}] });
+        newAuthor(em, { age: 40, graduated: Temporal.Now.plainDateISO(), books: [{}] });
         await em.flush();
         // Use a new em to ensure nothing is cached
         const em2 = newEntityManager();
@@ -566,7 +567,7 @@ describe("EntityManager.reactiveRules", () => {
       });
 
       it.withCtx("calculates on updated review", async ({ em }) => {
-        newAuthor(em, { age: 40, graduated: new Date(), books: [{ reviews: [{ rating: 0 }] }] });
+        newAuthor(em, { age: 40, graduated: Temporal.Now.plainDateISO(), books: [{ reviews: [{ rating: 0 }] }] });
         await em.flush();
         // Use a new em to ensure nothing is cached
         const em2 = newEntityManager();
@@ -578,8 +579,8 @@ describe("EntityManager.reactiveRules", () => {
 
       it.withCtx("calculates after subgraph mutations", async ({ em }) => {
         // Given two authors that have public reviews
-        newAuthor(em, { age: 40, graduated: new Date(), books: [{ reviews: [{ rating: 1 }] }] });
-        newAuthor(em, { age: 40, graduated: new Date(), books: [{ reviews: [{ rating: 1 }] }] });
+        newAuthor(em, { age: 40, graduated: Temporal.Now.plainDateISO(), books: [{ reviews: [{ rating: 1 }] }] });
+        newAuthor(em, { age: 40, graduated: Temporal.Now.plainDateISO(), books: [{ reviews: [{ rating: 1 }] }] });
         await em.flush();
 
         // Use a new em to ensure nothing is cached
@@ -601,7 +602,11 @@ describe("EntityManager.reactiveRules", () => {
 
       it.withCtx("calculates on async property change", async ({ em }) => {
         // Given a public review
-        newAuthor(em, { age: 40, graduated: new Date(), books: [{ reviews: [{ rating: 1, comment: {} }] }] });
+        newAuthor(em, {
+          age: 40,
+          graduated: Temporal.Now.plainDateISO(),
+          books: [{ reviews: [{ rating: 1, comment: {} }] }],
+        });
         await em.flush();
         expect(await select("authors")).toMatchObject([{ id: 1, number_of_public_reviews: 1 }]);
         // Use a new em to ensure nothing is cached

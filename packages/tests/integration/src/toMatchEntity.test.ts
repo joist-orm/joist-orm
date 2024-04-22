@@ -1,7 +1,7 @@
 import { alignedAnsiStyleSerializer } from "@src/alignedAnsiStyleSerializer";
 import { Author, Book, newAuthor, newBook } from "@src/entities";
 import { newEntityManager } from "@src/testEm";
-import { getInstanceData, jan1 } from "joist-orm";
+import { getInstanceData, jan1DateTime } from "joist-orm";
 
 expect.addSnapshotSerializer(alignedAnsiStyleSerializer as any);
 
@@ -46,9 +46,9 @@ describe("toMatchEntity", () => {
 
   it("can match collections with soft-deleted entities", async () => {
     const em = newEntityManager();
-    const a1 = newAuthor(em, { books: [{ deletedAt: jan1 }] });
+    const a1 = newAuthor(em, { books: [{ deletedAt: jan1DateTime }] });
     await em.flush();
-    expect(a1).toMatchEntity({ books: [{ deletedAt: jan1 }] });
+    expect(a1).toMatchEntity({ books: [{ deletedAt: jan1DateTime }] });
   });
 
   it("can match async properties", async () => {

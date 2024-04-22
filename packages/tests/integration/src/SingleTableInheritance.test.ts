@@ -12,6 +12,7 @@ import {
 } from "src/entities";
 import { insertTask, select } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
+import { Temporal } from "temporal-polyfill";
 
 describe("SingleTableInheritance", () => {
   it("can create a TaskOld", async () => {
@@ -357,7 +358,7 @@ describe("SingleTableInheritance", () => {
 
   it("filters out soft-deletes when querying by subtype", async () => {
     const em = newEntityManager();
-    newTaskOld(em, { deletedAt: new Date() });
+    newTaskOld(em, { deletedAt: Temporal.Now.zonedDateTimeISO() });
     await em.flush();
     expect(await em.find(TaskOld, {})).toMatchEntity([]);
   });
@@ -365,7 +366,7 @@ describe("SingleTableInheritance", () => {
   it("filters out soft-deletes from collections", async () => {
     const em = newEntityManager();
     const a = newAuthor(em);
-    newTaskNew(em, { deletedAt: new Date(), specialNewAuthor: a });
+    newTaskNew(em, { deletedAt: Temporal.Now.zonedDateTimeISO(), specialNewAuthor: a });
     await em.flush();
     expect(a.tasks.get).toMatchEntity([]);
   });

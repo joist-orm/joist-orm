@@ -23,6 +23,7 @@ import {
   getInstanceData,
   sameEntity,
 } from "joist-orm";
+import { Temporal } from "temporal-polyfill";
 import {
   Author,
   Book,
@@ -272,8 +273,8 @@ describe("EntityManager", () => {
   });
 
   it("updatedAt does not change on noops on dates", async () => {
-    const jan1 = new Date(2000, 0, 1);
-    const jan2 = new Date(2000, 0, 2);
+    const jan1 = Temporal.PlainDate.from("2000-01-01");
+    const jan2 = Temporal.PlainDate.from("2000-01-02");
 
     const em = newEntityManager();
     const a1 = em.create(Author, { firstName: "a1", graduated: jan1 });
@@ -694,7 +695,7 @@ describe("EntityManager", () => {
   });
 
   it("ignores date sets of the same value", async () => {
-    const jan1 = new Date(2000, 0, 1);
+    const jan1 = Temporal.PlainDate.from("2000-01-01");
     await insertAuthor({ first_name: "a1", initials: "a", number_of_books: 1, graduated: jan1 as any });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");

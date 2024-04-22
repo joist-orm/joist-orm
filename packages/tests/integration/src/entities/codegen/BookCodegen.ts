@@ -41,6 +41,7 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
+import { Temporal } from "temporal-polyfill";
 import {
   Author,
   authorMeta,
@@ -78,9 +79,9 @@ export interface BookFields {
   order: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   notes: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   acknowledgements: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  deletedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
 }
 
@@ -89,7 +90,7 @@ export interface BookOpts {
   order?: number;
   notes?: string;
   acknowledgements?: string | null;
-  deletedAt?: Date | null;
+  deletedAt?: Temporal.ZonedDateTime | null;
   author: Author | AuthorId;
   currentDraftAuthor?: Author | null;
   image?: Image | null;
@@ -115,9 +116,9 @@ export interface BookFilter {
   order?: ValueFilter<number, never>;
   notes?: ValueFilter<string, never>;
   acknowledgements?: ValueFilter<string, null>;
-  deletedAt?: ValueFilter<Date, null>;
-  createdAt?: ValueFilter<Date, never>;
-  updatedAt?: ValueFilter<Date, never>;
+  deletedAt?: ValueFilter<Temporal.ZonedDateTime, null>;
+  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
   currentDraftAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
@@ -133,9 +134,9 @@ export interface BookGraphQLFilter {
   order?: ValueGraphQLFilter<number>;
   notes?: ValueGraphQLFilter<string>;
   acknowledgements?: ValueGraphQLFilter<string>;
-  deletedAt?: ValueGraphQLFilter<Date>;
-  createdAt?: ValueGraphQLFilter<Date>;
-  updatedAt?: ValueGraphQLFilter<Date>;
+  deletedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
   currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
@@ -234,19 +235,19 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
     setField(this, "acknowledgements", cleanStringValue(acknowledgements));
   }
 
-  get deletedAt(): Date | undefined {
+  get deletedAt(): Temporal.ZonedDateTime | undefined {
     return getField(this, "deletedAt");
   }
 
-  set deletedAt(deletedAt: Date | undefined) {
+  set deletedAt(deletedAt: Temporal.ZonedDateTime | undefined) {
     setField(this, "deletedAt", deletedAt);
   }
 
-  get createdAt(): Date {
+  get createdAt(): Temporal.ZonedDateTime {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Date {
+  get updatedAt(): Temporal.ZonedDateTime {
     return getField(this, "updatedAt");
   }
 

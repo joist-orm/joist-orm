@@ -4,6 +4,7 @@ import { getInstanceData } from "./BaseEntity";
 import { setAsyncDefaults } from "./defaults";
 import { getField, setField } from "./fields";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
+import { Temporal } from "temporal-polyfill";
 import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
 import { JoinRows } from "./JoinRows";
@@ -1086,8 +1087,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       const baseMeta = getBaseMeta(getMetadata(entity));
       const { createdAt, updatedAt } = baseMeta.timestampFields;
       const { data } = getInstanceData(entity);
-      if (createdAt) data[createdAt] = new Date();
-      if (updatedAt) data[updatedAt] = new Date();
+      if (createdAt) data[createdAt] = Temporal.Now.zonedDateTimeISO();
+      if (updatedAt) data[updatedAt] = Temporal.Now.zonedDateTimeISO();
       // Set the discriminator for STI
       if (baseMeta.inheritanceType === "sti") {
         setStiDiscriminatorValue(baseMeta, entity);
@@ -1936,7 +1937,7 @@ function isCustomRelation(r: AbstractRelationImpl<any, any>): boolean {
   return r instanceof CustomCollection || r instanceof CustomReference || r instanceof ReactiveReferenceImpl;
 }
 
-function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Date): void {
+function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Temporal.Instant): void {
   for (const todo of Object.values(todos)) {
     const { updatedAt } = todo.metadata.timestampFields;
     if (updatedAt) {
@@ -1947,23 +1948,23 @@ function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Date): void {
         // so force the field to be dirty.
         const orm = getInstanceData(e);
         orm.originalData[updatedAt] = getField(e, updatedAt);
-        orm.data[updatedAt] = now;
+        orm.data[updatedAt] = now.toZonedDateTimeISO("UTC");
       }
     }
   }
 }
 
-let lastNow = new Date();
+let lastNow = Temporal.Now.instant();
 
-function getNow(): Date {
-  let now = new Date();
+function getNow(): Temporal.Instant {
+  let now = Temporal.Now.instant();
   // If we detect time has not progressed (or went backwards), we're probably in test that
   // has frozen time, which can throw off our oplocks b/c if Joist issues multiple `UPDATE`s
   // with exactly the same `updated_at`, the `updated_at` SQL trigger fallback will think "the caller
   // didn't self-manage `updated_at`" and so bump it for them. Which is fine, but now
   // Joist doesn't know about the bumped time, and the 2nd `UPDATE` will fail.
-  if (lastNow.getTime() === now.getTime() || now.getTime() < lastNow.getTime()) {
-    now = new Date(lastNow.getTime() + 1);
+  if (lastNow.epochMilliseconds === now.epochMilliseconds || now.epochMilliseconds < lastNow.epochMilliseconds) {
+    now = lastNow.add({ milliseconds: 1 });
   }
   lastNow = now;
   return now;

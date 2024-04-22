@@ -94,7 +94,7 @@ interface Field {
   ignore?: boolean;
 }
 
-export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Date" | "Object" | "bigint";
+export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Object" | "bigint" | Code;
 
 export type PrimitiveField = Field & {
   kind: "primitive";
@@ -102,7 +102,7 @@ export type PrimitiveField = Field & {
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
   // The fieldType might be code for jsonb columns or primitive array columns, i.e. string[]
-  fieldType: PrimitiveTypescriptType | Import | Code;
+  fieldType: PrimitiveTypescriptType | Import;
   rawFieldType: PrimitiveTypescriptType;
   notNull: boolean;
   derived: "orm" | "sync" | "async" | false;
@@ -782,7 +782,9 @@ export function makeEntity(entityName: string): Entity {
     idType: imp(`t:${entityName}Id@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
     orderType: imp(`t:${entityName}Order@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
     optsType: imp(`t:${entityName}Opts@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
-    configConst: imp(`${camelCase(entityName)}Config@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
+    configConst: imp(`${camelCase(entityName)}Config@./entities.ts`, {
+      definedIn: `./codegen/${entityName}Codegen.ts`,
+    }),
   };
 }
 

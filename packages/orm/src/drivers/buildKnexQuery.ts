@@ -1,4 +1,5 @@
 import { Knex } from "knex";
+import { Temporal } from "temporal-polyfill";
 import { opToFn } from "../EntityGraphQLFilter";
 import { isDefined } from "../EntityManager";
 import { ColumnCondition, ParsedExpressionFilter, ParsedFindQuery, ParsedTable, RawCondition } from "../QueryParser";
@@ -131,18 +132,30 @@ function buildCondition(cc: ColumnCondition): [string, any[]] {
     case "containedBy":
     case "overlaps":
       const fn = opToFn[cond.kind] ?? fail(`Invalid operator ${cond.kind}`);
-      return [`${columnName} ${fn} ?`, [cond.value]];
+      return [`${columnName} ${fn} ?`, [maybeConvertTemporalToDate(cond.value)]];
     case "is-null":
       return [`${columnName} is null`, []];
     case "not-null":
       return [`${columnName} is not null`, []];
     case "in":
-      return [`${columnName} = any(?)`, [cond.value]];
+      return [`${columnName} = any(?)`, [cond.value.map(maybeConvertTemporalToDate)]];
     case "nin":
-      return [`${columnName} != all(?)`, [cond.value]];
+      return [`${columnName} != all(?)`, [cond.value.map(maybeConvertTemporalToDate)]];
     case "between":
-      return [`${columnName} between ? and ?`, cond.value];
+      return [`${columnName} between ? and ?`, cond.value.map(maybeConvertTemporalToDate)];
     default:
       assertNever(cond);
+  }
+}
+
+function maybeConvertTemporalToDate(value: any): any {
+  if (value instanceof Temporal.ZonedDateTime) {
+    return new Date(value.epochMilliseconds);
+  } else if (value instanceof Temporal.PlainDateTime) {
+    return new Date(value.toZonedDateTime("UTC").epochMilliseconds);
+  } else if (value instanceof Temporal.PlainDate) {
+    return new Date(value.toZonedDateTime("UTC").epochMilliseconds);
+  } else {
+    return value;
   }
 }

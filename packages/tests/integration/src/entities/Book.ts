@@ -8,7 +8,7 @@ export class Book extends BookCodegen {
   reviewsRuleInvoked = 0;
   numberOfBooks2RuleInvoked = 0;
   authorSetWhenDeleteRuns: boolean | undefined = undefined;
-  afterCommitCheckTagsChanged = false;
+  afterCommitCheckTagsChanged: boolean | undefined = undefined;
 
   /** For testing reacting to poly CommentParent properties. */
   readonly commentParentInfo: AsyncProperty<Book, string> = hasReactiveAsyncProperty(

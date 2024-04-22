@@ -4,11 +4,11 @@ import {
   Book,
   BookReview,
   Comment,
-  Task,
+  TaskOld,
   isCommentParent,
   newAdminUser,
   newBook,
-  newSmallPublisher, TaskOld,
+  newSmallPublisher,
 } from "../entities";
 
 describe("PolymorphicReference", () => {

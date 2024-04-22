@@ -17,7 +17,6 @@ import type {
   Changes,
   EntityMetadata,
   Flavor,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
@@ -26,6 +25,7 @@ import type {
   OrderBy,
   PartialOrNull,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -149,8 +149,8 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<DatabaseOwner>>(hint: H): Promise<JsonPayload<DatabaseOwner, H>>;
+  toJSON<const H extends ToJsonHint<DatabaseOwner>>(hint: H): Promise<JsonPayload<DatabaseOwner, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 }

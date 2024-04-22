@@ -29,6 +29,7 @@ export { Relation, isRelation } from "./Relation";
 export { AsyncMethod, LoadedMethod, hasAsyncMethod } from "./hasAsyncMethod";
 export {
   AsyncProperty,
+  AsyncPropertyImpl,
   LoadedProperty,
   hasAsyncProperty,
   hasReactiveAsyncProperty,

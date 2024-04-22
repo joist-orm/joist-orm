@@ -13,6 +13,7 @@ import {
   kqDot,
 } from "../index";
 import { LoadHint } from "../loadHints";
+import { getRelationFromMaybePolyKey, isPolyHint } from "../reactiveHints";
 import { ReactiveFieldImpl } from "../relations/ReactiveField";
 import { toArray } from "../utils";
 
@@ -91,12 +92,16 @@ export function populateDataLoader(
         // One breadth-width pass (only 1 level deep, our 2nd pass recurses) to ensure each relation is loaded
         const loadPromises = Object.entries(layerNode.subHints).flatMap(([key, tree]) => {
           return [...tree.entities].map((entity) => {
-            const relation = (entity as any)[key];
+            const relation = getRelationFromMaybePolyKey(entity, key);
+
             // This happens to let through non-relation hints like 'name' on user, which wasn't intentional,
             // but currently doesn't blow up (somehow), and is not depended on by internal tests.
             if (!relation || typeof relation.load !== "function") {
+              // We don't want to throw on poly hints, because they're not actually loaded on the entity
+              if (isPolyHint(key)) return;
               throw new Error(`Invalid load hint '${key}' on ${entity}`);
             }
+
             // If we're populating a hasReactiveField, don't bother loading it
             // if it's already been calculated (i.e. we have no reason to believe its value
             // is stale, so we should avoid pulling all of its data into memory).
@@ -125,7 +130,10 @@ export function populateDataLoader(
 
             // Get the children we found, i.e. [a1, a2, a3] -> all of their books
             const childrenByParent = new Map(
-              [...tree.entities].map((entity) => [entity, toArray(getEvenDeleted((entity as any)[key]))]),
+              [...tree.entities].map((entity) => {
+                const relation = getRelationFromMaybePolyKey(entity, key);
+                return [entity, relation ? toArray(getEvenDeleted(relation)) : []];
+              }),
             );
             if (childrenByParent.size === 0) return;
 

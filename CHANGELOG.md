@@ -1,3 +1,45 @@
+## [1.160.4](https://github.com/joist-orm/joist-orm/compare/v1.160.3...v1.160.4) (2024-04-21)
+
+
+### Bug Fixes
+
+* Support ids in toJSON ([#1052](https://github.com/joist-orm/joist-orm/issues/1052)) ([c17f72d](https://github.com/joist-orm/joist-orm/commit/c17f72dfec4208f674e97c68c028a0a0c16fbc28))
+
+## [1.160.3](https://github.com/joist-orm/joist-orm/compare/v1.160.2...v1.160.3) (2024-04-20)
+
+
+### Bug Fixes
+
+* Fix reactive poly against properties ([#1051](https://github.com/joist-orm/joist-orm/issues/1051)) ([ad2ae2c](https://github.com/joist-orm/joist-orm/commit/ad2ae2ce54e15be343dc5288131c63ab06720869))
+
+## [1.160.2](https://github.com/joist-orm/joist-orm/compare/v1.160.1...v1.160.2) (2024-04-19)
+
+
+### Bug Fixes
+
+* Fix toJSON treating keys as hints ([#1050](https://github.com/joist-orm/joist-orm/issues/1050)) ([2a5cadc](https://github.com/joist-orm/joist-orm/commit/2a5cadc86c52ed7ca08089f407effef7e862beba))
+
+## [1.160.1](https://github.com/joist-orm/joist-orm/compare/v1.160.0...v1.160.1) (2024-04-19)
+
+
+### Bug Fixes
+
+* Fix querying against CustomSerde values. ([#1049](https://github.com/joist-orm/joist-orm/issues/1049)) ([e2ba761](https://github.com/joist-orm/joist-orm/commit/e2ba761f20ed973ecd8e34e60de7ae2824794987)), closes [#1048](https://github.com/joist-orm/joist-orm/issues/1048)
+
+# [1.160.0](https://github.com/joist-orm/joist-orm/compare/v1.159.0...v1.160.0) (2024-04-19)
+
+
+### Features
+
+* Support reactivity through polys ([#1047](https://github.com/joist-orm/joist-orm/issues/1047)) ([2b36980](https://github.com/joist-orm/joist-orm/commit/2b369800c7ca9a342e07711be54dcf944c4896a7))
+
+# [1.159.0](https://github.com/joist-orm/joist-orm/compare/v1.158.0...v1.159.0) (2024-04-19)
+
+
+### Features
+
+* Add config.afterMetadata hook. ([#1045](https://github.com/joist-orm/joist-orm/issues/1045)) ([1be5324](https://github.com/joist-orm/joist-orm/commit/1be5324b670bfd6e6d7eea02525a92519dcf6ce1))
+
 # [1.158.0](https://github.com/joist-orm/joist-orm/compare/v1.157.0...v1.158.0) (2024-04-19)
 
 

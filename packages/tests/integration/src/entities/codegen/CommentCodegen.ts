@@ -28,7 +28,6 @@ import type {
   Flavor,
   GraphQLFilterOf,
   IdOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
@@ -39,7 +38,9 @@ import type {
   OrderBy,
   PartialOrNull,
   PolymorphicReference,
+  ReactiveField,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -71,6 +72,7 @@ export function isCommentParent(maybeEntity: unknown): maybeEntity is CommentPar
 
 export interface CommentFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  parentTags: { kind: "primitive"; type: string; unique: false; nullable: never; derived: true };
   text: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -93,6 +95,7 @@ export interface CommentIdsOpts {
 
 export interface CommentFilter {
   id?: ValueFilter<CommentId, never> | null;
+  parentTags?: ValueFilter<string, never>;
   text?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
@@ -103,6 +106,7 @@ export interface CommentFilter {
 
 export interface CommentGraphQLFilter {
   id?: ValueGraphQLFilter<CommentId>;
+  parentTags?: ValueGraphQLFilter<string>;
   text?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
@@ -113,6 +117,7 @@ export interface CommentGraphQLFilter {
 
 export interface CommentOrder {
   id?: OrderBy;
+  parentTags?: OrderBy;
   text?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
@@ -121,6 +126,7 @@ export interface CommentOrder {
 
 export const commentConfig = new ConfigApi<Comment, Context>();
 
+commentConfig.addRule(newRequiredRule("parentTags"));
 commentConfig.addRule(newRequiredRule("createdAt"));
 commentConfig.addRule(newRequiredRule("updatedAt"));
 commentConfig.addRule(newRequiredRule("parent"));
@@ -159,6 +165,8 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   get idTaggedMaybe(): TaggedId | undefined {
     return getField(this, "id");
   }
+
+  abstract readonly parentTags: ReactiveField<Comment, string>;
 
   get text(): string | undefined {
     return getField(this, "text");
@@ -211,9 +219,9 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<Comment>>(hint: H): Promise<JsonPayload<Comment, H>>;
+  toJSON<const H extends ToJsonHint<Comment>>(hint: H): Promise<JsonPayload<Comment, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get user(): ManyToOneReference<Comment, User, undefined> {

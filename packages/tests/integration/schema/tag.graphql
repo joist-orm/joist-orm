@@ -5,6 +5,9 @@ type Tag {
   updatedAt: Date!
   books: [Book!]!
   publishers: [Publisher!]!
+  bookReviews: [BookReview!]!
+  tasks: [Task!]!
+  authors: [Author!]!
 }
 
 input SaveTagInput {

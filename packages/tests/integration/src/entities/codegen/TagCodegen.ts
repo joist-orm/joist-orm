@@ -5,7 +5,6 @@ import {
   failNoIdYet,
   getField,
   getInstanceData,
-  hasLargeManyToMany,
   hasManyToMany,
   isLoaded,
   loadLens,
@@ -25,9 +24,7 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  JsonHint,
   JsonPayload,
-  LargeCollection,
   Lens,
   Loaded,
   LoadHint,
@@ -35,6 +32,7 @@ import type {
   OrderBy,
   PartialOrNull,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -44,14 +42,18 @@ import {
   authorMeta,
   Book,
   bookMeta,
+  BookReview,
+  bookReviewMeta,
   EntityManager,
   newTag,
   Publisher,
   publisherMeta,
   Tag,
   tagMeta,
+  Task,
+  taskMeta,
 } from "../entities";
-import type { BookId, Entity, PublisherId } from "../entities";
+import type { AuthorId, BookId, BookReviewId, Entity, PublisherId, TaskId } from "../entities";
 
 export type TagId = Flavor<string, Tag>;
 
@@ -64,13 +66,19 @@ export interface TagFields {
 
 export interface TagOpts {
   name: string;
+  authors?: Author[];
   books?: Book[];
+  bookReviews?: BookReview[];
   publishers?: Publisher[];
+  tasks?: Task[];
 }
 
 export interface TagIdsOpts {
+  authorIds?: AuthorId[] | null;
   bookIds?: BookId[] | null;
+  bookReviewIds?: BookReviewId[] | null;
   publisherIds?: PublisherId[] | null;
+  taskIds?: TaskId[] | null;
 }
 
 export interface TagFilter {
@@ -78,8 +86,11 @@ export interface TagFilter {
   name?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  bookReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
+  tasks?: EntityFilter<Task, TaskId, FilterOf<Task>, null | undefined>;
 }
 
 export interface TagGraphQLFilter {
@@ -87,8 +98,11 @@ export interface TagGraphQLFilter {
   name?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  bookReviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
   publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
+  tasks?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null | undefined>;
 }
 
 export interface TagOrder {
@@ -190,9 +204,22 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<Tag>>(hint: H): Promise<JsonPayload<Tag, H>>;
+  toJSON<const H extends ToJsonHint<Tag>>(hint: H): Promise<JsonPayload<Tag, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
+  }
+
+  get authors(): Collection<Tag, Author> {
+    const { relations } = getInstanceData(this);
+    return relations.authors ??= hasManyToMany(
+      this as any as Tag,
+      "authors_to_tags",
+      "authors",
+      "tag_id",
+      authorMeta,
+      "tags",
+      "author_id",
+    );
   }
 
   get books(): Collection<Tag, Book> {
@@ -205,6 +232,19 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
       bookMeta,
       "tags",
       "book_id",
+    );
+  }
+
+  get bookReviews(): Collection<Tag, BookReview> {
+    const { relations } = getInstanceData(this);
+    return relations.bookReviews ??= hasManyToMany(
+      this as any as Tag,
+      "book_reviews_to_tags",
+      "bookReviews",
+      "tag_id",
+      bookReviewMeta,
+      "tags",
+      "book_review_id",
     );
   }
 
@@ -221,16 +261,16 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
     );
   }
 
-  get authors(): LargeCollection<Tag, Author> {
+  get tasks(): Collection<Tag, Task> {
     const { relations } = getInstanceData(this);
-    return relations.authors ??= hasLargeManyToMany(
+    return relations.tasks ??= hasManyToMany(
       this as any as Tag,
-      "authors_to_tags",
-      "authors",
+      "task_to_tags",
+      "tasks",
       "tag_id",
-      authorMeta,
+      taskMeta,
       "tags",
-      "author_id",
+      "task_id",
     );
   }
 }

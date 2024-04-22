@@ -17,7 +17,6 @@ import type {
   Changes,
   EntityMetadata,
   Flavor,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
@@ -26,6 +25,7 @@ import type {
   OrderBy,
   PartialOrNull,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -315,8 +315,8 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<AuthorStat>>(hint: H): Promise<JsonPayload<AuthorStat, H>>;
+  toJSON<const H extends ToJsonHint<AuthorStat>>(hint: H): Promise<JsonPayload<AuthorStat, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 }

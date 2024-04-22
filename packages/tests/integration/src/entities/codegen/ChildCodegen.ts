@@ -24,7 +24,6 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
@@ -33,6 +32,7 @@ import type {
   OrderBy,
   PartialOrNull,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -172,9 +172,9 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<Child>>(hint: H): Promise<JsonPayload<Child, H>>;
+  toJSON<const H extends ToJsonHint<Child>>(hint: H): Promise<JsonPayload<Child, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get groups(): Collection<Child, ChildGroup> {

@@ -1,7 +1,9 @@
 import {
+  AsyncProperty,
   cannotBeUpdated,
   Collection,
   CustomCollection,
+  hasReactiveAsyncProperty,
   hasReactiveQueryField,
   isLoaded,
   Loaded,
@@ -72,6 +74,9 @@ export abstract class Publisher extends PublisherCodegen {
     },
     isLoaded: () => isLoaded(this, allImagesHint as any),
   });
+
+  /** For testing reacting to poly CommentParent properties. */
+  readonly commentParentInfo: AsyncProperty<Publisher, string> = hasReactiveAsyncProperty([], () => ``);
 }
 
 /** Test the types for an enum default value (even though it is already matched by the db defaultValues). */

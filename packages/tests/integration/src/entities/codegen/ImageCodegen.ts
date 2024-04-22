@@ -23,7 +23,6 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
@@ -33,6 +32,7 @@ import type {
   OrderBy,
   PartialOrNull,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -231,9 +231,9 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<Image>>(hint: H): Promise<JsonPayload<Image, H>>;
+  toJSON<const H extends ToJsonHint<Image>>(hint: H): Promise<JsonPayload<Image, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get author(): ManyToOneReference<Image, Author, undefined> {

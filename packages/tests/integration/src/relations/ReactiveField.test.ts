@@ -1,6 +1,16 @@
-import { insertAuthor, insertBook, insertBookReview, select, update } from "@src/entities/inserts";
+import {
+  insertAuthor,
+  insertAuthorToTag,
+  insertBook,
+  insertBookReview,
+  insertBookToTag,
+  insertComment,
+  insertTag,
+  select,
+  update,
+} from "@src/entities/inserts";
 import { knex, newEntityManager } from "@src/testEm";
-import { Author, Book, BookRange, BookReview, newAuthor, newBook, newBookReview, newComment } from "../entities";
+import { Author, Book, BookRange, BookReview, Tag, newAuthor, newBook, newBookReview, newComment } from "../entities";
 
 describe("ReactiveField", () => {
   it("can repopulate a changed tree", async () => {
@@ -284,5 +294,37 @@ describe("ReactiveField", () => {
     const em = newEntityManager();
     const br1 = newBookReview(em, { book: { author: "a:1" } });
     expect(() => br1.isPublic.get).toThrow("isPublic has not been derived yet");
+  });
+
+  it("can react through polys", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertTag({ name: "t1" });
+    await insertTag({ name: "t2" });
+    await insertComment({ text: "c1", parent_author_id: 1 });
+    await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+    await insertAuthorToTag({ author_id: 1, tag_id: 2 });
+    const em = newEntityManager();
+    const t1 = await em.load(Tag, "t:1");
+    t1.name = "t11";
+    await em.flush();
+    const rows = await select("comments");
+    expect(rows[0]).toMatchObject({ parent_tags: "books=0-t11-t2" });
+  });
+
+  it("can react through polys on a different poly component", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ rating: 1, book_id: 1 });
+    await insertTag({ name: "t1" });
+    await insertTag({ name: "t2" });
+    await insertComment({ text: "c1", parent_book_id: 1 });
+    await insertBookToTag({ book_id: 1, tag_id: 1 });
+    await insertBookToTag({ book_id: 1, tag_id: 2 });
+    const em = newEntityManager();
+    const t1 = await em.load(Tag, "t:1");
+    t1.name = "t11";
+    await em.flush();
+    const rows = await select("comments");
+    expect(rows[0]).toMatchObject({ parent_tags: "reviews=1-t11-t2" });
   });
 });

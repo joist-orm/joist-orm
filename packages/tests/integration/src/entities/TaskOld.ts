@@ -1,3 +1,4 @@
+import { AsyncProperty, hasReactiveAsyncProperty } from "joist-orm";
 import { TaskOldCodegen, taskOldConfig as config } from "./entities";
 
 export class TaskOld extends TaskOldCodegen {
@@ -5,6 +6,12 @@ export class TaskOld extends TaskOldCodegen {
     oldSimpleRuleRan: false,
     oldReactiveRuleRan: false,
   };
+
+  /** For testing reacting to poly CommentParent properties. */
+  readonly commentParentInfo: AsyncProperty<TaskOld, string> = hasReactiveAsyncProperty(
+    { parentOldTask: "id" },
+    (t) => `parent=${t.parentOldTask.get?.id}`,
+  );
 }
 
 /** For testing that STI reactive rules run correctly. */

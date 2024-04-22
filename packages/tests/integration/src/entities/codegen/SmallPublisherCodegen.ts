@@ -23,7 +23,6 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
@@ -33,6 +32,7 @@ import type {
   PartialOrNull,
   ReactiveField,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -190,9 +190,9 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<SmallPublisher>>(hint: H): Promise<JsonPayload<SmallPublisher, H>>;
+  toJSON<const H extends ToJsonHint<SmallPublisher>>(hint: H): Promise<JsonPayload<SmallPublisher, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get users(): Collection<SmallPublisher, User> {

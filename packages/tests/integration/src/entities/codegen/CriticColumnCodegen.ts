@@ -23,7 +23,6 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
@@ -33,6 +32,7 @@ import type {
   OrderBy,
   PartialOrNull,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -178,9 +178,9 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<CriticColumn>>(hint: H): Promise<JsonPayload<CriticColumn, H>>;
+  toJSON<const H extends ToJsonHint<CriticColumn>>(hint: H): Promise<JsonPayload<CriticColumn, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get critic(): ManyToOneReference<CriticColumn, Critic, never> {

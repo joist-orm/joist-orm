@@ -53,6 +53,7 @@ export const ValueGraphQLFilter = imp("t:ValueGraphQLFilter@joist-orm");
 export const FilterOf = imp("t:FilterOf@joist-orm");
 export const GraphQLFilterOf = imp("t:GraphQLFilterOf@joist-orm");
 export const JsonHint = imp("t:JsonHint@joist-orm");
+export const ToJsonHint = imp("t:ToJsonHint@joist-orm");
 export const JsonPayload = imp("t:JsonPayload@joist-orm");
 export const configureMetadata = imp("configureMetadata@joist-orm");
 export const newRequiredRule = imp("newRequiredRule@joist-orm");

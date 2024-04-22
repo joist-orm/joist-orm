@@ -23,7 +23,6 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
@@ -33,6 +32,7 @@ import type {
   OrderBy,
   PartialOrNull,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -176,9 +176,9 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, number> impl
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<Book>>(hint: H): Promise<JsonPayload<Book, H>>;
+  toJSON<const H extends ToJsonHint<Book>>(hint: H): Promise<JsonPayload<Book, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get author(): ManyToOneReference<Book, Author, never> {

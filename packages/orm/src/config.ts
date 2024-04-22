@@ -118,6 +118,10 @@ export class ConfigApi<T extends Entity, C> {
     }
   }
 
+  afterMetadata(fn: Function): void {
+    this.__data.afterMetadataCallbacks.push(fn);
+  }
+
   beforeDelete<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>, C>): void;
   beforeDelete(fn: HookFn<T, C>): void;
   beforeDelete(ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>): void {
@@ -280,6 +284,7 @@ export interface ReactiveField {
 
 /** The internal state of an entity's configuration data, i.e. validation rules/hooks. */
 export class ConfigData<T extends Entity, C> {
+  afterMetadataCallbacks: Function[] = [];
   /** The validation rules for this entity type. */
   rules: ValidationRuleInternal<T>[] = [];
   /** The hooks for this entity type. */

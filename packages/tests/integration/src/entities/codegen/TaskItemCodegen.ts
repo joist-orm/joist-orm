@@ -22,7 +22,6 @@ import type {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  JsonHint,
   JsonPayload,
   Lens,
   Loaded,
@@ -32,6 +31,7 @@ import type {
   OrderBy,
   PartialOrNull,
   TaggedId,
+  ToJsonHint,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -185,9 +185,9 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
   }
 
   toJSON(): object;
-  toJSON<const H extends JsonHint<TaskItem>>(hint: H): Promise<JsonPayload<TaskItem, H>>;
+  toJSON<const H extends ToJsonHint<TaskItem>>(hint: H): Promise<JsonPayload<TaskItem, H>>;
   toJSON(hint?: any): object {
-    return hint ? toJSON(this, hint) : super.toJSON();
+    return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
   get newTask(): ManyToOneReference<TaskItem, TaskNew, undefined> {

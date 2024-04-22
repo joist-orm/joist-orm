@@ -19,6 +19,7 @@ type Task {
   parentOldTask: Task
   tasks: [Task!]!
   deletedAt: DateTime
+  tags: [Tag!]!
 }
 
 input SaveTaskInput {

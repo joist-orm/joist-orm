@@ -1,6 +1,6 @@
 import { Entity } from "./Entity";
 import { FieldsOf, MaybeAbstractEntityConstructor, RelationsOf, getEmInternalApi } from "./EntityManager";
-import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
 import { Changes, FieldStatus, ManyToOneFieldStatus } from "./changes";
 import { isChangeableField } from "./fields";
 import { getProperties } from "./getProperties";
@@ -152,11 +152,26 @@ export function reverseReactiveHint<T extends Entity>(
             },
           );
         }
+        case "poly": {
+          if (!isReadOnly) {
+            fields.push(field.fieldName);
+          }
+          // A poly is basically multiple m2os glued together, so copy/paste the `case m2o` code
+          // above but do it for each component FK, and glue them together.
+          return field.components.flatMap((comp) => {
+            return reverseReactiveHint(rootType, comp.otherMetadata().cstr, subHint, undefined, false).map(
+              ({ entity, fields, path }) => {
+                return { entity, fields, path: [...path, comp.otherFieldName] };
+              },
+            );
+          });
+        }
         case "m2m": {
+          const otherField =
+            field.otherMetadata().allFields[field.otherFieldName] ??
+            fail(`No field ${field.otherMetadata().type}.${field.otherFieldName}`);
           const otherFieldName =
-            field.otherMetadata().allFields[field.otherFieldName].kind === "poly"
-              ? `${field.otherFieldName}@${meta.type}`
-              : field.otherFieldName;
+            otherField.kind === "poly" ? `${field.otherFieldName}@${meta.type}` : field.otherFieldName;
           // While o2m and o2o can watch for just FK changes by passing `reactForOtherSide` (the FK lives in the other
           // table), for m2m reactivity we push the collection name into the reactive hint, because it's effectively
           // "the other/reverse side", and JoinRows will trigger it explicitly instead of `setField` for non-m2m keys.
@@ -292,8 +307,19 @@ export function convertToLoadHint<T extends Entity>(
   // Process the hints individually instead of just calling Object.fromEntries so that
   // we can handle inlined reactive hints that overlap.
   for (const [keyMaybeSuffix, subHint] of Object.entries(normalizeHint(hint))) {
-    const key = keyMaybeSuffix.replace(suffixRe, "");
-    const field = meta.allFields[key];
+    let key = keyMaybeSuffix.replace(suffixRe, "");
+    let field = meta.allFields[key];
+
+    // If `allowCustomKeys` is enabled, we're probably doing `toJSON`,
+    // so look for `companyId` & `companyIds` to turn into `company`
+    if (!field && allowCustomKeys) {
+      const realField = Object.values(meta.allFields).find((f) => f.fieldIdName === key);
+      if (realField) {
+        field = realField;
+        key = realField.fieldName;
+      }
+    }
+
     if (field) {
       switch (field.kind) {
         case "m2m":
@@ -301,6 +327,19 @@ export function convertToLoadHint<T extends Entity>(
         case "o2m":
         case "o2o":
           mergeNormalizedHints(loadHint, { [key]: convertToLoadHint(field.otherMetadata(), subHint, allowCustomKeys) });
+          break;
+        case "poly":
+          for (const comp of field.components) {
+            // Write `{ parent: { child@Type: hint } }` into the load hint
+            mergeNormalizedHints(loadHint, {
+              [key]: Object.fromEntries(
+                Object.entries(convertToLoadHint(comp.otherMetadata(), subHint, allowCustomKeys)).map(
+                  // Map the subHint keys to add in `@Type`
+                  ([subKey, subHint]) => [`${subKey}@${comp.otherMetadata().type}`, subHint],
+                ),
+              ),
+            });
+          }
           break;
         case "primitive":
         case "enum":
@@ -341,4 +380,26 @@ async function maybeLoadedPoly(loadPromise: Promise<Entity>, viaPolyType: string
     return loaded && getMetadata(loaded).type === viaPolyType ? loaded : undefined;
   }
   return loadPromise;
+}
+
+export function isPolyHint(key: string): boolean {
+  return key.includes("@");
+}
+
+export function splitPolyHintToKeyAndType(key: string): [string, string] {
+  const [k, type] = key.split("@");
+  return [k, type];
+}
+
+/** If this hint is a poly like `author@Book`, return the type, otherwise return undefined. */
+export function getRelationFromMaybePolyKey(entity: Entity, key: string): any {
+  if (isPolyHint(key)) {
+    const [realKey, typeName] = splitPolyHintToKeyAndType(key);
+    // Even though `entity[realKey]` might exist, if it's from a different poly type, we don't want it
+    const isApplicable = getBaseAndSelfMetas(getMetadata(entity)).some((meta) => meta.type === typeName);
+    if (!isApplicable) return undefined;
+    return (entity as any)[realKey];
+  } else {
+    return (entity as any)[key];
+  }
 }

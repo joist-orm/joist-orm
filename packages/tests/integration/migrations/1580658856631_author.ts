@@ -273,6 +273,8 @@ export function up(b: MigrationBuilder): void {
     parent_author_id: foreignKey("authors", { notNull: false }),
     // for testing collection renames
     user_id: foreignKey("users", { notNull: false, otherFieldName: "createdComments" }),
+    // for testing ReactiveFields that read through polymorphic references
+    parent_tags: { type: "text", notNull: true },
     text: "text",
   });
 
@@ -290,22 +292,6 @@ export function up(b: MigrationBuilder): void {
     nullable_text: { type: "text", notNull: false },
     json: { type: "jsonb", notNull: false },
   });
-
-  // for testing ignore of m2m
-  createManyToManyTable(b, "critics_to_tags", "critics", "tags");
-  // for testing large m2m
-  createManyToManyTable(b, "authors_to_tags", "authors", "tags");
-  // for testing regular m2m
-  createManyToManyTable(b, "books_to_tags", "books", "tags");
-  // for testing table-per-class m2m
-  createManyToManyTable(b, "publishers_to_tags", "publishers", "tags");
-  // for testing m2m renames and name inference
-  createManyToManyTable(
-    b,
-    "users_to_comments",
-    { table: "users", column: "liked_by_user_id" },
-    { table: "comments", collectionName: "likedComments" },
-  );
 
   // for testing abbreviations that are SQL keywords, i.s. `author_schedules` ==> `as`
   createEntityTable(b, "author_schedules", {
@@ -347,4 +333,23 @@ export function up(b: MigrationBuilder): void {
   addColumns(b, "comments", {
     parent_task_id: foreignKey("tasks", { notNull: false }),
   });
+
+  // for testing ignore of m2m
+  createManyToManyTable(b, "critics_to_tags", "critics", "tags");
+  // for testing regular m2m
+  createManyToManyTable(b, "books_to_tags", "books", "tags");
+  // For testing polys Comment -> Parent -> Tags
+  // export type CommentParent = Author | Book | BookReview | Publisher | TaskOld;
+  createManyToManyTable(b, "authors_to_tags", "authors", "tags");
+  createManyToManyTable(b, "book_reviews_to_tags", "book_reviews", "tags");
+  createManyToManyTable(b, "task_to_tags", "tasks", "tags");
+  // for testing table-per-class m2m
+  createManyToManyTable(b, "publishers_to_tags", "publishers", "tags");
+  // for testing m2m renames and name inference
+  createManyToManyTable(
+      b,
+      "users_to_comments",
+      { table: "users", column: "liked_by_user_id" },
+      { table: "comments", collectionName: "likedComments" },
+  );
 }

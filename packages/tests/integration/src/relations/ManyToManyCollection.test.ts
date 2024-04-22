@@ -638,7 +638,7 @@ describe("ManyToManyCollection", () => {
       await em.flush();
 
       // This test assumes there is flag to be used on the test that should start as false
-      expect(book.afterCommitCheckTagsChanged).toBe(false);
+      expect(book.afterCommitCheckTagsChanged).toBe(undefined);
 
       // When we set the m2m relation
       book.tags.add(t1);

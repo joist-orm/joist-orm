@@ -23,11 +23,16 @@ export function maybeAdjustForLocalDevelopment(pkgVersion: string): string {
     return pkgVersion;
   }
   // If we're on main, the package.version will have been bumped already by `set-versions.sh`
-  const branchName = execSync("git symbolic-ref --short HEAD", { encoding: "utf-8" });
-  if (branchName.trim() === "main") {
+  try {
+    const branchName = execSync("git symbolic-ref --short HEAD", { encoding: "utf-8" });
+    if (branchName.trim() === "main") {
+      return pkgVersion;
+    }
+    // Otherwise look for a `feat:` commit message to guess minor/patch version bump
+    const commits = execSync(`git log --oneline main..HEAD --no-merges --pretty=format:"%s"`, { encoding: "utf-8" });
+    return semver.inc(pkgVersion, commits.includes("feat:") ? "minor" : "patch")!;
+  } catch (e) {
     return pkgVersion;
   }
-  // Otherwise look for a `feat:` commit message to guess minor/patch version bump
-  const commits = execSync(`git log --oneline main..HEAD --no-merges --pretty=format:"%s"`, { encoding: "utf-8" });
-  return semver.inc(pkgVersion, commits.includes("feat:") ? "minor" : "patch")!;
 }
+

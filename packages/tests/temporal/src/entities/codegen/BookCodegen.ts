@@ -1,44 +1,51 @@
 import {
   BaseEntity,
+  type Changes,
   cleanStringValue,
   ConfigApi,
+  type EntityFilter,
+  type EntityGraphQLFilter,
+  type EntityMetadata,
   failNoIdYet,
+  type FilterOf,
+  type Flavor,
   getField,
+  type GraphQLFilterOf,
   hasOne,
   isLoaded,
+  type JsonPayload,
+  type Lens,
+  type Loaded,
+  type LoadHint,
   loadLens,
+  type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  type OptsOf,
+  type OrderBy,
+  type PartialOrNull,
   setField,
   setOpts,
+  type TaggedId,
   toIdOf,
   toJSON,
+  type ToJsonHint,
+  type ValueFilter,
+  type ValueGraphQLFilter,
 } from "joist-orm";
-import type {
-  Changes,
-  EntityFilter,
-  EntityGraphQLFilter,
-  EntityMetadata,
-  FilterOf,
-  Flavor,
-  GraphQLFilterOf,
-  JsonPayload,
-  Lens,
-  Loaded,
-  LoadHint,
-  ManyToOneReference,
-  OptsOf,
-  OrderBy,
-  PartialOrNull,
-  TaggedId,
-  ToJsonHint,
-  ValueFilter,
-  ValueGraphQLFilter,
-} from "joist-orm";
-import type { Context } from "src/context";
+import { type Context } from "src/context";
 import { Temporal } from "temporal-polyfill";
-import { Author, authorMeta, Book, bookMeta, EntityManager, newBook } from "../entities";
-import type { AuthorId, AuthorOrder, Entity } from "../entities";
+import {
+  Author,
+  type AuthorId,
+  authorMeta,
+  type AuthorOrder,
+  Book,
+  bookMeta,
+  type Entity,
+  EntityManager,
+  newBook,
+} from "../entities";
 
 export type BookId = Flavor<string, Book>;
 

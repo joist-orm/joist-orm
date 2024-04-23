@@ -1,6 +1,5 @@
-import { configureMetadata, EntityManager as EntityManager1, KeySerde, PrimitiveSerde } from "joist-orm";
-import type { Entity as Entity2, EntityMetadata } from "joist-orm";
-import type { Context } from "src/context";
+import { configureMetadata, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PrimitiveSerde } from "joist-orm";
+import { type Context } from "src/context";
 import { T1Author } from "../T1Author";
 import { T1Book } from "../T1Book";
 import { T2Author } from "../T2Author";

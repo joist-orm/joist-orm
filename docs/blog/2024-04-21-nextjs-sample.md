@@ -9,7 +9,12 @@ authors:
 tags: []
 ---
 
-* Overview
-* Sample N+1 Prevention
-* Sample JSON Payload Creation
-* Sample Preloading
+We've added a new [NextJS + Joist](https://github.com/joist-orm/joist-nextjs-sample/) sample app that shows how Joist can be used in a NextJS environment, with several benefits:
+
+* Automatic N+1 Prevention
+* JSON Payload/Props Creation
+* Using Preloading
+
+## Automatic N+1 Prevention
+
+

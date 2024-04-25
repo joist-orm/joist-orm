@@ -27,6 +27,7 @@ import { hasDefaultValue } from "./defaults";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
 import { assertNever } from "./utils";
+
 /**
  * DeepPartial-esque type specific to our `newTestInstance` factory.
  *
@@ -47,7 +48,6 @@ export type FactoryOpts<T extends Entity> = DeepPartialOpts<T> & {
 export const jan1 = new Date(2018, 0, 1);
 export const jan2 = new Date(2018, 0, 2);
 export const jan3 = new Date(2018, 0, 3);
-
 export let testDate = jan1;
 
 /**

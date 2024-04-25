@@ -1,5 +1,4 @@
 import { Knex } from "knex";
-import { Temporal } from "temporal-polyfill";
 import { opToFn } from "../EntityGraphQLFilter";
 import { isDefined } from "../EntityManager";
 import { ColumnCondition, ParsedExpressionFilter, ParsedFindQuery, ParsedTable, RawCondition } from "../QueryParser";
@@ -145,17 +144,5 @@ function buildCondition(cc: ColumnCondition): [string, any[]] {
       return [`${columnName} between ? and ?`, cond.value];
     default:
       assertNever(cond);
-  }
-}
-
-function maybeConvertTemporalToDate(value: any): any {
-  if (value instanceof Temporal.ZonedDateTime) {
-    return new Date(value.epochMilliseconds);
-  } else if (value instanceof Temporal.PlainDateTime) {
-    return new Date(value.toZonedDateTime("UTC").epochMilliseconds);
-  } else if (value instanceof Temporal.PlainDate) {
-    return new Date(value.toZonedDateTime("UTC").epochMilliseconds);
-  } else {
-    return value;
   }
 }

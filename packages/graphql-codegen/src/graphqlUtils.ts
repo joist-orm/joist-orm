@@ -198,7 +198,7 @@ export function mapTypescriptTypeToGraphQLType(
   } else if (type === "boolean") {
     return "Boolean";
   } else if (type === "number") {
-    return "String";
+    return "Int";
   } else if (type instanceof Code) {
     const rawType = type.toCodeString([]);
     if (rawType.startsWith("Date")) {

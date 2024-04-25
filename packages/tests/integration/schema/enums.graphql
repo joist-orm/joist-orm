@@ -39,7 +39,7 @@ enum ImageType {
 type ImageTypeDetail {
   code: ImageType!
   name: String!
-  sortOrder: String!
+  sortOrder: Int!
   visible: Boolean!
   nickname: String!
 }

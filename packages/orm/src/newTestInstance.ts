@@ -1,4 +1,5 @@
 import { isPlainObject } from "joist-utils";
+import { Temporal } from "temporal-polyfill";
 import { Entity, isEntity } from "./Entity";
 import {
   ActualFactoryOpts,
@@ -49,7 +50,9 @@ export const jan1 = new Date(2018, 0, 1);
 export const jan2 = new Date(2018, 0, 2);
 export const jan3 = new Date(2018, 0, 3);
 export let testDate = jan1;
-
+export let testPlainDate = Temporal.PlainDate.from("2018-01-01");
+export let testPlainDateTime = testPlainDate.toPlainDateTime("00:00:00");
+export let testZonedDateTime = testPlainDate.toZonedDateTime("UTC");
 /**
  * Creates a test instance of `T`.
  *
@@ -553,8 +556,14 @@ function defaultValueForField(em: EntityManager, cstr: EntityConstructor<any>, f
       return 0;
     case "bigint":
       return 0n;
-    case "Date":
+    case Date:
       return testDate;
+    case Temporal.PlainDate:
+      return testPlainDate;
+    case Temporal.PlainDateTime:
+      return testPlainDateTime;
+    case Temporal.ZonedDateTime:
+      return testZonedDateTime;
     case "boolean":
       return false;
   }

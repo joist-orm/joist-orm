@@ -1,0 +1,39 @@
+{
+  "name": "joist-tests-temporal",
+  "version": "1.0.0",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joist-orm/joist-orm.git",
+    "directory": "packages/tests/temporal"
+  },
+  "scripts": {
+    "migrate": "DATABASE_URL=postgres://joist:local@localhost:5435/temporal node-pg-migrate up --decamelize=false --migrations-dir=./migrations",
+    "test": "jest --runInBand --logHeapUsage",
+    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "codegen": "node ../../codegen"
+  },
+  "dependencies": {
+    "joist-orm": "workspace:*",
+    "node-pg-migrate": "^6.2.2",
+    "temporal-polyfill": "^0.2.4"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.4.13",
+    "@swc/jest": "^0.2.36",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "jest": "30.0.0-alpha.3",
+    "jest-junit": "^16.0.0",
+    "joist-codegen": "workspace:*",
+    "joist-migration-utils": "workspace:*",
+    "joist-test-utils": "workspace:*",
+    "prettier": "^3.2.5",
+    "prettier-plugin-organize-imports": "^3.2.4",
+    "superstruct": "0.15.5",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.4.5"
+  }
+}

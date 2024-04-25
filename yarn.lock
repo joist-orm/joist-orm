@@ -11327,6 +11327,31 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"joist-tests-temporal@workspace:packages/tests/temporal":
+  version: 0.0.0-use.local
+  resolution: "joist-tests-temporal@workspace:packages/tests/temporal"
+  dependencies:
+    "@swc/core": "npm:^1.4.13"
+    "@swc/jest": "npm:^0.2.36"
+    "@types/jest": "npm:^29.5.12"
+    "@types/node": "npm:^20.12.7"
+    jest: "npm:30.0.0-alpha.3"
+    jest-junit: "npm:^16.0.0"
+    joist-codegen: "workspace:*"
+    joist-migration-utils: "workspace:*"
+    joist-orm: "workspace:*"
+    joist-test-utils: "workspace:*"
+    node-pg-migrate: "npm:^6.2.2"
+    prettier: "npm:^3.2.5"
+    prettier-plugin-organize-imports: "npm:^3.2.4"
+    superstruct: "npm:0.15.5"
+    temporal-polyfill: "npm:^0.2.4"
+    ts-node: "npm:^10.9.2"
+    tsconfig-paths: "npm:^4.2.0"
+    typescript: "npm:^5.4.5"
+  languageName: unknown
+  linkType: soft
+
 "joist-tests-untagged-ids@workspace:packages/tests/untagged-ids":
   version: 0.0.0-use.local
   resolution: "joist-tests-untagged-ids@workspace:packages/tests/untagged-ids"

@@ -1,7 +1,6 @@
 {
   "codegenPlugins": [],
   "contextType": "Context@src/context",
-  "dateAndTime": { "timeZone": "UTC", "types": { "date": "Date", "timestamp": "Date", "timestamptz": "Date" } },
   "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
   "entitiesDirectory": "./src/entities",
   "idType": "number",

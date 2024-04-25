@@ -2,7 +2,6 @@
   "codegenPlugins": [],
   "contextType": "Context@src/context",
   "databaseUrl": "postgres://joist:local@localhost:5435/schema_misc",
-  "dateAndTime": { "timeZone": "UTC", "types": { "date": "Date", "timestamp": "Date", "timestamptz": "Date" } },
   "entities": {
     "Artist": { "tag": "artist" },
     "Author": { "tag": "a" },

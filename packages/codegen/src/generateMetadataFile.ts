@@ -100,11 +100,11 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
     } else {
       let serdeType: Import;
       if (columnType === "date") {
-        serdeType = config.dateAndTime.types["date"] === "Date" ? DateSerde : PlainDateSerde;
+        serdeType = config.temporal ? PlainDateSerde : DateSerde;
       } else if (columnType === "timestamp without time zone") {
-        serdeType = config.dateAndTime.types["timestamp"] === "Date" ? DateSerde : PlainDateTimeSerde;
+        serdeType = config.temporal ? PlainDateTimeSerde : DateSerde;
       } else if (columnType === "timestamp with time zone") {
-        serdeType = config.dateAndTime.types["timestamptz"] === "Date" ? DateSerde : ZonedDateTimeSerde;
+        serdeType = config.temporal ? ZonedDateTimeSerde : DateSerde;
       } else {
         serdeType = PrimitiveSerde;
       }
@@ -113,7 +113,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
           ? code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}[]", true)`
           : code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}")`;
       } else {
-        const { timeZone } = config.dateAndTime;
+        const timeZone = typeof config.temporal === "object" ? config.temporal.timeZone : "UTC";
         serde = isArray
           ? code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}[]", "${timeZone}", true)`
           : code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}", "${timeZone}")`;

@@ -96,33 +96,12 @@ export const config = z
       }),
     ),
     /**
-     * Allows the user to set the output type from codegen for date and timestamp db types.
+     * Allows the user to have codegen output `Temporal` types (via `temporal-polyfill`) instead of the base JS `Date`
      *
-     * We default to legacy Date and provide Temporal types (via `temporal-polyfill`) as alternatives
-     *
-     * Additionally, allows for specifying the default time zone for converting dates to/from the database. This only
-     * is used for Temporal types and defaults to "UTC"
+     * Additionally, allows for specifying the default time zone for `Temporal` tyeps when converting dates to/from
+     * the database.
      */
-    dateAndTime: z
-      .optional(
-        z.object({
-          timeZone: z.optional(z.string()).default("UTC"),
-          types: z
-            .optional(
-              z.object({
-                date: z.optional(z.union([z.literal("Date"), z.literal("Temporal.PlainDate")])).default("Date"),
-                timestamp: z
-                  .optional(z.union([z.literal("Date"), z.literal("Temporal.PlainDateTime")]))
-                  .default("Date"),
-                timestamptz: z
-                  .optional(z.union([z.literal("Date"), z.literal("Temporal.ZonedDateTime")]))
-                  .default("Date"),
-              }),
-            )
-            .default({}),
-        }),
-      )
-      .default({}),
+    temporal: z.optional(z.union([z.boolean(), z.object({ timeZone: z.string() })])),
     /**
      * By default, we create a `flush_database` function for fast testing.
      *

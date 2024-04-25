@@ -1,3 +1,10 @@
+# [1.161.0](https://github.com/joist-orm/joist-orm/compare/v1.160.4...v1.161.0) (2024-04-25)
+
+
+### Features
+
+* Add findWithNewOrChanged. ([#1057](https://github.com/joist-orm/joist-orm/issues/1057)) ([cedadae](https://github.com/joist-orm/joist-orm/commit/cedadae9306889b1886604198263bb4e40691399)), closes [#1055](https://github.com/joist-orm/joist-orm/issues/1055)
+
 ## [1.160.4](https://github.com/joist-orm/joist-orm/compare/v1.160.3...v1.160.4) (2024-04-21)
 
 

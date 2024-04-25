@@ -35,6 +35,7 @@ export interface FieldSerde {
 
 export interface TimestampSerde<T> extends FieldSerde {
   mapFromInstant(value: Temporal.Instant): T;
+  dbValue(data: any): any;
 }
 
 /** A specific physical column of a logical field. */

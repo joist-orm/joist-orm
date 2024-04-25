@@ -132,17 +132,17 @@ function buildCondition(cc: ColumnCondition): [string, any[]] {
     case "containedBy":
     case "overlaps":
       const fn = opToFn[cond.kind] ?? fail(`Invalid operator ${cond.kind}`);
-      return [`${columnName} ${fn} ?`, [maybeConvertTemporalToDate(cond.value)]];
+      return [`${columnName} ${fn} ?`, [cond.value]];
     case "is-null":
       return [`${columnName} is null`, []];
     case "not-null":
       return [`${columnName} is not null`, []];
     case "in":
-      return [`${columnName} = any(?)`, [cond.value.map(maybeConvertTemporalToDate)]];
+      return [`${columnName} = any(?)`, [cond.value]];
     case "nin":
-      return [`${columnName} != all(?)`, [cond.value.map(maybeConvertTemporalToDate)]];
+      return [`${columnName} != all(?)`, [cond.value]];
     case "between":
-      return [`${columnName} between ? and ?`, cond.value.map(maybeConvertTemporalToDate)];
+      return [`${columnName} between ? and ?`, cond.value];
     default:
       assertNever(cond);
   }

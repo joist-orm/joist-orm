@@ -403,7 +403,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
   const columnName = column.name;
   const columnType = (column.type.shortName || column.type.name) as DatabaseColumnType;
   const array = isArray(column);
-  const fieldType = mapType(table.name, columnName, columnType);
+  const fieldType = mapType(config, table.name, columnName, columnType);
   const customSerde = serdeConfig(config, entity, fieldName);
   const superstruct = superstructConfig(config, entity, fieldName);
   const zodSchema = zodSchemaConfig(config, entity, fieldName);
@@ -804,8 +804,13 @@ function entityTypeForMetadataFile(entityName: string): Import {
   return imp(`${entityName}@./${entityName}.ts`);
 }
 
-function mapType(tableName: string, columnName: string, dbColumnType: DatabaseColumnType): PrimitiveTypescriptType {
-  return mapSimpleDbTypeToTypescriptType(dbColumnType);
+function mapType(
+  config: Config,
+  tableName: string,
+  columnName: string,
+  dbColumnType: DatabaseColumnType,
+): PrimitiveTypescriptType {
+  return mapSimpleDbTypeToTypescriptType(config, dbColumnType);
 }
 
 function isEnumArray(c: Column): boolean {

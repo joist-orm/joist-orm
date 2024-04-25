@@ -91,7 +91,7 @@ export function tableToEntityName(config: Config, table: Table): string {
 }
 
 /** Maps db types, i.e. `int`, to JS types, i.e. `number`. */
-export function mapSimpleDbTypeToTypescriptType(dbType: DatabaseColumnType): PrimitiveTypescriptType {
+export function mapSimpleDbTypeToTypescriptType(config: Config, dbType: DatabaseColumnType): PrimitiveTypescriptType {
   switch (dbType) {
     case "boolean":
       return "boolean";
@@ -116,11 +116,17 @@ export function mapSimpleDbTypeToTypescriptType(dbType: DatabaseColumnType): Pri
     case "tsvector":
       return "string";
     case "timestamp with time zone":
-      return code`${imp("Temporal@temporal-polyfill")}.ZonedDateTime`;
+      return config.dateAndTimeTypes.timestamptz === "Date"
+        ? code`Date`
+        : code`${imp("Temporal@temporal-polyfill")}.ZonedDateTime`;
     case "timestamp without time zone":
-      return code`${imp(`Temporal@temporal-polyfill`)}.PlainDateTime`;
+      return config.dateAndTimeTypes.timestamp === "Date"
+        ? code`Date`
+        : code`${imp(`Temporal@temporal-polyfill`)}.PlainDateTime`;
     case "date":
-      return code`${imp(`Temporal@temporal-polyfill`)}.PlainDate`;
+      return config.dateAndTimeTypes.date === "Date"
+        ? code`Date`
+        : code`${imp(`Temporal@temporal-polyfill`)}.PlainDate`;
     case "jsonb":
       return "Object";
     default:

@@ -2,6 +2,11 @@
   "codegenPlugins": [],
   "contextType": "Context@src/context",
   "databaseUrl": "postgres://joist:local@localhost:5435/schema_misc",
+  "dateAndTimeTypes": {
+    "date": "Temporal.PlainDate",
+    "timestamp": "Temporal.PlainDateTime",
+    "timestamptz": "Temporal.ZonedDateTime"
+  },
   "entities": {
     "Artist": { "tag": "artist" },
     "Author": { "tag": "a" },

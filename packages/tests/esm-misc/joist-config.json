@@ -2,6 +2,11 @@
   "codegenPlugins": [],
   "contextType": "Context@../../context.js",
   "databaseUrl": "postgres://joist:local@localhost:5435/esm",
+  "dateAndTimeTypes": {
+    "date": "Temporal.PlainDate",
+    "timestamp": "Temporal.PlainDateTime",
+    "timestamptz": "Temporal.ZonedDateTime"
+  },
   "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
   "entitiesDirectory": "./src/entities",
   "esm": true,

@@ -7,6 +7,7 @@ import { setSyncDefaults } from "./defaults";
 import { getProperties } from "./getProperties";
 import { isAllSqlPaths } from "./loadLens";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
+import { TimestampSerde } from "./serde";
 import { fail } from "./utils";
 
 export const testing = { isAllSqlPaths };
@@ -143,7 +144,8 @@ export function setOpts<T extends Entity>(
           const allowDelete = !field.otherMetadata().fields["delete"];
           const allowRemove = !field.otherMetadata().fields["remove"];
 
-          const maybeSoftDelete = getBaseMeta(field.otherMetadata()).timestampFields.deletedAt;
+          const meta = getBaseMeta(field.otherMetadata());
+          const maybeSoftDelete = meta.timestampFields.deletedAt;
 
           // We're replacing the old `delete: true` / `remove: true` behavior with `op` (i.e. operation).
           // When passed in, all values must have it, and we kick into incremental mode, i.e. we
@@ -161,7 +163,9 @@ export function setOpts<T extends Entity>(
               if (v.op === "delete") {
                 // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
                 if (maybeSoftDelete) {
-                  v.set({ [maybeSoftDelete]: Temporal.Now.zonedDateTimeISO() });
+                  const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
+                  const now = Temporal.Now.instant();
+                  v.set({ [maybeSoftDelete]: serde.mapFromInstant(now) });
                 } else {
                   entity.em.delete(v);
                 }

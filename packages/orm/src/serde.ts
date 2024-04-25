@@ -3,6 +3,7 @@ import { Field, PolymorphicField, SerdeField, getBaseMeta } from "./EntityMetada
 import {
   EntityMetadata,
   getConstructorFromTaggedId,
+  isDefined,
   keyToNumber,
   keyToTaggedId,
   maybeResolveReferenceToId,
@@ -30,6 +31,10 @@ export interface FieldSerde {
    * Used in EntityManager.hydrate to set row value on the entity
    */
   setOnEntity(data: any, row: any): void;
+}
+
+export interface TimestampSerde<T> extends FieldSerde {
+  mapFromInstant(value: Temporal.Instant): T;
 }
 
 /** A specific physical column of a logical field. */
@@ -92,22 +97,7 @@ export class PrimitiveSerde implements FieldSerde {
   ) {}
 
   setOnEntity(data: any, row: any): void {
-    let value = maybeNullToUndefined(row[this.columnName]);
-    if (value instanceof Date) {
-      const zonedDateTime = toTemporalInstant.call(value).toZonedDateTimeISO("UTC");
-      switch (this.dbType) {
-        case "timestamp with time zone":
-          value = zonedDateTime;
-          break;
-        case "timestamp without time zone":
-          value = zonedDateTime.toPlainDateTime();
-          break;
-        case "date":
-          value = zonedDateTime.toPlainDate();
-          break;
-      }
-    }
-    data[this.fieldName] = value;
+    data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
   }
 
   dbValue(data: any) {
@@ -115,33 +105,91 @@ export class PrimitiveSerde implements FieldSerde {
   }
 
   mapToDb(value: any) {
-    // I'm not sure how dates are sneaking in here, but it seems like mapToDb might be getting called on its own result?
-    if (value instanceof Date) return value;
-    switch (this.dbType) {
-      case "timestamp with time zone":
-        return new Date((value as Temporal.ZonedDateTime).epochMilliseconds);
-      case "timestamp without time zone":
-        return new Date((value as Temporal.PlainDateTime).toZonedDateTime("UTC").epochMilliseconds);
-      case "date":
-        return new Date((value as Temporal.PlainDate).toZonedDateTime("UTC").epochMilliseconds);
-      default:
-        return value;
-    }
+    return value;
+  }
+
+  mapFromJsonAgg(value: any): any {
+    return value;
+  }
+}
+
+export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
+  mapFromInstant(value: Temporal.Instant): Date {
+    return new Date(value.epochMilliseconds);
   }
 
   mapFromJsonAgg(value: any): any {
     if (value === null) return value;
-    // Super-hacky handling of de-JSON-ifying dates
-    switch (this.dbType) {
-      case "timestamp with time zone":
-        return toTemporalInstant.call(new Date(value)).toZonedDateTimeISO("UTC");
-      case "timestamp without time zone":
-        return toTemporalInstant.call(new Date(value)).toZonedDateTimeISO("UTC").toPlainDateTime();
-      case "date":
-        return toTemporalInstant.call(new Date(value)).toZonedDateTimeISO("UTC").toPlainDate();
-      default:
-        return value;
-    }
+    return new Date(value);
+  }
+}
+
+abstract class TemporalSerde<T> implements FieldSerde {
+  columns = [this];
+
+  constructor(
+    private fieldName: string,
+    public columnName: string,
+    public dbType: string,
+    public isArray = false,
+  ) {}
+
+  abstract toTemporal(value: Date): T;
+
+  abstract fromTemporal(value: T): Date;
+
+  setOnEntity(data: any, row: any): void {
+    const value = maybeNullToUndefined(row[this.columnName]);
+    data[this.fieldName] = isDefined(value) && value instanceof Date ? this.toTemporal(value) : value;
+  }
+
+  dbValue(data: any) {
+    return this.mapToDb(data[this.fieldName]);
+  }
+
+  mapToDb(value: any) {
+    return isDefined(value) && !(value instanceof Date) ? this.fromTemporal(value) : value;
+  }
+
+  mapFromJsonAgg(value: any): any {
+    return isDefined(value) ? this.toTemporal(new Date(value)) : value;
+  }
+}
+
+export class PlainDateSerde extends TemporalSerde<Temporal.PlainDate> {
+  fromTemporal(value: Temporal.PlainDate): Date {
+    return new Date(value.toZonedDateTime("UTC").epochMilliseconds);
+  }
+
+  toTemporal(value: Date): Temporal.PlainDate {
+    return toTemporalInstant.call(value).toZonedDateTimeISO("UTC").toPlainDate();
+  }
+}
+
+export class PlainDateTimeSerde extends TemporalSerde<Temporal.PlainDateTime> {
+  fromTemporal(value: Temporal.PlainDateTime): Date {
+    return new Date(value.toZonedDateTime("UTC").epochMilliseconds);
+  }
+
+  toTemporal(value: Date): Temporal.PlainDateTime {
+    return toTemporalInstant.call(value).toZonedDateTimeISO("UTC").toPlainDateTime();
+  }
+}
+
+export class ZonedDateTimeSerde
+  extends TemporalSerde<Temporal.ZonedDateTime>
+  implements TimestampSerde<Temporal.ZonedDateTime>
+{
+  fromTemporal(value: Temporal.ZonedDateTime) {
+    return new Date(value.epochMilliseconds);
+  }
+
+  toTemporal(value: Date) {
+    return toTemporalInstant.call(value).toZonedDateTimeISO("UTC");
+  }
+
+  mapFromInstant(value: Temporal.Instant) {
+    return value.toZonedDateTimeISO("UTC");
   }
 }
 

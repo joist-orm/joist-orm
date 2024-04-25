@@ -95,6 +95,24 @@ export const config = z
         deletedAt: z.optional(timestampConfig),
       }),
     ),
+    dateAndTimeTypes: z
+      .optional(
+        z.object({
+          date: z.optional(z.union([z.literal("Date"), z.literal("Temporal.PlainDate")])).default("Temporal.PlainDate"),
+          timestamp: z
+            .optional(z.union([z.literal("Date"), z.literal("Temporal.PlainDateTime")]))
+            .default("Temporal.PlainDateTime"),
+          timestamptz: z
+            .optional(z.union([z.literal("Date"), z.literal("Temporal.ZonedDateTime")]))
+            .default("Temporal.ZonedDateTime"),
+        }),
+      )
+      .default({
+        date: "Temporal.PlainDate",
+        timestamp: "Temporal.PlainDateTime",
+        timestamptz: "Temporal.ZonedDateTime",
+      }),
+
     /**
      * By default, we create a `flush_database` function for fast testing.
      *

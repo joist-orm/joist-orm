@@ -1,6 +1,11 @@
 {
   "codegenPlugins": [],
   "contextType": "Context@src/context",
+  "dateAndTimeTypes": {
+    "date": "Temporal.PlainDate",
+    "timestamp": "Temporal.PlainDateTime",
+    "timestamptz": "Temporal.ZonedDateTime"
+  },
   "entities": {
     "Author": { "tag": "a" },
     "Book": { "tag": "b" },

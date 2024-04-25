@@ -347,9 +347,9 @@ export function up(b: MigrationBuilder): void {
   createManyToManyTable(b, "publishers_to_tags", "publishers", "tags");
   // for testing m2m renames and name inference
   createManyToManyTable(
-      b,
-      "users_to_comments",
-      { table: "users", column: "liked_by_user_id" },
-      { table: "comments", collectionName: "likedComments" },
+    b,
+    "users_to_comments",
+    { table: "users", column: "liked_by_user_id" },
+    { table: "comments", collectionName: "likedComments" },
   );
 }

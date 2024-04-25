@@ -37,6 +37,7 @@ import {
   OneToManyCollection,
   PartialOrNull,
   PolymorphicReferenceImpl,
+  TimestampSerde,
   UniqueFilter,
   ValidationError,
   ValidationErrors,
@@ -1087,8 +1088,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       const baseMeta = getBaseMeta(getMetadata(entity));
       const { createdAt, updatedAt } = baseMeta.timestampFields;
       const { data } = getInstanceData(entity);
-      if (createdAt) data[createdAt] = Temporal.Now.zonedDateTimeISO();
-      if (updatedAt) data[updatedAt] = Temporal.Now.zonedDateTimeISO();
+      const now = Temporal.Now.instant();
+      if (createdAt) {
+        const serde = baseMeta.fields[createdAt].serde as TimestampSerde<unknown>;
+        data[createdAt] = serde.mapFromInstant(now);
+      }
+      if (updatedAt) {
+        const serde = baseMeta.fields[updatedAt].serde as TimestampSerde<unknown>;
+        data[updatedAt] = serde.mapFromInstant(now);
+      }
       // Set the discriminator for STI
       if (baseMeta.inheritanceType === "sti") {
         setStiDiscriminatorValue(baseMeta, entity);
@@ -1948,7 +1956,8 @@ function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Temporal.Instant):
         // so force the field to be dirty.
         const orm = getInstanceData(e);
         orm.originalData[updatedAt] = getField(e, updatedAt);
-        orm.data[updatedAt] = now.toZonedDateTimeISO("UTC");
+        const serde = todo.metadata.fields[updatedAt].serde as TimestampSerde<unknown>;
+        orm.data[updatedAt] = serde.mapFromInstant(now);
       }
     }
   }

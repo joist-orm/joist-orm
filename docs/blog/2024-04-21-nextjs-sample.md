@@ -77,7 +77,7 @@ In either approach, Joist's N+1 prevention auto-batches database calls, even if 
 - All 2nd-level `AuthorRscCard` cards each make their own `author.books.load()` call, but because they are rendered in the same event loop, Joist can batch all of the `load` calls into 1 SQL call
 - Any 3rd-level components would have their `load` calls batched as well.
 
-In the React Client Component approach, this auto-batching is admittedly not as necessary, assuming a singular top-level level component, like `Table`, loads all the data at once anyway (although, as mentioned later, Joist can optimize that as well).
+In the React Client Component approach, this auto-batching is admittedly not as necessary, assuming a singular top-level component, like `Table`, loads all the data at once anyway (although, as mentioned later, Joist can optimize that as well).
 
 See the [Avoiding N+1s](/docs/goals/avoiding-n-plus-1s) section of our docs for more information.
 

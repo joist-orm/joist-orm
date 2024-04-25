@@ -14,7 +14,7 @@ import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
 import { findDataLoader } from "./dataloaders/findDataLoader";
-import { findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
+import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { populateDataLoader } from "./dataloaders/populateDataLoader";
 import { Driver } from "./drivers/Driver";
@@ -532,6 +532,38 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     }
 
     return count;
+  }
+
+  /**
+   *
+   * @param type the entity type to find/create
+   * @param where the fields to look up the existing entity by
+   */
+  async findWithNewOrChanged<T extends EntityW, F extends Partial<OptsOf<T>>>(
+    type: EntityConstructor<T>,
+    where: F,
+  ): Promise<T[]>;
+  async findWithNewOrChanged<T extends EntityW, F extends Partial<OptsOf<T>>, const H extends LoadHint<T>>(
+    type: EntityConstructor<T>,
+    where: F,
+    options?: { populate?: H; softDeletes?: "include" | "exclude" },
+  ): Promise<Loaded<T, H>[]>;
+  async findWithNewOrChanged<T extends EntityW, F extends Partial<OptsOf<T>>, const H extends LoadHint<T>>(
+    type: EntityConstructor<T>,
+    where: F,
+    options?: { populate?: H; softDeletes?: "include" | "exclude" },
+  ): Promise<T[]> {
+    const { softDeletes = "exclude", populate } = options ?? {};
+    const persisted = await this.find(type, where as any, { softDeletes });
+    const unchanged = persisted.filter((e) => !e.isNewEntity && !e.isDirtyEntity && !e.isDeletedEntity);
+    const maybeNew = this.entities.filter(
+      (e) => e instanceof type && (e.isNewEntity || e.isDirtyEntity) && entityMatches(e, where),
+    );
+    const found = [...unchanged, ...maybeNew];
+    if (populate) {
+      await this.populate(found, populate as any);
+    }
+    return found as unknown as T[];
   }
 
   /**

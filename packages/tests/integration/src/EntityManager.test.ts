@@ -1311,6 +1311,61 @@ describe("EntityManager", () => {
     expect(result).toEqual(a1);
   });
 
+  describe("findWithNewOrChanged", () => {
+    it("finds existing, unloaded entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      const authors = await em.findWithNewOrChanged(Author, { firstName: "a1" });
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
+    it("finds existing, loaded entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      await em.find(Author, {});
+      const authors = await em.findWithNewOrChanged(Author, { firstName: "a1" });
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
+    it("finds new entities", async () => {
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      em.create(Author, { firstName: "a1" });
+      const authors = await em.findWithNewOrChanged(Author, { firstName: "a1" });
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
+    it("finds changed entities", async () => {
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      const a2 = await em.load(Author, "a:1");
+      a2.firstName = "a1";
+      const authors = await em.findWithNewOrChanged(Author, { firstName: "a1" });
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
+    it("ignores changed entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const a2 = await em.load(Author, "a:1");
+      a2.firstName = "a2";
+      const authors = await em.findWithNewOrChanged(Author, { firstName: "a1" });
+      expect(authors).toMatchEntity([]);
+    });
+
+    it("can populate found & created entities", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertPublisher({ id: 2, name: "p2" });
+      await insertAuthor({ first_name: "a1", last_name: "last", publisher_id: 1 });
+      const em = newEntityManager();
+      em.create(Author, { firstName: "a2", lastName: "last", publisher: "p:2" });
+      const authors = await em.findWithNewOrChanged(Author, { lastName: "last" }, { populate: "publisher" });
+      expect(authors).toMatchEntity([{ publisher: { name: "p1" } }, { publisher: { name: "p2" } }]);
+    });
+  });
+
   describe("touch", () => {
     it("can touch an entity to force it to be flushed", async () => {
       await insertAuthor({ first_name: "a1" });

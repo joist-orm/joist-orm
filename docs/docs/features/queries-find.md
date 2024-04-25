@@ -298,3 +298,18 @@ const author = await em.findOneOrFail(Author, { email: "foo@bar.com" });
 const em = newEntityManager();
 const author = await em.findOrCreate(Author, { email: "foo@bar.com" });
 ```
+
+### `#findWithNewOrChanged`
+
+The normal `em.find` method creates a SQL `SELECT` statement that is issued against the database.
+
+This is great, but it will miss any work-in-progress changes you've made to entities in the current `EntityManager` instance, i.e. if you've created new entities, or have mutated entities, that would technically match the `where` parameter, but have not been `em.flush`ed to the database yet.
+
+This `findWithNewOrChanged` provides this capability, to find against both unloaded rows from the database, as well as any WIP changes to entities in the current `EntityManager` instance.
+
+Because we evaluate this "where clause" in memory, the `where` parameter is limited to a flat set of fields immediately on the entity, i.e. primitives, enums, and many-to-ones, without any nested, cross-table joins/conditions.
+
+```ts
+const em = newEntityManager();
+const author = await em.findWithNewOrChanged(Author, { email: "foo@bar.com" });
+```

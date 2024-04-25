@@ -101,7 +101,7 @@ export function findOrCreateDataLoader<T extends Entity>(
 }
 
 /** A simple in-memory match of `entity` against a mini/flat "WHERE clause" of `opts`. */
-function entityMatches<T extends Entity>(entity: T, opts: Partial<OptsOf<T>>): boolean {
+export function entityMatches<T extends Entity>(entity: T, opts: Partial<OptsOf<T>>): boolean {
   const meta = getMetadata(entity);
   return Object.entries(opts).every(([fieldName, value]) => {
     const field = meta.allFields[fieldName] ?? fail(`Invalid field ${fieldName}`);

@@ -36,7 +36,6 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import { Artist, artistMeta, EntityManager, newArtist, Painting, paintingMeta } from "../entities";
 import type { Entity, PaintingId } from "../entities";
 
@@ -46,8 +45,8 @@ export interface ArtistFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   lastName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Temporal.PlainDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.PlainDateTime; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
 }
 
 export interface ArtistOpts {
@@ -64,8 +63,8 @@ export interface ArtistFilter {
   id?: ValueFilter<ArtistId, never> | null;
   firstName?: ValueFilter<string, never>;
   lastName?: ValueFilter<string, never>;
-  createdAt?: ValueFilter<Temporal.PlainDateTime, never>;
-  updatedAt?: ValueFilter<Temporal.PlainDateTime, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
   paintings?: EntityFilter<Painting, PaintingId, FilterOf<Painting>, null | undefined>;
 }
 
@@ -73,8 +72,8 @@ export interface ArtistGraphQLFilter {
   id?: ValueGraphQLFilter<ArtistId>;
   firstName?: ValueGraphQLFilter<string>;
   lastName?: ValueGraphQLFilter<string>;
-  createdAt?: ValueGraphQLFilter<Temporal.PlainDateTime>;
-  updatedAt?: ValueGraphQLFilter<Temporal.PlainDateTime>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
   paintings?: EntityGraphQLFilter<Painting, PaintingId, GraphQLFilterOf<Painting>, null | undefined>;
 }
 
@@ -144,11 +143,11 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
     setField(this, "lastName", cleanStringValue(lastName));
   }
 
-  get createdAt(): Temporal.PlainDateTime {
+  get createdAt(): Date {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Temporal.PlainDateTime {
+  get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
 

@@ -1,11 +1,7 @@
 {
   "codegenPlugins": ["joist-graphql-codegen"],
   "contextType": "Context@src/context",
-  "dateAndTimeTypes": {
-    "date": "Temporal.PlainDate",
-    "timestamp": "Temporal.PlainDateTime",
-    "timestamptz": "Temporal.ZonedDateTime"
-  },
+  "dateAndTime": { "timeZone": "UTC", "types": { "date": "Date", "timestamp": "Date", "timestamptz": "Date" } },
   "entities": {
     "AdminUser": { "tag": "u" },
     "Author": {

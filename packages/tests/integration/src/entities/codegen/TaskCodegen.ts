@@ -39,7 +39,6 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import {
   EntityManager,
   newTask,
@@ -62,15 +61,15 @@ export type TaskId = Flavor<string, Task>;
 export interface TaskFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   durationInDays: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  deletedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   type: { kind: "enum"; type: TaskType; nullable: undefined };
 }
 
 export interface TaskOpts {
   durationInDays: number;
-  deletedAt?: Temporal.ZonedDateTime | null;
+  deletedAt?: Date | null;
   taskTaskItems?: TaskItem[];
   tags?: Tag[];
 }
@@ -83,9 +82,9 @@ export interface TaskIdsOpts {
 export interface TaskFilter {
   id?: ValueFilter<TaskId, never> | null;
   durationInDays?: ValueFilter<number, never>;
-  deletedAt?: ValueFilter<Temporal.ZonedDateTime, null>;
-  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
-  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  deletedAt?: ValueFilter<Date, null>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
   type?: ValueFilter<TaskType, null>;
   taskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
@@ -94,9 +93,9 @@ export interface TaskFilter {
 export interface TaskGraphQLFilter {
   id?: ValueGraphQLFilter<TaskId>;
   durationInDays?: ValueGraphQLFilter<number>;
-  deletedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
-  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
-  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  deletedAt?: ValueGraphQLFilter<Date>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
   type?: ValueGraphQLFilter<TaskType>;
   taskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
@@ -161,19 +160,19 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
     setField(this, "durationInDays", durationInDays);
   }
 
-  get deletedAt(): Temporal.ZonedDateTime | undefined {
+  get deletedAt(): Date | undefined {
     return getField(this, "deletedAt");
   }
 
-  set deletedAt(deletedAt: Temporal.ZonedDateTime | undefined) {
+  set deletedAt(deletedAt: Date | undefined) {
     setField(this, "deletedAt", deletedAt);
   }
 
-  get createdAt(): Temporal.ZonedDateTime {
+  get createdAt(): Date {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Temporal.ZonedDateTime {
+  get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
 

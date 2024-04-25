@@ -36,7 +36,6 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import { Child, ChildGroup, childGroupMeta, childMeta, EntityManager, newChild } from "../entities";
 import type { ChildGroupId, Entity } from "../entities";
 
@@ -45,8 +44,8 @@ export type ChildId = Flavor<string, Child>;
 export interface ChildFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
 }
 
 export interface ChildOpts {
@@ -61,16 +60,16 @@ export interface ChildIdsOpts {
 export interface ChildFilter {
   id?: ValueFilter<ChildId, never> | null;
   name?: ValueFilter<string, null>;
-  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
-  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
   groups?: EntityFilter<ChildGroup, ChildGroupId, FilterOf<ChildGroup>, null | undefined>;
 }
 
 export interface ChildGraphQLFilter {
   id?: ValueGraphQLFilter<ChildId>;
   name?: ValueGraphQLFilter<string>;
-  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
-  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
   groups?: EntityGraphQLFilter<ChildGroup, ChildGroupId, GraphQLFilterOf<ChildGroup>, null | undefined>;
 }
 
@@ -129,11 +128,11 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
     setField(this, "name", cleanStringValue(name));
   }
 
-  get createdAt(): Temporal.ZonedDateTime {
+  get createdAt(): Date {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Temporal.ZonedDateTime {
+  get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
 

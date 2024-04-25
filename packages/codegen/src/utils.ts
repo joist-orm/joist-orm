@@ -121,11 +121,11 @@ export function mapSimpleDbTypeToTypescriptType(config: Config, dbType: Database
     case "tsvector":
       return "string";
     case "timestamp with time zone":
-      return config.dateAndTimeTypes.timestamptz === "Date" ? dateCode : zonedDateTimeCode;
+      return config.dateAndTime.types.timestamptz === "Date" ? dateCode : zonedDateTimeCode;
     case "timestamp without time zone":
-      return config.dateAndTimeTypes.timestamp === "Date" ? dateCode : plainDateTimeCode;
+      return config.dateAndTime.types.timestamp === "Date" ? dateCode : plainDateTimeCode;
     case "date":
-      return config.dateAndTimeTypes.date === "Date" ? dateCode : plainDateCode;
+      return config.dateAndTime.types.date === "Date" ? dateCode : plainDateCode;
     case "jsonb":
       return "Object";
     default:

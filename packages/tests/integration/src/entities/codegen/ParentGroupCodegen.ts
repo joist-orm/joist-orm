@@ -36,7 +36,6 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import {
   ChildGroup,
   childGroupMeta,
@@ -54,8 +53,8 @@ export type ParentGroupId = Flavor<string, ParentGroup>;
 export interface ParentGroupFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
 }
 
 export interface ParentGroupOpts {
@@ -72,8 +71,8 @@ export interface ParentGroupIdsOpts {
 export interface ParentGroupFilter {
   id?: ValueFilter<ParentGroupId, never> | null;
   name?: ValueFilter<string, null>;
-  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
-  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
   childGroups?: EntityFilter<ChildGroup, ChildGroupId, FilterOf<ChildGroup>, null | undefined>;
   parentItems?: EntityFilter<ParentItem, ParentItemId, FilterOf<ParentItem>, null | undefined>;
 }
@@ -81,8 +80,8 @@ export interface ParentGroupFilter {
 export interface ParentGroupGraphQLFilter {
   id?: ValueGraphQLFilter<ParentGroupId>;
   name?: ValueGraphQLFilter<string>;
-  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
-  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
   childGroups?: EntityGraphQLFilter<ChildGroup, ChildGroupId, GraphQLFilterOf<ChildGroup>, null | undefined>;
   parentItems?: EntityGraphQLFilter<ParentItem, ParentItemId, GraphQLFilterOf<ParentItem>, null | undefined>;
 }
@@ -142,11 +141,11 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
     setField(this, "name", cleanStringValue(name));
   }
 
-  get createdAt(): Temporal.ZonedDateTime {
+  get createdAt(): Date {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Temporal.ZonedDateTime {
+  get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
 

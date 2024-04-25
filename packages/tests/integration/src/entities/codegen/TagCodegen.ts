@@ -36,7 +36,6 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import {
   Author,
   authorMeta,
@@ -60,8 +59,8 @@ export type TagId = Flavor<string, Tag>;
 export interface TagFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
 }
 
 export interface TagOpts {
@@ -84,8 +83,8 @@ export interface TagIdsOpts {
 export interface TagFilter {
   id?: ValueFilter<TagId, never> | null;
   name?: ValueFilter<string, never>;
-  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
-  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
   authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   bookReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
@@ -96,8 +95,8 @@ export interface TagFilter {
 export interface TagGraphQLFilter {
   id?: ValueGraphQLFilter<TagId>;
   name?: ValueGraphQLFilter<string>;
-  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
-  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
   authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   bookReviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
@@ -161,11 +160,11 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
     setField(this, "name", cleanStringValue(name));
   }
 
-  get createdAt(): Temporal.ZonedDateTime {
+  get createdAt(): Date {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Temporal.ZonedDateTime {
+  get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
 

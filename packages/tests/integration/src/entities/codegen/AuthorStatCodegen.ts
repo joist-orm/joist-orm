@@ -30,7 +30,6 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import { AuthorStat, authorStatMeta, EntityManager, newAuthorStat } from "../entities";
 import type { Entity } from "../entities";
 
@@ -50,8 +49,8 @@ export interface AuthorStatFields {
   doublePrecision: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   nullableText: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   json: { kind: "primitive"; type: Object; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
 }
 
 export interface AuthorStatOpts {
@@ -86,8 +85,8 @@ export interface AuthorStatFilter {
   doublePrecision?: ValueFilter<number, never>;
   nullableText?: ValueFilter<string, null>;
   json?: ValueFilter<Object, null>;
-  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
-  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
 }
 
 export interface AuthorStatGraphQLFilter {
@@ -104,8 +103,8 @@ export interface AuthorStatGraphQLFilter {
   doublePrecision?: ValueGraphQLFilter<number>;
   nullableText?: ValueGraphQLFilter<string>;
   json?: ValueGraphQLFilter<Object>;
-  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
-  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
 }
 
 export interface AuthorStatOrder {
@@ -271,11 +270,11 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
     setField(this, "json", json);
   }
 
-  get createdAt(): Temporal.ZonedDateTime {
+  get createdAt(): Date {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Temporal.ZonedDateTime {
+  get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
 

@@ -1,6 +1,6 @@
 import { insertAuthor, insertPublisher } from "@src/entities/inserts";
 import { zeroTo } from "@src/utils";
-import { aliases, jan1DateTime } from "joist-orm";
+import { aliases, jan1 } from "joist-orm";
 import {
   AdvanceStatus,
   Author,
@@ -332,7 +332,7 @@ describe("EntityManager.find.batch", () => {
         {
           conditions: {
             or: [
-              { and: [ba.createdAt.gt(jan1DateTime)] },
+              { and: [ba.createdAt.gt(jan1)] },
               { and: [ba.status.eq(AdvanceStatus.Paid), p.type.in([PublisherType.Big])] },
             ],
           },

@@ -1,5 +1,4 @@
 import { DeepNew, EntityManager, FactoryOpts, newTestInstance, testIndex } from "joist-orm";
-import { Temporal } from "temporal-polyfill";
 import { Author } from "../entities";
 
 // for testing factories
@@ -17,6 +16,6 @@ export function newAuthor(
     age: opts.isPopular ? 50 : undefined,
     // Adding to ensure newTestInstance doesn't infinitely recurse between m2os & o2os
     image: undefined,
-    ...(canHaveReviews ? { graduated: Temporal.Now.plainDateISO(), age: 21 } : {}),
+    ...(canHaveReviews ? { graduated: new Date(), age: 21 } : {}),
   });
 }

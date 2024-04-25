@@ -36,7 +36,6 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import {
   Author,
   authorMeta,
@@ -59,8 +58,8 @@ export type ImageId = Flavor<string, Image>;
 export interface ImageFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   fileName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   type: { kind: "enum"; type: ImageType; nullable: never };
   author: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   book: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
@@ -84,8 +83,8 @@ export interface ImageIdsOpts {
 export interface ImageFilter {
   id?: ValueFilter<ImageId, never> | null;
   fileName?: ValueFilter<string, never>;
-  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
-  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
   type?: ValueFilter<ImageType, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   book?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
@@ -95,8 +94,8 @@ export interface ImageFilter {
 export interface ImageGraphQLFilter {
   id?: ValueGraphQLFilter<ImageId>;
   fileName?: ValueGraphQLFilter<string>;
-  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
-  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
   type?: ValueGraphQLFilter<ImageType>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
@@ -164,11 +163,11 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
     setField(this, "fileName", cleanStringValue(fileName));
   }
 
-  get createdAt(): Temporal.ZonedDateTime {
+  get createdAt(): Date {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Temporal.ZonedDateTime {
+  get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
 

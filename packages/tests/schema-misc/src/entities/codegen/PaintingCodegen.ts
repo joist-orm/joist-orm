@@ -36,7 +36,6 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import { Artist, artistMeta, EntityManager, newPainting, Painting, paintingMeta } from "../entities";
 import type { ArtistId, ArtistOrder, Entity } from "../entities";
 
@@ -45,8 +44,8 @@ export type PaintingId = Flavor<string, Painting>;
 export interface PaintingFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Temporal.PlainDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.PlainDateTime; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   artist: { kind: "m2o"; type: Artist; nullable: never; derived: false };
 }
 
@@ -62,16 +61,16 @@ export interface PaintingIdsOpts {
 export interface PaintingFilter {
   id?: ValueFilter<PaintingId, never> | null;
   title?: ValueFilter<string, never>;
-  createdAt?: ValueFilter<Temporal.PlainDateTime, never>;
-  updatedAt?: ValueFilter<Temporal.PlainDateTime, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
   artist?: EntityFilter<Artist, ArtistId, FilterOf<Artist>, never>;
 }
 
 export interface PaintingGraphQLFilter {
   id?: ValueGraphQLFilter<PaintingId>;
   title?: ValueGraphQLFilter<string>;
-  createdAt?: ValueGraphQLFilter<Temporal.PlainDateTime>;
-  updatedAt?: ValueGraphQLFilter<Temporal.PlainDateTime>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
   artist?: EntityGraphQLFilter<Artist, ArtistId, GraphQLFilterOf<Artist>, never>;
 }
 
@@ -133,11 +132,11 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
     setField(this, "title", cleanStringValue(title));
   }
 
-  get createdAt(): Temporal.PlainDateTime {
+  get createdAt(): Date {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Temporal.PlainDateTime {
+  get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
 

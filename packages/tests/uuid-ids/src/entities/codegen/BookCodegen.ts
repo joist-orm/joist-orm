@@ -36,7 +36,6 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import {
   Author,
   authorMeta,
@@ -55,8 +54,8 @@ export type BookId = Flavor<string, Book>;
 export interface BookFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   status: { kind: "enum"; type: BookStatus; nullable: never };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
 }
@@ -74,8 +73,8 @@ export interface BookIdsOpts {
 export interface BookFilter {
   id?: ValueFilter<BookId, never> | null;
   title?: ValueFilter<string, never>;
-  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
-  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
   status?: ValueFilter<BookStatus, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
 }
@@ -83,8 +82,8 @@ export interface BookFilter {
 export interface BookGraphQLFilter {
   id?: ValueGraphQLFilter<BookId>;
   title?: ValueGraphQLFilter<string>;
-  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
-  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
   status?: ValueGraphQLFilter<BookStatus>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
 }
@@ -149,11 +148,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
     setField(this, "title", cleanStringValue(title));
   }
 
-  get createdAt(): Temporal.ZonedDateTime {
+  get createdAt(): Date {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Temporal.ZonedDateTime {
+  get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
 

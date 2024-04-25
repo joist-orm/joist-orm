@@ -35,7 +35,6 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import {
   EntityManager,
   newTaskItem,
@@ -54,8 +53,8 @@ export type TaskItemId = Flavor<string, TaskItem>;
 
 export interface TaskItemFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   newTask: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
   oldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
   task: { kind: "m2o"; type: Task; nullable: undefined; derived: false };
@@ -75,8 +74,8 @@ export interface TaskItemIdsOpts {
 
 export interface TaskItemFilter {
   id?: ValueFilter<TaskItemId, never> | null;
-  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
-  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
   newTask?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   oldTask?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
   task?: EntityFilter<Task, TaskId, FilterOf<Task>, null>;
@@ -84,8 +83,8 @@ export interface TaskItemFilter {
 
 export interface TaskItemGraphQLFilter {
   id?: ValueGraphQLFilter<TaskItemId>;
-  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
-  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
   newTask?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   oldTask?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
   task?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null>;
@@ -142,11 +141,11 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
     return getField(this, "id");
   }
 
-  get createdAt(): Temporal.ZonedDateTime {
+  get createdAt(): Date {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Temporal.ZonedDateTime {
+  get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
 

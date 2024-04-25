@@ -36,7 +36,6 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import { Critic, CriticColumn, criticColumnMeta, criticMeta, EntityManager, newCriticColumn } from "../entities";
 import type { CriticId, CriticOrder, Entity } from "../entities";
 
@@ -45,8 +44,8 @@ export type CriticColumnId = Flavor<string, CriticColumn>;
 export interface CriticColumnFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   critic: { kind: "m2o"; type: Critic; nullable: never; derived: false };
 }
 
@@ -62,16 +61,16 @@ export interface CriticColumnIdsOpts {
 export interface CriticColumnFilter {
   id?: ValueFilter<CriticColumnId, never> | null;
   name?: ValueFilter<string, never>;
-  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
-  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
   critic?: EntityFilter<Critic, CriticId, FilterOf<Critic>, never>;
 }
 
 export interface CriticColumnGraphQLFilter {
   id?: ValueGraphQLFilter<CriticColumnId>;
   name?: ValueGraphQLFilter<string>;
-  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
-  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
   critic?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, never>;
 }
 
@@ -133,11 +132,11 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
     setField(this, "name", cleanStringValue(name));
   }
 
-  get createdAt(): Temporal.ZonedDateTime {
+  get createdAt(): Date {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Temporal.ZonedDateTime {
+  get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
 

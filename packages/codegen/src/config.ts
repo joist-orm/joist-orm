@@ -95,24 +95,34 @@ export const config = z
         deletedAt: z.optional(timestampConfig),
       }),
     ),
-    dateAndTimeTypes: z
+    /**
+     * Allows the user to set the output type from codegen for date and timestamp db types.
+     *
+     * We default to legacy Date and provide Temporal types (via `temporal-polyfill`) as alternatives
+     *
+     * Additionally, allows for specifying the default time zone for converting dates to/from the database. This only
+     * is used for Temporal types and defaults to "UTC"
+     */
+    dateAndTime: z
       .optional(
         z.object({
-          date: z.optional(z.union([z.literal("Date"), z.literal("Temporal.PlainDate")])).default("Temporal.PlainDate"),
-          timestamp: z
-            .optional(z.union([z.literal("Date"), z.literal("Temporal.PlainDateTime")]))
-            .default("Temporal.PlainDateTime"),
-          timestamptz: z
-            .optional(z.union([z.literal("Date"), z.literal("Temporal.ZonedDateTime")]))
-            .default("Temporal.ZonedDateTime"),
+          timeZone: z.optional(z.string()).default("UTC"),
+          types: z
+            .optional(
+              z.object({
+                date: z.optional(z.union([z.literal("Date"), z.literal("Temporal.PlainDate")])).default("Date"),
+                timestamp: z
+                  .optional(z.union([z.literal("Date"), z.literal("Temporal.PlainDateTime")]))
+                  .default("Date"),
+                timestamptz: z
+                  .optional(z.union([z.literal("Date"), z.literal("Temporal.ZonedDateTime")]))
+                  .default("Date"),
+              }),
+            )
+            .default({}),
         }),
       )
-      .default({
-        date: "Temporal.PlainDate",
-        timestamp: "Temporal.PlainDateTime",
-        timestamptz: "Temporal.ZonedDateTime",
-      }),
-
+      .default({}),
     /**
      * By default, we create a `flush_database` function for fast testing.
      *

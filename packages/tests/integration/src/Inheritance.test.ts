@@ -30,7 +30,7 @@ import {
 } from "./entities";
 
 import { newEntityManager, queries, resetQueryCount, testDriver } from "@src/testEm";
-import { jan1DateTime } from "joist-orm";
+import { jan1 } from "joist-orm";
 
 describe("Inheritance", () => {
   it("can insert a subtype into two tables", async () => {
@@ -68,7 +68,7 @@ describe("Inheritance", () => {
   });
 
   it("can update a subtype across two tables", async () => {
-    await insertPublisher({ name: "sp1", updated_at: jan1DateTime });
+    await insertPublisher({ name: "sp1", updated_at: jan1 });
     await insertLargePublisher({ id: 2, name: "lp1" });
 
     const em = newEntityManager();
@@ -85,8 +85,8 @@ describe("Inheritance", () => {
       { id: 1, name: "spa" },
       { id: 2, name: "lpa" },
     ]);
-    expect(baseRows[0].updated_at.getTime() > jan1DateTime.epochMilliseconds).toBe(true);
-    expect(baseRows[1].updated_at.getTime() > jan1DateTime.epochMilliseconds).toBe(true);
+    expect(baseRows[0].updated_at.getTime() > jan1.getTime()).toBe(true);
+    expect(baseRows[1].updated_at.getTime() > jan1.getTime()).toBe(true);
     expect(await testDriver.select("small_publishers")).toMatchObject([{ id: 1, city: "citya" }]);
     expect(await testDriver.select("large_publishers")).toMatchObject([{ id: 2, country: "countrya" }]);
   });
@@ -107,13 +107,13 @@ describe("Inheritance", () => {
   });
 
   it("updates updated_at on the base table", async () => {
-    await insertPublisher({ name: "sp1", updated_at: jan1DateTime });
+    await insertPublisher({ name: "sp1", updated_at: jan1 });
     const em = newEntityManager();
     const sp = await em.load(SmallPublisher, "p:1");
     sp.city = "citya";
     await em.flush();
     const baseRows = await testDriver.select("publishers");
-    expect(baseRows[0].updated_at.getTime() > jan1DateTime.epochMilliseconds).toBe(true);
+    expect(baseRows[0].updated_at.getTime() > jan1.getTime()).toBe(true);
   });
 
   it("runs base type validation rules against the sub type", async () => {

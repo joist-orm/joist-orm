@@ -9,7 +9,6 @@ import {
 } from "@src/entities/inserts";
 import { lastQuery, newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 import { Lens, getLens, getMetadata, testing } from "joist-orm";
-import { Temporal } from "temporal-polyfill";
 import { Author, Book, Image, Publisher, Tag } from "./entities";
 
 const { isAllSqlPaths } = testing;
@@ -145,7 +144,7 @@ describe("EntityManager.lens", () => {
   });
 
   it("can navigate across soft-deleted references from an entity", async () => {
-    await insertAuthor({ first_name: "a1", deleted_at: Temporal.Now.zonedDateTimeISO() });
+    await insertAuthor({ first_name: "a1", deleted_at: new Date() });
     await insertBook({ author_id: 1, title: "b1" });
     const em = newEntityManager();
     const b1 = await em.load(Book, "b:1");

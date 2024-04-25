@@ -47,7 +47,6 @@ import type {
 } from "joist-orm";
 import type { Context } from "src/context";
 import type { IpAddress, PasswordValue } from "src/entities/types";
-import { Temporal } from "temporal-polyfill";
 import {
   AdminUser,
   Author,
@@ -81,8 +80,8 @@ export interface UserFields {
   password: { kind: "primitive"; type: PasswordValue; unique: false; nullable: undefined; derived: false };
   bio: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   originalEmail: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: undefined };
 }
@@ -115,8 +114,8 @@ export interface UserFilter {
   password?: ValueFilter<PasswordValue, null>;
   bio?: ValueFilter<string, never>;
   originalEmail?: ValueFilter<string, never>;
-  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
-  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
   authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   createdComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   likedComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
@@ -131,8 +130,8 @@ export interface UserGraphQLFilter {
   password?: ValueGraphQLFilter<PasswordValue>;
   bio?: ValueGraphQLFilter<string>;
   originalEmail?: ValueGraphQLFilter<string>;
-  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
-  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
   authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   likedComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
@@ -245,11 +244,11 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
     setField(this, "originalEmail", cleanStringValue(originalEmail));
   }
 
-  get createdAt(): Temporal.ZonedDateTime {
+  get createdAt(): Date {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Temporal.ZonedDateTime {
+  get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
 

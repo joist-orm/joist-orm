@@ -42,7 +42,6 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import {
   Book,
   bookMeta,
@@ -66,8 +65,8 @@ export interface BookReviewFields {
   rating: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   isPublic: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: true };
   isTest: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: true };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   book: { kind: "m2o"; type: Book; nullable: never; derived: false };
   critic: { kind: "m2o"; type: Critic; nullable: undefined; derived: false };
 }
@@ -92,8 +91,8 @@ export interface BookReviewFilter {
   rating?: ValueFilter<number, never>;
   isPublic?: BooleanFilter<never>;
   isTest?: BooleanFilter<never>;
-  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
-  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
   book?: EntityFilter<Book, BookId, FilterOf<Book>, never>;
   critic?: EntityFilter<Critic, CriticId, FilterOf<Critic>, null>;
   comment?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
@@ -105,8 +104,8 @@ export interface BookReviewGraphQLFilter {
   rating?: ValueGraphQLFilter<number>;
   isPublic?: BooleanGraphQLFilter;
   isTest?: BooleanGraphQLFilter;
-  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
-  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
   critic?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, null>;
   comment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
@@ -180,11 +179,11 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
 
   abstract readonly isTest: ReactiveField<BookReview, boolean>;
 
-  get createdAt(): Temporal.ZonedDateTime {
+  get createdAt(): Date {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Temporal.ZonedDateTime {
+  get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
 

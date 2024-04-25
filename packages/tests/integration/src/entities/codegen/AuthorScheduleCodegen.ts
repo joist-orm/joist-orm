@@ -36,7 +36,6 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import { Author, authorMeta, AuthorSchedule, authorScheduleMeta, EntityManager, newAuthorSchedule } from "../entities";
 import type { AuthorId, AuthorOrder, Entity } from "../entities";
 
@@ -45,8 +44,8 @@ export type AuthorScheduleId = Flavor<string, AuthorSchedule>;
 export interface AuthorScheduleFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   overview: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
 }
 
@@ -62,16 +61,16 @@ export interface AuthorScheduleIdsOpts {
 export interface AuthorScheduleFilter {
   id?: ValueFilter<AuthorScheduleId, never> | null;
   overview?: ValueFilter<string, null>;
-  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
-  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
 }
 
 export interface AuthorScheduleGraphQLFilter {
   id?: ValueGraphQLFilter<AuthorScheduleId>;
   overview?: ValueGraphQLFilter<string>;
-  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
-  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
 }
 
@@ -132,11 +131,11 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
     setField(this, "overview", cleanStringValue(overview));
   }
 
-  get createdAt(): Temporal.ZonedDateTime {
+  get createdAt(): Date {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Temporal.ZonedDateTime {
+  get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
 

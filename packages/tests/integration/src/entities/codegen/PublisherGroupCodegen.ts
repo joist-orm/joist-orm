@@ -39,7 +39,6 @@ import type {
   ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import {
   Critic,
   criticMeta,
@@ -58,8 +57,8 @@ export interface PublisherGroupFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
 }
 
 export interface PublisherGroupOpts {
@@ -75,8 +74,8 @@ export interface PublisherGroupFilter {
   id?: ValueFilter<PublisherGroupId, never> | null;
   name?: ValueFilter<string, null>;
   numberOfBookReviews?: ValueFilter<number, never>;
-  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
-  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
 }
 
@@ -84,8 +83,8 @@ export interface PublisherGroupGraphQLFilter {
   id?: ValueGraphQLFilter<PublisherGroupId>;
   name?: ValueGraphQLFilter<string>;
   numberOfBookReviews?: ValueGraphQLFilter<number>;
-  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
-  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
   publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
 }
 
@@ -148,11 +147,11 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
 
   abstract readonly numberOfBookReviews: ReactiveField<PublisherGroup, number>;
 
-  get createdAt(): Temporal.ZonedDateTime {
+  get createdAt(): Date {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Temporal.ZonedDateTime {
+  get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
 

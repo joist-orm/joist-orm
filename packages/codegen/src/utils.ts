@@ -90,6 +90,11 @@ export function tableToEntityName(config: Config, table: Table): string {
   return entityName;
 }
 
+export const dateCode = code`Date`;
+export const plainDateCode = code`${imp("Temporal@temporal-polyfill")}.PlainDate`;
+export const plainDateTimeCode = code`${imp("Temporal@temporal-polyfill")}.PlainDateTime`;
+export const zonedDateTimeCode = code`${imp("Temporal@temporal-polyfill")}.ZonedDateTime`;
+
 /** Maps db types, i.e. `int`, to JS types, i.e. `number`. */
 export function mapSimpleDbTypeToTypescriptType(config: Config, dbType: DatabaseColumnType): PrimitiveTypescriptType {
   switch (dbType) {
@@ -116,17 +121,11 @@ export function mapSimpleDbTypeToTypescriptType(config: Config, dbType: Database
     case "tsvector":
       return "string";
     case "timestamp with time zone":
-      return config.dateAndTimeTypes.timestamptz === "Date"
-        ? code`Date`
-        : code`${imp("Temporal@temporal-polyfill")}.ZonedDateTime`;
+      return config.dateAndTimeTypes.timestamptz === "Date" ? dateCode : zonedDateTimeCode;
     case "timestamp without time zone":
-      return config.dateAndTimeTypes.timestamp === "Date"
-        ? code`Date`
-        : code`${imp(`Temporal@temporal-polyfill`)}.PlainDateTime`;
+      return config.dateAndTimeTypes.timestamp === "Date" ? dateCode : plainDateTimeCode;
     case "date":
-      return config.dateAndTimeTypes.date === "Date"
-        ? code`Date`
-        : code`${imp(`Temporal@temporal-polyfill`)}.PlainDate`;
+      return config.dateAndTimeTypes.date === "Date" ? dateCode : plainDateCode;
     case "jsonb":
       return "Object";
     default:

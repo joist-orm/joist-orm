@@ -121,6 +121,7 @@ function equalArrays(a: any[], b: any[]): boolean {
 
 function equal(a: any, b: any): boolean {
   if (a === b) return true;
+  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
   if (a instanceof Temporal.ZonedDateTime && b instanceof Temporal.ZonedDateTime) return a.equals(b);
   if (a instanceof Temporal.PlainDateTime && b instanceof Temporal.PlainDateTime) return a.equals(b);
   if (a instanceof Temporal.PlainDate && b instanceof Temporal.PlainDate) return a.equals(b);

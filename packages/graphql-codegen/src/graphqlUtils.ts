@@ -200,17 +200,17 @@ export function mapTypescriptTypeToGraphQLType(
   } else if (type === "number") {
     return "String";
   } else if (type instanceof Code) {
-    const rawType = type.toString();
+    const rawType = type.toCodeString([]);
     if (rawType.startsWith("Date")) {
       // Legacy javascript Date doesn't have different `date` vs. `datetime` types but GraphQL does
       // so lean on the `..._at` suffix convention to know "DateTime".
       return fieldName.endsWith("At") ? "DateTime" : "Date";
-    } else if (rawType.startsWith("Temporal.PlainDate")) {
-      return "Date";
-    } else if (rawType.startsWith("Temporal.PlainDateTime")) {
-      return "DateTime";
     } else if (rawType.startsWith("Temporal.ZonedDateTime")) {
       return "DateTime";
+    } else if (rawType.startsWith("Temporal.PlainDateTime")) {
+      return "DateTime";
+    } else if (rawType.startsWith("Temporal.PlainDate")) {
+      return "Date";
     } else {
       // If this is a fancy import like a superstruct/something, we can't guess what it will be in GraphQL
       return undefined;

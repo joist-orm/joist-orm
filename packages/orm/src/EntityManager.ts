@@ -535,8 +535,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   }
 
   /**
+   * Looks for entities that match `where`, both in the database and any just-created or just-changed entities.
    *
-   * @param type the entity type to find/create
+   * Because we evaluate this `where` clause in memory (against any WIP changes made to entities
+   * that have not yet been `em.flush`ed to the database), the `where` clause is limited to a
+   * flat set of fields immediately on the entity, i.e. primitives, enums, and many-to-ones,
+   * without any nested, cross-table joins/conditions.
+   *
+   * @param type the entity type to find
    * @param where the fields to look up the existing entity by
    */
   async findWithNewOrChanged<T extends EntityW, F extends Partial<OptsOf<T>>>(

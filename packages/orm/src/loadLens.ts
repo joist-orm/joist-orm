@@ -1,6 +1,7 @@
-import { lensDataLoader } from "./dataloaders/lensDataLoader";
 import { Entity, isEntity } from "./Entity";
 import { EntityMetadata, Field, getMetadata } from "./EntityMetadata";
+import { lensDataLoader } from "./dataloaders/lensDataLoader";
+import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 
 /** Generically matches on a Reference/Collection's load method. */
 type LoadLike<U> = { load(): Promise<U> };
@@ -163,8 +164,15 @@ export function getLens<T, U, V>(start: T | T[], fn: (lens: Lens<T>) => Lens<U, 
   // Now evaluate each step of the path
   for (const path of paths) {
     if (Array.isArray(current)) {
-      current = current.map((c) => maybeGet(c, path)).flat();
-      current = [...new Set(current.filter((c: any) => c !== undefined && !c.isSoftDeletedEntity))];
+      // Use a set to dedup as we go
+      const next = new Set();
+      // This can be a hot path, so avoid `map` and `flat` and just loop
+      for (const c of current) {
+        const value = maybeGet(c, path);
+        if (Array.isArray(value)) for (const v of value) maybeAdd(next, v);
+        else maybeAdd(next, value);
+      }
+      current = [...next];
     } else {
       current = maybeGet(current, path);
       seenSoftDeleted ||= (current as any)?.isSoftDeletedEntity;
@@ -178,15 +186,46 @@ export function getLens<T, U, V>(start: T | T[], fn: (lens: Lens<T>) => Lens<U, 
   return current!;
 }
 
+function maybeAdd(set: Set<any>, value: any) {
+  if (value !== undefined && !value.isSoftDeletedEntity) set.add(value);
+}
+
 /** Returns whether a lens is loaded; primarily for deeply loaded instances in tests. */
 export function isLensLoaded<T, U, V>(start: T | T[], fn: (lens: Lens<T>) => Lens<U, V>): boolean {
-  // This is pretty hacky, but we just call `get` and assume it will blow up with "not loaded" errors.
-  try {
-    getLens(start, fn);
-    return true;
-  } catch {
-    return false;
+  // This is a huge copy/paste of `getLens` but we check `isNotLoaded` and early return
+  // as soon as we find any not-loaded relation
+  const paths = collectPaths(fn);
+  let current: any = start;
+  let seenSoftDeleted = false;
+  // Now evaluate each step of the path
+  for (const path of paths) {
+    if (Array.isArray(current)) {
+      // Use a set to dedup as we go
+      const next = new Set();
+      for (const c of current) {
+        if (isNotLoaded(c, path)) return false;
+        const value = maybeGet(c, path);
+        if (Array.isArray(value)) for (const v of value) maybeAdd(next, v);
+        else maybeAdd(next, value);
+      }
+      current = [...next];
+    } else {
+      if (isNotLoaded(current, path)) return false;
+      current = maybeGet(current, path);
+      seenSoftDeleted ||= (current as any)?.isSoftDeletedEntity;
+      // If we had been traversing m2o -> m2o and just hit an o2m/m2m, and any of our
+      // prior m2os had been soft deleted, just filter everything out.
+      if (Array.isArray(current) && seenSoftDeleted) {
+        return true;
+      }
+    }
   }
+  return true;
+}
+
+function isNotLoaded(object: any, path: string): boolean {
+  const value = object[path];
+  return value instanceof AbstractRelationImpl && !value.isLoaded;
 }
 
 function maybeGet(object: any, path: string): unknown {
@@ -194,12 +233,8 @@ function maybeGet(object: any, path: string): unknown {
     return undefined;
   }
   const value = object[path];
-  if (value && typeof value === "object" && "get" in value) {
-    if (typeof value.get === "function") {
-      return value.get();
-    } else {
-      return value.get;
-    }
+  if (typeof value === "object" && "get" in value) {
+    return value.get;
   } else if (value && typeof value === "function") {
     return value.apply(object);
   } else {

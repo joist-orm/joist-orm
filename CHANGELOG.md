@@ -1,3 +1,10 @@
+## [1.161.1](https://github.com/joist-orm/joist-orm/compare/v1.161.0...v1.161.1) (2024-04-26)
+
+
+### Bug Fixes
+
+* Fix using the wrong meta to inject CTE tables. ([#1059](https://github.com/joist-orm/joist-orm/issues/1059)) ([d195654](https://github.com/joist-orm/joist-orm/commit/d19565443d8c6258cd3b7b4a73dc0df3901b767a))
+
 # [1.161.0](https://github.com/joist-orm/joist-orm/compare/v1.160.4...v1.161.0) (2024-04-25)
 
 

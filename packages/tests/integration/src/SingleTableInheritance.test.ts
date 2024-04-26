@@ -253,28 +253,37 @@ describe("SingleTableInheritance", () => {
   it("reports the right properties", () => {
     expect(Object.keys(getProperties(Task.metadata))).toMatchInlineSnapshot(`
      [
+       "typeDetails",
+       "isOld",
+       "isNew",
        "taskTaskItems",
        "tags",
      ]
     `);
     expect(Object.keys(getProperties(TaskNew.metadata))).toMatchInlineSnapshot(`
      [
-       "specialNewAuthor",
        "newTaskTaskItems",
+       "specialNewAuthor",
+       "typeDetails",
+       "isOld",
+       "isNew",
        "taskTaskItems",
        "tags",
      ]
     `);
     expect(Object.keys(getProperties(TaskOld.metadata))).toMatchInlineSnapshot(`
      [
-       "parentOldTask",
+       "commentParentInfo",
        "comments",
        "oldTaskTaskItems",
        "tasks",
+       "parentOldTask",
        "publishers",
+       "typeDetails",
+       "isOld",
+       "isNew",
        "taskTaskItems",
        "tags",
-       "commentParentInfo",
      ]
     `);
   });

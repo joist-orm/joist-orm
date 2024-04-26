@@ -1,4 +1,4 @@
-import { getInstanceData } from "./BaseEntity";
+import { BaseEntity, getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityMetadata } from "./EntityMetadata";
 import { asConcreteCstr } from "./index";
@@ -25,16 +25,29 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
   if (propertiesCache[key]) {
     return propertiesCache[key];
   }
+
   const instance = getFakeInstance(meta);
+
+  // Mostly for historical reasons, we don't treat known primitives/enums as properties,
+  // i.e. properties were originally meant to be the wrapper objects like `hasOne`,
+  // `hasMany`, `ReactiveField`, etc.
+  //
+  // That said, we've since start leaking other things like getters, regular async methods,
+  // etc., into properties, so that `entityResolver` can pick them up as keys to put into
+  // the GraphQL resolvers. So we should probably just remove this filter and let everything
+  // get returned as properties.
+  const knownPrimitives = Object.values(meta.allFields)
+    .filter((f) => f.kind === "primaryKey" || f.kind === "primitive" || f.kind === "enum")
+    .map((f) => f.fieldName);
+
   propertiesCache[key] = Object.fromEntries(
-    [
-      ...Object.values(meta.allFields)
-        .filter((f) => f.kind !== "primaryKey" && f.kind !== "primitive" && f.kind !== "enum")
-        .map((f) => f.fieldName),
-      ...Object.getOwnPropertyNames(meta.cstr.prototype),
-      ...Object.keys(instance),
-    ]
-      .filter((key) => key !== "constructor" && !key.startsWith("__"))
+    // Recursively looking for ownKeys will find:
+    // - Custom properties set on the instance, like `readonly author: Reference<Author> = hasOneThrough(...)`
+    // - Getters declared within the class like `get initials()`
+    // - Getters auto-created by transform-properties when it lazies `readonly author = hasOneThrough(...)` relations
+    // - Getters declared within the codegen classes like `get books(): Reference<...>`
+    getRecursiveOwnNames(instance)
+      .filter((key) => key !== "constructor" && !key.startsWith("__") && !knownPrimitives.includes(key))
       .map((key) => {
         // Return the value of `instance[key]` but wrap it in a try/catch in case it's
         // a getter that runs code that fails b/c of the dummy state we're in.
@@ -74,4 +87,31 @@ export function getFakeInstance(meta: EntityMetadata): Entity {
     } as any,
     {},
   ));
+}
+
+// These are keys we codegen into `AuthorCodegen` files to get the best typing
+// experience, but really should be treated as BaseEntity keys that we don't
+// need to expose from `getProperties`.
+const ignoredKeys = new Set([
+  "id",
+  "idMaybe",
+  "idTagged",
+  "idTaggedMaybe",
+  "set",
+  "setPartial",
+  "changes",
+  "isSoftDeletedEntity",
+  "load",
+  "populate",
+  "isLoaded",
+  "toJSON",
+]);
+
+// function getRecursiveOwnNames(cstr: MaybeAbstractEntityConstructor<any>): string[] {
+function getRecursiveOwnNames(instance: any): string[] {
+  const keys: string[] = [];
+  for (let curr = instance; curr && curr !== BaseEntity.prototype; curr = Object.getPrototypeOf(curr)) {
+    keys.push(...Object.getOwnPropertyNames(curr));
+  }
+  return keys.filter((k) => !ignoredKeys.has(k));
 }

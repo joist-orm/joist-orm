@@ -66,20 +66,47 @@ describe("getProperties", () => {
   });
 
   it("includes non-relations", () => {
-    expect(Object.keys(getProperties(authorMeta))).toEqual(
-      expect.arrayContaining([
-        "withLoadedBooks",
-        "initials",
-        "fullName",
-        "isPopular",
-        "hasBooks",
-        "authors",
-        "books",
-        "mentor",
-        "publisher",
-        "image",
-      ]),
-    );
+    expect(Object.keys(getProperties(authorMeta))).toMatchInlineSnapshot(`
+     [
+       "reviews",
+       "reviewedBooks",
+       "latestComment",
+       "favoriteBook",
+       "numberOfBooks2",
+       "latestComment2",
+       "allPublisherAuthorNames",
+       "latestComments",
+       "commentParentInfo",
+       "booksWithTitle",
+       "booksTitles",
+       "hasLowerCaseFirstName",
+       "withLoadedBooks",
+       "fullName",
+       "fullName2",
+       "hasBooks",
+       "setWasEverPopular",
+       "isFew",
+       "isLot",
+       "favoriteColorsDetails",
+       "isRed",
+       "isGreen",
+       "isBlue",
+       "isCircle",
+       "isSquare",
+       "isTriangle",
+       "authors",
+       "schedules",
+       "books",
+       "comments",
+       "tasks",
+       "mentor",
+       "currentDraftBook",
+       "publisher",
+       "image",
+       "userOneToOne",
+       "tags",
+     ]
+    `);
   });
 
   it("does not include fullNonReactiveAccess", () => {

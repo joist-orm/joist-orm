@@ -1,3 +1,10 @@
+## [1.161.2](https://github.com/joist-orm/joist-orm/compare/v1.161.1...v1.161.2) (2024-04-26)
+
+
+### Bug Fixes
+
+* Optimize loadLens to not rely on exceptions. ([#1060](https://github.com/joist-orm/joist-orm/issues/1060)) ([1b01fe7](https://github.com/joist-orm/joist-orm/commit/1b01fe78b12252074fcb3687ba015b187b86128d))
+
 ## [1.161.1](https://github.com/joist-orm/joist-orm/compare/v1.161.0...v1.161.1) (2024-04-26)
 
 

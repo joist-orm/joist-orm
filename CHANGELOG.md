@@ -1,3 +1,10 @@
+## [1.162.1](https://github.com/joist-orm/joist-orm/compare/v1.162.0...v1.162.1) (2024-04-27)
+
+
+### Bug Fixes
+
+* Fix NPE is new isNotLoaded. ([#1062](https://github.com/joist-orm/joist-orm/issues/1062)) ([b014277](https://github.com/joist-orm/joist-orm/commit/b014277360b73c0e368993b59d132e17e97c6691))
+
 # [1.162.0](https://github.com/joist-orm/joist-orm/compare/v1.161.2...v1.162.0) (2024-04-27)
 
 

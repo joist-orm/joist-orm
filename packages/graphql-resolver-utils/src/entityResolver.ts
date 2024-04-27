@@ -79,7 +79,7 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
     return typeof entityOrId === "string" ? entityOrId : entityOrId.id;
   };
 
-  const primitiveResolvers = Object.values(entityMetadata.fields)
+  const primitiveResolvers = Object.values(entityMetadata.allFields)
     .filter((ormField) => !isPrimaryKeyField(ormField) && !isReferenceField(ormField) && !isCollectionField(ormField))
     .map((ormField) => {
       if (ormField.kind === "primitive" && ormField.derived === "async") {
@@ -90,7 +90,7 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
       }
     });
 
-  const referenceResolvers: [string, Resolver<any, any, any>][] = Object.values(entityMetadata.fields)
+  const referenceResolvers: [string, Resolver<any, any, any>][] = Object.values(entityMetadata.allFields)
     .filter((ormField) => isReferenceField(ormField))
     .map((ormField) => [
       ormField.fieldName,
@@ -127,7 +127,7 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
       },
     ]);
 
-  const collectionResolvers: [string, Resolver<T, any, any>][] = Object.values(entityMetadata.fields)
+  const collectionResolvers: [string, Resolver<T, any, any>][] = Object.values(entityMetadata.allFields)
     .filter((ormField) => isCollectionField(ormField))
     .map((ormField) => [
       ormField.fieldName,

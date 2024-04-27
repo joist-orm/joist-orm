@@ -3,12 +3,12 @@ import {
   AsyncPropertyImpl,
   CustomCollection,
   CustomReference,
+  getProperties,
   ManyToManyCollection,
   ManyToOneReferenceImpl,
   OneToManyCollection,
   OneToOneReferenceImpl,
   UnknownProperty,
-  getProperties,
 } from "joist-orm";
 
 describe("getProperties", () => {

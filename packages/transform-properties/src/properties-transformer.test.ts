@@ -5,16 +5,17 @@ describe("properties-transformer", () => {
   it("should rewrite async properties", () => {
     const source = `
       class Author {
-        readonly numberOfBooks: AsyncProperty<number> = hasAsyncProperty<number>();
+        readonly numberOfBooks: AsyncProperty<number> = hasAsyncProperty<number>(() => {
+          return 1;
+        });
       }
     `;
     const result = compile(source);
     expect(result).toMatchInlineSnapshot(`
      "class Author {
-         #numberOfBooks;
-         get numberOfBooks() { if (this.#numberOfBooks === undefined) {
-             this.#numberOfBooks = hasAsyncProperty();
-         } return this.#numberOfBooks; }
+         get numberOfBooks() { return this.__data.relations.numberOfBooks ??= hasAsyncProperty(() => {
+             return 1;
+         }); }
      }
      "
     `);

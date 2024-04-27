@@ -600,8 +600,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get books(): Collection<Author, Book> {
-    const { relations } = getInstanceData(this);
-    return relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", {
+    return getInstanceData(this).relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", {
       "field": "order",
       "direction": "ASC",
     });

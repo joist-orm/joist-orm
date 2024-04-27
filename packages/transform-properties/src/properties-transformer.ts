@@ -6,43 +6,29 @@ export const transformer: ts.TransformerFactory<ts.SourceFile> = (ctx) => {
 
   const visit: ts.Visitor = (node) => {
     if (ts.isPropertyDeclaration(node) && node.initializer && shouldRewrite(node.type?.getText())) {
-      // Check if the property has an initializer
-      const privateIdentifier = f.createPrivateIdentifier("#" + node.name.getText());
       const getterName = node.name;
-
-      // Create private field with unique name and no initializer
-      const privateField = f.createPropertyDeclaration(undefined, privateIdentifier, undefined, undefined, undefined);
-
-      // Create a getter for the private field that initializes it if necessary
       const getter = f.createGetAccessorDeclaration(
         undefined,
         getterName,
         [],
         node.type,
         f.createBlock([
-          f.createIfStatement(
+          f.createReturnStatement(
             f.createBinaryExpression(
-              f.createPropertyAccessExpression(f.createThis(), privateIdentifier),
-              f.createToken(ts.SyntaxKind.EqualsEqualsEqualsToken),
-              f.createIdentifier("undefined"),
-            ),
-            f.createBlock(
-              [
-                f.createExpressionStatement(
-                  f.createBinaryExpression(
-                    f.createPropertyAccessExpression(f.createThis(), privateIdentifier),
-                    f.createToken(ts.SyntaxKind.EqualsToken),
-                    node.initializer,
-                  ),
+              f.createPropertyAccessExpression(
+                f.createPropertyAccessExpression(
+                  f.createPropertyAccessExpression(f.createThis(), f.createIdentifier("__data")),
+                  f.createIdentifier("relations"),
                 ),
-              ],
-              true,
+                getterName.getText(),
+              ),
+              f.createToken(ts.SyntaxKind.QuestionQuestionEqualsToken),
+              node.initializer,
             ),
           ),
-          f.createReturnStatement(f.createPropertyAccessExpression(f.createThis(), privateIdentifier)),
         ]),
       );
-      return [privateField, getter];
+      return [getter];
     }
     return ts.visitEachChild(node, visit, ctx);
   };

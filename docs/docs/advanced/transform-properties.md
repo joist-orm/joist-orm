@@ -17,7 +17,17 @@ This means that if you load 1,000 `Author` rows from the database, there will be
 
 In the majority of scenarios, this is fine, but when loading ~1,000s of entities, it can become a performance issue.
 
-To address this, Joist provides a [ts-patch](https://github.com/nonara/ts-patch) transformer that will rewrite the fields into lazy getters on the `Author` prototype.
+To address this, Joist provides a [ts-patch](https://github.com/nonara/ts-patch) transformer that will rewrite the fields into lazy getters on the `Author` prototype, i.e. the above code will become:
+
+```ts
+export class Author extends AuthorCodegen {
+  get reviews() {
+    return this.__data.relations.reviews ??= hasManyThrough((a) => a.books.reviews);
+  }
+}
+```
+
+And since the `get reviews` becomes defined on the `Author` prototype, there is no instance-level overhead until code specifically wants to access an author's `reviews`, at which point the `hasManyThrough` relation is lazy initialized.
 
 To enable this, add the following to your `tsconfig.json`:
 

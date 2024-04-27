@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasOne,
   isLoaded,
   loadLens,
@@ -182,7 +181,6 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get artist(): ManyToOneReference<Painting, Artist, never> {
-    const { relations } = getInstanceData(this);
-    return relations.artist ??= hasOne(this as any as Painting, artistMeta, "artist", "paintings");
+    return this.__data.relations.artist ??= hasOne(this as any as Painting, artistMeta, "artist", "paintings");
   }
 }

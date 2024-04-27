@@ -11,6 +11,7 @@
     { "path": "./packages/tests/schema-misc" },
     { "path": "./packages/tests/uuid-ids" },
     { "path": "./packages/test-utils" },
+    { "path": "./packages/transform-properties"},
     { "path": "./packages/utils" }
   ],
   "files": [],

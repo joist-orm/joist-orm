@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   isLoaded,
   loadLens,
@@ -178,8 +177,7 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get groups(): Collection<Child, ChildGroup> {
-    const { relations } = getInstanceData(this);
-    return relations.groups ??= hasMany(
+    return this.__data.relations.groups ??= hasMany(
       this as any as Child,
       childGroupMeta,
       "groups",

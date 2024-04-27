@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   hasManyToMany,
   isLoaded,
@@ -247,8 +246,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get taskTaskItems(): Collection<Task, TaskItem> {
-    const { relations } = getInstanceData(this);
-    return relations.taskTaskItems ??= hasMany(
+    return this.__data.relations.taskTaskItems ??= hasMany(
       this as any as Task,
       taskItemMeta,
       "taskTaskItems",
@@ -259,8 +257,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get tags(): Collection<Task, Tag> {
-    const { relations } = getInstanceData(this);
-    return relations.tags ??= hasManyToMany(
+    return this.__data.relations.tags ??= hasManyToMany(
       this as any as Task,
       "task_to_tags",
       "tags",

@@ -28,7 +28,8 @@
     "packages/tests/esm-misc",
     "packages/tests/number-ids",
     "packages/tests/untagged-ids",
-    "packages/tests/uuid-ids"
+    "packages/tests/uuid-ids",
+    "packages/transform-properties"
   ],
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",

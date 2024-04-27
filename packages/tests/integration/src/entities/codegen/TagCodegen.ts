@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasManyToMany,
   isLoaded,
   loadLens,
@@ -210,8 +209,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get authors(): Collection<Tag, Author> {
-    const { relations } = getInstanceData(this);
-    return relations.authors ??= hasManyToMany(
+    return this.__data.relations.authors ??= hasManyToMany(
       this as any as Tag,
       "authors_to_tags",
       "authors",
@@ -223,8 +221,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get books(): Collection<Tag, Book> {
-    const { relations } = getInstanceData(this);
-    return relations.books ??= hasManyToMany(
+    return this.__data.relations.books ??= hasManyToMany(
       this as any as Tag,
       "books_to_tags",
       "books",
@@ -236,8 +233,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get bookReviews(): Collection<Tag, BookReview> {
-    const { relations } = getInstanceData(this);
-    return relations.bookReviews ??= hasManyToMany(
+    return this.__data.relations.bookReviews ??= hasManyToMany(
       this as any as Tag,
       "book_reviews_to_tags",
       "bookReviews",
@@ -249,8 +245,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get publishers(): Collection<Tag, Publisher> {
-    const { relations } = getInstanceData(this);
-    return relations.publishers ??= hasManyToMany(
+    return this.__data.relations.publishers ??= hasManyToMany(
       this as any as Tag,
       "publishers_to_tags",
       "publishers",
@@ -262,8 +257,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get tasks(): Collection<Tag, Task> {
-    const { relations } = getInstanceData(this);
-    return relations.tasks ??= hasManyToMany(
+    return this.__data.relations.tasks ??= hasManyToMany(
       this as any as Tag,
       "task_to_tags",
       "tasks",

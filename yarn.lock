@@ -11262,12 +11262,14 @@ __metadata:
     joist-orm: "workspace:*"
     joist-plugin-join-preloading: "workspace:*"
     joist-test-utils: "workspace:*"
+    joist-transform-properties: "workspace:*"
     kelonio: "npm:^0.10.0"
     mitata: "npm:^0.1.11"
     postgres: "npm:^3.4.4"
     prettier: "npm:^3.2.5"
     prettier-plugin-organize-imports: "npm:^3.2.4"
     superstruct: "npm:0.15.5"
+    ts-patch: "npm:^3.1.2"
     tsconfig-paths: "npm:^4.2.0"
     tsx: "npm:^4.7.2"
     typescript: "npm:^5.4.5"
@@ -11367,6 +11369,23 @@ __metadata:
     superstruct: "npm:0.15.5"
     tsconfig-paths: "npm:^4.2.0"
     tsx: "npm:^4.7.2"
+    typescript: "npm:^5.4.5"
+  languageName: unknown
+  linkType: soft
+
+"joist-transform-properties@workspace:*, joist-transform-properties@workspace:packages/transform-properties":
+  version: 0.0.0-use.local
+  resolution: "joist-transform-properties@workspace:packages/transform-properties"
+  dependencies:
+    "@swc/core": "npm:^1.4.13"
+    "@swc/jest": "npm:^0.2.36"
+    "@types/jest": "npm:^29.5.12"
+    "@types/node": "npm:^20.12.7"
+    jest: "npm:30.0.0-alpha.3"
+    prettier: "npm:^3.2.5"
+    prettier-plugin-organize-imports: "npm:^3.2.4"
+    ts-node-dev: "npm:^2.0.0"
+    tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:^5.4.5"
   languageName: unknown
   linkType: soft

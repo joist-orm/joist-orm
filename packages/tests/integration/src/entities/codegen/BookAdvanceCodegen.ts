@@ -3,7 +3,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasOne,
   isLoaded,
   loadLens,
@@ -218,12 +217,15 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   get book(): ManyToOneReference<BookAdvance, Book, never> {
-    const { relations } = getInstanceData(this);
-    return relations.book ??= hasOne(this as any as BookAdvance, bookMeta, "book", "advances");
+    return this.__data.relations.book ??= hasOne(this as any as BookAdvance, bookMeta, "book", "advances");
   }
 
   get publisher(): ManyToOneReference<BookAdvance, Publisher, never> {
-    const { relations } = getInstanceData(this);
-    return relations.publisher ??= hasOne(this as any as BookAdvance, publisherMeta, "publisher", "bookAdvances");
+    return this.__data.relations.publisher ??= hasOne(
+      this as any as BookAdvance,
+      publisherMeta,
+      "publisher",
+      "bookAdvances",
+    );
   }
 }

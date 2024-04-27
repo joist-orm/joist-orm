@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   isLoaded,
   loadLens,
@@ -196,8 +195,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   }
 
   get childGroups(): Collection<ParentGroup, ChildGroup> {
-    const { relations } = getInstanceData(this);
-    return relations.childGroups ??= hasMany(
+    return this.__data.relations.childGroups ??= hasMany(
       this as any as ParentGroup,
       childGroupMeta,
       "childGroups",
@@ -208,8 +206,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   }
 
   get parentItems(): Collection<ParentGroup, ParentItem> {
-    const { relations } = getInstanceData(this);
-    return relations.parentItems ??= hasMany(
+    return this.__data.relations.parentItems ??= hasMany(
       this as any as ParentGroup,
       parentItemMeta,
       "parentItems",

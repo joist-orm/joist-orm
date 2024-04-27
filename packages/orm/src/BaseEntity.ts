@@ -35,13 +35,12 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   protected readonly __data!: InstanceData;
 
   protected constructor(em: EM, optsOrId: any) {
+    const isNew = typeof optsOrId !== "string";
+    const data = new InstanceData(em, (this.constructor as any).metadata, isNew);
+    // This makes it non-enumerable to avoid Jest/recursive things tripping over it
+    Object.defineProperty(this, "__data", { value: data, enumerable: false, writable: false, configurable: false });
     // Only do em.register for em.create-d entities, otherwise defer to hydrate to em.register
-    if (typeof optsOrId === "string") {
-      this.__data = new InstanceData(em, (this.constructor as any).metadata, false);
-    } else {
-      this.__data = new InstanceData(em, (this.constructor as any).metadata, true);
-      em.register(this);
-    }
+    if (isNew) em.register(this);
     currentlyInstantiatingEntity = this;
   }
 

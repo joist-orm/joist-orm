@@ -1,3 +1,10 @@
+# [1.162.0](https://github.com/joist-orm/joist-orm/compare/v1.161.2...v1.162.0) (2024-04-27)
+
+
+### Features
+
+* Add joist-transform-properties to make custom properties lazy ([#1061](https://github.com/joist-orm/joist-orm/issues/1061)) ([3b57406](https://github.com/joist-orm/joist-orm/commit/3b57406b3785ce96709e67ed5c1f5282cb4c42bc))
+
 ## [1.161.2](https://github.com/joist-orm/joist-orm/compare/v1.161.1...v1.161.2) (2024-04-26)
 
 

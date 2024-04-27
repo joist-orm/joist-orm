@@ -30,3 +30,5 @@ To enable this, add the following to your `tsconfig.json`:
   }
 }
 ```
+
+And then compile your production code with `tspc` instead of the raw `tsc` command.

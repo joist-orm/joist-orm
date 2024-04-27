@@ -224,7 +224,7 @@ export function isLensLoaded<T, U, V>(start: T | T[], fn: (lens: Lens<T>) => Len
 }
 
 function isNotLoaded(object: any, path: string): boolean {
-  const value = object[path];
+  const value = object && object[path];
   return value instanceof AbstractRelationImpl && !value.isLoaded;
 }
 

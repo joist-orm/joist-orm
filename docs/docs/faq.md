@@ -9,9 +9,13 @@ Currently only Postgres; see [support other databases](https://github.com/joist-
 
 ## Why are relations modeled as objects?
 
-In Joist, relations are modeled as objects, i.e. `Author.books`, is not a raw array like `Book[]`, but instead a `Collection<Author, Book[]>` that must have `.load()` and `.get` called on it.
+In Joist, relations are modeled as wrapper objects, i.e. `Author.books` is not a raw array like `Book[]`, but instead a `Collection<Author, Book[]>` that must have `.load()` and `.get` called on it.
 
-This can initially feel awkward, but it allows for a more powerful and flexible API, where relations can be lazily loaded, which is often how business logic wants to interact with the domain model--a continual incremental loading of data as needed.
+This can initially feel awkward, but it provides a truly type-safe API, given that relations may-or-may not be loaded from the database, and instead are incrementally into memory.
+
+This is often how business logic wants to interact with the domain model--a continual incremental loading of data as needed, as conditional codepaths are executed, instead of an endpoint/program exhaustively knowing up-front exactly what data will be necessary.
+
+If performance is a concern (loading thousands of entities with many custom properties), Joist provides a [ts-patch transform](/docs/advanced/transform-properties) to rewrite the properties as lazy getters in production builds. 
 
 ## Why must properties be explicitly typed?
 

@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   hasManyToMany,
   hasOne,
@@ -297,8 +296,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get createdComments(): Collection<User, Comment> {
-    const { relations } = getInstanceData(this);
-    return relations.createdComments ??= hasMany(
+    return this.__data.relations.createdComments ??= hasMany(
       this as any as User,
       commentMeta,
       "createdComments",
@@ -309,13 +307,16 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get authorManyToOne(): ManyToOneReference<User, Author, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.authorManyToOne ??= hasOne(this as any as User, authorMeta, "authorManyToOne", "userOneToOne");
+    return this.__data.relations.authorManyToOne ??= hasOne(
+      this as any as User,
+      authorMeta,
+      "authorManyToOne",
+      "userOneToOne",
+    );
   }
 
   get likedComments(): Collection<User, Comment> {
-    const { relations } = getInstanceData(this);
-    return relations.likedComments ??= hasManyToMany(
+    return this.__data.relations.likedComments ??= hasManyToMany(
       this as any as User,
       "users_to_comments",
       "likedComments",
@@ -327,7 +328,6 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get favoritePublisher(): PolymorphicReference<User, UserFavoritePublisher, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.favoritePublisher ??= hasOnePolymorphic(this as any as User, "favoritePublisher");
+    return this.__data.relations.favoritePublisher ??= hasOnePolymorphic(this as any as User, "favoritePublisher");
   }
 }

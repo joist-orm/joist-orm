@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   hasOne,
   hasOneToOne,
@@ -220,8 +219,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get bookReviews(): Collection<Critic, BookReview> {
-    const { relations } = getInstanceData(this);
-    return relations.bookReviews ??= hasMany(
+    return this.__data.relations.bookReviews ??= hasMany(
       this as any as Critic,
       bookReviewMeta,
       "bookReviews",
@@ -232,8 +230,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get favoriteLargePublisher(): ManyToOneReference<Critic, LargePublisher, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.favoriteLargePublisher ??= hasOne(
+    return this.__data.relations.favoriteLargePublisher ??= hasOne(
       this as any as Critic,
       largePublisherMeta,
       "favoriteLargePublisher",
@@ -242,13 +239,11 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get group(): ManyToOneReference<Critic, PublisherGroup, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.group ??= hasOne(this as any as Critic, publisherGroupMeta, "group", "critics");
+    return this.__data.relations.group ??= hasOne(this as any as Critic, publisherGroupMeta, "group", "critics");
   }
 
   get criticColumn(): OneToOneReference<Critic, CriticColumn> {
-    const { relations } = getInstanceData(this);
-    return relations.criticColumn ??= hasOneToOne(
+    return this.__data.relations.criticColumn ??= hasOneToOne(
       this as any as Critic,
       criticColumnMeta,
       "criticColumn",

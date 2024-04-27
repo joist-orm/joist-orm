@@ -3,7 +3,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasOne,
   isLoaded,
   loadLens,
@@ -191,17 +190,24 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get newTask(): ManyToOneReference<TaskItem, TaskNew, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.newTask ??= hasOne(this as any as TaskItem, taskNewMeta, "newTask", "newTaskTaskItems");
+    return this.__data.relations.newTask ??= hasOne(
+      this as any as TaskItem,
+      taskNewMeta,
+      "newTask",
+      "newTaskTaskItems",
+    );
   }
 
   get oldTask(): ManyToOneReference<TaskItem, TaskOld, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.oldTask ??= hasOne(this as any as TaskItem, taskOldMeta, "oldTask", "oldTaskTaskItems");
+    return this.__data.relations.oldTask ??= hasOne(
+      this as any as TaskItem,
+      taskOldMeta,
+      "oldTask",
+      "oldTaskTaskItems",
+    );
   }
 
   get task(): ManyToOneReference<TaskItem, Task, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.task ??= hasOne(this as any as TaskItem, taskMeta, "task", "taskTaskItems");
+    return this.__data.relations.task ??= hasOne(this as any as TaskItem, taskMeta, "task", "taskTaskItems");
   }
 }

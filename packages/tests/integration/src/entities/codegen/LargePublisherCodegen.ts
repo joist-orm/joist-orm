@@ -3,7 +3,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   isLoaded,
   loadLens,
@@ -193,8 +192,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   get critics(): Collection<LargePublisher, Critic> {
-    const { relations } = getInstanceData(this);
-    return relations.critics ??= hasMany(
+    return this.__data.relations.critics ??= hasMany(
       this as any as LargePublisher,
       criticMeta,
       "critics",
@@ -205,8 +203,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   get users(): Collection<LargePublisher, User> {
-    const { relations } = getInstanceData(this);
-    return relations.users ??= hasMany(
+    return this.__data.relations.users ??= hasMany(
       this as any as LargePublisher,
       userMeta,
       "users",

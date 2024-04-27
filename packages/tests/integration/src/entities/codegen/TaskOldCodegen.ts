@@ -2,7 +2,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   hasManyToMany,
   hasOne,
@@ -202,8 +201,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   }
 
   get comments(): Collection<TaskOld, Comment> {
-    const { relations } = getInstanceData(this);
-    return relations.comments ??= hasMany(
+    return this.__data.relations.comments ??= hasMany(
       this as any as TaskOld,
       commentMeta,
       "comments",
@@ -214,8 +212,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   }
 
   get oldTaskTaskItems(): Collection<TaskOld, TaskItem> {
-    const { relations } = getInstanceData(this);
-    return relations.oldTaskTaskItems ??= hasMany(
+    return this.__data.relations.oldTaskTaskItems ??= hasMany(
       this as any as TaskOld,
       taskItemMeta,
       "oldTaskTaskItems",
@@ -226,8 +223,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   }
 
   get tasks(): Collection<TaskOld, TaskOld> {
-    const { relations } = getInstanceData(this);
-    return relations.tasks ??= hasMany(
+    return this.__data.relations.tasks ??= hasMany(
       this as any as TaskOld,
       taskOldMeta,
       "tasks",
@@ -238,13 +234,16 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   }
 
   get parentOldTask(): ManyToOneReference<TaskOld, TaskOld, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.parentOldTask ??= hasOne(this as any as TaskOld, taskOldMeta, "parentOldTask", "tasks");
+    return this.__data.relations.parentOldTask ??= hasOne(
+      this as any as TaskOld,
+      taskOldMeta,
+      "parentOldTask",
+      "tasks",
+    );
   }
 
   get publishers(): Collection<TaskOld, Publisher> {
-    const { relations } = getInstanceData(this);
-    return relations.publishers ??= hasManyToMany(
+    return this.__data.relations.publishers ??= hasManyToMany(
       this as any as TaskOld,
       "tasks_to_publishers",
       "publishers",

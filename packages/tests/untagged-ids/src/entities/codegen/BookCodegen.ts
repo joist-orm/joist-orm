@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   hasOne,
   isLoaded,
@@ -188,8 +187,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get comments(): Collection<Book, Comment> {
-    const { relations } = getInstanceData(this);
-    return relations.comments ??= hasMany(
+    return this.__data.relations.comments ??= hasMany(
       this as any as Book,
       commentMeta,
       "comments",
@@ -200,7 +198,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get author(): ManyToOneReference<Book, Author, never> {
-    const { relations } = getInstanceData(this);
-    return relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
+    return this.__data.relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
   }
 }

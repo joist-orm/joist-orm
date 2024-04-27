@@ -2,7 +2,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   hasOne,
   isLoaded,
@@ -182,8 +181,7 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   }
 
   get newTaskTaskItems(): Collection<TaskNew, TaskItem> {
-    const { relations } = getInstanceData(this);
-    return relations.newTaskTaskItems ??= hasMany(
+    return this.__data.relations.newTaskTaskItems ??= hasMany(
       this as any as TaskNew,
       taskItemMeta,
       "newTaskTaskItems",
@@ -194,7 +192,11 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   }
 
   get specialNewAuthor(): ManyToOneReference<TaskNew, Author, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.specialNewAuthor ??= hasOne(this as any as TaskNew, authorMeta, "specialNewAuthor", "tasks");
+    return this.__data.relations.specialNewAuthor ??= hasOne(
+      this as any as TaskNew,
+      authorMeta,
+      "specialNewAuthor",
+      "tasks",
+    );
   }
 }

@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   hasOne,
   isLoaded,
@@ -198,8 +197,7 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
   }
 
   get childItems(): Collection<ParentItem, ChildItem> {
-    const { relations } = getInstanceData(this);
-    return relations.childItems ??= hasMany(
+    return this.__data.relations.childItems ??= hasMany(
       this as any as ParentItem,
       childItemMeta,
       "childItems",
@@ -210,7 +208,11 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
   }
 
   get parentGroup(): ManyToOneReference<ParentItem, ParentGroup, never> {
-    const { relations } = getInstanceData(this);
-    return relations.parentGroup ??= hasOne(this as any as ParentItem, parentGroupMeta, "parentGroup", "parentItems");
+    return this.__data.relations.parentGroup ??= hasOne(
+      this as any as ParentItem,
+      parentGroupMeta,
+      "parentGroup",
+      "parentItems",
+    );
   }
 }

@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasOne,
   isLoaded,
   loadLens,
@@ -184,7 +183,6 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   }
 
   get critic(): ManyToOneReference<CriticColumn, Critic, never> {
-    const { relations } = getInstanceData(this);
-    return relations.critic ??= hasOne(this as any as CriticColumn, criticMeta, "critic", "criticColumn");
+    return this.__data.relations.critic ??= hasOne(this as any as CriticColumn, criticMeta, "critic", "criticColumn");
   }
 }

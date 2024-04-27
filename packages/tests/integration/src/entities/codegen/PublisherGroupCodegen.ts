@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasLargeMany,
   hasMany,
   isLoaded,
@@ -199,8 +198,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   get publishers(): Collection<PublisherGroup, Publisher> {
-    const { relations } = getInstanceData(this);
-    return relations.publishers ??= hasMany(
+    return this.__data.relations.publishers ??= hasMany(
       this as any as PublisherGroup,
       publisherMeta,
       "publishers",
@@ -211,8 +209,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   get critics(): LargeCollection<PublisherGroup, Critic> {
-    const { relations } = getInstanceData(this);
-    return relations.critics ??= hasLargeMany(
+    return this.__data.relations.critics ??= hasLargeMany(
       this as any as PublisherGroup,
       criticMeta,
       "critics",

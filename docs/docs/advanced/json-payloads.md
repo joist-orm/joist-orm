@@ -5,6 +5,12 @@ sidebar_position: 5
 
 If you're using Joist for a REST API, or in React Server components passing props to client-side components, the `toJSON` function can succinctly and type-safely create JSON output. 
 
+:::info
+
+Creating JSON Payloads is a newer feature of Joist, so if you have ideas on how to make it even better, please let us know!
+
+:::
+
 ### Basic Usage
 
 For example, given a `Author` entity, we can use `toJSON` to create a tree of output:
@@ -13,8 +19,8 @@ For example, given a `Author` entity, we can use `toJSON` to create a tree of ou
 const a = await em.load(Author, "a:1");
 // Describe the shape of your payload
 const payload = await a.toJSON({
-  id,
-  books: { id, reviews: { rating } }
+  id: true,
+  books: { id: true, reviews: { rating: true } }
 });
 // payload will be typed with only the keys you requested
 console.log(payload);

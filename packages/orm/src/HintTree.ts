@@ -44,12 +44,20 @@ export function buildHintTree<E extends EntityOrId>(
   hints: readonly { entity: E; hint: LoadHint<any> | undefined }[] | LoadHint<any>,
 ): HintNode<E> {
   if (Array.isArray(hints)) {
-    const entitiesKind = typeof hints[0].entity === "string" ? ("ids" as const) : ("instances" as const);
-    const root: HintNode<E> = { entitiesKind, entities: new Set(), subHints: {} };
-    for (const { entity, hint } of hints) {
-      addHintNode(root, entity, hint);
+    // This might be a top-level LoadHint string[] like ["books"]
+    const isLoadHint = hints.length > 0 && typeof hints[0] === "string";
+    if (isLoadHint) {
+      const root: HintNode<E> = { entitiesKind: "none", entities: new Set(), subHints: {} };
+      addHintNode(root, undefined, hints as LoadHint<any>);
+      return root;
+    } else {
+      const entitiesKind = typeof hints[0].entity === "string" ? ("ids" as const) : ("instances" as const);
+      const root: HintNode<E> = { entitiesKind, entities: new Set(), subHints: {} };
+      for (const { entity, hint } of hints) {
+        addHintNode(root, entity, hint);
+      }
+      return root;
     }
-    return root;
   } else {
     const root: HintNode<E> = { entitiesKind: "none", entities: new Set(), subHints: {} };
     addHintNode(root, undefined, hints as LoadHint<any>);

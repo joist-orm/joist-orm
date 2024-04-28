@@ -1,3 +1,10 @@
+## [1.162.2](https://github.com/joist-orm/joist-orm/compare/v1.162.1...v1.162.2) (2024-04-28)
+
+
+### Bug Fixes
+
+* Fix preloading with a string[] hint. ([#1063](https://github.com/joist-orm/joist-orm/issues/1063)) ([7c66d48](https://github.com/joist-orm/joist-orm/commit/7c66d48cdb3c3687d25e2101cec3bfa3792ad65e))
+
 ## [1.162.1](https://github.com/joist-orm/joist-orm/compare/v1.162.0...v1.162.1) (2024-04-27)
 
 

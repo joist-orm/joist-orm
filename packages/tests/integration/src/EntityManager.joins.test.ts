@@ -235,7 +235,7 @@ describe("EntityManager.joins", () => {
     resetQueryCount();
     const [a1] = await em.find(Author, { firstName: "a1" }, { populate: ["books"] });
     // Then we issued one query
-    expect(queries.length).toEqual(isPreloadingEnabled ? 1 : 3);
+    expect(queries.length).toEqual(isPreloadingEnabled ? 1 : 2);
     expect(a1.books.get[0].title).toBe("b1");
   });
 

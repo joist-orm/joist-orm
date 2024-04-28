@@ -21,6 +21,7 @@
 <li>Optional Join-based Preloading</li>
 </ul>
 <p>This post gives a short overview; if you'd like to watch a video, we also have a <a href="https://youtu.be/H_qJdKUS9D0" target="_blank" rel="noopener noreferrer">YouTube video</a> that walks through the sample app.</p>
+<div style="display:grid;place-items:center"><iframe width="750" height="420" src="https://www.youtube.com/embed/H_qJdKUS9D0?si=qUiRr0GTMrQCgayC" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
 <h2 class="anchor anchorWithStickyNavbar_JmGV" id="two-render-tree-approaches">Two Render Tree Approaches<a href="https://joist-orm.io/blog/nextjs-sample-app#two-render-tree-approaches" class="hash-link" aria-label="Direct link to Two Render Tree Approaches" title="Direct link to Two Render Tree Approaches">​</a></h2>
 <p>While building the sample app, we found two fundamental ways of structuring a NextJS app's render tree:</p>
 <ol>

@@ -13,9 +13,9 @@ We've added a new [NextJS + Joist](https://github.com/joist-orm/joist-nextjs-sam
 
 - Automatic N+1 Prevention
 - JSON Payload/Props Creation
-- Optional Join-based Preloading to Reduce SQL Calls
+- Optional Join-based Preloading
 
-This post gives a short overview; if you'd like to watch a video, we also have a [YouTube video](https://www.youtube.com/watch?v=3Q6Q6Q1Z9ZQ) that walks through the sample app.
+This post gives a short overview; if you'd like to watch a video, we also have a [YouTube video](https://youtu.be/H_qJdKUS9D0) that walks through the sample app.
 
 ## Two Render Tree Approaches
 
@@ -32,7 +32,7 @@ While building the sample app, we found two fundamental ways of structuring a Ne
 
 The top-level `Table` / `table.tsx` component renders each of these side-by-side, so we can see the differences, and observe some pros/cons of each approach.
 
-- With mostly RSC components, it's easy to distribute data loading away from the top-level component.
+- With mostly RSC components, it's easy to decompose data loading away from the top-level component.
 
   For example, the `AuthorRscCard` can make its own data loading calls, and even if it's render many pages on the page, Joist will de-dupe across the `N` sibling `AuthorRscCard`s, and batch into a single SQL call.
 
@@ -47,10 +47,13 @@ The top-level `Table` / `table.tsx` component renders each of these side-by-side
   export async function AuthorRscCard({ author, addBook }: AuthorCardProps) {
     // This will be auto-batched if many cards render at once
     const books = await author.books.load();
+    // Or if you wanted a tree of data, this will also be auto-batched
+    const loaded = await author.populate({ books: { reviews: "ratings" } });
+    return <div>...jsx</div>;
   }
   ```
 
-  This is nice because it allows the `AuthorRscCard` to be more self-sufficent, and allow the parent table component to be unaware of its children loading details.
+  This is nice because it allows the `AuthorRscCard` to be more self-sufficient, and allow the parent table component to be unaware of its children loading details.
 
 - With mostly Client components, the opposite happens, and only the parent can make database / `EntityManager` calls, and so is responsible for loading all the data for its children, and passing it as JSON via props:
 
@@ -74,7 +77,7 @@ The top-level `Table` / `table.tsx` component renders each of these side-by-side
 In either approach, Joist's N+1 prevention auto-batches database calls, even if they are made across separate component renders. I.e. in the RSC components:
 
 - The top-level `Table` component makes 1 SQL call for all `Author` entities.
-- All 2nd-level `AuthorRscCard` cards each make their own `author.books.load()` call, but because they are rendered in the same event loop, Joist can batch all of the `load` calls into 1 SQL call
+- All 2nd-level `AuthorRscCard` cards each make their own `author.books.load()` (or `author.populate(...)`) call, but because they're all rendered in the same event loop, Joist batches all the `load` calls into 1 SQL call
 - Any 3rd-level components would have their `load` calls batched as well.
 
 In the React Client Component approach, this auto-batching is admittedly not as necessary, assuming a singular top-level component, like `Table`, loads all the data at once anyway (although, as mentioned later, Joist can optimize that as well).
@@ -83,7 +86,7 @@ See the [Avoiding N+1s](/docs/goals/avoiding-n-plus-1s) section of our docs for 
 
 ## JSON Payload/Props Creation
 
-Since the client components cannot make their own `async` data calls, the top-level `Table` components is responsible for loading all the data into a JSON payload, and passing it down to the children as props.
+Since the client components cannot make their own async data calls, the top-level `Table` components is responsible for loading all the data into a JSON payload, and passing it down to the children as props.
 
 Joist entities have an easy way of doing this is, via a `toJSON` method that takes the shape of data to create:
 
@@ -107,13 +110,13 @@ export type AuthorPayload = JsonPayload<Author, typeof authorHint>;
 const payload = await a.toJSON(authorHint);
 ```
 
-The `toJSON` people will take care of:
+The `toJSON` implementation will:
 
-- Loading any relations that are not yet loaded from the database
-- Outputting only the keys that are requested in the `authorHint`
-- Calling any lambdas like `customField` to generate custom values
+- Load any relations that are not yet loaded from the database
+- Output only the keys that are requested in the `authorHint`
+- Call any lambdas like `customField` to generate custom values
 
-As with previous examples, all the data loading will be N+1 safe, and also potentially join-based preloaded.
+As with previous examples, all data loading is N+1 safe, and also potentially join-based preloaded.
 
 See the [toJSON](/docs/advanced/json-payloads) docs for more information.
 
@@ -138,7 +141,7 @@ export const getEm = cache(() => {
 });
 ```
 
-This will allow Joist to load a single tree of entities in a single SQL call.
+This will allow Joist to load a deep tree/subgraph of entities in a single SQL call.
 
 For example, normally a Joist `em.find` a call like:
 
@@ -191,6 +194,6 @@ Instead, Joist encourages an approach that uses its robust write-side features t
 
 Although you can of course use both approaches, and just use a lower-level query builder where needed.
 
-## Sample Feedback
+## Sample App Feedback
 
 Joist's roots come from the GraphQL world, so this sample app was our first foray into using it for a NextJS application. If we've missed any key features that would make it easier to use Joist in a NextJS app, please let us know!

@@ -17,6 +17,10 @@ We've added a new [NextJS + Joist](https://github.com/joist-orm/joist-nextjs-sam
 
 This post gives a short overview; if you'd like to watch a video, we also have a [YouTube video](https://youtu.be/H_qJdKUS9D0) that walks through the sample app.
 
+<div style={{ display: 'grid', placeItems: 'center' }}>
+  <iframe width="750" height="420" src="https://www.youtube.com/embed/H_qJdKUS9D0?si=qUiRr0GTMrQCgayC" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
+
 ## Two Render Tree Approaches
 
 While building the sample app, we found two fundamental ways of structuring a NextJS app's render tree:

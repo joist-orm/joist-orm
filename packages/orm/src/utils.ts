@@ -184,9 +184,12 @@ export function cleanSql(sql: string): string {
 }
 
 type RequireTemporal = { Temporal: typeof Temporal; toTemporalInstant: typeof toTemporalInstant; Intl: typeof Intl };
-let temporal: RequireTemporal | undefined;
+let temporal: RequireTemporal | undefined | false;
 
 export function maybeRequireTemporal(): RequireTemporal | undefined {
+  // if we've already failed to find a temporal implementation before, early exit
+  if (temporal === false) return undefined;
+  // if we already required temporal, just return that
   if (temporal) return temporal;
   // use built in temporal if present
   if ("Temporal" in global && "Intl" in global) {
@@ -200,14 +203,15 @@ export function maybeRequireTemporal(): RequireTemporal | undefined {
   // preferentially try to use temporal-polyfill
   try {
     temporal = require("temporal-polyfill");
-    return temporal!;
+    return temporal as RequireTemporal;
   } catch (e) {}
   // last resort, try to use @js-temporal/polyfill
   try {
     temporal = require("@js-temporal/polyfill");
-    return temporal!;
+    return temporal as RequireTemporal;
   } catch (e) {}
-
+  // don't try to load temporal again
+  temporal = false;
   return undefined;
 }
 

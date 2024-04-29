@@ -4,7 +4,6 @@ import { getInstanceData } from "./BaseEntity";
 import { setAsyncDefaults } from "./defaults";
 import { getField, setField } from "./fields";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
-import { Temporal } from "temporal-polyfill";
 import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
 import { JoinRows } from "./JoinRows";
@@ -1088,14 +1087,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       const baseMeta = getBaseMeta(getMetadata(entity));
       const { createdAt, updatedAt } = baseMeta.timestampFields;
       const { data } = getInstanceData(entity);
-      const now = Temporal.Now.instant();
+      const now = new Date();
       if (createdAt) {
         const serde = baseMeta.fields[createdAt].serde as TimestampSerde<unknown>;
-        data[createdAt] = serde.mapFromInstant(now);
+        data[createdAt] = serde.mapFromDate(now);
       }
       if (updatedAt) {
         const serde = baseMeta.fields[updatedAt].serde as TimestampSerde<unknown>;
-        data[updatedAt] = serde.mapFromInstant(now);
+        data[updatedAt] = serde.mapFromDate(now);
       }
       // Set the discriminator for STI
       if (baseMeta.inheritanceType === "sti") {
@@ -1945,7 +1944,7 @@ function isCustomRelation(r: AbstractRelationImpl<any, any>): boolean {
   return r instanceof CustomCollection || r instanceof CustomReference || r instanceof ReactiveReferenceImpl;
 }
 
-function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Temporal.Instant): void {
+function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Date): void {
   for (const todo of Object.values(todos)) {
     const { updatedAt } = todo.metadata.timestampFields;
     if (updatedAt) {
@@ -1957,23 +1956,23 @@ function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Temporal.Instant):
         const orm = getInstanceData(e);
         orm.originalData[updatedAt] = getField(e, updatedAt);
         const serde = todo.metadata.fields[updatedAt].serde as TimestampSerde<unknown>;
-        orm.data[updatedAt] = serde.mapFromInstant(now);
+        orm.data[updatedAt] = serde.mapFromDate(now);
       }
     }
   }
 }
 
-let lastNow = Temporal.Now.instant();
+let lastNow = new Date();
 
-function getNow(): Temporal.Instant {
-  let now = Temporal.Now.instant();
+function getNow(): Date {
+  let now = new Date();
   // If we detect time has not progressed (or went backwards), we're probably in test that
   // has frozen time, which can throw off our oplocks b/c if Joist issues multiple `UPDATE`s
   // with exactly the same `updated_at`, the `updated_at` SQL trigger fallback will think "the caller
   // didn't self-manage `updated_at`" and so bump it for them. Which is fine, but now
   // Joist doesn't know about the bumped time, and the 2nd `UPDATE` will fail.
-  if (lastNow.epochMilliseconds === now.epochMilliseconds || now.epochMilliseconds < lastNow.epochMilliseconds) {
-    now = lastNow.add({ milliseconds: 1 });
+  if (lastNow.getTime() === now.getTime() || now.getTime() < lastNow.getTime()) {
+    now = new Date(lastNow.getTime() + 1);
   }
   lastNow = now;
   return now;

@@ -11080,7 +11080,6 @@ __metadata:
     prettier: "npm:^3.2.5"
     prettier-plugin-organize-imports: "npm:^3.2.4"
     semver: "npm:^7.6.0"
-    temporal-polyfill: "npm:^0.2.4"
     ts-node-dev: "npm:^2.0.0"
     ts-poet: "npm:^6.8.1"
     tsconfig-paths: "npm:^4.2.0"

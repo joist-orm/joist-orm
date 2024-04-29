@@ -25,8 +25,7 @@
     "knex": "^3.1.0",
     "object-hash": "^3.0.0",
     "pg": "^8.11.5",
-    "pg-types": "^4.0.2",
-    "temporal-polyfill": "^0.2.4"
+    "pg-types": "^4.0.2"
   },
   "devDependencies": {
     "@swc/core": "^1.4.13",
@@ -36,6 +35,7 @@
     "jest": "30.0.0-alpha.3",
     "prettier": "^3.2.5",
     "prettier-plugin-organize-imports": "^3.2.4",
+    "temporal-polyfill": "^0.2.4",
     "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.4.5"

@@ -1,4 +1,3 @@
-import { Temporal } from "temporal-polyfill";
 import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityConstructor, MaybeAbstractEntityConstructor, OptsOf } from "./EntityManager";
@@ -164,8 +163,8 @@ export function setOpts<T extends Entity>(
                 // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
                 if (maybeSoftDelete) {
                   const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
-                  const now = Temporal.Now.instant();
-                  v.set({ [maybeSoftDelete]: serde.mapFromInstant(now) });
+                  const now = new Date();
+                  v.set({ [maybeSoftDelete]: serde.mapFromDate(now) });
                 } else {
                   entity.em.delete(v);
                 }

@@ -1,5 +1,4 @@
 import { isPlainObject } from "joist-utils";
-import { Temporal } from "temporal-polyfill";
 import { Entity, isEntity } from "./Entity";
 import {
   ActualFactoryOpts,
@@ -27,7 +26,7 @@ import {
 import { hasDefaultValue } from "./defaults";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
-import { assertNever } from "./utils";
+import { assertNever, maybeRequireTemporal } from "./utils";
 
 /**
  * DeepPartial-esque type specific to our `newTestInstance` factory.
@@ -50,9 +49,10 @@ export const jan1 = new Date(2018, 0, 1);
 export const jan2 = new Date(2018, 0, 2);
 export const jan3 = new Date(2018, 0, 3);
 export let testDate = jan1;
-export let testPlainDate = Temporal.PlainDate.from("2018-01-01");
-export let testPlainDateTime = testPlainDate.toPlainDateTime("00:00:00");
-export let testZonedDateTime = testPlainDate.toZonedDateTime("UTC");
+const Temporal = maybeRequireTemporal()?.Temporal;
+export let testPlainDate = Temporal?.PlainDate.from("2018-01-01");
+export let testPlainDateTime = testPlainDate?.toPlainDateTime("00:00:00");
+export let testZonedDateTime = testPlainDate?.toZonedDateTime("UTC");
 /**
  * Creates a test instance of `T`.
  *
@@ -546,27 +546,29 @@ function getTestId<T extends Entity>(em: EntityManager, entity: T): string {
 }
 
 function defaultValueForField(em: EntityManager, cstr: EntityConstructor<any>, field: PrimitiveField): unknown {
-  switch (field.type) {
-    case "string":
-      if (field.fieldName === "name") {
-        return `${cstr.name} ${getTestIndex(em, cstr)}`;
-      }
-      return field.fieldName;
-    case "number":
-      return 0;
-    case "bigint":
-      return 0n;
-    case Date:
-      return testDate;
-    case Temporal.PlainDate:
+  if (field.type === "string") {
+    if (field.fieldName === "name") {
+      return `${cstr.name} ${getTestIndex(em, cstr)}`;
+    }
+    return field.fieldName;
+  } else if (field.type === "number") {
+    return 0;
+  } else if (field.type === "bigint") {
+    return 0n;
+  } else if (field.type === Date) {
+    return testDate;
+  } else if (field.type === "boolean") {
+    return false;
+  } else if (Temporal) {
+    if (field.type === Temporal.PlainDate) {
       return testPlainDate;
-    case Temporal.PlainDateTime:
+    } else if (field.type === Temporal.PlainDateTime) {
       return testPlainDateTime;
-    case Temporal.ZonedDateTime:
+    } else if (field.type === Temporal.ZonedDateTime) {
       return testZonedDateTime;
-    case "boolean":
-      return false;
+    }
   }
+
   return null;
 }
 

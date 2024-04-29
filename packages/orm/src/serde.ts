@@ -1,4 +1,4 @@
-import { Temporal, toTemporalInstant } from "temporal-polyfill";
+import type { Temporal } from "temporal-polyfill";
 import { Field, PolymorphicField, SerdeField, getBaseMeta } from "./EntityMetadata";
 import {
   EntityMetadata,
@@ -8,7 +8,7 @@ import {
   keyToTaggedId,
   maybeResolveReferenceToId,
 } from "./index";
-import { groupBy } from "./utils";
+import { groupBy, requireTemporal } from "./utils";
 
 export function hasSerde(field: Field): field is SerdeField {
   return !!field.serde;
@@ -35,6 +35,7 @@ export interface FieldSerde {
 
 export interface TimestampSerde<T> extends FieldSerde {
   mapFromInstant(value: Temporal.Instant): T;
+  mapFromDate(value: Date): T;
   dbValue(data: any): any;
 }
 
@@ -123,6 +124,10 @@ export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
     if (value === null) return value;
     return new Date(value);
   }
+
+  mapFromDate(value: Date) {
+    return value;
+  }
 }
 
 abstract class TemporalSerde<T> implements FieldSerde {
@@ -185,7 +190,7 @@ export class PlainDateSerde extends TemporalSerde<Temporal.PlainDate> {
   }
 
   toTemporal(value: Date): Temporal.PlainDate {
-    return toTemporalInstant.call(value).toZonedDateTimeISO(this.timeZone).toPlainDate();
+    return requireTemporal().toTemporalInstant.call(value).toZonedDateTimeISO(this.timeZone).toPlainDate();
   }
 }
 
@@ -195,7 +200,7 @@ export class PlainDateTimeSerde extends TemporalSerde<Temporal.PlainDateTime> {
   }
 
   toTemporal(value: Date): Temporal.PlainDateTime {
-    return toTemporalInstant.call(value).toZonedDateTimeISO(this.timeZone).toPlainDateTime();
+    return requireTemporal().toTemporalInstant.call(value).toZonedDateTimeISO(this.timeZone).toPlainDateTime();
   }
 }
 
@@ -208,11 +213,15 @@ export class ZonedDateTimeSerde
   }
 
   toTemporal(value: Date) {
-    return toTemporalInstant.call(value).toZonedDateTimeISO(this.timeZone);
+    return requireTemporal().toTemporalInstant.call(value).toZonedDateTimeISO(this.timeZone);
   }
 
   mapFromInstant(value: Temporal.Instant) {
     return value.toZonedDateTimeISO(this.timeZone);
+  }
+
+  mapFromDate(value: Date) {
+    return this.toTemporal(value);
   }
 }
 

@@ -1,9 +1,9 @@
-import { Temporal } from "temporal-polyfill";
 import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
 import { ensureNotDeleted, maybeResolveReferenceToId } from "./index";
+import { maybeRequireTemporal } from "./utils";
 
 /**
  * Returns the current value of `fieldName`, this is an internal method that should
@@ -119,11 +119,14 @@ function equalArrays(a: any[], b: any[]): boolean {
   return a.every((_: any, i) => equal(a[i], b[i]));
 }
 
+const Temporal = maybeRequireTemporal()?.Temporal;
 function equal(a: any, b: any): boolean {
   if (a === b) return true;
   if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
-  if (a instanceof Temporal.ZonedDateTime && b instanceof Temporal.ZonedDateTime) return a.equals(b);
-  if (a instanceof Temporal.PlainDateTime && b instanceof Temporal.PlainDateTime) return a.equals(b);
-  if (a instanceof Temporal.PlainDate && b instanceof Temporal.PlainDate) return a.equals(b);
+  if (Temporal) {
+    if (a instanceof Temporal.ZonedDateTime && b instanceof Temporal.ZonedDateTime) return a.equals(b);
+    if (a instanceof Temporal.PlainDateTime && b instanceof Temporal.PlainDateTime) return a.equals(b);
+    if (a instanceof Temporal.PlainDate && b instanceof Temporal.PlainDate) return a.equals(b);
+  }
   return false;
 }

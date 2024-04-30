@@ -1,3 +1,10 @@
+# [1.163.0](https://github.com/joist-orm/joist-orm/compare/v1.162.2...v1.163.0) (2024-04-30)
+
+
+### Features
+
+* Integrated temporal-polyfill as optional replacement for legacy `Date` ([#1053](https://github.com/joist-orm/joist-orm/issues/1053)) ([5bc812d](https://github.com/joist-orm/joist-orm/commit/5bc812db8427495cf108e69a158f0095c6e6316d))
+
 ## [1.162.2](https://github.com/joist-orm/joist-orm/compare/v1.162.1...v1.162.2) (2024-04-28)
 
 

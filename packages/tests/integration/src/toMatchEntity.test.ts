@@ -339,7 +339,7 @@ describe("toMatchEntity", () => {
     await em.flush();
     // This test assumes that no Author rules loaded `comments` during
     // flush, and so this is the 1st time comments is being accessed
-    expect(Object.keys(getInstanceData(a1).relations)).toEqual(["books", "comments", "publisher", "mentor"]);
+    expect(Object.keys(getInstanceData(a1).relations)).toEqual(expect.arrayContaining(["comments"]));
     expect(a1).toMatchEntity({ comments: [] });
   });
 

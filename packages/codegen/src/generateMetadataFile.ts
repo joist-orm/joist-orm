@@ -1,20 +1,24 @@
 import { DbMetadata } from "index";
-import { code, Code, imp } from "ts-poet";
+import { Code, code, imp, Import } from "ts-poet";
 import { Config } from "./config";
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import {
   BigIntSerde,
   CustomSerdeAdapter,
+  DateSerde,
   DecimalToNumberSerde,
   EntityMetadata,
   EnumArrayFieldSerde,
   EnumFieldSerde,
   JsonSerde,
   KeySerde,
+  PlainDateSerde,
+  PlainDateTimeSerde,
   PolymorphicKeySerde,
   PrimitiveSerde,
   SuperstructSerde,
   ZodSerde,
+  ZonedDateTimeSerde,
 } from "./symbols";
 import { q } from "./utils";
 
@@ -80,21 +84,41 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
 
   dbMetadata.primitives.forEach((p) => {
     const { fieldName, derived, columnName, columnType, fieldType, superstruct, zodSchema, customSerde, isArray } = p;
-    const serdeType = customSerde
-      ? code`new ${CustomSerdeAdapter}("${fieldName}", "${columnName}", "${columnType}", ${customSerde})`
-      : superstruct
-        ? code`new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct})`
-        : zodSchema
-          ? code`new ${ZodSerde}("${fieldName}", "${columnName}", ${zodSchema})`
-          : columnType === "numeric"
-            ? code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}")`
-            : columnType === "jsonb"
-              ? code`new ${JsonSerde}("${fieldName}", "${columnName}")`
-              : fieldType === "bigint"
-                ? code`new ${BigIntSerde}("${fieldName}", "${columnName}")`
-                : isArray
-                  ? code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}[]", true)`
-                  : code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
+    let serde: Code;
+    if (customSerde) {
+      serde = code`new ${CustomSerdeAdapter}("${fieldName}", "${columnName}", "${columnType}", ${customSerde})`;
+    } else if (superstruct) {
+      serde = code`new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct})`;
+    } else if (zodSchema) {
+      serde = code`new ${ZodSerde}("${fieldName}", "${columnName}", ${zodSchema})`;
+    } else if (columnType === "numeric") {
+      serde = code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}")`;
+    } else if (columnType === "jsonb") {
+      serde = code`new ${JsonSerde}("${fieldName}", "${columnName}")`;
+    } else if (fieldType === "bigint") {
+      serde = code`new ${BigIntSerde}("${fieldName}", "${columnName}")`;
+    } else {
+      let serdeType: Import;
+      if (columnType === "date") {
+        serdeType = config.temporal ? PlainDateSerde : DateSerde;
+      } else if (columnType === "timestamp without time zone") {
+        serdeType = config.temporal ? PlainDateTimeSerde : DateSerde;
+      } else if (columnType === "timestamp with time zone") {
+        serdeType = config.temporal ? ZonedDateTimeSerde : DateSerde;
+      } else {
+        serdeType = PrimitiveSerde;
+      }
+      if (serdeType === PrimitiveSerde || serdeType === DateSerde) {
+        serde = isArray
+          ? code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}[]", true)`
+          : code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}")`;
+      } else {
+        const timeZone = typeof config.temporal === "object" ? config.temporal.timeZone : "UTC";
+        serde = isArray
+          ? code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}[]", "${timeZone}", true)`
+          : code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}", "${timeZone}")`;
+      }
+    }
     const extras = columnType === "citext" ? code`citext: true,` : "";
     fields[fieldName] = code`
       {
@@ -105,7 +129,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         required: ${!derived && p.notNull},
         protected: ${p.protected},
         type: ${typeof p.rawFieldType === "string" ? `"${p.rawFieldType}"` : p.rawFieldType},
-        serde: ${serdeType},
+        serde: ${serde},
         immutable: false,
         ${extras}
         ${maybeDefault(p)}

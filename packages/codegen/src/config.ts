@@ -96,6 +96,13 @@ export const config = z
       }),
     ),
     /**
+     * Allows the user to have codegen output `Temporal` types (via `temporal-polyfill`) instead of the base JS `Date`
+     *
+     * Additionally, allows for specifying the default time zone for `Temporal` tyeps when converting dates to/from
+     * the database.
+     */
+    temporal: z.optional(z.union([z.boolean(), z.object({ timeZone: z.string() })])),
+    /**
      * By default, we create a `flush_database` function for fast testing.
      *
      * However, if you don't want to use this, or you have your own bespoke function like we do

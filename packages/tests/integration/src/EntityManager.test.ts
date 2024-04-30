@@ -21,6 +21,8 @@ import {
   MaybeAbstractEntityConstructor,
   OptsOf,
   getInstanceData,
+  jan1,
+  jan2,
   sameEntity,
 } from "joist-orm";
 import {
@@ -272,9 +274,6 @@ describe("EntityManager", () => {
   });
 
   it("updatedAt does not change on noops on dates", async () => {
-    const jan1 = new Date(2000, 0, 1);
-    const jan2 = new Date(2000, 0, 2);
-
     const em = newEntityManager();
     const a1 = em.create(Author, { firstName: "a1", graduated: jan1 });
     await em.flush();
@@ -694,8 +693,7 @@ describe("EntityManager", () => {
   });
 
   it("ignores date sets of the same value", async () => {
-    const jan1 = new Date(2000, 0, 1);
-    await insertAuthor({ first_name: "a1", initials: "a", number_of_books: 1, graduated: jan1 as any });
+    await insertAuthor({ first_name: "a1", initials: "a", number_of_books: 1, graduated: jan1 });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     a1.graduated = jan1;

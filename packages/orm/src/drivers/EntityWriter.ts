@@ -11,7 +11,7 @@ import {
 import { Todo } from "../Todo";
 import { getField, isChangeableField } from "../fields";
 import { keyToNumber } from "../keys";
-import { hasSerde } from "../serde";
+import { TimestampSerde, hasSerde } from "../serde";
 
 type Column = { columnName: string; dbType: string };
 export type InsertOp = { tableName: string; columns: Column[]; rows: any[][] };
@@ -165,10 +165,11 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
 
   // We already have the bumped updated_at column, but also include the original updated_at for the data CTE
   if (updatedAt) {
+    const serde = meta.fields[updatedAt].serde as TimestampSerde<unknown>;
     columns.push({
       columnName: "__original_updated_at",
       dbType: "timestamptz",
-      dbValue: (_, originalData) => originalData[updatedAt],
+      dbValue: (_, originalData) => serde.dbValue(originalData),
     });
   }
 

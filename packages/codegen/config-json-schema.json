@@ -6,6 +6,9 @@
       "properties": {
         "databaseUrl": { "type": "string" },
         "contextType": { "type": "string" },
+        "temporal": {
+          "anyOf": [{ "type": "boolean" }, { "type": "object", "properties": { "timeZone": { "type": "string" } } }]
+        },
         "timestampColumns": {
           "type": "object",
           "properties": {
@@ -70,7 +73,8 @@
           "default": {}
         },
         "ignoredTables": { "type": "array", "items": { "type": "string" } },
-        "idType": { "type": "string", "enum": ["tagged-string", "untagged-string", "number"] }
+        "idType": { "type": "string", "enum": ["tagged-string", "untagged-string", "number"] },
+        "version": { "type":  "string " }
       },
       "additionalProperties": false
     }

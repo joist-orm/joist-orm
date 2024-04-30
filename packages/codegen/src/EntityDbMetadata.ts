@@ -94,7 +94,7 @@ interface Field {
   ignore?: boolean;
 }
 
-export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Date" | "Object" | "bigint";
+export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Object" | "bigint" | Code;
 
 export type PrimitiveField = Field & {
   kind: "primitive";
@@ -102,7 +102,7 @@ export type PrimitiveField = Field & {
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
   // The fieldType might be code for jsonb columns or primitive array columns, i.e. string[]
-  fieldType: PrimitiveTypescriptType | Import | Code;
+  fieldType: PrimitiveTypescriptType | Import;
   rawFieldType: PrimitiveTypescriptType;
   notNull: boolean;
   derived: "orm" | "sync" | "async" | false;
@@ -403,7 +403,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
   const columnName = column.name;
   const columnType = (column.type.shortName || column.type.name) as DatabaseColumnType;
   const array = isArray(column);
-  const fieldType = mapType(table.name, columnName, columnType);
+  const fieldType = mapType(config, table.name, columnName, columnType);
   const customSerde = serdeConfig(config, entity, fieldName);
   const superstruct = superstructConfig(config, entity, fieldName);
   const zodSchema = zodSchemaConfig(config, entity, fieldName);
@@ -782,7 +782,9 @@ export function makeEntity(entityName: string): Entity {
     idType: imp(`t:${entityName}Id@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
     orderType: imp(`t:${entityName}Order@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
     optsType: imp(`t:${entityName}Opts@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
-    configConst: imp(`${camelCase(entityName)}Config@./entities.ts`, { definedIn: `./codegen/${entityName}Codegen.ts` }),
+    configConst: imp(`${camelCase(entityName)}Config@./entities.ts`, {
+      definedIn: `./codegen/${entityName}Codegen.ts`,
+    }),
   };
 }
 
@@ -802,8 +804,13 @@ function entityTypeForMetadataFile(entityName: string): Import {
   return imp(`${entityName}@./${entityName}.ts`);
 }
 
-function mapType(tableName: string, columnName: string, dbColumnType: DatabaseColumnType): PrimitiveTypescriptType {
-  return mapSimpleDbTypeToTypescriptType(dbColumnType);
+function mapType(
+  config: Config,
+  tableName: string,
+  columnName: string,
+  dbColumnType: DatabaseColumnType,
+): PrimitiveTypescriptType {
+  return mapSimpleDbTypeToTypescriptType(config, dbColumnType);
 }
 
 function isEnumArray(c: Column): boolean {

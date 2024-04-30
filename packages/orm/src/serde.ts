@@ -1,12 +1,14 @@
-import { Field, getBaseMeta, PolymorphicField, SerdeField } from "./EntityMetadata";
+import type { Temporal } from "temporal-polyfill";
+import { Field, PolymorphicField, SerdeField, getBaseMeta } from "./EntityMetadata";
 import {
   EntityMetadata,
   getConstructorFromTaggedId,
+  isDefined,
   keyToNumber,
   keyToTaggedId,
   maybeResolveReferenceToId,
 } from "./index";
-import { groupBy } from "./utils";
+import { groupBy, requireTemporal } from "./utils";
 
 export function hasSerde(field: Field): field is SerdeField {
   return !!field.serde;
@@ -29,6 +31,12 @@ export interface FieldSerde {
    * Used in EntityManager.hydrate to set row value on the entity
    */
   setOnEntity(data: any, row: any): void;
+}
+
+export interface TimestampSerde<T> extends FieldSerde {
+  mapFromInstant(value: Temporal.Instant): T;
+  mapFromDate(value: Date): T;
+  dbValue(data: any): any;
 }
 
 /** A specific physical column of a logical field. */
@@ -103,10 +111,117 @@ export class PrimitiveSerde implements FieldSerde {
   }
 
   mapFromJsonAgg(value: any): any {
-    if (value === null) return value;
-    // Super-hacky handling of de-JSON-ifying dates
-    if (this.dbType.includes("time") || this.dbType.includes("date")) return new Date(value);
     return value;
+  }
+}
+
+export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
+  mapFromInstant(value: Temporal.Instant): Date {
+    return new Date(value.epochMilliseconds);
+  }
+
+  mapFromJsonAgg(value: any): any {
+    if (value === null) return value;
+    return new Date(value);
+  }
+
+  mapFromDate(value: Date) {
+    return value;
+  }
+}
+
+abstract class TemporalSerde<T> implements FieldSerde {
+  columns = [this];
+
+  constructor(
+    private fieldName: string,
+    public columnName: string,
+    public dbType: string,
+    public timeZone: string,
+    public isArray = false,
+  ) {}
+
+  abstract toTemporal(value: Date): T;
+
+  abstract fromTemporal(value: T): Date;
+
+  private maybeToTemporal(value: any): any {
+    return isDefined(value) && value instanceof Date ? this.toTemporal(value) : value;
+  }
+
+  private maybeFromTemporal(value: any): any {
+    return isDefined(value) && !(value instanceof Date) ? this.fromTemporal(value) : value;
+  }
+
+  setOnEntity(data: any, row: any) {
+    let value = maybeNullToUndefined(row[this.columnName]);
+    if (this.isArray) {
+      if (Array.isArray(value)) value = value.map((v) => this.maybeToTemporal(v));
+    } else {
+      value = this.maybeToTemporal(value);
+    }
+    data[this.fieldName] = value;
+  }
+
+  dbValue(data: any) {
+    return this.mapToDb(data[this.fieldName]);
+  }
+
+  mapToDb(value: any) {
+    if (this.isArray) {
+      return Array.isArray(value) ? value.map((v) => this.maybeFromTemporal(v)) : value;
+    } else {
+      return this.maybeFromTemporal(value);
+    }
+  }
+
+  mapFromJsonAgg(value: any): any {
+    if (this.isArray) {
+      return Array.isArray(value) ? value.map((v) => this.toTemporal(new Date(v))) : value;
+    } else {
+      return isDefined(value) ? this.toTemporal(new Date(value)) : value;
+    }
+  }
+}
+
+export class PlainDateSerde extends TemporalSerde<Temporal.PlainDate> {
+  fromTemporal(value: Temporal.PlainDate): Date {
+    return new Date(value.toZonedDateTime(this.timeZone).epochMilliseconds);
+  }
+
+  toTemporal(value: Date): Temporal.PlainDate {
+    return requireTemporal().toTemporalInstant.call(value).toZonedDateTimeISO(this.timeZone).toPlainDate();
+  }
+}
+
+export class PlainDateTimeSerde extends TemporalSerde<Temporal.PlainDateTime> {
+  fromTemporal(value: Temporal.PlainDateTime): Date {
+    return new Date(value.toZonedDateTime(this.timeZone).epochMilliseconds);
+  }
+
+  toTemporal(value: Date): Temporal.PlainDateTime {
+    return requireTemporal().toTemporalInstant.call(value).toZonedDateTimeISO(this.timeZone).toPlainDateTime();
+  }
+}
+
+export class ZonedDateTimeSerde
+  extends TemporalSerde<Temporal.ZonedDateTime>
+  implements TimestampSerde<Temporal.ZonedDateTime>
+{
+  fromTemporal(value: Temporal.ZonedDateTime) {
+    return new Date(value.epochMilliseconds);
+  }
+
+  toTemporal(value: Date) {
+    return requireTemporal().toTemporalInstant.call(value).toZonedDateTimeISO(this.timeZone);
+  }
+
+  mapFromInstant(value: Temporal.Instant) {
+    return value.toZonedDateTimeISO(this.timeZone);
+  }
+
+  mapFromDate(value: Date) {
+    return this.toTemporal(value);
   }
 }
 

@@ -1,4 +1,5 @@
 import { EntityDbMetadata } from "joist-codegen";
+import { dateCode, plainDateCode, plainDateTimeCode, zonedDateTimeCode } from "joist-codegen/build/utils";
 import { generateGraphqlSchemaFiles } from "./generateGraphqlSchemaFiles";
 import { newEntityMetadata, newEnumField, newFs, newPrimitiveField } from "./testUtils";
 
@@ -245,7 +246,55 @@ describe("generateGraphqlSchemaFiles", () => {
     `);
   });
 
-  it("can output both Date and DateTime types", async () => {
+  it("can output both Date and DateTime types for Temporal types", async () => {
+    // Given an author
+    const entities: EntityDbMetadata[] = [
+      newEntityMetadata("Author", {
+        primitives: [
+          // With a regular field
+          newPrimitiveField("firstName"),
+          // And a timestamp with time zone field
+          newPrimitiveField("createdAt", { fieldType: zonedDateTimeCode }),
+          // And a timestamp without time zone field
+          newPrimitiveField("startTime", { fieldType: plainDateTimeCode }),
+          // And also a date field
+          newPrimitiveField("startDate", { fieldType: plainDateCode }),
+        ],
+      }),
+    ];
+    // When ran
+    const fs = newFs({});
+    await generateGraphqlSchemaFiles(fs, entities);
+    // Then the input has both both types of fields as appropriate
+    expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
+      "extend type Mutation {
+        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+      }
+
+      type Author {
+        id: ID!
+        firstName: String!
+        createdAt: DateTime!
+        startTime: DateTime!
+        startDate: Date!
+      }
+
+      input SaveAuthorInput {
+        id: ID
+        firstName: String
+        createdAt: DateTime
+        startTime: DateTime
+        startDate: Date
+      }
+
+      type SaveAuthorResult {
+        author: Author!
+      }
+      "
+    `);
+  });
+
+  it("can output both Date and DateTime types for legacy Date fields", async () => {
     // Given an author
     const entities: EntityDbMetadata[] = [
       newEntityMetadata("Author", {
@@ -253,9 +302,9 @@ describe("generateGraphqlSchemaFiles", () => {
           // With a regular field
           newPrimitiveField("firstName"),
           // And a timestamp field  with the `_at` convention
-          newPrimitiveField("createdAt", { fieldType: "Date" }),
+          newPrimitiveField("createdAt", { fieldType: dateCode }),
           // And also a date field with the `_date` convention
-          newPrimitiveField("startDate", { fieldType: "Date" }),
+          newPrimitiveField("startDate", { fieldType: dateCode }),
         ],
       }),
     ];

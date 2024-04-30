@@ -36,6 +36,7 @@ import {
   OneToManyCollection,
   PartialOrNull,
   PolymorphicReferenceImpl,
+  TimestampSerde,
   UniqueFilter,
   ValidationError,
   ValidationErrors,
@@ -1086,8 +1087,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       const baseMeta = getBaseMeta(getMetadata(entity));
       const { createdAt, updatedAt } = baseMeta.timestampFields;
       const { data } = getInstanceData(entity);
-      if (createdAt) data[createdAt] = new Date();
-      if (updatedAt) data[updatedAt] = new Date();
+      const now = new Date();
+      if (createdAt) {
+        const serde = baseMeta.fields[createdAt].serde as TimestampSerde<unknown>;
+        data[createdAt] = serde.mapFromDate(now);
+      }
+      if (updatedAt) {
+        const serde = baseMeta.fields[updatedAt].serde as TimestampSerde<unknown>;
+        data[updatedAt] = serde.mapFromDate(now);
+      }
       // Set the discriminator for STI
       if (baseMeta.inheritanceType === "sti") {
         setStiDiscriminatorValue(baseMeta, entity);
@@ -1947,7 +1955,8 @@ function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Date): void {
         // so force the field to be dirty.
         const orm = getInstanceData(e);
         orm.originalData[updatedAt] = getField(e, updatedAt);
-        orm.data[updatedAt] = now;
+        const serde = todo.metadata.fields[updatedAt].serde as TimestampSerde<unknown>;
+        orm.data[updatedAt] = serde.mapFromDate(now);
       }
     }
   }

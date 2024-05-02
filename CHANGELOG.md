@@ -1,3 +1,10 @@
+## [1.163.3](https://github.com/joist-orm/joist-orm/compare/v1.163.2...v1.163.3) (2024-05-02)
+
+
+### Bug Fixes
+
+* More explicitly reject invalid ids. ([#1067](https://github.com/joist-orm/joist-orm/issues/1067)) ([5371fb7](https://github.com/joist-orm/joist-orm/commit/5371fb7ad655729d41273efc0ff22f4790250c9b))
+
 ## [1.163.2](https://github.com/joist-orm/joist-orm/compare/v1.163.1...v1.163.2) (2024-05-02)
 
 

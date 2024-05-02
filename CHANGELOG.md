@@ -1,3 +1,10 @@
+## [1.163.2](https://github.com/joist-orm/joist-orm/compare/v1.163.1...v1.163.2) (2024-05-02)
+
+
+### Bug Fixes
+
+* Fix toMatchEntity against readonly arrays. ([#1065](https://github.com/joist-orm/joist-orm/issues/1065)) ([6c3571a](https://github.com/joist-orm/joist-orm/commit/6c3571a71cae9959fe36b138435d3d8c47311c15))
+
 ## [1.163.1](https://github.com/joist-orm/joist-orm/compare/v1.163.0...v1.163.1) (2024-05-02)
 
 

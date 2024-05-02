@@ -1,14 +1,5 @@
 module.exports = {
-  transform: {
-    "^.+\\.tsx?$": [
-      "ts-jest",
-      {
-        isolatedModules: true,
-        astTransformers: { before: [{ path: "joist-transform-properties", options: { type: "raw" } }] },
-        tsconfig: { moduleResolution: "classic" },
-      },
-    ],
-  },
+  transform: { "^.+\\.tsx?$": "@swc/jest" },
   moduleNameMapper: {
     "^@src/(.*)": "<rootDir>/src/$1",
     "^src/(.*)": "<rootDir>/src/$1",

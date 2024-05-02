@@ -1,3 +1,10 @@
+## [1.163.1](https://github.com/joist-orm/joist-orm/compare/v1.163.0...v1.163.1) (2024-05-02)
+
+
+### Bug Fixes
+
+* Fix transformed properties assigned to incorrect entities. ([#1064](https://github.com/joist-orm/joist-orm/issues/1064)) ([15126e9](https://github.com/joist-orm/joist-orm/commit/15126e9e2212135bdb4ce49993a94c6ddd1b9139))
+
 # [1.163.0](https://github.com/joist-orm/joist-orm/compare/v1.162.2...v1.163.0) (2024-04-30)
 
 

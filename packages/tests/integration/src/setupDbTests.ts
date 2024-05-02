@@ -1,9 +1,11 @@
+import { expect } from "@jest/globals";
 import { resetQueryCount, setApiCallMock, testDriver } from "@src/testEm";
-import { toMatchEntity } from "joist-test-utils";
+import { areEntitiesEqual, toMatchEntity } from "joist-test-utils";
 
 export const makeApiCall = jest.fn();
 
 expect.extend({ toMatchEntity });
+expect.addEqualityTesters([areEntitiesEqual]);
 
 beforeEach(async () => {
   setApiCallMock(makeApiCall);

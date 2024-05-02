@@ -751,8 +751,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
                   return undefined;
                 }
               case "m2o":
-              case "poly":
               case "enum":
+                if (f.derived) {
+                  return undefined;
+                } else {
+                  return [f.fieldName, getField(entity, f.fieldName)];
+                }
+              case "poly":
                 return [f.fieldName, getField(entity, f.fieldName)];
               case "primaryKey":
               case "o2m":

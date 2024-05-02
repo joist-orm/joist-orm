@@ -13,6 +13,11 @@ import {
 
 export let currentlyInstantiatingEntity: Entity | undefined;
 
+/** Should only be used by our `joist-transform-properties` to lazy init properties. */
+export function setCurrentlyInstantiatingEntity(entity: Entity): void {
+  currentlyInstantiatingEntity = entity;
+}
+
 /**
  * Returns the internal `__data` tracking field for `entity`.
  *

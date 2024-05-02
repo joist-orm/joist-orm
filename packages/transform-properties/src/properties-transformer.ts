@@ -119,6 +119,7 @@ function shouldRewrite(typeName: string | undefined): boolean {
     !!typeName &&
     (typeName.startsWith("Reactive") ||
       typeName.startsWith("AsyncProperty<") ||
+      typeName.startsWith("AsyncMethod<") ||
       typeName.startsWith("Collection<") ||
       typeName.startsWith("Reference<"))
   );

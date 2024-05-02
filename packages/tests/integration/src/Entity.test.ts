@@ -41,41 +41,11 @@ describe("Entity", () => {
     await insertAuthor({ first_name: "f" });
     const em = newEntityManager();
     const author = await em.load(Author, "1");
-    const copy = deepCopyAndNormalize(author);
-    expect(copy).toMatchInlineSnapshot(`
-     {
-       "booksTitles": {
-         "fn": {},
-         "loadPromise": undefined,
-         "loaded": false,
-       },
-       "booksWithTitle": {
-         "fn": {},
-         "loadPromise": undefined,
-         "loaded": false,
-       },
-       "transientFields": {
-         "afterCommitIdIsSet": false,
-         "afterCommitIsDeletedEntity": false,
-         "afterCommitIsNewEntity": false,
-         "afterCommitRan": false,
-         "afterValidationRan": false,
-         "ageRuleInvoked": 0,
-         "beforeCommitRan": false,
-         "beforeCreateRan": false,
-         "beforeDeleteRan": false,
-         "beforeFlushRan": false,
-         "beforeUpdateRan": false,
-         "bookCommentsCalcInvoked": 0,
-         "deleteDuringFlush": false,
-         "firstIsNotLastNameRuleInvoked": 0,
-         "graduatedRuleInvoked": 0,
-         "mentorRuleInvoked": 0,
-         "numberOfBooksCalcInvoked": 0,
-         "setGraduatedInFlush": false,
-       },
-     }
-    `);
+    // This method will blow up if it recurses into the metadata
+    deepCopyAndNormalize(author);
+    // Otherwise we don't assert on this b/c the behavior is different between
+    // the with/without joist-transform-properties test runs
+    // expect(copy).toMatchInlineSnapshot;
   });
 });
 
@@ -109,8 +79,8 @@ function deepCopyAndNormalize(value: any) {
         keys.sort();
         var ret: any = {};
         keys.forEach(function (key) {
-          // If we hint anything with `.hooks` assume it's metadata
-          if (key === "hooks") {
+          // If we hint anything with `.tagName` assume its metadata
+          if (key === "tagName") {
             throw new Error(`Recursed into the metadata: ${path}`);
           }
           ret[key] = doCopy(value[key], `${path}.${key}`);

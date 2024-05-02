@@ -11,9 +11,8 @@ import {
   insertTag,
   select,
 } from "@src/entities/inserts";
-import { Author, Book, ImageType } from "./entities";
-
 import { newEntityManager } from "@src/testEm";
+import { Author, Book, ImageType } from "./entities";
 
 describe("EntityManager.createOrUpdatePartial", () => {
   it("can create new entity with valid data", async () => {
@@ -369,6 +368,16 @@ describe("EntityManager.createOrUpdatePartial", () => {
       const em = newEntityManager();
       const a1 = await em.createOrUpdatePartial(Author, { firstName: "a2", books: [await em.load(Book, "1")] });
       expect((await a1.books.load())[0].title).toEqual("b1");
+    });
+  });
+
+  describe("m2m", () => {
+    it("rejects invalid ids", async () => {
+      const em = newEntityManager();
+      const result = em.createOrUpdatePartial(Author, {
+        tags: ["", ""],
+      });
+      await expect(result).rejects.toThrow("Invalid Tag id: ");
     });
   });
 

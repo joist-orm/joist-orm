@@ -1,7 +1,7 @@
 import { alignedAnsiStyleSerializer } from "@src/alignedAnsiStyleSerializer";
 import { Author, Book, newAuthor, newBook } from "@src/entities";
 import { newEntityManager } from "@src/testEm";
-import { getInstanceData, jan1 } from "joist-orm";
+import { DeepNew, getInstanceData, jan1 } from "joist-orm";
 
 expect.addSnapshotSerializer(alignedAnsiStyleSerializer as any);
 
@@ -349,6 +349,8 @@ describe("toMatchEntity", () => {
     const a2 = newAuthor(em, { firstName: "a1" });
     const res = [{ author1: a1 }];
     expect(res).toMatchEntity([{ author1: a1 }]);
+    expect(res).toMatchEntity([{ author1: a1 }] as readonly { author1: DeepNew<Author> }[]);
+    expect(res as readonly { author1: DeepNew<Author> }[]).toMatchEntity([{ author1: a1 }]);
     expect([a1, a2]).toMatchEntity([a1, a2]);
     expect(() => expect([a1, a2]).toMatchEntity([a2, a1])).toThrowErrorMatchingInlineSnapshot(`
       expect(received).toMatchObject(expected)

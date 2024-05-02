@@ -1,3 +1,4 @@
+import { isPlainObject } from "joist-utils";
 import { Entity, isEntity } from "./Entity";
 import { EntityManager, IdOf, MaybeAbstractEntityConstructor, OptIdsOf, OptsOf, isKey } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
@@ -140,10 +141,14 @@ export async function createOrUpdatePartial<T extends Entity>(
 
       const entities = await Promise.all(
         toArray(value).map(async (value: any) => {
-          if (!value || isEntity(value)) {
+          if (isEntity(value)) {
             return value;
           } else if (isKey(value)) {
             return await em.load(field.otherMetadata().cstr, value);
+          } else if (value === null || value === undefined) {
+            return undefined;
+          } else if (!isPlainObject(value)) {
+            throw new Error(`Invalid value ${value}`);
           } else {
             // Look for `delete: true/false` and `remove: true/false` markers
             const deleteMarker: any = allowDelete && value["delete"];

@@ -836,7 +836,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       id = typeOrId;
     } else {
       type = typeOrId;
-      id = id || fail();
+      id = id || fail(`Invalid ${typeOrId.name} id: ${id}`);
     }
     const meta = getMetadata(type);
     const tagged = toTaggedId(meta, id);

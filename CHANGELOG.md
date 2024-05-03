@@ -1,3 +1,10 @@
+## [1.163.4](https://github.com/joist-orm/joist-orm/compare/v1.163.3...v1.163.4) (2024-05-03)
+
+
+### Bug Fixes
+
+* Fix factories defaulting tests when sinon is used. ([#1068](https://github.com/joist-orm/joist-orm/issues/1068)) ([4651d07](https://github.com/joist-orm/joist-orm/commit/4651d07523a17aa6cfdca8e169e434bf78060593))
+
 ## [1.163.3](https://github.com/joist-orm/joist-orm/compare/v1.163.2...v1.163.3) (2024-05-02)
 
 

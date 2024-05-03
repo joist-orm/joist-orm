@@ -1,6 +1,7 @@
 import { Entity, isEntity } from "./Entity";
 import { EntityMetadata, Field, getMetadata } from "./EntityMetadata";
 import { lensDataLoader } from "./dataloaders/lensDataLoader";
+import { isAsyncProperty } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 
 /** Generically matches on a Reference/Collection's load method. */
@@ -225,7 +226,10 @@ export function isLensLoaded<T, U, V>(start: T | T[], fn: (lens: Lens<T>) => Len
 
 function isNotLoaded(object: any, path: string): boolean {
   const value = object && object[path];
-  return value instanceof AbstractRelationImpl && !value.isLoaded;
+  if (value instanceof AbstractRelationImpl || isAsyncProperty(value)) {
+    return !value.isLoaded;
+  }
+  return false;
 }
 
 function maybeGet(object: any, path: string): unknown {

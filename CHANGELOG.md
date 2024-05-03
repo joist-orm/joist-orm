@@ -1,3 +1,10 @@
+## [1.163.5](https://github.com/joist-orm/joist-orm/compare/v1.163.4...v1.163.5) (2024-05-03)
+
+
+### Bug Fixes
+
+* Fix lens over unloaded AsyncProperties. ([#1069](https://github.com/joist-orm/joist-orm/issues/1069)) ([a96582f](https://github.com/joist-orm/joist-orm/commit/a96582f4a491b9b68791d351c6559ad5cfe6afb6))
+
 ## [1.163.4](https://github.com/joist-orm/joist-orm/compare/v1.163.3...v1.163.4) (2024-05-03)
 
 

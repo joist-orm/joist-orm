@@ -398,6 +398,22 @@ describe("EntityManager.factories", () => {
     expect(a2).toMatchEntity(a1);
   });
 
+  it("can skip creating a singleton", async () => {
+    const em = newEntityManager();
+    // Given we have an existing author
+    const a1 = newTestInstance(em, Author, {}, {});
+    // And a factory wants to dedup authors on firstName
+    const a2 = newTestInstance(
+      em,
+      Author,
+      // But the test wants to skip it
+      { useExistingCheck: false },
+      { useExisting: (opts, existing) => opts.firstName === existing.firstName },
+    );
+    // Then we got back a new author
+    expect(a2).not.toMatchEntity(a1);
+  });
+
   it("can create and leave required fields unset with noValue", async () => {
     const em = newEntityManager();
     // Given we want to make a Book

@@ -42,6 +42,7 @@ import { assertNever, maybeRequireTemporal } from "./utils";
 export type FactoryOpts<T extends Entity> = DeepPartialOpts<T> & {
   use?: Entity | Entity[];
   useFactoryDefaults?: boolean | "none";
+  useExistingCheck?: boolean;
 };
 
 // Chosen b/c it's a monday https://www.timeanddate.com/calendar/monthly.html?year=2018&month=1&country=1
@@ -168,7 +169,7 @@ export function newTestInstance<T extends Entity>(
 
   const createOpts = Object.fromEntries(initialOpts);
 
-  if (factoryOpts.useExisting) {
+  if (factoryOpts.useExisting && testOpts.useExistingCheck !== false) {
     const existing = em.entities
       .filter((e) => e instanceof meta.cstr)
       .find((e) => factoryOpts.useExisting!(createOpts as OptsOf<T>, e as DeepNew<T>));

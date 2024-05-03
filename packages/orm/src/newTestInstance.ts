@@ -545,6 +545,11 @@ function getTestId<T extends Entity>(em: EntityManager, entity: T): string {
   return tagId(meta, String(sameType.indexOf(entity) + 1));
 }
 
+// We keep a local copy of `global.Date`, in case a faking library
+// like @sinonjs/fake-timers is used and rewrites `global.Date` to
+// their own `ClockDate`, which would make our `===` check below fail.
+const globalDate = global.Date;
+
 function defaultValueForField(em: EntityManager, cstr: EntityConstructor<any>, field: PrimitiveField): unknown {
   if (field.type === "string") {
     if (field.fieldName === "name") {
@@ -555,7 +560,7 @@ function defaultValueForField(em: EntityManager, cstr: EntityConstructor<any>, f
     return 0;
   } else if (field.type === "bigint") {
     return 0n;
-  } else if (field.type === Date) {
+  } else if (field.type === globalDate) {
     return testDate;
   } else if (field.type === "boolean") {
     return false;

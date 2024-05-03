@@ -1,3 +1,10 @@
+## [1.163.6](https://github.com/joist-orm/joist-orm/compare/v1.163.5...v1.163.6) (2024-05-03)
+
+
+### Bug Fixes
+
+* Allow skipping useExisting. ([#1070](https://github.com/joist-orm/joist-orm/issues/1070)) ([7085178](https://github.com/joist-orm/joist-orm/commit/7085178f2a73f0ce8659bf1070256e12a5ce6ebf)), closes [#1066](https://github.com/joist-orm/joist-orm/issues/1066)
+
 ## [1.163.5](https://github.com/joist-orm/joist-orm/compare/v1.163.4...v1.163.5) (2024-05-03)
 
 

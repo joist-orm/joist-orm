@@ -1,5 +1,5 @@
 import { currentlyInstantiatingEntity } from "../BaseEntity";
-import { CustomReference, Entity, getLens, isLensLoaded, Lens, loadLens, Reference } from "../index";
+import { CustomReference, Entity, getLens, isLensLoaded, LensFn, loadLens, Reference } from "../index";
 
 /**
  * Creates a CustomReference that will walk across references in the object graph.
@@ -9,7 +9,7 @@ import { CustomReference, Entity, getLens, isLensLoaded, Lens, loadLens, Referen
  * Because this is based on `CustomReference`, it will work in populates, i.e. `em.populate(review, "author")`.
  */
 export function hasOneThrough<T extends Entity, U extends Entity, N extends never | undefined, V extends U | N>(
-  lens: (lens: Lens<T>) => Lens<V>,
+  lens: LensFn<T, V>,
 ): Reference<T, U, N> {
   const entity: T = currentlyInstantiatingEntity as T;
   return new CustomReference<T, U, N>(entity, {

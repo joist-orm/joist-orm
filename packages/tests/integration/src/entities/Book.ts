@@ -1,4 +1,4 @@
-import { AsyncProperty, hasReactiveAsyncProperty } from "joist-orm";
+import { AsyncProperty, hasAsyncProperty, hasReactiveAsyncProperty } from "joist-orm";
 import { Author, BookCodegen, bookConfig as config } from "./entities";
 
 export class Book extends BookCodegen {
@@ -14,6 +14,9 @@ export class Book extends BookCodegen {
     { reviews: "isPublic" },
     (b) => `reviews=${b.reviews.get.filter((r) => r.isPublic.get).length}`,
   );
+
+  /** For testing lens-based AsyncProperty. */
+  readonly authorFirstName: AsyncProperty<Book, string> = hasAsyncProperty((b) => b.author.firstName);
 }
 
 config.addRule((book) => {

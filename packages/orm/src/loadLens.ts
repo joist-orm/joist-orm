@@ -1,7 +1,9 @@
 import { Entity, isEntity } from "./Entity";
 import { EntityMetadata, Field, getMetadata } from "./EntityMetadata";
 import { lensDataLoader } from "./dataloaders/lensDataLoader";
-import { isAsyncProperty } from "./relations";
+import { getProperties } from "./getProperties";
+import { LoadHint } from "./loadHints";
+import { isAsyncProperty, isRelation } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 
 /** Generically matches on a Reference/Collection's load method. */
@@ -39,6 +41,8 @@ export type Lens<T, R = T> = {
       ? Lens<MaybeDropArray<DropUndefined<U>>, MaybeArray<R, U>>
       : Lens<MaybeDropArray<DropUndefined<T[P]>>, MaybeArray<R, T[P]>>;
 };
+
+export type LensFn<T, V = T> = (lens: Lens<T>) => Lens<V>;
 
 /**
  * Allows declaratively loading/traversing several layers of references at once.
@@ -109,6 +113,20 @@ export async function loadLens<T extends Entity, U, V>(
     }
   }
   return current!;
+}
+
+export function convertLensToLoadHint<T extends Entity>(meta: EntityMetadata<T>, lensFn: LensFn<T, any>): LoadHint<T> {
+  const root = {} as any;
+  let hint = root;
+  let props = getProperties(meta);
+  for (const path of collectPaths(lensFn)) {
+    const prop = props[path];
+    if (isRelation(prop) || isAsyncProperty(prop)) {
+      hint = hint[path] = {};
+      props = getProperties(prop.otherMetadata());
+    }
+  }
+  return root;
 }
 
 export function isAllSqlPaths(meta: EntityMetadata, paths: string[]): boolean {

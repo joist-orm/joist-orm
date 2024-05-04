@@ -2,6 +2,7 @@ import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { getMetadata } from "../EntityMetadata";
 import { LoadHint, Loaded } from "../loadHints";
+import { Lens, LensFn, convertLensToLoadHint, getLens } from "../loadLens";
 import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { tryResolve } from "../utils";
 
@@ -29,9 +30,20 @@ export interface LoadedProperty<T extends Entity, V> {
 export function hasAsyncProperty<T extends Entity, const H extends LoadHint<T>, V>(
   loadHint: H,
   fn: (entity: Loaded<T, H>) => V,
+): AsyncProperty<T, V>;
+export function hasAsyncProperty<T extends Entity, V>(fn: (ln: Lens<T, V>) => V): AsyncProperty<T, V>;
+export function hasAsyncProperty<T extends Entity, const H extends LoadHint<T>, V>(
+  maybeLoadHintOrLens: H | LensFn<T, V>,
+  fn?: (entity: Loaded<T, H>) => V,
 ): AsyncProperty<T, V> {
   const entity = currentlyInstantiatingEntity as T;
-  return new AsyncPropertyImpl(entity, loadHint, fn);
+  if (typeof maybeLoadHintOrLens === "function") {
+    const lens = maybeLoadHintOrLens;
+    const hint = convertLensToLoadHint(getMetadata(entity), lens);
+    return new AsyncPropertyImpl(entity, hint, (e) => getLens(e, lens));
+  } else {
+    return new AsyncPropertyImpl(entity, maybeLoadHintOrLens, fn!);
+  }
 }
 
 /**

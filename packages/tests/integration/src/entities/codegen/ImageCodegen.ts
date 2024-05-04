@@ -56,7 +56,7 @@ import type { AuthorId, AuthorOrder, BookId, BookOrder, Entity, PublisherId, Pub
 export type ImageId = Flavor<string, Image>;
 
 export interface ImageFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   fileName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };

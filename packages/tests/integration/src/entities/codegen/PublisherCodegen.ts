@@ -85,7 +85,7 @@ import type {
 export type PublisherId = Flavor<string, Publisher>;
 
 export interface PublisherFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   latitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   longitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };

@@ -59,7 +59,7 @@ import type { Entity, TagId, TaskItemId } from "../entities";
 export type TaskId = Flavor<string, Task>;
 
 export interface TaskFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   durationInDays: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };

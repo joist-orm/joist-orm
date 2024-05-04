@@ -467,7 +467,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     ${generatePolymorphicTypes(meta)}
     
     export interface ${entityName}Fields ${maybeBaseFields} {
-      ${generateFieldsType(config, meta)}
+      ${generateFieldsType(config, meta, idType)}
     }
 
     export interface ${entityName}Opts ${maybeBaseOpts} {
@@ -715,8 +715,8 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
 }
 
 // Make our fields type
-function generateFieldsType(config: Config, meta: EntityDbMetadata): Code[] {
-  const id = code`id: { kind: "primitive"; type: ${meta.primaryKey.fieldType}; unique: ${true}; nullable: never };`;
+function generateFieldsType(config: Config, meta: EntityDbMetadata, idType: "string" | "number"): Code[] {
+  const id = code`id: { kind: "primitive"; type: ${idType}; unique: ${true}; nullable: never };`;
   const primitives = meta.primitives.map((field) => {
     const { fieldName, fieldType, notNull, unique, derived } = field;
     return code`${fieldName}: { kind: "primitive"; type: ${fieldType}; unique: ${unique}; nullable: ${undefinedOrNever(

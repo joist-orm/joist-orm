@@ -54,7 +54,7 @@ import type { Entity, PublisherId } from "../entities";
 export type PublisherGroupId = Flavor<string, PublisherGroup>;
 
 export interface PublisherGroupFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };

@@ -53,7 +53,7 @@ import type { BookId, BookOrder, Entity, PublisherId, PublisherOrder } from "../
 export type BookAdvanceId = Flavor<string, BookAdvance>;
 
 export interface BookAdvanceFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   status: { kind: "enum"; type: AdvanceStatus; nullable: never };

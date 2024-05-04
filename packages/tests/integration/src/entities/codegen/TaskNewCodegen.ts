@@ -62,7 +62,7 @@ import type {
 export type TaskNewId = Flavor<string, TaskNew> & Flavor<string, "Task">;
 
 export interface TaskNewFields extends TaskFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   specialNewField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   specialNewAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
 }

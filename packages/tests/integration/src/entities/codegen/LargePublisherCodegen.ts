@@ -60,7 +60,7 @@ import type {
 export type LargePublisherId = Flavor<string, LargePublisher> & Flavor<string, "Publisher">;
 
 export interface LargePublisherFields extends PublisherFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   country: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
 }

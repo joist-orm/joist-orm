@@ -43,7 +43,7 @@ import type { AuthorId, AuthorOrder, Entity } from "../entities";
 export type BookId = Flavor<string, Book>;
 
 export interface BookFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   publishedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };

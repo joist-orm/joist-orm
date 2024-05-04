@@ -4,5 +4,5 @@
   "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
   "entitiesDirectory": "./src/entities",
   "idType": "number",
-  "version": "1.163.1"
+  "version": "1.163.6"
 }

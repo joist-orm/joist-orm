@@ -61,7 +61,7 @@ import type { BookId, BookOrder, CommentId, CriticId, CriticOrder, Entity, TagId
 export type BookReviewId = Flavor<string, BookReview>;
 
 export interface BookReviewFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   rating: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   isPublic: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: true };
   isTest: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: true };

@@ -52,7 +52,7 @@ import type { Entity, TaskId, TaskNewId, TaskNewOrder, TaskOldId, TaskOldOrder, 
 export type TaskItemId = Flavor<string, TaskItem>;
 
 export interface TaskItemFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   newTask: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };

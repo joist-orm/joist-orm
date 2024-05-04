@@ -73,7 +73,7 @@ export function isUserFavoritePublisher(maybeEntity: unknown): maybeEntity is Us
 }
 
 export interface UserFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   email: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: undefined; derived: false };

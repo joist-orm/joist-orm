@@ -1,3 +1,10 @@
+## [1.163.7](https://github.com/joist-orm/joist-orm/compare/v1.163.6...v1.163.7) (2024-05-04)
+
+
+### Bug Fixes
+
+* Fix id alias columns typed as numbers. ([#1072](https://github.com/joist-orm/joist-orm/issues/1072)) ([8d71cce](https://github.com/joist-orm/joist-orm/commit/8d71ccee43cdcd72c2a6e2d549d82f3a73cc3e33))
+
 ## [1.163.6](https://github.com/joist-orm/joist-orm/compare/v1.163.5...v1.163.6) (2024-05-03)
 
 

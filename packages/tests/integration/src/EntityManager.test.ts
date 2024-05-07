@@ -652,6 +652,30 @@ describe("EntityManager", () => {
     await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
+  it("cannot set over an async field", async () => {
+    const em = newEntityManager();
+    const a1 = em.create(Author, { firstName: "a1" });
+    expect(() => {
+      a1.set({ latestComments: [] } as any);
+    }).toThrow("Invalid argument, cannot set over latestComments AsyncPropertyImpl");
+  });
+
+  it("cannot set over an hasOneDerived relation", async () => {
+    const em = newEntityManager();
+    const a1 = em.create(Author, { firstName: "a1" });
+    expect(() => {
+      a1.set({ latestComment: [] } as any);
+    }).toThrow("'set' not implemented on CustomReference");
+  });
+
+  it("cannot set over a reactive field", async () => {
+    const em = newEntityManager();
+    const a1 = em.create(Author, { firstName: "a1" });
+    expect(() => {
+      a1.set({ numberOfPublicReviews: 2 } as any);
+    }).toThrow("Invalid argument, cannot set over numberOfPublicReviews ReactiveFieldImpl");
+  });
+
   it("can setPartial with a null required field", async () => {
     const em = newEntityManager();
     const a1 = em.create(Author, { firstName: "a1" });

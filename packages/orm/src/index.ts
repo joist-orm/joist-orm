@@ -5,6 +5,7 @@ import { getBaseMeta, getMetadata } from "./EntityMetadata";
 import { setSyncDefaults } from "./defaults";
 import { getProperties } from "./getProperties";
 import { isAllSqlPaths } from "./loadLens";
+import { isAsyncProperty, isReactiveField, isReactiveGetter, isReactiveQueryField } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { TimestampSerde } from "./serde";
 import { fail } from "./utils";
@@ -196,6 +197,13 @@ export function setOpts<T extends Entity>(
         } else {
           current.set(value);
         }
+      } else if (
+        isAsyncProperty(current) ||
+        isReactiveField(current) ||
+        isReactiveGetter(current) ||
+        isReactiveQueryField(current)
+      ) {
+        throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
       } else {
         (entity as any)[key] = value;
       }

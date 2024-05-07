@@ -1,3 +1,10 @@
+## [1.164.1](https://github.com/joist-orm/joist-orm/compare/v1.164.0...v1.164.1) (2024-05-07)
+
+
+### Bug Fixes
+
+* Use Promise.all in toJSON iteration. ([#1077](https://github.com/joist-orm/joist-orm/issues/1077)) ([9deb08d](https://github.com/joist-orm/joist-orm/commit/9deb08dcb09465b3445bd07675190b27c1276057))
+
 # [1.164.0](https://github.com/joist-orm/joist-orm/compare/v1.163.8...v1.164.0) (2024-05-07)
 
 

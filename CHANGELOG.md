@@ -1,3 +1,10 @@
+## [1.163.8](https://github.com/joist-orm/joist-orm/compare/v1.163.7...v1.163.8) (2024-05-07)
+
+
+### Bug Fixes
+
+* Prevent setting over properties. ([#1075](https://github.com/joist-orm/joist-orm/issues/1075)) ([e1c9351](https://github.com/joist-orm/joist-orm/commit/e1c93516d6627175dcf085d06ce19569d2b339c8))
+
 ## [1.163.7](https://github.com/joist-orm/joist-orm/compare/v1.163.6...v1.163.7) (2024-05-04)
 
 

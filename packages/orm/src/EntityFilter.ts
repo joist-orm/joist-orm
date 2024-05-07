@@ -7,7 +7,7 @@ import { ColumnCondition, RawCondition } from "./QueryParser";
 export type FilterAndSettings<T extends Entity> = {
   where: FilterWithAlias<T>;
   conditions?: ExpressionFilter;
-  orderBy?: OrderOf<T>;
+  orderBy?: OrderOf<T> | OrderOf<T>[];
   limit?: number;
   offset?: number;
   softDeletes?: "exclude" | "include";

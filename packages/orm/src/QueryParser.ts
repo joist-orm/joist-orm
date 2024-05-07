@@ -377,13 +377,10 @@ export function parseFindQuery(
     }
   }
 
-  function addOrderBy(meta: EntityMetadata, alias: string, orderBy: any): void {
-    // Assume only one key
+  function addOrderBy(meta: EntityMetadata, alias: string, orderBy: Record<string, any>): void {
     const entries = Object.entries(orderBy);
-    if (entries.length === 0) {
-      return;
-    }
-    Object.entries(orderBy).forEach(([key, value]) => {
+    if (entries.length === 0) return;
+    for (const [key, value] of entries) {
       const field = meta.allFields[key] ?? fail(`${key} not found on ${meta.tableName}`);
       if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
         const column = field.serde.columns[0];
@@ -415,7 +412,7 @@ export function parseFindQuery(
       } else {
         throw new Error(`Unsupported field ${key}`);
       }
-    });
+    }
   }
 
   // always add the main table
@@ -443,7 +440,11 @@ export function parseFindQuery(
   }
 
   if (orderBy) {
-    addOrderBy(meta, alias, orderBy);
+    if (Array.isArray(orderBy)) {
+      for (const ob of orderBy) addOrderBy(meta, alias, ob);
+    } else {
+      addOrderBy(meta, alias, orderBy);
+    }
   }
   maybeAddOrderBy(query, meta, alias);
 

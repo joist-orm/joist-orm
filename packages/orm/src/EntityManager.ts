@@ -88,7 +88,7 @@ export interface EntityConstructor<T> {
 /** Options for the auto-batchable `em.find` queries, i.e. limit & offset aren't allowed. */
 export interface FindFilterOptions<T extends Entity> {
   conditions?: ExpressionFilter;
-  orderBy?: OrderOf<T>;
+  orderBy?: OrderOf<T> | OrderOf<T>[];
   softDeletes?: "include" | "exclude";
 }
 

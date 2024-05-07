@@ -109,13 +109,15 @@ export async function toJSON<T extends Entity, const H extends JsonHint<T>>(
   await entity.em.populate(entityOrList, loadHint);
 
   if (Array.isArray(entityOrList)) {
-    const list = [];
-    for (const entity of entityOrList) {
-      const json = {};
-      await copyToPayload(json, entity, normalizeHint(hint as any));
-      list.push(json);
-    }
-    return list as any;
+    const list = [] as any;
+    await Promise.all(
+      entityOrList.map((entity) => {
+        const json = {};
+        list.push(json);
+        return copyToPayload(json, entity, normalizeHint(hint as any));
+      }),
+    );
+    return list;
   } else {
     const json = {};
     await copyToPayload(json, entity, normalizeHint(hint as any));

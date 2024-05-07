@@ -1,3 +1,10 @@
+# [1.164.0](https://github.com/joist-orm/joist-orm/compare/v1.163.8...v1.164.0) (2024-05-07)
+
+
+### Features
+
+* Support multiple separate order bys. ([#1076](https://github.com/joist-orm/joist-orm/issues/1076)) ([7f949db](https://github.com/joist-orm/joist-orm/commit/7f949dbe4182514c2ac87db219524ecf745b3e8f)), closes [#1074](https://github.com/joist-orm/joist-orm/issues/1074)
+
 ## [1.163.8](https://github.com/joist-orm/joist-orm/compare/v1.163.7...v1.163.8) (2024-05-07)
 
 

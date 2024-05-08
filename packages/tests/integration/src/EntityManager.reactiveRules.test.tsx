@@ -239,7 +239,13 @@ describe("EntityManager.reactiveRules", () => {
         fn,
       },
       // SmallPublisher's "cannot have >5 authors" rule
-      { cstr: "SmallPublisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher"], path: ["publisher"], fn },
+      {
+        cstr: "SmallPublisher",
+        name: sm(/Publisher.ts:\d+/),
+        fields: ["publisher"],
+        path: ["publisher@SmallPublisher"],
+        fn,
+      },
     ]);
 
     expect(getReactiveRules(Book)).toMatchObject([

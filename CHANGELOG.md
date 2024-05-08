@@ -1,3 +1,10 @@
+## [1.164.2](https://github.com/joist-orm/joist-orm/compare/v1.164.1...v1.164.2) (2024-05-08)
+
+
+### Bug Fixes
+
+* Fix reacting to subtype-only relations. ([#1079](https://github.com/joist-orm/joist-orm/issues/1079)) ([368a9be](https://github.com/joist-orm/joist-orm/commit/368a9be65372fc64fd2480579cefd0bc77273be3))
+
 ## [1.164.1](https://github.com/joist-orm/joist-orm/compare/v1.164.0...v1.164.1) (2024-05-07)
 
 

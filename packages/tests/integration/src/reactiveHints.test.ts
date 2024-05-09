@@ -1,116 +1,151 @@
-import { Author, Book, BookReview, Comment, Image, Tag } from "@src/entities";
-import { LoadHint, Loaded, Reacted, ReactiveHint, getMetadata, reverseReactiveHint } from "joist-orm";
-import { convertToLoadHint } from "joist-orm/build/reactiveHints";
+import { Author, Book, BookReview, Comment, Critic } from "@src/entities";
+import {
+  Entity,
+  LoadHint,
+  Loaded,
+  MaybeAbstractEntityConstructor,
+  Reacted,
+  ReactiveHint,
+  getMetadata,
+  reverseReactiveHint,
+} from "joist-orm";
+import { ReactiveTarget, convertToLoadHint } from "joist-orm/build/reactiveHints";
 
 const am = getMetadata(Author);
 
 describe("reactiveHints", () => {
   it("can do immediate primitive field names", () => {
-    expect(reverseReactiveHint(Author, Author, "firstName")).toEqual([
-      { entity: Author, fields: ["firstName"], path: [] },
-    ]);
+    expect(reverse(Author, Author, "firstName")).toEqual([{ entity: "Author", fields: ["firstName"], path: [] }]);
   });
 
   it("can do parent primitive field names", () => {
-    expect(reverseReactiveHint(Book, Book, { author: ["firstName", "lastName"] })).toEqual([
-      { entity: Book, fields: ["author"], path: [] },
-      { entity: Author, fields: ["firstName", "lastName"], path: ["books"] },
+    expect(reverse(Book, Book, { author: ["firstName", "lastName"] })).toEqual([
+      { entity: "Book", fields: ["author"], path: [] },
+      { entity: "Author", fields: ["firstName", "lastName"], path: ["books"] },
     ]);
   });
 
   it("can do grand-parent primitive field names", () => {
-    expect(reverseReactiveHint(BookReview, BookReview, { book: { author: ["firstName", "lastName"] } })).toEqual([
-      { entity: BookReview, fields: [], path: [] },
-      { entity: Book, fields: ["author"], path: ["reviews"] },
-      { entity: Author, fields: ["firstName", "lastName"], path: ["books", "reviews"] },
+    expect(reverse(BookReview, BookReview, { book: { author: ["firstName", "lastName"] } })).toEqual([
+      { entity: "BookReview", fields: [], path: [] },
+      { entity: "Book", fields: ["author"], path: ["reviews"] },
+      { entity: "Author", fields: ["firstName", "lastName"], path: ["books", "reviews"] },
     ]);
   });
 
   it("can do parent and grand-parent primitive field names", () => {
-    expect(
-      reverseReactiveHint(BookReview, BookReview, { book: { title: {}, author: ["firstName", "lastName"] } }),
-    ).toEqual([
-      { entity: BookReview, fields: [], path: [] },
-      { entity: Book, fields: ["title", "author"], path: ["reviews"] },
-      { entity: Author, fields: ["firstName", "lastName"], path: ["books", "reviews"] },
+    expect(reverse(BookReview, BookReview, { book: { title: {}, author: ["firstName", "lastName"] } })).toEqual([
+      { entity: "BookReview", fields: [], path: [] },
+      { entity: "Book", fields: ["title", "author"], path: ["reviews"] },
+      { entity: "Author", fields: ["firstName", "lastName"], path: ["books", "reviews"] },
     ]);
   });
 
   it("can do child o2m with primitive field names", () => {
-    expect(reverseReactiveHint(Author, Author, { books: "title" })).toEqual([
+    expect(reverse(Author, Author, { books: "title" })).toEqual([
       // Include the Author so that if no books are added, the rule still rules on create
-      { entity: Author, fields: [], path: [] },
-      { entity: Book, fields: ["author", "title"], path: ["author"] },
+      { entity: "Author", fields: [], path: [] },
+      { entity: "Book", fields: ["author", "title"], path: ["author"] },
     ]);
   });
 
   it("can do child o2m with w/o any fields", () => {
-    expect(reverseReactiveHint(Author, Author, "books")).toEqual([
-      { entity: Author, fields: [], path: [] },
-      { entity: Book, fields: ["author"], path: ["author"] },
+    expect(reverse(Author, Author, "books")).toEqual([
+      { entity: "Author", fields: [], path: [] },
+      { entity: "Book", fields: ["author"], path: ["author"] },
     ]);
   });
 
   it("can do child o2o with primitive field names", () => {
-    expect(reverseReactiveHint(Author, Author, { image: "fileName" })).toEqual([
-      { entity: Author, fields: [], path: [] },
-      { entity: Image, fields: ["author", "fileName"], path: ["author"] },
+    expect(reverse(Author, Author, { image: "fileName" })).toEqual([
+      { entity: "Author", fields: [], path: [] },
+      { entity: "Image", fields: ["author", "fileName"], path: ["author"] },
     ]);
   });
 
   it("can do child m2m with primitive field names", () => {
-    expect(reverseReactiveHint(Book, Book, { tags: "name" })).toEqual([
-      { entity: Book, fields: ["tags"], path: [] },
-      { entity: Tag, fields: ["name"], path: ["books"] },
+    expect(reverse(Book, Book, { tags: "name" })).toEqual([
+      { entity: "Book", fields: ["tags"], path: [] },
+      { entity: "Tag", fields: ["name"], path: ["books"] },
     ]);
   });
 
   it("can do nested child m2m with primitive field names", () => {
-    expect(reverseReactiveHint(Author, Author, { books: { tags: "name" } })).toEqual([
-      { entity: Author, fields: [], path: [] },
-      { entity: Book, fields: ["author", "tags"], path: ["author"] },
-      { entity: Tag, fields: ["name"], path: ["books", "author"] },
+    expect(reverse(Author, Author, { books: { tags: "name" } })).toEqual([
+      { entity: "Author", fields: [], path: [] },
+      { entity: "Book", fields: ["author", "tags"], path: ["author"] },
+      { entity: "Tag", fields: ["name"], path: ["books", "author"] },
     ]);
   });
 
   it("can do via polymorphic reference", () => {
-    expect(reverseReactiveHint(Author, Author, { books: { comments: "text" } })).toEqual([
-      { entity: Author, fields: [], path: [] },
-      { entity: Book, fields: ["author"], path: ["author"] },
-      { entity: Comment, fields: ["parent", "text"], path: ["parent@Book", "author"] },
+    expect(reverse(Author, Author, { books: { comments: "text" } })).toEqual([
+      { entity: "Author", fields: [], path: [] },
+      { entity: "Book", fields: ["author"], path: ["author"] },
+      { entity: "Comment", fields: ["parent", "text"], path: ["parent@Book", "author"] },
+    ]);
+  });
+
+  it("can do via subtype-only poly relation", () => {
+    // User.favoritePublisher is a poly, so filter on LargePublisher to avoid smallPublisher.critics
+    expect(reverse(Critic, Critic, { favoriteLargePublisher: "users" })).toEqual([
+      { entity: "Critic", fields: ["favoriteLargePublisher"], path: [] },
+      { entity: "User", fields: ["favoritePublisher"], path: ["favoritePublisher@LargePublisher", "critics"] },
+    ]);
+  });
+
+  it("can do via subtype-only m2o relation", () => {
+    // Image.publisher points to any publishers, so filter on LargePublisher to avoid smallPublisher.critics
+    expect(reverse(Critic, Critic, { favoriteLargePublisher: "images" })).toEqual([
+      { entity: "Critic", fields: ["favoriteLargePublisher"], path: [] },
+      { entity: "Image", fields: ["publisher"], path: ["publisher@LargePublisher", "critics"] },
+    ]);
+  });
+
+  it("can do via subtype-only o2m relation", () => {
+    // PublisherGroup.publishers points to any publishers, so filter on LargePublisher to avoid smallPublisher.critics
+    expect(reverse(Critic, Critic, { favoriteLargePublisher: { group: "publishers" } })).toEqual([
+      { entity: "Critic", fields: ["favoriteLargePublisher"], path: [] },
+      { entity: "LargePublisher", fields: ["group"], path: ["critics"] },
+      { entity: "Publisher", fields: ["group"], path: ["group", "publishers@LargePublisher", "critics"] },
+    ]);
+  });
+
+  it("can do via subtype-only m2m relation", () => {
+    // Tag.publishers points to any publishers, so filter on LargePublisher to avoid smallPublisher.critics
+    expect(reverse(Critic, Critic, { favoriteLargePublisher: { tags: "name" } })).toEqual([
+      { entity: "Critic", fields: ["favoriteLargePublisher"], path: [] },
+      { entity: "LargePublisher", fields: ["tags"], path: ["critics"] },
+      { entity: "Tag", fields: ["name"], path: ["publishers@LargePublisher", "critics"] },
     ]);
   });
 
   it("skips read-only m2o parents", () => {
-    expect(reverseReactiveHint(Book, Book, { author_ro: "firstName:ro" })).toEqual([
-      { entity: Book, fields: [], path: [] },
-    ]);
+    expect(reverse(Book, Book, { author_ro: "firstName:ro" })).toEqual([{ entity: "Book", fields: [], path: [] }]);
   });
 
   it("skips read-only o2m children and grand-children", () => {
-    expect(reverseReactiveHint(Author, Author, { books_ro: "reviews:ro", firstName_ro: {} })).toEqual([
-      { entity: Author, fields: [], path: [] },
+    expect(reverse(Author, Author, { books_ro: "reviews:ro", firstName_ro: {} })).toEqual([
+      { entity: "Author", fields: [], path: [] },
     ]);
   });
 
   it("can do read-only string hint", () => {
     // expect(reverseHint(Author, "books:ro")).toEqual([{ entity: Book, fields: ["author"], path: ["author"] }]);
-    expect(reverseReactiveHint(Author, Author, "publisher:ro")).toEqual([{ entity: Author, fields: [], path: [] }]);
+    expect(reverse(Author, Author, "publisher:ro")).toEqual([{ entity: "Author", fields: [], path: [] }]);
   });
 
   it("can do array of read-only string hints", () => {
-    expect(reverseReactiveHint(Author, Author, ["firstName:ro", "publisher:ro"])).toEqual([
-      { entity: Author, fields: [], path: [] },
+    expect(reverse(Author, Author, ["firstName:ro", "publisher:ro"])).toEqual([
+      { entity: "Author", fields: [], path: [] },
     ]);
   });
 
   it("can do hash of read-only hints", () => {
     // TODO Enforce that `name` must be `name:ro`
-    expect(reverseReactiveHint(Author, Author, { publisher_ro: "name:ro" })).toEqual([
-      { entity: Author, fields: [], path: [] },
-    ]);
-    expect(reverseReactiveHint(BookReview, BookReview, { book: "author:ro" })).toEqual([
-      { entity: BookReview, fields: [], path: [] },
+    expect(reverse(Author, Author, { publisher_ro: "name:ro" })).toEqual([{ entity: "Author", fields: [], path: [] }]);
+    expect(reverse(BookReview, BookReview, { book: "author:ro" })).toEqual([
+      { entity: "BookReview", fields: [], path: [] },
     ]);
   });
 
@@ -262,3 +297,17 @@ describe("reactiveHints", () => {
     }
   });
 });
+
+/** Calls reverseReactiveHint but swaps the entity with a string name to placate Jest. */
+function reverse<T extends Entity>(
+  rootType: MaybeAbstractEntityConstructor<T>,
+  entityType: MaybeAbstractEntityConstructor<T>,
+  hint: ReactiveHint<T>,
+  reactForOtherSide?: string | boolean,
+  isFirst: boolean = true,
+): ReactiveTarget[] {
+  return reverseReactiveHint(rootType, entityType, hint, reactForOtherSide, isFirst).map((target) => {
+    (target as any).entity = target.entity.name;
+    return target;
+  });
+}

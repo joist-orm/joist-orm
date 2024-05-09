@@ -1,3 +1,10 @@
+## [1.164.5](https://github.com/joist-orm/joist-orm/compare/v1.164.4...v1.164.5) (2024-05-09)
+
+
+### Bug Fixes
+
+* Fix filtering on the wrong subtype. ([#1082](https://github.com/joist-orm/joist-orm/issues/1082)) ([2e22bc2](https://github.com/joist-orm/joist-orm/commit/2e22bc20bce68345e9e2c8fbdbd35b1fa07ffa35))
+
 ## [1.164.4](https://github.com/joist-orm/joist-orm/compare/v1.164.3...v1.164.4) (2024-05-09)
 
 

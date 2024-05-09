@@ -8,6 +8,7 @@ import {
   newBook,
   newBookReview,
   newPublisher,
+  newSmallPublisher,
   newTag,
   SmallPublisher,
   Tag,
@@ -207,6 +208,14 @@ describe("EntityManager.reactiveRules", () => {
     await em.flush();
     // Then the rule runs again
     expect(b.reviewsRuleInvoked).toBe(3);
+  });
+
+  it.withCtx("skips traversing through subtype-only relations", async ({ em }) => {
+    // Given we trigger an Image -> publishers -> critics (only exists on LargePublishers)
+    newSmallPublisher(em, { images: [{}] });
+    // Then it does not blow up (and we can't assert against the Critic rule having executed
+    // b/c the scenario is that SmallPublishers don't have the `critics` relation)
+    await em.flush();
   });
 
   it.withCtx("creates the right reactive rules", async () => {

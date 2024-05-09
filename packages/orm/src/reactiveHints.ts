@@ -12,6 +12,7 @@ import {
   getSubMetas,
 } from "./EntityMetadata";
 import { Changes, FieldStatus, ManyToOneFieldStatus } from "./changes";
+import { getMetadataForType } from "./configure";
 import { isChangeableField } from "./fields";
 import { getProperties } from "./getProperties";
 import { LoadHint, Loadable, Loaded } from "./loadHints";
@@ -424,7 +425,7 @@ function isTypeOrSubType(entity: Entity, typeName: string): boolean {
   if (meta.type === typeName) return true;
   // Otherwise see if the entity is a subtype of the typeName, i.e. if our poly/type
   // filter is `@Publisher`, and we're a `SmallPublisher`, that's valid to traverse.
-  for (const other of getSubMetas(meta)) {
+  for (const other of getSubMetas(getMetadataForType(typeName))) {
     if (other.type === typeName) return true;
   }
   return false;

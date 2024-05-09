@@ -1,3 +1,10 @@
+## [1.164.3](https://github.com/joist-orm/joist-orm/compare/v1.164.2...v1.164.3) (2024-05-09)
+
+
+### Bug Fixes
+
+* Add tests for previous reactive hint fix, with more fixes. ([#1080](https://github.com/joist-orm/joist-orm/issues/1080)) ([3185237](https://github.com/joist-orm/joist-orm/commit/31852378b5cf2536172906044cdc5a4316725d72))
+
 ## [1.164.2](https://github.com/joist-orm/joist-orm/compare/v1.164.1...v1.164.2) (2024-05-08)
 
 

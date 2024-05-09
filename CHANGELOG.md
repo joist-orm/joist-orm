@@ -1,3 +1,10 @@
+## [1.164.4](https://github.com/joist-orm/joist-orm/compare/v1.164.3...v1.164.4) (2024-05-09)
+
+
+### Bug Fixes
+
+* Fix failing on hints that use ReactiveReferences. ([#1081](https://github.com/joist-orm/joist-orm/issues/1081)) ([3e1dfc9](https://github.com/joist-orm/joist-orm/commit/3e1dfc9175cf7712f2f94cbe1ed059e615e8d05f))
+
 ## [1.164.3](https://github.com/joist-orm/joist-orm/compare/v1.164.2...v1.164.3) (2024-05-09)
 
 

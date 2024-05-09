@@ -261,9 +261,13 @@ function maybeAddTypeFilterSuffix(
   meta: EntityMetadata,
   field: ManyToOneField | OneToManyField | ManyToManyField | OneToOneField | PolymorphicFieldComponent,
 ): string {
-  const otherField =
-    field.otherMetadata().allFields[field.otherFieldName] ??
-    fail(`No field ${field.otherMetadata().type}.${field.otherFieldName}`);
+  const otherField = field.otherMetadata().allFields[field.otherFieldName];
+  if (!otherField) {
+    // This is usually an error, unless if its ReactiveReference which we don't create o2m-s for
+    const isReactiveReference = "kind" in field && field.kind === "m2o" && field.derived === "async";
+    if (!isReactiveReference) fail(`No field ${field.otherMetadata().type}.${field.otherFieldName}`);
+    return field.otherFieldName;
+  }
   // If we're Foo, and the other field (which we'll traverse back from at runtime) is actually
   // a poly FK pointing back to multiple `owner=Foo | Bar | Zaz`, add a suffix of `@Foo` so
   // that any runtime traversal that hit `owner` and see a `Bar | Zaz` will stop.

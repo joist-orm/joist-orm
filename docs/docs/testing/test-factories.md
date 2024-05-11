@@ -3,16 +3,30 @@ title: Test Factories
 sidebar_position: 0
 ---
 
-Joist generates customizable factories for easily creating test data, i.e. a test can easily create any entity, with all its required fields & dependencies transitively filled in, with a single line:
+Joist provides customizable factories for easily creating test data.
+
+This lets tests succinctly create entities, with all required fields & dependencies filled in:
 
 ```ts
-// Given an author...
+// Given an author
 const a = newAuthor(em);
 ```
- 
+
+Factories also allow easily creating "trees" of test data:
+
+```ts
+// Given one author with three books
+const a1 = newAuthor(em, { books: [{}, {}, {}] });
+// And a second author with two draft books
+const a2 = newAuthor(em, { books: [{ draft: true }, { draft: true } });
+// Then ...some business case...
+```
+
 The approach is very similar to generic test factory tools like [Fishery](https://github.com/thoughtbot/fishery), but with deep/native integration with Joist.
 
-The goal of test factories are to provide tests (and only tests!) with "valid by default" instances of entities, so that each test can focus solely on the state/behavior that is unique to its boundary case.
+## Goal
+
+The goal of test factories are to provide tests (and only tests!) with "valid by default" instances of entities, so that **each test can set only the fields/state that is unique to its boundary case**.
 
 Joist also fundamentally assumes the database is reset between each test (see [Fast Database Resets](./fast-database-resets.md)), and so allowing tests to succinctly create the entire graph of entities they need is a key part of Joist's developer experience.
 

@@ -3,6 +3,10 @@ title: FAQ
 position: 10
 ---
 
+## Why Joist?
+
+See [Why Joist](./why-joist).
+
 ## What databases does Joist support?
 
 Currently only Postgres; see [support other databases](https://github.com/joist-orm/joist-orm/issues/636).

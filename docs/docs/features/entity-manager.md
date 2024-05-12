@@ -25,6 +25,22 @@ author.firstName = "a2";
 await em.flush();
 ```
 
+## Features
+
+### Auto-Batch Updates
+
+Initially using an `EntityManager` can feel awkward, especially for saving changes via `em.flush()` because you "don't see", don't type out, the individual `INSERT` / `UPDATE` / `DELETE` SQL calls that Joist issues for each entity.
+
+However, letting Joist handle this means it can apply your SQL changes in the most efficient manner possible:
+
+1. It first opens a transaction so call mutations are made atomically
+2. It then issues a single "assign new ids" `SELECT` statement to get ids for any newly-inserted entities, from their respective sequences.
+3. Next it issues 1 batch-insert/batch-update/batch-delete statement for each entity type that's created/updated/deleted.
+   - We automatically leverage Postgres's `DEFERRED FOREIGN KEY` constraints to avoid entity-insert ordering issues
+   - The batching logic will use multiple batches if needed, depending on the number of rows & columns being updated (to stay under PostgreSQL's max parameter limit)
+4. Finally, `COMMIT` all the changes
+
+## API
 
 ### `#create`
 Load an instance of a given entity and id

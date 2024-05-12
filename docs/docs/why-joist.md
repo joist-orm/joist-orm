@@ -120,16 +120,17 @@ Instead, domain-focused validation logic that would normally be scattered across
 
 Beyond the reads & writes example, Joist fundamentally lets you "think in graphs" instead of "think in rows & columns".
 
+:::info
+
+This section needs flushed out more.
+
+:::
+
 ## Target Market
 
-Joist will work great for any (Postgres) database schema or (TypeScript) team, large or small. We take a lot of inspiration from [ActiveRecord](https://guides.rubyonrails.org/active_record_basics.html), which of course has been used by many apps & teams of all sizes.
+Joist will work great for any (Postgres) database schema or (TypeScript) team, large or small. We take a lot of inspiration from [ActiveRecord](https://guides.rubyonrails.org/active_record_basics.html), which of course has been used by many, many applications & teams of all sizes.
 
 That said, Joist is particularly suited to **moderately-to-very complicated business domains**; i.e. stereotypical enterprise back-office systems are an ideal fit for Joist.
 
 Joist's framework-style structure, and idiomatic ways of encoding cross-entity business invariants (reactive validation rules, reactive fields, and lifecycle hooks), are all purposefully built to manage the complexity of medium-to-large database schemas/domain models, where "just updating a few columns in this one database row" is insufficient.
 
----
-
-And the N+1 safety allows business logic to confidently incremental loading"
-
-It also encourages a mental model of "thinking in entities" and "thinking in subgraphs", instead of "thinking in rows & columns". Granted, we need to be careful about leaky abstractions, but...

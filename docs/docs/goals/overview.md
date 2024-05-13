@@ -13,7 +13,7 @@ Joist's primary features are:
 
 - [Code Generation](./code-generation.md) to move fast and remove boilerplate
 - [Bullet-Proof N+1 Prevention](./avoiding-n-plus-1s.md) through first-class [dataloader](https://github.com/graphql/dataloader) integration
+- Type-safe tracking of [Loaded vs. Unloaded Relations](./load-safe-relations.md)
 - Bringing [Reactivity to the Backend](../modeling/reactive-fields.md)
 - Robust [Domain Modeling](../modeling/fields.md)
-- Strict type-safe tracking of [Loaded vs. Unloaded Relations](./load-safe-relations.md)
 - [Great testing](./great-tests.md) with built-in factories and other support

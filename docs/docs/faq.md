@@ -34,3 +34,17 @@ Unfortunately, given how interconnected the types of a domain model are, and how
 And adding explicit field types short-circuits these cyclic dependency.
 
 
+## Does Joist require `temporal-polyfill`?
+
+No. Joist has optional support for the upcoming JS temporal API; you can opt-in to it by setting `temporal: "true"` in `joist-config.json`.
+
+If you'd like to keep using `Date`, there are no runtime dependencies on `temporal-polyfill`, but if you get errors like:
+
+```
+node_modules/joist-orm/build/utils.d.ts:1:56 - error TS2307: Cannot find module 'temporal-polyfill' or its corresponding type declarations.
+
+1 import type { Intl, Temporal, toTemporalInstant } from "temporal-polyfill";
+```
+
+Then you either need to enable `skipLibCheck: "true"` in your `tsconfig.json` (recommended, as this disables unnecessary type-checking of your dependency's `*.ts` code), or install `temporal-polyfill` as a `devDependency`.
+

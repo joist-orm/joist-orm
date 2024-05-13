@@ -136,7 +136,7 @@ The declarative nature of Joist's domain model-wide reactivity graph is also ver
 
 ## Conclusion: Best ORM Ever?
 
-So, these three features are what back up my "best ORM ever" assertion.
+So, these three features are what back up my exaggerated "best ORM ever" assertion.
 
 If tomorrow, I suddenly could not use Joist, and had to find another ORM to use (or, in general, build any sort of application backend on top of a relational database), in any current/mainstream programming language, without a doubt I would want:
 
@@ -154,7 +154,7 @@ I did enough of that early in my career, and at this point I'm more interested i
 
 So, I hold two somewhat incongruent thoughts in my head, as I am both:
 
-- Very confident that Joist is "the best" way to build application backends on top of a relational database, for the far majority of use cases/codebases, but I also
+- Very confident that Joist is "the best" way to build application backends on top of a relational database, for a large majority of use cases/teams/codebases, but I also
 - Recognize it's "framework" / entity approach (see [Why Joist](/docs/why-joist)) might be either too opinionated or too much abstraction for some people's tastes, and just in general choices & alternatives are always great to have.
 
 My guess is if you tried Joist, you would quickly come to like it, but it's also perfectly fine if not!

@@ -1,1 +1,0 @@
-"use strict";(self.webpackChunkdocs=self.webpackChunkdocs||[]).push([[2535],{5641:e=>{e.exports=JSON.parse('{"title":"Recent posts","items":[{"title":"New NextJS Sample App","permalink":"/blog/nextjs-sample-app","unlisted":false},{"title":"Welcome","permalink":"/blog/welcome-blog","unlisted":false}]}')}}]);

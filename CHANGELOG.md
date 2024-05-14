@@ -1,3 +1,10 @@
+## [1.164.6](https://github.com/joist-orm/joist-orm/compare/v1.164.5...v1.164.6) (2024-05-14)
+
+
+### Bug Fixes
+
+* Fix em.find on m2m with new entities ([#1085](https://github.com/joist-orm/joist-orm/issues/1085)) ([c022bbf](https://github.com/joist-orm/joist-orm/commit/c022bbfacf2e785b5e78f0523ef538a7dbdd76fb))
+
 ## [1.164.5](https://github.com/joist-orm/joist-orm/compare/v1.164.4...v1.164.5) (2024-05-09)
 
 

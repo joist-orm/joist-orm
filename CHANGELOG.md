@@ -1,3 +1,10 @@
+## [1.165.1](https://github.com/joist-orm/joist-orm/compare/v1.165.0...v1.165.1) (2024-05-14)
+
+
+### Bug Fixes
+
+* Fix alias.search with an empty string. ([#1087](https://github.com/joist-orm/joist-orm/issues/1087)) ([e96f150](https://github.com/joist-orm/joist-orm/commit/e96f1504d845385365c45552f9be2f4d4ddbffb8))
+
 # [1.165.0](https://github.com/joist-orm/joist-orm/compare/v1.164.6...v1.165.0) (2024-05-14)
 
 

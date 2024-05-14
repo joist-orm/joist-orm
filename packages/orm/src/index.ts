@@ -4,6 +4,7 @@ import { EntityConstructor, MaybeAbstractEntityConstructor, OptsOf } from "./Ent
 import { getBaseMeta, getMetadata } from "./EntityMetadata";
 import { setSyncDefaults } from "./defaults";
 import { getProperties } from "./getProperties";
+import { New } from "./loadHints";
 import { isAllSqlPaths } from "./loadLens";
 import { isAsyncProperty, isReactiveField, isReactiveGetter, isReactiveQueryField } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
@@ -266,4 +267,13 @@ export class NoIdError extends Error {}
 /** Throws a `NoIdError` for `entity`, i.e. because `id` was called before being saved. */
 export function failNoIdYet(entity: string): never {
   throw new NoIdError(`${entity} has no id yet`);
+}
+
+/**
+ * Add a static function since getters can't have type guards.
+ *
+ * See https://github.com/microsoft/TypeScript/issues/43368
+ */
+export function isNewEntity<T extends Entity>(entity: T): entity is New<T> {
+  return entity.isNewEntity;
 }

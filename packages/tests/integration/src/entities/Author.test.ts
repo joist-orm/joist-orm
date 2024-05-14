@@ -7,7 +7,7 @@ import {
   select,
 } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
-import { defaultValue, getMetadata, jan1, jan2 } from "joist-orm";
+import { defaultValue, getMetadata, isNewEntity, jan1, jan2 } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
 import { Author, Book, BookId, Publisher, PublisherSize, newAuthor, newPublisher } from "../entities";
@@ -483,10 +483,18 @@ describe("Author", () => {
 
     it("is true for new entities until they are flushed", async () => {
       const em = newEntityManager();
-      const a1 = await em.create(Author, { firstName: "a1" });
+      const a1 = em.create(Author, { firstName: "a1" });
       expect(a1.isNewEntity).toBe(true);
       await em.flush();
       expect(a1.isNewEntity).toBe(false);
+    });
+
+    it("is true for new entities until they are flushed", async () => {
+      const em = newEntityManager();
+      const a1: Author = em.create(Author, { firstName: "a1" });
+      if (isNewEntity(a1)) {
+        expect(a1.books.get).toBe([]);
+      }
     });
   });
 

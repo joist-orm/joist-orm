@@ -1,3 +1,10 @@
+# [1.165.0](https://github.com/joist-orm/joist-orm/compare/v1.164.6...v1.165.0) (2024-05-14)
+
+
+### Features
+
+* Add isNewEntity type guard function ([#1086](https://github.com/joist-orm/joist-orm/issues/1086)) ([b1a3578](https://github.com/joist-orm/joist-orm/commit/b1a35782a1ab6caeabad93cfd40bf2869404d5bf))
+
 ## [1.164.6](https://github.com/joist-orm/joist-orm/compare/v1.164.5...v1.164.6) (2024-05-14)
 
 

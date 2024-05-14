@@ -52,6 +52,7 @@ import {
   UserFilter,
   newAuthor,
   newBook,
+  newTag,
 } from "./entities";
 
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
@@ -1971,6 +1972,29 @@ describe("EntityManager.queries", () => {
       condition: {
         op: "and",
         conditions: [{ alias: "att", column: "tag_id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through m2m matching on new values and not fail", async () => {
+    await insertAuthor({ first_name: "a1" });
+
+    const em = newEntityManager();
+    const t1 = newTag(em, 1);
+    const where = { tags: [t1] } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(0);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
+      ],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "att", column: "tag_id", dbType: "int", cond: { kind: "in", value: [-1] } }],
       },
       orderBys: [expect.anything()],
     });

@@ -2547,6 +2547,24 @@ describe("EntityManager.queries", () => {
       });
     });
 
+    it("can use aliases for search on empty string", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const conditions = { or: [a.firstName.search(""), b.title.search("")] };
+      const authors = await em.find(Author, { as: a, books: b }, { ...opts, conditions });
+      expect(authors.length).toEqual(3);
+
+      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        orderBys: [expect.anything()],
+      });
+    });
+
     it("prunes partially used complex conditions", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });

@@ -348,9 +348,14 @@ export function parseFindQuery(
             );
           } else {
             const meta = field.otherMetadata();
+            // We normally don't have `columns` for m2m fields, b/c they don't go through normal serde
+            // codepaths, so make one up to leverage the existing `mapToDb` function.
             const column: any = {
               mapToDb(value: any) {
-                return value === null ? value : keyToNumber(meta, maybeResolveReferenceToId(value));
+                // Check for `typeof value === number` in case this is a new entity, and we've been given the nilIdValue
+                return value === null || isNilIdValue(value)
+                  ? value
+                  : keyToNumber(meta, maybeResolveReferenceToId(value));
               },
             };
             inlineConditions.push({

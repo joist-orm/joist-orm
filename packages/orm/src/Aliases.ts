@@ -242,7 +242,8 @@ class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<
   }
 
   search(value: V | undefined): ColumnCondition {
-    if (value === undefined) return skipCondition;
+    // Check !value so that empty strings are pruned
+    if (!value) return skipCondition;
     return this.addCondition({ kind: "ilike", value: makeLike(value) });
   }
 

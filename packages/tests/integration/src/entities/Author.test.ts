@@ -493,7 +493,7 @@ describe("Author", () => {
       const em = newEntityManager();
       const a1: Author = em.create(Author, { firstName: "a1" });
       if (isNewEntity(a1)) {
-        expect(a1.books.get).toBe([]);
+        expect(a1.books.get).toEqual([]);
       }
     });
   });

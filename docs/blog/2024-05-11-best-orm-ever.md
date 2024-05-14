@@ -1,5 +1,5 @@
 ---
-title: The Best ORM, Ever?
+title: Is Joist the Best ORM, Ever?
 description: A thought experiment on whether Joist is the best ORM ever.
 slug: the-best-orm-ever
 authors:

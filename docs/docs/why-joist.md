@@ -1,24 +1,23 @@
 ---
-title: Why Joist?
+title: Why Entities?
 position: 10
 ---
 
-Joist is an ORM for TypeScript: it lets you interact with your database (Postgres) through objects (entities) instead of raw SQL.
+One of Joist's biggest differentiators is its focus on **entities** and **domain modeling**.
 
-For example, reading and updating an `authors` row looks like:
+## Tldr: Structure
 
-```typescript
-const em = newEntityManager();
-const author = em.load(Author, "a:1");
-author.firstName = "New Name";
-await em.flush();
-```
+The tldr of "Why Entities?" is that they provide a structure for your application's business logic, which means:
 
-See the [Quick Tour](/docs/getting-started/tour) for more short examples.
+- Derived fields/helper methods you calculate on the fly,
+- Validation rules you enforce before saving, and
+- Side effects you trigger after saving
 
-## What's Different About Joist?
+These are fundamental aspects to all backends, regardless of whether your ORM uses POJOs, or entities, or raw SQL queries.
 
-Joist's biggest differentiator is its focus on **domain modeling**.
+Joist uses entities because, in our opinion, they provide very natural, intuitive guidance on where to put this business logic, that otherwise in "raw POJO from the database" ORMs, each application are must create its own structure in an adhoc/haphazard way.
+
+## Longer Answer
 
 Most modern ORMs in the JavaScript/TypeScript space focus on being "query builders", where each invocation in your code (a call into Prisma or Drizzle or Kysley) results in generally one invocation to your database, and you get back every database row as a dumb (meant in a good way) [POJO](https://gist.github.com/kurtmilam/a1179741777ea6f88374286a640829cc)--no more, and no less.
 
@@ -125,6 +124,41 @@ Beyond the reads & writes example, Joist fundamentally lets you "think in graphs
 This section needs flushed out more.
 
 :::
+
+## Why Classes?
+
+Joist's entities are classes, which often invokes a knee-jerk "anti-OOP" reaction.
+
+However, we primarily use the `class Author extends AuthorCodegen` pattern to "inject" code-generated getters & setters into entities, as the most ergonomic workflow we've found so far.
+
+The intent of Joist's entities is not to "encapsulate behavior" or "hide state" in traditional OOP sense--their job is precisely to expose state to clients/business logic.
+
+Additionally, we think "exposing _abstracted_ state", i.e. helper methods that calculate cross-entity derived fields, is also a perfectly fine idea--TypeScript classes are a natural place for this logic to live, as the logic is effectively "overlaid on top" of the raw POJO coming back from the database.
+
+## Why Mutability?
+
+The other potentially controversial aspect of Joist's entities is that they are mutable.
+
+This is because Joist's entities are meant to be "live" objects, that can be updated in memory, and then saved back to the database.
+
+While can seem concerning, it's driven by following rationale, that you're either:
+
+1. In a query/read endpoint, and the entities will be effectively immutable,
+2. In a mutation/save endpoint, and the point is to mutate entities anyway, and
+3. For either read/save endpoints, it's very likely you'll want to reuse logic across both the "read path" and "write path", so have strictly separate "read types" and "write types" will be more cumbersome than helpful.
+
+Furthermore, Joist's `em.flush` method is actually very strict, such that:
+
+- Initially, pre-`em.flush`, we want to allow easily the "morphing" the entities the graph's desired state,
+
+  (I.e. "morphing" is more than just a single column change on one isolated row--you might be creating several new child entities (attached to a parent), deleting others, and even mutating the parent itself, in one save endpoint, that all needs to be atomically committed.)
+- But once `em.flush` is called, and it's ran any hooks, all entities are **strictly locked** and become **effectively immutable**,
+- And then `em.flush` runs validation rules against the now-immutable entities.
+
+In our opinion, this gives you the best of both worlds:
+
+* We guarantee that entities will be **immutable while being validated**, but
+* Before then, you can very ergonomically mutate your graph to the desired state.
 
 ## Target Market
 

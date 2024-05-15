@@ -3,9 +3,9 @@ title: FAQ
 position: 10
 ---
 
-## Why Joist?
+## Why use Entities and Mutable Classes?
 
-See [Why Joist](./why-joist).
+See [Why Entities](./why-joist).
 
 ## What databases does Joist support?
 

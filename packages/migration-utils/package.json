@@ -20,7 +20,7 @@
     "joist-utils": "workspace:*",
     "node-pg-migrate": "^6.2.2",
     "pg": "^8.11.5",
-    "pg-structure": "^7.15.2",
+    "pg-structure": "^7.15.3",
     "pluralize": "^8.0.0"
   },
   "devDependencies": {

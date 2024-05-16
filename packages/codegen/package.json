@@ -29,7 +29,7 @@
     "jscodeshift": "^0.15.2",
     "knex": "^3.1.0",
     "pg": "^8.11.5",
-    "pg-structure": "^7.15.2",
+    "pg-structure": "^7.15.3",
     "pluralize": "^8.0.0",
     "semver": "^7.6.0",
     "ts-poet": "^6.8.1",

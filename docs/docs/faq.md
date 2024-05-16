@@ -5,7 +5,7 @@ position: 10
 
 ## Why use Entities & Mutable Classes?
 
-See [Why Entities](./why-joist), and the "Why Classes" and "Why Mutability" sections.
+See [Why Entities](/docs/modeling/why-entities), and the "Why Classes" and "Why Mutability" sections.
 
 A tldr is that we think mutable entities is the most ergonomic way to indicate "this how you would like the world to look" (i.e. "I want two new books, this old book archived, and the author's name changed"), by making potentially multiple mutations to the entity graph.
 

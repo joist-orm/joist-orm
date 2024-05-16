@@ -3,9 +3,17 @@ title: FAQ
 position: 10
 ---
 
-## Why use Entities and Mutable Classes?
+## Why use Entities & Mutable Classes?
 
-See [Why Entities](./why-joist).
+See [Why Entities](./why-joist), and the "Why Classes" and "Why Mutability" sections.
+
+A tldr is that we think mutable entities is the most ergonomic way to indicate "this how you would like the world to look" (i.e. "I want two new books, this old book archived, and the author's name changed"), by making potentially multiple mutations to the entity graph.
+
+After which, Joist's `em.flush` will ensure this "new proposed graph", as an aggregate, in still valid, and then commit all your changes to the database atomically.
+
+Also note that `em.flush` enforces "temporary immutability" during its lifecycle, specifically when running validation rules, by "locking" the entities to ensure they are not further mutated while being validated.
+
+(In a way, you can think of Joist's entities as an [Immer](https://immerjs.github.io/immer/) for your data model--i.e. the database itself progresses through a series of atomic, immutable states (transactions), and Joist's entities are just an ergonomic way to declare what you want the next state to be.)
 
 ## What databases does Joist support?
 
@@ -20,6 +28,22 @@ This can initially feel awkward, but it provides a truly type-safe API, given th
 This is often how business logic wants to interact with the domain model--a continual incremental loading of data as needed, as conditional codepaths are executed, instead of an endpoint/program exhaustively knowing up-front exactly what data will be necessary.
 
 If performance is a concern (loading thousands of entities with many custom properties), Joist provides a [ts-patch transform](/docs/advanced/transform-properties) to rewrite the properties as lazy getters in production builds. 
+
+## Does Joist over-fetch data from the database?
+
+When Joist loads an entity, it does loads of the columns; we've found in practice, for relational databases that load the whole row from disk anyway, this is not a significant performance concern.
+
+That said, all of Joist's "backend reactivity" features, like reactive validation rules & reactive fields, use field-level precision in whether they fire or not. For example, an `Author` rule that watches `{ books: title }` will not trigger when one of it's book changes its `book.status` value.
+
+Also, if you have endpoints that require summarizing a lot of children data, Joist's [reactive fields](https://joist-orm.io/docs/modeling/reactive-fields#async-reactive-fields) are an extremely robust way for keeping materialized columns up-to-date (i.e. tracking `Bill.totalPaid` and `Bill.totalUnpaid` columns that sum child `BillLineItem` rows, for fast, easy sorting & filtering.
+
+Finally, Joist does not have a dogmatic "all queries *must* be done via the ORM" stance. It's perfectly fine to use Joist's "object graph navigation" and `em.find` for 90-95% of your queries (that would be very boilerplate SQL queries), and then use a lower-level query builder for the remaining 10%.
+
+:::tip
+
+We do have an idea for [lazy column](https://github.com/joist-orm/joist-orm/issues/178) support, if you have particularly large columns that should not be fetched by default. We should be able to use Joist's existing "conditionally loaded relations" trick to apply ot "conditionally loaded columns", but have not implemented this yet.
+
+:::
 
 ## Why must properties be explicitly typed?
 

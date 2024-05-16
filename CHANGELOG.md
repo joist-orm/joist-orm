@@ -1,3 +1,10 @@
+## [1.165.2](https://github.com/joist-orm/joist-orm/compare/v1.165.1...v1.165.2) (2024-05-16)
+
+
+### Bug Fixes
+
+* Bump pg-structure for supabase fix. ([#1090](https://github.com/joist-orm/joist-orm/issues/1090)) ([cad46bd](https://github.com/joist-orm/joist-orm/commit/cad46bdde6461eabbc3a60bf1a9565b1e4765a7a))
+
 ## [1.165.1](https://github.com/joist-orm/joist-orm/compare/v1.165.0...v1.165.1) (2024-05-14)
 
 

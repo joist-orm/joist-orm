@@ -11084,7 +11084,7 @@ __metadata:
     jscodeshift: "npm:^0.15.2"
     knex: "npm:^3.1.0"
     pg: "npm:^8.11.5"
-    pg-structure: "npm:^7.15.2"
+    pg-structure: "npm:^7.15.3"
     pluralize: "npm:^8.0.0"
     prettier: "npm:^3.2.5"
     prettier-plugin-organize-imports: "npm:^3.2.4"
@@ -11156,7 +11156,7 @@ __metadata:
     joist-utils: "workspace:*"
     node-pg-migrate: "npm:^6.2.2"
     pg: "npm:^8.11.5"
-    pg-structure: "npm:^7.15.2"
+    pg-structure: "npm:^7.15.3"
     pluralize: "npm:^8.0.0"
     prettier: "npm:^3.2.5"
     prettier-plugin-organize-imports: "npm:^3.2.4"
@@ -14572,9 +14572,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg-structure@npm:^7.15.2":
-  version: 7.15.2
-  resolution: "pg-structure@npm:7.15.2"
+"pg-structure@npm:^7.15.3":
+  version: 7.15.3
+  resolution: "pg-structure@npm:7.15.3"
   dependencies:
     "@typescript-plus/fast-memoize-decorator": "npm:^0.1.0"
     dotenv: "npm:^8.2.0"
@@ -14585,7 +14585,7 @@ __metadata:
     lodash.get: "npm:^4.4.2"
     pg: "npm:^8.0.3"
     pg-connection-string: "npm:^2.2.1"
-  checksum: 10/bbf2da1403ab55ead095fae4a441e4a4b81b3da0d41845c7e7f5309905384622641792b8f121cc33e851a76ae7bfcb9b83483587237115f0ba7e91697480c9da
+  checksum: 10/dac3d738ae0938d8861838909f2dd1e4c387ebd2dd4fd787b4129740264183cd454acd228c5c8a3f64116ab4af7df828edb2add5629491495fab28e9d48bf8a8
   languageName: node
   linkType: hard
 

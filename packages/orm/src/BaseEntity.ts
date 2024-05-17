@@ -133,6 +133,10 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
     return this.toString();
   }
 
+  get forJestHack(): string {
+    return this.toString();
+  }
+
   /**
    * Hooks into node's `console.log` to avoid sprawling output of our relations/internal state.
    *

@@ -1,11 +1,15 @@
 import { expect } from "@jest/globals";
 import { resetQueryCount, setApiCallMock, testDriver } from "@src/testEm";
-import { preventEqualsOnEntities, toBeEntities, toBeEntity, toMatchEntity } from "joist-test-utils";
+import { SERIALIZABLE_PROPERTIES } from "jest-matcher-utils";
+import { BaseEntity } from "joist-orm";
+import { areEntitiesEqual, toBeEntities, toBeEntity, toMatchEntity } from "joist-test-utils";
 
 export const makeApiCall = jest.fn();
 
 expect.extend({ toMatchEntity, toBeEntity, toBeEntities });
-expect.addEqualityTesters([preventEqualsOnEntities]);
+// expect.addEqualityTesters([preventEqualsOnEntities]);
+expect.addEqualityTesters([areEntitiesEqual]);
+(BaseEntity as any).prototype[SERIALIZABLE_PROPERTIES] = ["forJestHack"];
 
 beforeEach(async () => {
   setApiCallMock(makeApiCall);

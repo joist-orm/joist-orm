@@ -1,4 +1,4 @@
-import { User } from "@src/entities";
+import { newBook, User } from "@src/entities";
 import { insertUser, select } from "@src/entities/inserts";
 import { PasswordValue } from "@src/entities/types";
 
@@ -15,7 +15,7 @@ describe("User", () => {
     await expect(em.flush()).resolves.toEqual([a1]);
   });
 
-  it("can interact with serde value", async () => {
+  it("can interact with serde value one", async () => {
     const em = newEntityManager();
     const a1 = em.create(User, {
       name: "a1",
@@ -23,7 +23,9 @@ describe("User", () => {
       password: PasswordValue.fromPlainText(PASSWORD),
       originalEmail: "test@test.com",
     });
-    await expect(em.flush()).resolves.toEqual([a1]);
+    const b1 = newBook(em);
+    await expect([a1]).toEqual([b1]);
+    await expect(em.flush()).resolves.toEqual([b1]);
     await expect(a1.password?.encoded).toEqual(PASSWORD_ENCODED);
   });
 

@@ -133,7 +133,6 @@ export class JoinRows {
 
   /** Scans our `rows` for newly-added/newly-deleted rows that need `INSERT`s/`UPDATE`s. */
   toTodo(): JoinRowTodo | undefined {
-    const allRows = this.rows;
     const newRows = this.rows.filter((r) => r.id === undefined && r.deleted !== true);
     const deletedRows = this.rows.filter((r) => r.id !== undefined && r.deleted === true);
     if (newRows.length === 0 && deletedRows.length === 0) {
@@ -143,8 +142,8 @@ export class JoinRows {
       m2m: this.m2m,
       newRows,
       deletedRows,
-      resetAfterFlushed() {
-        for (const row of allRows) {
+      resetAfterFlushed: () => {
+        for (const row of this.rows) {
           if (row.op === JoinRowOperation.Pending || row.op === JoinRowOperation.Flushed)
             row.op = JoinRowOperation.Completed;
         }

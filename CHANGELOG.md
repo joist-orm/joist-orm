@@ -1,3 +1,178 @@
+## [1.165.2](https://github.com/joist-orm/joist-orm/compare/v1.165.1...v1.165.2) (2024-05-16)
+
+
+### Bug Fixes
+
+* Bump pg-structure for supabase fix. ([#1090](https://github.com/joist-orm/joist-orm/issues/1090)) ([cad46bd](https://github.com/joist-orm/joist-orm/commit/cad46bdde6461eabbc3a60bf1a9565b1e4765a7a))
+
+## [1.165.1](https://github.com/joist-orm/joist-orm/compare/v1.165.0...v1.165.1) (2024-05-14)
+
+
+### Bug Fixes
+
+* Fix alias.search with an empty string. ([#1087](https://github.com/joist-orm/joist-orm/issues/1087)) ([e96f150](https://github.com/joist-orm/joist-orm/commit/e96f1504d845385365c45552f9be2f4d4ddbffb8))
+
+# [1.165.0](https://github.com/joist-orm/joist-orm/compare/v1.164.6...v1.165.0) (2024-05-14)
+
+
+### Features
+
+* Add isNewEntity type guard function ([#1086](https://github.com/joist-orm/joist-orm/issues/1086)) ([b1a3578](https://github.com/joist-orm/joist-orm/commit/b1a35782a1ab6caeabad93cfd40bf2869404d5bf))
+
+## [1.164.6](https://github.com/joist-orm/joist-orm/compare/v1.164.5...v1.164.6) (2024-05-14)
+
+
+### Bug Fixes
+
+* Fix em.find on m2m with new entities ([#1085](https://github.com/joist-orm/joist-orm/issues/1085)) ([c022bbf](https://github.com/joist-orm/joist-orm/commit/c022bbfacf2e785b5e78f0523ef538a7dbdd76fb))
+
+## [1.164.5](https://github.com/joist-orm/joist-orm/compare/v1.164.4...v1.164.5) (2024-05-09)
+
+
+### Bug Fixes
+
+* Fix filtering on the wrong subtype. ([#1082](https://github.com/joist-orm/joist-orm/issues/1082)) ([2e22bc2](https://github.com/joist-orm/joist-orm/commit/2e22bc20bce68345e9e2c8fbdbd35b1fa07ffa35))
+
+## [1.164.4](https://github.com/joist-orm/joist-orm/compare/v1.164.3...v1.164.4) (2024-05-09)
+
+
+### Bug Fixes
+
+* Fix failing on hints that use ReactiveReferences. ([#1081](https://github.com/joist-orm/joist-orm/issues/1081)) ([3e1dfc9](https://github.com/joist-orm/joist-orm/commit/3e1dfc9175cf7712f2f94cbe1ed059e615e8d05f))
+
+## [1.164.3](https://github.com/joist-orm/joist-orm/compare/v1.164.2...v1.164.3) (2024-05-09)
+
+
+### Bug Fixes
+
+* Add tests for previous reactive hint fix, with more fixes. ([#1080](https://github.com/joist-orm/joist-orm/issues/1080)) ([3185237](https://github.com/joist-orm/joist-orm/commit/31852378b5cf2536172906044cdc5a4316725d72))
+
+## [1.164.2](https://github.com/joist-orm/joist-orm/compare/v1.164.1...v1.164.2) (2024-05-08)
+
+
+### Bug Fixes
+
+* Fix reacting to subtype-only relations. ([#1079](https://github.com/joist-orm/joist-orm/issues/1079)) ([368a9be](https://github.com/joist-orm/joist-orm/commit/368a9be65372fc64fd2480579cefd0bc77273be3))
+
+## [1.164.1](https://github.com/joist-orm/joist-orm/compare/v1.164.0...v1.164.1) (2024-05-07)
+
+
+### Bug Fixes
+
+* Use Promise.all in toJSON iteration. ([#1077](https://github.com/joist-orm/joist-orm/issues/1077)) ([9deb08d](https://github.com/joist-orm/joist-orm/commit/9deb08dcb09465b3445bd07675190b27c1276057))
+
+# [1.164.0](https://github.com/joist-orm/joist-orm/compare/v1.163.8...v1.164.0) (2024-05-07)
+
+
+### Features
+
+* Support multiple separate order bys. ([#1076](https://github.com/joist-orm/joist-orm/issues/1076)) ([7f949db](https://github.com/joist-orm/joist-orm/commit/7f949dbe4182514c2ac87db219524ecf745b3e8f)), closes [#1074](https://github.com/joist-orm/joist-orm/issues/1074)
+
+## [1.163.8](https://github.com/joist-orm/joist-orm/compare/v1.163.7...v1.163.8) (2024-05-07)
+
+
+### Bug Fixes
+
+* Prevent setting over properties. ([#1075](https://github.com/joist-orm/joist-orm/issues/1075)) ([e1c9351](https://github.com/joist-orm/joist-orm/commit/e1c93516d6627175dcf085d06ce19569d2b339c8))
+
+## [1.163.7](https://github.com/joist-orm/joist-orm/compare/v1.163.6...v1.163.7) (2024-05-04)
+
+
+### Bug Fixes
+
+* Fix id alias columns typed as numbers. ([#1072](https://github.com/joist-orm/joist-orm/issues/1072)) ([8d71cce](https://github.com/joist-orm/joist-orm/commit/8d71ccee43cdcd72c2a6e2d549d82f3a73cc3e33))
+
+## [1.163.6](https://github.com/joist-orm/joist-orm/compare/v1.163.5...v1.163.6) (2024-05-03)
+
+
+### Bug Fixes
+
+* Allow skipping useExisting. ([#1070](https://github.com/joist-orm/joist-orm/issues/1070)) ([7085178](https://github.com/joist-orm/joist-orm/commit/7085178f2a73f0ce8659bf1070256e12a5ce6ebf)), closes [#1066](https://github.com/joist-orm/joist-orm/issues/1066)
+
+## [1.163.5](https://github.com/joist-orm/joist-orm/compare/v1.163.4...v1.163.5) (2024-05-03)
+
+
+### Bug Fixes
+
+* Fix lens over unloaded AsyncProperties. ([#1069](https://github.com/joist-orm/joist-orm/issues/1069)) ([a96582f](https://github.com/joist-orm/joist-orm/commit/a96582f4a491b9b68791d351c6559ad5cfe6afb6))
+
+## [1.163.4](https://github.com/joist-orm/joist-orm/compare/v1.163.3...v1.163.4) (2024-05-03)
+
+
+### Bug Fixes
+
+* Fix factories defaulting tests when sinon is used. ([#1068](https://github.com/joist-orm/joist-orm/issues/1068)) ([4651d07](https://github.com/joist-orm/joist-orm/commit/4651d07523a17aa6cfdca8e169e434bf78060593))
+
+## [1.163.3](https://github.com/joist-orm/joist-orm/compare/v1.163.2...v1.163.3) (2024-05-02)
+
+
+### Bug Fixes
+
+* More explicitly reject invalid ids. ([#1067](https://github.com/joist-orm/joist-orm/issues/1067)) ([5371fb7](https://github.com/joist-orm/joist-orm/commit/5371fb7ad655729d41273efc0ff22f4790250c9b))
+
+## [1.163.2](https://github.com/joist-orm/joist-orm/compare/v1.163.1...v1.163.2) (2024-05-02)
+
+
+### Bug Fixes
+
+* Fix toMatchEntity against readonly arrays. ([#1065](https://github.com/joist-orm/joist-orm/issues/1065)) ([6c3571a](https://github.com/joist-orm/joist-orm/commit/6c3571a71cae9959fe36b138435d3d8c47311c15))
+
+## [1.163.1](https://github.com/joist-orm/joist-orm/compare/v1.163.0...v1.163.1) (2024-05-02)
+
+
+### Bug Fixes
+
+* Fix transformed properties assigned to incorrect entities. ([#1064](https://github.com/joist-orm/joist-orm/issues/1064)) ([15126e9](https://github.com/joist-orm/joist-orm/commit/15126e9e2212135bdb4ce49993a94c6ddd1b9139))
+
+# [1.163.0](https://github.com/joist-orm/joist-orm/compare/v1.162.2...v1.163.0) (2024-04-30)
+
+
+### Features
+
+* Integrated temporal-polyfill as optional replacement for legacy `Date` ([#1053](https://github.com/joist-orm/joist-orm/issues/1053)) ([5bc812d](https://github.com/joist-orm/joist-orm/commit/5bc812db8427495cf108e69a158f0095c6e6316d))
+
+## [1.162.2](https://github.com/joist-orm/joist-orm/compare/v1.162.1...v1.162.2) (2024-04-28)
+
+
+### Bug Fixes
+
+* Fix preloading with a string[] hint. ([#1063](https://github.com/joist-orm/joist-orm/issues/1063)) ([7c66d48](https://github.com/joist-orm/joist-orm/commit/7c66d48cdb3c3687d25e2101cec3bfa3792ad65e))
+
+## [1.162.1](https://github.com/joist-orm/joist-orm/compare/v1.162.0...v1.162.1) (2024-04-27)
+
+
+### Bug Fixes
+
+* Fix NPE is new isNotLoaded. ([#1062](https://github.com/joist-orm/joist-orm/issues/1062)) ([b014277](https://github.com/joist-orm/joist-orm/commit/b014277360b73c0e368993b59d132e17e97c6691))
+
+# [1.162.0](https://github.com/joist-orm/joist-orm/compare/v1.161.2...v1.162.0) (2024-04-27)
+
+
+### Features
+
+* Add joist-transform-properties to make custom properties lazy ([#1061](https://github.com/joist-orm/joist-orm/issues/1061)) ([3b57406](https://github.com/joist-orm/joist-orm/commit/3b57406b3785ce96709e67ed5c1f5282cb4c42bc))
+
+## [1.161.2](https://github.com/joist-orm/joist-orm/compare/v1.161.1...v1.161.2) (2024-04-26)
+
+
+### Bug Fixes
+
+* Optimize loadLens to not rely on exceptions. ([#1060](https://github.com/joist-orm/joist-orm/issues/1060)) ([1b01fe7](https://github.com/joist-orm/joist-orm/commit/1b01fe78b12252074fcb3687ba015b187b86128d))
+
+## [1.161.1](https://github.com/joist-orm/joist-orm/compare/v1.161.0...v1.161.1) (2024-04-26)
+
+
+### Bug Fixes
+
+* Fix using the wrong meta to inject CTE tables. ([#1059](https://github.com/joist-orm/joist-orm/issues/1059)) ([d195654](https://github.com/joist-orm/joist-orm/commit/d19565443d8c6258cd3b7b4a73dc0df3901b767a))
+
+# [1.161.0](https://github.com/joist-orm/joist-orm/compare/v1.160.4...v1.161.0) (2024-04-25)
+
+
+### Features
+
+* Add findWithNewOrChanged. ([#1057](https://github.com/joist-orm/joist-orm/issues/1057)) ([cedadae](https://github.com/joist-orm/joist-orm/commit/cedadae9306889b1886604198263bb4e40691399)), closes [#1055](https://github.com/joist-orm/joist-orm/issues/1055)
+
 ## [1.160.4](https://github.com/joist-orm/joist-orm/compare/v1.160.3...v1.160.4) (2024-04-21)
 
 

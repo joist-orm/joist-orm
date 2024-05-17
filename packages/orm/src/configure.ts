@@ -10,9 +10,11 @@ import { ReactiveReferenceImpl, Reference } from "./relations";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
 import { isCannotBeUpdatedRule } from "./rules";
+import { fail } from "./utils";
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
 const tableToMetaMap = new Map<string, EntityMetadata>();
+const typeToMetaMap = new Map<string, EntityMetadata>();
 
 /** Performs our boot-time initialization, i.e. hooking up reactivity. */
 export function configureMetadata(metas: EntityMetadata[]): void {
@@ -40,6 +42,10 @@ export function getMetadataForTable(tableName: string): EntityMetadata {
   return tableToMetaMap.get(tableName) ?? fail(`Unknown table ${tableName}`);
 }
 
+export function getMetadataForType(typeName: string): EntityMetadata {
+  return typeToMetaMap.get(typeName) ?? fail(`Unknown type ${typeName}`);
+}
+
 export function maybeGetConstructorFromReference(
   value: string | Entity | Reference<any, any, any> | undefined,
 ): MaybeAbstractEntityConstructor<any> | undefined {
@@ -53,6 +59,7 @@ function populateConstructorMaps(metas: EntityMetadata[]): void {
     if (!meta.baseType) tagToConstructorMap.set(meta.tagName, meta.cstr);
     // Same for tables, but include subclass tables
     tableToMetaMap.set(meta.tableName, meta);
+    typeToMetaMap.set(meta.type, meta);
   }
 }
 

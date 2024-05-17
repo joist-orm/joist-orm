@@ -12,7 +12,7 @@ There are two main benefits:
 
 :::info
 
-To use `toMatchEntity`, you must have `joist-test-utils` installed, which is not installed by default with Joist.
+To use `toMatchEntity`, you must have the `joist-test-utils` package installed as a `devDependency`.
 
 :::
 

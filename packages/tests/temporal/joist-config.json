@@ -1,0 +1,8 @@
+{
+  "codegenPlugins": [],
+  "contextType": "Context@src/context",
+  "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
+  "entitiesDirectory": "./src/entities",
+  "temporal": { "timeZone": "America/Los_Angeles" },
+  "version": "1.165.0"
+}

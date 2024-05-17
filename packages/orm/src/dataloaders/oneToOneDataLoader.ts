@@ -48,8 +48,7 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
       },
       orderBys: [],
     };
-
-    addTablePerClassJoinsAndClassTag(query, meta, alias, true);
+    addTablePerClassJoinsAndClassTag(query, otherMeta, alias, true);
 
     const rows = await em.driver.executeFind(em, query, {});
 

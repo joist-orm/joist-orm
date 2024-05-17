@@ -4,15 +4,18 @@ import { EntityConstructor, MaybeAbstractEntityConstructor, OptsOf } from "./Ent
 import { getBaseMeta, getMetadata } from "./EntityMetadata";
 import { setSyncDefaults } from "./defaults";
 import { getProperties } from "./getProperties";
+import { New } from "./loadHints";
 import { isAllSqlPaths } from "./loadLens";
+import { isAsyncProperty, isReactiveField, isReactiveGetter, isReactiveQueryField } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
+import { TimestampSerde } from "./serde";
 import { fail } from "./utils";
 
 export const testing = { isAllSqlPaths };
 export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner";
 export * from "./Aliases";
-export { BaseEntity, getInstanceData } from "./BaseEntity";
+export { BaseEntity, getInstanceData, setCurrentlyInstantiatingEntity } from "./BaseEntity";
 export { Entity, IdType, isEntity } from "./Entity";
 export * from "./EntityFields";
 export * from "./EntityFilter";
@@ -31,8 +34,8 @@ export { DeepPartialOrNull } from "./createOrUpdatePartial";
 export * from "./drivers";
 export { getField, isChangeableField, isFieldSet, setField } from "./fields";
 export * from "./getProperties";
-export * from "./keys";
 export * from "./json";
+export * from "./keys";
 export { kq, kqDot, kqStar } from "./keywords";
 export {
   DeepNew,
@@ -142,7 +145,8 @@ export function setOpts<T extends Entity>(
           const allowDelete = !field.otherMetadata().fields["delete"];
           const allowRemove = !field.otherMetadata().fields["remove"];
 
-          const maybeSoftDelete = getBaseMeta(field.otherMetadata()).timestampFields.deletedAt;
+          const meta = getBaseMeta(field.otherMetadata());
+          const maybeSoftDelete = meta.timestampFields.deletedAt;
 
           // We're replacing the old `delete: true` / `remove: true` behavior with `op` (i.e. operation).
           // When passed in, all values must have it, and we kick into incremental mode, i.e. we
@@ -160,7 +164,9 @@ export function setOpts<T extends Entity>(
               if (v.op === "delete") {
                 // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
                 if (maybeSoftDelete) {
-                  v.set({ [maybeSoftDelete]: new Date() });
+                  const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
+                  const now = new Date();
+                  v.set({ [maybeSoftDelete]: serde.mapFromDate(now) });
                 } else {
                   entity.em.delete(v);
                 }
@@ -192,6 +198,13 @@ export function setOpts<T extends Entity>(
         } else {
           current.set(value);
         }
+      } else if (
+        isAsyncProperty(current) ||
+        isReactiveField(current) ||
+        isReactiveGetter(current) ||
+        isReactiveQueryField(current)
+      ) {
+        throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
       } else {
         (entity as any)[key] = value;
       }
@@ -254,4 +267,13 @@ export class NoIdError extends Error {}
 /** Throws a `NoIdError` for `entity`, i.e. because `id` was called before being saved. */
 export function failNoIdYet(entity: string): never {
   throw new NoIdError(`${entity} has no id yet`);
+}
+
+/**
+ * Add a static function since getters can't have type guards.
+ *
+ * See https://github.com/microsoft/TypeScript/issues/43368
+ */
+export function isNewEntity<T extends Entity>(entity: T): entity is New<T> {
+  return entity.isNewEntity;
 }

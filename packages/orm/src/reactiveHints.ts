@@ -1,7 +1,18 @@
 import { Entity } from "./Entity";
 import { FieldsOf, MaybeAbstractEntityConstructor, RelationsOf, getEmInternalApi } from "./EntityManager";
-import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
+import {
+  EntityMetadata,
+  ManyToManyField,
+  ManyToOneField,
+  OneToManyField,
+  OneToOneField,
+  PolymorphicFieldComponent,
+  getBaseAndSelfMetas,
+  getMetadata,
+  getSubMetas,
+} from "./EntityMetadata";
 import { Changes, FieldStatus, ManyToOneFieldStatus } from "./changes";
+import { getMetadataForType } from "./configure";
 import { isChangeableField } from "./fields";
 import { getProperties } from "./getProperties";
 import { LoadHint, Loadable, Loaded } from "./loadHints";
@@ -146,9 +157,10 @@ export function reverseReactiveHint<T extends Entity>(
           if (!isReadOnly) {
             fields.push(field.fieldName);
           }
+          const otherFieldName = maybeAddTypeFilterSuffix(meta, field);
           return reverseReactiveHint(rootType, field.otherMetadata().cstr, subHint, undefined, false).map(
             ({ entity, fields, path }) => {
-              return { entity, fields, path: [...path, field.otherFieldName] };
+              return { entity, fields, path: [...path, otherFieldName] };
             },
           );
         }
@@ -161,21 +173,18 @@ export function reverseReactiveHint<T extends Entity>(
           return field.components.flatMap((comp) => {
             return reverseReactiveHint(rootType, comp.otherMetadata().cstr, subHint, undefined, false).map(
               ({ entity, fields, path }) => {
-                return { entity, fields, path: [...path, comp.otherFieldName] };
+                const otherFieldName = maybeAddTypeFilterSuffix(meta, comp);
+                return { entity, fields, path: [...path, otherFieldName] };
               },
             );
           });
         }
         case "m2m": {
-          const otherField =
-            field.otherMetadata().allFields[field.otherFieldName] ??
-            fail(`No field ${field.otherMetadata().type}.${field.otherFieldName}`);
-          const otherFieldName =
-            otherField.kind === "poly" ? `${field.otherFieldName}@${meta.type}` : field.otherFieldName;
           // While o2m and o2o can watch for just FK changes by passing `reactForOtherSide` (the FK lives in the other
           // table), for m2m reactivity we push the collection name into the reactive hint, because it's effectively
           // "the other/reverse side", and JoinRows will trigger it explicitly instead of `setField` for non-m2m keys.
           fields.push(field.fieldName);
+          const otherFieldName = maybeAddTypeFilterSuffix(meta, field);
           return reverseReactiveHint(
             rootType,
             field.otherMetadata().cstr,
@@ -191,10 +200,7 @@ export function reverseReactiveHint<T extends Entity>(
         case "o2m":
         case "o2o": {
           const isOtherReadOnly = field.otherMetadata().allFields[field.otherFieldName].immutable;
-          const otherFieldName =
-            field.otherMetadata().allFields[field.otherFieldName].kind === "poly"
-              ? `${field.otherFieldName}@${meta.type}`
-              : field.otherFieldName;
+          const otherFieldName = maybeAddTypeFilterSuffix(meta, field);
           // This is not a field, but we want our reverse side to be reactive, so pass reactForOtherSide
           return reverseReactiveHint(
             rootType,
@@ -252,6 +258,29 @@ export function reverseReactiveHint<T extends Entity>(
   ];
 }
 
+function maybeAddTypeFilterSuffix(
+  meta: EntityMetadata,
+  field: ManyToOneField | OneToManyField | ManyToManyField | OneToOneField | PolymorphicFieldComponent,
+): string {
+  const otherField = field.otherMetadata().allFields[field.otherFieldName];
+  if (!otherField) {
+    // This is usually an error, unless if its ReactiveReference which we don't create o2m-s for
+    const isReactiveReference = "kind" in field && field.kind === "m2o" && field.derived === "async";
+    if (!isReactiveReference) fail(`No field ${field.otherMetadata().type}.${field.otherFieldName}`);
+    return field.otherFieldName;
+  }
+  // If we're Foo, and the other field (which we'll traverse back from at runtime) is actually
+  // a poly FK pointing back to multiple `owner=Foo | Bar | Zaz`, add a suffix of `@Foo` so
+  // that any runtime traversal that hit `owner` and see a `Bar | Zaz` will stop.
+  const nextFieldIsPoly = otherField.kind === "poly";
+  // If we're a SubType, and the other field points to our base type, assume there might be
+  // SubType-specific fields in the path so far, so tell the other side to only walk back through
+  // us if its value is actually a SubType.
+  const nextFieldPointsToBaseType =
+    !!meta.baseType && otherField.kind !== "poly" && (otherField as any).otherMetadata().cstr !== meta.cstr;
+  return nextFieldIsPoly || nextFieldPointsToBaseType ? `${field.otherFieldName}@${meta.type}` : field.otherFieldName;
+}
+
 /**
  * Walks `reverseHint` for every entity in `entities`.
  *
@@ -264,11 +293,11 @@ export async function followReverseHint(entities: Entity[], reverseHint: string[
   // And "walk backwards" through the reverse hint
   while (paths.length) {
     const path = paths.shift()!;
-    const [fieldName, viaPolyType] = path.split("@");
+    const [fieldName, viaType] = path.split("@");
     // The path might touch either a reference or a collection
     const entitiesOrLists = await Promise.all(
       current.flatMap((c: any) => {
-        const currentValuePromise = maybeLoadedPoly(c[fieldName].load(), viaPolyType);
+        const currentValuePromise = maybeApplyTypeFilter(c[fieldName].load(), viaType);
         // If we're going from Book.author back to Author to re-validate the Author.books collection,
         // see if Book.author has changed, so we can re-validate both the old author's books and the
         // new author's books.
@@ -279,7 +308,7 @@ export async function followReverseHint(entities: Entity[], reverseHint: string[
         if (isReference && changed && changed.hasUpdated && changed.originalValue) {
           return [
             currentValuePromise,
-            maybeLoadedPoly((changed as ManyToOneFieldStatus<any>).originalEntity, viaPolyType),
+            maybeApplyTypeFilter((changed as ManyToOneFieldStatus<any>).originalEntity, viaType),
           ];
         }
         if (isManyToMany) {
@@ -374,12 +403,32 @@ export interface ReactiveTarget {
   path: string[];
 }
 
-async function maybeLoadedPoly(loadPromise: Promise<Entity>, viaPolyType: string | undefined) {
-  if (viaPolyType) {
-    const loaded: Entity = await loadPromise;
-    return loaded && getMetadata(loaded).type === viaPolyType ? loaded : undefined;
+function maybeApplyTypeFilter(loadPromise: Promise<Entity | Entity[]>, viaType: string | undefined) {
+  if (viaType) {
+    return loadPromise.then((loaded) => {
+      if (Array.isArray(loaded)) {
+        return loaded.filter((e) => isTypeOrSubType(e, viaType));
+      } else if (loaded && isTypeOrSubType(loaded, viaType)) {
+        return loaded;
+      } else {
+        return undefined;
+      }
+    });
   }
   return loadPromise;
+}
+
+/** Handle `viaType` filtering with subtype awareness. */
+function isTypeOrSubType(entity: Entity, typeName: string): boolean {
+  const meta = getMetadata(entity);
+  // Easy check for the name is the same
+  if (meta.type === typeName) return true;
+  // Otherwise see if the entity is a subtype of the typeName, i.e. if our poly/type
+  // filter is `@Publisher`, and we're a `SmallPublisher`, that's valid to traverse.
+  for (const other of getSubMetas(getMetadataForType(typeName))) {
+    if (other.type === typeName) return true;
+  }
+  return false;
 }
 
 export function isPolyHint(key: string): boolean {

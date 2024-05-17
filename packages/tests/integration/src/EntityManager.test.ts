@@ -21,6 +21,8 @@ import {
   MaybeAbstractEntityConstructor,
   OptsOf,
   getInstanceData,
+  jan1,
+  jan2,
   sameEntity,
 } from "joist-orm";
 import {
@@ -272,9 +274,6 @@ describe("EntityManager", () => {
   });
 
   it("updatedAt does not change on noops on dates", async () => {
-    const jan1 = new Date(2000, 0, 1);
-    const jan2 = new Date(2000, 0, 2);
-
     const em = newEntityManager();
     const a1 = em.create(Author, { firstName: "a1", graduated: jan1 });
     await em.flush();
@@ -653,6 +652,30 @@ describe("EntityManager", () => {
     await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
+  it("cannot set over an async field", async () => {
+    const em = newEntityManager();
+    const a1 = em.create(Author, { firstName: "a1" });
+    expect(() => {
+      a1.set({ latestComments: [] } as any);
+    }).toThrow("Invalid argument, cannot set over latestComments AsyncPropertyImpl");
+  });
+
+  it("cannot set over an hasOneDerived relation", async () => {
+    const em = newEntityManager();
+    const a1 = em.create(Author, { firstName: "a1" });
+    expect(() => {
+      a1.set({ latestComment: [] } as any);
+    }).toThrow("'set' not implemented on CustomReference");
+  });
+
+  it("cannot set over a reactive field", async () => {
+    const em = newEntityManager();
+    const a1 = em.create(Author, { firstName: "a1" });
+    expect(() => {
+      a1.set({ numberOfPublicReviews: 2 } as any);
+    }).toThrow("Invalid argument, cannot set over numberOfPublicReviews ReactiveFieldImpl");
+  });
+
   it("can setPartial with a null required field", async () => {
     const em = newEntityManager();
     const a1 = em.create(Author, { firstName: "a1" });
@@ -694,8 +717,7 @@ describe("EntityManager", () => {
   });
 
   it("ignores date sets of the same value", async () => {
-    const jan1 = new Date(2000, 0, 1);
-    await insertAuthor({ first_name: "a1", initials: "a", number_of_books: 1, graduated: jan1 as any });
+    await insertAuthor({ first_name: "a1", initials: "a", number_of_books: 1, graduated: jan1 });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     a1.graduated = jan1;
@@ -1309,6 +1331,61 @@ describe("EntityManager", () => {
 
     // Then the deleted entity was returned from the flush
     expect(result).toEqual(a1);
+  });
+
+  describe("findWithNewOrChanged", () => {
+    it("finds existing, unloaded entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      const authors = await em.findWithNewOrChanged(Author, { firstName: "a1" });
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
+    it("finds existing, loaded entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      await em.find(Author, {});
+      const authors = await em.findWithNewOrChanged(Author, { firstName: "a1" });
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
+    it("finds new entities", async () => {
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      em.create(Author, { firstName: "a1" });
+      const authors = await em.findWithNewOrChanged(Author, { firstName: "a1" });
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
+    it("finds changed entities", async () => {
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      const a2 = await em.load(Author, "a:1");
+      a2.firstName = "a1";
+      const authors = await em.findWithNewOrChanged(Author, { firstName: "a1" });
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
+    it("ignores changed entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const a2 = await em.load(Author, "a:1");
+      a2.firstName = "a2";
+      const authors = await em.findWithNewOrChanged(Author, { firstName: "a1" });
+      expect(authors).toMatchEntity([]);
+    });
+
+    it("can populate found & created entities", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertPublisher({ id: 2, name: "p2" });
+      await insertAuthor({ first_name: "a1", last_name: "last", publisher_id: 1 });
+      const em = newEntityManager();
+      em.create(Author, { firstName: "a2", lastName: "last", publisher: "p:2" });
+      const authors = await em.findWithNewOrChanged(Author, { lastName: "last" }, { populate: "publisher" });
+      expect(authors).toMatchEntity([{ publisher: { name: "p1" } }, { publisher: { name: "p2" } }]);
+    });
   });
 
   describe("touch", () => {

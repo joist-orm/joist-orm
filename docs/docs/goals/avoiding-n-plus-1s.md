@@ -23,7 +23,13 @@ await Promise.all(books.map(async (book) => {
 }));
 ```
 
-Without Joist (or a similar Dataloader-ish approach), the risk is each `book.reviews.load()` causes its own `SELECT * FROM book_reviews WHERE book_id = ...`. I.e. the 1st loop calls `SELECT ... WHERE book_id = 1`, the 2nd loop calls `SELECT ... WHERE book_id = 2`, etc., such that if we have `N` books, we will make `N` SQL queries, one for each book id.
+Without Joist (or a similar Dataloader-ish approach), the risk is each `book.reviews.load()` causes its own `SELECT * FROM book_reviews WHERE book_id = ...`. I.e.:
+
+- the 1st loop calls `SELECT * FROM reviews WHERE book_id = 1`,
+- the 2nd loop calls `SELECT * FROM reviews WHERE book_id = 2`,
+- etc.,
+
+Such that if we have `N` books, we will make `N` SQL queries, one for each book id.
 
 If we count the initial `SELECT * FROM books WHERE author_id = 1` query as `1`, this means we've made `N + 1` queries to process each of the author's books, hence the term N+1.
 
@@ -40,11 +46,17 @@ SELECT * FROM book_reviews WHERE book_id IN (1, 2, 3, ...);
 
 This N+1 prevention works not only in our 3-line `await Promise.all` example, but also works in complex codepaths where the business logic of "process each book" (and any lazy loading it might trigger) is spread out across helper methods, validation rules, entity lifecycle hooks, etc.
 
+:::tip
+
+In one of Joist's alpha features, join-based preloading, these 3 queries can actually be collapsed into a single SQL call, although achieving this does require an up-front populate hint.
+
+:::
+
 ## Type-Safe Preloading
 
 While the 1st snippet shows that Joist avoids N+1s in `async` / `Promise.all`-heavy code, Joist also supports populate hints, which not only **preload the data** but also **change the types to allow non-async access**. 
 
-With Joist, the above code can be rewritten (code golf-d) as:
+With Joist, the above code can be rewritten as:
 
 ```typescript
 // Get an author and their books _and_ the books' reviews
@@ -56,9 +68,9 @@ author.books.get.map((book) => {
 });
 ```
 
-And it has exactly the same runtime semantics as the previous `async/await`-based code: the **same three queries** are issued for both "with populate hints" and "without populate hints" code.
+And it has exactly the same runtime semantics (i.e. number of SQL calls) as the previous `async/await`-based code: the **same three queries** are issued for both "with populate hints" and "without populate hints" code.
 
-See [Load-Safe Relations](./load-safe-relations.md) for more information about this feature, however we point it out here because while populate hints are great for writing non-async code & avoiding N+1s (other ORMs like ActiveRecord use them), in Joist **populate hints are supported but _not required_ to avoid N+1s**.
+See [Load-Safe Relations](./load-safe-relations.md) for more information about this feature, however we point it out here because while populate hints are great for writing non-async code & avoiding N+1s (other ORMs like ActiveRecord use them), in Joist populate hints are **supported but _not required_** to avoid N+1s.
 
 This is key, because in a sufficiently large/complex codebase, it can be **extremely hard to know ahead of time** exactly the right populate hint(s) that an endpoint should use to preload its data in an N+1 safe manner.
 
@@ -68,11 +80,9 @@ With Joist, you don't have to worry anymore: if you use populate hints, that's g
 
 ### Common/Tedious Pitfall
 
-N+1s have fundamentally plagued ORMs, in any language, because the de facto ORM approach of "relations are just methods on an object" (i.e. `author1.getBooks()` or `book1.getAuthor()`) causes a **leaky abstraction** because the method calls are not super-cheap in-memory accesses (like most method calls), but instead actually expensive I/O calls.
+N+1s have plagued ORMs, in many programming languages, because the de facto ORM approach of "relations are just methods on an object" (i.e. `author1.getBooks()` or `book1.getAuthor()` will lazy-load the requested data from the database) causes a **leaky abstraction**--normally method calls are super-cheap in-memory accesses, but ORM methods that make expensive I/O calls are fundamentally not "super-cheap".
 
-Methods that issue I/O calls are powerful, however they are almost too ergonomic: it's very natural for programmers to, given a list of objects, loop over those objects and access their methods.
-
-This is an extremely common pattern (looping over objects and calling their methods), which means in most ORMs N+1s are also extremely common, without careful planning (i.e. manually-maintained preload hints).
+These methods that implicitly issue I/O calls are powerful and very ergonomic, however they are almost **too ergonomic**: it's very natural for programmers to, given a list of objects, loop over those objects and access their methods, and unwittingly cause an N+1.
 
 For example, in Rails ActiveRecord, N+1s happen by default, and the programmer needs to tell ActiveRecord ahead of time which collections to preload:
 
@@ -101,7 +111,7 @@ await Promise.all(books.map(async (book) => {
 }));
 ```
 
-The `book.reviews.load` method is fundamentally not allowed to make an immediate SQL call, because it would block the event loop.
+The `book.reviews.load` method, when invoked, is fundamentally not allowed to make an immediate SQL call, because it would block the event loop.
 
 Instead, the `load` method is forced to return a `Promise`, handle the I/O off the thread, and then later return the `reviews` that have been loaded.
 
@@ -118,16 +128,16 @@ SELECT * FROM book_reviews WHERE book_id IN (1, 2, 3, ..., 10);
 It is a little esoteric, but dataloader implements this by automatically managing "flush" events in JavaScript's event loop. Specifically, the event loop execution will look like (each "Tick" is a synchronous execution of logic on the event loop):
 
 - Tick 1, call `books.map` for each book, and synchronously
-  - For book 1, call `load`, there is no existing "flush" event, so dataloader creates one at the end of the queue, with `book:1` in it
+  - For book 1, call `load`, there is no existing "flush" event, so dataloader creates one at the end of the queue (i.e. to be invoked at the next tick), with `book:1` in it
   - For book 2, call `load`, see there is already a queued "flush" event, so add `book:2` to it,
   - For book `N`, call `load`, see there is already a queued "flush" event, so add `book:N` to it
-- Tick 2, evaluate the "flush" event
+- Tick 2, evaluate the "flush" event, with it's 10 book ids kept in an array
   - Tell Joist "load all 10 books"
   - Joist issues a single SQL statement
-- Tick 3, SQL statement resolves, Joist tells dataloader "okay, here are the reviews for each of the 10 books"
-  - Resolve book 1's promise with its reviews
-  - Resolve book 2's promise with its reviews
-  - Resolve book `N`'s promise with its reviews
+- Tick 3, SQL statement resolves, Joist tells dataloader "okay, here are the reviews for each of the 10 books", when the dataloader:
+  - Resolves book 1's promise with its respective reviews
+  - Resolves book 2's promise with its respective reviews
+  - Resolves book `N`'s promise with its respective reviews
 - Tick 4, continue book 1's `async` function, now with `reviews` populated
 - Tick 5, continue book 2's `async` function, now with `reviews` populated
 - ...

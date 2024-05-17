@@ -3,7 +3,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasOne,
   isLoaded,
   loadLens,
@@ -54,7 +53,7 @@ import type { BookId, BookOrder, Entity, PublisherId, PublisherOrder } from "../
 export type BookAdvanceId = Flavor<string, BookAdvance>;
 
 export interface BookAdvanceFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   status: { kind: "enum"; type: AdvanceStatus; nullable: never };
@@ -218,12 +217,15 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   get book(): ManyToOneReference<BookAdvance, Book, never> {
-    const { relations } = getInstanceData(this);
-    return relations.book ??= hasOne(this as any as BookAdvance, bookMeta, "book", "advances");
+    return this.__data.relations.book ??= hasOne(this as any as BookAdvance, bookMeta, "book", "advances");
   }
 
   get publisher(): ManyToOneReference<BookAdvance, Publisher, never> {
-    const { relations } = getInstanceData(this);
-    return relations.publisher ??= hasOne(this as any as BookAdvance, publisherMeta, "publisher", "bookAdvances");
+    return this.__data.relations.publisher ??= hasOne(
+      this as any as BookAdvance,
+      publisherMeta,
+      "publisher",
+      "bookAdvances",
+    );
   }
 }

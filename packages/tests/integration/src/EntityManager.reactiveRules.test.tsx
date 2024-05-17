@@ -8,6 +8,7 @@ import {
   newBook,
   newBookReview,
   newPublisher,
+  newSmallPublisher,
   newTag,
   SmallPublisher,
   Tag,
@@ -209,6 +210,14 @@ describe("EntityManager.reactiveRules", () => {
     expect(b.reviewsRuleInvoked).toBe(3);
   });
 
+  it.withCtx("skips traversing through subtype-only relations", async ({ em }) => {
+    // Given we trigger an Image -> publishers -> critics (only exists on LargePublishers)
+    newSmallPublisher(em, { images: [{}] });
+    // Then it does not blow up (and we can't assert against the Critic rule having executed
+    // b/c the scenario is that SmallPublishers don't have the `critics` relation)
+    await em.flush();
+  });
+
   it.withCtx("creates the right reactive rules", async () => {
     const fn = expect.any(Function);
     expect(getReactiveRules(Author)).toMatchObject([
@@ -239,7 +248,13 @@ describe("EntityManager.reactiveRules", () => {
         fn,
       },
       // SmallPublisher's "cannot have >5 authors" rule
-      { cstr: "SmallPublisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher"], path: ["publisher"], fn },
+      {
+        cstr: "SmallPublisher",
+        name: sm(/Publisher.ts:\d+/),
+        fields: ["publisher"],
+        path: ["publisher@SmallPublisher"],
+        fn,
+      },
     ]);
 
     expect(getReactiveRules(Book)).toMatchObject([

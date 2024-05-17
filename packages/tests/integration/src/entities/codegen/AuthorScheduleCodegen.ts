@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasOne,
   isLoaded,
   loadLens,
@@ -43,7 +42,7 @@ import type { AuthorId, AuthorOrder, Entity } from "../entities";
 export type AuthorScheduleId = Flavor<string, AuthorSchedule>;
 
 export interface AuthorScheduleFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   overview: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -186,7 +185,6 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   get author(): ManyToOneReference<AuthorSchedule, Author, never> {
-    const { relations } = getInstanceData(this);
-    return relations.author ??= hasOne(this as any as AuthorSchedule, authorMeta, "author", "schedules");
+    return this.__data.relations.author ??= hasOne(this as any as AuthorSchedule, authorMeta, "author", "schedules");
   }
 }

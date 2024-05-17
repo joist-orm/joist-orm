@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasOne,
   isLoaded,
   loadLens,
@@ -43,7 +42,7 @@ import type { AuthorId, AuthorOrder, Entity } from "../entities";
 export type BookId = Flavor<string, Book>;
 
 export interface BookFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
 }
@@ -164,7 +163,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get author(): ManyToOneReference<Book, Author, never> {
-    const { relations } = getInstanceData(this);
-    return relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
+    return this.__data.relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
   }
 }

@@ -193,30 +193,36 @@ export function mapTypescriptTypeToGraphQLType(
   fieldName: string,
   type: PrimitiveTypescriptType | Import | Code,
 ): GraphQLType | undefined {
-  switch (type) {
-    case "string":
-      return "String";
-    case "boolean":
-      return "Boolean";
-    case "number":
-      return "Int";
-    case "Date":
-      // Joist doesn't yet have different `date` vs. `datetime` types (which is surprising...),
-      // but we do in GraphQL, so for now lean on the `..._at` suffix convention to know "DateTime".
-      if (fieldName.endsWith("At")) {
-        return "DateTime";
-      } else {
-        return "Date";
-      }
-    default:
+  if (type === "string") {
+    return "String";
+  } else if (type === "boolean") {
+    return "Boolean";
+  } else if (type === "number") {
+    return "Int";
+  } else if (type instanceof Code) {
+    const rawType = type.toCodeString([]);
+    if (rawType.startsWith("Date")) {
+      // Legacy javascript Date doesn't have different `date` vs. `datetime` types but GraphQL does
+      // so lean on the `..._at` suffix convention to know "DateTime".
+      return fieldName.endsWith("At") ? "DateTime" : "Date";
+    } else if (rawType.startsWith("Temporal.ZonedDateTime")) {
+      return "DateTime";
+    } else if (rawType.startsWith("Temporal.PlainDateTime")) {
+      return "DateTime";
+    } else if (rawType.startsWith("Temporal.PlainDate")) {
+      return "Date";
+    } else {
       // If this is a fancy import like a superstruct/something, we can't guess what it will be in GraphQL
-      if (type instanceof Import || type instanceof Code) {
-        return undefined;
-      }
-      // Anything else like `jsonb` (which shows up as `Object`) is also unlikely to be a valid
-      // GraphQL type, and doing things like `someField: Object` w/o predefined scalar types will
-      // cause GraphQL parsing errors.
       return undefined;
+    }
+  } else if (type instanceof Import) {
+    // If this is a fancy import like a superstruct/something, we can't guess what it will be in GraphQL
+    return undefined;
+  } else {
+    // Anything else like `jsonb` (which shows up as `Object`) is also unlikely to be a valid
+    // GraphQL type, and doing things like `someField: Object` w/o predefined scalar types will
+    // cause GraphQL parsing errors.
+    return undefined;
   }
 }
 

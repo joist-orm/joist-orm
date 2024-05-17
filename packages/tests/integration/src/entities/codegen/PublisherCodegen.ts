@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   hasManyToMany,
   hasOne,
@@ -86,7 +85,7 @@ import type {
 export type PublisherId = Flavor<string, Publisher>;
 
 export interface PublisherFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   latitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   longitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
@@ -375,8 +374,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get authors(): Collection<Publisher, Author> {
-    const { relations } = getInstanceData(this);
-    return relations.authors ??= hasMany(
+    return this.__data.relations.authors ??= hasMany(
       this as any as Publisher,
       authorMeta,
       "authors",
@@ -387,8 +385,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get bookAdvances(): Collection<Publisher, BookAdvance> {
-    const { relations } = getInstanceData(this);
-    return relations.bookAdvances ??= hasMany(
+    return this.__data.relations.bookAdvances ??= hasMany(
       this as any as Publisher,
       bookAdvanceMeta,
       "bookAdvances",
@@ -399,8 +396,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get comments(): Collection<Publisher, Comment> {
-    const { relations } = getInstanceData(this);
-    return relations.comments ??= hasMany(
+    return this.__data.relations.comments ??= hasMany(
       this as any as Publisher,
       commentMeta,
       "comments",
@@ -411,8 +407,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get images(): Collection<Publisher, Image> {
-    const { relations } = getInstanceData(this);
-    return relations.images ??= hasMany(
+    return this.__data.relations.images ??= hasMany(
       this as any as Publisher,
       imageMeta,
       "images",
@@ -423,13 +418,11 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get group(): ManyToOneReference<Publisher, PublisherGroup, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.group ??= hasOne(this as any as Publisher, publisherGroupMeta, "group", "publishers");
+    return this.__data.relations.group ??= hasOne(this as any as Publisher, publisherGroupMeta, "group", "publishers");
   }
 
   get tags(): Collection<Publisher, Tag> {
-    const { relations } = getInstanceData(this);
-    return relations.tags ??= hasManyToMany(
+    return this.__data.relations.tags ??= hasManyToMany(
       this as any as Publisher,
       "publishers_to_tags",
       "tags",
@@ -441,8 +434,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get tasks(): Collection<Publisher, TaskOld> {
-    const { relations } = getInstanceData(this);
-    return relations.tasks ??= hasManyToMany(
+    return this.__data.relations.tasks ??= hasManyToMany(
       this as any as Publisher,
       "tasks_to_publishers",
       "tasks",

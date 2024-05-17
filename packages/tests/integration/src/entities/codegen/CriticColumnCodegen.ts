@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasOne,
   isLoaded,
   loadLens,
@@ -43,7 +42,7 @@ import type { CriticId, CriticOrder, Entity } from "../entities";
 export type CriticColumnId = Flavor<string, CriticColumn>;
 
 export interface CriticColumnFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -184,7 +183,6 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   }
 
   get critic(): ManyToOneReference<CriticColumn, Critic, never> {
-    const { relations } = getInstanceData(this);
-    return relations.critic ??= hasOne(this as any as CriticColumn, criticMeta, "critic", "criticColumn");
+    return this.__data.relations.critic ??= hasOne(this as any as CriticColumn, criticMeta, "critic", "criticColumn");
   }
 }

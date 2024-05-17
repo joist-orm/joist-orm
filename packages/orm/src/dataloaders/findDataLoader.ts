@@ -19,7 +19,7 @@ import {
 import { visitConditions } from "../QueryVisitor";
 import { kq, kqDot } from "../keywords";
 import { LoadHint } from "../loadHints";
-import { assertNever, cleanSql } from "../utils";
+import { assertNever, cleanSql, maybeRequireTemporal } from "../utils";
 
 export function findDataLoader<T extends Entity>(
   em: EntityManager,
@@ -142,15 +142,23 @@ export function findDataLoader<T extends Entity>(
   );
 }
 
+const Temporal = maybeRequireTemporal()?.Temporal;
 // If a where clause includes an entity, object-hash cannot hash it, so just use the id.
 function replacer(v: any) {
   if (isEntity(v)) {
     // Use toString() instead of id so that new entities are kept separate, i.e. `Author#2`
     return v.toString();
-  }
-  // Strip out `{ as: ...alias proxy... }` from the `em.find` inline conditions
-  if (isAlias(v)) {
+  } else if (isAlias(v)) {
+    // Strip out `{ as: ...alias proxy... }` from the `em.find` inline conditions
     return "alias";
+  } else if (Temporal) {
+    if (v instanceof Temporal.ZonedDateTime) {
+      return new Date(v.epochMilliseconds);
+    } else if (v instanceof Temporal.PlainDateTime) {
+      return new Date(v.toZonedDateTime("UTC").epochMilliseconds);
+    } else if (v instanceof Temporal.PlainDate) {
+      return new Date(v.toZonedDateTime("UTC").epochMilliseconds);
+    }
   }
   return v;
 }

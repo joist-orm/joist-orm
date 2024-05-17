@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasLargeMany,
   hasMany,
   isLoaded,
@@ -55,7 +54,7 @@ import type { Entity, PublisherId } from "../entities";
 export type PublisherGroupId = Flavor<string, PublisherGroup>;
 
 export interface PublisherGroupFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -199,8 +198,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   get publishers(): Collection<PublisherGroup, Publisher> {
-    const { relations } = getInstanceData(this);
-    return relations.publishers ??= hasMany(
+    return this.__data.relations.publishers ??= hasMany(
       this as any as PublisherGroup,
       publisherMeta,
       "publishers",
@@ -211,8 +209,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   get critics(): LargeCollection<PublisherGroup, Critic> {
-    const { relations } = getInstanceData(this);
-    return relations.critics ??= hasLargeMany(
+    return this.__data.relations.critics ??= hasLargeMany(
       this as any as PublisherGroup,
       criticMeta,
       "critics",

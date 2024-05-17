@@ -9,4 +9,6 @@ export abstract class AbstractPropertyImpl<T> {
   get entity(): T {
     return this.#entity;
   }
+
+  abstract get isLoaded(): boolean;
 }

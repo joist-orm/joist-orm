@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   isLoaded,
   loadLens,
@@ -45,7 +44,7 @@ import type { BookId, Entity } from "../entities.js";
 export type AuthorId = Flavor<string, Author>;
 
 export interface AuthorFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   delete: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
@@ -207,7 +206,13 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get books(): Collection<Author, Book> {
-    const { relations } = getInstanceData(this);
-    return relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "authorId", undefined);
+    return this.__data.relations.books ??= hasMany(
+      this as any as Author,
+      bookMeta,
+      "books",
+      "author",
+      "authorId",
+      undefined,
+    );
   }
 }

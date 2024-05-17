@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   hasManyToMany,
   hasOne,
@@ -74,7 +73,7 @@ import type {
 export type BookId = Flavor<string, Book>;
 
 export interface BookFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   order: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   notes: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
@@ -296,8 +295,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get advances(): Collection<Book, BookAdvance> {
-    const { relations } = getInstanceData(this);
-    return relations.advances ??= hasMany(
+    return this.__data.relations.advances ??= hasMany(
       this as any as Book,
       bookAdvanceMeta,
       "advances",
@@ -308,13 +306,18 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get reviews(): Collection<Book, BookReview> {
-    const { relations } = getInstanceData(this);
-    return relations.reviews ??= hasMany(this as any as Book, bookReviewMeta, "reviews", "book", "book_id", undefined);
+    return this.__data.relations.reviews ??= hasMany(
+      this as any as Book,
+      bookReviewMeta,
+      "reviews",
+      "book",
+      "book_id",
+      undefined,
+    );
   }
 
   get comments(): Collection<Book, Comment> {
-    const { relations } = getInstanceData(this);
-    return relations.comments ??= hasMany(
+    return this.__data.relations.comments ??= hasMany(
       this as any as Book,
       commentMeta,
       "comments",
@@ -325,13 +328,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get author(): ManyToOneReference<Book, Author, never> {
-    const { relations } = getInstanceData(this);
-    return relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
+    return this.__data.relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
   }
 
   get currentDraftAuthor(): OneToOneReference<Book, Author> {
-    const { relations } = getInstanceData(this);
-    return relations.currentDraftAuthor ??= hasOneToOne(
+    return this.__data.relations.currentDraftAuthor ??= hasOneToOne(
       this as any as Book,
       authorMeta,
       "currentDraftAuthor",
@@ -341,13 +342,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get image(): OneToOneReference<Book, Image> {
-    const { relations } = getInstanceData(this);
-    return relations.image ??= hasOneToOne(this as any as Book, imageMeta, "image", "book", "book_id");
+    return this.__data.relations.image ??= hasOneToOne(this as any as Book, imageMeta, "image", "book", "book_id");
   }
 
   get tags(): Collection<Book, Tag> {
-    const { relations } = getInstanceData(this);
-    return relations.tags ??= hasManyToMany(
+    return this.__data.relations.tags ??= hasManyToMany(
       this as any as Book,
       "books_to_tags",
       "tags",

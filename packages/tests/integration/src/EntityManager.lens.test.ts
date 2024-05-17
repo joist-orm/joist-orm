@@ -163,6 +163,13 @@ describe("EntityManager.lens", () => {
     expect(p1Id).toEqual("p:1");
   });
 
+  it("can populate properties", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "1");
+    await a1.load((a) => a.latestComments);
+  });
+
   describe("sql", () => {
     it("loads a subset via o2o", async () => {
       await insertAuthor({ first_name: "a1" });

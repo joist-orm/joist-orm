@@ -2,6 +2,7 @@ import { pascalCase } from "change-case";
 import { isPlainObject } from "joist-utils";
 import { Table } from "pg-structure";
 import pluralize from "pluralize";
+import { code, imp } from "ts-poet";
 import { DatabaseColumnType, PrimitiveTypescriptType } from "./EntityDbMetadata";
 import { Config, getTimestampConfig } from "./config";
 
@@ -89,8 +90,13 @@ export function tableToEntityName(config: Config, table: Table): string {
   return entityName;
 }
 
+export const dateCode = code`Date`;
+export const plainDateCode = code`${imp("Temporal@temporal-polyfill")}.PlainDate`;
+export const plainDateTimeCode = code`${imp("Temporal@temporal-polyfill")}.PlainDateTime`;
+export const zonedDateTimeCode = code`${imp("Temporal@temporal-polyfill")}.ZonedDateTime`;
+
 /** Maps db types, i.e. `int`, to JS types, i.e. `number`. */
-export function mapSimpleDbTypeToTypescriptType(dbType: DatabaseColumnType): PrimitiveTypescriptType {
+export function mapSimpleDbTypeToTypescriptType(config: Config, dbType: DatabaseColumnType): PrimitiveTypescriptType {
   switch (dbType) {
     case "boolean":
       return "boolean";
@@ -115,9 +121,11 @@ export function mapSimpleDbTypeToTypescriptType(dbType: DatabaseColumnType): Pri
     case "tsvector":
       return "string";
     case "timestamp with time zone":
+      return config.temporal ? zonedDateTimeCode : dateCode;
     case "timestamp without time zone":
+      return config.temporal ? plainDateTimeCode : dateCode;
     case "date":
-      return "Date";
+      return config.temporal ? plainDateCode : dateCode;
     case "jsonb":
       return "Object";
     default:

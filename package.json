@@ -1,5 +1,5 @@
 {
-  "version": "1.160.4",
+  "version": "1.165.2",
   "name": "joist",
   "scripts": {
     "build": "tspc --build",
@@ -28,7 +28,9 @@
     "packages/tests/esm-misc",
     "packages/tests/number-ids",
     "packages/tests/untagged-ids",
-    "packages/tests/uuid-ids"
+    "packages/tests/uuid-ids",
+    "packages/transform-properties",
+    "packages/tests/temporal"
   ],
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",

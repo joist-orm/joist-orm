@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasManyToMany,
   hasOne,
   hasOnePolymorphic,
@@ -71,7 +70,7 @@ export function isCommentParent(maybeEntity: unknown): maybeEntity is CommentPar
 }
 
 export interface CommentFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   parentTags: { kind: "primitive"; type: string; unique: false; nullable: never; derived: true };
   text: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -225,13 +224,11 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get user(): ManyToOneReference<Comment, User, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.user ??= hasOne(this as any as Comment, userMeta, "user", "createdComments");
+    return this.__data.relations.user ??= hasOne(this as any as Comment, userMeta, "user", "createdComments");
   }
 
   get likedByUsers(): Collection<Comment, User> {
-    const { relations } = getInstanceData(this);
-    return relations.likedByUsers ??= hasManyToMany(
+    return this.__data.relations.likedByUsers ??= hasManyToMany(
       this as any as Comment,
       "users_to_comments",
       "likedByUsers",
@@ -243,7 +240,6 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get parent(): PolymorphicReference<Comment, CommentParent, never> {
-    const { relations } = getInstanceData(this);
-    return relations.parent ??= hasOnePolymorphic(this as any as Comment, "parent");
+    return this.__data.relations.parent ??= hasOnePolymorphic(this as any as Comment, "parent");
   }
 }

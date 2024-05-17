@@ -52,6 +52,7 @@ import {
   UserFilter,
   newAuthor,
   newBook,
+  newTag,
 } from "./entities";
 
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
@@ -1490,6 +1491,35 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can order by multiple m2os as an array", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertAuthor({ first_name: "a1", publisher_id: 2 });
+    await insertAuthor({ first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const orderBy1 = { currentDraftBook: { title: "ASC" } } satisfies AuthorOrder;
+    const orderBy2 = { publisher: { name: "ASC" } } satisfies AuthorOrder;
+    const authors = await em.find(Author, {}, { orderBy: [orderBy2, orderBy1] });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a2");
+    expect(authors[1].firstName).toEqual("a1");
+
+    expect(parseFindQuery(am, {}, { ...opts, orderBy: [orderBy2, orderBy1] })).toEqual({
+      selects: [`a.*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id", distinct: false },
+        { alias: "b", table: "books", join: "outer", col1: "a.current_draft_book_id", col2: "b.id", distinct: false },
+      ],
+      orderBys: [
+        { alias: "p", column: "name", order: "ASC" },
+        { alias: "b", column: "title", order: "ASC" },
+        { alias: "a", column: "id", order: "ASC" },
+      ],
+    });
+  });
+
   it("can order by joined string asc", async () => {
     await insertPublisher({ name: "pB" });
     await insertPublisher({ id: 2, name: "pA" });
@@ -1947,6 +1977,29 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can find through m2m matching on new values and not fail", async () => {
+    await insertAuthor({ first_name: "a1" });
+
+    const em = newEntityManager();
+    const t1 = newTag(em, 1);
+    const where = { tags: [t1] } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(0);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
+      ],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "att", column: "tag_id", dbType: "int", cond: { kind: "in", value: [-1] } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
   it("can find through m2m matching on a column value", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });
@@ -2252,6 +2305,37 @@ describe("EntityManager.queries", () => {
       expect(authors.length).toEqual(1);
     });
 
+    it("can use aliases as an o2m entity filter with primary key is null", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const b = alias(Book);
+      const authors = await em.find(Author, { books: b }, { conditions: { and: [b.id.eq(null)] } });
+      expect(authors.length).toEqual(1);
+    });
+
+    it("can use aliases as an o2m entity filter with primary key in tagged ids", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const b = alias(Book);
+      const authors = await em.find(Author, { books: b }, { conditions: { and: [b.id.in(["b:1"])] } });
+      expect(authors.length).toEqual(1);
+    });
+
+    it("fails an o2m entity filter with primary key invalid tagged ids", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const b = alias(Book);
+      expect(() => {
+        em.find(Author, { books: b }, { conditions: { and: [b.id.in(["bad:1"])] } });
+      }).toThrow("Invalid tagged id");
+    });
+
     it("can use aliases for polymorphic reference with eq", async () => {
       await insertAuthor({ first_name: "a" });
       await insertBook({ title: "t", author_id: 1 });
@@ -2360,10 +2444,12 @@ describe("EntityManager.queries", () => {
 
       const em = newEntityManager();
       const t = alias(Tag);
-      const books = await em.find(Book, { author: { tags: t } }, { conditions: { or: [t.id.eq(1)] } });
+      const books = await em.find(Book, { author: { tags: t } }, { conditions: { or: [t.id.eq("t:1")] } });
       expect(books.length).toEqual(1);
 
-      expect(parseFindQuery(bm, { author: { tags: t } }, { conditions: { or: [t.id.eq(1)] }, ...opts })).toMatchObject({
+      expect(
+        parseFindQuery(bm, { author: { tags: t } }, { conditions: { or: [t.id.eq("t:1")] }, ...opts }),
+      ).toMatchObject({
         selects: [`b.*`],
         tables: [
           { alias: "b", table: "books", join: "primary" },
@@ -2457,6 +2543,42 @@ describe("EntityManager.queries", () => {
             { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "ilike", value: "%a2%" } },
           ],
         },
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("can use aliases for search on empty string", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const conditions = { or: [a.firstName.search(""), b.title.search("")] };
+      const authors = await em.find(Author, { as: a, books: b }, { ...opts, conditions });
+      expect(authors.length).toEqual(3);
+
+      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("can use aliases for search on undefined", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const conditions = { or: [a.firstName.search(undefined), b.title.search(undefined)] };
+      const authors = await em.find(Author, { as: a, books: b }, { ...opts, conditions });
+      expect(authors.length).toEqual(3);
+
+      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
         orderBys: [expect.anything()],
       });
     });
@@ -2753,7 +2875,7 @@ describe("EntityManager.queries", () => {
 
       const em = newEntityManager();
       const [a, b] = aliases(Author, Book);
-      const books = await em.find(Book, { as: b, author: a }, { ...opts, conditions: { and: [a.id.eq(b.id)] } });
+      const books = await em.find(Book, { as: b, author: a }, { ...opts, conditions: { and: [a.id.eq(b.id as any)] } });
       expect(books).toMatchEntity([{ title: "b1" }]);
     });
 

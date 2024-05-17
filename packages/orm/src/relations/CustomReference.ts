@@ -1,6 +1,6 @@
 import { Entity } from "../Entity";
 import { IdOf, TaggedId } from "../EntityManager";
-import { Reference, ensureNotDeleted, fail } from "../index";
+import { Reference, ensureNotDeleted, fail, getMetadata, getProperties } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
@@ -123,7 +123,9 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
 
   /** Finds this CustomReferences field name by looking in the entity for the key that we're assigned to. */
   get fieldName(): string {
-    return Object.entries(this.entity).filter((e) => e[1] === this)[0][0];
+    return Object.entries(getProperties(getMetadata(this.entity))).filter(
+      ([key]) => (this.entity as any)[key] === this,
+    )[0][0];
   }
 
   toString(): string {

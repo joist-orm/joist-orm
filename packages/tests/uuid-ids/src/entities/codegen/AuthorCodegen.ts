@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   isLoaded,
   loadLens,
@@ -192,7 +191,13 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get books(): Collection<Author, Book> {
-    const { relations } = getInstanceData(this);
-    return relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", undefined);
+    return this.__data.relations.books ??= hasMany(
+      this as any as Author,
+      bookMeta,
+      "books",
+      "author",
+      "author_id",
+      undefined,
+    );
   }
 }

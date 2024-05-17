@@ -3,5 +3,5 @@
   "contextType": "Context@src/context",
   "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
   "entitiesDirectory": "./src/entities",
-  "version": "1.160.4"
+  "version": "1.165.0"
 }

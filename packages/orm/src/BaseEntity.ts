@@ -13,8 +13,13 @@ import {
 
 export let currentlyInstantiatingEntity: Entity | undefined;
 
+/** Should only be used by our `joist-transform-properties` to lazy init properties. */
+export function setCurrentlyInstantiatingEntity(entity: Entity): void {
+  currentlyInstantiatingEntity = entity;
+}
+
 /**
- * Returns the internal `#orm` tracking field for `entity`.
+ * Returns the internal `__data` tracking field for `entity`.
  *
  * This should be treated as an internal API and may change without notice.
  */
@@ -29,18 +34,18 @@ export function getInstanceData(entity: Entity): InstanceData {
  */
 export abstract class BaseEntity<EM extends EntityManager, I extends IdType = IdType> implements Entity {
   public static getInstanceData(entity: Entity): InstanceData {
-    return (entity as BaseEntity<any>).#orm;
+    return (entity as BaseEntity<any>).__data;
   }
-  readonly #orm!: InstanceData;
+  // We use a protected field so that subclass getters can easily access `this.__data.relations`.
+  protected readonly __data!: InstanceData;
 
   protected constructor(em: EM, optsOrId: any) {
+    const isNew = typeof optsOrId !== "string";
+    const data = new InstanceData(em, (this.constructor as any).metadata, isNew);
+    // This makes it non-enumerable to avoid Jest/recursive things tripping over it
+    Object.defineProperty(this, "__data", { value: data, enumerable: false, writable: false, configurable: false });
     // Only do em.register for em.create-d entities, otherwise defer to hydrate to em.register
-    if (typeof optsOrId === "string") {
-      this.#orm = new InstanceData(em, (this.constructor as any).metadata, false);
-    } else {
-      this.#orm = new InstanceData(em, (this.constructor as any).metadata, true);
-      em.register(this);
-    }
+    if (isNew) em.register(this);
     currentlyInstantiatingEntity = this;
   }
 
@@ -82,15 +87,15 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
    * is no longer new; this only flips to `false` after the `flush` transaction has been committed.
    */
   get isNewEntity(): boolean {
-    return this.#orm.isNewEntity;
+    return this.__data.isNewEntity;
   }
 
   get isDeletedEntity(): boolean {
-    return this.#orm.isDeletedEntity;
+    return this.__data.isDeletedEntity;
   }
 
   get isDirtyEntity(): boolean {
-    return this.#orm.isDirtyEntity;
+    return this.__data.isDirtyEntity;
   }
 
   toString(): string {
@@ -110,7 +115,7 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   }
 
   public get em(): EM {
-    return this.#orm.em as EM;
+    return this.__data.em as EM;
   }
 
   /**

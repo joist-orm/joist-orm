@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasOne,
   isLoaded,
   loadLens,
@@ -57,7 +56,7 @@ import type { AuthorId, AuthorOrder, BookId, BookOrder, Entity, PublisherId, Pub
 export type ImageId = Flavor<string, Image>;
 
 export interface ImageFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   fileName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -237,17 +236,14 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get author(): ManyToOneReference<Image, Author, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.author ??= hasOne(this as any as Image, authorMeta, "author", "image");
+    return this.__data.relations.author ??= hasOne(this as any as Image, authorMeta, "author", "image");
   }
 
   get book(): ManyToOneReference<Image, Book, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.book ??= hasOne(this as any as Image, bookMeta, "book", "image");
+    return this.__data.relations.book ??= hasOne(this as any as Image, bookMeta, "book", "image");
   }
 
   get publisher(): ManyToOneReference<Image, Publisher, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.publisher ??= hasOne(this as any as Image, publisherMeta, "publisher", "images");
+    return this.__data.relations.publisher ??= hasOne(this as any as Image, publisherMeta, "publisher", "images");
   }
 }

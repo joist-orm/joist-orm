@@ -4,13 +4,12 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   hasManyToMany,
   hasOne,
   hasOneToOne,
   isLoaded,
-  loadLens,
+  loadLens, New,
   newChangesProxy,
   newRequiredRule,
   setField,
@@ -93,7 +92,7 @@ import type {
 export type AuthorId = Flavor<string, Author>;
 
 export interface AuthorFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   ssn: { kind: "primitive"; type: string; unique: true; nullable: undefined; derived: false };
@@ -576,8 +575,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get authors(): Collection<Author, Author> {
-    const { relations } = getInstanceData(this);
-    return relations.authors ??= hasMany(
+    return this.__data.relations.authors ??= hasMany(
       this as any as Author,
       authorMeta,
       "authors",
@@ -588,8 +586,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get schedules(): Collection<Author, AuthorSchedule> {
-    const { relations } = getInstanceData(this);
-    return relations.schedules ??= hasMany(
+    return this.__data.relations.schedules ??= hasMany(
       this as any as Author,
       authorScheduleMeta,
       "schedules",
@@ -600,16 +597,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get books(): Collection<Author, Book> {
-    const { relations } = getInstanceData(this);
-    return relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", {
+    return this.__data.relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", {
       "field": "order",
       "direction": "ASC",
     });
   }
 
   get comments(): Collection<Author, Comment> {
-    const { relations } = getInstanceData(this);
-    return relations.comments ??= hasMany(
+    return this.__data.relations.comments ??= hasMany(
       this as any as Author,
       commentMeta,
       "comments",
@@ -620,8 +615,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get tasks(): Collection<Author, TaskNew> {
-    const { relations } = getInstanceData(this);
-    return relations.tasks ??= hasMany(
+    return this.__data.relations.tasks ??= hasMany(
       this as any as Author,
       taskNewMeta,
       "tasks",
@@ -632,13 +626,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get mentor(): ManyToOneReference<Author, Author, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.mentor ??= hasOne(this as any as Author, authorMeta, "mentor", "authors");
+    return this.__data.relations.mentor ??= hasOne(this as any as Author, authorMeta, "mentor", "authors");
   }
 
   get currentDraftBook(): ManyToOneReference<Author, Book, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.currentDraftBook ??= hasOne(
+    return this.__data.relations.currentDraftBook ??= hasOne(
       this as any as Author,
       bookMeta,
       "currentDraftBook",
@@ -647,18 +639,21 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get publisher(): ManyToOneReference<Author, Publisher, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.publisher ??= hasOne(this as any as Author, publisherMeta, "publisher", "authors");
+    return this.__data.relations.publisher ??= hasOne(this as any as Author, publisherMeta, "publisher", "authors");
   }
 
   get image(): OneToOneReference<Author, Image> {
-    const { relations } = getInstanceData(this);
-    return relations.image ??= hasOneToOne(this as any as Author, imageMeta, "image", "author", "author_id");
+    return this.__data.relations.image ??= hasOneToOne(
+      this as any as Author,
+      imageMeta,
+      "image",
+      "author",
+      "author_id",
+    );
   }
 
   get userOneToOne(): OneToOneReference<Author, User> {
-    const { relations } = getInstanceData(this);
-    return relations.userOneToOne ??= hasOneToOne(
+    return this.__data.relations.userOneToOne ??= hasOneToOne(
       this as any as Author,
       userMeta,
       "userOneToOne",
@@ -668,8 +663,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get tags(): Collection<Author, Tag> {
-    const { relations } = getInstanceData(this);
-    return relations.tags ??= hasManyToMany(
+    return this.__data.relations.tags ??= hasManyToMany(
       this as any as Author,
       "authors_to_tags",
       "tags",

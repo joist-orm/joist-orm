@@ -348,9 +348,14 @@ export function parseFindQuery(
             );
           } else {
             const meta = field.otherMetadata();
+            // We normally don't have `columns` for m2m fields, b/c they don't go through normal serde
+            // codepaths, so make one up to leverage the existing `mapToDb` function.
             const column: any = {
               mapToDb(value: any) {
-                return value === null ? value : keyToNumber(meta, maybeResolveReferenceToId(value));
+                // Check for `typeof value === number` in case this is a new entity, and we've been given the nilIdValue
+                return value === null || isNilIdValue(value)
+                  ? value
+                  : keyToNumber(meta, maybeResolveReferenceToId(value));
               },
             };
             inlineConditions.push({
@@ -377,13 +382,10 @@ export function parseFindQuery(
     }
   }
 
-  function addOrderBy(meta: EntityMetadata, alias: string, orderBy: any): void {
-    // Assume only one key
+  function addOrderBy(meta: EntityMetadata, alias: string, orderBy: Record<string, any>): void {
     const entries = Object.entries(orderBy);
-    if (entries.length === 0) {
-      return;
-    }
-    Object.entries(orderBy).forEach(([key, value]) => {
+    if (entries.length === 0) return;
+    for (const [key, value] of entries) {
       const field = meta.allFields[key] ?? fail(`${key} not found on ${meta.tableName}`);
       if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
         const column = field.serde.columns[0];
@@ -415,7 +417,7 @@ export function parseFindQuery(
       } else {
         throw new Error(`Unsupported field ${key}`);
       }
-    });
+    }
   }
 
   // always add the main table
@@ -443,7 +445,11 @@ export function parseFindQuery(
   }
 
   if (orderBy) {
-    addOrderBy(meta, alias, orderBy);
+    if (Array.isArray(orderBy)) {
+      for (const ob of orderBy) addOrderBy(meta, alias, ob);
+    } else {
+      addOrderBy(meta, alias, orderBy);
+    }
   }
   maybeAddOrderBy(query, meta, alias);
 

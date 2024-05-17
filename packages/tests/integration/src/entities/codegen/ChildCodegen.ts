@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   isLoaded,
   loadLens,
@@ -43,7 +42,7 @@ import type { ChildGroupId, Entity } from "../entities";
 export type ChildId = Flavor<string, Child>;
 
 export interface ChildFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -178,8 +177,7 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get groups(): Collection<Child, ChildGroup> {
-    const { relations } = getInstanceData(this);
-    return relations.groups ??= hasMany(
+    return this.__data.relations.groups ??= hasMany(
       this as any as Child,
       childGroupMeta,
       "groups",

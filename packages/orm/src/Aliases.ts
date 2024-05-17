@@ -27,13 +27,15 @@ export function aliases<T extends readonly MaybeAbstractEntityConstructor<any>[]
 }
 
 export type Alias<T extends Entity> = {
-  [P in keyof FieldsOf<T>]: FieldsOf<T>[P] extends { kind: "primitive" | "enum"; type: infer V; nullable: infer N }
-    ? PrimitiveAlias<V, N extends undefined ? null : never>
-    : FieldsOf<T>[P] extends { kind: "m2o"; type: infer U }
-      ? EntityAlias<U>
-      : FieldsOf<T>[P] extends { kind: "poly"; type: infer U extends Entity }
-        ? PolyReferenceAlias<U>
-        : never;
+  [P in keyof FieldsOf<T>]: P extends "id"
+    ? EntityAlias<T>
+    : FieldsOf<T>[P] extends { kind: "primitive" | "enum"; type: infer V; nullable: infer N }
+      ? PrimitiveAlias<V, N extends undefined ? null : never>
+      : FieldsOf<T>[P] extends { kind: "m2o"; type: infer U }
+        ? EntityAlias<U>
+        : FieldsOf<T>[P] extends { kind: "poly"; type: infer U extends Entity }
+          ? PolyReferenceAlias<U>
+          : never;
 };
 
 export interface PrimitiveAlias<V, N extends null | never> {
@@ -240,7 +242,8 @@ class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<
   }
 
   search(value: V | undefined): ColumnCondition {
-    if (value === undefined) return skipCondition;
+    // Check !value so that empty strings are pruned
+    if (!value) return skipCondition;
     return this.addCondition({ kind: "ilike", value: makeLike(value) });
   }
 

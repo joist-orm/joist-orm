@@ -226,6 +226,19 @@ describe("EntityManager.joins", () => {
     expect(a1.books.get[0].reviews.get[0].rating).toBe(1);
   });
 
+  it("preloads em.find with a string[] hint", async () => {
+    // Given an author with books + reviews
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ author_id: 1, title: "b1" });
+    await insertAuthor({ first_name: "a2" });
+    const em = newEntityManager();
+    resetQueryCount();
+    const [a1] = await em.find(Author, { firstName: "a1" }, { populate: ["books"] });
+    // Then we issued one query
+    expect(queries.length).toEqual(isPreloadingEnabled ? 1 : 2);
+    expect(a1.books.get[0].title).toBe("b1");
+  });
+
   it("preloads em.find in a loop", async () => {
     // Given an author with books + reviews
     await insertAuthor({ first_name: "a1" });

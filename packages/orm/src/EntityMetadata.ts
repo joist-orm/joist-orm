@@ -215,6 +215,11 @@ export function getBaseSelfAndSubMetas(meta: EntityMetadata): EntityMetadata[] {
   return [...meta.baseTypes, meta, ...meta.subTypes];
 }
 
+export function getSubMetas(meta: EntityMetadata): EntityMetadata[] {
+  // We should do recursion at some point
+  return meta.subTypes;
+}
+
 export function getBaseMeta(meta: EntityMetadata): EntityMetadata {
   if (!meta.baseType) {
     return meta;

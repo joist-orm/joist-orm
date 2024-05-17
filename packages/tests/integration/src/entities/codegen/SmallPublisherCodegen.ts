@@ -3,7 +3,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   isLoaded,
   loadLens,
@@ -60,7 +59,7 @@ import type {
 export type SmallPublisherId = Flavor<string, SmallPublisher> & Flavor<string, "Publisher">;
 
 export interface SmallPublisherFields extends PublisherFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   city: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   allAuthorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
@@ -196,8 +195,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   }
 
   get users(): Collection<SmallPublisher, User> {
-    const { relations } = getInstanceData(this);
-    return relations.users ??= hasMany(
+    return this.__data.relations.users ??= hasMany(
       this as any as SmallPublisher,
       userMeta,
       "users",

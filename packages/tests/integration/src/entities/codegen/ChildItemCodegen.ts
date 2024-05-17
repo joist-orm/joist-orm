@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasOne,
   isLoaded,
   loadLens,
@@ -52,7 +51,7 @@ import type { ChildGroupId, ChildGroupOrder, Entity, ParentItemId, ParentItemOrd
 export type ChildItemId = Flavor<string, ChildItem>;
 
 export interface ChildItemFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -199,12 +198,20 @@ export abstract class ChildItemCodegen extends BaseEntity<EntityManager, string>
   }
 
   get childGroup(): ManyToOneReference<ChildItem, ChildGroup, never> {
-    const { relations } = getInstanceData(this);
-    return relations.childGroup ??= hasOne(this as any as ChildItem, childGroupMeta, "childGroup", "childItems");
+    return this.__data.relations.childGroup ??= hasOne(
+      this as any as ChildItem,
+      childGroupMeta,
+      "childGroup",
+      "childItems",
+    );
   }
 
   get parentItem(): ManyToOneReference<ChildItem, ParentItem, never> {
-    const { relations } = getInstanceData(this);
-    return relations.parentItem ??= hasOne(this as any as ChildItem, parentItemMeta, "parentItem", "childItems");
+    return this.__data.relations.parentItem ??= hasOne(
+      this as any as ChildItem,
+      parentItemMeta,
+      "parentItem",
+      "childItems",
+    );
   }
 }

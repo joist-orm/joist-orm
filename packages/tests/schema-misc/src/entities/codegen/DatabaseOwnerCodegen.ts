@@ -36,7 +36,7 @@ import type { Entity } from "../entities";
 export type DatabaseOwnerId = Flavor<string, DatabaseOwner>;
 
 export interface DatabaseOwnerFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
 }
 

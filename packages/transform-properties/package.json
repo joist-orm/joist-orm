@@ -1,0 +1,26 @@
+{
+  "name": "joist-transform-properties",
+  "version": "1.165.2",
+  "license": "MIT",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.4.13",
+    "@swc/jest": "^0.2.36",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "jest": "30.0.0-alpha.3",
+    "prettier": "^3.2.5",
+    "prettier-plugin-organize-imports": "^3.2.4",
+    "ts-node-dev": "^2.0.0",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.4.5"
+  }
+}

@@ -14,7 +14,7 @@ import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
 import { findDataLoader } from "./dataloaders/findDataLoader";
-import { findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
+import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { populateDataLoader } from "./dataloaders/populateDataLoader";
 import { Driver } from "./drivers/Driver";
@@ -36,6 +36,7 @@ import {
   OneToManyCollection,
   PartialOrNull,
   PolymorphicReferenceImpl,
+  TimestampSerde,
   UniqueFilter,
   ValidationError,
   ValidationErrors,
@@ -87,7 +88,7 @@ export interface EntityConstructor<T> {
 /** Options for the auto-batchable `em.find` queries, i.e. limit & offset aren't allowed. */
 export interface FindFilterOptions<T extends Entity> {
   conditions?: ExpressionFilter;
-  orderBy?: OrderOf<T>;
+  orderBy?: OrderOf<T> | OrderOf<T>[];
   softDeletes?: "include" | "exclude";
 }
 
@@ -535,6 +536,44 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   }
 
   /**
+   * Looks for entities that match `where`, both in the database and any just-created or just-changed entities.
+   *
+   * Because we evaluate this `where` clause in memory (against any WIP changes made to entities
+   * that have not yet been `em.flush`ed to the database), the `where` clause is limited to a
+   * flat set of fields immediately on the entity, i.e. primitives, enums, and many-to-ones,
+   * without any nested, cross-table joins/conditions.
+   *
+   * @param type the entity type to find
+   * @param where the fields to look up the existing entity by
+   */
+  async findWithNewOrChanged<T extends EntityW, F extends Partial<OptsOf<T>>>(
+    type: EntityConstructor<T>,
+    where: F,
+  ): Promise<T[]>;
+  async findWithNewOrChanged<T extends EntityW, F extends Partial<OptsOf<T>>, const H extends LoadHint<T>>(
+    type: EntityConstructor<T>,
+    where: F,
+    options?: { populate?: H; softDeletes?: "include" | "exclude" },
+  ): Promise<Loaded<T, H>[]>;
+  async findWithNewOrChanged<T extends EntityW, F extends Partial<OptsOf<T>>, const H extends LoadHint<T>>(
+    type: EntityConstructor<T>,
+    where: F,
+    options?: { populate?: H; softDeletes?: "include" | "exclude" },
+  ): Promise<T[]> {
+    const { softDeletes = "exclude", populate } = options ?? {};
+    const persisted = await this.find(type, where as any, { softDeletes });
+    const unchanged = persisted.filter((e) => !e.isNewEntity && !e.isDirtyEntity && !e.isDeletedEntity);
+    const maybeNew = this.entities.filter(
+      (e) => e instanceof type && (e.isNewEntity || e.isDirtyEntity) && entityMatches(e, where),
+    );
+    const found = [...unchanged, ...maybeNew];
+    if (populate) {
+      await this.populate(found, populate as any);
+    }
+    return found as unknown as T[];
+  }
+
+  /**
    * Conditionally finds or creates (or upserts) an Entity.
    *
    * The `where` param is used to find the existing/if any entity; if not found,
@@ -712,8 +751,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
                   return undefined;
                 }
               case "m2o":
-              case "poly":
               case "enum":
+                if (f.derived) {
+                  return undefined;
+                } else {
+                  return [f.fieldName, getField(entity, f.fieldName)];
+                }
+              case "poly":
                 return [f.fieldName, getField(entity, f.fieldName)];
               case "primaryKey":
               case "o2m":
@@ -792,7 +836,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       id = typeOrId;
     } else {
       type = typeOrId;
-      id = id || fail();
+      id = id || fail(`Invalid ${typeOrId.name} id: ${id}`);
     }
     const meta = getMetadata(type);
     const tagged = toTaggedId(meta, id);
@@ -1048,8 +1092,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       const baseMeta = getBaseMeta(getMetadata(entity));
       const { createdAt, updatedAt } = baseMeta.timestampFields;
       const { data } = getInstanceData(entity);
-      if (createdAt) data[createdAt] = new Date();
-      if (updatedAt) data[updatedAt] = new Date();
+      const now = new Date();
+      if (createdAt) {
+        const serde = baseMeta.fields[createdAt].serde as TimestampSerde<unknown>;
+        data[createdAt] = serde.mapFromDate(now);
+      }
+      if (updatedAt) {
+        const serde = baseMeta.fields[updatedAt].serde as TimestampSerde<unknown>;
+        data[updatedAt] = serde.mapFromDate(now);
+      }
       // Set the discriminator for STI
       if (baseMeta.inheritanceType === "sti") {
         setStiDiscriminatorValue(baseMeta, entity);
@@ -1913,7 +1964,8 @@ function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Date): void {
         // so force the field to be dirty.
         const orm = getInstanceData(e);
         orm.originalData[updatedAt] = getField(e, updatedAt);
-        orm.data[updatedAt] = now;
+        const serde = todo.metadata.fields[updatedAt].serde as TimestampSerde<unknown>;
+        orm.data[updatedAt] = serde.mapFromDate(now);
       }
     }
   }

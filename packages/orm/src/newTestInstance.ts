@@ -26,7 +26,7 @@ import {
 import { hasDefaultValue } from "./defaults";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
-import { assertNever } from "./utils";
+import { assertNever, maybeRequireTemporal } from "./utils";
 
 /**
  * DeepPartial-esque type specific to our `newTestInstance` factory.
@@ -42,6 +42,7 @@ import { assertNever } from "./utils";
 export type FactoryOpts<T extends Entity> = DeepPartialOpts<T> & {
   use?: Entity | Entity[];
   useFactoryDefaults?: boolean | "none";
+  useExistingCheck?: boolean;
 };
 
 // Chosen b/c it's a monday https://www.timeanddate.com/calendar/monthly.html?year=2018&month=1&country=1
@@ -49,7 +50,10 @@ export const jan1 = new Date(2018, 0, 1);
 export const jan2 = new Date(2018, 0, 2);
 export const jan3 = new Date(2018, 0, 3);
 export let testDate = jan1;
-
+const Temporal = maybeRequireTemporal()?.Temporal;
+export let testPlainDate = Temporal?.PlainDate.from("2018-01-01");
+export let testPlainDateTime = testPlainDate?.toPlainDateTime("00:00:00");
+export let testZonedDateTime = testPlainDate?.toZonedDateTime("UTC");
 /**
  * Creates a test instance of `T`.
  *
@@ -165,7 +169,7 @@ export function newTestInstance<T extends Entity>(
 
   const createOpts = Object.fromEntries(initialOpts);
 
-  if (factoryOpts.useExisting) {
+  if (factoryOpts.useExisting && testOpts.useExistingCheck !== false) {
     const existing = em.entities
       .filter((e) => e instanceof meta.cstr)
       .find((e) => factoryOpts.useExisting!(createOpts as OptsOf<T>, e as DeepNew<T>));
@@ -542,22 +546,35 @@ function getTestId<T extends Entity>(em: EntityManager, entity: T): string {
   return tagId(meta, String(sameType.indexOf(entity) + 1));
 }
 
+// We keep a local copy of `global.Date`, in case a faking library
+// like @sinonjs/fake-timers is used and rewrites `global.Date` to
+// their own `ClockDate`, which would make our `===` check below fail.
+const globalDate = global.Date;
+
 function defaultValueForField(em: EntityManager, cstr: EntityConstructor<any>, field: PrimitiveField): unknown {
-  switch (field.type) {
-    case "string":
-      if (field.fieldName === "name") {
-        return `${cstr.name} ${getTestIndex(em, cstr)}`;
-      }
-      return field.fieldName;
-    case "number":
-      return 0;
-    case "bigint":
-      return 0n;
-    case "Date":
-      return testDate;
-    case "boolean":
-      return false;
+  if (field.type === "string") {
+    if (field.fieldName === "name") {
+      return `${cstr.name} ${getTestIndex(em, cstr)}`;
+    }
+    return field.fieldName;
+  } else if (field.type === "number") {
+    return 0;
+  } else if (field.type === "bigint") {
+    return 0n;
+  } else if (field.type === globalDate) {
+    return testDate;
+  } else if (field.type === "boolean") {
+    return false;
+  } else if (Temporal) {
+    if (field.type === Temporal.PlainDate) {
+      return testPlainDate;
+    } else if (field.type === Temporal.PlainDateTime) {
+      return testPlainDateTime;
+    } else if (field.type === Temporal.ZonedDateTime) {
+      return testZonedDateTime;
+    }
   }
+
   return null;
 }
 

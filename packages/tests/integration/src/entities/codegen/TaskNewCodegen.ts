@@ -2,7 +2,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   hasOne,
   isLoaded,
@@ -63,7 +62,7 @@ import type {
 export type TaskNewId = Flavor<string, TaskNew> & Flavor<string, "Task">;
 
 export interface TaskNewFields extends TaskFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   specialNewField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   specialNewAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
 }
@@ -182,8 +181,7 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   }
 
   get newTaskTaskItems(): Collection<TaskNew, TaskItem> {
-    const { relations } = getInstanceData(this);
-    return relations.newTaskTaskItems ??= hasMany(
+    return this.__data.relations.newTaskTaskItems ??= hasMany(
       this as any as TaskNew,
       taskItemMeta,
       "newTaskTaskItems",
@@ -194,7 +192,11 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   }
 
   get specialNewAuthor(): ManyToOneReference<TaskNew, Author, undefined> {
-    const { relations } = getInstanceData(this);
-    return relations.specialNewAuthor ??= hasOne(this as any as TaskNew, authorMeta, "specialNewAuthor", "tasks");
+    return this.__data.relations.specialNewAuthor ??= hasOne(
+      this as any as TaskNew,
+      authorMeta,
+      "specialNewAuthor",
+      "tasks",
+    );
   }
 }

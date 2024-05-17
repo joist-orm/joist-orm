@@ -8,6 +8,7 @@
       "@src/*": ["src/*"],
       "src/*": ["src/*"]
     },
+    "plugins": [{ "transform": "../../transform-properties/src/index.ts", "type": "raw" }]
   },
   "include": ["./src", "./migrations"],
   "references": [

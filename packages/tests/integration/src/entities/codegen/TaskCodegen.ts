@@ -4,7 +4,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   hasManyToMany,
   isLoaded,
@@ -60,7 +59,7 @@ import type { Entity, TagId, TaskItemId } from "../entities";
 export type TaskId = Flavor<string, Task>;
 
 export interface TaskFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   durationInDays: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -247,8 +246,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get taskTaskItems(): Collection<Task, TaskItem> {
-    const { relations } = getInstanceData(this);
-    return relations.taskTaskItems ??= hasMany(
+    return this.__data.relations.taskTaskItems ??= hasMany(
       this as any as Task,
       taskItemMeta,
       "taskTaskItems",
@@ -259,8 +257,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get tags(): Collection<Task, Tag> {
-    const { relations } = getInstanceData(this);
-    return relations.tags ??= hasManyToMany(
+    return this.__data.relations.tags ??= hasManyToMany(
       this as any as Task,
       "task_to_tags",
       "tags",

@@ -3,7 +3,6 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
-  getInstanceData,
   hasMany,
   isLoaded,
   loadLens,
@@ -61,7 +60,7 @@ import type {
 export type LargePublisherId = Flavor<string, LargePublisher> & Flavor<string, "Publisher">;
 
 export interface LargePublisherFields extends PublisherFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
   sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   country: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
 }
@@ -193,8 +192,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   get critics(): Collection<LargePublisher, Critic> {
-    const { relations } = getInstanceData(this);
-    return relations.critics ??= hasMany(
+    return this.__data.relations.critics ??= hasMany(
       this as any as LargePublisher,
       criticMeta,
       "critics",
@@ -205,8 +203,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   get users(): Collection<LargePublisher, User> {
-    const { relations } = getInstanceData(this);
-    return relations.users ??= hasMany(
+    return this.__data.relations.users ??= hasMany(
       this as any as LargePublisher,
       userMeta,
       "users",

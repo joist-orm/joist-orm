@@ -1,4 +1,3 @@
-import { JoinRow } from "JoinRows";
 import { Knex } from "knex";
 import { buildValuesCte } from "../dataloaders/findDataLoader";
 import {
@@ -11,6 +10,7 @@ import {
   maybeResolveReferenceToId,
   ParsedFindQuery,
 } from "../index";
+import { JoinRowOperation } from "../JoinRows";
 import { kq, kqDot } from "../keywords";
 import { JoinRowTodo, Todo } from "../Todo";
 import { batched, cleanSql, partition, zeroTo } from "../utils";
@@ -131,12 +131,8 @@ export class PostgresDriver implements Driver {
     }
   }
 
-  async flushJoinTables(
-    em: EntityManager,
-    joinRows: Record<string, JoinRowTodo>,
-  ): Promise<{ resetAfterFlushed: () => void }> {
+  async flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void> {
     const knex = this.getMaybeInTxnKnex(em);
-    const resetAfterFlushedIds: { rows: JoinRow[]; index: number; id: number | undefined }[] = [];
     for await (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
       if (newRows.length > 0) {
         const sql = cleanSql(`
@@ -157,7 +153,8 @@ export class PostgresDriver implements Driver {
         });
         const { rows } = await knex.raw(sql, bindings);
         for (let i = 0; i < rows.length; i++) {
-          resetAfterFlushedIds.push({ rows: newRows, index: i, id: rows[i].id });
+          newRows[i].id = rows[i].id;
+          newRows[i].op = JoinRowOperation.Flushed;
         }
       }
       if (deletedRows.length > 0) {
@@ -190,13 +187,12 @@ export class PostgresDriver implements Driver {
           }
         }
 
-        deletedRows.forEach((_r, index) => resetAfterFlushedIds.push({ rows: deletedRows, index, id: undefined }));
+        deletedRows.forEach((row) => {
+          row.id = undefined;
+          row.op = JoinRowOperation.Flushed;
+        });
       }
     }
-
-    const resetAfterFlushed = () => resetAfterFlushedIds.forEach(({ rows, index, id }) => (rows[index].id = id));
-
-    return { resetAfterFlushed };
   }
 
   private getMaybeInTxnKnex(em: EntityManager): Knex {

@@ -9,7 +9,7 @@ import {
   hasOne,
   hasOneToOne,
   isLoaded,
-  loadLens, New,
+  loadLens,
   newChangesProxy,
   newRequiredRule,
   setField,

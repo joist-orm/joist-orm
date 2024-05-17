@@ -25,5 +25,5 @@ export interface Driver {
 
   flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void>;
 
-  flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<{ resetAfterFlushed?: () => void }>;
+  flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void>;
 }

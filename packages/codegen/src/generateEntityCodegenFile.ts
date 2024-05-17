@@ -802,8 +802,14 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
-  const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
-    return code`${fieldName}?: ${EntityFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, null | undefined>;`;
+  const polys = meta.polymorphics.flatMap(({ fieldName, fieldType, components, notNull }) => {
+    return [
+      code`${fieldName}?: ${EntityFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, ${nullOrNever(notNull)}>;`,
+      ...components.map((comp) => {
+        const { type } = comp.otherEntity;
+        return code`${fieldName}${type}?: ${EntityFilter}<${type}, ${IdOf}<${type}>, ${FilterOf}<${type}>, null>;`;
+      }),
+    ];
   });
   return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...o2m, ...m2m, ...polys];
 }
@@ -838,8 +844,14 @@ function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
-  const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
-    return code`${fieldName}?: ${EntityGraphQLFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, null | undefined>;`;
+  const polys = meta.polymorphics.flatMap(({ fieldName, fieldType, components, notNull }) => {
+    return [
+      code`${fieldName}?: ${EntityGraphQLFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, ${nullOrNever(notNull)}>;`,
+      ...components.map((comp) => {
+        const { type } = comp.otherEntity;
+        return code`${fieldName}${type}?: ${EntityGraphQLFilter}<${type}, ${IdOf}<${type}>, ${FilterOf}<${type}>, null>;`;
+      }),
+    ];
   });
   return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...o2m, ...m2m, ...polys];
 }

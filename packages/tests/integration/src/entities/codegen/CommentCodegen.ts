@@ -100,7 +100,12 @@ export interface CommentFilter {
   updatedAt?: ValueFilter<Date, never>;
   user?: EntityFilter<User, UserId, FilterOf<User>, null>;
   likedByUsers?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
-  parent?: EntityFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
+  parent?: EntityFilter<CommentParent, IdOf<CommentParent>, never, never>;
+  parentAuthor?: EntityFilter<Author, IdOf<Author>, FilterOf<Author>, null>;
+  parentBook?: EntityFilter<Book, IdOf<Book>, FilterOf<Book>, null>;
+  parentBookReview?: EntityFilter<BookReview, IdOf<BookReview>, FilterOf<BookReview>, null>;
+  parentPublisher?: EntityFilter<Publisher, IdOf<Publisher>, FilterOf<Publisher>, null>;
+  parentTaskOld?: EntityFilter<TaskOld, IdOf<TaskOld>, FilterOf<TaskOld>, null>;
 }
 
 export interface CommentGraphQLFilter {
@@ -111,7 +116,12 @@ export interface CommentGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   user?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null>;
   likedByUsers?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
-  parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
+  parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never, never>;
+  parentAuthor?: EntityGraphQLFilter<Author, IdOf<Author>, FilterOf<Author>, null>;
+  parentBook?: EntityGraphQLFilter<Book, IdOf<Book>, FilterOf<Book>, null>;
+  parentBookReview?: EntityGraphQLFilter<BookReview, IdOf<BookReview>, FilterOf<BookReview>, null>;
+  parentPublisher?: EntityGraphQLFilter<Publisher, IdOf<Publisher>, FilterOf<Publisher>, null>;
+  parentTaskOld?: EntityGraphQLFilter<TaskOld, IdOf<TaskOld>, FilterOf<TaskOld>, null>;
 }
 
 export interface CommentOrder {

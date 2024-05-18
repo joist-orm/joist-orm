@@ -29,6 +29,26 @@ This is often how business logic wants to interact with the domain model--a cont
 
 If performance is a concern (loading thousands of entities with many custom properties), Joist provides a [ts-patch transform](/docs/advanced/transform-properties) to rewrite the properties as lazy getters in production builds. 
 
+## Can't I just use Zod for validations in my controller?
+
+Zod works great for crossing the "untyped blob" to "typed POJO" divide, and Joist actually supports Zod for `jsonb` columns, which is a similar "untyped jsonb to typed POJO" use case.
+
+However, Zod can only validate fields directly on the "typed input" itself--is this email field a valid email regex, is the required first name field filled in.
+
+This is fine, but Zod can't validate all the *other* fields in your domain model that now might need revalidated--i.e. maybe the author's `age` field changed, so now validate that they're verified, or updating a purchase order line item's `amount` cannot make the total order's `amount` negative.
+
+Joist's domain model makes it easy to declaratively setup these "cross-field", "cross-entity" business variants, that are more than just `z.string().max(20)`, and then ensure they are *always* enforced, regardless of which controller initiated the mutation.
+
+:::tip
+
+Joist works particularly well with GraphQL, because GraphQL servers handle the basic "untyped blob -> typed mutation" conversion & checks, similar to what Zod can provide, but they do it "for free" using the GraphQL schema.
+
+Then each mutation can use the already-typed input POJO to update the domain model (typically through upsert-capable methods like `em.createOrUpdatePartial`), and then defer all "business variant" validations to the domain model itself.
+
+In our experience, this split of responsibilities is very robust, and leads to small, idiomatic mutation resolvers, much inline with the Rails "fat model, skinny controller" pattern.
+
+:::
+
 ## Does Joist over-fetch data from the database?
 
 When Joist loads an entity, it does loads of the columns; we've found in practice, for relational databases that load the whole row from disk anyway, this is not a significant performance concern.

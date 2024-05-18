@@ -1,7 +1,10 @@
-import { LargePublisher, newSmallPublisher, Publisher, SmallPublisher } from "@src/entities";
+import { Author, AuthorFilter, LargePublisher, newSmallPublisher, Publisher, SmallPublisher } from "@src/entities";
 import { newEntityManager } from "@src/testEm";
-import { alias } from "joist-orm";
-import { insertPublisher } from "src/entities/inserts";
+import { alias, getMetadata, parseFindQuery } from "joist-orm";
+import { insertAuthor, insertLargePublisher, insertPublisher } from "src/entities/inserts";
+
+const am = getMetadata(Author);
+const opts = { softDeletes: "include" } as const;
 
 describe("EntityManager.ctiQueries", () => {
   it("finds against child with simple parent filter", async () => {
@@ -76,5 +79,51 @@ describe("EntityManager.ctiQueries", () => {
     const em = newEntityManager();
     const sps = await em.find(SmallPublisher, {});
     expect(sps).toMatchEntity([]);
+  });
+
+  it("finds against subtype", async () => {
+    await insertLargePublisher({ id: 1, name: "lp1", country: "US" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    const em = newEntityManager();
+    const where = { publisherLargePublisher: { country: "US" } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toBe(1);
+    expect(parseFindQuery(am, where, { softDeletes: "include" })).toMatchObject({
+      selects: [`a.*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "lp", table: "large_publishers", join: "outer", col1: "a.publisher_id", col2: "lp.id" },
+      ],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "lp", column: "country", dbType: "text", cond: { kind: "eq", value: "US" } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("finds against subtype and basetype", async () => {
+    await insertLargePublisher({ id: 1, name: "lp1", country: "US" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    const em = newEntityManager();
+    const where = { publisherLargePublisher: { country: "US", name: "lp1" } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toBe(1);
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "lp", table: "large_publishers", join: "outer", col1: "a.publisher_id", col2: "lp.id" },
+        { alias: "lp_b0", table: "publishers", join: "outer", col1: "lp.id", col2: "lp_b0.id" },
+      ],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "lp", column: "country", dbType: "text", cond: { kind: "eq", value: "US" } },
+          { alias: "lp_b0", column: "name", dbType: "character varying", cond: { kind: "eq", value: "lp1" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
   });
 });

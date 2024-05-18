@@ -196,7 +196,7 @@ function populatePolyComponentFields(metas: EntityMetadata[]): void {
   for (const meta of metas) {
     for (const [key, field] of Object.entries(meta.allFields)) {
       if (field.kind === "poly") {
-        meta.polyComponentFields = {};
+        meta.polyComponentFields ??= {};
         for (const comp of field.components) {
           const fieldName = `${key}${comp.otherMetadata().type}`;
           // Synthesize a m2o component that won't be used for any actual read/write serde,
@@ -218,6 +218,17 @@ function populatePolyComponentFields(metas: EntityMetadata[]): void {
             aliasSuffix: field.aliasSuffix,
           } satisfies ManyToOneField & { aliasSuffix: string };
         }
+      } else if (field.kind === "m2o") {
+        field.otherMetadata().subTypes.forEach((st) => {
+          const fieldName = `${key}${st.type}`;
+          meta.polyComponentFields ??= {};
+          meta.polyComponentFields[fieldName] = {
+            ...field,
+            fieldName,
+            fieldIdName: `${fieldName}Id`,
+            otherMetadata: () => st,
+          } satisfies ManyToOneField & { aliasSuffix: string };
+        });
       }
     }
   }

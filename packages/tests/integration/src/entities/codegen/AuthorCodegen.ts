@@ -65,9 +65,11 @@ import {
   FavoriteShape,
   Image,
   imageMeta,
+  LargePublisher,
   newAuthor,
   Publisher,
   publisherMeta,
+  SmallPublisher,
   Tag,
   tagMeta,
   TaskNew,
@@ -82,8 +84,10 @@ import type {
   CommentId,
   Entity,
   ImageId,
+  LargePublisherId,
   PublisherId,
   PublisherOrder,
+  SmallPublisherId,
   TagId,
   TaskNewId,
   UserId,
@@ -207,6 +211,8 @@ export interface AuthorFilter {
   currentDraftBook?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   favoriteBook?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null>;
+  publisherLargePublisher?: EntityFilter<LargePublisher, LargePublisherId, FilterOf<LargePublisher>, null>;
+  publisherSmallPublisher?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   userOneToOne?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
@@ -249,6 +255,18 @@ export interface AuthorGraphQLFilter {
   currentDraftBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   favoriteBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null>;
+  publisherLargePublisher?: EntityGraphQLFilter<
+    LargePublisher,
+    LargePublisherId,
+    GraphQLFilterOf<LargePublisher>,
+    null
+  >;
+  publisherSmallPublisher?: EntityGraphQLFilter<
+    SmallPublisher,
+    SmallPublisherId,
+    GraphQLFilterOf<SmallPublisher>,
+    null
+  >;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   userOneToOne?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;

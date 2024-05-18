@@ -47,11 +47,23 @@ import {
   ImageType,
   ImageTypeDetails,
   ImageTypes,
+  LargePublisher,
   newImage,
   Publisher,
   publisherMeta,
+  SmallPublisher,
 } from "../entities";
-import type { AuthorId, AuthorOrder, BookId, BookOrder, Entity, PublisherId, PublisherOrder } from "../entities";
+import type {
+  AuthorId,
+  AuthorOrder,
+  BookId,
+  BookOrder,
+  Entity,
+  LargePublisherId,
+  PublisherId,
+  PublisherOrder,
+  SmallPublisherId,
+} from "../entities";
 
 export type ImageId = Flavor<string, Image>;
 
@@ -89,6 +101,8 @@ export interface ImageFilter {
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   book?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null>;
+  publisherLargePublisher?: EntityFilter<LargePublisher, LargePublisherId, FilterOf<LargePublisher>, null>;
+  publisherSmallPublisher?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null>;
 }
 
 export interface ImageGraphQLFilter {
@@ -100,6 +114,18 @@ export interface ImageGraphQLFilter {
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null>;
+  publisherLargePublisher?: EntityGraphQLFilter<
+    LargePublisher,
+    LargePublisherId,
+    GraphQLFilterOf<LargePublisher>,
+    null
+  >;
+  publisherSmallPublisher?: EntityGraphQLFilter<
+    SmallPublisher,
+    SmallPublisherId,
+    GraphQLFilterOf<SmallPublisher>,
+    null
+  >;
 }
 
 export interface ImageOrder {

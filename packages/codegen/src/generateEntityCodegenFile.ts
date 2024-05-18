@@ -1,4 +1,5 @@
 import { camelCase, pascalCase } from "change-case";
+import { groupBy } from "joist-utils";
 import { Code, code, imp, joinCode } from "ts-poet";
 import {
   DbMetadata,
@@ -86,6 +87,8 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
   // Avoid using `do` as a variable name b/c it's a reserved keyword
   const varName = keywords.includes(tagName) ? uncapitalize(entityName) : tagName;
+
+  const metasByName = groupBy(dbMeta.entities, (e) => e.name);
 
   // Add the primitives
   const primitives = meta.primitives.map((p) => {
@@ -479,11 +482,11 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     }
 
     export interface ${entityName}Filter ${maybeBaseFilter} {
-      ${generateFilterFields(meta)}
+      ${generateFilterFields(metasByName, meta)}
     }
 
     export interface ${entityName}GraphQLFilter ${maybeBaseGqlFilter} {
-      ${generateGraphQLFilterFields(meta)}
+      ${generateGraphQLFilterFields(metasByName, meta)}
     }
 
     export interface ${entityName}Order ${maybeBaseOrder} {
@@ -771,7 +774,7 @@ function generateOptIdsFields(config: Config, meta: EntityDbMetadata): Code[] {
   return [...m2o, ...polys, ...o2o, ...o2m, ...m2m];
 }
 
-function generateFilterFields(meta: EntityDbMetadata): Code[] {
+function generateFilterFields(metasByName: Record<string, EntityDbMetadata[]>, meta: EntityDbMetadata): Code[] {
   // Always allow filtering on null to do "child.id is null" for detecting "has no children"
   const maybeId = meta.baseClassName ? [] : [code`id?: ${ValueFilter}<${meta.entity.name}Id, never> | null;`];
   const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
@@ -788,10 +791,18 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
   const pgEnums = meta.pgEnums.map(({ fieldName, enumType, notNull }) => {
     return code`${fieldName}?: ${ValueFilter}<${enumType}, ${nullOrNever(notNull)}>;`;
   });
-  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
-    return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${
-      otherEntity.type
-    }>, ${nullOrNever(notNull)}>;`;
+  const m2o = meta.manyToOnes.flatMap(({ fieldName, otherEntity, notNull }) => {
+    const otherMeta = metasByName[otherEntity.name][0];
+    return [
+      code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${
+        otherEntity.type
+      }>, ${nullOrNever(notNull)}>;`,
+      ...otherMeta.subTypes.map((st) => {
+        return code`${fieldName}${st.name}?: ${EntityFilter}<${st.entity.type}, ${st.entity.idType}, ${FilterOf}<${
+          st.entity.type
+        }>, ${nullOrNever(notNull)}>;`;
+      }),
+    ];
   });
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
@@ -814,7 +825,7 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
   return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...o2m, ...m2m, ...polys];
 }
 
-function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
+function generateGraphQLFilterFields(metasByName: Record<string, EntityDbMetadata[]>, meta: EntityDbMetadata): Code[] {
   const maybeId = meta.baseClassName ? [] : [code`id?: ${ValueGraphQLFilter}<${meta.entity.name}Id>;`];
   const primitives = meta.primitives.map(({ fieldName, fieldType }) => {
     if (fieldType === "boolean") {
@@ -830,10 +841,18 @@ function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
   const pgEnums = meta.pgEnums.map(({ fieldName, enumType }) => {
     return code`${fieldName}?: ${ValueGraphQLFilter}<${enumType}>;`;
   });
-  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
-    return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${
-      otherEntity.type
-    }>, ${nullOrNever(notNull)}>;`;
+  const m2o = meta.manyToOnes.flatMap(({ fieldName, otherEntity, notNull }) => {
+    const otherMeta = metasByName[otherEntity.name][0];
+    return [
+      code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${
+        otherEntity.type
+      }>, ${nullOrNever(notNull)}>;`,
+      ...otherMeta.subTypes.map((st) => {
+        return code`${fieldName}${st.name}?: ${EntityGraphQLFilter}<${st.entity.type}, ${st.entity.idType}, ${GraphQLFilterOf}<${
+          st.entity.type
+        }>, ${nullOrNever(notNull)}>;`;
+      }),
+    ];
   });
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`;

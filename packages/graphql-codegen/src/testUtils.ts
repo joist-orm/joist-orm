@@ -57,6 +57,7 @@ export function newEntityMetadata(name: string, opts: Partial<EntityDbMetadata> 
     createdAt: undefined,
     deletedAt: undefined,
     baseClassName: undefined,
+    subTypes: [],
     inheritanceType: undefined,
     abstract: false,
     invalidDeferredFK: false,

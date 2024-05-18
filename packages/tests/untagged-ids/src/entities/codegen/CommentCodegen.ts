@@ -20,6 +20,7 @@ import type {
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
+  FilterOf,
   Flavor,
   IdOf,
   JsonPayload,
@@ -72,7 +73,9 @@ export interface CommentFilter {
   text?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
-  parent?: EntityFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
+  parent?: EntityFilter<CommentParent, IdOf<CommentParent>, never, never>;
+  parentAuthor?: EntityFilter<Author, IdOf<Author>, FilterOf<Author>, null>;
+  parentBook?: EntityFilter<Book, IdOf<Book>, FilterOf<Book>, null>;
 }
 
 export interface CommentGraphQLFilter {
@@ -80,7 +83,9 @@ export interface CommentGraphQLFilter {
   text?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
+  parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never, never>;
+  parentAuthor?: EntityGraphQLFilter<Author, IdOf<Author>, FilterOf<Author>, null>;
+  parentBook?: EntityGraphQLFilter<Book, IdOf<Book>, FilterOf<Book>, null>;
 }
 
 export interface CommentOrder {

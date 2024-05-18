@@ -1787,6 +1787,36 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can find through a polymorphic component by id", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertComment({ text: "t2" });
+
+    const em = newEntityManager();
+    const where = { parentBook: { title: "t" } } satisfies CommentFilter;
+    const comments = await em.find(Comment, where);
+    const [comment] = comments;
+    expect(comments.length).toEqual(1);
+    expect(comment.text).toEqual("t1");
+
+    expect(parseFindQuery(cm, where)).toMatchObject({
+      selects: [`c.*`],
+      tables: [
+        { alias: "c", table: "comments", join: "primary" },
+        { alias: "b", table: "books", join: "outer", col1: "c.parent_book_id", col2: "b.id" },
+      ],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "b", column: "deleted_at" },
+          { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "t" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
   it("can find through a polymorphic reference by entity", async () => {
     await insertAuthor({ first_name: "a" });
     await insertBook({ title: "t", author_id: 1 });
@@ -1813,29 +1843,25 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find through a null polymorphic reference", async () => {
-    await insertAuthor({ first_name: "a" });
-    await insertBook({ title: "t", author_id: 1 });
-    await insertComment({ text: "t1", parent_book_id: 1 });
-    await insertComment({ text: "t2" });
+    await insertPublisher({ name: "p1" });
+    await insertUser({ name: "u1", favorite_publisher_small_id: 1 });
+    await insertUser({ name: "u2" });
 
     const em = newEntityManager();
-    const where = { parent: null } satisfies CommentFilter;
-    const comments = await em.find(Comment, where);
-    const [comment] = comments;
-    expect(comments.length).toEqual(1);
-    expect(comment.text).toEqual("t2");
+    const where = { favoritePublisher: null } satisfies UserFilter;
+    const users = await em.find(User, where);
+    const [user] = users;
+    expect(users.length).toEqual(1);
+    expect(user.name).toEqual("u2");
 
-    expect(parseFindQuery(cm, where)).toMatchObject({
-      selects: [`c.*`],
-      tables: [{ alias: "c", table: "comments", join: "primary" }],
+    expect(parseFindQuery(um, where)).toMatchObject({
+      selects: [`u.*`, `u_s0.*`, `u.id as id`, expect.stringContaining("CASE")],
+      tables: [{ alias: "u", table: "users", join: "primary" }, { alias: "u_s0" }],
       condition: {
         op: "and",
         conditions: [
-          { alias: "c", column: "parent_author_id", dbType: "int", cond: { kind: "is-null" } },
-          { alias: "c", column: "parent_book_id", dbType: "int", cond: { kind: "is-null" } },
-          { alias: "c", column: "parent_book_review_id", dbType: "int", cond: { kind: "is-null" } },
-          { alias: "c", column: "parent_publisher_id", dbType: "int", cond: { kind: "is-null" } },
-          { alias: "c", column: "parent_task_id", dbType: "int", cond: { kind: "is-null" } },
+          { alias: "u", column: "favorite_publisher_large_id", dbType: "int", cond: { kind: "is-null" } },
+          { alias: "u", column: "favorite_publisher_small_id", dbType: "int", cond: { kind: "is-null" } },
         ],
       },
       orderBys: [expect.anything()],
@@ -2347,6 +2373,25 @@ describe("EntityManager.queries", () => {
         { as: c },
         {
           conditions: { or: [c.parent.eq("b:1")] },
+        },
+      );
+      const [comment] = comments;
+      expect(comments.length).toEqual(1);
+      expect(comment.text).toEqual("t1");
+    });
+
+    it("can use aliases for polymorphic component with eq", async () => {
+      await insertAuthor({ first_name: "a" });
+      await insertBook({ title: "t", author_id: 1 });
+      await insertComment({ text: "t1", parent_book_id: 1 });
+      await insertComment({ text: "t2", parent_author_id: 1 });
+      const em = newEntityManager();
+      const b = alias(Book);
+      const comments = await em.find(
+        Comment,
+        { parentBook: b },
+        {
+          conditions: { or: [b.id.ne(null)] },
         },
       );
       const [comment] = comments;

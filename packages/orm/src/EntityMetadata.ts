@@ -45,6 +45,8 @@ export interface EntityMetadata<T extends Entity = any> {
   tagName: string;
   fields: Record<string, Field>;
   allFields: Record<string, Field & { aliasSuffix: string }>;
+  /** Usually polys are in `allFields`, but we pull the components out for comp-specific finds, like `parentBook`. */
+  polyComponentFields?: Record<string, Field & { aliasSuffix: string }>;
   config: ConfigApi<any, any>;
   orderBy: string | undefined;
   timestampFields: TimestampFields;

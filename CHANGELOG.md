@@ -1,3 +1,10 @@
+# [1.166.0](https://github.com/joist-orm/joist-orm/compare/v1.165.2...v1.166.0) (2024-05-18)
+
+
+### Features
+
+* Support filtering by poly components ([#1092](https://github.com/joist-orm/joist-orm/issues/1092)) ([2f76e62](https://github.com/joist-orm/joist-orm/commit/2f76e62793f609a4ed0cf8e40d04d54f65469778))
+
 ## [1.165.2](https://github.com/joist-orm/joist-orm/compare/v1.165.1...v1.165.2) (2024-05-16)
 
 

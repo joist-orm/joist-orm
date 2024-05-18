@@ -1802,10 +1802,16 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(cm, where)).toMatchObject({
       selects: [`c.*`],
-      tables: [{ alias: "c", table: "comments", join: "primary" }],
+      tables: [
+        { alias: "c", table: "comments", join: "primary" },
+        { alias: "b", table: "books", join: "outer", col1: "c.parent_book_id", col2: "b.id" },
+      ],
       condition: {
         op: "and",
-        conditions: [{ alias: "c", column: "parent_book_id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+        conditions: [
+          { alias: "b", column: "deleted_at" },
+          { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "t" } },
+        ],
       },
       orderBys: [expect.anything()],
     });
@@ -2367,6 +2373,25 @@ describe("EntityManager.queries", () => {
         { as: c },
         {
           conditions: { or: [c.parent.eq("b:1")] },
+        },
+      );
+      const [comment] = comments;
+      expect(comments.length).toEqual(1);
+      expect(comment.text).toEqual("t1");
+    });
+
+    it("can use aliases for polymorphic component with eq", async () => {
+      await insertAuthor({ first_name: "a" });
+      await insertBook({ title: "t", author_id: 1 });
+      await insertComment({ text: "t1", parent_book_id: 1 });
+      await insertComment({ text: "t2", parent_author_id: 1 });
+      const em = newEntityManager();
+      const b = alias(Book);
+      const comments = await em.find(
+        Comment,
+        { parentBook: b },
+        {
+          conditions: { or: [b.id.ne(null)] },
         },
       );
       const [comment] = comments;

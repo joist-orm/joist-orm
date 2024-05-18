@@ -179,7 +179,10 @@ export function parseFindQuery(
       Object.keys(ef.subFilter).forEach((key) => {
         // Skip the `{ as: ... }` alias binding
         if (key === "as") return;
-        const field = meta.allFields[key] ?? fail(`Field '${key}' not found on ${meta.tableName}`);
+        const field =
+          meta.allFields[key] ??
+          meta.polyComponentFields?.[key] ??
+          fail(`Field '${key}' not found on ${meta.tableName}`);
         const fa = `${alias}${field.aliasSuffix}`;
         if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
           const column = field.serde.columns[0];

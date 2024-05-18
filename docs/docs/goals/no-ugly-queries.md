@@ -24,9 +24,11 @@ Joist "solves" ugly queries by just never even attempting them: it's a non-goal 
 
 Granted, we think Joist's graph navigation & `em.find` APIs are powerful, ergonomic, and should be **the large majority** of SQL queries in your app: "get this author's books", "load the books & reviews & their ratings", "load the Nth page of authors with the given filters", etc.
 
-But for any queries that are truly custom, and generally doing "hard things", it's perfectly fine to use a separate, lower-level query builder, or even raw strings, to build out complicated queries.
+However, we've limited them to **only features that can be implemented with "obviously boring SQL"**.
 
-These lower-level APIs put you in full-control of the SQL, at the cost of more verbosity and complexity--but sometimes that is the right tradeoff.
+Instead, for any of your queries that are truly custom, and doing "hard, complicated things", it's perfectly fine to use a separate, lower-level query builder, or even raw SQL strings, to issue complicated queries.
+
+These lower-level APIs put you in full-control of the SQL, at the cost of more verbosity and complexity--but sometimes that is the right tradeoff!
 
 :::tip
 
@@ -42,14 +44,14 @@ Specifically, today Joist does not support:
 
 * Common Table Expressions
 * Group bys, aggregates, sums, havings
-* Loading anything that isn't any entity
+* Loading/processing any query results that aren't entities
 * Probably much more
 
-Granted, we don't want to undersell our `em.find` API short--it is great, but nor have we set out to "build a DSL to create every SQL query ever".
+Granted, we don't want to undersell our `em.find` API (it is great), but nor have we set out to "build a DSL to create every SQL query ever".
 
-That is just not Joist's strength--our strength is ergonomically representing complicated business domains, and enforcing compliated business constraints, and that is a hard enough problem as it is. :-) 
+That is just not Joist's strength--our strength is ergonomically representing complicated business domains, and enforcing complicated business constraints, and that is a hard enough problem as it is. :-) 
 
-We encourage you to use "closer to the metal" libraries like Knex or Kysley, for your app's truly-custom query needs.
+Instead, we encourage you to use lower-level libraries like Knex for your app's custom queries.
 
 :::info
 
@@ -57,6 +59,6 @@ Obviously having multiple full-fledged libraries, i.e. Joist for the domain mode
 
 Personally, we use Knex for our low-level custom queries (those 5%), because it's lightweight and sufficiently ergonomic.
 
-Joist will likely eventually provide a "raw SQL" query builder, but it will be a completely separate API from `em.find`, to avoid any slippery slopes to `em.find` becoming a leaky abstraction and creating "ugly queries".
+Joist may eventually provide a "raw SQL" query builder, that is Knex-ish, but it will be a completely separate API from `em.find`, to avoid any slippery slopes to `em.find` becoming a leaky abstraction and creating "ugly queries".
 
 :::

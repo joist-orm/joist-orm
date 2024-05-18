@@ -1,6 +1,6 @@
 import { Entity } from "./Entity";
 import { MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
-import { EntityMetadata, ManyToOneField, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, ManyToOneField, OneToManyField, getMetadata } from "./EntityMetadata";
 import { setBooted } from "./config";
 import { hasDefaultValue } from "./defaults";
 import { getFakeInstance } from "./getProperties";
@@ -228,6 +228,19 @@ function populatePolyComponentFields(metas: EntityMetadata[]): void {
             fieldIdName: `${fieldName}Id`,
             otherMetadata: () => st,
           } satisfies ManyToOneField & { aliasSuffix: string };
+        });
+      } else if (field.kind === "o2m") {
+        field.otherMetadata().subTypes.forEach((st, i) => {
+          const fieldName = `${key}${st.type}`;
+          meta.polyComponentFields ??= {};
+          meta.polyComponentFields[fieldName] = {
+            ...field,
+            fieldName,
+            fieldIdName: `${fieldName}Id`,
+            // Ideally we would keep this the base, b/c that is where the FK we need to join into exists
+            otherMetadata: () => st,
+            aliasSuffix: `_b0`,
+          } satisfies OneToManyField & { aliasSuffix: string };
         });
       }
     }

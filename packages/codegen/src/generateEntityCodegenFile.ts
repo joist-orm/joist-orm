@@ -807,8 +807,14 @@ function generateFilterFields(metasByName: Record<string, EntityDbMetadata[]>, m
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
-  const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
-    return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
+  const o2m = meta.oneToManys.flatMap(({ fieldName, otherEntity }) => {
+    const otherMeta = metasByName[otherEntity.name][0];
+    return [
+      code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`,
+      ...otherMeta.subTypes.map((st) => {
+        return code`${fieldName}${st.name}?: ${EntityFilter}<${st.entity.type}, ${st.entity.idType}, ${FilterOf}<${st.entity.type}>, null | undefined>;`;
+      }),
+    ];
   });
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
@@ -857,8 +863,11 @@ function generateGraphQLFilterFields(metasByName: Record<string, EntityDbMetadat
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
-  const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
-    return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`;
+  const o2m = meta.oneToManys.flatMap(({ fieldName, otherEntity }) => {
+    const otherMeta = metasByName[otherEntity.name][0];
+    return [
+      code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`,
+    ];
   });
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`;

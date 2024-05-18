@@ -35,6 +35,7 @@ import type {
 } from "joist-orm";
 import type { Context } from "src/context";
 import {
+  AdminUser,
   Critic,
   criticMeta,
   EntityManager,
@@ -46,6 +47,7 @@ import {
   userMeta,
 } from "../entities";
 import type {
+  AdminUserId,
   CriticId,
   Entity,
   PublisherFields,
@@ -82,6 +84,7 @@ export interface LargePublisherFilter extends PublisherFilter {
   country?: ValueFilter<string, null>;
   critics?: EntityFilter<Critic, CriticId, FilterOf<Critic>, null | undefined>;
   users?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
+  usersAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null | undefined>;
 }
 
 export interface LargePublisherGraphQLFilter extends PublisherGraphQLFilter {

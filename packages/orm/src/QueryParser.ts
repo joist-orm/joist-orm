@@ -143,6 +143,7 @@ export function parseFindQuery(
     col1: string,
     col2: string,
     filter: any,
+    addBaseJoin?: boolean,
   ): void {
     // look at filter, is it `{ book: "b2" }` or `{ book: { ... } }`
     const ef = parseEntityFilter(meta, filter);
@@ -157,7 +158,7 @@ export function parseFindQuery(
     }
 
     // Maybe only do this if we're the primary, or have a field that needs it?
-    addTablePerClassJoinsAndClassTag(query, meta, alias, join === "primary");
+    addTablePerClassJoinsAndClassTag(query, meta, alias, join === "primary" || !!addBaseJoin);
     if (needsStiDiscriminator(meta)) {
       addStiSubtypeFilter(inlineConditions, meta, alias);
     }
@@ -316,8 +317,10 @@ export function parseFindQuery(
             a,
             "outer",
             kqDot(alias, "id"),
-            kqDot(a, otherColumn),
+            kqDot(`${a}${field.aliasSuffix}`, otherColumn),
             (ef.subFilter as any)[key],
+            // If we were joined onto a field from the base class, go fetch it
+            !!field.aliasSuffix,
           );
         } else if (field.kind === "m2m") {
           // Always join into the m2m table

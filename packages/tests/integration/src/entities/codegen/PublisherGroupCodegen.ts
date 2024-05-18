@@ -43,13 +43,15 @@ import {
   Critic,
   criticMeta,
   EntityManager,
+  LargePublisher,
   newPublisherGroup,
   Publisher,
   PublisherGroup,
   publisherGroupMeta,
   publisherMeta,
+  SmallPublisher,
 } from "../entities";
-import type { Entity, PublisherId } from "../entities";
+import type { Entity, LargePublisherId, PublisherId, SmallPublisherId } from "../entities";
 
 export type PublisherGroupId = Flavor<string, PublisherGroup>;
 
@@ -77,6 +79,8 @@ export interface PublisherGroupFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
+  publishersLargePublisher?: EntityFilter<LargePublisher, LargePublisherId, FilterOf<LargePublisher>, null | undefined>;
+  publishersSmallPublisher?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null | undefined>;
 }
 
 export interface PublisherGroupGraphQLFilter {

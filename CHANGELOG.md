@@ -1,3 +1,10 @@
+# [1.168.0](https://github.com/joist-orm/joist-orm/compare/v1.167.0...v1.168.0) (2024-05-19)
+
+
+### Features
+
+* m2m change detection follow up ([#1046](https://github.com/joist-orm/joist-orm/issues/1046)) ([ed4be3d](https://github.com/joist-orm/joist-orm/commit/ed4be3d0e5347a9fdca386a42a9bb9045b6714d6))
+
 # [1.167.0](https://github.com/joist-orm/joist-orm/compare/v1.166.0...v1.167.0) (2024-05-18)
 
 

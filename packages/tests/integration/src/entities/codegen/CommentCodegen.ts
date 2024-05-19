@@ -45,6 +45,7 @@ import type {
 } from "joist-orm";
 import type { Context } from "src/context";
 import {
+  AdminUser,
   Author,
   Book,
   BookReview,
@@ -57,7 +58,7 @@ import {
   User,
   userMeta,
 } from "../entities";
-import type { Entity, UserId, UserOrder } from "../entities";
+import type { AdminUserId, Entity, UserId, UserOrder } from "../entities";
 
 export type CommentId = Flavor<string, Comment>;
 
@@ -99,8 +100,14 @@ export interface CommentFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   user?: EntityFilter<User, UserId, FilterOf<User>, null>;
+  userAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
   likedByUsers?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
-  parent?: EntityFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
+  parent?: EntityFilter<CommentParent, IdOf<CommentParent>, never, never>;
+  parentAuthor?: EntityFilter<Author, IdOf<Author>, FilterOf<Author>, null>;
+  parentBook?: EntityFilter<Book, IdOf<Book>, FilterOf<Book>, null>;
+  parentBookReview?: EntityFilter<BookReview, IdOf<BookReview>, FilterOf<BookReview>, null>;
+  parentPublisher?: EntityFilter<Publisher, IdOf<Publisher>, FilterOf<Publisher>, null>;
+  parentTaskOld?: EntityFilter<TaskOld, IdOf<TaskOld>, FilterOf<TaskOld>, null>;
 }
 
 export interface CommentGraphQLFilter {
@@ -110,8 +117,14 @@ export interface CommentGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   user?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null>;
+  userAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
   likedByUsers?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
-  parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
+  parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never, never>;
+  parentAuthor?: EntityGraphQLFilter<Author, IdOf<Author>, FilterOf<Author>, null>;
+  parentBook?: EntityGraphQLFilter<Book, IdOf<Book>, FilterOf<Book>, null>;
+  parentBookReview?: EntityGraphQLFilter<BookReview, IdOf<BookReview>, FilterOf<BookReview>, null>;
+  parentPublisher?: EntityGraphQLFilter<Publisher, IdOf<Publisher>, FilterOf<Publisher>, null>;
+  parentTaskOld?: EntityGraphQLFilter<TaskOld, IdOf<TaskOld>, FilterOf<TaskOld>, null>;
 }
 
 export interface CommentOrder {

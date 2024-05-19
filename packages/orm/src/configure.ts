@@ -1,6 +1,6 @@
 import { Entity } from "./Entity";
 import { MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
-import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, ManyToOneField, getMetadata } from "./EntityMetadata";
 import { setBooted } from "./config";
 import { hasDefaultValue } from "./defaults";
 import { getFakeInstance } from "./getProperties";
@@ -10,6 +10,7 @@ import { ReactiveReferenceImpl, Reference } from "./relations";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
 import { isCannotBeUpdatedRule } from "./rules";
+import { KeySerde } from "./serde";
 import { fail } from "./utils";
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
@@ -25,6 +26,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
   setImmutableFields(metas);
   hookUpBaseTypeAndSubTypes(metas);
   reverseIndexReactivity(metas);
+  populatePolyComponentFields(metas);
 }
 
 function fireAfterMetadatas(metas: EntityMetadata[]): void {
@@ -180,6 +182,53 @@ function ensureDefaultsSet(metas: EntityMetadata[]): void {
         throw new Error(
           `Field ${meta.type}.${field.fieldName} is configured with hasConfigDefault=true in joist-config but is missing a config.setDefault`,
         );
+      }
+    }
+  }
+}
+
+/**
+ * In addition to the canonical `meta.allFields`, we populate a `meta.polyComponentFields` to
+ * disaggregates the poly's components into individual fields so that `em.find` / `parseFindQuery`
+ * can support component-specific find queries.
+ */
+function populatePolyComponentFields(metas: EntityMetadata[]): void {
+  for (const meta of metas) {
+    for (const [key, field] of Object.entries(meta.allFields)) {
+      if (field.kind === "poly") {
+        meta.polyComponentFields ??= {};
+        for (const comp of field.components) {
+          const fieldName = `${key}${comp.otherMetadata().type}`;
+          // Synthesize a m2o component that won't be used for any actual read/write serde,
+          // but just to help `parseFindQuery` build `WHERE` clauses.
+          meta.polyComponentFields[fieldName] = {
+            kind: "m2o",
+            fieldName,
+            fieldIdName: `${fieldName}Id`,
+            required: false,
+            immutable: false,
+            derived: false,
+            serde: new KeySerde(
+              comp.otherMetadata().tagName,
+              fieldName,
+              comp.columnName,
+              field.serde.columns[0].dbType as any,
+            ),
+            ...comp,
+            aliasSuffix: field.aliasSuffix,
+          } satisfies ManyToOneField & { aliasSuffix: string };
+        }
+      } else if (field.kind === "m2o") {
+        field.otherMetadata().subTypes.forEach((st) => {
+          const fieldName = `${key}${st.type}`;
+          meta.polyComponentFields ??= {};
+          meta.polyComponentFields[fieldName] = {
+            ...field,
+            fieldName,
+            fieldIdName: `${fieldName}Id`,
+            otherMetadata: () => st,
+          } satisfies ManyToOneField & { aliasSuffix: string };
+        });
       }
     }
   }

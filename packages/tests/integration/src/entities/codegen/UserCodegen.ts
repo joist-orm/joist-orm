@@ -119,7 +119,9 @@ export interface UserFilter {
   authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   createdComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   likedComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
-  favoritePublisher?: EntityFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null | undefined>;
+  favoritePublisher?: EntityFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
+  favoritePublisherLargePublisher?: EntityFilter<LargePublisher, IdOf<LargePublisher>, FilterOf<LargePublisher>, null>;
+  favoritePublisherSmallPublisher?: EntityFilter<SmallPublisher, IdOf<SmallPublisher>, FilterOf<SmallPublisher>, null>;
 }
 
 export interface UserGraphQLFilter {
@@ -135,7 +137,19 @@ export interface UserGraphQLFilter {
   authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   likedComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
-  favoritePublisher?: EntityGraphQLFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null | undefined>;
+  favoritePublisher?: EntityGraphQLFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
+  favoritePublisherLargePublisher?: EntityGraphQLFilter<
+    LargePublisher,
+    IdOf<LargePublisher>,
+    FilterOf<LargePublisher>,
+    null
+  >;
+  favoritePublisherSmallPublisher?: EntityGraphQLFilter<
+    SmallPublisher,
+    IdOf<SmallPublisher>,
+    FilterOf<SmallPublisher>,
+    null
+  >;
 }
 
 export interface UserOrder {

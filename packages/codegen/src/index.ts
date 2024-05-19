@@ -1,4 +1,4 @@
-import { ConnectionConfig, newPgConnectionConfig } from "joist-utils";
+import { ConnectionConfig, groupBy, newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
 import pgStructure from "pg-structure";
 import { saveFiles } from "ts-poet";
@@ -71,7 +71,7 @@ export async function generateAndSaveFiles(config: Config, dbMeta: DbMetadata): 
     toolName: "joist-codegen",
     directory: config.entitiesDirectory,
     files,
-    toStringOpts: { importExtensions: config.esm ? 'js' : false }
+    toStringOpts: { importExtensions: config.esm ? "js" : false },
   });
 }
 
@@ -115,11 +115,20 @@ async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMet
   return { entities, enums, pgEnums, totalTables, joinTables };
 }
 
-/** Ensure CTI base types have their inheritanceType set. */
+/**
+ * Ensure CTI base types have their inheritanceType set.
+ *
+ * (We automatically set `inheritanceType` for STI tables when we see
+ * their config setup, see `expandSingleTableInheritance`.)
+ */
 function setClassTableInheritance(entities: EntityDbMetadata[]): void {
+  const metasByName = groupBy(entities, (e) => e.name);
   const ctiBaseNames: string[] = [];
   for (const entity of entities) {
-    if (entity.baseClassName) ctiBaseNames.push(entity.baseClassName);
+    if (entity.baseClassName) {
+      ctiBaseNames.push(entity.baseClassName);
+      metasByName[entity.baseClassName]?.[0].subTypes.push(entity);
+    }
   }
   for (const entity of entities) {
     if (ctiBaseNames.includes(entity.name)) entity.inheritanceType = "cti";
@@ -174,6 +183,7 @@ function expandSingleTableInheritance(config: Config, entities: EntityDbMetadata
           updatedAt: undefined,
           deletedAt: undefined,
           baseClassName: entity.name,
+          subTypes: [],
           inheritanceType: "sti",
           stiDiscriminatorValue: (
             enumField.enumRows.find((r) => r.code === enumCode) ??

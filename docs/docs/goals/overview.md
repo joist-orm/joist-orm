@@ -17,3 +17,4 @@ Joist's primary features are:
 - Bringing [Reactivity to the Backend](../modeling/reactive-fields.md)
 - Robust [Domain Modeling](../modeling/fields.md)
 - [Great testing](./great-tests.md) with built-in factories and other support
+- A promise of [No Ugly Queries](/docs/goals/no-ugly-queries)

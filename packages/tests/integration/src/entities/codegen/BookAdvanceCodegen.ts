@@ -44,11 +44,21 @@ import {
   bookAdvanceMeta,
   bookMeta,
   EntityManager,
+  LargePublisher,
   newBookAdvance,
   Publisher,
   publisherMeta,
+  SmallPublisher,
 } from "../entities";
-import type { BookId, BookOrder, Entity, PublisherId, PublisherOrder } from "../entities";
+import type {
+  BookId,
+  BookOrder,
+  Entity,
+  LargePublisherId,
+  PublisherId,
+  PublisherOrder,
+  SmallPublisherId,
+} from "../entities";
 
 export type BookAdvanceId = Flavor<string, BookAdvance>;
 
@@ -79,6 +89,8 @@ export interface BookAdvanceFilter {
   status?: ValueFilter<AdvanceStatus, never>;
   book?: EntityFilter<Book, BookId, FilterOf<Book>, never>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, never>;
+  publisherLargePublisher?: EntityFilter<LargePublisher, LargePublisherId, FilterOf<LargePublisher>, never>;
+  publisherSmallPublisher?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, never>;
 }
 
 export interface BookAdvanceGraphQLFilter {
@@ -88,6 +100,18 @@ export interface BookAdvanceGraphQLFilter {
   status?: ValueGraphQLFilter<AdvanceStatus>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, never>;
+  publisherLargePublisher?: EntityGraphQLFilter<
+    LargePublisher,
+    LargePublisherId,
+    GraphQLFilterOf<LargePublisher>,
+    never
+  >;
+  publisherSmallPublisher?: EntityGraphQLFilter<
+    SmallPublisher,
+    SmallPublisherId,
+    GraphQLFilterOf<SmallPublisher>,
+    never
+  >;
 }
 
 export interface BookAdvanceOrder {

@@ -1,3 +1,17 @@
+# [1.167.0](https://github.com/joist-orm/joist-orm/compare/v1.166.0...v1.167.0) (2024-05-18)
+
+
+### Features
+
+* Allow filtering m2o by CTI subtypes. ([#1093](https://github.com/joist-orm/joist-orm/issues/1093)) ([1a67c5a](https://github.com/joist-orm/joist-orm/commit/1a67c5a4b17e94742e0737705ad15413a3769bf3))
+
+# [1.166.0](https://github.com/joist-orm/joist-orm/compare/v1.165.2...v1.166.0) (2024-05-18)
+
+
+### Features
+
+* Support filtering by poly components ([#1092](https://github.com/joist-orm/joist-orm/issues/1092)) ([2f76e62](https://github.com/joist-orm/joist-orm/commit/2f76e62793f609a4ed0cf8e40d04d54f65469778))
+
 ## [1.165.2](https://github.com/joist-orm/joist-orm/compare/v1.165.1...v1.165.2) (2024-05-16)
 
 

@@ -8,12 +8,12 @@ Find queries are Joist's ergonomic API for issuing `SELECT` queries to load enti
 ```ts
 // Find all BookReviews for a given Publisher
 const reviews1 = await em.find(BookReview, {
-  book: { author: { publisher: "p:1" } }
+  book: { author: { publisher: "p:1" } },
 });
 
 // Find all BookReviews of Books with foo in the title
 const reviews2 = await em.find(BookReview, {
-  book: { title: { like: "%foo%" } }
+  book: { title: { like: "%foo%" } },
 });
 ```
 
@@ -68,15 +68,15 @@ The join literal is the biggest brevity win of find queries, because just adding
 
 ## Inline Conditions
 
-Inline conditions are `WHERE` conditions that appear directly in the join literal, i.e.: 
+Inline conditions are `WHERE` conditions that appear directly in the join literal, i.e.:
 
 ```ts
 // Conditions directly in the top-level `books` join literal
-await em.find(Book, { title: "b1" })
-await em.find(Book, { title: { ne: "b1" } })
-await em.find(Book, { publishedAt: { gte: jan1 } })
+await em.find(Book, { title: "b1" });
+await em.find(Book, { title: { ne: "b1" } });
+await em.find(Book, { publishedAt: { gte: jan1 } });
 // Or conditions within any nested join literal like `author`
-await em.find(Book, { author: { firstName: { in: ["a1", "a2"] } } })
+await em.find(Book, { author: { firstName: { in: ["a1", "a2"] } } });
 ```
 
 As expected turn into the SQL `WHERE` clauses:
@@ -93,10 +93,10 @@ SELECT * FROM books b
 Because these conditions are inline with the rest of the join literal, they are always `AND`-d together with any other inline condition, for example:
 
 ```ts
-await em.find(Book, { title: "b1", author: a1 })
+await em.find(Book, { title: "b1", author: a1 });
 ```
 
-Finds books with the title is `b1` __and__ the author is `a:1`:
+Finds books with the title is `b1` **and** the author is `a:1`:
 
 ```sql
 SELECT * FROM books WHERE title = 'b1' AND author_id = 1;
@@ -104,35 +104,35 @@ SELECT * FROM books WHERE title = 'b1' AND author_id = 1;
 
 Inline conditions can be any of the following formats/operators:
 
-* Just the value itself, i.e. `{ firstName: "a1" }`
-  * `{ firstName: ["a1", "a2"] }` becomes `first_name IN ("a1", "a2")`
-* Just the entity itself, i.e. `{ publisher: p1 }`
-  * `{ publisher: [p1, p2] }` becomes `publisher_id IN (1, 2)`
-  * `{ publisher: true }` becomes `publisher_id IS NOT NULL`
-  * `{ publisher: false }` becomes `publisher_id IS NULL`
-  * `{ publisher: undefined }` is ignored
-* A variety of operator literals, i.e.
-  * `{ eq: "a1" }`
-  * `{ ne: "a1" }`
-  * `{ eq: null }` becomes `IS NULL`
-  * `{ ne: null }` becomes `IS NOT NULL`
-  * `{ in: ["a1", "b2", null] }`
-  * `{ nin: ["a1", "b2"] }` becomes `NOT IN`
-  * `{ lt: 1 }`
-  * `{ gt: 1 }`
-  * `{ gte: 1 }`
-  * `{ lte: 1 }`
-  * `{ like: "str" }`
-  * `{ ilike: "str" }`
-* An operator literal can also include multiple keys, i.e.:
-  * `{ gt: 1, lt: 10 }` becomes `> 1 AND < 10`
-* An operator literal can also use an explicit `op` key, i.e.:
-  * `{ op: "eq", value: "a1" }` 
-  * `{ op: "in", value: ["a1", "a2"] }`
-* An array field can also use these additional operators, i.e.:
-  * `{ contains: ["book"] }`
-  * `{ overlaps: ["book"] }`
-  * `{ containedBy: ["book"] }`
+- Just the value itself, i.e. `{ firstName: "a1" }`
+  - `{ firstName: ["a1", "a2"] }` becomes `first_name IN ("a1", "a2")`
+- Just the entity itself, i.e. `{ publisher: p1 }`
+  - `{ publisher: [p1, p2] }` becomes `publisher_id IN (1, 2)`
+  - `{ publisher: true }` becomes `publisher_id IS NOT NULL`
+  - `{ publisher: false }` becomes `publisher_id IS NULL`
+  - `{ publisher: undefined }` is ignored
+- A variety of operator literals, i.e.
+  - `{ eq: "a1" }`
+  - `{ ne: "a1" }`
+  - `{ eq: null }` becomes `IS NULL`
+  - `{ ne: null }` becomes `IS NOT NULL`
+  - `{ in: ["a1", "b2", null] }`
+  - `{ nin: ["a1", "b2"] }` becomes `NOT IN`
+  - `{ lt: 1 }`
+  - `{ gt: 1 }`
+  - `{ gte: 1 }`
+  - `{ lte: 1 }`
+  - `{ like: "str" }`
+  - `{ ilike: "str" }`
+- An operator literal can also include multiple keys, i.e.:
+  - `{ gt: 1, lt: 10 }` becomes `> 1 AND < 10`
+- An operator literal can also use an explicit `op` key, i.e.:
+  - `{ op: "eq", value: "a1" }`
+  - `{ op: "in", value: ["a1", "a2"] }`
+- An array field can also use these additional operators, i.e.:
+  - `{ contains: ["book"] }`
+  - `{ overlaps: ["book"] }`
+  - `{ containedBy: ["book"] }`
 
 :::tip
 
@@ -152,13 +152,7 @@ For example, to do an `OR`:
 
 ```ts
 const b = alias(Book);
-await em.find(
-  Book,
-  { as: b },
-  { conditions:
-    { or: [b.title.eq("b1"), b.author.eq(a1)] }
-  }      
-);
+await em.find(Book, { as: b }, { conditions: { or: [b.title.eq("b1"), b.author.eq(a1)] } });
 ```
 
 So we still have the join literal, but the `as` keyword binds the `b` alias to the `books` table, and then we can create an `OR` expressions after.
@@ -167,47 +161,38 @@ Splitting the aliases out allows `OR` expressions that touch separate tables, by
 
 ```ts
 const [b, a] = aliases(Book, Author);
-await em.find(
-  Book,
-  { as: b, author: a },
-  { conditions:
-    { or: [b.title.eq("b1"), a.firstName.eq("a1")] }
-  }      
-);
+await em.find(Book, { as: b, author: a }, { conditions: { or: [b.title.eq("b1"), a.firstName.eq("a1")] } });
 ```
 
 The aliases use method calls to create conditions (i.e. `.eq(1)`), which is a different syntax than the inline condition's `{ eq: 1 }` literals, but the supported operations are still the same:
 
-* `eq("b1")`
-* `ne("b1")`
-* `lt(1)`
-* `gt(1)`
-* `lte(1)`
-* `gte(1)`
-* `gte(1)`
+- `eq("b1")`
+- `ne("b1")`
+- `lt(1)`
+- `gt(1)`
+- `lte(1)`
+- `gte(1)`
+- `gte(1)`
 
 ## Condition & Join Pruning
 
 Find queries have special treatment of `undefined`, to facilitate constructing complex queries:
 
-* any condition that has `undefined` as a value will be dropped, and
-* any join that has no conditions actively using the joined table will also be dropped
+- any condition that has `undefined` as a value will be dropped, and
+- any join that has no conditions actively using the joined table will also be dropped
 
 This allows building queries from `filter`s like:
 
 ```ts
 // Either firstName or publisherId may be defined
 const { firstName, publisherId } = req.filter;
-const rows = await em.find(
-  Book,
-  { firstName, author: { publisher: publisherId } }
-)
+const rows = await em.find(Book, { firstName, author: { publisher: publisherId } });
 ```
 
 Where if the `req.filter` does not have `publisherId` set (because it was not submitted for this query), then:
 
-* There will not be `WHERE` clause for `author.publisher_id`
-* There will not be a join from `books` to `authors`
+- There will not be `WHERE` clause for `author.publisher_id`
+- There will not be a join from `books` to `authors`
 
 The win here is that, without the pruning feature, the filter construction code would have to manually join in the `authors` table only if `publisherId` was defined, to avoid making the query more expensive than it needs to be.
 
@@ -226,7 +211,7 @@ Joist's filters, specifically the `FilterWithAlias` type, can be used to increme
 ```ts
 const where: FilterWithAlias<Book> = {};
 if (authorCondition) {
-  where.author = authorCondition
+  where.author = authorCondition;
 }
 if (titleCondition) {
   where.title = titleCondition;
@@ -234,20 +219,38 @@ if (titleCondition) {
 return await em.find(Book, where);
 ```
 
-Often times it can be most ergonomic to use spreading to do this inline:
+Often it is more ergonomic to use spreading:
 
-```
-return await em.find(Book, {
-  author: { ...authorCondition, title },
+```ts
+await em.find(Book, {
+  author: {
+    ...(condition ? { achived: false } : {}),
+    status: authorStatus,
+  },
   title,
 });
 ```
 
-But, in general, the `FilterWithAlias` type allows you to create/pass around snippets of filters.
+Although, even then Joist's "condition pruning" feature (mentioned above), is usually the most ergonomic:
+
+```ts
+await em.find(Book, {
+  author: {
+    achived: condition ? false : undefined,
+    status: authorStatus,
+  },
+  title,
+});
+```
+
+Nonetheless, the type of `FilterWithAlias` allows you to incrementally create/pass arond snippets of filters for better reuse.
+
+## Polymorphic Relations
 
 ## Methods
 
 ### `#find`
+
 Query an entity and given where clause
 
 ```ts
@@ -290,7 +293,6 @@ const author = await em.findOneOrFail(Author, { email: "foo@bar.com" });
   - Entity if one found
   - throws `NotFoundError` if nothing found
   - throws `TooManyError` if more than 1 found
-
 
 ### `#findOrCreate`
 

@@ -3,10 +3,12 @@ title: No Ugly Queries
 sidebar_position: 5
 ---
 
-Historically, ORMs have a reputation for creating "ugly queries". These queries can:
+Historically, ORMs have a reputation for creating "ugly queries", particularly when the ORM's query API adds too much abstraction on top of raw SQL, and what "looks simple" in the query API is actually a big, gnarly SQL string that no programmer would ever write by hand.
 
-- Cause performance issues b/c of their arcane/weird output, or
-- Cause bugs b/c the ORM query generates SQL that doesn't actually do what the programmer meant (leaky abstractions), or
+These ugly queries can cause multiple issues:
+
+- Performance issues b/c of their arcane output can't be optimized by the database,
+- Logic issues (bugs) b/c the generated SQL that doesn't actually do what the programmer meant (leaky abstractions), and
 - Just look weird in general.
 
 And have caused a backlash of programmers who insist on writing every SQL query by hand. 

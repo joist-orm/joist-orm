@@ -2399,6 +2399,23 @@ describe("EntityManager.queries", () => {
       expect(comment.text).toEqual("t1");
     });
 
+    it("can use aliases for two polymorphic component with or", async () => {
+      await insertAuthor({ first_name: "a" });
+      await insertBook({ title: "t", author_id: 1 });
+      await insertComment({ text: "t1", parent_book_id: 1 });
+      await insertComment({ text: "t2", parent_author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const comments = await em.find(
+        Comment,
+        { parentAuthor: a, parentBook: b },
+        {
+          conditions: { or: [a.firstName.eq("a"), b.title.eq("t")] },
+        },
+      );
+      expect(comments.length).toEqual(2);
+    });
+
     it("can use aliases for polymorphic reference with in", async () => {
       await insertAuthor({ first_name: "a" });
       await insertBook({ title: "t", author_id: 1 });
@@ -2414,7 +2431,6 @@ describe("EntityManager.queries", () => {
           conditions: { or: [c.parent.in(["b:1", "p:1"])] },
         },
       );
-      const [comment] = comments;
       expect(comments.length).toEqual(2);
     });
 

@@ -26,7 +26,12 @@ export class JoinRows {
     if (existing) {
       existing.deleted = false;
     } else {
-      const joinRow: JoinRow = { id: undefined, [m2m.columnName]: e1, [m2m.otherColumnName]: e2 };
+      const joinRow: JoinRow = {
+        id: undefined,
+        [m2m.columnName]: e1,
+        [m2m.otherColumnName]: e2,
+        op: JoinRowOperation.Pending,
+      };
       this.rows.push(joinRow);
     }
     this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
@@ -52,7 +57,7 @@ export class JoinRows {
       }
     } else {
       // Use -1 to force the sortJoinRows to notice us as dirty ("delete: true but id is set")
-      this.rows.push({ id: -1, [columnName]: e1, [otherColumnName]: e2, deleted: true });
+      this.rows.push({ id: -1, [columnName]: e1, [otherColumnName]: e2, deleted: true, op: JoinRowOperation.Pending });
     }
     this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
     this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
@@ -80,7 +85,7 @@ export class JoinRows {
     if (existing) {
       // Treat any existing WIP change as source-of-truth, so leave it alone
     } else {
-      const joinRow: JoinRow = { id, [m2m.columnName]: e1, [m2m.otherColumnName]: e2 };
+      const joinRow: JoinRow = { id, [m2m.columnName]: e1, [m2m.otherColumnName]: e2, op: JoinRowOperation.Pending };
       this.rows.push(joinRow);
     }
   }
@@ -109,7 +114,14 @@ export class JoinRows {
       const p1 = em.load(meta1.cstr, keyToTaggedId(meta1, dbRow[column1])!);
       const p2 = em.load(meta2.cstr, keyToTaggedId(meta2, dbRow[column2])!);
       const [e1, e2] = await Promise.all([p1, p2]);
-      row = { id: dbRow.id, m2m: this.m2m, [column1]: e1, [column2]: e2, created_at: dbRow.created_at };
+      row = {
+        id: dbRow.id,
+        m2m: this.m2m,
+        [column1]: e1,
+        [column2]: e2,
+        created_at: dbRow.created_at,
+        op: JoinRowOperation.Completed,
+      };
       this.rows.push(row);
     } else {
       // If a placeholder row was created while a ManyToManyCollection was unloaded, and we find it during
@@ -126,12 +138,21 @@ export class JoinRows {
     if (newRows.length === 0 && deletedRows.length === 0) {
       return undefined;
     }
-    return { m2m: this.m2m, newRows, deletedRows };
+    return {
+      m2m: this.m2m,
+      newRows,
+      deletedRows,
+      resetAfterFlushed: () => {
+        for (const row of this.rows) {
+          if (row.op === JoinRowOperation.Pending || row.op === JoinRowOperation.Flushed)
+            row.op = JoinRowOperation.Completed;
+        }
+      },
+    };
   }
 
   get hasChanges() {
-    const todos = this.toTodo();
-    return !!todos;
+    return this.rows.some(({ op }) => op === JoinRowOperation.Pending || op === JoinRowOperation.Flushed);
   }
 }
 
@@ -149,7 +170,22 @@ export class JoinRows {
 export interface JoinRow {
   id: number | undefined;
   // The two columns; unfortunately the TS index signature requires unioning all possible types
-  [column: string]: number | Entity | undefined | boolean | Date;
+  [column: string]: number | Entity | undefined | boolean | Date | JoinRowOperation;
   created_at?: Date;
   deleted?: boolean;
+  /**
+   * Whether our relation has been processed or not.
+   *
+   * - `pending` means we've not flushed it to the Database
+   * - `flushed` means we've flushed but `em.flush` hasn't fully completed yet, likely due to ReactiveQueryField calcs
+   * - `completed` means we've been flushed and `em.flush` has completed
+   */
+  op: JoinRowOperation;
+}
+
+/** An enum to track our insert/delete state progression. */
+export enum JoinRowOperation {
+  Pending = "pending",
+  Flushed = "flushed",
+  Completed = "completed",
 }

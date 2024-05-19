@@ -580,6 +580,10 @@ describe("ManyToManyCollection", () => {
       expect(book.title).toBe("Tags Changed");
       // and another on the tags to change the tag name
       expect(t1.name).toBe("Books Changed");
+      // and we expect the state of the join rows to be clear after the flush but keep the relation loaded
+      const joinRows = (em as any).__api.joinRows({ joinTableName: "books_to_tags" });
+      expect(joinRows.hasChanges).toBe(false);
+      expect(joinRows.rows.length).toEqual(1);
     });
 
     it("detects adds m2m - using insert and loads", async () => {
@@ -597,6 +601,10 @@ describe("ManyToManyCollection", () => {
       expect(book.title).toBe("Tags Changed");
       // and another on the tags to change the tag name
       expect(tag.name).toBe("Books Changed");
+      // and we expect the state of the join rows to be clear after the flush but keep the relation loaded
+      const joinRows = (em as any).__api.joinRows({ joinTableName: "books_to_tags" });
+      expect(joinRows.hasChanges).toBe(false);
+      expect(joinRows.rows.length).toEqual(1);
     });
 
     it("detects remove m2m - using insert and loads", async () => {
@@ -617,6 +625,27 @@ describe("ManyToManyCollection", () => {
       expect(book.title).toBe("Tags Changed");
       // and another on the tags to change the tag name
       expect(tag.name).toBe("Books Changed");
+      // and we expect the state of the join rows to be clear after the flush but keep the relation loaded
+      const joinRows = (em as any).__api.joinRows({ joinTableName: "books_to_tags" });
+      expect(joinRows.hasChanges).toBe(false);
+      expect(joinRows.rows.length).toEqual(2);
+    });
+
+    it("detects adds m2m - until afterCommit", async () => {
+      const em = newEntityManager();
+      const book = newBook(em, { title: "To be changed by hook" });
+      const t1 = newTag(em, { name: "t1" });
+      await em.flush();
+
+      // This test assumes there is flag to be used on the test that should start as false
+      expect(book.afterCommitCheckTagsChanged).toBe(undefined);
+
+      // When we set the m2m relation
+      book.tags.add(t1);
+      await em.flush();
+
+      // This test assumes there is a hook that fires afterCommit that set this flag to true
+      expect(book.afterCommitCheckTagsChanged).toBe(true);
     });
   });
 });

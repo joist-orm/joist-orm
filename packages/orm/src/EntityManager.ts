@@ -1311,6 +1311,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
           getInstanceData(e).resetAfterFlushed();
         }
+        // Update the joinRows refs to reflect the new state
+        for (const joinRow of Object.values(joinRowTodos)) {
+          joinRow.resetAfterFlushed();
+        }
 
         // Reset the find caches b/c data will have changed in the db
         this.#dataloaders = {};

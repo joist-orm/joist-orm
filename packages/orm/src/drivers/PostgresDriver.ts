@@ -10,6 +10,7 @@ import {
   maybeResolveReferenceToId,
   ParsedFindQuery,
 } from "../index";
+import { JoinRowOperation } from "../JoinRows";
 import { kq, kqDot } from "../keywords";
 import { JoinRowTodo, Todo } from "../Todo";
 import { batched, cleanSql, partition, zeroTo } from "../utils";
@@ -153,6 +154,7 @@ export class PostgresDriver implements Driver {
         const { rows } = await knex.raw(sql, bindings);
         for (let i = 0; i < rows.length; i++) {
           newRows[i].id = rows[i].id;
+          newRows[i].op = JoinRowOperation.Flushed;
         }
       }
       if (deletedRows.length > 0) {
@@ -184,6 +186,11 @@ export class PostgresDriver implements Driver {
             await knex(joinTableName).del().whereIn([m2m.columnName, m2m.otherColumnName], data);
           }
         }
+
+        deletedRows.forEach((row) => {
+          row.id = undefined;
+          row.op = JoinRowOperation.Flushed;
+        });
       }
     }
   }

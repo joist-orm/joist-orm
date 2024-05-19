@@ -55,6 +55,7 @@ export interface JoinRowTodo {
   m2m: ManyToManyCollection<any, any>;
   newRows: JoinRow[];
   deletedRows: JoinRow[];
+  resetAfterFlushed: () => void;
 }
 
 /** Given a list of `JoinRow`s for a given table, combine them into a single logical `JoinRowTodo`. */

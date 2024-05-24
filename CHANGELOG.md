@@ -1,3 +1,10 @@
+## [1.168.2](https://github.com/joist-orm/joist-orm/compare/v1.168.1...v1.168.2) (2024-05-24)
+
+
+### Bug Fixes
+
+* EntityManager.hydrate should clear dirty fields. ([#1099](https://github.com/joist-orm/joist-orm/issues/1099)) ([87beb7a](https://github.com/joist-orm/joist-orm/commit/87beb7a252f829d6ffa9ac7747f532bab269a330))
+
 ## [1.168.1](https://github.com/joist-orm/joist-orm/compare/v1.168.0...v1.168.1) (2024-05-24)
 
 

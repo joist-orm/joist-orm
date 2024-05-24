@@ -13,9 +13,10 @@ import { indexBy } from "../utils";
 export function loadDataLoader<T extends Entity>(
   em: EntityManager,
   meta: EntityMetadata,
+  overwriteExisting: boolean = false,
 ): DataLoader<{ entity: string; hint: LoadHint<T> | undefined }, T | undefined> {
   // Batch different populate hints together and defer to the hint tree to do the right thing
-  return em.getLoader("load", meta.type, async (loads) => {
+  return em.getLoader(`load-${overwriteExisting}`, meta.type, async (loads) => {
     const keys = loads.map((l) => keyToNumber(meta, l.entity));
     const alias = abbreviation(meta.tableName);
     const query = {
@@ -35,8 +36,8 @@ export function loadDataLoader<T extends Entity>(
     // Skip maybeAddOrderBy?
     // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
     const rows = await em.driver.executeFind(em, query, {});
-    // Pass overwriteExisting (which is the default anyway) because it might be EntityManager.refresh calling us.
-    const entities = em.hydrate(meta.cstr, rows, { overwriteExisting: true });
+    // Pass overwriteExisting (which defaults to false) because it might be EntityManager.refresh calling us.
+    const entities = em.hydrate(meta.cstr, rows, { overwriteExisting });
     preloadHydrator && preloadHydrator(rows, entities);
 
     // Return the results back in the same order as the keys

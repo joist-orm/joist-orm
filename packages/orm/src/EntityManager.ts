@@ -366,7 +366,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     const query = parseFindQuery(getMetadata(type), where, rest);
     const rows = await this.driver.executeFind(this, query, { limit, offset });
     // check row limit
-    const result = this.hydrate(type, rows, { overwriteExisting: false });
+    const result = this.hydrate(type, rows);
     if (populate) {
       await this.populate(result, populate);
     }
@@ -955,7 +955,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       query.limit(this.entityLimit);
     }
     const rows = await query;
-    const entities = this.hydrate(type, rows, { overwriteExisting: false });
+    const entities = this.hydrate(type, rows);
     if (populate) {
       await this.populate(entities, populate);
     }
@@ -974,7 +974,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     rows: unknown[],
     populate?: any,
   ): Promise<T[]> {
-    const entities = this.hydrate(type, rows, { overwriteExisting: false });
+    const entities = this.hydrate(type, rows);
     if (populate) {
       await this.populate(entities, populate);
     }
@@ -1385,7 +1385,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
             const hint = getRelationEntries(entity)
               .filter(([_, r]) => deepLoad || r.isLoaded)
               .map(([k]) => k);
-            return loadDataLoader(this, getMetadata(entity)).load({ entity: entity.idTagged, hint });
+            return loadDataLoader(this, getMetadata(entity), true).load({ entity: entity.idTagged, hint });
           }),
       );
 
@@ -1480,14 +1480,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         if (this.#entities.length >= this.entityLimit) {
           throw new Error(`More than ${this.entityLimit} entities have been instantiated`);
         }
-      } else if (options?.overwriteExisting !== false) {
-        const meta = getMetadata(entity);
-        // Usually if the entity already exists, we don't write over it, but in this case
-        // we assume that `EntityManager.refresh` is telling us to explicitly load the
-        // latest data.
+      } else if (options?.overwriteExisting === true) {
+        // Usually if the entity already exists, we don't write over it, but in this case we assume that
+        // `EntityManager.refresh` is telling us to explicitly load the latest data.
+        // First swap out the old row with the new row
+        getInstanceData(entity).row = row;
+        // And then only refresh the data keys that have already been serde-d from rows
+        // (this keeps us from deserializing data out of rows that we don't need).
         const { data } = getInstanceData(entity);
-        for (const f of Object.values(meta.allFields)) {
-          f.serde?.setOnEntity(data, row);
+        for (const fieldName of Object.keys(data)) {
+          const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
+          serde.setOnEntity(data, row);
         }
       }
       entities[i++] = entity;

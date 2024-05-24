@@ -703,7 +703,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     await knex.update({ first_name: "a1b" }).into("authors");
-    const [a1b] = em.hydrate(Author, await knex.select("*").from("authors"));
+    const [a1b] = em.hydrate(Author, await knex.select("*").from("authors"), { overwriteExisting: true });
     expect(a1b).toStrictEqual(a1);
     expect(a1b.firstName).toEqual("a1b");
   });

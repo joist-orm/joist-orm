@@ -1,3 +1,10 @@
+## [1.168.1](https://github.com/joist-orm/joist-orm/compare/v1.168.0...v1.168.1) (2024-05-24)
+
+
+### Bug Fixes
+
+* Fix lens finds going through overwriteExisting path. ([#1098](https://github.com/joist-orm/joist-orm/issues/1098)) ([d4f6803](https://github.com/joist-orm/joist-orm/commit/d4f6803b03e88997918de4f5c888ed1ee5e5cc77))
+
 # [1.168.0](https://github.com/joist-orm/joist-orm/compare/v1.167.0...v1.168.0) (2024-05-19)
 
 

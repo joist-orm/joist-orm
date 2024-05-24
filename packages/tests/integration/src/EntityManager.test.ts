@@ -702,10 +702,12 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
-    await knex.update({ first_name: "a1b" }).into("authors");
+    a1.firstName = "a2";
+    expect(a1.changes.firstName.hasChanged).toBe(true);
+    await knex.update({ first_name: "a3" }).into("authors");
     const [a1b] = em.hydrate(Author, await knex.select("*").from("authors"), { overwriteExisting: true });
-    expect(a1b).toStrictEqual(a1);
-    expect(a1b.firstName).toEqual("a1b");
+    expect(a1b.firstName).toEqual("a3");
+    expect(a1.changes.firstName.hasChanged).toBe(false);
   });
 
   it("ignores sets of the same value", async () => {

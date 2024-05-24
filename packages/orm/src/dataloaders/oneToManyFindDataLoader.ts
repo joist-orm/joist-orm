@@ -66,8 +66,8 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
     // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
 
     const rows = await em.driver.executeFind(em, query, {});
+    em.hydrate(collection.otherMeta.cstr, rows);
 
-    const entities = em.hydrate(collection.otherMeta.cstr, rows, { overwriteExisting: false });
     // Decode `id=b:1,author_id=a:1`
     return keys.map((k) => {
       const [otherKey, parentKey] = k.split(",");

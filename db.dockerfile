@@ -35,6 +35,8 @@ RUN echo "#!/bin/bash" > /reset.sh && \
   echo "  CREATE DATABASE untagged_ids OWNER ${APP_USERNAME};" >> /reset.sh && \
   echo "  DROP DATABASE IF EXISTS temporal WITH (FORCE);" >> /reset.sh && \
   echo "  CREATE DATABASE temporal OWNER ${APP_USERNAME};" >> /reset.sh && \
+  echo "  DROP DATABASE IF EXISTS immediate_foreign_keys WITH (FORCE);" >> /reset.sh && \
+  echo "  CREATE DATABASE immediate_foreign_keys OWNER ${APP_USERNAME};" >> /reset.sh && \
   echo "EOSQL" >> /reset.sh && \
   chmod uo+x /reset.sh
 

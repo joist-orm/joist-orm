@@ -69,19 +69,9 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
 
   const contextType = config.contextType ? imp(`t:${config.contextType}`) : "{}";
 
-  // We want to hard-stop the app from booting if there are any invalid deferred FKs
-  const invalidEntities = entities.filter((e) => e.invalidDeferredFK);
-
   const metadataFile: CodegenFile = {
     name: "./codegen/metadata.ts",
     contents: code`
-    ${
-      invalidEntities.length > 0
-        ? `throw new Error('Misconfigured Foreign Keys found in the following entities: ${invalidEntities
-            .map((e) => e.name)
-            .join(", ")}');`
-        : ``
-    }
       export class ${def("EntityManager")} extends ${JoistEntityManager}<${contextType}, Entity> {}
 
       export interface ${def("Entity")} extends ${Entity} {
@@ -113,7 +103,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
 
   const indexFile: CodegenFile = {
     name: "./index.ts",
-    contents: code`export * from "./entities${config.esm ? '.js' : ''}"`,
+    contents: code`export * from "./entities${config.esm ? ".js" : ""}"`,
     overwrite: false,
   };
 

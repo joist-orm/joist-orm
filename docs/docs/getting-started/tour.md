@@ -33,7 +33,7 @@ export class AuthorCodegen {
   // ...all the boilerplate fields & m2o/o2m/m2m relations generated for you...
   readonly books: Collection<Author, Book> = hasOne(...);
   get firstName(): string { ... }
-  set firstName(): string { ... }
+  set firstName(value: string): string { ... }
 }
 ```
 

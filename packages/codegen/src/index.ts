@@ -1,14 +1,23 @@
-import { ConnectionConfig, groupBy, newPgConnectionConfig } from "joist-utils";
+import { promises as fs } from "fs";
+import { ConnectionConfig, newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
 import pgStructure from "pg-structure";
 import { saveFiles } from "ts-poet";
-import { DbMetadata, EntityDbMetadata, failIfOverlappingFieldNames, makeEntity } from "./EntityDbMetadata";
+import {
+  DbMetadata,
+  EntityDbMetadata,
+  ManyToOneField,
+  PolymorphicFieldComponent,
+  failIfOverlappingFieldNames,
+  makeEntity,
+} from "./EntityDbMetadata";
 import { assignTags } from "./assignTags";
 import { maybeRunTransforms } from "./codemods";
 import { Config, loadConfig, stripStiPlaceholders, warnInvalidConfigEntries, writeConfig } from "./config";
 import { generateFiles } from "./generate";
 import { createFlushFunction } from "./generateFlushFunction";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
+import { sortByNonDeferredForeignKeys } from "./sortForeignKeys";
 import { fail, isEntityTable, isJoinTable, mapSimpleDbTypeToTypescriptType } from "./utils";
 
 export {
@@ -39,10 +48,61 @@ async function main() {
   console.log(
     `Found ${totalTables} total tables, ${entities.length} entity tables, ${Object.entries(enums).length} enum tables`,
   );
+  console.log("");
+
+  let hasError = false;
+
+  // Hopefully all FKs are deferred, but if not...
+  const hasAnyNonDeferredFks = entities.some((e) => e.nonDeferredFks.length > 0);
+  if (!hasAnyNonDeferredFks) {
+    // Great, nothing to do
+    for (const entity of entities) entity.nonDeferredFkOrder = 0;
+  } else {
+    // Always sort the non-deferred FKs to establish insert/flush order
+    const { notNullCycles } = sortByNonDeferredForeignKeys(entities);
+
+    // Log the mere existence of the non-deferred FKs
+    const { nonDeferredForeignKeys: setting = "warn" } = config;
+    const nonDeferredFks = entities.flatMap((e) => e.nonDeferredFks.map((m2o) => ({ entity: e, m2o })));
+    if (setting === "error" || setting === "warn") {
+      const flag = setting === "error" ? "ERROR" : "WARNING";
+      console.log(`${flag}: Found ${nonDeferredFks.length} foreign keys that are not DEFERRABLE/INITIALLY DEFERRED`);
+      for (const { entity, m2o } of nonDeferredFks) console.log(`${entity.tableName}.${m2o.columnName}`);
+      console.log("");
+
+      console.log("Please either:");
+      console.log(" - Alter your migration to create the FKs as deferred (ideal)");
+      console.log(" - Execute the generated alter-foreign-keys.sql file (one-time fix)");
+      console.log(" - Set 'nonDeferredFks: ignore' in joist-config.json");
+      console.log("");
+
+      console.log("See https://joist-orm.io/docs/getting-started/schema-assumptions#deferred-constraints");
+      console.log("");
+
+      await writeAlterTables(nonDeferredFks);
+
+      if (setting === "error") hasError ??= true;
+    } else if (setting === "ignore") {
+      // We trust the user to know what they're doing
+    }
+
+    // Always treat these as errors?
+    if (notNullCycles.length > 0) {
+      console.log(`ERROR: Found a schema cycle of not-null foreign keys:`);
+      notNullCycles.forEach((cycle) => console.log(cycle));
+      console.log("");
+      console.log("These cycles can cause fatal em.flush & flush_test_database errors.");
+      console.log("");
+      console.log("Please make one of the FKs involved in the cycle nullable.");
+      console.log("");
+      hasError ??= true;
+    }
+  }
 
   await maybeGenerateFlushFunctions(config, client, pgConfig, dbMetadata);
   await client.end();
 
+  // Apply any codemods to the user's codebase, if we have them
   await maybeRunTransforms(config);
 
   // Assign any new tags and write them back to the config file
@@ -51,7 +111,6 @@ async function main() {
   // Do some warnings
   for (const entity of entities) failIfOverlappingFieldNames(entity);
   warnInvalidConfigEntries(config, dbMetadata);
-  const loggedFatal = errorOnInvalidDeferredFKs(entities);
 
   // Finally actually generate the files (even if we found a fatal error)
   await generateAndSaveFiles(config, dbMetadata);
@@ -59,8 +118,8 @@ async function main() {
   stripStiPlaceholders(config, entities);
   await writeConfig(config);
 
-  if (loggedFatal) {
-    throw new Error("A warning was generated during codegen");
+  if (hasError) {
+    throw new Error("A fatal error was found during codegen");
   }
 }
 
@@ -109,10 +168,11 @@ async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMet
     .map((table) => new EntityDbMetadata(config, table, enums));
   const totalTables = db.tables.length;
   const joinTables = db.tables.filter((t) => isJoinTable(config, t)).map((t) => t.name);
-  setClassTableInheritance(entities);
+  const entitiesByName = Object.fromEntries(entities.map((e) => [e.name, e]));
+  setClassTableInheritance(entities, entitiesByName);
   expandSingleTableInheritance(config, entities);
   rewriteSingleTableForeignKeys(config, entities);
-  return { entities, enums, pgEnums, totalTables, joinTables };
+  return { entities, entitiesByName, enums, pgEnums, totalTables, joinTables };
 }
 
 /**
@@ -121,13 +181,15 @@ async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMet
  * (We automatically set `inheritanceType` for STI tables when we see
  * their config setup, see `expandSingleTableInheritance`.)
  */
-function setClassTableInheritance(entities: EntityDbMetadata[]): void {
-  const metasByName = groupBy(entities, (e) => e.name);
+function setClassTableInheritance(
+  entities: EntityDbMetadata[],
+  entitiesByName: Record<string, EntityDbMetadata>,
+): void {
   const ctiBaseNames: string[] = [];
   for (const entity of entities) {
     if (entity.baseClassName) {
       ctiBaseNames.push(entity.baseClassName);
-      metasByName[entity.baseClassName]?.[0].subTypes.push(entity);
+      entitiesByName[entity.baseClassName].subTypes.push(entity);
     }
   }
   for (const entity of entities) {
@@ -190,7 +252,13 @@ function expandSingleTableInheritance(config: Config, entities: EntityDbMetadata
             fail(`No enum row found for ${entity.name}.${fieldName}.${enumCode}`)
           ).id,
           abstract: false,
-          invalidDeferredFK: false,
+          nonDeferredFkOrder: entity.nonDeferredFkOrder,
+          get nonDeferredFks(): Array<ManyToOneField | PolymorphicFieldComponent> {
+            return [
+              ...this.manyToOnes.filter((r) => !r.isDeferredAndDeferrable),
+              ...this.polymorphics.flatMap((p) => p.components).filter((c) => !c.isDeferredAndDeferrable),
+            ];
+          },
         };
 
         // Now strip all the subclass fields from the base class
@@ -307,21 +375,6 @@ function maybeSetDatabaseUrl(config: Config): void {
   }
 }
 
-function errorOnInvalidDeferredFKs(entities: EntityDbMetadata[]): boolean {
-  let hasError = false;
-  for (const entity of entities) {
-    for (const m2o of entity.manyToOnes) {
-      if (!m2o.isDeferredAndDeferrable) {
-        console.error(
-          `ERROR: Foreign key on ${m2o.columnName} is not DEFERRABLE/INITIALLY DEFERRED, see https://joist-orm.io/docs/getting-started/schema-assumptions#deferred-constraints`,
-        );
-        hasError ??= true;
-      }
-    }
-  }
-  return hasError;
-}
-
 if (require.main === module) {
   if (Object.fromEntries === undefined) {
     throw new Error("Joist requires Node v12.4.0+");
@@ -330,4 +383,13 @@ if (require.main === module) {
     console.error(err);
     process.exit(1);
   });
+}
+
+export async function writeAlterTables(
+  nonDeferredFks: Array<{ entity: EntityDbMetadata; m2o: ManyToOneField | PolymorphicFieldComponent }>,
+): Promise<void> {
+  const queries = nonDeferredFks.map(({ entity, m2o }) => {
+    return `ALTER TABLE ${entity.tableName} ALTER CONSTRAINT ${m2o.constraintName} DEFERRABLE INITIALLY DEFERRED;`;
+  });
+  await fs.writeFile("./alter-foreign-keys.sql", queries.join("\n"));
 }

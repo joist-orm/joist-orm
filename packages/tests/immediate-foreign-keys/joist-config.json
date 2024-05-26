@@ -1,0 +1,20 @@
+{
+  "codegenPlugins": [],
+  "contextType": "Context@src/context",
+  "entities": {
+    "T1Author": { "tag": "ta" },
+    "T1Book": { "tag": "tb" },
+    "T2Author": { "tag": "t2Author" },
+    "T2Book": { "tag": "t2Book" },
+    "T3Author": { "tag": "t3Author" },
+    "T3Book": { "tag": "t3Book" },
+    "T4Author": { "tag": "t4Author" },
+    "T4Book": { "tag": "t4Book" },
+    "T5Author": { "tag": "t5Author" },
+    "T5Book": { "tag": "t5Book" },
+    "T5BookReview": { "tag": "tbr" }
+  },
+  "entitiesDirectory": "./src/entities",
+  "idType": "number",
+  "version": "1.169.0"
+}

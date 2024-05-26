@@ -1,9 +1,12 @@
 import type { Temporal } from "temporal-polyfill";
-import { Field, PolymorphicField, SerdeField, getBaseMeta } from "./EntityMetadata";
+import { Field, PolymorphicField, SerdeField, getBaseMeta, getMetadata } from "./EntityMetadata";
+import { InsertFixup } from "./drivers/EntityWriter";
 import {
+  Entity,
   EntityMetadata,
   getConstructorFromTaggedId,
   isDefined,
+  isEntity,
   keyToNumber,
   keyToTaggedId,
   maybeResolveReferenceToId,
@@ -44,7 +47,7 @@ export interface Column {
   columnName: string;
   dbType: string;
   /** From the given `__orm.data` hash, return this columns value, i.e. for putting in `UPDATE` params. */
-  dbValue(data: any): any;
+  dbValue(data: any, entity: Entity, tableName: string, fixups: InsertFixup[] | undefined): any;
   /** For a given domain value, return the database value, i.e. for putting `em.find` params into a db WHERE clause. */
   mapToDb(value: any): any;
   /** For converting `json_agg`-preloaded JSON values into their domain type. */
@@ -309,8 +312,25 @@ export class KeySerde implements FieldSerde {
     data[this.fieldName] = keyToTaggedId(this.meta, row[this.columnName]);
   }
 
-  dbValue(data: any) {
-    return keyToNumber(this.meta, maybeResolveReferenceToId(data[this.fieldName]));
+  dbValue(data: any, entity: Entity, tableName: string, fixups: InsertFixup[] | undefined) {
+    const value = data[this.fieldName];
+    if (
+      fixups &&
+      isEntity(value) &&
+      value.isNewEntity &&
+      getMetadata(value).nonDeferredFkOrder &&
+      getMetadata(entity).nonDeferredFkOrder &&
+      getMetadata(value).nonDeferredFkOrder! >= getMetadata(entity).nonDeferredFkOrder!
+    ) {
+      fixups.push({
+        entity,
+        tableName,
+        column: this,
+        value: keyToNumber(this.meta, maybeResolveReferenceToId(value)),
+      });
+      return null;
+    }
+    return keyToNumber(this.meta, maybeResolveReferenceToId(value));
   }
 
   mapToDb(value: any) {

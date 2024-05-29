@@ -81,7 +81,7 @@ async function main() {
 
       await writeAlterTables(nonDeferredFks);
 
-      if (setting === "error") hasError ??= true;
+      if (setting === "error") hasError = true;
     } else if (setting === "ignore") {
       // We trust the user to know what they're doing
     }

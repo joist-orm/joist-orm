@@ -48,7 +48,7 @@ export function sortByNonDeferredForeignKeys(entities: EntityDbMetadata[]): {
   // Then add nullable deps next, as they can be fixed-up
 
   const nullableCycles: string[] = [];
-  const notNullCylces: string[] = [];
+  const notNullCycles: string[] = [];
 
   // If we see `books.author_id`, mark `author.inDegree++`
   entities.forEach((entity) => {
@@ -56,7 +56,7 @@ export function sortByNonDeferredForeignKeys(entities: EntityDbMetadata[]): {
       .filter((m2o) => m2o.notNull)
       .forEach((m2o) => {
         const added = addDependency(graph, entity, m2o);
-        if (Array.isArray(added)) notNullCylces.push(added.join(" -> "));
+        if (Array.isArray(added)) notNullCycles.push(added.join(" -> "));
       });
   });
 
@@ -93,7 +93,7 @@ export function sortByNonDeferredForeignKeys(entities: EntityDbMetadata[]): {
   // Use a marker value for "cyclic"
   entities.filter((e) => e.nonDeferredFkOrder === -1).forEach((e) => (e.nonDeferredFkOrder = 100_000));
 
-  return { nullableCycles, notNullCycles: notNullCylces };
+  return { nullableCycles, notNullCycles: notNullCycles };
 }
 
 type Node = {

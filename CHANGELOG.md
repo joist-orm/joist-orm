@@ -1,3 +1,10 @@
+# [1.169.0](https://github.com/joist-orm/joist-orm/compare/v1.168.2...v1.169.0) (2024-05-30)
+
+
+### Features
+
+* Support schemas with non-deferred FKs. ([#1100](https://github.com/joist-orm/joist-orm/issues/1100)) ([3577c18](https://github.com/joist-orm/joist-orm/commit/3577c187d0b2f6ee3a5d4ad7e31849639c7477ca))
+
 ## [1.168.2](https://github.com/joist-orm/joist-orm/compare/v1.168.1...v1.168.2) (2024-05-24)
 
 

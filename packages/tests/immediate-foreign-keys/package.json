@@ -1,0 +1,38 @@
+{
+  "name": "joist-tests-immediate-foreign-keys",
+  "version": "1.0.0",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joist-orm/joist-orm.git",
+    "directory": "packages/tests/immediate-foreign-keys"
+  },
+  "scripts": {
+    "migrate": "env-cmd tsx ../../migration-utils",
+    "test": "jest --runInBand --logHeapUsage",
+    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "codegen": "env-cmd tsx ../../codegen"
+  },
+  "dependencies": {
+    "joist-orm": "workspace:*"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.4.13",
+    "@swc/jest": "^0.2.36",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.7",
+    "env-cmd": "^10.1.0",
+    "jest": "30.0.0-alpha.3",
+    "jest-junit": "^16.0.0",
+    "joist-codegen": "workspace:*",
+    "joist-migration-utils": "workspace:*",
+    "joist-test-utils": "workspace:*",
+    "prettier": "^3.2.5",
+    "prettier-plugin-organize-imports": "^3.2.4",
+    "superstruct": "0.15.5",
+    "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.7.2",
+    "typescript": "^5.4.5"
+  }
+}

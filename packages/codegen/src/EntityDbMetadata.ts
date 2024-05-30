@@ -1,6 +1,6 @@
 import { camelCase, pascalCase, snakeCase } from "change-case";
 import { groupBy } from "joist-utils";
-import { Column, EnumType, Index, JSONData, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
+import { Action, Column, EnumType, Index, JSONData, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
 import { plural, singular } from "pluralize";
 import { Code, Import, code, imp } from "ts-poet";
 import {
@@ -34,6 +34,8 @@ import {
 /** All the entities + enums in our database. */
 export interface DbMetadata {
   entities: EntityDbMetadata[];
+  /** Type name i.e. `Author` to metadata. */
+  entitiesByName: Record<string, EntityDbMetadata>;
   enums: EnumMetadata;
   pgEnums: PgEnumMetadata;
   joinTables: string[];
@@ -154,8 +156,10 @@ export type ManyToOneField = Field & {
   otherEntity: Entity;
   notNull: boolean;
   isDeferredAndDeferrable: boolean;
+  constraintName: string;
   derived: "async" | false;
   hasConfigDefault: boolean;
+  onDelete: Action;
 };
 
 /** I.e. a `Author.books` collection. */
@@ -202,6 +206,9 @@ export type PolymorphicFieldComponent = {
   columnName: string; // eg `parent_book_id` or `parent_book_review_id`
   otherFieldName: string; // eg `comment` or `comments`
   otherEntity: Entity;
+  isDeferredAndDeferrable: boolean;
+  constraintName: string;
+  notNull: false; // Added to structurally match ManyToOneField
 };
 
 export type FieldNameOverrides = {
@@ -236,7 +243,7 @@ export class EntityDbMetadata {
   /** This will only be set on the sub metas. */
   stiDiscriminatorValue?: number;
   abstract: boolean;
-  invalidDeferredFK: boolean;
+  nonDeferredFkOrder: number = -1;
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
@@ -282,8 +289,6 @@ export class EntityDbMetadata {
       .filter((r) => !isBaseClassForeignKey(r))
       .map((r) => newManyToOneField(config, this.entity, r))
       .filter((f) => !f.ignore);
-
-    this.invalidDeferredFK = this.manyToOnes.some((r) => !r.isDeferredAndDeferrable);
 
     // We split these into regular/large...
     const allOneToManys = table.o2mRelations
@@ -336,6 +341,13 @@ export class EntityDbMetadata {
 
   get name(): string {
     return this.entity.name;
+  }
+
+  get nonDeferredFks(): Array<ManyToOneField | PolymorphicFieldComponent> {
+    return [
+      ...this.manyToOnes.filter((r) => !r.isDeferredAndDeferrable),
+      ...this.polymorphics.flatMap((p) => p.components).filter((c) => !c.isDeferredAndDeferrable),
+    ];
   }
 }
 
@@ -558,7 +570,9 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
     derived,
     dbType,
     isDeferredAndDeferrable,
+    constraintName: r.foreignKey.name,
     hasConfigDefault: hasConfigDefault(config, entity, fieldName),
+    onDelete: r.foreignKey.onDelete,
   };
 }
 
@@ -637,7 +651,15 @@ function newPolymorphicFieldComponent(config: Config, entity: Entity, r: M2ORela
   const otherFieldName = isOneToOne
     ? oneToOneName(config, otherEntity, entity, r)
     : collectionName(config, otherEntity, entity, r).fieldName;
-  return { columnName, otherEntity, otherFieldName };
+  const isDeferredAndDeferrable = r.foreignKey.isDeferred && r.foreignKey.isDeferrable;
+  return {
+    columnName,
+    otherEntity,
+    otherFieldName,
+    isDeferredAndDeferrable,
+    constraintName: r.foreignKey.name,
+    notNull: false,
+  };
 }
 
 function isFieldNameOverrides(maybeOverride: JSONData | undefined): maybeOverride is FieldNameOverrides {

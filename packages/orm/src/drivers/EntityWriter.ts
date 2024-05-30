@@ -11,14 +11,30 @@ import {
 import { Todo } from "../Todo";
 import { getField, isChangeableField } from "../fields";
 import { keyToNumber } from "../keys";
-import { TimestampSerde, hasSerde } from "../serde";
+import { Column, TimestampSerde, hasSerde } from "../serde";
+import { groupBy } from "../utils";
 
-type Column = { columnName: string; dbType: string };
-export type InsertOp = { tableName: string; columns: Column[]; rows: any[][] };
-export type UpdateOp = { tableName: string; columns: Column[]; rows: any[][]; updatedAt: string | undefined };
+/** A simplified view of columns, with only the keys necessary to create SQL statements. */
+type OpColumn = { columnName: string; dbType: string };
+export type InsertOp = { tableName: string; columns: OpColumn[]; rows: any[][] };
+export type UpdateOp = { tableName: string; columns: OpColumn[]; rows: any[][]; updatedAt: string | undefined };
 export type DeleteOp = { tableName: string; ids: any[] };
 
 type Ops = { inserts: InsertOp[]; updates: UpdateOp[]; deletes: DeleteOp[] };
+
+/**
+ * In schemas with entity FK cycles, we may insert a dummy/null value, and later fix it up
+ * before the transaction commits.
+ *
+ * I.e. `INSERT author.favorite_book_id` as `NULL` and then later do an `UPDATE author
+ * SET favorite_book_id = 1` after the book has been inserted/we have the id.
+ */
+export type InsertFixup = {
+  entity: Entity;
+  tableName: string;
+  column: OpColumn;
+  value: any;
+};
 
 /**
  * Builds AST-ish `Ops` for the inserts/updates/deletes in `todos`.
@@ -34,15 +50,21 @@ type Ops = { inserts: InsertOp[]; updates: UpdateOp[]; deletes: DeleteOp[] };
  */
 export function generateOps(todos: Record<string, Todo>): Ops {
   const ops: Ops = { inserts: [], updates: [], deletes: [] };
-  for (const todo of Object.values(todos)) {
-    addInserts(ops, todo);
+  const fixups: InsertFixup[] = [];
+  // Would be nice to conditionally sort
+  const sorted = Object.values(todos).sort(
+    (a, b) => (a.metadata.nonDeferredFkOrder ?? 0) - (b.metadata.nonDeferredFkOrder ?? 0),
+  );
+  for (const todo of sorted) {
+    addInserts(ops, todo, fixups);
     addUpdates(ops, todo);
     addDeletes(ops, todo);
   }
+  if (fixups.length > 0) translateFixupsIntoUpdates(ops, fixups);
   return ops;
 }
 
-function addInserts(ops: Ops, todo: Todo): void {
+function addInserts(ops: Ops, todo: Todo, fixups: InsertFixup[]): void {
   if (todo.inserts.length > 0) {
     // If we have subtypes, this todo.metadata will always be the base type
     const meta = todo.metadata;
@@ -50,28 +72,29 @@ function addInserts(ops: Ops, todo: Todo): void {
       if (meta.inheritanceType === "cti") {
         // Insert into each of the CTI tables
         for (const [meta, group] of groupEntitiesByTable(todo.inserts)) {
-          ops.inserts.push(newInsertOp(meta, group));
+          ops.inserts.push(newInsertOp(meta, group, fixups));
         }
       } else if (meta.inheritanceType === "sti") {
-        ops.inserts.push(newStiInsertOp(meta, todo.inserts));
+        ops.inserts.push(newStiInsertOp(meta, todo.inserts, fixups));
       } else {
         throw new Error(`Found ${meta.tableName} subTypes without a known inheritanceType ${meta.inheritanceType}`);
       }
     } else {
-      ops.inserts.push(newInsertOp(meta, todo.inserts));
+      ops.inserts.push(newInsertOp(meta, todo.inserts, fixups));
     }
   }
 }
 
-function newInsertOp(meta: EntityMetadata, entities: Entity[]): InsertOp {
+function newInsertOp(meta: EntityMetadata, entities: Entity[], fixups: InsertFixup[]): InsertOp {
+  // Purposefully use `meta.fields` instead of `allFields` b/c each CTI table has its own `InsertOp`
   const columns = Object.values(meta.fields)
     .filter(hasSerde)
     .flatMap((f) => f.serde.columns);
-  const rows = collectBindings(entities, columns);
+  const rows = collectBindings(entities, meta.tableName, columns, fixups);
   return { tableName: meta.tableName, columns, rows };
 }
 
-function newStiInsertOp(root: EntityMetadata, entities: Entity[]): InsertOp {
+function newStiInsertOp(root: EntityMetadata, entities: Entity[], fixups: InsertFixup[]): InsertOp {
   // Get the unique set of subtypes
   const subTypes = new Set<EntityMetadata>();
   for (const e of entities) subTypes.add(getMetadata(e));
@@ -87,7 +110,7 @@ function newStiInsertOp(root: EntityMetadata, entities: Entity[]): InsertOp {
   }
   const columns = fields.filter(hasSerde).flatMap((f) => f.serde.columns);
   // And then collect the same bindings across each STI
-  const rows = collectBindings(entities, columns);
+  const rows = collectBindings(entities, root.tableName, columns, fixups);
   return { tableName: root.tableName, columns, rows };
 }
 
@@ -144,7 +167,7 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     }
   }
 
-  const columns: Array<Column & BindingColumn> = (
+  const columns: Array<BindingColumn> = (
     meta.inheritanceType === "sti"
       ? // Hack this one handling of STI into here...
         getBaseSelfAndSubMetas(meta).flatMap((meta) =>
@@ -169,11 +192,11 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     columns.push({
       columnName: "__original_updated_at",
       dbType: "timestamptz",
-      dbValue: (_, originalData) => serde.dbValue(originalData),
+      dbValue: (_, entity) => serde.dbValue(getInstanceData(entity).originalData),
     });
   }
 
-  const rows = collectBindings(entities, columns);
+  const rows = collectBindings(entities, meta.tableName, columns, []);
   const updatedAtColumn = updatedAt
     ? (meta.fields[updatedAt] as PrimitiveField).serde.columns[0].columnName
     : undefined;
@@ -209,21 +232,38 @@ function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata, Entity
   return [...entitiesByType.entries()];
 }
 
-// This structurally matches our serde column but adds an originalData
-// param so that the updatedAt psuedo-column can get its original value.
-interface BindingColumn {
-  dbValue(data: any, originalData?: any): any;
-}
+type BindingColumn = OpColumn & Pick<Column, "dbValue">;
 
-function collectBindings(entities: Entity[], columns: BindingColumn[]): any[][] {
+function collectBindings(
+  entities: Entity[],
+  tableName: string,
+  columns: BindingColumn[],
+  fixups: InsertFixup[] | undefined,
+): any[][] {
   const rows = [];
   for (const entity of entities) {
-    const { data, originalData } = getInstanceData(entity);
+    const { data } = getInstanceData(entity);
     const bindings = [];
     for (const column of columns) {
-      bindings.push(column.dbValue(data, originalData) ?? null);
+      bindings.push(column.dbValue(data, entity, tableName, fixups) ?? null);
     }
     rows.push(bindings);
   }
   return rows;
+}
+/**
+ * Given `fixups` that indicate where we inserted `NULL` into non-deferred FKs, create `UPDATE`s
+ * that insert the value now that the FK check will succeed.
+ */
+function translateFixupsIntoUpdates(ops: Ops, fixups: InsertFixup[]): void {
+  // Create a single `UPDATE` for the N fixups we might have for each table/column combination
+  groupBy(fixups, (f) => `${f.tableName}.${f.column.columnName}`).forEach((fixups) => {
+    const { tableName, entity, column } = fixups[0];
+    ops.updates.push({
+      tableName,
+      columns: [getMetadata(entity).fields["id"].serde!.columns[0], column],
+      updatedAt: undefined,
+      rows: fixups.map((fixup) => [fixup.entity.id, fixup.value]),
+    });
+  });
 }

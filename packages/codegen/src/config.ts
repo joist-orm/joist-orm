@@ -118,9 +118,10 @@ export const config = z
     ignoredTables: z.optional(z.array(z.string())),
     /** The type of entity `id` fields; defaults to `tagged-string`. */
     idType: z.optional(z.union([z.literal("tagged-string"), z.literal("untagged-string"), z.literal("number")])),
-
+    /** How we should support non-deferred foreign keys. */
+    nonDeferredForeignKeys: z.optional(z.union([z.literal("error"), z.literal("warn"), z.literal("ignore")])),
+    /** Enables esm output. */
     esm: z.optional(z.boolean()),
-
     // The version of Joist that generated this config.
     version: z.string().default("0.0.0"),
   })

@@ -60,7 +60,10 @@ export function newEntityMetadata(name: string, opts: Partial<EntityDbMetadata> 
     subTypes: [],
     inheritanceType: undefined,
     abstract: false,
-    invalidDeferredFK: false,
+    nonDeferredFkOrder: 0,
+    get nonDeferredFks() {
+      return [];
+    },
     ...opts,
   };
 }

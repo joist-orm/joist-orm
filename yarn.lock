@@ -11252,6 +11252,30 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"joist-tests-immediate-foreign-keys@workspace:packages/tests/immediate-foreign-keys":
+  version: 0.0.0-use.local
+  resolution: "joist-tests-immediate-foreign-keys@workspace:packages/tests/immediate-foreign-keys"
+  dependencies:
+    "@swc/core": "npm:^1.4.13"
+    "@swc/jest": "npm:^0.2.36"
+    "@types/jest": "npm:^29.5.12"
+    "@types/node": "npm:^20.12.7"
+    env-cmd: "npm:^10.1.0"
+    jest: "npm:30.0.0-alpha.3"
+    jest-junit: "npm:^16.0.0"
+    joist-codegen: "workspace:*"
+    joist-migration-utils: "workspace:*"
+    joist-orm: "workspace:*"
+    joist-test-utils: "workspace:*"
+    prettier: "npm:^3.2.5"
+    prettier-plugin-organize-imports: "npm:^3.2.4"
+    superstruct: "npm:0.15.5"
+    tsconfig-paths: "npm:^4.2.0"
+    tsx: "npm:^4.7.2"
+    typescript: "npm:^5.4.5"
+  languageName: unknown
+  linkType: soft
+
 "joist-tests-integration@workspace:packages/tests/integration":
   version: 0.0.0-use.local
   resolution: "joist-tests-integration@workspace:packages/tests/integration"

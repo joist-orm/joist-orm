@@ -44,6 +44,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       deletedAt: ${q(deletedAt?.fieldName)},
     }
   `;
+  const maybeInsertionOrder = meta.nonDeferredFkOrder !== 0 ? `nonDeferredFkOrder: ${meta.nonDeferredFkOrder},` : ``;
 
   return code`
     export const ${entity.metaName}: ${EntityMetadata}<${entity.name}> = {
@@ -62,6 +63,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       factory: ${imp(`new${entity.name}@./entities.ts`)},
       baseTypes: [],
       subTypes: [],
+      ${maybeInsertionOrder}
     };
 
     (${entity.name} as any).metadata = ${entity.metaName};

@@ -55,6 +55,8 @@ export interface EntityMetadata<T extends Entity = any> {
   baseTypes: EntityMetadata[];
   /** The list of subtypes for this base type, e.g. for Animal it'd be `[Mammal, Dog]`. */
   subTypes: EntityMetadata[];
+  /** If the schema is lacking deferred FKs, this is our insertion order. */
+  nonDeferredFkOrder?: number;
 }
 
 export type Field =

@@ -12,7 +12,7 @@ import {
   PrimitiveTypescriptType,
 } from "./EntityDbMetadata";
 import { Config, hasConfigDefault } from "./config";
-import { getStiEntities } from "./index";
+import { getStiEntities } from "./inheritance";
 import { keywords } from "./keywords";
 import {
   BaseEntity,

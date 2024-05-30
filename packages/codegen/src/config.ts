@@ -5,7 +5,7 @@ import { promises as fs } from "fs";
 import { groupBy } from "joist-utils";
 import { z } from "zod";
 import { getThisVersion } from "./codemods";
-import { getStiEntities } from "./index";
+import { getStiEntities } from "./inheritance";
 import { fail, sortKeys, trueIfResolved } from "./utils";
 
 const jsonFormatter = createFromBuffer(getBuffer());

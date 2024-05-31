@@ -74,7 +74,7 @@ You can do this by using `hasReactiveGetter`, which declares the business logic'
 
 ```typescript
 class Author {
-  readonly fullName: ReactiveGetter<Author, string> = hasReactiveField(
+  readonly fullName: ReactiveGetter<Author, string> = hasReactiveGetter(
     "fullName",
     // Declare the other fields we depend on
     ["firstName", "lastName"],

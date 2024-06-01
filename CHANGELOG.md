@@ -1,3 +1,10 @@
+## [1.169.1](https://github.com/joist-orm/joist-orm/compare/v1.169.0...v1.169.1) (2024-06-01)
+
+
+### Bug Fixes
+
+* Relation.id should throw NoIdErrors. ([#1103](https://github.com/joist-orm/joist-orm/issues/1103)) ([3ca184c](https://github.com/joist-orm/joist-orm/commit/3ca184cf85ab9dad9262fef01ce3bc0c59a95b68))
+
 # [1.169.0](https://github.com/joist-orm/joist-orm/compare/v1.168.2...v1.169.0) (2024-05-30)
 
 

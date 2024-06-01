@@ -96,6 +96,7 @@ export function parseFindQuery(
     conditions?: ExpressionFilter;
     orderBy?: any;
     pruneJoins?: boolean;
+    pruneConditions?: boolean;
     keepAliases?: string[];
     softDeletes?: "include" | "exclude";
   } = {},
@@ -109,6 +110,7 @@ export function parseFindQuery(
     conditions: optsExpression = undefined,
     softDeletes = "exclude",
     pruneJoins = true,
+    pruneConditions = false,
     keepAliases = [],
   } = opts;
   const inlineConditions: ColumnCondition[] = [];
@@ -145,7 +147,7 @@ export function parseFindQuery(
     filter: any,
   ): void {
     // look at filter, is it `{ book: "b2" }` or `{ book: { ... } }`
-    const ef = parseEntityFilter(meta, filter);
+    const ef = parseEntityFilter(meta, filter, pruneConditions);
     if (!ef && join !== "primary" && !isAlias(filter)) {
       return;
     }
@@ -186,7 +188,7 @@ export function parseFindQuery(
         const fa = `${alias}${field.aliasSuffix}`;
         if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
           const column = field.serde.columns[0];
-          parseValueFilter((ef.subFilter as any)[key]).forEach((filter) => {
+          parseValueFilter((ef.subFilter as any)[key], pruneConditions).forEach((filter) => {
             inlineConditions.push({
               kind: "column",
               alias: fa,
@@ -203,7 +205,7 @@ export function parseFindQuery(
             const a = getAlias(field.otherMetadata().tableName);
             addTable(field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
           }
-          const f = parseEntityFilter(field.otherMetadata(), sub);
+          const f = parseEntityFilter(field.otherMetadata(), sub, pruneConditions);
           // Probe the filter and see if it's just an id (...and not soft deleted), if so we can avoid the join
           if (!f) {
             // skip
@@ -220,7 +222,7 @@ export function parseFindQuery(
             });
           }
         } else if (field.kind === "poly") {
-          const f = parseEntityFilter(meta, (ef.subFilter as any)[key]);
+          const f = parseEntityFilter(meta, (ef.subFilter as any)[key], pruneConditions);
           if (!f) {
             // skip
           } else if (f.kind === "join") {
@@ -335,7 +337,7 @@ export function parseFindQuery(
             const a = getAlias(field.otherMetadata().tableName);
             addTable(field.otherMetadata(), a, "outer", kqDot(ja, field.columnNames[1]), kqDot(a, "id"), sub);
           }
-          const f = parseEntityFilter(field.otherMetadata(), sub);
+          const f = parseEntityFilter(field.otherMetadata(), sub, pruneConditions);
           // Probe the filter and see if it's just an id, if so we can avoid the join
           if (!f) {
             // skip
@@ -585,11 +587,18 @@ export type ParsedEntityFilter =
   // Otherwise we return the join/complex
   | { kind: "join"; subFilter: object };
 
+function kindIsNullUnlessPruned(pruneConditions: boolean) {
+  return pruneConditions ? undefined : ({ kind: "is-null" } as const);
+}
+
 /** Parses an entity filter, which could be "just an id", an array of ids, or a nested filter. */
-export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEntityFilter | undefined {
+export function parseEntityFilter(
+  meta: EntityMetadata,
+  filter: any,
+  pruneConditions: boolean,
+): ParsedEntityFilter | undefined {
   if (filter === undefined) {
-    // This matches legacy `em.find(Book, { author: undefined })` behavior
-    return undefined;
+    return kindIsNullUnlessPruned(pruneConditions);
   } else if (isAlias(filter)) {
     // We're just binding an alias to this position in the join tree
     return undefined;
@@ -615,7 +624,7 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
     if (keys.length === 1 && keys[0] === "ne") {
       const value = filter["ne"];
       if (value === undefined) {
-        return undefined;
+        return pruneConditions ? undefined : { kind: "not-null" };
       } else if (value === null) {
         return { kind: "not-null" };
       } else if (typeof value === "string" || typeof value === "number") {
@@ -630,7 +639,7 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
     if (keys.length === 1 && keys[0] === "id") {
       const value = filter["id"];
       if (value === undefined) {
-        return undefined;
+        return kindIsNullUnlessPruned(pruneConditions);
       } else if (value === null) {
         return { kind: "is-null" };
       } else if (typeof value === "string" || typeof value === "number") {
@@ -638,7 +647,7 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
       } else if (isEntity(value)) {
         return { kind: "eq", value: value.idTaggedMaybe || nilIdValue(meta) };
       } else {
-        return parseValueFilter(value)[0] as any;
+        return parseValueFilter(value, pruneConditions)[0] as any;
       }
     }
     // Look for subFilter values being EntityFilter-ish instances like ManyToOneReference
@@ -714,12 +723,11 @@ export type ParsedValueFilter<V> =
  * Note we return an array because filter might be a `ValueGraphQLFilter` that is allowed to have
  * multiple conditions, i.e. `{ lt: 10, gt: 5 }`.
  */
-export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFilter<V>[] {
+export function parseValueFilter<V>(filter: ValueFilter<V, any>, pruneConditions: boolean): ParsedValueFilter<V>[] {
   if (filter === null) {
     return [{ kind: "is-null" }];
   } else if (filter === undefined) {
-    // This is legacy behavior where `em.find(Book, { author: undefined })` would match all books
-    return [];
+    return pruneConditions ? [] : [{ kind: "is-null" }];
   } else if (Array.isArray(filter)) {
     return [{ kind: "in", value: filter }];
   } else if (isPlainObject(filter)) {
@@ -743,7 +751,7 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
         .map(([key, value]) => {
           // Always do condition pruning on the value
           if (value === undefined) {
-            return undefined;
+            return kindIsNullUnlessPruned(pruneConditions);
           }
           switch (key) {
             case "eq":

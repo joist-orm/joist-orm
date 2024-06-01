@@ -65,6 +65,7 @@ const cm = getMetadata(Comment);
 const um = getMetadata(User);
 const criticMeta = getMetadata(Critic);
 const opts = { softDeletes: "include" } as const;
+const optsGql = { softDeletes: "include", pruneConditions: true } as const;
 
 describe("EntityManager.queries", () => {
   it("can find all", async () => {
@@ -136,9 +137,29 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const where = { lastName: undefined } satisfies AuthorFilter;
     const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "last_name", dbType: "character varying", cond: { kind: "is-null" } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("cannot findGql by simple varchar is undefined", async () => {
+    await insertAuthor({ first_name: "a1", last_name: "last_name" });
+    await insertAuthor({ first_name: "a2" });
+
+    const em = newEntityManager();
+    const where = { lastName: undefined } satisfies AuthorFilter;
+    const authors = await em.findGql(Author, where);
     expect(authors.length).toEqual(2);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, optsGql)).toEqual({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       orderBys: [expect.anything()],
@@ -173,9 +194,29 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const where = { lastName: { ne: undefined } } satisfies AuthorFilter;
     const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "last_name", dbType: "character varying", cond: { kind: "not-null" } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can findGql by simple varchar not undefined", async () => {
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    await insertAuthor({ first_name: "a2" });
+
+    const em = newEntityManager();
+    const where = { lastName: { ne: undefined } } satisfies AuthorFilter;
+    const authors = await em.findGql(Author, where);
     expect(authors.length).toEqual(2);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, optsGql)).toEqual({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       orderBys: [expect.anything()],
@@ -273,6 +314,28 @@ describe("EntityManager.queries", () => {
 
     const em = newEntityManager();
     const where = { publisher: null } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a1");
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "is-null" } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key is undefined does not prune", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const where = { publisher: undefined } satisfies AuthorFilter;
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a1");
@@ -1600,6 +1663,23 @@ describe("EntityManager.queries", () => {
         op: "and",
         conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "not-null" } }],
       },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can findGql by foreign key and prune undefined", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const gqlFilter = { publisher: { ne: undefined } } as GraphQLAuthorFilter;
+    const authors = await em.findGql(Author, gqlFilter);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, gqlFilter, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
       orderBys: [expect.anything()],
     });
   });

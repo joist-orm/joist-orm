@@ -90,6 +90,8 @@ export interface FindFilterOptions<T extends Entity> {
   conditions?: ExpressionFilter;
   orderBy?: OrderOf<T> | OrderOf<T>[];
   softDeletes?: "include" | "exclude";
+  /** Whether conditions have are `undefined` should be dropped; defaults false for `em.find` and true for `em.findGql`. */
+  pruneConditions?: boolean;
 }
 
 /**
@@ -392,7 +394,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     where: GraphQLFilterOf<T>,
     options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
-    return this.find(type, where as any, options);
+    return this.find(type, where as any, { ...options, pruneConditions: true });
   }
 
   /**
@@ -415,7 +417,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     where: GraphQLFilterWithAlias<T>,
     options: FindGqlPaginatedFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
-    return this.findPaginated(type, where as any, options as any);
+    return this.findPaginated(type, where as any, { ...(options as any), pruneConditions: true });
   }
 
   public async findOne<T extends EntityW>(

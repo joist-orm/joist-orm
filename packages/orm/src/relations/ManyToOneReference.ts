@@ -4,6 +4,7 @@ import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
 import { getField, setField } from "../fields";
 import {
   BaseEntity,
+  NoIdError,
   OneToManyLargeCollection,
   OneToOneReferenceImpl,
   Reference,
@@ -11,7 +12,6 @@ import {
   ensureNotDeleted,
   ensureTagged,
   fail,
-  failNoIdYet,
   getInstanceData,
   maybeResolveReferenceToId,
   toIdOf,
@@ -176,8 +176,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   get idIfSet(): IdOf<U> | N | undefined {
-    failIfNewEntity(this.entity, this.fieldName, this.current());
-    return this.idMaybe;
+    return this.idMaybe || failIfNewEntity(this.entity, this.fieldName, this.current());
   }
 
   get idUntagged(): string {
@@ -185,8 +184,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   get idUntaggedIfSet(): string | undefined {
-    failIfNewEntity(this.entity, this.fieldName, this.current());
-    return this.idUntaggedMaybe;
+    return this.idUntaggedMaybe || failIfNewEntity(this.entity, this.fieldName, this.current());
   }
 
   get idMaybe(): IdOf<U> | N | undefined {
@@ -388,17 +386,36 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   [ReferenceN]: N = null!;
 }
 
-/** Fails when we can't return an id for a reference, i.e. it's unset or a new entity. */
+/**
+ * Fails when we can't return an `.id` for a reference, i.e. it's unset or a new entity.
+ *
+ * We strictly type `book.author.id` as `AuthorId`, even if `book.author` is nullable, to
+ * avoid users calling `.id` and getting back `undefined`, but not because "there is no
+ * author", but only because "the assigned author doesn't have an id assigned yet".
+ *
+ * To handle nullable references, set `.idIfSet`.
+ *
+ * Assumes being called like `return idMaybe ?? failNoId()`, i.e. if we're called we
+ * know the id is not available.
+ */
 export function failNoId(entity: Entity, fieldName: string, current: string | Entity | undefined): never {
   if (!current) fail(`Reference ${entity}.${fieldName} is unset`);
-  // Use failNoIdYet to throw a NoIdError, which lets ReactionsManager will handle reactive fields gracefully
-  if (current instanceof BaseEntity && current.isNewEntity) failNoIdYet(getMetadata(entity).tagName);
-  fail(`Reference ${entity}.${fieldName} is unset or assigned to a new entity`);
+  // Throw NoIdError, which lets ReactionsManager will handle reactive fields gracefully
+  if (current instanceof BaseEntity)
+    throw new NoIdError(`Reference ${entity}.${fieldName} is assigned to a new entity`);
+  fail(`Unreachable`);
 }
 
-/** Fails when we can't return an id for a reference, i.e. it's unset or a new entity. */
-export function failIfNewEntity<U>(entity: Entity, fieldName: string, current: string | Entity | undefined): void {
-  if (current instanceof BaseEntity && current.isNewEntity) {
-    fail(`Reference ${entity}.${fieldName} is assigned to a new entity`);
+/**
+ * Fails when we can't return an `.idIfSet` for a reference, i.e. it's a new entity.
+ *
+ * Assumes being called like `return idMaybe ?? failIfNewEntity()`, i.e. if we're called we
+ * know the id is not available.
+ */
+export function failIfNewEntity(entity: Entity, fieldName: string, current: string | Entity | undefined): undefined {
+  if (current instanceof BaseEntity) {
+    throw new NoIdError(`Reference ${entity}.${fieldName} is assigned to a new entity`);
   }
+  // Since this is a `.idIfSet`, having no `current` is fine, return undefined.
+  return undefined;
 }

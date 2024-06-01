@@ -41,7 +41,7 @@
     "ChildGroup": { "tag": "cg" },
     "ChildItem": { "tag": "ci" },
     "Comment": {
-      "fields": { "parentTags": { "derived": "async" } },
+      "fields": { "parentTaggedId": { "derived": "async" }, "parentTags": { "derived": "async" } },
       "relations": { "parent": { "polymorphic": "notNull" } },
       "tag": "comment"
     },

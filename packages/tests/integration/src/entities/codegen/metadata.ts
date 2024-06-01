@@ -425,6 +425,7 @@ export const commentMeta: EntityMetadata<Comment> = {
   tableName: "comments",
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("comment", "id", "id", "int"), immutable: true },
+    "parentTaggedId": { kind: "primitive", fieldName: "parentTaggedId", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("parentTaggedId", "parent_tagged_id", "text"), immutable: false },
     "parentTags": { kind: "primitive", fieldName: "parentTags", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("parentTags", "parent_tags", "text"), immutable: false },
     "text": { kind: "primitive", fieldName: "text", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("text", "text", "text"), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },

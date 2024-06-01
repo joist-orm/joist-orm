@@ -11,6 +11,7 @@ import {
   ensureNotDeleted,
   ensureTagged,
   fail,
+  failNoIdYet,
   getInstanceData,
   maybeResolveReferenceToId,
   toIdOf,
@@ -390,8 +391,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 /** Fails when we can't return an id for a reference, i.e. it's unset or a new entity. */
 export function failNoId(entity: Entity, fieldName: string, current: string | Entity | undefined): never {
   if (!current) fail(`Reference ${entity}.${fieldName} is unset`);
-  if (current instanceof BaseEntity && current.isNewEntity)
-    fail(`Reference ${entity}.${fieldName} is assigned to a new entity`);
+  // Use failNoIdYet to throw a NoIdError, which lets ReactionsManager will handle reactive fields gracefully
+  if (current instanceof BaseEntity && current.isNewEntity) failNoIdYet(getMetadata(entity).tagName);
   fail(`Reference ${entity}.${fieldName} is unset or assigned to a new entity`);
 }
 

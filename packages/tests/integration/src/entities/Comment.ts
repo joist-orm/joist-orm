@@ -10,10 +10,12 @@ export class Comment extends CommentCodegen {
     },
   );
 
-  readonly parentTaggedId: ReactiveField<Comment, string> = hasReactiveField(
+  readonly parentTaggedId: ReactiveField<Comment, string | undefined> = hasReactiveField(
     "parentTaggedId",
     "parent",
-    // `as string` because `c.parent.id` is incorrectly coming back as IdType like `number | string`
-    (c) => c.parent.id as string,
+    // Use idIfSet because parent is allowed to be null, both to not breaking existing
+    // tests, including one PolymorphicReference test that explicitly tests deleting the
+    // target of a poly field, and watching it get unhooked.
+    (c) => c.parent.idIfSet,
   );
 }

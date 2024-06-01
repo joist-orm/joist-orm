@@ -25,6 +25,7 @@ import {
   LoadedReference,
   ManyToManyCollection,
   OneToOneReference,
+  PolymorphicReference,
   ReactiveGetter,
   Reference,
 } from "./relations";
@@ -85,13 +86,17 @@ export type NestedReactiveHint<T extends Entity> = {
 export type Reacted<T extends Entity, H> = Entity & {
   [K in keyof NormalizeHint<H> & keyof T]: T[K] extends OneToOneReference<any, infer U>
     ? LoadedOneToOneReference<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
-    : T[K] extends Reference<any, infer U, infer N>
-      ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<H>[K]>, N>
-      : T[K] extends Collection<any, infer U>
-        ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
-        : T[K] extends AsyncProperty<any, infer V>
-          ? LoadedProperty<any, V>
-          : T[K];
+    : // Add an explicit check for PolymorphicReference because it can add `PolymorphicReference &` which gives access to `idIfSet`
+      // ...although maybe LoadedReference should just have `idIfSet` in it as well? LoadedOneToOneReference does...
+      T[K] extends PolymorphicReference<any, infer U, infer N>
+      ? PolymorphicReference<T, U, N> & LoadedReference<T, Entity & Reacted<U, NormalizeHint<H>[K]>, N>
+      : T[K] extends Reference<any, infer U, infer N>
+        ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<H>[K]>, N>
+        : T[K] extends Collection<any, infer U>
+          ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
+          : T[K] extends AsyncProperty<any, infer V>
+            ? LoadedProperty<any, V>
+            : T[K];
 } & {
   /**
    * Gives reactive rules & fields a way to get the full entity if they really need it.

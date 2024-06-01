@@ -111,7 +111,7 @@
   "Child": ["createdAt", "groups", "id", "name", "updatedAt"],
   "ChildGroup": ["childGroupId", "childItems", "createdAt", "id", "name", "parentGroup", "updatedAt"],
   "ChildItem": ["childGroup", "createdAt", "id", "name", "parentItem", "updatedAt"],
-  "Comment": ["createdAt", "id", "likedByUsers", "parent", "parentTags", "text", "updatedAt", "user"],
+  "Comment": ["createdAt", "id", "likedByUsers", "parent", "parentTaggedId", "parentTags", "text", "updatedAt", "user"],
   "CommentParent": ["Author", "Book", "BookReview", "Publisher", "TaskOld"],
   "Critic": [
     "bookReviews",
@@ -293,7 +293,7 @@
   "SaveChildItemInput": ["childGroupId", "id", "name", "parentItemId"],
   "SaveChildItemResult": ["childItem"],
   "SaveChildResult": ["child"],
-  "SaveCommentInput": ["id", "parentId", "parentTags", "text", "userId"],
+  "SaveCommentInput": ["id", "parentId", "parentTaggedId", "parentTags", "text", "userId"],
   "SaveCommentResult": ["comment"],
   "SaveCriticColumnInput": ["criticId", "id", "name"],
   "SaveCriticColumnResult": ["criticColumn"],

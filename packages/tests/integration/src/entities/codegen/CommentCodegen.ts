@@ -72,6 +72,7 @@ export function isCommentParent(maybeEntity: unknown): maybeEntity is CommentPar
 
 export interface CommentFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  parentTaggedId: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   parentTags: { kind: "primitive"; type: string; unique: false; nullable: never; derived: true };
   text: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -95,6 +96,7 @@ export interface CommentIdsOpts {
 
 export interface CommentFilter {
   id?: ValueFilter<CommentId, never> | null;
+  parentTaggedId?: ValueFilter<string, null>;
   parentTags?: ValueFilter<string, never>;
   text?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
@@ -112,6 +114,7 @@ export interface CommentFilter {
 
 export interface CommentGraphQLFilter {
   id?: ValueGraphQLFilter<CommentId>;
+  parentTaggedId?: ValueGraphQLFilter<string>;
   parentTags?: ValueGraphQLFilter<string>;
   text?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
@@ -129,6 +132,7 @@ export interface CommentGraphQLFilter {
 
 export interface CommentOrder {
   id?: OrderBy;
+  parentTaggedId?: OrderBy;
   parentTags?: OrderBy;
   text?: OrderBy;
   createdAt?: OrderBy;
@@ -177,6 +181,8 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   get idTaggedMaybe(): TaggedId | undefined {
     return getField(this, "id");
   }
+
+  abstract readonly parentTaggedId: ReactiveField<Comment, string | undefined>;
 
   abstract readonly parentTags: ReactiveField<Comment, string>;
 

@@ -31,9 +31,16 @@ export function isPolymorphicReference(maybeReference: any): maybeReference is P
   return maybeReference instanceof PolymorphicReferenceImpl;
 }
 
+/**
+ * A reference that can be assigned to multiple different entity types.
+ *
+ * I.e. a `Comment.parent` reference that can be an `Author` or `Book`.
+ *
+ * The `U` generic will be the type union of `Author | Book`.
+ */
 export interface PolymorphicReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends Reference<T, U, N> {
-  /** Returns the id of the current assigned entity (or `undefined` if its new and has no id yet), or `undefined` if this column is nullable and currently unset. */
+  /** Returns the id of the current assigned entity, or a runtime error if either 1) unset or 2) set to a new entity that doesn't have an `id` yet. */
   id: IdOf<U>;
 
   /** Returns the id of the current assigned entity, undefined if unset, or a runtime error if set to a new entity. */
@@ -155,8 +162,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   get idIfSet(): IdOf<U> | N | undefined {
-    failIfNewEntity(this.entity, this.fieldName, this.current());
-    return this.idMaybe;
+    return this.idMaybe || failIfNewEntity(this.entity, this.fieldName, this.current());
   }
 
   get idTagged(): string {

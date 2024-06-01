@@ -1,5 +1,7 @@
+import { expect } from "@jest/globals";
 import { insertAuthor, insertBook, insertBookReview, insertComment, insertTask, select } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
+import { NoIdError } from "joist-orm";
 import {
   Book,
   BookReview,
@@ -7,7 +9,9 @@ import {
   TaskOld,
   isCommentParent,
   newAdminUser,
+  newAuthor,
   newBook,
+  newComment,
   newSmallPublisher,
 } from "../entities";
 
@@ -173,5 +177,19 @@ describe("PolymorphicReference", () => {
 
     // Then the favorite publisher is set
     expect(await adminUser.favoritePublisher.load()).toEqual(smallPublisher);
+  });
+
+  it("throws NoIdError from id", () => {
+    const em = newEntityManager();
+    const comment = newComment(em, { parent: newAuthor(em) });
+    expect(() => comment.parent.id).toThrow(new NoIdError("Reference Comment#1.parent is assigned to a new entity"));
+  });
+
+  it("throws NoIdError from idIfSet", () => {
+    const em = newEntityManager();
+    const comment = newComment(em, { parent: newAuthor(em) });
+    expect(() => comment.parent.idIfSet).toThrow(
+      new NoIdError("Reference Comment#1.parent is assigned to a new entity"),
+    );
   });
 });

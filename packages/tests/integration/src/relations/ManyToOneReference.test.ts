@@ -1,6 +1,8 @@
+import { expect } from "@jest/globals";
 import { insertAuthor, insertBook, insertPublisher, select, update } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
-import { Author, Book, newAuthor, newPublisher, newUser } from "../entities";
+import { NoIdError } from "joist-orm";
+import { Author, Book, newAuthor, newBook, newPublisher, newUser } from "../entities";
 
 describe("ManyToOneReference", () => {
   it("can load a foreign key", async () => {
@@ -180,5 +182,17 @@ describe("ManyToOneReference", () => {
     expect(() => {
       a.set({ publisher: "b:1" });
     }).toThrow("Invalid tagged id, expected tag p, got b:1");
+  });
+
+  it("throws NoIdError from id", () => {
+    const em = newEntityManager();
+    const book = newBook(em);
+    expect(() => book.author.id).toThrow(new NoIdError("Reference Book#1.author is assigned to a new entity"));
+  });
+
+  it("throws NoIdError from idIfSet", () => {
+    const em = newEntityManager();
+    const book = newBook(em);
+    expect(() => book.author.idIfSet).toThrow(new NoIdError("Reference Book#1.author is assigned to a new entity"));
   });
 });

@@ -240,13 +240,11 @@ export class ReactiveReferenceImpl<
   }
 
   get idIfSet(): IdOf<U> | N | undefined {
-    failIfNewEntity(this.entity, this.fieldName, this.current());
-    return this.idMaybe;
+    return this.idMaybe || failIfNewEntity(this.entity, this.fieldName, this.current());
   }
 
   get idUntaggedIfSet(): string | undefined {
-    failIfNewEntity(this.entity, this.fieldName, this.current());
-    return this.idUntaggedMaybe;
+    return this.idUntaggedMaybe || failIfNewEntity(this.entity, this.fieldName, this.current());
   }
 
   get loadHint(): any {

@@ -109,8 +109,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
 
   get idIfSet(): IdOf<U> | undefined {
     if (this._isLoaded) {
-      failIfNewEntity(this.entity, this.fieldName, this.loaded);
-      return this.idMaybe;
+      return this.idMaybe || failIfNewEntity(this.entity, this.fieldName, this.loaded);
     }
     throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
   }
@@ -120,8 +119,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   get idUntaggedIfSet(): string | undefined {
-    failIfNewEntity(this.entity, this.fieldName, this.loaded);
-    return this.idUntaggedMaybe;
+    return this.idUntaggedMaybe || failIfNewEntity(this.entity, this.fieldName, this.loaded);
   }
 
   private get idMaybe(): IdOf<U> | undefined {

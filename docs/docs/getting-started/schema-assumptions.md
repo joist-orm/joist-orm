@@ -7,10 +7,10 @@ Joist makes a few assumptions about your database schema, which basically assume
 
 ## Entity Tables
 
-Joist expects entity tables (i.e. `authors`, `books`) to have a single primary key column, `id`, that is either:
+Joist requires entity tables (i.e. `authors`, `books`) to have a single primary key column, `id`, that is either:
 
-1. A `id` / `serial` type, that uses a sequence called `${tableName}_id_seq`, or
-2. A `uuid` type
+1. An `id`, `serial`, `int`, or `bigint` type, that uses a sequence called `${tableName}_id_seq`, or
+2. An `uuid` type
 
 And that is it; you can:
 
@@ -25,61 +25,38 @@ We have added Postgres data types to Joist only as we've personally needed them;
 
 :::
 
-### Deferred Constraints
+## Deferred Constraints (Recommended)
 
-Joist batches all `INSERT`s and `UPDATE`s within an `EntityManager.flush`, which results in the best performance, but means that foreign keys might be temporarily invalid (i.e. we've inserted a `Book` with an `author_id` before the `Author` is inserted).
+Joist automatically batches all `INSERT`s and `UPDATE`s within an `EntityManager.flush`, which results in the best performance, but means that foreign keys might be temporarily invalid (i.e. we've inserted a `Book` with an `author_id` before the `Author` is inserted).
 
-Joist handles this by telling Postgres to _temporarily_ defer foreign key checks until the end of the transaction.
+The cleanest way to handle this, is by telling Postgres to _temporarily_ defer foreign key checks until the end of the transaction.
 
 To enable this, foreign keys must be created with this syntax:
 
 ```sql
 CREATE TABLE "authors" (
-  ...
   "publisher_id" integer REFERENCES "publishers" DEFERRABLE INITIALLY DEFERRED,
-  ...
 );
 ```
 
-If you're using node-pg-migrate for your migrations, Joist's `joist-migration-utils` NPM package has utility methods, i.e. `createEntityTable` and `foreignKey`, to apply these defaults for you, but you should be able to do the same in any migration library.
+If you're using node-pg-migrate, Joist's `joist-migration-utils` package has utility methods, i.e. `createEntityTable` and `foreignKey`, to apply these defaults for you, but you should be able to do the same in any migration library.
+
+The first time you run `joist-codegen`, Joist will output any foreign keys it finds that are not deferred, and create an `alter-foreign-keys.sql` file you can apply to convert them over.
+
+That said, this is *optional*; if you don't want to use deferred foreign keys, you can set `nonDeferredForeignKeys: "ignore"` in your `joist-config.json`, and Joist will stop outputting this warning.
+
 
 :::info
 
-As a longer example explaining the nuance of insertion order, given `Publisher`/`Author` entities, if deferred FK constraints are not used then:
+One scenario where deferred keys are required is if you have `NOT NULL` cycles in your schema.
 
-* Sometimes `Publisher` needs flushed first to satisfy an `authors.publisher_id` foreign key constraint, but
-* Other times `Author` needs flushed first to satisfy a `publishers.top_author_id` foreign key constraint.
-* Or, even trickier, if mixing `authors` and `publishers` `INSERT`s and `DELETE`s in the same transaction: should we delete authors then insert publishers, or delete publishers then insert authors, etc.
+An example is having `authors.favorite_book_id` and `books.author_id`, both of which are `NOT NULL`.
 
-Using deferred constraints makes this complexity & non-deterministic insertion order go away.
+When creating an `Author` and a `Book`, there is no way for Joist to "choose which one goes first", and so in this scenario you must either make one of the FKs nullable (i.e. the `authors.favorite_book_id`, in which case Joist will insert the `Author` first), or make one of the FKs deferred.
 
 :::
 
-:::tip
-
-If you have an existing schema, and need to convert your existing foreign keys to deferrable, you can use [pg-structure](https://www.pg-structure.com/) in a migration to loop over them like:
-
-```typescript
-import pgStructure from "pg-structure";
-
-const client = getYourDbClient();
-const db = await pgStructure(client, { includeSchemas: "public" });
-for (const table of db.tables) {
-  for (const constraint of table.constraints) {
-    if (constraint instanceof ForeignKey) {
-      await b.db.query(`
-        ALTER TABLE ${table.name}
-        ALTER CONSTRAINT ${constraint.name}
-        DEFERRABLE INITIALLY DEFERRED
-      `);
-    }
-  }
-}
-```
-
-:::
-
-### Timestamp Columns
+## Timestamp Columns
 
 Entity tables can optionally have `created_at` and `updated_at` columns, which Joist will automatically manage by setting `created_at` when creating entities, and updating `updated_at` when updating entities.
 

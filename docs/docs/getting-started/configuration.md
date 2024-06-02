@@ -124,6 +124,31 @@ Allows ignoring tables, i.e. not generating TypeScript entities for them.
 }
 ```
 
+### `nonDeferredForeignKeys`
+
+This setting controls how `joist-codegen` handles non-deferred foreign keys:
+
+* `"error"` will have Joist error out & require the key to be made deferred
+  * This is recommended but not required
+* `"warn"` will have Joist report any non-deferred keys, but still generate the output
+  * This is the default, to encourage users to convert their FKs to deferred
+* `"ignore"` will have Joist ignore any non-deferred keys
+  * If you don't want to use deferred FKs, this setting will have Joist just ignore them
+
+Note that, without deferred FKs, Joist will still behave correctly, i.e. if calling `em.flush` with both a new `Author` and a new `Book`, both with FKs that point to the other not-yet-inserted entity, then Joist will:
+
+* Insert the `authors` row with `book_id=NULL` to let the `INSERT` succeed
+* Insert the `books` rows with `author_id=1` for the book `INSERT`
+* Update the `authors` row to set `book_id=1` now that the `books` rows is available
+
+This approach works, but requires the extra "fixup" `UPDATE` after the two `INSERT`s, which is why we recommend using deferred FKs.
+
+:::info
+
+Note that if you have a cycle of `NOT NULL` foreign keys in your schema (which is rare), Joist will report this as a fatal error, and require you to either make one/all of them nullable, or deferred, or both.
+
+:::
+
 ### `timestampColumns`
 
 Joist will automatically manage columns like `Author.created_at` and `Author.updated_at`.

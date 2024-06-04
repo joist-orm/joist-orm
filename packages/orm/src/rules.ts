@@ -1,4 +1,5 @@
 import { Entity } from "./Entity";
+import { FieldsOf } from "./EntityManager";
 import { Changes, EntityChanges } from "./changes";
 import { getField } from "./fields";
 import { ReactiveHint } from "./reactiveHints";
@@ -54,7 +55,7 @@ export class ValidationErrors extends Error {
  *
  * This is added automatically by codegen to entities based on FK not-nulls.
  */
-export function newRequiredRule<T extends Entity>(key: keyof T & string): ValidationRule<T> {
+export function newRequiredRule<T extends Entity>(key: keyof FieldsOf<T> & string): ValidationRule<T> {
   // Use getField so that we peer through relations
   return (entity) => (getField(entity, key) === undefined ? `${key} is required` : undefined);
 }

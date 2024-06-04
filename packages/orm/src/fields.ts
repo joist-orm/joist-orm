@@ -3,7 +3,7 @@ import { Entity, isEntity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
 import { ensureNotDeleted, maybeResolveReferenceToId } from "./index";
-import { maybeRequireTemporal } from "./utils";
+import { fail, maybeRequireTemporal } from "./utils";
 
 /**
  * Returns the current value of `fieldName`, this is an internal method that should

@@ -1,3 +1,10 @@
+## [1.169.3](https://github.com/joist-orm/joist-orm/compare/v1.169.2...v1.169.3) (2024-06-04)
+
+
+### Bug Fixes
+
+* Add compile error for non-fields using newRequiredRule. ([#1105](https://github.com/joist-orm/joist-orm/issues/1105)) ([6587d5d](https://github.com/joist-orm/joist-orm/commit/6587d5d42bbf2df9c267e3357bb728cff8d10e7b))
+
 ## [1.169.2](https://github.com/joist-orm/joist-orm/compare/v1.169.1...v1.169.2) (2024-06-04)
 
 

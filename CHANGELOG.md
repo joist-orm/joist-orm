@@ -1,3 +1,10 @@
+## [1.169.2](https://github.com/joist-orm/joist-orm/compare/v1.169.1...v1.169.2) (2024-06-04)
+
+
+### Bug Fixes
+
+* **undef:** fail not defined ([#1104](https://github.com/joist-orm/joist-orm/issues/1104)) ([c1708d6](https://github.com/joist-orm/joist-orm/commit/c1708d62197d7e4ae65be74d18b1606708d77b3e))
+
 ## [1.169.1](https://github.com/joist-orm/joist-orm/compare/v1.169.0...v1.169.1) (2024-06-01)
 
 

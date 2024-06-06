@@ -1,3 +1,10 @@
+# [1.170.0](https://github.com/joist-orm/joist-orm/compare/v1.169.3...v1.170.0) (2024-06-06)
+
+
+### Features
+
+* Add array contains/overlaps methods to aliases. ([#1106](https://github.com/joist-orm/joist-orm/issues/1106)) ([fb5ade0](https://github.com/joist-orm/joist-orm/commit/fb5ade03b9bb446ae6cea722815448944384c291))
+
 ## [1.169.3](https://github.com/joist-orm/joist-orm/compare/v1.169.2...v1.169.3) (2024-06-04)
 
 

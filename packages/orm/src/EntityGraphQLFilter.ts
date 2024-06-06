@@ -76,8 +76,10 @@ export const opToFn: Record<Exclude<Operator, "in" | "nin" | "between">, string>
   nlike: "NOT LIKE",
   ilike: "ILIKE",
   nilike: "NOT ILIKE",
+  // containsAll / hasAll
   contains: "@>",
   containedBy: "<@",
+  // containsSome / hasSome
   overlaps: "&&",
 };
 

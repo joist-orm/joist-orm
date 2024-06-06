@@ -2434,6 +2434,39 @@ describe("EntityManager.queries", () => {
       expect(comments.length).toEqual(2);
     });
 
+    it("can use aliases for array contains", async () => {
+      await insertAuthor({ first_name: "a1", nick_names: ["a11", "11a"] });
+      await insertAuthor({ first_name: "a2", nick_names: ["a22", "22a"] });
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(
+        Author,
+        { as: a },
+        { conditions: { or: [a.nickNames.contains(["a11"]), a.nickNames.contains(["a22", "22a"])] } },
+      );
+      expect(authors.length).toEqual(2);
+    });
+
+    it("can use aliases for array ncontains", async () => {
+      await insertAuthor({ first_name: "a1", nick_names: ["foo"] }); // does not contain
+      await insertAuthor({ first_name: "a2", nick_names: ["bar"] }); // does not contain
+      await insertAuthor({ first_name: "a3", nick_names: ["foo", "bar", "zaz"] }); // does contain
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(Author, { as: a }, { conditions: { or: [a.nickNames.ncontains(["foo", "bar"])] } });
+      expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+    });
+
+    it("can use aliases for array noverlaps", async () => {
+      await insertAuthor({ first_name: "a1", nick_names: ["foo"] }); // does not overlap
+      await insertAuthor({ first_name: "a2", nick_names: ["bar"] }); // does overlap
+      await insertAuthor({ first_name: "a3", nick_names: ["foo", "bar", "zaz"] }); // does overlap
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(Author, { as: a }, { conditions: { or: [a.nickNames.noverlaps(["bar", "zaz"])] } });
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
     it("can use aliases for or with nested and", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2", age: 30 });

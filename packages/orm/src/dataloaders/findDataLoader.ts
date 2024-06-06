@@ -243,11 +243,15 @@ export function buildConditions(ef: ParsedExpressionFilter, argsIndex: number = 
   const originalIndex = argsIndex;
   ef.conditions.forEach((c) => {
     if (c.kind === "column") {
-      const [op, argsTaken] = makeOp(c.cond, argsIndex);
+      const [op, argsTaken, negate] = makeOp(c.cond, argsIndex);
       if (c.alias === "unset") {
         throw new Error("Alias was not bound in em.find");
       }
-      conditions.push(`${kqDot(c.alias, c.column)} ${op}`);
+      if (negate) {
+        conditions.push(`NOT (${kqDot(c.alias, c.column)} ${op})`);
+      } else {
+        conditions.push(`${kqDot(c.alias, c.column)} ${op}`);
+      }
       argsIndex += argsTaken;
     } else if (c.kind === "exp") {
       let [cond, argsTaken] = buildConditions(c, argsIndex);
@@ -268,7 +272,7 @@ export function buildConditions(ef: ParsedExpressionFilter, argsIndex: number = 
   return [conditions.join(` ${ef.op.toUpperCase()} `), argsTaken];
 }
 
-function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, number] {
+function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, number, boolean] {
   switch (cond.kind) {
     case "eq":
     case "ne":
@@ -282,19 +286,25 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, numbe
     case "nilike":
     case "contains":
     case "overlaps":
-    case "containedBy":
+    case "containedBy": {
       const fn = opToFn[cond.kind] ?? fail(`Invalid operator ${cond.kind}`);
-      return [`${fn} _find.arg${argsIndex}`, 1];
+      return [`${fn} _find.arg${argsIndex}`, 1, false];
+    }
+    case "noverlaps":
+    case "ncontains": {
+      const fn = (opToFn as any)[cond.kind.substring(1)] ?? fail(`Invalid operator ${cond.kind}`);
+      return [`${fn} _find.arg${argsIndex}`, 1, true];
+    }
     case "is-null":
-      return [`IS NULL`, 0];
+      return [`IS NULL`, 0, false];
     case "not-null":
-      return [`IS NOT NULL`, 0];
+      return [`IS NOT NULL`, 0, false];
     case "in":
-      return [`= ANY(_find.arg${argsIndex})`, 1];
+      return [`= ANY(_find.arg${argsIndex})`, 1, false];
     case "nin":
-      return [`!= ALL(_find.arg${argsIndex})`, 1];
+      return [`!= ALL(_find.arg${argsIndex})`, 1, false];
     case "between":
-      return [`BETWEEN _find.arg${argsIndex} AND _find.arg${argsIndex + 1}`, 2];
+      return [`BETWEEN _find.arg${argsIndex} AND _find.arg${argsIndex + 1}`, 2, false];
     default:
       assertNever(cond);
   }

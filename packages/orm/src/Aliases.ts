@@ -50,6 +50,11 @@ export interface PrimitiveAlias<V, N extends null | never> {
   ilike(value: V | undefined): ColumnCondition;
   search(value: V | undefined): ColumnCondition;
   between(v1: V | undefined, v2: V | undefined): ColumnCondition;
+  // need to move to ArrayAlias
+  contains(value: V | N | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
+  ncontains(value: V | N | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
+  overlaps(value: V | N | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
+  noverlaps(value: V | N | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
 }
 
 export interface EntityAlias<T> {
@@ -250,6 +255,29 @@ class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<
   in(values: V[] | undefined): ColumnCondition {
     if (values === undefined) return skipCondition;
     return this.addCondition({ kind: "in", value: values });
+  }
+
+  // V will already be an array
+  contains(v1: V | undefined): ColumnCondition {
+    if (v1 === undefined) return skipCondition;
+    return this.addCondition({ kind: "contains", value: v1 as any });
+  }
+
+  // V will already be an array
+  ncontains(v1: V | undefined): ColumnCondition {
+    if (v1 === undefined) return skipCondition;
+    return this.addCondition({ kind: "ncontains", value: v1 as any });
+  }
+
+  // V will already be an array
+  overlaps(v1: V | undefined): ColumnCondition {
+    if (v1 === undefined) return skipCondition;
+    return this.addCondition({ kind: "overlaps", value: v1 as any });
+  }
+
+  noverlaps(v1: V | undefined): ColumnCondition {
+    if (v1 === undefined) return skipCondition;
+    return this.addCondition({ kind: "noverlaps", value: v1 as any });
   }
 }
 

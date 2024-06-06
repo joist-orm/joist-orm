@@ -704,7 +704,9 @@ export type ParsedValueFilter<V> =
   | { kind: "ilike"; value: V }
   | { kind: "nilike"; value: V }
   | { kind: "contains"; value: readonly V[] }
+  | { kind: "ncontains"; value: readonly V[] }
   | { kind: "overlaps"; value: readonly V[] }
+  | { kind: "noverlaps"; value: readonly V[] }
   | { kind: "containedBy"; value: readonly V[] }
   | { kind: "between"; value: [V, V] };
 
@@ -820,7 +822,9 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
       }
       return filter;
     case "contains":
+    case "ncontains":
     case "overlaps":
+    case "noverlaps":
     case "containedBy":
       if (!column.isArray) {
         throw new Error(`${filter.kind} is only unsupported on array columns`);

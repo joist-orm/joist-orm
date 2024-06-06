@@ -129,9 +129,15 @@ function buildCondition(cc: ColumnCondition): [string, any[]] {
     case "nilike":
     case "contains":
     case "containedBy":
-    case "overlaps":
+    case "overlaps": {
       const fn = opToFn[cond.kind] ?? fail(`Invalid operator ${cond.kind}`);
       return [`${columnName} ${fn} ?`, [cond.value]];
+    }
+    case "noverlaps":
+    case "ncontains": {
+      const fn = (opToFn as any)[cond.kind.substring(1)] ?? fail(`Invalid operator ${cond.kind}`);
+      return [`NOT (${columnName} ${fn} ?)`, [cond.value]];
+    }
     case "is-null":
       return [`${columnName} is null`, []];
     case "not-null":

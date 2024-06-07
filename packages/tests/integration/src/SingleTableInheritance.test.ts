@@ -1,16 +1,17 @@
 import { getProperties } from "joist-orm";
 import {
-  Task,
-  TaskNew,
-  TaskOld,
-  TaskType,
   newAuthor,
   newTask,
   newTaskItem,
   newTaskNew,
   newTaskOld,
+  Task,
+  TaskItem,
+  TaskNew,
+  TaskOld,
+  TaskType,
 } from "src/entities";
-import { insertTask, select } from "src/entities/inserts";
+import { insertTask, insertTaskItem, select } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("SingleTableInheritance", () => {
@@ -368,6 +369,15 @@ describe("SingleTableInheritance", () => {
     newTaskNew(em, { deletedAt: new Date(), specialNewAuthor: a });
     await em.flush();
     expect(a.tasks.get).toMatchEntity([]);
+  });
+
+  it("can filter using subtype specific filters", async () => {
+    await insertTask({ type: "NEW", special_new_field: 1 });
+    await insertTask({ type: "OLD", special_old_field: 1 });
+    await insertTaskItem({ task_id: 1 });
+    const em = newEntityManager();
+    const items = await em.find(TaskItem, { taskTaskNew: { specialNewField: 1 } });
+    expect(items).toMatchEntity([{}]);
   });
 
   it("runs reactive validation rules", async () => {

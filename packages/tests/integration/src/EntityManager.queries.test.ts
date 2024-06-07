@@ -48,6 +48,8 @@ import {
   PublisherSize,
   SmallPublisher,
   Tag,
+  TaskItem,
+  TaskItemFilter,
   User,
   UserFilter,
   newAuthor,
@@ -64,6 +66,7 @@ const pm = getMetadata(Publisher);
 const cm = getMetadata(Comment);
 const um = getMetadata(User);
 const criticMeta = getMetadata(Critic);
+const taskItemMeta = getMetadata(TaskItem);
 const opts = { softDeletes: "include" } as const;
 
 describe("EntityManager.queries", () => {
@@ -2235,6 +2238,25 @@ describe("EntityManager.queries", () => {
         op: "and",
         conditions: [
           { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through m2o with subtype only fields", async () => {
+    const where = { taskTaskNew: { specialNewField: 1 } } satisfies TaskItemFilter;
+    expect(parseFindQuery(taskItemMeta, where, opts)).toMatchObject({
+      selects: [`ti.*`],
+      tables: [
+        { alias: "ti", table: "task_items", join: "primary" },
+        { alias: "t", table: "tasks", join: "outer", col1: "ti.task_id", col2: "t.id" },
+      ],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "t", column: "type_id", dbType: "int", cond: { kind: "eq", value: 2 } },
+          { alias: "t", column: "special_new_field", dbType: "int", cond: { kind: "eq", value: 1 } },
         ],
       },
       orderBys: [expect.anything()],

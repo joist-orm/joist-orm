@@ -79,6 +79,8 @@ export interface TaskItemFilter {
   newTask?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   oldTask?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
   task?: EntityFilter<Task, TaskId, FilterOf<Task>, null>;
+  taskTaskNew?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
+  taskTaskOld?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
 }
 
 export interface TaskItemGraphQLFilter {
@@ -88,6 +90,8 @@ export interface TaskItemGraphQLFilter {
   newTask?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   oldTask?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
   task?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null>;
+  taskTaskNew?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
+  taskTaskOld?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
 }
 
 export interface TaskItemOrder {

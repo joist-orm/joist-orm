@@ -1,3 +1,10 @@
+## [1.170.1](https://github.com/joist-orm/joist-orm/compare/v1.170.0...v1.170.1) (2024-06-07)
+
+
+### Bug Fixes
+
+* Add STI subtypes as per-type filters. ([#1107](https://github.com/joist-orm/joist-orm/issues/1107)) ([3d17c48](https://github.com/joist-orm/joist-orm/commit/3d17c480af87e182b896d3e3ae56ff2804722ff9))
+
 # [1.170.0](https://github.com/joist-orm/joist-orm/compare/v1.169.3...v1.170.0) (2024-06-06)
 
 

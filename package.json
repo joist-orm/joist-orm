@@ -1,5 +1,5 @@
 {
-  "version": "1.170.0",
+  "version": "1.170.1",
   "name": "joist",
   "scripts": {
     "build": "tspc --build",

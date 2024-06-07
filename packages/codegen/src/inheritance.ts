@@ -112,6 +112,7 @@ function expandSingleTableInheritance(config: Config, entities: EntityDbMetadata
         entity.manyToManys = entity.manyToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
         entity.largeManyToManys = entity.largeManyToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
         entity.polymorphics = entity.polymorphics.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.subTypes.push(subEntity);
 
         entities.push(subEntity);
       }

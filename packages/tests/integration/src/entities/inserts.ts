@@ -64,6 +64,11 @@ export function insertTask(row: {
   });
 }
 
+export function insertTaskItem(row: { id?: number; task_id?: number }) {
+  const { ...rest } = row;
+  return testDriver.insert("task_items", { ...rest });
+}
+
 export function insertBook(row: {
   id?: number;
   title: string;

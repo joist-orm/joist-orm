@@ -96,3 +96,9 @@ node_modules/joist-orm/build/utils.d.ts:1:56 - error TS2307: Cannot find module 
 
 Then you either need to enable `skipLibCheck: "true"` in your `tsconfig.json` (recommended, as this disables unnecessary type-checking of your dependency's `*.ts` code), or install `temporal-polyfill` as a `devDependency`.
 
+
+## Can I customize the formatter?
+
+Joist uses [ts-poet](https://github.com/stephenh/ts-poet) and [dprint-node](https://github.com/devongovett/dprint-node) to generate & format code, as dprint is significantly faster than Prettier when generating large amounts of code.
+
+The ts-poet output attempts to be "prettier-ish", but if you'd like to customize it, you can create a `.dprint.json` file as per the [dprint docs](https://dprint.dev/setup/#hidden-config-file).

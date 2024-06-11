@@ -94,5 +94,5 @@
     }
   },
   "entitiesDirectory": "./src/entities",
-  "version": "1.170.0"
+  "version": "1.170.1"
 }

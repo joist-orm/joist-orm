@@ -1,3 +1,10 @@
+## [1.170.2](https://github.com/joist-orm/joist-orm/compare/v1.170.1...v1.170.2) (2024-06-11)
+
+
+### Bug Fixes
+
+* Fix em.recalc against ReactiveReferences. ([#1110](https://github.com/joist-orm/joist-orm/issues/1110)) ([c01068a](https://github.com/joist-orm/joist-orm/commit/c01068ac70aa260de2395639059c12f51eff21a7))
+
 ## [1.170.1](https://github.com/joist-orm/joist-orm/compare/v1.170.0...v1.170.1) (2024-06-07)
 
 

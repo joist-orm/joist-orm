@@ -119,6 +119,7 @@ export class Author extends AuthorCodegen {
     ageRuleInvoked: 0,
     numberOfBooksCalcInvoked: 0,
     bookCommentsCalcInvoked: 0,
+    favoriteBookCalcInvoked: 0,
     graduatedRuleInvoked: 0,
     deleteDuringFlush: false,
   };
@@ -206,6 +207,7 @@ export class Author extends AuthorCodegen {
     "favoriteBook",
     { books: { reviews_ro: "rating" } },
     (a) => {
+      a.transientFields.favoriteBookCalcInvoked++;
       const books = a.books.get;
       if (books.length === 0) {
         return undefined;

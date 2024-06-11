@@ -172,6 +172,26 @@ describe("ReactiveField", () => {
     expect(a1.numberOfBooks.get).toEqual(0);
   });
 
+  it("can recalc RRs with em.recalc", async () => {
+    // Given a stale ReactiveReference
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    await insertBookReview({ book_id: 2, rating: 1 });
+    await update("authors", { id: 1, favorite_book_id: 1 });
+    // And initially we see the stale value
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1", "favoriteBook");
+    expect(a1.favoriteBook.get!.title).toBe("b1");
+    expect(a1.transientFields.favoriteBookCalcInvoked).toBe(0);
+    // When we recalc the author
+    await em.recalc(a1);
+    // Then the derived value was recalculated
+    expect(a1.transientFields.favoriteBookCalcInvoked).toBe(1);
+    // And it was updated
+    expect(a1.favoriteBook.get!.title).toBe("b2");
+  });
+
   it("can recalc getters with em.recalc", async () => {
     // Given an author
     const em = newEntityManager();

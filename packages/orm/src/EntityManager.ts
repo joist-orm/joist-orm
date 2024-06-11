@@ -1540,7 +1540,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         .filter((f) => "derived" in f && f.derived === "async")
         .map((field) => (entity as any)[field.fieldName]),
     );
-    await Promise.all(relations.map((r: any) => r.load()));
+    // Use forceReload: true to tell ReactiveReferences to recalc against their full graph
+    await Promise.all(relations.map((r: any) => r.load({ forceReload: true })));
 
     // And also sync reactive fields
     toArray(entityOrEntities).flatMap((entity) =>

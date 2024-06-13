@@ -4,6 +4,7 @@ import {
   ConfigApi,
   failNoIdYet,
   getField,
+  hasMany,
   hasManyToMany,
   hasOne,
   hasOnePolymorphic,
@@ -48,6 +49,7 @@ import {
   AdminUser,
   Author,
   Book,
+  bookMeta,
   BookReview,
   Comment,
   commentMeta,
@@ -58,7 +60,7 @@ import {
   User,
   userMeta,
 } from "../entities";
-import type { AdminUserId, Entity, UserId, UserOrder } from "../entities";
+import type { AdminUserId, BookId, Entity, UserId, UserOrder } from "../entities";
 
 export type CommentId = Flavor<string, Comment>;
 
@@ -85,12 +87,14 @@ export interface CommentOpts {
   text?: string | null;
   user?: User | UserId | null;
   parent: CommentParent;
+  books?: Book[];
   likedByUsers?: User[];
 }
 
 export interface CommentIdsOpts {
   userId?: UserId | null;
   parentId?: IdOf<CommentParent> | null;
+  bookIds?: BookId[] | null;
   likedByUserIds?: UserId[] | null;
 }
 
@@ -103,6 +107,7 @@ export interface CommentFilter {
   updatedAt?: ValueFilter<Date, never>;
   user?: EntityFilter<User, UserId, FilterOf<User>, null>;
   userAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
+  books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   likedByUsers?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   parent?: EntityFilter<CommentParent, IdOf<CommentParent>, never, never>;
   parentAuthor?: EntityFilter<Author, IdOf<Author>, FilterOf<Author>, null>;
@@ -121,6 +126,7 @@ export interface CommentGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   user?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null>;
   userAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
+  books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   likedByUsers?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never, never>;
   parentAuthor?: EntityGraphQLFilter<Author, IdOf<Author>, FilterOf<Author>, null>;
@@ -240,6 +246,17 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   toJSON<const H extends ToJsonHint<Comment>>(hint: H): Promise<JsonPayload<Comment, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
+  }
+
+  get books(): Collection<Comment, Book> {
+    return this.__data.relations.books ??= hasMany(
+      this as any as Comment,
+      bookMeta,
+      "books",
+      "randomComment",
+      "random_comment_id",
+      { "field": "title", "direction": "ASC" },
+    );
   }
 
   get user(): ManyToOneReference<Comment, User, undefined> {

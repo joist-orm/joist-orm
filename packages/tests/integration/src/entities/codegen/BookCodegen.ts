@@ -65,6 +65,7 @@ import type {
   BookAdvanceId,
   BookReviewId,
   CommentId,
+  CommentOrder,
   Entity,
   ImageId,
   TagId,
@@ -82,6 +83,7 @@ export interface BookFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
+  randomComment: { kind: "m2o"; type: Comment; nullable: undefined; derived: false };
 }
 
 export interface BookOpts {
@@ -91,6 +93,7 @@ export interface BookOpts {
   acknowledgements?: string | null;
   deletedAt?: Date | null;
   author: Author | AuthorId;
+  randomComment?: Comment | CommentId | null;
   currentDraftAuthor?: Author | null;
   image?: Image | null;
   advances?: BookAdvance[];
@@ -101,6 +104,7 @@ export interface BookOpts {
 
 export interface BookIdsOpts {
   authorId?: AuthorId | null;
+  randomCommentId?: CommentId | null;
   currentDraftAuthorId?: AuthorId | null;
   imageId?: ImageId | null;
   advanceIds?: BookAdvanceId[] | null;
@@ -119,6 +123,7 @@ export interface BookFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
+  randomComment?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null>;
   currentDraftAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   advances?: EntityFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
@@ -137,6 +142,7 @@ export interface BookGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  randomComment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null>;
   currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   advances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, GraphQLFilterOf<BookAdvance>, null | undefined>;
@@ -155,6 +161,7 @@ export interface BookOrder {
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   author?: AuthorOrder;
+  randomComment?: CommentOrder;
 }
 
 export const bookConfig = new ConfigApi<Book, Context>();
@@ -329,6 +336,10 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   get author(): ManyToOneReference<Book, Author, never> {
     return this.__data.relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
+  }
+
+  get randomComment(): ManyToOneReference<Book, Comment, undefined> {
+    return this.__data.relations.randomComment ??= hasOne(this as any as Book, commentMeta, "randomComment", "books");
   }
 
   get currentDraftAuthor(): OneToOneReference<Book, Author> {

@@ -639,15 +639,16 @@ function getOrCreateUseMap(opts: FactoryOpts<any>): UseMap {
     const todo = [opts];
     while (todo.length > 0) {
       const opts = todo.pop();
-      Object.values(opts || {}).forEach((opt) => {
+      for (const opt of Object.values(opts || {})) {
         if (isEntity(opt) && !map.has(opt.constructor)) {
           addForAllMetas(map, opt, "testOpts");
         } else if (opt instanceof Array) {
-          todo.push(...opt);
+          // Push the array as-is, because it will be `Object.value`-d on the next iteration
+          todo.push(opt);
         } else if (isPlainObject(opt)) {
           todo.push(opt);
         }
-      });
+      }
     }
   }
   // Store our potentially-massaged map back into opts i.e. in case resolveFactoryOpt needs it.

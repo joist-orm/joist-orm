@@ -1,3 +1,10 @@
+## [1.170.3](https://github.com/joist-orm/joist-orm/compare/v1.170.2...v1.170.3) (2024-06-13)
+
+
+### Bug Fixes
+
+* Fix newTestInstance not using entities in arrays. ([#1112](https://github.com/joist-orm/joist-orm/issues/1112)) ([f1dbed9](https://github.com/joist-orm/joist-orm/commit/f1dbed93cde101c2405b290b798be159f657b96c))
+
 ## [1.170.2](https://github.com/joist-orm/joist-orm/compare/v1.170.1...v1.170.2) (2024-06-11)
 
 

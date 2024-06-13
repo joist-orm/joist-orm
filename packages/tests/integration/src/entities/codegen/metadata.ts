@@ -258,6 +258,7 @@ export const bookMeta: EntityMetadata<Book> = {
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
     "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "author_id", "int"), immutable: false, default: "config" },
+    "randomComment": { kind: "m2o", fieldName: "randomComment", fieldIdName: "randomCommentId", derived: false, required: false, otherMetadata: () => commentMeta, otherFieldName: "books", serde: new KeySerde("comment", "randomComment", "random_comment_id", "int"), immutable: false },
     "advances": { kind: "o2m", fieldName: "advances", fieldIdName: "advanceIds", required: false, otherMetadata: () => bookAdvanceMeta, otherFieldName: "book", serde: undefined, immutable: false },
     "reviews": { kind: "o2m", fieldName: "reviews", fieldIdName: "reviewIds", required: false, otherMetadata: () => bookReviewMeta, otherFieldName: "book", serde: undefined, immutable: false },
     "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined, immutable: false },
@@ -431,6 +432,7 @@ export const commentMeta: EntityMetadata<Comment> = {
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
     "user": { kind: "m2o", fieldName: "user", fieldIdName: "userId", derived: false, required: false, otherMetadata: () => userMeta, otherFieldName: "createdComments", serde: new KeySerde("u", "user", "user_id", "int"), immutable: false },
+    "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "randomComment", serde: undefined, immutable: false },
     "likedByUsers": { kind: "m2m", fieldName: "likedByUsers", fieldIdName: "likedByUserIds", required: false, otherMetadata: () => userMeta, otherFieldName: "likedComments", serde: undefined, immutable: false, joinTableName: "users_to_comments", columnNames: ["comment_id", "liked_by_user_id"] },
     "parent": {
       kind: "poly",

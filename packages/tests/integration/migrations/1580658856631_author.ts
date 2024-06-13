@@ -336,6 +336,11 @@ export function up(b: MigrationBuilder): void {
     parent_task_id: foreignKey("tasks", { notNull: false }),
   });
 
+  // For testing factories discovering entities from opt literals
+  addColumns(b, "books", {
+    random_comment_id: foreignKey("comments", { notNull: false }),
+  });
+
   // for testing ignore of m2m
   createManyToManyTable(b, "critics_to_tags", "critics", "tags");
   // for testing regular m2m

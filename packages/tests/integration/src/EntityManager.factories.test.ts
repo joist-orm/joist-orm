@@ -14,6 +14,7 @@ import {
   newBookReview,
   newChild,
   newChildGroup,
+  newComment,
   newCritic,
   newCriticColumn,
   newImage,
@@ -119,6 +120,39 @@ describe("EntityManager.factories", () => {
       reviews: [],
       use: expect.any(Map),
     });
+  });
+
+  it("will use existing entities within the opts literal", async () => {
+    const em = newEntityManager();
+    // Given two authors (to turn off the obvious default)
+    const [, a2] = [newAuthor(em), newAuthor(em)];
+    // Given we want to make a Book
+    const b = newTestInstance(
+      em,
+      Book,
+      // and we refer to one of the authors in the opts literal
+      { comments: [{ parent: a2 }] },
+      // And leave the required author field unset
+      {},
+    );
+    // Then the book used that author
+    expect(b.author.get).toMatchEntity(a2);
+  });
+
+  it("will use existing entities within the opts literal array", async () => {
+    const em = newEntityManager();
+    // Given two comments (to turn off the obvious default)
+    const [, c2] = [newComment(em), newComment(em)];
+    // Given we want to make a Book
+    const b = newTestInstance(
+      em,
+      Book,
+      // and we refer to one of the comments in the opts literal
+      { comments: [c2] },
+      {},
+    );
+    // Then the book used that author
+    expect(b.randomComment.get).toMatchEntity(c2);
   });
 
   it("finds entities created within the factory but as side-effects", async () => {

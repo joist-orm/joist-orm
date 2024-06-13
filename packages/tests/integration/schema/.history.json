@@ -88,6 +88,7 @@
     "notes",
     "order",
     "originalOrder",
+    "randomComment",
     "reviews",
     "tags",
     "title",
@@ -111,7 +112,18 @@
   "Child": ["createdAt", "groups", "id", "name", "updatedAt"],
   "ChildGroup": ["childGroupId", "childItems", "createdAt", "id", "name", "parentGroup", "updatedAt"],
   "ChildItem": ["childGroup", "createdAt", "id", "name", "parentItem", "updatedAt"],
-  "Comment": ["createdAt", "id", "likedByUsers", "parent", "parentTaggedId", "parentTags", "text", "updatedAt", "user"],
+  "Comment": [
+    "books",
+    "createdAt",
+    "id",
+    "likedByUsers",
+    "parent",
+    "parentTaggedId",
+    "parentTags",
+    "text",
+    "updatedAt",
+    "user"
+  ],
   "CommentParent": ["Author", "Book", "BookReview", "Publisher", "TaskOld"],
   "Critic": [
     "bookReviews",
@@ -281,6 +293,7 @@
     "notes",
     "order",
     "originalOrder",
+    "randomCommentId",
     "title",
     "updatedAt"
   ],

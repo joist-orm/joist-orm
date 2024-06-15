@@ -124,6 +124,7 @@ export interface AuthorFields {
   numberOfPublicReviews2: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: true };
   tagsOfAllBooks: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   search: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  certificate: { kind: "primitive"; type: Uint8Array; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   rangeOfBooks: { kind: "enum"; type: BookRange; nullable: undefined };
@@ -149,6 +150,7 @@ export interface AuthorOpts {
   quotes?: Quotes | null;
   numberOfAtoms?: bigint | null;
   deletedAt?: Date | null;
+  certificate?: Uint8Array | null;
   rangeOfBooks?: BookRange | null;
   favoriteColors?: Color[];
   favoriteShape?: FavoriteShape | null;
@@ -202,6 +204,7 @@ export interface AuthorFilter {
   numberOfPublicReviews2?: ValueFilter<number, null>;
   tagsOfAllBooks?: ValueFilter<string, null>;
   search?: ValueFilter<string, null>;
+  certificate?: ValueFilter<Uint8Array, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   rangeOfBooks?: ValueFilter<BookRange, null>;
@@ -246,6 +249,7 @@ export interface AuthorGraphQLFilter {
   numberOfPublicReviews2?: ValueGraphQLFilter<number>;
   tagsOfAllBooks?: ValueGraphQLFilter<string>;
   search?: ValueGraphQLFilter<string>;
+  certificate?: ValueGraphQLFilter<Uint8Array>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   rangeOfBooks?: ValueGraphQLFilter<BookRange>;
@@ -300,6 +304,7 @@ export interface AuthorOrder {
   numberOfPublicReviews2?: OrderBy;
   tagsOfAllBooks?: OrderBy;
   search?: OrderBy;
+  certificate?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   rangeOfBooks?: OrderBy;
@@ -485,6 +490,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   abstract readonly tagsOfAllBooks: ReactiveField<Author, string | undefined>;
 
   abstract readonly search: ReactiveField<Author, string | undefined>;
+
+  get certificate(): Uint8Array | undefined {
+    return getField(this, "certificate");
+  }
+
+  set certificate(certificate: Uint8Array | undefined) {
+    setField(this, "certificate", certificate);
+  }
 
   get createdAt(): Date {
     return getField(this, "createdAt");

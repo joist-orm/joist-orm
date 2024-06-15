@@ -659,4 +659,30 @@ describe("Author", () => {
     const authors = await em.find(Author, { numberOfAtoms: { gt: 1n } });
     expect(authors.length).toBe(1);
   });
+
+  it("can read bytea", async () => {
+    await insertAuthor({ first_name: "a1", certificate: new Uint8Array([11, 22]) });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1");
+
+    expect(a.certificate?.at(0)).toBe(11);
+    expect(a.certificate?.at(1)).toBe(22);
+  });
+
+  it("can store bytea", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em, { certificate: new Uint8Array([11, 22]) });
+    await em.flush();
+
+    const cert = (await select("authors"))[0].certificate
+    expect(cert.at(0)).toBe(11);
+    expect(cert.at(1)).toBe(22);
+  });
+
+  it("can filter bytea", async () => {
+    await insertAuthor({ first_name: "a1", certificate: new Uint8Array([11, 22]) });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { certificate: { eq: new Uint8Array([11, 22])  } });
+    expect(authors.length).toBe(1);
+  });
 });

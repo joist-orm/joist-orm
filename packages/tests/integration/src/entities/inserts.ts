@@ -40,6 +40,7 @@ export function insertAuthor(row: {
   number_of_public_reviews?: number;
   updated_at?: any;
   deleted_at?: any;
+  certificate?: any;
 }) {
   return testDriver.insert("authors", {
     initials: row.first_name[0],

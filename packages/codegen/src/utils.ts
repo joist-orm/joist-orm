@@ -128,6 +128,8 @@ export function mapSimpleDbTypeToTypescriptType(config: Config, dbType: Database
       return config.temporal ? plainDateCode : dateCode;
     case "jsonb":
       return "Object";
+    case "bytea":
+      return "Uint8Array";
     default:
       assertNever(dbType);
   }

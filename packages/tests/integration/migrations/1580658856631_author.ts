@@ -139,6 +139,8 @@ export function up(b: MigrationBuilder): void {
     tags_of_all_books: { type: "varchar", notNull: false },
     // for testing full-text-search fields that want to use `id`
     search: { type: "text", notNull: false },
+    // for testing full-text-search fields that want to use `id`
+    certificate: { type: "bytea", notNull: false },
   });
 
   // For testing full-text-search

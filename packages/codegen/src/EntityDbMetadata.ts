@@ -84,6 +84,7 @@ export type DatabaseColumnType =
   | "timestamp without time zone"
   | "date"
   | "jsonb"
+  | "bytea"
   | "tsvector";
 
 /**
@@ -96,7 +97,7 @@ interface Field {
   ignore?: boolean;
 }
 
-export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Object" | "bigint" | Code;
+export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Object" | "bigint" | "Uint8Array" | Code;
 
 export type PrimitiveField = Field & {
   kind: "primitive";

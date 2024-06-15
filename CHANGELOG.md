@@ -1,3 +1,10 @@
+# [1.171.0](https://github.com/joist-orm/joist-orm/compare/v1.170.3...v1.171.0) (2024-06-15)
+
+
+### Features
+
+* bytea support ([#1115](https://github.com/joist-orm/joist-orm/issues/1115)) ([0d2acab](https://github.com/joist-orm/joist-orm/commit/0d2acabb7f049923169d7c8a76fab28e144aafe5))
+
 ## [1.170.3](https://github.com/joist-orm/joist-orm/compare/v1.170.2...v1.170.3) (2024-06-13)
 
 

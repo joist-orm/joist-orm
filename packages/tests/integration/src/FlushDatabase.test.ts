@@ -15,17 +15,15 @@ describe("FlushDatabase", () => {
       RETURNS void
       LANGUAGE plpgsql
      AS $function$
-         DECLARE seq_record RECORD; table_name TEXT; seq_name TEXT;
+         DECLARE seq RECORD;
          BEGIN
-           FOR seq_record IN
-             SELECT sequencename
+           FOR seq IN
+             SELECT sequencename AS name
              FROM pg_sequences
              WHERE schemaname = 'public' AND last_value IS NOT NULL AND sequencename LIKE '%_id_seq' AND sequencename NOT IN ('advance_status_id_seq', 'book_range_id_seq', 'color_id_seq', 'image_type_id_seq', 'publisher_size_id_seq', 'publisher_type_id_seq', 'task_type_id_seq')
            LOOP
-             seq_name := seq_record.sequencename;
-             table_name := regexp_replace(seq_name, '_id_seq$', '');
-             EXECUTE format('DELETE FROM %I', table_name);
-             EXECUTE format('ALTER SEQUENCE %I RESTART WITH 1', seq_name);
+             EXECUTE format('DELETE FROM %I', regexp_replace(seq.name, '_id_seq$', ''));
+             EXECUTE format('ALTER SEQUENCE %I RESTART WITH 1', seq.name);
            END LOOP;
          END;
         $function$

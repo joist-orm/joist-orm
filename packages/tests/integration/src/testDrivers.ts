@@ -56,6 +56,8 @@ export class PostgresTestDriver implements TestDriver {
 
   async insert(tableName: string, row: Record<string, any>, subclassTable = false): Promise<void> {
     if (row.id && !subclassTable) {
+      // Manually specifying ids can help test readability, but ensure the sequence is updated,
+      // particularly if we're using the "only delete from touched sequences" flush_database.
       await this.knex.raw(`SELECT setval('${tableName}_id_seq', ${row.id}, true)`);
     }
     await this.knex.insert(row).into(tableName);

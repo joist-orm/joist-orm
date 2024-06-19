@@ -21,21 +21,22 @@ export function generateFlushFunction(db: DbMetadata): string {
     .filter((t) => !t.baseClassName)
     .flatMap((t) => {
       return [
-        `SELECT COUNT(*) INTO count FROM "${t.tableName}";`,
-        `IF count > 0 THEN`,
+        // If `last_value` is NULL then the sequence hasn't been used
+        `SELECT last_value INTO sequence_value FROM pg_sequences where sequencename = '${t.tableName}_id_seq';`,
+        `IF sequence_value IS NOT NULL THEN`,
         ...t.subTypes.flatMap((st) => `DELETE FROM "${st.tableName}";`),
         `DELETE FROM "${t.tableName}";`,
+        `ALTER SEQUENCE "${t.tableName}_id_seq" RESTART WITH 1;`,
         `END IF;`,
-        `ALTER SEQUENCE IF EXISTS "${t.tableName}_id_seq" RESTART WITH 1 INCREMENT BY 1;`,
       ];
     });
   const m2mDeletes = db.joinTables.flatMap((t) => {
     return [
-      `SELECT COUNT(*) INTO count FROM "${t}";`,
-      `IF count > 0 THEN`,
+      `SELECT last_value INTO sequence_value FROM pg_sequences where sequencename = '${t}_id_seq';`,
+      `IF sequence_value IS NOT NULL THEN`,
       `DELETE FROM "${t}";`,
+      `ALTER SEQUENCE "${t}_id_seq" RESTART WITH 1;`,
       `END IF;`,
-      `ALTER SEQUENCE IF EXISTS "${t}_id_seq" RESTART WITH 1 INCREMENT BY 1;`,
     ];
   });
 
@@ -56,9 +57,9 @@ export function generateFlushFunction(db: DbMetadata): string {
   // console.log({ statements });
 
   return `CREATE OR REPLACE FUNCTION flush_database() RETURNS void AS $$
-    DECLARE count INTEGER;
+    DECLARE sequence_value INTEGER;
     BEGIN
-      ${statements}
+    ${statements}
     END;
    $$ LANGUAGE
     'plpgsql'`;

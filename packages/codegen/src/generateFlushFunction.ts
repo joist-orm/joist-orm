@@ -25,8 +25,8 @@ export function generateFlushFunction(db: DbMetadata): string {
         `IF count > 0 THEN`,
         ...t.subTypes.flatMap((st) => `DELETE FROM "${st.tableName}";`),
         `DELETE FROM "${t.tableName}";`,
-        `ALTER SEQUENCE "${t.tableName}_id_seq" RESTART WITH 1 INCREMENT BY 1;`,
         `END IF;`,
+        `ALTER SEQUENCE IF EXISTS "${t.tableName}_id_seq" RESTART WITH 1 INCREMENT BY 1;`,
       ];
     });
   const m2mDeletes = db.joinTables.flatMap((t) => {
@@ -34,8 +34,8 @@ export function generateFlushFunction(db: DbMetadata): string {
       `SELECT COUNT(*) INTO count FROM "${t}";`,
       `IF count > 0 THEN`,
       `DELETE FROM "${t}";`,
-      `ALTER SEQUENCE "${t}_id_seq" RESTART WITH 1 INCREMENT BY 1;`,
       `END IF;`,
+      `ALTER SEQUENCE IF EXISTS "${t}_id_seq" RESTART WITH 1 INCREMENT BY 1;`,
     ];
   });
 

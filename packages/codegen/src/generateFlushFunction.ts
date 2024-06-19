@@ -7,35 +7,38 @@ export async function createFlushFunction(client: Client, db: DbMetadata): Promi
 }
 
 export function generateFlushFunction(db: DbMetadata): string {
-  // Leave code/enum tables alone
-  const tables = [
-    ...[...db.entities]
-      .sort((a, b) => {
-        // Flush books before authors if it has non-deferred FKs
-        const x = a.nonDeferredFkOrder;
-        const y = b.nonDeferredFkOrder;
-        if (x !== y) {
-          return y - x;
-        }
-        // Flush base tables before sub-tables.
-        const i = a.baseClassName ? 1 : -1;
-        const j = b.baseClassName ? 1 : -1;
-        return j - i;
-      })
-      .map((e) => e.tableName),
-    ...db.joinTables,
-  ];
   // Note that, for whatever reason, doing DELETEs + ALTER SEQUENCEs is dramatically faster than TRUNCATEs.
   // On even a 40-table schema, TRUNCATEs (either 1 per table or even a single TRUNCATE with all tables) takes
   // 100s of milliseconds, whereas DELETEs takes single-digit milliseconds and DELETEs + ALTER SEQUENCEs is
   // 10s of milliseconds.
-  //
-  // One cute idea would be to use a single sequence for all tables when running locally. That would
-  // mean our flush_database function could reset a single sequence. Plus it would reduce bugs where
-  // something "works" but only b/c in the test database, all entities have id = 1.
-  const deletes = tables.map(
-    (t) => `DELETE FROM "${t}"; ALTER SEQUENCE IF EXISTS "${t}_id_seq" RESTART WITH 1 INCREMENT BY 1;`,
-  );
+  const entityDeletes = [...db.entities]
+    // Flush books before authors if it has non-deferred FKs
+    .sort((a, b) => {
+      const x = a.nonDeferredFkOrder;
+      const y = b.nonDeferredFkOrder;
+      return y - x;
+    })
+    .filter((t) => !t.baseClassName)
+    .flatMap((t) => {
+      return [
+        // If `last_value` is NULL then the sequence hasn't been used
+        `SELECT last_value INTO sequence_value FROM pg_sequences where sequencename = '${t.tableName}_id_seq';`,
+        `IF sequence_value IS NOT NULL THEN`,
+        ...t.subTypes.flatMap((st) => `DELETE FROM "${st.tableName}";`),
+        `DELETE FROM "${t.tableName}";`,
+        `ALTER SEQUENCE "${t.tableName}_id_seq" RESTART WITH 1;`,
+        `END IF;`,
+      ];
+    });
+  const m2mDeletes = db.joinTables.flatMap((t) => {
+    return [
+      `SELECT last_value INTO sequence_value FROM pg_sequences where sequencename = '${t}_id_seq';`,
+      `IF sequence_value IS NOT NULL THEN`,
+      `DELETE FROM "${t}";`,
+      `ALTER SEQUENCE "${t}_id_seq" RESTART WITH 1;`,
+      `END IF;`,
+    ];
+  });
 
   // Create `SET NULLs` in schemas that don't have deferred FKs
   const setFksNulls = db.entities
@@ -49,11 +52,12 @@ export function generateFlushFunction(db: DbMetadata): string {
         .map((m2o) => `UPDATE ${t.tableName} SET ${m2o.columnName} = NULL;`),
     );
 
-  const statements = [...setFksNulls, ...deletes].join("\n");
+  const statements = [...setFksNulls, ...m2mDeletes, ...entityDeletes].join("\n");
 
   // console.log({ statements });
 
   return `CREATE OR REPLACE FUNCTION flush_database() RETURNS void AS $$
+    DECLARE sequence_value INTEGER;
     BEGIN
     ${statements}
     END;

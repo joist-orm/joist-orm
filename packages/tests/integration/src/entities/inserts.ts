@@ -142,11 +142,15 @@ export async function insertPublisher(row: {
 }) {
   const { shared_column, ...others } = row;
   await testDriver.insert("publishers", others);
-  await testDriver.insert("small_publishers", {
-    id: row.id ?? 1,
-    city: row.city ?? "city",
-    shared_column: row.shared_column,
-  });
+  await testDriver.insert(
+    "small_publishers",
+    {
+      id: row.id ?? 1,
+      city: row.city ?? "city",
+      shared_column: row.shared_column,
+    },
+    true,
+  );
 }
 
 /** Inserts a large publisher, into `publishers` and `large_publishers`. */
@@ -164,7 +168,7 @@ export async function insertLargePublisher(row: {
 }) {
   const { country = "country", shared_column, ...others } = row;
   await testDriver.insert("publishers", others);
-  await testDriver.insert("large_publishers", { id: row.id ?? 1, country, shared_column });
+  await testDriver.insert("large_publishers", { id: row.id ?? 1, country, shared_column }, true);
 }
 
 export function insertTag(row: { id?: number; name: string }) {

@@ -1,4 +1,6 @@
+import ansis from "ansis";
 import { isPlainObject } from "joist-utils";
+import { builders } from "prettier/doc";
 import { Entity, isEntity } from "./Entity";
 import {
   ActualFactoryOpts,
@@ -27,6 +29,8 @@ import { hasDefaultValue } from "./defaults";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
 import { assertNever, maybeRequireTemporal } from "./utils";
+import indent = builders.indent;
+import dedent = builders.dedent;
 
 /**
  * DeepPartial-esque type specific to our `newTestInstance` factory.
@@ -54,6 +58,10 @@ const Temporal = maybeRequireTemporal()?.Temporal;
 export let testPlainDate = Temporal?.PlainDate.from("2018-01-01");
 export let testPlainDateTime = testPlainDate?.toPlainDateTime("00:00:00");
 export let testZonedDateTime = testPlainDate?.toZonedDateTime("UTC");
+
+let logger: FactoryLogger | undefined = undefined;
+let writer: WriteFn | undefined = undefined;
+
 /**
  * Creates a test instance of `T`.
  *
@@ -72,6 +80,13 @@ export function newTestInstance<T extends Entity>(
     useExisting?: (opts: OptsOf<T>, existing: DeepNew<T>) => boolean;
   } = {},
 ): DeepNew<T> {
+  // The first factory that is asked to debug, without one in place, will create+unset the logger.
+  let ownsTheLogger = !logger;
+  if (ownsTheLogger) logger = new FactoryLogger();
+
+  logger?.logCreating(cstr);
+  logger?.indent();
+
   const meta = getMetadata(cstr);
   const opts = mergeOpts(meta, testOpts, factoryOpts);
   const use = getOrCreateUseMap(opts);
@@ -137,7 +152,7 @@ export function newTestInstance<T extends Entity>(
       } else if (field.kind === "m2o" && !field.derived) {
         // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
         // then look in `use` and for an "obvious" there-is-only-one default (even for optional fields)
-        const existing = getObviousDefault(em, field.otherMetadata(), opts);
+        const existing = getObviousDefault(em, field.otherMetadata(), fieldName, opts);
         // If this is a m2o pointing to an o2o, i.e. that as a unique constraint, make sure the
         // existing entity we found isn't already claimed
         const isUniqueAndAlreadyUsed =
@@ -185,7 +200,7 @@ export function newTestInstance<T extends Entity>(
   // `build fullOpts` loop, we're also invoking `newTestInstance` as we go through the loop itself,
   // creating each test instance within nested/recursive `newTestInstance` calls.
   if (!use.has(entity.constructor) || use.get(entity.constructor)![1] === "diffBranch") {
-    addForAllMetas(use, entity, "sameBranch");
+    addToUseMap(use, entity, "sameBranch");
   }
 
   // Now that we've got the entity, do a 2nd pass for o2m/m2m where we pass
@@ -225,6 +240,10 @@ export function newTestInstance<T extends Entity>(
 
   entity.set(Object.fromEntries(additionalOpts.filter((t) => t.length > 0)));
 
+  // Set it back to undefined
+  logger?.dedent();
+  if (ownsTheLogger) logger = undefined;
+
   return entity as DeepNew<T>;
 }
 
@@ -263,7 +282,7 @@ function resolveFactoryOpt<T extends Entity>(
     // Look for an obvious default
     if (opt === undefined || opt instanceof MaybeNew) {
       if (field.kind !== "poly") {
-        const existing = getObviousDefault(em, meta, opts);
+        const existing = getObviousDefault(em, meta, field.fieldName, opts);
         if (existing) {
           return existing as T;
         }
@@ -273,7 +292,7 @@ function resolveFactoryOpt<T extends Entity>(
         const existing = (
           opt instanceof MaybeNew ? opt.polyRefPreferredOrder : field.components.map((c) => c.otherMetadata().cstr)
         )
-          .map((cstr) => getObviousDefault(em, getMetadata(cstr), opts))
+          .map((cstr) => getObviousDefault(em, getMetadata(cstr), field.fieldName, opts))
           .find((existing) => !!existing);
         if (existing) {
           return existing as T;
@@ -281,7 +300,7 @@ function resolveFactoryOpt<T extends Entity>(
       }
     }
     const use = getOrCreateUseMap(opts);
-    // If this is image.author (m2o) but the other-side is a o2o, pass null instead of []
+    // If this is image.author (m2o) but the other-side is an o2o, pass null instead of []
     maybeEntity ??= (meta.allFields[otherFieldName].kind === "o2o" ? null : []) as any;
     return meta.factory(em, {
       // Because of the `!isPlainObject` above, opt will either be undefined or an object here
@@ -317,12 +336,13 @@ function metaFromFieldAndOpt<T extends Entity>(
 function getObviousDefault<T extends Entity>(
   em: EntityManager,
   metadata: EntityMetadata,
+  fieldName: string,
   opts: FactoryOpts<any>,
 ): T | undefined {
   const use = getOrCreateUseMap(opts);
   if (use.has(metadata.cstr)) {
-    // const e = use.get(metadata.cstr) as any;
-    // console.log(`Found ${e[0].toString()} in ${objectId(use)} as ${e[1]}`);
+    const e = use.get(metadata.cstr) as any;
+    logger?.logFoundInUseMap(fieldName, e[0]);
     return use.get(metadata.cstr)![0] as T;
   }
   // If there is a single existing instance of this type, assume the caller is fine with that.
@@ -331,6 +351,7 @@ function getObviousDefault<T extends Entity>(
   // but that approach doesn't catch created-as-side-effect entities.
   const existing = em.entities.filter((e) => e instanceof metadata.cstr);
   if (existing.length === 1) {
+    logger?.logFoundSingleEntity(fieldName, existing[0]);
     return existing[0] as T;
   }
   return undefined;
@@ -362,7 +383,7 @@ function applyUse(optsMaybeNew: object, use: UseMap, metadata: EntityMetadata): 
         const def = use.get(f.otherMetadata().cstr)!;
         // Only pass explicit/user-defined `use` entities, so that factories can "fan out" if they want,
         // and not see other factory-created entities look like user-specific values.
-        if (def[1] === "testUse") {
+        if (def[1] === "useOpt") {
           (opts as any)[f.fieldName] = def[0];
         }
       }
@@ -608,11 +629,11 @@ type AllowRelationsOrPartials<T> = {
 // Map of constructor --> [
 //   default entity,
 //     | "testOpts" === explicitly passed into the top-level `newFactory` that creates the UseMap
-//     | "testUse === explicitly passed in as a `use` flag
+//     | "useOpt" === explicitly passed in as a `use` flag
 //     | "diffBranch" == created internally within the current factory call, but a different branch of children
 //     | "sameBranch" === created internally within the current factory call, in the current branch of entities
 // ]
-type UseMapSource = "testOpts" | "testUse" | "sameBranch" | "diffBranch";
+type UseMapSource = "testOpts" | "useOpt" | "sameBranch" | "diffBranch";
 type UseMapValue = [Entity, UseMapSource];
 type UseMap = Map<Function, UseMapValue>;
 
@@ -629,10 +650,10 @@ function getOrCreateUseMap(opts: FactoryOpts<any>): UseMap {
     map = new Map();
     if (use instanceof Array) {
       // it's a top-level `newAuthor` with a user-passed `use: array`
-      use.forEach((e) => addForAllMetas(map, e, "testUse"));
+      use.forEach((e) => addToUseMap(map, e, "useOpt"));
     } else if (use) {
       // it's a top-level `newAuthor` w/o a `use: entity` param
-      addForAllMetas(map, use, "testUse");
+      addToUseMap(map, use, "useOpt");
     }
     // Scan opts for entities to add to the map, i.e. if the user calls `newAuthor(em, { book: b1 })`,
     // we'll use `b1` for any other books we might happen to create.
@@ -641,7 +662,7 @@ function getOrCreateUseMap(opts: FactoryOpts<any>): UseMap {
       const opts = todo.pop();
       for (const opt of Object.values(opts || {})) {
         if (isEntity(opt) && !map.has(opt.constructor)) {
-          addForAllMetas(map, opt, "testOpts");
+          addToUseMap(map, opt, "testOpts");
         } else if (opt instanceof Array) {
           // Push the array as-is, because it will be `Object.value`-d on the next iteration
           todo.push(opt);
@@ -658,7 +679,8 @@ function getOrCreateUseMap(opts: FactoryOpts<any>): UseMap {
 }
 
 // If e is a subtype like SmallPublisher, register it for the base Publisher as well
-function addForAllMetas(map: UseMap, e: Entity, source: UseMapSource) {
+function addToUseMap(map: UseMap, e: Entity, source: UseMapSource) {
+  logger?.logAddToUseMap(e, source);
   const meta = getMetadata(e);
   if (meta.baseType || meta.subTypes.length) {
     getBaseAndSelfMetas(meta).forEach((m) => {
@@ -740,6 +762,58 @@ class CopyMap extends Map<Function, UseMapValue> {
     this.root?.set(k, [v[0], "diffBranch"]);
     return super.set(k, v);
   }
+}
+
+type WriteFn = (line: string) => void;
+
+class FactoryLogger {
+  private level = 0;
+  private write: WriteFn;
+
+  // We default to process.stdout.write to side-step around Jest's console.log instrumentation
+  // adding "...at..." stack traces to our output.
+  constructor() {
+    this.write = writer ?? process.stdout.write.bind(process.stdout);
+    this.write("New factory scope\n");
+    this.indent();
+  }
+
+  logCreating(cstr: any): void {
+    this.write(this.prefix() + ansis.green.bold(`Creating new`) + ` ${cstr.name}\n`);
+  }
+
+  logAddToUseMap(e: Entity, source: UseMapSource): void {
+    if (source === "sameBranch" || source === "diffBranch") {
+      this.write(this.prefix() + ansis.gray.bold(`created`) + ` ${e.toString()}\n`);
+    } else {
+      this.write(this.prefix() + ansis.gray.bold(`...found`) + ` ${e.toString()} from ${source}\n`);
+    }
+  }
+
+  logFoundInUseMap(fieldName: string, e: Entity): void {
+    this.write(this.prefix() + ansis.gray.bold(fieldName) + ` = ${e.toString()} from scope\n`);
+  }
+
+  logFoundSingleEntity(fieldName: string, e: Entity): void {
+    this.write(this.prefix() + ansis.gray.bold(fieldName) + ` = ${e.toString()} from em\n`);
+  }
+
+  indent() {
+    this.level++;
+  }
+
+  dedent() {
+    this.level--;
+  }
+
+  private prefix() {
+    return "  ".repeat(this.level);
+  }
+}
+
+// Allow our test suite observe the logger behavior
+export function setFactoryWriter(write: WriteFn | undefined): void {
+  writer = write;
 }
 
 // const objectId = (() => {

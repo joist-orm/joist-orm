@@ -28,7 +28,10 @@ import {
   SmallPublisher,
 } from "@src/entities";
 import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
-import { maybeNew, maybeNewPoly, newTestInstance, noValue, testIndex } from "joist-orm";
+import { maybeNew, maybeNewPoly, newTestInstance, noValue, setFactoryWriter, testIndex } from "joist-orm";
+import ansiRegex = require("ansi-regex");
+
+let factoryOutput: string[] = [];
 
 describe("EntityManager.factories", () => {
   it("can create a single top-level entity", async () => {
@@ -41,13 +44,22 @@ describe("EntityManager.factories", () => {
     expect(em.numberOfEntities).toEqual(1);
   });
 
-  it("can create a child and a required parent implicity", async () => {
+  it("can create a child and a required parent implicitly", async () => {
     const em = newEntityManager();
     // Given we make a book with no existing/passed authors
     const b1 = newBook(em);
     await em.flush();
     // Then we create the author b/c it's required
     expect(b1.author.get.firstName).toEqual("a1");
+    expect(factoryOutput).toMatchInlineSnapshot(`
+     [
+       "New factory scope",
+       "  Creating new Book↩",
+       "    Creating new Author↩",
+       "      created Author#1↩",
+       "    created Book#1↩",
+     ]
+    `);
   });
 
   it("can create a child and a required parent if opt is undefined", async () => {
@@ -101,6 +113,22 @@ describe("EntityManager.factories", () => {
     await em.flush();
     // Then it is used
     expect(b1.author.get).toEqual(a1);
+    expect(factoryOutput).toMatchInlineSnapshot(`
+     [
+       "New factory scope",
+       "  Creating new Author↩",
+       "    created Author#1↩",
+       "New factory scope",
+       "  Creating new Author↩",
+       "    mentor = Author#1 from em↩",
+       "    created Author#2↩",
+       "New factory scope",
+       "  Creating new Book↩",
+       "    ...found Author#1 from useOpt↩",
+       "    author = Author#1 from scope↩",
+       "    created Book#1↩",
+     ]
+    `);
   });
 
   it("can create a child and use an single parent from use", async () => {
@@ -137,6 +165,24 @@ describe("EntityManager.factories", () => {
     );
     // Then the book used that author
     expect(b.author.get).toMatchEntity(a2);
+    expect(factoryOutput).toMatchInlineSnapshot(`
+     [
+       "New factory scope",
+       "  Creating new Author↩",
+       "    created Author#1↩",
+       "New factory scope",
+       "  Creating new Author↩",
+       "    mentor = Author#1 from em↩",
+       "    created Author#2↩",
+       "New factory scope",
+       "  Creating new Book↩",
+       "    ...found Author#2 from testOpts↩",
+       "    author = Author#2 from scope↩",
+       "    created Book#1↩",
+       "    Creating new Comment↩",
+       "      created Comment#1↩",
+     ]
+    `);
   });
 
   it("will use existing entities within the opts literal array", async () => {
@@ -574,7 +620,7 @@ describe("EntityManager.factories", () => {
 
     it("reuse an entity if possible without an opt passed", async () => {
       const em = newEntityManager();
-      const p = newSmallPublisher(em);
+      newSmallPublisher(em);
       const ft1 = newTestInstance(em, Comment, {});
       expect(ft1.parent.isSet).toBe(true);
       expect(ft1.parent.get).toBeInstanceOf(SmallPublisher);
@@ -855,4 +901,18 @@ describe("EntityManager.factories", () => {
       }
     });
   });
+});
+
+beforeEach(() => {
+  setFactoryWriter((line: string) => {
+    factoryOutput.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
+  });
+});
+
+afterEach(() => {
+  factoryOutput = [];
+});
+
+afterAll(() => {
+  setFactoryWriter(undefined);
 });

@@ -47,11 +47,11 @@
     "prettier": "^3.2.5",
     "prettier-plugin-organize-imports": "^3.2.4",
     "superstruct": "0.15.5",
-    "ts-jest": "^29.1.2",
+    "ts-jest": "^29.1.5",
     "ts-patch": "^3.1.2",
     "tsconfig-paths": "^4.2.0",
-    "tsx": "^4.7.2",
-    "typescript": "^5.4.5",
+    "tsx": "^4.15.7",
+    "typescript": "^5.5.2",
     "zod": "^3.22.4"
   }
 }

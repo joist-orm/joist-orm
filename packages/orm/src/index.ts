@@ -53,7 +53,20 @@ export {
   maybePopulateThen,
 } from "./loadHints";
 export * from "./loadLens";
-export * from "./newTestInstance";
+export {
+  FactoryEntityOpt,
+  FactoryOpts,
+  defaultValue,
+  getTestIndex,
+  maybeBranchValue,
+  maybeNew,
+  maybeNewPoly,
+  newTestInstance,
+  noValue,
+  setFactoryLogging,
+  setFactoryWriter, // only for testing
+  testIndex,
+} from "./newTestInstance";
 export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
 export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";

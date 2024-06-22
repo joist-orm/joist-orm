@@ -1,6 +1,6 @@
 import { insertAuthor, insertPublisher } from "@src/entities/inserts";
 import { zeroTo } from "@src/utils";
-import { aliases, jan1 } from "joist-orm";
+import { aliases } from "joist-orm";
 import {
   AdvanceStatus,
   Author,
@@ -14,6 +14,7 @@ import {
 } from "./entities";
 
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
+import { jan1 } from "src/testDates";
 
 describe("EntityManager.find.batch", () => {
   it("batches queries loaded at the same time", async () => {

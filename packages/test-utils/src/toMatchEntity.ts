@@ -41,7 +41,7 @@ export function toMatchEntity<T extends object>(actual: T, expected: MatchedEnti
   // same "clean clone" of actual, and compare the two.
   const cleanExpected = deepClone(expected);
   const cleanActual = deepClone(deepMirror(cleanExpected, actual));
-  // Watch for `expect(someAuthor).toMatchEntity(a1)` as we'll turn `someAuthor` into "a:1`,
+  // Watch for `expect(someAuthor).toMatchEntity(a1)` as we'll turn `someAuthor` into "a:1",
   // so can't use toMatchObject anymore.
   if (typeof cleanActual !== "object") {
     // @ts-ignore

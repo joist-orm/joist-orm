@@ -5,20 +5,22 @@ sidebar_position: 0
 
 Joist provides customizable factories for easily creating test data.
 
-This lets tests succinctly create entities, with all required fields & dependencies filled in:
+Factories allow tests to succinctly create entities, with all required fields & dependencies filled in:
 
 ```ts
-// Given an author
+// Given a test author created with `newAuthor` 
 const a = newAuthor(em);
+// Then the factories will ensure it can flush w/no errors
+await em.flush();
 ```
 
-Factories also allow easily creating "trees" of test data:
+Factories also allow easily creating trees/sub-graphs of test data:
 
 ```ts
 // Given one author with three books
 const a1 = newAuthor(em, { books: [{}, {}, {}] });
 // And a second author with two draft books
-const a2 = newAuthor(em, { books: [{ draft: true }, { draft: true } });
+const a2 = newAuthor(em, { books: [{ draft: true }, { draft: true } ]});
 // Then ...some business case...
 ```
 
@@ -78,15 +80,15 @@ This is key so that your tests can **set only the minimum amount of fields neces
 
 ### Defaults for Primitives
 
-Factories can provide test suite-wide defaults, for example providing a default age:
+You can edit each entity's factory to provide suite-wide defaults, for example a default `age`:
 
 ```typescript
-// Default Authors (only within tests) to age 40
 export function newAuthor(
   em: EntityManager,
   opts: FactoryOpts<Author> = {},
 ): DeepNew<Author> {
   return newTestInstance(em, Author, opts, {
+    // Default Authors (only within tests) to age 40
     age: 40,
   });
 }
@@ -129,14 +131,15 @@ Factories can also provide default entities, for example a book creating a defau
 ```typescript
 export function newBook(em: EntityManager, opts: FactoryOpts<Book> = {}): New<Book> {
   return newTestInstance(em, Book, opts, {
+    // Always create a new author, specific to this book
     author: {},
   });
 }
 ```
 
-Note that, if `author` was required, we would not have to explicitly pass `author: {}`; we'd only pass `author` to `newTestInstance` if:
+Note that, typically, we would not have to add `author: {}` to `newBook.ts`, it's only necessary if:
 
-- The `author` field is not required, but we want all test `Book`s to have one anyway
+- The `Book.author` relation is not required, but we want all test `Book`s to have one anyway
 - We want all `Book`s' authors to themselves have some specific defaults, like `author: { age: 30 }`,
 - We want to explicitly create a _new_ author (see the next point)
 
@@ -173,6 +176,7 @@ If you want to a specific field to never reuse existing entities, you can use `{
 ```typescript
 export function newBook(em: EntityManager, opts: FactoryOpts<Book> = {}): New<Book> {
   return newTestInstance(em, Book, opts, {
+    // Never reuse an existing Author entity
     author: {},
   });
 }
@@ -180,7 +184,7 @@ export function newBook(em: EntityManager, opts: FactoryOpts<Book> = {}): New<Bo
 
 #### Reusing Entities With `use`
 
-As covered, if your test has already created multiple entities of a given type (e.g. multiple `Author`s), Joist will not use them as "obvious defaults", but if you want to nominate a specific `Author` as the default for a given `newBookReview` call, you can pass the `use` option:
+Per above, if your test has already created multiple entities of a given type (e.g. multiple `Author`s), Joist will not use them as "obvious defaults"; to override this behavior and nominate a specific `Author` as "the default Author" for a given factory call, you can pass the author via the `use` option:
 
 ```typescript
 // We have multiple authors
@@ -196,16 +200,16 @@ If you have validation rules like "all `Author`s must have at least one `Book`",
 ```typescript
 export function newAuthor(em: EntityManager, opts: FactoryOpts<Author> = {}): DeepNew<Author> {
   return newTestInstance(em, Author, opts, {
-    // Every Author has at least one Book
+    // Every Author has one Book by default
     books: [{}],
   });
 }
 ```
 
-Note that, due to the native factory integration, Joist is smart enough that if you create the graph "bottom up" and call `newBook()`, it will be smart enough to know that `newAuthor` should not create a 2nd book:
+Note that with this default `books`/children value, if you create the graph "bottom up" by calling `newBook()`, it will be smart enough to know that `newAuthor` should not create a 2nd book:
 
 ```typescript
-// Given we create a book
+// Given we create a book (which implicitly creates an author)
 const b = newBook(em);
 // Then `newAuthor` was effectively passed `books: [b]` and did not create a 2nd book
 expect(b.author.get.books.get.length).toBe(1);
@@ -302,6 +306,45 @@ If you find yourself regularly using `useFactoryDefaults`, it might be an indica
 For example, instead of the factory having "not actually universally required/useful" defaults that frequently need to be turned off, only the tests that actually rely on the sometimes-wanted/sometimes-not-wanted defaults should opt in to them via a dedicated custom opt.
 
 :::
+
+## Debugging Factory Behavior
+
+The goal of factories is to create the "just right" subgraph of entities for your test, and it uses heuristics like the "use obvious defaults" to achieve this.
+
+That said, in sufficiently complex domain models, it can be hard to guess how/why the factories created the test data, when there are ~3-4-5+ layers of defaults getting applied.
+
+To visualize this, you can enable factory logging by either:
+
+* Passing `useLogging: true` to a specific factory call, or
+* Calling `setFactoryLogging(true)` to enable logging for all factories
+
+This will create output like:
+
+```ts
+const b = newBook(Book, { useLogging: true });
+```
+
+```
+Creating new Book
+  author = creating new Author
+    created Author#1 added to scope
+  created Book#1 added to scope
+```
+
+An explanation of the output (most of which is from more complicated examples) is:
+
+* The top-level `newBook` call creates a "scope" of entities to share within the `newBook` call
+* Within the scope, we track the 1st entity created of each entity type 
+  * This is indicated by the `created ... added to scope` lines
+* When resolving fields, the factory will log where the value was found
+  * `author = creating new Author` means either
+    * We were asked to make a new author with `author: {}`,
+    * There were either no authors, or multiple authors, in the existing `EntityManager`, or
+    * We have not yet created an `Author` for this scope
+  * `author = ... from em` means there was a single `Author` in the test's `EntityManager`
+  * `author = ... from opt` means the factory was passed an `{ author: a1 }` opt
+  * `author = ... from scope` means we found a `Author` created in this factory scope
+* `using existing ...` means the `useExisting` hook returned an existing "singleton" instance
 
 ## DeepNew / `async` Free Assertions
 

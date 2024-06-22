@@ -22,13 +22,17 @@ import {
   newParentGroup,
   newPublisher,
   newSmallPublisher,
+  newTag,
   parentGroupBranchValue,
   Publisher,
   PublisherType,
   SmallPublisher,
 } from "@src/entities";
 import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
-import { maybeNew, maybeNewPoly, newTestInstance, noValue, testIndex } from "joist-orm";
+import { maybeNew, maybeNewPoly, newTestInstance, noValue, setFactoryWriter, testIndex } from "joist-orm";
+import ansiRegex = require("ansi-regex");
+
+let factoryOutput: string[] = [];
 
 describe("EntityManager.factories", () => {
   it("can create a single top-level entity", async () => {
@@ -41,13 +45,21 @@ describe("EntityManager.factories", () => {
     expect(em.numberOfEntities).toEqual(1);
   });
 
-  it("can create a child and a required parent implicity", async () => {
+  it("can create a child and a required parent implicitly", async () => {
     const em = newEntityManager();
     // Given we make a book with no existing/passed authors
-    const b1 = newBook(em);
+    const b1 = newBook(em, { useLogging: true });
     await em.flush();
     // Then we create the author b/c it's required
     expect(b1.author.get.firstName).toEqual("a1");
+    expect(factoryOutput).toMatchInlineSnapshot(`
+     [
+       "Creating new Book↩",
+       "  author = creating new Author↩",
+       "    created Author#1 added to scope↩",
+       "  created Book#1 added to scope↩",
+     ]
+    `);
   });
 
   it("can create a child and a required parent if opt is undefined", async () => {
@@ -92,15 +104,53 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get).toEqual(a1);
   });
 
+  it("can create a child and use an existing parent from scope", async () => {
+    const em = newEntityManager();
+    // Given there are multiple existing authors
+    const [a1, a2] = [newAuthor(em), newAuthor(em)];
+    // When we create a Tag with multiple Books that each need an Author
+    const t1 = newTag(em, { books: [{}, {}], useLogging: true });
+    await em.flush();
+    // Then the books used the same new author
+    const [b1, b2] = t1.books.get;
+    expect(b1.author.get).toMatchEntity(b2.author.get);
+    // And that author is neither a1 or a2
+    expect(b1.author.get).not.toMatchEntity(a1);
+    expect(b1.author.get).not.toMatchEntity(a2);
+    expect(factoryOutput).toMatchInlineSnapshot(`
+     [
+       "Creating new Tag↩",
+       "  created Tag#1 added to scope↩",
+       "  books = creating new Book↩",
+       "    author = creating new Author↩",
+       "      created Author#3 added to scope↩",
+       "    created Book#1 added to scope↩",
+       "    tags = Tag#1 from opt↩",
+       "  books = creating new Book↩",
+       "    author = Author#3 from scope↩",
+       "    created Book#2 added to scope↩",
+       "    tags = Tag#1 from opt↩",
+     ]
+    `);
+  });
+
   it("can create a child and use an existing parent from use", async () => {
     const em = newEntityManager();
     // Given there are multiple existing authors
     const [a1] = [newAuthor(em), newAuthor(em)];
     // When we explicitly pass it as use
-    const b1 = newBook(em, { use: a1 });
+    const b1 = newBook(em, { use: a1, useLogging: true });
     await em.flush();
     // Then it is used
     expect(b1.author.get).toEqual(a1);
+    expect(factoryOutput).toMatchInlineSnapshot(`
+     [
+       "Creating new Book↩",
+       "  ...adding Author#1 opt to scope↩",
+       "  author = Author#1 from scope↩",
+       "  created Book#1 added to scope↩",
+     ]
+    `);
   });
 
   it("can create a child and use an single parent from use", async () => {
@@ -131,12 +181,23 @@ describe("EntityManager.factories", () => {
       em,
       Book,
       // and we refer to one of the authors in the opts literal
-      { comments: [{ parent: a2 }] },
+      { comments: [{ parent: a2 }], useLogging: true },
       // And leave the required author field unset
       {},
     );
     // Then the book used that author
     expect(b.author.get).toMatchEntity(a2);
+    expect(factoryOutput).toMatchInlineSnapshot(`
+     [
+       "Creating new Book↩",
+       "  ...adding Author#2 opt to scope↩",
+       "  author = Author#2 from scope↩",
+       "  created Book#1 added to scope↩",
+       "  comments = creating new Comment↩",
+       "    parent = Book#1 from opt↩",
+       "    created Comment#1 added to scope↩",
+     ]
+    `);
   });
 
   it("will use existing entities within the opts literal array", async () => {
@@ -148,11 +209,21 @@ describe("EntityManager.factories", () => {
       em,
       Book,
       // and we refer to one of the comments in the opts literal
-      { comments: [c2] },
+      { comments: [c2], useLogging: true },
       {},
     );
     // Then the book used that author
     expect(b.randomComment.get).toMatchEntity(c2);
+    expect(factoryOutput).toMatchInlineSnapshot(`
+     [
+       "Creating new Book↩",
+       "  ...adding Comment#2 opt to scope↩",
+       "  author = Author#1 from em↩",
+       "  randomComment = Comment#2 from scope↩",
+       "  created Book#1 added to scope↩",
+       "  comments = Comment#2 from opt↩",
+     ]
+    `);
   });
 
   it("finds entities created within the factory but as side-effects", async () => {
@@ -519,8 +590,16 @@ describe("EntityManager.factories", () => {
         parent: maybeNewPoly<CommentParent, Author>(Author, {
           existingSearchOrder: [Author, Book, Publisher],
         }),
+        useLogging: true,
       });
       expect(ft1.parent.get).toEqual(b1.author.get);
+      expect(factoryOutput).toMatchInlineSnapshot(`
+       [
+         "Creating new Comment↩",
+         "  parent = Author#1 from em↩",
+         "  created Comment#1 added to scope↩",
+       ]
+      `);
     });
 
     it("should use an existing Publisher for the Comment.parent when no Book or Author exist", async () => {
@@ -528,8 +607,16 @@ describe("EntityManager.factories", () => {
       const p1 = newPublisher(em);
       const ft1 = newTestInstance(em, Comment, {
         parent: maybeNewPoly<CommentParent, Author>(Author, { existingSearchOrder: [Author, Book, Publisher] }),
+        useLogging: true,
       });
       expect(ft1.parent.get).toEqual(p1);
+      expect(factoryOutput).toMatchInlineSnapshot(`
+       [
+         "Creating new Comment↩",
+         "  parent = LargePublisher#1 from em↩",
+         "  created Comment#1 added to scope↩",
+       ]
+      `);
     });
 
     it("should use an existing Publisher for the Comment.parent even though there is a book/author", async () => {
@@ -538,8 +625,16 @@ describe("EntityManager.factories", () => {
       newBook(em);
       const ft1 = newTestInstance(em, Comment, {
         parent: maybeNewPoly<CommentParent>(SmallPublisher, { existingSearchOrder: [Publisher, Author, Book] }),
+        useLogging: true,
       });
       expect(ft1.parent.get).toEqual(p1);
+      expect(factoryOutput).toMatchInlineSnapshot(`
+       [
+         "Creating new Comment↩",
+         "  parent = LargePublisher#1 from em↩",
+         "  created Comment#1 added to scope↩",
+       ]
+      `);
     });
 
     it("creates a new entity if needed", async () => {
@@ -574,7 +669,7 @@ describe("EntityManager.factories", () => {
 
     it("reuse an entity if possible without an opt passed", async () => {
       const em = newEntityManager();
-      const p = newSmallPublisher(em);
+      newSmallPublisher(em);
       const ft1 = newTestInstance(em, Comment, {});
       expect(ft1.parent.isSet).toBe(true);
       expect(ft1.parent.get).toBeInstanceOf(SmallPublisher);
@@ -744,12 +839,36 @@ describe("EntityManager.factories", () => {
       // And the child group creates a new parentGroup
       const cg = newChildGroup(em, {
         parentGroup: { name: "pg1" },
+        // With two childItems which will each create a parentItem in pg1
         childItems: [{}, {}],
+        useLogging: true,
       });
       // Then the childItems hooked up to the new parentGroup
       expect(cg.childItems.get[0].parentItem.get.parentGroup.get).toMatchEntity(cg.parentGroup.get);
       expect(cg.childItems.get[1].parentItem.get.parentGroup.get).toMatchEntity(cg.parentGroup.get);
       await em.flush();
+      expect(factoryOutput).toMatchInlineSnapshot(`
+       [
+         "Creating new ChildGroup↩",
+         "  childGroupId = creating new Child↩",
+         "    created Child#1 added to scope↩",
+         "  parentGroup = creating new ParentGroup↩",
+         "    created ParentGroup#2 added to scope↩",
+         "  created ChildGroup#1 added to scope↩",
+         "  childItems = creating new ChildItem↩",
+         "    childGroup = ChildGroup#1 from opt↩",
+         "    parentItem = creating new ParentItem↩",
+         "      parentGroup = ParentGroup#2 from opt↩",
+         "      created ParentItem#1 added to scope↩",
+         "    created ChildItem#1 added to scope↩",
+         "  childItems = creating new ChildItem↩",
+         "    childGroup = ChildGroup#1 from opt↩",
+         "    parentItem = creating new ParentItem↩",
+         "      parentGroup = ParentGroup#2 from opt↩",
+         "      created ParentItem#2 added to scope↩",
+         "    created ChildItem#2 added to scope↩",
+       ]
+      `);
     });
 
     it("can hook up parent items with existing parentGroup from child group", async () => {
@@ -855,4 +974,18 @@ describe("EntityManager.factories", () => {
       }
     });
   });
+});
+
+beforeEach(() => {
+  setFactoryWriter((line: string) => {
+    factoryOutput.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
+  });
+});
+
+afterEach(() => {
+  factoryOutput = [];
+});
+
+afterAll(() => {
+  setFactoryWriter(undefined);
 });

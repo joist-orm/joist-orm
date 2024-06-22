@@ -12,6 +12,7 @@ import {
   insertUser,
   update,
 } from "@src/entities/inserts";
+import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
 import {
   EntityFilter,
   ExpressionFilter,
@@ -21,11 +22,10 @@ import {
   alias,
   aliases,
   getMetadata,
-  jan1,
-  jan2,
-  jan3,
   parseFindQuery,
 } from "joist-orm";
+import { PasswordValue } from "src/entities/types";
+import { jan1, jan2, jan3 } from "src/testDates";
 import {
   Author,
   AuthorFilter,
@@ -56,9 +56,6 @@ import {
   newBook,
   newTag,
 } from "./entities";
-
-import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
-import { PasswordValue } from "src/entities/types";
 
 const am = getMetadata(Author);
 const bm = getMetadata(Book);

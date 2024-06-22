@@ -16,5 +16,5 @@
   },
   "entitiesDirectory": "./src/entities",
   "idType": "number",
-  "version": "1.170.3"
+  "version": "1.172.0"
 }

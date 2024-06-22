@@ -44,6 +44,7 @@ export type FactoryOpts<T extends Entity> = DeepPartialOpts<T> & {
   use?: Entity | Entity[];
   useFactoryDefaults?: boolean | "none";
   useExistingCheck?: boolean;
+  useLogging?: boolean;
 };
 
 // Chosen b/c it's a monday https://www.timeanddate.com/calendar/monthly.html?year=2018&month=1&country=1
@@ -78,7 +79,7 @@ export function newTestInstance<T extends Entity>(
   } = {},
 ): DeepNew<T> {
   // The first factory that is asked to debug, without one in place, will create+unset the logger.
-  let ownsTheLogger = !logger;
+  let ownsTheLogger = !logger && testOpts.useLogging;
   if (ownsTheLogger) logger = new FactoryLogger();
 
   logger?.logCreating(cstr);
@@ -777,8 +778,6 @@ class FactoryLogger {
   // adding "...at..." stack traces to our output.
   constructor() {
     this.write = writer ?? process.stdout.write.bind(process.stdout);
-    this.write("New factory scope\n");
-    this.indent();
   }
 
   logCreating(cstr: any): void {

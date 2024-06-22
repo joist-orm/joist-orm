@@ -47,17 +47,16 @@ describe("EntityManager.factories", () => {
   it("can create a child and a required parent implicitly", async () => {
     const em = newEntityManager();
     // Given we make a book with no existing/passed authors
-    const b1 = newBook(em);
+    const b1 = newBook(em, { useLogging: true });
     await em.flush();
     // Then we create the author b/c it's required
     expect(b1.author.get.firstName).toEqual("a1");
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "New factory scope↩",
-       "  Creating new Book↩",
-       "    author = creating new Author↩",
-       "      created Author#1, added to scope↩",
-       "    created Book#1, added to scope↩",
+       "Creating new Book↩",
+       "  author = creating new Author↩",
+       "    created Author#1, added to scope↩",
+       "  created Book#1, added to scope↩",
      ]
     `);
   });
@@ -109,24 +108,16 @@ describe("EntityManager.factories", () => {
     // Given there are multiple existing authors
     const [a1] = [newAuthor(em), newAuthor(em)];
     // When we explicitly pass it as use
-    const b1 = newBook(em, { use: a1 });
+    const b1 = newBook(em, { use: a1, useLogging: true });
     await em.flush();
     // Then it is used
     expect(b1.author.get).toEqual(a1);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "New factory scope↩",
-       "  Creating new Author↩",
-       "    created Author#1, added to scope↩",
-       "New factory scope↩",
-       "  Creating new Author↩",
-       "    mentor = Author#1 from em↩",
-       "    created Author#2, added to scope↩",
-       "New factory scope↩",
-       "  Creating new Book↩",
-       "    ...adding Author#1 opts to scope↩",
-       "    author = Author#1 from scope↩",
-       "    created Book#1, added to scope↩",
+       "Creating new Book↩",
+       "  ...adding Author#1 opts to scope↩",
+       "  author = Author#1 from scope↩",
+       "  created Book#1, added to scope↩",
      ]
     `);
   });
@@ -159,7 +150,7 @@ describe("EntityManager.factories", () => {
       em,
       Book,
       // and we refer to one of the authors in the opts literal
-      { comments: [{ parent: a2 }] },
+      { comments: [{ parent: a2 }], useLogging: true },
       // And leave the required author field unset
       {},
     );
@@ -167,21 +158,13 @@ describe("EntityManager.factories", () => {
     expect(b.author.get).toMatchEntity(a2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "New factory scope↩",
-       "  Creating new Author↩",
-       "    created Author#1, added to scope↩",
-       "New factory scope↩",
-       "  Creating new Author↩",
-       "    mentor = Author#1 from em↩",
-       "    created Author#2, added to scope↩",
-       "New factory scope↩",
-       "  Creating new Book↩",
-       "    ...adding Author#2 opts to scope↩",
-       "    author = Author#2 from scope↩",
-       "    created Book#1, added to scope↩",
-       "    comments = creating new Comment↩",
-       "      parent = Book#1 in opt↩",
-       "      created Comment#1, added to scope↩",
+       "Creating new Book↩",
+       "  ...adding Author#2 opts to scope↩",
+       "  author = Author#2 from scope↩",
+       "  created Book#1, added to scope↩",
+       "  comments = creating new Comment↩",
+       "    parent = Book#1 in opt↩",
+       "    created Comment#1, added to scope↩",
      ]
     `);
   });
@@ -195,29 +178,19 @@ describe("EntityManager.factories", () => {
       em,
       Book,
       // and we refer to one of the comments in the opts literal
-      { comments: [c2] },
+      { comments: [c2], useLogging: true },
       {},
     );
     // Then the book used that author
     expect(b.randomComment.get).toMatchEntity(c2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "New factory scope↩",
-       "  Creating new Comment↩",
-       "    parent = creating new Author↩",
-       "      created Author#1, added to scope↩",
-       "    created Comment#1, added to scope↩",
-       "New factory scope↩",
-       "  Creating new Comment↩",
-       "    parent = Author#1 from em↩",
-       "    created Comment#2, added to scope↩",
-       "New factory scope↩",
-       "  Creating new Book↩",
-       "    ...adding Comment#2 opts to scope↩",
-       "    author = Author#1 from em↩",
-       "    randomComment = Comment#2 from scope↩",
-       "    created Book#1, added to scope↩",
-       "    comments = Comment#2 in opt↩",
+       "Creating new Book↩",
+       "  ...adding Comment#2 opts to scope↩",
+       "  author = Author#1 from em↩",
+       "  randomComment = Comment#2 from scope↩",
+       "  created Book#1, added to scope↩",
+       "  comments = Comment#2 in opt↩",
      ]
     `);
   });

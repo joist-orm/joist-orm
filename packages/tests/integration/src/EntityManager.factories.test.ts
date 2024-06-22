@@ -115,7 +115,7 @@ describe("EntityManager.factories", () => {
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
        "Creating new Book↩",
-       "  ...adding Author#1 opts to scope↩",
+       "  ...adding Author#1 opt to scope↩",
        "  author = Author#1 from scope↩",
        "  created Book#1 added to scope↩",
      ]
@@ -159,7 +159,7 @@ describe("EntityManager.factories", () => {
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
        "Creating new Book↩",
-       "  ...adding Author#2 opts to scope↩",
+       "  ...adding Author#2 opt to scope↩",
        "  author = Author#2 from scope↩",
        "  created Book#1 added to scope↩",
        "  comments = creating new Comment↩",
@@ -186,7 +186,7 @@ describe("EntityManager.factories", () => {
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
        "Creating new Book↩",
-       "  ...adding Comment#2 opts to scope↩",
+       "  ...adding Comment#2 opt to scope↩",
        "  author = Author#1 from em↩",
        "  randomComment = Comment#2 from scope↩",
        "  created Book#1 added to scope↩",

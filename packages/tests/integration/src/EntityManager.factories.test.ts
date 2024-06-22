@@ -55,8 +55,8 @@ describe("EntityManager.factories", () => {
      [
        "Creating new Book↩",
        "  author = creating new Author↩",
-       "    created Author#1, added to scope↩",
-       "  created Book#1, added to scope↩",
+       "    created Author#1 added to scope↩",
+       "  created Book#1 added to scope↩",
      ]
     `);
   });
@@ -117,7 +117,7 @@ describe("EntityManager.factories", () => {
        "Creating new Book↩",
        "  ...adding Author#1 opts to scope↩",
        "  author = Author#1 from scope↩",
-       "  created Book#1, added to scope↩",
+       "  created Book#1 added to scope↩",
      ]
     `);
   });
@@ -161,10 +161,10 @@ describe("EntityManager.factories", () => {
        "Creating new Book↩",
        "  ...adding Author#2 opts to scope↩",
        "  author = Author#2 from scope↩",
-       "  created Book#1, added to scope↩",
+       "  created Book#1 added to scope↩",
        "  comments = creating new Comment↩",
-       "    parent = Book#1 in opt↩",
-       "    created Comment#1, added to scope↩",
+       "    parent = Book#1 from opt↩",
+       "    created Comment#1 added to scope↩",
      ]
     `);
   });
@@ -189,8 +189,8 @@ describe("EntityManager.factories", () => {
        "  ...adding Comment#2 opts to scope↩",
        "  author = Author#1 from em↩",
        "  randomComment = Comment#2 from scope↩",
-       "  created Book#1, added to scope↩",
-       "  comments = Comment#2 in opt↩",
+       "  created Book#1 added to scope↩",
+       "  comments = Comment#2 from opt↩",
      ]
     `);
   });

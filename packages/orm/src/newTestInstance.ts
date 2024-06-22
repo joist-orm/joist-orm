@@ -795,7 +795,7 @@ class FactoryLogger {
 
   logAddToUseMap(e: Entity, source: UseMapSource): void {
     if (source === "sameBranch" || source === "diffBranch") {
-      this.write(`${gray(`created`)} ${e.toString()}, ${gray("added to scope")}`);
+      this.write(`${gray(`created`)} ${e.toString()} ${gray("added to scope")}`);
     } else {
       this.write(`${gray(`...adding`)} ${e.toString()} ${gray("opts to scope")}`);
     }

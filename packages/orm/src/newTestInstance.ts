@@ -29,6 +29,8 @@ import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
 import { assertNever, maybeRequireTemporal } from "./utils";
 
+const { gray, green, yellow } = ansis;
+
 /**
  * DeepPartial-esque type specific to our `newTestInstance` factory.
  *
@@ -771,13 +773,13 @@ type WriteFn = (line: string) => void;
 
 class FactoryLogger {
   private level = 0;
-  private write: WriteFn;
+  private writeFn: WriteFn;
   private skipNextLogCreating = false;
 
   // We default to process.stdout.write to side-step around Jest's console.log instrumentation
   // adding "...at..." stack traces to our output.
   constructor() {
-    this.write = writer ?? process.stdout.write.bind(process.stdout);
+    this.writeFn = writer ?? process.stdout.write.bind(process.stdout);
   }
 
   logCreating(cstr: any): void {
@@ -786,41 +788,42 @@ class FactoryLogger {
       this.skipNextLogCreating = false;
       return;
     }
-    this.write(this.prefix() + "Creating " + ansis.green.bold(`new ${cstr.name}`) + `\n`);
+    this.write("Creating " + green.bold(`new ${cstr.name}`));
   }
 
   logAddToUseMap(e: Entity, source: UseMapSource): void {
     if (source === "sameBranch" || source === "diffBranch") {
-      this.write(this.prefix() + ansis.gray.bold(`created`) + ` ${e.toString()}, added to scope\n`);
+      this.write(`${gray(`created`)} ${e.toString()}, ${gray("added to scope")}`);
     } else {
-      this.write(this.prefix() + ansis.gray.bold(`...adding`) + ` ${e.toString()} opts to scope\n`);
+      this.write(`${gray(`...adding`)} ${e.toString()} ${gray("opts to scope")}`);
     }
   }
 
   logCreated(e: Entity): void {
     // This matches the `logAddToUseMap` but for entities not going into tscope
-    this.write(this.prefix() + ansis.gray.bold(`created`) + ` ${e.toString()}\n`);
+    this.write(`${gray(`created`)} ${e.toString()}`);
   }
 
   logFoundExisting(e: Entity): void {
-    this.write(this.prefix() + ansis.gray.bold(`using existing`) + ` ${e.toString()}\n`);
+    // Make this yellow because it reverses the "new Entity" we thought we were going to do
+    this.write(`${yellow(`using existing`)} ${e.toString()}`);
   }
 
   logFoundOpt(fieldName: string, e: Entity): void {
-    this.write(this.prefix() + ansis.gray.bold(fieldName) + ` = ${e.toString()} in opt\n`);
+    this.write(`${gray(`${fieldName} =`)} ${e.toString()} ${gray("from opt")}`);
   }
 
   logNotFoundAndCreating(fieldName: string, meta: EntityMetadata): void {
-    this.write(this.prefix() + ansis.gray.bold(fieldName) + ` = creating ${ansis.green.bold(`new ${meta.type}`)}\n`);
+    this.write(`${gray(`${fieldName} =`)} creating ${green.bold(`new ${meta.type}`)}`);
     this.skipNextLogCreating = true;
   }
 
   logFoundInUseMap(fieldName: string, e: Entity): void {
-    this.write(this.prefix() + ansis.gray.bold(fieldName) + ` = ${e.toString()} from scope\n`);
+    this.write(`${gray(`${fieldName} =`)} ${e.toString()} ${gray("from scope")}`);
   }
 
   logFoundSingleEntity(fieldName: string, e: Entity): void {
-    this.write(this.prefix() + ansis.gray.bold(fieldName) + ` = ${e.toString()} from em\n`);
+    this.write(`${gray(`${fieldName} =`)} ${e.toString()} ${gray("from em")}`);
   }
 
   indent() {
@@ -829,6 +832,10 @@ class FactoryLogger {
 
   dedent() {
     this.level--;
+  }
+
+  private write(line: string): void {
+    this.writeFn(this.prefix() + line + "\n");
   }
 
   private prefix() {

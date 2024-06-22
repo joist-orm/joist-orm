@@ -152,7 +152,7 @@ export function newTestInstance<T extends Entity>(
       } else if (field.kind === "m2o" && !field.derived) {
         // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
         // then look in `use` and for an "obvious" there-is-only-one default (even for optional fields)
-        const existing = getObviousDefault(em, field.otherMetadata(), fieldName, opts);
+        const [existing, loggerKey] = getObviousDefault(em, field.otherMetadata(), use);
         // If this is a m2o pointing to an o2o, i.e. that as a unique constraint, make sure the
         // existing entity we found isn't already claimed
         const isUniqueAndAlreadyUsed =
@@ -161,6 +161,7 @@ export function newTestInstance<T extends Entity>(
           (existing as any)[field.otherFieldName].isLoaded &&
           (existing as any)[field.otherFieldName].isSet;
         if (existing && !isUniqueAndAlreadyUsed && !ignoreAllDefaults) {
+          logger?.[loggerKey](fieldName, existing);
           return [fieldName, existing];
         }
         // Otherwise, only make a new entity only if the field is required
@@ -273,6 +274,7 @@ function resolveFactoryOpt<T extends Entity>(
   opt: FactoryEntityOpt<any> | undefined,
   maybeEntity: T | undefined,
 ): T | IdOf<T> {
+  const use = getOrCreateUseMap(opts);
   const { meta, otherFieldName } = metaFromFieldAndOpt(field, opt);
   // const meta = field.kind === "poly" ? field.components[0].otherMetadata() : field.otherMetadata();
   // const otherFieldName = field.kind === "poly" ? field.components[0].otherFieldName : field.otherFieldName;
@@ -292,20 +294,26 @@ function resolveFactoryOpt<T extends Entity>(
     // Look for an obvious default
     if (opt === undefined || opt instanceof MaybeNew) {
       if (field.kind !== "poly") {
-        const existing = getObviousDefault(em, meta, field.fieldName, opts);
-        if (existing) return existing as T;
+        const [existing, loggerKey] = getObviousDefault(em, meta, use);
+        if (existing) {
+          logger?.[loggerKey](field.fieldName, existing);
+          return existing as T;
+        }
         // Otherwise fall though to making a new entity via the factory
       } else {
         // We have a polymorphic maybeNew to sort through
-        const existing = (
-          opt instanceof MaybeNew ? opt.polyRefPreferredOrder : field.components.map((c) => c.otherMetadata().cstr)
+        const [existing, loggerKey] = (opt instanceof MaybeNew
+          ? opt.polyRefPreferredOrder
+          : field.components.map((c) => c.otherMetadata().cstr)
         )
-          .map((cstr) => getObviousDefault(em, getMetadata(cstr), field.fieldName, opts))
-          .find((existing) => !!existing);
-        if (existing) return existing as T;
+          .map((cstr) => getObviousDefault(em, getMetadata(cstr), use))
+          .find((existing) => !!existing[0]) || [undefined, undefined];
+        if (existing) {
+          logger?.[loggerKey](field.fieldName, existing);
+          return existing as T;
+        }
       }
     }
-    const use = getOrCreateUseMap(opts);
     // If this is image.author (m2o) but the other-side is an o2o, pass null instead of []
     maybeEntity ??= (meta.allFields[otherFieldName].kind === "o2o" ? null : []) as any;
     logger?.logNotFoundAndCreating(field.fieldName, meta);
@@ -343,14 +351,10 @@ function metaFromFieldAndOpt<T extends Entity>(
 function getObviousDefault<T extends Entity>(
   em: EntityManager,
   metadata: EntityMetadata,
-  fieldName: string,
-  opts: FactoryOpts<any>,
-): T | undefined {
-  const use = getOrCreateUseMap(opts);
+  use: UseMap,
+): [T, "logFoundInUseMap" | "logFoundSingleEntity"] | [undefined, undefined] {
   if (use.has(metadata.cstr)) {
-    const e = use.get(metadata.cstr) as any;
-    logger?.logFoundInUseMap(fieldName, e[0]);
-    return use.get(metadata.cstr)![0] as T;
+    return [use.get(metadata.cstr)![0] as T, "logFoundInUseMap"];
   }
   // If there is a single existing instance of this type, assume the caller is fine with that.
   // ...in theory seeding our `use` map with the only-one entities was supposed to prevent the
@@ -358,10 +362,9 @@ function getObviousDefault<T extends Entity>(
   // but that approach doesn't catch created-as-side-effect entities.
   const existing = em.entities.filter((e) => e instanceof metadata.cstr);
   if (existing.length === 1) {
-    logger?.logFoundSingleEntity(fieldName, existing[0]);
-    return existing[0] as T;
+    return [existing[0] as T, "logFoundSingleEntity"];
   }
-  return undefined;
+  return [undefined, undefined];
 }
 
 // When a factory is called, i.e. `newAuthor`, opts will:

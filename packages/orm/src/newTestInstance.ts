@@ -190,6 +190,8 @@ export function newTestInstance<T extends Entity>(
       .find((e) => factoryOpts.useExisting!(createOpts as OptsOf<T>, e as DeepNew<T>));
     if (existing) {
       logger?.logFoundExisting(existing);
+      logger?.dedent();
+      if (ownsTheLogger) logger = undefined;
       return existing as DeepNew<T>;
     }
   }

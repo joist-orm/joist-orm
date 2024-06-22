@@ -313,7 +313,12 @@ The goal of factories is to create the "just right" subgraph of entities for you
 
 That said, in sufficiently complex domain models, it can be hard to guess how/why the factories created the test data, when there are ~3-4-5+ layers of defaults getting applied.
 
-To visualize this, you can pass `useLogging: true` to any factory call, and get output like:
+To visualize this, you can enable factory logging by either:
+
+* Passing `useLogging: true` to a specific factory call, or
+* Calling `setFactoryLogging(true)` to enable logging for all factories
+
+This will create output like:
 
 ```ts
 const b = newBook(Book, { useLogging: true });

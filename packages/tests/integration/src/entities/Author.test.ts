@@ -7,9 +7,10 @@ import {
   select,
 } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
-import { defaultValue, getMetadata, isNewEntity, jan1, jan2 } from "joist-orm";
+import { defaultValue, getMetadata, isNewEntity } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
+import { jan1, jan2 } from "src/testDates";
 import { Author, Book, BookId, Publisher, PublisherSize, newAuthor, newPublisher } from "../entities";
 import { makeApiCall } from "../setupDbTests";
 import { zeroTo } from "../utils";
@@ -674,7 +675,7 @@ describe("Author", () => {
     const a = newAuthor(em, { certificate: new Uint8Array([11, 22]) });
     await em.flush();
 
-    const cert = (await select("authors"))[0].certificate
+    const cert = (await select("authors"))[0].certificate;
     expect(cert.at(0)).toBe(11);
     expect(cert.at(1)).toBe(22);
   });
@@ -682,7 +683,7 @@ describe("Author", () => {
   it("can filter bytea", async () => {
     await insertAuthor({ first_name: "a1", certificate: new Uint8Array([11, 22]) });
     const em = newEntityManager();
-    const authors = await em.find(Author, { certificate: { eq: new Uint8Array([11, 22])  } });
+    const authors = await em.find(Author, { certificate: { eq: new Uint8Array([11, 22]) } });
     expect(authors.length).toBe(1);
   });
 });

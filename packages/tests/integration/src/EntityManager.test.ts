@@ -21,10 +21,9 @@ import {
   MaybeAbstractEntityConstructor,
   OptsOf,
   getInstanceData,
-  jan1,
-  jan2,
   sameEntity,
 } from "joist-orm";
+import { jan1, jan2 } from "src/testDates";
 import {
   Author,
   Book,

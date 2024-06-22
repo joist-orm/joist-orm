@@ -10,6 +10,7 @@ import {
   insertUser,
   select,
 } from "@src/entities/inserts";
+import { newEntityManager, queries, resetQueryCount, testDriver } from "@src/testEm";
 import { zeroTo } from "@src/utils";
 import {
   AdminUser,
@@ -28,9 +29,7 @@ import {
   newSmallPublisher,
   newUser,
 } from "./entities";
-
-import { newEntityManager, queries, resetQueryCount, testDriver } from "@src/testEm";
-import { jan1 } from "joist-orm";
+import { jan1 } from "./testDates";
 
 describe("Inheritance", () => {
   it("can insert a subtype into two tables", async () => {

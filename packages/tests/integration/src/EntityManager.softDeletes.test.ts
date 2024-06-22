@@ -1,6 +1,6 @@
 import { insertAuthor, insertBook, insertBookToTag, insertPublisher, insertTag } from "@src/entities/inserts";
-import { jan1 } from "joist-orm";
 import { Author, Book, Publisher, Tag } from "./entities";
+import { jan1 } from "./testDates";
 
 import { newEntityManager } from "@src/testEm";
 

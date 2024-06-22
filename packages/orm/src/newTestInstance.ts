@@ -50,14 +50,12 @@ export type FactoryOpts<T extends Entity> = DeepPartialOpts<T> & {
 };
 
 // Chosen b/c it's a monday https://www.timeanddate.com/calendar/monthly.html?year=2018&month=1&country=1
-export const jan1 = new Date(2018, 0, 1);
-export const jan2 = new Date(2018, 0, 2);
-export const jan3 = new Date(2018, 0, 3);
-export let testDate = jan1;
+const jan1 = new Date(2018, 0, 1);
+export const testDate = jan1;
 const Temporal = maybeRequireTemporal()?.Temporal;
-export let testPlainDate = Temporal?.PlainDate.from("2018-01-01");
-export let testPlainDateTime = testPlainDate?.toPlainDateTime("00:00:00");
-export let testZonedDateTime = testPlainDate?.toZonedDateTime("UTC");
+export const testPlainDate = Temporal?.PlainDate.from("2018-01-01");
+export const testPlainDateTime = testPlainDate?.toPlainDateTime("00:00:00");
+export const testZonedDateTime = testPlainDate?.toZonedDateTime("UTC");
 
 let logger: FactoryLogger | undefined = undefined;
 let writer: WriteFn | undefined = undefined;
@@ -846,6 +844,11 @@ class FactoryLogger {
   private prefix() {
     return "  ".repeat(this.level);
   }
+}
+
+/** Enables factory logging for all factories. */
+export function setFactoryLogging(enabled: boolean): void {
+  logger = enabled ? new FactoryLogger() : undefined;
 }
 
 // Allow our test suite observe the logger behavior

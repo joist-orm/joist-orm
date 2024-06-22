@@ -186,6 +186,7 @@ export function newTestInstance<T extends Entity>(
       .filter((e) => e instanceof meta.cstr)
       .find((e) => factoryOpts.useExisting!(createOpts as OptsOf<T>, e as DeepNew<T>));
     if (existing) {
+      logger?.logFoundExisting(existing);
       return existing as DeepNew<T>;
     }
   }
@@ -198,6 +199,9 @@ export function newTestInstance<T extends Entity>(
   // creating each test instance within nested/recursive `newTestInstance` calls.
   if (!use.has(entity.constructor) || use.get(entity.constructor)![1] === "diffBranch") {
     addToUseMap(use, entity, "sameBranch");
+  } else {
+    // The `addToUseMap` does its own 'created & added to scope'
+    logger?.logCreated(entity);
   }
 
   // Now that we've got the entity, do a 2nd pass for o2m/m2m where we pass
@@ -797,6 +801,10 @@ class FactoryLogger {
   logCreated(e: Entity): void {
     // This matches the `logAddToUseMap` but for entities not going into tscope
     this.write(this.prefix() + ansis.gray.bold(`created`) + ` ${e.toString()}\n`);
+  }
+
+  logFoundExisting(e: Entity): void {
+    this.write(this.prefix() + ansis.gray.bold(`using existing`) + ` ${e.toString()}\n`);
   }
 
   logFoundOpt(fieldName: string, e: Entity): void {

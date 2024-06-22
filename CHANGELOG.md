@@ -1,3 +1,10 @@
+# [1.172.0](https://github.com/joist-orm/joist-orm/compare/v1.171.0...v1.172.0) (2024-06-22)
+
+
+### Features
+
+* Add factory logging ([#1120](https://github.com/joist-orm/joist-orm/issues/1120)) ([b95691d](https://github.com/joist-orm/joist-orm/commit/b95691d0811f80eb38a7de8744d15b93e06b95e2))
+
 # [1.171.0](https://github.com/joist-orm/joist-orm/compare/v1.170.3...v1.171.0) (2024-06-15)
 
 

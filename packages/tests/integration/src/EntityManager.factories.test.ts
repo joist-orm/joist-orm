@@ -53,10 +53,11 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get.firstName).toEqual("a1");
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "New factory scope",
+       "New factory scope↩",
        "  Creating new Book↩",
        "    Creating new Author↩",
        "      created Author#1↩",
+       "    author = Author#1 just created↩",
        "    created Book#1↩",
      ]
     `);
@@ -115,16 +116,16 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get).toEqual(a1);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "New factory scope",
+       "New factory scope↩",
        "  Creating new Author↩",
        "    created Author#1↩",
-       "New factory scope",
+       "New factory scope↩",
        "  Creating new Author↩",
        "    mentor = Author#1 from em↩",
        "    created Author#2↩",
-       "New factory scope",
+       "New factory scope↩",
        "  Creating new Book↩",
-       "    ...found Author#1 from useOpt↩",
+       "    ...found Author#1 from opts↩",
        "    author = Author#1 from scope↩",
        "    created Book#1↩",
      ]
@@ -167,20 +168,22 @@ describe("EntityManager.factories", () => {
     expect(b.author.get).toMatchEntity(a2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "New factory scope",
+       "New factory scope↩",
        "  Creating new Author↩",
        "    created Author#1↩",
-       "New factory scope",
+       "New factory scope↩",
        "  Creating new Author↩",
        "    mentor = Author#1 from em↩",
        "    created Author#2↩",
-       "New factory scope",
+       "New factory scope↩",
        "  Creating new Book↩",
-       "    ...found Author#2 from testOpts↩",
+       "    ...found Author#2 from opts↩",
        "    author = Author#2 from scope↩",
        "    created Book#1↩",
        "    Creating new Comment↩",
+       "      parent = Book#1 in opt↩",
        "      created Comment#1↩",
+       "    comments = Comment#1 just created↩",
      ]
     `);
   });
@@ -199,6 +202,27 @@ describe("EntityManager.factories", () => {
     );
     // Then the book used that author
     expect(b.randomComment.get).toMatchEntity(c2);
+    expect(factoryOutput).toMatchInlineSnapshot(`
+     [
+       "New factory scope↩",
+       "  Creating new Comment↩",
+       "    Creating new Author↩",
+       "      created Author#1↩",
+       "    parent = Author#1 just created↩",
+       "    created Comment#1↩",
+       "New factory scope↩",
+       "  Creating new Comment↩",
+       "    parent = Author#1 from em↩",
+       "    created Comment#2↩",
+       "New factory scope↩",
+       "  Creating new Book↩",
+       "    ...found Comment#2 from opts↩",
+       "    author = Author#1 from em↩",
+       "    randomComment = Comment#2 from scope↩",
+       "    created Book#1↩",
+       "    comments = Comment#2 in opt↩",
+     ]
+    `);
   });
 
   it("finds entities created within the factory but as side-effects", async () => {

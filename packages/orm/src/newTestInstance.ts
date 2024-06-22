@@ -271,21 +271,24 @@ function resolveFactoryOpt<T extends Entity>(
   // const meta = field.kind === "poly" ? field.components[0].otherMetadata() : field.otherMetadata();
   // const otherFieldName = field.kind === "poly" ? field.components[0].otherFieldName : field.otherFieldName;
   if (isEntity(opt)) {
+    logger?.logFoundOpt(field.fieldName, opt);
     return opt as T;
   } else if (isId(opt)) {
     // Try finding the entity in the UoW, otherwise fallback on just setting it as the id (which we support that now)
-    return (em.entities.find((e) => e.idTaggedMaybe === opt || getTestId(em, e) === opt) as T) || opt;
+    const found = (em.entities.find((e) => e.idTaggedMaybe === opt || getTestId(em, e) === opt) as T) || opt;
+    logger?.logFoundOpt(field.fieldName, found);
+    return found;
   } else if (opt && !isPlainObject(opt) && !(opt instanceof MaybeNew)) {
     // If opt isn't a POJO, assume this is a completely-custom factory
-    return meta.factory(em, opt);
+    const custom = meta.factory(em, opt);
+    logger?.logFoundCreated(field.fieldName, custom);
+    return custom;
   } else {
     // Look for an obvious default
     if (opt === undefined || opt instanceof MaybeNew) {
       if (field.kind !== "poly") {
         const existing = getObviousDefault(em, meta, field.fieldName, opts);
-        if (existing) {
-          return existing as T;
-        }
+        if (existing) return existing as T;
         // Otherwise fall though to making a new entity via the factory
       } else {
         // We have a polymorphic maybeNew to sort through
@@ -294,20 +297,20 @@ function resolveFactoryOpt<T extends Entity>(
         )
           .map((cstr) => getObviousDefault(em, getMetadata(cstr), field.fieldName, opts))
           .find((existing) => !!existing);
-        if (existing) {
-          return existing as T;
-        }
+        if (existing) return existing as T;
       }
     }
     const use = getOrCreateUseMap(opts);
     // If this is image.author (m2o) but the other-side is an o2o, pass null instead of []
     maybeEntity ??= (meta.allFields[otherFieldName].kind === "o2o" ? null : []) as any;
-    return meta.factory(em, {
+    const created = meta.factory(em, {
       // Because of the `!isPlainObject` above, opt will either be undefined or an object here
       ...applyUse((opt as any) || {}, use, meta),
       ...(opt instanceof MaybeNew && opt.opts),
       [otherFieldName]: maybeEntity,
     });
+    logger?.logFoundCreated(field.fieldName, created);
+    return created;
   }
 }
 
@@ -786,8 +789,16 @@ class FactoryLogger {
     if (source === "sameBranch" || source === "diffBranch") {
       this.write(this.prefix() + ansis.gray.bold(`created`) + ` ${e.toString()}\n`);
     } else {
-      this.write(this.prefix() + ansis.gray.bold(`...found`) + ` ${e.toString()} from ${source}\n`);
+      this.write(this.prefix() + ansis.gray.bold(`...found`) + ` ${e.toString()} from opts\n`);
     }
+  }
+
+  logFoundOpt(fieldName: string, e: Entity): void {
+    this.write(this.prefix() + ansis.gray.bold(fieldName) + ` = ${e.toString()} in opt\n`);
+  }
+
+  logFoundCreated(fieldName: string, e: Entity): void {
+    this.write(this.prefix() + ansis.gray.bold(fieldName) + ` = ${e.toString()} just created\n`);
   }
 
   logFoundInUseMap(fieldName: string, e: Entity): void {

@@ -55,10 +55,9 @@ describe("EntityManager.factories", () => {
      [
        "New factory scope↩",
        "  Creating new Book↩",
-       "    Creating new Author↩",
-       "      created Author#1↩",
-       "    author = Author#1 just created↩",
-       "    created Book#1↩",
+       "    author = creating new Author↩",
+       "      created Author#1, added to scope↩",
+       "    created Book#1, added to scope↩",
      ]
     `);
   });
@@ -118,16 +117,16 @@ describe("EntityManager.factories", () => {
      [
        "New factory scope↩",
        "  Creating new Author↩",
-       "    created Author#1↩",
+       "    created Author#1, added to scope↩",
        "New factory scope↩",
        "  Creating new Author↩",
        "    mentor = Author#1 from em↩",
-       "    created Author#2↩",
+       "    created Author#2, added to scope↩",
        "New factory scope↩",
        "  Creating new Book↩",
-       "    ...found Author#1 from opts↩",
+       "    ...adding Author#1 opts to scope↩",
        "    author = Author#1 from scope↩",
-       "    created Book#1↩",
+       "    created Book#1, added to scope↩",
      ]
     `);
   });
@@ -170,20 +169,19 @@ describe("EntityManager.factories", () => {
      [
        "New factory scope↩",
        "  Creating new Author↩",
-       "    created Author#1↩",
+       "    created Author#1, added to scope↩",
        "New factory scope↩",
        "  Creating new Author↩",
        "    mentor = Author#1 from em↩",
-       "    created Author#2↩",
+       "    created Author#2, added to scope↩",
        "New factory scope↩",
        "  Creating new Book↩",
-       "    ...found Author#2 from opts↩",
+       "    ...adding Author#2 opts to scope↩",
        "    author = Author#2 from scope↩",
-       "    created Book#1↩",
-       "    Creating new Comment↩",
+       "    created Book#1, added to scope↩",
+       "    comments = creating new Comment↩",
        "      parent = Book#1 in opt↩",
-       "      created Comment#1↩",
-       "    comments = Comment#1 just created↩",
+       "      created Comment#1, added to scope↩",
      ]
     `);
   });
@@ -206,20 +204,19 @@ describe("EntityManager.factories", () => {
      [
        "New factory scope↩",
        "  Creating new Comment↩",
-       "    Creating new Author↩",
-       "      created Author#1↩",
-       "    parent = Author#1 just created↩",
-       "    created Comment#1↩",
+       "    parent = creating new Author↩",
+       "      created Author#1, added to scope↩",
+       "    created Comment#1, added to scope↩",
        "New factory scope↩",
        "  Creating new Comment↩",
        "    parent = Author#1 from em↩",
-       "    created Comment#2↩",
+       "    created Comment#2, added to scope↩",
        "New factory scope↩",
        "  Creating new Book↩",
-       "    ...found Comment#2 from opts↩",
+       "    ...adding Comment#2 opts to scope↩",
        "    author = Author#1 from em↩",
        "    randomComment = Comment#2 from scope↩",
-       "    created Book#1↩",
+       "    created Book#1, added to scope↩",
        "    comments = Comment#2 in opt↩",
      ]
     `);

@@ -1,6 +1,5 @@
 import ansis from "ansis";
 import { isPlainObject } from "joist-utils";
-import { builders } from "prettier/doc";
 import { Entity, isEntity } from "./Entity";
 import {
   ActualFactoryOpts,
@@ -29,8 +28,6 @@ import { hasDefaultValue } from "./defaults";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
 import { assertNever, maybeRequireTemporal } from "./utils";
-import indent = builders.indent;
-import dedent = builders.dedent;
 
 /**
  * DeepPartial-esque type specific to our `newTestInstance` factory.
@@ -280,9 +277,8 @@ function resolveFactoryOpt<T extends Entity>(
     return found;
   } else if (opt && !isPlainObject(opt) && !(opt instanceof MaybeNew)) {
     // If opt isn't a POJO, assume this is a completely-custom factory
-    const custom = meta.factory(em, opt);
-    logger?.logFoundCreated(field.fieldName, custom);
-    return custom;
+    logger?.logNotFoundAndCreating(field.fieldName, meta);
+    return meta.factory(em, opt);
   } else {
     // Look for an obvious default
     if (opt === undefined || opt instanceof MaybeNew) {
@@ -303,14 +299,13 @@ function resolveFactoryOpt<T extends Entity>(
     const use = getOrCreateUseMap(opts);
     // If this is image.author (m2o) but the other-side is an o2o, pass null instead of []
     maybeEntity ??= (meta.allFields[otherFieldName].kind === "o2o" ? null : []) as any;
-    const created = meta.factory(em, {
+    logger?.logNotFoundAndCreating(field.fieldName, meta);
+    return meta.factory(em, {
       // Because of the `!isPlainObject` above, opt will either be undefined or an object here
       ...applyUse((opt as any) || {}, use, meta),
       ...(opt instanceof MaybeNew && opt.opts),
       [otherFieldName]: maybeEntity,
     });
-    logger?.logFoundCreated(field.fieldName, created);
-    return created;
   }
 }
 
@@ -772,6 +767,7 @@ type WriteFn = (line: string) => void;
 class FactoryLogger {
   private level = 0;
   private write: WriteFn;
+  private skipNextLogCreating = false;
 
   // We default to process.stdout.write to side-step around Jest's console.log instrumentation
   // adding "...at..." stack traces to our output.
@@ -782,23 +778,34 @@ class FactoryLogger {
   }
 
   logCreating(cstr: any): void {
-    this.write(this.prefix() + ansis.green.bold(`Creating new`) + ` ${cstr.name}\n`);
+    // This was already logged by the parent `field = creating new`
+    if (this.skipNextLogCreating) {
+      this.skipNextLogCreating = false;
+      return;
+    }
+    this.write(this.prefix() + "Creating " + ansis.green.bold(`new ${cstr.name}`) + `\n`);
   }
 
   logAddToUseMap(e: Entity, source: UseMapSource): void {
     if (source === "sameBranch" || source === "diffBranch") {
-      this.write(this.prefix() + ansis.gray.bold(`created`) + ` ${e.toString()}\n`);
+      this.write(this.prefix() + ansis.gray.bold(`created`) + ` ${e.toString()}, added to scope\n`);
     } else {
-      this.write(this.prefix() + ansis.gray.bold(`...found`) + ` ${e.toString()} from opts\n`);
+      this.write(this.prefix() + ansis.gray.bold(`...adding`) + ` ${e.toString()} opts to scope\n`);
     }
+  }
+
+  logCreated(e: Entity): void {
+    // This matches the `logAddToUseMap` but for entities not going into tscope
+    this.write(this.prefix() + ansis.gray.bold(`created`) + ` ${e.toString()}\n`);
   }
 
   logFoundOpt(fieldName: string, e: Entity): void {
     this.write(this.prefix() + ansis.gray.bold(fieldName) + ` = ${e.toString()} in opt\n`);
   }
 
-  logFoundCreated(fieldName: string, e: Entity): void {
-    this.write(this.prefix() + ansis.gray.bold(fieldName) + ` = ${e.toString()} just created\n`);
+  logNotFoundAndCreating(fieldName: string, meta: EntityMetadata): void {
+    this.write(this.prefix() + ansis.gray.bold(fieldName) + ` = creating ${ansis.green.bold(`new ${meta.type}`)}\n`);
+    this.skipNextLogCreating = true;
   }
 
   logFoundInUseMap(fieldName: string, e: Entity): void {

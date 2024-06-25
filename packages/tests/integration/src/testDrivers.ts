@@ -19,7 +19,7 @@ export interface TestDriver {
   beforeEach(): Promise<void>;
   destroy(): Promise<void>;
   select(tableName: string): Promise<readonly any[]>;
-  insert(tableName: string, row: Record<string, any>): Promise<void>;
+  insert(tableName: string, row: Record<string, any>, subclassTable?: boolean): Promise<void>;
   update(tableName: string, row: Record<string, any>): Promise<void>;
   delete(tableName: string, id: number): Promise<void>;
   count(tableName: string): Promise<number>;
@@ -54,7 +54,12 @@ export class PostgresTestDriver implements TestDriver {
     return this.knex.select("*").from(tableName).orderBy("id");
   }
 
-  async insert(tableName: string, row: Record<string, any>): Promise<void> {
+  async insert(tableName: string, row: Record<string, any>, subclassTable = false): Promise<void> {
+    if (row.id && !subclassTable) {
+      // Manually specifying ids can help test readability, but ensure the sequence is updated,
+      // particularly if we're using the "only delete from touched sequences" flush_database.
+      await this.knex.raw(`SELECT setval('${tableName}_id_seq', ${row.id}, true)`);
+    }
     await this.knex.insert(row).into(tableName);
   }
 

@@ -3,10 +3,22 @@ import { DbMetadata } from "./EntityDbMetadata";
 
 /** Creates a `flush_database` stored procedure to truncate all the tables between tests. */
 export async function createFlushFunction(client: Client, db: DbMetadata): Promise<void> {
-  await client.query(generateFlushFunction(db));
+  const hasAnyNonDeferredFks = db.entities.some((e) => e.nonDeferredFks.length > 0);
+  const hasAnyNonSequenceIds = db.entities.some((e) => e.primaryKey.columnType === "uuid");
+  if (hasAnyNonSequenceIds || hasAnyNonDeferredFks) {
+    await client.query(generateExplicitFlushFunction(db));
+  } else {
+    await client.query(generateSequenceFlushFunction(db));
+  }
 }
 
-export function generateFlushFunction(db: DbMetadata): string {
+/**
+ * Explicitly deletes every entity/m2m table in a deterministic order.
+ *
+ * We do this for schemas with non-deferred foreign keys (order matters)
+ * or schemas with UUID id columns.
+ */
+export function generateExplicitFlushFunction(db: DbMetadata): string {
   // Leave code/enum tables alone
   const tables = [
     ...[...db.entities]
@@ -25,17 +37,15 @@ export function generateFlushFunction(db: DbMetadata): string {
       .map((e) => e.tableName),
     ...db.joinTables,
   ];
+
   // Note that, for whatever reason, doing DELETEs + ALTER SEQUENCEs is dramatically faster than TRUNCATEs.
   // On even a 40-table schema, TRUNCATEs (either 1 per table or even a single TRUNCATE with all tables) takes
   // 100s of milliseconds, whereas DELETEs takes single-digit milliseconds and DELETEs + ALTER SEQUENCEs is
   // 10s of milliseconds.
-  //
-  // One cute idea would be to use a single sequence for all tables when running locally. That would
-  // mean our flush_database function could reset a single sequence. Plus it would reduce bugs where
-  // something "works" but only b/c in the test database, all entities have id = 1.
-  const deletes = tables.map(
-    (t) => `DELETE FROM "${t}"; ALTER SEQUENCE IF EXISTS "${t}_id_seq" RESTART WITH 1 INCREMENT BY 1;`,
-  );
+  const deletes = tables.flatMap((t) => [
+    `DELETE FROM "${t}";`,
+    `ALTER SEQUENCE IF EXISTS "${t}_id_seq" RESTART WITH 1 INCREMENT BY 1;`,
+  ]);
 
   // Create `SET NULLs` in schemas that don't have deferred FKs
   const setFksNulls = db.entities
@@ -51,11 +61,38 @@ export function generateFlushFunction(db: DbMetadata): string {
 
   const statements = [...setFksNulls, ...deletes].join("\n");
 
-  // console.log({ statements });
-
   return `CREATE OR REPLACE FUNCTION flush_database() RETURNS void AS $$
     BEGIN
-    ${statements}
+      ${statements}
+    END;
+   $$ LANGUAGE
+    'plpgsql'`;
+}
+
+/**
+ * A cuter/shorter flush that only DELETEs from tables that were inserted into.
+ *
+ * The difference between this and the explicit-order function should only be
+ * noticeable on 100+ table schemas.
+ */
+export function generateSequenceFlushFunction(db: DbMetadata): string {
+  const enumTables = Object.values(db.enums).map((e) => e.table);
+  // We don't currently have a way to filter out the enum sequences in a query
+  const maybeSkipEnums =
+    enumTables.length === 0
+      ? ""
+      : `AND sequencename NOT IN (${enumTables.map((t) => `'${t.name}_id_seq'`).join(", ")})`;
+  return `CREATE OR REPLACE FUNCTION flush_database() RETURNS void AS $$
+    DECLARE seq RECORD;
+    BEGIN
+      FOR seq IN
+        SELECT sequencename AS name
+        FROM pg_sequences
+        WHERE schemaname = 'public' AND last_value IS NOT NULL AND sequencename LIKE '%_id_seq' ${maybeSkipEnums}
+      LOOP
+        EXECUTE format('DELETE FROM %I', regexp_replace(seq.name, '_id_seq$', ''));
+        EXECUTE format('ALTER SEQUENCE %I RESTART WITH 1', seq.name);
+      END LOOP;
     END;
    $$ LANGUAGE
     'plpgsql'`;

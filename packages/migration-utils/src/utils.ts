@@ -41,7 +41,14 @@ export function createSubTable(
   columns: ColumnDefinitions,
 ): void {
   b.createTable(subTableName, {
-    id: { type: "int", references: `${baseTableName}`, primaryKey: true, deferrable: true, deferred: true },
+    id: {
+      type: "int",
+      references: `${baseTableName}`,
+      primaryKey: true,
+      deferrable: true,
+      deferred: true,
+      onDelete: "CASCADE",
+    },
     ...columns,
   });
   // Postgres doesn't automatically index foreign keys, so any column def points at

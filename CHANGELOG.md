@@ -1,3 +1,10 @@
+# [1.174.0](https://github.com/joist-orm/joist-orm/compare/v1.173.0...v1.174.0) (2024-06-25)
+
+
+### Features
+
+* Only flush changed tables ([#1117](https://github.com/joist-orm/joist-orm/issues/1117)) ([80526ff](https://github.com/joist-orm/joist-orm/commit/80526fff79a51bea694bc707e26ad7b84488bfb4))
+
 # [1.173.0](https://github.com/joist-orm/joist-orm/compare/v1.172.0...v1.173.0) (2024-06-25)
 
 

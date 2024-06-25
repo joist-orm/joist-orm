@@ -54,7 +54,7 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get.firstName).toEqual("a1");
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book↩",
+       "Creating new Book at EntityManager.factories.test.ts:51↩",
        "  author = creating new Author↩",
        "    created Author#1 added to scope↩",
        "  created Book#1 added to scope↩",
@@ -119,7 +119,7 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get).not.toMatchEntity(a2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Tag↩",
+       "Creating new Tag at EntityManager.factories.test.ts:112↩",
        "  created Tag#1 added to scope↩",
        "  books = creating new Book↩",
        "    author = creating new Author↩",
@@ -145,7 +145,7 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get).toEqual(a1);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book↩",
+       "Creating new Book at EntityManager.factories.test.ts:142↩",
        "  ...adding Author#1 opt to scope↩",
        "  author = Author#1 from scope↩",
        "  created Book#1 added to scope↩",
@@ -189,7 +189,7 @@ describe("EntityManager.factories", () => {
     expect(b.author.get).toMatchEntity(a2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book↩",
+       "Creating new Book at jestAdapterInit.js:1524↩",
        "  ...adding Author#2 opt to scope↩",
        "  author = Author#2 from scope↩",
        "  created Book#1 added to scope↩",
@@ -216,7 +216,7 @@ describe("EntityManager.factories", () => {
     expect(b.randomComment.get).toMatchEntity(c2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book↩",
+       "Creating new Book at jestAdapterInit.js:1524↩",
        "  ...adding Comment#2 opt to scope↩",
        "  author = Author#1 from em↩",
        "  randomComment = Comment#2 from scope↩",
@@ -595,7 +595,7 @@ describe("EntityManager.factories", () => {
       expect(ft1.parent.get).toEqual(b1.author.get);
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new Comment↩",
+         "Creating new Comment at jestAdapterInit.js:1524↩",
          "  parent = Author#1 from em↩",
          "  created Comment#1 added to scope↩",
        ]
@@ -612,7 +612,7 @@ describe("EntityManager.factories", () => {
       expect(ft1.parent.get).toEqual(p1);
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new Comment↩",
+         "Creating new Comment at jestAdapterInit.js:1524↩",
          "  parent = LargePublisher#1 from em↩",
          "  created Comment#1 added to scope↩",
        ]
@@ -630,7 +630,7 @@ describe("EntityManager.factories", () => {
       expect(ft1.parent.get).toEqual(p1);
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new Comment↩",
+         "Creating new Comment at jestAdapterInit.js:1524↩",
          "  parent = LargePublisher#1 from em↩",
          "  created Comment#1 added to scope↩",
        ]
@@ -849,7 +849,7 @@ describe("EntityManager.factories", () => {
       await em.flush();
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new ChildGroup↩",
+         "Creating new ChildGroup at EntityManager.factories.test.ts:840↩",
          "  childGroupId = creating new Child↩",
          "    created Child#1 added to scope↩",
          "  parentGroup = creating new ParentGroup↩",

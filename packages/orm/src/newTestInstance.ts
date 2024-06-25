@@ -24,6 +24,7 @@ import {
   isManyToOneField,
   isOneToOneField,
 } from "./EntityMetadata";
+import { getCallerName } from "./config";
 import { hasDefaultValue } from "./defaults";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
@@ -789,9 +790,9 @@ class FactoryLogger {
     // This was already logged by the parent `field = creating new`
     if (this.skipNextLogCreating) {
       this.skipNextLogCreating = false;
-      return;
+    } else {
+      this.write("Creating", green.bold(`new ${cstr.name}`), gray(`at ${getCallerName(2)}`));
     }
-    this.write("Creating " + green.bold(`new ${cstr.name}`));
   }
 
   logAddToUseMap(e: Entity, source: UseMapSource): void {
@@ -837,8 +838,8 @@ class FactoryLogger {
     this.level--;
   }
 
-  private write(line: string): void {
-    this.writeFn(this.prefix() + line + "\n");
+  private write(...line: string[]): void {
+    this.writeFn(this.prefix() + line.join(" ") + "\n");
   }
 
   private prefix() {

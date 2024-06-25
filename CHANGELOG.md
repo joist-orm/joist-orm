@@ -1,3 +1,10 @@
+# [1.173.0](https://github.com/joist-orm/joist-orm/compare/v1.172.0...v1.173.0) (2024-06-25)
+
+
+### Features
+
+* Add line numbers to initial factory logging output. ([#1121](https://github.com/joist-orm/joist-orm/issues/1121)) ([9bb4703](https://github.com/joist-orm/joist-orm/commit/9bb4703278fff41512a12dd25bab04365a7a20a0))
+
 # [1.172.0](https://github.com/joist-orm/joist-orm/compare/v1.171.0...v1.172.0) (2024-06-22)
 
 

@@ -1,4 +1,3 @@
-import inquirer from "inquirer";
 import semver from "semver";
 import { maybeAdjustForLocalDevelopment } from "../adjustVersion";
 import { Config } from "../config";
@@ -8,6 +7,7 @@ import { v1_148_0_move_codegen_files } from "./v1_148_0_move_codegen_files";
 import { v1_151_0_rename_derived_reference } from "./v1_151_0_rename_derived_async_reference";
 
 export async function maybeRunTransforms(config: Config): Promise<void> {
+  const { default: inquirer } = await import("inquirer");
   const confVersion = config.version;
   const thisVersion = getThisVersion();
   if (semver.eq(confVersion, thisVersion)) {

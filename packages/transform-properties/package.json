@@ -12,12 +12,12 @@
     "test": "jest"
   },
   "devDependencies": {
-    "@swc/core": "^1.4.13",
+    "@swc/core": "^1.6.5",
     "@swc/jest": "^0.2.36",
     "@types/jest": "^29.5.12",
-    "@types/node": "^20.12.7",
-    "jest": "30.0.0-alpha.3",
-    "prettier": "^3.2.5",
+    "@types/node": "^20.14.9",
+    "jest": "30.0.0-alpha.5",
+    "prettier": "^3.3.2",
     "prettier-plugin-organize-imports": "^3.2.4",
     "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^4.2.0",

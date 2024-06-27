@@ -33,7 +33,7 @@ export type AsyncDerivedFieldInternal<T extends Entity> = {
 /** A generic error which contains only a message field */
 export type GenericError = { message: string };
 
-/** An extension to GenericError which may associates the error to a specific entity */
+/** An extension to GenericError which associates the error to a specific entity */
 export type ValidationError = { entity: Entity } & GenericError;
 
 export class ValidationErrors extends Error {

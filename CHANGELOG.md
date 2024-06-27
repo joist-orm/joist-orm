@@ -1,3 +1,10 @@
+## [1.174.3](https://github.com/joist-orm/joist-orm/compare/v1.174.2...v1.174.3) (2024-06-27)
+
+
+### Bug Fixes
+
+* Get message only validation errors to have the same behavior as entity specific errors ([#1123](https://github.com/joist-orm/joist-orm/issues/1123)) ([e13d0ba](https://github.com/joist-orm/joist-orm/commit/e13d0ba80e04019226e558f109af23d5ab9dc16a))
+
 ## [1.174.2](https://github.com/joist-orm/joist-orm/compare/v1.174.1...v1.174.2) (2024-06-27)
 
 

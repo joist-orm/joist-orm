@@ -1,3 +1,10 @@
+## [1.174.2](https://github.com/joist-orm/joist-orm/compare/v1.174.1...v1.174.2) (2024-06-27)
+
+
+### Bug Fixes
+
+* Bump dependencies. ([#1122](https://github.com/joist-orm/joist-orm/issues/1122)) ([1de26cd](https://github.com/joist-orm/joist-orm/commit/1de26cdd23cc2749fee46835350e9979aa714de1))
+
 ## [1.174.1](https://github.com/joist-orm/joist-orm/compare/v1.174.0...v1.174.1) (2024-06-27)
 
 

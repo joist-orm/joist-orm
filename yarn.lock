@@ -11304,7 +11304,7 @@ __metadata:
     prettier-plugin-organize-imports: "npm:^3.2.4"
     superstruct: "npm:0.15.5"
     ts-jest: "npm:^29.1.5"
-    ts-patch: "npm:^3.1.2"
+    ts-patch: "npm:^3.2.1"
     tsconfig-paths: "npm:^4.2.0"
     tsx: "npm:^4.15.7"
     typescript: "npm:^5.5.2"
@@ -11483,7 +11483,7 @@ __metadata:
     env-cmd: "npm:^10.1.0"
     expect-type: "npm:^0.19.0"
     semantic-release: "npm:^23.0.8"
-    ts-patch: "npm:^3.1.2"
+    ts-patch: "npm:^3.2.1"
     typescript: "npm:^5.5.2"
     typescript-transform-paths: "npm:^3.4.7"
   languageName: unknown
@@ -18013,9 +18013,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-patch@npm:^3.1.2":
-  version: 3.1.2
-  resolution: "ts-patch@npm:3.1.2"
+"ts-patch@npm:^3.2.1":
+  version: 3.2.1
+  resolution: "ts-patch@npm:3.2.1"
   dependencies:
     chalk: "npm:^4.1.2"
     global-prefix: "npm:^3.0.0"
@@ -18026,7 +18026,7 @@ __metadata:
   bin:
     ts-patch: bin/ts-patch.js
     tspc: bin/tspc.js
-  checksum: 10/d738f51f1a7d16249ef82212a8dec8391c02812dde0f1dfdcd6bfc22b96bf99efd89c560172544f6339ab05083ccc9be895168915e4c7c0a8f019496728137ce
+  checksum: 10/d15d6a8bdad0a39e56a8f346a6aa7174cf48176c0aa2e5a6d223c325e411592804b02cdf428c72807ed2c617cf1031cc362ef8a74dbac3eaaada47db91b6d1d2
   languageName: node
   linkType: hard
 

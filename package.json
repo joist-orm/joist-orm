@@ -44,7 +44,7 @@
     "env-cmd": "^10.1.0",
     "expect-type": "^0.19.0",
     "semantic-release": "^23.0.8",
-    "ts-patch": "^3.1.2",
+    "ts-patch": "^3.2.1",
     "typescript-transform-paths": "^3.4.7"
   },
   "dependencies": {

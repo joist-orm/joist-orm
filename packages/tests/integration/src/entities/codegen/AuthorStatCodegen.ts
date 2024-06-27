@@ -1,37 +1,34 @@
 import {
   BaseEntity,
+  type Changes,
   cleanStringValue,
   ConfigApi,
+  type EntityMetadata,
   failNoIdYet,
+  type Flavor,
   getField,
   isLoaded,
+  type JsonPayload,
+  type Lens,
+  type Loaded,
+  type LoadHint,
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  type OptsOf,
+  type OrderBy,
+  type PartialOrNull,
   setField,
   setOpts,
+  type TaggedId,
   toIdOf,
   toJSON,
+  type ToJsonHint,
+  type ValueFilter,
+  type ValueGraphQLFilter,
 } from "joist-orm";
-import type {
-  Changes,
-  EntityMetadata,
-  Flavor,
-  JsonPayload,
-  Lens,
-  Loaded,
-  LoadHint,
-  OptsOf,
-  OrderBy,
-  PartialOrNull,
-  TaggedId,
-  ToJsonHint,
-  ValueFilter,
-  ValueGraphQLFilter,
-} from "joist-orm";
-import type { Context } from "src/context";
-import { AuthorStat, authorStatMeta, EntityManager, newAuthorStat } from "../entities";
-import type { Entity } from "../entities";
+import { type Context } from "src/context";
+import { AuthorStat, authorStatMeta, type Entity, EntityManager, newAuthorStat } from "../entities";
 
 export type AuthorStatId = Flavor<string, AuthorStat>;
 

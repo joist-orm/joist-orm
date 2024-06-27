@@ -1,4 +1,4 @@
-import type { EnumMetadata } from "joist-orm";
+import { type EnumMetadata } from "joist-orm";
 
 export enum PublisherSize {
   Small = "SMALL",

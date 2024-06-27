@@ -1,43 +1,49 @@
 import {
   BaseEntity,
+  type Changes,
   cleanStringValue,
+  type Collection,
   ConfigApi,
+  type EntityFilter,
+  type EntityGraphQLFilter,
+  type EntityMetadata,
   failNoIdYet,
+  type FilterOf,
+  type Flavor,
   getField,
+  type GraphQLFilterOf,
   hasMany,
   isLoaded,
+  type JsonPayload,
+  type Lens,
+  type Loaded,
+  type LoadHint,
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  type OptsOf,
+  type OrderBy,
+  type PartialOrNull,
   setField,
   setOpts,
+  type TaggedId,
   toIdOf,
   toJSON,
+  type ToJsonHint,
+  type ValueFilter,
+  type ValueGraphQLFilter,
 } from "joist-orm";
-import type {
-  Changes,
-  Collection,
-  EntityFilter,
-  EntityGraphQLFilter,
-  EntityMetadata,
-  FilterOf,
-  Flavor,
-  GraphQLFilterOf,
-  JsonPayload,
-  Lens,
-  Loaded,
-  LoadHint,
-  OptsOf,
-  OrderBy,
-  PartialOrNull,
-  TaggedId,
-  ToJsonHint,
-  ValueFilter,
-  ValueGraphQLFilter,
-} from "joist-orm";
-import type { Context } from "src/context";
-import { EntityManager, newT1Author, T1Author, t1AuthorMeta, T1Book, t1BookMeta } from "../entities";
-import type { Entity, T1BookId } from "../entities";
+import { type Context } from "src/context";
+import {
+  type Entity,
+  EntityManager,
+  newT1Author,
+  T1Author,
+  t1AuthorMeta,
+  T1Book,
+  type T1BookId,
+  t1BookMeta,
+} from "../entities";
 
 export type T1AuthorId = Flavor<number, T1Author>;
 

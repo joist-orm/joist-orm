@@ -1,36 +1,46 @@
 import {
+  type Changes,
   cleanStringValue,
   ConfigApi,
+  type EntityMetadata,
   failNoIdYet,
+  type Flavor,
   getField,
   isLoaded,
+  type JsonPayload,
+  type Lens,
+  type Loaded,
+  type LoadHint,
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  type OptsOf,
+  type OrderBy,
+  type PartialOrNull,
   setField,
   setOpts,
+  type TaggedId,
   toIdOf,
   toJSON,
+  type ToJsonHint,
+  type ValueFilter,
+  type ValueGraphQLFilter,
 } from "joist-orm";
-import type {
-  Changes,
-  EntityMetadata,
-  Flavor,
-  JsonPayload,
-  Lens,
-  Loaded,
-  LoadHint,
-  OptsOf,
-  OrderBy,
-  PartialOrNull,
-  TaggedId,
-  ToJsonHint,
-  ValueFilter,
-  ValueGraphQLFilter,
-} from "joist-orm";
-import type { Context } from "src/context";
-import { AdminUser, adminUserMeta, EntityManager, newAdminUser, User } from "../entities";
-import type { Entity, UserFields, UserFilter, UserGraphQLFilter, UserIdsOpts, UserOpts, UserOrder } from "../entities";
+import { type Context } from "src/context";
+import {
+  AdminUser,
+  adminUserMeta,
+  type Entity,
+  EntityManager,
+  newAdminUser,
+  User,
+  type UserFields,
+  type UserFilter,
+  type UserGraphQLFilter,
+  type UserIdsOpts,
+  type UserOpts,
+  type UserOrder,
+} from "../entities";
 
 export type AdminUserId = Flavor<string, AdminUser> & Flavor<string, "User">;
 

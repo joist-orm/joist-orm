@@ -33,17 +33,17 @@ export type AsyncDerivedFieldInternal<T extends Entity> = {
 /** A generic error which contains only a message field */
 export type GenericError = { message: string };
 
-/** An extension to GenericError which associates the error to a specific entity */
+/** An extension to GenericError which may associates the error to a specific entity */
 export type ValidationError = { entity: Entity } & GenericError;
 
 export class ValidationErrors extends Error {
-  public errors: ValidationError[];
+  public errors: Array<GenericError | ValidationError>;
   public readonly toJSON: () => string;
   constructor(errors: ValidationError[]);
   constructor(message: string);
   constructor(messageOrErrors: ValidationError[] | string) {
     super(typeof messageOrErrors === "string" ? messageOrErrors : errorMessage(messageOrErrors));
-    this.errors = typeof messageOrErrors === "string" ? [] : messageOrErrors;
+    this.errors = typeof messageOrErrors === "string" ? [{ message: messageOrErrors }] : messageOrErrors;
     // Jest clones without prototype, so explictly setting this as a property rather than a class method
     // https://github.com/jestjs/jest/issues/11958
     this.toJSON = () => `ValidationErrors: ${this.message}`;

@@ -1751,7 +1751,10 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     em.create(Author, { publisher: "p:1", firstName: "Jim" });
     em.create(Author, { publisher: "p:1", firstName: "Jim" });
-    await expect(em.flush()).rejects.toThrow("There is already a publisher with a Jim");
+    await expect(em.flush()).rejects.toMatchObject({
+      message: "There is already a publisher with a Jim",
+      errors: [{ message: "There is already a publisher with a Jim" }],
+    });
   });
 
   it("is typed correctly", async () => {

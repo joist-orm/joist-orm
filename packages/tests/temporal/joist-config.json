@@ -4,5 +4,5 @@
   "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
   "entitiesDirectory": "./src/entities",
   "temporal": { "timeZone": "America/Los_Angeles" },
-  "version": "1.174.1"
+  "version": "1.174.2"
 }

@@ -23,6 +23,7 @@ describe("getProperties", () => {
       authorSetWhenDeleteRuns: expect.any(UnknownProperty),
       afterCommitCheckTagsChanged: expect.any(UnknownProperty),
       currentDraftAuthor: expect.any(OneToOneReferenceImpl),
+      favoriteAuthor: expect.any(OneToOneReferenceImpl),
       image: expect.any(OneToOneReferenceImpl),
       tags: expect.any(ManyToManyCollection),
       favoriteColorsRuleInvoked: 0,

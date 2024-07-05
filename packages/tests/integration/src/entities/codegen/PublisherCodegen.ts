@@ -88,6 +88,7 @@ export interface PublisherFields {
   hugeNumber: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
+  titlesOfFavoriteBooks: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   size: { kind: "enum"; type: PublisherSize; nullable: undefined };
@@ -130,6 +131,7 @@ export interface PublisherFilter {
   hugeNumber?: ValueFilter<number, null>;
   numberOfBookReviews?: ValueFilter<number, never>;
   deletedAt?: ValueFilter<Date, null>;
+  titlesOfFavoriteBooks?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   size?: ValueFilter<PublisherSize, null>;
@@ -151,6 +153,7 @@ export interface PublisherGraphQLFilter {
   hugeNumber?: ValueGraphQLFilter<number>;
   numberOfBookReviews?: ValueGraphQLFilter<number>;
   deletedAt?: ValueGraphQLFilter<Date>;
+  titlesOfFavoriteBooks?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   size?: ValueGraphQLFilter<PublisherSize>;
@@ -172,6 +175,7 @@ export interface PublisherOrder {
   hugeNumber?: OrderBy;
   numberOfBookReviews?: OrderBy;
   deletedAt?: OrderBy;
+  titlesOfFavoriteBooks?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   size?: OrderBy;
@@ -269,6 +273,8 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   set deletedAt(deletedAt: Date | undefined) {
     setField(this, "deletedAt", deletedAt);
   }
+
+  abstract readonly titlesOfFavoriteBooks: ReactiveField<Publisher, string | undefined>;
 
   get createdAt(): Date {
     return getField(this, "createdAt");

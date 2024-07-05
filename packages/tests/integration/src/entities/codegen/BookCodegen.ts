@@ -91,6 +91,7 @@ export interface BookOpts {
   author: Author | AuthorId;
   randomComment?: Comment | CommentId | null;
   currentDraftAuthor?: Author | null;
+  favoriteAuthor?: Author | null;
   image?: Image | null;
   advances?: BookAdvance[];
   reviews?: BookReview[];
@@ -102,6 +103,7 @@ export interface BookIdsOpts {
   authorId?: AuthorId | null;
   randomCommentId?: CommentId | null;
   currentDraftAuthorId?: AuthorId | null;
+  favoriteAuthorId?: AuthorId | null;
   imageId?: ImageId | null;
   advanceIds?: BookAdvanceId[] | null;
   reviewIds?: BookReviewId[] | null;
@@ -121,6 +123,7 @@ export interface BookFilter {
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
   randomComment?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null>;
   currentDraftAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
+  favoriteAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   advances?: EntityFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
   reviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
@@ -140,6 +143,7 @@ export interface BookGraphQLFilter {
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
   randomComment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null>;
   currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  favoriteAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   advances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, GraphQLFilterOf<BookAdvance>, null | undefined>;
   reviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
@@ -345,6 +349,16 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
       "currentDraftAuthor",
       "currentDraftBook",
       "current_draft_book_id",
+    );
+  }
+
+  get favoriteAuthor(): OneToOneReference<Book, Author> {
+    return this.__data.relations.favoriteAuthor ??= hasOneToOne(
+      this as any as Book,
+      authorMeta,
+      "favoriteAuthor",
+      "favoriteBook",
+      "favorite_book_id",
     );
   }
 

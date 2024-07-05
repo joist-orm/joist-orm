@@ -82,6 +82,7 @@
     "currentDraftAuthor",
     "currentDraftBook",
     "deletedAt",
+    "favoriteAuthor",
     "favoriteBookAuthors",
     "id",
     "image",
@@ -101,6 +102,7 @@
     "createdAt",
     "critic",
     "id",
+    "isOnFavoriteBook",
     "isPublic",
     "isTest",
     "parent",
@@ -159,6 +161,7 @@
     "size",
     "tags",
     "tasks",
+    "titlesOfFavoriteBooks",
     "type",
     "updatedAt",
     "users"
@@ -217,6 +220,7 @@
     "tag",
     "tags",
     "tasks",
+    "titlesOfFavoriteBooks",
     "type",
     "updatedAt"
   ],
@@ -298,7 +302,16 @@
     "updatedAt"
   ],
   "SaveBookResult": ["book"],
-  "SaveBookReviewInput": ["bookId", "createdAt", "criticId", "id", "isPublic", "rating", "updatedAt"],
+  "SaveBookReviewInput": [
+    "bookId",
+    "createdAt",
+    "criticId",
+    "id",
+    "isOnFavoriteBook",
+    "isPublic",
+    "rating",
+    "updatedAt"
+  ],
   "SaveBookReviewResult": ["bookReview"],
   "SaveChildGroupInput": ["childGroupIdId", "id", "name", "parentGroupId"],
   "SaveChildGroupResult": ["childGroup"],
@@ -334,6 +347,7 @@
     "name",
     "sharedColumn",
     "size",
+    "titlesOfFavoriteBooks",
     "type"
   ],
   "SaveLargePublisherResult": ["largePublisher"],
@@ -358,6 +372,7 @@
     "name",
     "size",
     "tagId",
+    "titlesOfFavoriteBooks",
     "type",
     "updatedAt"
   ],
@@ -375,6 +390,7 @@
     "name",
     "sharedColumn",
     "size",
+    "titlesOfFavoriteBooks",
     "type"
   ],
   "SaveSmallPublisherResult": ["smallPublisher"],
@@ -435,6 +451,7 @@
     "size",
     "tags",
     "tasks",
+    "titlesOfFavoriteBooks",
     "type",
     "updatedAt",
     "users"

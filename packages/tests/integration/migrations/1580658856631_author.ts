@@ -56,6 +56,8 @@ export function up(b: MigrationBuilder): void {
     group_id: foreignKey("publisher_groups", { notNull: false }),
     // for testing soft-delete with CTI tables
     deleted_at: { type: "timestamptz", notNull: false },
+    // for testing reactivity to ReactiveReferences that are o2os
+    titles_of_favorite_books: { type: "text", notNull: false },
   });
 
   // Create two subclass tables
@@ -180,7 +182,10 @@ export function up(b: MigrationBuilder): void {
 
   // for derived fks
   addColumns(b, "authors", {
-    favorite_book_id: foreignKey("books", { notNull: false }),
+    // For testing ReactiveReferences, where the opposite side is an o2o (the book can only
+    // be the favorite of a single author at a time--it's author).
+    // We should add another ReactiveReference that is not unique...
+    favorite_book_id: foreignKey("books", { notNull: false, unique: true }),
   });
 
   createEntityTable(b, "book_advances", {

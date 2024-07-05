@@ -349,7 +349,6 @@ describe("EntityManager.reactiveRules", () => {
   });
 
   it.withCtx("creates the right reactive field targets", async () => {
-    const cstr = expect.any(Function);
     expect(getReactiveFields(Book)).toEqual([
       { kind: "populate", cstr: "Author", name: "numberOfBooks", fields: ["author"], path: ["author"] },
       { kind: "populate", cstr: "Author", name: "bookComments", fields: ["author"], path: ["author"] },
@@ -367,6 +366,13 @@ describe("EntityManager.reactiveRules", () => {
         name: "numberOfBookReviews",
         fields: ["author"],
         path: ["author", "publisher"],
+      },
+      {
+        kind: "populate",
+        cstr: "Publisher",
+        name: "titlesOfFavoriteBooks",
+        fields: ["title"],
+        path: ["favoriteAuthor", "publisher"],
       },
     ]);
     expect(getReactiveFields(BookReview)).toEqual([
@@ -429,7 +435,7 @@ describe("EntityManager.reactiveRules", () => {
     expect(a.bookComments.fieldValue).toEqual("B1C2, B2C1, B2C2");
   });
 
-  describe("async properties", () => {
+  describe("ReactiveFields", () => {
     it.withCtx("runs rule on new grandchild", async ({ em }) => {
       // Given a publisher that has two authors
       const p = newPublisher(em, {
@@ -497,7 +503,7 @@ describe("EntityManager.reactiveRules", () => {
     });
   });
 
-  describe("persisted async properties", () => {
+  describe("ReactiveReferences", () => {
     it.withCtx("runs rule on new grandchild", async ({ em }) => {
       // Given a publisher that has two authors
       const p = newPublisher(em, {

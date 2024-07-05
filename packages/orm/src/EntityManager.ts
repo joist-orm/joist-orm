@@ -1282,7 +1282,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
                 getInstanceData(e).resetForRqfLoop();
               }
               // Actually do the recalc
-              await this.#fl.allowWrites(() => this.#rm.recalcPendingDerivedValues("reactiveQueries"));
+              await this.#fl.allowWrites(async () => {
+                await this.#rm.recalcPendingDerivedValues("reactiveQueries");
+                // If any ReactiveFields depended on ReactiveQueryFields, go ahead and calc those now
+                await this.#rm.recalcPendingDerivedValues("reactiveFields");
+              });
               // Advance `now` so that our triggers don't think our UPDATEs are forgetting to self-bump
               // updated_at, and bump it themselves, which could cause a subsequent error.
               now = getNow();

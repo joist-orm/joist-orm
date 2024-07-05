@@ -233,6 +233,9 @@ export function newTestInstance<T extends Entity>(
         (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, withBranchMap(opts), field, opt, [entity] as any)),
       ];
     } else if (field.kind === "o2o") {
+      const otherField = field.otherMetadata().allFields[field.otherFieldName];
+      const isReactiveReference = "derived" in otherField && otherField.derived === "async";
+      if (isReactiveReference) return [];
       // If this is an o2o, i.e. author.image, just pass the optValue (i.e. it won't be a list)
       return [fieldName, resolveFactoryOpt(em, opts, field, optValue as any, entity)];
     } else {

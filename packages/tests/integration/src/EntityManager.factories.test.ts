@@ -167,6 +167,7 @@ describe("EntityManager.factories", () => {
       title: expect.anything(),
       author: a1,
       currentDraftAuthor: a1,
+      favoriteAuthor: a1,
       reviews: [],
       use: expect.any(Map),
     });
@@ -774,7 +775,7 @@ describe("EntityManager.factories", () => {
     expect(a.books.get[0].reviews.get[0].rating).toBe(1);
     expect(a.books.get[1].reviews.get[0].rating).toBe(2);
     // And it took only 9 queries (vs. 29 without join preloading)
-    expect(queries.length).toBe(isPreloadingEnabled ? 9 : 29);
+    expect(queries.length).toBe(isPreloadingEnabled ? 9 : 31);
   });
 
   it("uniquely assigns name fields", async () => {
@@ -849,7 +850,7 @@ describe("EntityManager.factories", () => {
       await em.flush();
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new ChildGroup at EntityManager.factories.test.ts:840↩",
+         "Creating new ChildGroup at EntityManager.factories.test.ts:841↩",
          "  childGroupId = creating new Child↩",
          "    created Child#1 added to scope↩",
          "  parentGroup = creating new ParentGroup↩",

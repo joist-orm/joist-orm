@@ -4,6 +4,7 @@ import {
   Collection,
   CustomCollection,
   hasReactiveAsyncProperty,
+  hasReactiveField,
   hasReactiveQueryField,
   isLoaded,
   Loaded,
@@ -37,6 +38,22 @@ export abstract class Publisher extends PublisherCodegen {
     { authors: { books: "reviews" } },
     // findCount is N+1 safe
     (p) => p.em.findCount(BookReview, { book: { author: { publisher: p.id } } }),
+  );
+
+  /** Example of a ReactiveField reacting to ReactiveReferences. */
+  readonly titlesOfFavoriteBooks: ReactiveField<Publisher, string | undefined> = hasReactiveField(
+    "titlesOfFavoriteBooks",
+    // We don't actually read the title, but
+    { authors: { favoriteBook: "title" } },
+    (p) => {
+      return (
+        p.authors.get
+          .map((a) => a.favoriteBook.get)
+          .filter((b) => b !== undefined)
+          .map((b) => b.title)
+          .join(", ") || undefined
+      );
+    },
   );
 
   // Example of a custom collection that can add/remove

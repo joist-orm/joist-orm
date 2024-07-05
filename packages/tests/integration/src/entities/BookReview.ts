@@ -1,14 +1,14 @@
 import {
   AsyncProperty,
-  ReactiveField,
-  Reference,
   cannotBeUpdated,
   hasOneDerived,
   hasOneThrough,
   hasReactiveAsyncProperty,
   hasReactiveField,
+  ReactiveField,
+  Reference,
 } from "joist-orm";
-import { Author, BookReviewCodegen, Publisher, bookReviewConfig as config } from "./entities";
+import { Author, BookReviewCodegen, bookReviewConfig as config, Publisher } from "./entities";
 
 export class BookReview extends BookReviewCodegen {
   // Currently this infers as Reference<BookReview, Author, undefined> --> it should be never...

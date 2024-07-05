@@ -1,5 +1,5 @@
-import { Author, Book, newAuthor } from "@src/entities";
-import { insertAuthor, insertBook, insertBookReview, update } from "@src/entities/inserts";
+import { Author, Book, BookReview, newAuthor } from "@src/entities";
+import { insertAuthor, insertBook, insertBookReview, insertPublisher, select, update } from "@src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
 
 describe("ReactiveReference", () => {
@@ -106,5 +106,55 @@ describe("ReactiveReference", () => {
     expect(queries).toEqual([]);
     expect(a.favoriteBook.isLoaded).toBe(true);
     expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("with o2o references does not fail em.delete", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await update("authors", { id: 1, favorite_book_id: 1 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1", "favoriteBook");
+    em.delete(a);
+    await em.flush();
+  });
+
+  it("drives recalc of downstream ReactiveFields", async () => {
+    // Given two books, and the 1st is currently the favorite
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    await update("authors", { id: 1, favorite_book_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 2 });
+    await insertBookReview({ book_id: 2, rating: 1 });
+    // When we make the 2nd book to have a higher rating
+    const em = newEntityManager();
+    const br2 = await em.load(BookReview, "br:2");
+    br2.rating = 3;
+    await em.flush();
+    // Then we recalculated the "titles_of_favorite_books" as well
+    const rows = await select("publishers");
+    expect(rows).toMatchObject([{ id: 1, titles_of_favorite_books: "b2" }]);
+  });
+
+  it("drives recalc of downstream ReactiveFields through o2o", async () => {
+    // Given two books, and the 1st is currently the favorite
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await update("authors", { id: 1, favorite_book_id: 1 });
+    // When we change the title of the book
+    const em = newEntityManager();
+    const b1 = await em.load(Book, "b:1");
+    b1.title = "b22";
+    await em.flush();
+    // Then we recalculated the "titles_of_favorite_books" as well
+    const rows = await select("publishers");
+    expect(rows).toMatchObject([
+      {
+        id: 1,
+        titles_of_favorite_books: "b22",
+      },
+    ]);
   });
 });

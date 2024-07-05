@@ -1,4 +1,4 @@
-import { Author, Book, BookReview, Comment, Critic } from "@src/entities";
+import { Author, Book, BookReview, Comment, Critic, Publisher } from "@src/entities";
 import {
   Entity,
   LoadHint,
@@ -75,6 +75,14 @@ describe("reactiveHints", () => {
       { entity: "Author", fields: [], path: [] },
       { entity: "Book", fields: ["author", "tags"], path: ["author"] },
       { entity: "Tag", fields: ["name"], path: ["books", "author"] },
+    ]);
+  });
+
+  it("can do ReactiveReferences through a o2o", () => {
+    expect(reverse(Publisher, Publisher, { authors: { favoriteBook: "title" } })).toEqual([
+      { entity: "Publisher", fields: [], path: [] },
+      { entity: "Author", fields: ["publisher", "favoriteBook"], path: ["publisher"] },
+      { entity: "Book", fields: ["title"], path: ["favoriteAuthor", "publisher"] },
     ]);
   });
 

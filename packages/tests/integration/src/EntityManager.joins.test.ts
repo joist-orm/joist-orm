@@ -178,7 +178,12 @@ describe("EntityManager.joins", () => {
     expect(lp.group.get?.name).toBe("pg1");
   });
 
-  it("does not preloads derived m2os", async () => {
+  // this test was originally written for Author.favoriteBook when it was non-unique
+  // and so the `Book.favoriteAuthors` m2o was skipped all together. Now we've made
+  // favoriteBook unique, so `Book.favoriteBook` as o2o does actually get created,
+  // because if we try and skip it then reactivity through the ReactiveReference
+  // won't work. This probably means reactivity through non-unique RRs is broken.
+  it("preloads derived o2os", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     await insertBookReview({ book_id: 1, rating: 1 });
@@ -186,9 +191,10 @@ describe("EntityManager.joins", () => {
     const em = newEntityManager();
     resetQueryCount();
     const a = await em.load(Author, "a:1", { favoriteBook: "reviews" });
+    // ...old comment that applied to the `Book.favoriteAuthors` m2o
     // We don't model the "other side" of derived m2os b/c it was too complicated
     // for the initial implementation. So, for now it doesn't get preloaded.
-    expect(queries.length).toBe(3);
+    expect(queries.length).toBe(isPreloadingEnabled ? 1 : 3);
     expect(a.favoriteBook.get?.reviews.get[0].rating).toBe(1);
   });
 

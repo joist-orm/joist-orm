@@ -31,6 +31,7 @@ export class ReactionsManager {
    * try again during `em.flush`.
    */
   private relationsPendingAssignedIds: Set<Relation<any, any>> = new Set();
+  private needsRecalc = { populate: false, query: false };
 
   /**
    * Queue all downstream reactive fields that depend on `fieldName` as a source field.
@@ -54,8 +55,9 @@ export class ReactionsManager {
         //   dirty, otherwise it will be left out of any INSERTs/UPDATEs.
         this.getPending(rf).todo.add(entity);
         this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
+        this.needsRecalc[rf.kind] = true;
         // Keep for future debugging...
-        // console.log(`${entity}.${fieldName} changed, queuing ${rf.name} walk from ${entity} -> ${rf.path}`);
+        log(`${entity}.${fieldName} changed, queuing ${entity}.${rf.path.join(".")}.${rf.name}`);
       }
     }
   }
@@ -93,6 +95,7 @@ export class ReactionsManager {
     for (const rf of rfs) {
       this.getPending(rf).todo.add(entity);
       this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
+      this.needsRecalc[rf.kind] = true;
     }
   }
 
@@ -113,7 +116,7 @@ export class ReactionsManager {
   }
 
   hasPendingReactiveQueries(): boolean {
-    return [...this.pendingFieldReactions.keys()].some((rf) => rf.kind === "query");
+    return this.needsRecalc.query;
   }
 
   /**
@@ -124,10 +127,15 @@ export class ReactionsManager {
    * We also do this in a loop to handle reactive fields depending on other reactive fields.
    */
   async recalcPendingDerivedValues(kind: "reactiveFields" | "reactiveQueries") {
-    let scanPending = true;
     let loops = 0;
-    while (scanPending) {
-      scanPending = false;
+    // Map our parameter `kind` value (which is a nicer name) to the shorter ADT kind
+    const k = kind === "reactiveFields" ? "populate" : "query";
+    while (this.needsRecalc[k]) {
+      // ...we probably should only loop for `kind=populate` ReactiveFields, and `kind=query`
+      // ReactiveQueryFields should probably only have a single loop, after which we return and
+      // let `em.flush` push the latest values to the db, so our 2nd-order ReactiveQueryFields
+      // will see the latest value.
+      this.needsRecalc[k] = false;
       const relations = await Promise.all(
         [...this.pendingFieldReactions.entries()].map(async ([rf, pending]) => {
           // Skip reactive queries until post-flush
@@ -136,12 +144,8 @@ export class ReactionsManager {
 
           // Copy pending and clear it
           const todo = [...pending.todo];
+          if (todo.length === 0) return [];
           pending.todo.clear();
-          // If we found any pending, loop again b/c we might be a dependency of another field,
-          // which our `.load()` will have marked as pending by calling `queueDownstreamReactiveFields`.
-          if (todo.length > 0) {
-            scanPending = true;
-          }
           for (const doing of todo) pending.done.add(doing);
           // Walk back from the source to any downstream fields
           const relations = (await followReverseHint(todo, rf.path))
@@ -149,7 +153,10 @@ export class ReactionsManager {
             .filter((e) => e instanceof rf.cstr)
             .map((entity) => (entity as any)[rf.name]);
           // Keep for future debugging...
-          // console.log(`Recalc-ing ${todo} -> ${rf.path} -> ${rf.cstr.name}.${rf.name} for found ${relations.length}`);
+          const from = todo[0].constructor.name;
+          log(
+            `Loading ${from}s(${todo.length}).${rf.path.join(".")}.${rf.name} (${relations.length} ${rf.cstr.name}s)`,
+          );
           return relations;
         }),
       );
@@ -158,7 +165,7 @@ export class ReactionsManager {
       const unique = [...new Set(relations.flat())];
 
       // Use allSettled so that we can watch for derived values that want to use the entity'd id,
-      // i.e. they can fail but we'll queue them from later.
+      // i.e. they can fail, but we'll queue them from later.
       const results = await Promise.allSettled(unique.map((r: any) => r.load()));
       const failures: any[] = [];
       results.forEach((result, i) => {
@@ -215,4 +222,8 @@ export class ReactionsManager {
     }
     return dirty;
   }
+}
+
+function log(line: string): void {
+  // process.stdout.write(`${line}\n`);
 }

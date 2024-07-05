@@ -58,7 +58,11 @@
     "LargePublisher": { "tag": "p" },
     "ParentGroup": { "tag": "parentGroup" },
     "ParentItem": { "tag": "pi" },
-    "Publisher": { "abstract": true, "fields": { "numberOfBookReviews": { "derived": "async" } }, "tag": "p" },
+    "Publisher": {
+      "abstract": true,
+      "fields": { "numberOfBookReviews": { "derived": "async" }, "titlesOfFavoriteBooks": { "derived": "async" } },
+      "tag": "p"
+    },
     "PublisherGroup": {
       "fields": { "numberOfBookReviews": { "derived": "async" } },
       "relations": { "critics": { "large": true } },

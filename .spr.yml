@@ -1,0 +1,12 @@
+githubRepoOwner: joist-orm
+githubRepoName: joist-orm
+githubHost: github.com
+githubRemote: origin
+githubBranch: main
+requireChecks: true
+requireApproval: false
+mergeMethod: rebase
+mergeQueue: false
+forceFetchTags: false
+showPrTitlesInStack: false
+branchPushIndividually: false

@@ -1,8 +1,43 @@
-import { Author, Book } from "@src/entities";
+import { Author, Book, newAuthor } from "@src/entities";
 import { insertAuthor, insertBook, insertBookReview, update } from "@src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
 
 describe("ReactiveReference", () => {
+  it("can be accessed if implicitly loaded", async () => {
+    const em = newEntityManager();
+    // Given a new author, with at least 1 book
+    const a = newAuthor(em, { books: [{}] });
+    const [b1] = a.books.get;
+    // And we've not explicitly asked for `favoriteBook` to be loaded
+    // Then we can access it anyway, because it realizes the load hint is in-memory
+    expect(a.favoriteBook.get).toMatchEntity(b1);
+  });
+
+  it("reports the initial value as changed", async () => {
+    const em = newEntityManager();
+    // Given a new author, with at least 1 book
+    const a = newAuthor(em, { books: [{}] });
+    // When the field hasn't been accessed yet, it's reported as not changed
+    expect(a.changes.favoriteBook.hasChanged).toBe(false);
+    expect(a.changes.favoriteBook.hasUpdated).toBe(false);
+    // But as soon as we access it
+    a.favoriteBook.get;
+    // Then the field is considered changed
+    expect(a.changes.favoriteBook.hasChanged).toBe(true);
+    expect(a.changes.favoriteBook.hasUpdated).toBe(false);
+  });
+
+  it("reports the cached value as unchanged", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await update("authors", { id: 1, favorite_book_id: 1 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1", "favoriteBook");
+    expect(a.favoriteBook.isLoaded).toBe(true);
+    expect(a.changes.favoriteBook.hasChanged).toBe(false);
+    expect(a.changes.favoriteBook.hasUpdated).toBe(false);
+  });
+
   it("load does not populates if unnecessary for calculating on a new entity", async () => {
     const em = newEntityManager();
     // Given a new author

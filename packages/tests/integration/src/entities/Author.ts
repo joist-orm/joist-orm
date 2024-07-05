@@ -212,7 +212,9 @@ export class Author extends AuthorCodegen {
       if (books.length === 0) {
         return undefined;
       }
-      const bestRating = Math.max(...books.flatMap((b) => b.reviews.get).map((r) => r.rating));
+      const ratings = books.flatMap((b) => b.reviews.get).map((r) => r.rating);
+      if (ratings.length === 0) return books[0].fullNonReactiveAccess;
+      const bestRating = Math.max(...ratings);
       return books.find((b) => b.reviews.get.some((r) => r.rating === bestRating)) as Book | undefined;
     },
   );

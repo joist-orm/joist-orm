@@ -140,6 +140,9 @@ export class ReactiveReferenceImpl<
   private doGet(opts?: { withDeleted?: boolean }): U | N {
     const { fn } = this;
     ensureNotDeleted(this.entity, "pending");
+    // Call isLoaded to probe the load hint, and get `_isLoaded` set, but still have
+    // our `if` check the raw `_isLoaded` to know if we should eval-latest or return `loaded`.
+    this.isLoaded;
     // We assume `isLoaded` has been called coming into this to manage
     if (this._isLoaded === "full") {
       const newValue = this.filterDeleted(fn(this.entity as Reacted<T, H>), opts);
@@ -150,6 +153,10 @@ export class ReactiveReferenceImpl<
       if (!getEmInternalApi(this.entity.em).isValidating) {
         this.setImpl(newValue);
       }
+      // ...should we store the `newValue` as `loaded`? It seems like a good idea, just in
+      // case our graph mutates & we become "not fully loaded" some time later, but going
+      // to leave this out for now, until we have a need/test case covering the behavior.
+      // this.loaded = newValue;
       return this.maybeFindEntity();
     } else if (this._isLoaded) {
       return this.loaded as U | N;

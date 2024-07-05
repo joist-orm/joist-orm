@@ -339,14 +339,14 @@ export async function followReverseHint(entities: Entity[], reverseHint: string[
         if (isManyToMany) {
           const m2m = c[fieldName] as ManyToManyCollection<any, any>;
           const joinRows = getEmInternalApi(m2m.entity.em).joinRows(m2m);
+          // Return a tuple of [currentRows, removedRows]
           return [currentValuePromise, joinRows.removedFor(m2m, c)];
         }
         return [currentValuePromise];
       }),
     );
     // Use flat() to get them all as entities
-    const entities = entitiesOrLists.flat().filter((e) => e !== undefined);
-    current = entities as Entity[];
+    current = entitiesOrLists.flat().filter((e) => e !== undefined);
   }
   return current;
 }

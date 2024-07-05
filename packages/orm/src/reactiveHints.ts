@@ -289,7 +289,26 @@ function maybeAddTypeFilterSuffix(
 /**
  * Walks `reverseHint` for every entity in `entities`.
  *
- * I.e. given `[book1, book2]` and `["author", 'publisher"]`, will return all of the books' authors' publishers.
+ * I.e. given `[book1, book2]` and `["author", 'publisher"]`, will return all the books' authors' publishers.
+ *
+ * Note that for references (and only references), we walk both through "the current value"
+ * and "the original value". This is fundamentally because references are the true "owner"
+ * of the relation, while collections are derived.
+ *
+ * For example, with reversals walking through collections:
+ *
+ * - Given a hint `book: author`
+ * - Which reverses to `author.books`
+ * - When we traverse through `a1.books`, we use only the current value, which might have only `[b2]` in it.
+ * - We don't need to worry about "the old a1.books" value, which might have previously had `[b1]` in it,
+ *   because the `b1.author` changing authors (from `a1` to `a2`) will trigger its own reactivity.
+ *
+ * Which we can see with reversals walking through references:
+ *
+ * - Given a hint `author: books`
+ * - Which reverses to `book: author`
+ * - When we traverse through `b1.author`, we use both the current value and original value, so that both
+ *   "our prior author" and "our new author" see their latest `author.books` collection values.
  */
 export async function followReverseHint(entities: Entity[], reverseHint: string[]): Promise<Entity[]> {
   // Start at the current entities
@@ -310,6 +329,7 @@ export async function followReverseHint(entities: Entity[], reverseHint: string[
         const isReference = fieldKind === "m2o" || fieldKind === "poly";
         const isManyToMany = fieldKind === "m2m";
         const changed = isChangeableField(c, fieldName) ? (c.changes[fieldName] as FieldStatus<any>) : undefined;
+        // See jsdoc comment about why this is only necessary for references...
         if (isReference && changed && changed.hasUpdated && changed.originalValue) {
           return [
             currentValuePromise,
@@ -319,14 +339,14 @@ export async function followReverseHint(entities: Entity[], reverseHint: string[
         if (isManyToMany) {
           const m2m = c[fieldName] as ManyToManyCollection<any, any>;
           const joinRows = getEmInternalApi(m2m.entity.em).joinRows(m2m);
+          // Return a tuple of [currentRows, removedRows]
           return [currentValuePromise, joinRows.removedFor(m2m, c)];
         }
         return [currentValuePromise];
       }),
     );
     // Use flat() to get them all as entities
-    const entities = entitiesOrLists.flat().filter((e) => e !== undefined);
-    current = entities as Entity[];
+    current = entitiesOrLists.flat().filter((e) => e !== undefined);
   }
   return current;
 }

@@ -2,7 +2,7 @@ import { Author, Book } from "@src/entities";
 import { insertAuthor, insertBook, insertBookReview, update } from "@src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
 
-describe("PersistedAsyncReference", () => {
+describe("ReactiveReference", () => {
   it("load does not populates if unnecessary for calculating on a new entity", async () => {
     const em = newEntityManager();
     // Given a new author

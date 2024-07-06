@@ -5,6 +5,7 @@ import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { setField } from "../fields";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId, ManyToOneReference } from "./ManyToOneReference";
+import { isReactiveReference } from "./ReactiveReference";
 import { Reference, ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
 
@@ -233,7 +234,11 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     if (this.isCascadeDelete) return;
     const current = await this.load({ withDeleted: true });
     if (current !== undefined) {
-      this.getOtherRelation(current).set(undefined as any);
+      const otherSide = this.getOtherRelation(current);
+      // Don't call `ReactiveReference.set` because it'll blow up
+      if (!isReactiveReference(otherSide)) {
+        otherSide.set(undefined as any);
+      }
       setField(current, this.otherFieldName, undefined);
     }
     this.loaded = undefined as any;

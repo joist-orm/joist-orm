@@ -108,13 +108,15 @@ describe("ReactiveReference", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it("with o2o references does not fail em.delete", async () => {
+  it("em.delete with o2o reference does not fail", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     await update("authors", { id: 1, favorite_book_id: 1 });
     const em = newEntityManager();
-    const a = await em.load(Author, "a:1", "favoriteBook");
-    em.delete(a);
+    // Given we delete a book
+    const b = await em.load(Book, "b:1");
+    em.delete(b);
+    // Then the `Book.favoriteAuthor` o2o does not blow up by setting `Author.favoriteBook` to null
     await em.flush();
   });
 

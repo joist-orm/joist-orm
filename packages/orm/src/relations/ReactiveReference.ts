@@ -161,7 +161,8 @@ export class ReactiveReferenceImpl<
     } else if (this._isLoaded) {
       return this.loaded as U | N;
     } else {
-      throw new Error(`${this.fieldName} has not been derived yet`);
+      const noun = this.entity.isNewEntity ? "derived" : "loaded";
+      throw new Error(`${this.entity}.${this.fieldName} has not been ${noun} yet`);
     }
   }
 
@@ -194,7 +195,7 @@ export class ReactiveReferenceImpl<
   }
 
   set(other: U | N): void {
-    fail("Cannot set a persisted async relation directly.");
+    fail(`Cannot set ${this.entity}.${this.fieldName} ReactiveReference directly.`);
   }
 
   get isSet(): boolean {
@@ -347,4 +348,9 @@ export class ReactiveReferenceImpl<
   [RelationT]: T = null!;
   [RelationU]: U = null!;
   [ReferenceN]: N = null!;
+}
+
+/** Type guard utility for determining if an entity field is a ReactiveReference. */
+export function isReactiveReference(maybeReactiveRef: any): maybeReactiveRef is ReactiveReference<any, any, any> {
+  return maybeReactiveRef instanceof ReactiveReferenceImpl;
 }

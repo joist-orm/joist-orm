@@ -10,9 +10,9 @@ export async function maybeRunTransforms(config: Config): Promise<void> {
   const { default: inquirer } = await import("inquirer");
   const confVersion = config.version;
 
-  // Look for `0.0.0` as a hint that a) we're running in the Joist repo and
+  // Look for `0.0.1` as a hint that a) we're running in the Joist repo and
   // b) aren't manually testing any transformers, so just early return.
-  if (confVersion === "0.0.0") return;
+  if (confVersion === "0.0.1") return;
 
   const thisVersion = getThisVersion();
   if (semver.eq(confVersion, thisVersion)) {

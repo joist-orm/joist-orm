@@ -1,3 +1,12 @@
+## [1.174.4](https://github.com/joist-orm/joist-orm/compare/v1.174.3...v1.174.4) (2024-07-06)
+
+
+### Bug Fixes
+
+* Allow ReactiveReferences to be accessed when already loaded. ([73e9355](https://github.com/joist-orm/joist-orm/commit/73e93552de35666183959f07fedfebc2d3b187fd))
+* Fix RQF/RF dependencies. ([465c530](https://github.com/joist-orm/joist-orm/commit/465c5306f269652fe094531eb30068d6dd018b32))
+* Use 0.0.1 for our internal skip codemod. ([2b1dd55](https://github.com/joist-orm/joist-orm/commit/2b1dd55fcc6c6c6ce9ac63085301ebc40e00a889))
+
 ## [1.174.3](https://github.com/joist-orm/joist-orm/compare/v1.174.2...v1.174.3) (2024-06-27)
 
 

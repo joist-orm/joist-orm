@@ -1,3 +1,10 @@
+## [1.174.5](https://github.com/joist-orm/joist-orm/compare/v1.174.4...v1.174.5) (2024-07-06)
+
+
+### Bug Fixes
+
+* Avoid calling ReactiveReference.set during em.delete. ([ffcd935](https://github.com/joist-orm/joist-orm/commit/ffcd93525a7193eb503fc4e73c22646b83439831))
+
 ## [1.174.4](https://github.com/joist-orm/joist-orm/compare/v1.174.3...v1.174.4) (2024-07-06)
 
 

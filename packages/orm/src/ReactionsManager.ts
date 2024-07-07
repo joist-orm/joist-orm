@@ -176,10 +176,19 @@ export class ReactionsManager {
           const from = todo[0].constructor.name;
           logger?.log(
             " ", // indent
-            gray(`Loading (${todo.length})`),
-            green.bold(`${from}s`) + green(`.${rf.path.join(".")}.`) + yellow(rf.name),
-            gray("found for"),
-            green.bold(`${relations.length} ${rf.cstr.name}s`),
+            gray(`Walked`),
+            white(`${todo.length}`),
+            green.bold(`${from}`) + green(`.${rf.path.join(".")}`),
+            gray("paths, found"),
+            white(`${relations.length}`),
+            green.bold(`${rf.cstr.name}`) + green(".") + yellow(rf.name),
+            gray("to recalc"),
+          );
+          logger?.log(
+            "   ", // indent
+            todo.map((e) => e.idMaybe).join(","),
+            "->",
+            relations.map((r) => r.entity.idMaybe).join(","),
           );
           return relations;
         }),

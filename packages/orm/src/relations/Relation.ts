@@ -16,6 +16,7 @@ export interface Relation<T extends Entity, U extends Entity> {
   [RelationT]: T;
   [RelationU]: U;
   isLoaded: boolean;
+  entity: Entity;
 }
 
 /** Type guard utility for determining if an entity field is a Relation. */

@@ -159,8 +159,8 @@ describe("ReactiveReference", () => {
     expect(rows).toMatchObject([{ id: 1, titles_of_favorite_books: "b22" }]);
     expect(reactionOutput).toMatchInlineSnapshot(`
      [
-       "Book:1.title changed, queuing Book:1.author.search↩",
-       "Book:1.title changed, queuing Book:1.favoriteAuthor.publisher.titlesOfFavoriteBooks↩",
+       "b:1.title changed, queuing b:1.author.search↩",
+       "b:1.title changed, queuing b:1.favoriteAuthor.publisher.titlesOfFavoriteBooks↩",
        "Recalculating reactive fields values...↩",
        "  Walked 1 Book.author paths, found 1 Author.search to recalc↩",
        "    [ b:1 ] -> [ a:1 ]↩",

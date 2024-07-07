@@ -63,11 +63,7 @@ export class ReactionsManager {
         this.getPending(rf).todo.add(entity);
         this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
         this.needsRecalc[rf.kind] = true;
-        logger?.log(
-          green.bold(`${entity}`) + green(".") + yellow(`${fieldName}`),
-          gray(`changed, queuing`),
-          green.bold(`${entity}`) + yellow(maybeDotPath(rf)) + yellow(rf.name),
-        );
+        logger?.logQueued(entity, fieldName, rf);
       }
     }
   }
@@ -106,11 +102,7 @@ export class ReactionsManager {
       this.getPending(rf).todo.add(entity);
       this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
       this.needsRecalc[rf.kind] = true;
-      logger?.log(
-        green.bold(`${entity}`),
-        gray(`${reason}, queuing`),
-        green.bold(`${entity}`) + green(maybeDotPath(rf)) + yellow(rf.name),
-      );
+      logger?.logQueuedAll(entity, reason, rf);
     }
   }
 
@@ -144,9 +136,8 @@ export class ReactionsManager {
   async recalcPendingDerivedValues(kind: "reactiveFields" | "reactiveQueries") {
     // Map our parameter `kind` value (which is a nicer name) to the shorter ADT kind
     const k = kind === "reactiveFields" ? "populate" : "query";
-
     if (this.needsRecalc[k]) {
-      logger?.log(white.bold(`Recalculating reactive ${kind === "reactiveQueries" ? "queries" : "fields"} values...`));
+      logger?.logStartingRecalc(kind);
     }
 
     let loops = 0;
@@ -172,28 +163,7 @@ export class ReactionsManager {
             .filter((entity) => !entity.isDeletedEntity)
             .filter((e) => e instanceof rf.cstr)
             .map((entity) => (entity as any)[rf.name]);
-          // Keep for future debugging...
-          const from = todo[0].constructor.name;
-          logger?.log(
-            " ", // indent
-            gray(`Walked`),
-            white(`${todo.length}`),
-            green.bold(`${from}`) + green(`.${rf.path.join(".")}`),
-            gray("paths, found"),
-            white(`${relations.length}`),
-            green.bold(`${rf.cstr.name}`) + green(".") + yellow(rf.name),
-            gray("to recalc"),
-          );
-          if (relations.length > 0) {
-            logger?.log(
-              "   ", // indent
-              gray("["),
-              todo.map((e) => e.toTaggedString()).join(" "),
-              gray("] -> ["),
-              [...new Set(relations)].map((r) => r.entity.toTaggedString()).join(" "),
-              gray("]"),
-            );
-          }
+          logger?.logWalked(todo, rf, relations);
           return relations;
         }),
       );
@@ -278,7 +248,52 @@ class ReactionLogger {
     this.writeFn = writer ?? process.stdout.write.bind(process.stdout);
   }
 
-  log(...line: string[]): void {
+  logQueued(entity: Entity, fieldName: string, rf: ReactiveField): void {
+    this.log(
+      green.bold(`${entity.toTaggedString()}`) + yellow(`.${fieldName}`),
+      gray(`changed, queuing`),
+      green.bold(`${entity.toTaggedString()}`) + yellow(maybeDotPath(rf)) + yellow(rf.name),
+    );
+  }
+
+  logQueuedAll(entity: Entity, reason: string, rf: ReactiveField): void {
+    this.log(
+      green.bold(`${entity.toTaggedString()}`),
+      gray(`${reason}, queuing`),
+      green.bold(`${entity.toTaggedString()}`) + green(maybeDotPath(rf)) + yellow(rf.name),
+    );
+  }
+
+  logStartingRecalc(kind: "reactiveFields" | "reactiveQueries"): void {
+    this.log(white.bold(`Recalculating reactive ${kind === "reactiveQueries" ? "queries" : "fields"} values...`));
+  }
+
+  logWalked(todo: Entity[], rf: ReactiveField, relations: Relation<any, any>[]): void {
+    // Keep for future debugging...
+    const from = todo[0].constructor.name;
+    this.log(
+      " ", // indent
+      gray(`Walked`),
+      white(`${todo.length}`),
+      green.bold(`${from}`) + green(`.${rf.path.join(".")}`),
+      gray("paths, found"),
+      white(`${relations.length}`),
+      green.bold(`${rf.cstr.name}`) + green(".") + yellow(rf.name),
+      gray("to recalc"),
+    );
+    if (relations.length > 0) {
+      this.log(
+        "   ", // indent
+        gray("["),
+        todo.map((e) => e.toTaggedString()).join(" "),
+        gray("] -> ["),
+        [...new Set(relations)].map((r) => r.entity.toTaggedString()).join(" "),
+        gray("]"),
+      );
+    }
+  }
+
+  private log(...line: string[]): void {
     this.writeFn(`${line.join(" ")}\n`);
   }
 }

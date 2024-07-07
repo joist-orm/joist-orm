@@ -1,6 +1,10 @@
 import { Author, Book, BookReview, newAuthor } from "@src/entities";
 import { insertAuthor, insertBook, insertBookReview, insertPublisher, select, update } from "@src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
+import { setReactionLogging, setReactionWriter } from "joist-orm";
+import ansiRegex = require("ansi-regex");
+
+let reactionOutput: string[] = [];
 
 describe("ReactiveReference", () => {
   it("can be accessed if implicitly loaded", async () => {
@@ -152,11 +156,30 @@ describe("ReactiveReference", () => {
     await em.flush();
     // Then we recalculated the "titles_of_favorite_books" as well
     const rows = await select("publishers");
-    expect(rows).toMatchObject([
-      {
-        id: 1,
-        titles_of_favorite_books: "b22",
-      },
-    ]);
+    expect(rows).toMatchObject([{ id: 1, titles_of_favorite_books: "b22" }]);
+    expect(reactionOutput).toMatchInlineSnapshot(`
+     [
+       "Book:1.title changed, queuing Book:1.author.search↩",
+       "Book:1.title changed, queuing Book:1.favoriteAuthor.publisher.titlesOfFavoriteBooks↩",
+       "Recalculating reactive fields values...↩",
+       "  Loading (1) Books.author.search found for 1 Authors↩",
+       "  Loading (1) Books.favoriteAuthor.publisher.titlesOfFavoriteBooks found for 1 Publishers↩",
+     ]
+    `);
   });
+});
+
+beforeEach(() => {
+  setReactionWriter((line: string) => {
+    reactionOutput.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
+  });
+  setReactionLogging(true);
+});
+
+afterEach(() => {
+  reactionOutput = [];
+});
+
+afterAll(() => {
+  setReactionWriter(undefined);
 });

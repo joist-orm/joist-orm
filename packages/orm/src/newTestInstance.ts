@@ -60,6 +60,7 @@ export const testZonedDateTime = testPlainDate?.toZonedDateTime("UTC");
 
 let logger: FactoryLogger | undefined = undefined;
 let writer: WriteFn | undefined = undefined;
+type WriteFn = (line: string) => void;
 
 /**
  * Creates a test instance of `T`.
@@ -775,8 +776,6 @@ class CopyMap extends Map<Function, UseMapValue> {
     return super.set(k, v);
   }
 }
-
-type WriteFn = (line: string) => void;
 
 class FactoryLogger {
   private level = 0;

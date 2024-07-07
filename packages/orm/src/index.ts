@@ -27,6 +27,7 @@ export { EntityOrId, HintNode } from "./HintTree";
 export { InstanceData } from "./InstanceData";
 export * from "./QueryBuilder";
 export * from "./QueryParser";
+export { setReactionLogging, setReactionWriter } from "./ReactionsManager";
 export * from "./changes";
 export { ConfigApi, EntityHook } from "./config";
 export { configureMetadata, getConstructorFromTaggedId, maybeGetConstructorFromReference } from "./configure";
@@ -38,25 +39,25 @@ export * from "./json";
 export * from "./keys";
 export { kq, kqDot, kqStar } from "./keywords";
 export {
-  DeepNew,
-  LoadHint,
-  Loadable,
-  Loaded,
-  MarkLoaded,
-  NestedLoadHint,
-  New,
-  RelationsIn,
   assertLoaded,
+  DeepNew,
   ensureLoaded,
   isLoaded,
   isNew,
+  Loadable,
+  Loaded,
+  LoadHint,
+  MarkLoaded,
   maybePopulateThen,
+  NestedLoadHint,
+  New,
+  RelationsIn,
 } from "./loadHints";
 export * from "./loadLens";
 export {
+  defaultValue,
   FactoryEntityOpt,
   FactoryOpts,
-  defaultValue,
   getTestIndex,
   maybeBranchValue,
   maybeNew,
@@ -72,21 +73,21 @@ export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlu
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
 export {
-  GenericError,
-  ValidationError,
-  ValidationErrors,
-  ValidationRule,
-  ValidationRuleResult,
   cannotBeUpdated,
+  GenericError,
   maxValueRule,
   minValueRule,
   mustBeSubType,
   newRequiredRule,
   rangeValueRule,
+  ValidationError,
+  ValidationErrors,
+  ValidationRule,
+  ValidationRuleResult,
 } from "./rules";
 export * from "./serde";
 export { asNew, assertNever, cleanStringValue, fail, indexBy } from "./utils";
-export { WithLoaded, ensureWithLoaded, withLoaded } from "./withLoaded";
+export { ensureWithLoaded, WithLoaded, withLoaded } from "./withLoaded";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {

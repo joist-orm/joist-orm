@@ -1105,7 +1105,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       if (baseMeta.inheritanceType === "sti") {
         setStiDiscriminatorValue(baseMeta, entity);
       }
-      this.#rm.queueAllDownstreamFields(entity);
+      this.#rm.queueAllDownstreamFields(entity, "created");
     }
   }
 
@@ -1125,7 +1125,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     const alreadyMarked = getInstanceData(entity).markDeleted();
     if (!alreadyMarked) return;
     // Any derived fields that read this entity will need recalc-d
-    this.#rm.queueAllDownstreamFields(entity);
+    this.#rm.queueAllDownstreamFields(entity, "deleted");
     // Synchronously unhook the entity if the relations are loaded
     getCascadeDeleteRelations(entity).forEach((r) => r.maybeCascadeDelete());
     // And queue the cascade deletes

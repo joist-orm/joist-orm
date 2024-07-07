@@ -1,3 +1,4 @@
+import ansis from "ansis";
 import { Entity } from "./Entity";
 import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
 import { ReactiveField } from "./config";
@@ -5,6 +6,12 @@ import { NoIdError } from "./index";
 import { followReverseHint } from "./reactiveHints";
 import { Relation } from "./relations";
 import { AbstractPropertyImpl } from "./relations/AbstractPropertyImpl";
+
+const { gray, green, yellow, white } = ansis;
+
+let logger: ReactionLogger | undefined = undefined;
+let writer: WriteFn | undefined = undefined;
+type WriteFn = (line: string) => void;
 
 /**
  * Manages the reactivity of tracking which source fields have changed and finding/recalculating
@@ -56,8 +63,11 @@ export class ReactionsManager {
         this.getPending(rf).todo.add(entity);
         this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
         this.needsRecalc[rf.kind] = true;
-        // Keep for future debugging...
-        log(`${entity}.${fieldName} changed, queuing ${entity}.${rf.path.join(".")}.${rf.name}`);
+        logger?.log(
+          green.bold(`${entity}`) + green(".") + yellow(`${fieldName}`),
+          gray(`changed, queuing`),
+          green.bold(`${entity}`) + yellow(maybeDotPath(rf)) + yellow(rf.name),
+        );
       }
     }
   }
@@ -90,12 +100,17 @@ export class ReactionsManager {
   }
 
   /** Queue all downstream reactive fields that depend on this entity being created or deleted. */
-  queueAllDownstreamFields(entity: Entity): void {
+  queueAllDownstreamFields(entity: Entity, reason: "created" | "deleted"): void {
     const rfs = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
     for (const rf of rfs) {
       this.getPending(rf).todo.add(entity);
       this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
       this.needsRecalc[rf.kind] = true;
+      logger?.log(
+        green.bold(`${entity}`),
+        gray(`${reason}, queuing`),
+        green.bold(`${entity}`) + green(maybeDotPath(rf)) + yellow(rf.name),
+      );
     }
   }
 
@@ -127,9 +142,14 @@ export class ReactionsManager {
    * We also do this in a loop to handle reactive fields depending on other reactive fields.
    */
   async recalcPendingDerivedValues(kind: "reactiveFields" | "reactiveQueries") {
-    let loops = 0;
     // Map our parameter `kind` value (which is a nicer name) to the shorter ADT kind
     const k = kind === "reactiveFields" ? "populate" : "query";
+
+    if (this.needsRecalc[k]) {
+      logger?.log(white.bold(`Recalculating reactive ${kind === "reactiveQueries" ? "queries" : "fields"} values...`));
+    }
+
+    let loops = 0;
     while (this.needsRecalc[k]) {
       // ...we probably should only loop for `kind=populate` ReactiveFields, and `kind=query`
       // ReactiveQueryFields should probably only have a single loop, after which we return and
@@ -154,8 +174,12 @@ export class ReactionsManager {
             .map((entity) => (entity as any)[rf.name]);
           // Keep for future debugging...
           const from = todo[0].constructor.name;
-          log(
-            `Loading ${from}s(${todo.length}).${rf.path.join(".")}.${rf.name} (${relations.length} ${rf.cstr.name}s)`,
+          logger?.log(
+            " ", // indent
+            gray(`Loading (${todo.length})`),
+            green.bold(`${from}s`) + green(`.${rf.path.join(".")}.`) + yellow(rf.name),
+            gray("found for"),
+            green.bold(`${relations.length} ${rf.cstr.name}s`),
           );
           return relations;
         }),
@@ -224,6 +248,28 @@ export class ReactionsManager {
   }
 }
 
-function log(line: string): void {
-  // process.stdout.write(`${line}\n`);
+export function setReactionLogging(enabled: boolean): void {
+  logger = enabled ? new ReactionLogger() : undefined;
+}
+
+// Allow our test suite observe the logger behavior
+export function setReactionWriter(write: WriteFn | undefined): void {
+  writer = write;
+}
+
+class ReactionLogger {
+  private writeFn: WriteFn;
+
+  // We default to process.stdout.write to side-step around Jest's console.log instrumentation
+  constructor() {
+    this.writeFn = writer ?? process.stdout.write.bind(process.stdout);
+  }
+
+  log(...line: string[]): void {
+    this.writeFn(`${line.join(" ")}\n`);
+  }
+}
+
+function maybeDotPath(rf: ReactiveField): string {
+  return rf.path.length > 0 ? `.${rf.path.join(".")}.` : ".";
 }

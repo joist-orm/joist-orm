@@ -28,4 +28,11 @@ export interface Entity {
    * name / display name.
    */
   toString(): string;
+  /**
+   * Returns `tag:id`, i.e. `a:1` for persisted entities and `a#1` for new entities.
+   *
+   * This is meant to be used for developer-facing logging and debugging, and not a user-facing
+   * name / display name.
+   */
+  toTaggedString(): string;
 }

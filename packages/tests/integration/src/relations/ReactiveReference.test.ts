@@ -162,8 +162,10 @@ describe("ReactiveReference", () => {
        "Book:1.title changed, queuing Book:1.author.search↩",
        "Book:1.title changed, queuing Book:1.favoriteAuthor.publisher.titlesOfFavoriteBooks↩",
        "Recalculating reactive fields values...↩",
-       "  Loading (1) Books.author.search found for 1 Authors↩",
-       "  Loading (1) Books.favoriteAuthor.publisher.titlesOfFavoriteBooks found for 1 Publishers↩",
+       "  Walked 1 Book.author paths, found 1 Author.search to recalc↩",
+       "    [ b:1 ] -> [ a:1 ]↩",
+       "  Walked 1 Book.favoriteAuthor.publisher paths, found 1 Publisher.titlesOfFavoriteBooks to recalc↩",
+       "    [ b:1 ] -> [ p:1 ]↩",
      ]
     `);
   });

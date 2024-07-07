@@ -184,12 +184,16 @@ export class ReactionsManager {
             green.bold(`${rf.cstr.name}`) + green(".") + yellow(rf.name),
             gray("to recalc"),
           );
-          logger?.log(
-            "   ", // indent
-            todo.map((e) => e.idMaybe).join(","),
-            "->",
-            relations.map((r) => r.entity.idMaybe).join(","),
-          );
+          if (relations.length > 0) {
+            logger?.log(
+              "   ", // indent
+              gray("["),
+              todo.map((e) => e.toTaggedString()).join(" "),
+              gray("] -> ["),
+              [...new Set(relations)].map((r) => r.entity.toTaggedString()).join(" "),
+              gray("]"),
+            );
+          }
           return relations;
         }),
       );

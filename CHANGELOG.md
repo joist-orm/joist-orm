@@ -1,3 +1,10 @@
+# [1.175.0](https://github.com/joist-orm/joist-orm/compare/v1.174.5...v1.175.0) (2024-07-08)
+
+
+### Features
+
+* Add reaction logging. ([5ed30e5](https://github.com/joist-orm/joist-orm/commit/5ed30e5171403ee08001f18ca408a1bd9d6a365a))
+
 ## [1.174.5](https://github.com/joist-orm/joist-orm/compare/v1.174.4...v1.174.5) (2024-07-06)
 
 

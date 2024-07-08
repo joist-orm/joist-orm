@@ -27,7 +27,7 @@ export { EntityOrId, HintNode } from "./HintTree";
 export { InstanceData } from "./InstanceData";
 export * from "./QueryBuilder";
 export * from "./QueryParser";
-export { setReactionLogging, setReactionWriter } from "./ReactionsManager";
+export { ReactionLogger, setReactionLogging } from "./ReactionsManager";
 export * from "./changes";
 export { ConfigApi, EntityHook } from "./config";
 export { configureMetadata, getConstructorFromTaggedId, maybeGetConstructorFromReference } from "./configure";

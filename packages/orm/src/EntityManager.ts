@@ -7,7 +7,7 @@ import { getField, setField } from "./fields";
 import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
 import { JoinRows } from "./JoinRows";
-import { ReactionsManager } from "./ReactionsManager";
+import { ReactionLogger, ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo, Todo, combineJoinRows, createTodos } from "./Todo";
 import { ReactiveRule, constraintNameToValidationError } from "./config";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
@@ -1618,6 +1618,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     }
     // For all relations, unhook the entity from the other side
     await Promise.all(relationsToCleanup.map((r) => r.cleanupOnEntityDeleted()));
+  }
+
+  setReactionLogging(logger: ReactionLogger): void;
+  setReactionLogging(enabled: boolean): void;
+  setReactionLogging(arg: boolean | ReactionLogger): void {
+    this.#rm.setLogger(typeof arg === "boolean" ? (arg ? new ReactionLogger() : undefined) : arg);
   }
 }
 

@@ -1,0 +1,5 @@
+procs:
+  db:
+    shell: "yarn db"
+  build:
+    shell: "yarn build -w"

@@ -185,8 +185,11 @@ export function up(b: MigrationBuilder): void {
     // For testing ReactiveReferences, where the opposite side is an o2o (the book can only
     // be the favorite of a single author at a time--it's author).
     // We should add another ReactiveReference that is not unique...
-    favorite_book_id: foreignKey("books", { notNull: false, unique: true }),
+    favorite_book_id: foreignKey("books", { notNull: false }),
   });
+  b.sql(
+    "ALTER TABLE authors ADD CONSTRAINT authors_favorite_book_id_key UNIQUE (favorite_book_id) DEFERRABLE INITIALLY DEFERRED;",
+  );
 
   createEntityTable(b, "book_advances", {
     // for testing required enums

@@ -1,7 +1,7 @@
 import { Author, Book, BookReview, newAuthor } from "@src/entities";
 import { insertAuthor, insertBook, insertBookReview, insertPublisher, select, update } from "@src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
-import { setReactionLogging, setReactionWriter } from "joist-orm";
+import { ReactionLogger, setReactionLogging } from "joist-orm";
 import ansiRegex = require("ansi-regex");
 
 let reactionOutput: string[] = [];
@@ -172,16 +172,14 @@ describe("ReactiveReference", () => {
 });
 
 beforeEach(() => {
-  setReactionWriter((line: string) => {
-    reactionOutput.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
-  });
-  setReactionLogging(true);
-});
-
-afterEach(() => {
   reactionOutput = [];
+  setReactionLogging(
+    new ReactionLogger((line: string) => {
+      reactionOutput.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
+    }),
+  );
 });
 
 afterAll(() => {
-  setReactionWriter(undefined);
+  setReactionLogging(false);
 });

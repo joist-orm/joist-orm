@@ -9,8 +9,7 @@ import { AbstractPropertyImpl } from "./relations/AbstractPropertyImpl";
 
 const { gray, green, yellow, white } = ansis;
 
-let logger: ReactionLogger | undefined = undefined;
-let writer: WriteFn | undefined = undefined;
+let globalLogger: ReactionLogger | undefined = undefined;
 type WriteFn = (line: string) => void;
 
 /**
@@ -39,6 +38,7 @@ export class ReactionsManager {
    */
   private relationsPendingAssignedIds: Set<Relation<any, any>> = new Set();
   private needsRecalc = { populate: false, query: false };
+  private logger: ReactionLogger | undefined = globalLogger;
 
   /**
    * Queue all downstream reactive fields that depend on `fieldName` as a source field.
@@ -63,7 +63,7 @@ export class ReactionsManager {
         this.getPending(rf).todo.add(entity);
         this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
         this.needsRecalc[rf.kind] = true;
-        logger?.logQueued(entity, fieldName, rf);
+        this.logger?.logQueued(entity, fieldName, rf);
       }
     }
   }
@@ -102,7 +102,7 @@ export class ReactionsManager {
       this.getPending(rf).todo.add(entity);
       this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
       this.needsRecalc[rf.kind] = true;
-      logger?.logQueuedAll(entity, reason, rf);
+      this.logger?.logQueuedAll(entity, reason, rf);
     }
   }
 
@@ -137,7 +137,7 @@ export class ReactionsManager {
     // Map our parameter `kind` value (which is a nicer name) to the shorter ADT kind
     const k = kind === "reactiveFields" ? "populate" : "query";
     if (this.needsRecalc[k]) {
-      logger?.logStartingRecalc(kind);
+      this.logger?.logStartingRecalc(kind);
     }
 
     let loops = 0;
@@ -163,7 +163,7 @@ export class ReactionsManager {
             .filter((entity) => !entity.isDeletedEntity)
             .filter((e) => e instanceof rf.cstr)
             .map((entity) => (entity as any)[rf.name]);
-          logger?.logWalked(todo, rf, relations);
+          this.logger?.logWalked(todo, rf, relations);
           return relations;
         }),
       );
@@ -212,6 +212,10 @@ export class ReactionsManager {
     );
   }
 
+  setLogger(logger: ReactionLogger | undefined): void {
+    this.logger = logger;
+  }
+
   private getPending(rf: ReactiveField): { todo: Set<Entity>; done: Set<Entity> } {
     let pending = this.pendingFieldReactions.get(rf);
     if (!pending) {
@@ -231,21 +235,18 @@ export class ReactionsManager {
   }
 }
 
-export function setReactionLogging(enabled: boolean): void {
-  logger = enabled ? new ReactionLogger() : undefined;
+export function setReactionLogging(enabled: boolean): void;
+export function setReactionLogging(logger: ReactionLogger): void;
+export function setReactionLogging(arg: boolean | ReactionLogger): void {
+  globalLogger = typeof arg === "boolean" ? (arg ? new ReactionLogger() : undefined) : arg;
 }
 
-// Allow our test suite observe the logger behavior
-export function setReactionWriter(write: WriteFn | undefined): void {
-  writer = write;
-}
-
-class ReactionLogger {
+export class ReactionLogger {
   private writeFn: WriteFn;
 
   // We default to process.stdout.write to side-step around Jest's console.log instrumentation
-  constructor() {
-    this.writeFn = writer ?? process.stdout.write.bind(process.stdout);
+  constructor(writeFn: WriteFn = process.stdout.write.bind(process.stdout)) {
+    this.writeFn = writeFn;
   }
 
   logQueued(entity: Entity, fieldName: string, rf: ReactiveField): void {

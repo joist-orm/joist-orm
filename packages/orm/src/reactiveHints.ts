@@ -246,7 +246,7 @@ export function reverseReactiveHint<T extends Entity>(
             )}, please use hasReactiveAsyncProperty instead`,
           );
         }
-        return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false);
+        return isReadOnly ? [] : reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false);
       } else if (p instanceof ReactiveGetterImpl) {
         return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false);
       } else {

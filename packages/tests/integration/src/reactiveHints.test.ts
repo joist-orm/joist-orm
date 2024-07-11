@@ -149,6 +149,18 @@ describe("reactiveHints", () => {
     ]);
   });
 
+  it("includes sub hints from reactive async properties", () => {
+    expect(reverse(Author, Author, "allPublisherAuthorNames")).toEqual([
+      { entity: "Author", fields: [], path: [] },
+      { entity: "Author", fields: ["publisher"], path: [] },
+      { entity: "Author", fields: ["publisher", "firstName"], path: ["publisher", "authors"] },
+    ]);
+  });
+
+  it("skips subhints of reactive async properties marked as readonly", () => {
+    expect(reverse(Author, Author, "allPublisherAuthorNames:ro")).toEqual([{ entity: "Author", fields: [], path: [] }]);
+  });
+
   it("can do hash of read-only hints", () => {
     // TODO Enforce that `name` must be `name:ro`
     expect(reverse(Author, Author, { publisher_ro: "name:ro" })).toEqual([{ entity: "Author", fields: [], path: [] }]);

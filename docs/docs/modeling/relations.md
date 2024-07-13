@@ -209,7 +209,7 @@ Why `COMMENT` metadata? Putting field names in the `COMMENT` metadata is somewha
 
 2. Previously we put renames in the `joist-config.json` file, but that meant having to know/guess the wrong/unintuitive name, just to map it over to the correct name. Which was confusing and also did not handle collisions.
 
-  With the `COMMENT` approach, the `joist-config.json` now has only the correct/best field name for the rest of the config options you might want to specify on the relation.
+   With the `COMMENT` approach, the `joist-config.json` now has only the correct/best field name for the rest of the config options you might want to specify on the relation.
 
 :::
 

@@ -239,8 +239,9 @@ export function reverseReactiveHint<T extends Entity>(
       // notice their primitive values changing, and kicking off any downstream reactive fields as necessary.
       const p = getProperties(meta)[key];
       if (p instanceof AsyncPropertyImpl) {
-        // if the field is marked as readonly, then we can assume that applies to its entire hint as well and can
-        // simply omit it.  This also allows us to use non-reactive async props as long as they are readonly.
+        // If the field is marked as readonly (i.e. using the `_ro` suffix), then we can assume that applies to its
+        // entire hint as well and can simply omit it. This also allows us to use non-reactive async props as long as
+        // they are readonly.
         if (isReadOnly) return [];
         if (!p.reactiveHint) {
           throw new Error(
@@ -251,8 +252,8 @@ export function reverseReactiveHint<T extends Entity>(
         }
         return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false);
       } else if (p instanceof ReactiveGetterImpl) {
-        // if the field is marked as readonly, then we can assume that applies to its entire hint as well and can
-        // simply omit it
+        // If the field is marked as readonly, then we can assume that applies to its entire hint as well and can
+        // simply omit it.
         if (isReadOnly) return [];
         return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false);
       } else {

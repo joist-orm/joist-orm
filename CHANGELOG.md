@@ -1,3 +1,10 @@
+## [1.175.2](https://github.com/joist-orm/joist-orm/compare/v1.175.1...v1.175.2) (2024-07-13)
+
+
+### Bug Fixes
+
+* Fix getters calling ReactiveField.get crashing. ([c956c4d](https://github.com/joist-orm/joist-orm/commit/c956c4d4d7f1d8d0710e7f50da1f02ac36cbb72e))
+
 ## [1.175.1](https://github.com/joist-orm/joist-orm/compare/v1.175.0...v1.175.1) (2024-07-13)
 
 

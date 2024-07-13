@@ -26,6 +26,13 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
     return propertiesCache[key];
   }
 
+  // Immediately populate key to avoid infinite loops when we later call `instance[key]` to probe
+  // for properties, and we end up calling a getter than invokes a ReactiveField/anything else that
+  // happens to ask for properties.
+  // The caller will admittedly see incorrect (empty) properties, but we generally expect these "evaled
+  // on fake instances" getters to throw nonsense errors anyway (which we suppress), so it should be fine.
+  const cached = (propertiesCache[key] = {});
+
   const instance = getFakeInstance(meta);
 
   // Mostly for historical reasons, we don't treat known primitives/enums as properties,
@@ -40,7 +47,7 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
     .filter((f) => f.kind === "primaryKey" || f.kind === "primitive" || f.kind === "enum")
     .map((f) => f.fieldName);
 
-  propertiesCache[key] = Object.fromEntries(
+  const properties = Object.fromEntries(
     // Recursively looking for ownKeys will find:
     // - Custom properties set on the instance, like `readonly author: Reference<Author> = hasOneThrough(...)`
     // - Getters declared within the class like `get initials()`
@@ -60,7 +67,8 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
       // Purposefully return methods, primitives, etc. so that `entityResolver` can add them to the resolver
       .filter(([key]) => key !== "fullNonReactiveAccess" && key !== "transientFields"),
   );
-  return propertiesCache[key];
+
+  return Object.assign(cached, properties);
 }
 
 export class UnknownProperty {}

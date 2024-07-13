@@ -105,6 +105,20 @@ console.log(a2.books.get.length);
 console.log(a2.books.get[0].title);
 ```
 
+If a one-to-many collection is loaded, it can also be set, like `a1.books.set([b1, b2])`. Besides updating the value of `a1.books.get`, both the `b1.author` and `b2.author` references will be updated to `a1`.
+
+:::info
+
+If `Author.ts` has a `cascadeDelete("books")` _and_ `Book.ts.` has a `cannotBeUpdated("author")` rule, then Joist will consider the book to be "fully owned" by the `Author`, and if any existing book is left out of the `a1.books.set` call, it will be implicitly deleted via `em.delete`.
+
+The rationale is that this makes calls like `parent.lineItems.set(...)`, that purposefully omit an existing child, "just work" by assuming the intent is that we no longer want that child to exist.
+
+Currently, this behavior is not configurable (it relies on the convention of both the cascade delete + `cannotBeUpdated` rule), and also is only invoked by the `a1.books.set` side of the relation; i.e. if `b1.author.set(undefined)` is called, then `b1` won't be implicitly deleted, and instead a regular "`author` is required" validation error will be thrown.
+
+Also note that Joist's `em.createOrUpdatePartial` API supports an `op` parameter to more explicitly control child collection behavior, see [Saving Parents with Children](https://joist-orm.io/docs/features/partial-update-apis#saving-parents-with-children).
+
+:::
+
 ## One To One Reference
 
 Joist distinguishes "incoming" foreign keys with a unique constraint as a one-to-one relationship rather than one-to-many and instead automatically generates a `hasOneToOne` reference as the "other side" rather than `hasMany`:

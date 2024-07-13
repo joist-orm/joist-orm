@@ -69,12 +69,11 @@ console.log(b2.author.get.firstName);
 
 If `books.author_id` is `not null`, then the reference will be required, i.e. `someBook.author.get` will return `Author`, otherwise it will be optional, and `someBook.author.get` will return `Author | undefined`.
 
-
 :::
 
 ## One To Many Collections
 
-Joist also looks for "incoming" (one-to-many) foreign keys like the opposite of `Author` being "pointed at" by the `books.author_id` column and automatically generates a `hasMany` collection as the "other side" in `AuthorCodegen.ts`:
+Joist also looks for "incoming" foreign keys, like `Author` being "pointed at" by the `books.author_id` column and automatically generates a one-to-many `hasMany` collection as the "other side" in `AuthorCodegen.ts`:
 
 ```typescript
 export abstract class AuthorCodegen {

@@ -15,7 +15,6 @@ Two common themes for all of Joist's relations are that:
 
    This is a big quality-of-life win, as business logic (validation rules, rendering logic) will always see the latest state of relations, and not have to worry about running against now-stale data.
 
-
 ### Reading Relations
 
 In other ORMs you may be used to checking for the existings of a relation by checking for it's presence, e.g. `if (book.author) { ... }`. In Joist, all relations are always present, but may not be set to a value. To check if a relation is set use `isSet`, for example:
@@ -33,6 +32,7 @@ if (b1.author.isSet) {
   ...
 }
 ```
+
 If you want to read the id of a relation without loading it, you can do so via the `id` field:
 
 ```typescript
@@ -41,7 +41,6 @@ const b1 = await em.load(Book, "b:1");
 // The id of the author is available without loading the author
 const authorId = b1.author.id;
 ```
-
 
 ## Many To One References
 
@@ -129,11 +128,11 @@ export abstract class AuthorCodegen {
 }
 ```
 
-These references work similarly to a `hasOne` reference, but have less information available to them when in an unloaded state (such as checking if the reference is set without loading it).  Additionally, they are always assumed to be nullable.
+These references work similarly to a `hasOne` reference, but have less information available to them when in an unloaded state (such as checking if the reference is set without loading it). Additionally, they are always assumed to be nullable.
 
 ## Many to Many Collection
 
-Joist will skip generating full entity classes for any tables it considers to be a "join table" between two other entities. Instead, it will  generate matching `hasManyToMany` collections on each of the entities pointed to by the foreign keys on the join table:
+Joist will skip generating full entity classes for any tables it considers to be a "join table" between two other entities. Instead, it will generate matching `hasManyToMany` collections on each of the entities pointed to by the foreign keys on the join table:
 
 ```typescript
 export abstract class BookCodegen {
@@ -162,7 +161,7 @@ Polymorphic references have two components:
   The field type is `PolymorphicReference<BookPublisher>`, where `BookPublisher` is a code generated type union of each potential type, i.e. Joist will create:
 
   ```typescript
-   export type BookPublisher = CorporatePublisher | SelfPublisher;
+  export type BookPublisher = CorporatePublisher | SelfPublisher;
   ```
 
   In the `BookCodegen.ts` file.
@@ -180,10 +179,10 @@ To use polymorphic references, there are two steps:
    ```json
    {
      "entites": {
-        "Comment": {
-           "relations": { "publisher": { "polymorphic": "notNull" } },
-           "tag": "comment"
-        }
+       "Comment": {
+         "relations": { "publisher": { "polymorphic": "notNull" } },
+         "tag": "comment"
+       }
      }
    }
    ```
@@ -198,8 +197,8 @@ Sometimes a table will have two incoming foreign keys that cause a naming collis
 
 In these circumstances, you can specify which field names to use directly in the database schema. Joist uses `pg-structure`'s [`commentData`](https://www.pg-structure.com/nav.02.api/classes/dbobject.html#commentdata) convention (which is basically a JSON payload in the column's `COMMENT` metadata) to look for two properties:
 
-* `fieldName` for renaming a m2o reference, and
-* `otherFieldName` for renaming the opposing m2o/m2m/o2o relation
+- `fieldName` for renaming a m2o reference, and
+- `otherFieldName` for renaming the opposing m2o/m2m/o2o relation
 
 Setting this `commentData` structure by hand can be tedious, but Joist's `joist-migration-utils` package provides both a `renameRelation` function (for renaming fields of existing columns) and a `foreignKey` helper (for renames fields on new columns) that allow easily setting the `fieldName` and `otherFieldName` keys.
 
@@ -237,9 +236,9 @@ Besides the core relations discovered from the schema's foreign keys, Joist lets
 
 :::tip
 
-These custom relations are great for defining relationships between *entities* in your domain model, like how `Author` might relate to `BookReview`.
+These custom relations are great for defining relationships between _entities_ in your domain model, like how `Author` might relate to `BookReview`.
 
-If you'd like to define custom *non-entity* fields, like derived numbers or strings, see [Derived Fields](./derived-properties.md).
+If you'd like to define custom _non-entity_ fields, like derived numbers or strings, see [Derived Fields](./derived-properties.md).
 
 :::
 
@@ -293,7 +292,7 @@ The behavior is the same as `hasOneThrough`:
 ```typescript
 // Using the core relations
 const p1 = await em.load(Publisher, { authors: { books: "reviews" } });
-console.log(`p1 reviews:` + p1.authors.get.flatMap(a => a.books.get.flatMap(b => b.reviews.get)));
+console.log(`p1 reviews:` + p1.authors.get.flatMap((a) => a.books.get.flatMap((b) => b.reviews.get)));
 
 // Using the hasManyThrough alias
 const p2 = await em.load(Publisher, "reviews");

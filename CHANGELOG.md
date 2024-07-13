@@ -1,3 +1,10 @@
+## [1.175.1](https://github.com/joist-orm/joist-orm/compare/v1.175.0...v1.175.1) (2024-07-13)
+
+
+### Bug Fixes
+
+* don't include subhints from readonly reactive async props in reverseReactiveHint ([11a4d66](https://github.com/joist-orm/joist-orm/commit/11a4d669d16c47e56845ce6863fcd05ccf7bede1))
+
 # [1.175.0](https://github.com/joist-orm/joist-orm/compare/v1.174.5...v1.175.0) (2024-07-08)
 
 

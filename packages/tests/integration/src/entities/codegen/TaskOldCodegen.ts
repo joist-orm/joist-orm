@@ -13,7 +13,8 @@ import {
   hasMany,
   hasManyToMany,
   hasOne,
-  hasRecursiveMany,
+  hasRecursiveChildren,
+  hasRecursiveParents,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -240,11 +241,19 @@ export abstract class TaskOldCodegen extends Task implements Entity {
     );
   }
 
-  get parentOldTaskRecursive(): ReadOnlyCollection<TaskOld, TaskOld> {
-    return this.__data.relations.parentOldTaskRecursive ??= hasRecursiveMany(
+  get parentOldTasksRecursive(): ReadOnlyCollection<TaskOld, TaskOld> {
+    return this.__data.relations.parentOldTasksRecursive ??= hasRecursiveParents(
       this as any as TaskOld,
-      "parentOldTaskRecursive",
+      "parentOldTasksRecursive",
       "parentOldTask",
+    );
+  }
+
+  get tasksRecursive(): ReadOnlyCollection<TaskOld, TaskOld> {
+    return this.__data.relations.tasksRecursive ??= hasRecursiveChildren(
+      this as any as TaskOld,
+      "tasksRecursive",
+      "tasks",
     );
   }
 

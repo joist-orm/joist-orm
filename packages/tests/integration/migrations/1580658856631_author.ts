@@ -124,7 +124,7 @@ export function up(b: MigrationBuilder): void {
     ignore_enum_fk_id_required_with_default: foreignKey("publisher_size", { notNull: true, default: 1 }),
     // for foreign key tests
     publisher_id: foreignKey("publishers", { notNull: false }),
-    mentor_id: foreignKey("authors", { notNull: false }),
+    mentor_id: foreignKey("authors", { notNull: false, otherFieldName: "mentees" }),
     // for testing jsonb columns
     address: { type: "jsonb", notNull: false },
     business_address: { type: "jsonb", notNull: false },

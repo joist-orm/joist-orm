@@ -18,7 +18,8 @@ import {
   hasManyToMany,
   hasOne,
   hasOneToOne,
-  hasRecursiveMany,
+  hasRecursiveChildren,
+  hasRecursiveParents,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -157,7 +158,7 @@ export interface AuthorOpts {
   publisher?: Publisher | PublisherId | null;
   image?: Image | null;
   userOneToOne?: User | null;
-  authors?: Author[];
+  mentees?: Author[];
   schedules?: AuthorSchedule[];
   books?: Book[];
   comments?: Comment[];
@@ -171,7 +172,7 @@ export interface AuthorIdsOpts {
   publisherId?: PublisherId | null;
   imageId?: ImageId | null;
   userOneToOneId?: UserId | null;
-  authorIds?: AuthorId[] | null;
+  menteeIds?: AuthorId[] | null;
   scheduleIds?: AuthorScheduleId[] | null;
   bookIds?: BookId[] | null;
   commentIds?: CommentId[] | null;
@@ -216,7 +217,7 @@ export interface AuthorFilter {
   publisherSmallPublisher?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   userOneToOne?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
-  authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
+  mentees?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   schedules?: EntityFilter<AuthorSchedule, AuthorScheduleId, FilterOf<AuthorSchedule>, null | undefined>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
@@ -271,7 +272,7 @@ export interface AuthorGraphQLFilter {
   >;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   userOneToOne?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
-  authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  mentees?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   schedules?: EntityGraphQLFilter<AuthorSchedule, AuthorScheduleId, GraphQLFilterOf<AuthorSchedule>, null | undefined>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
@@ -603,11 +604,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
-  get authors(): Collection<Author, Author> {
-    return this.__data.relations.authors ??= hasMany(
+  get mentees(): Collection<Author, Author> {
+    return this.__data.relations.mentees ??= hasMany(
       this as any as Author,
       authorMeta,
-      "authors",
+      "mentees",
       "mentor",
       "mentor_id",
       undefined,
@@ -655,7 +656,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get mentor(): ManyToOneReference<Author, Author, undefined> {
-    return this.__data.relations.mentor ??= hasOne(this as any as Author, authorMeta, "mentor", "authors");
+    return this.__data.relations.mentor ??= hasOne(this as any as Author, authorMeta, "mentor", "mentees");
   }
 
   get currentDraftBook(): ManyToOneReference<Author, Book, undefined> {
@@ -671,11 +672,19 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     return this.__data.relations.publisher ??= hasOne(this as any as Author, publisherMeta, "publisher", "authors");
   }
 
-  get mentorRecursive(): ReadOnlyCollection<Author, Author> {
-    return this.__data.relations.mentorRecursive ??= hasRecursiveMany(
+  get mentorsRecursive(): ReadOnlyCollection<Author, Author> {
+    return this.__data.relations.mentorsRecursive ??= hasRecursiveParents(
       this as any as Author,
-      "mentorRecursive",
+      "mentorsRecursive",
       "mentor",
+    );
+  }
+
+  get menteesRecursive(): ReadOnlyCollection<Author, Author> {
+    return this.__data.relations.menteesRecursive ??= hasRecursiveChildren(
+      this as any as Author,
+      "menteesRecursive",
+      "mentees",
     );
   }
 

@@ -80,6 +80,9 @@ export interface ColumnMetaData {
   fieldType: PrimitiveTypescriptType;
 }
 
+// A local type just for tracking abstract vs. concrete relations
+type Relation = { kind: "abstract"; line: Code } | { kind: "concrete"; fieldName: string; decl: Code; init: Code };
+
 /** Creates the base class with the boilerplate annotations. */
 export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
   const { entity, tagName } = meta;
@@ -90,297 +93,11 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
   const metasByName = groupBy(dbMeta.entities, (e) => e.name);
 
-  // Add the primitives
-  const primitives = meta.primitives.map((p) => {
-    const { fieldName, fieldType, notNull } = p;
-    const maybeOptional = notNull ? "" : " | undefined";
-
-    let getter: Code;
-    if (p.derived === "async") {
-      getter = code`
-        abstract readonly ${fieldName}: ${ReactiveField}<${entity.name}, ${p.fieldType}${maybeOptional}>;
-     `;
-    } else if (p.derived === "sync") {
-      getter = code`
-        abstract get ${fieldName}(): ${fieldType}${maybeOptional};
-     `;
-    } else if (p.zodSchema) {
-      getter = code`
-        get ${fieldName}(): ${Zod}.output<typeof ${p.zodSchema}>${maybeOptional} {
-          return ${getField}(this, "${fieldName}");
-        }
-     `;
-    } else {
-      getter = code`
-        get ${fieldName}(): ${fieldType}${maybeOptional} {
-          return ${getField}(this, "${fieldName}");
-        }
-     `;
-    }
-
-    let setter: Code | string;
-    // ...technically we should be checking a list of JS keywords
-    const paramName = keywords.includes(fieldName) ? "value" : fieldName;
-    const setterValue =
-      p.fieldType === "string" && p.columnDefault !== "''"
-        ? code`${cleanStringValue}(${paramName})`
-        : code`${paramName}`;
-    if (p.protected) {
-      // TODO Allow making the getter to be protected as well. And so probably remove it
-      // from the Opts as well. Wonder how that works for required protected fields?
-      //
-      // We have to use a method of `set${fieldName}` because TS enforces getters/setters to have
-      // same access level and currently we're leaving the getter as public.
-      setter = code`
-        protected set${pascalCase(fieldName)}(${paramName}: ${fieldType}${maybeOptional}) {
-          ${setField}(this, "${fieldName}", ${setterValue});
-        }
-      `;
-    } else if (p.derived) {
-      setter = "";
-    } else if (p.superstruct) {
-      // We use `value` as the param name to not potentially conflict with the
-      // name of the imported superstruct const that is passed to assert.
-      setter = code`
-        set ${fieldName}(value: ${fieldType}${maybeOptional}) {
-          if (value) {
-            ${SSAssert}(value, ${p.superstruct});
-          }
-          ${setField}(this, "${fieldName}", value);
-        }
-      `;
-    } else if (p.zodSchema) {
-      // We use `value` as the param name to not potentially conflict with the
-      // name of the imported zod schema that is passed to parse.
-      setter = code`
-        set ${fieldName}(value: ${Zod}.input<typeof ${p.zodSchema}>${maybeOptional}) {
-          if (value) {
-            ${setField}(this, "${fieldName}", ${p.zodSchema}.parse(value));
-          } else {
-            ${setField}(this, "${fieldName}", value);
-          }
-        }
-      `;
-    } else {
-      setter = code`
-        set ${fieldName}(${paramName}: ${fieldType}${maybeOptional}) {
-          ${setField}(this, "${fieldName}", ${setterValue});
-        }
-      `;
-    }
-
-    return code`${getter} ${setter}`;
-  });
-
-  // Add ManyToOne enums
-  meta.enums
-    .filter((e) => !e.isArray)
-    .forEach((e) => {
-      const { fieldName, enumType, enumDetailType, enumDetailsType, notNull, enumRows, derived } = e;
-      const maybeOptional = notNull ? "" : " | undefined";
-      const getByCode = code`${enumDetailType}.getByCode(this.${fieldName})`;
-
-      let getter: Code;
-      if (derived === "async") {
-        getter = code`
-          abstract readonly ${fieldName}: ${ReactiveField}<${entity.name}, ${enumType}${maybeOptional}>;
-       `;
-      } else if (derived === "sync") {
-        getter = code`
-          abstract get ${fieldName}(): ${enumType}${maybeOptional};
-       `;
-      } else {
-        getter = code`
-          get ${fieldName}(): ${enumType}${maybeOptional} {
-            return ${getField}(this, "${fieldName}");
-          }
-
-          get ${fieldName}Details(): ${enumDetailsType}${maybeOptional} {
-            return ${notNull ? getByCode : code`this.${fieldName} ? ${getByCode} : undefined`};
-          }
-       `;
-      }
-
-      let setter: Code;
-      if (derived) {
-        setter = code``;
-      } else {
-        setter = code`
-          set ${fieldName}(${fieldName}: ${enumType}${maybeOptional}) {
-            ${setField}(this, "${fieldName}", ${fieldName});
-          }
-        `;
-      }
-
-      const codes = new Set(enumRows.map((r) => r.code));
-      const shouldPrefixAccessors = meta.enums
-        .filter((other) => other !== e)
-        .some((other) => other.enumRows.some((r) => codes.has(r.code)));
-
-      const accessors = enumRows.map(
-        (row) => code`
-          get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
-            return ${getField}(this, "${fieldName}") === ${enumType}.${pascalCase(row.code)};
-          }
-        `,
-      );
-      // Group enums as primitives
-      primitives.push(getter, setter, ...accessors);
-    });
-
-  // Add integer[] enums
-  meta.enums
-    .filter((e) => e.isArray)
-    .forEach((e) => {
-      const { fieldName, enumType, enumDetailType, enumDetailsType, enumRows } = e;
-      const getter = code`
-        get ${fieldName}(): ${enumType}[] {
-          return ${getField}(this, "${fieldName}") || [];
-        }
-
-        get ${fieldName}Details(): ${enumDetailsType}[] {
-          return this.${fieldName}.map(code => ${enumDetailType}.getByCode(code));
-        }
-     `;
-      const setter = code`
-        set ${fieldName}(${fieldName}: ${enumType}[]) {
-          ${setField}(this, "${fieldName}", ${fieldName});
-        }
-      `;
-
-      const codes = new Set(enumRows.map((r) => r.code));
-      const shouldPrefixAccessors = meta.enums
-        .filter((other) => other !== e)
-        .some((other) => other.enumRows.some((r) => codes.has(r.code)));
-
-      const accessors = enumRows.map(
-        (row) => code`
-          get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
-            return this.${fieldName}.includes(${enumType}.${pascalCase(row.code)});
-          }
-        `,
-      );
-      // Group enums as primitives
-      primitives.push(getter, setter, ...accessors);
-    });
-
-  meta.pgEnums.forEach((e) => {
-    const { fieldName, enumType, enumValues, notNull } = e;
-    const maybeOptional = notNull ? "" : " | undefined";
-
-    const getter = code`
-        get ${fieldName}(): ${enumType}${maybeOptional} {
-          return ${getField}(this, "${fieldName}");
-        }
-     `;
-    const setter = code`
-        set ${fieldName}(${fieldName}: ${enumType}${maybeOptional}) {
-          ${setField}(this, "${fieldName}", ${fieldName});
-        }
-      `;
-
-    const codes = new Set(enumValues);
-    const shouldPrefixAccessors = meta.pgEnums
-      .filter((other) => other !== e)
-      .some((other) => other.enumValues.some((r) => codes.has(r)));
-
-    const accessors = enumValues.map(
-      (row) => code`
-          get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row)}(): boolean {
-            return this.${fieldName} === ${enumType}.${pascalCase(row)};
-          }
-        `,
-    );
-    // Group enums as primitives
-    primitives.push(getter, setter, ...accessors);
-  });
-
-  // Add ManyToOne entities
-  type Relation = { kind: "abstract"; line: Code } | { kind: "concrete"; fieldName: string; decl: Code; init: Code };
-
-  const m2o: Relation[] = meta.manyToOnes.map((m2o) => {
-    const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
-    const maybeOptional = notNull ? "never" : "undefined";
-    if (m2o.derived === "async") {
-      const line = code`
-        abstract readonly ${fieldName}: ${ReactiveReference}<${entity.name}, ${otherEntity.type}, ${maybeOptional}>;
-      `;
-      return { kind: "abstract", line } as const;
-    }
-    const decl = code`${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>`;
-    const init = code`${hasOne}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}")`;
-    return { kind: "concrete", fieldName, decl, init };
-  });
-
-  // Add OneToMany
-  const o2m: Relation[] = meta.oneToManys.map((o2m) => {
-    const { fieldName, otherFieldName, otherColumnName, otherEntity, orderBy } = o2m;
-    const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`${hasMany}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}", ${orderBy})`;
-    return { kind: "concrete", fieldName, decl, init };
-  });
-
-  // Add large OneToMany
-  const lo2m: Relation[] = meta.largeOneToManys.map((o2m) => {
-    const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
-    const decl = code`${LargeCollection}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`${hasLargeMany}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
-    return { kind: "concrete", fieldName, decl, init };
-  });
-
-  // Add OneToOne
-  const o2o: Relation[] = meta.oneToOnes.map((o2o) => {
-    const { fieldName, otherEntity, otherFieldName, otherColumnName } = o2o;
-    const decl = code`${OneToOneReference}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`${hasOneToOne}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
-    return { kind: "concrete", fieldName, decl, init };
-  });
-
-  // Add ManyToMany
-  const m2m: Relation[] = meta.manyToManys.map((m2m) => {
-    const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
-    const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`
-      ${hasManyToMany}(
-        this as any as ${entityName},
-        "${joinTableName}",
-        "${fieldName}",
-        "${columnName}",
-        ${otherEntity.metaType},
-        "${otherFieldName}",
-        "${otherColumnName}",
-      )`;
-    return { kind: "concrete", fieldName, decl, init };
-  });
-
-  // Add large ManyToMany
-  const lm2m: Relation[] = meta.largeManyToManys.map((m2m) => {
-    const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
-    const decl = code`${LargeCollection}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`
-      ${hasLargeManyToMany}(
-        this as any as ${entityName},
-        "${joinTableName}",
-        "${fieldName}",
-        "${columnName}",
-        ${otherEntity.metaType},
-        "${otherFieldName}",
-        "${otherColumnName}",
-      );
-    `;
-    return { kind: "concrete", fieldName, decl, init };
-  });
-
-  // Add Polymorphic
-  const polymorphic: Relation[] = meta.polymorphics.map((p) => {
-    const { fieldName, notNull, fieldType } = p;
-    const maybeOptional = notNull ? "never" : "undefined";
-    const decl = code`${PolymorphicReference}<${entity.type}, ${fieldType}, ${maybeOptional}>`;
-    const init = code`${hasOnePolymorphic}(this as any as ${entityName}, "${fieldName}")`;
-    return { kind: "concrete", fieldName, decl, init };
-  });
-
-  const relations = [o2m, lo2m, m2o, o2o, m2m, lm2m, polymorphic].flat();
+  const primitives = createPrimitives(meta, entity); // Add the primitives
+  primitives.push(...createRegularEnums(meta, entity)); // Add ManyToOne enums
+  primitives.push(...createArrayEnums(meta)); // Add integer[] enums
+  primitives.push(...createPgEnums(meta)); // Add native enums
+  const relations = createRelations(meta, entity, entityName);
 
   const configName = `${camelCase(entityName)}Config`;
   const metadata = imp(`${camelCase(entityName)}Meta@./entities.ts`);
@@ -511,14 +228,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         optIdsType: ${entityName}IdsOpts;
         factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
       };
-      ${relations.map((r) => {
-        if (r.kind === "abstract") {
-          return r.line;
-        } else {
-          return "";
-          // return code`#${r.fieldName}: ${r.decl} | undefined = undefined;`;
-        }
-      })}
+      ${relations.filter((r) => r.kind === "abstract").map((r) => r.line)}
 
       ${cstr}
 
@@ -576,17 +286,15 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         return !hint || typeof hint === "string" ? super.toJSON() : ${toJSON}(this, hint);
       }
 
-      ${relations.map((r) => {
-        if (r.kind === "abstract") {
-          return "";
-        } else {
+      ${relations
+        .filter((r) => r.kind === "concrete")
+        .map((r) => {
           return code`
             get ${r.fieldName}(): ${r.decl} {
               return this.__data.relations.${r.fieldName} ??= ${r.init};
             }
           `;
-        }
-      })}
+        })}
     }
   `;
 }
@@ -890,6 +598,301 @@ function generateOrderFields(meta: EntityDbMetadata): Code[] {
     return code`${fieldName}?: ${otherEntity.orderType};`;
   });
   return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o];
+}
+
+function createPrimitives(meta: EntityDbMetadata, entity: Entity) {
+  const primitives = meta.primitives.map((p) => {
+    const { fieldName, fieldType, notNull } = p;
+    const maybeOptional = notNull ? "" : " | undefined";
+
+    let getter: Code;
+    if (p.derived === "async") {
+      getter = code`
+        abstract readonly ${fieldName}: ${ReactiveField}<${entity.name}, ${p.fieldType}${maybeOptional}>;
+     `;
+    } else if (p.derived === "sync") {
+      getter = code`
+        abstract get ${fieldName}(): ${fieldType}${maybeOptional};
+     `;
+    } else if (p.zodSchema) {
+      getter = code`
+        get ${fieldName}(): ${Zod}.output<typeof ${p.zodSchema}>${maybeOptional} {
+          return ${getField}(this, "${fieldName}");
+        }
+     `;
+    } else {
+      getter = code`
+        get ${fieldName}(): ${fieldType}${maybeOptional} {
+          return ${getField}(this, "${fieldName}");
+        }
+     `;
+    }
+
+    let setter: Code | string;
+    // ...technically we should be checking a list of JS keywords
+    const paramName = keywords.includes(fieldName) ? "value" : fieldName;
+    const setterValue =
+      p.fieldType === "string" && p.columnDefault !== "''"
+        ? code`${cleanStringValue}(${paramName})`
+        : code`${paramName}`;
+    if (p.protected) {
+      // TODO Allow making the getter to be protected as well. And so probably remove it
+      // from the Opts as well. Wonder how that works for required protected fields?
+      //
+      // We have to use a method of `set${fieldName}` because TS enforces getters/setters to have
+      // same access level and currently we're leaving the getter as public.
+      setter = code`
+        protected set${pascalCase(fieldName)}(${paramName}: ${fieldType}${maybeOptional}) {
+          ${setField}(this, "${fieldName}", ${setterValue});
+        }
+      `;
+    } else if (p.derived) {
+      setter = "";
+    } else if (p.superstruct) {
+      // We use `value` as the param name to not potentially conflict with the
+      // name of the imported superstruct const that is passed to assert.
+      setter = code`
+        set ${fieldName}(value: ${fieldType}${maybeOptional}) {
+          if (value) {
+            ${SSAssert}(value, ${p.superstruct});
+          }
+          ${setField}(this, "${fieldName}", value);
+        }
+      `;
+    } else if (p.zodSchema) {
+      // We use `value` as the param name to not potentially conflict with the
+      // name of the imported zod schema that is passed to parse.
+      setter = code`
+        set ${fieldName}(value: ${Zod}.input<typeof ${p.zodSchema}>${maybeOptional}) {
+          if (value) {
+            ${setField}(this, "${fieldName}", ${p.zodSchema}.parse(value));
+          } else {
+            ${setField}(this, "${fieldName}", value);
+          }
+        }
+      `;
+    } else {
+      setter = code`
+        set ${fieldName}(${paramName}: ${fieldType}${maybeOptional}) {
+          ${setField}(this, "${fieldName}", ${setterValue});
+        }
+      `;
+    }
+
+    return code`${getter} ${setter}`;
+  });
+  return primitives;
+}
+
+function createRegularEnums(meta: EntityDbMetadata, entity: Entity) {
+  return meta.enums
+    .filter((e) => !e.isArray)
+    .flatMap((e) => {
+      const { fieldName, enumType, enumDetailType, enumDetailsType, notNull, enumRows, derived } = e;
+      const maybeOptional = notNull ? "" : " | undefined";
+      const getByCode = code`${enumDetailType}.getByCode(this.${fieldName})`;
+
+      let getter: Code;
+      if (derived === "async") {
+        getter = code`
+          abstract readonly ${fieldName}: ${ReactiveField}<${entity.name}, ${enumType}${maybeOptional}>;
+       `;
+      } else if (derived === "sync") {
+        getter = code`
+          abstract get ${fieldName}(): ${enumType}${maybeOptional};
+       `;
+      } else {
+        getter = code`
+          get ${fieldName}(): ${enumType}${maybeOptional} {
+            return ${getField}(this, "${fieldName}");
+          }
+
+          get ${fieldName}Details(): ${enumDetailsType}${maybeOptional} {
+            return ${notNull ? getByCode : code`this.${fieldName} ? ${getByCode} : undefined`};
+          }
+       `;
+      }
+
+      let setter: Code;
+      if (derived) {
+        setter = code``;
+      } else {
+        setter = code`
+          set ${fieldName}(${fieldName}: ${enumType}${maybeOptional}) {
+            ${setField}(this, "${fieldName}", ${fieldName});
+          }
+        `;
+      }
+
+      const codes = new Set(enumRows.map((r) => r.code));
+      const shouldPrefixAccessors = meta.enums
+        .filter((other) => other !== e)
+        .some((other) => other.enumRows.some((r) => codes.has(r.code)));
+
+      const accessors = enumRows.map(
+        (row) => code`
+          get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
+            return ${getField}(this, "${fieldName}") === ${enumType}.${pascalCase(row.code)};
+          }
+        `,
+      );
+      return [getter, setter, ...accessors];
+    });
+}
+
+function createArrayEnums(meta: EntityDbMetadata) {
+  return meta.enums
+    .filter((e) => e.isArray)
+    .flatMap((e) => {
+      const { fieldName, enumType, enumDetailType, enumDetailsType, enumRows } = e;
+      const getter = code`
+        get ${fieldName}(): ${enumType}[] {
+          return ${getField}(this, "${fieldName}") || [];
+        }
+
+        get ${fieldName}Details(): ${enumDetailsType}[] {
+          return this.${fieldName}.map(code => ${enumDetailType}.getByCode(code));
+        }
+     `;
+      const setter = code`
+        set ${fieldName}(${fieldName}: ${enumType}[]) {
+          ${setField}(this, "${fieldName}", ${fieldName});
+        }
+      `;
+
+      const codes = new Set(enumRows.map((r) => r.code));
+      const shouldPrefixAccessors = meta.enums
+        .filter((other) => other !== e)
+        .some((other) => other.enumRows.some((r) => codes.has(r.code)));
+
+      const accessors = enumRows.map(
+        (row) => code`
+          get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
+            return this.${fieldName}.includes(${enumType}.${pascalCase(row.code)});
+          }
+        `,
+      );
+      return [getter, setter, ...accessors];
+    });
+}
+
+function createPgEnums(meta: EntityDbMetadata) {
+  return meta.pgEnums.flatMap((e) => {
+    const { fieldName, enumType, enumValues, notNull } = e;
+    const maybeOptional = notNull ? "" : " | undefined";
+
+    const getter = code`
+        get ${fieldName}(): ${enumType}${maybeOptional} {
+          return ${getField}(this, "${fieldName}");
+        }
+     `;
+    const setter = code`
+        set ${fieldName}(${fieldName}: ${enumType}${maybeOptional}) {
+          ${setField}(this, "${fieldName}", ${fieldName});
+        }
+      `;
+
+    const codes = new Set(enumValues);
+    const shouldPrefixAccessors = meta.pgEnums
+      .filter((other) => other !== e)
+      .some((other) => other.enumValues.some((r) => codes.has(r)));
+
+    const accessors = enumValues.map(
+      (row) => code`
+          get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row)}(): boolean {
+            return this.${fieldName} === ${enumType}.${pascalCase(row)};
+          }
+        `,
+    );
+    return [getter, setter, ...accessors];
+  });
+}
+
+function createRelations(meta: EntityDbMetadata, entity: Entity, entityName: string) {
+  // Add ManyToOne entities
+  const m2o: Relation[] = meta.manyToOnes.map((m2o) => {
+    const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
+    const maybeOptional = notNull ? "never" : "undefined";
+    if (m2o.derived === "async") {
+      const line = code`
+        abstract readonly ${fieldName}: ${ReactiveReference}<${entity.name}, ${otherEntity.type}, ${maybeOptional}>;
+      `;
+      return { kind: "abstract", line } as const;
+    }
+    const decl = code`${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>`;
+    const init = code`${hasOne}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}")`;
+    return { kind: "concrete", fieldName, decl, init };
+  });
+
+  // Add OneToMany
+  const o2m: Relation[] = meta.oneToManys.map((o2m) => {
+    const { fieldName, otherFieldName, otherColumnName, otherEntity, orderBy } = o2m;
+    const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
+    const init = code`${hasMany}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}", ${orderBy})`;
+    return { kind: "concrete", fieldName, decl, init };
+  });
+
+  // Add large OneToMany
+  const lo2m: Relation[] = meta.largeOneToManys.map((o2m) => {
+    const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
+    const decl = code`${LargeCollection}<${entity.type}, ${otherEntity.type}>`;
+    const init = code`${hasLargeMany}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
+    return { kind: "concrete", fieldName, decl, init };
+  });
+
+  // Add OneToOne
+  const o2o: Relation[] = meta.oneToOnes.map((o2o) => {
+    const { fieldName, otherEntity, otherFieldName, otherColumnName } = o2o;
+    const decl = code`${OneToOneReference}<${entity.type}, ${otherEntity.type}>`;
+    const init = code`${hasOneToOne}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
+    return { kind: "concrete", fieldName, decl, init };
+  });
+
+  // Add ManyToMany
+  const m2m: Relation[] = meta.manyToManys.map((m2m) => {
+    const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
+    const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
+    const init = code`
+      ${hasManyToMany}(
+        this as any as ${entityName},
+        "${joinTableName}",
+        "${fieldName}",
+        "${columnName}",
+        ${otherEntity.metaType},
+        "${otherFieldName}",
+        "${otherColumnName}",
+      )`;
+    return { kind: "concrete", fieldName, decl, init };
+  });
+
+  // Add large ManyToMany
+  const lm2m: Relation[] = meta.largeManyToManys.map((m2m) => {
+    const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
+    const decl = code`${LargeCollection}<${entity.type}, ${otherEntity.type}>`;
+    const init = code`
+      ${hasLargeManyToMany}(
+        this as any as ${entityName},
+        "${joinTableName}",
+        "${fieldName}",
+        "${columnName}",
+        ${otherEntity.metaType},
+        "${otherFieldName}",
+        "${otherColumnName}",
+      );
+    `;
+    return { kind: "concrete", fieldName, decl, init };
+  });
+
+  // Add Polymorphic
+  const polymorphic: Relation[] = meta.polymorphics.map((p) => {
+    const { fieldName, notNull, fieldType } = p;
+    const maybeOptional = notNull ? "never" : "undefined";
+    const decl = code`${PolymorphicReference}<${entity.type}, ${fieldType}, ${maybeOptional}>`;
+    const init = code`${hasOnePolymorphic}(this as any as ${entityName}, "${fieldName}")`;
+    return { kind: "concrete", fieldName, decl, init };
+  });
+
+  return [o2m, lo2m, m2o, o2o, m2m, lm2m, polymorphic].flat();
 }
 
 function maybeOptional(notNull: boolean): string {

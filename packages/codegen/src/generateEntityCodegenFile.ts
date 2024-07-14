@@ -1,4 +1,5 @@
 import { camelCase, pascalCase } from "change-case";
+import { plural } from "pluralize";
 import { Code, code, imp, joinCode } from "ts-poet";
 import {
   DbMetadata,
@@ -63,7 +64,8 @@ import {
   hasOne,
   hasOnePolymorphic,
   hasOneToOne,
-  hasRecursiveMany,
+  hasRecursiveChildren,
+  hasRecursiveParents,
   isEntity,
   isLoaded,
   loadLens,
@@ -827,12 +829,26 @@ function createRelations(meta: EntityDbMetadata, entity: Entity, entityName: str
   // Add any recursive ManyToOne entities
   const m2oRecursive: Relation[] = meta.manyToOnes
     .filter((m2o) => m2o.otherEntity.name === meta.name)
-    .map((m2o) => {
-      const { fieldName: m2oName, otherEntity } = m2o;
-      const fieldName = `${m2oName}Recursive`;
-      const decl = code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`;
-      const init = code`${hasRecursiveMany}(this as any as ${entityName}, "${fieldName}", "${m2oName}")`;
-      return { kind: "concrete", fieldName, decl, init };
+    .flatMap((m2o) => {
+      const { fieldName: m2oName, otherFieldName, otherEntity } = m2o;
+      const parentsField = `${plural(m2oName)}Recursive`;
+      const childrenField = `${otherFieldName}Recursive`;
+      return [
+        {
+          // parents recursive
+          kind: "concrete",
+          fieldName: parentsField,
+          decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
+          init: code`${hasRecursiveParents}(this as any as ${entityName}, "${parentsField}", "${m2oName}")`,
+        },
+        {
+          // children recursive
+          kind: "concrete",
+          fieldName: childrenField,
+          decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
+          init: code`${hasRecursiveChildren}(this as any as ${entityName}, "${childrenField}", "${otherFieldName}")`,
+        },
+      ];
     });
 
   // Add OneToMany

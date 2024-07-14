@@ -35,6 +35,7 @@
     "initials",
     "isPopular",
     "lastName",
+    "mentees",
     "mentor",
     "nickNames",
     "numberOfAtoms",

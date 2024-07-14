@@ -19,7 +19,6 @@ export { LargeCollection } from "./LargeCollection";
 export { ManyToManyCollection, hasManyToMany } from "./ManyToManyCollection";
 export { ManyToManyLargeCollection, hasLargeManyToMany } from "./ManyToManyLargeCollection";
 export { ManyToOneReference, ManyToOneReferenceImpl, hasOne, isManyToOneReference } from "./ManyToOneReference";
-export { hasRecursiveMany } from "./ManyToRecursiveCollection";
 export { OneToManyCollection, hasMany } from "./OneToManyCollection";
 export { OneToManyLargeCollection, hasLargeMany } from "./OneToManyLargeCollection";
 export {
@@ -45,5 +44,6 @@ export {
   isLoadedReadOnlyCollection,
   isReadOnlyCollection,
 } from "./ReadOnlyCollection";
+export { hasRecursiveChildren, hasRecursiveParents } from "./RecursiveCollection";
 export { LoadedReference, Reference, isLoadedReference, isReference } from "./Reference";
 export { Relation, isRelation } from "./Relation";

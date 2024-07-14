@@ -36,6 +36,7 @@ import {
   LoadHint,
   Loaded,
   ManyToOneReference,
+  ManyToRecursiveCollection,
   MaybeAbstractEntityConstructor,
   OneToOneReference,
   OptsOf,
@@ -63,6 +64,7 @@ import {
   hasOne,
   hasOnePolymorphic,
   hasOneToOne,
+  hasRecursiveMany,
   isEntity,
   isLoaded,
   loadLens,
@@ -824,6 +826,16 @@ function createRelations(meta: EntityDbMetadata, entity: Entity, entityName: str
     return { kind: "concrete", fieldName, decl, init };
   });
 
+  // Add any recursive ManyToOne entities
+  const m2oRecursive: Relation[] = meta.manyToOnes
+    .filter((m2o) => m2o.otherEntity.name === meta.name)
+    .map((m2o) => {
+      const { fieldName, otherEntity, otherFieldName } = m2o;
+      const decl = code`${ManyToRecursiveCollection}<${entity.type}, ${otherEntity.type}>`;
+      const init = code`${hasRecursiveMany}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}")`;
+      return { kind: "concrete", fieldName: `${fieldName}Recursive`, decl, init };
+    });
+
   // Add OneToMany
   const o2m: Relation[] = meta.oneToManys.map((o2m) => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity, orderBy } = o2m;
@@ -892,7 +904,7 @@ function createRelations(meta: EntityDbMetadata, entity: Entity, entityName: str
     return { kind: "concrete", fieldName, decl, init };
   });
 
-  return [o2m, lo2m, m2o, o2o, m2m, lm2m, polymorphic].flat();
+  return [o2m, lo2m, m2o, m2oRecursive, o2o, m2m, lm2m, polymorphic].flat();
 }
 
 function maybeOptional(notNull: boolean): string {

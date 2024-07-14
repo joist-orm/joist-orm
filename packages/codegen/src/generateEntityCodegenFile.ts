@@ -1,5 +1,4 @@
 import { camelCase, pascalCase } from "change-case";
-import { groupBy } from "joist-utils";
 import { Code, code, imp, joinCode } from "ts-poet";
 import {
   DbMetadata,
@@ -36,7 +35,6 @@ import {
   LoadHint,
   Loaded,
   ManyToOneReference,
-  ManyToRecursiveCollection,
   MaybeAbstractEntityConstructor,
   OneToOneReference,
   OptsOf,
@@ -46,6 +44,7 @@ import {
   ProjectEntity,
   ReactiveField,
   ReactiveReference,
+  ReadOnlyCollection,
   RelationsOf,
   SSAssert,
   TaggedId,
@@ -87,13 +86,12 @@ type Relation = { kind: "abstract"; line: Code } | { kind: "concrete"; fieldName
 
 /** Creates the base class with the boilerplate annotations. */
 export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
+  const { entitiesByName: metasByName } = dbMeta;
   const { entity, tagName } = meta;
   const entityName = entity.name;
 
   // Avoid using `do` as a variable name b/c it's a reserved keyword
   const varName = keywords.includes(tagName) ? uncapitalize(entityName) : tagName;
-
-  const metasByName = groupBy(dbMeta.entities, (e) => e.name);
 
   const primitives = createPrimitives(meta, entity); // Add the primitives
   primitives.push(...createRegularEnums(meta, entity)); // Add ManyToOne enums
@@ -484,7 +482,7 @@ function generateOptIdsFields(config: Config, meta: EntityDbMetadata): Code[] {
   return [...m2o, ...polys, ...o2o, ...o2m, ...m2m];
 }
 
-function generateFilterFields(metasByName: Record<string, EntityDbMetadata[]>, meta: EntityDbMetadata): Code[] {
+function generateFilterFields(metasByName: Record<string, EntityDbMetadata>, meta: EntityDbMetadata): Code[] {
   // Always allow filtering on null to do "child.id is null" for detecting "has no children"
   const maybeId = meta.baseClassName ? [] : [code`id?: ${ValueFilter}<${meta.entity.name}Id, never> | null;`];
   const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
@@ -502,7 +500,7 @@ function generateFilterFields(metasByName: Record<string, EntityDbMetadata[]>, m
     return code`${fieldName}?: ${ValueFilter}<${enumType}, ${nullOrNever(notNull)}>;`;
   });
   const m2o = meta.manyToOnes.flatMap(({ fieldName, otherEntity, notNull }) => {
-    const otherMeta = metasByName[otherEntity.name][0];
+    const otherMeta = metasByName[otherEntity.name] ?? fail(`Could not find metadata for ${otherEntity.name}`);
     return [
       code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${
         otherEntity.type
@@ -535,7 +533,7 @@ function generateFilterFields(metasByName: Record<string, EntityDbMetadata[]>, m
   return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...o2m, ...m2m, ...polys];
 }
 
-function generateGraphQLFilterFields(metasByName: Record<string, EntityDbMetadata[]>, meta: EntityDbMetadata): Code[] {
+function generateGraphQLFilterFields(metasByName: Record<string, EntityDbMetadata>, meta: EntityDbMetadata): Code[] {
   const maybeId = meta.baseClassName ? [] : [code`id?: ${ValueGraphQLFilter}<${meta.entity.name}Id>;`];
   const primitives = meta.primitives.map(({ fieldName, fieldType }) => {
     if (fieldType === "boolean") {
@@ -552,7 +550,7 @@ function generateGraphQLFilterFields(metasByName: Record<string, EntityDbMetadat
     return code`${fieldName}?: ${ValueGraphQLFilter}<${enumType}>;`;
   });
   const m2o = meta.manyToOnes.flatMap(({ fieldName, otherEntity, notNull }) => {
-    const otherMeta = metasByName[otherEntity.name][0];
+    const otherMeta = metasByName[otherEntity.name];
     return [
       code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${
         otherEntity.type
@@ -830,10 +828,11 @@ function createRelations(meta: EntityDbMetadata, entity: Entity, entityName: str
   const m2oRecursive: Relation[] = meta.manyToOnes
     .filter((m2o) => m2o.otherEntity.name === meta.name)
     .map((m2o) => {
-      const { fieldName, otherEntity, otherFieldName } = m2o;
-      const decl = code`${ManyToRecursiveCollection}<${entity.type}, ${otherEntity.type}>`;
-      const init = code`${hasRecursiveMany}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}")`;
-      return { kind: "concrete", fieldName: `${fieldName}Recursive`, decl, init };
+      const { fieldName: m2oName, otherEntity } = m2o;
+      const fieldName = `${m2oName}Recursive`;
+      const decl = code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`;
+      const init = code`${hasRecursiveMany}(this as any as ${entityName}, "${fieldName}", "${m2oName}")`;
+      return { kind: "concrete", fieldName, decl, init };
     });
 
   // Add OneToMany

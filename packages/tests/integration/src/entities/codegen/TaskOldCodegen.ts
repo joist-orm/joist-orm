@@ -13,6 +13,7 @@ import {
   hasMany,
   hasManyToMany,
   hasOne,
+  hasRecursiveMany,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -26,6 +27,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type ReadOnlyCollection,
   setField,
   setOpts,
   type TaggedId,
@@ -235,6 +237,14 @@ export abstract class TaskOldCodegen extends Task implements Entity {
       taskOldMeta,
       "parentOldTask",
       "tasks",
+    );
+  }
+
+  get parentOldTaskRecursive(): ReadOnlyCollection<TaskOld, TaskOld> {
+    return this.__data.relations.parentOldTaskRecursive ??= hasRecursiveMany(
+      this as any as TaskOld,
+      "parentOldTaskRecursive",
+      "parentOldTask",
     );
   }
 

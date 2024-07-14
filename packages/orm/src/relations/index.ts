@@ -1,10 +1,25 @@
 export { Collection, LoadedCollection, isCollection, isLoadedCollection } from "./Collection";
 export { CustomCollection } from "./CustomCollection";
 export { CustomReference } from "./CustomReference";
+export { AsyncMethod, LoadedMethod, hasAsyncMethod } from "./hasAsyncMethod";
+export {
+  AsyncProperty,
+  AsyncPropertyImpl,
+  LoadedProperty,
+  hasAsyncProperty,
+  hasReactiveAsyncProperty,
+  isAsyncProperty,
+  isLoadedAsyncProperty,
+} from "./hasAsyncProperty";
+export { hasManyDerived } from "./hasManyDerived";
+export { hasManyThrough } from "./hasManyThrough";
+export { hasOneDerived } from "./hasOneDerived";
+export { hasOneThrough } from "./hasOneThrough";
 export { LargeCollection } from "./LargeCollection";
 export { ManyToManyCollection, hasManyToMany } from "./ManyToManyCollection";
 export { ManyToManyLargeCollection, hasLargeManyToMany } from "./ManyToManyLargeCollection";
 export { ManyToOneReference, ManyToOneReferenceImpl, hasOne, isManyToOneReference } from "./ManyToOneReference";
+export { hasRecursiveMany } from "./ManyToRecursiveCollection";
 export { OneToManyCollection, hasMany } from "./OneToManyCollection";
 export { OneToManyLargeCollection, hasLargeMany } from "./OneToManyLargeCollection";
 export {
@@ -24,19 +39,11 @@ export { ReactiveField, hasReactiveField, isReactiveField } from "./ReactiveFiel
 export { ReactiveGetter, hasReactiveGetter, isReactiveGetter } from "./ReactiveGetter";
 export { hasReactiveQueryField, isReactiveQueryField } from "./ReactiveQueryField";
 export { ReactiveReference, ReactiveReferenceImpl, hasReactiveReference } from "./ReactiveReference";
+export {
+  LoadedReadOnlyCollection,
+  ReadOnlyCollection,
+  isLoadedReadOnlyCollection,
+  isReadOnlyCollection,
+} from "./ReadOnlyCollection";
 export { LoadedReference, Reference, isLoadedReference, isReference } from "./Reference";
 export { Relation, isRelation } from "./Relation";
-export { AsyncMethod, LoadedMethod, hasAsyncMethod } from "./hasAsyncMethod";
-export {
-  AsyncProperty,
-  AsyncPropertyImpl,
-  LoadedProperty,
-  hasAsyncProperty,
-  hasReactiveAsyncProperty,
-  isAsyncProperty,
-  isLoadedAsyncProperty,
-} from "./hasAsyncProperty";
-export { hasManyDerived } from "./hasManyDerived";
-export { hasManyThrough } from "./hasManyThrough";
-export { hasOneDerived } from "./hasOneDerived";
-export { hasOneThrough } from "./hasOneThrough";

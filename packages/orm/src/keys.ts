@@ -77,9 +77,8 @@ export function keyToTaggedId(meta: HasTagName, dbValue: string | number): Tagge
 
 /** Fails if any keys are tagged; used by internal functions b/c we still allow most direct API input to be untagged. */
 export function assertIdsAreTagged(keys: readonly string[]): void {
-  const invalidKeys = keys.filter((k) => k.indexOf(tagDelimiter) === -1);
-  if (invalidKeys.length > 0) {
-    throw new Error(`Some keys are missing tags ${invalidKeys}`);
+  for (const key of keys) {
+    if (key.indexOf(tagDelimiter) === -1) throw new Error(`Key ${key} is missing a tag`);
   }
 }
 
@@ -188,7 +187,9 @@ export function deTagId(entityOrMeta: Entity | HasTagName, id?: string | number)
 
 /** Removes the tag prefixes so we can use the keys for SQL operations. */
 export function deTagIds(meta: HasTagName, keys: readonly string[]): readonly string[] {
-  return keys.map((k) => deTagId(meta, k));
+  const deTagged = Array(keys.length);
+  for (let i = 0; i < keys.length; i++) deTagged[i] = deTagId(meta, keys[i]);
+  return deTagged;
 }
 
 /** Removes the tag prefixes so we can use the keys for SQL operations. */

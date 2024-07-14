@@ -86,6 +86,8 @@ export interface ParsedFindQuery {
   condition?: ParsedExpressionFilter;
   /** Any optional orders to add before the default 'order by id'. */
   orderBys: ParsedOrderBy[];
+  /** Optional CTE to prefix to the query, i.e. for recursive relations. */
+  cte?: { sql: string; bindings: readonly any[] };
 }
 
 /** Parses an `em.find` filter into a `ParsedFindQuery` for simpler execution. */

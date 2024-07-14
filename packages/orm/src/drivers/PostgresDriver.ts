@@ -14,7 +14,7 @@ import { JoinRowOperation } from "../JoinRows";
 import { kq, kqDot } from "../keywords";
 import { JoinRowTodo, Todo } from "../Todo";
 import { batched, cleanSql, partition, zeroTo } from "../utils";
-import { buildKnexQuery } from "./buildKnexQuery";
+import { buildRawQuery } from "./buildRawQuery";
 import { Driver } from "./Driver";
 import { DeleteOp, generateOps, InsertOp, UpdateOp } from "./EntityWriter";
 import { IdAssigner, SequenceIdAssigner } from "./IdAssigner";
@@ -52,13 +52,19 @@ export class PostgresDriver implements Driver {
     parsed: ParsedFindQuery,
     settings: { limit?: number; offset?: number },
   ): Promise<any[]> {
+    const { sql, bindings } = buildRawQuery(parsed, { limit: em.entityLimit, ...settings });
+    // console.log(sql);
+    // console.log(bindings);
+    // Still go through knex to use the connection pool
     const knex = this.getMaybeInTxnKnex(em);
-    return buildKnexQuery(knex, parsed, { limit: em.entityLimit, ...settings });
+    const result = await knex.raw(sql, bindings);
+    return result.rows;
   }
 
   async executeQuery(em: EntityManager<unknown>, sql: string, bindings: any[]): Promise<any[]> {
     const knex = this.getMaybeInTxnKnex(em);
-    return (await knex.raw(sql, bindings)).rows;
+    const result = await knex.raw(sql, bindings);
+    return result.rows;
   }
 
   async transaction<T>(

@@ -7,44 +7,46 @@ import { assertNever, fail } from "../utils";
 import QueryBuilder = Knex.QueryBuilder;
 
 /**
- * Transforms `ParsedFindQuery` into a Knex query.
+ * Transforms `ParsedFindQuery` into a raw SQL string.
  *
- * In theory this should be implemented within each Driver, because it's generally
- * a private API, but:
- *
- * a) Multiple drivers will likely be based on Knex, and
- * b) We've already leaked the `QueryBuilder.ts` `buildQuery` API for letting Joist
- * do the boilerplate joins/conditions, and then letting the user had more as needed.
+ * In theory this should be implemented within each Driver, but the logic will be largely
+ * the same for different dbs.
  */
-export function buildKnexQuery(
-  knex: Knex,
+export function buildRawQuery(
   parsed: ParsedFindQuery,
   settings: { limit?: number; offset?: number },
-): QueryBuilder<{}, unknown[]> {
+): { sql: string; bindings: readonly any[] } {
   const { limit, offset } = settings;
 
   // If we're doing o2m joins, add a `DISTINCT` clause to avoid duplicates
   const needsDistinct = parsed.tables.some((t) => t.join === "outer" && t.distinct !== false);
 
-  // We need the `knex` param to call `knex.raw`
-  const asRaw = (t: ParsedTable) => knex.raw(`${kq(t.table)} as ${kq(t.alias)}`);
+  let sql = "";
+  const bindings: any[] = [];
 
-  const primary = parsed.tables.find((t) => t.join === "primary")!;
+  if (parsed.cte) {
+    sql += parsed.cte.sql + " ";
+    bindings.push(...parsed.cte.bindings);
+  }
 
-  let query: Knex.QueryBuilder<any, any> = knex.from(asRaw(primary));
-
+  sql += "SELECT ";
   parsed.selects.forEach((s, i) => {
     const maybeDistinct = i === 0 && needsDistinct ? "distinct " : "";
-    query.select(knex.raw(`${maybeDistinct}${s}`));
+    const maybeComma = i === parsed.selects.length - 1 ? "" : ", ";
+    sql += maybeDistinct + s + maybeComma;
   });
 
-  parsed.tables.forEach((t) => {
+  // Make sure the primary is first
+  const primary = parsed.tables.find((t) => t.join === "primary")!;
+  sql += ` FROM ${as(primary)}`;
+  // Then the joins
+  for (const t of parsed.tables) {
     switch (t.join) {
       case "inner":
-        query.join(asRaw(t), knex.raw(t.col1) as any, knex.raw(t.col2));
+        sql += ` JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
         break;
       case "outer":
-        query.leftOuterJoin(asRaw(t), knex.raw(t.col1) as any, knex.raw(t.col2));
+        sql += ` LEFT OUTER JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
         break;
       case "primary":
         // ignore
@@ -52,33 +54,33 @@ export function buildKnexQuery(
       default:
         assertNever(t);
     }
-  });
-
-  if (parsed.lateralJoins) {
-    query.joinRaw(parsed.lateralJoins.joins.join("\n"), parsed.lateralJoins.bindings);
   }
 
-  if (parsed.condition) {
-    const where = buildWhereClause(parsed.condition, true);
-    if (where) {
-      const [sql, bindings] = where;
-      query.whereRaw(sql, bindings);
-    }
-  }
+  // if (parsed.lateralJoins) {
+  //   query.joinRaw(parsed.lateralJoins.joins.join("\n"), parsed.lateralJoins.bindings);
+  // }
 
-  parsed.orderBys &&
-    parsed.orderBys.forEach(({ alias, column, order }) => {
-      // If we're doing "select distinct" for o2m joins, then all order bys must be selects
-      if (needsDistinct) {
-        query.select(`${alias}.${column}`);
-      }
-      query.orderBy(knex.raw(kqDot(alias, column)) as any, order);
-    });
+  // if (parsed.condition) {
+  //   const where = buildWhereClause(parsed.condition, true);
+  //   if (where) {
+  //     const [sql, bindings] = where;
+  //     query.whereRaw(sql, bindings);
+  //   }
+  // }
 
-  if (limit) query.limit(limit);
-  if (offset) query.offset(offset);
+  // parsed.orderBys &&
+  //   parsed.orderBys.forEach(({ alias, column, order }) => {
+  //     // If we're doing "select distinct" for o2m joins, then all order bys must be selects
+  //     if (needsDistinct) {
+  //       query.select(`${alias}.${column}`);
+  //     }
+  //     query.orderBy(knex.raw(kqDot(alias, column)) as any, order);
+  //   });
+  //
+  // if (limit) query.limit(limit);
+  // if (offset) query.offset(offset);
 
-  return query;
+  return { sql, bindings };
 }
 
 /** Returns a tuple of `["cond AND (cond OR cond)", bindings]`. */
@@ -149,3 +151,5 @@ function buildCondition(cc: ColumnCondition): [string, any[]] {
       assertNever(cond);
   }
 }
+
+const as = (t: ParsedTable) => `${kq(t.table)} as ${kq(t.alias)}`;

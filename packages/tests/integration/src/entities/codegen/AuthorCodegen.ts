@@ -18,6 +18,7 @@ import {
   hasManyToMany,
   hasOne,
   hasOneToOne,
+  hasRecursiveMany,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -33,6 +34,7 @@ import {
   type PartialOrNull,
   type ReactiveField,
   type ReactiveReference,
+  type ReadOnlyCollection,
   setField,
   setOpts,
   type TaggedId,
@@ -667,6 +669,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   get publisher(): ManyToOneReference<Author, Publisher, undefined> {
     return this.__data.relations.publisher ??= hasOne(this as any as Author, publisherMeta, "publisher", "authors");
+  }
+
+  get mentorRecursive(): ReadOnlyCollection<Author, Author> {
+    return this.__data.relations.mentorRecursive ??= hasRecursiveMany(
+      this as any as Author,
+      "mentorRecursive",
+      "mentor",
+    );
   }
 
   get image(): OneToOneReference<Author, Image> {

@@ -9,8 +9,10 @@ import {
   LoadedCollection,
   LoadedMethod,
   LoadedProperty,
+  LoadedReadOnlyCollection,
   LoadedReference,
   OneToOneReference,
+  ReadOnlyCollection,
   Reference,
   Relation,
 } from "./relations";
@@ -38,16 +40,18 @@ export type MarkLoaded<T extends Entity, P, UH = {}> =
       ? LoadedReference<T, Loaded<U, UH>, N>
       : P extends Collection<MaybeBaseType, infer U>
         ? LoadedCollection<T, Loaded<U, UH>>
-        : P extends AsyncProperty<MaybeBaseType, infer V>
-          ? // prettier-ignore
-            [V] extends [(infer U extends Entity) | undefined]
+        : P extends ReadOnlyCollection<MaybeBaseType, infer U>
+          ? LoadedReadOnlyCollection<T, Loaded<U, UH>>
+          : P extends AsyncProperty<MaybeBaseType, infer V>
+            ? // prettier-ignore
+              [V] extends [(infer U extends Entity) | undefined]
     ? LoadedProperty<T, Loaded<U, UH> | Exclude<V, U>>
     : V extends readonly (infer U extends Entity)[]
     ? LoadedProperty<T, Loaded<U, UH>[]>
     : LoadedProperty<T, V>
-          : P extends AsyncMethod<T, infer A, infer V>
-            ? LoadedMethod<T, A, V>
-            : unknown;
+            : P extends AsyncMethod<T, infer A, infer V>
+              ? LoadedMethod<T, A, V>
+              : unknown;
 
 /** A version of MarkLoaded the uses `DeepLoadHint` for tests. */
 type MarkDeepLoaded<T extends Entity, P> =
@@ -152,13 +156,15 @@ export type LoadableValue<V> =
     ? U
     : V extends Collection<any, infer U>
       ? U
-      : V extends AsyncMethod<any, any, infer V>
-        ? V
-        : V extends AsyncProperty<any, infer P>
-          ? // If the AsyncProperty returns `Comment | undefined`, then we want to return `Comment`
-            // prettier-ignore
-            P extends (infer U extends Entity) | undefined ? U : P
-          : never;
+      : V extends ReadOnlyCollection<any, infer U>
+        ? U
+        : V extends AsyncMethod<any, any, infer V>
+          ? V
+          : V extends AsyncProperty<any, infer P>
+            ? // If the AsyncProperty returns `Comment | undefined`, then we want to return `Comment`
+              // prettier-ignore
+              P extends (infer U extends Entity) | undefined ? U : P
+            : never;
 
 /**
  *  A load hint of a single key, multiple keys, or nested keys and sub-hints.

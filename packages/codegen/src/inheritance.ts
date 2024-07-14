@@ -11,7 +11,7 @@ import { fail } from "./utils";
 export function applyInheritanceUpdates(config: Config, db: DbMetadata): void {
   const { entities, entitiesByName } = db;
   setClassTableInheritance(entities, entitiesByName);
-  expandSingleTableInheritance(config, entities);
+  expandSingleTableInheritance(config, entitiesByName, entities);
   rewriteSingleTableForeignKeys(config, entities);
 }
 
@@ -38,7 +38,11 @@ function setClassTableInheritance(
 }
 
 /** Expands STI tables into multiple entities, so they get separate `SubTypeCodegen.ts` & `SubType.ts` files. */
-function expandSingleTableInheritance(config: Config, entities: EntityDbMetadata[]): void {
+function expandSingleTableInheritance(
+  config: Config,
+  entitiesByName: Record<string, EntityDbMetadata>,
+  entities: EntityDbMetadata[],
+): void {
   for (const entity of entities) {
     const [fieldName, stiField] =
       Object.entries(config.entities[entity.name]?.fields || {}).find(([, f]) => !!f.stiDiscriminator) ?? [];
@@ -115,6 +119,7 @@ function expandSingleTableInheritance(config: Config, entities: EntityDbMetadata
         entity.subTypes.push(subEntity);
 
         entities.push(subEntity);
+        entitiesByName[subEntity.name] = subEntity;
       }
     }
   }

@@ -116,7 +116,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   get isLoaded(): boolean {
-    return this._isLoaded;
+    // Even if `.load()` has not been called, `.get` will detect
+    return this._isLoaded || this.current() === undefined || !!this.maybeFindEntity();
   }
 
   get isPreloaded(): boolean {
@@ -133,11 +134,16 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     // This should only be callable in the type system if we've already resolved this to an instance,
     // but, just in case we somehow got here in an unloaded state, check to see if we're already in the UoW
     if (!this._isLoaded) {
-      const existing = this.maybeFindEntity();
-      if (existing === undefined) {
-        throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
+      const current = this.current();
+      if (current === undefined) {
+        this.loaded = current;
+      } else {
+        const existing = this.maybeFindEntity();
+        if (existing === undefined) {
+          throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
+        }
+        this.loaded = existing;
       }
-      this.loaded = existing;
       this._isLoaded = true;
     }
 
@@ -341,7 +347,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   public toString(): string {
-    return `ManyToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName}, id: ${this.id})`;
+    return `ManyToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName}, id: ${this.idMaybe})`;
   }
 
   /**

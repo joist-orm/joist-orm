@@ -1,5 +1,6 @@
 import { insertAuthor } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
+import { RecursiveCycleError } from "joist-orm";
 import { Author, newAuthor } from "../entities";
 
 describe("RecursiveRelations", () => {
@@ -26,6 +27,24 @@ describe("RecursiveRelations", () => {
       // Then we see the new, unsaved mentor
       expect(a3.mentorsRecursive.get).toMatchEntity([{ firstName: "a2" }, { firstName: "a1" }, { firstName: "a0" }]);
     });
+
+    it("detects wip cycles", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertAuthor({ first_name: "a3", mentor_id: 2 });
+      const em = newEntityManager();
+      // Given we make a3 a mentor of a1
+      const [a1, a3] = await em.loadAll(Author, ["a:1", "a:3"]);
+      a1.mentor.set(a3);
+      // When we later load a3.mentorsRecursive, we expect it to throw
+      await expect(a3.mentorsRecursive.load()).rejects.toThrow(RecursiveCycleError);
+      // And it knows the path that caused the error
+      try {
+        await a3.mentorsRecursive.load();
+      } catch (e: any) {
+        expect(e.entities).toMatchEntity([a3, { firstName: "a2" }, a1, a3]);
+      }
+    });
   });
 
   describe("children", () => {
@@ -50,6 +69,24 @@ describe("RecursiveRelations", () => {
       const a1 = await em.load(Author, "a:1", "menteesRecursive");
       // Then we see the new, unsaved mentor
       expect(a1.menteesRecursive.get).toMatchEntity([{ firstName: "a2" }, { firstName: "a3" }, { firstName: "a4" }]);
+    });
+
+    it("detects wip cycles", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertAuthor({ first_name: "a3", mentor_id: 2 });
+      const em = newEntityManager();
+      // Given we give a3 a new mentee
+      const [a1, a3] = await em.loadAll(Author, ["a:1", "a:3"]);
+      a3.mentees.add(a1);
+      // When we later load a1.menteesRecursive, we expect it to throw
+      await expect(a1.menteesRecursive.load()).rejects.toThrow(RecursiveCycleError);
+      // And it knows the path that caused the error
+      try {
+        await a1.menteesRecursive.load();
+      } catch (e: any) {
+        expect(e.entities).toMatchEntity([a1, { firstName: "a2" }, a3, a1]);
+      }
     });
   });
 });

@@ -186,7 +186,7 @@ describe("EntityManager.lens", () => {
       expect(em.entities.length).toBe(2);
 
       expect(lastQuery()).toMatchInlineSnapshot(
-        `"select "i".*, "b".id as __source_id from images as i inner join authors as a on a.id = i.author_id inner join books as b on b.author_id = a.id where a.deleted_at is null and b.deleted_at is null and b.id = any($1) order by i.id ASC limit $2"`,
+        `"SELECT "i".*, "b".id as __source_id FROM images AS i JOIN authors AS a ON a.id = i.author_id JOIN books AS b ON b.author_id = a.id WHERE a.deleted_at IS NULL AND b.deleted_at IS NULL AND b.id = ANY($1) ORDER BY i.id ASC LIMIT $2"`,
       );
     });
 
@@ -205,7 +205,7 @@ describe("EntityManager.lens", () => {
       expect(em.entities.length).toBe(2);
 
       expect(lastQuery()).toMatchInlineSnapshot(
-        `"select "p".*, p_s0.*, p_s1.*, p.id as id, COALESCE(p_s0.shared_column, p_s1.shared_column) as shared_column, CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class, "i".id as __source_id from publishers as p left outer join large_publishers as p_s0 on p.id = p_s0.id left outer join small_publishers as p_s1 on p.id = p_s1.id inner join authors as a on a.publisher_id = p.id inner join images as i on i.author_id = a.id where a.deleted_at is null and i.id = any($1) order by p.id ASC limit $2"`,
+        `"SELECT "p".*, p_s0.*, p_s1.*, p.id as id, COALESCE(p_s0.shared_column, p_s1.shared_column) as shared_column, CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class, "i".id as __source_id FROM publishers AS p LEFT OUTER JOIN large_publishers AS p_s0 ON p.id = p_s0.id LEFT OUTER JOIN small_publishers AS p_s1 ON p.id = p_s1.id JOIN authors AS a ON a.publisher_id = p.id JOIN images AS i ON i.author_id = a.id WHERE a.deleted_at IS NULL AND i.id = ANY($1) ORDER BY p.id ASC LIMIT $2"`,
       );
     });
 
@@ -224,7 +224,7 @@ describe("EntityManager.lens", () => {
       expect(em.entities.length).toBe(2);
 
       expect(lastQuery()).toMatchInlineSnapshot(
-        `"select "p".*, p_s0.*, p_s1.*, p.id as id, COALESCE(p_s0.shared_column, p_s1.shared_column) as shared_column, CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class, "b".id as __source_id from publishers as p left outer join large_publishers as p_s0 on p.id = p_s0.id left outer join small_publishers as p_s1 on p.id = p_s1.id inner join authors as a on a.publisher_id = p.id inner join books as b on b.author_id = a.id where a.deleted_at is null and b.deleted_at is null and b.id = any($1) order by p.id ASC limit $2"`,
+        `"SELECT "p".*, p_s0.*, p_s1.*, p.id as id, COALESCE(p_s0.shared_column, p_s1.shared_column) as shared_column, CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class, "b".id as __source_id FROM publishers AS p LEFT OUTER JOIN large_publishers AS p_s0 ON p.id = p_s0.id LEFT OUTER JOIN small_publishers AS p_s1 ON p.id = p_s1.id JOIN authors AS a ON a.publisher_id = p.id JOIN books AS b ON b.author_id = a.id WHERE a.deleted_at IS NULL AND b.deleted_at IS NULL AND b.id = ANY($1) ORDER BY p.id ASC LIMIT $2"`,
       );
     });
 
@@ -243,7 +243,7 @@ describe("EntityManager.lens", () => {
       expect(em.entities.length).toBe(2);
 
       expect(lastQuery()).toMatchInlineSnapshot(
-        `"select "b".*, "a".publisher_id as __source_id from books as b inner join authors as a on a.id = b.author_id where a.deleted_at is null and a.publisher_id = any($1) order by b.title ASC, b.id ASC limit $2"`,
+        `"SELECT "b".*, "a".publisher_id as __source_id FROM books AS b JOIN authors AS a ON a.id = b.author_id WHERE a.deleted_at IS NULL AND a.publisher_id = ANY($1) ORDER BY b.title ASC, b.id ASC LIMIT $2"`,
       );
     });
 

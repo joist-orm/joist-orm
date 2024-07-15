@@ -63,7 +63,7 @@ describe("SingleTableInheritance", () => {
     });
     expect(queries).toMatchInlineSnapshot(`
      [
-       "select t.* from tasks as t where t.type_id = $1 and t.deleted_at is null order by t.id ASC limit $2",
+       "SELECT t.* FROM tasks AS t WHERE t.type_id = $1 AND t.deleted_at IS NULL ORDER BY t.id ASC LIMIT $2",
      ]
     `);
   });
@@ -279,6 +279,8 @@ describe("SingleTableInheritance", () => {
        "oldTaskTaskItems",
        "tasks",
        "parentOldTask",
+       "parentOldTasksRecursive",
+       "tasksRecursive",
        "publishers",
        "typeDetails",
        "isOld",

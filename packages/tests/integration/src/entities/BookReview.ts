@@ -7,6 +7,7 @@ import {
   hasReactiveField,
   ReactiveField,
   Reference,
+  withLoaded,
 } from "joist-orm";
 import { Author, BookReviewCodegen, bookReviewConfig as config, Publisher } from "./entities";
 
@@ -22,19 +23,25 @@ export class BookReview extends BookReviewCodegen {
     (review) => review.book.get.author.get.publisher.get,
   );
 
-  // Reviews are only public if the author is over the age of 21 and graduated (checking graduated b/c age is immutable)
+  // Reviews are only public if:
+  // - the author is over the age of 21,
+  // - and graduated (checking graduated b/c age is immutable),
+  // - and the review's comment does not include the word "private" (this prevents isPublic from being
+  //   implicitly/hint loaded merely from having its author & book in-memory, which makes it harder to
+  //   use isPublic as a test case reactivity caching).
   readonly isPublic: ReactiveField<BookReview, boolean> = hasReactiveField(
     "isPublic",
-    { book: { author: ["age", "graduated"] } },
+    { book: { author: ["age", "graduated"] }, comment: "text" },
     (review) => {
       review.transientFields.numberOfIsPublicCalcs++;
-      const author = review.book.get.author.get;
+      const { book, comment } = withLoaded(review);
+      const { author } = withLoaded(book);
       // Currently our multi-hop reactivity recalc is more aggressive (runs before) our multi-hop
       // cascade deletion (which requires multiple 'pending loops' within `em.flush`), so we might
       // be invoked when Author/Book have been marked for deletion, and we _will_ be marked for
       // deletion soon, but have not yet.
       if (!author) return false;
-      return !!author.age && author.age >= 21 && !!author.graduated;
+      return !!author.age && author.age >= 21 && !!author.graduated && !comment?.text?.includes("private");
     },
   );
 

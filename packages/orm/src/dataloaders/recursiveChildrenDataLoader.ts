@@ -57,20 +57,24 @@ export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
 
     const rows = await em.driver.executeFind(em, query, {});
-
     const entities = em.hydrate(meta.cstr, rows);
 
+    // For all the entities we found, group them by their parent (or the root node, which has no parent)
     const entitiesById = groupBy(entities, (entity) => {
-      const ownerId = maybeResolveReferenceToId(getField(entity, m2o.fieldName));
-      return ownerId ?? "dummyNoLongerOwned";
+      const parentId = maybeResolveReferenceToId(getField(entity, m2o.fieldName));
+      return parentId ?? "root";
     });
 
-    for (const [ownerId, children] of entitiesById) {
-      if (ownerId !== "dummyNoLongerOwned") {
-        getEmInternalApi(em).setPreloadedRelation(ownerId, o2m.fieldName, children);
-        (em.getEntity(ownerId) as any)[o2m.fieldName].preload();
+    // For each found parent, use the preloading infra to inject the children into the relation
+    for (const [parentId, children] of entitiesById) {
+      if (parentId !== "root") {
+        getEmInternalApi(em).setPreloadedRelation(parentId, o2m.fieldName, children);
+        // I thought we could delay calling this, but currently `em.populate` calls `preload()` explicitly
+        (em.getEntity(parentId) as any)[o2m.fieldName].preload();
       }
     }
+
+    // Any entity[o2m] still not loaded must be a leaf which didn't have any children; go ahead and mark it as loaded
     for (const entity of entities) {
       if (!isLoadedCollection(entity[o2m.fieldName])) {
         getEmInternalApi(em).setPreloadedRelation(entity.id, o2m.fieldName, []);
@@ -78,6 +82,7 @@ export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
       }
     }
 
+    // We used preloading to load keys + any recursive keys, so the return value doesn't matter
     return _keys.map(() => []);
   });
 }

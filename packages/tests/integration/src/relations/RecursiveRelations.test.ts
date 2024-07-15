@@ -1,4 +1,4 @@
-import { insertAuthor } from "@src/entities/inserts";
+import { insertAuthor, update } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 import { RecursiveCycleError } from "joist-orm";
 import { Author, newAuthor } from "../entities";
@@ -45,6 +45,15 @@ describe("RecursiveRelations", () => {
         expect(e.entities).toMatchEntity([a3, { firstName: "a2" }, a1, a3]);
       }
     });
+
+    it("detects persisted cycles", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertAuthor({ first_name: "a3", mentor_id: 2 });
+      await update("authors", { id: 1, mentor_id: 3 });
+      const em = newEntityManager();
+      await expect(em.load(Author, "a:3", "mentorsRecursive")).rejects.toThrow(RecursiveCycleError);
+    });
   });
 
   describe("children", () => {
@@ -87,6 +96,15 @@ describe("RecursiveRelations", () => {
       } catch (e: any) {
         expect(e.entities).toMatchEntity([a1, { firstName: "a2" }, a3, a1]);
       }
+    });
+
+    it("detects persisted cycles", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertAuthor({ first_name: "a3", mentor_id: 2 });
+      await update("authors", { id: 1, mentor_id: 3 });
+      const em = newEntityManager();
+      await expect(em.load(Author, "a:1", "menteesRecursive")).rejects.toThrow(RecursiveCycleError);
     });
   });
 });

@@ -835,14 +835,12 @@ function createRelations(meta: EntityDbMetadata, entity: Entity, entityName: str
       const childrenField = `${otherFieldName}Recursive`;
       return [
         {
-          // parents recursive
           kind: "concrete",
           fieldName: parentsField,
           decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
           init: code`${hasRecursiveParents}(this as any as ${entityName}, "${parentsField}", "${m2oName}")`,
         },
         {
-          // children recursive
           kind: "concrete",
           fieldName: childrenField,
           decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,

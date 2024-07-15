@@ -2324,7 +2324,7 @@ describe("EntityManager.queries", () => {
       );
       // Then we grouped the ors
       expect(queries[0]).toEqual(
-        "select a.* from authors as a where a.first_name LIKE $1 and (a.first_name = $2 or a.first_name = $3) order by a.id ASC limit $4",
+        "SELECT a.* FROM authors as a WHERE a.first_name LIKE $1 and (a.first_name = $2 or a.first_name = $3) ORDER BY a.id ASC LIMIT $4",
       );
       // And only returned the 1 matching author
       expect(authors.length).toEqual(1);

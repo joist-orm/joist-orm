@@ -56,29 +56,35 @@ export function buildRawQuery(
     }
   }
 
-  // if (parsed.lateralJoins) {
-  //   query.joinRaw(parsed.lateralJoins.joins.join("\n"), parsed.lateralJoins.bindings);
-  // }
+  if (parsed.lateralJoins) {
+    sql += " " + parsed.lateralJoins.joins.join("\n");
+    bindings.push(...parsed.lateralJoins.bindings);
+  }
 
-  // if (parsed.condition) {
-  //   const where = buildWhereClause(parsed.condition, true);
-  //   if (where) {
-  //     const [sql, bindings] = where;
-  //     query.whereRaw(sql, bindings);
-  //   }
-  // }
+  if (parsed.condition) {
+    const where = buildWhereClause(parsed.condition, true);
+    if (where) {
+      sql += " WHERE " + where[0];
+      bindings.push(...where[1]);
+    }
+  }
 
-  // parsed.orderBys &&
-  //   parsed.orderBys.forEach(({ alias, column, order }) => {
-  //     // If we're doing "select distinct" for o2m joins, then all order bys must be selects
-  //     if (needsDistinct) {
-  //       query.select(`${alias}.${column}`);
-  //     }
-  //     query.orderBy(knex.raw(kqDot(alias, column)) as any, order);
-  //   });
-  //
-  // if (limit) query.limit(limit);
-  // if (offset) query.offset(offset);
+  // If we're doing "select distinct" for o2m joins, then all order bys must be selects
+  // if (needsDistinct) {
+  //   query.select(`${alias}.${column}`);
+  // }
+  if (parsed.orderBys.length > 0) {
+    sql += " ORDER BY " + parsed.orderBys.map((ob) => kqDot(ob.alias, ob.column) + " " + ob.order).join(", ");
+  }
+
+  if (limit) {
+    sql += ` LIMIT ?`;
+    bindings.push(limit);
+  }
+  if (offset) {
+    sql += ` OFFSET ?`;
+    bindings.push(offset);
+  }
 
   return { sql, bindings };
 }

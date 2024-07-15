@@ -53,18 +53,14 @@ export class PostgresDriver implements Driver {
     settings: { limit?: number; offset?: number },
   ): Promise<any[]> {
     const { sql, bindings } = buildRawQuery(parsed, { limit: em.entityLimit, ...settings });
-    // console.log(sql);
-    // console.log(bindings);
-    // Still go through knex to use the connection pool
-    const knex = this.getMaybeInTxnKnex(em);
-    const result = await knex.raw(sql, bindings);
-    return result.rows;
+    return this.executeQuery(em, sql, bindings);
   }
 
-  async executeQuery(em: EntityManager<unknown>, sql: string, bindings: any[]): Promise<any[]> {
-    const knex = this.getMaybeInTxnKnex(em);
-    const result = await knex.raw(sql, bindings);
-    return result.rows;
+  async executeQuery(em: EntityManager<unknown>, sql: string, bindings: readonly any[]): Promise<any[]> {
+    // Still go through knex to use the connection pool
+    return this.getMaybeInTxnKnex(em)
+      .raw(sql, bindings)
+      .then((result) => result.rows);
   }
 
   async transaction<T>(

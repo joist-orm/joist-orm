@@ -134,10 +134,10 @@ describe("ReactiveField", () => {
     // Then the numberOfPublicReviews2.load will ensure br2.isPublic is loaded first
     expect(await a1.numberOfPublicReviews2.load()).toBe(2);
     // And we calc'd the br2.isPublic b/c it's new
-    expect(br2.transientFields.numberOfIsPublicCalcs).toBe(2);
+    expect(br2.transientFields.numberOfIsPublicCalcs).toBe(2); // now 1
     // But we did not recalc br1.isPublic because it's already set
     const br1 = await em2.load(BookReview, "br:1");
-    expect(br1.transientFields.numberOfIsPublicCalcs).toBe(0);
+    expect(br1.transientFields.numberOfIsPublicCalcs).toBe(0); // now 1
   });
 
   it("can save when reactive fields values don't change", async () => {

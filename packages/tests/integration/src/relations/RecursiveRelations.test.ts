@@ -21,7 +21,7 @@ describe("RecursiveRelations", () => {
       const em = newEntityManager();
       // Given we give a1 a new mentor
       const a1 = await em.load(Author, "a:1");
-      a1.mentor.set(newAuthor(em, { firstName: "a0" }));
+      a1.mentor.set(newAuthor(em, { firstName: "a0", mentor: undefined }));
       // When we later load a3.mentorsRecursive
       const a3 = await em.load(Author, "a:3", "mentorsRecursive");
       // Then we see the new, unsaved mentor

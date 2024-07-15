@@ -31,7 +31,7 @@ export function buildRawQuery(
 
   sql += "SELECT ";
   parsed.selects.forEach((s, i) => {
-    const maybeDistinct = i === 0 && needsDistinct ? "distinct " : "";
+    const maybeDistinct = i === 0 && needsDistinct ? "DISTINCT " : "";
     const maybeComma = i === parsed.selects.length - 1 ? "" : ", ";
     sql += maybeDistinct + s + maybeComma;
   });
@@ -105,7 +105,7 @@ function buildWhereClause(exp: ParsedExpressionFilter, topLevel = false): [strin
   // If we don't have any conditions to combine, just return undefined;
   if (tuples.length === 0) return undefined;
   // Wrap/join the sql strings together first, and then flatten the bindings.
-  let sql = tuples.map(([sql]) => sql).join(` ${exp.op} `);
+  let sql = tuples.map(([sql]) => sql).join(` ${exp.op.toUpperCase()} `);
   if (!topLevel) sql = `(${sql})`;
   return [sql, tuples.flatMap(([, bindings]) => bindings)];
 }
@@ -144,18 +144,18 @@ function buildCondition(cc: ColumnCondition): [string, any[]] {
       return [`NOT (${columnName} ${fn} ?)`, [cond.value]];
     }
     case "is-null":
-      return [`${columnName} is null`, []];
+      return [`${columnName} IS NULL`, []];
     case "not-null":
-      return [`${columnName} is not null`, []];
+      return [`${columnName} IS NOT NULL`, []];
     case "in":
-      return [`${columnName} = any(?)`, [cond.value]];
+      return [`${columnName} = ANY(?)`, [cond.value]];
     case "nin":
-      return [`${columnName} != all(?)`, [cond.value]];
+      return [`${columnName} != ALL(?)`, [cond.value]];
     case "between":
-      return [`${columnName} between ? and ?`, cond.value];
+      return [`${columnName} BETWEEN ? AND ?`, cond.value];
     default:
       assertNever(cond);
   }
 }
 
-const as = (t: ParsedTable) => `${kq(t.table)} as ${kq(t.alias)}`;
+const as = (t: ParsedTable) => `${kq(t.table)} AS ${kq(t.alias)}`;

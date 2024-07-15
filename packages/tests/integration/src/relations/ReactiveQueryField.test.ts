@@ -22,7 +22,7 @@ describe("ReactiveQueryField", () => {
        "select nextval('publishers_id_seq') from generate_series(1, 1)",
        "INSERT INTO "publishers" ("id", "name", "latitude", "longitude", "huge_number", "number_of_book_reviews", "deleted_at", "titles_of_favorite_books", "created_at", "updated_at", "size_id", "type_id", "group_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
        "INSERT INTO "large_publishers" ("id", "shared_column", "country") VALUES ($1, $2, $3)",
-       "select distinct count(distinct "br".id) as count from book_reviews as br inner join books as b on br.book_id = b.id inner join authors as a on b.author_id = a.id left outer join publishers as p on a.publisher_id = p.id where b.deleted_at is null and a.deleted_at is null and p.deleted_at is null and p.id = $1 limit $2",
+       "SELECT DISTINCT count(distinct "br".id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2",
        "COMMIT;",
      ]
     `);
@@ -48,7 +48,7 @@ describe("ReactiveQueryField", () => {
        "INSERT INTO "authors" ("id", "first_name", "last_name", "ssn", "initials", "number_of_books", "book_comments", "is_popular", "age", "graduated", "nick_names", "nick_names_upper", "was_ever_popular", "address", "business_address", "quotes", "number_of_atoms", "deleted_at", "number_of_public_reviews", "numberOfPublicReviews2", "tags_of_all_books", "search", "certificate", "created_at", "updated_at", "favorite_shape", "range_of_books", "favorite_colors", "mentor_id", "current_draft_book_id", "favorite_book_id", "publisher_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)",
        "INSERT INTO "books" ("id", "title", "order", "notes", "acknowledgements", "deleted_at", "created_at", "updated_at", "author_id", "random_comment_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10),($11, $12, $13, $14, $15, $16, $17, $18, $19, $20)",
        "INSERT INTO "book_reviews" ("id", "rating", "is_public", "is_test", "created_at", "updated_at", "book_id", "critic_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8),($9, $10, $11, $12, $13, $14, $15, $16)",
-       "select distinct count(distinct "br".id) as count from book_reviews as br inner join books as b on br.book_id = b.id inner join authors as a on b.author_id = a.id left outer join publishers as p on a.publisher_id = p.id where b.deleted_at is null and a.deleted_at is null and p.deleted_at is null and p.id = $1 limit $2",
+       "SELECT DISTINCT count(distinct "br".id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2",
        "WITH data (id, number_of_book_reviews, updated_at, __original_updated_at) AS (VALUES ($1::int, $2::int, $3::timestamp with time zone, $4::timestamptz) ) UPDATE publishers SET number_of_book_reviews = data.number_of_book_reviews, updated_at = data.updated_at FROM data WHERE publishers.id = data.id AND date_trunc('milliseconds', publishers.updated_at) = data.__original_updated_at RETURNING publishers.id",
        "COMMIT;",
        "select * from "publishers" order by "id" asc",
@@ -98,7 +98,7 @@ describe("ReactiveQueryField", () => {
       number_of_book_reviews: 1,
     });
     expect(queries).toContain(
-      `select distinct count(distinct "br".id) as count from book_reviews as br inner join books as b on br.book_id = b.id inner join authors as a on b.author_id = a.id left outer join publishers as p on a.publisher_id = p.id where b.deleted_at is null and a.deleted_at is null and p.deleted_at is null and p.id = $1 limit $2`,
+      `SELECT DISTINCT count(distinct "br".id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2`,
     );
   });
 

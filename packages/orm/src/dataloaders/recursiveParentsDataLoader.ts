@@ -4,24 +4,23 @@ import { EntityManager } from "../EntityManager";
 import {
   abbreviation,
   addTablePerClassJoinsAndClassTag,
-  assertIdsAreTagged,
-  deTagIds,
+  getField,
   kq,
   ManyToOneField,
   ParsedFindQuery,
+  unsafeDeTagIds,
 } from "../index";
 import { RecursiveParentsCollectionImpl } from "../relations/RecursiveCollection";
 
 export function recursiveParentsDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
   collection: RecursiveParentsCollectionImpl<T, U>,
-): DataLoader<string, U[]> {
+): DataLoader<Entity, U[]> {
   const { meta, fieldName } = collection;
   const batchKey = `${meta.tableName}-${fieldName}`;
-  return em.getLoader("m2o-recursive", batchKey, async (_keys) => {
-    assertIdsAreTagged(_keys);
-    const keys = deTagIds(meta, _keys);
+  return em.getLoader("m2o-recursive", batchKey, async (children) => {
     const m2o = meta.allFields[collection.m2oFieldName] as ManyToOneField;
+    const immediateParentIds = children.map((c) => getField(c, m2o.fieldName)).filter((id: any) => id !== undefined);
     const { columnName } = m2o.serde.columns[0];
 
     const alias = abbreviation(meta.tableName);
@@ -35,15 +34,15 @@ export function recursiveParentsDataLoader<T extends Entity, U extends Entity>(
       ],
       orderBys: [{ alias, column: "id", order: "ASC" }],
       cte: {
-        // b is our base case, which is all children we're looking for parents of,
-        // and r is the recursive case of finding the parent.
+        // b is our base case, which is the immediate parents of the children we're loading,
+        // and r is the recursive case of finding their parents.
         sql: `
           WITH RECURSIVE ${alias}_cte AS (
-             SELECT b.id, b.${columnName} FROM ${kq(meta.tableName)} b WHERE b.id = ANY(?)
-             UNION
-             SELECT r.id, r.${columnName} FROM ${kq(meta.tableName)} r JOIN ${alias}_cte ON r.id = ${alias}_cte.${columnName}
+            SELECT b.id, b.${columnName} FROM ${kq(meta.tableName)} b WHERE b.id = ANY(?)
+            UNION
+            SELECT r.id, r.${columnName} FROM ${kq(meta.tableName)} r JOIN ${alias}_cte ON r.id = ${alias}_cte.${columnName}
           )`,
-        bindings: [keys],
+        bindings: [unsafeDeTagIds(immediateParentIds)],
       },
     };
 
@@ -56,6 +55,6 @@ export function recursiveParentsDataLoader<T extends Entity, U extends Entity>(
     // keys, or push them into the preloader cache.
     em.hydrate(meta.cstr, rows);
 
-    return _keys.map(() => []);
+    return children.map(() => []);
   });
 }

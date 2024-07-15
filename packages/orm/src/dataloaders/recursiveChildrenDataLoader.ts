@@ -41,12 +41,11 @@ export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
       ],
       orderBys: [{ alias, column: "id", order: "ASC" }],
       cte: {
-        // b is our base case, which is all children we're looking for parents of,
-        // and r is the recursive case of finding the parent.
-        // ...can we skip the base row being our already loaded row?
+        // b is our base case, which is the immediate children of the parents in `keys`, and r is the
+        // recursive case of finding their children.
         sql: `
           WITH RECURSIVE ${alias}_cte AS (
-             SELECT b.id, b.${columnName} FROM ${kq(meta.tableName)} b WHERE b.id = ANY(?)
+             SELECT b.id, b.${columnName} FROM ${kq(meta.tableName)} b WHERE b.${columnName} = ANY(?)
              UNION
              SELECT r.id, r.${columnName} FROM ${kq(meta.tableName)} r JOIN ${alias}_cte ON r.${columnName} = ${alias}_cte.id
           )`,

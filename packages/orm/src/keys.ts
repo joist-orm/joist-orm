@@ -194,7 +194,12 @@ export function deTagIds(meta: HasTagName, keys: readonly string[]): readonly st
 
 /** Removes the tag prefixes so we can use the keys for SQL operations. */
 export function unsafeDeTagIds(keys: readonly string[]): readonly string[] {
-  return keys.map((k) => k.split(tagDelimiter)).map((t) => (t.length === 0 ? t[0] : t[1]));
+  const deTagged = Array(keys.length);
+  for (let i = 0; i < keys.length; i++) {
+    const maybeTagged = keys[i].split(tagDelimiter);
+    deTagged[i] = maybeTagged.length === 0 ? maybeTagged[0] : maybeTagged[1];
+  }
+  return deTagged;
 }
 
 /** Given a tagged id, returns its tag. */

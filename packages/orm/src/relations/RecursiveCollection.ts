@@ -115,7 +115,7 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
     ensureNotDeleted(this.entity, "pending");
     // Check #loaded
     if (!this.isLoaded || (opts.forceReload && !this.entity.isNewEntity)) {
-      await recursiveParentsDataLoader(this.entity.em, this).load(this.entity.idTagged);
+      await recursiveParentsDataLoader(this.entity.em, this).load(this.entity);
     }
     return this.filterDeleted(this.doGet(), opts);
   }

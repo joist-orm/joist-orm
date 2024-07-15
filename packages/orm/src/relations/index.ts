@@ -44,6 +44,6 @@ export {
   isLoadedReadOnlyCollection,
   isReadOnlyCollection,
 } from "./ReadOnlyCollection";
-export { hasRecursiveChildren, hasRecursiveParents } from "./RecursiveCollection";
+export { RecursiveCycleError, hasRecursiveChildren, hasRecursiveParents } from "./RecursiveCollection";
 export { LoadedReference, Reference, isLoadedReference, isReference } from "./Reference";
 export { Relation, isRelation } from "./Relation";

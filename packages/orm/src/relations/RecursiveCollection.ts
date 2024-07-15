@@ -119,8 +119,11 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
   }
 
   get isLoaded(): boolean {
+    const visited = new Set<any>();
     for (let current = this.entity; current !== undefined; current = getLoadedReference(current[this.#m2oName])) {
       if (!isLoadedReference(current[this.#m2oName])) return false;
+      if (visited.has(current)) throw new RecursiveCycleError([...visited, current]);
+      visited.add(current);
     }
     return true;
   }
@@ -144,12 +147,16 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
       throw new Error(this.toString() + ".get was called when not loaded");
     }
     const parents: U[] = [];
+    const visited = new Set<U>();
     for (
       let current = getLoadedReference(this.entity[this.#m2oName]);
       current !== undefined;
       current = getLoadedReference(current[this.#m2oName])
-    )
+    ) {
       parents.push(current);
+      if (visited.has(current)) throw new RecursiveCycleError([...visited, current]);
+      visited.add(current);
+    }
     return parents;
   }
 }
@@ -200,13 +207,16 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
       throw new Error(this.toString() + ".get was called when not loaded");
     }
     const children: U[] = [];
-    const todo = [this.entity[this.#o2mName]];
+    const visited = new Set<any>();
+    // Use a node+path combo to know which path caused the cycle
+    const todo: { relation: any; path: U[] }[] = [{ relation: this.entity[this.#o2mName], path: [this.entity as any] }];
     while (todo.length > 0) {
-      const current = todo.pop()!;
-      const theseChildren = getLoadedCollection(current);
-      children.push(...theseChildren);
-      for (const child of theseChildren) {
-        todo.push(child[this.#o2mName]);
+      const { relation, path } = todo.pop()!;
+      if (visited.has(relation)) throw new RecursiveCycleError(path);
+      visited.add(relation);
+      for (const child of getLoadedCollection(relation)) {
+        children.push(child);
+        todo.push({ relation: child[this.#o2mName], path: [...path, child] });
       }
     }
     return children;
@@ -219,4 +229,12 @@ function getLoadedReference(relation: any): any {
 
 function getLoadedCollection(relation: any): any {
   return isLoadedCollection(relation) ? relation.get : fail(`${relation} was not loaded`);
+}
+
+export class RecursiveCycleError extends Error {
+  entities: Entity[] = [];
+  constructor(entities: Entity[]) {
+    super("Cycle detected in recursive relation");
+    this.entities = entities;
+  }
 }

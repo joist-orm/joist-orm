@@ -4,8 +4,6 @@ import { EntityManager, getEmInternalApi } from "../EntityManager";
 import {
   abbreviation,
   addTablePerClassJoinsAndClassTag,
-  assertIdsAreTagged,
-  deTagIds,
   getField,
   isLoadedCollection,
   kq,
@@ -13,6 +11,7 @@ import {
   maybeResolveReferenceToId,
   OneToManyField,
   ParsedFindQuery,
+  unsafeDeTagIds,
 } from "../index";
 import { RecursiveChildrenCollectionImpl } from "../relations/RecursiveCollection";
 import { groupBy } from "../utils";
@@ -20,12 +19,10 @@ import { groupBy } from "../utils";
 export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
   collection: RecursiveChildrenCollectionImpl<T, U>,
-): DataLoader<string, U[]> {
+): DataLoader<Entity, U[]> {
   const { meta, fieldName } = collection;
   const batchKey = `${meta.tableName}-${fieldName}`;
-  return em.getLoader("o2m-recursive", batchKey, async (_keys) => {
-    assertIdsAreTagged(_keys);
-    const keys = deTagIds(meta, _keys);
+  return em.getLoader("o2m-recursive", batchKey, async (parents) => {
     const o2m = meta.allFields[collection.o2mFieldName] as OneToManyField;
     const m2o = meta.allFields[o2m.otherFieldName] as ManyToOneField;
     const { columnName } = m2o.serde.columns[0];
@@ -41,7 +38,7 @@ export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
       ],
       orderBys: [{ alias, column: "id", order: "ASC" }],
       cte: {
-        // b is our base case, which is the immediate children of the parents in `keys`, and r is the
+        // b is our base case, which is the immediate children of the parents, and r is the
         // recursive case of finding their children.
         sql: `
           WITH RECURSIVE ${alias}_cte AS (
@@ -49,7 +46,8 @@ export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
              UNION
              SELECT r.id, r.${columnName} FROM ${kq(meta.tableName)} r JOIN ${alias}_cte ON r.${columnName} = ${alias}_cte.id
           )`,
-        bindings: [keys],
+        // Ensure that the parent is not new...
+        bindings: [unsafeDeTagIds(parents.map((e) => e.idTagged))],
       },
     };
 
@@ -74,7 +72,7 @@ export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
     }
 
     // Any entity[o2m] still not loaded must be a leaf which didn't have any children; go ahead and mark it as loaded
-    for (const entity of entities) {
+    for (const entity of [...parents, ...entities]) {
       if (!isLoadedCollection(entity[o2m.fieldName])) {
         getEmInternalApi(em).setPreloadedRelation(entity.id, o2m.fieldName, []);
         entity[o2m.fieldName].preload();
@@ -82,6 +80,6 @@ export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
     }
 
     // We used preloading to load keys + any recursive keys, so the return value doesn't matter
-    return _keys.map(() => []);
+    return parents.map(() => []);
   });
 }

@@ -1,11 +1,13 @@
 import { recursiveChildrenDataLoader } from "../dataloaders/recursiveChildrenDataLoader";
 import { recursiveParentsDataLoader } from "../dataloaders/recursiveParentsDataLoader";
 import {
+  Collection,
   ensureNotDeleted,
   Entity,
   EntityMetadata,
   fail,
   getMetadata,
+  isCollection,
   isLoadedCollection,
   isLoadedReference,
   isReference,
@@ -116,6 +118,13 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
     // Check #loaded
     if (!this.isLoaded || (opts.forceReload && !this.entity.isNewEntity)) {
       await recursiveParentsDataLoader(this.entity.em, this).load(this.entity);
+      // See if there are any WIP changes, i.e. new parents, that the ^ SQL query didn't know to load.
+      // We don't have to `while` loop this, because if parent itself has WIP changes above it, then
+      // its own `RecursiveParentsCollectionImpl.load` will load it, before returning to this method.
+      const unloadedParent = this.findUnloadedReference();
+      if (unloadedParent) {
+        await recursiveParentsDataLoader(this.entity.em, this).load(unloadedParent.entity);
+      }
     }
     return this.filterDeleted(this.doGet(), opts);
   }
@@ -186,7 +195,14 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
     if (!this.isLoaded || (opts.forceReload && !this.entity.isNewEntity)) {
-      await recursiveChildrenDataLoader(this.entity.em, this).load(this.entity.idTagged);
+      await recursiveChildrenDataLoader(this.entity.em, this).load(this.entity);
+      const unloaded = this.findUnloadedCollections();
+      if (unloaded.length > 0) {
+        // Go through the entities own `fooRecursive` collection so that it's marked as loaded.
+        // We don't have to `while` loop this, because if they children themselves have any WIP
+        // changes, then their own `RecursiveChildrenCollectionImpl.load` will load them.
+        await Promise.all(unloaded.map((r) => (r.entity as any)[this.fieldName].load(opts)));
+      }
       this.#loaded = true;
     }
     return this.filterDeleted(this.doGet(), opts);
@@ -227,6 +243,25 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
       }
     }
     return children;
+  }
+
+  private findUnloadedCollections(): Collection<any, any>[] {
+    const visited = new Set<any>();
+    const unloaded: Collection<any, any>[] = [];
+    const todo: { relation: any; path: U[] }[] = [{ relation: this.entity[this.#o2mName], path: [this.entity as any] }];
+    while (todo.length > 0) {
+      const { relation, path } = todo.pop()!;
+      if (visited.has(relation)) throw new RecursiveCycleError(path);
+      visited.add(relation);
+      if (isCollection(relation) && !isLoadedCollection(relation)) {
+        unloaded.push(relation);
+      } else {
+        for (const child of getLoadedCollection(relation)) {
+          todo.push({ relation: child[this.#o2mName], path: [...path, child] });
+        }
+      }
+    }
+    return unloaded;
   }
 }
 

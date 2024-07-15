@@ -40,7 +40,7 @@ describe("RecursiveCollection", () => {
       // When we later load a4.mentorsRecursive
       const a4 = await em.load(Author, "a:4", "mentorsRecursive");
       // Then we see the new, unsaved mentor
-      expect(a4.mentorsRecursive.get).toMatchEntity([{ firstName: "a2" }, { firstName: "a1" }, { firstName: "a0" }]);
+      expect(a4.mentorsRecursive.get).toMatchEntity([{ firstName: "a3" }, { firstName: "a2" }, { firstName: "a1" }]);
     });
 
     it("detects wip cycles", async () => {
@@ -99,7 +99,7 @@ describe("RecursiveCollection", () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2", mentor_id: 1 });
       await insertAuthor({ first_name: "a3" });
-      await insertAuthor({ first_name: "a4", mentor_id: 2 });
+      await insertAuthor({ first_name: "a4", mentor_id: 3 });
       const em = newEntityManager();
       // Given we give a2 a new mentee of a3
       const [a2, a3] = await em.loadAll(Author, ["a:2", "a:3"]);

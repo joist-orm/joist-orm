@@ -20,6 +20,7 @@ export function recursiveParentsDataLoader<T extends Entity, U extends Entity>(
   const batchKey = `${meta.tableName}-${fieldName}`;
   return em.getLoader("m2o-recursive", batchKey, async (children) => {
     const m2o = meta.allFields[collection.m2oFieldName] as ManyToOneField;
+    // ...can `getField` return a new entity?
     const immediateParentIds = children.map((c) => getField(c, m2o.fieldName)).filter((id: any) => id !== undefined);
     const { columnName } = m2o.serde.columns[0];
 

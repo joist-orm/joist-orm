@@ -3,7 +3,7 @@ import { newEntityManager } from "@src/testEm";
 import { RecursiveCycleError } from "joist-orm";
 import { Author, newAuthor } from "../entities";
 
-describe("RecursiveRelations", () => {
+describe("RecursiveCollection", () => {
   describe("parents", () => {
     it("can load recursive levels of mentors", async () => {
       await insertAuthor({ first_name: "a1" });

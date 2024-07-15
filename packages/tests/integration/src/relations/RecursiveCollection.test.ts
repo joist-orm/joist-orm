@@ -28,6 +28,21 @@ describe("RecursiveCollection", () => {
       expect(a3.mentorsRecursive.get).toMatchEntity([{ firstName: "a2" }, { firstName: "a1" }, { firstName: "a0" }]);
     });
 
+    it("sees wip changes several layers up to unloaded relations", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertAuthor({ first_name: "a3" });
+      await insertAuthor({ first_name: "a4", mentor_id: 3 });
+      const em = newEntityManager();
+      // Given we give a3 an existing mentor a2
+      const [a2, a3] = await em.loadAll(Author, ["a:2", "a:3"]);
+      a3.mentor.set(a2);
+      // When we later load a4.mentorsRecursive
+      const a4 = await em.load(Author, "a:4", "mentorsRecursive");
+      // Then we see the new, unsaved mentor
+      expect(a4.mentorsRecursive.get).toMatchEntity([{ firstName: "a2" }, { firstName: "a1" }, { firstName: "a0" }]);
+    });
+
     it("detects wip cycles", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2", mentor_id: 1 });
@@ -77,6 +92,21 @@ describe("RecursiveCollection", () => {
       // When we later load a1.menteesRecursive
       const a1 = await em.load(Author, "a:1", "menteesRecursive");
       // Then we see the new, unsaved mentor
+      expect(a1.menteesRecursive.get).toMatchEntity([{ firstName: "a2" }, { firstName: "a3" }, { firstName: "a4" }]);
+    });
+
+    it("sees wip changes several layers down to unloaded relations", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertAuthor({ first_name: "a3" });
+      await insertAuthor({ first_name: "a4", mentor_id: 2 });
+      const em = newEntityManager();
+      // Given we give a2 a new mentee of a3
+      const [a2, a3] = await em.loadAll(Author, ["a:2", "a:3"]);
+      a2.mentees.add(a3);
+      // When we later load a1.menteesRecursive
+      const a1 = await em.load(Author, "a:1", "menteesRecursive");
+      // Then we see full mentor chain
       expect(a1.menteesRecursive.get).toMatchEntity([{ firstName: "a2" }, { firstName: "a3" }, { firstName: "a4" }]);
     });
 

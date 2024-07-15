@@ -8,6 +8,8 @@ import {
   getMetadata,
   isLoadedCollection,
   isLoadedReference,
+  isReference,
+  Reference,
 } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReadOnlyCollection } from "./ReadOnlyCollection";
@@ -119,13 +121,7 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
   }
 
   get isLoaded(): boolean {
-    const visited = new Set<any>();
-    for (let current = this.entity; current !== undefined; current = getLoadedReference(current[this.#m2oName])) {
-      if (!isLoadedReference(current[this.#m2oName])) return false;
-      if (visited.has(current)) throw new RecursiveCycleError([...visited, current]);
-      visited.add(current);
-    }
-    return true;
+    return this.findUnloadedReference() === undefined;
   }
 
   get fieldName(): string {
@@ -142,9 +138,9 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
 
   doGet(): U[] {
     ensureNotDeleted(this.entity, "pending");
-    if (!this.isLoaded) {
-      // This should only be callable in the type system if we've already resolved this to an instance
-      throw new Error(this.toString() + ".get was called when not loaded");
+    const unloaded = this.findUnloadedReference();
+    if (unloaded) {
+      throw new Error(this.toString() + `.get was called but ${unloaded} was not loaded`);
     }
     const parents: U[] = [];
     const visited = new Set<U>();
@@ -158,6 +154,17 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
       visited.add(current);
     }
     return parents;
+  }
+
+  private findUnloadedReference(): Reference<any, any, any> | undefined {
+    const visited = new Set<any>();
+    for (let current = this.entity; current !== undefined; current = getLoadedReference(current[this.#m2oName])) {
+      const relation = current[this.#m2oName];
+      if (isReference(relation) && !isLoadedReference(relation)) return relation;
+      if (visited.has(current)) throw new RecursiveCycleError([...visited, current]);
+      visited.add(current);
+    }
+    return undefined;
   }
 }
 
@@ -204,7 +211,7 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
   doGet(): U[] {
     ensureNotDeleted(this.entity, "pending");
     if (!this.isLoaded) {
-      throw new Error(this.toString() + ".get was called when not loaded");
+      throw new Error(this.toString() + `.get was called but when not loaded`);
     }
     const children: U[] = [];
     const visited = new Set<any>();

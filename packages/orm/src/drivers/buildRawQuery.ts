@@ -35,23 +35,27 @@ export function buildRawQuery(
     sql += maybeDistinct + s + maybeComma;
   });
 
+  // If we're doing "select distinct" for o2m joins, then all order bys must be selects
+  if (needsDistinct && parsed.orderBys.length > 0) {
+    for (const { alias, column } of parsed.orderBys) {
+      sql += `, ${alias}.${column}`;
+    }
+  }
+
   // Make sure the primary is first
   const primary = parsed.tables.find((t) => t.join === "primary")!;
   sql += ` FROM ${as(primary)}`;
+
   // Then the joins
   for (const t of parsed.tables) {
-    switch (t.join) {
-      case "inner":
-        sql += ` JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
-        break;
-      case "outer":
-        sql += ` LEFT OUTER JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
-        break;
-      case "primary":
-        // ignore
-        break;
-      default:
-        assertNever(t);
+    if (t.join === "inner") {
+      sql += ` JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
+    } else if (t.join === "outer") {
+      sql += ` LEFT OUTER JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
+    } else if (t.join === "primary") {
+      // handled above
+    } else {
+      assertNever(t.join);
     }
   }
 
@@ -68,10 +72,6 @@ export function buildRawQuery(
     }
   }
 
-  // If we're doing "select distinct" for o2m joins, then all order bys must be selects
-  // if (needsDistinct) {
-  //   query.select(`${alias}.${column}`);
-  // }
   if (parsed.orderBys.length > 0) {
     sql += " ORDER BY " + parsed.orderBys.map((ob) => kqDot(ob.alias, ob.column) + " " + ob.order).join(", ");
   }

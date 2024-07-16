@@ -115,8 +115,7 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
   // opts is an internal parameter
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
-    // Check #loaded
-    if (!this.isLoaded || (opts.forceReload && !this.entity.isNewEntity)) {
+    if (!this.isLoaded || opts.forceReload) {
       await recursiveParentsDataLoader(this.entity.em, this).load(this.entity);
       // See if there are any WIP changes, i.e. new parents, that the ^ SQL query didn't know to load.
       // We don't have to `while` loop this, because if parent itself has WIP changes above it, then
@@ -194,14 +193,17 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
   // opts is an internal parameter
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
-    if (!this.isLoaded || (opts.forceReload && !this.entity.isNewEntity)) {
-      await recursiveChildrenDataLoader(this.entity.em, this).load(this.entity);
-      const unloaded = this.findUnloadedCollections();
-      if (unloaded.length > 0) {
-        // Go through the entities own `fooRecursive` collection so that it's marked as loaded.
-        // We don't have to `while` loop this, because if they children themselves have any WIP
-        // changes, then their own `RecursiveChildrenCollectionImpl.load` will load them.
-        await Promise.all(unloaded.map((r) => (r.entity as any)[this.fieldName].load(opts)));
+    if (!this.isLoaded || opts.forceReload) {
+      // New entities can't have any children
+      if (!this.entity.isNewEntity) {
+        await recursiveChildrenDataLoader(this.entity.em, this).load(this.entity);
+        const unloaded = this.findUnloadedCollections();
+        if (unloaded.length > 0) {
+          // Go through the entities own `fooRecursive` collection so that it's marked as loaded.
+          // We don't have to `while` loop this, because if they children themselves have any WIP
+          // changes, then their own `RecursiveChildrenCollectionImpl.load` will load them.
+          await Promise.all(unloaded.map((r) => (r.entity as any)[this.fieldName].load(opts)));
+        }
       }
       this.#loaded = true;
     }

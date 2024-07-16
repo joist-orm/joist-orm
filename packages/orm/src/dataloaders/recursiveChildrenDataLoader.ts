@@ -46,7 +46,7 @@ export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
              UNION
              SELECT r.id, r.${columnName} FROM ${kq(meta.tableName)} r JOIN ${alias}_cte ON r.${columnName} = ${alias}_cte.id
           )`,
-        // Ensure that the parent is not new...
+        // RecursiveChildrenCollectionImpl won't call `.load` on new entities, so we can assume entities have an id
         bindings: [unsafeDeTagIds(parents.map((e) => e.idTagged))],
       },
     };

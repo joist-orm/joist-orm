@@ -1,3 +1,10 @@
+# [1.176.0](https://github.com/joist-orm/joist-orm/compare/v1.175.2...v1.176.0) (2024-07-16)
+
+
+### Features
+
+* Add recursive collection support. ([a10ea61](https://github.com/joist-orm/joist-orm/commit/a10ea61055e6441fb6a51f7721ec76038e7d1ffd))
+
 ## [1.175.2](https://github.com/joist-orm/joist-orm/compare/v1.175.1...v1.175.2) (2024-07-13)
 
 

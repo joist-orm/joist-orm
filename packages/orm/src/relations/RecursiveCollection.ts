@@ -184,12 +184,13 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
 {
   readonly #fieldName: keyof T & string;
   readonly #o2mName: keyof T & string;
-  #loaded = false;
+  #loaded: boolean;
 
   constructor(entity: T, fieldName: keyof T & string, o2mName: keyof T & string) {
     super(entity);
     this.#fieldName = fieldName;
     this.#o2mName = o2mName;
+    this.#loaded = entity.isNewEntity;
   }
 
   // opts is an internal parameter

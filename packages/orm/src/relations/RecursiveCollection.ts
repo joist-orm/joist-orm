@@ -52,6 +52,8 @@ abstract class AbstractRecursiveCollectionImpl<T extends Entity, U extends Entit
   T,
   U[]
 > {
+  abstract fieldName: string;
+
   get get(): U[] {
     return this.filterDeleted(this.doGet(), { withDeleted: false });
   }
@@ -158,7 +160,7 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
       current = getLoadedReference(current[this.#m2oName])
     ) {
       parents.push(current);
-      if (visited.has(current)) throw new RecursiveCycleError([...visited, current]);
+      if (visited.has(current)) throw new RecursiveCycleError(this, [...visited, current]);
       visited.add(current);
     }
     return parents;
@@ -169,7 +171,7 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
     for (let current = this.entity; current !== undefined; current = getLoadedReference(current[this.#m2oName])) {
       const relation = current[this.#m2oName];
       if (isReference(relation) && !isLoadedReference(relation)) return relation;
-      if (visited.has(current)) throw new RecursiveCycleError([...visited, current]);
+      if (visited.has(current)) throw new RecursiveCycleError(this, [...visited, current]);
       visited.add(current);
     }
     return undefined;
@@ -237,7 +239,7 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
     const todo: { relation: any; path: U[] }[] = [{ relation: this.entity[this.#o2mName], path: [this.entity as any] }];
     while (todo.length > 0) {
       const { relation, path } = todo.pop()!;
-      if (visited.has(relation)) throw new RecursiveCycleError(path);
+      if (visited.has(relation)) throw new RecursiveCycleError(this, path);
       visited.add(relation);
       for (const child of getLoadedCollection(relation)) {
         children.push(child);
@@ -253,7 +255,7 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
     const todo: { relation: any; path: U[] }[] = [{ relation: this.entity[this.#o2mName], path: [this.entity as any] }];
     while (todo.length > 0) {
       const { relation, path } = todo.pop()!;
-      if (visited.has(relation)) throw new RecursiveCycleError(path);
+      if (visited.has(relation)) throw new RecursiveCycleError(this, path);
       visited.add(relation);
       if (isCollection(relation) && !isLoadedCollection(relation)) {
         unloaded.push(relation);
@@ -277,8 +279,8 @@ function getLoadedCollection(relation: any): any {
 
 export class RecursiveCycleError extends Error {
   entities: Entity[] = [];
-  constructor(entities: Entity[]) {
-    super("Cycle detected in recursive relation");
+  constructor(relation: AbstractRecursiveCollectionImpl<any, any>, entities: Entity[]) {
+    super(`Cycle detected in ${relation.entity.toString()}.${relation.fieldName}`);
     this.entities = entities;
   }
 }

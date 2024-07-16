@@ -57,6 +57,7 @@ describe("RecursiveCollection", () => {
       try {
         await a3.mentorsRecursive.load();
       } catch (e: any) {
+        expect(e.message).toBe("Cycle detected in Author:3.mentorsRecursive");
         expect(e.entities).toMatchEntity([a3, { firstName: "a2" }, a1, a3]);
       }
     });
@@ -138,6 +139,7 @@ describe("RecursiveCollection", () => {
       try {
         await a1.menteesRecursive.load();
       } catch (e: any) {
+        expect(e.message).toBe("Cycle detected in Author:1.menteesRecursive");
         expect(e.entities).toMatchEntity([a1, { firstName: "a2" }, a3, a1]);
       }
     });

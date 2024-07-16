@@ -84,6 +84,13 @@ describe("RecursiveCollection", () => {
       a1.mentor.set(newAuthor(em, { mentor: undefined }));
       expect(await a1.mentorsRecursive.load()).toMatchEntity([{}]);
     });
+
+    it("is loaded on new entities", async () => {
+      const em = newEntityManager();
+      const a1 = em.create(Author, { firstName: "a1" });
+      expect(a1.mentorsRecursive.isLoaded).toBe(true);
+      expect(a1.mentorsRecursive.get).toMatchEntity([]);
+    });
   });
 
   describe("children", () => {
@@ -165,6 +172,12 @@ describe("RecursiveCollection", () => {
       const a1 = await em.load(Author, "a:1");
       a1.mentees.add(newAuthor(em));
       expect(await a1.menteesRecursive.load()).toMatchEntity([{}]);
+    });
+
+    it("is loaded on new entities", async () => {
+      const em = newEntityManager();
+      const a1 = em.create(Author, { firstName: "a1" });
+      expect(a1.menteesRecursive.get).toMatchEntity([]);
     });
   });
 });

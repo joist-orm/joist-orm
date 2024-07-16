@@ -69,6 +69,20 @@ describe("RecursiveCollection", () => {
       const em = newEntityManager();
       await expect(em.load(Author, "a:3", "mentorsRecursive")).rejects.toThrow(RecursiveCycleError);
     });
+
+    it("works on new instance", async () => {
+      const em = newEntityManager();
+      const a1 = newAuthor(em);
+      expect(await a1.mentorsRecursive.load()).toMatchEntity([]);
+    });
+
+    it("works on parent is new instance", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1");
+      a1.mentor.set(newAuthor(em, { mentor: undefined }));
+      expect(await a1.mentorsRecursive.load()).toMatchEntity([{}]);
+    });
   });
 
   describe("children", () => {
@@ -135,6 +149,20 @@ describe("RecursiveCollection", () => {
       await update("authors", { id: 1, mentor_id: 3 });
       const em = newEntityManager();
       await expect(em.load(Author, "a:1", "menteesRecursive")).rejects.toThrow(RecursiveCycleError);
+    });
+
+    it("works on new instance", async () => {
+      const em = newEntityManager();
+      const a1 = newAuthor(em);
+      expect(await a1.menteesRecursive.load()).toMatchEntity([]);
+    });
+
+    it("works on child is new instance", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1");
+      a1.mentees.add(newAuthor(em));
+      expect(await a1.menteesRecursive.load()).toMatchEntity([{}]);
     });
   });
 });

@@ -91,6 +91,14 @@ describe("RecursiveCollection", () => {
       expect(a1.mentorsRecursive.isLoaded).toBe(true);
       expect(a1.mentorsRecursive.get).toMatchEntity([]);
     });
+
+    it("doesn't consider self-referential values as cycles", async () => {
+      const em = newEntityManager();
+      const a1 = newAuthor(em);
+      a1.mentor.set(a1);
+      await em.flush();
+      expect(await a1.mentorsRecursive.load()).toMatchEntity([a1]);
+    });
   });
 
   describe("children", () => {
@@ -178,6 +186,14 @@ describe("RecursiveCollection", () => {
       const em = newEntityManager();
       const a1 = em.create(Author, { firstName: "a1" });
       expect(a1.menteesRecursive.get).toMatchEntity([]);
+    });
+
+    it("doesn't consider self-referential values as cycles", async () => {
+      const em = newEntityManager();
+      const a1 = newAuthor(em);
+      a1.mentor.set(a1);
+      await em.flush();
+      expect(await a1.menteesRecursive.load()).toMatchEntity([a1]);
     });
   });
 });

@@ -152,6 +152,8 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
     if (unloaded) {
       throw new Error(this.toString() + `.get was called but ${unloaded} was not loaded`);
     }
+    // If we're self-referential, then we don't consider it a cycle.
+    if (this.isSelfReferential()) return [this.entity] as any;
     const parents: U[] = [];
     const visited = new Set<U>();
     for (
@@ -167,6 +169,7 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
   }
 
   private findUnloadedReference(): Reference<any, any, any> | undefined {
+    if (this.isSelfReferential()) return undefined;
     const visited = new Set<any>();
     for (let current = this.entity; current !== undefined; current = getLoadedReference(current[this.#m2oName])) {
       const relation = current[this.#m2oName];
@@ -175,6 +178,10 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
       visited.add(current);
     }
     return undefined;
+  }
+
+  private isSelfReferential(): boolean {
+    return getLoadedReference(this.entity[this.#m2oName]) === this.entity;
   }
 }
 

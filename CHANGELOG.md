@@ -1,3 +1,10 @@
+# [1.178.0](https://github.com/joist-orm/joist-orm/compare/v1.177.0...v1.178.0) (2024-07-17)
+
+
+### Features
+
+* Add recursive o2o support. ([9dba18b](https://github.com/joist-orm/joist-orm/commit/9dba18bc9e5907d2e9f718b55f4cd4a5db70083d))
+
 # [1.177.0](https://github.com/joist-orm/joist-orm/compare/v1.176.1...v1.177.0) (2024-07-17)
 
 

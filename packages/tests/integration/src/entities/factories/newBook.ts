@@ -9,6 +9,7 @@ export function newBook(em: EntityManager, opts: FactoryOpts<Book> = {}): DeepNe
   return newTestInstance(em, Book, opts, {
     // Pass a default age so that we can test deep-merging author.age and opts.firstName
     author: maybeNew<Author>({ age: 40 }),
+    sequel: null!, // noValue<Book>(),
     order: testIndex,
   });
 }

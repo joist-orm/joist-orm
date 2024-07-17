@@ -10,6 +10,10 @@ import {
   UnknownProperty,
   getProperties,
 } from "joist-orm";
+import {
+  RecursiveChildrenCollectionImpl,
+  RecursiveParentsCollectionImpl,
+} from "joist-orm/build/relations/RecursiveCollection";
 
 describe("getProperties", () => {
   it("should work", () => {
@@ -24,6 +28,10 @@ describe("getProperties", () => {
       afterCommitCheckTagsChanged: expect.any(UnknownProperty),
       currentDraftAuthor: expect.any(OneToOneReferenceImpl),
       favoriteAuthor: expect.any(OneToOneReferenceImpl),
+      prequel: expect.any(ManyToOneReferenceImpl),
+      prequelsRecursive: expect.any(RecursiveParentsCollectionImpl),
+      sequel: expect.any(OneToOneReferenceImpl),
+      sequelsRecursive: expect.any(RecursiveChildrenCollectionImpl),
       image: expect.any(OneToOneReferenceImpl),
       tags: expect.any(ManyToManyCollection),
       favoriteColorsRuleInvoked: 0,

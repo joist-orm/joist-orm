@@ -828,8 +828,10 @@ export const userMeta: EntityMetadata<User> = {
     "originalEmail": { kind: "primitive", fieldName: "originalEmail", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("originalEmail", "original_email", "character varying"), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
+    "manager": { kind: "m2o", fieldName: "manager", fieldIdName: "managerId", derived: false, required: false, otherMetadata: () => userMeta, otherFieldName: "directs", serde: new KeySerde("u", "manager", "manager_id", "int"), immutable: false },
     "authorManyToOne": { kind: "m2o", fieldName: "authorManyToOne", fieldIdName: "authorManyToOneId", derived: false, required: false, otherMetadata: () => authorMeta, otherFieldName: "userOneToOne", serde: new KeySerde("a", "authorManyToOne", "author_id", "int"), immutable: false },
     "createdComments": { kind: "o2m", fieldName: "createdComments", fieldIdName: "createdCommentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "user", serde: undefined, immutable: false },
+    "directs": { kind: "o2m", fieldName: "directs", fieldIdName: "directIds", required: false, otherMetadata: () => userMeta, otherFieldName: "manager", serde: undefined, immutable: false },
     "likedComments": { kind: "m2m", fieldName: "likedComments", fieldIdName: "likedCommentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "likedByUsers", serde: undefined, immutable: false, joinTableName: "users_to_comments", columnNames: ["liked_by_user_id", "comment_id"] },
     "favoritePublisher": {
       kind: "poly",

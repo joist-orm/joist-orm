@@ -250,6 +250,8 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "users", {
     name: { type: "varchar(255)", notNull: true },
     email: { type: "varchar(255)", notNull: true },
+    // For testing skipping recursive relations
+    manager_id: foreignKey("users", { notNull: false, otherFieldName: "directs" }),
     // for testing o2o/m2o renames
     author_id: foreignKey("authors", {
       notNull: false,

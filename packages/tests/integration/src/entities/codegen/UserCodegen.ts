@@ -47,6 +47,7 @@ import { type Context } from "src/context";
 import { type IpAddress, type PasswordValue } from "src/entities/types";
 import {
   AdminUser,
+  type AdminUserId,
   Author,
   type AuthorId,
   authorMeta,
@@ -83,6 +84,7 @@ export interface UserFields {
   originalEmail: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  manager: { kind: "m2o"; type: User; nullable: undefined; derived: false };
   authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: undefined };
 }
@@ -94,16 +96,20 @@ export interface UserOpts {
   password?: PasswordValue | null;
   bio?: string;
   originalEmail: string;
+  manager?: User | UserId | null;
   authorManyToOne?: Author | AuthorId | null;
   favoritePublisher?: UserFavoritePublisher;
   createdComments?: Comment[];
+  directs?: User[];
   likedComments?: Comment[];
 }
 
 export interface UserIdsOpts {
+  managerId?: UserId | null;
   authorManyToOneId?: AuthorId | null;
   favoritePublisherId?: IdOf<UserFavoritePublisher> | null;
   createdCommentIds?: CommentId[] | null;
+  directIds?: UserId[] | null;
   likedCommentIds?: CommentId[] | null;
 }
 
@@ -117,8 +123,11 @@ export interface UserFilter {
   originalEmail?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  manager?: EntityFilter<User, UserId, FilterOf<User>, null>;
+  managerAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
   authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   createdComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  directs?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   likedComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   favoritePublisher?: EntityFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
   favoritePublisherLargePublisher?: EntityFilter<LargePublisher, IdOf<LargePublisher>, FilterOf<LargePublisher>, null>;
@@ -135,8 +144,11 @@ export interface UserGraphQLFilter {
   originalEmail?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  manager?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null>;
+  managerAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
   authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  directs?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   likedComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   favoritePublisher?: EntityGraphQLFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
   favoritePublisherLargePublisher?: EntityGraphQLFilter<
@@ -163,6 +175,7 @@ export interface UserOrder {
   originalEmail?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  manager?: UserOrder;
   authorManyToOne?: AuthorOrder;
 }
 
@@ -319,6 +332,21 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
       "user_id",
       undefined,
     );
+  }
+
+  get directs(): Collection<User, User> {
+    return this.__data.relations.directs ??= hasMany(
+      this as any as User,
+      userMeta,
+      "directs",
+      "manager",
+      "manager_id",
+      undefined,
+    );
+  }
+
+  get manager(): ManyToOneReference<User, User, undefined> {
+    return this.__data.relations.manager ??= hasOne(this as any as User, userMeta, "manager", "directs");
   }
 
   get authorManyToOne(): ManyToOneReference<User, Author, undefined> {

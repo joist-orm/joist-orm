@@ -43,6 +43,8 @@ const relationConfig = z
     stiNotNull: z.optional(z.boolean()),
     /** Whether the user will configure a default value for this field via `config.setDefault`. */
     hasConfigDefault: z.optional(z.boolean()),
+    /** Allow skipping self-referential fields getting a `...Recursive` relation. */
+    skipRecursiveRelations: z.optional(z.boolean()),
   })
   .strict();
 

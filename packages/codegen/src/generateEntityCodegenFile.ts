@@ -99,7 +99,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   primitives.push(...createRegularEnums(meta, entity)); // Add ManyToOne enums
   primitives.push(...createArrayEnums(meta)); // Add integer[] enums
   primitives.push(...createPgEnums(meta)); // Add native enums
-  const relations = createRelations(meta, entity, entityName);
+  const relations = createRelations(config, meta, entity, entityName);
 
   const configName = `${camelCase(entityName)}Config`;
   const metadata = imp(`${camelCase(entityName)}Meta@./entities.ts`);
@@ -810,7 +810,7 @@ function createPgEnums(meta: EntityDbMetadata) {
   });
 }
 
-function createRelations(meta: EntityDbMetadata, entity: Entity, entityName: string) {
+function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity, entityName: string) {
   // Add ManyToOne entities
   const m2o: Relation[] = meta.manyToOnes.map((m2o) => {
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
@@ -829,6 +829,8 @@ function createRelations(meta: EntityDbMetadata, entity: Entity, entityName: str
   // Add any recursive ManyToOne entities
   const m2oRecursive: Relation[] = meta.manyToOnes
     .filter((m2o) => m2o.otherEntity.name === meta.name)
+    // Allow disabling recursive relations
+    .filter((m2o) => !(config.entities[meta.name]?.relations?.[m2o.fieldName]?.skipRecursiveRelations === true))
     .flatMap((m2o) => {
       const { fieldName: m2oName, otherFieldName, otherEntity } = m2o;
       const parentsField = `${plural(m2oName)}Recursive`;

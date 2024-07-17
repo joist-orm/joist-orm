@@ -93,7 +93,7 @@
         "ipAddress": { "type": "IpAddress@src/entities/types" },
         "password": { "serde": "PasswordValueSerde@src/entities/types", "type": "PasswordValue@src/entities/types" }
       },
-      "relations": { "favoritePublisher": { "polymorphic": true } },
+      "relations": { "favoritePublisher": { "polymorphic": true }, "manager": { "skipRecursiveRelations": true } },
       "tag": "u"
     }
   },

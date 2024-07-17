@@ -6,10 +6,12 @@ import {
   addTablePerClassJoinsAndClassTag,
   getField,
   isLoadedCollection,
+  isLoadedOneToOneReference,
   kq,
   ManyToOneField,
   maybeResolveReferenceToId,
   OneToManyField,
+  OneToOneField,
   ParsedFindQuery,
   unsafeDeTagIds,
 } from "../index";
@@ -23,7 +25,7 @@ export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
   const { meta, fieldName } = collection;
   const batchKey = `${meta.tableName}-${fieldName}`;
   return em.getLoader("o2m-recursive", batchKey, async (parents) => {
-    const o2m = meta.allFields[collection.o2mFieldName] as OneToManyField;
+    const o2m = meta.allFields[collection.o2mFieldName] as OneToManyField | OneToOneField;
     const m2o = meta.allFields[o2m.otherFieldName] as ManyToOneField;
     const { columnName } = m2o.serde.columns[0];
 
@@ -73,7 +75,7 @@ export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
 
     // Any entity[o2m] still not loaded must be a leaf which didn't have any children; go ahead and mark it as loaded
     for (const entity of [...parents, ...entities]) {
-      if (!isLoadedCollection(entity[o2m.fieldName])) {
+      if (!isLoadedCollection(entity[o2m.fieldName]) && !isLoadedOneToOneReference(entity[o2m.fieldName])) {
         getEmInternalApi(em).setPreloadedRelation(entity.id, o2m.fieldName, []);
         entity[o2m.fieldName].preload();
       }

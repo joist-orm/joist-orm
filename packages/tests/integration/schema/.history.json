@@ -92,8 +92,10 @@
     "notes",
     "order",
     "originalOrder",
+    "prequel",
     "randomComment",
     "reviews",
+    "sequel",
     "tags",
     "title",
     "updatedAt"

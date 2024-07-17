@@ -1,7 +1,6 @@
 import { recursiveChildrenDataLoader } from "../dataloaders/recursiveChildrenDataLoader";
 import { recursiveParentsDataLoader } from "../dataloaders/recursiveParentsDataLoader";
 import {
-  Collection,
   ensureNotDeleted,
   Entity,
   EntityMetadata,
@@ -9,9 +8,12 @@ import {
   getMetadata,
   isCollection,
   isLoadedCollection,
+  isLoadedOneToOneReference,
   isLoadedReference,
+  isOneToOneReference,
   isReference,
   Reference,
+  Relation,
 } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReadOnlyCollection } from "./ReadOnlyCollection";
@@ -250,15 +252,17 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
     return children;
   }
 
-  private findUnloadedCollections(): Collection<any, any>[] {
+  private findUnloadedCollections(): Relation<any, any>[] {
     const visited = new Set<any>();
-    const unloaded: Collection<any, any>[] = [];
+    const unloaded: Relation<any, any>[] = [];
     const todo: { relation: any; path: U[] }[] = [{ relation: this.entity[this.#o2mName], path: [this.entity as any] }];
     while (todo.length > 0) {
       const { relation, path } = todo.pop()!;
       if (visited.has(relation)) throw new RecursiveCycleError(this, path);
       visited.add(relation);
       if (isCollection(relation) && !isLoadedCollection(relation)) {
+        unloaded.push(relation);
+      } else if (isOneToOneReference(relation) && !isLoadedOneToOneReference(relation)) {
         unloaded.push(relation);
       } else {
         for (const child of getLoadedCollection(relation)) {
@@ -275,7 +279,13 @@ function getLoadedReference(relation: any): any {
 }
 
 function getLoadedCollection(relation: any): any {
-  return isLoadedCollection(relation) ? relation.get : fail(`${relation} was not loaded`);
+  return isLoadedCollection(relation)
+    ? relation.get
+    : isLoadedOneToOneReference(relation)
+      ? relation.get
+        ? [relation.get]
+        : []
+      : fail(`${relation} was not loaded`);
 }
 
 export class RecursiveCycleError extends Error {

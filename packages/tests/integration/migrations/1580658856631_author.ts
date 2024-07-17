@@ -166,6 +166,8 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "books", {
     title: { type: "varchar(255)", notNull: true },
     author_id: foreignKey("authors", { notNull: true }),
+    // For testing recursive keys with o2os
+    prequel_id: foreignKey("books", { notNull: false, otherFieldName: "sequel", unique: true }),
     // for testing columns that are keywords (and testing default values)
     order: { type: "integer", notNull: true, default: 1 },
     // for testing `NOT NULL` fields with `config.setDefault`s are optional

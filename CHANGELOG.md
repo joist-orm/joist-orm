@@ -1,3 +1,10 @@
+## [1.176.1](https://github.com/joist-orm/joist-orm/compare/v1.176.0...v1.176.1) (2024-07-17)
+
+
+### Bug Fixes
+
+* Test recursive collections loaded on new entities. ([0ecf476](https://github.com/joist-orm/joist-orm/commit/0ecf476b6d8b5e3201050259874a22bbef94f86d))
+
 # [1.176.0](https://github.com/joist-orm/joist-orm/compare/v1.175.2...v1.176.0) (2024-07-16)
 
 

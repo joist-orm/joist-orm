@@ -16,6 +16,8 @@ import {
   hasManyToMany,
   hasOne,
   hasOneToOne,
+  hasRecursiveChildren,
+  hasRecursiveParents,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -29,6 +31,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type ReadOnlyCollection,
   setField,
   setOpts,
   type TaggedId,
@@ -78,6 +81,7 @@ export interface BookFields {
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  prequel: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
   randomComment: { kind: "m2o"; type: Comment; nullable: undefined; derived: false };
 }
@@ -88,8 +92,10 @@ export interface BookOpts {
   notes?: string;
   acknowledgements?: string | null;
   deletedAt?: Date | null;
+  prequel?: Book | BookId | null;
   author: Author | AuthorId;
   randomComment?: Comment | CommentId | null;
+  sequel?: Book | null;
   currentDraftAuthor?: Author | null;
   favoriteAuthor?: Author | null;
   image?: Image | null;
@@ -100,8 +106,10 @@ export interface BookOpts {
 }
 
 export interface BookIdsOpts {
+  prequelId?: BookId | null;
   authorId?: AuthorId | null;
   randomCommentId?: CommentId | null;
+  sequelId?: BookId | null;
   currentDraftAuthorId?: AuthorId | null;
   favoriteAuthorId?: AuthorId | null;
   imageId?: ImageId | null;
@@ -120,8 +128,10 @@ export interface BookFilter {
   deletedAt?: ValueFilter<Date, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  prequel?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
   randomComment?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null>;
+  sequel?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   currentDraftAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   favoriteAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
@@ -140,8 +150,10 @@ export interface BookGraphQLFilter {
   deletedAt?: ValueGraphQLFilter<Date>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  prequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
   randomComment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null>;
+  sequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   favoriteAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
@@ -160,6 +172,7 @@ export interface BookOrder {
   deletedAt?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  prequel?: BookOrder;
   author?: AuthorOrder;
   randomComment?: CommentOrder;
 }
@@ -334,12 +347,42 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
     );
   }
 
+  get prequel(): ManyToOneReference<Book, Book, undefined> {
+    return this.__data.relations.prequel ??= hasOne(this as any as Book, bookMeta, "prequel", "sequel");
+  }
+
   get author(): ManyToOneReference<Book, Author, never> {
     return this.__data.relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
   }
 
   get randomComment(): ManyToOneReference<Book, Comment, undefined> {
     return this.__data.relations.randomComment ??= hasOne(this as any as Book, commentMeta, "randomComment", "books");
+  }
+
+  get prequelsRecursive(): ReadOnlyCollection<Book, Book> {
+    return this.__data.relations.prequelsRecursive ??= hasRecursiveParents(
+      this as any as Book,
+      "prequelsRecursive",
+      "prequel",
+    );
+  }
+
+  get sequelRecursive(): ReadOnlyCollection<Book, Book> {
+    return this.__data.relations.sequelRecursive ??= hasRecursiveChildren(
+      this as any as Book,
+      "sequelRecursive",
+      "sequel",
+    );
+  }
+
+  get sequel(): OneToOneReference<Book, Book> {
+    return this.__data.relations.sequel ??= hasOneToOne(
+      this as any as Book,
+      bookMeta,
+      "sequel",
+      "prequel",
+      "prequel_id",
+    );
   }
 
   get currentDraftAuthor(): OneToOneReference<Book, Author> {

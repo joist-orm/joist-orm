@@ -3,3 +3,5 @@ procs:
     shell: "yarn db"
   build:
     shell: "yarn build -w"
+  shell:
+    shell: "$SHELL"

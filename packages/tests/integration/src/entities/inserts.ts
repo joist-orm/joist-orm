@@ -74,6 +74,7 @@ export function insertBook(row: {
   id?: number;
   title: string;
   author_id: number | null;
+  prequel_id?: number | null;
   deleted_at?: Date;
   order?: number;
 }) {

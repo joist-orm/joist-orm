@@ -1,7 +1,7 @@
-import { insertAuthor, update } from "@src/entities/inserts";
+import { insertAuthor, insertBook, update } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 import { RecursiveCycleError } from "joist-orm";
-import { Author, newAuthor } from "../entities";
+import { Author, Book, newAuthor, newBook } from "../entities";
 
 describe("RecursiveCollection", () => {
   describe("parents", () => {
@@ -178,6 +178,100 @@ describe("RecursiveCollection", () => {
       const em = newEntityManager();
       const a1 = em.create(Author, { firstName: "a1" });
       expect(a1.menteesRecursive.get).toMatchEntity([]);
+    });
+  });
+
+  describe("children o2o", () => {
+    it("can load recursive levels of sequels", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1, prequel_id: 1 });
+      await insertBook({ title: "b3", author_id: 1, prequel_id: 2 });
+      const em = newEntityManager();
+      const b1 = await em.load(Book, "b:1", "sequelRecursive");
+      expect(b1.sequelRecursive.get).toMatchEntity([{ title: "b2" }, { title: "b3" }]);
+    });
+
+    it("sees wip changes several layers down", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1, prequel_id: 1 });
+      await insertBook({ title: "b3", author_id: 1, prequel_id: 2 });
+      const em = newEntityManager();
+      // Given we give b3 a new sequel
+      const b3 = await em.load(Book, "b:3");
+      newBook(em, { title: "b4", author: b3.author.id, prequel: b3 });
+      // When we later load b1.sequelRecursive
+      const b1 = await em.load(Book, "b:1", "sequelRecursive");
+      // Then we see the new, unsaved sequel
+      expect(b1.sequelRecursive.get).toMatchEntity([{ title: "b2" }, { title: "b3" }, { title: "b4" }]);
+    });
+
+    it("sees wip changes several layers down to unloaded relations", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1, prequel_id: 1 });
+      await insertBook({ title: "b3", author_id: 1 });
+      await insertBook({ title: "b4", author_id: 1, prequel_id: 3 });
+      const em = newEntityManager();
+      // Given we give b2 a new sequel of b3
+      const [b2, b3] = await em.loadAll(Book, ["b:2", "b:3"]);
+      b2.sequel.set(b3);
+      // When we later load b1.sequelRecursive
+      const b1 = await em.load(Book, "b:1", "sequelRecursive");
+      // Then we see full mentor chain
+      expect(b1.sequelRecursive.get).toMatchEntity([{ title: "b2" }, { title: "b3" }, { title: "b4" }]);
+    });
+
+    it("detects wip cycles", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1, prequel_id: 1 });
+      await insertBook({ title: "b3", author_id: 1, prequel_id: 2 });
+      const em = newEntityManager();
+      const [b1, b3] = await em.loadAll(Book, ["b:1", "b:3"]);
+      b3.sequel.set(b1);
+      // When we later load b1.sequelRecursive, we expect it to throw
+      await expect(b1.sequelRecursive.load()).rejects.toThrow(RecursiveCycleError);
+      // And it knows the path that caused the error
+      try {
+        await b1.sequelRecursive.load();
+      } catch (e: any) {
+        expect(e.message).toBe("Cycle detected in Book:1.sequelRecursive");
+        expect(e.entities).toMatchEntity([b1, { title: "b2" }, b3, b1]);
+      }
+    });
+
+    it("detects persisted cycles", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1, prequel_id: 1 });
+      await insertBook({ title: "b3", author_id: 1, prequel_id: 2 });
+      await update("books", { id: 1, prequel_id: 3 });
+      const em = newEntityManager();
+      await expect(em.load(Book, "b:1", "sequelRecursive")).rejects.toThrow(RecursiveCycleError);
+    });
+
+    it("works on new instance", async () => {
+      const em = newEntityManager();
+      const b1 = newBook(em);
+      expect(await b1.sequelRecursive.load()).toMatchEntity([]);
+    });
+
+    it("works on child is new instance", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const b1 = await em.load(Book, "b:1");
+      const b2 = newBook(em);
+      b1.sequel.set(b2);
+      expect(await b1.sequelRecursive.load()).toMatchEntity([b2]);
+    });
+
+    it("is loaded on new entities", async () => {
+      const em = newEntityManager();
+      const b1 = em.create(Book, { title: "b1", author: newAuthor(em) });
+      expect(b1.sequelRecursive.get).toMatchEntity([]);
     });
   });
 });

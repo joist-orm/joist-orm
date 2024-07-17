@@ -367,10 +367,10 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
     );
   }
 
-  get sequelRecursive(): ReadOnlyCollection<Book, Book> {
-    return this.__data.relations.sequelRecursive ??= hasRecursiveChildren(
+  get sequelsRecursive(): ReadOnlyCollection<Book, Book> {
+    return this.__data.relations.sequelsRecursive ??= hasRecursiveChildren(
       this as any as Book,
-      "sequelRecursive",
+      "sequelsRecursive",
       "sequel",
     );
   }

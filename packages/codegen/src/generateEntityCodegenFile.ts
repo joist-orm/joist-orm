@@ -834,7 +834,8 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
     .flatMap((m2o) => {
       const { fieldName: m2oName, otherFieldName, otherEntity } = m2o;
       const parentsField = `${plural(m2oName)}Recursive`;
-      const childrenField = `${otherFieldName}Recursive`;
+      const maybeOneToOne = meta.oneToOnes.find((o2o) => o2o.fieldName === otherFieldName);
+      const childrenField = maybeOneToOne ? `${plural(otherFieldName)}Recursive` : `${otherFieldName}Recursive`;
       return [
         {
           kind: "concrete",

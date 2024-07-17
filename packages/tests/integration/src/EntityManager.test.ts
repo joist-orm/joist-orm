@@ -506,7 +506,8 @@ describe("EntityManager", () => {
     await em.refresh(b1);
     // Then we have the new data
     expect(b1.tags.get!.length).toEqual(2);
-    expect(queries.length).toBe(isPreloadingEnabled ? 1 : 3);
+    // 2 because of Book.author + Book.prequel
+    expect(queries.length).toBe(isPreloadingEnabled ? 2 : 3);
   });
 
   it("refresh an entity with a loaded PersistedAsyncReference", async () => {

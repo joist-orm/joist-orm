@@ -252,6 +252,7 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
     return children;
   }
 
+  /** Finds any children/downstream o2m collections or o2o references. */
   private findUnloadedCollections(): Relation<any, any>[] {
     const visited = new Set<any>();
     const unloaded: Relation<any, any>[] = [];

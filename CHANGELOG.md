@@ -1,3 +1,10 @@
+# [1.177.0](https://github.com/joist-orm/joist-orm/compare/v1.176.1...v1.177.0) (2024-07-17)
+
+
+### Features
+
+* Allow skipping recursive relations. ([77ead04](https://github.com/joist-orm/joist-orm/commit/77ead04d3c811fa267f6c7b03dea204afa754ed6))
+
 ## [1.176.1](https://github.com/joist-orm/joist-orm/compare/v1.176.0...v1.176.1) (2024-07-17)
 
 

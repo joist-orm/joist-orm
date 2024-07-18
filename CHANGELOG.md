@@ -1,3 +1,10 @@
+## [1.178.1](https://github.com/joist-orm/joist-orm/compare/v1.178.0...v1.178.1) (2024-07-18)
+
+
+### Bug Fixes
+
+* Prune undefined order bys. ([8b3b460](https://github.com/joist-orm/joist-orm/commit/8b3b460a08791190429ceb33ad8aaa72bb0d8ec1))
+
 # [1.178.0](https://github.com/joist-orm/joist-orm/compare/v1.177.0...v1.178.0) (2024-07-17)
 
 

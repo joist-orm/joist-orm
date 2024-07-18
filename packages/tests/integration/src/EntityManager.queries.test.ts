@@ -1463,6 +1463,24 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can prune order by undefined", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+
+    const em = newEntityManager();
+    const orderBy = { firstName: undefined } satisfies AuthorOrder;
+    const authors = await em.find(Author, {}, { orderBy });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a1");
+    expect(authors[1].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, {}, { ...opts, orderBy })).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+    });
+  });
+
   it("can order by multiple m2os", async () => {
     await insertPublisher({ id: 1, name: "p1" });
     await insertPublisher({ id: 2, name: "p2" });

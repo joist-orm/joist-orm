@@ -391,6 +391,7 @@ export function parseFindQuery(
     const entries = Object.entries(orderBy);
     if (entries.length === 0) return;
     for (const [key, value] of entries) {
+      if (!value) continue; // prune undefined
       const field = meta.allFields[key] ?? fail(`${key} not found on ${meta.tableName}`);
       if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
         const column = field.serde.columns[0];

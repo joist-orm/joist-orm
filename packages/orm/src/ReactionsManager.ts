@@ -6,6 +6,7 @@ import { NoIdError } from "./index";
 import { followReverseHint } from "./reactiveHints";
 import { Relation } from "./relations";
 import { AbstractPropertyImpl } from "./relations/AbstractPropertyImpl";
+import { groupBy } from "./utils";
 
 const { gray, green, yellow, white } = ansis;
 
@@ -170,10 +171,13 @@ export class ReactionsManager {
       // Multiple reactions could have pointed back to the same reactive field, so
       // dedupe the found relations before calling .load.
       const unique = [...new Set(relations.flat())];
-
+      this.logger?.logLoading(unique);
       // Use allSettled so that we can watch for derived values that want to use the entity'd id,
       // i.e. they can fail, but we'll queue them from later.
+      const startTime = this.logger?.now() ?? 0;
       const results = await Promise.allSettled(unique.map((r: any) => r.load()));
+      const endTime = this.logger?.now() ?? 0;
+      this.logger?.logLoadingTime(endTime - startTime);
       const failures: any[] = [];
       results.forEach((result, i) => {
         if (result.status === "rejected") {
@@ -249,6 +253,10 @@ export class ReactionLogger {
     this.writeFn = writeFn;
   }
 
+  now(): number {
+    return performance.now();
+  }
+
   logQueued(entity: Entity, fieldName: string, rf: ReactiveField): void {
     this.log(
       green.bold(`${entity.toTaggedString()}`) + yellow(`.${fieldName}`),
@@ -292,6 +300,25 @@ export class ReactionLogger {
         gray("]"),
       );
     }
+  }
+
+  logLoading(relations: any[]): void {
+    this.log(" ", gray("Loading"), String(relations.length), gray("relations..."));
+    // Group by the relation name
+    [...groupBy(relations, (r) => `${r.entity.constructor.name}.${r.fieldName}`).entries()].forEach(([, relations]) => {
+      const r = relations[0];
+      this.log(
+        "   ",
+        green.bold(r.entity.constructor.name) + green(".") + yellow(r.fieldName),
+        gray("-> ["),
+        String(relations.map((r: any) => r.entity.toTaggedString()).join(" ")),
+        gray("]"),
+      );
+    });
+  }
+
+  logLoadingTime(millis: number): void {
+    this.log("   ", gray("took"), String(Math.floor(millis)), gray("millis"));
   }
 
   private log(...line: string[]): void {

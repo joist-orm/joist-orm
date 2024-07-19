@@ -166,6 +166,10 @@ describe("ReactiveReference", () => {
        "    [ b:1 ] -> [ a:1 ]↩",
        "  Walked 1 Book.favoriteAuthor.publisher paths, found 1 Publisher.titlesOfFavoriteBooks to recalc↩",
        "    [ b:1 ] -> [ p:1 ]↩",
+       "  Loading 2 relations...↩",
+       "    Author.search -> [ a:1 ]↩",
+       "    SmallPublisher.titlesOfFavoriteBooks -> [ p:1 ]↩",
+       "    took 0 millis↩",
      ]
     `);
   });
@@ -174,9 +178,17 @@ describe("ReactiveReference", () => {
 beforeEach(() => {
   reactionOutput = [];
   setReactionLogging(
-    new ReactionLogger((line: string) => {
-      reactionOutput.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
-    }),
+    new (class extends ReactionLogger {
+      constructor() {
+        super((line: string) => {
+          reactionOutput.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
+        });
+      }
+      // Ensure deterministic output
+      now() {
+        return 0;
+      }
+    })(),
   );
 });
 

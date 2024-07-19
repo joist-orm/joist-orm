@@ -1,3 +1,10 @@
+## [1.179.1](https://github.com/joist-orm/joist-orm/compare/v1.179.0...v1.179.1) (2024-07-19)
+
+
+### Bug Fixes
+
+* Lightly optimize followReverseHint. ([#1153](https://github.com/joist-orm/joist-orm/issues/1153)) ([a697dc5](https://github.com/joist-orm/joist-orm/commit/a697dc5049acf761f760893d449b04d7180a28bc))
+
 # [1.179.0](https://github.com/joist-orm/joist-orm/compare/v1.178.1...v1.179.0) (2024-07-19)
 
 

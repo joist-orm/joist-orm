@@ -1,3 +1,10 @@
+# [1.179.0](https://github.com/joist-orm/joist-orm/compare/v1.178.1...v1.179.0) (2024-07-19)
+
+
+### Features
+
+* Add loading info to ReactionLogger output. ([#1151](https://github.com/joist-orm/joist-orm/issues/1151)) ([157ad58](https://github.com/joist-orm/joist-orm/commit/157ad580ecf90563518bcd117f19174ceaa79d32))
+
 ## [1.178.1](https://github.com/joist-orm/joist-orm/compare/v1.178.0...v1.178.1) (2024-07-18)
 
 

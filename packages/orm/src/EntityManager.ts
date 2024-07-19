@@ -228,7 +228,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   #dataloaders: Record<string, LoaderCache> = {};
   readonly #joinRows: Record<string, JoinRows> = {};
   /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
-  readonly #rm = new ReactionsManager();
+  readonly #rm = new ReactionsManager(this);
   /** Ensures our `em.flush` method is not interrupted. */
   readonly #fl = new FlushLock();
   readonly #hooks: Record<EntityManagerHook, HookFn[]> = { beforeTransaction: [], afterTransaction: [] };

@@ -2,10 +2,11 @@ import ansis from "ansis";
 import { Entity } from "./Entity";
 import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
 import { ReactiveField } from "./config";
-import { NoIdError } from "./index";
+import { EntityManager, NoIdError } from "./index";
 import { followReverseHint } from "./reactiveHints";
 import { Relation } from "./relations";
 import { AbstractPropertyImpl } from "./relations/AbstractPropertyImpl";
+import { groupBy } from "./utils";
 
 const { gray, green, yellow, white } = ansis;
 
@@ -39,6 +40,11 @@ export class ReactionsManager {
   private relationsPendingAssignedIds: Set<Relation<any, any>> = new Set();
   private needsRecalc = { populate: false, query: false };
   private logger: ReactionLogger | undefined = globalLogger;
+  private em: EntityManager;
+
+  constructor(em: EntityManager) {
+    this.em = em;
+  }
 
   /**
    * Queue all downstream reactive fields that depend on `fieldName` as a source field.
@@ -137,7 +143,7 @@ export class ReactionsManager {
     // Map our parameter `kind` value (which is a nicer name) to the shorter ADT kind
     const k = kind === "reactiveFields" ? "populate" : "query";
     if (this.needsRecalc[k]) {
-      this.logger?.logStartingRecalc(kind);
+      this.logger?.logStartingRecalc(this.em, kind);
     }
 
     let loops = 0;
@@ -170,10 +176,13 @@ export class ReactionsManager {
       // Multiple reactions could have pointed back to the same reactive field, so
       // dedupe the found relations before calling .load.
       const unique = [...new Set(relations.flat())];
-
+      this.logger?.logLoading(this.em, unique);
       // Use allSettled so that we can watch for derived values that want to use the entity'd id,
       // i.e. they can fail, but we'll queue them from later.
+      const startTime = this.logger?.now() ?? 0;
       const results = await Promise.allSettled(unique.map((r: any) => r.load()));
+      const endTime = this.logger?.now() ?? 0;
+      this.logger?.logLoadingTime(this.em, endTime - startTime);
       const failures: any[] = [];
       results.forEach((result, i) => {
         if (result.status === "rejected") {
@@ -249,6 +258,10 @@ export class ReactionLogger {
     this.writeFn = writeFn;
   }
 
+  now(): number {
+    return performance.now();
+  }
+
   logQueued(entity: Entity, fieldName: string, rf: ReactiveField): void {
     this.log(
       green.bold(`${entity.toTaggedString()}`) + yellow(`.${fieldName}`),
@@ -265,8 +278,11 @@ export class ReactionLogger {
     );
   }
 
-  logStartingRecalc(kind: "reactiveFields" | "reactiveQueries"): void {
-    this.log(white.bold(`Recalculating reactive ${kind === "reactiveQueries" ? "queries" : "fields"} values...`));
+  logStartingRecalc(em: EntityManager, kind: "reactiveFields" | "reactiveQueries"): void {
+    this.log(
+      white.bold(`Recalculating reactive ${kind === "reactiveQueries" ? "queries" : "fields"} values...`),
+      this.entityCount(em),
+    );
   }
 
   logWalked(todo: Entity[], rf: ReactiveField, relations: Relation<any, any>[]): void {
@@ -292,6 +308,29 @@ export class ReactionLogger {
         gray("]"),
       );
     }
+  }
+
+  logLoading(em: EntityManager, relations: any[]): void {
+    this.log(" ", gray("Loading"), String(relations.length), gray("relations..."), this.entityCount(em));
+    // Group by the relation name
+    [...groupBy(relations, (r) => `${r.entity.constructor.name}.${r.fieldName}`).entries()].forEach(([, relations]) => {
+      const r = relations[0];
+      this.log(
+        "   ",
+        green.bold(r.entity.constructor.name) + green(".") + yellow(r.fieldName),
+        gray("-> ["),
+        String(relations.map((r: any) => r.entity.toTaggedString()).join(" ")),
+        gray("]"),
+      );
+    });
+  }
+
+  logLoadingTime(em: EntityManager, millis: number): void {
+    this.log("   ", gray("took"), String(Math.floor(millis)), gray("millis"), this.entityCount(em));
+  }
+
+  private entityCount(em: EntityManager): string {
+    return gray("(em.entities=") + em.entities.length + gray(")");
   }
 
   private log(...line: string[]): void {

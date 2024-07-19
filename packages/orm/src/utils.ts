@@ -218,3 +218,16 @@ export function maybeRequireTemporal(): RequireTemporal | undefined {
 export function requireTemporal(): RequireTemporal {
   return maybeRequireTemporal() ?? fail("Unable to find a Temporal implementation");
 }
+
+// Collections return an array, so do a hot-path `.flat()`
+export function flatAndUnique<T extends unknown>(list: (T | T[] | undefined)[]): Set<T> {
+  const result = new Set<T>();
+  for (const c of list) {
+    if (Array.isArray(c)) {
+      for (const e of c) result.add(e);
+    } else if (c) {
+      result.add(c);
+    }
+  }
+  return result;
+}

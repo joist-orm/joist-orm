@@ -32,7 +32,7 @@ import {
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
 import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
 import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
-import { fail, mergeNormalizedHints } from "./utils";
+import { fail, flatAndUnique, mergeNormalizedHints } from "./utils";
 
 /** The keys in `T` that rules & hooks can react to. */
 export type Reactable<T extends Entity> =
@@ -318,44 +318,42 @@ function maybeAddTypeFilterSuffix(
  *   "our prior author" and "our new author" see their latest `author.books` collection values.
  */
 export async function followReverseHint(entities: Entity[], reverseHint: string[]): Promise<Entity[]> {
-  // Start at the current entities
-  let current = [...entities];
+  // Start at the current (unique) entities
+  let current = new Set(entities);
   const paths = [...reverseHint];
   // And "walk backwards" through the reverse hint
   while (paths.length) {
     const path = paths.shift()!;
     const [fieldName, viaType] = path.split("@");
+    const promises = new Array(current.size);
     // The path might touch either a reference or a collection
-    const entitiesOrLists = await Promise.all(
-      current.flatMap((c: any) => {
-        const currentValuePromise = maybeApplyTypeFilter(c[fieldName].load(), viaType);
-        // If we're going from Book.author back to Author to re-validate the Author.books collection,
-        // see if Book.author has changed, so we can re-validate both the old author's books and the
-        // new author's books.
-        const fieldKind = getMetadata(c).fields[fieldName]?.kind;
-        const isReference = fieldKind === "m2o" || fieldKind === "poly";
-        const isManyToMany = fieldKind === "m2m";
-        const changed = isChangeableField(c, fieldName) ? (c.changes[fieldName] as FieldStatus<any>) : undefined;
-        // See jsdoc comment about why this is only necessary for references...
-        if (isReference && changed && changed.hasUpdated && changed.originalValue) {
-          return [
-            currentValuePromise,
-            maybeApplyTypeFilter((changed as ManyToOneFieldStatus<any>).originalEntity, viaType),
-          ];
-        }
-        if (isManyToMany) {
-          const m2m = c[fieldName] as ManyToManyCollection<any, any>;
-          const joinRows = getEmInternalApi(m2m.entity.em).joinRows(m2m);
-          // Return a tuple of [currentRows, removedRows]
-          return [currentValuePromise, joinRows.removedFor(m2m, c)];
-        }
-        return [currentValuePromise];
-      }),
-    );
-    // Use flat() to get them all as entities
-    current = entitiesOrLists.flat().filter((e) => e !== undefined);
+    for (const c of current as Set<any>) {
+      const currentValuePromise = maybeApplyTypeFilter(c[fieldName].load(), viaType);
+      // Always wait for the relation itself
+      promises.push(currentValuePromise);
+      // If we're going from Book.author back to Author to re-validate the Author.books collection,
+      // see if Book.author has changed, so we can re-validate both the old author's books and the
+      // new author's books.
+      const fieldKind = getMetadata(c).fields[fieldName]?.kind;
+      const isReference = fieldKind === "m2o" || fieldKind === "poly";
+      const isManyToMany = fieldKind === "m2m";
+      const changed = isChangeableField(c, fieldName) ? (c.changes[fieldName] as FieldStatus<any>) : undefined;
+      // See jsdoc comment about why this is only necessary for references...
+      if (isReference && changed && changed.hasUpdated && changed.originalValue) {
+        promises.push(maybeApplyTypeFilter((changed as ManyToOneFieldStatus<any>).originalEntity, viaType));
+      }
+      if (isManyToMany) {
+        const m2m = c[fieldName] as ManyToManyCollection<any, any>;
+        const joinRows = getEmInternalApi(m2m.entity.em).joinRows(m2m);
+        // Return a tuple of [currentRows, removedRows]
+        promises.push(joinRows.removedFor(m2m, c));
+      }
+    }
+    const nextLevel = await Promise.all(promises);
+    // Make a new set so that we dedupe as we go
+    current = flatAndUnique(nextLevel);
   }
-  return current;
+  return [...current];
 }
 
 /** Converts a normalized reactive `hint` into a load hint. */

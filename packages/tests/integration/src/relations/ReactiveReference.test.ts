@@ -161,15 +161,15 @@ describe("ReactiveReference", () => {
      [
        "b:1.title changed, queuing b:1.author.search↩",
        "b:1.title changed, queuing b:1.favoriteAuthor.publisher.titlesOfFavoriteBooks↩",
-       "Recalculating reactive fields values... (1 EM entities)↩",
+       "Recalculating reactive fields values... (em.entities=1)↩",
        "  Walked 1 Book.author paths, found 1 Author.search to recalc↩",
        "    [ b:1 ] -> [ a:1 ]↩",
        "  Walked 1 Book.favoriteAuthor.publisher paths, found 1 Publisher.titlesOfFavoriteBooks to recalc↩",
        "    [ b:1 ] -> [ p:1 ]↩",
-       "  Loading 2 relations... (3 EM entities)↩",
+       "  Loading 2 relations... (em.entities=3)↩",
        "    Author.search -> [ a:1 ]↩",
        "    SmallPublisher.titlesOfFavoriteBooks -> [ p:1 ]↩",
-       "    took 0 millis (3 EM entities)↩",
+       "    took 0 millis (em.entities=3)↩",
      ]
     `);
   });

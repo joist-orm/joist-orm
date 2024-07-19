@@ -126,13 +126,9 @@ class AbstractAliasColumn<V> {
   ) {}
 
   protected addCondition(value: ParsedValueFilter<V>): ColumnCondition {
-    const cond: ColumnCondition = {
-      kind: "column",
-      alias: "unset",
-      column: this.column.columnName,
-      dbType: this.column.dbType,
-      cond: mapToDb([], [], "unset", this.column, value),
-    };
+    const conditions: ColumnCondition[] = [];
+    mapToDb(conditions, [], "unset", this.column, value)
+    const [cond] = conditions;
     this.callbacks.push((newMeta, newAlias) => {
       cond.alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
     });
@@ -360,13 +356,10 @@ class PolyReferenceAlias<T extends Entity> {
 
   private addCondition(comp: PolymorphicFieldComponent, value: ParsedValueFilter<T | TaggedId>): ColumnCondition {
     const column = this.field.serde.columns.find((c) => c.columnName === comp.columnName) ?? fail("Missing column");
-    const cond: ColumnCondition = {
-      kind: "column",
-      alias: "unset",
-      column: comp.columnName,
-      dbType: this.field.serde.columns[0].dbType,
-      cond: mapToDb([], [], "unset", {...column, columnName: comp.columnName, dbType: this.field.serde.columns[0].dbType }, value),
-    };
+    const conditions: ColumnCondition[] = [];
+    mapToDb(conditions, [], "unset", { ...column, columnName: comp.columnName, dbType: this.field.serde.columns[0].dbType }, value);
+    const [cond] = conditions;
+    
     this.callbacks.push((newMeta, newAlias) => {
       cond.alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
     });

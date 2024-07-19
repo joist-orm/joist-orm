@@ -254,16 +254,11 @@ export function parseFindQuery(
               // Split up the ids by constructor
               const idsByConstructor = groupBy(f.value, (id) => getConstructorFromTaggedId(id as string).name);
               // Or together `parent_book_id in (1,2,3) OR parent_author_id IN (4,5,6)`
-              const conditions = Object.entries(idsByConstructor).map(([cstrName, ids]) => {
+              const conditions: ColumnCondition[] = [];
+              Object.entries(idsByConstructor).forEach(([cstrName, ids]) => {
                 const column = field.serde.columns.find((c) => c.otherMetadata().cstr.name === cstrName)!;
-                return {
-                  kind: "column",
-                  alias: fa,
-                  column: column.columnName,
-                  dbType: column.dbType,
-                  cond: mapToDb([], inlineExpressions, fa, column, { kind: "in", value: ids }),
-                } satisfies ColumnCondition;
-              });
+                mapToDb(conditions, inlineExpressions, fa, column, { kind: "in", value: ids });
+              })
               if (conditions.length > 0) {
                 inlineExpressions.push({ kind: "exp", op: "or", conditions });
               }
@@ -766,7 +761,7 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
 }
 
 /** Converts domain-level values like string ids/enums into their db equivalent. */
-export function mapToDb(inlineConditions: ColumnCondition[], inlineExpressions: ParsedExpressionFilter[], alias: string, column: Column, filter: ParsedValueFilter<any>): ParsedValueFilter<any> {
+export function mapToDb(inlineConditions: ColumnCondition[], inlineExpressions: ParsedExpressionFilter[], alias: string, column: Column, filter: ParsedValueFilter<any>): void {
   switch (filter.kind) {
     case "eq":
     case "gt":
@@ -779,27 +774,28 @@ export function mapToDb(inlineConditions: ColumnCondition[], inlineExpressions: 
     case "ilike":
     case "nilike":
       filter.value = column.mapToDb(filter.value);
-      inlineConditions.push({ alias, column: column.columnName, cond: filter, dbType: column.dbType, kind: "column" });
-      return filter;
+      break;
     case "in":
       if (column.isArray) {
-        inlineConditions.push({ alias, column: column.columnName, cond: { kind: "contains", value: column.mapToDb(filter.value) }, dbType: column.dbType, kind: "column" });
         // Arrays need a special operator
-        return { kind: "contains", value: column.mapToDb(filter.value) };
-      } else if (filter.value.some((v: any) => v === null)) {
-          filter.value = filter.value.map((v: any) => column.mapToDb(v));;
+        filter = { kind: "contains", value: column.mapToDb(filter.value) };
+        break;
+      } else {
+        filter.value = filter.value.map((v) => column.mapToDb(v));;
+        // If the filter contains a null, we need to split it into an `is-null` and `in` condition
+        if (filter.value.some((v) => v === null)) {
           inlineExpressions.push({
             kind: "exp", op: "or", conditions: [
               { kind: "column", alias, column: column.columnName, dbType: column.dbType, cond: { kind: "is-null" } },
-              { kind: "column", alias, column: column.columnName, dbType: column.dbType, cond: { kind: "in", value: filter.value.filter((v: any) => v !== null) } },
+              // Filter out the nulls from the in condition
+              { kind: "column", alias, column: column.columnName, dbType: column.dbType, cond: { kind: "in", value: filter.value.filter((v) => v !== null) } },
             ]
           });
-        return filter;
-      } else {
-        filter.value = filter.value.map((v: any) => column.mapToDb(v));
-      }
-      inlineConditions.push({ alias, column: column.columnName, cond: filter, dbType: column.dbType, kind: "column" });
-      return filter;
+          // Early return, we've already added the conditions through the inline expression
+          return;
+        }
+        break;
+      } 
     case "nin":
       if (column.isArray) {
         // Arrays need a special operator
@@ -807,8 +803,7 @@ export function mapToDb(inlineConditions: ColumnCondition[], inlineExpressions: 
       } else {
         filter.value = filter.value.map((v) => column.mapToDb(v));
       }
-      inlineConditions.push({ alias, column: column.columnName, cond: filter, dbType: column.dbType, kind: "column" });
-      return filter;
+      break;
     case "contains":
     case "ncontains":
     case "overlaps":
@@ -818,20 +813,20 @@ export function mapToDb(inlineConditions: ColumnCondition[], inlineExpressions: 
         throw new Error(`${filter.kind} is only unsupported on array columns`);
       }
       filter.value = column.mapToDb(filter.value);
-      inlineConditions.push({ alias, column: column.columnName, cond: filter, dbType: column.dbType, kind: "column" });
-      return filter;
+      break;
     case "between":
       filter.value[0] = column.mapToDb(filter.value[0]);
       filter.value[1] = column.mapToDb(filter.value[1]);
-      inlineConditions.push({ alias, column: column.columnName, cond: filter, dbType: column.dbType, kind: "column" });
-      return filter;
+      break;
     case "is-null":
     case "not-null":
-      inlineConditions.push({ alias, column: column.columnName, cond: filter, dbType: column.dbType, kind: "column" });
-      return filter;
+      break;
     default:
       throw assertNever(filter);
   }
+
+  // Always push the filter to the inline conditions
+  inlineConditions.push({ alias, column: column.columnName, cond: filter, dbType: column.dbType, kind: "column" });
 }
 
 /** Adds any user-configured default order, plus a "always order by id" for determinism. */

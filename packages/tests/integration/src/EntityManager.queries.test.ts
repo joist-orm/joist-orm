@@ -442,7 +442,6 @@ describe("EntityManager.queries", () => {
     expect(authors[0].firstName).toEqual("a1");
     expect(authors[1].firstName).toEqual("a2");
 
-    console.log(parseFindQuery(am, where, opts).condition?.conditions);
     expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],

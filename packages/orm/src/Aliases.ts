@@ -41,7 +41,7 @@ export type Alias<T extends Entity> = {
 export interface PrimitiveAlias<V, N extends null | never> {
   eq(value: V | N | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
   ne(value: V | N | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
-  in(values: V[] | undefined): ColumnCondition;
+  in(values: (V | null)[] | undefined): ColumnCondition;
   gt(value: V | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
   gte(value: V | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
   lt(value: V | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
@@ -131,7 +131,7 @@ class AbstractAliasColumn<V> {
       alias: "unset",
       column: this.column.columnName,
       dbType: this.column.dbType,
-      cond: mapToDb(this.column, value),
+      cond: mapToDb([], [], "unset", this.column, value),
     };
     this.callbacks.push((newMeta, newAlias) => {
       cond.alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
@@ -365,7 +365,7 @@ class PolyReferenceAlias<T extends Entity> {
       alias: "unset",
       column: comp.columnName,
       dbType: this.field.serde.columns[0].dbType,
-      cond: mapToDb(column, value),
+      cond: mapToDb([], [], "unset", {...column, columnName: comp.columnName, dbType: this.field.serde.columns[0].dbType }, value),
     };
     this.callbacks.push((newMeta, newAlias) => {
       cond.alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);

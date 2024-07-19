@@ -64,7 +64,7 @@ export type ValueFilter<V, N> =
   // Both eq and in are redundant with `V` and `V[]` above but are convenient for matching GQL filter APIs
   | { eq: V | N | undefined }
   | { ne: V | N | undefined }
-  | { in: readonly (V | N)[] | undefined }
+  | { in: readonly (V | N | null)[] | undefined }
   | { nin: readonly (V | N)[] | undefined }
   | { gt: V | undefined }
   | { gte: V | undefined }

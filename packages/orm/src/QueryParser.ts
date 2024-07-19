@@ -189,13 +189,7 @@ export function parseFindQuery(
         if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
           const column = field.serde.columns[0];
           parseValueFilter((ef.subFilter as any)[key]).forEach((filter) => {
-            inlineConditions.push({
-              kind: "column",
-              alias: fa,
-              column: column.columnName,
-              dbType: column.dbType,
-              cond: mapToDb(column, filter),
-            });
+            mapToDb(inlineConditions, inlineExpressions, fa, column, filter);
           });
         } else if (field.kind === "m2o") {
           const column = field.serde.columns[0];
@@ -213,13 +207,7 @@ export function parseFindQuery(
             const a = getAlias(field.otherMetadata().tableName);
             addTable(field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
           } else {
-            inlineConditions.push({
-              kind: "column",
-              alias: fa,
-              column: column.columnName,
-              dbType: column.dbType,
-              cond: mapToDb(column, f),
-            });
+            mapToDb(inlineConditions, inlineExpressions, fa, column, f);
           }
         } else if (field.kind === "poly") {
           const f = parseEntityFilter(meta, (ef.subFilter as any)[key]);
@@ -237,13 +225,7 @@ export function parseFindQuery(
                   (p) => p.otherMetadata().cstr === getConstructorFromTaggedId(f.value as string),
                 ) || fail(`Could not find component for ${f.value}`);
               const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
-              inlineConditions.push({
-                kind: "column",
-                alias: fa,
-                column: comp.columnName,
-                dbType: column.dbType,
-                cond: mapToDb(column, f),
-              });
+              mapToDb(inlineConditions, inlineExpressions, fa, column, f);
             } else if (f.kind === "is-null") {
               // Add a condition for every component--these can be AND-d with the rest of the simple/inline conditions
               field.components.forEach((comp) => {
@@ -279,7 +261,7 @@ export function parseFindQuery(
                   alias: fa,
                   column: column.columnName,
                   dbType: column.dbType,
-                  cond: mapToDb(column, { kind: "in", value: ids }),
+                  cond: mapToDb([], inlineExpressions, fa, column, { kind: "in", value: ids }),
                 } satisfies ColumnCondition;
               });
               if (conditions.length > 0) {
@@ -356,6 +338,8 @@ export function parseFindQuery(
             // We normally don't have `columns` for m2m fields, b/c they don't go through normal serde
             // codepaths, so make one up to leverage the existing `mapToDb` function.
             const column: any = {
+              columnName: field.columnNames[1],
+              dbType: meta.idDbType,
               mapToDb(value: any) {
                 // Check for `typeof value === number` in case this is a new entity, and we've been given the nilIdValue
                 return value === null || isNilIdValue(value)
@@ -363,13 +347,7 @@ export function parseFindQuery(
                   : keyToNumber(meta, maybeResolveReferenceToId(value));
               },
             };
-            inlineConditions.push({
-              kind: "column",
-              alias: ja,
-              column: field.columnNames[1],
-              dbType: meta.idDbType,
-              cond: mapToDb(column, f),
-            });
+            mapToDb(inlineConditions, inlineExpressions, ja, column, f);
           }
         } else {
           throw new Error(`Unsupported field ${key}`);
@@ -377,13 +355,7 @@ export function parseFindQuery(
       });
     } else if (ef) {
       const column = meta.fields["id"].serde!.columns[0];
-      inlineConditions.push({
-        kind: "column",
-        alias,
-        column: "id",
-        dbType: meta.idDbType,
-        cond: mapToDb(column, ef),
-      });
+      mapToDb(inlineConditions, inlineExpressions, alias, column, ef);
     }
   }
 
@@ -794,7 +766,7 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
 }
 
 /** Converts domain-level values like string ids/enums into their db equivalent. */
-export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedValueFilter<any> {
+export function mapToDb(inlineConditions: ColumnCondition[], inlineExpressions: ParsedExpressionFilter[], alias: string, column: Column, filter: ParsedValueFilter<any>): ParsedValueFilter<any> {
   switch (filter.kind) {
     case "eq":
     case "gt":
@@ -807,14 +779,26 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
     case "ilike":
     case "nilike":
       filter.value = column.mapToDb(filter.value);
+      inlineConditions.push({ alias, column: column.columnName, cond: filter, dbType: column.dbType, kind: "column" });
       return filter;
     case "in":
       if (column.isArray) {
+        inlineConditions.push({ alias, column: column.columnName, cond: { kind: "contains", value: column.mapToDb(filter.value) }, dbType: column.dbType, kind: "column" });
         // Arrays need a special operator
         return { kind: "contains", value: column.mapToDb(filter.value) };
+      } else if (filter.value.some((v: any) => v === null)) {
+          filter.value = filter.value.map((v: any) => column.mapToDb(v));;
+          inlineExpressions.push({
+            kind: "exp", op: "or", conditions: [
+              { kind: "column", alias, column: column.columnName, dbType: column.dbType, cond: { kind: "is-null" } },
+              { kind: "column", alias, column: column.columnName, dbType: column.dbType, cond: { kind: "in", value: filter.value.filter((v: any) => v !== null) } },
+            ]
+          });
+        return filter;
       } else {
-        filter.value = filter.value.map((v) => column.mapToDb(v));
+        filter.value = filter.value.map((v: any) => column.mapToDb(v));
       }
+      inlineConditions.push({ alias, column: column.columnName, cond: filter, dbType: column.dbType, kind: "column" });
       return filter;
     case "nin":
       if (column.isArray) {
@@ -823,6 +807,7 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
       } else {
         filter.value = filter.value.map((v) => column.mapToDb(v));
       }
+      inlineConditions.push({ alias, column: column.columnName, cond: filter, dbType: column.dbType, kind: "column" });
       return filter;
     case "contains":
     case "ncontains":
@@ -833,13 +818,16 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
         throw new Error(`${filter.kind} is only unsupported on array columns`);
       }
       filter.value = column.mapToDb(filter.value);
+      inlineConditions.push({ alias, column: column.columnName, cond: filter, dbType: column.dbType, kind: "column" });
       return filter;
     case "between":
       filter.value[0] = column.mapToDb(filter.value[0]);
       filter.value[1] = column.mapToDb(filter.value[1]);
+      inlineConditions.push({ alias, column: column.columnName, cond: filter, dbType: column.dbType, kind: "column" });
       return filter;
     case "is-null":
     case "not-null":
+      inlineConditions.push({ alias, column: column.columnName, cond: filter, dbType: column.dbType, kind: "column" });
       return filter;
     default:
       throw assertNever(filter);

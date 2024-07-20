@@ -4,10 +4,18 @@
         <title>Joist Blog</title>
         <link>https://joist-orm.io/blog</link>
         <description>Joist Blog</description>
-        <lastBuildDate>Sat, 11 May 2024 00:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Sat, 20 Jul 2024 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <language>en</language>
+        <item>
+            <title><![CDATA[Recursive Relations]]></title>
+            <link>https://joist-orm.io/blog/recursive-relations</link>
+            <guid>https://joist-orm.io/blog/recursive-relations</guid>
+            <pubDate>Sat, 20 Jul 2024 00:00:00 GMT</pubDate>
+            <description><![CDATA[Joist's development is currently very incremental, and doesn't have "big release" milestones & release notes, but we recently released a notable new featuretada:]]></description>
+            <content:encoded><![CDATA[<p>Joist's development is currently very incremental, and doesn't have "big release" milestones &amp; release notes, but we recently released a notable new feature: <a href="https://joist-orm.io/docs/advanced/recursive-relations">recursive relations</a>. Check them out! <!-- -->🎉</p>]]></content:encoded>
+        </item>
         <item>
             <title><![CDATA[Is Joist the Best ORM, Ever?]]></title>
             <link>https://joist-orm.io/blog/the-best-orm-ever</link>

@@ -315,3 +315,6 @@ class BookReview extends PublisherCodegen {
 }
 ```
 
+## Recursive Relations
+
+We also support recursive relations, see [Recursive Relations](/docs/advanced/recursive-relations.md) for more.

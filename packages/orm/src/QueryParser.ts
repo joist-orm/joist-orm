@@ -794,11 +794,9 @@ export class ConditionBuilder {
   /**
    * Adds a user-facing `ParsedValueFilter` to the inline conditions.
    *
-   * We return back the 1-or-more `ColumnCondition` that were added to the inline conditions, in case
-   * we're being called by `Alias` could that needs to later rewrite our `alias: unset` values to the
-   * correct alias that they get bound to.
+   * Unless it's something like `in: [a1, null]`, in which case we split it into two `is-null` and `in` conditions.
    */
-  addValueFilter(alias: string, column: Column, filter: ParsedValueFilter<any>): ColumnCondition[] {
+  addValueFilter(alias: string, column: Column, filter: ParsedValueFilter<any>): void {
     if (filter.kind === "in" && filter.value.includes(null)) {
       // If the filter contains a null, we need to split it into an `is-null` and `in` condition
       const isNull = {
@@ -821,7 +819,6 @@ export class ConditionBuilder {
       } satisfies ColumnCondition;
       // Now OR them back together
       this.expressions.push({ kind: "exp", op: "or", conditions: [isNull, inValues] });
-      return [isNull, inValues];
     } else {
       const cond = {
         kind: "column",
@@ -832,7 +829,6 @@ export class ConditionBuilder {
         cond: mapToDb(column, filter),
       } satisfies ColumnCondition;
       this.conditions.push(cond);
-      return [cond];
     }
   }
 
@@ -852,6 +848,11 @@ export class ConditionBuilder {
 
 /** Converts domain-level values like string ids/enums into their db equivalent. */
 export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedValueFilter<any> {
+  // ...to really re-use this with the `in: [null, 1]` handling, we'd need to:
+  // 1. return a maybe-simple/maybe-nested condition, so basically a `ParsedExpressionCondition`, because
+  // this would let `in` return an `{ or: ... }` to all the callers.
+  // 2. also return `{ parsed: ParsedExpressionCondition, simples: SimpleCondition[] }` tuple, for the
+  // alias `addCondition` processing to track the `simples` and rewrite their alias when later bound.
   switch (filter.kind) {
     case "eq":
     case "gt":

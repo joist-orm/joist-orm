@@ -848,7 +848,7 @@ export class ConditionBuilder {
 
 /** Converts domain-level values like string ids/enums into their db equivalent. */
 export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedValueFilter<any> {
-  // ...to really re-use this with the `in: [null, 1]` handling, we'd need to:
+  // ...to teach this `mapToDb` function to handle/rewrite `in: [1, null]` handling, we'd need to:
   // 1. return a maybe-simple/maybe-nested condition, so basically a `ParsedExpressionCondition`, because
   // this would let `in` return an `{ or: ... }` to all the callers.
   // 2. also return `{ parsed: ParsedExpressionCondition, simples: SimpleCondition[] }` tuple, for the

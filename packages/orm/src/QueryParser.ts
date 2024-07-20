@@ -14,8 +14,11 @@ import { assertNever, fail, partition } from "./utils";
 export interface ParsedExpressionFilter {
   kind: "exp";
   op: "and" | "or";
-  conditions: (ParsedExpressionFilter | ColumnCondition | RawCondition)[];
+  conditions: ParsedExpressionCondition[];
 }
+
+/** A condition or nested condition in a `ParsedExpressionFilter`. */
+export type ParsedExpressionCondition = ParsedExpressionFilter | ColumnCondition | RawCondition;
 
 export interface ColumnCondition {
   kind: "column";
@@ -113,8 +116,7 @@ export function parseFindQuery(
     pruneJoins = true,
     keepAliases = [],
   } = opts;
-  const inlineConditions: ColumnCondition[] = [];
-  const inlineExpressions: ParsedExpressionFilter[] = [];
+  const cb = new ConditionBuilder();
 
   const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
@@ -127,7 +129,7 @@ export function parseFindQuery(
   function maybeAddNotSoftDeleted(meta: EntityMetadata, alias: string): void {
     if (filterSoftDeletes(meta, softDeletes)) {
       const column = meta.allFields[getBaseMeta(meta).timestampFields.deletedAt!].serde?.columns[0]!;
-      inlineConditions.push({
+      cb.addSimpleCondition({
         kind: "column",
         alias,
         column: column.columnName,
@@ -161,7 +163,7 @@ export function parseFindQuery(
     // Maybe only do this if we're the primary, or have a field that needs it?
     addTablePerClassJoinsAndClassTag(query, meta, alias, join === "primary");
     if (needsStiDiscriminator(meta)) {
-      addStiSubtypeFilter(inlineConditions, meta, alias);
+      addStiSubtypeFilter(cb, meta, alias);
     }
 
     maybeAddNotSoftDeleted(meta, alias);
@@ -189,7 +191,7 @@ export function parseFindQuery(
         if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
           const column = field.serde.columns[0];
           parseValueFilter((ef.subFilter as any)[key]).forEach((filter) => {
-            mapToDb(inlineConditions, inlineExpressions, fa, column, filter);
+            cb.addValueFilter(fa, column, filter);
           });
         } else if (field.kind === "m2o") {
           const column = field.serde.columns[0];
@@ -207,7 +209,7 @@ export function parseFindQuery(
             const a = getAlias(field.otherMetadata().tableName);
             addTable(field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
           } else {
-            mapToDb(inlineConditions, inlineExpressions, fa, column, f);
+            cb.addValueFilter(fa, column, f);
           }
         } else if (field.kind === "poly") {
           const f = parseEntityFilter(meta, (ef.subFilter as any)[key]);
@@ -225,12 +227,12 @@ export function parseFindQuery(
                   (p) => p.otherMetadata().cstr === getConstructorFromTaggedId(f.value as string),
                 ) || fail(`Could not find component for ${f.value}`);
               const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
-              mapToDb(inlineConditions, inlineExpressions, fa, column, f);
+              cb.addValueFilter(fa, column, f);
             } else if (f.kind === "is-null") {
               // Add a condition for every component--these can be AND-d with the rest of the simple/inline conditions
               field.components.forEach((comp) => {
                 const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
-                inlineConditions.push({
+                cb.addSimpleCondition({
                   kind: "column",
                   alias: fa,
                   column: comp.columnName,
@@ -249,18 +251,24 @@ export function parseFindQuery(
                   cond: { kind: "not-null" },
                 };
               }) satisfies ColumnCondition[];
-              inlineExpressions.push({ kind: "exp", op: "or", conditions });
+              cb.addParsedExpression({ kind: "exp", op: "or", conditions });
             } else if (f.kind === "in") {
               // Split up the ids by constructor
               const idsByConstructor = groupBy(f.value, (id) => getConstructorFromTaggedId(id as string).name);
               // Or together `parent_book_id in (1,2,3) OR parent_author_id IN (4,5,6)`
-              const conditions: ColumnCondition[] = [];
-              Object.entries(idsByConstructor).forEach(([cstrName, ids]) => {
+              // ...if there is a `parent IN [b:1, b:2, a:1, null]` we'd need to pull the `null` out and do an `OR (all columns are null)`...
+              const conditions = Object.entries(idsByConstructor).map(([cstrName, ids]) => {
                 const column = field.serde.columns.find((c) => c.otherMetadata().cstr.name === cstrName)!;
-                mapToDb(conditions, inlineExpressions, fa, column, { kind: "in", value: ids });
-              })
+                return {
+                  kind: "column",
+                  alias: fa,
+                  column: column.columnName,
+                  dbType: column.dbType,
+                  cond: mapToDb(column, { kind: "in", value: ids }),
+                } satisfies ColumnCondition;
+              });
               if (conditions.length > 0) {
-                inlineExpressions.push({ kind: "exp", op: "or", conditions });
+                cb.addParsedExpression({ kind: "exp", op: "or", conditions });
               }
             } else {
               throw new Error(`Filters on polys for ${f.kind} are not supported`);
@@ -342,7 +350,13 @@ export function parseFindQuery(
                   : keyToNumber(meta, maybeResolveReferenceToId(value));
               },
             };
-            mapToDb(inlineConditions, inlineExpressions, ja, column, f);
+            cb.addSimpleCondition({
+              kind: "column",
+              alias: ja,
+              column: field.columnNames[1],
+              dbType: meta.idDbType,
+              cond: mapToDb(column, f),
+            });
           }
         } else {
           throw new Error(`Unsupported field ${key}`);
@@ -350,7 +364,7 @@ export function parseFindQuery(
       });
     } else if (ef) {
       const column = meta.fields["id"].serde!.columns[0];
-      mapToDb(inlineConditions, inlineExpressions, alias, column, ef);
+      cb.addValueFilter(alias, column, ef);
     }
   }
 
@@ -400,18 +414,12 @@ export function parseFindQuery(
 
   // If they passed extra `conditions: ...`, parse that
   if (optsExpression) {
-    const parsed = parseExpression(optsExpression);
-    if (parsed) inlineExpressions.push(parsed);
+    cb.maybeAddExpression(optsExpression);
   }
-  if (inlineConditions.length === 0 && inlineExpressions.length === 1) {
-    // If no inline conditions, and just 1 opt expression, just use that
-    Object.assign(query, { condition: inlineExpressions[0] });
-  } else if (inlineConditions.length > 0 || inlineExpressions.length > 0) {
-    // Combine the conditions within the `em.find` join literal & the `conditions` as ANDs
-    Object.assign(query, {
-      condition: { op: "and", conditions: [...inlineConditions, ...inlineExpressions] },
-    });
-  }
+
+  Object.assign(query, {
+    condition: cb.toExpressionFilter(),
+  });
 
   if (query.tables.some((t) => t.join === "outer")) {
     maybeAddIdNotNulls(query);
@@ -681,7 +689,7 @@ export type ParsedValueFilter<V> =
   | { kind: "between"; value: [V, V] };
 
 /**
- * Parses the many/hodgepdoge (ergonomic!) patterns of value filters into a `ParsedValueFilter[]`.
+ * Parses the many/hodgepodge (ergonomic!) patterns of value filters into a `ParsedValueFilter[]`.
  *
  * Note we return an array because filter might be a `ValueGraphQLFilter` that is allowed to have
  * multiple conditions, i.e. `{ lt: 10, gt: 5 }`.
@@ -761,7 +769,89 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
 }
 
 /** Converts domain-level values like string ids/enums into their db equivalent. */
-export function mapToDb(inlineConditions: ColumnCondition[], inlineExpressions: ParsedExpressionFilter[], alias: string, column: Column, filter: ParsedValueFilter<any>): void {
+export class ConditionBuilder {
+  /** Simple, single-column conditions, which will be AND-d together. */
+  private conditions: ColumnCondition[] = [];
+  /** Complex expressions, which will also be AND-d together with `conditions`. */
+  private expressions: ParsedExpressionFilter[] = [];
+
+  /** Accepts a raw user-facing DSL filter, and parses it into a `ParsedExpressionFilter`. */
+  maybeAddExpression(expression: ExpressionFilter): void {
+    const parsed = parseExpression(expression);
+    if (parsed) this.expressions.push(parsed);
+  }
+
+  /** Adds an already-db-level condition to the simple conditions list. */
+  addSimpleCondition(condition: ColumnCondition): void {
+    this.conditions.push(condition);
+  }
+
+  /** Adds an already-db-level expression to the expressions list. */
+  addParsedExpression(parsed: ParsedExpressionFilter): void {
+    this.expressions.push(parsed);
+  }
+
+  /**
+   * Adds a user-facing `ParsedValueFilter` to the inline conditions.
+   *
+   * We return back the 1-or-more `ColumnCondition` that were added to the inline conditions, in case
+   * we're being called by `Alias` could that needs to later rewrite our `alias: unset` values to the
+   * correct alias that they get bound to.
+   */
+  addValueFilter(alias: string, column: Column, filter: ParsedValueFilter<any>): ColumnCondition[] {
+    if (filter.kind === "in" && filter.value.includes(null)) {
+      // If the filter contains a null, we need to split it into an `is-null` and `in` condition
+      const isNull = {
+        kind: "column",
+        alias,
+        column: column.columnName,
+        dbType: column.dbType,
+        cond: { kind: "is-null" },
+      } satisfies ColumnCondition;
+      const inValues = {
+        kind: "column",
+        alias,
+        column: column.columnName,
+        dbType: column.dbType,
+        cond: {
+          kind: "in",
+          // Filter out the nulls from the in condition
+          value: filter.value.filter((v) => v !== null).map((v) => column.mapToDb(v)),
+        },
+      } satisfies ColumnCondition;
+      // Now OR them back together
+      this.expressions.push({ kind: "exp", op: "or", conditions: [isNull, inValues] });
+      return [isNull, inValues];
+    } else {
+      const cond = {
+        kind: "column",
+        alias,
+        column: column.columnName,
+        dbType: column.dbType,
+        // Rewrite the user-facing domain values to db values
+        cond: mapToDb(column, filter),
+      } satisfies ColumnCondition;
+      this.conditions.push(cond);
+      return [cond];
+    }
+  }
+
+  /** Combines our collected `conditions` & `expressions` into a single `ParsedExpressionFilter`. */
+  toExpressionFilter(): ParsedExpressionFilter | undefined {
+    const { expressions, conditions } = this;
+    if (conditions.length === 0 && expressions.length === 1) {
+      // If no inline conditions, and just 1 opt expression, just use that
+      return expressions[0];
+    } else if (conditions.length > 0 || expressions.length > 0) {
+      // Combine the conditions within the `em.find` join literal & the `conditions` as ANDs
+      return { kind: "exp", op: "and", conditions: [...conditions, ...expressions] };
+    }
+    return undefined;
+  }
+}
+
+/** Converts domain-level values like string ids/enums into their db equivalent. */
+export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedValueFilter<any> {
   switch (filter.kind) {
     case "eq":
     case "gt":
@@ -774,28 +864,15 @@ export function mapToDb(inlineConditions: ColumnCondition[], inlineExpressions: 
     case "ilike":
     case "nilike":
       filter.value = column.mapToDb(filter.value);
-      break;
+      return filter;
     case "in":
       if (column.isArray) {
         // Arrays need a special operator
-        filter = { kind: "contains", value: column.mapToDb(filter.value) };
-        break;
+        return { kind: "contains", value: column.mapToDb(filter.value) };
       } else {
-        filter.value = filter.value.map((v) => column.mapToDb(v));;
-        // If the filter contains a null, we need to split it into an `is-null` and `in` condition
-        if (filter.value.some((v) => v === null)) {
-          inlineExpressions.push({
-            kind: "exp", op: "or", conditions: [
-              { kind: "column", alias, column: column.columnName, dbType: column.dbType, cond: { kind: "is-null" } },
-              // Filter out the nulls from the in condition
-              { kind: "column", alias, column: column.columnName, dbType: column.dbType, cond: { kind: "in", value: filter.value.filter((v) => v !== null) } },
-            ]
-          });
-          // Early return, we've already added the conditions through the inline expression
-          return;
-        }
-        break;
-      } 
+        filter.value = filter.value.map((v) => column.mapToDb(v));
+      }
+      return filter;
     case "nin":
       if (column.isArray) {
         // Arrays need a special operator
@@ -803,7 +880,7 @@ export function mapToDb(inlineConditions: ColumnCondition[], inlineExpressions: 
       } else {
         filter.value = filter.value.map((v) => column.mapToDb(v));
       }
-      break;
+      return filter;
     case "contains":
     case "ncontains":
     case "overlaps":
@@ -813,20 +890,17 @@ export function mapToDb(inlineConditions: ColumnCondition[], inlineExpressions: 
         throw new Error(`${filter.kind} is only unsupported on array columns`);
       }
       filter.value = column.mapToDb(filter.value);
-      break;
+      return filter;
     case "between":
       filter.value[0] = column.mapToDb(filter.value[0]);
       filter.value[1] = column.mapToDb(filter.value[1]);
-      break;
+      return filter;
     case "is-null":
     case "not-null":
-      break;
+      return filter;
     default:
       throw assertNever(filter);
   }
-
-  // Always push the filter to the inline conditions
-  inlineConditions.push({ alias, column: column.columnName, cond: filter, dbType: column.dbType, kind: "column" });
 }
 
 /** Adds any user-configured default order, plus a "always order by id" for determinism. */
@@ -993,10 +1067,10 @@ function needsStiDiscriminator(meta: EntityMetadata): boolean {
   return meta.inheritanceType === "sti" && !meta.stiDiscriminatorField;
 }
 
-function addStiSubtypeFilter(conditions: ColumnCondition[], subtypeMeta: EntityMetadata, alias: string): void {
+function addStiSubtypeFilter(cb: ConditionBuilder, subtypeMeta: EntityMetadata, alias: string): void {
   const baseMeta = getBaseMeta(subtypeMeta);
   const column = baseMeta.fields[baseMeta.stiDiscriminatorField!].serde?.columns[0]!;
-  conditions.push({
+  cb.addSimpleCondition({
     kind: "column",
     alias,
     column: column.columnName,

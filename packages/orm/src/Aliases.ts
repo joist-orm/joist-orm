@@ -10,7 +10,7 @@ import {
   getMetadata,
 } from "./EntityMetadata";
 import { ColumnCondition, ParsedValueFilter, RawCondition, makeLike, mapToDb, skipCondition } from "./QueryParser";
-import { ExpressionFilter, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
+import { ExpressionCondition, ExpressionFilter, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
 import { Column } from "./serde";
 import { fail } from "./utils";
 
@@ -39,28 +39,28 @@ export type Alias<T extends Entity> = {
 };
 
 export interface PrimitiveAlias<V, N extends null | never> {
-  eq(value: V | N | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
-  ne(value: V | N | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
-  in(values: (V | null)[] | undefined): ColumnCondition;
-  gt(value: V | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
-  gte(value: V | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
-  lt(value: V | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
-  lte(value: V | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
-  like(value: V | undefined): ColumnCondition;
-  ilike(value: V | undefined): ColumnCondition;
-  search(value: V | undefined): ColumnCondition;
-  between(v1: V | undefined, v2: V | undefined): ColumnCondition;
+  eq(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
+  ne(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
+  in(values: (V | null)[] | undefined): ExpressionCondition;
+  gt(value: V | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
+  gte(value: V | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
+  lt(value: V | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
+  lte(value: V | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
+  like(value: V | undefined): ExpressionCondition;
+  ilike(value: V | undefined): ExpressionCondition;
+  search(value: V | undefined): ExpressionCondition;
+  between(v1: V | undefined, v2: V | undefined): ExpressionCondition;
   // need to move to ArrayAlias
-  contains(value: V | N | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
-  ncontains(value: V | N | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
-  overlaps(value: V | N | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
-  noverlaps(value: V | N | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
+  contains(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
+  ncontains(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
+  overlaps(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
+  noverlaps(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
 }
 
 export interface EntityAlias<T> {
-  eq(value: T | IdOf<T> | null | undefined): ColumnCondition;
-  ne(value: T | IdOf<T> | null | undefined): ColumnCondition;
-  in(value: Array<T | IdOf<T>> | undefined): ColumnCondition;
+  eq(value: T | IdOf<T> | null | undefined): ExpressionCondition;
+  ne(value: T | IdOf<T> | null | undefined): ExpressionCondition;
+  in(value: Array<T | IdOf<T>> | undefined): ExpressionCondition;
 }
 
 export const aliasMgmt = Symbol("aliasMgmt");
@@ -126,9 +126,14 @@ class AbstractAliasColumn<V> {
   ) {}
 
   protected addCondition(value: ParsedValueFilter<V>): ColumnCondition {
-    const conditions: ColumnCondition[] = [];
-    mapToDb(conditions, [], "unset", this.column, value)
-    const [cond] = conditions;
+    const cond: ColumnCondition = {
+      kind: "column",
+      alias: "unset",
+      column: this.column.columnName,
+      dbType: this.column.dbType,
+      cond: mapToDb(this.column, value),
+    };
+    // Track the conditions we've created to re-write the alias when we're bound
     this.callbacks.push((newMeta, newAlias) => {
       cond.alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
     });
@@ -248,9 +253,15 @@ class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<
     return this.addCondition({ kind: "ilike", value: makeLike(value) });
   }
 
-  in(values: V[] | undefined): ColumnCondition {
+  in(values: (V | null)[] | undefined): ExpressionCondition {
     if (values === undefined) return skipCondition;
-    return this.addCondition({ kind: "in", value: values });
+    if (values.includes(null)) {
+      const isNull = this.addCondition({ kind: "is-null" });
+      const hasValue = this.addCondition({ kind: "in", value: values.filter((v) => v !== null) });
+      return { or: [isNull, hasValue] };
+    } else {
+      return this.addCondition({ kind: "in", value: values as V[] });
+    }
   }
 
   // V will already be an array
@@ -298,7 +309,7 @@ class EntityAliasImpl<T> extends AbstractAliasColumn<IdType> implements EntityAl
     }
   }
 
-  in(values: Array<T | IdOf<T>> | undefined): ColumnCondition {
+  in(values: Array<T | IdOf<T>> | undefined): ExpressionCondition {
     if (values === undefined) return skipCondition;
     return this.addCondition({ kind: "in", value: values as any });
   }
@@ -356,10 +367,14 @@ class PolyReferenceAlias<T extends Entity> {
 
   private addCondition(comp: PolymorphicFieldComponent, value: ParsedValueFilter<T | TaggedId>): ColumnCondition {
     const column = this.field.serde.columns.find((c) => c.columnName === comp.columnName) ?? fail("Missing column");
-    const conditions: ColumnCondition[] = [];
-    mapToDb(conditions, [], "unset", { ...column, columnName: comp.columnName, dbType: this.field.serde.columns[0].dbType }, value);
-    const [cond] = conditions;
-    
+    const cond: ColumnCondition = {
+      kind: "column",
+      alias: "unset",
+      column: comp.columnName,
+      dbType: this.field.serde.columns[0].dbType,
+      cond: mapToDb(column, value),
+    };
+    // Track the conditions we've created to re-write the alias when we're bound
     this.callbacks.push((newMeta, newAlias) => {
       cond.alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
     });

@@ -431,6 +431,45 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can find by NULL value on IN list", async () => {
+    await insertAuthor({ id: 2, first_name: "a1", age: null });
+    await insertAuthor({ id: 3, first_name: "a2", age: 20 });
+
+    const em = newEntityManager();
+    const where = { age: { in: [20, null] } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a1");
+    expect(authors[1].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        kind: "exp",
+        op: "or",
+        conditions: [
+          { kind: "column", alias: "a", column: "age", dbType: "int", cond: { kind: "is-null" } },
+          { kind: "column", alias: "a", column: "age", dbType: "int", cond: { kind: "in", value: [20] } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by NULL value on complex condition IN list", async () => {
+    await insertAuthor({ id: 2, first_name: "a1", age: null });
+    await insertAuthor({ id: 3, first_name: "a2", age: 20 });
+
+    const em = newEntityManager();
+    // const authors = await em.find(Author, where);
+    const a = alias(Author);
+    const authors = await em.find(Author, { as: a }, { conditions: { and: [a.age.in([20, null])] } });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a1");
+    expect(authors[1].firstName).toEqual("a2");
+  });
+
   it("can find by foreign key id in empty list of polys", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertComment({ text: "comment", parent_author_id: 1 });

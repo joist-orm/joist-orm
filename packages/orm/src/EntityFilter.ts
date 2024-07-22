@@ -64,7 +64,7 @@ export type ValueFilter<V, N> =
   // Both eq and in are redundant with `V` and `V[]` above but are convenient for matching GQL filter APIs
   | { eq: V | N | undefined }
   | { ne: V | N | undefined }
-  | { in: readonly (V | N)[] | undefined }
+  | { in: readonly (V | N | null)[] | undefined }
   | { nin: readonly (V | N)[] | undefined }
   | { gt: V | undefined }
   | { gte: V | undefined }
@@ -89,6 +89,9 @@ export type ValueFilter<V, N> =
  * This is the user-facing DSL that internally will be converted to `ParsedExpressionFilter.
  */
 export type ExpressionFilter = (
-  | { and: Array<ExpressionFilter | ColumnCondition | RawCondition | undefined>; or?: never }
-  | { or: Array<ExpressionFilter | ColumnCondition | RawCondition | undefined>; and?: never }
+  | { and: Array<ExpressionCondition | undefined>; or?: never }
+  | { or: Array<ExpressionCondition | undefined>; and?: never }
 ) & { pruneIfUndefined?: "any" | "all" };
+
+/** A user-facing filter for maybe-nested/maybe-simple conditions. */
+export type ExpressionCondition = ExpressionFilter | ColumnCondition | RawCondition;

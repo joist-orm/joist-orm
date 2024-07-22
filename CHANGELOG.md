@@ -1,3 +1,10 @@
+# [1.180.0](https://github.com/joist-orm/joist-orm/compare/v1.179.1...v1.180.0) (2024-07-22)
+
+
+### Features
+
+* support `NULL` values on `IN` operator ([#1152](https://github.com/joist-orm/joist-orm/issues/1152)) ([42f7a41](https://github.com/joist-orm/joist-orm/commit/42f7a412ddeb5da3cb47e875bc016f99292c5154))
+
 ## [1.179.1](https://github.com/joist-orm/joist-orm/compare/v1.179.0...v1.179.1) (2024-07-19)
 
 

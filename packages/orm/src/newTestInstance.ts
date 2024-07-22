@@ -806,7 +806,7 @@ class FactoryLogger {
   }
 
   logCreated(e: Entity): void {
-    // This matches the `logAddToUseMap` but for entities not going into tscope
+    // This matches the `logAddToUseMap` but for entities not going into scope
     this.write(`${gray(`created`)} ${e.toString()}`);
   }
 

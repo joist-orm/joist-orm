@@ -12,10 +12,12 @@ import {
   isCollection,
   isLoadedAsyncProperty,
   isLoadedCollection,
+  isLoadedReadOnlyCollection,
   isLoadedReference,
   isManyToOneField,
   isOneToManyField,
   isReactiveGetter,
+  isReadOnlyCollection,
   isReference,
   LoadHint,
   ManyToManyField,
@@ -26,6 +28,7 @@ import {
   PolymorphicField,
   PrimaryKeyField,
   ReactiveGetter,
+  ReadOnlyCollection,
   Reference,
 } from "joist-orm";
 import { Resolver } from "./context";
@@ -51,19 +54,21 @@ export type EntityResolver<T extends Entity> = {
       ? Resolver<T, Record<string, any>, T[P]>
       : T[P] extends Collection<any, infer U>
         ? Resolver<T, Record<string, any>, U[]>
-        : T[P] extends Reference<any, infer U, infer N>
-          ? Resolver<T, Record<string, any>, U>
-          : T[P] extends AsyncProperty<any, infer V>
-            ? Resolver<T, Record<string, any>, V>
-            : T[P] extends ReactiveGetter<any, infer V>
+        : T[P] extends ReadOnlyCollection<any, infer U>
+          ? Resolver<T, Record<string, any>, U[]>
+          : T[P] extends Reference<any, infer U, infer N>
+            ? Resolver<T, Record<string, any>, U>
+            : T[P] extends AsyncProperty<any, infer V>
               ? Resolver<T, Record<string, any>, V>
-              : T[P] extends Promise<infer V>
+              : T[P] extends ReactiveGetter<any, infer V>
                 ? Resolver<T, Record<string, any>, V>
-                : T[P] extends () => Promise<infer V>
+                : T[P] extends Promise<infer V>
                   ? Resolver<T, Record<string, any>, V>
-                  : T[P] extends () => infer V
+                  : T[P] extends () => Promise<infer V>
                     ? Resolver<T, Record<string, any>, V>
-                    : Resolver<T, Record<string, any>, T[P]>;
+                    : T[P] extends () => infer V
+                      ? Resolver<T, Record<string, any>, V>
+                      : Resolver<T, Record<string, any>, T[P]>;
 };
 
 /**
@@ -174,6 +179,11 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
         // if (loadHint) {
         //   return entity.em.populate(entity, loadHint).then(() => (property as any).get);
         // }
+        return property.load();
+      } else if (isReadOnlyCollection(property)) {
+        if (isLoadedReadOnlyCollection(property)) {
+          return property.get;
+        }
         return property.load();
       } else {
         return property;

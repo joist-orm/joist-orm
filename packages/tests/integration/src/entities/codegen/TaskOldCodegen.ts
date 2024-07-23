@@ -246,6 +246,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
       this as any as TaskOld,
       "parentOldTasksRecursive",
       "parentOldTask",
+      "tasksRecursive",
     );
   }
 
@@ -254,6 +255,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
       this as any as TaskOld,
       "tasksRecursive",
       "tasks",
+      "parentOldTasksRecursive",
     );
   }
 

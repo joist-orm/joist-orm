@@ -841,13 +841,13 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
           kind: "concrete",
           fieldName: parentsField,
           decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
-          init: code`${hasRecursiveParents}(this as any as ${entityName}, "${parentsField}", "${m2oName}")`,
+          init: code`${hasRecursiveParents}(this as any as ${entityName}, "${parentsField}", "${m2oName}", "${childrenField}")`,
         },
         {
           kind: "concrete",
           fieldName: childrenField,
           decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
-          init: code`${hasRecursiveChildren}(this as any as ${entityName}, "${childrenField}", "${otherFieldName}")`,
+          init: code`${hasRecursiveChildren}(this as any as ${entityName}, "${childrenField}", "${otherFieldName}", "${parentsField}")`,
         },
       ];
     });

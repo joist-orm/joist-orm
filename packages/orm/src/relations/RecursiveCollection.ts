@@ -28,8 +28,9 @@ export function hasRecursiveParents<T extends Entity, U extends Entity>(
   entity: T,
   fieldName: keyof T & string, // i.e. `author.mentorsRecursive`
   m2oName: keyof T & string, // i.e. `author.mentor`
+  otherFieldName: keyof T & string, // i.e. `author.menteesRecursive`
 ): ReadOnlyCollection<T, U> {
-  return new RecursiveParentsCollectionImpl(entity, fieldName, m2oName);
+  return new RecursiveParentsCollectionImpl(entity, fieldName, m2oName, otherFieldName);
 }
 
 /**
@@ -41,8 +42,9 @@ export function hasRecursiveChildren<T extends Entity, U extends Entity>(
   entity: T,
   fieldName: keyof T & string, // i.e. `author.menteesRecursive`
   o2mName: keyof T & string, // i.e. `author.mentees`
+  otherFieldName: keyof T & string, // i.e. `author.mentorsRecursive`
 ): ReadOnlyCollection<T, U> {
-  return new RecursiveChildrenCollectionImpl(entity, fieldName, o2mName);
+  return new RecursiveChildrenCollectionImpl(entity, fieldName, o2mName, otherFieldName);
 }
 
 /**
@@ -109,11 +111,13 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
 {
   readonly #fieldName: keyof T & string;
   readonly #m2oName: keyof T & string;
+  readonly #otherFieldName: keyof T & string;
 
-  constructor(entity: T, fieldName: keyof T & string, m2oName: keyof T & string) {
+  constructor(entity: T, fieldName: keyof T & string, m2oName: keyof T & string, otherFieldName: keyof T & string) {
     super(entity);
     this.#fieldName = fieldName;
     this.#m2oName = m2oName;
+    this.#otherFieldName = otherFieldName;
   }
 
   // opts is an internal parameter
@@ -142,6 +146,10 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
 
   get m2oFieldName(): string {
     return this.#m2oName;
+  }
+
+  get otherFieldName(): string {
+    return this.#otherFieldName;
   }
 
   toString(): string {
@@ -186,37 +194,39 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
 {
   readonly #fieldName: keyof T & string;
   readonly #o2mName: keyof T & string;
-  #loaded: boolean;
+  readonly #otherFieldName: keyof T & string;
+  // Even if we're a new entity, our immediate `author.mentees` will be loaded, but we might have
+  // a WIP change that adds a non-new entity to the collection, which we then need to load, so
+  // we always initialize `#loaded = false`.
+  #loaded = false;
 
-  constructor(entity: T, fieldName: keyof T & string, o2mName: keyof T & string) {
+  constructor(entity: T, fieldName: keyof T & string, o2mName: keyof T & string, otherFieldName: keyof T & string) {
     super(entity);
     this.#fieldName = fieldName;
     this.#o2mName = o2mName;
-    this.#loaded = entity.isNewEntity;
+    this.#otherFieldName = otherFieldName;
   }
 
   // opts is an internal parameter
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
     if (!this.isLoaded || opts.forceReload) {
-      // New entities can't have any children
       if (!this.entity.isNewEntity) {
         await recursiveChildrenDataLoader(this.entity.em, this).load(this.entity);
-        const unloaded = this.findUnloadedCollections();
-        if (unloaded.length > 0) {
-          // Go through the entities own `fooRecursive` collection so that it's marked as loaded.
-          // We don't have to `while` loop this, because if they children themselves have any WIP
-          // changes, then their own `RecursiveChildrenCollectionImpl.load` will load them.
-          await Promise.all(unloaded.map((r) => (r.entity as any)[this.fieldName].load(opts)));
-        }
       }
-      this.#loaded = true;
+      const unloaded = this.findUnloadedCollections();
+      if (unloaded.length > 0) {
+        // Go through the entities own `fooRecursive` collection so that it's marked as loaded.
+        // We don't have to `while` loop this, because if they children themselves have any WIP
+        // changes, then their own `RecursiveChildrenCollectionImpl.load` will load them.
+        await Promise.all(unloaded.map((r) => (r.entity as any)[this.fieldName].load(opts)));
+      }
     }
     return this.filterDeleted(this.doGet(), opts);
   }
 
   get isLoaded(): boolean {
-    return this.#loaded;
+    return this.findUnloadedCollections().length === 0;
   }
 
   get fieldName(): string {
@@ -225,6 +235,10 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
 
   get o2mFieldName(): string {
     return this.#o2mName;
+  }
+
+  get otherFieldName(): string {
+    return this.#otherFieldName;
   }
 
   toString(): string {

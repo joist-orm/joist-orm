@@ -108,6 +108,7 @@ export interface AuthorFields {
   nickNames: { kind: "primitive"; type: string[]; unique: false; nullable: undefined; derived: false };
   nickNamesUpper: { kind: "primitive"; type: string[]; unique: false; nullable: undefined; derived: true };
   wasEverPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
+  mentorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   address: { kind: "primitive"; type: Address; unique: false; nullable: undefined; derived: false };
   businessAddress: {
     kind: "primitive";
@@ -194,6 +195,7 @@ export interface AuthorFilter {
   nickNames?: ValueFilter<string[], null>;
   nickNamesUpper?: ValueFilter<string[], null>;
   wasEverPopular?: BooleanFilter<null>;
+  mentorNames?: ValueFilter<string, null>;
   address?: ValueFilter<Address, null>;
   businessAddress?: ValueFilter<z.input<typeof AddressSchema>, null>;
   quotes?: ValueFilter<Quotes, null>;
@@ -239,6 +241,7 @@ export interface AuthorGraphQLFilter {
   nickNames?: ValueGraphQLFilter<string[]>;
   nickNamesUpper?: ValueGraphQLFilter<string[]>;
   wasEverPopular?: BooleanGraphQLFilter;
+  mentorNames?: ValueGraphQLFilter<string>;
   address?: ValueGraphQLFilter<Address>;
   businessAddress?: ValueGraphQLFilter<z.input<typeof AddressSchema>>;
   quotes?: ValueGraphQLFilter<Quotes>;
@@ -294,6 +297,7 @@ export interface AuthorOrder {
   nickNames?: OrderBy;
   nickNamesUpper?: OrderBy;
   wasEverPopular?: OrderBy;
+  mentorNames?: OrderBy;
   address?: OrderBy;
   businessAddress?: OrderBy;
   quotes?: OrderBy;
@@ -431,6 +435,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   protected setWasEverPopular(wasEverPopular: boolean | undefined) {
     setField(this, "wasEverPopular", wasEverPopular);
   }
+
+  abstract readonly mentorNames: ReactiveField<Author, string | undefined>;
 
   get address(): Address | undefined {
     return getField(this, "address");
@@ -677,6 +683,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
       this as any as Author,
       "mentorsRecursive",
       "mentor",
+      "menteesRecursive",
     );
   }
 
@@ -685,6 +692,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
       this as any as Author,
       "menteesRecursive",
       "mentees",
+      "mentorsRecursive",
     );
   }
 

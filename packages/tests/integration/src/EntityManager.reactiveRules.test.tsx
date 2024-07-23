@@ -501,6 +501,41 @@ describe("EntityManager.reactiveRules", () => {
       // Then it fails
       await expect(em.flush()).rejects.toThrow("A publisher cannot have 13 books");
     });
+
+    it.withCtx("calcs recursive children on field change", async ({ em }) => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertAuthor({ first_name: "a3", mentor_id: 2 });
+      const a1 = await em.load(Author, "a:1");
+      a1.firstName = "a11";
+      await em.flush();
+      expect(await select("authors")).toMatchObject([
+        { id: 1, mentor_names: null },
+        { id: 2, mentor_names: "a11" },
+        { id: 3, mentor_names: "a2, a11" },
+      ]);
+      expect((a1.mentorNames as any).loadHint).toMatchInlineSnapshot(`
+       {
+         "mentorsRecursive": {},
+       }
+      `);
+    });
+
+    it.withCtx("calcs recursive children on foreign key change", async ({ em }) => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertAuthor({ first_name: "a3", mentor_id: 2 });
+      await insertAuthor({ first_name: "a4" });
+      const [a2, a4] = await em.loadAll(Author, ["a:2", "a:4"]);
+      a2.mentor.set(a4);
+      await em.flush();
+      expect(await select("authors")).toMatchObject([
+        { id: 1, mentor_names: null },
+        { id: 2, mentor_names: "a4" },
+        { id: 3, mentor_names: "a2, a4" },
+        { id: 4, mentor_names: null },
+      ]);
+    });
   });
 
   describe("ReactiveReferences", () => {

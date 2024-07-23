@@ -22,15 +22,18 @@ import {
   Collection,
   LoadedCollection,
   LoadedProperty,
+  LoadedReadOnlyCollection,
   LoadedReference,
   ManyToManyCollection,
   OneToOneReference,
   PolymorphicReference,
   ReactiveGetter,
+  ReadOnlyCollection,
   Reference,
 } from "./relations";
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
 import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
+import { RecursiveParentsCollectionImpl } from "./relations/RecursiveCollection";
 import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
 import { fail, flatAndUnique, mergeNormalizedHints } from "./utils";
 
@@ -94,9 +97,11 @@ export type Reacted<T extends Entity, H> = Entity & {
         ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<H>[K]>, N>
         : T[K] extends Collection<any, infer U>
           ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
-          : T[K] extends AsyncProperty<any, infer V>
-            ? LoadedProperty<any, V>
-            : T[K];
+          : T[K] extends ReadOnlyCollection<any, infer U>
+            ? LoadedReadOnlyCollection<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
+            : T[K] extends AsyncProperty<any, infer V>
+              ? LoadedProperty<any, V>
+              : T[K];
 } & {
   /**
    * Gives reactive rules & fields a way to get the full entity if they really need it.
@@ -151,6 +156,7 @@ export function reverseReactiveHint<T extends Entity>(
   if (typeof reactForOtherSide === "string") {
     fields.push(reactForOtherSide);
   }
+  const maybeRecursive: ReactiveTarget[] = [];
   // Look through the hint for our own fields, i.e. `["title"]`, and nested hints like `{ author: "firstName" }`.
   const subHints = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
     const key = keyMaybeSuffix.replace(suffixRe, "");
@@ -256,6 +262,22 @@ export function reverseReactiveHint<T extends Entity>(
         // simply omit it.
         if (isReadOnly) return [];
         return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false);
+      } else if (p instanceof RecursiveParentsCollectionImpl) {
+        const { otherFieldName, m2oFieldName } = p;
+        // I.e. this is `Author.mentorsRecursive`
+        // When our mentor changes, tell our immediate; but we ourselves are also "a new mentee"
+        // of the mentor, so do `fields.push(m2oFieldName)` to notify our immediate books.
+        //
+        // We could technically do "when our mentor changes, it means his list of mentees has changed,
+        // so go up to him, and then back down to his mentees", but this would load more mentees than
+        // just "us + our children".
+        if (!isReadOnly) {
+          fields.push(m2oFieldName);
+          maybeRecursive.push({ entity: entityType, fields: [m2oFieldName], path: [otherFieldName] });
+        }
+        return reverseReactiveHint(rootType, entityType, subHint, undefined, false).map(({ entity, fields, path }) => {
+          return { entity, fields, path: [...path, otherFieldName] };
+        });
       } else {
         throw new Error(`Invalid hint in ${rootType.name}.ts ${JSON.stringify(hint)}`);
       }
@@ -266,6 +288,7 @@ export function reverseReactiveHint<T extends Entity>(
     // from "here" (entityType) that is initially empty (path: []) but will have
     // paths layered on by the previous callers
     ...(fields.length > 0 || isFirst || reactForOtherSide === true ? [{ entity: entityType, fields, path: [] }] : []),
+    ...maybeRecursive,
     ...subHints,
   ];
 }
@@ -413,7 +436,9 @@ export function convertToLoadHint<T extends Entity>(
       }
     } else {
       const p = getProperties(meta)[key];
-      if (p && p.reactiveHint) {
+      if (p instanceof RecursiveParentsCollectionImpl) {
+        mergeNormalizedHints(loadHint, { [p.fieldName]: convertToLoadHint(meta, subHint, allowCustomKeys) });
+      } else if (p && p.reactiveHint) {
         mergeNormalizedHints(loadHint, convertToLoadHint(meta, p.reactiveHint, allowCustomKeys));
       } else if (!allowCustomKeys) {
         fail(`Invalid reactive hint on ${meta.tableName} ${JSON.stringify(hint)}`);

@@ -13,6 +13,7 @@
         "ignoreUsedToBeUseful": { "ignore": true },
         "ignoreUsedToBeUsefulRequiredWithDefault": { "ignore": true },
         "initials": { "derived": "sync" },
+        "mentorNames": { "derived": "async" },
         "nickNamesUpper": { "derived": "async" },
         "numberOfBooks": { "derived": "async" },
         "numberOfPublicReviews": { "derived": "async" },

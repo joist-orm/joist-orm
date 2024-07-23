@@ -118,6 +118,7 @@ export class Author extends AuthorCodegen {
     mentorRuleInvoked: 0,
     ageRuleInvoked: 0,
     numberOfBooksCalcInvoked: 0,
+    mentorNamesCalcInvoked: 0,
     bookCommentsCalcInvoked: 0,
     favoriteBookCalcInvoked: 0,
     graduatedRuleInvoked: 0,
@@ -180,6 +181,16 @@ export class Author extends AuthorCodegen {
     (a) => {
       a.transientFields.numberOfBooksCalcInvoked++;
       return a.books.get.length;
+    },
+  );
+
+  /** Example of a ReactiveField that uses recursive relations. */
+  readonly mentorNames: ReactiveField<Author, string | undefined> = hasReactiveField(
+    "mentorNames",
+    { mentorsRecursive: "firstName" },
+    (a) => {
+      a.transientFields.mentorNamesCalcInvoked++;
+      return a.mentorsRecursive.get.flatMap((m) => m.firstName).join(", ");
     },
   );
 

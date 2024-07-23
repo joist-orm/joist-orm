@@ -119,4 +119,14 @@ describe("entityResolver", () => {
     expect(spy).toHaveBeenCalledWith(a, { favoriteBook: { reviews: {} } });
     expect(b.reviews.isLoaded).toBe(true);
   });
+
+  it("can load recursive relations", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2", mentor_id: 1 });
+    await insertAuthor({ first_name: "a3", mentor_id: 2 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:3");
+    const result = await entityResolver(Author).mentorsRecursive(a, {}, {}, undefined!);
+    expect(result).toMatchEntity([{ id: "a:2" }, { id: "a:1" }]);
+  });
 });

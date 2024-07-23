@@ -1,3 +1,10 @@
+# [1.181.0](https://github.com/joist-orm/joist-orm/compare/v1.180.0...v1.181.0) (2024-07-23)
+
+
+### Features
+
+* Allow ReactiveFields to use recursive parent collections. ([#1155](https://github.com/joist-orm/joist-orm/issues/1155)) ([86c2b59](https://github.com/joist-orm/joist-orm/commit/86c2b59543b42ed68c5452aa485e0487a85113a8))
+
 # [1.180.0](https://github.com/joist-orm/joist-orm/compare/v1.179.1...v1.180.0) (2024-07-22)
 
 

@@ -35,6 +35,7 @@ type Author {
   tasks: [Task!]!
   rangeOfBooks: BookRangeDetail
   mentees: [Author!]!
+  mentorNames: String
 }
 
 input SaveAuthorInput {
@@ -60,6 +61,7 @@ input SaveAuthorInput {
   numberOfAtoms: Int
   nickNames: String
   rangeOfBooks: BookRange
+  mentorNames: String
 }
 
 type SaveAuthorResult {

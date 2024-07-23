@@ -364,6 +364,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
       this as any as Book,
       "prequelsRecursive",
       "prequel",
+      "sequelsRecursive",
     );
   }
 
@@ -372,6 +373,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
       this as any as Book,
       "sequelsRecursive",
       "sequel",
+      "prequelsRecursive",
     );
   }
 

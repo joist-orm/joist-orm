@@ -94,6 +94,14 @@ describe("reactiveHints", () => {
     ]);
   });
 
+  it("can do recursive relations", () => {
+    expect(reverse(Author, Author, { mentorsRecursive: "firstName" })).toEqual([
+      { entity: "Author", fields: ["mentor"], path: [] },
+      { entity: "Author", fields: ["mentor"], path: ["menteesRecursive"] },
+      { entity: "Author", fields: ["firstName"], path: ["menteesRecursive"] },
+    ]);
+  });
+
   it("can do via subtype-only poly relation", () => {
     // User.favoritePublisher is a poly, so filter on LargePublisher to avoid smallPublisher.critics
     expect(reverse(Critic, Critic, { favoriteLargePublisher: "users" })).toEqual([

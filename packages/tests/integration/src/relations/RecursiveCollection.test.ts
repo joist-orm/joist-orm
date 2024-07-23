@@ -169,9 +169,19 @@ describe("RecursiveCollection", () => {
     it("works on child is new instance", async () => {
       await insertAuthor({ first_name: "a1" });
       const em = newEntityManager();
+      const a2 = newAuthor(em);
       const a1 = await em.load(Author, "a:1");
-      a1.mentees.add(newAuthor(em));
-      expect(await a1.menteesRecursive.load()).toMatchEntity([{}]);
+      a1.mentees.add(a2);
+      expect(await a1.menteesRecursive.load()).toMatchEntity([a2]);
+    });
+
+    it("works on parent is new instance", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const a0 = newAuthor(em);
+      const a1 = await em.load(Author, "a:1");
+      a1.mentor.set(a0);
+      expect(await a0.menteesRecursive.load()).toMatchEntity([a1]);
     });
 
     it("is loaded on new entities", async () => {

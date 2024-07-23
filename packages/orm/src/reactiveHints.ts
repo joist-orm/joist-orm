@@ -265,7 +265,12 @@ export function reverseReactiveHint<T extends Entity>(
       } else if (p instanceof RecursiveParentsCollectionImpl) {
         const { otherFieldName, m2oFieldName } = p;
         // I.e. this is `Author.mentorsRecursive`
-        // If our `Author.mentor` changes, we need to tell our `menteesRecursive` about it
+        // When our mentor changes, tell our immediate; but we ourselves are also "a new mentee"
+        // of the mentor, so do `fields.push(m2oFieldName)` to notify our immediate books.
+        //
+        // We could technically do "when our mentor changes, it means his list of mentees has changed,
+        // so go up to him, and then back down to his mentees", but this would load more mentees than
+        // just "us + our children".
         if (!isReadOnly) {
           fields.push(m2oFieldName);
           maybeRecursive.push({ entity: entityType, fields: [m2oFieldName], path: [otherFieldName] });

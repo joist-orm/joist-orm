@@ -100,6 +100,19 @@ describe("reactiveHints", () => {
       { entity: "Author", fields: ["mentor"], path: ["menteesRecursive"] },
       { entity: "Author", fields: ["firstName"], path: ["menteesRecursive"] },
     ]);
+    expect(reverse(Book, Book, { author: { mentorsRecursive: { publisher: "name" } } })).toEqual([
+      { entity: "Book", fields: ["author"], path: [] },
+      // When `a2.mentor = a1`, any `a2.books` would see a1 in their `b1.author.mentorsRecursive` collection.
+      // When `a2.mentor` changes to `a3`, we *could* recalc through `a3.menteesRecursive`, but that would over
+      // fetch, so instead we (as a new mentee) ping our books directly + our own mentees.
+      { entity: "Author", fields: ["mentor"], path: ["books"] },
+      { entity: "Author", fields: ["mentor"], path: ["menteesRecursive", "books"] },
+      // When I am the mentor, and my publisher changes, tell my mentee's books
+      { entity: "Author", fields: ["publisher"], path: ["menteesRecursive", "books"] },
+      // When I am the Publisher, tell my authors, who if they're mentors, will tell their mentees
+      // (which will get us to the `author` level in the hint, to invalidate their books.)
+      { entity: "Publisher", fields: ["name"], path: ["authors", "menteesRecursive", "books"] },
+    ]);
   });
 
   it("can do via subtype-only poly relation", () => {

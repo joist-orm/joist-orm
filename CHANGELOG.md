@@ -1,3 +1,10 @@
+## [1.181.1](https://github.com/joist-orm/joist-orm/compare/v1.181.0...v1.181.1) (2024-07-23)
+
+
+### Bug Fixes
+
+* Support recursive relations in entityResolver. ([#1156](https://github.com/joist-orm/joist-orm/issues/1156)) ([df6d9ca](https://github.com/joist-orm/joist-orm/commit/df6d9caaa5328e2b616f249edd1eb9ca761a6a7b))
+
 # [1.181.0](https://github.com/joist-orm/joist-orm/compare/v1.180.0...v1.181.0) (2024-07-23)
 
 

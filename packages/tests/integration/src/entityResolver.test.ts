@@ -121,14 +121,12 @@ describe("entityResolver", () => {
   });
 
   it("can load recursive relations", async () => {
-    // Given an author with a technically incorrect numberOfPublicReviews
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2", mentor_id: 1 });
     await insertAuthor({ first_name: "a3", mentor_id: 2 });
     const em = newEntityManager();
     const a = await em.load(Author, "a:3");
     const result = await entityResolver(Author).mentorsRecursive(a, {}, {}, undefined!);
-    // Then we got the stale value
     expect(result).toMatchEntity([{ id: "a:2" }, { id: "a:1" }]);
   });
 });

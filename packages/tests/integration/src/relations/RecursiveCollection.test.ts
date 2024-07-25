@@ -91,6 +91,18 @@ describe("RecursiveCollection", () => {
       expect(a1.mentorsRecursive.isLoaded).toBe(true);
       expect(a1.mentorsRecursive.get).toMatchEntity([]);
     });
+
+    it("can em.refresh that deletes a parent", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      const em = newEntityManager();
+      const [a1, a2] = await em.find(Author, {});
+      em.delete(a1);
+      await em.flush();
+      await em.refresh();
+      expect(a1.isDeletedEntity).toBe(true);
+      expect(a2.isDeletedEntity).toBe(false);
+    });
   });
 
   describe("children", () => {

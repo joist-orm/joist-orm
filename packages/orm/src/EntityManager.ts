@@ -1383,7 +1383,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       // For any entity with an id, get its latest data + relations from the database
       const entities = await Promise.all(
         copy
-          .filter((e) => e.idTaggedMaybe)
+          .filter((e) => e.idTaggedMaybe && !e.isDeletedEntity)
           .map((entity) => {
             // Pass these as a hint to potentially preload them
             const hint = getRelationEntries(entity)

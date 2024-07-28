@@ -9,6 +9,7 @@ describe("connection", () => {
       password: "local",
       port: 5432,
       user: "joist",
+      ssl: false,
     });
   });
 
@@ -19,14 +20,27 @@ describe("connection", () => {
       DB_DATABASE: "joist",
       DB_HOST: "db",
       DB_PORT: "5432",
+      DB_SSL: "true",
     });
     expect(info).toEqual({
       database: "joist",
       host: "db",
       password: "local",
       port: 5432,
-      ssl: undefined,
+      ssl: true,
       user: "joist",
+    });
+  });
+
+  it("should parse a DATABASE_URL with ssl=true", () => {
+    const info = newPgConnectionConfig({ DATABASE_URL: "postgres://joist:local@db:5432/joist?ssl=true" });
+    expect(info).toEqual({
+      database: "joist",
+      host: "db",
+      password: "local",
+      port: 5432,
+      user: "joist",
+      ssl: true,
     });
   });
 });

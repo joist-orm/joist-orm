@@ -3,7 +3,14 @@ import { parse } from "pg-connection-string";
 import { setupLatestPgTypes } from "./setupLatestPgTypes";
 
 type DatabaseUrlEnv = { DATABASE_URL: string };
-type DbSettingsEnv = { DB_USER: string; DB_PASSWORD: string; DB_HOST: string; DB_DATABASE: string; DB_PORT: string };
+type DbSettingsEnv = {
+  DB_USER: string;
+  DB_PASSWORD: string;
+  DB_HOST: string;
+  DB_DATABASE: string;
+  DB_PORT: string;
+  DB_SSL?: string;
+};
 
 export type ConnectionEnv = DatabaseUrlEnv | DbSettingsEnv;
 
@@ -45,6 +52,7 @@ export function newPgConnectionConfig(env?: ConnectionEnv): ConnectionConfig {
       database: database ?? undefined,
       host: host ?? undefined,
       port: port ? Number(port) : undefined,
+      ssl: options.ssl === true,
     };
   } else if (process.env.DB_DATABASE || (env && "DB_DATABASE" in env)) {
     const e = process.env.DB_DATABASE ? process.env : (env as DbSettingsEnv);
@@ -54,6 +62,7 @@ export function newPgConnectionConfig(env?: ConnectionEnv): ConnectionConfig {
       database: e.DB_DATABASE,
       host: e.DB_HOST,
       port: e.DB_PORT ? Number(e.DB_PORT) : undefined,
+      ssl: e.DB_SSL === "1" || e.DB_SSL === "true",
     };
   } else {
     throw new Error("No DATABASE_URL or DB_DATABASE/etc. environment variable found");

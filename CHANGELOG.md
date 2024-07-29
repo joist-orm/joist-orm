@@ -1,3 +1,10 @@
+## [1.181.2](https://github.com/joist-orm/joist-orm/compare/v1.181.1...v1.181.2) (2024-07-29)
+
+
+### Bug Fixes
+
+* simple pg connection string ssl handling ([#1162](https://github.com/joist-orm/joist-orm/issues/1162)) ([610ed68](https://github.com/joist-orm/joist-orm/commit/610ed6897b59cfd52080973f57bb5aa0afaa6846))
+
 ## [1.181.1](https://github.com/joist-orm/joist-orm/compare/v1.181.0...v1.181.1) (2024-07-23)
 
 

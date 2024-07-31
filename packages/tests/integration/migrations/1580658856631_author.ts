@@ -125,6 +125,8 @@ export function up(b: MigrationBuilder): void {
     // for foreign key tests
     publisher_id: foreignKey("publishers", { notNull: false }),
     mentor_id: foreignKey("authors", { notNull: false, otherFieldName: "mentees" }),
+    // for testing ReactiveReferences within a table that has recursive relations
+    root_mentor_id: foreignKey("authors", { notNull: false }),
     // for testing ReactiveFields against recursive relations
     mentor_names: { type: "text", notNull: false },
     // for testing jsonb columns

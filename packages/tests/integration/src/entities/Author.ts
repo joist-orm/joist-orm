@@ -20,7 +20,16 @@ import {
   isDefined,
   withLoaded,
 } from "joist-orm";
-import { AuthorCodegen, Book, BookRange, BookReview, Comment, bookMeta, authorConfig as config } from "./entities";
+import {
+  AuthorCodegen,
+  Book,
+  BookRange,
+  BookReview,
+  Comment,
+  authorMeta,
+  bookMeta,
+  authorConfig as config,
+} from "./entities";
 
 export class Author extends AuthorCodegen {
   readonly reviews: Collection<Author, BookReview> = hasManyThrough((author) => author.books.reviews);
@@ -228,6 +237,14 @@ export class Author extends AuthorCodegen {
       const bestRating = Math.max(...ratings);
       return books.find((b) => b.reviews.get.some((r) => r.rating === bestRating)) as Book | undefined;
     },
+  );
+
+  // For testing ReactiveReferences in entities with recursive relations
+  readonly rootMentor: ReactiveReference<Author, Author, undefined> = hasReactiveReference(
+    authorMeta,
+    "rootMentor",
+    "mentorsRecursive",
+    (a) => a.mentorsRecursive.get[a.mentorsRecursive.get.length - 1]?.fullNonReactiveAccess,
   );
 
   /** Example of an async property that can be loaded via a populate hint. */

@@ -131,6 +131,7 @@ export interface AuthorFields {
   favoriteColors: { kind: "enum"; type: Color[]; nullable: never };
   favoriteShape: { kind: "enum"; type: FavoriteShape; nullable: undefined; native: true };
   mentor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  rootMentor: { kind: "m2o"; type: Author; nullable: undefined; derived: true };
   currentDraftBook: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
   favoriteBook: { kind: "m2o"; type: Book; nullable: undefined; derived: true };
   publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
@@ -212,6 +213,7 @@ export interface AuthorFilter {
   favoriteColors?: ValueFilter<Color[], null>;
   favoriteShape?: ValueFilter<FavoriteShape, null>;
   mentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
+  rootMentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   currentDraftBook?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   favoriteBook?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null>;
@@ -258,6 +260,7 @@ export interface AuthorGraphQLFilter {
   favoriteColors?: ValueGraphQLFilter<Color[]>;
   favoriteShape?: ValueGraphQLFilter<FavoriteShape>;
   mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  rootMentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   currentDraftBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   favoriteBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null>;
@@ -314,6 +317,7 @@ export interface AuthorOrder {
   favoriteColors?: OrderBy;
   favoriteShape?: OrderBy;
   mentor?: AuthorOrder;
+  rootMentor?: AuthorOrder;
   currentDraftBook?: BookOrder;
   favoriteBook?: BookOrder;
   publisher?: PublisherOrder;
@@ -340,6 +344,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     optIdsType: AuthorIdsOpts;
     factoryOptsType: Parameters<typeof newAuthor>[1];
   };
+
+  abstract readonly rootMentor: ReactiveReference<Author, Author, undefined>;
 
   abstract readonly favoriteBook: ReactiveReference<Author, Book, undefined>;
 

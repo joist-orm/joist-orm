@@ -25,7 +25,11 @@
         "tsSearch": { "ignore": true },
         "wasEverPopular": { "protected": true }
       },
-      "relations": { "books": { "orderBy": "order" }, "favoriteBook": { "derived": "async" } },
+      "relations": {
+        "books": { "orderBy": "order" },
+        "favoriteBook": { "derived": "async" },
+        "rootMentor": { "derived": "async" }
+      },
       "tag": "a"
     },
     "AuthorSchedule": { "tag": "authorSchedule" },

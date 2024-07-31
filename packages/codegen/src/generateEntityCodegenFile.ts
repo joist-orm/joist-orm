@@ -831,6 +831,8 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
     .filter((m2o) => m2o.otherEntity.name === meta.name)
     // Allow disabling recursive relations
     .filter((m2o) => !(config.entities[meta.name]?.relations?.[m2o.fieldName]?.skipRecursiveRelations === true))
+    // Skip ReactiveReferences because they don't have an `other` side for us to use
+    .filter((m2o) => !m2o.derived)
     .flatMap((m2o) => {
       const { fieldName: m2oName, otherFieldName, otherEntity } = m2o;
       const parentsField = `${plural(m2oName)}Recursive`;

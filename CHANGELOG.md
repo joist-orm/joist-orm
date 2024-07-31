@@ -1,3 +1,10 @@
+## [1.181.3](https://github.com/joist-orm/joist-orm/compare/v1.181.2...v1.181.3) (2024-07-31)
+
+
+### Bug Fixes
+
+* Skip ReactiveReferences for recursive relations. ([#1165](https://github.com/joist-orm/joist-orm/issues/1165)) ([96c78c4](https://github.com/joist-orm/joist-orm/commit/96c78c44fbcb1e74ff7a42794fd2a265306e58ff)), closes [#1164](https://github.com/joist-orm/joist-orm/issues/1164)
+
 ## [1.181.2](https://github.com/joist-orm/joist-orm/compare/v1.181.1...v1.181.2) (2024-07-29)
 
 

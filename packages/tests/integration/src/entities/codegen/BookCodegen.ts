@@ -31,6 +31,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type ReactiveField,
   type ReadOnlyCollection,
   setField,
   setOpts,
@@ -78,6 +79,7 @@ export interface BookFields {
   order: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   notes: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   acknowledgements: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  search: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -125,6 +127,7 @@ export interface BookFilter {
   order?: ValueFilter<number, never>;
   notes?: ValueFilter<string, never>;
   acknowledgements?: ValueFilter<string, null>;
+  search?: ValueFilter<string, null>;
   deletedAt?: ValueFilter<Date, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
@@ -147,6 +150,7 @@ export interface BookGraphQLFilter {
   order?: ValueGraphQLFilter<number>;
   notes?: ValueGraphQLFilter<string>;
   acknowledgements?: ValueGraphQLFilter<string>;
+  search?: ValueGraphQLFilter<string>;
   deletedAt?: ValueGraphQLFilter<Date>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
@@ -169,6 +173,7 @@ export interface BookOrder {
   order?: OrderBy;
   notes?: OrderBy;
   acknowledgements?: OrderBy;
+  search?: OrderBy;
   deletedAt?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
@@ -253,6 +258,8 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   set acknowledgements(acknowledgements: string | undefined) {
     setField(this, "acknowledgements", cleanStringValue(acknowledgements));
   }
+
+  abstract readonly search: ReactiveField<Book, string | undefined>;
 
   get deletedAt(): Date | undefined {
     return getField(this, "deletedAt");

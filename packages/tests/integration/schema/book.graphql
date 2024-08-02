@@ -18,6 +18,7 @@ type Book {
   notes: String
   originalOrder: Int!
   acknowledgements: String
+  search: String
 }
 
 input SaveBookInput {

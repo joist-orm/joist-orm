@@ -1,4 +1,4 @@
-import { AsyncProperty, hasReactiveAsyncProperty } from "joist-orm";
+import { AsyncProperty, hasReactiveAsyncProperty, hasReactiveField, ReactiveField } from "joist-orm";
 import { Author, BookCodegen, bookConfig as config } from "./entities";
 
 export class Book extends BookCodegen {
@@ -15,6 +15,13 @@ export class Book extends BookCodegen {
     { reviews: "isPublic" },
     (b) => `reviews=${b.reviews.get.filter((r) => r.isPublic.get).length}`,
   );
+
+  /** For testing accessing `book.author.get` when it's undefined. */
+  readonly search: ReactiveField<Book, string> = hasReactiveField("search", { author: "firstName", title: {} }, (b) => {
+    // This will NPE if author is undefined (which is what we're testing)
+    const { firstName } = b.author.get;
+    return [firstName, b.title].join(" ");
+  });
 }
 
 config.addRule((book) => {

@@ -178,6 +178,8 @@ export function up(b: MigrationBuilder): void {
     notes: { type: "text", notNull: true },
     // for testing nullable fields that don't have a default
     acknowledgements: { type: "text", notNull: false },
+    // for testing ReactiveFields that access undefined required fields
+    search: { type: "text", notNull: false },
     deleted_at: { type: "timestamptz", notNull: false },
   });
 

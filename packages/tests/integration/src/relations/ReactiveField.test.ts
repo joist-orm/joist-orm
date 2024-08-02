@@ -10,6 +10,7 @@ import {
   update,
 } from "@src/entities/inserts";
 import { knex, newEntityManager } from "@src/testEm";
+import { noValue } from "joist-orm";
 import { Author, Book, BookRange, BookReview, Tag, newAuthor, newBook, newBookReview, newComment } from "../entities";
 
 describe("ReactiveField", () => {
@@ -346,5 +347,11 @@ describe("ReactiveField", () => {
     await em.flush();
     const rows = await select("comments");
     expect(rows[0]).toMatchObject({ parent_tags: "reviews=1-t11-t2" });
+  });
+
+  it("does not trigger NPEs in lambdas accessing required relations", async () => {
+    const em = newEntityManager();
+    newBook(em, { author: noValue() });
+    await expect(em.flush()).rejects.toThrow("Book#1 author is required");
   });
 });

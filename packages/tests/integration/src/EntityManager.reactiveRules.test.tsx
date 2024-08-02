@@ -358,6 +358,7 @@ describe("EntityManager.reactiveRules", () => {
       { kind: "populate", cstr: "Author", name: "search", fields: ["author", "title"], path: ["author"] },
       { kind: "populate", cstr: "Author", name: "rangeOfBooks", fields: ["author"], path: ["author"] },
       { kind: "populate", cstr: "Author", name: "favoriteBook", fields: ["author"], path: ["author"] },
+      { kind: "populate", cstr: "Book", name: "search", fields: ["author", "title"], path: [] },
       { kind: "populate", cstr: "BookReview", name: "isPublic", fields: ["author"], path: ["reviews"] },
       { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["tags"], path: ["comments"] },
       {

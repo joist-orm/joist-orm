@@ -47,6 +47,10 @@ function buildCondition(cc: ColumnCondition): [string, any[]] {
     case "nlike":
     case "ilike":
     case "nilike":
+    case "regex":
+    case "nregex":
+    case "iregex":
+    case "niregex":
     case "contains":
     case "containedBy":
     case "overlaps": {

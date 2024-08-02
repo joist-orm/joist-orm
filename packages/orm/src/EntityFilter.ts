@@ -74,6 +74,10 @@ export type ValueFilter<V, N> =
   | { nlike: V | undefined }
   | { ilike: V | undefined }
   | { nilike: V | undefined }
+  | { regex?: V | undefined }
+  | { iregex?: V | undefined }
+  | { nregex?: V | undefined }
+  | { niregex?: V | undefined }
   | { search: V | undefined }
   // should put these in a dedicated ArrayFilter
   | { contains: V | undefined }

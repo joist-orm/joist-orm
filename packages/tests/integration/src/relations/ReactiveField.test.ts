@@ -349,7 +349,7 @@ describe("ReactiveField", () => {
     expect(rows[0]).toMatchObject({ parent_tags: "reviews=1-t11-t2" });
   });
 
-  it("does not trigger NPEs in lambdas accessing required relations", async () => {
+  it("still throws validation rules instead of NPEs in lambdas accessing unset required relations", async () => {
     const em = newEntityManager();
     newBook(em, { author: noValue() });
     await expect(em.flush()).rejects.toThrow("Book#1 author is required");

@@ -1370,12 +1370,12 @@ describe("EntityManager.queries", () => {
     });
   });
 
-  it("can find by reg", async () => {
+  it("can find by regex", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
 
     const em = newEntityManager();
-    const where = { firstName: { reg: "a[1]" } };
+    const where = { firstName: { regex: "a[1]" } };
     const authors = await em.find(Author, where);
     expect(authors).toMatchEntity([{ firstName: "a1" }]);
 
@@ -1385,19 +1385,19 @@ describe("EntityManager.queries", () => {
       condition: {
         op: "and",
         conditions: [
-          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "reg", value: "a[1]" } },
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "regex", value: "a[1]" } },
         ],
       },
       orderBys: [expect.anything()],
     });
   });
 
-  it("can find by ireg", async () => {
+  it("can find by iregex", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
 
     const em = newEntityManager();
-    const where = { firstName: { ireg: "A[1]" } };
+    const where = { firstName: { iregex: "A[1]" } };
     const authors = await em.find(Author, where);
     expect(authors).toMatchEntity([{ firstName: "a1" }]);
 
@@ -1407,19 +1407,19 @@ describe("EntityManager.queries", () => {
       condition: {
         op: "and",
         conditions: [
-          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "ireg", value: "A[1]" } },
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "iregex", value: "A[1]" } },
         ],
       },
       orderBys: [expect.anything()],
     });
   });
 
-  it("can find by nreg", async () => {
+  it("can find by nregex", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
 
     const em = newEntityManager();
-    const where = { firstName: { nreg: "a[1]" } };
+    const where = { firstName: { nregex: "a[1]" } };
     const authors = await em.find(Author, where);
     expect(authors).toMatchEntity([{ firstName: "a2" }]);
 
@@ -1429,19 +1429,19 @@ describe("EntityManager.queries", () => {
       condition: {
         op: "and",
         conditions: [
-          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "nreg", value: "a[1]" } },
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "nregex", value: "a[1]" } },
         ],
       },
       orderBys: [expect.anything()],
     });
   });
 
-  it("can find by nireg", async () => {
+  it("can find by niregex", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
 
     const em = newEntityManager();
-    const where = { firstName: { nireg: "A[1]" } };
+    const where = { firstName: { niregex: "A[1]" } };
     const authors = await em.find(Author, where);
     expect(authors).toMatchEntity([{ firstName: "a2" }]);
 
@@ -1451,7 +1451,7 @@ describe("EntityManager.queries", () => {
       condition: {
         op: "and",
         conditions: [
-          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "nireg", value: "A[1]" } },
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "niregex", value: "A[1]" } },
         ],
       },
       orderBys: [expect.anything()],

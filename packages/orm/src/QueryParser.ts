@@ -681,10 +681,10 @@ export type ParsedValueFilter<V> =
   | { kind: "nlike"; value: V }
   | { kind: "ilike"; value: V }
   | { kind: "nilike"; value: V }
-  | { kind: "reg"; value: V }
-  | { kind: "nreg"; value: V }
-  | { kind: "ireg"; value: V }
-  | { kind: "nireg"; value: V }
+  | { kind: "regex"; value: V }
+  | { kind: "nregex"; value: V }
+  | { kind: "iregex"; value: V }
+  | { kind: "niregex"; value: V }
   | { kind: "contains"; value: readonly V[] }
   | { kind: "ncontains"; value: readonly V[] }
   | { kind: "overlaps"; value: readonly V[] }
@@ -752,10 +752,10 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
             case "nlike":
             case "ilike":
             case "nilike":
-            case "reg":
-            case "nreg":
-            case "ireg":
-            case "nireg":
+            case "regex":
+            case "nregex":
+            case "iregex":
+            case "niregex":
             case "contains":
             case "overlaps":
             case "containedBy":
@@ -872,10 +872,10 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
     case "nlike":
     case "ilike":
     case "nilike":
-    case "reg":
-    case "nreg":
-    case "ireg":
-    case "nireg":
+    case "regex":
+    case "nregex":
+    case "iregex":
+    case "niregex":
       filter.value = column.mapToDb(filter.value);
       return filter;
     case "in":

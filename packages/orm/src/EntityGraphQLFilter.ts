@@ -32,10 +32,10 @@ export type ValueGraphQLFilter<V> =
       nlike?: V | null;
       ilike?: V | null;
       nilike?: V | null;
-      reg?: V | null;
-      ireg?: V | null;
-      nreg?: V | null;
-      nireg?: V | null;
+      regex?: V | null;
+      iregex?: V | null;
+      nregex?: V | null;
+      niregex?: V | null;
       between?: readonly V[] | null;
       contains?: V | null;
       overlaps?: V | null;
@@ -60,10 +60,10 @@ export const operators = [
   "ilike",
   "nilike",
   // Regular expression operators
-  "reg",
-  "ireg",
-  "nreg",
-  "nireg",
+  "regex",
+  "iregex",
+  "nregex",
+  "niregex",
   "in",
   "nin",
   "between",
@@ -86,10 +86,10 @@ export const opToFn: Record<Exclude<Operator, "in" | "nin" | "between">, string>
   ilike: "ILIKE",
   nilike: "NOT ILIKE",
   // Regular expression operators
-  reg: "~",
-  ireg: "~*",
-  nreg: "!~",
-  nireg: "!~*",
+  regex: "~",
+  iregex: "~*",
+  nregex: "!~",
+  niregex: "!~*",
   // containsAll / hasAll
   contains: "@>",
   containedBy: "<@",

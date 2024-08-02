@@ -1,3 +1,10 @@
+# [1.182.0](https://github.com/joist-orm/joist-orm/compare/v1.181.3...v1.182.0) (2024-08-02)
+
+
+### Features
+
+* Native support for regex operators on find ([#1169](https://github.com/joist-orm/joist-orm/issues/1169)) ([1ce21d4](https://github.com/joist-orm/joist-orm/commit/1ce21d46952c56cc341ed65fdf8a77884196b99e))
+
 ## [1.181.3](https://github.com/joist-orm/joist-orm/compare/v1.181.2...v1.181.3) (2024-07-31)
 
 

@@ -1262,6 +1262,26 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can find by date", async () => {
+    await insertAuthor({ first_name: "a1", graduated: jan1 });
+    await insertAuthor({ first_name: "a2", graduated: jan2 });
+
+    const em = newEntityManager();
+    const where = { graduated: jan2 } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "graduated", dbType: "date", cond: { kind: "eq", value: jan2 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
   it("can find by like", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
@@ -1279,26 +1299,6 @@ describe("EntityManager.queries", () => {
         conditions: [
           { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "like", value: "a%" } },
         ],
-      },
-      orderBys: [expect.anything()],
-    });
-  });
-
-  it("can find by date", async () => {
-    await insertAuthor({ first_name: "a1", graduated: jan1 });
-    await insertAuthor({ first_name: "a2", graduated: jan2 });
-
-    const em = newEntityManager();
-    const where = { graduated: jan2 } satisfies AuthorFilter;
-    const authors = await em.find(Author, where);
-    expect(authors.length).toEqual(1);
-
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
-      selects: [`a.*`],
-      tables: [{ alias: "a", table: "authors", join: "primary" }],
-      condition: {
-        op: "and",
-        conditions: [{ alias: "a", column: "graduated", dbType: "date", cond: { kind: "eq", value: jan2 } }],
       },
       orderBys: [expect.anything()],
     });
@@ -1364,6 +1364,94 @@ describe("EntityManager.queries", () => {
         op: "and",
         conditions: [
           { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "nilike", value: "A%" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by reg", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { firstName: { reg: "a[1]" } };
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "reg", value: "a[1]" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by ireg", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { firstName: { ireg: "A[1]" } };
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "ireg", value: "A[1]" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by nreg", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { firstName: { nreg: "a[1]" } };
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a2" }]);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "nreg", value: "a[1]" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by nireg", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { firstName: { nireg: "A[1]" } };
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a2" }]);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "nireg", value: "A[1]" } },
         ],
       },
       orderBys: [expect.anything()],

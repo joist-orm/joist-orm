@@ -284,6 +284,10 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, numbe
     case "nlike":
     case "ilike":
     case "nilike":
+    case "reg":
+    case "nreg":
+    case "ireg":
+    case "nireg":
     case "contains":
     case "overlaps":
     case "containedBy": {

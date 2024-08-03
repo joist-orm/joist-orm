@@ -35,7 +35,11 @@
     "AuthorSchedule": { "tag": "authorSchedule" },
     "AuthorStat": { "tag": "as" },
     "Book": {
-      "fields": { "notes": { "hasConfigDefault": true }, "order": { "hasConfigDefault": true } },
+      "fields": {
+        "notes": { "hasConfigDefault": true },
+        "order": { "hasConfigDefault": true },
+        "search": { "derived": "async" }
+      },
       "orderBy": "title",
       "relations": { "author": { "hasConfigDefault": true } },
       "tag": "b"

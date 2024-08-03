@@ -10,6 +10,7 @@ import {
   update,
 } from "@src/entities/inserts";
 import { knex, newEntityManager } from "@src/testEm";
+import { noValue } from "joist-orm";
 import { Author, Book, BookRange, BookReview, Tag, newAuthor, newBook, newBookReview, newComment } from "../entities";
 
 describe("ReactiveField", () => {
@@ -346,5 +347,18 @@ describe("ReactiveField", () => {
     await em.flush();
     const rows = await select("comments");
     expect(rows[0]).toMatchObject({ parent_tags: "reviews=1-t11-t2" });
+  });
+
+  it("throws validation rules instead of NPEs in lambdas accessing unset required relations", async () => {
+    const em = newEntityManager();
+    newBook(em, { author: noValue() });
+    await expect(em.flush()).rejects.toThrow("Book#1 author is required");
+  });
+
+  it("still throws valid NPEs in lambdas", async () => {
+    const em = newEntityManager();
+    const b1 = newBook(em);
+    b1.transientFields.throwNpeInSearch = true;
+    await expect(em.flush()).rejects.toThrow("Cannot read properties of undefined (reading 'willFail')");
   });
 });

@@ -41,6 +41,8 @@ export class ReactionsManager {
   private needsRecalc = { populate: false, query: false };
   private logger: ReactionLogger | undefined = globalLogger;
   private em: EntityManager;
+  /** These are NPEs that *might* have been from invalid m2o fields, so we only throw them after validation. */
+  private suppressedTypeErrors: Error[] = [];
 
   constructor(em: EntityManager) {
     this.em = em;
@@ -177,16 +179,19 @@ export class ReactionsManager {
       // dedupe the found relations before calling .load.
       const unique = [...new Set(relations.flat())];
       this.logger?.logLoading(this.em, unique);
+
       // Use allSettled so that we can watch for derived values that want to use the entity'd id,
       // i.e. they can fail, but we'll queue them from later.
       const startTime = this.logger?.now() ?? 0;
       const results = await Promise.allSettled(unique.map((r: any) => r.load()));
       const endTime = this.logger?.now() ?? 0;
       this.logger?.logLoadingTime(this.em, endTime - startTime);
+
       const failures: any[] = [];
       results.forEach((result, i) => {
         if (result.status === "rejected") {
-          if (result.reason instanceof NoIdError) {
+          // Let `author.id` and `book.author.get.firstName` errors run again after flush/hooks fills them in
+          if (result.reason instanceof NoIdError || result.reason instanceof TypeError) {
             this.relationsPendingAssignedIds.add(unique[i]);
           } else {
             failures.push(result.reason);
@@ -216,13 +221,40 @@ export class ReactionsManager {
   async recalcRelationsPendingAssignedIds(): Promise<void> {
     const relations = [...this.relationsPendingAssignedIds];
     this.relationsPendingAssignedIds.clear();
-    await Promise.all(
+
+    const startTime = this.logger?.now() ?? 0;
+    const results = await Promise.allSettled(
       relations.filter((r) => r instanceof AbstractPropertyImpl && !r.entity.isDeletedEntity).map((r: any) => r.load()),
     );
+    const endTime = this.logger?.now() ?? 0;
+    this.logger?.logLoadingTime(this.em, endTime - startTime);
+
+    const failures: any[] = [];
+    results.forEach((result) => {
+      if (result.status === "rejected") {
+        if (result.reason instanceof TypeError) {
+          // Defer to the validation error to catch this
+          this.suppressedTypeErrors.push(result.reason);
+        } else {
+          failures.push(result.reason);
+        }
+      }
+    });
+    if (failures.length > 0) throw failures[0];
   }
 
   setLogger(logger: ReactionLogger | undefined): void {
     this.logger = logger;
+  }
+
+  clearSuppressedTypeErrors(): void {
+    this.suppressedTypeErrors = [];
+  }
+
+  throwIfAnySuppressedTypeErrors(): void {
+    if (this.suppressedTypeErrors.length > 0) {
+      throw this.suppressedTypeErrors[0];
+    }
   }
 
   private getPending(rf: ReactiveField): { todo: Set<Entity>; done: Set<Entity> } {

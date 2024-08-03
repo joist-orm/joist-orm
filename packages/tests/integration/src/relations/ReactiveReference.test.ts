@@ -160,14 +160,18 @@ describe("ReactiveReference", () => {
     expect(reactionOutput).toMatchInlineSnapshot(`
      [
        "b:1.title changed, queuing b:1.author.search↩",
+       "b:1.title changed, queuing b:1.search↩",
        "b:1.title changed, queuing b:1.favoriteAuthor.publisher.titlesOfFavoriteBooks↩",
        "Recalculating reactive fields values... (em.entities=1)↩",
+       "  Walked 1 Book. paths, found 1 Book.search to recalc↩",
+       "    [ b:1 ] -> [ b:1 ]↩",
        "  Walked 1 Book.author paths, found 1 Author.search to recalc↩",
        "    [ b:1 ] -> [ a:1 ]↩",
        "  Walked 1 Book.favoriteAuthor.publisher paths, found 1 Publisher.titlesOfFavoriteBooks to recalc↩",
        "    [ b:1 ] -> [ p:1 ]↩",
-       "  Loading 2 relations... (em.entities=3)↩",
+       "  Loading 3 relations... (em.entities=3)↩",
        "    Author.search -> [ a:1 ]↩",
+       "    Book.search -> [ b:1 ]↩",
        "    SmallPublisher.titlesOfFavoriteBooks -> [ p:1 ]↩",
        "    took 0 millis (em.entities=3)↩",
      ]

@@ -1813,6 +1813,22 @@ describe("EntityManager", () => {
     // Then we see both error messages
     await expect(em.flush()).rejects.toThrow("Author#1 First Name is invalid one, First Name is invalid two");
   });
+
+  it("implements AsyncDisposable", async () => {
+    // Given an existing Author
+    await insertAuthor({ first_name: "f" });
+    // When we have a function with `using` and no `em.flush();`
+    async function updateAuthor() {
+      await using em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      a.firstName = "f2";
+    }
+    // When we call the function
+    await updateAuthor();
+    // Then the EntityManager was implicitly flushed, and the Author is updated
+    const rows = await select("authors");
+    expect(rows[0].first_name).toEqual("f2");
+  });
 });
 
 function delay(ms: number): Promise<void> {

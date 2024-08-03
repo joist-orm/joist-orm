@@ -66,6 +66,9 @@ import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { MaybePromise, assertNever, fail, getOrSet, partition, toArray } from "./utils";
 
+// polyfill
+(Symbol as any).asyncDispose ??= Symbol("Symbol.asyncDispose");
+
 /**
  * The constructor for concrete entity types.
  *
@@ -1628,6 +1631,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   setReactionLogging(enabled: boolean): void;
   setReactionLogging(arg: boolean | ReactionLogger): void {
     this.#rm.setLogger(typeof arg === "boolean" ? (arg ? new ReactionLogger() : undefined) : arg);
+  }
+
+  async [Symbol.asyncDispose](): Promise<void> {
+    await this.flush();
   }
 }
 

@@ -1,3 +1,10 @@
+# [1.185.0](https://github.com/joist-orm/joist-orm/compare/v1.184.0...v1.185.0) (2024-08-03)
+
+
+### Features
+
+* Auto-detect config.setDefault calls. ([#1170](https://github.com/joist-orm/joist-orm/issues/1170)) ([dfeb86a](https://github.com/joist-orm/joist-orm/commit/dfeb86ab8b2b1786f99ded4fc3535e65eb0fb8ed)), closes [#1160](https://github.com/joist-orm/joist-orm/issues/1160)
+
 # [1.184.0](https://github.com/joist-orm/joist-orm/compare/v1.183.0...v1.184.0) (2024-08-03)
 
 

@@ -7,7 +7,6 @@ import {
   Config,
   fieldTypeConfig,
   getTimestampConfig,
-  hasConfigDefault,
   isFieldIgnored,
   isGetterField,
   isLargeCollection,
@@ -441,7 +440,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
     zodSchema: fieldType === "Object" && zodSchema ? Import.from(zodSchema) : undefined,
     customSerde: customSerde ? serdeType(customSerde) : undefined,
     isArray: array,
-    hasConfigDefault: hasConfigDefault(config, entity, fieldName),
+    hasConfigDefault: false, // updated by scanEntityFiles
   };
 }
 
@@ -491,7 +490,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
     ignore,
     enumRows: enums[r.targetTable.name].rows,
     isArray: false,
-    hasConfigDefault: hasConfigDefault(config, entity, fieldName),
+    hasConfigDefault: false, // updated by scanEntityFiles
   };
 }
 
@@ -522,7 +521,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
     ignore,
     enumRows: enums[enumTable].rows,
     isArray: true,
-    hasConfigDefault: hasConfigDefault(config, entity, fieldName),
+    hasConfigDefault: false, // updated by scanEntityFiles
   };
 }
 
@@ -542,7 +541,7 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
     notNull: column.notNull,
     columnDefault: column.default,
     ignore: isFieldIgnored(config, entity, fieldName, column.notNull, column.default !== null),
-    hasConfigDefault: hasConfigDefault(config, entity, fieldName),
+    hasConfigDefault: false, // updated by scanEntityFiles
   };
 }
 
@@ -572,7 +571,7 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
     dbType,
     isDeferredAndDeferrable,
     constraintName: r.foreignKey.name,
-    hasConfigDefault: hasConfigDefault(config, entity, fieldName),
+    hasConfigDefault: false, // updated by scanEntityFiles
     onDelete: r.foreignKey.onDelete,
   };
 }

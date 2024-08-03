@@ -95,7 +95,7 @@ export interface UserOpts {
   ipAddress?: IpAddress | null;
   password?: PasswordValue | null;
   bio?: string;
-  originalEmail: string;
+  originalEmail?: string;
   manager?: User | UserId | null;
   authorManyToOne?: Author | AuthorId | null;
   favoritePublisher?: UserFavoritePublisher;

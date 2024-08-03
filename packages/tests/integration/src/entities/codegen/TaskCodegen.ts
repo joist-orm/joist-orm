@@ -68,7 +68,7 @@ export interface TaskFields {
 }
 
 export interface TaskOpts {
-  durationInDays: number;
+  durationInDays?: number;
   deletedAt?: Date | null;
   taskTaskItems?: TaskItem[];
   tags?: Tag[];

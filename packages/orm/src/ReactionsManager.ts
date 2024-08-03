@@ -41,6 +41,7 @@ export class ReactionsManager {
   private needsRecalc = { populate: false, query: false };
   private logger: ReactionLogger | undefined = globalLogger;
   private em: EntityManager;
+  /** These are NPEs that *might* have been from invalid m2o fields, so we only throw them after validation. */
   private suppressedTypeErrors: Error[] = [];
 
   constructor(em: EntityManager) {

@@ -11,18 +11,19 @@ import { generateFiles } from "./generate";
 import { createFlushFunction } from "./generateFlushFunction";
 import { applyInheritanceUpdates } from "./inheritance";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
+import { scanEntityFiles } from "./scanEntityFiles";
 import { isEntityTable, isJoinTable, mapSimpleDbTypeToTypescriptType } from "./utils";
 
 export {
   DbMetadata,
   EnumField,
+  makeEntity,
   ManyToManyField,
   ManyToOneField,
   OneToManyField,
   OneToOneField,
   PrimitiveField,
   PrimitiveTypescriptType,
-  makeEntity,
 } from "./EntityDbMetadata";
 export { EnumMetadata, EnumRow, EnumTableData, PgEnumData, PgEnumMetadata } from "./loadMetadata";
 export { Config, EntityDbMetadata, mapSimpleDbTypeToTypescriptType };
@@ -45,6 +46,9 @@ async function main() {
 
   // Look for STI tables to synthesize separate metas
   applyInheritanceUpdates(config, dbMetadata);
+
+  // Scan `*.ts` files after we've expanded `Task` -> `TaskOld.ts`
+  await scanEntityFiles(config, dbMetadata);
 
   // If we're not using deferred FKs, determine our DAG insert order
   const hasError = await maybeSetForeignKeyOrdering(config, dbMetadata.entities);

@@ -2,7 +2,6 @@ import { Entity } from "./Entity";
 import { MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
 import { EntityMetadata, ManyToOneField, getMetadata } from "./EntityMetadata";
 import { setBooted } from "./config";
-import { hasDefaultValue } from "./defaults";
 import { getFakeInstance } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { reverseReactiveHint } from "./reactiveHints";
@@ -22,7 +21,6 @@ export function configureMetadata(metas: EntityMetadata[]): void {
   fireAfterMetadatas(metas);
   setBooted();
   populateConstructorMaps(metas);
-  ensureDefaultsSet(metas);
   setImmutableFields(metas);
   hookUpBaseTypeAndSubTypes(metas);
   reverseIndexReactivity(metas);
@@ -169,21 +167,6 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
           });
         }
       });
-  }
-}
-
-/** If the joist-config.json says a field has a `setDefault` call, make sure it does. */
-function ensureDefaultsSet(metas: EntityMetadata[]): void {
-  for (const meta of metas) {
-    for (const field of Object.values(meta.fields)) {
-      const shouldBeConfigDefault = "default" in field && field.default === "config";
-      const wasConfigCalled = hasDefaultValue(meta, field.fieldName);
-      if (shouldBeConfigDefault && !wasConfigCalled) {
-        throw new Error(
-          `Field ${meta.type}.${field.fieldName} is configured with hasConfigDefault=true in joist-config but is missing a config.setDefault`,
-        );
-      }
-    }
   }
 }
 

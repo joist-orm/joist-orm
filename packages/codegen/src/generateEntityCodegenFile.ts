@@ -11,7 +11,7 @@ import {
   PrimitiveField,
   PrimitiveTypescriptType,
 } from "./EntityDbMetadata";
-import { Config, hasConfigDefault } from "./config";
+import { Config } from "./config";
 import { getStiEntities } from "./inheritance";
 import { keywords } from "./keywords";
 import {
@@ -388,7 +388,7 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
     if (derived) {
       return code``;
     }
-    return code`${fieldName}${maybeOptionalOrDefault(config, meta.entity, field)}: ${fieldType}${maybeUnionNull(notNull)};`;
+    return code`${fieldName}${maybeOptionalOrDefault(field)}: ${fieldType}${maybeUnionNull(notNull)};`;
   });
   const enums = meta.enums.map((field) => {
     const { fieldName, enumType, notNull, isArray } = field;
@@ -399,12 +399,12 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
       // Arrays are always optional and we'll default to `[]`
       return code`${fieldName}?: ${enumType}[];`;
     } else {
-      return code`${fieldName}${maybeOptionalOrDefault(config, meta.entity, field)}: ${enumType}${maybeUnionNull(notNull)};`;
+      return code`${fieldName}${maybeOptionalOrDefault(field)}: ${enumType}${maybeUnionNull(notNull)};`;
     }
   });
   const pgEnums = meta.pgEnums.map((field) => {
     const { fieldName, enumType, notNull } = field;
-    return code`${fieldName}${maybeOptionalOrDefault(config, meta.entity, field)}: ${enumType}${maybeUnionNull(notNull)};`;
+    return code`${fieldName}${maybeOptionalOrDefault(field)}: ${enumType}${maybeUnionNull(notNull)};`;
   });
   const m2o = meta.manyToOnes
     .filter(({ derived }) => !derived)
@@ -930,16 +930,8 @@ function maybeOptional(notNull: boolean): string {
 }
 
 /** Makes the field required if there is a `NOT NULL` and no db-or-config default. */
-function maybeOptionalOrDefault(
-  config: Config,
-  entity: Entity,
-  field: PrimitiveField | EnumField | PgEnumField | ManyToOneField,
-): string {
-  return field.notNull &&
-    !(field.kind !== "m2o" && fieldHasDefaultValue(field)) &&
-    !hasConfigDefault(config, entity, field.fieldName)
-    ? ""
-    : "?";
+function maybeOptionalOrDefault(field: PrimitiveField | EnumField | PgEnumField | ManyToOneField): string {
+  return field.notNull && !(field.kind !== "m2o" && fieldHasDefaultValue(field)) && !field.hasConfigDefault ? "" : "?";
 }
 
 function maybeUnionNull(notNull: boolean): string {

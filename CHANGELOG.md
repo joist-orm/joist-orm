@@ -1,3 +1,10 @@
+# [1.184.0](https://github.com/joist-orm/joist-orm/compare/v1.183.0...v1.184.0) (2024-08-03)
+
+
+### Features
+
+* Update EntityManager to implement AsyncDisposable. ([#773](https://github.com/joist-orm/joist-orm/issues/773)) ([38b2dbf](https://github.com/joist-orm/joist-orm/commit/38b2dbf105dbdb97cad8eaab8c440cba47f3b83c))
+
 # [1.183.0](https://github.com/joist-orm/joist-orm/compare/v1.182.0...v1.183.0) (2024-08-03)
 
 

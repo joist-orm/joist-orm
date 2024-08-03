@@ -349,9 +349,16 @@ describe("ReactiveField", () => {
     expect(rows[0]).toMatchObject({ parent_tags: "reviews=1-t11-t2" });
   });
 
-  it("still throws validation rules instead of NPEs in lambdas accessing unset required relations", async () => {
+  it("throws validation rules instead of NPEs in lambdas accessing unset required relations", async () => {
     const em = newEntityManager();
     newBook(em, { author: noValue() });
     await expect(em.flush()).rejects.toThrow("Book#1 author is required");
+  });
+
+  it("still throws valid NPEs in lambdas", async () => {
+    const em = newEntityManager();
+    const b1 = newBook(em);
+    b1.transientFields.throwNpeInSearch = true;
+    await expect(em.flush()).rejects.toThrow("Cannot read properties of undefined (reading 'willFail')");
   });
 });

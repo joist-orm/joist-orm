@@ -9,6 +9,7 @@ export class Book extends BookCodegen {
   numberOfBooks2RuleInvoked = 0;
   authorSetWhenDeleteRuns: boolean | undefined = undefined;
   afterCommitCheckTagsChanged: boolean | undefined = undefined;
+  transientFields = { throwNpeInSearch: false };
 
   /** For testing reacting to poly CommentParent properties. */
   readonly commentParentInfo: AsyncProperty<Book, string> = hasReactiveAsyncProperty(
@@ -18,6 +19,10 @@ export class Book extends BookCodegen {
 
   /** For testing accessing `book.author.get` when it's undefined. */
   readonly search: ReactiveField<Book, string> = hasReactiveField("search", { author: "firstName", title: {} }, (b) => {
+    // Ensure that NPEs that aren't from validation errors aren't suppressed
+    if (b.transientFields.throwNpeInSearch) {
+      (undefined as any).willFail();
+    }
     // This will NPE if author is undefined (which is what we're testing)
     const { firstName } = b.author.get;
     return [firstName, b.title].join(" ");

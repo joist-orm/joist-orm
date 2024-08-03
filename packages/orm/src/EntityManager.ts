@@ -1175,7 +1175,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     // Make sure two ReactiveQueryFields don't ping-pong each other forever
     let hookLoops = 0;
     let now = getNow();
+    this.#rm.clearSuppressedTypeErrors();
 
+    // Make a lambda that we can invoke multiple times, if we loop for ReactiveQueryFields
     const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
       if (hookLoops++ >= 10) throw new Error("runHooksOnPendingEntities has ran 10 iterations, aborting");
       // Any dirty entities we find, even if we skipped firing their hooks on this loop
@@ -1263,6 +1265,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       if (!skipValidation) {
         await runValidation(entityTodos, joinRowTodos);
       }
+      this.#rm.throwIfAnySuppressedTypeErrors();
 
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
         // The driver will handle the right thing if we're already in an existing transaction.
@@ -1297,6 +1300,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
               entityTodos = createTodos(entitiesToFlush);
               // ...what about joinRowTodos?...
               await runValidation(entityTodos, joinRowTodos);
+              this.#rm.throwIfAnySuppressedTypeErrors();
             } else {
               // Exit the loop
               entityTodos = {};

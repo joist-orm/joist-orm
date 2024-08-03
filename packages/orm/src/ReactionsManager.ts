@@ -41,6 +41,7 @@ export class ReactionsManager {
   private needsRecalc = { populate: false, query: false };
   private logger: ReactionLogger | undefined = globalLogger;
   private em: EntityManager;
+  private suppressedTypeErrors: Error[] = [];
 
   constructor(em: EntityManager) {
     this.em = em;
@@ -188,6 +189,7 @@ export class ReactionsManager {
       const failures: any[] = [];
       results.forEach((result, i) => {
         if (result.status === "rejected") {
+          // Let `author.id` and `book.author.get.firstName` errors run again after flush/hooks fills them in
           if (result.reason instanceof NoIdError || result.reason instanceof TypeError) {
             this.relationsPendingAssignedIds.add(unique[i]);
           } else {
@@ -231,6 +233,7 @@ export class ReactionsManager {
       if (result.status === "rejected") {
         if (result.reason instanceof TypeError) {
           // Defer to the validation error to catch this
+          this.suppressedTypeErrors.push(result.reason);
         } else {
           failures.push(result.reason);
         }
@@ -241,6 +244,16 @@ export class ReactionsManager {
 
   setLogger(logger: ReactionLogger | undefined): void {
     this.logger = logger;
+  }
+
+  clearSuppressedTypeErrors(): void {
+    this.suppressedTypeErrors = [];
+  }
+
+  throwIfAnySuppressedTypeErrors(): void {
+    if (this.suppressedTypeErrors.length > 0) {
+      throw this.suppressedTypeErrors[0];
+    }
   }
 
   private getPending(rf: ReactiveField): { todo: Set<Entity>; done: Set<Entity> } {

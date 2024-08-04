@@ -95,7 +95,7 @@ export interface BookOpts {
   acknowledgements?: string | null;
   deletedAt?: Date | null;
   prequel?: Book | BookId | null;
-  author: Author | AuthorId;
+  author?: Author | AuthorId;
   randomComment?: Comment | CommentId | null;
   sequel?: Book | null;
   currentDraftAuthor?: Author | null;

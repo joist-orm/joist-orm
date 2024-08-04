@@ -25,6 +25,9 @@ export function setSyncDefaults(entity: Entity): void {
       } else if (value === undefined) {
         (entity as any)[field] = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
       } else if (isLoadedReference(value) && !value.isSet) {
+        // A sync default usually would never be for a reference, because reference defaults usually
+        // require a field hint (so would be async) to get "the other entity". However, something like:
+        // `config.setDefault("original", (self) => self);` is technically valid.
         value.set(maybeFn instanceof Function ? maybeFn(entity) : maybeFn);
       }
     }

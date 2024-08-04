@@ -1,3 +1,10 @@
+## [1.185.2](https://github.com/joist-orm/joist-orm/compare/v1.185.1...v1.185.2) (2024-08-04)
+
+
+### Bug Fixes
+
+* Fix synchronous defaults on m2o fields. ([#1172](https://github.com/joist-orm/joist-orm/issues/1172)) ([ecd3603](https://github.com/joist-orm/joist-orm/commit/ecd3603b3c1b7d735bf90b7dcab2b4dc32fec50f))
+
 ## [1.185.1](https://github.com/joist-orm/joist-orm/compare/v1.185.0...v1.185.1) (2024-08-04)
 
 

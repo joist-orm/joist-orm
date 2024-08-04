@@ -1,3 +1,10 @@
+## [1.185.1](https://github.com/joist-orm/joist-orm/compare/v1.185.0...v1.185.1) (2024-08-04)
+
+
+### Bug Fixes
+
+* Fix default detection when wrapped. ([#1171](https://github.com/joist-orm/joist-orm/issues/1171)) ([5c7d98f](https://github.com/joist-orm/joist-orm/commit/5c7d98f047db37871fd2f33034ac52084371325f))
+
 # [1.185.0](https://github.com/joist-orm/joist-orm/compare/v1.184.0...v1.185.0) (2024-08-03)
 
 

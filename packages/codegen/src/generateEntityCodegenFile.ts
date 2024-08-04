@@ -8,6 +8,7 @@ import {
   EnumField,
   ManyToOneField,
   PgEnumField,
+  PolymorphicField,
   PrimitiveField,
   PrimitiveTypescriptType,
 } from "./EntityDbMetadata";
@@ -408,9 +409,10 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   });
   const m2o = meta.manyToOnes
     .filter(({ derived }) => !derived)
-    .map(({ fieldName, otherEntity, notNull }) => {
+    .map((field) => {
+      const { fieldName, otherEntity, notNull } = field;
       const maybeNull = maybeUnionNull(notNull);
-      return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity.type} | ${otherEntity.idType} ${maybeNull};`;
+      return code`${fieldName}${maybeOptionalOrDefault(field)}: ${otherEntity.type} | ${otherEntity.idType} ${maybeNull};`;
     });
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${otherEntity.type} | null;`;
@@ -421,8 +423,9 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${otherEntity.type}[];`;
   });
-  const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
-    return code`${fieldName}${maybeOptional(notNull)}: ${fieldType};`;
+  const polys = meta.polymorphics.map((field) => {
+    const { fieldName, notNull, fieldType } = field;
+    return code`${fieldName}${maybeOptionalOrDefault(field)}: ${fieldType};`;
   });
   return [...primitives, ...enums, ...pgEnums, ...m2o, ...polys, ...o2o, ...o2m, ...m2m];
 }
@@ -930,8 +933,12 @@ function maybeOptional(notNull: boolean): string {
 }
 
 /** Makes the field required if there is a `NOT NULL` and no db-or-config default. */
-function maybeOptionalOrDefault(field: PrimitiveField | EnumField | PgEnumField | ManyToOneField): string {
-  return field.notNull && !(field.kind !== "m2o" && fieldHasDefaultValue(field)) && !field.hasConfigDefault ? "" : "?";
+function maybeOptionalOrDefault(
+  field: PrimitiveField | EnumField | PgEnumField | ManyToOneField | PolymorphicField,
+): string {
+  const hasDefault =
+    (field.kind !== "m2o" && field.kind !== "poly" && fieldHasDefaultValue(field)) || field.hasConfigDefault;
+  return !field.notNull || hasDefault ? "?" : "";
 }
 
 function maybeUnionNull(notNull: boolean): string {

@@ -199,6 +199,7 @@ export type PolymorphicField = Field & {
   kind: "poly";
   fieldType: string; // The name of the type union, eg `CommentParent`
   notNull: boolean;
+  hasConfigDefault: boolean;
   components: PolymorphicFieldComponent[];
 };
 
@@ -640,7 +641,14 @@ function newPolymorphicField(config: Config, table: Table, entity: Entity, pr: P
     .filter((r) => polymorphicFieldName(config, r) === fieldName)
     .map((r) => newPolymorphicFieldComponent(config, entity, r));
   const fieldType = `${entity.name}${pascalCase(fieldName)}`;
-  return { kind: "poly" as const, fieldName, fieldType, notNull, components };
+  return {
+    kind: "poly" as const,
+    fieldName,
+    fieldType,
+    notNull,
+    components,
+    hasConfigDefault: false, // updated by scanEntityFiles
+  };
 }
 
 function newPolymorphicFieldComponent(config: Config, entity: Entity, r: M2ORelation): PolymorphicFieldComponent {

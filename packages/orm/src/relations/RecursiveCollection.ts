@@ -124,13 +124,20 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
     if (!this.isLoaded || opts.forceReload) {
-      await recursiveParentsDataLoader(this.entity.em, this).load(this.entity);
-      // See if there are any WIP changes, i.e. new parents, that the ^ SQL query didn't know to load.
-      // We don't have to `while` loop this, because if parent itself has WIP changes above it, then
-      // its own `RecursiveParentsCollectionImpl.load` will load it, before returning to this method.
-      const unloadedParent = this.findUnloadedReference();
-      if (unloadedParent) {
-        await recursiveParentsDataLoader(this.entity.em, this).load(unloadedParent.entity);
+      // If we have `[grandchild, newlyCreatedParent, existingGrandparent, ...more...]`, skip up to the
+      // `existingGrandparent`, because if we `.load(entity)` (i.e. where we are the `grandchild`) then
+      // recursiveParentsDataLoader will try CTE query up from `grandchild[parent]`, but since that will
+      // be `newlyCreatedParent`, it doesn't have an id yet.
+      const entityToLoad = opts.forceReload ? this.entity : this.findUnloadedReference()?.entity;
+      if (entityToLoad && !entityToLoad.isNewEntity) {
+        await recursiveParentsDataLoader(this.entity.em, this).load(entityToLoad);
+        // See if there are any WIP changes, i.e. new parents, that the ^ SQL query didn't know to load.
+        // We don't have to `while` loop this, because if parent itself has WIP changes above it, then
+        // its own `RecursiveParentsCollectionImpl.load` will load it, before returning to this method.
+        const unloadedParent = this.findUnloadedReference();
+        if (unloadedParent) {
+          await recursiveParentsDataLoader(this.entity.em, this).load(unloadedParent.entity);
+        }
       }
     }
     return this.filterDeleted(this.doGet(), opts);

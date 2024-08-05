@@ -38,17 +38,23 @@ export function setSyncDefaults(entity: Entity): void {
 export function setAsyncDefaults(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
   return Promise.all(
     Object.values(todos).flatMap((todo) =>
+      // Would probably be good to bulk `em.populate` all the entities at once, instead of dataloader-ing them back together
       todo.inserts.flatMap((entity) =>
-        getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) =>
-          Object.entries(m.config.__data.asyncDefaults).map(async ([fieldName, fn]) => {
-            const value = (entity as any)[fieldName];
-            if (value === undefined) {
-              (entity as any)[fieldName] = await fn(entity, ctx);
-            } else if (isLoadedReference(value) && !value.isSet) {
-              value.set(await fn(entity, ctx));
-            }
-          }),
-        ),
+        getBaseAndSelfMetas(getMetadata(entity)).flatMap(async (m) => {
+          // Apply defaults by level, for defaults by depend on another
+          for await (const level of m.config.__data.asyncDefaultsByLevel) {
+            await Promise.all(
+              level.map(async (df) => {
+                const value = (entity as any)[df.fieldName];
+                if (value === undefined) {
+                  (entity as any)[df.fieldName] = await df.getValue(entity, ctx);
+                } else if (isLoadedReference(value) && !value.isSet) {
+                  value.set(await df.getValue(entity, ctx));
+                }
+              }),
+            );
+          }
+        }),
       ),
     ),
   );

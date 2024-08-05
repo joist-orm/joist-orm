@@ -36,6 +36,11 @@ export function setSyncDefaults(entity: Entity): void {
 
 /** Runs the async defaults for all inserted entities in `todos`. */
 export function setAsyncDefaults(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
+  // For inheritance, we want our sort to be across-subtypes, i.e. a Child.foo depends on a Parent.bar field
+  // It would be nice if `meta.config.data.__asyncDefaults` ended up with all DFs from the type + base types
+  // When setting defaults, we probably want per-subtype Todos, as then we could bulk `em.populate(...subtypes..., fieldHint)`
+  // It's tempting to create a single `fieldHint`, but which fields will need defaults will change from
+  // flush to flush, and entity to entity.
   return Promise.all(
     Object.values(todos).flatMap((todo) =>
       // Would probably be good to bulk `em.populate` all the entities at once, instead of dataloader-ing them back together

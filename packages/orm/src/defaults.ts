@@ -1,7 +1,9 @@
 import { Entity } from "./Entity";
-import { EntityMetadata, PrimitiveField, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "./EntityMetadata";
 import { Todo } from "./Todo";
 import { setField } from "./fields";
+import { normalizeHint } from "./normalizeHints";
+import { convertToLoadHint, ReactiveHint } from "./reactiveHints";
 import { isLoadedReference } from "./relations/index";
 
 export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolean {
@@ -63,4 +65,31 @@ export function setAsyncDefaults(ctx: unknown, todos: Record<string, Todo>): Pro
       ),
     ),
   );
+}
+
+/** Wraps the hint + lambda of an async `setDefault`. */
+export class AsyncDefault<T extends Entity> {
+  readonly fieldName: string;
+  #fieldHint: ReactiveHint<T>;
+  #loadHint: any;
+  #fn: (entity: any, ctx: any) => any;
+
+  constructor(fieldName: string, fieldHint: ReactiveHint<T>, fn: (entity: T, ctx: any) => any) {
+    this.fieldName = fieldName;
+    this.#fieldHint = fieldHint;
+    this.#fn = fn;
+  }
+
+  /** Return the immediate, sibling fields we depend on. */
+  get dependsOn(): string[] {
+    // i.e. `{ author: { firstName }, title: {}` -> `[author, title]`
+    return Object.keys(normalizeHint(this.#fieldHint));
+  }
+
+  /** For the given `entity`, returns what the default value should be. */
+  getValue(entity: T, ctx: any): Promise<any> {
+    // We can't convert this until now, since it requires the `metadata`
+    this.#loadHint ??= convertToLoadHint(getMetadata(entity), this.#fieldHint);
+    return entity.em.populate(entity, this.#loadHint).then((loaded) => this.#fn(loaded, ctx));
+  }
 }

@@ -1,3 +1,10 @@
+## [1.186.1](https://github.com/joist-orm/joist-orm/compare/v1.186.0...v1.186.1) (2024-08-05)
+
+
+### Bug Fixes
+
+* Fix parentsRecursive for new parents. ([#1175](https://github.com/joist-orm/joist-orm/issues/1175)) ([2df2c4e](https://github.com/joist-orm/joist-orm/commit/2df2c4e310c45d966d9f37fd542ac97f32947070))
+
 # [1.186.0](https://github.com/joist-orm/joist-orm/compare/v1.185.2...v1.186.0) (2024-08-05)
 
 

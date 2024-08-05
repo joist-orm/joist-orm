@@ -1,7 +1,9 @@
 import { Entity } from "./Entity";
-import { EntityMetadata, PrimitiveField, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "./EntityMetadata";
 import { Todo } from "./Todo";
 import { setField } from "./fields";
+import { normalizeHint } from "./normalizeHints";
+import { convertToLoadHint, ReactiveHint } from "./reactiveHints";
 import { isLoadedReference } from "./relations/index";
 
 export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolean {
@@ -36,20 +38,58 @@ export function setSyncDefaults(entity: Entity): void {
 
 /** Runs the async defaults for all inserted entities in `todos`. */
 export function setAsyncDefaults(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
+  // For inheritance, we want our sort to be across-subtypes, i.e. a Child.foo depends on a Parent.bar field
+  // It would be nice if `meta.config.data.__asyncDefaults` ended up with all DFs from the type + base types
+  // When setting defaults, we probably want per-subtype Todos, as then we could bulk `em.populate(...subtypes..., fieldHint)`
+  // It's tempting to create a single `fieldHint`, but which fields will need defaults will change from
+  // flush to flush, and entity to entity.
   return Promise.all(
     Object.values(todos).flatMap((todo) =>
+      // Would probably be good to bulk `em.populate` all the entities at once, instead of dataloader-ing them back together
       todo.inserts.flatMap((entity) =>
-        getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) =>
-          Object.entries(m.config.__data.asyncDefaults).map(async ([fieldName, fn]) => {
-            const value = (entity as any)[fieldName];
-            if (value === undefined) {
-              (entity as any)[fieldName] = await fn(entity, ctx);
-            } else if (isLoadedReference(value) && !value.isSet) {
-              value.set(await fn(entity, ctx));
-            }
-          }),
-        ),
+        getBaseAndSelfMetas(getMetadata(entity)).flatMap(async (m) => {
+          // Apply defaults by level, for defaults by depend on another
+          for await (const level of m.config.__data.asyncDefaultsByLevel) {
+            await Promise.all(
+              level.map(async (df) => {
+                const value = (entity as any)[df.fieldName];
+                if (value === undefined) {
+                  (entity as any)[df.fieldName] = await df.getValue(entity, ctx);
+                } else if (isLoadedReference(value) && !value.isSet) {
+                  value.set(await df.getValue(entity, ctx));
+                }
+              }),
+            );
+          }
+        }),
       ),
     ),
   );
+}
+
+/** Wraps the hint + lambda of an async `setDefault`. */
+export class AsyncDefault<T extends Entity> {
+  readonly fieldName: string;
+  #fieldHint: ReactiveHint<T>;
+  #loadHint: any;
+  #fn: (entity: any, ctx: any) => any;
+
+  constructor(fieldName: string, fieldHint: ReactiveHint<T>, fn: (entity: T, ctx: any) => any) {
+    this.fieldName = fieldName;
+    this.#fieldHint = fieldHint;
+    this.#fn = fn;
+  }
+
+  /** Return the immediate, sibling fields we depend on. */
+  get dependsOn(): string[] {
+    // i.e. `{ author: { firstName }, title: {}` -> `[author, title]`
+    return Object.keys(normalizeHint(this.#fieldHint));
+  }
+
+  /** For the given `entity`, returns what the default value should be. */
+  getValue(entity: T, ctx: any): Promise<any> {
+    // We can't convert this until now, since it requires the `metadata`
+    this.#loadHint ??= convertToLoadHint(getMetadata(entity), this.#fieldHint);
+    return entity.em.populate(entity, this.#loadHint).then((loaded) => this.#fn(loaded, ctx));
+  }
 }

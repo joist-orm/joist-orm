@@ -1,3 +1,4 @@
+import { AsyncDefault } from "./defaults";
 import { Entity } from "./Entity";
 import {
   EntityField,
@@ -195,12 +196,7 @@ export class ConfigApi<T extends Entity, C> {
     if (fn) {
       // If we're called once by the codegen, and again by the user, override the syncDefault
       delete this.__data.syncDefaults[fieldName];
-      this.__data.asyncDefaults[fieldName] = async (entity: T, ctx: C) => {
-        // Ideally we'd convert this once outside `fn`, but we don't have `metadata` yet
-        const loadHint = convertToLoadHint(getMetadata(entity), hintOrFnOrValue);
-        const loaded = await entity.em.populate(entity, loadHint);
-        return fn(loaded, ctx);
-      };
+      this.__data.asyncDefaults[fieldName] = new AsyncDefault(fieldName, hintOrFnOrValue, fn);
     } else {
       this.__data.syncDefaults[fieldName] = hintOrFnOrValue;
     }
@@ -300,7 +296,11 @@ export class ConfigData<T extends Entity, C> {
   /** Synchronous defaults for this entity type, invoked on `em.create`. */
   syncDefaults: Record<string, ((entity: T) => void) | unknown> = {};
   /** Asynchronous defaults for this entity type, invoked on `em.flush`. */
-  asyncDefaults: Record<string, (entity: T, ctx: C) => MaybePromise<T>> = {};
+  asyncDefaults: Record<string, AsyncDefault<T>> = {};
+  /** Asynchronous defaults organized by dependent-level for parallel loading. */
+  asyncDefaultsByLevel: AsyncDefault<T>[][] = [];
+  /** All fields in order of default dependencies. */
+  fieldsInOrder: string[] = [];
 
   // An array of the reactive rules that depend on this entity
   reactiveRules: ReactiveRule[] = [];

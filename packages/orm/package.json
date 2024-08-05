@@ -21,6 +21,7 @@
   "dependencies": {
     "@types/object-hash": "^3.0.6",
     "ansis": "^3.2.0",
+    "batching-toposort": "^1.2.0",
     "dataloader": "^2.2.2",
     "joist-utils": "workspace:*",
     "knex": "^3.1.0",

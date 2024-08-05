@@ -26,6 +26,7 @@ describe("toMatchEntity", () => {
     const b1 = newBook(em);
     await em.flush();
     expect(b1).toMatchEntity(b1);
+    expect(b1).toBeEntity(b1);
   });
 
   it("can match entity that is undefined", async () => {
@@ -353,6 +354,7 @@ describe("toMatchEntity", () => {
     expect(res).toMatchEntity([{ author1: a1 }] as readonly { author1: DeepNew<Author> }[]);
     expect(res as readonly { author1: DeepNew<Author> }[]).toMatchEntity([{ author1: a1 }]);
     expect([a1, a2]).toMatchEntity([a1, a2]);
+    expect([a1, a2]).toBeEntities([a1, a2]);
     expect(() => expect([a1, a2]).toMatchEntity([a2, a1])).toThrowErrorMatchingInlineSnapshot(`
       expect(received).toMatchObject(expected)
 
@@ -400,5 +402,13 @@ describe("toMatchEntity", () => {
       - ]
       + Array []
     `);
+  });
+
+  it("breaks toEqual being called with entities", async () => {
+    const em = newEntityManager();
+    const p1 = newAuthor(em, { firstName: "Author 1" });
+    expect(() => {
+      expect(p1).toEqual(p1);
+    }).toThrow("Use toBeEntity, toBeEntities, or toMatchEntity for asserting against entities");
   });
 });

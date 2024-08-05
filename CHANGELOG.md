@@ -1,3 +1,10 @@
+# [1.186.0](https://github.com/joist-orm/joist-orm/compare/v1.185.2...v1.186.0) (2024-08-05)
+
+
+### Features
+
+* Recognize cross-field setDefault dependencies. ([#1173](https://github.com/joist-orm/joist-orm/issues/1173)) ([eb564b6](https://github.com/joist-orm/joist-orm/commit/eb564b68b97ee114821350e0dff9c10978136686)), closes [#1160](https://github.com/joist-orm/joist-orm/issues/1160)
+
 ## [1.185.2](https://github.com/joist-orm/joist-orm/compare/v1.185.1...v1.185.2) (2024-08-04)
 
 

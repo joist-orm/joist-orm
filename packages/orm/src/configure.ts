@@ -27,7 +27,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
   hookUpBaseTypeAndSubTypes(metas);
   reverseIndexReactivity(metas);
   populatePolyComponentFields(metas);
-  sortDependentFields(metas);
+  sortFieldsBySetDefaultHints(metas);
 }
 
 function fireAfterMetadatas(metas: EntityMetadata[]): void {
@@ -83,7 +83,7 @@ function setImmutableFields(metas: EntityMetadata[]): void {
 }
 
 // Order fields based on setDefault dependencies
-function sortDependentFields(metas: EntityMetadata[]): void {
+function sortFieldsBySetDefaultHints(metas: EntityMetadata[]): void {
   for (const meta of metas) {
     // Put every field into the dag of { dependency: dependents[] }
     const dag: Record<string, string[]> = {};

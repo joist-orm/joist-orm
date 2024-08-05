@@ -89,6 +89,7 @@ function sortDependentFields(metas: EntityMetadata[]): void {
     const dag: Record<string, string[]> = {};
     for (const fieldName of Object.keys(meta.allFields)) {
       dag[fieldName] ??= [];
+      // ...if `fieldName` is from a base type, this won't technically find it
       const df = meta.config.__data.asyncDefaults[fieldName];
       if (df) for (const dep of df.dependsOn) (dag[dep] ??= []).push(fieldName);
     }

@@ -93,13 +93,15 @@ describe("ReactiveField", () => {
   });
 
   it("recalcs when o2m relation soft deleted", async () => {
+    // Given a PublisherGroup with a will-be-stale numberOfBookReviews
     await insertPublisherGroup({ name: "pg1", number_of_book_reviews: 100 });
     await insertPublisher({ name: "p1", group_id: 1 });
     const em = newEntityManager();
-    // Given an author with initially no books
+    // When we soft-delete the publisher
     const p1 = await em.load(Publisher, "p:1");
     p1.deletedAt = new Date();
     await em.flush();
+    // Then the PublisherGroup's numberOfBookReviews is recalculated
     const rows = await select("publisher_groups");
     expect(rows[0].number_of_book_reviews).toEqual(0);
   });

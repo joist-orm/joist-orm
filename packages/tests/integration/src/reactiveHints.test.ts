@@ -1,4 +1,4 @@
-import { Author, Book, BookReview, Comment, Critic, Publisher } from "@src/entities";
+import { Author, Book, BookReview, Comment, Critic, Publisher, PublisherGroup } from "@src/entities";
 import {
   Entity,
   LoadHint,
@@ -41,18 +41,25 @@ describe("reactiveHints", () => {
     ]);
   });
 
+  it("can do parent that is soft-deleted", () => {
+    expect(reverse(PublisherGroup, PublisherGroup, { publishers: "name" })).toEqual([
+      { entity: "PublisherGroup", fields: [], path: [] },
+      { entity: "Publisher", fields: ["group", "deletedAt", "name"], path: ["group"] },
+    ]);
+  });
+
   it("can do child o2m with primitive field names", () => {
     expect(reverse(Author, Author, { books: "title" })).toEqual([
       // Include the Author so that if no books are added, the rule still rules on create
       { entity: "Author", fields: [], path: [] },
-      { entity: "Book", fields: ["author", "title"], path: ["author"] },
+      { entity: "Book", fields: ["author", "deletedAt", "title"], path: ["author"] },
     ]);
   });
 
   it("can do child o2m with w/o any fields", () => {
     expect(reverse(Author, Author, "books")).toEqual([
       { entity: "Author", fields: [], path: [] },
-      { entity: "Book", fields: ["author"], path: ["author"] },
+      { entity: "Book", fields: ["author", "deletedAt"], path: ["author"] },
     ]);
   });
 
@@ -73,7 +80,7 @@ describe("reactiveHints", () => {
   it("can do nested child m2m with primitive field names", () => {
     expect(reverse(Author, Author, { books: { tags: "name" } })).toEqual([
       { entity: "Author", fields: [], path: [] },
-      { entity: "Book", fields: ["author", "tags"], path: ["author"] },
+      { entity: "Book", fields: ["author", "deletedAt", "tags"], path: ["author"] },
       { entity: "Tag", fields: ["name"], path: ["books", "author"] },
     ]);
   });
@@ -81,7 +88,7 @@ describe("reactiveHints", () => {
   it("can do ReactiveReferences through a o2o", () => {
     expect(reverse(Publisher, Publisher, { authors: { favoriteBook: "title" } })).toEqual([
       { entity: "Publisher", fields: [], path: [] },
-      { entity: "Author", fields: ["publisher", "favoriteBook"], path: ["publisher"] },
+      { entity: "Author", fields: ["publisher", "deletedAt", "favoriteBook"], path: ["publisher"] },
       { entity: "Book", fields: ["title"], path: ["favoriteAuthor", "publisher"] },
     ]);
   });
@@ -89,7 +96,7 @@ describe("reactiveHints", () => {
   it("can do via polymorphic reference", () => {
     expect(reverse(Author, Author, { books: { comments: "text" } })).toEqual([
       { entity: "Author", fields: [], path: [] },
-      { entity: "Book", fields: ["author"], path: ["author"] },
+      { entity: "Book", fields: ["author", "deletedAt"], path: ["author"] },
       { entity: "Comment", fields: ["parent", "text"], path: ["parent@Book", "author"] },
     ]);
   });
@@ -136,7 +143,7 @@ describe("reactiveHints", () => {
     expect(reverse(Critic, Critic, { favoriteLargePublisher: { group: "publishers" } })).toEqual([
       { entity: "Critic", fields: ["favoriteLargePublisher"], path: [] },
       { entity: "LargePublisher", fields: ["group"], path: ["critics"] },
-      { entity: "Publisher", fields: ["group"], path: ["group", "publishers@LargePublisher", "critics"] },
+      { entity: "Publisher", fields: ["group", "deletedAt"], path: ["group", "publishers@LargePublisher", "critics"] },
     ]);
   });
 
@@ -174,7 +181,7 @@ describe("reactiveHints", () => {
     expect(reverse(Author, Author, "allPublisherAuthorNames")).toEqual([
       { entity: "Author", fields: [], path: [] },
       { entity: "Author", fields: ["publisher"], path: [] },
-      { entity: "Author", fields: ["publisher", "firstName"], path: ["publisher", "authors"] },
+      { entity: "Author", fields: ["publisher", "deletedAt", "firstName"], path: ["publisher", "authors"] },
     ]);
   });
 

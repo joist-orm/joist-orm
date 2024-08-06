@@ -155,6 +155,9 @@ export function reverseReactiveHint<T extends Entity>(
   // to our `title` changing, `reactForOtherSide` tells us to react to our `author` field as well.
   if (typeof reactForOtherSide === "string") {
     fields.push(reactForOtherSide);
+    if (meta.timestampFields?.deletedAt) {
+      fields.push(meta.timestampFields.deletedAt);
+    }
   }
   const maybeRecursive: ReactiveTarget[] = [];
   // Look through the hint for our own fields, i.e. `["title"]`, and nested hints like `{ author: "firstName" }`.

@@ -236,14 +236,14 @@ describe("EntityManager.reactiveRules", () => {
       // Book's "too many colors" rule, only depends on favoriteColors, not firstName:ro
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["favoriteColors"], path: ["books"], fn },
       // Publisher's "cannot have 13 authors" rule
-      { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher"], path: ["publisher"], fn },
+      { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher", "deletedAt"], path: ["publisher"], fn },
       // Publisher's numberOfBooks2 "cannot have 13 books" rule
-      { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher"], path: ["publisher"], fn },
+      { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher", "deletedAt"], path: ["publisher"], fn },
       // Publisher's numberOfBooks "cannot have 15 books" rule
       {
         cstr: "Publisher",
         name: sm(/Publisher.ts:\d+/),
-        fields: ["publisher", "numberOfBooks"],
+        fields: ["publisher", "deletedAt", "numberOfBooks"],
         path: ["publisher"],
         fn,
       },
@@ -251,7 +251,7 @@ describe("EntityManager.reactiveRules", () => {
       {
         cstr: "SmallPublisher",
         name: sm(/Publisher.ts:\d+/),
-        fields: ["publisher"],
+        fields: ["publisher", "deletedAt"],
         path: ["publisher@SmallPublisher"],
         fn,
       },
@@ -259,9 +259,9 @@ describe("EntityManager.reactiveRules", () => {
 
     expect(getReactiveRules(Book)).toMatchObject([
       // Author's firstName/book.title validation rule
-      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["author", "title"], path: ["author"], fn },
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["author", "deletedAt", "title"], path: ["author"], fn },
       // Author's "cannot have 13 books" rule
-      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["author"], path: ["author"], fn },
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["author", "deletedAt"], path: ["author"], fn },
       // Book's noop rule on author.firstName, if author changes
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["author"], path: [], fn },
       // Book's "too many colors" rule, if author changes
@@ -270,14 +270,20 @@ describe("EntityManager.reactiveRules", () => {
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: [], path: [], fn },
       // Book's "numberOfBooks2" rule (this book + other books)
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["author"], path: [], fn },
-      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["author", "title"], path: ["author", "books"], fn },
+      {
+        cstr: "Book",
+        name: sm(/Book.ts:\d+/),
+        fields: ["author", "deletedAt", "title"],
+        path: ["author", "books"],
+        fn,
+      },
       // The tags <= 3 rule
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["tags"], path: [], fn },
       // Publisher's numberOfBooks2 "cannot have 13 books" rule
       {
         cstr: "Publisher",
         name: sm(/Publisher.ts:\d+/),
-        fields: ["author", "title"],
+        fields: ["author", "deletedAt", "title"],
         path: ["author", "publisher"],
         fn,
       },
@@ -350,14 +356,32 @@ describe("EntityManager.reactiveRules", () => {
 
   it.withCtx("creates the right reactive field targets", async () => {
     expect(getReactiveFields(Book)).toEqual([
-      { kind: "populate", cstr: "Author", name: "numberOfBooks", fields: ["author"], path: ["author"] },
-      { kind: "populate", cstr: "Author", name: "bookComments", fields: ["author"], path: ["author"] },
-      { kind: "populate", cstr: "Author", name: "numberOfPublicReviews", fields: ["author"], path: ["author"] },
-      { kind: "populate", cstr: "Author", name: "numberOfPublicReviews2", fields: ["author"], path: ["author"] },
-      { kind: "populate", cstr: "Author", name: "tagsOfAllBooks", fields: ["author", "tags"], path: ["author"] },
-      { kind: "populate", cstr: "Author", name: "search", fields: ["author", "title"], path: ["author"] },
-      { kind: "populate", cstr: "Author", name: "rangeOfBooks", fields: ["author"], path: ["author"] },
-      { kind: "populate", cstr: "Author", name: "favoriteBook", fields: ["author"], path: ["author"] },
+      { kind: "populate", cstr: "Author", name: "numberOfBooks", fields: ["author", "deletedAt"], path: ["author"] },
+      { kind: "populate", cstr: "Author", name: "bookComments", fields: ["author", "deletedAt"], path: ["author"] },
+      {
+        kind: "populate",
+        cstr: "Author",
+        name: "numberOfPublicReviews",
+        fields: ["author", "deletedAt"],
+        path: ["author"],
+      },
+      {
+        kind: "populate",
+        cstr: "Author",
+        name: "numberOfPublicReviews2",
+        fields: ["author", "deletedAt"],
+        path: ["author"],
+      },
+      {
+        kind: "populate",
+        cstr: "Author",
+        name: "tagsOfAllBooks",
+        fields: ["author", "deletedAt", "tags"],
+        path: ["author"],
+      },
+      { kind: "populate", cstr: "Author", name: "search", fields: ["author", "deletedAt", "title"], path: ["author"] },
+      { kind: "populate", cstr: "Author", name: "rangeOfBooks", fields: ["author", "deletedAt"], path: ["author"] },
+      { kind: "populate", cstr: "Author", name: "favoriteBook", fields: ["author", "deletedAt"], path: ["author"] },
       { kind: "populate", cstr: "Book", name: "search", fields: ["author", "title"], path: [] },
       { kind: "populate", cstr: "BookReview", name: "isPublic", fields: ["author"], path: ["reviews"] },
       { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["tags"], path: ["comments"] },
@@ -365,7 +389,7 @@ describe("EntityManager.reactiveRules", () => {
         kind: "query",
         cstr: "Publisher",
         name: "numberOfBookReviews",
-        fields: ["author"],
+        fields: ["author", "deletedAt"],
         path: ["author", "publisher"],
       },
       {

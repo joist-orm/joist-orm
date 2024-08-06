@@ -5,13 +5,26 @@ import {
   insertBookReview,
   insertBookToTag,
   insertComment,
+  insertPublisher,
+  insertPublisherGroup,
   insertTag,
   select,
   update,
 } from "@src/entities/inserts";
 import { knex, newEntityManager } from "@src/testEm";
 import { noValue } from "joist-orm";
-import { Author, Book, BookRange, BookReview, Tag, newAuthor, newBook, newBookReview, newComment } from "../entities";
+import {
+  Author,
+  Book,
+  BookRange,
+  BookReview,
+  newAuthor,
+  newBook,
+  newBookReview,
+  newComment,
+  Publisher,
+  Tag,
+} from "../entities";
 
 describe("ReactiveField", () => {
   it("can repopulate a changed tree", async () => {
@@ -77,6 +90,20 @@ describe("ReactiveField", () => {
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(4);
     const rows = await select("authors");
     expect(rows[0].number_of_books).toEqual(1);
+  });
+
+  it("recalcs when o2m relation soft deleted", async () => {
+    // Given a PublisherGroup with a will-be-stale numberOfBookReviews
+    await insertPublisherGroup({ name: "pg1", number_of_book_reviews: 100 });
+    await insertPublisher({ name: "p1", group_id: 1 });
+    const em = newEntityManager();
+    // When we soft-delete the publisher
+    const p1 = await em.load(Publisher, "p:1");
+    p1.deletedAt = new Date();
+    await em.flush();
+    // Then the PublisherGroup's numberOfBookReviews is recalculated
+    const rows = await select("publisher_groups");
+    expect(rows[0].number_of_book_reviews).toEqual(0);
   });
 
   it("can em.recalc to update a stale value", async () => {

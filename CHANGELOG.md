@@ -1,3 +1,10 @@
+## [1.186.2](https://github.com/joist-orm/joist-orm/compare/v1.186.1...v1.186.2) (2024-08-06)
+
+
+### Bug Fixes
+
+* Fix reacting to soft deletions. ([#1177](https://github.com/joist-orm/joist-orm/issues/1177)) ([51f3ffd](https://github.com/joist-orm/joist-orm/commit/51f3ffdfbd707877fad7d0b657effc8e46693710))
+
 ## [1.186.1](https://github.com/joist-orm/joist-orm/compare/v1.186.0...v1.186.1) (2024-08-05)
 
 

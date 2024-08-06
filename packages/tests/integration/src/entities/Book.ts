@@ -1,5 +1,5 @@
 import { AsyncProperty, hasReactiveAsyncProperty, hasReactiveField, ReactiveField } from "joist-orm";
-import { Author, BookCodegen, bookConfig as config } from "./entities";
+import { BookCodegen, bookConfig as config } from "./entities";
 
 export class Book extends BookCodegen {
   rulesInvoked = 0;
@@ -71,18 +71,10 @@ config.setDefault("order", { author: "books" }, (b) => b.author.get?.books.get.l
 /** Example of an asynchronous default that returns an entity. */
 config.setDefault(
   "author",
-  {
-    // Elaborate hint to test returning a Reacted<Author>
-    tags: { publishers: "authors" },
-    title: {},
-  },
-  async (b, { em }) => {
-    // Test returning a Reacted<Author> can pass type check
-    const maybeAuthor = b.tags.get[0]?.publishers.get[0]?.authors.get[0];
-    if (maybeAuthor) return maybeAuthor;
-    // See if we have an author with the same name as the book title
-    return em.findOne(Author, { lastName: b.title });
-  },
+  // Elaborate hint to test returning a Reacted<Author>
+  { tags: { publishers: "authors" } },
+  // Test returning a Reacted<Author> can pass type check
+  (b) => b.tags.get[0]?.publishers.get[0]?.authors.get[0],
 );
 
 config.cascadeDelete("reviews");

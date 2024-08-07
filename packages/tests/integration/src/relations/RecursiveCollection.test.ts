@@ -1,4 +1,4 @@
-import { insertAuthor, insertBook, update } from "@src/entities/inserts";
+import { insertAuthor, insertBook, select, update } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 import { RecursiveCycleError } from "joist-orm";
 import { Author, Book, newAuthor, newBook } from "../entities";
@@ -199,6 +199,19 @@ describe("RecursiveCollection", () => {
       const em = newEntityManager();
       const a1 = em.create(Author, { firstName: "a1" });
       expect(a1.menteesRecursive.get).toMatchEntity([]);
+    });
+
+    it("can delete and refresh", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertAuthor({ first_name: "a3", mentor_id: 2 });
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1", "menteesRecursive");
+      em.delete(a1.menteesRecursive.get[1]);
+      await em.flush();
+      await em.refresh();
+      const rows = await select("authors");
+      expect(rows.length).toBe(2);
     });
   });
 

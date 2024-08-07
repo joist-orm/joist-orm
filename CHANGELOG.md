@@ -1,3 +1,10 @@
+## [1.186.3](https://github.com/joist-orm/joist-orm/compare/v1.186.2...v1.186.3) (2024-08-07)
+
+
+### Bug Fixes
+
+* Fix em.refresh failing after em.deletes. ([#1178](https://github.com/joist-orm/joist-orm/issues/1178)) ([2fff31d](https://github.com/joist-orm/joist-orm/commit/2fff31d1239f7481f452637dc8ffe9e6cfb10398)), closes [#1158](https://github.com/joist-orm/joist-orm/issues/1158)
+
 ## [1.186.2](https://github.com/joist-orm/joist-orm/compare/v1.186.1...v1.186.2) (2024-08-06)
 
 

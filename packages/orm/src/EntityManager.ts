@@ -1387,10 +1387,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       copy.forEach((e) => done.add(e));
       todo = [];
 
-      // For any entity with an id, get its latest data + relations from the database
+      // For any non-deleted entity with an id, get its latest data + relations from the database
       const entities = await Promise.all(
         copy
-          .filter((e) => e.idTaggedMaybe)
+          .filter((e) => e.idTaggedMaybe && !e.isDeletedEntity)
           .map((entity) => {
             // Pass these as a hint to potentially preload them
             const hint = getRelationEntries(entity)
@@ -1400,7 +1400,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           }),
       );
 
-      // Then refresh any non-deleted loaded relations (the `loadDataLoader.load` only populates the
+      // Then refresh any loaded relations (the `loadDataLoader.load` only populates the
       // preloader cache, if in use, it doesn't actually get each relation into a loaded state.)
       const [custom, builtin] = partition(
         entities

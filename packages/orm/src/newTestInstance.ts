@@ -12,6 +12,7 @@ import {
 } from "./EntityManager";
 import {
   EntityMetadata,
+  Field,
   ManyToManyField,
   ManyToOneField,
   OneToManyField,
@@ -26,9 +27,9 @@ import {
 } from "./EntityMetadata";
 import { getCallerName } from "./config";
 import { hasDefaultValue } from "./defaults";
-import { DeepNew, New } from "./index";
+import { DeepNew, New, getField } from "./index";
 import { tagId } from "./keys";
-import { assertNever, maybeRequireTemporal } from "./utils";
+import { maybeRequireTemporal } from "./utils";
 
 const { gray, green, yellow } = ansis;
 
@@ -88,103 +89,51 @@ export function newTestInstance<T extends Entity>(
   logger?.indent();
 
   const meta = getMetadata(cstr);
+  // Deep merge the test file's opts + the factory file's opts
   const opts = mergeOpts(meta, testOpts, factoryOpts);
   const use = getOrCreateUseMap(opts);
 
   const selfFields: string[] = [];
 
+  // Create a blank-slate entity because we're going to set fields one-by-one,
+  // i.e. to let the defaults kick in incrementally (and synchronously).
+
   // Create just the primitive and m2o fields 1st, so we can create a minimal/valid
   // instance of the entity. We'll do the o2m/other fields as a second pass.
   const initialOpts = Object.values(meta.allFields)
+    .filter(isInitialOptField)
     .map((field) => {
       const { fieldName } = field;
-
-      // Use the opts value if they passed one in
-      if (fieldName in opts && (opts as any)[fieldName] !== defaultValueMarker) {
-        const optValue = (opts as any)[fieldName];
-        // We don't explicitly support null (callers should pass undefined), but we accept it
-        // for good measure.
-        if (optValue === null || (optValue === undefined && !field.required)) {
+      const optValue = (opts as any)[fieldName];
+      // Use the opts value if they passed one in (defaultValueMarker allows tests to ignore a factory opt)
+      if (fieldName in opts && optValue !== defaultValueMarker) {
+        // We don't explicitly support null (callers should pass undefined), but we accept it for good measure.
+        if (optValue === null || (optValue === undefined && !field.required)) return [];
+        return [fieldName, resolveOpt(em, opts, meta, field, optValue)];
+      }
+      // Don't fill in required fields if told to skip them
+      const ignoreAllDefaults = "useFactoryDefaults" in opts && opts.useFactoryDefaults === "none";
+      const useFactoryDefault =
+        (field.required || optValue === defaultValueMarker) &&
+        !("derived" in field && field.derived) &&
+        !("protected" in field && field.protected) &&
+        !ignoreAllDefaults &&
+        !hasDefaultValue(meta, fieldName);
+      if (useFactoryDefault) {
+        const value = resolveDefault(em, opts, use, meta, field);
+        // Hack to avoid infinite loops...
+        if (value === "SELF_FIELD") {
+          selfFields.push(fieldName);
           return [];
         }
-        switch (field.kind) {
-          case "m2o":
-          case "poly":
-            return [fieldName, resolveFactoryOpt(em, opts, field, optValue, undefined)];
-          case "o2o":
-          case "o2m":
-          case "m2m":
-            // We do these in the 2nd pass after `entity` exists (see additionalOpts)
-            return [];
-          case "lo2m":
-            // If a child is passing themselves into a parent that is a large collection, just ignore it
-            return [];
-          case "primitive":
-          case "enum":
-          case "primaryKey":
-            // Look for strings that want to use the test index
-            if (typeof optValue === "string" && optValue.includes(testIndexString)) {
-              const actualIndex = getTestIndex(em, meta.cstr);
-              const value = optValue.replace(testIndexString, String(actualIndex));
-              return [fieldName, value];
-            } else if (typeof optValue === "number" && optValue === testIndex) {
-              const actualIndex = getTestIndex(em, meta.cstr);
-              return [fieldName, actualIndex];
-            }
-            // Otherwise just use the user's opt value as-is
-            return [fieldName, optValue];
-          default:
-            return assertNever(field);
-        }
-      }
-
-      // Don't fill in required fields if told not to
-      const ignoreAllDefaults = "useFactoryDefaults" in opts && opts.useFactoryDefaults === "none";
-      const required = field.required && !ignoreAllDefaults && !hasDefaultValue(meta, fieldName);
-
-      if (
-        field.kind === "primitive" &&
-        (required || (opts as any)[fieldName] === defaultValueMarker) &&
-        !field.derived &&
-        !field.protected
-      ) {
-        return [fieldName, defaultValueForField(em, cstr, field)];
-      } else if (field.kind === "m2o" && !field.derived) {
-        // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
-        // then look in `use` and for an "obvious" there-is-only-one default (even for optional fields)
-        const [existing, loggerKey] = getObviousDefault(em, field.otherMetadata(), use);
-        // If this is a m2o pointing to an o2o, i.e. that as a unique constraint, make sure the
-        // existing entity we found isn't already claimed
-        const isUniqueAndAlreadyUsed =
-          existing &&
-          isOneToOneField(field.otherMetadata().fields[field.otherFieldName]) &&
-          (existing as any)[field.otherFieldName].isLoaded &&
-          (existing as any)[field.otherFieldName].isSet;
-        if (existing && !isUniqueAndAlreadyUsed && !ignoreAllDefaults) {
-          logger?.[loggerKey](fieldName, existing);
-          return [fieldName, existing];
-        }
-        // Otherwise, only make a new entity only if the field is required
-        if (required) {
-          // ...unless this is a self-referential key, in which case avoid infinite looping.
-          if (field.otherMetadata() === meta) {
-            selfFields.push(fieldName);
-            return [];
-          } else {
-            return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
-          }
-        }
-      } else if (field.kind === "enum" && required) {
-        return [fieldName, field.enumDetailType.getValues()[0]];
-      } else if (field.kind === "poly" && required) {
-        return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
+        return [fieldName, value];
       }
       return [];
-    })
-    .filter((t) => t.length > 0);
+    });
 
-  const createOpts = Object.fromEntries(initialOpts);
+  const createOpts = Object.fromEntries(initialOpts.filter((t) => t.length > 0));
 
+  // See if the factory wants to provide an existing singleton instance for these opts...
   if (factoryOpts.useExisting && testOpts.useExistingCheck !== false) {
     const existing = em.entities
       .filter((e) => e instanceof meta.cstr)
@@ -216,45 +165,127 @@ export function newTestInstance<T extends Entity>(
   const additionalOpts = Object.entries(opts).map(([fieldName, optValue]) => {
     const field = meta.allFields[fieldName];
     // Check `!field` b/c `use` won't have a field
-    if (optValue === null || optValue === undefined || !field) {
-      return [];
-    }
-    if (field.kind === "o2m") {
-      // If this is a list of children, i.e. book.authors, handle partials to newTestInstance'd
-      return [
-        fieldName,
-        (optValue as Array<any>).map((opt) => {
-          // console.log(`${field.fieldName}`, i);
-          return resolveFactoryOpt(em, withBranchMap(opts), field, opt, entity);
-        }),
-      ];
-    } else if (field.kind == "m2m") {
-      return [
-        fieldName,
-        (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, withBranchMap(opts), field, opt, [entity] as any)),
-      ];
-    } else if (field.kind === "o2o") {
-      const otherField = field.otherMetadata().allFields[field.otherFieldName];
-      const isReactiveReference = "derived" in otherField && otherField.derived === "async";
-      if (isReactiveReference) return [];
-      // If this is an o2o, i.e. author.image, just pass the optValue (i.e. it won't be a list)
-      return [fieldName, resolveFactoryOpt(em, opts, field, optValue as any, entity)];
-    } else {
-      return [];
-    }
+    if (optValue === null || optValue === undefined || !field) return [];
+    const value = resolveCollectionOpt(em, opts, entity, field, optValue);
+    return value ? [fieldName, value] : [];
   });
 
-  for (const fieldName of selfFields) {
-    additionalOpts.push([fieldName, entity]);
-  }
-
+  for (const fieldName of selfFields) additionalOpts.push([fieldName, entity]);
   entity.set(Object.fromEntries(additionalOpts.filter((t) => t.length > 0)));
+
+  // The `setOpts` cal within `em.create` already applied sync defaults; now do async-but-sync defaults
+  applySyncableAsyncDefaults(meta, entity);
+
+  // ...now apply defaults for not-required + not-setDefault + but obvious-default-able m2os...
+  for (const field of Object.values(meta.allFields)) {
+    const { fieldName } = field;
+    if (field.kind === "m2o" && !field.derived && !(entity as any)[fieldName].isSet) {
+      // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
+      // then look in `use` and for an "obvious" there-is-only-one default (even for optional fields)
+      const [existing, loggerKey] = getObviousDefault(em, field.otherMetadata(), use);
+      // If this is a m2o pointing to an o2o, i.e. that as a unique constraint, make sure the
+      // existing entity we found isn't already claimed
+      const isUniqueAndAlreadyUsed =
+        existing &&
+        isOneToOneField(field.otherMetadata().fields[field.otherFieldName]) &&
+        (existing as any)[field.otherFieldName].isLoaded &&
+        (existing as any)[field.otherFieldName].isSet;
+      if (existing && !isUniqueAndAlreadyUsed && field.otherMetadata() !== meta) {
+        logger?.[loggerKey](fieldName, existing);
+        (entity as any).set({ [fieldName]: existing });
+      }
+    }
+  }
 
   // Set it back to undefined
   logger?.dedent();
   if (ownsTheLogger) logger = undefined;
 
   return entity as DeepNew<T>;
+}
+
+/** Given an `optValue` passed into a factory, resolve it to the appropriate value. */
+function resolveOpt(em: EntityManager, opts: FactoryOpts<any>, meta: EntityMetadata, field: Field, optValue: any): any {
+  if (field.kind === "m2o" || field.kind === "poly") {
+    return resolveFactoryOpt(em, opts, field, optValue, undefined);
+  } else if (field.kind === "enum" || field.kind === "primitive") {
+    // Look for strings that want to use the test index
+    if (typeof optValue === "string" && optValue.includes(testIndexString)) {
+      const actualIndex = getTestIndex(em, meta.cstr);
+      return optValue.replace(testIndexString, String(actualIndex));
+    } else if (typeof optValue === "number" && optValue === testIndex) {
+      return getTestIndex(em, meta.cstr);
+    }
+    // Otherwise just use the user's opt value as-is
+    return optValue;
+  } else {
+    throw new Error(`Handled field.kind ${field}`);
+  }
+}
+
+function resolveDefault(
+  em: EntityManager,
+  opts: FactoryOpts<any>,
+  use: UseMap,
+  meta: EntityMetadata,
+  field: Field,
+): any {
+  const { fieldName } = field;
+  if (field.kind === "primitive") {
+    return defaultValueForField(em, meta.cstr, field);
+  } else if (field.kind === "enum") {
+    return field.enumDetailType.getValues()[0];
+  } else if (field.kind === "m2o") {
+    // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
+    // then look in `use` and for an "obvious" there-is-only-one default (even for optional fields)
+    const [existing, loggerKey] = getObviousDefault(em, field.otherMetadata(), use);
+    // If this is a m2o pointing to an o2o, i.e. that as a unique constraint, make sure the
+    // existing entity we found isn't already claimed
+    const isUniqueAndAlreadyUsed =
+      existing &&
+      isOneToOneField(field.otherMetadata().fields[field.otherFieldName]) &&
+      (existing as any)[field.otherFieldName].isLoaded &&
+      (existing as any)[field.otherFieldName].isSet;
+    if (existing && !isUniqueAndAlreadyUsed) {
+      logger?.[loggerKey](fieldName, existing);
+      return existing;
+    }
+    // Otherwise, only make a new entity only if the field is required
+    // ...unless this is a self-referential key, in which case avoid infinite looping.
+    if (field.otherMetadata() === meta) return "SELF_FIELD";
+    return resolveFactoryOpt(em, opts, field, undefined, undefined);
+  } else if (field.kind === "poly") {
+    return resolveFactoryOpt(em, opts, field, undefined, undefined);
+  } else {
+    throw new Error(`Unhandled field kind ${JSON.stringify(field)}`);
+  }
+}
+
+function resolveCollectionOpt(
+  em: EntityManager,
+  opts: FactoryOpts<any>,
+  entity: Entity,
+  field: Field,
+  optValue: any,
+): any {
+  if (field.kind === "o2m") {
+    // If this is a list of children, i.e. book.authors, handle partials to newTestInstance'd
+    return (optValue as Array<any>).map((opt) => {
+      return resolveFactoryOpt(em, withBranchMap(opts), field, opt, entity);
+    });
+  } else if (field.kind == "m2m") {
+    return (optValue as Array<any>).map((opt) =>
+      resolveFactoryOpt(em, withBranchMap(opts), field, opt, [entity] as any),
+    );
+  } else if (field.kind === "o2o") {
+    const otherField = field.otherMetadata().allFields[field.otherFieldName];
+    const isReactiveReference = "derived" in otherField && otherField.derived === "async";
+    if (isReactiveReference) return undefined;
+    // If this is an o2o, i.e. author.image, just pass the optValue (i.e. it won't be a list)
+    return resolveFactoryOpt(em, opts, field, optValue as any, entity);
+  } else {
+    return undefined;
+  }
 }
 
 /**
@@ -350,6 +381,18 @@ function metaFromFieldAndOpt<T extends Entity>(
   return { meta: componentToUse.otherMetadata(), otherFieldName: componentToUse.otherFieldName };
 }
 
+function applySyncableAsyncDefaults(meta: EntityMetadata, entity: Entity): void {
+  for (const level of meta.config.__data.asyncDefaultsByLevel) {
+    for (const df of level) {
+      const value = getField(entity, df.fieldName);
+      if (value === undefined && df.isActuallySyncFn) {
+        const defaultValue = df.getSyncValue(entity, entity.em.ctx);
+        (entity as any).set({ [df.fieldName]: defaultValue });
+      }
+    }
+  }
+}
+
 /** We look for `use`-cached entities, which are either those we created, or had "if-only-one" defaults. */
 function getObviousDefault<T extends Entity>(
   em: EntityManager,
@@ -435,12 +478,12 @@ export function defaultValue<T>(): T {
 }
 
 /**
- * A marker value to never set a field, even if it's required.
+ * A marker value (`null`) to never set a field, even if it's required.
  *
  * The factories treat `{ author: undefined }` as "still set the author", because of how easy
  * it is for destructuring/restructuring opts to implicitly set `undefined` values.
  *
- * If you want to force a field to not be set, you can use `{ author: noValue() }`.
+ * If you want to force a required field to not be set, you can use `{ author: noValue() }`.
  */
 export function noValue<T>(): T {
   return null as T;
@@ -585,7 +628,11 @@ function getTestId<T extends Entity>(em: EntityManager, entity: T): string {
 // their own `ClockDate`, which would make our `===` check below fail.
 const globalDate = global.Date;
 
-function defaultValueForField(em: EntityManager, cstr: EntityConstructor<any>, field: PrimitiveField): unknown {
+function defaultValueForField(
+  em: EntityManager,
+  cstr: MaybeAbstractEntityConstructor<any>,
+  field: PrimitiveField,
+): unknown {
   if (field.type === "string") {
     if (field.fieldName === "name") {
       return `${cstr.name} ${getTestIndex(em, cstr)}`;
@@ -718,7 +765,10 @@ function mergeOpts(meta: EntityMetadata, testOpts: Record<string, any>, factoryO
     // Skip special opts
     if (key === "useExisting") return;
     const testValue = testOpts[key];
-    if (testOpts[key] === undefined) {
+
+    if (testValue === defaultValueMarker) {
+      // leave it alone
+    } else if (testValue === undefined) {
       // If the test doesn't define an opt, we have nothing to merge...unless
       // they literally passed `foo: undefined`, in which case they win.
       if (!(key in testOpts)) {
@@ -869,3 +919,7 @@ export function setFactoryWriter(write: WriteFn | undefined): void {
 //     return map.get(object)!;
 //   };
 // })();
+
+function isInitialOptField(field: Field): boolean {
+  return field.kind === "primitive" || field.kind === "enum" || field.kind === "m2o" || field.kind === "poly";
+}

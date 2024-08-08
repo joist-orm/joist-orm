@@ -86,6 +86,18 @@ export class AsyncDefault<T extends Entity> {
     return Object.keys(normalizeHint(this.#fieldHint));
   }
 
+  get isActuallySyncFn(): boolean {
+    return this.#fn.constructor.name !== "AsyncFunction";
+  }
+
+  getSyncValue(entity: T, ctx: any): any {
+    const value = this.#fn(entity, ctx);
+    if (value instanceof Promise) {
+      throw new Error(`Expected sync default for ${this.fieldName}, but got a Promise`);
+    }
+    return value;
+  }
+
   /** For the given `entity`, returns what the default value should be. */
   getValue(entity: T, ctx: any): Promise<any> {
     // We can't convert this until now, since it requires the `metadata`

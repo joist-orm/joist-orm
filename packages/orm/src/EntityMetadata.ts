@@ -183,6 +183,10 @@ export type PolymorphicFieldComponent = {
   columnName: string; // eg `parent_book_id` or `parent_book_review_id`
 };
 
+export function isPrimaryKeyField(ormField: Field): ormField is PrimaryKeyField {
+  return ormField.kind === "primaryKey";
+}
+
 export function isOneToManyField(ormField: Field): ormField is OneToManyField {
   return ormField.kind === "o2m";
 }
@@ -196,11 +200,15 @@ export function isManyToManyField(ormField: Field): ormField is ManyToManyField 
 }
 
 export function isOneToOneField(ormField: Field): ormField is OneToOneField {
-  return ormField.kind === "o2o";
+  return ormField?.kind === "o2o";
 }
 
 export function isPolymorphicField(ormField: Field): ormField is PolymorphicField {
   return ormField.kind === "poly";
+}
+
+export function isRelationField(ormField: Field): boolean {
+  return isReferenceField(ormField) || isCollectionField(ormField);
 }
 
 export function isReferenceField(ormField: Field): ormField is ManyToOneField | OneToOneField | PolymorphicField {

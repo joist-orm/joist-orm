@@ -29,7 +29,7 @@ export * from "./QueryBuilder";
 export * from "./QueryParser";
 export { ReactionLogger, setReactionLogging } from "./ReactionsManager";
 export * from "./changes";
-export { ConfigApi, EntityHook } from "./config";
+export { ConfigApi, EntityHook, resetBootFlag } from "./config";
 export { configureMetadata, getConstructorFromTaggedId, maybeGetConstructorFromReference } from "./configure";
 export { DeepPartialOrNull } from "./createOrUpdatePartial";
 export * from "./drivers";

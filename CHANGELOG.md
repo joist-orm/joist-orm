@@ -1,3 +1,10 @@
+## [1.186.4](https://github.com/joist-orm/joist-orm/compare/v1.186.3...v1.186.4) (2024-08-10)
+
+
+### Bug Fixes
+
+* Export resetBootFlag. ([#1182](https://github.com/joist-orm/joist-orm/issues/1182)) ([afd04d9](https://github.com/joist-orm/joist-orm/commit/afd04d9740bbbfef24cda40bdb9750a833c7db6b))
+
 ## [1.186.3](https://github.com/joist-orm/joist-orm/compare/v1.186.2...v1.186.3) (2024-08-07)
 
 

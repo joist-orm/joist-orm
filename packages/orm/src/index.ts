@@ -23,6 +23,7 @@ export * from "./EntityGraphQLFilter";
 export * from "./EntityManager";
 export * from "./EntityMetadata";
 export { EnumMetadata } from "./EnumMetadata";
+export * from "./FieldLogger";
 export { EntityOrId, HintNode } from "./HintTree";
 export { InstanceData } from "./InstanceData";
 export * from "./QueryBuilder";

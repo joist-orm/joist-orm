@@ -181,20 +181,18 @@ describe("ReactiveReference", () => {
 
 beforeEach(() => {
   reactionOutput = [];
-  setReactionLogging(
-    new (class extends ReactionLogger {
-      constructor() {
-        super((line: string) => {
-          reactionOutput.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
-        });
-      }
-      // Ensure deterministic output
-      now() {
-        return 0;
-      }
-    })(),
-  );
+  setReactionLogging(new StubReactionLogger());
 });
+
+class StubReactionLogger extends ReactionLogger {
+  constructor() {
+    super((line: string) => {
+      reactionOutput.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
+    });
+  }
+  // Ensure deterministic output
+  now = () => 0;
+}
 
 afterAll(() => {
   setReactionLogging(false);

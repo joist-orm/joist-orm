@@ -1633,6 +1633,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     this.#rm.setLogger(typeof arg === "boolean" ? (arg ? new ReactionLogger() : undefined) : arg);
   }
 
+  setFieldLoggin(logger: FieldLogger): void;
+  setFieldLoggin(enabled: boolean): void;
+  setFieldLoggin(arg: boolean | FieldLogger): void {
+    this.setFieldLogger(typeof arg === "boolean" ? (arg ? new ReactionLogger() : undefined) : arg);
+  }
+
   async [Symbol.asyncDispose](): Promise<void> {
     await this.flush();
   }

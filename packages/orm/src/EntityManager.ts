@@ -28,6 +28,7 @@ import {
   EntityMetadata,
   EnumField,
   ExpressionFilter,
+  FieldLogger,
   FilterWithAlias,
   GraphQLFilterWithAlias,
   InstanceData,
@@ -236,6 +237,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   readonly #fl = new FlushLock();
   readonly #hooks: Record<EntityManagerHook, HookFn[]> = { beforeTransaction: [], afterTransaction: [] };
   readonly #preloader: PreloadPlugin | undefined;
+  #fieldLogger: FieldLogger | undefined;
   private __api: EntityManagerInternalApi;
 
   constructor(em: EntityManager<C>);
@@ -287,6 +289,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       },
       checkWritesAllowed(): void {
         return em.#fl.checkWritesAllowed();
+      },
+      get fieldLogger() {
+        return em.#fieldLogger;
       },
     };
   }
@@ -1633,10 +1638,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     this.#rm.setLogger(typeof arg === "boolean" ? (arg ? new ReactionLogger() : undefined) : arg);
   }
 
-  setFieldLoggin(logger: FieldLogger): void;
-  setFieldLoggin(enabled: boolean): void;
-  setFieldLoggin(arg: boolean | FieldLogger): void {
-    this.setFieldLogger(typeof arg === "boolean" ? (arg ? new ReactionLogger() : undefined) : arg);
+  setFieldLogging(logger: FieldLogger): void {
+    this.#fieldLogger = logger;
   }
 
   async [Symbol.asyncDispose](): Promise<void> {
@@ -1660,6 +1663,7 @@ export interface EntityManagerInternalApi {
   preloader: PreloadPlugin | undefined;
   isValidating: boolean;
   checkWritesAllowed: () => void;
+  get fieldLogger(): FieldLogger | undefined;
 }
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {

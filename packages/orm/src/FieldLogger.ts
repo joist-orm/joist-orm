@@ -1,10 +1,14 @@
 import ansis from "ansis";
 import { Entity } from "./Entity";
+import { getCallerName } from "./config";
 
 const { gray, green, yellow, white } = ansis;
 let globalLogger: FieldLogger | undefined = undefined;
 type WriteFn = (line: string) => void;
 
+/**
+ * Logs the setting of fields on entities to a `writeFn`, which defaults to `process.stdout`.
+ */
 export class FieldLogger {
   private writeFn: WriteFn;
 
@@ -14,7 +18,12 @@ export class FieldLogger {
   }
 
   logSet(entity: Entity, fieldName: string, value: unknown): void {
-    this.log(green.bold(`${entity.toTaggedString()}`) + yellow(`.${fieldName}`), gray(`=`), green.bold(`${value}`));
+    this.log(
+      green.bold(`${entity.toTaggedString()}`) + yellow(`.${fieldName}`),
+      gray(`=`),
+      green.bold(`${value}`),
+      gray(`at ${getCallerName(2)}`),
+    );
   }
 
   private log(...line: string[]): void {

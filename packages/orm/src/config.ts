@@ -334,12 +334,21 @@ export function getFuzzyCallerName(): string {
       .find((line) => {
         // When running Joist's own integration tests, if we ignore `/joist-orm/`, we'll end up ignoring
         // everything because `joist-orm` is the name of the repository/working copy itself.
-        const withinWorkingCopy = line.includes("/packages/orm/");
+        const withinWorkingCopyJoist = line.includes("/packages/orm/");
         // But once we're not in a working copy, assume any `/joist-orm/` in the path === internal orm stack frames
-        const withinProduction = !withinWorkingCopy && line.includes("/joist-orm/");
+        const withinProductionJoist = !withinWorkingCopyJoist && line.includes("/joist-orm/src/");
+        const isUserCode = !(withinWorkingCopyJoist || withinProductionJoist);
+        const isRecalc = line.includes("recalc");
+        const isDefault = line.includes("/defaults.ts");
+        // Batched calls like findOrCreate won't have a stack trace back to the true caller, so just stop there
+        const isDataloader = line.includes("/dataloaders/");
+        // What about:
+        // recalcSynchronousDerivedFields
         return (
-          !(withinWorkingCopy || withinProduction) &&
+          (isRecalc || isDefault || isDataloader || isUserCode) &&
           !line.includes("Codegen.ts") &&
+          // I wanted to exclude this, but it was actually our utils/entities.ts maybeSetDefault helper method
+          // !line.includes("entities.ts") &&
           // Ignore loops in joist code like setOpts
           !line.includes("at Array") &&
           // Ignore the Author.ts constructor calling setOpts

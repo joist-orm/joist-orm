@@ -1,8 +1,8 @@
 import ansis from "ansis";
-import { Entity } from "./Entity";
+import { Entity, isEntity } from "./Entity";
 import { getFuzzyCallerName } from "./config";
 
-const { gray, green, yellow, white } = ansis;
+const { gray, green, yellow, white, blue, red } = ansis;
 let globalLogger: FieldLogger | undefined = undefined;
 type WriteFn = (line: string) => void;
 
@@ -18,10 +18,12 @@ export class FieldLogger {
   }
 
   logSet(entity: Entity, fieldName: string, value: unknown): void {
+    const color = typeof value === "boolean" ? red : isEntity(value) ? green : blue;
+
     this.log(
       green.bold(`${entity.toTaggedString()}`) + yellow(`.${fieldName}`),
       gray(`=`),
-      green.bold(`${value}`),
+      color(`${value}`),
       // We don't know if we'll be called from getField or M2O.set+getField, i.e. how many stack frames to skip
       // to really get "the caller's location", so use `getFuzzyCallerName` instead of `getCallerName`.
       gray(`at ${getFuzzyCallerName()}`),

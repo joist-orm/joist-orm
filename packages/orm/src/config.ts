@@ -2,6 +2,7 @@ import { AsyncDefault } from "./defaults";
 import { Entity } from "./Entity";
 import {
   EntityField,
+  fail,
   FieldsOf,
   getMetadata,
   Loaded,
@@ -320,6 +321,23 @@ export function getCallerName(extraFrames: number = 0): string {
   const line = err.stack!.split("\n").filter((line) => line.includes(" at "))[3 + extraFrames];
   const parts = line.split("/");
   // Get the last part, which will be the file name, i.e. Activity.ts:86:8
+  return parts[parts.length - 1].replace(/:\d+\)?$/, "");
+}
+
+export function getFuzzyCallerName(): string {
+  const err = getErrorObject();
+  // E.g. at Object.<anonymous> (/home/stephen/homebound/graphql-service/src/entities/Activity.ts:86:8)
+  const line =
+    err
+      .stack!.split("\n")
+      .filter((line) => line.includes(" at "))
+      .find((line) => {
+        // Check `/packages/orm/` for running locally, and `/packages/joist-orm/` for real projects
+        const withinOrm =
+          line.includes("/packages/orm/") || line.includes("/packages/joist-orm/") || line.includes("Codegen.ts");
+        return !withinOrm;
+      }) ?? fail("Could not find caller name");
+  const parts = line.split("/");
   return parts[parts.length - 1].replace(/:\d+\)?$/, "");
 }
 

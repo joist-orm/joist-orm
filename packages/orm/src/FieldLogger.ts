@@ -1,6 +1,6 @@
 import ansis from "ansis";
 import { Entity } from "./Entity";
-import { getCallerName } from "./config";
+import { getFuzzyCallerName } from "./config";
 
 const { gray, green, yellow, white } = ansis;
 let globalLogger: FieldLogger | undefined = undefined;
@@ -22,7 +22,8 @@ export class FieldLogger {
       green.bold(`${entity.toTaggedString()}`) + yellow(`.${fieldName}`),
       gray(`=`),
       green.bold(`${value}`),
-      gray(`at ${getCallerName(2)}`),
+      // We don't know if we'll be called from getField or M2O.set+getField
+      gray(`at ${getFuzzyCallerName()}`),
     );
   }
 

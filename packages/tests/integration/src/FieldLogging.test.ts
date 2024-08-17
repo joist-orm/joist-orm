@@ -78,7 +78,7 @@ describe("FieldLogging", () => {
   });
 
   // skipped because this needs to run in debug mode
-  it("can hit a breakpoint", async () => {
+  it.skip("can hit a breakpoint", async () => {
     const em = newEntityManager();
     em.setFieldLogging(
       new StubFieldLogger([
@@ -90,11 +90,7 @@ describe("FieldLogging", () => {
       ]),
     );
     newBook(em);
-    expect(fieldOutput).toMatchInlineSnapshot(`
-     [
-       "a#1.age = 40 at newAuthor.ts:13↩",
-     ]
-    `);
+    // Manually verify in the debugger that it hits the breakpoint
   });
 });
 

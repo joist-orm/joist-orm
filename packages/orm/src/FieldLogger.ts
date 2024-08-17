@@ -22,7 +22,8 @@ export class FieldLogger {
       green.bold(`${entity.toTaggedString()}`) + yellow(`.${fieldName}`),
       gray(`=`),
       green.bold(`${value}`),
-      // We don't know if we'll be called from getField or M2O.set+getField
+      // We don't know if we'll be called from getField or M2O.set+getField, i.e. how many stack frames to skip
+      // to really get "the caller's location", so use `getFuzzyCallerName` instead of `getCallerName`.
       gray(`at ${getFuzzyCallerName()}`),
     );
   }

@@ -45,8 +45,9 @@ beforeEach(() => {
 
 class StubFieldLogger extends FieldLogger {
   constructor() {
-    super((line: string) => {
-      fieldOutput.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
-    });
+    super();
+    // super((line: string) => {
+    //   fieldOutput.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
+    // });
   }
 }

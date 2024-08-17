@@ -332,11 +332,23 @@ export function getFuzzyCallerName(): string {
       .stack!.split("\n")
       .filter((line) => line.includes(" at "))
       .find((line) => {
-        // Check `/packages/orm/` for running locally, and `/packages/joist-orm/` for real projects
-        const withinOrm =
-          line.includes("/packages/orm/") || line.includes("/packages/joist-orm/") || line.includes("Codegen.ts");
-        return !withinOrm;
+        // When running Joist's own integration tests, if we ignore `/joist-orm/`, we'll end up ignoring
+        // everything because `joist-orm` is the name of the repository/working copy itself.
+        const withinWorkingCopy = line.includes("/packages/orm/");
+        // But once we're not in a working copy, assume any `/joist-orm/` in the path === internal orm stack frames
+        const withinProduction = !withinWorkingCopy && line.includes("/joist-orm/");
+        return (
+          !(withinWorkingCopy || withinProduction) &&
+          !line.includes("Codegen.ts") &&
+          // Ignore loops in joist code like setOpts
+          !line.includes("at Array") &&
+          // Ignore the Author.ts constructor calling setOpts
+          !line.includes("at new ")
+        );
       }) ?? fail("Could not find caller name");
+  if (line.includes("task_queues")) {
+    console.log(err.stack!.split("\n").join(" ---> "));
+  }
   const parts = line.split("/");
   return parts[parts.length - 1].replace(/:\d+\)?$/, "");
 }

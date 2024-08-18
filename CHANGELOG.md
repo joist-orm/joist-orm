@@ -1,3 +1,10 @@
+## [1.187.2](https://github.com/joist-orm/joist-orm/compare/v1.187.1...v1.187.2) (2024-08-18)
+
+
+### Bug Fixes
+
+* Fix regression in lens through properties. ([#1187](https://github.com/joist-orm/joist-orm/issues/1187)) ([e7b81a2](https://github.com/joist-orm/joist-orm/commit/e7b81a24155b497d7720b8ee93cba1808c6349cd))
+
 ## [1.187.1](https://github.com/joist-orm/joist-orm/compare/v1.187.0...v1.187.1) (2024-08-18)
 
 

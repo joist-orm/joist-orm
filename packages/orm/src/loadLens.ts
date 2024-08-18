@@ -110,7 +110,8 @@ export async function loadLens<T extends Entity, U, V>(
       | ManyToManyField
       | OneToManyField
       | OneToOneField
-      | PrimitiveField;
+      | PrimitiveField
+      | undefined;
     if (Array.isArray(current)) {
       current = (await Promise.all(current.map((c) => maybeLoad(c, path, opts)))).flat();
       current = [...new Set(current.filter((c: any) => c !== undefined && !c.isSoftDeletedEntity))];
@@ -130,7 +131,7 @@ export async function loadLens<T extends Entity, U, V>(
       }
     } else {
       // current is undefined; see if we should flip to a list ... which means we can early return
-      if (field.kind === "o2m" || field.kind === "m2m") return [] as any;
+      if (field?.kind === "o2m" || field?.kind === "m2m") return [] as any;
     }
     currentMeta = field && "otherMetadata" in field ? field.otherMetadata() : undefined;
   }
@@ -197,7 +198,8 @@ export function getLens<T, U, V>(startMeta: EntityMetadata, start: T | T[], fn: 
       | ManyToManyField
       | OneToManyField
       | OneToOneField
-      | PrimitiveField;
+      | PrimitiveField
+      | undefined;
     if (Array.isArray(current)) {
       // Use a set to dedup as we go
       const next = new Set();
@@ -218,7 +220,7 @@ export function getLens<T, U, V>(startMeta: EntityMetadata, start: T | T[], fn: 
       }
     } else {
       // current is undefined; see if we should flip to a list ... which means we can early return
-      if (field.kind === "o2m" || field.kind === "m2m") return [] as any;
+      if (field?.kind === "o2m" || field?.kind === "m2m") return [] as any;
     }
     currentMeta = field && "otherMetadata" in field ? field.otherMetadata() : undefined;
   }

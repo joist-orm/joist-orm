@@ -1,3 +1,10 @@
+## [1.187.1](https://github.com/joist-orm/joist-orm/compare/v1.187.0...v1.187.1) (2024-08-18)
+
+
+### Bug Fixes
+
+* Fix lens traversal over undefined refs to collections. ([#1186](https://github.com/joist-orm/joist-orm/issues/1186)) ([2ef801f](https://github.com/joist-orm/joist-orm/commit/2ef801f7ba4ab635da5d2416560bd295d7e8c87b)), closes [#1184](https://github.com/joist-orm/joist-orm/issues/1184)
+
 # [1.187.0](https://github.com/joist-orm/joist-orm/compare/v1.186.4...v1.187.0) (2024-08-18)
 
 

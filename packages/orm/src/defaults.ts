@@ -49,7 +49,7 @@ export function setAsyncDefaults(ctx: unknown, todos: Record<string, Todo>): Pro
       todo.inserts.flatMap((entity) =>
         getBaseAndSelfMetas(getMetadata(entity)).flatMap(async (m) => {
           // Apply defaults by level, for defaults by depend on another
-          for await (const level of m.config.__data.asyncDefaultsByLevel) {
+          for (const level of m.config.__data.asyncDefaultsByLevel) {
             await Promise.all(
               level.map(async (df) => {
                 const value = (entity as any)[df.fieldName];

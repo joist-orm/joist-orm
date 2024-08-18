@@ -43,7 +43,7 @@ export async function maybeRunTransforms(config: Config): Promise<void> {
   }
 
   // Otherwise run them
-  for await (const mod of mods) {
+  for (const mod of mods) {
     const run = await inquirer.prompt({
       name: "run",
       type: "confirm",

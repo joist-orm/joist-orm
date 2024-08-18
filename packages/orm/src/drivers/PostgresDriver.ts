@@ -135,7 +135,7 @@ export class PostgresDriver implements Driver {
 
   async flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void> {
     const knex = this.getMaybeInTxnKnex(em);
-    for await (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
+    for (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
       if (newRows.length > 0) {
         const sql = cleanSql(`
           INSERT INTO ${joinTableName} (${m2m.columnName}, ${m2m.otherColumnName})

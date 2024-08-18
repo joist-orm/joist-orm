@@ -1,6 +1,6 @@
 import ansis from "ansis";
-import { Entity, isEntity } from "./Entity";
-import { getFuzzyCallerName } from "./config";
+import { Entity, isEntity } from "../Entity";
+import { getFuzzyCallerName } from "../config";
 
 const { gray, green, yellow, blue, red } = ansis;
 let globalLogger: FieldLogger | undefined = undefined;

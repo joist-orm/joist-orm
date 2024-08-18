@@ -53,6 +53,7 @@ export {
   RelationsIn,
 } from "./loadHints";
 export * from "./loadLens";
+export { setFactoryWriter } from "./logging/FactoryLogger";
 export * from "./logging/FieldLogger";
 export { ReactionLogger, setReactionLogging } from "./logging/ReactionLogger";
 export {
@@ -66,7 +67,6 @@ export {
   newTestInstance,
   noValue,
   setFactoryLogging,
-  setFactoryWriter, // only for testing
   testIndex,
 } from "./newTestInstance";
 export { deepNormalizeHint, normalizeHint } from "./normalizeHints";

@@ -27,7 +27,6 @@ export { EntityOrId, HintNode } from "./HintTree";
 export { InstanceData } from "./InstanceData";
 export * from "./QueryBuilder";
 export * from "./QueryParser";
-export { ReactionLogger, setReactionLogging } from "./ReactionsManager";
 export * from "./changes";
 export { ConfigApi, EntityHook, resetBootFlag } from "./config";
 export { configureMetadata, getConstructorFromTaggedId, maybeGetConstructorFromReference } from "./configure";
@@ -55,6 +54,7 @@ export {
 } from "./loadHints";
 export * from "./loadLens";
 export * from "./logging/FieldLogger";
+export { ReactionLogger, setReactionLogging } from "./logging/ReactionLogger";
 export {
   defaultValue,
   FactoryEntityOpt,

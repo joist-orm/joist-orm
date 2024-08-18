@@ -7,7 +7,7 @@ import { getField, setField } from "./fields";
 import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
 import { JoinRows } from "./JoinRows";
-import { ReactionLogger, ReactionsManager } from "./ReactionsManager";
+import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo, Todo, combineJoinRows, createTodos } from "./Todo";
 import { ReactiveRule, constraintNameToValidationError } from "./config";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
@@ -37,6 +37,7 @@ import {
   OneToManyCollection,
   PartialOrNull,
   PolymorphicReferenceImpl,
+  ReactionLogger,
   TimestampSerde,
   UniqueFilter,
   ValidationError,

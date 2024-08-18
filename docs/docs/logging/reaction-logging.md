@@ -13,6 +13,13 @@ Reaction logging can be enabled on individual `EntityManager`s:
 em.setReactionLogging(true);
 ```
 
+or globally:
+
+```ts
+import { setReactionLogging } from "joist-orm";
+setReactionLogging(true);
+```
+
 This will create output like:
 
 ...todo...

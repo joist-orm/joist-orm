@@ -1,3 +1,10 @@
+# [1.187.0](https://github.com/joist-orm/joist-orm/compare/v1.186.4...v1.187.0) (2024-08-18)
+
+
+### Features
+
+* Add field logging ([#1185](https://github.com/joist-orm/joist-orm/issues/1185)) ([1212fa1](https://github.com/joist-orm/joist-orm/commit/1212fa1397cf8c0034d25a8fe1b8fcde9190bd5f))
+
 ## [1.186.4](https://github.com/joist-orm/joist-orm/compare/v1.186.3...v1.186.4) (2024-08-10)
 
 

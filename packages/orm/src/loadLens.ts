@@ -1,5 +1,14 @@
 import { Entity, isEntity } from "./Entity";
-import { EntityMetadata, Field, getMetadata } from "./EntityMetadata";
+import {
+  EntityMetadata,
+  Field,
+  getMetadata,
+  ManyToManyField,
+  ManyToOneField,
+  OneToManyField,
+  OneToOneField,
+  PrimitiveField,
+} from "./EntityMetadata";
 import { lensDataLoader } from "./dataloaders/lensDataLoader";
 import { isAsyncProperty } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
@@ -57,19 +66,22 @@ export async function loadLens<T extends Entity, U, V>(
   fn: (lens: Lens<T>) => Lens<U, V>,
   opts: { forceReload?: boolean; sql?: boolean } = {},
 ): Promise<V> {
+  // Probe for the meta, so we can track when/if it needs to flip to a collection (even after hitting undefined)
+  const meta = Array.isArray(start)
+    ? isEntity(start[0]) && getMetadata(start[0])
+    : isEntity(start) && getMetadata(start);
+  // This should only happen for `start=[]`, which we know should return `[]`
+  if (!meta) return [] as V;
+
   // If we're already loaded, just return
   if (!opts.forceReload && isLensLoaded(start, fn)) {
-    return getLens(start, fn);
+    return getLens(meta, start, fn);
   }
 
   const paths = collectPaths(fn);
 
   // See if we can load this via SQL
   if (opts.sql) {
-    const meta = Array.isArray(start)
-      ? isEntity(start[0]) && getMetadata(start[0])
-      : isEntity(start) && getMetadata(start);
-    if (!meta) return [] as V;
     // Are all paths SQL query-able?
     if (!isAllSqlPaths(meta, paths)) {
       throw new Error("Cannot use loadLens opts.sql with non-SQL paths");
@@ -87,14 +99,24 @@ export async function loadLens<T extends Entity, U, V>(
     }
   }
 
+  // This could be `Entity | Entity[] | undefined` as we keep walking
   let current: any = start;
+  let currentMeta: EntityMetadata | undefined = meta;
   let seenSoftDeleted = false;
   // Now evaluate each step of the path
-  for await (const path of paths) {
+  for (const path of paths) {
+    const field = currentMeta?.allFields[path] as
+      | ManyToOneField
+      | ManyToManyField
+      | OneToManyField
+      | OneToOneField
+      | PrimitiveField;
     if (Array.isArray(current)) {
       current = (await Promise.all(current.map((c) => maybeLoad(c, path, opts)))).flat();
       current = [...new Set(current.filter((c: any) => c !== undefined && !c.isSoftDeletedEntity))];
-    } else {
+      // As soon as we hit `current=[]`, we can early return (...`current=undefined` cannot b/c the next path might flip to a list)
+      if (current.length === 0) return current!;
+    } else if (current) {
       current = await maybeLoad(current, path, opts);
       seenSoftDeleted ||= (current as any)?.isSoftDeletedEntity;
       // If we had been traversing m2o -> m2o (i.e. book -> author) and just hit an o2m/m2m (i.e.
@@ -106,7 +128,11 @@ export async function loadLens<T extends Entity, U, V>(
       if (Array.isArray(current) && seenSoftDeleted) {
         return [] as any;
       }
+    } else {
+      // current is undefined; see if we should flip to a list ... which means we can early return
+      if (field.kind === "o2m" || field.kind === "m2m") return [] as any;
     }
+    currentMeta = field && "otherMetadata" in field ? field.otherMetadata() : undefined;
   }
   return current!;
 }
@@ -158,12 +184,20 @@ function maybeLoad(object: any, path: string, opts: { forceReload?: boolean }): 
  *
  * This assumes you've first evaluated the lens with `loadLens` and now can access it synchronously.
  */
-export function getLens<T, U, V>(start: T | T[], fn: (lens: Lens<T>) => Lens<U, V>): V {
+export function getLens<T, U, V>(startMeta: EntityMetadata, start: T | T[], fn: (lens: Lens<T>) => Lens<U, V>): V {
   const paths = collectPaths(fn);
+  let currentMeta: EntityMetadata | undefined = startMeta;
   let current: any = start;
   let seenSoftDeleted = false;
   // Now evaluate each step of the path
   for (const path of paths) {
+    // We might navigate into properties, at which point we won't know the currentMeta
+    const field = currentMeta?.allFields[path] as
+      | ManyToOneField
+      | ManyToManyField
+      | OneToManyField
+      | OneToOneField
+      | PrimitiveField;
     if (Array.isArray(current)) {
       // Use a set to dedup as we go
       const next = new Set();
@@ -174,15 +208,19 @@ export function getLens<T, U, V>(start: T | T[], fn: (lens: Lens<T>) => Lens<U, 
         else maybeAdd(next, value);
       }
       current = [...next];
-    } else {
+    } else if (current) {
       current = maybeGet(current, path);
       seenSoftDeleted ||= (current as any)?.isSoftDeletedEntity;
       // If we had been traversing m2o -> m2o and just hit an o2m/m2m, and any of our
-      // prior m2os had been soft deleted, just filter everything out.
+      // prior m2os had been soft-deleted, just filter everything out.
       if (Array.isArray(current) && seenSoftDeleted) {
         return [] as any;
       }
+    } else {
+      // current is undefined; see if we should flip to a list ... which means we can early return
+      if (field.kind === "o2m" || field.kind === "m2m") return [] as any;
     }
+    currentMeta = field && "otherMetadata" in field ? field.otherMetadata() : undefined;
   }
   return current!;
 }
@@ -252,7 +290,7 @@ function collectPaths(fn: Function): string[] {
   const proxy = new Proxy(
     {},
     {
-      get(object, property, receiver) {
+      get(_, property, receiver) {
         paths.push(String(property));
         return receiver;
       },

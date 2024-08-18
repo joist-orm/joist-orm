@@ -3,13 +3,14 @@ import {
   insertBook,
   insertBookReview,
   insertBookToTag,
+  insertComment,
   insertImage,
   insertPublisher,
   insertTag,
 } from "@src/entities/inserts";
 import { lastQuery, newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
-import { Lens, getLens, getMetadata, testing } from "joist-orm";
-import { Author, Book, Image, Publisher, Tag } from "./entities";
+import { getLens, getMetadata, Lens, testing } from "joist-orm";
+import { Author, Book, Image, newBook, Publisher, Tag } from "./entities";
 
 const { isAllSqlPaths } = testing;
 
@@ -113,6 +114,36 @@ describe("EntityManager.lens", () => {
     expect(publishers).toEqual([]);
   });
 
+  it("can navigate nullable references then collections", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+    await insertComment({ text: "c1", parent_publisher_id: 1 });
+    await insertComment({ text: "c2", parent_publisher_id: 1 });
+    const em = newEntityManager();
+    const [b1, b2] = await em.loadAll(Book, ["b:1", "b:2"]);
+    // b1 -> author -> publisher (set) -> comments ==> a collection of [pg1]
+    const c1 = await b1.load((b) => b.author.publisher.comments);
+    expect(c1.length).toEqual(2);
+    // b2 -> author -> publisher (null) -> comments ==> a collection of []
+    const c2 = await b2.load((b) => b.author.publisher.comments);
+    expect(c2).toEqual([]);
+  });
+
+  it("can navigate nullable references then collections when already loaded", async () => {
+    const em = newEntityManager();
+    const b1 = newBook(em, { author: { publisher: { comments: [{}, {}] } } });
+    const b2 = newBook(em, { author: { publisher: null! } });
+    // b1 -> author -> publisher (set) -> comments ==> a collection of [pg1]
+    const c1 = await b1.load((b) => b.author.publisher.comments);
+    expect(c1.length).toEqual(2);
+    // b2 -> author -> publisher (null) -> comments ==> a collection of []
+    const c2 = await b2.load((b) => b.author.publisher.comments);
+    expect(c2).toEqual([]);
+  });
+
   it("can navigate into async helper methods", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
@@ -140,7 +171,7 @@ describe("EntityManager.lens", () => {
     const publishers = await t1.load((t) => t.books.author.publisher);
     // Use `toStrictEqual` to ensure the list is not `[undefined]`
     expect(publishers).toStrictEqual([]);
-    expect(getLens(t1, (t) => t.books.author.publisher)).toStrictEqual([]);
+    expect(getLens(getMetadata(t1), t1, (t) => t.books.author.publisher)).toStrictEqual([]);
   });
 
   it("can navigate across soft-deleted references from an entity", async () => {
@@ -150,7 +181,7 @@ describe("EntityManager.lens", () => {
     const b1 = await em.load(Book, "b:1");
     const books = await b1.load((b) => b.author.books);
     expect(books).toMatchEntity([]);
-    expect(getLens(b1, (b) => b.author.books)).toMatchEntity([]);
+    expect(getLens(getMetadata(b1), b1, (b) => b.author.books)).toMatchEntity([]);
   });
 
   it("can navigate into getters", async () => {

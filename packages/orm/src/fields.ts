@@ -55,9 +55,10 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
   getEmInternalApi(em).checkWritesAllowed();
 
+  const { fieldLogger } = getEmInternalApi(em);
   const { data, originalData, flushedData } = getInstanceData(entity);
 
-  // If a `set` occurs during the rqf-loop, copy the last-flushed value to flushedData.
+  // If a `set` occurs during the ReactiveQueryField-loop, copy the last-flushed value to flushedData.
   // Then our `pendingOperation` logic can tell "do we need another micro-flush?" separately
   // from our public-facing changed fields logic.
   if (flushedData) {
@@ -84,6 +85,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
     if (equalOrSameEntity(originalData[fieldName], newValue)) {
       data[fieldName] = newValue;
       delete originalData[fieldName];
+      fieldLogger?.logSet(entity, fieldName, newValue);
       getEmInternalApi(em).rm.dequeueDownstreamReactiveFields(entity, fieldName);
       return true;
     }
@@ -99,6 +101,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   if (!(fieldName in originalData)) {
     originalData[fieldName] = currentValue;
   }
+  fieldLogger?.logSet(entity, fieldName, newValue);
   getEmInternalApi(em).rm.queueDownstreamReactiveFields(entity, fieldName);
   data[fieldName] = newValue;
   return true;

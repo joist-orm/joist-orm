@@ -1,4 +1,3 @@
-import ansis from "ansis";
 import { isPlainObject } from "joist-utils";
 import { Entity, isEntity } from "./Entity";
 import {
@@ -6,31 +5,31 @@ import {
   EntityConstructor,
   EntityManager,
   IdOf,
+  isId,
   MaybeAbstractEntityConstructor,
   OptsOf,
-  isId,
 } from "./EntityManager";
 import {
   EntityMetadata,
+  getBaseAndSelfMetas,
+  getBaseSelfAndSubMetas,
+  getMetadata,
+  isManyToOneField,
+  isOneToOneField,
   ManyToManyField,
   ManyToOneField,
   OneToManyField,
   OneToOneField,
   PolymorphicField,
   PrimitiveField,
-  getBaseAndSelfMetas,
-  getBaseSelfAndSubMetas,
-  getMetadata,
-  isManyToOneField,
-  isOneToOneField,
 } from "./EntityMetadata";
-import { getCallerName } from "./config";
 import { hasDefaultValue } from "./defaults";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
+import { FactoryLogger } from "./logging/FactoryLogger";
 import { assertNever, maybeRequireTemporal } from "./utils";
 
-const { gray, green, yellow } = ansis;
+let logger: FactoryLogger | undefined = undefined;
 
 /**
  * DeepPartial-esque type specific to our `newTestInstance` factory.
@@ -57,10 +56,6 @@ const Temporal = maybeRequireTemporal()?.Temporal;
 export const testPlainDate = Temporal?.PlainDate.from("2018-01-01");
 export const testPlainDateTime = testPlainDate?.toPlainDateTime("00:00:00");
 export const testZonedDateTime = testPlainDate?.toZonedDateTime("UTC");
-
-let logger: FactoryLogger | undefined = undefined;
-let writer: WriteFn | undefined = undefined;
-type WriteFn = (line: string) => void;
 
 /**
  * Creates a test instance of `T`.
@@ -646,7 +641,7 @@ type AllowRelationsOrPartials<T> = {
 //     | "diffBranch" == created internally within the current factory call, but a different branch of children
 //     | "sameBranch" === created internally within the current factory call, in the current branch of entities
 // ]
-type UseMapSource = "testOpts" | "useOpt" | "sameBranch" | "diffBranch";
+export type UseMapSource = "testOpts" | "useOpt" | "sameBranch" | "diffBranch";
 type UseMapValue = [Entity, UseMapSource];
 type UseMap = Map<Function, UseMapValue>;
 
@@ -777,88 +772,6 @@ class CopyMap extends Map<Function, UseMapValue> {
   }
 }
 
-class FactoryLogger {
-  private level = 0;
-  private writeFn: WriteFn;
-  private skipNextLogCreating = false;
-
-  // We default to process.stdout.write to side-step around Jest's console.log instrumentation
-  // adding "...at..." stack traces to our output.
-  constructor() {
-    this.writeFn = writer ?? process.stdout.write.bind(process.stdout);
-  }
-
-  logCreating(cstr: any): void {
-    // This was already logged by the parent `field = creating new`
-    if (this.skipNextLogCreating) {
-      this.skipNextLogCreating = false;
-    } else {
-      this.write("Creating", green.bold(`new ${cstr.name}`), gray(`at ${getCallerName(2)}`));
-    }
-  }
-
-  logAddToUseMap(e: Entity, source: UseMapSource): void {
-    if (source === "sameBranch" || source === "diffBranch") {
-      this.write(`${gray(`created`)} ${e.toString()} ${gray("added to scope")}`);
-    } else {
-      this.write(`${gray(`...adding`)} ${e.toString()} ${gray("opt to scope")}`);
-    }
-  }
-
-  logCreated(e: Entity): void {
-    // This matches the `logAddToUseMap` but for entities not going into scope
-    this.write(`${gray(`created`)} ${e.toString()}`);
-  }
-
-  logFoundExisting(e: Entity): void {
-    // Make this yellow because it reverses the "new Entity" we thought we were going to do
-    this.write(`${yellow(`using existing`)} ${e.toString()}`);
-  }
-
-  logFoundOpt(fieldName: string, e: Entity): void {
-    this.write(`${gray(`${fieldName} =`)} ${e.toString()} ${gray("from opt")}`);
-  }
-
-  logNotFoundAndCreating(fieldName: string, meta: EntityMetadata): void {
-    this.write(`${gray(`${fieldName} =`)} creating ${green.bold(`new ${meta.type}`)}`);
-    this.skipNextLogCreating = true;
-  }
-
-  logFoundInUseMap(fieldName: string, e: Entity): void {
-    this.write(`${gray(`${fieldName} =`)} ${e.toString()} ${gray("from scope")}`);
-  }
-
-  logFoundSingleEntity(fieldName: string, e: Entity): void {
-    this.write(`${gray(`${fieldName} =`)} ${e.toString()} ${gray("from em")}`);
-  }
-
-  indent() {
-    this.level++;
-  }
-
-  dedent() {
-    this.level--;
-  }
-
-  private write(...line: string[]): void {
-    this.writeFn(this.prefix() + line.join(" ") + "\n");
-  }
-
-  private prefix() {
-    return "  ".repeat(this.level);
-  }
-}
-
-/** Enables factory logging for all factories. */
-export function setFactoryLogging(enabled: boolean): void {
-  logger = enabled ? new FactoryLogger() : undefined;
-}
-
-// Allow our test suite observe the logger behavior
-export function setFactoryWriter(write: WriteFn | undefined): void {
-  writer = write;
-}
-
 // const objectId = (() => {
 //   let currentId = 0;
 //   const map = new WeakMap();
@@ -869,3 +782,7 @@ export function setFactoryWriter(write: WriteFn | undefined): void {
 //     return map.get(object)!;
 //   };
 // })();
+/** Enables factory logging for all factories. */
+export function setFactoryLogging(enabled: boolean): void {
+  logger = enabled ? new FactoryLogger() : undefined;
+}

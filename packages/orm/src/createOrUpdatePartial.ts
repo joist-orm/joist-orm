@@ -144,7 +144,7 @@ export async function createOrUpdatePartial<T extends Entity>(
           if (isEntity(value)) {
             return value;
           } else if (isKey(value)) {
-            return await em.load(field.otherMetadata().cstr, value);
+            return em.load(field.otherMetadata().cstr, value);
           } else if (value === null || value === undefined) {
             return undefined;
           } else if (!isPlainObject(value)) {

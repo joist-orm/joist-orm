@@ -27,7 +27,6 @@ export { EntityOrId, HintNode } from "./HintTree";
 export { InstanceData } from "./InstanceData";
 export * from "./QueryBuilder";
 export * from "./QueryParser";
-export { ReactionLogger, setReactionLogging } from "./ReactionsManager";
 export * from "./changes";
 export { ConfigApi, EntityHook, resetBootFlag } from "./config";
 export { configureMetadata, getConstructorFromTaggedId, maybeGetConstructorFromReference } from "./configure";
@@ -54,6 +53,9 @@ export {
   RelationsIn,
 } from "./loadHints";
 export * from "./loadLens";
+export { setFactoryWriter } from "./logging/FactoryLogger";
+export * from "./logging/FieldLogger";
+export { ReactionLogger, setReactionLogging } from "./logging/ReactionLogger";
 export {
   defaultValue,
   FactoryEntityOpt,
@@ -65,7 +67,6 @@ export {
   newTestInstance,
   noValue,
   setFactoryLogging,
-  setFactoryWriter, // only for testing
   testIndex,
 } from "./newTestInstance";
 export { deepNormalizeHint, normalizeHint } from "./normalizeHints";

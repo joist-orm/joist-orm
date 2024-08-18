@@ -10,7 +10,7 @@ import {
 } from "@src/entities/inserts";
 import { lastQuery, newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 import { getLens, getMetadata, Lens, testing } from "joist-orm";
-import { Author, Book, Image, newBook, Publisher, Tag } from "./entities";
+import { Author, Book, Image, newAuthor, newBook, Publisher, Tag } from "./entities";
 
 const { isAllSqlPaths } = testing;
 
@@ -142,6 +142,19 @@ describe("EntityManager.lens", () => {
     // b2 -> author -> publisher (null) -> comments ==> a collection of []
     const c2 = await b2.load((b) => b.author.publisher.comments);
     expect(c2).toEqual([]);
+  });
+
+  it("can navigate hasOneDerived then relation", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1");
+    await a1.load((a) => a.latestComment.books);
+  });
+
+  it("can navigate hasOneDerived then relation when already loaded", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em);
+    await a1.load((a) => a.latestComment.books);
   });
 
   it("can navigate into async helper methods", async () => {

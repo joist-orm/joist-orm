@@ -84,7 +84,8 @@ export type DatabaseColumnType =
   | "date"
   | "jsonb"
   | "bytea"
-  | "tsvector";
+  | "tsvector"
+  | "tstzrange";
 
 /**
  * A logical entity field.

@@ -1,3 +1,10 @@
+# [1.188.0](https://github.com/joist-orm/joist-orm/compare/v1.187.2...v1.188.0) (2024-08-22)
+
+
+### Features
+
+* add tstzrange field support ([#1188](https://github.com/joist-orm/joist-orm/issues/1188)) ([85b2aac](https://github.com/joist-orm/joist-orm/commit/85b2aac8294127e82b71086b9df476f61291a246))
+
 ## [1.187.2](https://github.com/joist-orm/joist-orm/compare/v1.187.1...v1.187.2) (2024-08-18)
 
 

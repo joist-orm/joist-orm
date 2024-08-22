@@ -13,6 +13,7 @@
     "name",
     "originalEmail",
     "role",
+    "trialPeriod",
     "updatedAt"
   ],
   "Author": [
@@ -243,7 +244,8 @@
     "managerId",
     "name",
     "originalEmail",
-    "role"
+    "role",
+    "trialPeriod"
   ],
   "SaveAdminUserResult": ["adminUser"],
   "SaveAuthorInput": [
@@ -450,7 +452,8 @@
     "id",
     "managerId",
     "name",
-    "originalEmail"
+    "originalEmail",
+    "trialPeriod"
   ],
   "SaveUserResult": ["user"],
   "SmallPublisher": [
@@ -548,6 +551,7 @@
     "manager",
     "name",
     "originalEmail",
+    "trialPeriod",
     "updatedAt"
   ],
   "UserFavoritePublisher": ["LargePublisher", "SmallPublisher"]

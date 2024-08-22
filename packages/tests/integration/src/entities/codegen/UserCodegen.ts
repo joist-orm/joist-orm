@@ -82,6 +82,7 @@ export interface UserFields {
   password: { kind: "primitive"; type: PasswordValue; unique: false; nullable: undefined; derived: false };
   bio: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   originalEmail: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  trialPeriod: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   manager: { kind: "m2o"; type: User; nullable: undefined; derived: false };
@@ -96,6 +97,7 @@ export interface UserOpts {
   password?: PasswordValue | null;
   bio?: string;
   originalEmail?: string;
+  trialPeriod?: string | null;
   manager?: User | UserId | null;
   authorManyToOne?: Author | AuthorId | null;
   favoritePublisher?: UserFavoritePublisher;
@@ -121,6 +123,7 @@ export interface UserFilter {
   password?: ValueFilter<PasswordValue, null>;
   bio?: ValueFilter<string, never>;
   originalEmail?: ValueFilter<string, never>;
+  trialPeriod?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   manager?: EntityFilter<User, UserId, FilterOf<User>, null>;
@@ -142,6 +145,7 @@ export interface UserGraphQLFilter {
   password?: ValueGraphQLFilter<PasswordValue>;
   bio?: ValueGraphQLFilter<string>;
   originalEmail?: ValueGraphQLFilter<string>;
+  trialPeriod?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   manager?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null>;
@@ -173,6 +177,7 @@ export interface UserOrder {
   password?: OrderBy;
   bio?: OrderBy;
   originalEmail?: OrderBy;
+  trialPeriod?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   manager?: UserOrder;
@@ -270,6 +275,14 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   set originalEmail(originalEmail: string) {
     setField(this, "originalEmail", cleanStringValue(originalEmail));
+  }
+
+  get trialPeriod(): string | undefined {
+    return getField(this, "trialPeriod");
+  }
+
+  set trialPeriod(trialPeriod: string | undefined) {
+    setField(this, "trialPeriod", cleanStringValue(trialPeriod));
   }
 
   get createdAt(): Date {

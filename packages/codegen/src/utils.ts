@@ -119,6 +119,7 @@ export function mapSimpleDbTypeToTypescriptType(config: Config, dbType: Database
     case "varchar":
     case "uuid":
     case "tsvector":
+    case "tstzrange":
       return "string";
     case "timestamp with time zone":
       return config.temporal ? zonedDateTimeCode : dateCode;

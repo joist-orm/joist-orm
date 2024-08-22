@@ -276,6 +276,8 @@ export function up(b: MigrationBuilder): void {
     favorite_publisher_large_id: foreignKey("large_publishers", { notNull: false }),
     // for testing default values of required-but-not-defaulted columns
     original_email: { type: "varchar(255)", notNull: true },
+    // for testing tstzrange fields
+    trial_period: { type: "tstzrange", notNull: false },
   });
 
   // For testing subclasses with their own rules...

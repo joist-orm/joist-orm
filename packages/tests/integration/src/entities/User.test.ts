@@ -1,6 +1,7 @@
 import { User } from "@src/entities";
 import { insertUser, select } from "@src/entities/inserts";
 import { PasswordValue } from "@src/entities/types";
+import { jan1, jan2 } from "@src/testDates";
 
 import { newEntityManager } from "@src/testEm";
 
@@ -55,5 +56,16 @@ describe("User", () => {
     a1.password = PasswordValue.fromPlainText("another");
     await expect(em.flush()).resolves.toEqual([a1]);
     expect(a1.password.matches(PASSWORD)).toBe(false);
+  });
+
+  it("can interact with tstzrange values", async () => {
+    const em = newEntityManager();
+    const u1 = em.create(User, {
+      name: "u1",
+      email: "test@test.com",
+      trialPeriod: `[${jan1.toISOString()},${jan2.toISOString()})`,
+    });
+    await expect(em.flush()).resolves.toEqual([u1]);
+    await expect(u1.trialPeriod).toEqual("[2018-01-01T00:00:00.000Z,2018-01-02T00:00:00.000Z)");
   });
 });

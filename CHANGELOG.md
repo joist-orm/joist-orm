@@ -1,3 +1,10 @@
+## [1.188.1](https://github.com/joist-orm/joist-orm/compare/v1.188.0...v1.188.1) (2024-08-30)
+
+
+### Bug Fixes
+
+* Fix m2m deletes when RQFs are updated. ([#1194](https://github.com/joist-orm/joist-orm/issues/1194)) ([9b6ea70](https://github.com/joist-orm/joist-orm/commit/9b6ea7044eb2a5e6b5822d161f679a7bd529bc0f))
+
 # [1.188.0](https://github.com/joist-orm/joist-orm/compare/v1.187.2...v1.188.0) (2024-08-22)
 
 

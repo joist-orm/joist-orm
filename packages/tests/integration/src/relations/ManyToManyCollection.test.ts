@@ -1,6 +1,14 @@
-import { countOfBookToTags, insertAuthor, insertBook, insertBookToTag, insertTag, select } from "@src/entities/inserts";
+import {
+  countOfBookToTags,
+  insertAuthor,
+  insertBook,
+  insertBookToTag,
+  insertPublisher,
+  insertTag,
+  select,
+} from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
-import { Author, Book, Tag, newAuthor, newBook, newTag, newUser } from "../entities";
+import { Author, Book, Tag, newAuthor, newBook, newBookReview, newTag, newUser } from "../entities";
 import { zeroTo } from "../utils";
 
 describe("ManyToManyCollection", () => {
@@ -141,10 +149,8 @@ describe("ManyToManyCollection", () => {
     await insertBookToTag({ book_id: 3, tag_id: 5 });
 
     const em = newEntityManager();
-    const b2 = await em.load(Book, "b:2");
-    const b3 = await em.load(Book, "b:3");
-    const t4 = await em.load(Tag, "t:4");
-    const t5 = await em.load(Tag, "t:5");
+    const [b2, b3] = await em.loadAll(Book, ["b:2", "b:3"]);
+    const [t4, t5] = await em.loadAll(Tag, ["t:4", "t:5"]);
 
     // When we add the existing relations again
     b2.tags.add(t4);
@@ -321,6 +327,32 @@ describe("ManyToManyCollection", () => {
     const t2 = await em.load(Tag, "4");
     // When the tag is deleted
     em.delete(t1);
+    await em.flush();
+    // Then the deleted tag is removed from the book collection
+    expect(b1.tags.get.map((t) => t.id)).toEqual([t2.id]);
+    // And the tag itself was deleted
+    expect((await select("tags")).length).toEqual(1);
+    // And the join table entry was deleted
+    expect((await select("books_to_tags")).length).toEqual(1);
+  });
+
+  it("can delete a tag that is on a book with an RQF loop", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t1` });
+    await insertTag({ id: 4, name: `t2` });
+    await insertBookToTag({ book_id: 2, tag_id: 3 });
+    await insertBookToTag({ book_id: 2, tag_id: 4 });
+    // Given a book with two tags
+    const em = newEntityManager();
+    const b1 = await em.load(Book, "2", "tags");
+    const t1 = await em.load(Tag, "3");
+    const t2 = await em.load(Tag, "4");
+    // When the tag is deleted
+    em.delete(t1);
+    // ...and we also recalc a RFQ
+    newBookReview(em, { book: "b:1" });
     await em.flush();
     // Then the deleted tag is removed from the book collection
     expect(b1.tags.get.map((t) => t.id)).toEqual([t2.id]);

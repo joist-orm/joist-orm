@@ -1307,7 +1307,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
               for (const e of entitiesToFlush) allFlushedEntities.add(e);
               // Recreate `entityTodos` against the only-the-just-changed entities
               entityTodos = createTodos(entitiesToFlush);
-              // ...what about joinRowTodos?...
+              joinRowTodos = combineJoinRows(this.#joinRows);
               await runValidation(entityTodos, joinRowTodos);
               this.#rm.throwIfAnySuppressedTypeErrors();
             } else {

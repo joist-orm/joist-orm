@@ -25,6 +25,7 @@ export class JoinRows {
     const existing = this.rows.find((r) => r[columnName] === e1 && r[otherColumnName] === e2);
     if (existing) {
       existing.deleted = false;
+      existing.op = JoinRowOperation.Pending;
     } else {
       const joinRow: JoinRow = {
         id: undefined,
@@ -55,6 +56,7 @@ export class JoinRows {
       } else {
         existing.deleted = true;
       }
+      existing.op = JoinRowOperation.Pending;
     } else {
       // Use -1 to force the sortJoinRows to notice us as dirty ("delete: true but id is set")
       this.rows.push({ id: -1, [columnName]: e1, [otherColumnName]: e2, deleted: true, op: JoinRowOperation.Pending });
@@ -133,8 +135,8 @@ export class JoinRows {
 
   /** Scans our `rows` for newly-added/newly-deleted rows that need `INSERT`s/`UPDATE`s. */
   toTodo(): JoinRowTodo | undefined {
-    const newRows = this.rows.filter((r) => r.id === undefined && r.deleted !== true);
-    const deletedRows = this.rows.filter((r) => r.id !== undefined && r.deleted === true);
+    const newRows = this.rows.filter((r) => r.id === undefined && r.deleted !== true && r.op === "pending");
+    const deletedRows = this.rows.filter((r) => r.id !== undefined && r.deleted === true && r.op === "pending");
     if (newRows.length === 0 && deletedRows.length === 0) {
       return undefined;
     }

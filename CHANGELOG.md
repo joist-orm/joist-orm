@@ -1,3 +1,10 @@
+# [1.189.0](https://github.com/joist-orm/joist-orm/compare/v1.188.1...v1.189.0) (2024-09-04)
+
+
+### Features
+
+* index all foreign keys in many to many tables ([#1196](https://github.com/joist-orm/joist-orm/issues/1196)) ([581071f](https://github.com/joist-orm/joist-orm/commit/581071faa42ded33344bae71077d77723664ad2b)), closes [#1195](https://github.com/joist-orm/joist-orm/issues/1195)
+
 ## [1.188.1](https://github.com/joist-orm/joist-orm/compare/v1.188.0...v1.188.1) (2024-08-30)
 
 

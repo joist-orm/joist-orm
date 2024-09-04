@@ -256,6 +256,7 @@ export function createManyToManyTable(
     options,
   );
   b.createIndex(tableName, [column1, column2], { unique: true, ifNotExists: options?.ifNotExists });
+  b.createIndex(tableName, [column2]); // Improves lookup performance when querying just column2
 }
 
 /** Adds columns + auto-indexes any foreign keys. */

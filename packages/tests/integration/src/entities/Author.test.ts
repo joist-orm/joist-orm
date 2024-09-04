@@ -474,6 +474,25 @@ describe("Author", () => {
     expect(i).toBeDefined();
   });
 
+  it("creates a unique composite index for m2m tasks_to_publishers", async () => {
+    const pgConfig = newPgConnectionConfig();
+    const db = await pgStructure(pgConfig);
+    const t = db.tables.find((t) => t.name === "tasks_to_publishers")!;
+    const i = t.indexes.find((i) => i.name === "tasks_to_publishers_task_id_publisher_id_unique_index")!;
+    expect(i).toBeDefined();
+    expect(i.columns.map((c) => c.name)).toEqual(["task_id", "publisher_id"]);
+    expect(i.isUnique).toEqual(true);
+  });
+
+  it("creates an index for the second column of an m2m relationship", async () => {
+    const pgConfig = newPgConnectionConfig();
+    const db = await pgStructure(pgConfig);
+    const t = db.tables.find((t) => t.name === "tasks_to_publishers")!;
+    const i = t.indexes.find((i) => i.name === "tasks_to_publishers_publisher_id_index")!;
+    expect(i).toBeDefined();
+    expect(i.columns.map((c) => c.name)).toEqual(["publisher_id"]);
+  });
+
   describe("isNewEntity", () => {
     it("is false after fetch for existing entities", async () => {
       await insertAuthor({ first_name: "a1" });

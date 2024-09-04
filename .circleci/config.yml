@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  node: circleci/node@5.2.0
+  node: circleci/node@6.1.0
 
 workflows:
   version: 2
@@ -10,7 +10,10 @@ workflows:
       - build:
           matrix:
             parameters:
-              node-version: ["18.12.0", "20.8.1", "21.1.0", "22.0.0"]
+              node-version:
+                - "18" # EOL 30 Apr 2025
+                - "20" # EOL 30 Apr 2026
+                - "22" # EOL 30 Apr 2027
 
 jobs:
   build:
@@ -49,7 +52,7 @@ jobs:
           condition:
             and:
               - equal: [main, << pipeline.git.branch >>]
-              - equal: ["21.1.0", << parameters.node-version >>]
+              - equal: ["22", << parameters.node-version >>]
           steps:
             - run:
                 name: Release

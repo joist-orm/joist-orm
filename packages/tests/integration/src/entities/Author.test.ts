@@ -474,23 +474,23 @@ describe("Author", () => {
     expect(i).toBeDefined();
   });
 
-  it("creates a unique composite index for m2m tasks_to_publishers", async () => {
+  it("creates a unique composite index for m2m authors_to_tags", async () => {
     const pgConfig = newPgConnectionConfig();
     const db = await pgStructure(pgConfig);
-    const t = db.tables.find((t) => t.name === "tasks_to_publishers")!;
-    const i = t.indexes.find((i) => i.name === "tasks_to_publishers_task_id_publisher_id_unique_index")!;
+    const t = db.tables.find((t) => t.name === "authors_to_tags")!;
+    const i = t.indexes.find((i) => i.name === "authors_to_tags_author_id_tag_id_unique_index")!;
     expect(i).toBeDefined();
-    expect(i.columns.map((c) => c.name)).toEqual(["task_id", "publisher_id"]);
+    expect(i.columns.map((c) => c.name)).toEqual(["author_id", "tag_id"]);
     expect(i.isUnique).toEqual(true);
   });
 
   it("creates an index for the second column of an m2m relationship", async () => {
     const pgConfig = newPgConnectionConfig();
     const db = await pgStructure(pgConfig);
-    const t = db.tables.find((t) => t.name === "tasks_to_publishers")!;
-    const i = t.indexes.find((i) => i.name === "tasks_to_publishers_publisher_id_index")!;
+    const t = db.tables.find((t) => t.name === "authors_to_tags")!;
+    const i = t.indexes.find((i) => i.name === "authors_to_tags_tag_id_index")!;
     expect(i).toBeDefined();
-    expect(i.columns.map((c) => c.name)).toEqual(["publisher_id"]);
+    expect(i.columns.map((c) => c.name)).toEqual(["tag_id"]);
   });
 
   describe("isNewEntity", () => {

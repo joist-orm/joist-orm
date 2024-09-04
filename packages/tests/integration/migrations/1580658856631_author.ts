@@ -153,7 +153,7 @@ export function up(b: MigrationBuilder): void {
   b.sql(`
     ALTER TABLE authors ADD COLUMN ts_search tsvector
     GENERATED ALWAYS AS (to_tsvector('english', coalesce(search, ''))) STORED;
-    CREATE INDEX authors_ts_search_idx ON authors USING GIN (ts_search);
+    CREATE INDEX authors_ts_search_index ON authors USING GIN (ts_search);
   `);
 
   // A publisher can only have one author named `Jim`, but still have other authors

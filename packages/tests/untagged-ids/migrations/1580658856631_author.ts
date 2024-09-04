@@ -16,7 +16,7 @@ export function up(b: MigrationBuilder): void {
     created_at: { type: "timestamptz", notNull: true },
     updated_at: { type: "timestamptz", notNull: true },
   });
-  b.sql(`CREATE INDEX books_author_id_idx ON books USING btree (author_id)`);
+  b.createIndex("books", ["author_id"], { method: "btree" });
 
   b.createTable("comments", {
     id: { type: "uuid", primaryKey: true },
@@ -26,6 +26,6 @@ export function up(b: MigrationBuilder): void {
     created_at: { type: "timestamptz", notNull: true },
     updated_at: { type: "timestamptz", notNull: true },
   });
-  b.sql(`CREATE INDEX comments_author_id_idx ON comments USING btree (parent_author_id)`);
-  b.sql(`CREATE INDEX comments_book_id_idx ON comments USING btree (parent_book_id)`);
+  b.addIndex("comments", ["parent_author_id"], { method: "btree" });
+  b.addIndex("comments", ["parent_book_id"], { method: "btree" });
 }

@@ -29,5 +29,5 @@ export function up(b: MigrationBuilder): void {
     created_at: { type: "timestamptz", notNull: true },
     updated_at: { type: "timestamptz", notNull: true },
   });
-  b.sql(`CREATE INDEX books_author_id_idx ON books USING btree (author_id)`);
+  b.addIndex("books", ["author_id"], { method: "btree" });
 }

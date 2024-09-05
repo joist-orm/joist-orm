@@ -1,3 +1,10 @@
+# [1.190.0](https://github.com/joist-orm/joist-orm/compare/v1.189.0...v1.190.0) (2024-09-05)
+
+
+### Features
+
+* index suffix _idx -> _index ([#1198](https://github.com/joist-orm/joist-orm/issues/1198)) ([99e865e](https://github.com/joist-orm/joist-orm/commit/99e865e3f3363ebd72d02d91f0cb176d991adeb3))
+
 # [1.189.0](https://github.com/joist-orm/joist-orm/compare/v1.188.1...v1.189.0) (2024-09-04)
 
 

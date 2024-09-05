@@ -21,7 +21,7 @@ import { addColumns } from "joist-migration-utils";
 import { MigrationBuilder } from "node-pg-migrate";
 
 export async function up(b: MigrationBuilder): Promise<void> {
-  addColumns(b, "books", { search: { type: "text" }});
+  addColumns(b, "books", { search: { type: "text" } });
 
   // Then create a "generated" column, allowing postgres to handle the `to_tsvector` word stemming.
   b.sql(`
@@ -29,7 +29,7 @@ export async function up(b: MigrationBuilder): Promise<void> {
     ADD COLUMN ts_search tsvector
     GENERATED ALWAYS AS (to_tsvector('english', coalesce(search, ''))) STORED;
 
-    CREATE INDEX ts_search_idx ON books USING GIN (ts_search);
+    CREATE INDEX ts_search_index ON books USING GIN (ts_search);
   `);
 }
 ```
@@ -81,7 +81,7 @@ readonly search: ReactiveField<Book, string> = hasReactiveField(
 // Use the buildQuery method to create a base query to build off of
 const query = buildQuery(knex, Book, {});
 
-// Use knex raw methods to craft the search query against the `ts_search` generated column 
+// Use knex raw methods to craft the search query against the `ts_search` generated column
 // and (optionally) sort by the rank
 void query
   .whereRaw(`ts_search @@ plainto_tsquery('english', '${searchTerm}')`)

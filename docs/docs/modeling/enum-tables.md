@@ -60,7 +60,7 @@ And then other domain entities use foreign keys to point back to valid values:
  updated_at         | timestamp with time zone | not null |
 Indexes:
     "authors_pkey" PRIMARY KEY, btree (id)
-    "authors_favorite_color_id_idx" btree (size_id)
+    "authors_favorite_color_id_index" btree (size_id)
 Foreign-key constraints:
     "authors_favorite_color_id_fkey" FOREIGN KEY
        (favorite_color_id) REFERENCES color(id)

@@ -470,7 +470,7 @@ describe("Author", () => {
     const pgConfig = newPgConnectionConfig();
     const db = await pgStructure(pgConfig);
     const t = db.tables.find((t) => t.name === "authors")!;
-    const i = t.indexes.find((i) => i.name === "authors_publisher_id_idx")!;
+    const i = t.indexes.find((i) => i.name === "authors_publisher_id_index")!;
     expect(i).toBeDefined();
   });
 

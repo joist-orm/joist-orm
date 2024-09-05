@@ -21,7 +21,7 @@ export function createEntityTable(b: MigrationBuilder, tableName: string, column
   // another table, assume we'll be doing a lot of lookups on this column and should fk it.
   Object.entries(columns).forEach(([name, def]) => {
     if (typeof def === "object" && def.references) {
-      b.sql(`CREATE INDEX ${tableName}_${name}_idx ON ${tableName} USING btree (${name})`);
+      b.addIndex(tableName, [name], { method: "btree" });
     }
   });
 
@@ -55,7 +55,7 @@ export function createSubTable(
   // another table, assume we'll be doing a lot of lookups on this column and should fk it.
   Object.entries(columns).forEach(([name, def]) => {
     if (typeof def === "object" && def.references) {
-      b.sql(`CREATE INDEX ${subTableName}_${name}_idx ON ${subTableName} USING btree (${name})`);
+      b.addIndex(subTableName, [name], { method: "btree" });
     }
   });
 }
@@ -264,7 +264,7 @@ export function addColumns(b: MigrationBuilder, tableName: string, columns: Colu
   b.addColumns(tableName, columns);
   Object.entries(columns).forEach(([name, def]) => {
     if (typeof def === "object" && def.references) {
-      b.sql(`CREATE INDEX ${tableName}_${name}_idx ON ${tableName} USING btree (${name})`);
+      b.addIndex(tableName, [name], { method: "btree" });
     }
   });
 }

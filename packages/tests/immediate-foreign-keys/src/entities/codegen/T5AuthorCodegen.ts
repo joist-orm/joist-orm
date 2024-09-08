@@ -87,6 +87,7 @@ export abstract class T5AuthorCodegen extends BaseEntity<EntityManager, number> 
   static readonly metadata: EntityMetadata<T5Author>;
 
   declare readonly __orm: {
+    entityType: T5Author;
     filterType: T5AuthorFilter;
     gqlFilterType: T5AuthorGraphQLFilter;
     orderType: T5AuthorOrder;

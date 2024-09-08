@@ -106,6 +106,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   static readonly metadata: EntityMetadata<PublisherGroup>;
 
   declare readonly __orm: {
+    entityType: PublisherGroup;
     filterType: PublisherGroupFilter;
     gqlFilterType: PublisherGroupGraphQLFilter;
     orderType: PublisherGroupOrder;

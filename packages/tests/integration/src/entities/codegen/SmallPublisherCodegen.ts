@@ -100,6 +100,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   static readonly metadata: EntityMetadata<SmallPublisher>;
 
   declare readonly __orm: {
+    entityType: SmallPublisher;
     filterType: SmallPublisherFilter;
     gqlFilterType: SmallPublisherGraphQLFilter;
     orderType: SmallPublisherOrder;

@@ -147,6 +147,7 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   static readonly metadata: EntityMetadata<Image>;
 
   declare readonly __orm: {
+    entityType: Image;
     filterType: ImageFilter;
     gqlFilterType: ImageGraphQLFilter;
     orderType: ImageOrder;

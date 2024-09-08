@@ -199,6 +199,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   static readonly metadata: EntityMetadata<User>;
 
   declare readonly __orm: {
+    entityType: User;
     filterType: UserFilter;
     gqlFilterType: UserGraphQLFilter;
     orderType: UserOrder;

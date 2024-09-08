@@ -198,6 +198,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   static readonly metadata: EntityMetadata<Publisher>;
 
   declare readonly __orm: {
+    entityType: Publisher;
     filterType: PublisherFilter;
     gqlFilterType: PublisherGraphQLFilter;
     orderType: PublisherOrder;

@@ -90,6 +90,7 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
   static readonly metadata: EntityMetadata<T5BookReview>;
 
   declare readonly __orm: {
+    entityType: T5BookReview;
     filterType: T5BookReviewFilter;
     gqlFilterType: T5BookReviewGraphQLFilter;
     orderType: T5BookReviewOrder;

@@ -98,6 +98,7 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   static readonly metadata: EntityMetadata<TaskNew>;
 
   declare readonly __orm: {
+    entityType: TaskNew;
     filterType: TaskNewFilter;
     gqlFilterType: TaskNewGraphQLFilter;
     orderType: TaskNewOrder;

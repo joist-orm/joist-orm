@@ -96,6 +96,7 @@ export abstract class T2AuthorCodegen extends BaseEntity<EntityManager, number> 
   static readonly metadata: EntityMetadata<T2Author>;
 
   declare readonly __orm: {
+    entityType: T2Author;
     filterType: T2AuthorFilter;
     gqlFilterType: T2AuthorGraphQLFilter;
     orderType: T2AuthorOrder;

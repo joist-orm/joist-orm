@@ -18,7 +18,7 @@ import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { IdOf } from "../EntityManager";
 import { getField, setField } from "../fields";
-import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
+import { MaybeReactedEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";
 import { Reference, ReferenceN } from "./Reference";
@@ -60,7 +60,7 @@ export function hasReactiveReference<
   otherMeta: EntityMetadata<U>,
   fieldName: keyof T & string,
   hint: H,
-  fn: (entity: Reacted<T, H>) => U | N,
+  fn: (entity: Reacted<T, H>) => MaybeReactedEntity<U> | N,
 ): ReactiveReference<T, U, N> {
   const entity = currentlyInstantiatingEntity as T;
   return new ReactiveReferenceImpl<T, U, H, N>(entity, fieldName, otherMeta, hint, fn);
@@ -88,7 +88,7 @@ export class ReactiveReferenceImpl<
     private fieldName: keyof T & string,
     otherMeta: EntityMetadata,
     public reactiveHint: H,
-    private fn: (entity: Reacted<T, H>) => U | N,
+    private fn: (entity: Reacted<T, H>) => MaybeReactedEntity<U> | N,
   ) {
     super(entity);
     this.#fieldName = fieldName;
@@ -145,7 +145,7 @@ export class ReactiveReferenceImpl<
     this.isLoaded;
     // We assume `isLoaded` has been called coming into this to manage
     if (this._isLoaded === "full") {
-      const newValue = this.filterDeleted(fn(this.entity as Reacted<T, H>), opts);
+      const newValue = this.filterDeleted(fn(this.entity as any) as any, opts);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update (...unless we're accessing it
       // during the validate phase of `em.flush`, then skip it to avoid tripping up
@@ -213,7 +213,6 @@ export class ReactiveReferenceImpl<
       return;
     }
 
-    const previous = this.maybeFindEntity();
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
     setField(this.entity, this.fieldName, isEntity(_other) ? _other.idTaggedMaybe ?? _other : _other);
 

@@ -336,6 +336,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   static readonly metadata: EntityMetadata<Author>;
 
   declare readonly __orm: {
+    entityType: Author;
     filterType: AuthorFilter;
     gqlFilterType: AuthorGraphQLFilter;
     orderType: AuthorOrder;

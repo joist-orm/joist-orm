@@ -100,6 +100,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   static readonly metadata: EntityMetadata<AuthorSchedule>;
 
   declare readonly __orm: {
+    entityType: AuthorSchedule;
     filterType: AuthorScheduleFilter;
     gqlFilterType: AuthorScheduleGraphQLFilter;
     orderType: AuthorScheduleOrder;

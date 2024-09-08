@@ -103,6 +103,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   static readonly metadata: EntityMetadata<Artist>;
 
   declare readonly __orm: {
+    entityType: Artist;
     filterType: ArtistFilter;
     gqlFilterType: ArtistGraphQLFilter;
     orderType: ArtistOrder;

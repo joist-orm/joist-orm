@@ -100,6 +100,7 @@ export abstract class T5BookCodegen extends BaseEntity<EntityManager, number> im
   static readonly metadata: EntityMetadata<T5Book>;
 
   declare readonly __orm: {
+    entityType: T5Book;
     filterType: T5BookFilter;
     gqlFilterType: T5BookGraphQLFilter;
     orderType: T5BookOrder;

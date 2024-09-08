@@ -141,6 +141,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   static readonly metadata: EntityMetadata<AuthorStat>;
 
   declare readonly __orm: {
+    entityType: AuthorStat;
     filterType: AuthorStatFilter;
     gqlFilterType: AuthorStatGraphQLFilter;
     orderType: AuthorStatOrder;

@@ -99,6 +99,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   static readonly metadata: EntityMetadata<LargePublisher>;
 
   declare readonly __orm: {
+    entityType: LargePublisher;
     filterType: LargePublisherFilter;
     gqlFilterType: LargePublisherGraphQLFilter;
     orderType: LargePublisherOrder;

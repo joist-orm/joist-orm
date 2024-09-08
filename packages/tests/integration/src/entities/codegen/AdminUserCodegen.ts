@@ -77,6 +77,7 @@ export abstract class AdminUserCodegen extends User implements Entity {
   static readonly metadata: EntityMetadata<AdminUser>;
 
   declare readonly __orm: {
+    entityType: AdminUser;
     filterType: AdminUserFilter;
     gqlFilterType: AdminUserGraphQLFilter;
     orderType: AdminUserOrder;

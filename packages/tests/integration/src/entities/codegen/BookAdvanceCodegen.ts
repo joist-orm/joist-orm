@@ -132,6 +132,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   static readonly metadata: EntityMetadata<BookAdvance>;
 
   declare readonly __orm: {
+    entityType: BookAdvance;
     filterType: BookAdvanceFilter;
     gqlFilterType: BookAdvanceGraphQLFilter;
     orderType: BookAdvanceOrder;

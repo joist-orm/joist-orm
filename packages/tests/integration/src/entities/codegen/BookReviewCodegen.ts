@@ -141,6 +141,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   static readonly metadata: EntityMetadata<BookReview>;
 
   declare readonly __orm: {
+    entityType: BookReview;
     filterType: BookReviewFilter;
     gqlFilterType: BookReviewGraphQLFilter;
     orderType: BookReviewOrder;

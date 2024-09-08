@@ -68,6 +68,7 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
   static readonly metadata: EntityMetadata<DatabaseOwner>;
 
   declare readonly __orm: {
+    entityType: DatabaseOwner;
     filterType: DatabaseOwnerFilter;
     gqlFilterType: DatabaseOwnerGraphQLFilter;
     orderType: DatabaseOwnerOrder;

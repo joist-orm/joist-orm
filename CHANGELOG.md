@@ -1,3 +1,10 @@
+## [1.190.1](https://github.com/joist-orm/joist-orm/compare/v1.190.0...v1.190.1) (2024-09-08)
+
+
+### Bug Fixes
+
+* Allow returning Reacted entities from hasReactiveAsyncProperty. ([#1203](https://github.com/joist-orm/joist-orm/issues/1203)) ([c9df69c](https://github.com/joist-orm/joist-orm/commit/c9df69c62700687eb81307a238047761d2cdf6c2))
+
 # [1.190.0](https://github.com/joist-orm/joist-orm/compare/v1.189.0...v1.190.0) (2024-09-05)
 
 

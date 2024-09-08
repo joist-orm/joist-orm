@@ -160,6 +160,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   static readonly metadata: EntityMetadata<Comment>;
 
   declare readonly __orm: {
+    entityType: Comment;
     filterType: CommentFilter;
     gqlFilterType: CommentGraphQLFilter;
     orderType: CommentOrder;

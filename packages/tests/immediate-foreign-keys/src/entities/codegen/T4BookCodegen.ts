@@ -97,6 +97,7 @@ export abstract class T4BookCodegen extends BaseEntity<EntityManager, number> im
   static readonly metadata: EntityMetadata<T4Book>;
 
   declare readonly __orm: {
+    entityType: T4Book;
     filterType: T4BookFilter;
     gqlFilterType: T4BookGraphQLFilter;
     orderType: T4BookOrder;

@@ -233,9 +233,9 @@ export class Author extends AuthorCodegen {
         return undefined;
       }
       const ratings = books.flatMap((b) => b.reviews.get).map((r) => r.rating);
-      if (ratings.length === 0) return books[0].fullNonReactiveAccess;
+      if (ratings.length === 0) return books[0];
       const bestRating = Math.max(...ratings);
-      return books.find((b) => b.reviews.get.some((r) => r.rating === bestRating)) as Book | undefined;
+      return books.find((b) => b.reviews.get.some((r) => r.rating === bestRating));
     },
   );
 
@@ -244,7 +244,7 @@ export class Author extends AuthorCodegen {
     authorMeta,
     "rootMentor",
     "mentorsRecursive",
-    (a) => a.mentorsRecursive.get[a.mentorsRecursive.get.length - 1]?.fullNonReactiveAccess,
+    (a) => a.mentorsRecursive.get[a.mentorsRecursive.get.length - 1],
   );
 
   /** Example of an async property that can be loaded via a populate hint. */
@@ -256,8 +256,7 @@ export class Author extends AuthorCodegen {
   /** Example of an async property that returns an entity. */
   readonly latestComment2: AsyncProperty<Author, Comment | undefined> = hasReactiveAsyncProperty(
     { publisher: "comments", comments: {} },
-    (author) =>
-      author.publisher.get?.comments.get[0].fullNonReactiveAccess ?? author.comments.get[0].fullNonReactiveAccess,
+    (author) => author.publisher.get?.comments.get[0] ?? author.comments.get[0],
   );
 
   /** Example of an async property that has a conflicting/overlapping reactive hint with ^. */

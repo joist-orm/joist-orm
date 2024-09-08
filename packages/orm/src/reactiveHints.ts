@@ -113,7 +113,16 @@ export type Reacted<T extends Entity, H> = Entity & {
   fullNonReactiveAccess: Loaded<T, H>;
   /** Allow detecting if a reactive change is due to nuances like `hasUpdated` or `hasChanged`. */
   changes: Changes<T, keyof (FieldsOf<T> & RelationsOf<T>), keyof NormalizeHint<H>>;
+  /** Allow returning reacted entities from `hasReactiveAsyncProperties`. */
+  readonly __orm: { entityType: T };
 } & MaybeTransientFields<T>;
+
+/** Allow returning reacted entities from `hasReactiveAsyncProperties`. */
+export type MaybeReactedEntity<V> = V extends (infer T extends Entity) | undefined
+  ? { __orm: { entityType: T } } | undefined
+  : V extends Entity
+    ? { __orm: { entityType: V } }
+    : V;
 
 /**
  * A reactive hint that only allows fields immediately on the entity, i.e. no nested hints.

@@ -122,6 +122,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   static readonly metadata: EntityMetadata<Task>;
 
   declare readonly __orm: {
+    entityType: Task;
     filterType: TaskFilter;
     gqlFilterType: TaskGraphQLFilter;
     orderType: TaskOrder;

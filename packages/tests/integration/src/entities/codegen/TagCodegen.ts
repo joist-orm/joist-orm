@@ -125,6 +125,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   static readonly metadata: EntityMetadata<Tag>;
 
   declare readonly __orm: {
+    entityType: Tag;
     filterType: TagFilter;
     gqlFilterType: TagGraphQLFilter;
     orderType: TagOrder;

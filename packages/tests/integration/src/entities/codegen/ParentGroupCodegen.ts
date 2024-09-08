@@ -103,6 +103,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   static readonly metadata: EntityMetadata<ParentGroup>;
 
   declare readonly __orm: {
+    entityType: ParentGroup;
     filterType: ParentGroupFilter;
     gqlFilterType: ParentGroupGraphQLFilter;
     orderType: ParentGroupOrder;

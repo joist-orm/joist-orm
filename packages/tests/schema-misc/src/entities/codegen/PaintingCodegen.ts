@@ -101,6 +101,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   static readonly metadata: EntityMetadata<Painting>;
 
   declare readonly __orm: {
+    entityType: Painting;
     filterType: PaintingFilter;
     gqlFilterType: PaintingGraphQLFilter;
     orderType: PaintingOrder;

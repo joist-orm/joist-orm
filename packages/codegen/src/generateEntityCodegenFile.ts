@@ -223,6 +223,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       static readonly metadata: ${EntityMetadata}<${entity.type}>;
 
       declare readonly __orm: {
+        entityType: ${entityName};
         filterType: ${entityName}Filter;
         gqlFilterType: ${entityName}GraphQLFilter;
         orderType: ${entityName}Order;
@@ -231,6 +232,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         optIdsType: ${entityName}IdsOpts;
         factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
       };
+
       ${relations.filter((r) => r.kind === "abstract").map((r) => r.line)}
 
       ${cstr}

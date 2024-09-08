@@ -97,6 +97,7 @@ export abstract class T3BookCodegen extends BaseEntity<EntityManager, number> im
   static readonly metadata: EntityMetadata<T3Book>;
 
   declare readonly __orm: {
+    entityType: T3Book;
     filterType: T3BookFilter;
     gqlFilterType: T3BookGraphQLFilter;
     orderType: T3BookOrder;

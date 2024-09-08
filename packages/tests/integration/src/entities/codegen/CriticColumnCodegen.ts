@@ -101,6 +101,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   static readonly metadata: EntityMetadata<CriticColumn>;
 
   declare readonly __orm: {
+    entityType: CriticColumn;
     filterType: CriticColumnFilter;
     gqlFilterType: CriticColumnGraphQLFilter;
     orderType: CriticColumnOrder;

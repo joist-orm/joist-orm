@@ -1,3 +1,10 @@
+# [1.191.0](https://github.com/joist-orm/joist-orm/compare/v1.190.1...v1.191.0) (2024-09-09)
+
+
+### Features
+
+* Pass meta to the afterMetadata callback. ([#1204](https://github.com/joist-orm/joist-orm/issues/1204)) ([3780296](https://github.com/joist-orm/joist-orm/commit/37802961f0598edcab739971b41dcf1331b55b69))
+
 ## [1.190.1](https://github.com/joist-orm/joist-orm/compare/v1.190.0...v1.190.1) (2024-09-08)
 
 

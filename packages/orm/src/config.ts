@@ -2,6 +2,7 @@ import { AsyncDefault } from "./defaults";
 import { Entity } from "./Entity";
 import {
   EntityField,
+  EntityMetadata,
   fail,
   FieldsOf,
   getMetadata,
@@ -120,7 +121,7 @@ export class ConfigApi<T extends Entity, C> {
     }
   }
 
-  afterMetadata(fn: Function): void {
+  afterMetadata(fn: AfterMetadataCallback<T>): void {
     this.__data.afterMetadataCallbacks.push(fn);
   }
 
@@ -279,9 +280,11 @@ export interface ReactiveField {
   name: string;
 }
 
+type AfterMetadataCallback<T extends Entity> = (meta: EntityMetadata<T>) => void;
+
 /** The internal state of an entity's configuration data, i.e. validation rules/hooks. */
 export class ConfigData<T extends Entity, C> {
-  afterMetadataCallbacks: Function[] = [];
+  afterMetadataCallbacks: AfterMetadataCallback<T>[] = [];
   /** The validation rules for this entity type. */
   rules: ValidationRuleInternal<T>[] = [];
   /** The hooks for this entity type. */

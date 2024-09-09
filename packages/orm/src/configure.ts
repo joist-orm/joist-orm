@@ -32,7 +32,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
 
 function fireAfterMetadatas(metas: EntityMetadata[]): void {
   for (const meta of metas) {
-    for (const fn of meta.config.__data.afterMetadataCallbacks) fn();
+    for (const fn of meta.config.__data.afterMetadataCallbacks) fn(meta);
   }
 }
 

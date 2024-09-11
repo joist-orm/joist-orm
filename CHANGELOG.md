@@ -1,3 +1,10 @@
+## [1.191.1](https://github.com/joist-orm/joist-orm/compare/v1.191.0...v1.191.1) (2024-09-11)
+
+
+### Bug Fixes
+
+* support single quotes in scanEntityFiles ([#1208](https://github.com/joist-orm/joist-orm/issues/1208)) ([2347ee0](https://github.com/joist-orm/joist-orm/commit/2347ee0e5ea3d8dd76e68ae3f8376e9236394419))
+
 # [1.191.0](https://github.com/joist-orm/joist-orm/compare/v1.190.1...v1.191.0) (2024-09-09)
 
 

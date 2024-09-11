@@ -4,7 +4,7 @@ import { DbMetadata } from "./EntityDbMetadata";
 import { Config } from "./config";
 
 // Erg, we need a regex in case the fieldName arg is wrapped onto a new line... :-/
-const regex = /config\.setDefault\([\s\n]*"(\w+)"/g;
+const regex = /config\.setDefault\([\s\n]*"(\w+)"|config\.setDefault\([\s\n]*'(\w+)'/g;
 
 /** Scans the entity files themselves for usage hints (like `setDefault` calls) to drive our codegen output. */
 export async function scanEntityFiles(config: Config, dbMeta: DbMetadata): Promise<void> {

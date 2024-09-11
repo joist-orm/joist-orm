@@ -62,8 +62,13 @@ config.addRule({ author: "numberOfBooks2" }, (b) => {
   b.fullNonReactiveAccess.numberOfBooks2RuleInvoked++;
 });
 
-/** Example of a synchronous default. */
-config.setDefault("notes", (b) => `Notes for ${b.title}`);
+/**
+ * Example of a synchronous default.
+ *
+ * Explicitly using single quotes for scanEntityFiles detection
+ * */
+// prettier-ignore
+config.setDefault('notes', (b) => `Notes for ${b.title}`);
 
 /** Example of an asynchronous default. */
 config.setDefault("order", { author: "books" }, (b) => b.author.get?.books.get.length);

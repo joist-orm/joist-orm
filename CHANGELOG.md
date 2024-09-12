@@ -1,3 +1,11 @@
+## [1.191.2](https://github.com/joist-orm/joist-orm/compare/v1.191.1...v1.191.2) (2024-09-12)
+
+
+### Bug Fixes
+
+* Fail on invalid stiType values. ([#1214](https://github.com/joist-orm/joist-orm/issues/1214)) ([aca56fa](https://github.com/joist-orm/joist-orm/commit/aca56fa7571fe613b47f10ffb11ab9da80e61947))
+* Fix regex to have only 1 group. ([#1213](https://github.com/joist-orm/joist-orm/issues/1213)) ([d3b9a89](https://github.com/joist-orm/joist-orm/commit/d3b9a8986086b009b60783e900627294725bc0a0))
+
 ## [1.191.1](https://github.com/joist-orm/joist-orm/compare/v1.191.0...v1.191.1) (2024-09-11)
 
 

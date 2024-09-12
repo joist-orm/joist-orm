@@ -72,7 +72,7 @@
     "Tag": { "tag": "t" },
     "Task": {
       "fields": {
-        "specialNewField": { "stiType": "TaskNew" },
+        "specialNewField": { "stiType": "NEW" },
         "specialOldField": { "stiNotNull": true, "stiType": "TaskOld" },
         "type": { "stiDiscriminator": { "NEW": "TaskNew", "OLD": "TaskOld" } }
       },

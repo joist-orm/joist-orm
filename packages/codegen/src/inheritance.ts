@@ -58,24 +58,25 @@ function expandSingleTableInheritance(
       // Find the available discriminators/subtypes, i.e. NEW => NewTask, OLD => OldTask, etc.
       const subTypes = Object.entries(stiField.stiDiscriminator);
 
-      // Make sure there aren't any typos in `stiType`s
-      const availableSubTypes = subTypes.map(([, subTypeName]) => subTypeName);
-      [
+      const allFields = [
         ...Object.entries(config.entities[entity.name]?.fields ?? {}),
         ...Object.entries(config.entities[entity.name]?.relations ?? {}),
-      ].filter(([name, f]) => {
-        if (f.stiType && !availableSubTypes.includes(f.stiType)) {
-          fail(`${name}.stiType '${f.stiType}' is invalid, expected one of ${availableSubTypes.join(", ")}`);
+      ];
+
+      // Make sure there aren't any typos in `stiType`s
+      const availableCodes = subTypes.map(([code]) => code);
+      const availableNames = subTypes.map(([, name]) => name);
+      const available = [...availableCodes, ...availableNames];
+      allFields.filter(([name, f]) => {
+        if (f.stiType && !available.includes(f.stiType)) {
+          fail(`${name}.stiType '${f.stiType}' is invalid, expected one of ${available.join(", ")}`);
         }
       });
 
       // Now split each subType out into its out entity
       for (const [enumCode, subTypeName] of subTypes) {
         // Find all the base entity's fields that belong to us
-        const subTypeFields = [
-          ...Object.entries(config.entities[entity.name]?.fields ?? {}),
-          ...Object.entries(config.entities[entity.name]?.relations ?? {}),
-        ].filter(([, f]) => f.stiType === subTypeName);
+        const subTypeFields = allFields.filter(([, f]) => f.stiType === subTypeName || f.stiType === enumCode);
         const subTypeFieldNames = subTypeFields.map(([name]) => name);
 
         // Make fields as required

@@ -48,12 +48,29 @@ function expandSingleTableInheritance(
       Object.entries(config.entities[entity.name]?.fields || {}).find(([, f]) => !!f.stiDiscriminator) ?? [];
     if (fieldName && stiField && stiField.stiDiscriminator) {
       entity.inheritanceType = "sti";
+
       // Ensure we have an enum field so that we can bake the STI discriminators into the metadata.ts file
       const enumField =
         entity.enums.find((e) => e.fieldName === fieldName) ??
         fail(`No enum column found for ${entity.name}.${fieldName}, which is required to use singleTableInheritance`);
       entity.stiDiscriminatorField = enumField.fieldName;
-      for (const [enumCode, subTypeName] of Object.entries(stiField.stiDiscriminator)) {
+
+      // Find the available discriminators/subtypes, i.e. NEW => NewTask, OLD => OldTask, etc.
+      const subTypes = Object.entries(stiField.stiDiscriminator);
+
+      // Make sure there aren't any typos in `stiType`s
+      const availableSubTypes = subTypes.map(([, subTypeName]) => subTypeName);
+      [
+        ...Object.entries(config.entities[entity.name]?.fields ?? {}),
+        ...Object.entries(config.entities[entity.name]?.relations ?? {}),
+      ].filter(([name, f]) => {
+        if (f.stiType && !availableSubTypes.includes(f.stiType)) {
+          fail(`${name}.stiType '${f.stiType}' is invalid, expected one of ${availableSubTypes.join(", ")}`);
+        }
+      });
+
+      // Now split each subType out into its out entity
+      for (const [enumCode, subTypeName] of subTypes) {
         // Find all the base entity's fields that belong to us
         const subTypeFields = [
           ...Object.entries(config.entities[entity.name]?.fields ?? {}),

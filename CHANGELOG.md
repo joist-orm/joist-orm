@@ -1,3 +1,10 @@
+# [1.192.0](https://github.com/joist-orm/joist-orm/compare/v1.191.2...v1.192.0) (2024-09-12)
+
+
+### Features
+
+* Allow stiType to use the enum codes. ([#1215](https://github.com/joist-orm/joist-orm/issues/1215)) ([782a557](https://github.com/joist-orm/joist-orm/commit/782a5578f677c98073e06e6284dee619bde78371))
+
 ## [1.191.2](https://github.com/joist-orm/joist-orm/compare/v1.191.1...v1.191.2) (2024-09-12)
 
 

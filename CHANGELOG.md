@@ -1,3 +1,10 @@
+# [1.193.0](https://github.com/joist-orm/joist-orm/compare/v1.192.0...v1.193.0) (2024-09-13)
+
+
+### Features
+
+* Add EntityManager.mode. ([#1216](https://github.com/joist-orm/joist-orm/issues/1216)) ([a1f420a](https://github.com/joist-orm/joist-orm/commit/a1f420ad8b6eeac77a4f2c8fb827098cce3ca87a))
+
 # [1.192.0](https://github.com/joist-orm/joist-orm/compare/v1.191.2...v1.192.0) (2024-09-12)
 
 

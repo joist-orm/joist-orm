@@ -193,6 +193,15 @@ export interface FlushOptions {
 }
 
 /**
+ * Describes the EntityManager read/write mode.
+ *
+ * - `read-only` -- any entity mutations or `em.flush` calls will fail fast
+ * - `in-memory-writes` -- allows entity mutations and `em.flush` w/o a `COMMIT`
+ * - `writes` -- allows entity mutations and `em.flush` will `COMMIT` writes
+ */
+export type EntityManagerMode = "read-only" | "in-memory-writes" | "writes";
+
+/**
  * The EntityManager is the primary way nearly all code, i.e. anything that finds/creates/updates/deletes entities,
  * will interact with the database.
  *
@@ -240,6 +249,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   readonly #preloader: PreloadPlugin | undefined;
   #fieldLogger: FieldLogger | undefined;
   private __api: EntityManagerInternalApi;
+  mode: EntityManagerMode = "writes";
 
   constructor(em: EntityManager<C>);
   constructor(ctx: C, opts: EntityManagerOpts);
@@ -289,6 +299,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         return em.#isValidating;
       },
       checkWritesAllowed(): void {
+        if (em.mode === "read-only") throw new ReadOnlyError();
         return em.#fl.checkWritesAllowed();
       },
       get fieldLogger() {
@@ -1164,6 +1175,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
    * It returns entities that have changed (an entity is considered changed if it has been deleted, inserted, or updated)
    */
   async flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
+    if (this.mode === "read-only") throw new ReadOnlyError();
+
     const { skipValidation = false } = flushOptions;
 
     this.#fl.startLock();
@@ -1260,9 +1273,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       await afterValidation(this.ctx, entityTodos);
     };
 
-    try {
-      const allFlushedEntities: Set<Entity> = new Set();
+    const allFlushedEntities: Set<Entity> = new Set();
 
+    try {
       // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
       let entitiesToFlush = await runHooksOnPendingEntities();
       for (const e of entitiesToFlush) allFlushedEntities.add(e);
@@ -1317,6 +1330,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           } while (Object.keys(entityTodos).length > 0);
           // Run `beforeCommit once right before COMMIT
           await beforeCommit(this.ctx, allFlushedEntities);
+          if (this.mode === "in-memory-writes") {
+            throw new InMemoryRollbackError();
+          }
         });
 
         // TODO: This is really "after flush" if we're being called from a transaction that
@@ -1349,6 +1365,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           throw new ValidationErrors(message);
         }
       }
+      if (e instanceof InMemoryRollbackError) return [...allFlushedEntities];
       throw e;
     } finally {
       this.#fl.releaseLock();
@@ -2079,5 +2096,15 @@ function findPendingFlushEntities<Entity extends EntityW>(
       }
       pendingFlush.add(e);
     }
+  }
+}
+
+/** An error we throw to get knex to `ROLLBACK`, but then catch. */
+class InMemoryRollbackError extends Error {}
+
+/** An error thrown when `em.mode === "read-only"` but entities are mutated/flushed. */
+export class ReadOnlyError extends Error {
+  constructor() {
+    super("EntityManager is read-only");
   }
 }

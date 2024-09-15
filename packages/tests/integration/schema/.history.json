@@ -83,6 +83,7 @@
     "acknowledgements",
     "advances",
     "author",
+    "authorsNickNames",
     "book",
     "comments",
     "createdAt",
@@ -305,6 +306,7 @@
   "SaveBookInput": [
     "acknowledgements",
     "authorId",
+    "authorsNickNames",
     "createdAt",
     "deletedAt",
     "id",

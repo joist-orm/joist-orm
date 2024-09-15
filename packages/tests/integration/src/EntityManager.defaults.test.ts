@@ -40,7 +40,7 @@ describe("EntityManager.defaults", () => {
     // When we flush
     await em.flush();
     // Then the async default kicked in
-    expect(b1.order).toBe(2);
+    expect(b1.order).toBe(1);
     expect(b2.order).toBe(2);
   });
 
@@ -69,5 +69,17 @@ describe("EntityManager.defaults", () => {
     // Then the async default left them alone
     expect(b1.order).toBe(3);
     expect(b2.order).toBe(4);
+  });
+
+  it("supports cross-entity defaults", async () => {
+    const em = newEntityManager();
+    // Given we make both a book and author at the same time
+    const a = newAuthor(em);
+    const b = newBook(em);
+    // When we flush
+    await em.flush();
+    // Then the b.notes default read the nickName default
+    expect(a.nickNames).toEqual(["a1"]);
+    expect(b.authorsNickNames).toBe("a1");
   });
 });

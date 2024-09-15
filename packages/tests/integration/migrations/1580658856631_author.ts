@@ -92,6 +92,7 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "authors", {
     first_name: { type: "varchar(255)", notNull: true },
     last_name: { type: "varchar(255)", notNull: false },
+    // for testing findByUnique
     ssn: { type: "varchar(25)", notNull: false, unique: true },
     // for testing sync derived values
     initials: { type: "varchar(255)", notNull: true },
@@ -174,10 +175,12 @@ export function up(b: MigrationBuilder): void {
     prequel_id: foreignKey("books", { notNull: false, otherFieldName: "sequel", unique: true }),
     // for testing columns that are keywords (and testing default values)
     order: { type: "integer", notNull: true, default: 1 },
-    // for testing `NOT NULL` fields with `config.setDefault`s are optional
+    // for testing required fields with `setDefault`s aren't required by em.create
     notes: { type: "text", notNull: true },
-    // for testing nullable fields that don't have a default
+    // for testing nullable fields that don't have a default, i.e. query/em.find on `{ acknowledgements: null }`
     acknowledgements: { type: "text", notNull: false },
+    // for testing cross-entity default dependencies
+    authors_nick_names: { type: "text", notNull: false },
     // for testing ReactiveFields that access undefined required fields
     search: { type: "text", notNull: false },
     deleted_at: { type: "timestamptz", notNull: false },

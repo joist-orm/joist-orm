@@ -79,6 +79,7 @@ export interface BookFields {
   order: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   notes: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   acknowledgements: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  authorsNickNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   search: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -93,6 +94,7 @@ export interface BookOpts {
   order?: number;
   notes?: string;
   acknowledgements?: string | null;
+  authorsNickNames?: string | null;
   deletedAt?: Date | null;
   prequel?: Book | BookId | null;
   author?: Author | AuthorId;
@@ -127,6 +129,7 @@ export interface BookFilter {
   order?: ValueFilter<number, never>;
   notes?: ValueFilter<string, never>;
   acknowledgements?: ValueFilter<string, null>;
+  authorsNickNames?: ValueFilter<string, null>;
   search?: ValueFilter<string, null>;
   deletedAt?: ValueFilter<Date, null>;
   createdAt?: ValueFilter<Date, never>;
@@ -150,6 +153,7 @@ export interface BookGraphQLFilter {
   order?: ValueGraphQLFilter<number>;
   notes?: ValueGraphQLFilter<string>;
   acknowledgements?: ValueGraphQLFilter<string>;
+  authorsNickNames?: ValueGraphQLFilter<string>;
   search?: ValueGraphQLFilter<string>;
   deletedAt?: ValueGraphQLFilter<Date>;
   createdAt?: ValueGraphQLFilter<Date>;
@@ -173,6 +177,7 @@ export interface BookOrder {
   order?: OrderBy;
   notes?: OrderBy;
   acknowledgements?: OrderBy;
+  authorsNickNames?: OrderBy;
   search?: OrderBy;
   deletedAt?: OrderBy;
   createdAt?: OrderBy;
@@ -258,6 +263,14 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   set acknowledgements(acknowledgements: string | undefined) {
     setField(this, "acknowledgements", cleanStringValue(acknowledgements));
+  }
+
+  get authorsNickNames(): string | undefined {
+    return getField(this, "authorsNickNames");
+  }
+
+  set authorsNickNames(authorsNickNames: string | undefined) {
+    setField(this, "authorsNickNames", cleanStringValue(authorsNickNames));
   }
 
   abstract readonly search: ReactiveField<Book, string | undefined>;

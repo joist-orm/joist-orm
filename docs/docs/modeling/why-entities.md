@@ -17,6 +17,12 @@ These are fundamental aspects to all backends, regardless of whether your ORM us
 
 Joist uses entities because, in our opinion, they provide very natural, intuitive guidance on where to put this business logic, that otherwise in "raw POJO from the database" ORMs, each application are must create its own structure in an adhoc/haphazard way.
 
+:::tip
+
+Riffing on [Greenspun's Tenth Rule](https://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule), Joist's "Tenth Rule" is that any sufficiently complicated query-builder-based CRUD app contains an ad hoc, informally-specified, bug-ridden, slow implementation of half of Joist's reactive domain model. :-)
+
+:::
+
 ## Longer Answer
 
 Most modern ORMs in the JavaScript/TypeScript space focus on being "query builders", where each invocation in your code (a call into Prisma or Drizzle or Kysley) results in generally one invocation to your database, and you get back every database row as a dumb (meant in a good way) [POJO](https://gist.github.com/kurtmilam/a1179741777ea6f88374286a640829cc)--no more, and no less.

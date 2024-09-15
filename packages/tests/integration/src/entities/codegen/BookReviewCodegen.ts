@@ -192,22 +192,65 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     return getField(this, "updatedAt");
   }
 
+  /**
+   * Partial update taking any subset of the entities fields.
+   * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
+   * is left as untouched
+   * Collections are exhaustively set to the new values, however,
+   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   * @example
+   * ```
+   * entity.setPartial({
+   *  firstName: 'foo' // updated
+   *  lastName: undefined // do nothing
+   *  age: null // unset, (i.e. set it as undefined)
+   * })
+   * ```
+   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   */
   set(opts: Partial<BookReviewOpts>): void {
     setOpts(this as any as BookReview, opts);
   }
 
+  /**
+   * Partial update taking any subset of the entities fields.
+   * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
+   * is left as untouched
+   * Collections are exhaustively set to the new values, however,
+   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   * @example
+   * ```
+   * entity.setPartial({
+   *  firstName: 'foo' // updated
+   *  lastName: undefined // do nothing
+   *  age: null // unset, (i.e. set it as undefined)
+   * })
+   * ```
+   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   */
   setPartial(opts: PartialOrNull<BookReviewOpts>): void {
     setOpts(this as any as BookReview, opts as OptsOf<BookReview>, { partial: true });
   }
 
+  /**
+   * Details the field changes of the entity within the current unit of work.
+   * @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   */
   get changes(): Changes<BookReview> {
     return newChangesProxy(this) as any;
   }
 
+  /**
+   * Traverse from this entity using a lens
+   */
   load<U, V>(fn: (lens: Lens<BookReview>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as BookReview, fn, opts);
   }
 
+  /**
+   * Traverse from this entity using a lens, and load the result
+   * @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   */
   populate<const H extends LoadHint<BookReview>>(hint: H): Promise<Loaded<BookReview, H>>;
   populate<const H extends LoadHint<BookReview>>(
     opts: { hint: H; forceReload?: boolean },
@@ -224,10 +267,25 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     return this.em.populate(this as any as BookReview, hintOrOpts, fn);
   }
 
+  /**
+   * Given a load hint, checks if it is loaded within the unit of work. Type Guarded via Loaded<>
+   */
   isLoaded<const H extends LoadHint<BookReview>>(hint: H): this is Loaded<BookReview, H> {
     return isLoaded(this as any as BookReview, hint);
   }
 
+  /**
+   * Build a type-safe, loadable and relation aware POJO from this entity, given a hint
+   * Note: As the hint might load, this returns a Promise
+   * @example
+   * ```
+   * const payload = await a.toJSON({
+   *   id: true,
+   *   books: { id: true, reviews: { rating: true } }
+   * });
+   * ```
+   * @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<BookReview>>(hint: H): Promise<JsonPayload<BookReview, H>>;
   toJSON(hint?: any): object {

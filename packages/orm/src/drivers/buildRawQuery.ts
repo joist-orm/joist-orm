@@ -38,7 +38,7 @@ export function buildRawQuery(
   // If we're doing "select distinct" for o2m joins, then all order bys must be selects
   if (needsDistinct && parsed.orderBys.length > 0) {
     for (const { alias, column } of parsed.orderBys) {
-      sql += `, ${alias}.${column}`;
+      sql += `, ${kqDot(alias, column)}`;
     }
   }
 

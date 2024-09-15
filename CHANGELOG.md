@@ -1,3 +1,10 @@
+## [1.193.1](https://github.com/joist-orm/joist-orm/compare/v1.193.0...v1.193.1) (2024-09-15)
+
+
+### Bug Fixes
+
+* Missing kqDot within distinct/orderBy ([#1218](https://github.com/joist-orm/joist-orm/issues/1218)) ([19cc79f](https://github.com/joist-orm/joist-orm/commit/19cc79f24bfd9f6c7cde0b33eefcb026e62ea9b8))
+
 # [1.193.0](https://github.com/joist-orm/joist-orm/compare/v1.192.0...v1.193.0) (2024-09-13)
 
 

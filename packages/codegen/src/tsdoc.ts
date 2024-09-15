@@ -14,18 +14,18 @@ export const tsdocComments = {
 *  age: null // unset, (i.e. set it as undefined)
 * })
 * \`\`\`
-* @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs 
+* @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs 
         */`,
         changes: `/**
 * Details the field changes of the entity within the current unit of work.        
-* @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs 
+* @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs 
         */`,
         load: `/**
 * Traverse from this entity using a lens 
         */`,
         populate: `/**
 * Traverse from this entity using a lens, and load the result
-* @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs 
+* @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs 
         */`,
         isLoaded: `/**
 * Given a load hint, checks if it is loaded within the unit of work. Type Guarded via Loaded<> 
@@ -40,7 +40,7 @@ export const tsdocComments = {
 *   books: { id: true, reviews: { rating: true } }
 * });
 * \`\`\`
-* @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs 
+* @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs 
         */`
     },
 }

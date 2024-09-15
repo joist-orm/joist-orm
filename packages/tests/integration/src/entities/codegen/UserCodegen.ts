@@ -308,7 +308,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<UserOpts>): void {
     setOpts(this as any as User, opts);
@@ -328,7 +328,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<UserOpts>): void {
     setOpts(this as any as User, opts as OptsOf<User>, { partial: true });
@@ -336,7 +336,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   * @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<
     User,
@@ -354,7 +354,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   /**
    * Traverse from this entity using a lens, and load the result
-   * @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<User>>(hint: H): Promise<Loaded<User, H>>;
   populate<const H extends LoadHint<User>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<User, H>>;
@@ -387,7 +387,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<User>>(hint: H): Promise<JsonPayload<User, H>>;

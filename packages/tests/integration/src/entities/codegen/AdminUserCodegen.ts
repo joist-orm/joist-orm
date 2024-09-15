@@ -130,7 +130,7 @@ export abstract class AdminUserCodegen extends User implements Entity {
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<AdminUserOpts>): void {
     setOpts(this as any as AdminUser, opts);
@@ -150,7 +150,7 @@ export abstract class AdminUserCodegen extends User implements Entity {
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<AdminUserOpts>): void {
     setOpts(this as any as AdminUser, opts as OptsOf<AdminUser>, { partial: true });
@@ -158,7 +158,7 @@ export abstract class AdminUserCodegen extends User implements Entity {
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   * @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<AdminUser> {
     return newChangesProxy(this) as any;
@@ -173,7 +173,7 @@ export abstract class AdminUserCodegen extends User implements Entity {
 
   /**
    * Traverse from this entity using a lens, and load the result
-   * @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<AdminUser>>(hint: H): Promise<Loaded<AdminUser, H>>;
   populate<const H extends LoadHint<AdminUser>>(
@@ -208,7 +208,7 @@ export abstract class AdminUserCodegen extends User implements Entity {
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<AdminUser>>(hint: H): Promise<JsonPayload<AdminUser, H>>;

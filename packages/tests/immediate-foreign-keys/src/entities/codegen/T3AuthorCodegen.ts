@@ -150,7 +150,7 @@ export abstract class T3AuthorCodegen extends BaseEntity<EntityManager, number> 
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<T3AuthorOpts>): void {
     setOpts(this as any as T3Author, opts);
@@ -170,7 +170,7 @@ export abstract class T3AuthorCodegen extends BaseEntity<EntityManager, number> 
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<T3AuthorOpts>): void {
     setOpts(this as any as T3Author, opts as OptsOf<T3Author>, { partial: true });
@@ -178,7 +178,7 @@ export abstract class T3AuthorCodegen extends BaseEntity<EntityManager, number> 
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   * @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<T3Author> {
     return newChangesProxy(this) as any;
@@ -193,7 +193,7 @@ export abstract class T3AuthorCodegen extends BaseEntity<EntityManager, number> 
 
   /**
    * Traverse from this entity using a lens, and load the result
-   * @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<T3Author>>(hint: H): Promise<Loaded<T3Author, H>>;
   populate<const H extends LoadHint<T3Author>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<T3Author, H>>;
@@ -226,7 +226,7 @@ export abstract class T3AuthorCodegen extends BaseEntity<EntityManager, number> 
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<T3Author>>(hint: H): Promise<JsonPayload<T3Author, H>>;

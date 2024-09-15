@@ -143,7 +143,7 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<T5BookReviewOpts>): void {
     setOpts(this as any as T5BookReview, opts);
@@ -163,7 +163,7 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<T5BookReviewOpts>): void {
     setOpts(this as any as T5BookReview, opts as OptsOf<T5BookReview>, { partial: true });
@@ -171,7 +171,7 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   * @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<T5BookReview> {
     return newChangesProxy(this) as any;
@@ -186,7 +186,7 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
 
   /**
    * Traverse from this entity using a lens, and load the result
-   * @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<T5BookReview>>(hint: H): Promise<Loaded<T5BookReview, H>>;
   populate<const H extends LoadHint<T5BookReview>>(
@@ -221,7 +221,7 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<T5BookReview>>(hint: H): Promise<JsonPayload<T5BookReview, H>>;

@@ -170,7 +170,7 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<ParentItemOpts>): void {
     setOpts(this as any as ParentItem, opts);
@@ -190,7 +190,7 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<ParentItemOpts>): void {
     setOpts(this as any as ParentItem, opts as OptsOf<ParentItem>, { partial: true });
@@ -198,7 +198,7 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   * @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<ParentItem> {
     return newChangesProxy(this) as any;
@@ -213,7 +213,7 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
 
   /**
    * Traverse from this entity using a lens, and load the result
-   * @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<ParentItem>>(hint: H): Promise<Loaded<ParentItem, H>>;
   populate<const H extends LoadHint<ParentItem>>(
@@ -248,7 +248,7 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<ParentItem>>(hint: H): Promise<JsonPayload<ParentItem, H>>;

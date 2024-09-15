@@ -174,7 +174,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<TaskOldOpts>): void {
     setOpts(this as any as TaskOld, opts);
@@ -194,7 +194,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<TaskOldOpts>): void {
     setOpts(this as any as TaskOld, opts as OptsOf<TaskOld>, { partial: true });
@@ -202,7 +202,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   * @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<TaskOld> {
     return newChangesProxy(this) as any;
@@ -217,7 +217,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
 
   /**
    * Traverse from this entity using a lens, and load the result
-   * @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<TaskOld>>(hint: H): Promise<Loaded<TaskOld, H>>;
   populate<const H extends LoadHint<TaskOld>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<TaskOld, H>>;
@@ -250,7 +250,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<TaskOld>>(hint: H): Promise<JsonPayload<TaskOld, H>>;

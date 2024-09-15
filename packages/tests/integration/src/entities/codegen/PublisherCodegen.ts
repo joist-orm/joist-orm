@@ -339,7 +339,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<PublisherOpts>): void {
     setOpts(this as any as Publisher, opts);
@@ -359,7 +359,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<PublisherOpts>): void {
     setOpts(this as any as Publisher, opts as OptsOf<Publisher>, { partial: true });
@@ -367,7 +367,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   * @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<
     Publisher,
@@ -391,7 +391,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   /**
    * Traverse from this entity using a lens, and load the result
-   * @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>>;
   populate<const H extends LoadHint<Publisher>>(
@@ -426,7 +426,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<Publisher>>(hint: H): Promise<JsonPayload<Publisher, H>>;

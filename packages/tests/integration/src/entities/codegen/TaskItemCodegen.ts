@@ -172,7 +172,7 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<TaskItemOpts>): void {
     setOpts(this as any as TaskItem, opts);
@@ -192,7 +192,7 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<TaskItemOpts>): void {
     setOpts(this as any as TaskItem, opts as OptsOf<TaskItem>, { partial: true });
@@ -200,7 +200,7 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   * @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<TaskItem> {
     return newChangesProxy(this) as any;
@@ -215,7 +215,7 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
 
   /**
    * Traverse from this entity using a lens, and load the result
-   * @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<TaskItem>>(hint: H): Promise<Loaded<TaskItem, H>>;
   populate<const H extends LoadHint<TaskItem>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<TaskItem, H>>;
@@ -248,7 +248,7 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<TaskItem>>(hint: H): Promise<JsonPayload<TaskItem, H>>;

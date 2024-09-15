@@ -162,7 +162,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, number> im
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<AuthorOpts>): void {
     setOpts(this as any as Author, opts);
@@ -182,7 +182,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, number> im
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<AuthorOpts>): void {
     setOpts(this as any as Author, opts as OptsOf<Author>, { partial: true });
@@ -190,7 +190,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, number> im
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   * @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<Author> {
     return newChangesProxy(this) as any;
@@ -205,7 +205,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, number> im
 
   /**
    * Traverse from this entity using a lens, and load the result
-   * @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>>;
   populate<const H extends LoadHint<Author>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Author, H>>;
@@ -238,7 +238,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, number> im
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<Author>>(hint: H): Promise<JsonPayload<Author, H>>;

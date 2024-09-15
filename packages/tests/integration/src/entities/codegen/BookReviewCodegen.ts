@@ -206,7 +206,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<BookReviewOpts>): void {
     setOpts(this as any as BookReview, opts);
@@ -226,7 +226,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<BookReviewOpts>): void {
     setOpts(this as any as BookReview, opts as OptsOf<BookReview>, { partial: true });
@@ -234,7 +234,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   * @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<BookReview> {
     return newChangesProxy(this) as any;
@@ -249,7 +249,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
 
   /**
    * Traverse from this entity using a lens, and load the result
-   * @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<BookReview>>(hint: H): Promise<Loaded<BookReview, H>>;
   populate<const H extends LoadHint<BookReview>>(
@@ -284,7 +284,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<BookReview>>(hint: H): Promise<JsonPayload<BookReview, H>>;

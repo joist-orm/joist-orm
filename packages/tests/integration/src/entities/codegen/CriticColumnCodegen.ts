@@ -162,7 +162,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<CriticColumnOpts>): void {
     setOpts(this as any as CriticColumn, opts);
@@ -182,7 +182,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<CriticColumnOpts>): void {
     setOpts(this as any as CriticColumn, opts as OptsOf<CriticColumn>, { partial: true });
@@ -190,7 +190,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   * @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<CriticColumn> {
     return newChangesProxy(this) as any;
@@ -205,7 +205,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
 
   /**
    * Traverse from this entity using a lens, and load the result
-   * @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<CriticColumn>>(hint: H): Promise<Loaded<CriticColumn, H>>;
   populate<const H extends LoadHint<CriticColumn>>(
@@ -240,7 +240,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<CriticColumn>>(hint: H): Promise<JsonPayload<CriticColumn, H>>;

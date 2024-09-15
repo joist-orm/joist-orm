@@ -121,7 +121,7 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<DatabaseOwnerOpts>): void {
     setOpts(this as any as DatabaseOwner, opts);
@@ -141,7 +141,7 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<DatabaseOwnerOpts>): void {
     setOpts(this as any as DatabaseOwner, opts as OptsOf<DatabaseOwner>, { partial: true });
@@ -149,7 +149,7 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   * @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<DatabaseOwner> {
     return newChangesProxy(this) as any;
@@ -164,7 +164,7 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
 
   /**
    * Traverse from this entity using a lens, and load the result
-   * @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<DatabaseOwner>>(hint: H): Promise<Loaded<DatabaseOwner, H>>;
   populate<const H extends LoadHint<DatabaseOwner>>(
@@ -202,7 +202,7 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<DatabaseOwner>>(hint: H): Promise<JsonPayload<DatabaseOwner, H>>;

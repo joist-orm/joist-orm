@@ -169,7 +169,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<PublisherGroupOpts>): void {
     setOpts(this as any as PublisherGroup, opts);
@@ -189,7 +189,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<PublisherGroupOpts>): void {
     setOpts(this as any as PublisherGroup, opts as OptsOf<PublisherGroup>, { partial: true });
@@ -197,7 +197,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   * @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<PublisherGroup> {
     return newChangesProxy(this) as any;
@@ -212,7 +212,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
 
   /**
    * Traverse from this entity using a lens, and load the result
-   * @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<PublisherGroup>>(hint: H): Promise<Loaded<PublisherGroup, H>>;
   populate<const H extends LoadHint<PublisherGroup>>(
@@ -247,7 +247,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<PublisherGroup>>(hint: H): Promise<JsonPayload<PublisherGroup, H>>;

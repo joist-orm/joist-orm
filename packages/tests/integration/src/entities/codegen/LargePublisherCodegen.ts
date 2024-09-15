@@ -160,7 +160,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<LargePublisherOpts>): void {
     setOpts(this as any as LargePublisher, opts);
@@ -180,7 +180,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
    *  age: null // unset, (i.e. set it as undefined)
    * })
    * ```
-   * @see @{link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<LargePublisherOpts>): void {
     setOpts(this as any as LargePublisher, opts as OptsOf<LargePublisher>, { partial: true });
@@ -188,7 +188,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   * @see @{link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<LargePublisher> {
     return newChangesProxy(this) as any;
@@ -203,7 +203,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
 
   /**
    * Traverse from this entity using a lens, and load the result
-   * @see @{link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<LargePublisher>>(hint: H): Promise<Loaded<LargePublisher, H>>;
   populate<const H extends LoadHint<LargePublisher>>(
@@ -238,7 +238,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see @{link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<LargePublisher>>(hint: H): Promise<JsonPayload<LargePublisher, H>>;

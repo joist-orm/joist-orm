@@ -13,7 +13,7 @@ describe("QueryParser", () => {
   it("quotes with abbreviation", () => {
     expect(generateSql(parseFindQuery(bm, { author: { firstName: "jeff", schedules: { id: 4 } } }))).toEqual(
       [
-        'select distinct b.*, "b"."title", "b"."id"',
+        'select distinct b.*, b.title, b.id',
         " from books as b",
         " inner join authors as a on b.author_id = a.id",
         ' left outer join author_schedules as "as" on a.id = "as".author_id',

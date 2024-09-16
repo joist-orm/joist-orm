@@ -1,3 +1,10 @@
+# [1.194.0](https://github.com/joist-orm/joist-orm/compare/v1.193.2...v1.194.0) (2024-09-16)
+
+
+### Features
+
+* Add cross-entity default dependencies. ([#1217](https://github.com/joist-orm/joist-orm/issues/1217)) ([c66ac8c](https://github.com/joist-orm/joist-orm/commit/c66ac8c24ece4c57efbf415b944ab1fde5c77e48))
+
 ## [1.193.2](https://github.com/joist-orm/joist-orm/compare/v1.193.1...v1.193.2) (2024-09-16)
 
 

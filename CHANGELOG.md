@@ -1,3 +1,10 @@
+## [1.194.4](https://github.com/joist-orm/joist-orm/compare/v1.194.3...v1.194.4) (2024-09-16)
+
+
+### Bug Fixes
+
+* Don't double-tap the deferred on subtypes. ([#1224](https://github.com/joist-orm/joist-orm/issues/1224)) ([4c179a1](https://github.com/joist-orm/joist-orm/commit/4c179a1e18536128dfba1e61ec2053c6a5d200e0))
+
 ## [1.194.3](https://github.com/joist-orm/joist-orm/compare/v1.194.2...v1.194.3) (2024-09-16)
 
 

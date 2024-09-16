@@ -1,5 +1,5 @@
 import { EntityMetadata, noValue, testing } from "joist-orm";
-import { Book, newAuthor, newBook, newUser } from "src/entities";
+import { Author, Book, newAuthor, newBook, newUser } from "src/entities";
 import { select } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
@@ -96,28 +96,34 @@ describe("EntityManager.defaults", () => {
 
   describe("getDefaultDependencies", () => {
     it("works with primitives", () => {
-      expect(getDeps(Book.metadata, "order")).toEqual([["Book", "order"]]);
+      expect(getDeps(Book.metadata, "someField", "order")).toEqual([["Book", "order"]]);
     });
 
     it("works with nested primitives", () => {
-      expect(getDeps(Book.metadata, { author: "nickNames" })).toEqual([
+      expect(getDeps(Book.metadata, "authorsNickNames", { author: "nickNames" })).toEqual([
         ["Book", "author"],
         ["Author", "nickNames"],
       ]);
     });
 
     it("ignores non-defaults", () => {
-      expect(getDeps(Book.metadata, { randomComment: "text", author: "title" })).toEqual([["Book", "author"]]);
+      expect(getDeps(Book.metadata, "authorsNickNames", { randomComment: "text", author: "title" })).toEqual([
+        ["Book", "author"],
+      ]);
     });
 
     it("ignores sync defaults", () => {
-      expect(getDeps(Book.metadata, "notes")).toEqual([]);
+      expect(getDeps(Book.metadata, "order", "notes")).toEqual([]);
+    });
+
+    it("ignores cyclic defaults", () => {
+      expect(getDeps(Author.metadata, "notes", "notes")).toEqual([]);
     });
   });
 });
 
 // Wrap getDefaultDependencies and turn `meta` into a string for less-terrible Jest diffing
-function getDeps(meta: EntityMetadata, hint: any): [string, string][] {
-  const deps = getDefaultDependencies(meta, hint);
+function getDeps(meta: EntityMetadata, fieldName: string, hint: any): [string, string][] {
+  const deps = getDefaultDependencies(meta, fieldName, hint);
   return deps.map(({ meta, fieldName }) => [meta.type, fieldName]);
 }

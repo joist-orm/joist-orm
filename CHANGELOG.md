@@ -1,3 +1,10 @@
+## [1.194.2](https://github.com/joist-orm/joist-orm/compare/v1.194.1...v1.194.2) (2024-09-16)
+
+
+### Bug Fixes
+
+* Fix self-referential defaults hanging. ([#1222](https://github.com/joist-orm/joist-orm/issues/1222)) ([96b9739](https://github.com/joist-orm/joist-orm/commit/96b9739e1258ae1baf3b68004fc6a1cbfdc6ad87))
+
 ## [1.194.1](https://github.com/joist-orm/joist-orm/compare/v1.194.0...v1.194.1) (2024-09-16)
 
 

@@ -139,7 +139,7 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
     const entities = entitiesByName[entityName];
     if (!entities) {
       console.log(`WARNING: Found config for non-existent entity ${entityName}`);
-      return;
+      continue;
     }
     // We don't have keyBy...
     const [entity] = entities;

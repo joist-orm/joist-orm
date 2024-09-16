@@ -254,12 +254,12 @@ describe("Author", () => {
       expect(a1.changes.firstName.hasUpdated).toBe(false);
       expect(a1.changes.firstName.originalValue).toBe(undefined);
       expect(a1.changes.isPopular.hasChanged).toBe(false);
-      expect(a1.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "lastName", "nickNames"]);
+      expect(a1.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "lastName"]);
       a1.lastName = undefined;
       expect(a1.changes.lastName.hasChanged).toBe(false);
       expect(a1.changes.lastName.hasUpdated).toBe(false);
       expect(a1.changes.lastName.originalValue).toBe(undefined);
-      expect(a1.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "nickNames"]);
+      expect(a1.changes.fields).toEqual(["createdAt", "updatedAt", "firstName"]);
     });
 
     it("after initial load nothing is considered changed", async () => {

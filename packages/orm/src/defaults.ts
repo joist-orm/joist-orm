@@ -2,6 +2,7 @@ import { Entity } from "./Entity";
 import { EntityMetadata, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "./EntityMetadata";
 import { Todo } from "./Todo";
 import { setField } from "./fields";
+import { LoadHint } from "./loadHints";
 import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint, ReactiveHint } from "./reactiveHints";
 import { isLoadedReference } from "./relations/index";
@@ -91,5 +92,20 @@ export class AsyncDefault<T extends Entity> {
     // We can't convert this until now, since it requires the `metadata`
     this.#loadHint ??= convertToLoadHint(getMetadata(entity), this.#fieldHint);
     return entity.em.populate(entity, this.#loadHint).then((loaded) => this.#fn(loaded, ctx));
+  }
+}
+
+type DefaultDependency = {
+  meta: EntityMetadata;
+  fieldName: string;
+};
+
+export function getDefaultDependencies<T extends Entity>(hint: LoadHint<T> | ReactiveHint<T>): DefaultDependency[] {
+  if (typeof hint === "string") {
+    return { [hint]: {} };
+  } else if (Array.isArray(hint)) {
+    return Object.fromEntries(hint.map((field) => [field, {}]));
+  } else {
+    return hint;
   }
 }

@@ -1,3 +1,10 @@
+## [1.194.3](https://github.com/joist-orm/joist-orm/compare/v1.194.2...v1.194.3) (2024-09-16)
+
+
+### Bug Fixes
+
+* Run defaults defined on subtypes. ([#1223](https://github.com/joist-orm/joist-orm/issues/1223)) ([430e787](https://github.com/joist-orm/joist-orm/commit/430e787bb48a75a58a23c81b0f0026ef87c2d17b))
+
 ## [1.194.2](https://github.com/joist-orm/joist-orm/compare/v1.194.1...v1.194.2) (2024-09-16)
 
 

@@ -5570,13 +5570,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"batching-toposort@npm:^1.2.0":
-  version: 1.2.0
-  resolution: "batching-toposort@npm:1.2.0"
-  checksum: 10/34f3a1f6b3d3466bb44cf3c71d256f98808fb8826a0deb97051d0b1db58b36d99a8d7468d256e90b7528cb0b3a3b8f96c9e7549f5ba7c03657eddbae4780c362
-  languageName: node
-  linkType: hard
-
 "before-after-hook@npm:^3.0.2":
   version: 3.0.2
   resolution: "before-after-hook@npm:3.0.2"
@@ -11064,7 +11057,6 @@ __metadata:
     "@types/node": "npm:^20.14.9"
     "@types/object-hash": "npm:^3.0.6"
     ansis: "npm:^3.2.0"
-    batching-toposort: "npm:^1.2.0"
     dataloader: "npm:^2.2.2"
     jest: "npm:30.0.0-alpha.5"
     joist-utils: "workspace:*"

@@ -1198,6 +1198,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     let hookLoops = 0;
     let now = getNow();
     this.#rm.clearSuppressedTypeErrors();
+    const suppressedDefaultTypeErrors: Error[] = [];
 
     // Make a lambda that we can invoke multiple times, if we loop for ReactiveQueryFields
     const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
@@ -1223,7 +1224,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         await this.#fl.allowWrites(async () => {
           // Run our hooks
           let todos = createTodos([...pendingHooks]);
-          await setAsyncDefaults(this.ctx, todos);
+          await setAsyncDefaults(suppressedDefaultTypeErrors, this.ctx, todos);
           maybeBumpUpdatedAt(todos, now);
           await beforeCreate(this.ctx, todos);
           await beforeUpdate(this.ctx, todos);
@@ -1288,6 +1289,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         await runValidation(entityTodos, joinRowTodos);
       }
       this.#rm.throwIfAnySuppressedTypeErrors();
+      if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
 
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
         // The driver will handle the right thing if we're already in an existing transaction.

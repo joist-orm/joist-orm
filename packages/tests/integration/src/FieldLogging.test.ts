@@ -49,7 +49,7 @@ describe("FieldLogging", () => {
        "b#1.title = title at newBook.ts:9↩",
        "b#1.order = 1 at newBook.ts:9↩",
        "b#1.author = Author#1 at newBook.ts:9↩",
-       "b#1.notes = Notes for title at defaults.ts:28↩",
+       "b#1.notes = Notes for title at defaults.ts:30↩",
      ]
     `);
   });

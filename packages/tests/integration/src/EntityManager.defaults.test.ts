@@ -1,7 +1,9 @@
-import { noValue } from "joist-orm";
-import { newAuthor, newBook, newUser } from "src/entities";
+import { EntityMetadata, noValue, testing } from "joist-orm";
+import { Book, newAuthor, newBook, newUser } from "src/entities";
 import { select } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
+
+const { getDefaultDependencies } = testing;
 
 describe("EntityManager.defaults", () => {
   it("can default a synchronous field", async () => {
@@ -40,7 +42,7 @@ describe("EntityManager.defaults", () => {
     // When we flush
     await em.flush();
     // Then the async default kicked in
-    expect(b1.order).toBe(2);
+    expect(b1.order).toBe(1);
     expect(b2.order).toBe(2);
   });
 
@@ -70,4 +72,52 @@ describe("EntityManager.defaults", () => {
     expect(b1.order).toBe(3);
     expect(b2.order).toBe(4);
   });
+
+  it("supports cross-entity defaults", async () => {
+    const em = newEntityManager();
+    // Given we make both a book and author at the same time
+    const a = newAuthor(em);
+    const b = newBook(em);
+    // When we flush
+    await em.flush();
+    // Then the b.notes default read the nickName default
+    expect(a.nickNames).toEqual(["a1"]);
+    expect(b.authorsNickNames).toBe("a1");
+  });
+
+  it("throws validation rules instead of NPEs in setDefaults accessing unset required relations", async () => {
+    const em = newEntityManager();
+    // The Book.authorsNickNames lambda *really* wants `author.get` to work, and it will
+    // actively NPE during `em.flush`, but show that we suppress that error, and let the
+    // more helpful validation error get thrown instead
+    newBook(em, { author: noValue() });
+    await expect(em.flush()).rejects.toThrow("Book#1 author is required");
+  });
+
+  describe("getDefaultDependencies", () => {
+    it("works with primitives", () => {
+      expect(getDeps(Book.metadata, "order")).toEqual([["Book", "order"]]);
+    });
+
+    it("works with nested primitives", () => {
+      expect(getDeps(Book.metadata, { author: "nickNames" })).toEqual([
+        ["Book", "author"],
+        ["Author", "nickNames"],
+      ]);
+    });
+
+    it("ignores non-defaults", () => {
+      expect(getDeps(Book.metadata, { randomComment: "text", author: "title" })).toEqual([["Book", "author"]]);
+    });
+
+    it("ignores sync defaults", () => {
+      expect(getDeps(Book.metadata, "notes")).toEqual([]);
+    });
+  });
 });
+
+// Wrap getDefaultDependencies and turn `meta` into a string for less-terrible Jest diffing
+function getDeps(meta: EntityMetadata, hint: any): [string, string][] {
+  const deps = getDefaultDependencies(meta, hint);
+  return deps.map(({ meta, fieldName }) => [meta.type, fieldName]);
+}

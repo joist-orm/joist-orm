@@ -7,6 +7,7 @@ const { getDefaultDependencies } = testing;
 
 // We don't have tests for:
 // - default-defined-on-base pushing into child
+// - default-defined-on-base that inserts both a base and a child (and doesn't double tap the Deferred.resolve)
 // - default-defined-on-sub
 
 describe("EntityManager.defaults", () => {

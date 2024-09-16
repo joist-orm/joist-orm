@@ -48,12 +48,18 @@ export function setAsyncDefaults(
   // For all N of these todo.inserts, go through default
   const p = Object.values(todos).flatMap((todo) => {
     // The todo.metadata will be the base meta, see if we need to look at subtypes
-    const entitiesBySubType: Map<EntityMetadata, Entity[]> = todo.metadata.inheritanceType
+    const entitiesByType: Map<EntityMetadata, Entity[]> = todo.metadata.inheritanceType
       ? groupBy(todo.inserts, (e) => getMetadata(e))
       : new Map([[todo.metadata, todo.inserts]]);
-    // flatMap because each subType might have N fields
-    const p = [...entitiesBySubType.entries()].flatMap(([maybeSub, inserts]) => {
-      return Object.values(maybeSub.config.__data.asyncDefaults).map((df) =>
+    // Copy subtypes insert down into the base, so they get base-level defaults applied
+    for (const [maybeSub, inserts] of entitiesByType.entries()) {
+      for (const baseType of maybeSub.baseTypes) {
+        entitiesByType.set(baseType, [...(entitiesByType.get(baseType) ?? []), ...inserts]);
+      }
+    }
+    // flatMap because each meta might have N fields
+    const p = [...entitiesByType.entries()].flatMap(([meta, inserts]) => {
+      return Object.values(meta.config.__data.asyncDefaults).map((df) =>
         df.setOnEntities(ctx, dt, suppressedTypeErrors, todo.metadata, inserts),
       );
     });

@@ -111,10 +111,6 @@ function hookUpBaseTypeAndSubTypes(metas: EntityMetadata[]): void {
         // We use `b0` because that is what addTablePerClassJoinsAndClassTag uses to join in the base table
         m.allFields[name] = { ...field, aliasSuffix: b.inheritanceType === "cti" ? "_b0" : "" };
       });
-      // Push our parent's defaults into us
-      Object.entries(b.config.__data.asyncDefaults).forEach(([name, df]) => {
-        m.config.__data.asyncDefaults[name] = df;
-      });
     }
   }
 }

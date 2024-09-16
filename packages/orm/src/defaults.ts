@@ -40,36 +40,16 @@ export function setSyncDefaults(entity: Entity): void {
 
 /** Runs the async defaults for all inserted entities in `todos`. */
 export function setAsyncDefaults(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  // Create a map "new entity -> fieldName -> deferred"
-  const deferreds = new Map<string, Map<string, Deferred<void>>>();
-  function getDeferred(meta: EntityMetadata, fieldName: string): Deferred<void> {
-    const map = deferreds.get(meta.type) ?? fail(`No deferred check necessary for ${meta.type}`);
-    let deferred = map.get(fieldName);
-    if (!deferred) {
-      deferred = new Deferred();
-      map.set(fieldName, deferred);
-    }
-    return deferred;
-  }
-
-  // Seed it with any entities that we're actively inserting (as any dependencies to
-  // entities that aren't even having `setDefault` called can be skipped)
-  for (const todo of Object.values(todos)) {
-    // ...handle subtypes?
-    deferreds.set(todo.metadata.type, new Map());
-  }
-
+  const dt = new DependencyTracker(todos);
   return Promise.all(
     Object.values(todos).flatMap((todo) =>
       // For all N of these todo.inserts, go through default
       Object.entries(todo.metadata.config.__data.asyncDefaults).map(async ([fieldName, df]) => {
         // Ensure our dependencies have ran
-        const deps = df
-          .deps(todo.metadata)
-          // Only wait on dependencies that are actively being calculated
-          .filter((dep) => deferreds.has(dep.meta.type));
+        // (...and only wait on dependencies that are actively being calculated)
+        const deps = df.deps(todo.metadata).filter((dep) => dt.hasMaybePending(dep.meta));
         if (deps.length > 0) {
-          await Promise.all(deps.map((dep) => getDeferred(dep.meta, dep.fieldName).promise));
+          await Promise.all(deps.map((dep) => dt.getDeferred(dep.meta, dep.fieldName).promise));
         }
 
         // Run our default for all entities
@@ -85,7 +65,7 @@ export function setAsyncDefaults(ctx: unknown, todos: Record<string, Todo>): Pro
         );
 
         // Mark ourselves as complete
-        getDeferred(todo.metadata, fieldName).resolve();
+        dt.getDeferred(todo.metadata, fieldName).resolve();
       }),
     ),
   );
@@ -169,4 +149,42 @@ export function getDefaultDependencies<T extends Entity>(
     }
   }
   return deps;
+}
+
+/**
+ * This tracks cross-default dependencies that are active within a single `em.flush` loop.
+ *
+ * I.e. this is not a static "the Author.firstName in general depends on Publisher.whatever",
+ * it tracks that we're actively inserting 10 new `Author` instances, and their `firstName`
+ * default needs to wait until the `Publisher.whatever` fields have their async default
+ * calculated.
+ *
+ * Really this is just a smaller wrapper around a map of `Deferred`s.
+ */
+class DependencyTracker {
+  // Create a map "new entity -> fieldName -> deferred"
+  #deferreds = new Map<string, Map<string, Deferred<void>>>();
+
+  constructor(todos: Record<string, Todo>) {
+    // Seed it with any entities that we're actively inserting (as any dependencies to
+    // entities that aren't even having `setDefault` called can be skipped)
+    for (const todo of Object.values(todos)) {
+      // ...handle subtypes?
+      this.#deferreds.set(todo.metadata.type, new Map());
+    }
+  }
+
+  hasMaybePending(meta: EntityMetadata): boolean {
+    return this.#deferreds.has(meta.type) ?? false;
+  }
+
+  getDeferred(meta: EntityMetadata, fieldName: string): Deferred<void> {
+    const map = this.#deferreds.get(meta.type) ?? fail(`No deferred check necessary for ${meta.type}`);
+    let deferred = map.get(fieldName);
+    if (!deferred) {
+      deferred = new Deferred();
+      map.set(fieldName, deferred);
+    }
+    return deferred;
+  }
 }

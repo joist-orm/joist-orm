@@ -127,7 +127,7 @@ export class AsyncDefault<T extends Entity> {
 
   // Calc once and cache
   private deps(meta: EntityMetadata): DefaultDependency[] {
-    return (this.#deps = getDefaultDependencies(meta, this.#fieldHint));
+    return (this.#deps = getDefaultDependencies(meta, this.fieldName, this.#fieldHint));
   }
 }
 
@@ -143,16 +143,20 @@ type DefaultDependency = {
  * [Publisher, "name"]]`.
  */
 export function getDefaultDependencies<T extends Entity>(
-  meta: EntityMetadata<T>,
-  hint: ReactiveHint<T>,
+  baseMeta: EntityMetadata<T>,
+  baseFieldName: string,
+  baseHint: ReactiveHint<T>,
 ): DefaultDependency[] {
   // Ensure the hint is an `{ ... }`
   const deps: DefaultDependency[] = [];
-  const todo: [meta: EntityMetadata, hint: ReactiveHint<any>][] = [[meta, normalizeHint(hint)]];
+  const todo: [meta: EntityMetadata, hint: ReactiveHint<any>][] = [[baseMeta, normalizeHint(baseHint)]];
   while (todo.length !== 0) {
     const [meta, hint] = todo.pop()!;
     for (const [fieldName, nestedHint] of Object.entries(hint)) {
       const field = meta.allFields[fieldName];
+      // Super naive circular dependency detection
+      const isSameField = meta === baseMeta && fieldName === baseFieldName;
+      if (isSameField) continue;
       // If this is an invalid hint, just ignore it, and assume someone else will fail on it
       if (!field) continue;
       switch (field.kind) {

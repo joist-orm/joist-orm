@@ -85,6 +85,15 @@ describe("EntityManager.defaults", () => {
     expect(b.authorsNickNames).toBe("a1");
   });
 
+  it("throws validation rules instead of NPEs in setDefaults accessing unset required relations", async () => {
+    const em = newEntityManager();
+    // The Book.authorsNickNames lambda *really* wants `author.get` to work, and it will
+    // actively NPE during `em.flush`, but show that we suppress that error, and let the
+    // more helpful validation error get thrown instead
+    newBook(em, { author: noValue() });
+    await expect(em.flush()).rejects.toThrow("Book#1 author is required");
+  });
+
   describe("getDefaultDependencies", () => {
     it("works with primitives", () => {
       expect(getDeps(Book.metadata, "order")).toEqual([["Book", "order"]]);

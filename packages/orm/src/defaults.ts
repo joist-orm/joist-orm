@@ -2,7 +2,6 @@ import { Entity } from "./Entity";
 import { EntityMetadata, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "./EntityMetadata";
 import { Todo } from "./Todo";
 import { setField } from "./fields";
-import { LoadHint } from "./loadHints";
 import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint, ReactiveHint } from "./reactiveHints";
 import { isLoadedReference } from "./relations/index";
@@ -100,12 +99,49 @@ type DefaultDependency = {
   fieldName: string;
 };
 
-export function getDefaultDependencies<T extends Entity>(hint: LoadHint<T> | ReactiveHint<T>): DefaultDependency[] {
-  if (typeof hint === "string") {
-    return { [hint]: {} };
-  } else if (Array.isArray(hint)) {
-    return Object.fromEntries(hint.map((field) => [field, {}]));
-  } else {
-    return hint;
+/**
+ * Given a `meta` and a nested field hint, return the meta+field tuples included within the hint.
+ *
+ * I.e. passing `{ author: { firstName: {}, publisher: "name" } }` would return `[[Author, "firstName"],
+ * [Publisher, "name"]]`.
+ */
+export function getDefaultDependencies<T extends Entity>(
+  meta: EntityMetadata<T>,
+  hint: ReactiveHint<T>,
+): DefaultDependency[] {
+  // Ensure the hint is an `{ ... }`
+  const deps: DefaultDependency[] = [];
+  const todo: [meta: EntityMetadata, hint: ReactiveHint<any>][] = [[meta, normalizeHint(hint)]];
+  while (todo.length !== 0) {
+    const [meta, hint] = todo.pop()!;
+    for (const [fieldName, nestedHint] of Object.entries(hint)) {
+      const field = meta.allFields[fieldName];
+      // If this is an invalid hint, just ignore it, and assume someone else will fail on it
+      if (!field) continue;
+      switch (field.kind) {
+        case "enum":
+        case "primitive":
+          if (field.default === "config") {
+            deps.push({ meta, fieldName });
+          }
+          break;
+        case "m2o":
+          if (field.default === "config") {
+            deps.push({ meta, fieldName });
+          }
+          if (nestedHint) {
+            todo.push([field.otherMetadata(), normalizeHint(nestedHint)]);
+          }
+          break;
+        case "o2o":
+        case "o2m":
+        case "m2m":
+          if (nestedHint) {
+            todo.push([field.otherMetadata(), normalizeHint(nestedHint)]);
+          }
+          break;
+      }
+    }
   }
+  return deps;
 }

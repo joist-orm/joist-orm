@@ -370,10 +370,8 @@ config.cascadeDelete("books");
 
 // For testing cross-entity default dependencies, i.e. for Book.notes
 config.setDefault(
-  // Reusing `nickNames` which is also used for testing `string[]` columns
-  "nickNames",
-  // Add a dummy load hint to make this async, so it doesn't just run-first for free
-  ["publisher", "firstName"],
+  "nickNames", // Reusing `nickNames` which is also used for testing `string[]` columns
+  ["publisher", "firstName"], // Add a dummy load hint to make this async, so it doesn't just run-first for free
   (a) => [a.firstName],
 );
 

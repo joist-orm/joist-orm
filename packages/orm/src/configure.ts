@@ -12,7 +12,6 @@ import { isCannotBeUpdatedRule } from "./rules";
 import { KeySerde } from "./serde";
 import { fail } from "./utils";
 // @ts-ignore
-import batchTopo from "batching-toposort";
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
 const tableToMetaMap = new Map<string, EntityMetadata>();
@@ -27,7 +26,6 @@ export function configureMetadata(metas: EntityMetadata[]): void {
   hookUpBaseTypeAndSubTypes(metas);
   reverseIndexReactivity(metas);
   populatePolyComponentFields(metas);
-  sortFieldsBySetDefaultHints(metas);
 }
 
 function fireAfterMetadatas(metas: EntityMetadata[]): void {
@@ -79,29 +77,6 @@ function setImmutableFields(metas: EntityMetadata[]): void {
         field.immutable = true;
       }
     });
-  }
-}
-
-// Order fields based on setDefault dependencies
-function sortFieldsBySetDefaultHints(metas: EntityMetadata[]): void {
-  for (const meta of metas) {
-    // Put every field into the dag of { dependency: dependents[] }
-    const dag: Record<string, string[]> = {};
-    for (const fieldName of Object.keys(meta.allFields)) {
-      dag[fieldName] ??= [];
-      // ...if `fieldName` is from a base type, this won't technically find it
-      const df = meta.config.__data.asyncDefaults[fieldName];
-      if (df) for (const dep of df.dependsOn) (dag[dep] ??= []).push(fieldName);
-    }
-    // [[a, b], [c, d]]
-    const levels = batchTopo(dag) as string[][];
-    meta.config.__data.asyncDefaultsByLevel = levels
-      .map((level) => {
-        return level.map((fieldName) => meta.config.__data.asyncDefaults[fieldName]).filter((df) => !!df);
-      })
-      .filter((level) => level.length > 0);
-    // [a, b, c, d]
-    meta.config.__data.fieldsInOrder = levels.flat();
   }
 }
 

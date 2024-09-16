@@ -87,7 +87,7 @@ describe("EntityManager.defaults", () => {
 
   describe("getDefaultDependencies", () => {
     it("works with primitives", () => {
-      expect(getDeps(Book.metadata, "notes")).toEqual([["Book", "notes"]]);
+      expect(getDeps(Book.metadata, "order")).toEqual([["Book", "order"]]);
     });
 
     it("works with nested primitives", () => {
@@ -99,6 +99,10 @@ describe("EntityManager.defaults", () => {
 
     it("ignores non-defaults", () => {
       expect(getDeps(Book.metadata, { randomComment: "text", author: "title" })).toEqual([["Book", "author"]]);
+    });
+
+    it("ignores sync defaults", () => {
+      expect(getDeps(Book.metadata, "notes")).toEqual([]);
     });
   });
 });

@@ -1,3 +1,10 @@
+## [1.193.2](https://github.com/joist-orm/joist-orm/compare/v1.193.1...v1.193.2) (2024-09-16)
+
+
+### Bug Fixes
+
+* continue vs return on config warnings ([#1220](https://github.com/joist-orm/joist-orm/issues/1220)) ([bce0f96](https://github.com/joist-orm/joist-orm/commit/bce0f96971c20ef5eaed5b319f3c27a45d142ea2))
+
 ## [1.193.1](https://github.com/joist-orm/joist-orm/compare/v1.193.0...v1.193.1) (2024-09-15)
 
 

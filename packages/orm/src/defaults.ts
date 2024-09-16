@@ -89,6 +89,11 @@ export class AsyncDefault<T extends Entity> {
     // (...and only wait on dependencies that are actively being calculated)
     const deps = this.deps(baseMetadata).filter((dep) => dt.hasMaybePending(dep.meta));
     if (deps.length > 0) {
+      // console.log(
+      //   "WAITING ON",
+      //   deps.map((dep) => `${dep.meta.type}.${dep.fieldName}`),
+      //   `FOR ${baseMetadata.type}.${this.fieldName}`,
+      // );
       await Promise.all(deps.map((dep) => dt.getDeferred(dep.meta, dep.fieldName).promise));
     }
     // Run our default for all entities
@@ -115,6 +120,7 @@ export class AsyncDefault<T extends Entity> {
         ),
     );
     // Mark ourselves as complete
+    // console.log(`FINISHED ${baseMetadata.type}.${this.fieldName}`);
     dt.getDeferred(baseMetadata, this.fieldName).resolve();
   }
 

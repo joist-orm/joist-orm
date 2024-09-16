@@ -5,6 +5,10 @@ import { newEntityManager } from "src/testEm";
 
 const { getDefaultDependencies } = testing;
 
+// We don't have tests for:
+// - default-defined-on-base pushing into child
+// - default-defined-on-sub
+
 describe("EntityManager.defaults", () => {
   it("can default a synchronous field", async () => {
     const em = newEntityManager();

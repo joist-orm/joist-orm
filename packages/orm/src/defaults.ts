@@ -5,7 +5,7 @@ import { setField } from "./fields";
 import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint, ReactiveHint } from "./reactiveHints";
 import { isLoadedReference } from "./relations/index";
-import { fail } from "./utils";
+import { fail, groupBy } from "./utils";
 import { Deferred } from "./utils/Deferred";
 
 export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolean {
@@ -45,44 +45,21 @@ export function setAsyncDefaults(
   todos: Record<string, Todo>,
 ): Promise<unknown> {
   const dt = new DependencyTracker(todos);
-  return Promise.all(
-    Object.values(todos).flatMap((todo) =>
-      // For all N of these todo.inserts, go through default
-      Object.entries(todo.metadata.config.__data.asyncDefaults).map(async ([fieldName, df]) => {
-        // Ensure our dependencies have ran
-        // (...and only wait on dependencies that are actively being calculated)
-        const deps = df.deps(todo.metadata).filter((dep) => dt.hasMaybePending(dep.meta));
-        if (deps.length > 0) {
-          await Promise.all(deps.map((dep) => dt.getDeferred(dep.meta, dep.fieldName).promise));
-        }
-
-        // Run our default for all entities
-        await Promise.all(
-          todo.inserts
-            .map(async (entity) => {
-              const value = (entity as any)[df.fieldName];
-              if (value === undefined) {
-                (entity as any)[df.fieldName] = await df.getValue(entity, ctx);
-              } else if (isLoadedReference(value) && !value.isSet) {
-                value.set(await df.getValue(entity, ctx));
-              }
-            })
-            .map((promise) =>
-              promise.catch((reason) => {
-                if (reason instanceof TypeError) {
-                  suppressedTypeErrors.push(reason);
-                } else {
-                  throw reason;
-                }
-              }),
-            ),
-        );
-
-        // Mark ourselves as complete
-        dt.getDeferred(todo.metadata, fieldName).resolve();
-      }),
-    ),
-  );
+  // For all N of these todo.inserts, go through default
+  const p = Object.values(todos).flatMap((todo) => {
+    // The todo.metadata will be the base meta, see if we need to look at subtypes
+    const entitiesBySubType: Map<EntityMetadata, Entity[]> = todo.metadata.inheritanceType
+      ? groupBy(todo.inserts, (e) => getMetadata(e))
+      : new Map([[todo.metadata, todo.inserts]]);
+    // flatMap because each subType might have N fields
+    const p = [...entitiesBySubType.entries()].flatMap(([maybeSub, inserts]) => {
+      return Object.values(maybeSub.config.__data.asyncDefaults).map((df) =>
+        df.setOnEntities(ctx, dt, suppressedTypeErrors, todo.metadata, inserts),
+      );
+    });
+    return Promise.all(p);
+  });
+  return Promise.all(p);
 }
 
 /** Wraps the hint + lambda of an async `setDefault`. */
@@ -100,15 +77,56 @@ export class AsyncDefault<T extends Entity> {
     this.#fn = fn;
   }
 
+  /** Given a list of inserts of the same type/subtype, set ourselves on each of them. */
+  async setOnEntities(
+    ctx: any,
+    dt: DependencyTracker,
+    suppressedTypeErrors: Error[],
+    baseMetadata: EntityMetadata,
+    inserts: T[],
+  ): Promise<any> {
+    // Ensure our dependencies have been set
+    // (...and only wait on dependencies that are actively being calculated)
+    const deps = this.deps(baseMetadata).filter((dep) => dt.hasMaybePending(dep.meta));
+    if (deps.length > 0) {
+      await Promise.all(deps.map((dep) => dt.getDeferred(dep.meta, dep.fieldName).promise));
+    }
+    // Run our default for all entities
+    await Promise.all(
+      inserts
+        .map(async (entity) => {
+          const value = (entity as any)[this.fieldName];
+          if (value === undefined) {
+            (entity as any)[this.fieldName] = await this.getValue(entity, ctx);
+          } else if (isLoadedReference(value) && !value.isSet) {
+            value.set(await this.getValue(entity, ctx));
+          }
+        })
+        .map((promise) =>
+          promise.catch((reason) => {
+            // If we NPE-d because a required field wasn't set, hold on to this and
+            // let the validation failures reject the `em.flush` instead of us
+            if (reason instanceof TypeError) {
+              suppressedTypeErrors.push(reason);
+            } else {
+              throw reason;
+            }
+          }),
+        ),
+    );
+    // Mark ourselves as complete
+    dt.getDeferred(baseMetadata, this.fieldName).resolve();
+  }
+
   /** For the given `entity`, returns what the default value should be. */
-  getValue(entity: T, ctx: any): Promise<any> {
+  private getValue(entity: T, ctx: any): Promise<any> {
     // We can't convert this until now, since it requires the `metadata`
     this.#loadHint ??= convertToLoadHint(getMetadata(entity), this.#fieldHint);
     return entity.em.populate(entity, this.#loadHint).then((loaded) => this.#fn(loaded, ctx));
   }
 
   // Calc once and cache
-  deps(meta: EntityMetadata): DefaultDependency[] {
+  private deps(meta: EntityMetadata): DefaultDependency[] {
     return (this.#deps = getDefaultDependencies(meta, this.#fieldHint));
   }
 }

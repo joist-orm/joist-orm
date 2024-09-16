@@ -39,7 +39,11 @@ export function setSyncDefaults(entity: Entity): void {
 }
 
 /** Runs the async defaults for all inserted entities in `todos`. */
-export function setAsyncDefaults(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
+export function setAsyncDefaults(
+  suppressedTypeErrors: Error[],
+  ctx: unknown,
+  todos: Record<string, Todo>,
+): Promise<unknown> {
   const dt = new DependencyTracker(todos);
   return Promise.all(
     Object.values(todos).flatMap((todo) =>
@@ -54,14 +58,24 @@ export function setAsyncDefaults(ctx: unknown, todos: Record<string, Todo>): Pro
 
         // Run our default for all entities
         await Promise.all(
-          todo.inserts.map(async (entity) => {
-            const value = (entity as any)[df.fieldName];
-            if (value === undefined) {
-              (entity as any)[df.fieldName] = await df.getValue(entity, ctx);
-            } else if (isLoadedReference(value) && !value.isSet) {
-              value.set(await df.getValue(entity, ctx));
-            }
-          }),
+          todo.inserts
+            .map(async (entity) => {
+              const value = (entity as any)[df.fieldName];
+              if (value === undefined) {
+                (entity as any)[df.fieldName] = await df.getValue(entity, ctx);
+              } else if (isLoadedReference(value) && !value.isSet) {
+                value.set(await df.getValue(entity, ctx));
+              }
+            })
+            .map((promise) =>
+              promise.catch((reason) => {
+                if (reason instanceof TypeError) {
+                  suppressedTypeErrors.push(reason);
+                } else {
+                  throw reason;
+                }
+              }),
+            ),
         );
 
         // Mark ourselves as complete

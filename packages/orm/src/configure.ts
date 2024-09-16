@@ -11,7 +11,6 @@ import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
 import { isCannotBeUpdatedRule } from "./rules";
 import { KeySerde } from "./serde";
 import { fail } from "./utils";
-// @ts-ignore
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
 const tableToMetaMap = new Map<string, EntityMetadata>();

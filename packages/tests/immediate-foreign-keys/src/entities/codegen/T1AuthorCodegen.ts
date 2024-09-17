@@ -135,10 +135,10 @@ export abstract class T1AuthorCodegen extends BaseEntity<EntityManager, number> 
    * @example
    * ```
    * entity.setPartial({
-   *  firstName: 'foo' // updated
-   *  lastName: undefined // do nothing
-   *  age: null // unset, (i.e. set it as undefined)
-   * })
+   *   firstName: 'foo' // updated
+   *   lastName: undefined // do nothing
+   *   age: null // unset, (i.e. set it as undefined)
+   * });
    * ```
    * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
@@ -155,10 +155,10 @@ export abstract class T1AuthorCodegen extends BaseEntity<EntityManager, number> 
    * @example
    * ```
    * entity.setPartial({
-   *  firstName: 'foo' // updated
-   *  lastName: undefined // do nothing
-   *  age: null // unset, (i.e. set it as undefined)
-   * })
+   *   firstName: 'foo' // updated
+   *   lastName: undefined // do nothing
+   *   age: null // unset, (i.e. set it as undefined)
+   * });
    * ```
    * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
@@ -175,15 +175,16 @@ export abstract class T1AuthorCodegen extends BaseEntity<EntityManager, number> 
   }
 
   /**
-   * Traverse from this entity using a lens
+   * Traverse from this entity using a lens, and load the result
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   load<U, V>(fn: (lens: Lens<T1Author>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as T1Author, fn, opts);
   }
 
   /**
-   * Traverse from this entity using a lens, and load the result
-   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * Hydrate this entity using a load hint
+   * @see {@link https://joist-orm.io/docs/features/loading-entities#1-object-graph-navigation | Loading entities} on the Joist docs
    */
   populate<const H extends LoadHint<T1Author>>(hint: H): Promise<Loaded<T1Author, H>>;
   populate<const H extends LoadHint<T1Author>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<T1Author, H>>;

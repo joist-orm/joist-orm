@@ -1,5 +1,5 @@
 function makeTsDocComment(...lines: string[]): string {
-    return ['/**', lines.map(l => `* ${l}`), '*/'].join('\n');
+    return ['/**', ...lines.map(l => `* ${l}`), '*/'].join('\n');
 }
 
 export const tsdocComments = {

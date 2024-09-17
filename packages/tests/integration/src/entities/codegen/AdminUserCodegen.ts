@@ -125,10 +125,10 @@ export abstract class AdminUserCodegen extends User implements Entity {
    * @example
    * ```
    * entity.setPartial({
-   *  firstName: 'foo' // updated
-   *  lastName: undefined // do nothing
-   *  age: null // unset, (i.e. set it as undefined)
-   * })
+   *   firstName: 'foo' // updated
+   *   lastName: undefined // do nothing
+   *   age: null // unset, (i.e. set it as undefined)
+   * });
    * ```
    * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
@@ -145,10 +145,10 @@ export abstract class AdminUserCodegen extends User implements Entity {
    * @example
    * ```
    * entity.setPartial({
-   *  firstName: 'foo' // updated
-   *  lastName: undefined // do nothing
-   *  age: null // unset, (i.e. set it as undefined)
-   * })
+   *   firstName: 'foo' // updated
+   *   lastName: undefined // do nothing
+   *   age: null // unset, (i.e. set it as undefined)
+   * });
    * ```
    * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
@@ -165,15 +165,16 @@ export abstract class AdminUserCodegen extends User implements Entity {
   }
 
   /**
-   * Traverse from this entity using a lens
+   * Traverse from this entity using a lens, and load the result
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   load<U, V>(fn: (lens: Lens<AdminUser>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as AdminUser, fn, opts);
   }
 
   /**
-   * Traverse from this entity using a lens, and load the result
-   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * Hydrate this entity using a load hint
+   * @see {@link https://joist-orm.io/docs/features/loading-entities#1-object-graph-navigation | Loading entities} on the Joist docs
    */
   populate<const H extends LoadHint<AdminUser>>(hint: H): Promise<Loaded<AdminUser, H>>;
   populate<const H extends LoadHint<AdminUser>>(

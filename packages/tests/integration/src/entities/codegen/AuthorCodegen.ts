@@ -152,7 +152,6 @@ export interface AuthorOpts {
   numberOfAtoms?: bigint | null;
   deletedAt?: Date | null;
   certificate?: Uint8Array | null;
-  rangeOfBooks?: BookRange | null;
   favoriteColors?: Color[];
   favoriteShape?: FavoriteShape | null;
   mentor?: Author | AuthorId | null;

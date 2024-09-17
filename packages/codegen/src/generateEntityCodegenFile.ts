@@ -388,14 +388,12 @@ function generateDefaultValidationRules(db: DbMetadata, meta: EntityDbMetadata, 
 function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   const primitives = meta.primitives.map((field) => {
     const { fieldName, fieldType, notNull, derived } = field;
-    if (derived) {
-      return code``;
-    }
+    if (derived) return code``;
     return code`${fieldName}${maybeOptionalOrDefault(field)}: ${fieldType}${maybeUnionNull(notNull)};`;
   });
   const enums = meta.enums.map((field) => {
-    const { fieldName, enumType, notNull, isArray } = field;
-    if (meta.stiDiscriminatorField === fieldName) {
+    const { fieldName, enumType, notNull, isArray, derived } = field;
+    if (meta.stiDiscriminatorField === fieldName || derived) {
       // Don't include the discriminator as an opt b/c we'll infer it from the instance type
       return code``;
     } else if (isArray) {

@@ -1,3 +1,10 @@
+## [1.194.5](https://github.com/joist-orm/joist-orm/compare/v1.194.4...v1.194.5) (2024-09-17)
+
+
+### Bug Fixes
+
+* Don't put derived enums in opts. ([#1225](https://github.com/joist-orm/joist-orm/issues/1225)) ([dac31aa](https://github.com/joist-orm/joist-orm/commit/dac31aad6a9ac9a622c72389b1243cc071c68658))
+
 ## [1.194.4](https://github.com/joist-orm/joist-orm/compare/v1.194.3...v1.194.4) (2024-09-16)
 
 

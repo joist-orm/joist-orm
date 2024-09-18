@@ -1,3 +1,10 @@
+## [1.194.6](https://github.com/joist-orm/joist-orm/compare/v1.194.5...v1.194.6) (2024-09-18)
+
+
+### Bug Fixes
+
+* newTestInstance to not provide default value for required derived enum columns ([#1226](https://github.com/joist-orm/joist-orm/issues/1226)) ([264fc86](https://github.com/joist-orm/joist-orm/commit/264fc8629ae59278dd00960d62371a179bb14d26))
+
 ## [1.194.5](https://github.com/joist-orm/joist-orm/compare/v1.194.4...v1.194.5) (2024-09-17)
 
 

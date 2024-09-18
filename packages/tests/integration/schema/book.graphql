@@ -19,6 +19,7 @@ type Book {
   originalOrder: Int!
   acknowledgements: String
   search: String
+  authorsNickNames: String
 }
 
 input SaveBookInput {
@@ -32,6 +33,7 @@ input SaveBookInput {
   notes: String
   originalOrder: Int
   acknowledgements: String
+  authorsNickNames: String
 }
 
 type SaveBookResult {

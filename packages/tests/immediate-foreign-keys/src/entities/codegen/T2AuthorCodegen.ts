@@ -137,10 +137,13 @@ export abstract class T2AuthorCodegen extends BaseEntity<EntityManager, number> 
 
   /**
    * Partial update taking any subset of the entities fields.
+   *
    * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
-   * is left as untouched
+   * is left as untouched.
+   *
    * Collections are exhaustively set to the new values, however,
    * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   *
    * @example
    * ```
    * entity.setPartial({
@@ -157,10 +160,13 @@ export abstract class T2AuthorCodegen extends BaseEntity<EntityManager, number> 
 
   /**
    * Partial update taking any subset of the entities fields.
+   *
    * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
-   * is left as untouched
+   * is left as untouched.
+   *
    * Collections are exhaustively set to the new values, however,
    * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   *
    * @example
    * ```
    * entity.setPartial({
@@ -177,6 +183,7 @@ export abstract class T2AuthorCodegen extends BaseEntity<EntityManager, number> 
 
   /**
    * Details the field changes of the entity within the current unit of work.
+   *
    * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<T2Author> {
@@ -184,7 +191,8 @@ export abstract class T2AuthorCodegen extends BaseEntity<EntityManager, number> 
   }
 
   /**
-   * Traverse from this entity using a lens, and load the result
+   * Traverse from this entity using a lens, and load the result.
+   *
    * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   load<U, V>(fn: (lens: Lens<T2Author>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
@@ -193,6 +201,7 @@ export abstract class T2AuthorCodegen extends BaseEntity<EntityManager, number> 
 
   /**
    * Hydrate this entity using a load hint
+   *
    * @see {@link https://joist-orm.io/docs/features/loading-entities#1-object-graph-navigation | Loading entities} on the Joist docs
    */
   populate<const H extends LoadHint<T2Author>>(hint: H): Promise<Loaded<T2Author, H>>;
@@ -210,15 +219,19 @@ export abstract class T2AuthorCodegen extends BaseEntity<EntityManager, number> 
   }
 
   /**
-   * Given a load hint, checks if it is loaded within the unit of work. Type Guarded via Loaded<>
+   * Given a load hint, checks if it is loaded within the unit of work.
+   *
+   * Type Guarded via Loaded<>
    */
   isLoaded<const H extends LoadHint<T2Author>>(hint: H): this is Loaded<T2Author, H> {
     return isLoaded(this as any as T2Author, hint);
   }
 
   /**
-   * Build a type-safe, loadable and relation aware POJO from this entity, given a hint
+   * Build a type-safe, loadable and relation aware POJO from this entity, given a hint.
+   *
    * Note: As the hint might load, this returns a Promise
+   *
    * @example
    * ```
    * const payload = await a.toJSON({

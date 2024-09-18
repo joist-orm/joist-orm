@@ -79,6 +79,7 @@ export interface BookFields {
   order: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   notes: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   acknowledgements: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  authorsNickNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   search: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -93,6 +94,7 @@ export interface BookOpts {
   order?: number;
   notes?: string;
   acknowledgements?: string | null;
+  authorsNickNames?: string | null;
   deletedAt?: Date | null;
   prequel?: Book | BookId | null;
   author?: Author | AuthorId;
@@ -127,6 +129,7 @@ export interface BookFilter {
   order?: ValueFilter<number, never>;
   notes?: ValueFilter<string, never>;
   acknowledgements?: ValueFilter<string, null>;
+  authorsNickNames?: ValueFilter<string, null>;
   search?: ValueFilter<string, null>;
   deletedAt?: ValueFilter<Date, null>;
   createdAt?: ValueFilter<Date, never>;
@@ -150,6 +153,7 @@ export interface BookGraphQLFilter {
   order?: ValueGraphQLFilter<number>;
   notes?: ValueGraphQLFilter<string>;
   acknowledgements?: ValueGraphQLFilter<string>;
+  authorsNickNames?: ValueGraphQLFilter<string>;
   search?: ValueGraphQLFilter<string>;
   deletedAt?: ValueGraphQLFilter<Date>;
   createdAt?: ValueGraphQLFilter<Date>;
@@ -173,6 +177,7 @@ export interface BookOrder {
   order?: OrderBy;
   notes?: OrderBy;
   acknowledgements?: OrderBy;
+  authorsNickNames?: OrderBy;
   search?: OrderBy;
   deletedAt?: OrderBy;
   createdAt?: OrderBy;
@@ -260,6 +265,14 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
     setField(this, "acknowledgements", cleanStringValue(acknowledgements));
   }
 
+  get authorsNickNames(): string | undefined {
+    return getField(this, "authorsNickNames");
+  }
+
+  set authorsNickNames(authorsNickNames: string | undefined) {
+    setField(this, "authorsNickNames", cleanStringValue(authorsNickNames));
+  }
+
   abstract readonly search: ReactiveField<Book, string | undefined>;
 
   get deletedAt(): Date | undefined {
@@ -280,10 +293,13 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   /**
    * Partial update taking any subset of the entities fields.
+   *
    * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
-   * is left as untouched
+   * is left as untouched.
+   *
    * Collections are exhaustively set to the new values, however,
    * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   *
    * @example
    * ```
    * entity.setPartial({
@@ -300,10 +316,13 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   /**
    * Partial update taking any subset of the entities fields.
+   *
    * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
-   * is left as untouched
+   * is left as untouched.
+   *
    * Collections are exhaustively set to the new values, however,
    * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   *
    * @example
    * ```
    * entity.setPartial({
@@ -320,6 +339,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   /**
    * Details the field changes of the entity within the current unit of work.
+   *
    * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<Book> {
@@ -331,7 +351,8 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   /**
-   * Traverse from this entity using a lens, and load the result
+   * Traverse from this entity using a lens, and load the result.
+   *
    * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   load<U, V>(fn: (lens: Lens<Book>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
@@ -340,6 +361,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   /**
    * Hydrate this entity using a load hint
+   *
    * @see {@link https://joist-orm.io/docs/features/loading-entities#1-object-graph-navigation | Loading entities} on the Joist docs
    */
   populate<const H extends LoadHint<Book>>(hint: H): Promise<Loaded<Book, H>>;
@@ -357,15 +379,19 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   /**
-   * Given a load hint, checks if it is loaded within the unit of work. Type Guarded via Loaded<>
+   * Given a load hint, checks if it is loaded within the unit of work.
+   *
+   * Type Guarded via Loaded<>
    */
   isLoaded<const H extends LoadHint<Book>>(hint: H): this is Loaded<Book, H> {
     return isLoaded(this as any as Book, hint);
   }
 
   /**
-   * Build a type-safe, loadable and relation aware POJO from this entity, given a hint
+   * Build a type-safe, loadable and relation aware POJO from this entity, given a hint.
+   *
    * Note: As the hint might load, this returns a Promise
+   *
    * @example
    * ```
    * const payload = await a.toJSON({

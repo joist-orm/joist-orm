@@ -10,6 +10,7 @@ export type IdType = number | string;
 
 /** A marker/base interface for all of our entity types. */
 export interface Entity {
+  __orm: { filterType: unknown };
   id: IdType;
   idMaybe: IdType | undefined;
   /** The entity id that is always tagged, regardless of the idType config. */

@@ -1,3 +1,10 @@
+# [1.195.0](https://github.com/joist-orm/joist-orm/compare/v1.194.6...v1.195.0) (2024-09-18)
+
+
+### Features
+
+* sync lens ([#1227](https://github.com/joist-orm/joist-orm/issues/1227)) ([1e1043d](https://github.com/joist-orm/joist-orm/commit/1e1043da690533023dfcc771bc5330512bd0e086))
+
 ## [1.194.6](https://github.com/joist-orm/joist-orm/compare/v1.194.5...v1.194.6) (2024-09-18)
 
 

@@ -11,6 +11,8 @@ import {
   type FilterOf,
   type Flavor,
   getField,
+  type GetLens,
+  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -170,6 +172,10 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
 
   load<U, V>(fn: (lens: Lens<ParentItem>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as ParentItem, fn, opts);
+  }
+
+  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
+    return getLens(parentItemMeta, this, fn as never);
   }
 
   populate<const H extends LoadHint<ParentItem>>(hint: H): Promise<Loaded<ParentItem, H>>;

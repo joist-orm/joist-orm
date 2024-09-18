@@ -11,6 +11,8 @@ import {
   type FilterOf,
   type Flavor,
   getField,
+  type GetLens,
+  getLens,
   type GraphQLFilterOf,
   hasManyToMany,
   isLoaded,
@@ -186,6 +188,10 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
 
   load<U, V>(fn: (lens: Lens<Tag>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as Tag, fn, opts);
+  }
+
+  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
+    return getLens(tagMeta, this, fn as never);
   }
 
   populate<const H extends LoadHint<Tag>>(hint: H): Promise<Loaded<Tag, H>>;

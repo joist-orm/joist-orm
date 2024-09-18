@@ -7,6 +7,8 @@ import {
   failNoIdYet,
   type Flavor,
   getField,
+  type GetLens,
+  getLens,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -121,6 +123,10 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
 
   load<U, V>(fn: (lens: Lens<DatabaseOwner>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as DatabaseOwner, fn, opts);
+  }
+
+  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
+    return getLens(databaseOwnerMeta, this, fn as never);
   }
 
   populate<const H extends LoadHint<DatabaseOwner>>(hint: H): Promise<Loaded<DatabaseOwner, H>>;

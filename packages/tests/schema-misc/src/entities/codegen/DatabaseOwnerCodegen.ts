@@ -41,8 +41,7 @@ export interface DatabaseOwnerOpts {
   name: string;
 }
 
-export interface DatabaseOwnerIdsOpts {
-}
+export interface DatabaseOwnerIdsOpts {}
 
 export interface DatabaseOwnerFilter {
   id?: ValueFilter<DatabaseOwnerId, never> | null;
@@ -124,9 +123,10 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
   }
 
   populate<const H extends LoadHint<DatabaseOwner>>(hint: H): Promise<Loaded<DatabaseOwner, H>>;
-  populate<const H extends LoadHint<DatabaseOwner>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<DatabaseOwner, H>>;
+  populate<const H extends LoadHint<DatabaseOwner>>(opts: {
+    hint: H;
+    forceReload?: boolean;
+  }): Promise<Loaded<DatabaseOwner, H>>;
   populate<const H extends LoadHint<DatabaseOwner>, V>(
     hint: H,
     fn: (databaseOwner: Loaded<DatabaseOwner, H>) => V,

@@ -35,4 +35,3 @@ export function maybeAdjustForLocalDevelopment(pkgVersion: string): string {
     return pkgVersion;
   }
 }
-

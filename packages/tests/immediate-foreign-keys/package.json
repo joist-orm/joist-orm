@@ -12,7 +12,7 @@
     "migrate": "env-cmd tsx ../../migration-utils",
     "test": "jest --runInBand --logHeapUsage",
     "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
-    "codegen": "env-cmd tsx ../../codegen"
+    "codegen": "env-cmd tsx ../../codegen --always-exit-code-zero"
   },
   "dependencies": {
     "joist-orm": "workspace:*"

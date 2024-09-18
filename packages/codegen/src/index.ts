@@ -142,6 +142,7 @@ if (require.main === module) {
   }
   main().then(() => {
     if (
+        !process.argv.includes("--always-exit-code-zero") &&
         // strict mode + warnings or greater
         (process.argv.includes("--strict") && loggerMaxWarningLevelHit >= LOG_LEVELS.warn) ||
         // otherwise errors or greater

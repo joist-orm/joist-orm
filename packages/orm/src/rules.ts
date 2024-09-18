@@ -11,7 +11,7 @@ import { MaybePromise, groupBy, maybePromiseThen } from "./utils";
  *
  * Consumers can extend `GenericError` to add fields relevant for their application.
  */
-export type ValidationRuleResult<E extends GenericError> = string | string[] | E | E[] | undefined;
+export type ValidationRuleResult<E extends GenericError> = string | string[] | E | E[] | {field: string, msg: string } | undefined;
 
 /** An entity validation rule. */
 export type ValidationRule<T extends Entity> = (entity: T) => MaybePromise<ValidationRuleResult<any>>;
@@ -34,7 +34,7 @@ export type AsyncDerivedFieldInternal<T extends Entity> = {
 export type GenericError = { message: string };
 
 /** An extension to GenericError which associates the error to a specific entity */
-export type ValidationError = { entity: Entity } & GenericError;
+export type ValidationError = { entity: Entity, field?: string } & GenericError;
 
 export class ValidationErrors extends Error {
   public errors: Array<GenericError | ValidationError>;
@@ -57,7 +57,7 @@ export class ValidationErrors extends Error {
  */
 export function newRequiredRule<T extends Entity>(key: keyof FieldsOf<T> & string): ValidationRule<T> {
   // Use getField so that we peer through relations
-  return (entity) => (getField(entity, key) === undefined ? `${key} is required` : undefined);
+  return (entity) => (getField(entity, key) === undefined ? { field: key, code: 'required', message: `${key} is required` }: undefined);
 }
 
 /**
@@ -75,7 +75,7 @@ export function cannotBeUpdated<T extends Entity, K extends keyof Changes<T> & s
     if ((entity as any as EntityChanges<T>).changes[field].hasUpdated) {
       return maybePromiseThen(unless ? unless(entity) : false, (result) => {
         if (!result) {
-          return `${field} cannot be updated`;
+          return {field, code: 'not-updatable', message: `${field} cannot be updated` };
         }
         return undefined;
       });
@@ -139,12 +139,12 @@ export function minValueRule<T extends Entity, K extends keyof T & string>(
 
     // Show an error when the value type is not a number
     if (typeof value !== "number") {
-      return `${field} must be a number`;
+      return { field, code: 'expect-number', message: `${field} must be a number` };
     }
 
     // Show an error when the value is smaller than the minimum value
     if (value < minValue) {
-      return `${field} must be greater than or equal to ${minValue}`;
+      return { field, code: 'expect-number-lt-min', message: `${field} must be greater than or equal to ${minValue}` };
     }
 
     return;
@@ -179,7 +179,7 @@ export function maxValueRule<T extends Entity, K extends keyof T & string>(
 
     // Show an error when the value is smaller than the minimum value
     if (value > maxValue) {
-      return `${field} must be smaller than or equal to ${maxValue}`;
+      return { field, code: 'expect-number-gt-max', message: `${field} must be smaller than or equal to ${maxValue}` };
     }
 
     return;

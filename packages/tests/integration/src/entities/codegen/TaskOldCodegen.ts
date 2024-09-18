@@ -201,67 +201,67 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   }
 
   get comments(): Collection<TaskOld, Comment> {
-    return this.__data.relations.comments ??= hasMany(
+    return (this.__data.relations.comments ??= hasMany(
       this as any as TaskOld,
       commentMeta,
       "comments",
       "parent",
       "parent_task_id",
       undefined,
-    );
+    ));
   }
 
   get oldTaskTaskItems(): Collection<TaskOld, TaskItem> {
-    return this.__data.relations.oldTaskTaskItems ??= hasMany(
+    return (this.__data.relations.oldTaskTaskItems ??= hasMany(
       this as any as TaskOld,
       taskItemMeta,
       "oldTaskTaskItems",
       "oldTask",
       "old_task_id",
       undefined,
-    );
+    ));
   }
 
   get tasks(): Collection<TaskOld, TaskOld> {
-    return this.__data.relations.tasks ??= hasMany(
+    return (this.__data.relations.tasks ??= hasMany(
       this as any as TaskOld,
       taskOldMeta,
       "tasks",
       "parentOldTask",
       "parent_old_task_id",
       undefined,
-    );
+    ));
   }
 
   get parentOldTask(): ManyToOneReference<TaskOld, TaskOld, undefined> {
-    return this.__data.relations.parentOldTask ??= hasOne(
+    return (this.__data.relations.parentOldTask ??= hasOne(
       this as any as TaskOld,
       taskOldMeta,
       "parentOldTask",
       "tasks",
-    );
+    ));
   }
 
   get parentOldTasksRecursive(): ReadOnlyCollection<TaskOld, TaskOld> {
-    return this.__data.relations.parentOldTasksRecursive ??= hasRecursiveParents(
+    return (this.__data.relations.parentOldTasksRecursive ??= hasRecursiveParents(
       this as any as TaskOld,
       "parentOldTasksRecursive",
       "parentOldTask",
       "tasksRecursive",
-    );
+    ));
   }
 
   get tasksRecursive(): ReadOnlyCollection<TaskOld, TaskOld> {
-    return this.__data.relations.tasksRecursive ??= hasRecursiveChildren(
+    return (this.__data.relations.tasksRecursive ??= hasRecursiveChildren(
       this as any as TaskOld,
       "tasksRecursive",
       "tasks",
       "parentOldTasksRecursive",
-    );
+    ));
   }
 
   get publishers(): Collection<TaskOld, Publisher> {
-    return this.__data.relations.publishers ??= hasManyToMany(
+    return (this.__data.relations.publishers ??= hasManyToMany(
       this as any as TaskOld,
       "tasks_to_publishers",
       "publishers",
@@ -269,6 +269,6 @@ export abstract class TaskOldCodegen extends Task implements Entity {
       publisherMeta,
       "tasks",
       "publisher_id",
-    );
+    ));
   }
 }

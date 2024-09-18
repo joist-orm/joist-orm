@@ -205,24 +205,24 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get books(): Collection<Author, Book> {
-    return this.__data.relations.books ??= hasMany(
+    return (this.__data.relations.books ??= hasMany(
       this as any as Author,
       bookMeta,
       "books",
       "author",
       "author_id",
       undefined,
-    );
+    ));
   }
 
   get comments(): Collection<Author, Comment> {
-    return this.__data.relations.comments ??= hasMany(
+    return (this.__data.relations.comments ??= hasMany(
       this as any as Author,
       commentMeta,
       "comments",
       "parent",
       "parent_author_id",
       undefined,
-    );
+    ));
   }
 }

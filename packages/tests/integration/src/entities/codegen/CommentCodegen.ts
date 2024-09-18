@@ -252,22 +252,22 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get books(): Collection<Comment, Book> {
-    return this.__data.relations.books ??= hasMany(
+    return (this.__data.relations.books ??= hasMany(
       this as any as Comment,
       bookMeta,
       "books",
       "randomComment",
       "random_comment_id",
-      { "field": "title", "direction": "ASC" },
-    );
+      { field: "title", direction: "ASC" },
+    ));
   }
 
   get user(): ManyToOneReference<Comment, User, undefined> {
-    return this.__data.relations.user ??= hasOne(this as any as Comment, userMeta, "user", "createdComments");
+    return (this.__data.relations.user ??= hasOne(this as any as Comment, userMeta, "user", "createdComments"));
   }
 
   get likedByUsers(): Collection<Comment, User> {
-    return this.__data.relations.likedByUsers ??= hasManyToMany(
+    return (this.__data.relations.likedByUsers ??= hasManyToMany(
       this as any as Comment,
       "users_to_comments",
       "likedByUsers",
@@ -275,10 +275,10 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
       userMeta,
       "likedComments",
       "liked_by_user_id",
-    );
+    ));
   }
 
   get parent(): PolymorphicReference<Comment, CommentParent, never> {
-    return this.__data.relations.parent ??= hasOnePolymorphic(this as any as Comment, "parent");
+    return (this.__data.relations.parent ??= hasOnePolymorphic(this as any as Comment, "parent"));
   }
 }

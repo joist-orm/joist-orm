@@ -53,8 +53,7 @@ export interface AdminUserOpts extends UserOpts {
   role: string;
 }
 
-export interface AdminUserIdsOpts extends UserIdsOpts {
-}
+export interface AdminUserIdsOpts extends UserIdsOpts {}
 
 export interface AdminUserFilter extends UserFilter {
   role?: ValueFilter<string, never>;
@@ -133,9 +132,10 @@ export abstract class AdminUserCodegen extends User implements Entity {
   }
 
   populate<const H extends LoadHint<AdminUser>>(hint: H): Promise<Loaded<AdminUser, H>>;
-  populate<const H extends LoadHint<AdminUser>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<AdminUser, H>>;
+  populate<const H extends LoadHint<AdminUser>>(opts: {
+    hint: H;
+    forceReload?: boolean;
+  }): Promise<Loaded<AdminUser, H>>;
   populate<const H extends LoadHint<AdminUser>, V>(hint: H, fn: (u: Loaded<AdminUser, H>) => V): Promise<V>;
   populate<const H extends LoadHint<AdminUser>, V>(
     opts: { hint: H; forceReload?: boolean },

@@ -247,18 +247,18 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get taskTaskItems(): Collection<Task, TaskItem> {
-    return this.__data.relations.taskTaskItems ??= hasMany(
+    return (this.__data.relations.taskTaskItems ??= hasMany(
       this as any as Task,
       taskItemMeta,
       "taskTaskItems",
       "task",
       "task_id",
       undefined,
-    );
+    ));
   }
 
   get tags(): Collection<Task, Tag> {
-    return this.__data.relations.tags ??= hasManyToMany(
+    return (this.__data.relations.tags ??= hasManyToMany(
       this as any as Task,
       "task_to_tags",
       "tags",
@@ -266,6 +266,6 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
       tagMeta,
       "tasks",
       "tag_id",
-    );
+    ));
   }
 }

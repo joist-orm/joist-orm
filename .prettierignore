@@ -1,0 +1,4 @@
+# Ignore Joist Codegen Assets
+**/entities/codegen/*.ts
+**/entities/metadata.ts
+**/entities/factories.ts

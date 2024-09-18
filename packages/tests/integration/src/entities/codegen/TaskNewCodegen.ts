@@ -178,22 +178,22 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   }
 
   get newTaskTaskItems(): Collection<TaskNew, TaskItem> {
-    return this.__data.relations.newTaskTaskItems ??= hasMany(
+    return (this.__data.relations.newTaskTaskItems ??= hasMany(
       this as any as TaskNew,
       taskItemMeta,
       "newTaskTaskItems",
       "newTask",
       "new_task_id",
       undefined,
-    );
+    ));
   }
 
   get specialNewAuthor(): ManyToOneReference<TaskNew, Author, undefined> {
-    return this.__data.relations.specialNewAuthor ??= hasOne(
+    return (this.__data.relations.specialNewAuthor ??= hasOne(
       this as any as TaskNew,
       authorMeta,
       "specialNewAuthor",
       "tasks",
-    );
+    ));
   }
 }

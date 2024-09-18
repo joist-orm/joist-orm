@@ -336,104 +336,104 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get advances(): Collection<Book, BookAdvance> {
-    return this.__data.relations.advances ??= hasMany(
+    return (this.__data.relations.advances ??= hasMany(
       this as any as Book,
       bookAdvanceMeta,
       "advances",
       "book",
       "book_id",
       undefined,
-    );
+    ));
   }
 
   get reviews(): Collection<Book, BookReview> {
-    return this.__data.relations.reviews ??= hasMany(
+    return (this.__data.relations.reviews ??= hasMany(
       this as any as Book,
       bookReviewMeta,
       "reviews",
       "book",
       "book_id",
       undefined,
-    );
+    ));
   }
 
   get comments(): Collection<Book, Comment> {
-    return this.__data.relations.comments ??= hasMany(
+    return (this.__data.relations.comments ??= hasMany(
       this as any as Book,
       commentMeta,
       "comments",
       "parent",
       "parent_book_id",
       undefined,
-    );
+    ));
   }
 
   get prequel(): ManyToOneReference<Book, Book, undefined> {
-    return this.__data.relations.prequel ??= hasOne(this as any as Book, bookMeta, "prequel", "sequel");
+    return (this.__data.relations.prequel ??= hasOne(this as any as Book, bookMeta, "prequel", "sequel"));
   }
 
   get author(): ManyToOneReference<Book, Author, never> {
-    return this.__data.relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
+    return (this.__data.relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books"));
   }
 
   get randomComment(): ManyToOneReference<Book, Comment, undefined> {
-    return this.__data.relations.randomComment ??= hasOne(this as any as Book, commentMeta, "randomComment", "books");
+    return (this.__data.relations.randomComment ??= hasOne(this as any as Book, commentMeta, "randomComment", "books"));
   }
 
   get prequelsRecursive(): ReadOnlyCollection<Book, Book> {
-    return this.__data.relations.prequelsRecursive ??= hasRecursiveParents(
+    return (this.__data.relations.prequelsRecursive ??= hasRecursiveParents(
       this as any as Book,
       "prequelsRecursive",
       "prequel",
       "sequelsRecursive",
-    );
+    ));
   }
 
   get sequelsRecursive(): ReadOnlyCollection<Book, Book> {
-    return this.__data.relations.sequelsRecursive ??= hasRecursiveChildren(
+    return (this.__data.relations.sequelsRecursive ??= hasRecursiveChildren(
       this as any as Book,
       "sequelsRecursive",
       "sequel",
       "prequelsRecursive",
-    );
+    ));
   }
 
   get sequel(): OneToOneReference<Book, Book> {
-    return this.__data.relations.sequel ??= hasOneToOne(
+    return (this.__data.relations.sequel ??= hasOneToOne(
       this as any as Book,
       bookMeta,
       "sequel",
       "prequel",
       "prequel_id",
-    );
+    ));
   }
 
   get currentDraftAuthor(): OneToOneReference<Book, Author> {
-    return this.__data.relations.currentDraftAuthor ??= hasOneToOne(
+    return (this.__data.relations.currentDraftAuthor ??= hasOneToOne(
       this as any as Book,
       authorMeta,
       "currentDraftAuthor",
       "currentDraftBook",
       "current_draft_book_id",
-    );
+    ));
   }
 
   get favoriteAuthor(): OneToOneReference<Book, Author> {
-    return this.__data.relations.favoriteAuthor ??= hasOneToOne(
+    return (this.__data.relations.favoriteAuthor ??= hasOneToOne(
       this as any as Book,
       authorMeta,
       "favoriteAuthor",
       "favoriteBook",
       "favorite_book_id",
-    );
+    ));
   }
 
   get image(): OneToOneReference<Book, Image> {
-    return this.__data.relations.image ??= hasOneToOne(this as any as Book, imageMeta, "image", "book", "book_id");
+    return (this.__data.relations.image ??= hasOneToOne(this as any as Book, imageMeta, "image", "book", "book_id"));
   }
 
   get tags(): Collection<Book, Tag> {
-    return this.__data.relations.tags ??= hasManyToMany(
+    return (this.__data.relations.tags ??= hasManyToMany(
       this as any as Book,
       "books_to_tags",
       "tags",
@@ -441,6 +441,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
       tagMeta,
       "books",
       "tag_id",
-    );
+    ));
   }
 }

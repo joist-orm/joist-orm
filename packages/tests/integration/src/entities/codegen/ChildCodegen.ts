@@ -184,13 +184,13 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get groups(): Collection<Child, ChildGroup> {
-    return this.__data.relations.groups ??= hasMany(
+    return (this.__data.relations.groups ??= hasMany(
       this as any as Child,
       childGroupMeta,
       "groups",
       "childGroupId",
       "child_id_group_id",
       undefined,
-    );
+    ));
   }
 }

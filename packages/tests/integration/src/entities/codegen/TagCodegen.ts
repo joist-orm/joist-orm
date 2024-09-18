@@ -213,7 +213,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get authors(): Collection<Tag, Author> {
-    return this.__data.relations.authors ??= hasManyToMany(
+    return (this.__data.relations.authors ??= hasManyToMany(
       this as any as Tag,
       "authors_to_tags",
       "authors",
@@ -221,11 +221,11 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
       authorMeta,
       "tags",
       "author_id",
-    );
+    ));
   }
 
   get books(): Collection<Tag, Book> {
-    return this.__data.relations.books ??= hasManyToMany(
+    return (this.__data.relations.books ??= hasManyToMany(
       this as any as Tag,
       "books_to_tags",
       "books",
@@ -233,11 +233,11 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
       bookMeta,
       "tags",
       "book_id",
-    );
+    ));
   }
 
   get bookReviews(): Collection<Tag, BookReview> {
-    return this.__data.relations.bookReviews ??= hasManyToMany(
+    return (this.__data.relations.bookReviews ??= hasManyToMany(
       this as any as Tag,
       "book_reviews_to_tags",
       "bookReviews",
@@ -245,11 +245,11 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
       bookReviewMeta,
       "tags",
       "book_review_id",
-    );
+    ));
   }
 
   get publishers(): Collection<Tag, Publisher> {
-    return this.__data.relations.publishers ??= hasManyToMany(
+    return (this.__data.relations.publishers ??= hasManyToMany(
       this as any as Tag,
       "publishers_to_tags",
       "publishers",
@@ -257,11 +257,11 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
       publisherMeta,
       "tags",
       "publisher_id",
-    );
+    ));
   }
 
   get tasks(): Collection<Tag, Task> {
-    return this.__data.relations.tasks ??= hasManyToMany(
+    return (this.__data.relations.tasks ??= hasManyToMany(
       this as any as Tag,
       "task_to_tags",
       "tasks",
@@ -269,6 +269,6 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
       taskMeta,
       "tags",
       "task_id",
-    );
+    ));
   }
 }

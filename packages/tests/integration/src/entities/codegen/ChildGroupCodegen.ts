@@ -184,9 +184,10 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   }
 
   populate<const H extends LoadHint<ChildGroup>>(hint: H): Promise<Loaded<ChildGroup, H>>;
-  populate<const H extends LoadHint<ChildGroup>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<ChildGroup, H>>;
+  populate<const H extends LoadHint<ChildGroup>>(opts: {
+    hint: H;
+    forceReload?: boolean;
+  }): Promise<Loaded<ChildGroup, H>>;
   populate<const H extends LoadHint<ChildGroup>, V>(hint: H, fn: (cg: Loaded<ChildGroup, H>) => V): Promise<V>;
   populate<const H extends LoadHint<ChildGroup>, V>(
     opts: { hint: H; forceReload?: boolean },
@@ -210,31 +211,31 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   }
 
   get childItems(): Collection<ChildGroup, ChildItem> {
-    return this.__data.relations.childItems ??= hasMany(
+    return (this.__data.relations.childItems ??= hasMany(
       this as any as ChildGroup,
       childItemMeta,
       "childItems",
       "childGroup",
       "child_group_id",
       undefined,
-    );
+    ));
   }
 
   get childGroupId(): ManyToOneReference<ChildGroup, Child, never> {
-    return this.__data.relations.childGroupId ??= hasOne(
+    return (this.__data.relations.childGroupId ??= hasOne(
       this as any as ChildGroup,
       childMeta,
       "childGroupId",
       "groups",
-    );
+    ));
   }
 
   get parentGroup(): ManyToOneReference<ChildGroup, ParentGroup, never> {
-    return this.__data.relations.parentGroup ??= hasOne(
+    return (this.__data.relations.parentGroup ??= hasOne(
       this as any as ChildGroup,
       parentGroupMeta,
       "parentGroup",
       "childGroups",
-    );
+    ));
   }
 }

@@ -164,9 +164,10 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   populate<const H extends LoadHint<AuthorSchedule>>(hint: H): Promise<Loaded<AuthorSchedule, H>>;
-  populate<const H extends LoadHint<AuthorSchedule>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<AuthorSchedule, H>>;
+  populate<const H extends LoadHint<AuthorSchedule>>(opts: {
+    hint: H;
+    forceReload?: boolean;
+  }): Promise<Loaded<AuthorSchedule, H>>;
   populate<const H extends LoadHint<AuthorSchedule>, V>(
     hint: H,
     fn: (authorSchedule: Loaded<AuthorSchedule, H>) => V,
@@ -193,6 +194,6 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   get author(): ManyToOneReference<AuthorSchedule, Author, never> {
-    return this.__data.relations.author ??= hasOne(this as any as AuthorSchedule, authorMeta, "author", "schedules");
+    return (this.__data.relations.author ??= hasOne(this as any as AuthorSchedule, authorMeta, "author", "schedules"));
   }
 }

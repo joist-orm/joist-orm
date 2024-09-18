@@ -163,9 +163,10 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   populate<const H extends LoadHint<LargePublisher>>(hint: H): Promise<Loaded<LargePublisher, H>>;
-  populate<const H extends LoadHint<LargePublisher>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<LargePublisher, H>>;
+  populate<const H extends LoadHint<LargePublisher>>(opts: {
+    hint: H;
+    forceReload?: boolean;
+  }): Promise<Loaded<LargePublisher, H>>;
   populate<const H extends LoadHint<LargePublisher>, V>(hint: H, fn: (p: Loaded<LargePublisher, H>) => V): Promise<V>;
   populate<const H extends LoadHint<LargePublisher>, V>(
     opts: { hint: H; forceReload?: boolean },
@@ -189,24 +190,24 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   get critics(): Collection<LargePublisher, Critic> {
-    return this.__data.relations.critics ??= hasMany(
+    return (this.__data.relations.critics ??= hasMany(
       this as any as LargePublisher,
       criticMeta,
       "critics",
       "favoriteLargePublisher",
       "favorite_large_publisher_id",
       undefined,
-    );
+    ));
   }
 
   get users(): Collection<LargePublisher, User> {
-    return this.__data.relations.users ??= hasMany(
+    return (this.__data.relations.users ??= hasMany(
       this as any as LargePublisher,
       userMeta,
       "users",
       "favoritePublisher",
       "favorite_publisher_large_id",
       undefined,
-    );
+    ));
   }
 }

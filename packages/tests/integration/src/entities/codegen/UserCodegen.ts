@@ -338,42 +338,42 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get createdComments(): Collection<User, Comment> {
-    return this.__data.relations.createdComments ??= hasMany(
+    return (this.__data.relations.createdComments ??= hasMany(
       this as any as User,
       commentMeta,
       "createdComments",
       "user",
       "user_id",
       undefined,
-    );
+    ));
   }
 
   get directs(): Collection<User, User> {
-    return this.__data.relations.directs ??= hasMany(
+    return (this.__data.relations.directs ??= hasMany(
       this as any as User,
       userMeta,
       "directs",
       "manager",
       "manager_id",
       undefined,
-    );
+    ));
   }
 
   get manager(): ManyToOneReference<User, User, undefined> {
-    return this.__data.relations.manager ??= hasOne(this as any as User, userMeta, "manager", "directs");
+    return (this.__data.relations.manager ??= hasOne(this as any as User, userMeta, "manager", "directs"));
   }
 
   get authorManyToOne(): ManyToOneReference<User, Author, undefined> {
-    return this.__data.relations.authorManyToOne ??= hasOne(
+    return (this.__data.relations.authorManyToOne ??= hasOne(
       this as any as User,
       authorMeta,
       "authorManyToOne",
       "userOneToOne",
-    );
+    ));
   }
 
   get likedComments(): Collection<User, Comment> {
-    return this.__data.relations.likedComments ??= hasManyToMany(
+    return (this.__data.relations.likedComments ??= hasManyToMany(
       this as any as User,
       "users_to_comments",
       "likedComments",
@@ -381,10 +381,10 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
       commentMeta,
       "likedByUsers",
       "comment_id",
-    );
+    ));
   }
 
   get favoritePublisher(): PolymorphicReference<User, UserFavoritePublisher, undefined> {
-    return this.__data.relations.favoritePublisher ??= hasOnePolymorphic(this as any as User, "favoritePublisher");
+    return (this.__data.relations.favoritePublisher ??= hasOnePolymorphic(this as any as User, "favoritePublisher"));
   }
 }

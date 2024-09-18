@@ -173,9 +173,10 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
   }
 
   populate<const H extends LoadHint<ParentItem>>(hint: H): Promise<Loaded<ParentItem, H>>;
-  populate<const H extends LoadHint<ParentItem>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<ParentItem, H>>;
+  populate<const H extends LoadHint<ParentItem>>(opts: {
+    hint: H;
+    forceReload?: boolean;
+  }): Promise<Loaded<ParentItem, H>>;
   populate<const H extends LoadHint<ParentItem>, V>(hint: H, fn: (pi: Loaded<ParentItem, H>) => V): Promise<V>;
   populate<const H extends LoadHint<ParentItem>, V>(
     opts: { hint: H; forceReload?: boolean },
@@ -199,22 +200,22 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
   }
 
   get childItems(): Collection<ParentItem, ChildItem> {
-    return this.__data.relations.childItems ??= hasMany(
+    return (this.__data.relations.childItems ??= hasMany(
       this as any as ParentItem,
       childItemMeta,
       "childItems",
       "parentItem",
       "parent_item_id",
       undefined,
-    );
+    ));
   }
 
   get parentGroup(): ManyToOneReference<ParentItem, ParentGroup, never> {
-    return this.__data.relations.parentGroup ??= hasOne(
+    return (this.__data.relations.parentGroup ??= hasOne(
       this as any as ParentItem,
       parentGroupMeta,
       "parentGroup",
       "parentItems",
-    );
+    ));
   }
 }

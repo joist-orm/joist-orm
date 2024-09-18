@@ -11,6 +11,8 @@ import {
   type FilterOf,
   type Flavor,
   getField,
+  type GetLens,
+  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -181,6 +183,10 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
 
   load<U, V>(fn: (lens: Lens<ChildGroup>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as ChildGroup, fn, opts);
+  }
+
+  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
+    return getLens(childGroupMeta, this, fn as never);
   }
 
   populate<const H extends LoadHint<ChildGroup>>(hint: H): Promise<Loaded<ChildGroup, H>>;

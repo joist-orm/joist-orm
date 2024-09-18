@@ -76,7 +76,7 @@ import {
   setField,
   setOpts,
   toIdOf,
-  toJSON,
+  toJSON, getLens, GetLens,
 } from "./symbols";
 import { assertNever, fail, uncapitalize } from "./utils";
 
@@ -271,6 +271,10 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
       load<U, V>(fn: (lens: ${Lens}<${entity.type}>) => ${Lens}<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
         return ${loadLens}(this as any as ${entityName}, fn, opts);
+      }
+
+      get<U, V>(fn: (lens: ${GetLens}<Omit<this, 'fullNonReactiveAccess'>>) => ${GetLens}<U, V>): V {
+        return ${getLens}(${entity.metaType}, this, fn as never);
       }
 
       populate<const H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>>;

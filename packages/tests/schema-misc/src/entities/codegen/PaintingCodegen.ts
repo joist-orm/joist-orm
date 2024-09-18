@@ -10,6 +10,8 @@ import {
   type FilterOf,
   type Flavor,
   getField,
+  type GetLens,
+  getLens,
   type GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -162,6 +164,10 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
 
   load<U, V>(fn: (lens: Lens<Painting>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as Painting, fn, opts);
+  }
+
+  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
+    return getLens(paintingMeta, this, fn as never);
   }
 
   populate<const H extends LoadHint<Painting>>(hint: H): Promise<Loaded<Painting, H>>;

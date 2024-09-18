@@ -10,6 +10,8 @@ import {
   type FilterOf,
   type Flavor,
   getField,
+  type GetLens,
+  getLens,
   type GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -143,6 +145,10 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
 
   load<U, V>(fn: (lens: Lens<T5BookReview>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as T5BookReview, fn, opts);
+  }
+
+  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
+    return getLens(t5BookReviewMeta, this, fn as never);
   }
 
   populate<const H extends LoadHint<T5BookReview>>(hint: H): Promise<Loaded<T5BookReview, H>>;

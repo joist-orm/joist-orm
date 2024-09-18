@@ -169,7 +169,7 @@ export function newTestInstance<T extends Entity>(
             return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
           }
         }
-      } else if (field.kind === "enum" && required) {
+      } else if (field.kind === "enum" && required && !field.derived) {
         return [fieldName, field.enumDetailType.getValues()[0]];
       } else if (field.kind === "poly" && required) {
         return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];

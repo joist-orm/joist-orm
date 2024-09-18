@@ -10,8 +10,8 @@ export const logger = {
     loggerMaxWarningLevelHit = Math.max(loggerMaxWarningLevelHit, LOG_LEVELS.warn);
     console.warn("WARNING:", ...args);
   },
-  error(...args: Parameters<typeof console["warn"]>) {
+  error(...args: Parameters<typeof console["error"]>) {
     loggerMaxWarningLevelHit = Math.max(loggerMaxWarningLevelHit, LOG_LEVELS.error);
-    console.warn("ERROR:", ...args);
+    console.error("ERROR:", ...args);
   }
 }

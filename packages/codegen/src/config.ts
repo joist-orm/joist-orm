@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getThisVersion } from "./codemods";
 import { getStiEntities } from "./inheritance";
 import { fail, sortKeys, trueIfResolved } from "./utils";
+import { logger } from "./logger";
 
 const jsonFormatter = createFromBuffer(getBuffer());
 
@@ -138,7 +139,7 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
   for (const [entityName, entityConfig] of Object.entries(config.entities)) {
     const entities = entitiesByName[entityName];
     if (!entities) {
-      console.log(`WARNING: Found config for non-existent entity ${entityName}`);
+      logger.warn(`Found config for non-existent entity ${entityName}`);
       continue;
     }
     // We don't have keyBy...
@@ -154,7 +155,7 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
         const stiEntities = getStiEntities(db.entities).get(entity.name)?.subTypes;
         field = stiEntities?.flatMap((st) => [...st.primitives, ...st.enums]).find((f) => f.fieldName === name);
       }
-      if (!field) console.log(`WARNING: Found config for non-existent field ${entityName}.${name}`);
+      if (!field) logger.warn(`Found config for non-existent field ${entityName}.${name}`);
     }
 
     // Check relations
@@ -184,7 +185,7 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
           ])
           ?.find((f) => f.fieldName === name);
       }
-      if (!relation) console.log(`WARNING: Found config for non-existent relation ${entityName}.${name}`);
+      if (!relation) logger.warn(`Found config for non-existent relation ${entityName}.${name}`);
     }
   }
 }

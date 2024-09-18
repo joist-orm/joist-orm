@@ -351,10 +351,9 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   populate<const H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>>;
-  populate<const H extends LoadHint<Publisher>>(opts: {
-    hint: H;
-    forceReload?: boolean;
-  }): Promise<Loaded<Publisher, H>>;
+  populate<const H extends LoadHint<Publisher>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<Publisher, H>>;
   populate<const H extends LoadHint<Publisher>, V>(hint: H, fn: (p: Loaded<Publisher, H>) => V): Promise<V>;
   populate<const H extends LoadHint<Publisher>, V>(
     opts: { hint: H; forceReload?: boolean },
@@ -378,60 +377,55 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get authors(): Collection<Publisher, Author> {
-    return (this.__data.relations.authors ??= hasMany(
+    return this.__data.relations.authors ??= hasMany(
       this as any as Publisher,
       authorMeta,
       "authors",
       "publisher",
       "publisher_id",
       undefined,
-    ));
+    );
   }
 
   get bookAdvances(): Collection<Publisher, BookAdvance> {
-    return (this.__data.relations.bookAdvances ??= hasMany(
+    return this.__data.relations.bookAdvances ??= hasMany(
       this as any as Publisher,
       bookAdvanceMeta,
       "bookAdvances",
       "publisher",
       "publisher_id",
       undefined,
-    ));
+    );
   }
 
   get comments(): Collection<Publisher, Comment> {
-    return (this.__data.relations.comments ??= hasMany(
+    return this.__data.relations.comments ??= hasMany(
       this as any as Publisher,
       commentMeta,
       "comments",
       "parent",
       "parent_publisher_id",
       undefined,
-    ));
+    );
   }
 
   get images(): Collection<Publisher, Image> {
-    return (this.__data.relations.images ??= hasMany(
+    return this.__data.relations.images ??= hasMany(
       this as any as Publisher,
       imageMeta,
       "images",
       "publisher",
       "publisher_id",
       undefined,
-    ));
+    );
   }
 
   get group(): ManyToOneReference<Publisher, PublisherGroup, undefined> {
-    return (this.__data.relations.group ??= hasOne(
-      this as any as Publisher,
-      publisherGroupMeta,
-      "group",
-      "publishers",
-    ));
+    return this.__data.relations.group ??= hasOne(this as any as Publisher, publisherGroupMeta, "group", "publishers");
   }
 
   get tags(): Collection<Publisher, Tag> {
-    return (this.__data.relations.tags ??= hasManyToMany(
+    return this.__data.relations.tags ??= hasManyToMany(
       this as any as Publisher,
       "publishers_to_tags",
       "tags",
@@ -439,11 +433,11 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
       tagMeta,
       "publishers",
       "tag_id",
-    ));
+    );
   }
 
   get tasks(): Collection<Publisher, TaskOld> {
-    return (this.__data.relations.tasks ??= hasManyToMany(
+    return this.__data.relations.tasks ??= hasManyToMany(
       this as any as Publisher,
       "tasks_to_publishers",
       "tasks",
@@ -451,6 +445,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
       taskOldMeta,
       "publishers",
       "task_id",
-    ));
+    );
   }
 }

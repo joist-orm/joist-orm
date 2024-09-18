@@ -146,10 +146,9 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
   }
 
   populate<const H extends LoadHint<T5BookReview>>(hint: H): Promise<Loaded<T5BookReview, H>>;
-  populate<const H extends LoadHint<T5BookReview>>(opts: {
-    hint: H;
-    forceReload?: boolean;
-  }): Promise<Loaded<T5BookReview, H>>;
+  populate<const H extends LoadHint<T5BookReview>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<T5BookReview, H>>;
   populate<const H extends LoadHint<T5BookReview>, V>(hint: H, fn: (tbr: Loaded<T5BookReview, H>) => V): Promise<V>;
   populate<const H extends LoadHint<T5BookReview>, V>(
     opts: { hint: H; forceReload?: boolean },
@@ -173,6 +172,6 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
   }
 
   get book(): ManyToOneReference<T5BookReview, T5Book, undefined> {
-    return (this.__data.relations.book ??= hasOne(this as any as T5BookReview, t5BookMeta, "book", "reviews"));
+    return this.__data.relations.book ??= hasOne(this as any as T5BookReview, t5BookMeta, "book", "reviews");
   }
 }

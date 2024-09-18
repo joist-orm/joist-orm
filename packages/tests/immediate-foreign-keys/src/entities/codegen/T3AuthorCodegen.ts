@@ -177,22 +177,22 @@ export abstract class T3AuthorCodegen extends BaseEntity<EntityManager, number> 
   }
 
   get t3Books(): Collection<T3Author, T3Book> {
-    return (this.__data.relations.t3Books ??= hasMany(
+    return this.__data.relations.t3Books ??= hasMany(
       this as any as T3Author,
       t3BookMeta,
       "t3Books",
       "author",
       "author_id",
       undefined,
-    ));
+    );
   }
 
   get favoriteBook(): ManyToOneReference<T3Author, T3Book, never> {
-    return (this.__data.relations.favoriteBook ??= hasOne(
+    return this.__data.relations.favoriteBook ??= hasOne(
       this as any as T3Author,
       t3BookMeta,
       "favoriteBook",
       "t3Authors",
-    ));
+    );
   }
 }

@@ -167,13 +167,13 @@ export abstract class T1AuthorCodegen extends BaseEntity<EntityManager, number> 
   }
 
   get t1Books(): Collection<T1Author, T1Book> {
-    return (this.__data.relations.t1Books ??= hasMany(
+    return this.__data.relations.t1Books ??= hasMany(
       this as any as T1Author,
       t1BookMeta,
       "t1Books",
       "author",
       "author_id",
       undefined,
-    ));
+    );
   }
 }

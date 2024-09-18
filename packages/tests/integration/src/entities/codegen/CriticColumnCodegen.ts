@@ -165,10 +165,9 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   }
 
   populate<const H extends LoadHint<CriticColumn>>(hint: H): Promise<Loaded<CriticColumn, H>>;
-  populate<const H extends LoadHint<CriticColumn>>(opts: {
-    hint: H;
-    forceReload?: boolean;
-  }): Promise<Loaded<CriticColumn, H>>;
+  populate<const H extends LoadHint<CriticColumn>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<CriticColumn, H>>;
   populate<const H extends LoadHint<CriticColumn>, V>(hint: H, fn: (cc: Loaded<CriticColumn, H>) => V): Promise<V>;
   populate<const H extends LoadHint<CriticColumn>, V>(
     opts: { hint: H; forceReload?: boolean },
@@ -192,6 +191,6 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   }
 
   get critic(): ManyToOneReference<CriticColumn, Critic, never> {
-    return (this.__data.relations.critic ??= hasOne(this as any as CriticColumn, criticMeta, "critic", "criticColumn"));
+    return this.__data.relations.critic ??= hasOne(this as any as CriticColumn, criticMeta, "critic", "criticColumn");
   }
 }

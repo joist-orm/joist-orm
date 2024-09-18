@@ -172,10 +172,9 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   populate<const H extends LoadHint<PublisherGroup>>(hint: H): Promise<Loaded<PublisherGroup, H>>;
-  populate<const H extends LoadHint<PublisherGroup>>(opts: {
-    hint: H;
-    forceReload?: boolean;
-  }): Promise<Loaded<PublisherGroup, H>>;
+  populate<const H extends LoadHint<PublisherGroup>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<PublisherGroup, H>>;
   populate<const H extends LoadHint<PublisherGroup>, V>(hint: H, fn: (pg: Loaded<PublisherGroup, H>) => V): Promise<V>;
   populate<const H extends LoadHint<PublisherGroup>, V>(
     opts: { hint: H; forceReload?: boolean },
@@ -199,23 +198,23 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   get publishers(): Collection<PublisherGroup, Publisher> {
-    return (this.__data.relations.publishers ??= hasMany(
+    return this.__data.relations.publishers ??= hasMany(
       this as any as PublisherGroup,
       publisherMeta,
       "publishers",
       "group",
       "group_id",
       undefined,
-    ));
+    );
   }
 
   get critics(): LargeCollection<PublisherGroup, Critic> {
-    return (this.__data.relations.critics ??= hasLargeMany(
+    return this.__data.relations.critics ??= hasLargeMany(
       this as any as PublisherGroup,
       criticMeta,
       "critics",
       "group",
       "group_id",
-    ));
+    );
   }
 }

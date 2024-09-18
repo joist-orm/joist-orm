@@ -166,10 +166,9 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   }
 
   populate<const H extends LoadHint<SmallPublisher>>(hint: H): Promise<Loaded<SmallPublisher, H>>;
-  populate<const H extends LoadHint<SmallPublisher>>(opts: {
-    hint: H;
-    forceReload?: boolean;
-  }): Promise<Loaded<SmallPublisher, H>>;
+  populate<const H extends LoadHint<SmallPublisher>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<SmallPublisher, H>>;
   populate<const H extends LoadHint<SmallPublisher>, V>(hint: H, fn: (p: Loaded<SmallPublisher, H>) => V): Promise<V>;
   populate<const H extends LoadHint<SmallPublisher>, V>(
     opts: { hint: H; forceReload?: boolean },
@@ -193,13 +192,13 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   }
 
   get users(): Collection<SmallPublisher, User> {
-    return (this.__data.relations.users ??= hasMany(
+    return this.__data.relations.users ??= hasMany(
       this as any as SmallPublisher,
       userMeta,
       "users",
       "favoritePublisher",
       "favorite_publisher_small_id",
       undefined,
-    ));
+    );
   }
 }

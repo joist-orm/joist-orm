@@ -212,10 +212,9 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   populate<const H extends LoadHint<BookAdvance>>(hint: H): Promise<Loaded<BookAdvance, H>>;
-  populate<const H extends LoadHint<BookAdvance>>(opts: {
-    hint: H;
-    forceReload?: boolean;
-  }): Promise<Loaded<BookAdvance, H>>;
+  populate<const H extends LoadHint<BookAdvance>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<BookAdvance, H>>;
   populate<const H extends LoadHint<BookAdvance>, V>(hint: H, fn: (ba: Loaded<BookAdvance, H>) => V): Promise<V>;
   populate<const H extends LoadHint<BookAdvance>, V>(
     opts: { hint: H; forceReload?: boolean },
@@ -239,15 +238,15 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   get book(): ManyToOneReference<BookAdvance, Book, never> {
-    return (this.__data.relations.book ??= hasOne(this as any as BookAdvance, bookMeta, "book", "advances"));
+    return this.__data.relations.book ??= hasOne(this as any as BookAdvance, bookMeta, "book", "advances");
   }
 
   get publisher(): ManyToOneReference<BookAdvance, Publisher, never> {
-    return (this.__data.relations.publisher ??= hasOne(
+    return this.__data.relations.publisher ??= hasOne(
       this as any as BookAdvance,
       publisherMeta,
       "publisher",
       "bookAdvances",
-    ));
+    );
   }
 }

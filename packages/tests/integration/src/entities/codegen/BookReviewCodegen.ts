@@ -209,10 +209,9 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   }
 
   populate<const H extends LoadHint<BookReview>>(hint: H): Promise<Loaded<BookReview, H>>;
-  populate<const H extends LoadHint<BookReview>>(opts: {
-    hint: H;
-    forceReload?: boolean;
-  }): Promise<Loaded<BookReview, H>>;
+  populate<const H extends LoadHint<BookReview>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<BookReview, H>>;
   populate<const H extends LoadHint<BookReview>, V>(hint: H, fn: (br: Loaded<BookReview, H>) => V): Promise<V>;
   populate<const H extends LoadHint<BookReview>, V>(
     opts: { hint: H; forceReload?: boolean },
@@ -236,25 +235,25 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   }
 
   get book(): ManyToOneReference<BookReview, Book, never> {
-    return (this.__data.relations.book ??= hasOne(this as any as BookReview, bookMeta, "book", "reviews"));
+    return this.__data.relations.book ??= hasOne(this as any as BookReview, bookMeta, "book", "reviews");
   }
 
   get critic(): ManyToOneReference<BookReview, Critic, undefined> {
-    return (this.__data.relations.critic ??= hasOne(this as any as BookReview, criticMeta, "critic", "bookReviews"));
+    return this.__data.relations.critic ??= hasOne(this as any as BookReview, criticMeta, "critic", "bookReviews");
   }
 
   get comment(): OneToOneReference<BookReview, Comment> {
-    return (this.__data.relations.comment ??= hasOneToOne(
+    return this.__data.relations.comment ??= hasOneToOne(
       this as any as BookReview,
       commentMeta,
       "comment",
       "parent",
       "parent_book_review_id",
-    ));
+    );
   }
 
   get tags(): Collection<BookReview, Tag> {
-    return (this.__data.relations.tags ??= hasManyToMany(
+    return this.__data.relations.tags ??= hasManyToMany(
       this as any as BookReview,
       "book_reviews_to_tags",
       "tags",
@@ -262,6 +261,6 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
       tagMeta,
       "bookReviews",
       "tag_id",
-    ));
+    );
   }
 }

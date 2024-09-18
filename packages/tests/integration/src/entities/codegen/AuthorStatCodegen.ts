@@ -65,7 +65,8 @@ export interface AuthorStatOpts {
   json?: Object | null;
 }
 
-export interface AuthorStatIdsOpts {}
+export interface AuthorStatIdsOpts {
+}
 
 export interface AuthorStatFilter {
   id?: ValueFilter<AuthorStatId, never> | null;
@@ -292,10 +293,9 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   populate<const H extends LoadHint<AuthorStat>>(hint: H): Promise<Loaded<AuthorStat, H>>;
-  populate<const H extends LoadHint<AuthorStat>>(opts: {
-    hint: H;
-    forceReload?: boolean;
-  }): Promise<Loaded<AuthorStat, H>>;
+  populate<const H extends LoadHint<AuthorStat>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<AuthorStat, H>>;
   populate<const H extends LoadHint<AuthorStat>, V>(hint: H, fn: (as: Loaded<AuthorStat, H>) => V): Promise<V>;
   populate<const H extends LoadHint<AuthorStat>, V>(
     opts: { hint: H; forceReload?: boolean },

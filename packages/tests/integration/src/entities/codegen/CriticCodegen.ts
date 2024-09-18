@@ -216,36 +216,36 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get bookReviews(): Collection<Critic, BookReview> {
-    return (this.__data.relations.bookReviews ??= hasMany(
+    return this.__data.relations.bookReviews ??= hasMany(
       this as any as Critic,
       bookReviewMeta,
       "bookReviews",
       "critic",
       "critic_id",
       undefined,
-    ));
+    );
   }
 
   get favoriteLargePublisher(): ManyToOneReference<Critic, LargePublisher, undefined> {
-    return (this.__data.relations.favoriteLargePublisher ??= hasOne(
+    return this.__data.relations.favoriteLargePublisher ??= hasOne(
       this as any as Critic,
       largePublisherMeta,
       "favoriteLargePublisher",
       "critics",
-    ));
+    );
   }
 
   get group(): ManyToOneReference<Critic, PublisherGroup, undefined> {
-    return (this.__data.relations.group ??= hasOne(this as any as Critic, publisherGroupMeta, "group", "critics"));
+    return this.__data.relations.group ??= hasOne(this as any as Critic, publisherGroupMeta, "group", "critics");
   }
 
   get criticColumn(): OneToOneReference<Critic, CriticColumn> {
-    return (this.__data.relations.criticColumn ??= hasOneToOne(
+    return this.__data.relations.criticColumn ??= hasOneToOne(
       this as any as Critic,
       criticColumnMeta,
       "criticColumn",
       "critic",
       "critic_id",
-    ));
+    );
   }
 }

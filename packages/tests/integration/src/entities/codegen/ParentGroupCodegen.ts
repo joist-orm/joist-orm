@@ -167,10 +167,9 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   }
 
   populate<const H extends LoadHint<ParentGroup>>(hint: H): Promise<Loaded<ParentGroup, H>>;
-  populate<const H extends LoadHint<ParentGroup>>(opts: {
-    hint: H;
-    forceReload?: boolean;
-  }): Promise<Loaded<ParentGroup, H>>;
+  populate<const H extends LoadHint<ParentGroup>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<ParentGroup, H>>;
   populate<const H extends LoadHint<ParentGroup>, V>(
     hint: H,
     fn: (parentGroup: Loaded<ParentGroup, H>) => V,
@@ -197,24 +196,24 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   }
 
   get childGroups(): Collection<ParentGroup, ChildGroup> {
-    return (this.__data.relations.childGroups ??= hasMany(
+    return this.__data.relations.childGroups ??= hasMany(
       this as any as ParentGroup,
       childGroupMeta,
       "childGroups",
       "parentGroup",
       "parent_group_id",
       undefined,
-    ));
+    );
   }
 
   get parentItems(): Collection<ParentGroup, ParentItem> {
-    return (this.__data.relations.parentItems ??= hasMany(
+    return this.__data.relations.parentItems ??= hasMany(
       this as any as ParentGroup,
       parentItemMeta,
       "parentItems",
       "parentGroup",
       "parent_group_id",
       undefined,
-    ));
+    );
   }
 }

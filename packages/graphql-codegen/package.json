@@ -10,7 +10,7 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
-    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "format": "prettier --ignore-path ../../.prettierignore --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "files": [

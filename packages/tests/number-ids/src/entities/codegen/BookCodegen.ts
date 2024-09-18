@@ -189,6 +189,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, number> impl
   }
 
   get author(): ManyToOneReference<Book, Author, never> {
-    return (this.__data.relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books"));
+    return this.__data.relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
   }
 }

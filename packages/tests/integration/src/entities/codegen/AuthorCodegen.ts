@@ -617,113 +617,113 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get mentees(): Collection<Author, Author> {
-    return (this.__data.relations.mentees ??= hasMany(
+    return this.__data.relations.mentees ??= hasMany(
       this as any as Author,
       authorMeta,
       "mentees",
       "mentor",
       "mentor_id",
       undefined,
-    ));
+    );
   }
 
   get schedules(): Collection<Author, AuthorSchedule> {
-    return (this.__data.relations.schedules ??= hasMany(
+    return this.__data.relations.schedules ??= hasMany(
       this as any as Author,
       authorScheduleMeta,
       "schedules",
       "author",
       "author_id",
       undefined,
-    ));
+    );
   }
 
   get books(): Collection<Author, Book> {
-    return (this.__data.relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", {
-      field: "order",
-      direction: "ASC",
-    }));
+    return this.__data.relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", {
+      "field": "order",
+      "direction": "ASC",
+    });
   }
 
   get comments(): Collection<Author, Comment> {
-    return (this.__data.relations.comments ??= hasMany(
+    return this.__data.relations.comments ??= hasMany(
       this as any as Author,
       commentMeta,
       "comments",
       "parent",
       "parent_author_id",
       undefined,
-    ));
+    );
   }
 
   get tasks(): Collection<Author, TaskNew> {
-    return (this.__data.relations.tasks ??= hasMany(
+    return this.__data.relations.tasks ??= hasMany(
       this as any as Author,
       taskNewMeta,
       "tasks",
       "specialNewAuthor",
       "special_new_author_id",
       undefined,
-    ));
+    );
   }
 
   get mentor(): ManyToOneReference<Author, Author, undefined> {
-    return (this.__data.relations.mentor ??= hasOne(this as any as Author, authorMeta, "mentor", "mentees"));
+    return this.__data.relations.mentor ??= hasOne(this as any as Author, authorMeta, "mentor", "mentees");
   }
 
   get currentDraftBook(): ManyToOneReference<Author, Book, undefined> {
-    return (this.__data.relations.currentDraftBook ??= hasOne(
+    return this.__data.relations.currentDraftBook ??= hasOne(
       this as any as Author,
       bookMeta,
       "currentDraftBook",
       "currentDraftAuthor",
-    ));
+    );
   }
 
   get publisher(): ManyToOneReference<Author, Publisher, undefined> {
-    return (this.__data.relations.publisher ??= hasOne(this as any as Author, publisherMeta, "publisher", "authors"));
+    return this.__data.relations.publisher ??= hasOne(this as any as Author, publisherMeta, "publisher", "authors");
   }
 
   get mentorsRecursive(): ReadOnlyCollection<Author, Author> {
-    return (this.__data.relations.mentorsRecursive ??= hasRecursiveParents(
+    return this.__data.relations.mentorsRecursive ??= hasRecursiveParents(
       this as any as Author,
       "mentorsRecursive",
       "mentor",
       "menteesRecursive",
-    ));
+    );
   }
 
   get menteesRecursive(): ReadOnlyCollection<Author, Author> {
-    return (this.__data.relations.menteesRecursive ??= hasRecursiveChildren(
+    return this.__data.relations.menteesRecursive ??= hasRecursiveChildren(
       this as any as Author,
       "menteesRecursive",
       "mentees",
       "mentorsRecursive",
-    ));
+    );
   }
 
   get image(): OneToOneReference<Author, Image> {
-    return (this.__data.relations.image ??= hasOneToOne(
+    return this.__data.relations.image ??= hasOneToOne(
       this as any as Author,
       imageMeta,
       "image",
       "author",
       "author_id",
-    ));
+    );
   }
 
   get userOneToOne(): OneToOneReference<Author, User> {
-    return (this.__data.relations.userOneToOne ??= hasOneToOne(
+    return this.__data.relations.userOneToOne ??= hasOneToOne(
       this as any as Author,
       userMeta,
       "userOneToOne",
       "authorManyToOne",
       "author_id",
-    ));
+    );
   }
 
   get tags(): Collection<Author, Tag> {
-    return (this.__data.relations.tags ??= hasManyToMany(
+    return this.__data.relations.tags ??= hasManyToMany(
       this as any as Author,
       "authors_to_tags",
       "tags",
@@ -731,6 +731,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
       tagMeta,
       "authors",
       "tag_id",
-    ));
+    );
   }
 }

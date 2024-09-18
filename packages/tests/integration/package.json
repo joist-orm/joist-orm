@@ -16,7 +16,7 @@
     "test-stock": "PLUGINS= jest --runInBand --logHeapUsage",
     "test-preloading": "PLUGINS=join-preloading jest --runInBand --logHeapUsage",
     "test-transformed": "jest --config jest.config-transformed.js --runInBand --logHeapUsage",
-    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "format": "prettier --ignore-path ../../../.prettierignore --ignore-path ../../.prettierignore --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "codegen": "env-cmd tsx ../../codegen",
     "docker:up": "docker compose up -d db",
     "docker:reset": "docker compose exec db ./reset.sh"

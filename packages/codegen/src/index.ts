@@ -144,9 +144,9 @@ if (require.main === module) {
     if (
         !process.argv.includes("--always-exit-code-zero") &&
         // strict mode + warnings or greater
-        (process.argv.includes("--strict") && loggerMaxWarningLevelHit >= LOG_LEVELS.warn) ||
+        ((process.argv.includes("--strict") && loggerMaxWarningLevelHit >= LOG_LEVELS.warn) ||
         // otherwise errors or greater
-        loggerMaxWarningLevelHit >= LOG_LEVELS.error
+        loggerMaxWarningLevelHit >= LOG_LEVELS.error)
     ) {
       process.exitCode = 1;
     }

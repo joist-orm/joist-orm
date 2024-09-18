@@ -11,7 +11,7 @@
   "scripts": {
     "migrate": "env-cmd tsx ../../migration-utils",
     "test": "jest --runInBand --logHeapUsage",
-    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "format": "prettier --ignore-path ../../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "codegen": "env-cmd tsx ../../codegen"
   },
   "dependencies": {

@@ -8,7 +8,7 @@
     "build"
   ],
   "scripts": {
-    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "format": "prettier --ignore-path ../../.prettierignore --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "test": "jest"
   },
   "devDependencies": {

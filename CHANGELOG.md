@@ -1,3 +1,10 @@
+## [1.195.1](https://github.com/joist-orm/joist-orm/compare/v1.195.0...v1.195.1) (2024-09-19)
+
+
+### Bug Fixes
+
+* Add missing ??= operator. ([#1234](https://github.com/joist-orm/joist-orm/issues/1234)) ([3601b6b](https://github.com/joist-orm/joist-orm/commit/3601b6bdff6dbcca50bf8354985ea3c13fd905a7))
+
 # [1.195.0](https://github.com/joist-orm/joist-orm/compare/v1.194.6...v1.195.0) (2024-09-18)
 
 

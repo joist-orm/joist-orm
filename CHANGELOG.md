@@ -1,3 +1,10 @@
+## [1.196.1](https://github.com/joist-orm/joist-orm/compare/v1.196.0...v1.196.1) (2024-09-19)
+
+
+### Bug Fixes
+
+* Correct handling of setDefault on STI subtypes ([#1236](https://github.com/joist-orm/joist-orm/issues/1236)) ([e596059](https://github.com/joist-orm/joist-orm/commit/e596059acd0adf004497c0af24ba008c14665bfb))
+
 # [1.196.0](https://github.com/joist-orm/joist-orm/compare/v1.195.1...v1.196.0) (2024-09-19)
 
 

@@ -43,7 +43,7 @@ export const joistEntityOrdering = createRule({
         },
         messages: {
             configHookOrder:
-                'Joist Hooks should be defined in order of execution. beforeCreate, beforeUpdate, beforeFlush, afterFlush',
+                'Joist Hooks should be defined in order of execution. Move {{ method }} calls to before {{ previousMethod }}',
             entityDefinitionFirst: 'Joist Entity should come before the Config API',
             uselessConfigPlaceholder: 'config.placeholder() is not needed if other config calls exist'
         },
@@ -72,7 +72,7 @@ export const joistEntityOrdering = createRule({
             CallExpression(node) {
                 const configMethod = getConfigCall(node);
                 if (configMethod) {
-                  configNodes.push(configMethod);
+                    configNodes.push(configMethod);
                 }
             },
             "Program:exit"() {
@@ -92,7 +92,11 @@ export const joistEntityOrdering = createRule({
                         if (currentCallMethodIndex < previousCallMethodIndex) {
                             context.report({
                                 node: configCall.node,
-                                messageId: 'configHookOrder'
+                                messageId: 'configHookOrder',
+                                data: {
+                                    method: configCall.method,
+                                    previousMethod: CONFIG_ORDERING[previousCallMethodIndex]
+                                }
                             })
                         }
 

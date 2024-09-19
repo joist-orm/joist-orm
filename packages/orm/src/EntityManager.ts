@@ -1940,7 +1940,6 @@ function recalcSynchronousDerivedFields(todos: Record<string, Todo>) {
       ];
     }),
   );
-  if (entities.some((e) => getMetadata(e).type === "TaskNew")) console.log([...derivedFieldsByMeta.entries()]);
 
   for (const entity of entities) {
     const derivedFields = derivedFieldsByMeta.get(getMetadata(entity)) || [];

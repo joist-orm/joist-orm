@@ -10,6 +10,8 @@ import {
   type FilterOf,
   type Flavor,
   getField,
+  type GetLens,
+  getLens,
   type GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -220,20 +222,17 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
 
   /**
    * Partial update taking any subset of the entities fields.
-   *
    * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
-   * is left as untouched.
-   *
+   * is left as untouched
    * Collections are exhaustively set to the new values, however,
    * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
-   *
    * @example
    * ```
    * entity.setPartial({
-   *   firstName: 'foo' // updated
-   *   lastName: undefined // do nothing
-   *   age: null // unset, (i.e. set it as undefined)
-   * });
+   *  firstName: 'foo' // updated
+   *  lastName: undefined // do nothing
+   *  age: null // unset, (i.e. set it as undefined)
+   * })
    * ```
    * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
@@ -243,20 +242,17 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
 
   /**
    * Partial update taking any subset of the entities fields.
-   *
    * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
-   * is left as untouched.
-   *
+   * is left as untouched
    * Collections are exhaustively set to the new values, however,
    * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
-   *
    * @example
    * ```
    * entity.setPartial({
-   *   firstName: 'foo' // updated
-   *   lastName: undefined // do nothing
-   *   age: null // unset, (i.e. set it as undefined)
-   * });
+   *  firstName: 'foo' // updated
+   *  lastName: undefined // do nothing
+   *  age: null // unset, (i.e. set it as undefined)
+   * })
    * ```
    * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
@@ -266,7 +262,6 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   *
    * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<Image> {
@@ -274,18 +269,19 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   /**
-   * Traverse from this entity using a lens, and load the result.
-   *
-   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * Traverse from this entity using a lens
    */
   load<U, V>(fn: (lens: Lens<Image>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as Image, fn, opts);
   }
 
+  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
+    return getLens(imageMeta, this, fn as never);
+  }
+
   /**
-   * Hydrate this entity using a load hint
-   *
-   * @see {@link https://joist-orm.io/docs/features/loading-entities#1-object-graph-navigation | Loading entities} on the Joist docs
+   * Traverse from this entity using a lens, and load the result
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<Image>>(hint: H): Promise<Loaded<Image, H>>;
   populate<const H extends LoadHint<Image>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Image, H>>;
@@ -302,19 +298,15 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   /**
-   * Given a load hint, checks if it is loaded within the unit of work.
-   *
-   * Type Guarded via Loaded<>
+   * Given a load hint, checks if it is loaded within the unit of work. Type Guarded via Loaded<>
    */
   isLoaded<const H extends LoadHint<Image>>(hint: H): this is Loaded<Image, H> {
     return isLoaded(this as any as Image, hint);
   }
 
   /**
-   * Build a type-safe, loadable and relation aware POJO from this entity, given a hint.
-   *
+   * Build a type-safe, loadable and relation aware POJO from this entity, given a hint
    * Note: As the hint might load, this returns a Promise
-   *
    * @example
    * ```
    * const payload = await a.toJSON({

@@ -13,7 +13,7 @@
   },
   "types": "build/index.d.ts",
   "scripts": {
-    "format": "prettier --write '{src}/**/*.{ts,js,tsx,jsx,graphql}'"
+    "format": "prettier --ignore-path ../../../.prettierignore --write 'src/**/*.{ts,js,tsx,jsx,graphql}'"
   },
   "files": [
     "build"

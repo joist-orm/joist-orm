@@ -76,7 +76,7 @@ import {
   setField,
   setOpts,
   toIdOf,
-  toJSON,
+  toJSON, getLens, GetLens,
 } from "./symbols";
 import { assertNever, fail, uncapitalize } from "./utils";
 import {tsdocComments} from "./tsdoc";
@@ -278,6 +278,10 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         return ${loadLens}(this as any as ${entityName}, fn, opts);
       }
 
+      get<U, V>(fn: (lens: ${GetLens}<Omit<this, 'fullNonReactiveAccess'>>) => ${GetLens}<U, V>): V {
+        return ${getLens}(${entity.metaType}, this, fn as never);
+      }
+      
       ${tsdocComments.entity.populate}
       populate<const H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>>;
       populate<const H extends ${LoadHint}<${entityName}>>(opts: { hint: H, forceReload?: boolean }): Promise<${Loaded}<${entityName}, H>>;
@@ -396,14 +400,12 @@ function generateDefaultValidationRules(db: DbMetadata, meta: EntityDbMetadata, 
 function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   const primitives = meta.primitives.map((field) => {
     const { fieldName, fieldType, notNull, derived } = field;
-    if (derived) {
-      return code``;
-    }
+    if (derived) return code``;
     return code`${fieldName}${maybeOptionalOrDefault(field)}: ${fieldType}${maybeUnionNull(notNull)};`;
   });
   const enums = meta.enums.map((field) => {
-    const { fieldName, enumType, notNull, isArray } = field;
-    if (meta.stiDiscriminatorField === fieldName) {
+    const { fieldName, enumType, notNull, isArray, derived } = field;
+    if (meta.stiDiscriminatorField === fieldName || derived) {
       // Don't include the discriminator as an opt b/c we'll infer it from the instance type
       return code``;
     } else if (isArray) {

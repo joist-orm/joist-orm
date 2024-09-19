@@ -66,12 +66,12 @@ config.addRule({ author: "numberOfBooks2" }, (b) => {
  * Example of a synchronous default.
  *
  * Explicitly using single quotes for scanEntityFiles detection
- * */
+ */
 // prettier-ignore
 config.setDefault('notes', (b) => `Notes for ${b.title}`);
 
 /** Example of an asynchronous default. */
-config.setDefault("order", { author: "books" }, (b) => b.author.get?.books.get.length);
+config.setDefault("order", { author: "books" }, (b) => b.author.get?.books.get.indexOf(b) + 1);
 
 /** Example of an asynchronous default that returns an entity. */
 config.setDefault(
@@ -90,6 +90,11 @@ config.setDefault(
   },
 );
 
+/** Example of cross-entity setDefault dependencies. */
+config.setDefault("authorsNickNames", { author: "nickNames" }, (b) => {
+  return b.author.get.nickNames?.join(", ") ?? "-";
+});
+
 config.cascadeDelete("reviews");
 
 // Verify that beforeDelete hooks see their pre-unhooked-state, because if they run
@@ -103,15 +108,16 @@ config.addRule("tags", (b) => {
   return b.tags.get.length === 3 ? "Cannot have exactly three tags" : undefined;
 });
 
-// Example of a trigger for a many to many field
+// Example of a trigger for a many-to-many field
 config.touchOnChange("tags");
+
 config.beforeFlush((book) => {
-  // this is an arbritrary logic to identify that this hook fired on unit tests, the relevant logic here is the `book.changes.fields.includes("tags")`
+  // Arbitrary logic to show this hook fired, the relevant logic here is the `book.changes.fields.includes("tags")`
   if (book.changes.fields.includes("tags") && book.title.includes("To be changed by hook")) {
-    // This is an arbitrary example of a hook that could happen when tags change, so we can test it
     book.title = "Tags Changed";
   }
 });
+
 // Example to ensure the m2m changes are tracked until afterCommit is called
 config.afterCommit((book) => {
   if (book.changes.fields.includes("tags")) {

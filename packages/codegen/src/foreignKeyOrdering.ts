@@ -3,6 +3,7 @@ import { ManyToOneField, PolymorphicFieldComponent } from "./EntityDbMetadata";
 import { Config, EntityDbMetadata } from "./index";
 import { sortByNonDeferredForeignKeys } from "./sortForeignKeys";
 import { assertNever } from "./utils";
+import { logger } from "./logger";
 
 export async function maybeSetForeignKeyOrdering(config: Config, entities: EntityDbMetadata[]): Promise<boolean> {
   // Hopefully all FKs are deferred, but if not...
@@ -22,8 +23,7 @@ export async function maybeSetForeignKeyOrdering(config: Config, entities: Entit
   const nonDeferredFks = entities.flatMap((e) => e.nonDeferredFks.map((m2o) => ({ entity: e, m2o })));
 
   if (setting === "error" || setting === "warn") {
-    const flag = setting === "error" ? "ERROR" : "WARNING";
-    console.log(`${flag}: Found ${nonDeferredFks.length} foreign keys that are not DEFERRABLE/INITIALLY DEFERRED`);
+    logger[setting](`Found ${nonDeferredFks.length} foreign keys that are not DEFERRABLE/INITIALLY DEFERRED`)
     for (const { entity, m2o } of nonDeferredFks) console.log(`${entity.tableName}.${m2o.columnName}`);
     console.log("");
 
@@ -49,7 +49,7 @@ export async function maybeSetForeignKeyOrdering(config: Config, entities: Entit
   // But they would still probably break flush_test_database. Unless we tell it to disable constraints,
   // like `ALTER TABLE your_table_name DISABLE TRIGGER ALL;`. But still unsure how we'd insert new rows.
   if (notNullCycles.length > 0) {
-    console.log(`ERROR: Found a schema cycle of not-null foreign keys:`);
+    logger.error(`Found a schema cycle of not-null foreign keys:`);
     notNullCycles.forEach((cycle) => console.log(cycle));
     console.log("");
     console.log("These cycles can cause fatal em.flush & flush_test_database errors.");

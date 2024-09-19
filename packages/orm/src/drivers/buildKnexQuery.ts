@@ -69,7 +69,7 @@ export function buildKnexQuery(
     parsed.orderBys.forEach(({ alias, column, order }) => {
       // If we're doing "select distinct" for o2m joins, then all order bys must be selects
       if (needsDistinct) {
-        query.select(`${alias}.${column}`);
+        query.select(knex.raw(kqDot(alias, column)));
       }
       query.orderBy(knex.raw(kqDot(alias, column)) as any, order);
     });

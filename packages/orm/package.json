@@ -1,6 +1,6 @@
 {
   "name": "joist-orm",
-  "version": "1.193.0",
+  "version": "1.196.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -13,7 +13,7 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
-    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
+    "format": "prettier --ignore-path ../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
   },
   "files": [
     "build"
@@ -21,7 +21,6 @@
   "dependencies": {
     "@types/object-hash": "^3.0.6",
     "ansis": "^3.2.0",
-    "batching-toposort": "^1.2.0",
     "dataloader": "^2.2.2",
     "joist-utils": "workspace:*",
     "knex": "^3.1.0",

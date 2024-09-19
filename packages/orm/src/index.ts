@@ -2,7 +2,7 @@ import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityConstructor, MaybeAbstractEntityConstructor, OptsOf } from "./EntityManager";
 import { getBaseMeta, getMetadata } from "./EntityMetadata";
-import { setSyncDefaults } from "./defaults";
+import { getDefaultDependencies, setSyncDefaults } from "./defaults";
 import { getProperties } from "./getProperties";
 import { New } from "./loadHints";
 import { isAllSqlPaths } from "./loadLens";
@@ -11,7 +11,7 @@ import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { TimestampSerde } from "./serde";
 import { fail } from "./utils";
 
-export const testing = { isAllSqlPaths };
+export const testing = { isAllSqlPaths, getDefaultDependencies };
 export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner";
 export * from "./Aliases";

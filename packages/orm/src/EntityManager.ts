@@ -1198,6 +1198,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     let hookLoops = 0;
     let now = getNow();
     this.#rm.clearSuppressedTypeErrors();
+    const suppressedDefaultTypeErrors: Error[] = [];
 
     // Make a lambda that we can invoke multiple times, if we loop for ReactiveQueryFields
     const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
@@ -1223,7 +1224,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         await this.#fl.allowWrites(async () => {
           // Run our hooks
           let todos = createTodos([...pendingHooks]);
-          await setAsyncDefaults(this.ctx, todos);
+          await setAsyncDefaults(suppressedDefaultTypeErrors, this.ctx, todos);
           maybeBumpUpdatedAt(todos, now);
           await beforeCreate(this.ctx, todos);
           await beforeUpdate(this.ctx, todos);
@@ -1266,6 +1267,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         // Run simple rules first b/c it includes not-null/required rules, so that then when we run
         // `validateReactiveRules` next, the lambdas won't see invalid entities.
         await validateSimpleRules(entityTodos);
+        // After we've let any "author is not set" simple rules fail before prematurely throwing
+        // the "of course that caused an NPE" `TypeError`s, if all the authors *were* valid/set,
+        // and we still have TypeErrors, they were real, unrelated errors that the user should see.
+        if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
         await validateReactiveRules(entityTodos, joinRowTodos);
       } finally {
         this.#isValidating = false;
@@ -1288,6 +1293,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         await runValidation(entityTodos, joinRowTodos);
       }
       this.#rm.throwIfAnySuppressedTypeErrors();
+      if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
 
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
         // The driver will handle the right thing if we're already in an existing transaction.

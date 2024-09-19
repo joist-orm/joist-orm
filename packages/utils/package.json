@@ -1,6 +1,6 @@
 {
   "name": "joist-utils",
-  "version": "1.193.0",
+  "version": "1.196.0",
   "license": "MIT",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -12,7 +12,7 @@
     "pg-connection-string": "^2.6.4"
   },
   "scripts": {
-    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "format": "prettier --ignore-path ../../.prettierignore --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "test": "jest"
   },
   "devDependencies": {

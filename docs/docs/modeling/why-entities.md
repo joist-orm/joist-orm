@@ -9,13 +9,19 @@ One of Joist's biggest differentiators is its focus on **entities** and **domain
 
 The tldr of "Why Entities?" is that they provide a structure for your application's business logic, which means:
 
-- Derived fields/helper methods you calculate on the fly,
+- Derived fields you re-calculate when they're dirty,
 - Validation rules you enforce before saving, and
 - Side effects you trigger after saving
 
 These are fundamental aspects to all backends, regardless of whether your ORM uses POJOs, or entities, or raw SQL queries.
 
-Joist uses entities because, in our opinion, they provide very natural, intuitive guidance on where to put this business logic, that otherwise in "raw POJO from the database" ORMs, each application are must create its own structure in an adhoc/haphazard way.
+Joist uses entities because, in our opinion, they provide very natural, intuitive guidance on **where to put business logic**, that otherwise in "raw POJO from the database" ORMs (query builders), each application must create its own structure in an adhoc/haphazard way.
+
+:::tip
+
+Riffing on [Greenspun's Tenth Rule](https://en.wikipedia.org/wiki/Greenspun%27s_tenth_rule), Joist's "Tenth Rule" is that any sufficiently complicated query-builder-based CRUD app contains an ad hoc, informally-specified, bug-ridden, slow implementation of half of Joist's reactive domain model. :-)
+
+:::
 
 ## Longer Answer
 

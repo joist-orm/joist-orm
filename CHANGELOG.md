@@ -1,3 +1,87 @@
+# [1.196.0](https://github.com/joist-orm/joist-orm/compare/v1.195.1...v1.196.0) (2024-09-19)
+
+
+### Features
+
+* add codegen logger + exit code w/ strict flag ([#1228](https://github.com/joist-orm/joist-orm/issues/1228)) ([5fc3701](https://github.com/joist-orm/joist-orm/commit/5fc37014a6c7b375f6edc36711fa88ee7d87c909))
+
+## [1.195.1](https://github.com/joist-orm/joist-orm/compare/v1.195.0...v1.195.1) (2024-09-19)
+
+
+### Bug Fixes
+
+* Add missing ??= operator. ([#1234](https://github.com/joist-orm/joist-orm/issues/1234)) ([3601b6b](https://github.com/joist-orm/joist-orm/commit/3601b6bdff6dbcca50bf8354985ea3c13fd905a7))
+
+# [1.195.0](https://github.com/joist-orm/joist-orm/compare/v1.194.6...v1.195.0) (2024-09-18)
+
+
+### Features
+
+* sync lens ([#1227](https://github.com/joist-orm/joist-orm/issues/1227)) ([1e1043d](https://github.com/joist-orm/joist-orm/commit/1e1043da690533023dfcc771bc5330512bd0e086))
+
+## [1.194.6](https://github.com/joist-orm/joist-orm/compare/v1.194.5...v1.194.6) (2024-09-18)
+
+
+### Bug Fixes
+
+* newTestInstance to not provide default value for required derived enum columns ([#1226](https://github.com/joist-orm/joist-orm/issues/1226)) ([264fc86](https://github.com/joist-orm/joist-orm/commit/264fc8629ae59278dd00960d62371a179bb14d26))
+
+## [1.194.5](https://github.com/joist-orm/joist-orm/compare/v1.194.4...v1.194.5) (2024-09-17)
+
+
+### Bug Fixes
+
+* Don't put derived enums in opts. ([#1225](https://github.com/joist-orm/joist-orm/issues/1225)) ([dac31aa](https://github.com/joist-orm/joist-orm/commit/dac31aad6a9ac9a622c72389b1243cc071c68658))
+
+## [1.194.4](https://github.com/joist-orm/joist-orm/compare/v1.194.3...v1.194.4) (2024-09-16)
+
+
+### Bug Fixes
+
+* Don't double-tap the deferred on subtypes. ([#1224](https://github.com/joist-orm/joist-orm/issues/1224)) ([4c179a1](https://github.com/joist-orm/joist-orm/commit/4c179a1e18536128dfba1e61ec2053c6a5d200e0))
+
+## [1.194.3](https://github.com/joist-orm/joist-orm/compare/v1.194.2...v1.194.3) (2024-09-16)
+
+
+### Bug Fixes
+
+* Run defaults defined on subtypes. ([#1223](https://github.com/joist-orm/joist-orm/issues/1223)) ([430e787](https://github.com/joist-orm/joist-orm/commit/430e787bb48a75a58a23c81b0f0026ef87c2d17b))
+
+## [1.194.2](https://github.com/joist-orm/joist-orm/compare/v1.194.1...v1.194.2) (2024-09-16)
+
+
+### Bug Fixes
+
+* Fix self-referential defaults hanging. ([#1222](https://github.com/joist-orm/joist-orm/issues/1222)) ([96b9739](https://github.com/joist-orm/joist-orm/commit/96b9739e1258ae1baf3b68004fc6a1cbfdc6ad87))
+
+## [1.194.1](https://github.com/joist-orm/joist-orm/compare/v1.194.0...v1.194.1) (2024-09-16)
+
+
+### Bug Fixes
+
+* Fix defaults in subtypes. ([#1221](https://github.com/joist-orm/joist-orm/issues/1221)) ([0f9505b](https://github.com/joist-orm/joist-orm/commit/0f9505b94f8ed00f55296cc1580da18861066497))
+
+# [1.194.0](https://github.com/joist-orm/joist-orm/compare/v1.193.2...v1.194.0) (2024-09-16)
+
+
+### Features
+
+* Add cross-entity default dependencies. ([#1217](https://github.com/joist-orm/joist-orm/issues/1217)) ([c66ac8c](https://github.com/joist-orm/joist-orm/commit/c66ac8c24ece4c57efbf415b944ab1fde5c77e48))
+
+## [1.193.2](https://github.com/joist-orm/joist-orm/compare/v1.193.1...v1.193.2) (2024-09-16)
+
+
+### Bug Fixes
+
+* continue vs return on config warnings ([#1220](https://github.com/joist-orm/joist-orm/issues/1220)) ([bce0f96](https://github.com/joist-orm/joist-orm/commit/bce0f96971c20ef5eaed5b319f3c27a45d142ea2))
+
+## [1.193.1](https://github.com/joist-orm/joist-orm/compare/v1.193.0...v1.193.1) (2024-09-15)
+
+
+### Bug Fixes
+
+* Missing kqDot within distinct/orderBy ([#1218](https://github.com/joist-orm/joist-orm/issues/1218)) ([19cc79f](https://github.com/joist-orm/joist-orm/commit/19cc79f24bfd9f6c7cde0b33eefcb026e62ea9b8))
+
 # [1.193.0](https://github.com/joist-orm/joist-orm/compare/v1.192.0...v1.193.0) (2024-09-13)
 
 

@@ -1,6 +1,6 @@
 {
   "name": "joist-graphql-resolver-utils",
-  "version": "1.193.0",
+  "version": "1.196.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -14,7 +14,7 @@
   },
   "types": "build/index.d.ts",
   "scripts": {
-    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
+    "format": "prettier --ignore-path ../../.prettierignore --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
   },
   "files": [
     "build"

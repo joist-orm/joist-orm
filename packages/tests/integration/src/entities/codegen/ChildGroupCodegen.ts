@@ -11,6 +11,8 @@ import {
   type FilterOf,
   type Flavor,
   getField,
+  type GetLens,
+  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -169,20 +171,17 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
 
   /**
    * Partial update taking any subset of the entities fields.
-   *
    * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
-   * is left as untouched.
-   *
+   * is left as untouched
    * Collections are exhaustively set to the new values, however,
    * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
-   *
    * @example
    * ```
    * entity.setPartial({
-   *   firstName: 'foo' // updated
-   *   lastName: undefined // do nothing
-   *   age: null // unset, (i.e. set it as undefined)
-   * });
+   *  firstName: 'foo' // updated
+   *  lastName: undefined // do nothing
+   *  age: null // unset, (i.e. set it as undefined)
+   * })
    * ```
    * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
@@ -192,20 +191,17 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
 
   /**
    * Partial update taking any subset of the entities fields.
-   *
    * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
-   * is left as untouched.
-   *
+   * is left as untouched
    * Collections are exhaustively set to the new values, however,
    * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
-   *
    * @example
    * ```
    * entity.setPartial({
-   *   firstName: 'foo' // updated
-   *   lastName: undefined // do nothing
-   *   age: null // unset, (i.e. set it as undefined)
-   * });
+   *  firstName: 'foo' // updated
+   *  lastName: undefined // do nothing
+   *  age: null // unset, (i.e. set it as undefined)
+   * })
    * ```
    * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
@@ -215,7 +211,6 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
 
   /**
    * Details the field changes of the entity within the current unit of work.
-   *
    * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<ChildGroup> {
@@ -223,18 +218,19 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   }
 
   /**
-   * Traverse from this entity using a lens, and load the result.
-   *
-   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * Traverse from this entity using a lens
    */
   load<U, V>(fn: (lens: Lens<ChildGroup>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as ChildGroup, fn, opts);
   }
 
+  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
+    return getLens(childGroupMeta, this, fn as never);
+  }
+
   /**
-   * Hydrate this entity using a load hint
-   *
-   * @see {@link https://joist-orm.io/docs/features/loading-entities#1-object-graph-navigation | Loading entities} on the Joist docs
+   * Traverse from this entity using a lens, and load the result
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
    */
   populate<const H extends LoadHint<ChildGroup>>(hint: H): Promise<Loaded<ChildGroup, H>>;
   populate<const H extends LoadHint<ChildGroup>>(
@@ -253,19 +249,15 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   }
 
   /**
-   * Given a load hint, checks if it is loaded within the unit of work.
-   *
-   * Type Guarded via Loaded<>
+   * Given a load hint, checks if it is loaded within the unit of work. Type Guarded via Loaded<>
    */
   isLoaded<const H extends LoadHint<ChildGroup>>(hint: H): this is Loaded<ChildGroup, H> {
     return isLoaded(this as any as ChildGroup, hint);
   }
 
   /**
-   * Build a type-safe, loadable and relation aware POJO from this entity, given a hint.
-   *
+   * Build a type-safe, loadable and relation aware POJO from this entity, given a hint
    * Note: As the hint might load, this returns a Promise
-   *
    * @example
    * ```
    * const payload = await a.toJSON({

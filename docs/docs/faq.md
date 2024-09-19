@@ -15,6 +15,23 @@ Also note that `em.flush` enforces "temporary immutability" during its lifecycle
 
 (In a way, you can think of Joist's entities as an [Immer](https://immerjs.github.io/immer/) for your data model--i.e. the database itself progresses through a series of atomic, immutable states (transactions), and Joist's entities are just an ergonomic way to declare what you want the next state to be.)
 
+## Aren't ORMs only for programmers who won't learn SQL?
+
+This is a popular assertion on `/r/node`, but Joist generally considers it FUD, because in stereotypical CRUD apps:
+
+* Over 90-95% of SQL queries are boilerplate `SELECT` / `INSERT` / `UPDATE` queries that are tedious/straightforward to write (or an ORM like Joist to generate), and
+* Only 5% of SQL queries are actually complicated and best written in raw SQL but engineers that "know SQL"
+
+I.e. just because Joist users don't want to write the same `INSERT INTO authors (...) VALUES (...)` over and over (and then remember, or more likely forget!, to run all the downstream validation rules and update the derived values), does not mean they "don't know SQL". :-)
+
+## Does Joist make it impossible to write the SQL query I want?
+
+Some engineers have been validly burned by ORMs that force "literally every database query" to go through it's psuedo SQL DSL.
+
+While Joist definitely has a (cute!) SQL DSL, see the `em.find` docs, it's very pragmatic about *not* trying to create every SQL query you could possibly imagine.
+
+Instead, Joist encourages dropping down to raw SQL whenever necessary, albeit hopefully only for `SELECT`s, as Joist's business rules are best enforced if all `INSERT` and `UPDATE`s always go through entities.
+
 ## What databases does Joist support?
 
 Currently only Postgres; see [support other databases](https://github.com/joist-orm/joist-orm/issues/636).

@@ -301,10 +301,6 @@ export class ConfigData<T extends Entity, C> {
   syncDefaults: Record<string, ((entity: T) => void) | unknown> = {};
   /** Asynchronous defaults for this entity type, invoked on `em.flush`. */
   asyncDefaults: Record<string, AsyncDefault<T>> = {};
-  /** Asynchronous defaults organized by dependent-level for parallel loading. */
-  asyncDefaultsByLevel: AsyncDefault<T>[][] = [];
-  /** All fields in order of default dependencies. */
-  fieldsInOrder: string[] = [];
 
   // An array of the reactive rules that depend on this entity
   reactiveRules: ReactiveRule[] = [];

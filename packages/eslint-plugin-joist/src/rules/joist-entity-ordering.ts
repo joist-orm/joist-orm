@@ -44,7 +44,8 @@ export const joistEntityOrdering = createRule({
         messages: {
             configHookOrder:
                 'Joist Hooks should be defined in order of execution. beforeCreate, beforeUpdate, beforeFlush, afterFlush',
-            entityDefinitionFirst: 'Joist Entity should come before the Config API'
+            entityDefinitionFirst: 'Joist Entity should come before the Config API',
+            uselessConfigPlaceholder: 'config.placeholder() is not needed if other config calls exist'
         },
     },
     defaultOptions: [],
@@ -78,6 +79,13 @@ export const joistEntityOrdering = createRule({
                 if (isEntityFile) {
                     let previousCallMethodIndex = 0;
                     for (const configCall of configNodes) {
+                        if (configCall.method === 'placeholder' && configNodes.length !== 1) {
+                            context.report({
+                                node: configCall.node,
+                                messageId: 'uselessConfigPlaceholder',
+                            })
+                        }
+
                         const currentCallMethodIndex = CONFIG_ORDERING.indexOf(configCall.method);
                         if (currentCallMethodIndex < 0) continue;
 

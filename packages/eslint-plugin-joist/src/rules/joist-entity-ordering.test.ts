@@ -113,6 +113,23 @@ ruleTester.run("joist-entity-ordering", joistEntityOrdering, {
                     messageId: "configHookOrder",
                 },
             ],
+        }, {
+            code: `
+                ${baseFixture}
+        class Publisher extends PublisherCodegen {}
+        
+        config.placeholder();
+        config.addRule(() => 'error');
+      `,
+            errors: [
+                {
+                    column: 9,
+                    endColumn: 29,
+                    line: 8,
+                    endLine: 8,
+                    messageId: "uselessConfigPlaceholder",
+                },
+            ],
         },
     ],
 });

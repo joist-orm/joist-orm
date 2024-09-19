@@ -1,6 +1,14 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
-import { DbMetadata } from "./EntityDbMetadata";
+import {
+  DbMetadata,
+  EntityDbMetadata,
+  EnumField,
+  ManyToOneField,
+  PgEnumField,
+  PolymorphicField,
+  PrimitiveField,
+} from "./EntityDbMetadata";
 import { Config } from "./config";
 
 // Erg, we need a regex in case the fieldName arg is wrapped onto a new line... :-/
@@ -11,26 +19,9 @@ export async function scanEntityFiles(config: Config, dbMeta: DbMetadata): Promi
   await Promise.all(
     dbMeta.entities.map(async (entity) => {
       try {
-        // For inheritence, we need to load the base entity to get all of its fields as well
-        const baseEntity = entity.baseClassName ? dbMeta.entitiesByName[entity.baseClassName] : undefined;
         // load the entity.ts file (as a promise with fs/promises)
         const tsCode = (await readFile(join(config.entitiesDirectory, `${entity.name}.ts`))).toString();
-        const defaultableFields = [
-          ...entity.primitives,
-          ...entity.enums,
-          ...entity.pgEnums,
-          ...entity.manyToOnes,
-          ...entity.polymorphics,
-          ...(baseEntity
-            ? [
-                ...baseEntity.primitives,
-                ...baseEntity.enums,
-                ...baseEntity.pgEnums,
-                ...baseEntity.manyToOnes,
-                ...baseEntity.polymorphics,
-              ]
-            : []),
-        ];
+        const defaultableFields = recursiveDefaultableFields(dbMeta, entity);
         for (const match of tsCode.matchAll(regex)) {
           const field = defaultableFields.find((f) => f.fieldName === match[1]);
           if (field) {
@@ -42,4 +33,26 @@ export async function scanEntityFiles(config: Config, dbMeta: DbMetadata): Promi
       }
     }),
   );
+}
+
+/**
+ * Traverse the entity inheritance tree to find all fields that can have defaults set on them.
+ *
+ * NOTE: I suspect here could be some edge cases here that will need to be ironed out, but should work
+ * for simple inheritence structures. In particular, there may be unexpected side effects if a base
+ * class field has a default set in one subtype, but not another.
+ */
+function recursiveDefaultableFields(
+  dbMeta: DbMetadata,
+  entity: EntityDbMetadata | undefined,
+): Array<PrimitiveField | EnumField | PgEnumField | ManyToOneField | PolymorphicField> {
+  if (!entity) return [];
+  return [
+    ...entity.primitives,
+    ...entity.enums,
+    ...entity.pgEnums,
+    ...entity.manyToOnes,
+    ...entity.polymorphics,
+    ...(entity.baseClassName ? recursiveDefaultableFields(dbMeta, dbMeta.entitiesByName[entity.baseClassName]) : []),
+  ];
 }

@@ -375,8 +375,8 @@ describe("SingleTableInheritance", () => {
 
   it("setDefaults work as expected for subtypes", async () => {
     const em = newEntityManager();
-    const ot = newTaskOld(em, {});
-    const nt = newTaskNew(em, {});
+    const ot = em.create(TaskOld, { specialOldField: 1 });
+    const nt = em.create(TaskNew, {});
     await em.flush();
     // Then TaskOld runs its defaults
     expect(ot).toMatchEntity({
@@ -394,8 +394,8 @@ describe("SingleTableInheritance", () => {
 
   it("derived fields work as expected", async () => {
     const em = newEntityManager();
-    const ot = newTaskOld(em, {});
-    const nt = newTaskNew(em, {});
+    const ot = em.create(TaskOld, { specialOldField: 1 });
+    const nt = em.create(TaskNew, {});
     await em.flush();
     // Then TaskOld runs its defaults
     expect(ot).toMatchEntity({

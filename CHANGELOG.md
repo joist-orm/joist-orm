@@ -1,3 +1,10 @@
+## [1.197.1](https://github.com/joist-orm/joist-orm/compare/v1.197.0...v1.197.1) (2024-09-19)
+
+
+### Bug Fixes
+
+* Sync derived fields on STI types ([#1237](https://github.com/joist-orm/joist-orm/issues/1237)) ([467024c](https://github.com/joist-orm/joist-orm/commit/467024c79bc060f5d0d193c4fb05687241c79bda))
+
 # [1.197.0](https://github.com/joist-orm/joist-orm/compare/v1.196.1...v1.197.0) (2024-09-19)
 
 

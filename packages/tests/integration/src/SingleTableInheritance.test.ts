@@ -1,7 +1,6 @@
 import { getProperties } from "joist-orm";
 import {
   newAuthor,
-  newTask,
   newTaskItem,
   newTaskNew,
   newTaskOld,
@@ -90,11 +89,12 @@ describe("SingleTableInheritance", () => {
 
   it("keeps subtype fields off of the base type", async () => {
     const em = newEntityManager();
-    const t = newTask(em);
+    const nt = newTaskNew(em);
+    const ot = newTaskOld(em);
     // @ts-expect-error
-    expect(t.specialNewField).toBeUndefined();
+    expect(ot.specialNewField).toBeUndefined();
     // @ts-expect-error
-    expect(t.specialOldField).toBeUndefined();
+    expect(nt.specialOldField).toBeUndefined();
     // @ts-expect-error
     await expect(em.find(Task, { specialNewField: 1 })).rejects.toThrow("Field 'specialNewField' not found on tasks");
   });
@@ -144,7 +144,6 @@ describe("SingleTableInheritance", () => {
 
   it("can have subtype-specific hooks", async () => {
     const em = newEntityManager();
-    newTask(em);
     const t2 = newTaskOld(em);
     const t3 = newTaskNew(em);
     await em.flush();
@@ -154,8 +153,6 @@ describe("SingleTableInheritance", () => {
 
   it("can bulk-create tasks of each type", async () => {
     const em = newEntityManager();
-    newTask(em);
-    newTask(em);
     newTaskOld(em);
     newTaskOld(em, { specialOldField: 1 });
     newTaskNew(em);
@@ -165,41 +162,27 @@ describe("SingleTableInheritance", () => {
     expect(rows).toMatchObject([
       {
         id: 1,
-        type_id: null,
-        duration_in_days: 10,
-        special_new_field: null,
-        special_old_field: null,
-      },
-      {
-        id: 2,
-        type_id: null,
-        duration_in_days: 10,
-        special_new_field: null,
-        special_old_field: null,
-      },
-      {
-        id: 3,
         type_id: 1,
         duration_in_days: 10,
         special_new_field: null,
         special_old_field: 0,
       },
       {
-        id: 4,
+        id: 2,
         type_id: 1,
         duration_in_days: 10,
         special_new_field: null,
         special_old_field: 1,
       },
       {
-        id: 5,
+        id: 3,
         type_id: 2,
         duration_in_days: 10,
         special_new_field: null,
         special_old_field: null,
       },
       {
-        id: 6,
+        id: 4,
         type_id: 2,
         duration_in_days: 10,
         special_new_field: 2,
@@ -301,11 +284,10 @@ describe("SingleTableInheritance", () => {
 
   it("can use hints to differentiate between old and new task m2o FKs", async () => {
     const em = newEntityManager();
-    const t = newTask(em);
     const ot = newTaskOld(em, { specialOldField: 1 });
     const nt = newTaskNew(em, { specialNewField: 2 });
     // Given ti.newTask points to TaskNew, and ti.oldTask points to TaskOld
-    const ti = newTaskItem(em, { task: t, newTask: nt, oldTask: ot });
+    const ti = newTaskItem(em, { task: ot, newTask: nt, oldTask: ot });
     await em.flush();
     // Then we can access those with the right types
     expect(ti.oldTask.get!.specialOldField).toBe(1);
@@ -314,13 +296,13 @@ describe("SingleTableInheritance", () => {
 
   it("cannot use the wrong task type for a m2o FK", async () => {
     const em = newEntityManager();
-    const t = newTask(em);
     const ot = newTaskOld(em, { specialOldField: 1 });
     const nt = newTaskNew(em, { specialNewField: 2 });
+    // NOTE: `task` field can be either old or new
     // @ts-expect-error
-    newTaskItem(em, { task: t, newTask: ot, oldTask: ot });
+    newTaskItem(em, { task: ot, newTask: ot, oldTask: ot });
     // @ts-expect-error
-    newTaskItem(em, { task: t, newTask: nt, oldTask: nt });
+    newTaskItem(em, { task: nt, newTask: nt, oldTask: nt });
     await expect(em.flush()).rejects.toThrow(
       "TaskItem#1 TaskOld#1 must be a TaskNew, TaskItem#2 TaskNew#1 must be a TaskOld",
     );
@@ -389,5 +371,41 @@ describe("SingleTableInheritance", () => {
     await em.flush();
     expect(ot.transientFields.oldReactiveRuleRan).toBe(true);
     expect(nt.transientFields.newReactiveRuleRan).toBe(true);
+  });
+
+  it("setDefaults work as expected for subtypes", async () => {
+    const em = newEntityManager();
+    const ot = newTaskOld(em, {});
+    const nt = newTaskNew(em, {});
+    await em.flush();
+    // Then TaskOld runs its defaults
+    expect(ot).toMatchEntity({
+      syncDefault: "TaskOld",
+      asyncDefault_1: "TaskOld Async1",
+      asyncDefault_2: "TaskOld Async1 Async2",
+    });
+    // And TaskNew runs its defaults
+    expect(nt).toMatchEntity({
+      syncDefault: "TaskNew",
+      asyncDefault_1: "TaskNew Async1",
+      asyncDefault_2: "TaskNew Async1 Async2",
+    });
+  });
+
+  it("derived fields work as expected", async () => {
+    const em = newEntityManager();
+    const ot = newTaskOld(em, {});
+    const nt = newTaskNew(em, {});
+    await em.flush();
+    // Then TaskOld runs its defaults
+    expect(ot).toMatchEntity({
+      syncDerived: "SyncDerivedOld",
+      asyncDerived: "SyncDerivedOld AsyncDerived",
+    });
+    // And TaskNew runs its defaults
+    expect(nt).toMatchEntity({
+      syncDerived: "SyncDerivedNew",
+      asyncDerived: "SyncDerivedNew AsyncDerived",
+    });
   });
 });

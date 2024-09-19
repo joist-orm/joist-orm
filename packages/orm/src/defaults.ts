@@ -51,16 +51,10 @@ export function setAsyncDefaults(
     const entitiesByType: Map<EntityMetadata, Entity[]> = todo.metadata.inheritanceType
       ? groupBy(todo.inserts, (e) => getMetadata(e))
       : new Map([[todo.metadata, todo.inserts]]);
-    // Copy subtypes insert down into the base, so they get base-level defaults applied
-    for (const [maybeSub, inserts] of entitiesByType.entries()) {
-      for (const baseType of maybeSub.baseTypes) {
-        entitiesByType.set(baseType, [...(entitiesByType.get(baseType) ?? []), ...inserts]);
-      }
-    }
     // flatMap because each meta might have N fields
     const p = [...entitiesByType.entries()].flatMap(([meta, inserts]) => {
       return Object.values(meta.config.__data.asyncDefaults).map((df) =>
-        df.setOnEntities(ctx, dt, suppressedTypeErrors, todo.metadata, inserts),
+        df.setOnEntities(ctx, dt, suppressedTypeErrors, meta, inserts),
       );
     });
     return Promise.all(p);
@@ -217,8 +211,11 @@ class DependencyTracker {
     // Seed it with any entities that we're actively inserting (as any dependencies to
     // entities that aren't even having `setDefault` called can be skipped)
     for (const todo of Object.values(todos)) {
-      // ...handle subtypes?
-      this.#deferreds.set(todo.metadata.type, new Map());
+      if (todo.metadata.inheritanceType) {
+        new Set(todo.inserts.map((e) => getMetadata(e))).forEach((meta) => this.#deferreds.set(meta.type, new Map()));
+      } else {
+        this.#deferreds.set(todo.metadata.type, new Map());
+      }
     }
   }
 
@@ -227,7 +224,7 @@ class DependencyTracker {
   }
 
   getDeferred(meta: EntityMetadata, fieldName: string): Deferred<void> {
-    const map = this.#deferreds.get(meta.type) ?? fail(`No deferred check necessary for ${meta.type}`);
+    const map = this.#deferreds.get(meta.type) ?? fail(`No deferred check necessary for ${meta.type}.${fieldName}`);
     let deferred = map.get(fieldName);
     if (!deferred) {
       deferred = new Deferred();

@@ -12,6 +12,8 @@ import {
   type FilterOf,
   type Flavor,
   getField,
+  type GetLens,
+  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -311,6 +313,10 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   load<U, V>(fn: (lens: Lens<User>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as User, fn, opts);
+  }
+
+  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
+    return getLens(userMeta, this, fn as never);
   }
 
   populate<const H extends LoadHint<User>>(hint: H): Promise<Loaded<User, H>>;

@@ -12,8 +12,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasManyToMany,
   hasOne,
@@ -208,10 +206,6 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
 
   load<U, V>(fn: (lens: Lens<BookReview>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as BookReview, fn, opts);
-  }
-
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(bookReviewMeta, this, fn as never);
   }
 
   populate<const H extends LoadHint<BookReview>>(hint: H): Promise<Loaded<BookReview, H>>;

@@ -7,8 +7,6 @@ import {
   failNoIdYet,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -292,10 +290,6 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
 
   load<U, V>(fn: (lens: Lens<AuthorStat>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as AuthorStat, fn, opts);
-  }
-
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(authorStatMeta, this, fn as never);
   }
 
   populate<const H extends LoadHint<AuthorStat>>(hint: H): Promise<Loaded<AuthorStat, H>>;

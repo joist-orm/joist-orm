@@ -29,6 +29,7 @@ import {
   FieldsOf,
   FilterOf,
   Flavor,
+  GetLens,
   GraphQLFilterOf,
   IdOf,
   JsonPayload,
@@ -58,6 +59,7 @@ import {
   cleanStringValue,
   failNoIdYet,
   getField,
+  getLens,
   hasLargeMany,
   hasLargeManyToMany,
   hasMany,
@@ -76,10 +78,10 @@ import {
   setField,
   setOpts,
   toIdOf,
-  toJSON, getLens, GetLens,
+  toJSON,
 } from "./symbols";
+import { tsdocComments } from "./tsdoc";
 import { assertNever, fail, uncapitalize } from "./utils";
-import {tsdocComments} from "./tsdoc";
 
 export interface ColumnMetaData {
   fieldType: PrimitiveTypescriptType;

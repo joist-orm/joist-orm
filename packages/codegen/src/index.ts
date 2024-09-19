@@ -1,5 +1,5 @@
-import process from "node:process";
 import { ConnectionConfig, newPgConnectionConfig } from "joist-utils";
+import process from "node:process";
 import { Client } from "pg";
 import pgStructure from "pg-structure";
 import { saveFiles } from "ts-poet";
@@ -12,9 +12,9 @@ import { generateFiles } from "./generate";
 import { createFlushFunction } from "./generateFlushFunction";
 import { applyInheritanceUpdates } from "./inheritance";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
+import { LOG_LEVELS, loggerMaxWarningLevelHit } from "./logger";
 import { scanEntityFiles } from "./scanEntityFiles";
 import { isEntityTable, isJoinTable, mapSimpleDbTypeToTypescriptType } from "./utils";
-import { LOG_LEVELS, loggerMaxWarningLevelHit } from "./logger";
 
 export {
   DbMetadata,
@@ -140,18 +140,20 @@ if (require.main === module) {
   if (Object.fromEntries === undefined) {
     throw new Error("Joist requires Node v12.4.0+");
   }
-  main().then(() => {
-    if (
+  main()
+    .then(() => {
+      if (
         !process.argv.includes("--always-exit-code-zero") &&
         // strict mode + warnings or greater
         ((process.argv.includes("--strict") && loggerMaxWarningLevelHit >= LOG_LEVELS.warn) ||
-        // otherwise errors or greater
-        loggerMaxWarningLevelHit >= LOG_LEVELS.error)
-    ) {
-      process.exitCode = 1;
-    }
-  }).catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+          // otherwise errors or greater
+          loggerMaxWarningLevelHit >= LOG_LEVELS.error)
+      ) {
+        process.exitCode = 1;
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
 }

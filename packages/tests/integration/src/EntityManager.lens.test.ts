@@ -15,7 +15,7 @@ import { Author, Book, Image, newAuthor, newBook, Publisher, Tag } from "./entit
 const { isAllSqlPaths } = testing;
 
 describe("EntityManager.lens", () => {
-  describe('sync lens', () => {
+  describe("sync lens", () => {
     it("can handle own properties", async () => {
       await insertPublisher({ name: "p1" });
       await insertAuthor({ first_name: "a1", publisher_id: 1 });
@@ -55,7 +55,7 @@ describe("EntityManager.lens", () => {
       // @ts-expect-error
       b2.get((b) => b.author.publisher);
     });
-  })
+  });
 
   it("can navigate references", async () => {
     await insertPublisher({ name: "p1" });

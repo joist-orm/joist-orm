@@ -15,5 +15,6 @@ jobs:
         with:
           node-version: 22
       - run: yarn install
+      - run: yarn build
       - run: yarn db
       - run: git diff --exit-code

@@ -112,7 +112,6 @@ const ignoredKeys = new Set([
   "load",
   "populate",
   "isLoaded",
-  "get",
   "toJSON",
 ]);
 

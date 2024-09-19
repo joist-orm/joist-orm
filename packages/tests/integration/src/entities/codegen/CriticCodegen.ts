@@ -11,8 +11,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -191,10 +189,6 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
 
   load<U, V>(fn: (lens: Lens<Critic>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as Critic, fn, opts);
-  }
-
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(criticMeta, this, fn as never);
   }
 
   populate<const H extends LoadHint<Critic>>(hint: H): Promise<Loaded<Critic, H>>;

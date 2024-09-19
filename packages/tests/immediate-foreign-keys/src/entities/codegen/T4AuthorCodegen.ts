@@ -11,8 +11,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -152,10 +150,6 @@ export abstract class T4AuthorCodegen extends BaseEntity<EntityManager, number> 
 
   load<U, V>(fn: (lens: Lens<T4Author>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as T4Author, fn, opts);
-  }
-
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(t4AuthorMeta, this, fn as never);
   }
 
   populate<const H extends LoadHint<T4Author>>(hint: H): Promise<Loaded<T4Author, H>>;

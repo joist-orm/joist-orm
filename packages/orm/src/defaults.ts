@@ -133,7 +133,7 @@ export class AsyncDefault<T extends Entity> {
 
   // Calc once and cache
   private deps(meta: EntityMetadata): DefaultDependency[] {
-    return (this.#deps = getDefaultDependencies(meta, this.fieldName, this.#fieldHint));
+    return (this.#deps ??= getDefaultDependencies(meta, this.fieldName, this.#fieldHint));
   }
 }
 

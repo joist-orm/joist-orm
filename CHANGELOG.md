@@ -1,3 +1,17 @@
+# [1.196.0](https://github.com/joist-orm/joist-orm/compare/v1.195.1...v1.196.0) (2024-09-19)
+
+
+### Features
+
+* add codegen logger + exit code w/ strict flag ([#1228](https://github.com/joist-orm/joist-orm/issues/1228)) ([5fc3701](https://github.com/joist-orm/joist-orm/commit/5fc37014a6c7b375f6edc36711fa88ee7d87c909))
+
+## [1.195.1](https://github.com/joist-orm/joist-orm/compare/v1.195.0...v1.195.1) (2024-09-19)
+
+
+### Bug Fixes
+
+* Add missing ??= operator. ([#1234](https://github.com/joist-orm/joist-orm/issues/1234)) ([3601b6b](https://github.com/joist-orm/joist-orm/commit/3601b6bdff6dbcca50bf8354985ea3c13fd905a7))
+
 # [1.195.0](https://github.com/joist-orm/joist-orm/compare/v1.194.6...v1.195.0) (2024-09-18)
 
 

@@ -1,3 +1,10 @@
+# [1.197.0](https://github.com/joist-orm/joist-orm/compare/v1.196.1...v1.197.0) (2024-09-19)
+
+
+### Features
+
+* Revert "feat: sync lens ([#1227](https://github.com/joist-orm/joist-orm/issues/1227))" - Temporary ([#1238](https://github.com/joist-orm/joist-orm/issues/1238)) ([0a89748](https://github.com/joist-orm/joist-orm/commit/0a89748ff90fcc9dc01482fac2c002ddd48db173))
+
 ## [1.196.1](https://github.com/joist-orm/joist-orm/compare/v1.196.0...v1.196.1) (2024-09-19)
 
 

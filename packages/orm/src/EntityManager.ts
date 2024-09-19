@@ -1934,15 +1934,15 @@ function recalcSynchronousDerivedFields(todos: Record<string, Todo>) {
     [...new Set(entities.map(getMetadata))].map((m) => {
       return [
         m,
-        Object.values(m.fields)
-          .filter((f) => f.kind === "primitive" && f.derived === "sync")
+        Object.values(m.allFields)
+          .filter((f) => (f.kind === "primitive" || f.kind === "enum") && f.derived === "sync")
           .map((f) => f.fieldName),
       ];
     }),
   );
 
   for (const entity of entities) {
-    const derivedFields = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => derivedFieldsByMeta.get(m) || []);
+    const derivedFields = derivedFieldsByMeta.get(getMetadata(entity)) || [];
     derivedFields.forEach((fieldName) => {
       // setField will intelligently mark/not mark the field as dirty.
       setField(entity, fieldName as any, (entity as any)[fieldName]);

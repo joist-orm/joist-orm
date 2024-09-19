@@ -344,6 +344,13 @@ export function up(b: MigrationBuilder): void {
     parent_old_task_id: foreignKey("tasks", { notNull: false }),
     // For testing soft-delete on STI tables
     deleted_at: { type: "timestamptz", notNull: false },
+    // For testing defaults, where each subtype provides a different default
+    sync_default: { type: "text", notNull: false },
+    async_default_1: { type: "text", notNull: false },
+    async_default_2: { type: "text", notNull: false },
+    // For testing derived fields, where each subtype provides a different derived value
+    sync_derived: { type: "text", notNull: false },
+    async_derived: { type: "text", notNull: false },
   });
 
   // For testing single-table inheritance

@@ -19,6 +19,11 @@ type TaskOld {
   tasks: [Task!]!
   deletedAt: DateTime
   tags: [Tag!]!
+  syncDefault: String
+  asyncDefault_1: String
+  asyncDefault_2: String
+  syncDerived: String
+  asyncDerived: String
 }
 
 input SaveTaskOldInput {
@@ -29,6 +34,9 @@ input SaveTaskOldInput {
   specialNewAuthorId: ID
   parentOldTaskId: ID
   deletedAt: DateTime
+  syncDefault: String
+  asyncDefault_1: String
+  asyncDefault_2: String
 }
 
 type SaveTaskOldResult {

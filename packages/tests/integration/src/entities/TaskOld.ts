@@ -1,5 +1,5 @@
-import { AsyncProperty, hasReactiveAsyncProperty } from "joist-orm";
-import { TaskOldCodegen, taskOldConfig as config } from "./entities";
+import { AsyncProperty, hasReactiveAsyncProperty, hasReactiveField, ReactiveField } from "joist-orm";
+import { taskOldConfig as config, TaskOldCodegen } from "./entities";
 
 export class TaskOld extends TaskOldCodegen {
   transientFields = {
@@ -12,7 +12,23 @@ export class TaskOld extends TaskOldCodegen {
     { parentOldTask: "id" },
     (t) => `parent=${t.parentOldTask.get?.id}`,
   );
+
+  get syncDerived(): string | undefined {
+    return "SyncDerivedOld";
+  }
+
+  readonly asyncDerived: ReactiveField<TaskOld, string | undefined> = hasReactiveField(
+    "asyncDerived",
+    { syncDerived: [], oldTaskTaskItems: "oldTask" },
+    (tn) => `${tn.syncDerived} AsyncDerived`,
+  );
 }
+
+config.setDefault("syncDefault", () => "TaskOld");
+
+config.setDefault("asyncDefault_1", ["syncDefault", "oldTaskTaskItems"], (tn) => `${tn.syncDefault} Async1`);
+
+config.setDefault("asyncDefault_2", ["asyncDefault_1", "oldTaskTaskItems"], (tn) => `${tn.asyncDefault_1} Async2`);
 
 /** For testing that STI reactive rules run correctly. */
 config.addRule("deletedAt", (t) => {

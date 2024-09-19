@@ -11,6 +11,8 @@ export async function scanEntityFiles(config: Config, dbMeta: DbMetadata): Promi
   await Promise.all(
     dbMeta.entities.map(async (entity) => {
       try {
+        // For inheritence, we need to load the base entity to get all of its fields as well
+        const baseEntity = entity.baseClassName ? dbMeta.entitiesByName[entity.baseClassName] : undefined;
         // load the entity.ts file (as a promise with fs/promises)
         const tsCode = (await readFile(join(config.entitiesDirectory, `${entity.name}.ts`))).toString();
         const defaultableFields = [
@@ -19,6 +21,15 @@ export async function scanEntityFiles(config: Config, dbMeta: DbMetadata): Promi
           ...entity.pgEnums,
           ...entity.manyToOnes,
           ...entity.polymorphics,
+          ...(baseEntity
+            ? [
+                ...baseEntity.primitives,
+                ...baseEntity.enums,
+                ...baseEntity.pgEnums,
+                ...baseEntity.manyToOnes,
+                ...baseEntity.polymorphics,
+              ]
+            : []),
         ];
         for (const match of tsCode.matchAll(regex)) {
           const field = defaultableFields.find((f) => f.fieldName === match[1]);

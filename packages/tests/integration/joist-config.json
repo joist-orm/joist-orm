@@ -72,8 +72,10 @@
     "Tag": { "tag": "t" },
     "Task": {
       "fields": {
+        "asyncDerived": { "derived": "async" },
         "specialNewField": { "stiType": "NEW" },
         "specialOldField": { "stiNotNull": true, "stiType": "TaskOld" },
+        "syncDerived": { "derived": "sync" },
         "type": { "stiDiscriminator": { "NEW": "TaskNew", "OLD": "TaskOld" } }
       },
       "relations": {

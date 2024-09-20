@@ -99,6 +99,10 @@ export abstract class Publisher extends PublisherCodegen {
 /** Test the types for an enum default value (even though it is already matched by the db defaultValues). */
 config.setDefault("type", () => PublisherType.Big);
 
+/** Test that base class defaults are processed and persisted */
+config.setDefault("baseSyncDefault", () => "BaseSyncDefault");
+config.setDefault("baseAsyncDefault", "authors", () => "BaseAsyncDefault");
+
 // Example of a rule against a base type
 config.addRule(cannotBeUpdated("type"));
 

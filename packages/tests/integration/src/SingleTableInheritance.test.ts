@@ -388,9 +388,9 @@ describe("SingleTableInheritance", () => {
     expect(tasks[0].async_default_2).toEqual("TaskOld Async1 Async2");
     // And TaskNew persisted its defaults
     expect(tasks[1].id).toEqual(2);
-    expect(tasks[1].sync_default).toEqual("TaskOld");
-    expect(tasks[1].async_default_1).toEqual("TaskOld Async1");
-    expect(tasks[1].async_default_2).toEqual("TaskOld Async1 Async2");
+    expect(tasks[1].sync_default).toEqual("TaskNew");
+    expect(tasks[1].async_default_1).toEqual("TaskNew Async1");
+    expect(tasks[1].async_default_2).toEqual("TaskNew Async1 Async2");
 
     // And the entities reflect the values
     expect(ot).toMatchEntity({

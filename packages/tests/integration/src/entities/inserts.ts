@@ -123,8 +123,14 @@ export function insertPublisherOnly(row: {
   huge_number?: string | number;
   size_id?: number;
   group_id?: number;
+  base_sync_default?: string;
+  base_async_default?: string;
 }) {
-  return testDriver.insert("publishers", row);
+  return testDriver.insert("publishers", {
+    base_sync_default: "FactorySyncDefault",
+    base_async_default: "FactoryAsyncDefault",
+    ...row,
+  });
 }
 
 /** Inserts a small publisher, into `publishers` and `small_publishers`. */
@@ -141,9 +147,15 @@ export async function insertPublisher(row: {
   shared_column?: string;
   updated_at?: Date;
   deleted_at?: Date;
+  base_sync_default?: string;
+  base_async_default?: string;
 }) {
   const { shared_column, ...others } = row;
-  await testDriver.insert("publishers", others);
+  await testDriver.insert("publishers", {
+    base_sync_default: "FactorySyncDefault",
+    base_async_default: "FactoryAsyncDefault",
+    ...others,
+  });
   await testDriver.insert(
     "small_publishers",
     {
@@ -167,9 +179,15 @@ export async function insertLargePublisher(row: {
   shared_column?: string;
   country?: string;
   updated_at?: Date;
+  base_sync_default?: string;
+  base_async_default?: string;
 }) {
   const { country = "country", shared_column, ...others } = row;
-  await testDriver.insert("publishers", others);
+  await testDriver.insert("publishers", {
+    base_sync_default: "FactorySyncDefault",
+    base_async_default: "FactoryAsyncDefault",
+    ...others,
+  });
   await testDriver.insert("large_publishers", { id: row.id ?? 1, country, shared_column }, true);
 }
 

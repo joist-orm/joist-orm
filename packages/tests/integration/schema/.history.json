@@ -154,6 +154,8 @@
   "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "type", "updatedAt"],
   "LargePublisher": [
     "authors",
+    "baseAsyncDefault",
+    "baseSyncDefault",
     "bookAdvances",
     "comments",
     "country",
@@ -213,6 +215,8 @@
   "ParentItem": ["childItems", "createdAt", "id", "name", "parentGroup", "updatedAt"],
   "Publisher": [
     "authors",
+    "baseAsyncDefault",
+    "baseSyncDefault",
     "bookAdvances",
     "comments",
     "createdAt",
@@ -353,6 +357,8 @@
   "SaveImageInput": ["authorId", "bookId", "createdAt", "fileName", "id", "publisherId", "type", "updatedAt"],
   "SaveImageResult": ["image"],
   "SaveLargePublisherInput": [
+    "baseAsyncDefault",
+    "baseSyncDefault",
     "country",
     "deletedAt",
     "groupId",
@@ -379,6 +385,8 @@
   "SavePublisherGroupInput": ["id", "name", "numberOfBookReviews"],
   "SavePublisherGroupResult": ["publisherGroup"],
   "SavePublisherInput": [
+    "baseAsyncDefault",
+    "baseSyncDefault",
     "createdAt",
     "deletedAt",
     "groupId",
@@ -396,6 +404,8 @@
   "SavePublisherResult": ["publisher"],
   "SaveSmallPublisherInput": [
     "allAuthorNames",
+    "baseAsyncDefault",
+    "baseSyncDefault",
     "city",
     "deletedAt",
     "groupId",
@@ -473,6 +483,8 @@
   "SmallPublisher": [
     "allAuthorNames",
     "authors",
+    "baseAsyncDefault",
+    "baseSyncDefault",
     "bookAdvances",
     "city",
     "comments",

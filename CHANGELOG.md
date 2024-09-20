@@ -1,3 +1,10 @@
+## [1.197.2](https://github.com/joist-orm/joist-orm/compare/v1.197.1...v1.197.2) (2024-09-20)
+
+
+### Bug Fixes
+
+* Correctly handle setDefault from base type and overrides in subtypes ([#1239](https://github.com/joist-orm/joist-orm/issues/1239)) ([f7c4ea1](https://github.com/joist-orm/joist-orm/commit/f7c4ea1b7f6933f0016985cbcd94e30ee6a591e6))
+
 ## [1.197.1](https://github.com/joist-orm/joist-orm/compare/v1.197.0...v1.197.1) (2024-09-19)
 
 

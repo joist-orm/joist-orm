@@ -138,7 +138,7 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
     });
 
     // Look for ReactiveFields to reverse
-    Object.values(meta.fields)
+    Object.values(meta.allFields)
       .filter(
         (f) =>
           f.kind === "primitive" ||

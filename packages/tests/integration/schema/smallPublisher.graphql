@@ -24,6 +24,8 @@ type SmallPublisher {
   tasks: [Task!]!
   deletedAt: DateTime
   sharedColumn: String
+  baseSyncDefault: String
+  baseAsyncDefault: String!
 }
 
 input SaveSmallPublisherInput {
@@ -38,6 +40,8 @@ input SaveSmallPublisherInput {
   groupId: ID
   deletedAt: DateTime
   sharedColumn: String
+  baseSyncDefault: String
+  baseAsyncDefault: String
 }
 
 type SaveSmallPublisherResult {

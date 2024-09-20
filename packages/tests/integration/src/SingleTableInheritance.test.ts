@@ -375,16 +375,29 @@ describe("SingleTableInheritance", () => {
 
   it("setDefaults work as expected for subtypes", async () => {
     const em = newEntityManager();
-    const ot = em.create(TaskOld, { specialOldField: 1 });
-    const nt = em.create(TaskNew, {});
+    const ot = newTaskOld(em, {});
+    const nt = newTaskNew(em, {});
     await em.flush();
-    // Then TaskOld runs its defaults
+
+    const tasks = await select("tasks");
+    expect(tasks.length).toEqual(2);
+    // Then TaskOld persisted its defaults
+    expect(tasks[0].id).toEqual(1);
+    expect(tasks[0].sync_default).toEqual("TaskOld");
+    expect(tasks[0].async_default_1).toEqual("TaskOld Async1");
+    expect(tasks[0].async_default_2).toEqual("TaskOld Async1 Async2");
+    // And TaskNew persisted its defaults
+    expect(tasks[1].id).toEqual(2);
+    expect(tasks[1].sync_default).toEqual("TaskNew");
+    expect(tasks[1].async_default_1).toEqual("TaskNew Async1");
+    expect(tasks[1].async_default_2).toEqual("TaskNew Async1 Async2");
+
+    // And the entities reflect the values
     expect(ot).toMatchEntity({
       syncDefault: "TaskOld",
       asyncDefault_1: "TaskOld Async1",
       asyncDefault_2: "TaskOld Async1 Async2",
     });
-    // And TaskNew runs its defaults
     expect(nt).toMatchEntity({
       syncDefault: "TaskNew",
       asyncDefault_1: "TaskNew Async1",
@@ -394,15 +407,26 @@ describe("SingleTableInheritance", () => {
 
   it("derived fields work as expected", async () => {
     const em = newEntityManager();
-    const ot = em.create(TaskOld, { specialOldField: 1 });
-    const nt = em.create(TaskNew, {});
+    const ot = newTaskOld(em, {});
+    const nt = newTaskNew(em, {});
     await em.flush();
-    // Then TaskOld runs its defaults
+
+    const tasks = await select("tasks");
+    expect(tasks.length).toEqual(2);
+    // Then TaskOld persisted its derived fields
+    expect(tasks[0].id).toEqual(1);
+    expect(tasks[0].sync_derived).toEqual("SyncDerivedOld");
+    expect(tasks[0].async_derived).toEqual("SyncDerivedOld AsyncDerived");
+    // And TaskNew persisted its derived fields
+    expect(tasks[1].id).toEqual(2);
+    expect(tasks[1].sync_derived).toEqual("SyncDerivedNew");
+    expect(tasks[1].async_derived).toEqual("SyncDerivedNew AsyncDerived");
+
+    // And the entities reflect the values
     expect(ot).toMatchEntity({
       syncDerived: "SyncDerivedOld",
       asyncDerived: "SyncDerivedOld AsyncDerived",
     });
-    // And TaskNew runs its defaults
     expect(nt).toMatchEntity({
       syncDerived: "SyncDerivedNew",
       asyncDerived: "SyncDerivedNew AsyncDerived",

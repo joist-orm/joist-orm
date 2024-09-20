@@ -89,6 +89,8 @@ export interface PublisherFields {
   numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   titlesOfFavoriteBooks: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  baseSyncDefault: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  baseAsyncDefault: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   size: { kind: "enum"; type: PublisherSize; nullable: undefined };
@@ -102,6 +104,8 @@ export interface PublisherOpts {
   longitude?: number | null;
   hugeNumber?: number | null;
   deletedAt?: Date | null;
+  baseSyncDefault?: string;
+  baseAsyncDefault?: string;
   size?: PublisherSize | null;
   type?: PublisherType;
   group?: PublisherGroup | PublisherGroupId | null;
@@ -132,6 +136,8 @@ export interface PublisherFilter {
   numberOfBookReviews?: ValueFilter<number, never>;
   deletedAt?: ValueFilter<Date, null>;
   titlesOfFavoriteBooks?: ValueFilter<string, null>;
+  baseSyncDefault?: ValueFilter<string, never>;
+  baseAsyncDefault?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   size?: ValueFilter<PublisherSize, null>;
@@ -154,6 +160,8 @@ export interface PublisherGraphQLFilter {
   numberOfBookReviews?: ValueGraphQLFilter<number>;
   deletedAt?: ValueGraphQLFilter<Date>;
   titlesOfFavoriteBooks?: ValueGraphQLFilter<string>;
+  baseSyncDefault?: ValueGraphQLFilter<string>;
+  baseAsyncDefault?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   size?: ValueGraphQLFilter<PublisherSize>;
@@ -176,6 +184,8 @@ export interface PublisherOrder {
   numberOfBookReviews?: OrderBy;
   deletedAt?: OrderBy;
   titlesOfFavoriteBooks?: OrderBy;
+  baseSyncDefault?: OrderBy;
+  baseAsyncDefault?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   size?: OrderBy;
@@ -187,6 +197,8 @@ export const publisherConfig = new ConfigApi<Publisher, Context>();
 
 publisherConfig.addRule(newRequiredRule("name"));
 publisherConfig.addRule(newRequiredRule("numberOfBookReviews"));
+publisherConfig.addRule(newRequiredRule("baseSyncDefault"));
+publisherConfig.addRule(newRequiredRule("baseAsyncDefault"));
 publisherConfig.addRule(newRequiredRule("createdAt"));
 publisherConfig.addRule(newRequiredRule("updatedAt"));
 publisherConfig.addRule(newRequiredRule("type"));
@@ -276,6 +288,22 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   abstract readonly titlesOfFavoriteBooks: ReactiveField<Publisher, string | undefined>;
+
+  get baseSyncDefault(): string {
+    return getField(this, "baseSyncDefault");
+  }
+
+  set baseSyncDefault(baseSyncDefault: string) {
+    setField(this, "baseSyncDefault", cleanStringValue(baseSyncDefault));
+  }
+
+  get baseAsyncDefault(): string {
+    return getField(this, "baseAsyncDefault");
+  }
+
+  set baseAsyncDefault(baseAsyncDefault: string) {
+    setField(this, "baseAsyncDefault", cleanStringValue(baseAsyncDefault));
+  }
 
   get createdAt(): Date {
     return getField(this, "createdAt");

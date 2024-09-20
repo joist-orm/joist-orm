@@ -16,6 +16,8 @@ type Publisher {
   numberOfBookReviews: Int
   tasks: [Task!]!
   deletedAt: DateTime
+  baseSyncDefault: String
+  baseAsyncDefault: String!
 }
 
 input SavePublisherInput {
@@ -30,6 +32,8 @@ input SavePublisherInput {
   type: PublisherType
   groupId: ID
   deletedAt: DateTime
+  baseSyncDefault: String
+  baseAsyncDefault: String
 }
 
 type SavePublisherResult {

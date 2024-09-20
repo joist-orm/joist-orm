@@ -1,6 +1,6 @@
 import ansiRegex = require("ansi-regex");
 import { FieldLogger, FieldLoggerWatch } from "joist-orm";
-import { Author, newBook, Publisher } from "src/entities";
+import { Author, Publisher, newBook } from "src/entities";
 import { insertAuthor, insertPublisher } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
@@ -49,7 +49,7 @@ describe("FieldLogging", () => {
        "b#1.title = title at newBook.ts:9↩",
        "b#1.order = 1 at newBook.ts:9↩",
        "b#1.author = Author#1 at newBook.ts:9↩",
-       "b#1.notes = Notes for title at defaults.ts:30↩",
+       "b#1.notes = Notes for title at defaults.ts:38↩",
      ]
     `);
   });

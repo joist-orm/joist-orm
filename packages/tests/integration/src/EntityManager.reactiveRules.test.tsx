@@ -387,6 +387,20 @@ describe("EntityManager.reactiveRules", () => {
       { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["tags"], path: ["comments"] },
       {
         kind: "query",
+        cstr: "LargePublisher",
+        name: "numberOfBookReviews",
+        fields: ["author", "deletedAt"],
+        path: ["author", "publisher@LargePublisher"],
+      },
+      {
+        kind: "populate",
+        cstr: "LargePublisher",
+        name: "titlesOfFavoriteBooks",
+        fields: ["title"],
+        path: ["favoriteAuthor", "publisher@LargePublisher"],
+      },
+      {
+        kind: "query",
         cstr: "Publisher",
         name: "numberOfBookReviews",
         fields: ["author", "deletedAt"],
@@ -398,6 +412,20 @@ describe("EntityManager.reactiveRules", () => {
         name: "titlesOfFavoriteBooks",
         fields: ["title"],
         path: ["favoriteAuthor", "publisher"],
+      },
+      {
+        kind: "query",
+        cstr: "SmallPublisher",
+        name: "numberOfBookReviews",
+        fields: ["author", "deletedAt"],
+        path: ["author", "publisher@SmallPublisher"],
+      },
+      {
+        kind: "populate",
+        cstr: "SmallPublisher",
+        name: "titlesOfFavoriteBooks",
+        fields: ["title"],
+        path: ["favoriteAuthor", "publisher@SmallPublisher"],
       },
     ]);
     expect(getReactiveFields(BookReview)).toEqual([
@@ -422,10 +450,24 @@ describe("EntityManager.reactiveRules", () => {
       { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["tags"], path: ["comment"] },
       {
         kind: "query",
+        cstr: "LargePublisher",
+        name: "numberOfBookReviews",
+        fields: [],
+        path: ["book", "author", "publisher@LargePublisher"],
+      },
+      {
+        kind: "query",
         cstr: "Publisher",
         name: "numberOfBookReviews",
         fields: [],
         path: ["book", "author", "publisher"],
+      },
+      {
+        kind: "query",
+        cstr: "SmallPublisher",
+        name: "numberOfBookReviews",
+        fields: [],
+        path: ["book", "author", "publisher@SmallPublisher"],
       },
     ]);
   });

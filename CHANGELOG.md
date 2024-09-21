@@ -1,3 +1,10 @@
+## [1.197.3](https://github.com/joist-orm/joist-orm/compare/v1.197.2...v1.197.3) (2024-09-21)
+
+
+### Bug Fixes
+
+* Call hookUpBaseTypeAndSubTypes before fireAfterMetadatas ([#1240](https://github.com/joist-orm/joist-orm/issues/1240)) ([be539d2](https://github.com/joist-orm/joist-orm/commit/be539d2102c9dabd87d24621c122548dc5d49813))
+
 ## [1.197.2](https://github.com/joist-orm/joist-orm/compare/v1.197.1...v1.197.2) (2024-09-20)
 
 

@@ -398,6 +398,10 @@ describe("Inheritance", () => {
     );
   });
 
+  it("can access base type metadata in afterMetadata", async () => {
+    expect(SmallPublisher.afterMetadataHasBaseTypes).toBe(true);
+  });
+
   it("can access sub type metadata in afterMetadata", async () => {
     expect(Publisher.afterMetadataHasSubTypes).toBe(true);
   });

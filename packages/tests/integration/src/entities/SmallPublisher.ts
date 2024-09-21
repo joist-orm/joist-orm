@@ -10,6 +10,7 @@ export class SmallPublisher extends SmallPublisherCodegen {
     { authors: ["firstName"] },
     (sp) => sp.authors.get.map((a) => a.firstName).join(", "),
   );
+  static afterMetadataHasBaseTypes = false;
   public beforeFlushRan = false;
   public beforeCreateRan = false;
   public beforeUpdateRan = false;
@@ -17,6 +18,10 @@ export class SmallPublisher extends SmallPublisherCodegen {
   public afterValidationRan = false;
   public afterCommitRan = false;
 }
+
+config.afterMetadata((meta) => {
+  SmallPublisher.afterMetadataHasBaseTypes = meta.baseTypes.length > 0;
+});
 
 config.addRule((p) => {
   if (p.name === "large") {

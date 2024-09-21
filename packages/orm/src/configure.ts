@@ -18,13 +18,13 @@ const typeToMetaMap = new Map<string, EntityMetadata>();
 
 /** Performs our boot-time initialization, i.e. hooking up reactivity. */
 export function configureMetadata(metas: EntityMetadata[]): void {
-  hookUpBaseTypeAndSubTypes(metas);
-  fireAfterMetadatas(metas);
   setBooted();
   populateConstructorMaps(metas);
   setImmutableFields(metas);
+  hookUpBaseTypeAndSubTypes(metas);
   reverseIndexReactivity(metas);
   populatePolyComponentFields(metas);
+  fireAfterMetadatas(metas);
 }
 
 function fireAfterMetadatas(metas: EntityMetadata[]): void {

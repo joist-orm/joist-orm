@@ -38,6 +38,10 @@ export async function scanEntityFiles(config: Config, dbMeta: DbMetadata): Promi
 /**
  * Traverse the entity inheritance tree to find all fields that can have defaults set on them.
  *
+ * I.e. a column defined in a base CTI table like `publishers.foo_bar` having a `config.setDefault` in
+ * `SmallPublisher` and/or `LargePublisher`, or the same scenario for an STI table like `tasks.foo_bar`
+ * with `TaskNew` and/or `TaskOld`.
+ *
  * NOTE: I suspect here could be some edge cases here that will need to be ironed out, but should work
  * for simple inheritence structures. In particular, there may be unexpected side effects if a base
  * class field has a default set in one subtype, but not another.

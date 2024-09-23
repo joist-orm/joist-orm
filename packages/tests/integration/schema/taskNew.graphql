@@ -24,6 +24,8 @@ type TaskNew {
   asyncDefault_2: String
   syncDerived: String
   asyncDerived: String
+  selfReferential: TaskNew
+  selfReferentialTasks: [TaskNew!]!
 }
 
 input SaveTaskNewInput {
@@ -37,6 +39,7 @@ input SaveTaskNewInput {
   syncDefault: String
   asyncDefault_1: String
   asyncDefault_2: String
+  selfReferentialId: ID
 }
 
 type SaveTaskNewResult {

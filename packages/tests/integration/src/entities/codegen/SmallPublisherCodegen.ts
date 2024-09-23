@@ -12,12 +12,14 @@ import {
   getField,
   type GraphQLFilterOf,
   hasMany,
+  hasOne,
   isLoaded,
   type JsonPayload,
   type Lens,
   type Loaded,
   type LoadHint,
   loadLens,
+  type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
   type OptsOf,
@@ -59,15 +61,20 @@ export interface SmallPublisherFields extends PublisherFields {
   city: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   allAuthorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  selfReferential: { kind: "m2o"; type: SmallPublisher; nullable: undefined; derived: false };
 }
 
 export interface SmallPublisherOpts extends PublisherOpts {
   city: string;
   sharedColumn?: string | null;
+  selfReferential?: SmallPublisher | SmallPublisherId | null;
+  smallPublishers?: SmallPublisher[];
   users?: User[];
 }
 
 export interface SmallPublisherIdsOpts extends PublisherIdsOpts {
+  selfReferentialId?: SmallPublisherId | null;
+  smallPublisherIds?: SmallPublisherId[] | null;
   userIds?: UserId[] | null;
 }
 
@@ -75,6 +82,8 @@ export interface SmallPublisherFilter extends PublisherFilter {
   city?: ValueFilter<string, never>;
   sharedColumn?: ValueFilter<string, null>;
   allAuthorNames?: ValueFilter<string, null>;
+  selfReferential?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null>;
+  smallPublishers?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null | undefined>;
   users?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
 }
 
@@ -82,6 +91,13 @@ export interface SmallPublisherGraphQLFilter extends PublisherGraphQLFilter {
   city?: ValueGraphQLFilter<string>;
   sharedColumn?: ValueGraphQLFilter<string>;
   allAuthorNames?: ValueGraphQLFilter<string>;
+  selfReferential?: EntityGraphQLFilter<SmallPublisher, SmallPublisherId, GraphQLFilterOf<SmallPublisher>, null>;
+  smallPublishers?: EntityGraphQLFilter<
+    SmallPublisher,
+    SmallPublisherId,
+    GraphQLFilterOf<SmallPublisher>,
+    null | undefined
+  >;
   users?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
 }
 
@@ -89,6 +105,7 @@ export interface SmallPublisherOrder extends PublisherOrder {
   city?: OrderBy;
   sharedColumn?: OrderBy;
   allAuthorNames?: OrderBy;
+  selfReferential?: SmallPublisherOrder;
 }
 
 export const smallPublisherConfig = new ConfigApi<SmallPublisher, Context>();
@@ -191,6 +208,17 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
+  get smallPublishers(): Collection<SmallPublisher, SmallPublisher> {
+    return this.__data.relations.smallPublishers ??= hasMany(
+      this as any as SmallPublisher,
+      smallPublisherMeta,
+      "smallPublishers",
+      "selfReferential",
+      "self_referential_id",
+      undefined,
+    );
+  }
+
   get users(): Collection<SmallPublisher, User> {
     return this.__data.relations.users ??= hasMany(
       this as any as SmallPublisher,
@@ -199,6 +227,15 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
       "favoritePublisher",
       "favorite_publisher_small_id",
       undefined,
+    );
+  }
+
+  get selfReferential(): ManyToOneReference<SmallPublisher, SmallPublisher, undefined> {
+    return this.__data.relations.selfReferential ??= hasOne(
+      this as any as SmallPublisher,
+      smallPublisherMeta,
+      "selfReferential",
+      "smallPublishers",
     );
   }
 }

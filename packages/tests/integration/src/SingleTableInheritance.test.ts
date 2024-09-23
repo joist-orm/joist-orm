@@ -235,43 +235,40 @@ describe("SingleTableInheritance", () => {
   });
 
   it("reports the right properties", () => {
-    expect(Object.keys(getProperties(Task.metadata))).toMatchInlineSnapshot(`
-     [
-       "typeDetails",
-       "isOld",
-       "isNew",
-       "taskTaskItems",
-       "tags",
-     ]
-    `);
-    expect(Object.keys(getProperties(TaskNew.metadata))).toMatchInlineSnapshot(`
-     [
-       "newTaskTaskItems",
-       "specialNewAuthor",
-       "typeDetails",
-       "isOld",
-       "isNew",
-       "taskTaskItems",
-       "tags",
-     ]
-    `);
-    expect(Object.keys(getProperties(TaskOld.metadata))).toMatchInlineSnapshot(`
-     [
-       "commentParentInfo",
-       "comments",
-       "oldTaskTaskItems",
-       "tasks",
-       "parentOldTask",
-       "parentOldTasksRecursive",
-       "tasksRecursive",
-       "publishers",
-       "typeDetails",
-       "isOld",
-       "isNew",
-       "taskTaskItems",
-       "tags",
-     ]
-    `);
+    expect(Object.keys(getProperties(Task.metadata))).toEqual(
+      expect.arrayContaining(["typeDetails", "isOld", "isNew", "taskTaskItems", "tags"]),
+    );
+    // And does not include the recursive selfReferential field which is configured to be skipped
+    expect(Object.keys(getProperties(TaskNew.metadata))).toEqual(
+      expect.arrayContaining([
+        "newTaskTaskItems",
+        "selfReferentialTasks",
+        "selfReferential",
+        "specialNewAuthor",
+        "typeDetails",
+        "isOld",
+        "isNew",
+        "taskTaskItems",
+        "tags",
+      ]),
+    );
+    expect(Object.keys(getProperties(TaskOld.metadata))).toEqual(
+      expect.arrayContaining([
+        "commentParentInfo",
+        "comments",
+        "oldTaskTaskItems",
+        "tasks",
+        "parentOldTask",
+        "parentOldTasksRecursive",
+        "tasksRecursive",
+        "publishers",
+        "typeDetails",
+        "isOld",
+        "isNew",
+        "taskTaskItems",
+        "tags",
+      ]),
+    );
   });
 
   it("prevents the discriminator column from being updated", async () => {

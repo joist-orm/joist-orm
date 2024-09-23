@@ -1,3 +1,10 @@
+## [1.197.5](https://github.com/joist-orm/joist-orm/compare/v1.197.4...v1.197.5) (2024-09-23)
+
+
+### Bug Fixes
+
+* move setBooted to end of configureMetadata ([#1242](https://github.com/joist-orm/joist-orm/issues/1242)) ([afa58c4](https://github.com/joist-orm/joist-orm/commit/afa58c4c11f41aab6a70e084edcb33600c6f075d))
+
 ## [1.197.4](https://github.com/joist-orm/joist-orm/compare/v1.197.3...v1.197.4) (2024-09-23)
 
 

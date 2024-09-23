@@ -26,6 +26,8 @@ type SmallPublisher {
   sharedColumn: String
   baseSyncDefault: String
   baseAsyncDefault: String!
+  selfReferential: SmallPublisher
+  smallPublishers: [SmallPublisher!]!
 }
 
 input SaveSmallPublisherInput {
@@ -42,6 +44,7 @@ input SaveSmallPublisherInput {
   sharedColumn: String
   baseSyncDefault: String
   baseAsyncDefault: String
+  selfReferentialId: ID
 }
 
 type SaveSmallPublisherResult {

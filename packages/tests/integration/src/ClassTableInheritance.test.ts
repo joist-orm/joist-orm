@@ -1,8 +1,41 @@
-import { newLargePublisher, newSmallPublisher } from "src/entities";
+import { getProperties } from "joist-orm";
+import { newLargePublisher, newSmallPublisher, SmallPublisher } from "src/entities";
 import { select } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
 describe("ClassTableInheritance", () => {
+  it("reports the right properties", () => {
+    // And does not include the recursive selfReferential field which is configured to be skipped
+    expect(Object.keys(getProperties(SmallPublisher.metadata))).toMatchInlineSnapshot(`
+     [
+       "allImages",
+       "commentParentInfo",
+       "beforeFlushRan",
+       "beforeCreateRan",
+       "beforeUpdateRan",
+       "beforeDeleteRan",
+       "afterValidationRan",
+       "afterCommitRan",
+       "smallPublishers",
+       "users",
+       "selfReferential",
+       "sizeDetails",
+       "isSizeSmall",
+       "isSizeLarge",
+       "typeDetails",
+       "isTypeSmall",
+       "isTypeBig",
+       "authors",
+       "bookAdvances",
+       "comments",
+       "images",
+       "group",
+       "tags",
+       "tasks",
+     ]
+    `);
+  });
+
   it("setDefaults work as expected for subtypes", async () => {
     const em = newEntityManager();
     const sp = newSmallPublisher(em, {});

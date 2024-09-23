@@ -244,9 +244,12 @@ describe("SingleTableInheritance", () => {
        "tags",
      ]
     `);
+    // And does not include the recursive selfReferential field which is configured to be skipped
     expect(Object.keys(getProperties(TaskNew.metadata))).toMatchInlineSnapshot(`
      [
        "newTaskTaskItems",
+       "selfReferentialTasks",
+       "selfReferential",
        "specialNewAuthor",
        "typeDetails",
        "isOld",

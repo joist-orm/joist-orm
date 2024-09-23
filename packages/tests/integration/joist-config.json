@@ -68,7 +68,11 @@
       "relations": { "critics": { "large": true } },
       "tag": "pg"
     },
-    "SmallPublisher": { "fields": { "allAuthorNames": { "derived": "async" } }, "tag": "p" },
+    "SmallPublisher": {
+      "fields": { "allAuthorNames": { "derived": "async" } },
+      "relations": { "selfReferential": { "skipRecursiveRelations": true } },
+      "tag": "p"
+    },
     "Tag": { "tag": "t" },
     "Task": {
       "fields": {
@@ -84,6 +88,8 @@
         "oldTaskTaskItems": { "stiType": "TaskOld" },
         "parentOldTask": { "stiType": "TaskOld" },
         "publishers": { "stiType": "TaskOld" },
+        "selfReferential": { "skipRecursiveRelations": true, "stiType": "TaskNew" },
+        "selfReferentialTasks": { "stiType": "TaskNew" },
         "specialNewAuthor": { "stiType": "TaskNew" },
         "tasks": { "stiType": "TaskOld" }
       },

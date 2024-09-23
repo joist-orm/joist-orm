@@ -833,7 +833,14 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
   const m2oRecursive: Relation[] = meta.manyToOnes
     .filter((m2o) => m2o.otherEntity.name === meta.name)
     // Allow disabling recursive relations
-    .filter((m2o) => !(config.entities[meta.name]?.relations?.[m2o.fieldName]?.skipRecursiveRelations === true))
+    .filter(
+      (m2o) =>
+        // For STI - look at the baseClassName, since there is actually no configuration for the subtype currently
+        !(
+          config.entities[meta.inheritanceType == "sti" && meta.baseClassName ? meta.baseClassName : meta.name]
+            ?.relations?.[m2o.fieldName]?.skipRecursiveRelations === true
+        ),
+    )
     // Skip ReactiveReferences because they don't have an `other` side for us to use
     .filter((m2o) => !m2o.derived)
     .flatMap((m2o) => {

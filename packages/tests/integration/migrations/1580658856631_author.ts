@@ -70,6 +70,8 @@ export function up(b: MigrationBuilder): void {
     shared_column: { type: "text" },
     // Used to test reactive fields that only exist on a subtype
     all_author_names: { type: "text" },
+    // For testing skipRecursiveRelations on a subclass field
+    self_referential_id: foreignKey("small_publishers", { notNull: false }),
   });
   createSubTable(b, "publishers", "large_publishers", {
     // For testing columns shared between CTI subtypes
@@ -344,7 +346,7 @@ export function up(b: MigrationBuilder): void {
     // OldTask columns
     special_old_field: { type: "int", notNull: false },
     // Self-referential but only for a subtype
-    parent_old_task_id: foreignKey("tasks", { notNull: false }),
+    parent_old_task_id: foreignKey("tasks", { notNull: false, otherFieldName: "tasks" }),
     // For testing soft-delete on STI tables
     deleted_at: { type: "timestamptz", notNull: false },
     // For testing defaults, where each subtype provides a different default
@@ -354,6 +356,8 @@ export function up(b: MigrationBuilder): void {
     // For testing derived fields, where each subtype provides a different derived value
     sync_derived: { type: "text", notNull: false },
     async_derived: { type: "text", notNull: false },
+    // For testing skipRecursiveRelations on a subclass field
+    self_referential_id: foreignKey("tasks", { notNull: false }),
   });
 
   // For testing single-table inheritance

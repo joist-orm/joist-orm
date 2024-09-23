@@ -1,3 +1,10 @@
+## [1.197.4](https://github.com/joist-orm/joist-orm/compare/v1.197.3...v1.197.4) (2024-09-23)
+
+
+### Bug Fixes
+
+* correctly exclude recursive relations of STI fields when configured ([#1241](https://github.com/joist-orm/joist-orm/issues/1241)) ([f347194](https://github.com/joist-orm/joist-orm/commit/f347194b204da9b3e55fe189503a1c7491e8a620))
+
 ## [1.197.3](https://github.com/joist-orm/joist-orm/compare/v1.197.2...v1.197.3) (2024-09-21)
 
 

@@ -429,4 +429,17 @@ describe("SingleTableInheritance", () => {
       asyncDerived: "SyncDerivedNew AsyncDerived",
     });
   });
+
+  it("can query by fields on a sub type", async () => {
+    const em = newEntityManager();
+    newTaskOld(em, {});
+    const nt1 = newTaskNew(em, { specialNewField: 10 });
+    newTaskNew(em, { specialNewField: 12 });
+    await em.flush();
+
+    // @ts-expect-error TODO: Get the types right to allow this
+    const result = await em.find(Task, { specialNewField: 10 });
+
+    expect(result).toMatchEntity([nt1]);
+  });
 });

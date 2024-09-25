@@ -6,6 +6,7 @@ import {
   fail,
   FieldsOf,
   getMetadata,
+  Lens,
   Loaded,
   LoadHint,
   MaybeAbstractEntityConstructor,
@@ -205,8 +206,25 @@ export class ConfigApi<T extends Entity, C> {
   }
 
   /**
+   * Allows setting up a constraint that all entities in the list must be the same.
+   *
+   * This can be useful for things like tenants, i.e. the `Author` has a tenant, and the
+   * `Book` has a tenant, and the `Book`'s tenant must always equal its `Author`'s tenant.
+   *
+   * ```ts
+   * config.addMustBeSame((b) => [b.tenant, b.author.tenant]);
+   * ```
+   *
+   *
+   *
+   * @param fn
+   */
+  addMustBeSame<U extends Entity>(fn: (lens: Lens<T>) => Lens<T, U>[]): void {}
+
+  /**
    * A noop method that exists solely to keep the `config.placeholder()` line in the initial entity file,
-   * until the user is ready to use it. */
+   * until the user is ready to use it.
+   */
   placeholder(): void {}
 
   private ensurePreBoot(name: string, op: string): void {

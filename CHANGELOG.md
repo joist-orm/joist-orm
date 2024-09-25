@@ -1,3 +1,10 @@
+## [1.197.6](https://github.com/joist-orm/joist-orm/compare/v1.197.5...v1.197.6) (2024-09-25)
+
+
+### Bug Fixes
+
+* Ability to filter o2m sub type relationships based on sub type specific fields ([#1243](https://github.com/joist-orm/joist-orm/issues/1243)) ([6a60f73](https://github.com/joist-orm/joist-orm/commit/6a60f73338dfee018c852b5fba1c0a3cb57af089))
+
 ## [1.197.5](https://github.com/joist-orm/joist-orm/compare/v1.197.4...v1.197.5) (2024-09-23)
 
 

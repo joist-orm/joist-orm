@@ -42,12 +42,16 @@ import {
   criticMeta,
   type Entity,
   EntityManager,
+  LargePublisher,
+  type LargePublisherId,
   newPublisherGroup,
   Publisher,
   PublisherGroup,
   publisherGroupMeta,
   type PublisherId,
   publisherMeta,
+  SmallPublisher,
+  type SmallPublisherId,
 } from "../entities";
 
 export type PublisherGroupId = Flavor<string, PublisherGroup>;
@@ -76,6 +80,8 @@ export interface PublisherGroupFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
+  publishersLargePublisher?: EntityFilter<LargePublisher, LargePublisherId, FilterOf<LargePublisher>, null>;
+  publishersSmallPublisher?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null>;
 }
 
 export interface PublisherGroupGraphQLFilter {
@@ -85,6 +91,18 @@ export interface PublisherGroupGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
+  publishersLargePublisher?: EntityGraphQLFilter<
+    LargePublisher,
+    LargePublisherId,
+    GraphQLFilterOf<LargePublisher>,
+    null
+  >;
+  publishersSmallPublisher?: EntityGraphQLFilter<
+    SmallPublisher,
+    SmallPublisherId,
+    GraphQLFilterOf<SmallPublisher>,
+    null
+  >;
 }
 
 export interface PublisherGroupOrder {

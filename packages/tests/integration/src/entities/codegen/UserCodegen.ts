@@ -131,6 +131,7 @@ export interface UserFilter {
   authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   createdComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   directs?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
+  directsAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
   likedComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   favoritePublisher?: EntityFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
   favoritePublisherLargePublisher?: EntityFilter<LargePublisher, IdOf<LargePublisher>, FilterOf<LargePublisher>, null>;
@@ -153,6 +154,7 @@ export interface UserGraphQLFilter {
   authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   directs?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
+  directsAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
   likedComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   favoritePublisher?: EntityGraphQLFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
   favoritePublisherLargePublisher?: EntityGraphQLFilter<

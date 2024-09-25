@@ -37,6 +37,8 @@ import {
 } from "joist-orm";
 import { type Context } from "src/context";
 import {
+  AdminUser,
+  type AdminUserId,
   type Entity,
   EntityManager,
   newSmallPublisher,
@@ -85,6 +87,7 @@ export interface SmallPublisherFilter extends PublisherFilter {
   selfReferential?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null>;
   smallPublishers?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null | undefined>;
   users?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
+  usersAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
 }
 
 export interface SmallPublisherGraphQLFilter extends PublisherGraphQLFilter {
@@ -99,6 +102,7 @@ export interface SmallPublisherGraphQLFilter extends PublisherGraphQLFilter {
     null | undefined
   >;
   users?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
+  usersAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
 }
 
 export interface SmallPublisherOrder extends PublisherOrder {

@@ -466,4 +466,27 @@ describe("ClassTableInheritance", () => {
       baseAsyncDefault: "LPAsyncDefault",
     });
   });
+
+  it("can find authors by fields on a sub type", async () => {
+    const em = newEntityManager();
+    const sp1 = newSmallPublisher(em, { city: "Denver", authors: [{}] });
+    const sp2 = newSmallPublisher(em, { city: "Houston", authors: [{}] });
+    const lp1 = newLargePublisher(em, { country: "USA!!", authors: [{}] });
+    const lp2 = newLargePublisher(em, { country: "CANADA!!", authors: [{}] });
+    await em.flush();
+
+    // When I search for authors by fields on the sub type, then expected authors are returned
+    expect(await em.find(Author, { publisherLargePublisher: { country: "USA!!" } })).toMatchEntity(lp1.authors.get);
+    expect(await em.find(Author, { publisherSmallPublisher: { city: "Denver" } })).toMatchEntity(sp1.authors.get);
+
+    // When I attempt to search for fields in different sub types
+    expect(
+      await em.find(Author, {
+        publisherLargePublisher: { country: "USA!!" },
+        publisherSmallPublisher: { city: "Denver" },
+      }),
+    )
+      // Then no authors are returned, because none can be of both types
+      .toMatchEntity([]);
+  });
 });

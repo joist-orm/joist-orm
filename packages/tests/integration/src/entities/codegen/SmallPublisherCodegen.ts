@@ -39,18 +39,25 @@ import { type Context } from "src/context";
 import {
   AdminUser,
   type AdminUserId,
+  Author,
+  BookAdvance,
+  Comment,
   type Entity,
   EntityManager,
+  Image,
   newSmallPublisher,
   Publisher,
   type PublisherFields,
   type PublisherFilter,
   type PublisherGraphQLFilter,
+  PublisherGroup,
   type PublisherIdsOpts,
   type PublisherOpts,
   type PublisherOrder,
   SmallPublisher,
   smallPublisherMeta,
+  Tag,
+  TaskOld,
   User,
   type UserId,
   userMeta,
@@ -241,5 +248,33 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
       "selfReferential",
       "smallPublishers",
     );
+  }
+
+  get authors(): Collection<SmallPublisher, Author> {
+    return super.authors as Collection<SmallPublisher, Author>;
+  }
+
+  get bookAdvances(): Collection<SmallPublisher, BookAdvance> {
+    return super.bookAdvances as Collection<SmallPublisher, BookAdvance>;
+  }
+
+  get comments(): Collection<SmallPublisher, Comment> {
+    return super.comments as Collection<SmallPublisher, Comment>;
+  }
+
+  get images(): Collection<SmallPublisher, Image> {
+    return super.images as Collection<SmallPublisher, Image>;
+  }
+
+  get group(): ManyToOneReference<SmallPublisher, PublisherGroup, undefined> {
+    return super.group as ManyToOneReference<SmallPublisher, PublisherGroup, undefined>;
+  }
+
+  get tags(): Collection<SmallPublisher, Tag> {
+    return super.tags as Collection<SmallPublisher, Tag>;
+  }
+
+  get tasks(): Collection<SmallPublisher, TaskOld> {
+    return super.tasks as Collection<SmallPublisher, TaskOld>;
   }
 }

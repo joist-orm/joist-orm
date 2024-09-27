@@ -42,6 +42,7 @@ import {
   type Entity,
   EntityManager,
   newTaskNew,
+  Tag,
   Task,
   type TaskFields,
   type TaskFilter,
@@ -223,5 +224,13 @@ export abstract class TaskNewCodegen extends Task implements Entity {
 
   get specialNewAuthor(): ManyToOneReference<TaskNew, Author, undefined> {
     return this.__data.relations.specialNewAuthor ??= hasOne(this, authorMeta, "specialNewAuthor", "tasks");
+  }
+
+  get taskTaskItems(): Collection<TaskNew, TaskItem> {
+    return super.taskTaskItems as Collection<TaskNew, TaskItem>;
+  }
+
+  get tags(): Collection<TaskNew, Tag> {
+    return super.tags as Collection<TaskNew, Tag>;
   }
 }

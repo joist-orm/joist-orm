@@ -1,6 +1,7 @@
 import {
   type Changes,
   cleanStringValue,
+  type Collection,
   ConfigApi,
   type EntityMetadata,
   failNoIdYet,
@@ -12,6 +13,7 @@ import {
   type Loaded,
   type LoadHint,
   loadLens,
+  type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
   type OptsOf,
@@ -30,6 +32,8 @@ import { type Context } from "src/context";
 import {
   AdminUser,
   adminUserMeta,
+  Author,
+  Comment,
   type Entity,
   EntityManager,
   newAdminUser,
@@ -156,5 +160,25 @@ export abstract class AdminUserCodegen extends User implements Entity {
   toJSON<const H extends ToJsonHint<AdminUser>>(hint: H): Promise<JsonPayload<AdminUser, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
+  }
+
+  get createdComments(): Collection<AdminUser, Comment> {
+    return super.createdComments as Collection<AdminUser, Comment>;
+  }
+
+  get directs(): Collection<AdminUser, User> {
+    return super.directs as Collection<AdminUser, User>;
+  }
+
+  get manager(): ManyToOneReference<AdminUser, User, undefined> {
+    return super.manager as ManyToOneReference<AdminUser, User, undefined>;
+  }
+
+  get authorManyToOne(): ManyToOneReference<AdminUser, Author, undefined> {
+    return super.authorManyToOne as ManyToOneReference<AdminUser, Author, undefined>;
+  }
+
+  get likedComments(): Collection<AdminUser, Comment> {
+    return super.likedComments as Collection<AdminUser, Comment>;
   }
 }

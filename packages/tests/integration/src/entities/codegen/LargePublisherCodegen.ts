@@ -18,6 +18,7 @@ import {
   type Loaded,
   type LoadHint,
   loadLens,
+  type ManyToOneReference,
   newChangesProxy,
   type OptsOf,
   type OrderBy,
@@ -35,11 +36,15 @@ import { type Context } from "src/context";
 import {
   AdminUser,
   type AdminUserId,
+  Author,
+  BookAdvance,
+  Comment,
   Critic,
   type CriticId,
   criticMeta,
   type Entity,
   EntityManager,
+  Image,
   LargePublisher,
   largePublisherMeta,
   newLargePublisher,
@@ -47,9 +52,12 @@ import {
   type PublisherFields,
   type PublisherFilter,
   type PublisherGraphQLFilter,
+  PublisherGroup,
   type PublisherIdsOpts,
   type PublisherOpts,
   type PublisherOrder,
+  Tag,
+  TaskOld,
   User,
   type UserId,
   userMeta,
@@ -212,5 +220,33 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
       "favorite_publisher_large_id",
       undefined,
     );
+  }
+
+  get authors(): Collection<LargePublisher, Author> {
+    return super.authors as Collection<LargePublisher, Author>;
+  }
+
+  get bookAdvances(): Collection<LargePublisher, BookAdvance> {
+    return super.bookAdvances as Collection<LargePublisher, BookAdvance>;
+  }
+
+  get comments(): Collection<LargePublisher, Comment> {
+    return super.comments as Collection<LargePublisher, Comment>;
+  }
+
+  get images(): Collection<LargePublisher, Image> {
+    return super.images as Collection<LargePublisher, Image>;
+  }
+
+  get group(): ManyToOneReference<LargePublisher, PublisherGroup, undefined> {
+    return super.group as ManyToOneReference<LargePublisher, PublisherGroup, undefined>;
+  }
+
+  get tags(): Collection<LargePublisher, Tag> {
+    return super.tags as Collection<LargePublisher, Tag>;
+  }
+
+  get tasks(): Collection<LargePublisher, TaskOld> {
+    return super.tasks as Collection<LargePublisher, TaskOld>;
   }
 }

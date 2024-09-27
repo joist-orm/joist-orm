@@ -46,6 +46,7 @@ import {
   type PublisherFields,
   type PublisherFilter,
   type PublisherGraphQLFilter,
+  PublisherGroup,
   type PublisherIdsOpts,
   type PublisherOpts,
   type PublisherOrder,
@@ -241,5 +242,9 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
       "selfReferential",
       "smallPublishers",
     );
+  }
+
+  get group(): ManyToOneReference<SmallPublisher, PublisherGroup, undefined> {
+    return super.group as ManyToOneReference<SmallPublisher, PublisherGroup, undefined>;
   }
 }

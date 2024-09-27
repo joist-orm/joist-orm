@@ -238,6 +238,7 @@ export class EntityDbMetadata {
   updatedAt: PrimitiveField | undefined;
   deletedAt: PrimitiveField | undefined;
   baseClassName: string | undefined;
+  baseType: EntityDbMetadata | undefined;
   subTypes: EntityDbMetadata[] = [];
   inheritanceType: "sti" | "cti" | undefined;
   /** This will only be set on the base meta. */

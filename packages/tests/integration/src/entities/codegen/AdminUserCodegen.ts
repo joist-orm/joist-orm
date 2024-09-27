@@ -12,6 +12,7 @@ import {
   type Loaded,
   type LoadHint,
   loadLens,
+  type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
   type OptsOf,
@@ -30,6 +31,7 @@ import { type Context } from "src/context";
 import {
   AdminUser,
   adminUserMeta,
+  Author,
   type Entity,
   EntityManager,
   newAdminUser,
@@ -156,5 +158,13 @@ export abstract class AdminUserCodegen extends User implements Entity {
   toJSON<const H extends ToJsonHint<AdminUser>>(hint: H): Promise<JsonPayload<AdminUser, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
+  }
+
+  get manager(): ManyToOneReference<AdminUser, User, undefined> {
+    return super.manager as ManyToOneReference<AdminUser, User, undefined>;
+  }
+
+  get authorManyToOne(): ManyToOneReference<AdminUser, Author, undefined> {
+    return super.authorManyToOne as ManyToOneReference<AdminUser, Author, undefined>;
   }
 }

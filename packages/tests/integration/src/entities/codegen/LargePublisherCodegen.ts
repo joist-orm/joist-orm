@@ -18,6 +18,7 @@ import {
   type Loaded,
   type LoadHint,
   loadLens,
+  type ManyToOneReference,
   newChangesProxy,
   type OptsOf,
   type OrderBy,
@@ -47,6 +48,7 @@ import {
   type PublisherFields,
   type PublisherFilter,
   type PublisherGraphQLFilter,
+  PublisherGroup,
   type PublisherIdsOpts,
   type PublisherOpts,
   type PublisherOrder,
@@ -212,5 +214,9 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
       "favorite_publisher_large_id",
       undefined,
     );
+  }
+
+  get group(): ManyToOneReference<LargePublisher, PublisherGroup, undefined> {
+    return super.group as ManyToOneReference<LargePublisher, PublisherGroup, undefined>;
   }
 }

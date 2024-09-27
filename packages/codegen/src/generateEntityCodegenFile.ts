@@ -85,7 +85,13 @@ export interface ColumnMetaData {
 }
 
 // A local type just for tracking abstract vs. concrete relations
-type Relation = { kind: "abstract"; line: Code } | { kind: "concrete"; fieldName: string; decl: Code; init: Code };
+type Relation =
+  // I.e. `abstract ReactiveReference` that the user must implement
+  | { kind: "abstract"; line: Code }
+  // I.e. a `get author(): ManyToOne<...>`
+  | { kind: "concrete"; fieldName: string; decl: Code; init: Code }
+  // I.e. a `get author(): { super.author as ... }`
+  | { kind: "super"; fieldName: string; decl: Code };
 
 /** Creates the base class with the boilerplate annotations. */
 export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
@@ -100,7 +106,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   primitives.push(...createRegularEnums(meta, entity)); // Add ManyToOne enums
   primitives.push(...createArrayEnums(meta)); // Add integer[] enums
   primitives.push(...createPgEnums(meta)); // Add native enums
-  const relations = createRelations(config, meta, entity, entityName);
+  const relations = createRelations(config, meta, entity);
 
   const configName = `${camelCase(entityName)}Config`;
   const metadata = imp(`${camelCase(entityName)}Meta@./entities.ts`);
@@ -297,6 +303,15 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
           return code`
             get ${r.fieldName}(): ${r.decl} {
               return this.__data.relations.${r.fieldName} ??= ${r.init};
+            }
+          `;
+        })}
+      ${relations
+        .filter((r) => r.kind === "super")
+        .map((r) => {
+          return code`
+            get ${r.fieldName}(): ${r.decl} {
+              return super.${r.fieldName} as ${r.decl};
             }
           `;
         })}
@@ -829,7 +844,7 @@ function createPgEnums(meta: EntityDbMetadata) {
   });
 }
 
-function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity, entityName: string) {
+function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity) {
   // Add ManyToOne entities
   const m2o: Relation[] = meta.manyToOnes.map((m2o) => {
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
@@ -844,6 +859,14 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
     const init = code`${hasOne}(this, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}")`;
     return { kind: "concrete", fieldName, decl, init };
   });
+  // Specialize
+  const m2oBase: Relation[] =
+    meta.baseType?.manyToOnes.map((m2o) => {
+      const { fieldName, otherEntity, notNull } = m2o;
+      const maybeOptional = notNull ? "never" : "undefined";
+      const decl = code`${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>`;
+      return { kind: "super", fieldName, decl };
+    }) ?? [];
 
   // Add any recursive ManyToOne entities
   const m2oRecursive: Relation[] = meta.manyToOnes
@@ -948,7 +971,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
     return { kind: "concrete", fieldName, decl, init };
   });
 
-  return [o2m, lo2m, m2o, m2oRecursive, o2o, m2m, lm2m, polymorphic].flat();
+  return [o2m, lo2m, m2o, m2oBase, m2oRecursive, o2o, m2m, lm2m, polymorphic].flat();
 }
 
 function maybeOptional(notNull: boolean): string {

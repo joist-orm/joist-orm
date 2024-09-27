@@ -1,3 +1,10 @@
+## [1.198.1](https://github.com/joist-orm/joist-orm/compare/v1.198.0...v1.198.1) (2024-09-27)
+
+
+### Bug Fixes
+
+* Remove unnecessary casts. ([#1248](https://github.com/joist-orm/joist-orm/issues/1248)) ([d8d5855](https://github.com/joist-orm/joist-orm/commit/d8d5855758e9f279fa8790c0476804d13ad4d80b))
+
 # [1.198.0](https://github.com/joist-orm/joist-orm/compare/v1.197.6...v1.198.0) (2024-09-27)
 
 

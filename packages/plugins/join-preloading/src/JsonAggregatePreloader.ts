@@ -203,7 +203,7 @@ function addJoins<I extends EntityOrId>(
 
         // We get back an array of [[1, title], [2, title], [3, title]]
         const children = arrays.map((array) => {
-          // If we've snuck the m2m row id into the json arry, ignore it
+          // If we've snuck the m2m row id into the json array, ignore it
           const m2mOffset = field.kind === "m2m" ? 1 : 0;
           const taggedId = keyToTaggedId(otherMeta, array[m2mOffset] as any)!;
           const entity =

@@ -214,7 +214,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
 
   get smallPublishers(): Collection<SmallPublisher, SmallPublisher> {
     return this.__data.relations.smallPublishers ??= hasMany(
-      this as any as SmallPublisher,
+      this,
       smallPublisherMeta,
       "smallPublishers",
       "selfReferential",
@@ -225,7 +225,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
 
   get users(): Collection<SmallPublisher, User> {
     return this.__data.relations.users ??= hasMany(
-      this as any as SmallPublisher,
+      this,
       userMeta,
       "users",
       "favoritePublisher",
@@ -236,7 +236,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
 
   get selfReferential(): ManyToOneReference<SmallPublisher, SmallPublisher, undefined> {
     return this.__data.relations.selfReferential ??= hasOne(
-      this as any as SmallPublisher,
+      this,
       smallPublisherMeta,
       "selfReferential",
       "smallPublishers",

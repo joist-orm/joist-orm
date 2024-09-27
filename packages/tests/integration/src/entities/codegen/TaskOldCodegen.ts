@@ -202,7 +202,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
 
   get comments(): Collection<TaskOld, Comment> {
     return this.__data.relations.comments ??= hasMany(
-      this as any as TaskOld,
+      this,
       commentMeta,
       "comments",
       "parent",
@@ -213,7 +213,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
 
   get oldTaskTaskItems(): Collection<TaskOld, TaskItem> {
     return this.__data.relations.oldTaskTaskItems ??= hasMany(
-      this as any as TaskOld,
+      this,
       taskItemMeta,
       "oldTaskTaskItems",
       "oldTask",
@@ -224,7 +224,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
 
   get tasks(): Collection<TaskOld, TaskOld> {
     return this.__data.relations.tasks ??= hasMany(
-      this as any as TaskOld,
+      this,
       taskOldMeta,
       "tasks",
       "parentOldTask",
@@ -234,17 +234,12 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   }
 
   get parentOldTask(): ManyToOneReference<TaskOld, TaskOld, undefined> {
-    return this.__data.relations.parentOldTask ??= hasOne(
-      this as any as TaskOld,
-      taskOldMeta,
-      "parentOldTask",
-      "tasks",
-    );
+    return this.__data.relations.parentOldTask ??= hasOne(this, taskOldMeta, "parentOldTask", "tasks");
   }
 
   get parentOldTasksRecursive(): ReadOnlyCollection<TaskOld, TaskOld> {
     return this.__data.relations.parentOldTasksRecursive ??= hasRecursiveParents(
-      this as any as TaskOld,
+      this,
       "parentOldTasksRecursive",
       "parentOldTask",
       "tasksRecursive",
@@ -253,7 +248,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
 
   get tasksRecursive(): ReadOnlyCollection<TaskOld, TaskOld> {
     return this.__data.relations.tasksRecursive ??= hasRecursiveChildren(
-      this as any as TaskOld,
+      this,
       "tasksRecursive",
       "tasks",
       "parentOldTasksRecursive",
@@ -262,7 +257,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
 
   get publishers(): Collection<TaskOld, Publisher> {
     return this.__data.relations.publishers ??= hasManyToMany(
-      this as any as TaskOld,
+      this,
       "tasks_to_publishers",
       "publishers",
       "task_id",

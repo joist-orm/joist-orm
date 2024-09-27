@@ -341,7 +341,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   get createdComments(): Collection<User, Comment> {
     return this.__data.relations.createdComments ??= hasMany(
-      this as any as User,
+      this,
       commentMeta,
       "createdComments",
       "user",
@@ -351,32 +351,20 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get directs(): Collection<User, User> {
-    return this.__data.relations.directs ??= hasMany(
-      this as any as User,
-      userMeta,
-      "directs",
-      "manager",
-      "manager_id",
-      undefined,
-    );
+    return this.__data.relations.directs ??= hasMany(this, userMeta, "directs", "manager", "manager_id", undefined);
   }
 
   get manager(): ManyToOneReference<User, User, undefined> {
-    return this.__data.relations.manager ??= hasOne(this as any as User, userMeta, "manager", "directs");
+    return this.__data.relations.manager ??= hasOne(this, userMeta, "manager", "directs");
   }
 
   get authorManyToOne(): ManyToOneReference<User, Author, undefined> {
-    return this.__data.relations.authorManyToOne ??= hasOne(
-      this as any as User,
-      authorMeta,
-      "authorManyToOne",
-      "userOneToOne",
-    );
+    return this.__data.relations.authorManyToOne ??= hasOne(this, authorMeta, "authorManyToOne", "userOneToOne");
   }
 
   get likedComments(): Collection<User, Comment> {
     return this.__data.relations.likedComments ??= hasManyToMany(
-      this as any as User,
+      this,
       "users_to_comments",
       "likedComments",
       "liked_by_user_id",
@@ -387,6 +375,6 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get favoritePublisher(): PolymorphicReference<User, UserFavoritePublisher, undefined> {
-    return this.__data.relations.favoritePublisher ??= hasOnePolymorphic(this as any as User, "favoritePublisher");
+    return this.__data.relations.favoritePublisher ??= hasOnePolymorphic(this, "favoritePublisher");
   }
 }

@@ -199,24 +199,14 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get newTask(): ManyToOneReference<TaskItem, TaskNew, undefined> {
-    return this.__data.relations.newTask ??= hasOne(
-      this as any as TaskItem,
-      taskNewMeta,
-      "newTask",
-      "newTaskTaskItems",
-    );
+    return this.__data.relations.newTask ??= hasOne(this, taskNewMeta, "newTask", "newTaskTaskItems");
   }
 
   get oldTask(): ManyToOneReference<TaskItem, TaskOld, undefined> {
-    return this.__data.relations.oldTask ??= hasOne(
-      this as any as TaskItem,
-      taskOldMeta,
-      "oldTask",
-      "oldTaskTaskItems",
-    );
+    return this.__data.relations.oldTask ??= hasOne(this, taskOldMeta, "oldTask", "oldTaskTaskItems");
   }
 
   get task(): ManyToOneReference<TaskItem, Task, undefined> {
-    return this.__data.relations.task ??= hasOne(this as any as TaskItem, taskMeta, "task", "taskTaskItems");
+    return this.__data.relations.task ??= hasOne(this, taskMeta, "task", "taskTaskItems");
   }
 }

@@ -200,7 +200,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
 
   get paintings(): Collection<Artist, Painting> {
     return this.__data.relations.paintings ??= hasMany(
-      this as any as Artist,
+      this,
       paintingMeta,
       "paintings",
       "artist",

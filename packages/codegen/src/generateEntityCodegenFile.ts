@@ -841,7 +841,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
       return { kind: "abstract", line } as const;
     }
     const decl = code`${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>`;
-    const init = code`${hasOne}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}")`;
+    const init = code`${hasOne}(this, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}")`;
     return { kind: "concrete", fieldName, decl, init };
   });
 
@@ -869,13 +869,13 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
           kind: "concrete",
           fieldName: parentsField,
           decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
-          init: code`${hasRecursiveParents}(this as any as ${entityName}, "${parentsField}", "${m2oName}", "${childrenField}")`,
+          init: code`${hasRecursiveParents}(this, "${parentsField}", "${m2oName}", "${childrenField}")`,
         },
         {
           kind: "concrete",
           fieldName: childrenField,
           decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
-          init: code`${hasRecursiveChildren}(this as any as ${entityName}, "${childrenField}", "${otherFieldName}", "${parentsField}")`,
+          init: code`${hasRecursiveChildren}(this, "${childrenField}", "${otherFieldName}", "${parentsField}")`,
         },
       ];
     });
@@ -884,7 +884,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
   const o2m: Relation[] = meta.oneToManys.map((o2m) => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity, orderBy } = o2m;
     const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`${hasMany}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}", ${orderBy})`;
+    const init = code`${hasMany}(this, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}", ${orderBy})`;
     return { kind: "concrete", fieldName, decl, init };
   });
 
@@ -892,7 +892,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
   const lo2m: Relation[] = meta.largeOneToManys.map((o2m) => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
     const decl = code`${LargeCollection}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`${hasLargeMany}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
+    const init = code`${hasLargeMany}(this, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
     return { kind: "concrete", fieldName, decl, init };
   });
 
@@ -900,7 +900,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
   const o2o: Relation[] = meta.oneToOnes.map((o2o) => {
     const { fieldName, otherEntity, otherFieldName, otherColumnName } = o2o;
     const decl = code`${OneToOneReference}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`${hasOneToOne}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
+    const init = code`${hasOneToOne}(this, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
     return { kind: "concrete", fieldName, decl, init };
   });
 
@@ -910,7 +910,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
     const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
     const init = code`
       ${hasManyToMany}(
-        this as any as ${entityName},
+        this,
         "${joinTableName}",
         "${fieldName}",
         "${columnName}",
@@ -927,7 +927,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
     const decl = code`${LargeCollection}<${entity.type}, ${otherEntity.type}>`;
     const init = code`
       ${hasLargeManyToMany}(
-        this as any as ${entityName},
+        this,
         "${joinTableName}",
         "${fieldName}",
         "${columnName}",
@@ -944,7 +944,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
     const { fieldName, notNull, fieldType } = p;
     const maybeOptional = notNull ? "never" : "undefined";
     const decl = code`${PolymorphicReference}<${entity.type}, ${fieldType}, ${maybeOptional}>`;
-    const init = code`${hasOnePolymorphic}(this as any as ${entityName}, "${fieldName}")`;
+    const init = code`${hasOnePolymorphic}(this, "${fieldName}")`;
     return { kind: "concrete", fieldName, decl, init };
   });
 

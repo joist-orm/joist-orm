@@ -235,16 +235,16 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   }
 
   get book(): ManyToOneReference<BookReview, Book, never> {
-    return this.__data.relations.book ??= hasOne(this as any as BookReview, bookMeta, "book", "reviews");
+    return this.__data.relations.book ??= hasOne(this, bookMeta, "book", "reviews");
   }
 
   get critic(): ManyToOneReference<BookReview, Critic, undefined> {
-    return this.__data.relations.critic ??= hasOne(this as any as BookReview, criticMeta, "critic", "bookReviews");
+    return this.__data.relations.critic ??= hasOne(this, criticMeta, "critic", "bookReviews");
   }
 
   get comment(): OneToOneReference<BookReview, Comment> {
     return this.__data.relations.comment ??= hasOneToOne(
-      this as any as BookReview,
+      this,
       commentMeta,
       "comment",
       "parent",
@@ -254,7 +254,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
 
   get tags(): Collection<BookReview, Tag> {
     return this.__data.relations.tags ??= hasManyToMany(
-      this as any as BookReview,
+      this,
       "book_reviews_to_tags",
       "tags",
       "book_review_id",

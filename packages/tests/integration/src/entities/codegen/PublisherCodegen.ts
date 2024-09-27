@@ -406,7 +406,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get authors(): Collection<Publisher, Author> {
     return this.__data.relations.authors ??= hasMany(
-      this as any as Publisher,
+      this,
       authorMeta,
       "authors",
       "publisher",
@@ -417,7 +417,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get bookAdvances(): Collection<Publisher, BookAdvance> {
     return this.__data.relations.bookAdvances ??= hasMany(
-      this as any as Publisher,
+      this,
       bookAdvanceMeta,
       "bookAdvances",
       "publisher",
@@ -428,7 +428,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get comments(): Collection<Publisher, Comment> {
     return this.__data.relations.comments ??= hasMany(
-      this as any as Publisher,
+      this,
       commentMeta,
       "comments",
       "parent",
@@ -438,23 +438,16 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get images(): Collection<Publisher, Image> {
-    return this.__data.relations.images ??= hasMany(
-      this as any as Publisher,
-      imageMeta,
-      "images",
-      "publisher",
-      "publisher_id",
-      undefined,
-    );
+    return this.__data.relations.images ??= hasMany(this, imageMeta, "images", "publisher", "publisher_id", undefined);
   }
 
   get group(): ManyToOneReference<Publisher, PublisherGroup, undefined> {
-    return this.__data.relations.group ??= hasOne(this as any as Publisher, publisherGroupMeta, "group", "publishers");
+    return this.__data.relations.group ??= hasOne(this, publisherGroupMeta, "group", "publishers");
   }
 
   get tags(): Collection<Publisher, Tag> {
     return this.__data.relations.tags ??= hasManyToMany(
-      this as any as Publisher,
+      this,
       "publishers_to_tags",
       "tags",
       "publisher_id",
@@ -466,7 +459,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get tasks(): Collection<Publisher, TaskOld> {
     return this.__data.relations.tasks ??= hasManyToMany(
-      this as any as Publisher,
+      this,
       "tasks_to_publishers",
       "tasks",
       "publisher_id",

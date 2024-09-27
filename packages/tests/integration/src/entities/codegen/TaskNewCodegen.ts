@@ -192,7 +192,7 @@ export abstract class TaskNewCodegen extends Task implements Entity {
 
   get newTaskTaskItems(): Collection<TaskNew, TaskItem> {
     return this.__data.relations.newTaskTaskItems ??= hasMany(
-      this as any as TaskNew,
+      this,
       taskItemMeta,
       "newTaskTaskItems",
       "newTask",
@@ -203,7 +203,7 @@ export abstract class TaskNewCodegen extends Task implements Entity {
 
   get selfReferentialTasks(): Collection<TaskNew, TaskNew> {
     return this.__data.relations.selfReferentialTasks ??= hasMany(
-      this as any as TaskNew,
+      this,
       taskNewMeta,
       "selfReferentialTasks",
       "selfReferential",
@@ -214,7 +214,7 @@ export abstract class TaskNewCodegen extends Task implements Entity {
 
   get selfReferential(): ManyToOneReference<TaskNew, TaskNew, undefined> {
     return this.__data.relations.selfReferential ??= hasOne(
-      this as any as TaskNew,
+      this,
       taskNewMeta,
       "selfReferential",
       "selfReferentialTasks",
@@ -222,11 +222,6 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   }
 
   get specialNewAuthor(): ManyToOneReference<TaskNew, Author, undefined> {
-    return this.__data.relations.specialNewAuthor ??= hasOne(
-      this as any as TaskNew,
-      authorMeta,
-      "specialNewAuthor",
-      "tasks",
-    );
+    return this.__data.relations.specialNewAuthor ??= hasOne(this, authorMeta, "specialNewAuthor", "tasks");
   }
 }

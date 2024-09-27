@@ -193,6 +193,6 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   get author(): ManyToOneReference<AuthorSchedule, Author, never> {
-    return this.__data.relations.author ??= hasOne(this as any as AuthorSchedule, authorMeta, "author", "schedules");
+    return this.__data.relations.author ??= hasOne(this, authorMeta, "author", "schedules");
   }
 }

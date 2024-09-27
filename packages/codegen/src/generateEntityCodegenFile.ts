@@ -910,6 +910,13 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     const init = code`${hasMany}(this, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}", ${orderBy})`;
     return { kind: "concrete", fieldName, decl, init };
   });
+  // Specialize
+  const o2mBase: Relation[] =
+    meta.baseType?.oneToManys.map((o2m) => {
+      const { fieldName, otherEntity } = o2m;
+      const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
+      return { kind: "super", fieldName, decl };
+    }) ?? [];
 
   // Add large OneToMany
   const lo2m: Relation[] = meta.largeOneToManys.map((o2m) => {
@@ -926,6 +933,13 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     const init = code`${hasOneToOne}(this, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
     return { kind: "concrete", fieldName, decl, init };
   });
+  // Specialize
+  const o2oBase: Relation[] =
+    meta.baseType?.oneToOnes.map((o2o) => {
+      const { fieldName, otherEntity } = o2o;
+      const decl = code`${OneToOneReference}<${entity.type}, ${otherEntity.type}>`;
+      return { kind: "super", fieldName, decl };
+    }) ?? [];
 
   // Add ManyToMany
   const m2m: Relation[] = meta.manyToManys.map((m2m) => {
@@ -943,6 +957,13 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
       )`;
     return { kind: "concrete", fieldName, decl, init };
   });
+  // Specialize
+  const m2mBase: Relation[] =
+    meta.baseType?.manyToManys.map((m2m) => {
+      const { fieldName, otherEntity } = m2m;
+      const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
+      return { kind: "super", fieldName, decl };
+    }) ?? [];
 
   // Add large ManyToMany
   const lm2m: Relation[] = meta.largeManyToManys.map((m2m) => {
@@ -971,7 +992,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     return { kind: "concrete", fieldName, decl, init };
   });
 
-  return [o2m, lo2m, m2o, m2oBase, m2oRecursive, o2o, m2m, lm2m, polymorphic].flat();
+  return [o2m, o2mBase, lo2m, m2o, m2oBase, m2oRecursive, o2o, o2oBase, m2m, m2mBase, lm2m, polymorphic].flat();
 }
 
 function maybeOptional(notNull: boolean): string {

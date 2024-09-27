@@ -49,6 +49,7 @@ import {
   Publisher,
   type PublisherId,
   publisherMeta,
+  Tag,
   Task,
   type TaskFields,
   type TaskFilter,
@@ -265,5 +266,13 @@ export abstract class TaskOldCodegen extends Task implements Entity {
       "tasks",
       "publisher_id",
     );
+  }
+
+  get taskTaskItems(): Collection<TaskOld, TaskItem> {
+    return super.taskTaskItems as Collection<TaskOld, TaskItem>;
+  }
+
+  get tags(): Collection<TaskOld, Tag> {
+    return super.tags as Collection<TaskOld, Tag>;
   }
 }

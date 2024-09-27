@@ -1,3 +1,10 @@
+# [1.199.0](https://github.com/joist-orm/joist-orm/compare/v1.198.1...v1.199.0) (2024-09-27)
+
+
+### Features
+
+* Specialize m2o on subtypes. ([#1249](https://github.com/joist-orm/joist-orm/issues/1249)) ([c231309](https://github.com/joist-orm/joist-orm/commit/c2313090adf7b9bce189c28336d08d8a4fe3dc39))
+
 ## [1.198.1](https://github.com/joist-orm/joist-orm/compare/v1.198.0...v1.198.1) (2024-09-27)
 
 

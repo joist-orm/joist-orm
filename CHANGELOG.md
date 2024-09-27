@@ -1,3 +1,10 @@
+# [1.200.0](https://github.com/joist-orm/joist-orm/compare/v1.199.0...v1.200.0) (2024-09-27)
+
+
+### Features
+
+* Add some tsdoc to codegen-only methods ([#1219](https://github.com/joist-orm/joist-orm/issues/1219)) ([bc3349e](https://github.com/joist-orm/joist-orm/commit/bc3349e9a86bcae4fec5b84fddbd7a5453389b38))
+
 # [1.199.0](https://github.com/joist-orm/joist-orm/compare/v1.198.1...v1.199.0) (2024-09-27)
 
 

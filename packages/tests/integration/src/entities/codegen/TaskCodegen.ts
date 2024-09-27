@@ -301,7 +301,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
 
   get taskTaskItems(): Collection<Task, TaskItem> {
     return this.__data.relations.taskTaskItems ??= hasMany(
-      this as any as Task,
+      this,
       taskItemMeta,
       "taskTaskItems",
       "task",
@@ -312,7 +312,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
 
   get tags(): Collection<Task, Tag> {
     return this.__data.relations.tags ??= hasManyToMany(
-      this as any as Task,
+      this,
       "task_to_tags",
       "tags",
       "task_id",

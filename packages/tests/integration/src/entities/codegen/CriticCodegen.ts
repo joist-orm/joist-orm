@@ -217,7 +217,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
 
   get bookReviews(): Collection<Critic, BookReview> {
     return this.__data.relations.bookReviews ??= hasMany(
-      this as any as Critic,
+      this,
       bookReviewMeta,
       "bookReviews",
       "critic",
@@ -228,7 +228,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
 
   get favoriteLargePublisher(): ManyToOneReference<Critic, LargePublisher, undefined> {
     return this.__data.relations.favoriteLargePublisher ??= hasOne(
-      this as any as Critic,
+      this,
       largePublisherMeta,
       "favoriteLargePublisher",
       "critics",
@@ -236,12 +236,12 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get group(): ManyToOneReference<Critic, PublisherGroup, undefined> {
-    return this.__data.relations.group ??= hasOne(this as any as Critic, publisherGroupMeta, "group", "critics");
+    return this.__data.relations.group ??= hasOne(this, publisherGroupMeta, "group", "critics");
   }
 
   get criticColumn(): OneToOneReference<Critic, CriticColumn> {
     return this.__data.relations.criticColumn ??= hasOneToOne(
-      this as any as Critic,
+      this,
       criticColumnMeta,
       "criticColumn",
       "critic",

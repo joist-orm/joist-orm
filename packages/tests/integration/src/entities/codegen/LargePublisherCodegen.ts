@@ -194,7 +194,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
 
   get critics(): Collection<LargePublisher, Critic> {
     return this.__data.relations.critics ??= hasMany(
-      this as any as LargePublisher,
+      this,
       criticMeta,
       "critics",
       "favoriteLargePublisher",
@@ -205,7 +205,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
 
   get users(): Collection<LargePublisher, User> {
     return this.__data.relations.users ??= hasMany(
-      this as any as LargePublisher,
+      this,
       userMeta,
       "users",
       "favoritePublisher",

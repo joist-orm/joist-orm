@@ -214,7 +214,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
 
   get authors(): Collection<Tag, Author> {
     return this.__data.relations.authors ??= hasManyToMany(
-      this as any as Tag,
+      this,
       "authors_to_tags",
       "authors",
       "tag_id",
@@ -226,7 +226,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
 
   get books(): Collection<Tag, Book> {
     return this.__data.relations.books ??= hasManyToMany(
-      this as any as Tag,
+      this,
       "books_to_tags",
       "books",
       "tag_id",
@@ -238,7 +238,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
 
   get bookReviews(): Collection<Tag, BookReview> {
     return this.__data.relations.bookReviews ??= hasManyToMany(
-      this as any as Tag,
+      this,
       "book_reviews_to_tags",
       "bookReviews",
       "tag_id",
@@ -250,7 +250,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
 
   get publishers(): Collection<Tag, Publisher> {
     return this.__data.relations.publishers ??= hasManyToMany(
-      this as any as Tag,
+      this,
       "publishers_to_tags",
       "publishers",
       "tag_id",
@@ -262,7 +262,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
 
   get tasks(): Collection<Tag, Task> {
     return this.__data.relations.tasks ??= hasManyToMany(
-      this as any as Tag,
+      this,
       "task_to_tags",
       "tasks",
       "tag_id",

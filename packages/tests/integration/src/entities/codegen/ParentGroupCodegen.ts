@@ -197,7 +197,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
 
   get childGroups(): Collection<ParentGroup, ChildGroup> {
     return this.__data.relations.childGroups ??= hasMany(
-      this as any as ParentGroup,
+      this,
       childGroupMeta,
       "childGroups",
       "parentGroup",
@@ -208,7 +208,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
 
   get parentItems(): Collection<ParentGroup, ParentItem> {
     return this.__data.relations.parentItems ??= hasMany(
-      this as any as ParentGroup,
+      this,
       parentItemMeta,
       "parentItems",
       "parentGroup",

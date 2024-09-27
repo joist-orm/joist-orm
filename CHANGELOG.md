@@ -1,3 +1,10 @@
+# [1.198.0](https://github.com/joist-orm/joist-orm/compare/v1.197.6...v1.198.0) (2024-09-27)
+
+
+### Features
+
+* Support gt/gte/lte/lt on FK columns. ([#1247](https://github.com/joist-orm/joist-orm/issues/1247)) ([cee79ba](https://github.com/joist-orm/joist-orm/commit/cee79bae209208fc1e520ed4b113cd8ee64abc95))
+
 ## [1.197.6](https://github.com/joist-orm/joist-orm/compare/v1.197.5...v1.197.6) (2024-09-25)
 
 

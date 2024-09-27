@@ -175,22 +175,75 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
     return getField(this, "updatedAt");
   }
 
+  /**
+   * Partial update taking any subset of the entities fields.
+   *
+   * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
+   * is left as untouched.
+   *
+   * Collections are exhaustively set to the new values, however,
+   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   *
+   * @example
+   * ```
+   * entity.setPartial({
+   *   firstName: 'foo' // updated
+   *   lastName: undefined // do nothing
+   *   age: null // unset, (i.e. set it as undefined)
+   * });
+   * ```
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   */
   set(opts: Partial<CriticOpts>): void {
     setOpts(this as any as Critic, opts);
   }
 
+  /**
+   * Partial update taking any subset of the entities fields.
+   *
+   * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
+   * is left as untouched.
+   *
+   * Collections are exhaustively set to the new values, however,
+   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   *
+   * @example
+   * ```
+   * entity.setPartial({
+   *   firstName: 'foo' // updated
+   *   lastName: undefined // do nothing
+   *   age: null // unset, (i.e. set it as undefined)
+   * });
+   * ```
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   */
   setPartial(opts: PartialOrNull<CriticOpts>): void {
     setOpts(this as any as Critic, opts as OptsOf<Critic>, { partial: true });
   }
 
+  /**
+   * Details the field changes of the entity within the current unit of work.
+   *
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   */
   get changes(): Changes<Critic> {
     return newChangesProxy(this) as any;
   }
 
+  /**
+   * Traverse from this entity using a lens, and load the result.
+   *
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   */
   load<U, V>(fn: (lens: Lens<Critic>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as Critic, fn, opts);
   }
 
+  /**
+   * Hydrate this entity using a load hint
+   *
+   * @see {@link https://joist-orm.io/docs/features/loading-entities#1-object-graph-navigation | Loading entities} on the Joist docs
+   */
   populate<const H extends LoadHint<Critic>>(hint: H): Promise<Loaded<Critic, H>>;
   populate<const H extends LoadHint<Critic>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Critic, H>>;
   populate<const H extends LoadHint<Critic>, V>(hint: H, fn: (c: Loaded<Critic, H>) => V): Promise<V>;
@@ -205,10 +258,29 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
     return this.em.populate(this as any as Critic, hintOrOpts, fn);
   }
 
+  /**
+   * Given a load hint, checks if it is loaded within the unit of work.
+   *
+   * Type Guarded via Loaded<>
+   */
   isLoaded<const H extends LoadHint<Critic>>(hint: H): this is Loaded<Critic, H> {
     return isLoaded(this as any as Critic, hint);
   }
 
+  /**
+   * Build a type-safe, loadable and relation aware POJO from this entity, given a hint.
+   *
+   * Note: As the hint might load, this returns a Promise
+   *
+   * @example
+   * ```
+   * const payload = await a.toJSON({
+   *   id: true,
+   *   books: { id: true, reviews: { rating: true } }
+   * });
+   * ```
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<Critic>>(hint: H): Promise<JsonPayload<Critic, H>>;
   toJSON(hint?: any): object {

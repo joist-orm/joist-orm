@@ -1,9 +1,9 @@
 import { promises as fs } from "fs";
 import { ManyToOneField, PolymorphicFieldComponent } from "./EntityDbMetadata";
 import { Config, EntityDbMetadata } from "./index";
+import { logger } from "./logger";
 import { sortByNonDeferredForeignKeys } from "./sortForeignKeys";
 import { assertNever } from "./utils";
-import { logger } from "./logger";
 
 export async function maybeSetForeignKeyOrdering(config: Config, entities: EntityDbMetadata[]): Promise<boolean> {
   // Hopefully all FKs are deferred, but if not...
@@ -23,7 +23,7 @@ export async function maybeSetForeignKeyOrdering(config: Config, entities: Entit
   const nonDeferredFks = entities.flatMap((e) => e.nonDeferredFks.map((m2o) => ({ entity: e, m2o })));
 
   if (setting === "error" || setting === "warn") {
-    logger[setting](`Found ${nonDeferredFks.length} foreign keys that are not DEFERRABLE/INITIALLY DEFERRED`)
+    logger[setting](`Found ${nonDeferredFks.length} foreign keys that are not DEFERRABLE/INITIALLY DEFERRED`);
     for (const { entity, m2o } of nonDeferredFks) console.log(`${entity.tableName}.${m2o.columnName}`);
     console.log("");
 

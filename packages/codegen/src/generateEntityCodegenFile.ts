@@ -78,6 +78,7 @@ import {
   toIdOf,
   toJSON,
 } from "./symbols";
+import { tsdocComments } from "./tsdoc";
 import { assertNever, fail, uncapitalize } from "./utils";
 
 export interface ColumnMetaData {
@@ -259,26 +260,31 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         return ${getField}(this, "id");
       }
 
-      ${primitives}
+      ${primitives}    
 
+      ${tsdocComments.entity.setPartial}
       set(opts: Partial<${entityName}Opts>): void {
         ${setOpts}(this as any as ${entityName}, opts);
       }
-
+      
+      ${tsdocComments.entity.setPartial}
       setPartial(opts: ${PartialOrNull}<${entityName}Opts>): void {
         ${setOpts}(this as any as ${entityName}, opts as ${OptsOf}<${entityName}>, { partial: true });
       }
 
+      ${tsdocComments.entity.changes}
       get changes(): ${Changes}<${entityName}${maybeOtherTypeChanges}> {
         return ${newChangesProxy}(this) as any;
       }
 
       ${maybeIsSoftDeleted}
 
+      ${tsdocComments.entity.load}
       load<U, V>(fn: (lens: ${Lens}<${entity.type}>) => ${Lens}<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
         return ${loadLens}(this as any as ${entityName}, fn, opts);
       }
 
+      ${tsdocComments.entity.populate}
       populate<const H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>>;
       populate<const H extends ${LoadHint}<${entityName}>>(opts: { hint: H, forceReload?: boolean }): Promise<${Loaded}<${entityName}, H>>;
       populate<const H extends ${LoadHint}<${entityName}>, V>(hint: H, fn: (${varName}: Loaded<${entityName}, H>) => V): Promise<V>;
@@ -287,10 +293,12 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         return this.em.populate(this as any as ${entityName}, hintOrOpts, fn);
       }
 
+      ${tsdocComments.entity.isLoaded}
       isLoaded<const H extends ${LoadHint}<${entityName}>>(hint: H): this is ${Loaded}<${entityName}${maybeOtherLoaded}, H> {
         return ${isLoaded}(this as any as ${entityName}, hint);
       }
 
+      ${tsdocComments.entity.toJSON}
       toJSON(): object;
       toJSON<const H extends ${ToJsonHint}<${entityName}>>(hint: H): Promise<${JsonPayload}<${entityName}, H>>;
       toJSON(hint?: any): object {

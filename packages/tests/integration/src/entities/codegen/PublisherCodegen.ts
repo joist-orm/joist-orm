@@ -353,14 +353,57 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
     return getField(this, "type") === PublisherType.Big;
   }
 
+  /**
+   * Partial update taking any subset of the entities fields.
+   *
+   * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
+   * is left as untouched.
+   *
+   * Collections are exhaustively set to the new values, however,
+   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   *
+   * @example
+   * ```
+   * entity.setPartial({
+   *   firstName: 'foo' // updated
+   *   lastName: undefined // do nothing
+   *   age: null // unset, (i.e. set it as undefined)
+   * });
+   * ```
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   */
   set(opts: Partial<PublisherOpts>): void {
     setOpts(this as any as Publisher, opts);
   }
 
+  /**
+   * Partial update taking any subset of the entities fields.
+   *
+   * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
+   * is left as untouched.
+   *
+   * Collections are exhaustively set to the new values, however,
+   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   *
+   * @example
+   * ```
+   * entity.setPartial({
+   *   firstName: 'foo' // updated
+   *   lastName: undefined // do nothing
+   *   age: null // unset, (i.e. set it as undefined)
+   * });
+   * ```
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   */
   setPartial(opts: PartialOrNull<PublisherOpts>): void {
     setOpts(this as any as Publisher, opts as OptsOf<Publisher>, { partial: true });
   }
 
+  /**
+   * Details the field changes of the entity within the current unit of work.
+   *
+   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   */
   get changes(): Changes<
     Publisher,
     | keyof (FieldsOf<Publisher> & RelationsOf<Publisher>)
@@ -374,10 +417,20 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
     return this.deletedAt !== undefined;
   }
 
+  /**
+   * Traverse from this entity using a lens, and load the result.
+   *
+   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   */
   load<U, V>(fn: (lens: Lens<Publisher>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as Publisher, fn, opts);
   }
 
+  /**
+   * Hydrate this entity using a load hint
+   *
+   * @see {@link https://joist-orm.io/docs/features/loading-entities#1-object-graph-navigation | Loading entities} on the Joist docs
+   */
   populate<const H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>>;
   populate<const H extends LoadHint<Publisher>>(
     opts: { hint: H; forceReload?: boolean },
@@ -394,10 +447,29 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
     return this.em.populate(this as any as Publisher, hintOrOpts, fn);
   }
 
+  /**
+   * Given a load hint, checks if it is loaded within the unit of work.
+   *
+   * Type Guarded via Loaded<>
+   */
   isLoaded<const H extends LoadHint<Publisher>>(hint: H): this is Loaded<Publisher, H> {
     return isLoaded(this as any as Publisher, hint);
   }
 
+  /**
+   * Build a type-safe, loadable and relation aware POJO from this entity, given a hint.
+   *
+   * Note: As the hint might load, this returns a Promise
+   *
+   * @example
+   * ```
+   * const payload = await a.toJSON({
+   *   id: true,
+   *   books: { id: true, reviews: { rating: true } }
+   * });
+   * ```
+   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<Publisher>>(hint: H): Promise<JsonPayload<Publisher, H>>;
   toJSON(hint?: any): object {

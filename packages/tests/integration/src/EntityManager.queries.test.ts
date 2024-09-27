@@ -2405,6 +2405,15 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can prune m2o subtype only fields", async () => {
+    const where = { publisherLargePublisher: { country: undefined } } satisfies AuthorFilter;
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: undefined,
+    });
+  });
+
   it("can find by unique", async () => {
     await insertAuthor({ first_name: "a1", ssn: "12" });
     await insertAuthor({ first_name: "a2", ssn: "13" });

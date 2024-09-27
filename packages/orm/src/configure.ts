@@ -1,6 +1,6 @@
 import { Entity } from "./Entity";
 import { MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
-import { EntityMetadata, ManyToOneField, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, ManyToOneField, OneToManyField, getMetadata } from "./EntityMetadata";
 import { setBooted } from "./config";
 import { getFakeInstance } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
@@ -18,13 +18,13 @@ const typeToMetaMap = new Map<string, EntityMetadata>();
 
 /** Performs our boot-time initialization, i.e. hooking up reactivity. */
 export function configureMetadata(metas: EntityMetadata[]): void {
-  fireAfterMetadatas(metas);
-  setBooted();
   populateConstructorMaps(metas);
   setImmutableFields(metas);
   hookUpBaseTypeAndSubTypes(metas);
   reverseIndexReactivity(metas);
   populatePolyComponentFields(metas);
+  fireAfterMetadatas(metas);
+  setBooted();
 }
 
 function fireAfterMetadatas(metas: EntityMetadata[]): void {
@@ -138,7 +138,7 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
     });
 
     // Look for ReactiveFields to reverse
-    Object.values(meta.fields)
+    Object.values(meta.allFields)
       .filter(
         (f) =>
           f.kind === "primitive" ||
@@ -211,6 +211,17 @@ function populatePolyComponentFields(metas: EntityMetadata[]): void {
             fieldIdName: `${fieldName}Id`,
             otherMetadata: () => st,
           } satisfies ManyToOneField & { aliasSuffix: string };
+        });
+      } else if (field.kind === "o2m") {
+        field.otherMetadata().subTypes.forEach((st) => {
+          const fieldName = `${key}${st.type}`;
+          meta.polyComponentFields ??= {};
+          meta.polyComponentFields[fieldName] = {
+            ...field,
+            fieldName,
+            fieldIdName: `${fieldName}Id`,
+            otherMetadata: () => st,
+          } satisfies OneToManyField & { aliasSuffix: string };
         });
       }
     }

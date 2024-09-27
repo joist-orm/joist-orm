@@ -10,8 +10,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -214,10 +212,6 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
     return loadLens(this as any as Painting, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(paintingMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -267,6 +261,6 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get artist(): ManyToOneReference<Painting, Artist, never> {
-    return this.__data.relations.artist ??= hasOne(this as any as Painting, artistMeta, "artist", "paintings");
+    return this.__data.relations.artist ??= hasOne(this, artistMeta, "artist", "paintings");
   }
 }

@@ -29,6 +29,8 @@ export abstract class Publisher extends PublisherCodegen {
     changedInBeforeCommit: [] as string[],
   };
 
+  static afterMetadataHasSubTypes = false;
+
   /** Example of a reactive query. */
   readonly numberOfBookReviews: ReactiveField<Publisher, number> = hasReactiveQueryField(
     "numberOfBookReviews",
@@ -96,8 +98,16 @@ export abstract class Publisher extends PublisherCodegen {
   readonly commentParentInfo: AsyncProperty<Publisher, string> = hasReactiveAsyncProperty([], () => ``);
 }
 
+config.afterMetadata((meta) => {
+  Publisher.afterMetadataHasSubTypes = meta.subTypes.length > 0;
+});
+
 /** Test the types for an enum default value (even though it is already matched by the db defaultValues). */
 config.setDefault("type", () => PublisherType.Big);
+
+/** Test that base class defaults are processed and persisted */
+config.setDefault("baseSyncDefault", () => "BaseSyncDefault");
+config.setDefault("baseAsyncDefault", "authors", () => "BaseAsyncDefault");
 
 // Example of a rule against a base type
 config.addRule(cannotBeUpdated("type"));

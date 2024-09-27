@@ -10,8 +10,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -284,10 +282,6 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
     return loadLens(this as any as Image, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(imageMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -337,14 +331,14 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get author(): ManyToOneReference<Image, Author, undefined> {
-    return this.__data.relations.author ??= hasOne(this as any as Image, authorMeta, "author", "image");
+    return this.__data.relations.author ??= hasOne(this, authorMeta, "author", "image");
   }
 
   get book(): ManyToOneReference<Image, Book, undefined> {
-    return this.__data.relations.book ??= hasOne(this as any as Image, bookMeta, "book", "image");
+    return this.__data.relations.book ??= hasOne(this, bookMeta, "book", "image");
   }
 
   get publisher(): ManyToOneReference<Image, Publisher, undefined> {
-    return this.__data.relations.publisher ??= hasOne(this as any as Image, publisherMeta, "publisher", "images");
+    return this.__data.relations.publisher ??= hasOne(this, publisherMeta, "publisher", "images");
   }
 }

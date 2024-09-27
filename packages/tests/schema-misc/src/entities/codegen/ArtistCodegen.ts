@@ -11,8 +11,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -224,10 +222,6 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
     return loadLens(this as any as Artist, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(artistMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -278,7 +272,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
 
   get paintings(): Collection<Artist, Painting> {
     return this.__data.relations.paintings ??= hasMany(
-      this as any as Artist,
+      this,
       paintingMeta,
       "paintings",
       "artist",

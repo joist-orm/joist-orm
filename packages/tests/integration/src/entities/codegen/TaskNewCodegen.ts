@@ -9,8 +9,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -21,6 +19,7 @@ import {
   type LoadHint,
   loadLens,
   type ManyToOneReference,
+  mustBeSubType,
   newChangesProxy,
   type OptsOf,
   type OrderBy,
@@ -43,6 +42,7 @@ import {
   type Entity,
   EntityManager,
   newTaskNew,
+  Tag,
   Task,
   type TaskFields,
   type TaskFilter,
@@ -62,38 +62,50 @@ export type TaskNewId = Flavor<string, TaskNew> & Flavor<string, "Task">;
 export interface TaskNewFields extends TaskFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   specialNewField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  selfReferential: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
   specialNewAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
 }
 
 export interface TaskNewOpts extends TaskOpts {
   specialNewField?: number | null;
+  selfReferential?: TaskNew | TaskNewId | null;
   specialNewAuthor?: Author | AuthorId | null;
   newTaskTaskItems?: TaskItem[];
+  selfReferentialTasks?: TaskNew[];
 }
 
 export interface TaskNewIdsOpts extends TaskIdsOpts {
+  selfReferentialId?: TaskNewId | null;
   specialNewAuthorId?: AuthorId | null;
   newTaskTaskItemIds?: TaskItemId[] | null;
+  selfReferentialTaskIds?: TaskNewId[] | null;
 }
 
 export interface TaskNewFilter extends TaskFilter {
   specialNewField?: ValueFilter<number, null>;
+  selfReferential?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   specialNewAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   newTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
+  selfReferentialTasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
 }
 
 export interface TaskNewGraphQLFilter extends TaskGraphQLFilter {
   specialNewField?: ValueGraphQLFilter<number>;
+  selfReferential?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   specialNewAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   newTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
+  selfReferentialTasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
 }
 
 export interface TaskNewOrder extends TaskOrder {
   specialNewField?: OrderBy;
+  selfReferential?: TaskNewOrder;
   specialNewAuthor?: AuthorOrder;
 }
 
 export const taskNewConfig = new ConfigApi<TaskNew, Context>();
+
+taskNewConfig.addRule("selfReferential", mustBeSubType("selfReferential"));
 
 export abstract class TaskNewCodegen extends Task implements Entity {
   static readonly tagName = "task";
@@ -203,10 +215,6 @@ export abstract class TaskNewCodegen extends Task implements Entity {
     return loadLens(this as any as TaskNew, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(taskNewMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -257,7 +265,7 @@ export abstract class TaskNewCodegen extends Task implements Entity {
 
   get newTaskTaskItems(): Collection<TaskNew, TaskItem> {
     return this.__data.relations.newTaskTaskItems ??= hasMany(
-      this as any as TaskNew,
+      this,
       taskItemMeta,
       "newTaskTaskItems",
       "newTask",
@@ -266,12 +274,35 @@ export abstract class TaskNewCodegen extends Task implements Entity {
     );
   }
 
-  get specialNewAuthor(): ManyToOneReference<TaskNew, Author, undefined> {
-    return this.__data.relations.specialNewAuthor ??= hasOne(
-      this as any as TaskNew,
-      authorMeta,
-      "specialNewAuthor",
-      "tasks",
+  get selfReferentialTasks(): Collection<TaskNew, TaskNew> {
+    return this.__data.relations.selfReferentialTasks ??= hasMany(
+      this,
+      taskNewMeta,
+      "selfReferentialTasks",
+      "selfReferential",
+      "self_referential_id",
+      undefined,
     );
+  }
+
+  get selfReferential(): ManyToOneReference<TaskNew, TaskNew, undefined> {
+    return this.__data.relations.selfReferential ??= hasOne(
+      this,
+      taskNewMeta,
+      "selfReferential",
+      "selfReferentialTasks",
+    );
+  }
+
+  get specialNewAuthor(): ManyToOneReference<TaskNew, Author, undefined> {
+    return this.__data.relations.specialNewAuthor ??= hasOne(this, authorMeta, "specialNewAuthor", "tasks");
+  }
+
+  get taskTaskItems(): Collection<TaskNew, TaskItem> {
+    return super.taskTaskItems as Collection<TaskNew, TaskItem>;
+  }
+
+  get tags(): Collection<TaskNew, Tag> {
+    return super.tags as Collection<TaskNew, Tag>;
   }
 }

@@ -10,8 +10,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   hasOnePolymorphic,
   type IdOf,
   isEntity,
@@ -217,10 +215,6 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
     return loadLens(this as any as Comment, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(commentMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -270,6 +264,6 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get parent(): PolymorphicReference<Comment, CommentParent, never> {
-    return this.__data.relations.parent ??= hasOnePolymorphic(this as any as Comment, "parent");
+    return this.__data.relations.parent ??= hasOnePolymorphic(this, "parent");
   }
 }

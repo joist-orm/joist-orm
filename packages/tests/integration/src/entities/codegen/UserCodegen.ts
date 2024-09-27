@@ -12,8 +12,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -133,6 +131,7 @@ export interface UserFilter {
   authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   createdComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   directs?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
+  directsAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
   likedComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   favoritePublisher?: EntityFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
   favoritePublisherLargePublisher?: EntityFilter<LargePublisher, IdOf<LargePublisher>, FilterOf<LargePublisher>, null>;
@@ -155,6 +154,7 @@ export interface UserGraphQLFilter {
   authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   directs?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
+  directsAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
   likedComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   favoritePublisher?: EntityGraphQLFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
   favoritePublisherLargePublisher?: EntityGraphQLFilter<
@@ -363,10 +363,6 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
     return loadLens(this as any as User, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(userMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -417,7 +413,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   get createdComments(): Collection<User, Comment> {
     return this.__data.relations.createdComments ??= hasMany(
-      this as any as User,
+      this,
       commentMeta,
       "createdComments",
       "user",
@@ -427,32 +423,20 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get directs(): Collection<User, User> {
-    return this.__data.relations.directs ??= hasMany(
-      this as any as User,
-      userMeta,
-      "directs",
-      "manager",
-      "manager_id",
-      undefined,
-    );
+    return this.__data.relations.directs ??= hasMany(this, userMeta, "directs", "manager", "manager_id", undefined);
   }
 
   get manager(): ManyToOneReference<User, User, undefined> {
-    return this.__data.relations.manager ??= hasOne(this as any as User, userMeta, "manager", "directs");
+    return this.__data.relations.manager ??= hasOne(this, userMeta, "manager", "directs");
   }
 
   get authorManyToOne(): ManyToOneReference<User, Author, undefined> {
-    return this.__data.relations.authorManyToOne ??= hasOne(
-      this as any as User,
-      authorMeta,
-      "authorManyToOne",
-      "userOneToOne",
-    );
+    return this.__data.relations.authorManyToOne ??= hasOne(this, authorMeta, "authorManyToOne", "userOneToOne");
   }
 
   get likedComments(): Collection<User, Comment> {
     return this.__data.relations.likedComments ??= hasManyToMany(
-      this as any as User,
+      this,
       "users_to_comments",
       "likedComments",
       "liked_by_user_id",
@@ -463,6 +447,6 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get favoritePublisher(): PolymorphicReference<User, UserFavoritePublisher, undefined> {
-    return this.__data.relations.favoritePublisher ??= hasOnePolymorphic(this as any as User, "favoritePublisher");
+    return this.__data.relations.favoritePublisher ??= hasOnePolymorphic(this, "favoritePublisher");
   }
 }

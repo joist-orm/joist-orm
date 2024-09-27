@@ -12,12 +12,16 @@ describe("EntityManager", () => {
 
     const t1 = (async () => {
       await steps.on(1, () => knex.select("*").from("publishers").where({ name: "foo" }));
-      await steps.on(3, () => knex.insert({ name: "foo" }).into("publishers"));
+      await steps.on(3, () =>
+        knex.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers"),
+      );
     })();
 
     const t2 = (async () => {
       await steps.on(2, () => knex.select("*").from("publishers").where({ name: "foo" }));
-      await steps.on(4, () => knex.insert({ name: "foo" }).into("publishers"));
+      await steps.on(4, () =>
+        knex.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers"),
+      );
     })();
 
     await Promise.all([t1, t2]);
@@ -35,14 +39,18 @@ describe("EntityManager", () => {
       // Use the default transaction isolation level
       await knex.transaction(async (knex) => {
         await steps.on(1, () => knex.select("*").from("publishers").where({ name: "foo" }));
-        await steps.on(3, () => knex.insert({ name: "foo" }).into("publishers"));
+        await steps.on(3, () =>
+          knex.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers"),
+        );
       });
     })();
 
     const t2 = (async () => {
       await knex.transaction(async (knex) => {
         await steps.on(2, () => knex.select("*").from("publishers").where({ name: "foo" }));
-        await steps.on(4, () => knex.insert({ name: "foo" }).into("publishers"));
+        await steps.on(4, () =>
+          knex.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers"),
+        );
       });
     })();
 
@@ -60,7 +68,7 @@ describe("EntityManager", () => {
       await txn.raw("set transaction isolation level serializable;");
       await steps.on(1, () => txn.select("*").from("publishers").where({ name: "foo" }));
       await steps.on(3, async () => {
-        await txn.insert({ name: "foo" }).into("publishers");
+        await txn.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers");
         await txn.commit();
       });
     })();
@@ -70,7 +78,9 @@ describe("EntityManager", () => {
       try {
         await txn.raw("set transaction isolation level serializable;");
         await steps.on(2, () => txn.select("*").from("publishers").where({ name: "foo" }));
-        await steps.on(4, () => txn.insert({ name: "foo" }).into("publishers"));
+        await steps.on(4, () =>
+          txn.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers"),
+        );
       } catch (e) {
         await txn.rollback();
         throw e;
@@ -96,7 +106,9 @@ describe("EntityManager", () => {
       await conn.query("set transaction isolation level serializable;");
       await steps.on(1, async () => conn.query("select * from publishers where name = 'foo'"));
       await steps.on(3, async () => {
-        await conn.query("insert into publishers (name) values ('foo')");
+        await conn.query(
+          "insert into publishers (name, base_sync_default, base_async_default) values ('foo', 'foo', 'foo')",
+        );
         await conn.query("commit");
       });
       conn.release();
@@ -108,7 +120,11 @@ describe("EntityManager", () => {
         await conn.query("begin");
         await conn.query("set transaction isolation level serializable;");
         await steps.on(2, async () => conn.query("select * from publishers where name = 'foo'"));
-        await steps.on(4, async () => conn.query("insert into publishers (name) values ('foo')"));
+        await steps.on(4, async () =>
+          conn.query(
+            "insert into publishers (name, base_sync_default, base_async_default) values ('foo', 'foo', 'foo')",
+          ),
+        );
       } finally {
         conn.release();
       }

@@ -10,16 +10,16 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
+  hasOne,
   isLoaded,
   type JsonPayload,
   type Lens,
   type Loaded,
   type LoadHint,
   loadLens,
+  type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
   type OptsOf,
@@ -37,18 +37,27 @@ import {
 } from "joist-orm";
 import { type Context } from "src/context";
 import {
+  AdminUser,
+  type AdminUserId,
+  Author,
+  BookAdvance,
+  Comment,
   type Entity,
   EntityManager,
+  Image,
   newSmallPublisher,
   Publisher,
   type PublisherFields,
   type PublisherFilter,
   type PublisherGraphQLFilter,
+  PublisherGroup,
   type PublisherIdsOpts,
   type PublisherOpts,
   type PublisherOrder,
   SmallPublisher,
   smallPublisherMeta,
+  Tag,
+  TaskOld,
   User,
   type UserId,
   userMeta,
@@ -61,15 +70,20 @@ export interface SmallPublisherFields extends PublisherFields {
   city: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   allAuthorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  selfReferential: { kind: "m2o"; type: SmallPublisher; nullable: undefined; derived: false };
 }
 
 export interface SmallPublisherOpts extends PublisherOpts {
   city: string;
   sharedColumn?: string | null;
+  selfReferential?: SmallPublisher | SmallPublisherId | null;
+  smallPublishers?: SmallPublisher[];
   users?: User[];
 }
 
 export interface SmallPublisherIdsOpts extends PublisherIdsOpts {
+  selfReferentialId?: SmallPublisherId | null;
+  smallPublisherIds?: SmallPublisherId[] | null;
   userIds?: UserId[] | null;
 }
 
@@ -77,20 +91,32 @@ export interface SmallPublisherFilter extends PublisherFilter {
   city?: ValueFilter<string, never>;
   sharedColumn?: ValueFilter<string, null>;
   allAuthorNames?: ValueFilter<string, null>;
+  selfReferential?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null>;
+  smallPublishers?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null | undefined>;
   users?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
+  usersAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
 }
 
 export interface SmallPublisherGraphQLFilter extends PublisherGraphQLFilter {
   city?: ValueGraphQLFilter<string>;
   sharedColumn?: ValueGraphQLFilter<string>;
   allAuthorNames?: ValueGraphQLFilter<string>;
+  selfReferential?: EntityGraphQLFilter<SmallPublisher, SmallPublisherId, GraphQLFilterOf<SmallPublisher>, null>;
+  smallPublishers?: EntityGraphQLFilter<
+    SmallPublisher,
+    SmallPublisherId,
+    GraphQLFilterOf<SmallPublisher>,
+    null | undefined
+  >;
   users?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
+  usersAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
 }
 
 export interface SmallPublisherOrder extends PublisherOrder {
   city?: OrderBy;
   sharedColumn?: OrderBy;
   allAuthorNames?: OrderBy;
+  selfReferential?: SmallPublisherOrder;
 }
 
 export const smallPublisherConfig = new ConfigApi<SmallPublisher, Context>();
@@ -215,10 +241,6 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
     return loadLens(this as any as SmallPublisher, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(smallPublisherMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -269,14 +291,62 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
+  get smallPublishers(): Collection<SmallPublisher, SmallPublisher> {
+    return this.__data.relations.smallPublishers ??= hasMany(
+      this,
+      smallPublisherMeta,
+      "smallPublishers",
+      "selfReferential",
+      "self_referential_id",
+      undefined,
+    );
+  }
+
   get users(): Collection<SmallPublisher, User> {
     return this.__data.relations.users ??= hasMany(
-      this as any as SmallPublisher,
+      this,
       userMeta,
       "users",
       "favoritePublisher",
       "favorite_publisher_small_id",
       undefined,
     );
+  }
+
+  get selfReferential(): ManyToOneReference<SmallPublisher, SmallPublisher, undefined> {
+    return this.__data.relations.selfReferential ??= hasOne(
+      this,
+      smallPublisherMeta,
+      "selfReferential",
+      "smallPublishers",
+    );
+  }
+
+  get authors(): Collection<SmallPublisher, Author> {
+    return super.authors as Collection<SmallPublisher, Author>;
+  }
+
+  get bookAdvances(): Collection<SmallPublisher, BookAdvance> {
+    return super.bookAdvances as Collection<SmallPublisher, BookAdvance>;
+  }
+
+  get comments(): Collection<SmallPublisher, Comment> {
+    return super.comments as Collection<SmallPublisher, Comment>;
+  }
+
+  get images(): Collection<SmallPublisher, Image> {
+    return super.images as Collection<SmallPublisher, Image>;
+  }
+
+  get group(): ManyToOneReference<SmallPublisher, PublisherGroup, undefined> {
+    return super.group as ManyToOneReference<SmallPublisher, PublisherGroup, undefined>;
+  }
+
+  get tags(): Collection<SmallPublisher, Tag> {
+    return super.tags as Collection<SmallPublisher, Tag>;
+  }
+
+  get tasks(): Collection<SmallPublisher, TaskOld> {
+    return super.tasks as Collection<SmallPublisher, TaskOld>;
   }
 }

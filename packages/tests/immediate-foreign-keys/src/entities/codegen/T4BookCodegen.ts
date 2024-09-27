@@ -11,8 +11,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -202,10 +200,6 @@ export abstract class T4BookCodegen extends BaseEntity<EntityManager, number> im
     return loadLens(this as any as T4Book, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(t4BookMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -256,7 +250,7 @@ export abstract class T4BookCodegen extends BaseEntity<EntityManager, number> im
 
   get t4Authors(): Collection<T4Book, T4Author> {
     return this.__data.relations.t4Authors ??= hasMany(
-      this as any as T4Book,
+      this,
       t4AuthorMeta,
       "t4Authors",
       "favoriteBook",
@@ -266,6 +260,6 @@ export abstract class T4BookCodegen extends BaseEntity<EntityManager, number> im
   }
 
   get author(): ManyToOneReference<T4Book, T4Author, never> {
-    return this.__data.relations.author ??= hasOne(this as any as T4Book, t4AuthorMeta, "author", "t4Books");
+    return this.__data.relations.author ??= hasOne(this, t4AuthorMeta, "author", "t4Books");
   }
 }

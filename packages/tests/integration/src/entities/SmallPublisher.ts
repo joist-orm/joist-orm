@@ -1,15 +1,21 @@
-import { SmallPublisherCodegen } from "./entities";
+import { Entity, PublisherGroup, SmallPublisherCodegen } from "./entities";
 
-import { hasReactiveField, ReactiveField } from "joist-orm";
+import { hasReactiveField, ManyToOneReference, ReactiveField } from "joist-orm";
 import { smallPublisherConfig as config } from "./entities";
 
-export class SmallPublisher extends SmallPublisherCodegen {
+// For testing an interface that is used on a subtype, with a relation from the base type
+type HasGroup<T extends Entity> = {
+  get group(): ManyToOneReference<T, PublisherGroup, undefined>;
+};
+
+export class SmallPublisher extends SmallPublisherCodegen implements HasGroup<SmallPublisher> {
   // Used for testing a derived property that only exists on a subtype
   readonly allAuthorNames: ReactiveField<SmallPublisher, string> = hasReactiveField(
     "allAuthorNames",
     { authors: ["firstName"] },
     (sp) => sp.authors.get.map((a) => a.firstName).join(", "),
   );
+  static afterMetadataHasBaseTypes = false;
   public beforeFlushRan = false;
   public beforeCreateRan = false;
   public beforeUpdateRan = false;
@@ -17,6 +23,10 @@ export class SmallPublisher extends SmallPublisherCodegen {
   public afterValidationRan = false;
   public afterCommitRan = false;
 }
+
+config.afterMetadata((meta) => {
+  SmallPublisher.afterMetadataHasBaseTypes = meta.baseTypes.length > 0;
+});
 
 config.addRule((p) => {
   if (p.name === "large") {

@@ -9,8 +9,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -261,10 +259,6 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
     return loadLens(this as any as BookAdvance, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(bookAdvanceMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -316,15 +310,10 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   get book(): ManyToOneReference<BookAdvance, Book, never> {
-    return this.__data.relations.book ??= hasOne(this as any as BookAdvance, bookMeta, "book", "advances");
+    return this.__data.relations.book ??= hasOne(this, bookMeta, "book", "advances");
   }
 
   get publisher(): ManyToOneReference<BookAdvance, Publisher, never> {
-    return this.__data.relations.publisher ??= hasOne(
-      this as any as BookAdvance,
-      publisherMeta,
-      "publisher",
-      "bookAdvances",
-    );
+    return this.__data.relations.publisher ??= hasOne(this, publisherMeta, "publisher", "bookAdvances");
   }
 }

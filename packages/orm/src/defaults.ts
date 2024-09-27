@@ -1,9 +1,9 @@
 import { Entity } from "./Entity";
-import { EntityMetadata, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "./EntityMetadata";
+import { EntityMetadata, EnumField, PrimitiveField, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
 import { Todo } from "./Todo";
 import { setField } from "./fields";
 import { normalizeHint } from "./normalizeHints";
-import { convertToLoadHint, ReactiveHint } from "./reactiveHints";
+import { ReactiveHint, convertToLoadHint } from "./reactiveHints";
 import { isLoadedReference } from "./relations/index";
 import { fail, groupBy } from "./utils";
 import { Deferred } from "./utils/Deferred";
@@ -16,26 +16,33 @@ export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolea
 
 /** Run the sync defaults for `entity`. */
 export function setSyncDefaults(entity: Entity): void {
-  getBaseAndSelfMetas(getMetadata(entity)).forEach((m) => {
-    for (const [field, maybeFn] of Object.entries(m.config.__data.syncDefaults)) {
-      const value = (entity as any)[field];
-      // Use allFields in case a subtype sets a default for one of its base fields
-      if (m.allFields[field].kind === "primitive" && (m.allFields[field] as PrimitiveField)["derived"] === "async") {
-        // If this is a ReactiveQueryField, we want to push in a default, but setOpts is called
-        // from the codegen constructor, so the user-defined `hasReactiveQueryField` fields will
-        // not have been initialized yet (i.e. `entity[field]` will be undefined and not yet an
-        // `instanceof ReactiveQueryField`). Thankfully we can just use setField.
-        setField(entity, field, maybeFn);
-      } else if (value === undefined) {
-        (entity as any)[field] = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
-      } else if (isLoadedReference(value) && !value.isSet) {
-        // A sync default usually would never be for a reference, because reference defaults usually
-        // require a field hint (so would be async) to get "the other entity". However, something like:
-        // `config.setDefault("original", (self) => self);` is technically valid.
-        value.set(maybeFn instanceof Function ? maybeFn(entity) : maybeFn);
-      }
+  const meta = getMetadata(entity);
+  const syncDefaults: Record<string, any> = getBaseAndSelfMetas(meta).reduce(
+    (acc, m) => ({ ...acc, ...m.config.__data.syncDefaults }),
+    {},
+  );
+  for (const [fieldName, maybeFn] of Object.entries(syncDefaults)) {
+    const value = (entity as any)[fieldName];
+    const field = meta.allFields[fieldName];
+    // Use allFields in case a subtype sets a default for one of its base fields
+    if (
+      (field.kind === "primitive" || field.kind === "enum") &&
+      (field as PrimitiveField | EnumField).derived === "async"
+    ) {
+      // If this is a ReactiveQueryField, we want to push in a default, but setOpts is called
+      // from the codegen constructor, so the user-defined `hasReactiveQueryField` fields will
+      // not have been initialized yet (i.e. `entity[field]` will be undefined and not yet an
+      // `instanceof ReactiveQueryField`). Thankfully we can just use setField.
+      setField(entity, fieldName, maybeFn);
+    } else if (value === undefined) {
+      (entity as any)[fieldName] = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
+    } else if (isLoadedReference(value) && !value.isSet) {
+      // A sync default usually would never be for a reference, because reference defaults usually
+      // require a field hint (so would be async) to get "the other entity". However, something like:
+      // `config.setDefault("original", (self) => self);` is technically valid.
+      value.set(maybeFn instanceof Function ? maybeFn(entity) : maybeFn);
     }
-  });
+  }
 }
 
 /** Runs the async defaults for all inserted entities in `todos`. */
@@ -51,17 +58,13 @@ export function setAsyncDefaults(
     const entitiesByType: Map<EntityMetadata, Entity[]> = todo.metadata.inheritanceType
       ? groupBy(todo.inserts, (e) => getMetadata(e))
       : new Map([[todo.metadata, todo.inserts]]);
-    // Copy subtypes insert down into the base, so they get base-level defaults applied
-    for (const [maybeSub, inserts] of entitiesByType.entries()) {
-      for (const baseType of maybeSub.baseTypes) {
-        entitiesByType.set(baseType, [...(entitiesByType.get(baseType) ?? []), ...inserts]);
-      }
-    }
     // flatMap because each meta might have N fields
     const p = [...entitiesByType.entries()].flatMap(([meta, inserts]) => {
-      return Object.values(meta.config.__data.asyncDefaults).map((df) =>
-        df.setOnEntities(ctx, dt, suppressedTypeErrors, todo.metadata, inserts),
+      const asyncDefaults: Record<string, AsyncDefault<any>> = getBaseAndSelfMetas(meta).reduce(
+        (acc, m) => ({ ...acc, ...m.config.__data.asyncDefaults }),
+        {},
       );
+      return Object.values(asyncDefaults).map((df) => df.setOnEntities(ctx, dt, suppressedTypeErrors, meta, inserts));
     });
     return Promise.all(p);
   });
@@ -217,8 +220,11 @@ class DependencyTracker {
     // Seed it with any entities that we're actively inserting (as any dependencies to
     // entities that aren't even having `setDefault` called can be skipped)
     for (const todo of Object.values(todos)) {
-      // ...handle subtypes?
-      this.#deferreds.set(todo.metadata.type, new Map());
+      if (todo.metadata.inheritanceType) {
+        new Set(todo.inserts.map((e) => getMetadata(e))).forEach((meta) => this.#deferreds.set(meta.type, new Map()));
+      } else {
+        this.#deferreds.set(todo.metadata.type, new Map());
+      }
     }
   }
 
@@ -227,7 +233,7 @@ class DependencyTracker {
   }
 
   getDeferred(meta: EntityMetadata, fieldName: string): Deferred<void> {
-    const map = this.#deferreds.get(meta.type) ?? fail(`No deferred check necessary for ${meta.type}`);
+    const map = this.#deferreds.get(meta.type) ?? fail(`No deferred check necessary for ${meta.type}.${fieldName}`);
     let deferred = map.get(fieldName);
     if (!deferred) {
       deferred = new Deferred();

@@ -4,6 +4,7 @@ node_modules/
 /.vscode/
 *.tsbuildinfo
 .clinic/
+.envrc
 
 .yarn/*
 !.yarn/patches

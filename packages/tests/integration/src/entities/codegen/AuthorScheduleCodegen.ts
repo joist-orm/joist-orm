@@ -10,8 +10,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -213,10 +211,6 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
     return loadLens(this as any as AuthorSchedule, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(authorScheduleMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -271,6 +265,6 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   get author(): ManyToOneReference<AuthorSchedule, Author, never> {
-    return this.__data.relations.author ??= hasOne(this as any as AuthorSchedule, authorMeta, "author", "schedules");
+    return this.__data.relations.author ??= hasOne(this, authorMeta, "author", "schedules");
   }
 }

@@ -12,8 +12,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasManyToMany,
   hasOne,
@@ -258,10 +256,6 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     return loadLens(this as any as BookReview, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(bookReviewMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -313,16 +307,16 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   }
 
   get book(): ManyToOneReference<BookReview, Book, never> {
-    return this.__data.relations.book ??= hasOne(this as any as BookReview, bookMeta, "book", "reviews");
+    return this.__data.relations.book ??= hasOne(this, bookMeta, "book", "reviews");
   }
 
   get critic(): ManyToOneReference<BookReview, Critic, undefined> {
-    return this.__data.relations.critic ??= hasOne(this as any as BookReview, criticMeta, "critic", "bookReviews");
+    return this.__data.relations.critic ??= hasOne(this, criticMeta, "critic", "bookReviews");
   }
 
   get comment(): OneToOneReference<BookReview, Comment> {
     return this.__data.relations.comment ??= hasOneToOne(
-      this as any as BookReview,
+      this,
       commentMeta,
       "comment",
       "parent",
@@ -332,7 +326,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
 
   get tags(): Collection<BookReview, Tag> {
     return this.__data.relations.tags ??= hasManyToMany(
-      this as any as BookReview,
+      this,
       "book_reviews_to_tags",
       "tags",
       "book_review_id",

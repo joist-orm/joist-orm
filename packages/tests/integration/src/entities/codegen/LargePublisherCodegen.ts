@@ -10,8 +10,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -20,6 +18,7 @@ import {
   type Loaded,
   type LoadHint,
   loadLens,
+  type ManyToOneReference,
   newChangesProxy,
   type OptsOf,
   type OrderBy,
@@ -35,11 +34,17 @@ import {
 } from "joist-orm";
 import { type Context } from "src/context";
 import {
+  AdminUser,
+  type AdminUserId,
+  Author,
+  BookAdvance,
+  Comment,
   Critic,
   type CriticId,
   criticMeta,
   type Entity,
   EntityManager,
+  Image,
   LargePublisher,
   largePublisherMeta,
   newLargePublisher,
@@ -47,9 +52,12 @@ import {
   type PublisherFields,
   type PublisherFilter,
   type PublisherGraphQLFilter,
+  PublisherGroup,
   type PublisherIdsOpts,
   type PublisherOpts,
   type PublisherOrder,
+  Tag,
+  TaskOld,
   User,
   type UserId,
   userMeta,
@@ -80,6 +88,7 @@ export interface LargePublisherFilter extends PublisherFilter {
   country?: ValueFilter<string, null>;
   critics?: EntityFilter<Critic, CriticId, FilterOf<Critic>, null | undefined>;
   users?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
+  usersAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
 }
 
 export interface LargePublisherGraphQLFilter extends PublisherGraphQLFilter {
@@ -87,6 +96,7 @@ export interface LargePublisherGraphQLFilter extends PublisherGraphQLFilter {
   country?: ValueGraphQLFilter<string>;
   critics?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, null | undefined>;
   users?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
+  usersAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
 }
 
 export interface LargePublisherOrder extends PublisherOrder {
@@ -212,10 +222,6 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
     return loadLens(this as any as LargePublisher, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(largePublisherMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -268,7 +274,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
 
   get critics(): Collection<LargePublisher, Critic> {
     return this.__data.relations.critics ??= hasMany(
-      this as any as LargePublisher,
+      this,
       criticMeta,
       "critics",
       "favoriteLargePublisher",
@@ -279,12 +285,40 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
 
   get users(): Collection<LargePublisher, User> {
     return this.__data.relations.users ??= hasMany(
-      this as any as LargePublisher,
+      this,
       userMeta,
       "users",
       "favoritePublisher",
       "favorite_publisher_large_id",
       undefined,
     );
+  }
+
+  get authors(): Collection<LargePublisher, Author> {
+    return super.authors as Collection<LargePublisher, Author>;
+  }
+
+  get bookAdvances(): Collection<LargePublisher, BookAdvance> {
+    return super.bookAdvances as Collection<LargePublisher, BookAdvance>;
+  }
+
+  get comments(): Collection<LargePublisher, Comment> {
+    return super.comments as Collection<LargePublisher, Comment>;
+  }
+
+  get images(): Collection<LargePublisher, Image> {
+    return super.images as Collection<LargePublisher, Image>;
+  }
+
+  get group(): ManyToOneReference<LargePublisher, PublisherGroup, undefined> {
+    return super.group as ManyToOneReference<LargePublisher, PublisherGroup, undefined>;
+  }
+
+  get tags(): Collection<LargePublisher, Tag> {
+    return super.tags as Collection<LargePublisher, Tag>;
+  }
+
+  get tasks(): Collection<LargePublisher, TaskOld> {
+    return super.tasks as Collection<LargePublisher, TaskOld>;
   }
 }

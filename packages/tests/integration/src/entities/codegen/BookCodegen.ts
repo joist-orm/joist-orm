@@ -11,8 +11,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -361,10 +359,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
     return loadLens(this as any as Book, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(bookMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -414,30 +408,16 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get advances(): Collection<Book, BookAdvance> {
-    return this.__data.relations.advances ??= hasMany(
-      this as any as Book,
-      bookAdvanceMeta,
-      "advances",
-      "book",
-      "book_id",
-      undefined,
-    );
+    return this.__data.relations.advances ??= hasMany(this, bookAdvanceMeta, "advances", "book", "book_id", undefined);
   }
 
   get reviews(): Collection<Book, BookReview> {
-    return this.__data.relations.reviews ??= hasMany(
-      this as any as Book,
-      bookReviewMeta,
-      "reviews",
-      "book",
-      "book_id",
-      undefined,
-    );
+    return this.__data.relations.reviews ??= hasMany(this, bookReviewMeta, "reviews", "book", "book_id", undefined);
   }
 
   get comments(): Collection<Book, Comment> {
     return this.__data.relations.comments ??= hasMany(
-      this as any as Book,
+      this,
       commentMeta,
       "comments",
       "parent",
@@ -447,20 +427,20 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get prequel(): ManyToOneReference<Book, Book, undefined> {
-    return this.__data.relations.prequel ??= hasOne(this as any as Book, bookMeta, "prequel", "sequel");
+    return this.__data.relations.prequel ??= hasOne(this, bookMeta, "prequel", "sequel");
   }
 
   get author(): ManyToOneReference<Book, Author, never> {
-    return this.__data.relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
+    return this.__data.relations.author ??= hasOne(this, authorMeta, "author", "books");
   }
 
   get randomComment(): ManyToOneReference<Book, Comment, undefined> {
-    return this.__data.relations.randomComment ??= hasOne(this as any as Book, commentMeta, "randomComment", "books");
+    return this.__data.relations.randomComment ??= hasOne(this, commentMeta, "randomComment", "books");
   }
 
   get prequelsRecursive(): ReadOnlyCollection<Book, Book> {
     return this.__data.relations.prequelsRecursive ??= hasRecursiveParents(
-      this as any as Book,
+      this,
       "prequelsRecursive",
       "prequel",
       "sequelsRecursive",
@@ -469,7 +449,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   get sequelsRecursive(): ReadOnlyCollection<Book, Book> {
     return this.__data.relations.sequelsRecursive ??= hasRecursiveChildren(
-      this as any as Book,
+      this,
       "sequelsRecursive",
       "sequel",
       "prequelsRecursive",
@@ -477,18 +457,12 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get sequel(): OneToOneReference<Book, Book> {
-    return this.__data.relations.sequel ??= hasOneToOne(
-      this as any as Book,
-      bookMeta,
-      "sequel",
-      "prequel",
-      "prequel_id",
-    );
+    return this.__data.relations.sequel ??= hasOneToOne(this, bookMeta, "sequel", "prequel", "prequel_id");
   }
 
   get currentDraftAuthor(): OneToOneReference<Book, Author> {
     return this.__data.relations.currentDraftAuthor ??= hasOneToOne(
-      this as any as Book,
+      this,
       authorMeta,
       "currentDraftAuthor",
       "currentDraftBook",
@@ -498,7 +472,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   get favoriteAuthor(): OneToOneReference<Book, Author> {
     return this.__data.relations.favoriteAuthor ??= hasOneToOne(
-      this as any as Book,
+      this,
       authorMeta,
       "favoriteAuthor",
       "favoriteBook",
@@ -507,12 +481,12 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get image(): OneToOneReference<Book, Image> {
-    return this.__data.relations.image ??= hasOneToOne(this as any as Book, imageMeta, "image", "book", "book_id");
+    return this.__data.relations.image ??= hasOneToOne(this, imageMeta, "image", "book", "book_id");
   }
 
   get tags(): Collection<Book, Tag> {
     return this.__data.relations.tags ??= hasManyToMany(
-      this as any as Book,
+      this,
       "books_to_tags",
       "tags",
       "book_id",

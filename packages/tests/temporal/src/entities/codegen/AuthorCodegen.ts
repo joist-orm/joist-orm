@@ -11,8 +11,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -229,10 +227,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     return loadLens(this as any as Author, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(authorMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -282,13 +276,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get books(): Collection<Author, Book> {
-    return this.__data.relations.books ??= hasMany(
-      this as any as Author,
-      bookMeta,
-      "books",
-      "author",
-      "author_id",
-      undefined,
-    );
+    return this.__data.relations.books ??= hasMany(this, bookMeta, "books", "author", "author_id", undefined);
   }
 }

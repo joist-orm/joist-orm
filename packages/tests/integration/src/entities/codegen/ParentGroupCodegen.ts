@@ -11,8 +11,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -216,10 +214,6 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
     return loadLens(this as any as ParentGroup, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(parentGroupMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -275,7 +269,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
 
   get childGroups(): Collection<ParentGroup, ChildGroup> {
     return this.__data.relations.childGroups ??= hasMany(
-      this as any as ParentGroup,
+      this,
       childGroupMeta,
       "childGroups",
       "parentGroup",
@@ -286,7 +280,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
 
   get parentItems(): Collection<ParentGroup, ParentItem> {
     return this.__data.relations.parentItems ??= hasMany(
-      this as any as ParentGroup,
+      this,
       parentItemMeta,
       "parentItems",
       "parentGroup",

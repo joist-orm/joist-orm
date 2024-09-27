@@ -11,8 +11,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -277,10 +275,6 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
     return loadLens(this as any as Comment, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(commentMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -330,23 +324,19 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get books(): Collection<Comment, Book> {
-    return this.__data.relations.books ??= hasMany(
-      this as any as Comment,
-      bookMeta,
-      "books",
-      "randomComment",
-      "random_comment_id",
-      { "field": "title", "direction": "ASC" },
-    );
+    return this.__data.relations.books ??= hasMany(this, bookMeta, "books", "randomComment", "random_comment_id", {
+      "field": "title",
+      "direction": "ASC",
+    });
   }
 
   get user(): ManyToOneReference<Comment, User, undefined> {
-    return this.__data.relations.user ??= hasOne(this as any as Comment, userMeta, "user", "createdComments");
+    return this.__data.relations.user ??= hasOne(this, userMeta, "user", "createdComments");
   }
 
   get likedByUsers(): Collection<Comment, User> {
     return this.__data.relations.likedByUsers ??= hasManyToMany(
-      this as any as Comment,
+      this,
       "users_to_comments",
       "likedByUsers",
       "comment_id",
@@ -357,6 +347,6 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get parent(): PolymorphicReference<Comment, CommentParent, never> {
-    return this.__data.relations.parent ??= hasOnePolymorphic(this as any as Comment, "parent");
+    return this.__data.relations.parent ??= hasOnePolymorphic(this, "parent");
   }
 }

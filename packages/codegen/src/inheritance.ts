@@ -29,7 +29,9 @@ function setClassTableInheritance(
   for (const entity of entities) {
     if (entity.baseClassName) {
       ctiBaseNames.push(entity.baseClassName);
-      entitiesByName[entity.baseClassName].subTypes.push(entity);
+      const base = entitiesByName[entity.baseClassName];
+      entity.baseType = base;
+      base.subTypes.push(entity);
     }
   }
   for (const entity of entities) {
@@ -107,6 +109,7 @@ function expandSingleTableInheritance(
           updatedAt: undefined,
           deletedAt: undefined,
           baseClassName: entity.name,
+          baseType: entity,
           subTypes: [],
           inheritanceType: "sti",
           stiDiscriminatorValue: (

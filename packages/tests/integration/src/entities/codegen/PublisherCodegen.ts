@@ -12,8 +12,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -91,6 +89,8 @@ export interface PublisherFields {
   numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   titlesOfFavoriteBooks: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  baseSyncDefault: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  baseAsyncDefault: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   size: { kind: "enum"; type: PublisherSize; nullable: undefined };
@@ -104,6 +104,8 @@ export interface PublisherOpts {
   longitude?: number | null;
   hugeNumber?: number | null;
   deletedAt?: Date | null;
+  baseSyncDefault?: string;
+  baseAsyncDefault?: string;
   size?: PublisherSize | null;
   type?: PublisherType;
   group?: PublisherGroup | PublisherGroupId | null;
@@ -134,6 +136,8 @@ export interface PublisherFilter {
   numberOfBookReviews?: ValueFilter<number, never>;
   deletedAt?: ValueFilter<Date, null>;
   titlesOfFavoriteBooks?: ValueFilter<string, null>;
+  baseSyncDefault?: ValueFilter<string, never>;
+  baseAsyncDefault?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   size?: ValueFilter<PublisherSize, null>;
@@ -156,6 +160,8 @@ export interface PublisherGraphQLFilter {
   numberOfBookReviews?: ValueGraphQLFilter<number>;
   deletedAt?: ValueGraphQLFilter<Date>;
   titlesOfFavoriteBooks?: ValueGraphQLFilter<string>;
+  baseSyncDefault?: ValueGraphQLFilter<string>;
+  baseAsyncDefault?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   size?: ValueGraphQLFilter<PublisherSize>;
@@ -178,6 +184,8 @@ export interface PublisherOrder {
   numberOfBookReviews?: OrderBy;
   deletedAt?: OrderBy;
   titlesOfFavoriteBooks?: OrderBy;
+  baseSyncDefault?: OrderBy;
+  baseAsyncDefault?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   size?: OrderBy;
@@ -189,6 +197,8 @@ export const publisherConfig = new ConfigApi<Publisher, Context>();
 
 publisherConfig.addRule(newRequiredRule("name"));
 publisherConfig.addRule(newRequiredRule("numberOfBookReviews"));
+publisherConfig.addRule(newRequiredRule("baseSyncDefault"));
+publisherConfig.addRule(newRequiredRule("baseAsyncDefault"));
 publisherConfig.addRule(newRequiredRule("createdAt"));
 publisherConfig.addRule(newRequiredRule("updatedAt"));
 publisherConfig.addRule(newRequiredRule("type"));
@@ -278,6 +288,22 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   abstract readonly titlesOfFavoriteBooks: ReactiveField<Publisher, string | undefined>;
+
+  get baseSyncDefault(): string {
+    return getField(this, "baseSyncDefault");
+  }
+
+  set baseSyncDefault(baseSyncDefault: string) {
+    setField(this, "baseSyncDefault", cleanStringValue(baseSyncDefault));
+  }
+
+  get baseAsyncDefault(): string {
+    return getField(this, "baseAsyncDefault");
+  }
+
+  set baseAsyncDefault(baseAsyncDefault: string) {
+    setField(this, "baseAsyncDefault", cleanStringValue(baseAsyncDefault));
+  }
 
   get createdAt(): Date {
     return getField(this, "createdAt");
@@ -400,10 +426,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
     return loadLens(this as any as Publisher, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(publisherMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -456,7 +478,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get authors(): Collection<Publisher, Author> {
     return this.__data.relations.authors ??= hasMany(
-      this as any as Publisher,
+      this,
       authorMeta,
       "authors",
       "publisher",
@@ -467,7 +489,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get bookAdvances(): Collection<Publisher, BookAdvance> {
     return this.__data.relations.bookAdvances ??= hasMany(
-      this as any as Publisher,
+      this,
       bookAdvanceMeta,
       "bookAdvances",
       "publisher",
@@ -478,7 +500,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get comments(): Collection<Publisher, Comment> {
     return this.__data.relations.comments ??= hasMany(
-      this as any as Publisher,
+      this,
       commentMeta,
       "comments",
       "parent",
@@ -488,23 +510,16 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get images(): Collection<Publisher, Image> {
-    return this.__data.relations.images ??= hasMany(
-      this as any as Publisher,
-      imageMeta,
-      "images",
-      "publisher",
-      "publisher_id",
-      undefined,
-    );
+    return this.__data.relations.images ??= hasMany(this, imageMeta, "images", "publisher", "publisher_id", undefined);
   }
 
   get group(): ManyToOneReference<Publisher, PublisherGroup, undefined> {
-    return this.__data.relations.group ??= hasOne(this as any as Publisher, publisherGroupMeta, "group", "publishers");
+    return this.__data.relations.group ??= hasOne(this, publisherGroupMeta, "group", "publishers");
   }
 
   get tags(): Collection<Publisher, Tag> {
     return this.__data.relations.tags ??= hasManyToMany(
-      this as any as Publisher,
+      this,
       "publishers_to_tags",
       "tags",
       "publisher_id",
@@ -516,7 +531,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get tasks(): Collection<Publisher, TaskOld> {
     return this.__data.relations.tasks ??= hasManyToMany(
-      this as any as Publisher,
+      this,
       "tasks_to_publishers",
       "tasks",
       "publisher_id",

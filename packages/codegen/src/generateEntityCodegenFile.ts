@@ -29,7 +29,6 @@ import {
   FieldsOf,
   FilterOf,
   Flavor,
-  GetLens,
   GraphQLFilterOf,
   IdOf,
   JsonPayload,
@@ -59,7 +58,6 @@ import {
   cleanStringValue,
   failNoIdYet,
   getField,
-  getLens,
   hasLargeMany,
   hasLargeManyToMany,
   hasMany,
@@ -88,7 +86,13 @@ export interface ColumnMetaData {
 }
 
 // A local type just for tracking abstract vs. concrete relations
-type Relation = { kind: "abstract"; line: Code } | { kind: "concrete"; fieldName: string; decl: Code; init: Code };
+type Relation =
+  // I.e. `abstract ReactiveReference` that the user must implement
+  | { kind: "abstract"; line: Code }
+  // I.e. a `get author(): ManyToOne<...>`
+  | { kind: "concrete"; fieldName: string; decl: Code; init: Code }
+  // I.e. a `get author(): { super.author as ... }`
+  | { kind: "super"; fieldName: string; decl: Code };
 
 /** Creates the base class with the boilerplate annotations. */
 export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
@@ -103,7 +107,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   primitives.push(...createRegularEnums(meta, entity)); // Add ManyToOne enums
   primitives.push(...createArrayEnums(meta)); // Add integer[] enums
   primitives.push(...createPgEnums(meta)); // Add native enums
-  const relations = createRelations(config, meta, entity, entityName);
+  const relations = createRelations(config, meta, entity);
 
   const configName = `${camelCase(entityName)}Config`;
   const metadata = imp(`${camelCase(entityName)}Meta@./entities.ts`);
@@ -280,10 +284,6 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         return ${loadLens}(this as any as ${entityName}, fn, opts);
       }
 
-      get<U, V>(fn: (lens: ${GetLens}<Omit<this, 'fullNonReactiveAccess'>>) => ${GetLens}<U, V>): V {
-        return ${getLens}(${entity.metaType}, this, fn as never);
-      }
-      
       ${tsdocComments.entity.populate}
       populate<const H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>>;
       populate<const H extends ${LoadHint}<${entityName}>>(opts: { hint: H, forceReload?: boolean }): Promise<${Loaded}<${entityName}, H>>;
@@ -311,6 +311,15 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
           return code`
             get ${r.fieldName}(): ${r.decl} {
               return this.__data.relations.${r.fieldName} ??= ${r.init};
+            }
+          `;
+        })}
+      ${relations
+        .filter((r) => r.kind === "super")
+        .map((r) => {
+          return code`
+            get ${r.fieldName}(): ${r.decl} {
+              return super.${r.fieldName} as ${r.decl};
             }
           `;
         })}
@@ -534,8 +543,16 @@ function generateFilterFields(metasByName: Record<string, EntityDbMetadata>, met
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
-  const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
-    return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
+  const o2m = meta.oneToManys.flatMap(({ fieldName, otherEntity, otherColumnNotNull }) => {
+    const otherMeta = metasByName[otherEntity.name] ?? fail(`Could not find metadata for ${otherEntity.name}`);
+    return [
+      code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`,
+      ...otherMeta.subTypes.map((st) => {
+        return code`${fieldName}${st.name}?: ${EntityFilter}<${st.entity.type}, ${st.entity.idType}, ${FilterOf}<${
+          st.entity.type
+        }>, ${nullOrNever(otherColumnNotNull)}>;`;
+      }),
+    ];
   });
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
@@ -584,8 +601,16 @@ function generateGraphQLFilterFields(metasByName: Record<string, EntityDbMetadat
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
-  const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
-    return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`;
+  const o2m = meta.oneToManys.flatMap(({ fieldName, otherEntity, otherColumnNotNull }) => {
+    const otherMeta = metasByName[otherEntity.name] ?? fail(`Could not find metadata for ${otherEntity.name}`);
+    return [
+      code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`,
+      ...otherMeta.subTypes.map((st) => {
+        return code`${fieldName}${st.name}?: ${EntityGraphQLFilter}<${st.entity.type}, ${st.entity.idType}, ${GraphQLFilterOf}<${
+          st.entity.type
+        }>, ${nullOrNever(otherColumnNotNull)}>;`;
+      }),
+    ];
   });
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`;
@@ -827,7 +852,7 @@ function createPgEnums(meta: EntityDbMetadata) {
   });
 }
 
-function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity, entityName: string) {
+function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity) {
   // Add ManyToOne entities
   const m2o: Relation[] = meta.manyToOnes.map((m2o) => {
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
@@ -839,15 +864,30 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
       return { kind: "abstract", line } as const;
     }
     const decl = code`${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>`;
-    const init = code`${hasOne}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}")`;
+    const init = code`${hasOne}(this, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}")`;
     return { kind: "concrete", fieldName, decl, init };
   });
+  // Specialize
+  const m2oBase: Relation[] =
+    meta.baseType?.manyToOnes.map((m2o) => {
+      const { fieldName, otherEntity, notNull } = m2o;
+      const maybeOptional = notNull ? "never" : "undefined";
+      const decl = code`${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>`;
+      return { kind: "super", fieldName, decl };
+    }) ?? [];
 
   // Add any recursive ManyToOne entities
   const m2oRecursive: Relation[] = meta.manyToOnes
     .filter((m2o) => m2o.otherEntity.name === meta.name)
     // Allow disabling recursive relations
-    .filter((m2o) => !(config.entities[meta.name]?.relations?.[m2o.fieldName]?.skipRecursiveRelations === true))
+    .filter(
+      (m2o) =>
+        // For STI - look at the baseClassName, since there is actually no configuration for the subtype currently
+        !(
+          config.entities[meta.inheritanceType == "sti" && meta.baseClassName ? meta.baseClassName : meta.name]
+            ?.relations?.[m2o.fieldName]?.skipRecursiveRelations === true
+        ),
+    )
     // Skip ReactiveReferences because they don't have an `other` side for us to use
     .filter((m2o) => !m2o.derived)
     .flatMap((m2o) => {
@@ -860,13 +900,13 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
           kind: "concrete",
           fieldName: parentsField,
           decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
-          init: code`${hasRecursiveParents}(this as any as ${entityName}, "${parentsField}", "${m2oName}", "${childrenField}")`,
+          init: code`${hasRecursiveParents}(this, "${parentsField}", "${m2oName}", "${childrenField}")`,
         },
         {
           kind: "concrete",
           fieldName: childrenField,
           decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
-          init: code`${hasRecursiveChildren}(this as any as ${entityName}, "${childrenField}", "${otherFieldName}", "${parentsField}")`,
+          init: code`${hasRecursiveChildren}(this, "${childrenField}", "${otherFieldName}", "${parentsField}")`,
         },
       ];
     });
@@ -875,15 +915,22 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
   const o2m: Relation[] = meta.oneToManys.map((o2m) => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity, orderBy } = o2m;
     const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`${hasMany}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}", ${orderBy})`;
+    const init = code`${hasMany}(this, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}", ${orderBy})`;
     return { kind: "concrete", fieldName, decl, init };
   });
+  // Specialize
+  const o2mBase: Relation[] =
+    meta.baseType?.oneToManys.map((o2m) => {
+      const { fieldName, otherEntity } = o2m;
+      const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
+      return { kind: "super", fieldName, decl };
+    }) ?? [];
 
   // Add large OneToMany
   const lo2m: Relation[] = meta.largeOneToManys.map((o2m) => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
     const decl = code`${LargeCollection}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`${hasLargeMany}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
+    const init = code`${hasLargeMany}(this, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
     return { kind: "concrete", fieldName, decl, init };
   });
 
@@ -891,9 +938,16 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
   const o2o: Relation[] = meta.oneToOnes.map((o2o) => {
     const { fieldName, otherEntity, otherFieldName, otherColumnName } = o2o;
     const decl = code`${OneToOneReference}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`${hasOneToOne}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
+    const init = code`${hasOneToOne}(this, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
     return { kind: "concrete", fieldName, decl, init };
   });
+  // Specialize
+  const o2oBase: Relation[] =
+    meta.baseType?.oneToOnes.map((o2o) => {
+      const { fieldName, otherEntity } = o2o;
+      const decl = code`${OneToOneReference}<${entity.type}, ${otherEntity.type}>`;
+      return { kind: "super", fieldName, decl };
+    }) ?? [];
 
   // Add ManyToMany
   const m2m: Relation[] = meta.manyToManys.map((m2m) => {
@@ -901,7 +955,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
     const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
     const init = code`
       ${hasManyToMany}(
-        this as any as ${entityName},
+        this,
         "${joinTableName}",
         "${fieldName}",
         "${columnName}",
@@ -911,6 +965,13 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
       )`;
     return { kind: "concrete", fieldName, decl, init };
   });
+  // Specialize
+  const m2mBase: Relation[] =
+    meta.baseType?.manyToManys.map((m2m) => {
+      const { fieldName, otherEntity } = m2m;
+      const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
+      return { kind: "super", fieldName, decl };
+    }) ?? [];
 
   // Add large ManyToMany
   const lm2m: Relation[] = meta.largeManyToManys.map((m2m) => {
@@ -918,7 +979,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
     const decl = code`${LargeCollection}<${entity.type}, ${otherEntity.type}>`;
     const init = code`
       ${hasLargeManyToMany}(
-        this as any as ${entityName},
+        this,
         "${joinTableName}",
         "${fieldName}",
         "${columnName}",
@@ -935,11 +996,11 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity,
     const { fieldName, notNull, fieldType } = p;
     const maybeOptional = notNull ? "never" : "undefined";
     const decl = code`${PolymorphicReference}<${entity.type}, ${fieldType}, ${maybeOptional}>`;
-    const init = code`${hasOnePolymorphic}(this as any as ${entityName}, "${fieldName}")`;
+    const init = code`${hasOnePolymorphic}(this, "${fieldName}")`;
     return { kind: "concrete", fieldName, decl, init };
   });
 
-  return [o2m, lo2m, m2o, m2oRecursive, o2o, m2m, lm2m, polymorphic].flat();
+  return [o2m, o2mBase, lo2m, m2o, m2oBase, m2oRecursive, o2o, o2oBase, m2m, m2mBase, lm2m, polymorphic].flat();
 }
 
 function maybeOptional(notNull: boolean): string {

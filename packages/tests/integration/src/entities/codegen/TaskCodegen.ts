@@ -2,6 +2,7 @@ import {
   BaseEntity,
   cannotBeUpdated,
   type Changes,
+  cleanStringValue,
   type Collection,
   ConfigApi,
   type EntityFilter,
@@ -12,8 +13,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -28,6 +27,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type ReactiveField,
   type RelationsOf,
   setField,
   setOpts,
@@ -64,6 +64,11 @@ export interface TaskFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   durationInDays: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
+  syncDefault: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  asyncDefault_1: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  asyncDefault_2: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  syncDerived: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  asyncDerived: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   type: { kind: "enum"; type: TaskType; nullable: undefined };
@@ -72,6 +77,9 @@ export interface TaskFields {
 export interface TaskOpts {
   durationInDays?: number;
   deletedAt?: Date | null;
+  syncDefault?: string | null;
+  asyncDefault_1?: string | null;
+  asyncDefault_2?: string | null;
   taskTaskItems?: TaskItem[];
   tags?: Tag[];
 }
@@ -85,6 +93,11 @@ export interface TaskFilter {
   id?: ValueFilter<TaskId, never> | null;
   durationInDays?: ValueFilter<number, never>;
   deletedAt?: ValueFilter<Date, null>;
+  syncDefault?: ValueFilter<string, null>;
+  asyncDefault_1?: ValueFilter<string, null>;
+  asyncDefault_2?: ValueFilter<string, null>;
+  syncDerived?: ValueFilter<string, null>;
+  asyncDerived?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   type?: ValueFilter<TaskType, null>;
@@ -96,6 +109,11 @@ export interface TaskGraphQLFilter {
   id?: ValueGraphQLFilter<TaskId>;
   durationInDays?: ValueGraphQLFilter<number>;
   deletedAt?: ValueGraphQLFilter<Date>;
+  syncDefault?: ValueGraphQLFilter<string>;
+  asyncDefault_1?: ValueGraphQLFilter<string>;
+  asyncDefault_2?: ValueGraphQLFilter<string>;
+  syncDerived?: ValueGraphQLFilter<string>;
+  asyncDerived?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   type?: ValueGraphQLFilter<TaskType>;
@@ -107,6 +125,11 @@ export interface TaskOrder {
   id?: OrderBy;
   durationInDays?: OrderBy;
   deletedAt?: OrderBy;
+  syncDefault?: OrderBy;
+  asyncDefault_1?: OrderBy;
+  asyncDefault_2?: OrderBy;
+  syncDerived?: OrderBy;
+  asyncDerived?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   type?: OrderBy;
@@ -170,6 +193,34 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   set deletedAt(deletedAt: Date | undefined) {
     setField(this, "deletedAt", deletedAt);
   }
+
+  get syncDefault(): string | undefined {
+    return getField(this, "syncDefault");
+  }
+
+  set syncDefault(syncDefault: string | undefined) {
+    setField(this, "syncDefault", cleanStringValue(syncDefault));
+  }
+
+  get asyncDefault_1(): string | undefined {
+    return getField(this, "asyncDefault_1");
+  }
+
+  set asyncDefault_1(asyncDefault_1: string | undefined) {
+    setField(this, "asyncDefault_1", cleanStringValue(asyncDefault_1));
+  }
+
+  get asyncDefault_2(): string | undefined {
+    return getField(this, "asyncDefault_2");
+  }
+
+  set asyncDefault_2(asyncDefault_2: string | undefined) {
+    setField(this, "asyncDefault_2", cleanStringValue(asyncDefault_2));
+  }
+
+  abstract get syncDerived(): string | undefined;
+
+  abstract readonly asyncDerived: ReactiveField<Task, string | undefined>;
 
   get createdAt(): Date {
     return getField(this, "createdAt");
@@ -272,10 +323,6 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
     return loadLens(this as any as Task, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(taskMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -326,7 +373,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
 
   get taskTaskItems(): Collection<Task, TaskItem> {
     return this.__data.relations.taskTaskItems ??= hasMany(
-      this as any as Task,
+      this,
       taskItemMeta,
       "taskTaskItems",
       "task",
@@ -337,7 +384,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
 
   get tags(): Collection<Task, Tag> {
     return this.__data.relations.tags ??= hasManyToMany(
-      this as any as Task,
+      this,
       "task_to_tags",
       "tags",
       "task_id",

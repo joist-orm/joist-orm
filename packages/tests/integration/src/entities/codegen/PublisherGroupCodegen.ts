@@ -11,8 +11,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasLargeMany,
   hasMany,
@@ -44,12 +42,16 @@ import {
   criticMeta,
   type Entity,
   EntityManager,
+  LargePublisher,
+  type LargePublisherId,
   newPublisherGroup,
   Publisher,
   PublisherGroup,
   publisherGroupMeta,
   type PublisherId,
   publisherMeta,
+  SmallPublisher,
+  type SmallPublisherId,
 } from "../entities";
 
 export type PublisherGroupId = Flavor<string, PublisherGroup>;
@@ -78,6 +80,8 @@ export interface PublisherGroupFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
+  publishersLargePublisher?: EntityFilter<LargePublisher, LargePublisherId, FilterOf<LargePublisher>, null>;
+  publishersSmallPublisher?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null>;
 }
 
 export interface PublisherGroupGraphQLFilter {
@@ -87,6 +91,18 @@ export interface PublisherGroupGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
+  publishersLargePublisher?: EntityGraphQLFilter<
+    LargePublisher,
+    LargePublisherId,
+    GraphQLFilterOf<LargePublisher>,
+    null
+  >;
+  publishersSmallPublisher?: EntityGraphQLFilter<
+    SmallPublisher,
+    SmallPublisherId,
+    GraphQLFilterOf<SmallPublisher>,
+    null
+  >;
 }
 
 export interface PublisherGroupOrder {
@@ -221,10 +237,6 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
     return loadLens(this as any as PublisherGroup, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(publisherGroupMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -277,7 +289,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
 
   get publishers(): Collection<PublisherGroup, Publisher> {
     return this.__data.relations.publishers ??= hasMany(
-      this as any as PublisherGroup,
+      this,
       publisherMeta,
       "publishers",
       "group",
@@ -287,12 +299,6 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   get critics(): LargeCollection<PublisherGroup, Critic> {
-    return this.__data.relations.critics ??= hasLargeMany(
-      this as any as PublisherGroup,
-      criticMeta,
-      "critics",
-      "group",
-      "group_id",
-    );
+    return this.__data.relations.critics ??= hasLargeMany(this, criticMeta, "critics", "group", "group_id");
   }
 }

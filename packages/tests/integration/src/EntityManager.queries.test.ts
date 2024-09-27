@@ -2693,6 +2693,31 @@ describe("EntityManager.queries", () => {
       expect(books.length).toEqual(2);
     });
 
+    it("can use aliases for m2o with gt/gte/lt/lte", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+      const em = newEntityManager();
+      const b = alias(Book);
+      const books = await em.find(
+        Book,
+        { as: b },
+        {
+          conditions: {
+            and: [
+              // Use all of gt/gte/lte/lt
+              b.author.gt("a:1"),
+              b.author.gte("a:2"),
+              b.author.lte("a:2"),
+              b.author.lt("a:3"),
+            ],
+          },
+        },
+      );
+      expect(books.length).toEqual(1);
+    });
+
     it("can use aliases for m2m", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });

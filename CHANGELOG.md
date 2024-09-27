@@ -1,3 +1,73 @@
+## [1.198.1](https://github.com/joist-orm/joist-orm/compare/v1.198.0...v1.198.1) (2024-09-27)
+
+
+### Bug Fixes
+
+* Remove unnecessary casts. ([#1248](https://github.com/joist-orm/joist-orm/issues/1248)) ([d8d5855](https://github.com/joist-orm/joist-orm/commit/d8d5855758e9f279fa8790c0476804d13ad4d80b))
+
+# [1.198.0](https://github.com/joist-orm/joist-orm/compare/v1.197.6...v1.198.0) (2024-09-27)
+
+
+### Features
+
+* Support gt/gte/lte/lt on FK columns. ([#1247](https://github.com/joist-orm/joist-orm/issues/1247)) ([cee79ba](https://github.com/joist-orm/joist-orm/commit/cee79bae209208fc1e520ed4b113cd8ee64abc95))
+
+## [1.197.6](https://github.com/joist-orm/joist-orm/compare/v1.197.5...v1.197.6) (2024-09-25)
+
+
+### Bug Fixes
+
+* Ability to filter o2m sub type relationships based on sub type specific fields ([#1243](https://github.com/joist-orm/joist-orm/issues/1243)) ([6a60f73](https://github.com/joist-orm/joist-orm/commit/6a60f73338dfee018c852b5fba1c0a3cb57af089))
+
+## [1.197.5](https://github.com/joist-orm/joist-orm/compare/v1.197.4...v1.197.5) (2024-09-23)
+
+
+### Bug Fixes
+
+* move setBooted to end of configureMetadata ([#1242](https://github.com/joist-orm/joist-orm/issues/1242)) ([afa58c4](https://github.com/joist-orm/joist-orm/commit/afa58c4c11f41aab6a70e084edcb33600c6f075d))
+
+## [1.197.4](https://github.com/joist-orm/joist-orm/compare/v1.197.3...v1.197.4) (2024-09-23)
+
+
+### Bug Fixes
+
+* correctly exclude recursive relations of STI fields when configured ([#1241](https://github.com/joist-orm/joist-orm/issues/1241)) ([f347194](https://github.com/joist-orm/joist-orm/commit/f347194b204da9b3e55fe189503a1c7491e8a620))
+
+## [1.197.3](https://github.com/joist-orm/joist-orm/compare/v1.197.2...v1.197.3) (2024-09-21)
+
+
+### Bug Fixes
+
+* Call hookUpBaseTypeAndSubTypes before fireAfterMetadatas ([#1240](https://github.com/joist-orm/joist-orm/issues/1240)) ([be539d2](https://github.com/joist-orm/joist-orm/commit/be539d2102c9dabd87d24621c122548dc5d49813))
+
+## [1.197.2](https://github.com/joist-orm/joist-orm/compare/v1.197.1...v1.197.2) (2024-09-20)
+
+
+### Bug Fixes
+
+* Correctly handle setDefault from base type and overrides in subtypes ([#1239](https://github.com/joist-orm/joist-orm/issues/1239)) ([f7c4ea1](https://github.com/joist-orm/joist-orm/commit/f7c4ea1b7f6933f0016985cbcd94e30ee6a591e6))
+
+## [1.197.1](https://github.com/joist-orm/joist-orm/compare/v1.197.0...v1.197.1) (2024-09-19)
+
+
+### Bug Fixes
+
+* Sync derived fields on STI types ([#1237](https://github.com/joist-orm/joist-orm/issues/1237)) ([467024c](https://github.com/joist-orm/joist-orm/commit/467024c79bc060f5d0d193c4fb05687241c79bda))
+
+# [1.197.0](https://github.com/joist-orm/joist-orm/compare/v1.196.1...v1.197.0) (2024-09-19)
+
+
+### Features
+
+* Revert "feat: sync lens ([#1227](https://github.com/joist-orm/joist-orm/issues/1227))" - Temporary ([#1238](https://github.com/joist-orm/joist-orm/issues/1238)) ([0a89748](https://github.com/joist-orm/joist-orm/commit/0a89748ff90fcc9dc01482fac2c002ddd48db173))
+
+## [1.196.1](https://github.com/joist-orm/joist-orm/compare/v1.196.0...v1.196.1) (2024-09-19)
+
+
+### Bug Fixes
+
+* Correct handling of setDefault on STI subtypes ([#1236](https://github.com/joist-orm/joist-orm/issues/1236)) ([e596059](https://github.com/joist-orm/joist-orm/commit/e596059acd0adf004497c0af24ba008c14665bfb))
+
 # [1.196.0](https://github.com/joist-orm/joist-orm/compare/v1.195.1...v1.196.0) (2024-09-19)
 
 

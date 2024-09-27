@@ -11,8 +11,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -241,10 +239,6 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
     return loadLens(this as any as Critic, fn, opts);
   }
 
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(criticMeta, this, fn as never);
-  }
-
   /**
    * Hydrate this entity using a load hint
    *
@@ -295,7 +289,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
 
   get bookReviews(): Collection<Critic, BookReview> {
     return this.__data.relations.bookReviews ??= hasMany(
-      this as any as Critic,
+      this,
       bookReviewMeta,
       "bookReviews",
       "critic",
@@ -306,7 +300,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
 
   get favoriteLargePublisher(): ManyToOneReference<Critic, LargePublisher, undefined> {
     return this.__data.relations.favoriteLargePublisher ??= hasOne(
-      this as any as Critic,
+      this,
       largePublisherMeta,
       "favoriteLargePublisher",
       "critics",
@@ -314,12 +308,12 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get group(): ManyToOneReference<Critic, PublisherGroup, undefined> {
-    return this.__data.relations.group ??= hasOne(this as any as Critic, publisherGroupMeta, "group", "critics");
+    return this.__data.relations.group ??= hasOne(this, publisherGroupMeta, "group", "critics");
   }
 
   get criticColumn(): OneToOneReference<Critic, CriticColumn> {
     return this.__data.relations.criticColumn ??= hasOneToOne(
-      this as any as Critic,
+      this,
       criticColumnMeta,
       "criticColumn",
       "critic",

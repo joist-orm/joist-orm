@@ -1,3 +1,21 @@
+import { getProperties } from "joist-orm";
+import {
+  AdminUser,
+  Author,
+  Critic,
+  LargePublisher,
+  newAuthor,
+  newBook,
+  newLargePublisher,
+  newPublisher,
+  newSmallPublisher,
+  newUser,
+  Publisher,
+  PublisherGroup,
+  SmallPublisher,
+  Tag,
+  User,
+} from "src/entities";
 import {
   insertAuthor,
   insertCritic,
@@ -9,29 +27,44 @@ import {
   insertTag,
   insertUser,
   select,
-} from "@src/entities/inserts";
-import { newEntityManager, queries, resetQueryCount, testDriver } from "@src/testEm";
-import { zeroTo } from "@src/utils";
-import {
-  AdminUser,
-  Author,
-  Critic,
-  LargePublisher,
-  Publisher,
-  PublisherGroup,
-  SmallPublisher,
-  Tag,
-  User,
-  newAuthor,
-  newBook,
-  newLargePublisher,
-  newPublisher,
-  newSmallPublisher,
-  newUser,
-} from "./entities";
+} from "src/entities/inserts";
+import { newEntityManager, queries, resetQueryCount, testDriver } from "src/testEm";
 import { jan1 } from "./testDates";
+import { zeroTo } from "./utils";
 
-describe("Inheritance", () => {
+describe("ClassTableInheritance", () => {
+  it("reports the right properties", () => {
+    // And does not include the recursive selfReferential field which is configured to be skipped
+    expect(Object.keys(getProperties(SmallPublisher.metadata))).toEqual(
+      expect.arrayContaining([
+        "allImages",
+        "commentParentInfo",
+        "beforeFlushRan",
+        "beforeCreateRan",
+        "beforeUpdateRan",
+        "beforeDeleteRan",
+        "afterValidationRan",
+        "afterCommitRan",
+        "smallPublishers",
+        "users",
+        "selfReferential",
+        "sizeDetails",
+        "isSizeSmall",
+        "isSizeLarge",
+        "typeDetails",
+        "isTypeSmall",
+        "isTypeBig",
+        "authors",
+        "bookAdvances",
+        "comments",
+        "images",
+        "group",
+        "tags",
+        "tasks",
+      ]),
+    );
+  });
+
   it("can insert a subtype into two tables", async () => {
     const em = newEntityManager();
     newSmallPublisher(em, { name: "sp1" });
@@ -396,5 +429,64 @@ describe("Inheritance", () => {
     expect(queries[0]).toMatchInlineSnapshot(
       `"SELECT p.*, p_s0.*, p_s1.*, p.id as id, COALESCE(p_s0.shared_column, p_s1.shared_column) as shared_column, CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class FROM publishers AS p LEFT OUTER JOIN large_publishers AS p_s0 ON p.id = p_s0.id LEFT OUTER JOIN small_publishers AS p_s1 ON p.id = p_s1.id WHERE p.deleted_at IS NULL ORDER BY p.id ASC LIMIT $1"`,
     );
+  });
+
+  it("can access base type metadata in afterMetadata", async () => {
+    expect(SmallPublisher.afterMetadataHasBaseTypes).toBe(true);
+  });
+
+  it("can access sub type metadata in afterMetadata", async () => {
+    expect(Publisher.afterMetadataHasSubTypes).toBe(true);
+  });
+
+  it("setDefaults work as expected for subtypes", async () => {
+    const em = newEntityManager();
+    const sp = newSmallPublisher(em, {});
+    const lp = newLargePublisher(em, {});
+    await em.flush();
+
+    const publishers = await select("publishers");
+    expect(publishers.length).toEqual(2);
+    // Then SmallPublisher persisted its defaults from the base class
+    expect(publishers[0].id).toEqual(parseInt(sp.idUntagged));
+    expect(publishers[0].base_sync_default).toEqual("BaseSyncDefault");
+    expect(publishers[0].base_async_default).toEqual("BaseAsyncDefault");
+    // And LargePublisher overrode the base class defaults and persisted its defaults
+    expect(publishers[1].id).toEqual(parseInt(lp.idUntagged));
+    expect(publishers[1].base_async_default).toEqual("LPAsyncDefault");
+    expect(publishers[1].base_sync_default).toEqual("LPSyncDefault");
+
+    // And the entities reflect the values
+    expect(sp).toMatchEntity({
+      baseSyncDefault: "BaseSyncDefault",
+      baseAsyncDefault: "BaseAsyncDefault",
+    });
+    expect(lp).toMatchEntity({
+      baseSyncDefault: "LPSyncDefault",
+      baseAsyncDefault: "LPAsyncDefault",
+    });
+  });
+
+  it("can find authors by fields on a sub type", async () => {
+    const em = newEntityManager();
+    const sp1 = newSmallPublisher(em, { city: "Denver", authors: [{}] });
+    const sp2 = newSmallPublisher(em, { city: "Houston", authors: [{}] });
+    const lp1 = newLargePublisher(em, { country: "USA!!", authors: [{}] });
+    const lp2 = newLargePublisher(em, { country: "CANADA!!", authors: [{}] });
+    await em.flush();
+
+    // When I search for authors by fields on the sub type, then expected authors are returned
+    expect(await em.find(Author, { publisherLargePublisher: { country: "USA!!" } })).toMatchEntity(lp1.authors.get);
+    expect(await em.find(Author, { publisherSmallPublisher: { city: "Denver" } })).toMatchEntity(sp1.authors.get);
+
+    // When I attempt to search for fields in different sub types
+    expect(
+      await em.find(Author, {
+        publisherLargePublisher: { country: "USA!!" },
+        publisherSmallPublisher: { city: "Denver" },
+      }),
+    )
+      // Then no authors are returned, because none can be of both types
+      .toMatchEntity([]);
   });
 });

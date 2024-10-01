@@ -175,7 +175,7 @@ export function up(b: MigrationBuilder): void {
 
   createEntityTable(b, "books", {
     title: { type: "varchar(255)", notNull: true },
-    author_id: foreignKey("authors", { notNull: true }),
+    author_id: foreignKey("authors", { notNull: true, otherFieldName: "books" }),
     // For testing recursive keys with o2os
     prequel_id: foreignKey("books", { notNull: false, otherFieldName: "sequel", unique: true }),
     // for testing columns that are keywords (and testing default values)
@@ -186,6 +186,8 @@ export function up(b: MigrationBuilder): void {
     acknowledgements: { type: "text", notNull: false },
     // for testing cross-entity default dependencies
     authors_nick_names: { type: "text", notNull: false },
+    // for testing setDefaults that do an em.find
+    reviewer_id: foreignKey("authors", { notNull: false }),
     // for testing ReactiveFields that access undefined required fields
     search: { type: "text", notNull: false },
     deleted_at: { type: "timestamptz", notNull: false },

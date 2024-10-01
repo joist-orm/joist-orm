@@ -199,6 +199,7 @@ describe("EntityManager.factories", () => {
       currentDraftAuthor: a1,
       favoriteAuthor: a1,
       reviews: [],
+      reviewer: a1,
       use: expect.any(Map),
     });
   });
@@ -223,6 +224,7 @@ describe("EntityManager.factories", () => {
        "Creating new Book at jestAdapterInit.js:1537↩",
        "  ...adding Author#2 opt to scope↩",
        "  author = Author#2 from scope↩",
+       "  reviewer = Author#2 from scope↩",
        "  created Book#1 added to scope↩",
        "  comments = creating new Comment↩",
        "    parent = Book#1 from opt↩",
@@ -250,6 +252,7 @@ describe("EntityManager.factories", () => {
        "Creating new Book at jestAdapterInit.js:1537↩",
        "  ...adding Comment#2 opt to scope↩",
        "  author = Author#1 from em↩",
+       "  reviewer = Author#1 from em↩",
        "  randomComment = Comment#2 from scope↩",
        "  created Book#1 added to scope↩",
        "  comments = Comment#2 from opt↩",
@@ -805,7 +808,7 @@ describe("EntityManager.factories", () => {
     expect(a.books.get[0].reviews.get[0].rating).toBe(1);
     expect(a.books.get[1].reviews.get[0].rating).toBe(2);
     // And it took only 9 (plus 6 recursive) queries (vs. 29 without join preloading)
-    expect(queries.length).toBe(isPreloadingEnabled ? 15 : 39);
+    expect(queries.length).toBe(isPreloadingEnabled ? 15 : 40);
   });
 
   it("uniquely assigns name fields", async () => {
@@ -880,7 +883,7 @@ describe("EntityManager.factories", () => {
       await em.flush();
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new ChildGroup at EntityManager.factories.test.ts:871↩",
+         "Creating new ChildGroup at EntityManager.factories.test.ts:874↩",
          "  childGroupId = creating new Child↩",
          "    created Child#1 added to scope↩",
          "  parentGroup = creating new ParentGroup↩",

@@ -160,8 +160,9 @@ export interface AuthorOpts {
   image?: Image | null;
   userOneToOne?: User | null;
   mentees?: Author[];
-  schedules?: AuthorSchedule[];
   books?: Book[];
+  reviewerBooks?: Book[];
+  schedules?: AuthorSchedule[];
   comments?: Comment[];
   tasks?: TaskNew[];
   tags?: Tag[];
@@ -174,8 +175,9 @@ export interface AuthorIdsOpts {
   imageId?: ImageId | null;
   userOneToOneId?: UserId | null;
   menteeIds?: AuthorId[] | null;
-  scheduleIds?: AuthorScheduleId[] | null;
   bookIds?: BookId[] | null;
+  reviewerBookIds?: BookId[] | null;
+  scheduleIds?: AuthorScheduleId[] | null;
   commentIds?: CommentId[] | null;
   taskIds?: TaskNewId[] | null;
   tagIds?: TagId[] | null;
@@ -221,8 +223,9 @@ export interface AuthorFilter {
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   userOneToOne?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   mentees?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
-  schedules?: EntityFilter<AuthorSchedule, AuthorScheduleId, FilterOf<AuthorSchedule>, null | undefined>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  reviewerBooks?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  schedules?: EntityFilter<AuthorSchedule, AuthorScheduleId, FilterOf<AuthorSchedule>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   tasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
@@ -278,8 +281,9 @@ export interface AuthorGraphQLFilter {
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   userOneToOne?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   mentees?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
-  schedules?: EntityGraphQLFilter<AuthorSchedule, AuthorScheduleId, GraphQLFilterOf<AuthorSchedule>, null | undefined>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  reviewerBooks?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  schedules?: EntityGraphQLFilter<AuthorSchedule, AuthorScheduleId, GraphQLFilterOf<AuthorSchedule>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   tasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
@@ -692,6 +696,20 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     return this.__data.relations.mentees ??= hasMany(this, authorMeta, "mentees", "mentor", "mentor_id", undefined);
   }
 
+  get books(): Collection<Author, Book> {
+    return this.__data.relations.books ??= hasMany(this, bookMeta, "books", "author", "author_id", {
+      "field": "order",
+      "direction": "ASC",
+    });
+  }
+
+  get reviewerBooks(): Collection<Author, Book> {
+    return this.__data.relations.reviewerBooks ??= hasMany(this, bookMeta, "reviewerBooks", "reviewer", "reviewer_id", {
+      "field": "title",
+      "direction": "ASC",
+    });
+  }
+
   get schedules(): Collection<Author, AuthorSchedule> {
     return this.__data.relations.schedules ??= hasMany(
       this,
@@ -701,13 +719,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
       "author_id",
       undefined,
     );
-  }
-
-  get books(): Collection<Author, Book> {
-    return this.__data.relations.books ??= hasMany(this, bookMeta, "books", "author", "author_id", {
-      "field": "order",
-      "direction": "ASC",
-    });
   }
 
   get comments(): Collection<Author, Comment> {

@@ -156,8 +156,9 @@ export class AsyncDefault<T extends Entity> {
         const val = this.#fn(entity, ctx);
         // Even though we checked `async () => ...` above, a lambda could still return a Promise
         if (val instanceof Promise) {
-          // ...maybe we should throw here as an invalid usage
-          val.catch(() => {});
+          throw new Error(
+            `Use the \`async\` keyword for the setDefault "${this.fieldName}" function that returns a Promise`,
+          );
         } else {
           if (isLoadedReference(value)) {
             value.set(val);
@@ -171,6 +172,10 @@ export class AsyncDefault<T extends Entity> {
       // pre-em.flush, i.e. we don't have the DependencyTracker/etc infra here, the lambdas
       // could do a `book.author.get.name` and NPE on the `author.get.name`. So instead just
       // suppress errors and assume `em.flush` will try again.
+      // ...we need to add a NotLoadedError
+      // if (!(e instanceof TypeError || e instanceof NotL)) {
+      //   throw e;
+      // }
     }
   }
 

@@ -11,6 +11,7 @@ export function newBook(em: EntityManager, opts: FactoryOpts<Book> = {}): DeepNe
     author: maybeNew<Author>({ age: 40 }),
     sequel: undefined,
     prequel: undefined,
+    reviewer: undefined,
     order: testIndex,
   });
 }

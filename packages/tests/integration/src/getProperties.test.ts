@@ -23,6 +23,7 @@ describe("getProperties", () => {
       comments: expect.any(OneToManyCollection),
       commentParentInfo: expect.any(AsyncPropertyImpl),
       author: expect.any(ManyToOneReferenceImpl),
+      reviewer: expect.any(ManyToOneReferenceImpl),
       randomComment: expect.any(ManyToOneReferenceImpl),
       authorSetWhenDeleteRuns: expect.any(UnknownProperty),
       afterCommitCheckTagsChanged: expect.any(UnknownProperty),

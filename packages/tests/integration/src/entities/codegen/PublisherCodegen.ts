@@ -70,6 +70,8 @@ import {
   PublisherTypeDetails,
   PublisherTypes,
   SmallPublisher,
+  SmallPublisherGroup,
+  type SmallPublisherGroupId,
   Tag,
   type TagId,
   tagMeta,
@@ -143,6 +145,12 @@ export interface PublisherFilter {
   size?: ValueFilter<PublisherSize, null>;
   type?: ValueFilter<PublisherType, never>;
   group?: EntityFilter<PublisherGroup, PublisherGroupId, FilterOf<PublisherGroup>, null>;
+  groupSmallPublisherGroup?: EntityFilter<
+    SmallPublisherGroup,
+    SmallPublisherGroupId,
+    FilterOf<SmallPublisherGroup>,
+    null
+  >;
   authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   bookAdvances?: EntityFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
@@ -167,6 +175,12 @@ export interface PublisherGraphQLFilter {
   size?: ValueGraphQLFilter<PublisherSize>;
   type?: ValueGraphQLFilter<PublisherType>;
   group?: EntityGraphQLFilter<PublisherGroup, PublisherGroupId, GraphQLFilterOf<PublisherGroup>, null>;
+  groupSmallPublisherGroup?: EntityGraphQLFilter<
+    SmallPublisherGroup,
+    SmallPublisherGroupId,
+    GraphQLFilterOf<SmallPublisherGroup>,
+    null
+  >;
   authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   bookAdvances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, GraphQLFilterOf<BookAdvance>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;

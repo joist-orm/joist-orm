@@ -11,8 +11,24 @@ import { fail } from "./utils";
 export function applyInheritanceUpdates(config: Config, db: DbMetadata): void {
   const { entities, entitiesByName } = db;
   setClassTableInheritance(entities, entitiesByName);
+  setupClassTableInheritanceSubTypeSpecialization(config, entities);
   expandSingleTableInheritance(config, entitiesByName, entities);
   rewriteSingleTableForeignKeys(config, entities);
+}
+
+function setupClassTableInheritanceSubTypeSpecialization(config: Config, entities: EntityDbMetadata[]): void {
+  for (const entity of entities) {
+    if (entity.baseType && entity.baseType.inheritanceType === "cti") {
+      // Look through the base's m2o's, looking for a config specialization
+      for (const m2o of entity.baseType.manyToOnes) {
+        const subType = config.entities[entity.name]?.relations?.[m2o.fieldName]?.subType;
+        if (subType) {
+          const otherEntity = makeEntity(subType);
+          entity.manyToOnes.push({ ...m2o, otherEntity });
+        }
+      }
+    }
+  }
 }
 
 /**

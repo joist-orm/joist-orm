@@ -44,6 +44,12 @@ export function up(b: MigrationBuilder): void {
     number_of_book_reviews: { type: "int", notNull: true },
   });
 
+  // Used to test SmallPublisher.group specializing to SmallPublisherGroup
+  createSubTable(b, "publisher_groups", "small_publisher_groups", {
+    // Just some placeholder field that is SmallPublisherGroup-only
+    small_name: "text",
+  });
+
   createEntityTable(b, "publishers", {
     name: { type: "varchar(255)", notNull: true },
     size_id: { type: "integer", references: "publisher_size", notNull: false },

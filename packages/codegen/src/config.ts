@@ -40,6 +40,8 @@ const relationConfig = z
     stiType: z.optional(z.string()),
     // Allow marking STI-subtype m2o FKs as required
     stiNotNull: z.optional(z.boolean()),
+    /** Allow specializing a base type relation (SmallPublisher.group: SmallPublisherGroup). */
+    subType: z.optional(z.string()),
     /** Allow skipping self-referential fields getting a `...Recursive` relation. */
     skipRecursiveRelations: z.optional(z.boolean()),
   })
@@ -170,7 +172,7 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
     ];
     for (const [name, config] of Object.entries(entityConfig.relations || {})) {
       let relation = relations.find((r) => r.fieldName === name);
-      // STI types might be in the base type
+      // STI types might be in the subtypes
       if (!relation && entity.stiDiscriminatorField) {
         const stiEntities = getStiEntities(db.entities).get(entity.name)?.subTypes;
         relation = stiEntities
@@ -185,6 +187,20 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
           ])
           ?.find((f) => f.fieldName === name);
       }
+      // CTI subtype specializations (i.e. SmallPublisher.group: SmallPublisherGroup) need to look in the base type
+      if (!relation && entity.baseType) {
+        const baseType = entity.baseType;
+        relation = [
+          ...baseType.manyToOnes,
+          ...baseType.oneToManys,
+          ...baseType.manyToManys,
+          ...baseType.oneToOnes,
+          ...baseType.largeOneToManys,
+          ...baseType.largeManyToManys,
+          ...baseType.polymorphics,
+        ].find((f) => f.fieldName === name);
+      }
+
       if (!relation) logger.warn(`Found config for non-existent relation ${entityName}.${name}`);
     }
   }

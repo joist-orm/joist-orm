@@ -25,6 +25,7 @@ const mappers = {
   PublisherSizeDetail: "src/entities#PublisherSize",
   PublisherTypeDetail: "src/entities#PublisherType",
   SmallPublisher: "src/entities#SmallPublisher",
+  SmallPublisherGroup: "src/entities#SmallPublisherGroup",
   Tag: "src/entities#Tag",
   Task: "src/entities#Task",
   TaskItem: "src/entities#TaskItem",

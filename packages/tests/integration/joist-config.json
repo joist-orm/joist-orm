@@ -70,9 +70,13 @@
     },
     "SmallPublisher": {
       "fields": { "allAuthorNames": { "derived": "async" } },
-      "relations": { "selfReferential": { "skipRecursiveRelations": true } },
+      "relations": {
+        "group": { "subType": "SmallPublisherGroup" },
+        "selfReferential": { "skipRecursiveRelations": true }
+      },
       "tag": "p"
     },
+    "SmallPublisherGroup": { "tag": "pg" },
     "Tag": { "tag": "t" },
     "Task": {
       "fields": {

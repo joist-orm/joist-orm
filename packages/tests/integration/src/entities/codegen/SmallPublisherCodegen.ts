@@ -50,11 +50,14 @@ import {
   type PublisherFields,
   type PublisherFilter,
   type PublisherGraphQLFilter,
-  PublisherGroup,
   type PublisherIdsOpts,
   type PublisherOpts,
   type PublisherOrder,
   SmallPublisher,
+  SmallPublisherGroup,
+  type SmallPublisherGroupId,
+  smallPublisherGroupMeta,
+  type SmallPublisherGroupOrder,
   smallPublisherMeta,
   Tag,
   TaskOld,
@@ -71,18 +74,21 @@ export interface SmallPublisherFields extends PublisherFields {
   sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   allAuthorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   selfReferential: { kind: "m2o"; type: SmallPublisher; nullable: undefined; derived: false };
+  group: { kind: "m2o"; type: SmallPublisherGroup; nullable: undefined; derived: false };
 }
 
 export interface SmallPublisherOpts extends PublisherOpts {
   city: string;
   sharedColumn?: string | null;
   selfReferential?: SmallPublisher | SmallPublisherId | null;
+  group?: SmallPublisherGroup | SmallPublisherGroupId | null;
   smallPublishers?: SmallPublisher[];
   users?: User[];
 }
 
 export interface SmallPublisherIdsOpts extends PublisherIdsOpts {
   selfReferentialId?: SmallPublisherId | null;
+  groupId?: SmallPublisherGroupId | null;
   smallPublisherIds?: SmallPublisherId[] | null;
   userIds?: UserId[] | null;
 }
@@ -92,6 +98,7 @@ export interface SmallPublisherFilter extends PublisherFilter {
   sharedColumn?: ValueFilter<string, null>;
   allAuthorNames?: ValueFilter<string, null>;
   selfReferential?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null>;
+  group?: EntityFilter<SmallPublisherGroup, SmallPublisherGroupId, FilterOf<SmallPublisherGroup>, null>;
   smallPublishers?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null | undefined>;
   users?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   usersAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
@@ -102,6 +109,7 @@ export interface SmallPublisherGraphQLFilter extends PublisherGraphQLFilter {
   sharedColumn?: ValueGraphQLFilter<string>;
   allAuthorNames?: ValueGraphQLFilter<string>;
   selfReferential?: EntityGraphQLFilter<SmallPublisher, SmallPublisherId, GraphQLFilterOf<SmallPublisher>, null>;
+  group?: EntityGraphQLFilter<SmallPublisherGroup, SmallPublisherGroupId, GraphQLFilterOf<SmallPublisherGroup>, null>;
   smallPublishers?: EntityGraphQLFilter<
     SmallPublisher,
     SmallPublisherId,
@@ -117,6 +125,7 @@ export interface SmallPublisherOrder extends PublisherOrder {
   sharedColumn?: OrderBy;
   allAuthorNames?: OrderBy;
   selfReferential?: SmallPublisherOrder;
+  group?: SmallPublisherGroupOrder;
 }
 
 export const smallPublisherConfig = new ConfigApi<SmallPublisher, Context>();
@@ -322,6 +331,10 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
     );
   }
 
+  get group(): ManyToOneReference<SmallPublisher, SmallPublisherGroup, undefined> {
+    return this.__data.relations.group ??= hasOne(this, smallPublisherGroupMeta, "group", "publishers");
+  }
+
   get authors(): Collection<SmallPublisher, Author> {
     return super.authors as Collection<SmallPublisher, Author>;
   }
@@ -336,10 +349,6 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
 
   get images(): Collection<SmallPublisher, Image> {
     return super.images as Collection<SmallPublisher, Image>;
-  }
-
-  get group(): ManyToOneReference<SmallPublisher, PublisherGroup, undefined> {
-    return super.group as ManyToOneReference<SmallPublisher, PublisherGroup, undefined>;
   }
 
   get tags(): Collection<SmallPublisher, Tag> {

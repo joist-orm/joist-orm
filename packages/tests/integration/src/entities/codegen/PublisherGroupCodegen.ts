@@ -8,6 +8,7 @@ import {
   type EntityGraphQLFilter,
   type EntityMetadata,
   failNoIdYet,
+  type FieldsOf,
   type FilterOf,
   type Flavor,
   getField,
@@ -27,6 +28,7 @@ import {
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
+  type RelationsOf,
   setField,
   setOpts,
   type TaggedId,
@@ -51,6 +53,7 @@ import {
   type PublisherId,
   publisherMeta,
   SmallPublisher,
+  SmallPublisherGroup,
   type SmallPublisherId,
 } from "../entities";
 
@@ -224,7 +227,11 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
    *
    * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
    */
-  get changes(): Changes<PublisherGroup> {
+  get changes(): Changes<
+    PublisherGroup,
+    | keyof (FieldsOf<PublisherGroup> & RelationsOf<PublisherGroup>)
+    | keyof (FieldsOf<SmallPublisherGroup> & RelationsOf<SmallPublisherGroup>)
+  > {
     return newChangesProxy(this) as any;
   }
 

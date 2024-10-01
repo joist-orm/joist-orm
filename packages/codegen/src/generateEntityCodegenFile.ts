@@ -869,12 +869,15 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
   });
   // Specialize
   const m2oBase: Relation[] =
-    meta.baseType?.manyToOnes.map((m2o) => {
-      const { fieldName, otherEntity, notNull } = m2o;
-      const maybeOptional = notNull ? "never" : "undefined";
-      const decl = code`${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>`;
-      return { kind: "super", fieldName, decl };
-    }) ?? [];
+    meta.baseType?.manyToOnes
+      // Skip m2os that are already specialized to a different otherEntity, i.e. `SmallPublisher.group: SmallPublisherGroup`
+      .filter((m2o) => !meta.manyToOnes.find((o) => o.fieldName === m2o.fieldName))
+      .map((m2o) => {
+        const { fieldName, otherEntity, notNull } = m2o;
+        const maybeOptional = notNull ? "never" : "undefined";
+        const decl = code`${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>`;
+        return { kind: "super", fieldName, decl };
+      }) ?? [];
 
   // Add any recursive ManyToOne entities
   const m2oRecursive: Relation[] = meta.manyToOnes

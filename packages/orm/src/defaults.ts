@@ -1,9 +1,9 @@
 import { Entity } from "./Entity";
-import { EntityMetadata, EnumField, PrimitiveField, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, EnumField, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "./EntityMetadata";
 import { Todo } from "./Todo";
 import { setField } from "./fields";
 import { normalizeHint } from "./normalizeHints";
-import { ReactiveHint, convertToLoadHint } from "./reactiveHints";
+import { convertToLoadHint, ReactiveHint } from "./reactiveHints";
 import { isLoadedReference } from "./relations/index";
 import { fail, groupBy } from "./utils";
 import { Deferred } from "./utils/Deferred";
@@ -71,6 +71,15 @@ export function setAsyncDefaults(
   return Promise.all(p);
 }
 
+/** Sets async defaults *synchronously*, only safe for factories with `DeepNew` entities. */
+export function setAsyncDefaultsSynchronously(ctx: unknown, entity: Entity): void {
+  for (const meta of getBaseAndSelfMetas(getMetadata(entity))) {
+    for (const df of Object.values(meta.config.__data.asyncDefaults)) {
+      df.setOnFactoryEntity(ctx, entity);
+    }
+  }
+}
+
 /** Wraps the hint + lambda of an async `setDefault`. */
 export class AsyncDefault<T extends Entity> {
   readonly fieldName: string;
@@ -131,6 +140,34 @@ export class AsyncDefault<T extends Entity> {
     // Mark ourselves as complete
     // console.log(`FINISHED ${baseMetadata.type}.${this.fieldName}`);
     dt.getDeferred(baseMetadata, this.fieldName).resolve();
+  }
+
+  setOnFactoryEntity(ctx: unknown, entity: T): void {
+    // If the lambda uses the `async` keyword, it definitely makes a promise, so don't invoke it
+    // from a synchronous factory call.
+    if (this.#fn.constructor.name === "AsyncFunction") return;
+    const value = (entity as any)[this.fieldName];
+    try {
+      if (value === undefined || (isLoadedReference(value) && !value.isSet)) {
+        const val = this.#fn(entity, ctx);
+        // Even though we checked `async () => ...` above, a lambda could still return a Promise
+        if (val instanceof Promise) {
+          // ...maybe we should throw here as an invalid usage
+          val.catch(() => {});
+        } else {
+          if (isLoadedReference(value)) {
+            value.set(val);
+          } else {
+            (entity as any)[this.fieldName] = val;
+          }
+        }
+      }
+    } catch (e) {
+      // It's likely common to get NPEs/TypeErrors from speculatively executing defaults
+      // pre-em.flush, i.e. we don't have the DependencyTracker/etc infra here, the lambdas
+      // could do a `book.author.get.name` and NPE on the `author.get.name`. So instead just
+      // suppress errors and assume `em.flush` will try again.
+    }
   }
 
   /** For the given `entity`, returns what the default value should be. */

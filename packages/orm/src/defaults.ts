@@ -17,6 +17,7 @@ export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolea
 /** Run the sync defaults for `entity`. */
 export function setSyncDefaults(entity: Entity): void {
   const meta = getMetadata(entity);
+  // Allow subtypes to override base setDefaults
   const syncDefaults: Record<string, any> = getBaseAndSelfMetas(meta).reduce(
     (acc, m) => ({ ...acc, ...m.config.__data.syncDefaults }),
     {},
@@ -73,10 +74,13 @@ export function setAsyncDefaults(
 
 /** Sets async defaults *synchronously*, only safe for factories with `DeepNew` entities. */
 export function setAsyncDefaultsSynchronously(ctx: unknown, entity: Entity): void {
-  for (const meta of getBaseAndSelfMetas(getMetadata(entity))) {
-    for (const df of Object.values(meta.config.__data.asyncDefaults)) {
-      df.setOnFactoryEntity(ctx, entity);
-    }
+  // Allow subtypes to override base setDefaults
+  const defaults: Record<string, AsyncDefault<any>> = getBaseAndSelfMetas(getMetadata(entity)).reduce(
+    (acc, m) => ({ ...acc, ...m.config.__data.asyncDefaults }),
+    {},
+  );
+  for (const df of Object.values(defaults)) {
+    df.setOnFactoryEntity(ctx, entity);
   }
 }
 

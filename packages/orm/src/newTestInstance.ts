@@ -248,7 +248,10 @@ export function newTestInstance<T extends Entity>(
 
   entity.set(Object.fromEntries(additionalOpts.filter((t) => t.length > 0)));
 
-  // Would be nice to log these in the output...
+  // em.create applied synchronous defaults automatically; since we're a factory with likely
+  // deeply-loaded instances, go ahead and synchronously invoke the async defaults, at least
+  // the ones that just use load hints + a synchronous lambda.
+  // (...would be nice to log these in the setFactoryLogging output)
   setAsyncDefaultsSynchronously(em.ctx, entity);
 
   // Set it back to undefined

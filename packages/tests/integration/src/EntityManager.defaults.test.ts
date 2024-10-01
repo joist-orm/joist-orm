@@ -41,12 +41,12 @@ describe("EntityManager.defaults", () => {
     const a = newAuthor(em);
     const b1 = newBook(em, { author: a, order: undefined });
     const b2 = newBook(em, { author: a, order: undefined });
-    // And the factory/sync default didn't get applied
-    expect(b1.order).toBeUndefined();
-    expect(b2.order).toBeUndefined();
+    // And the factory/sync default got applied (neat!)
+    expect(b1.order).toBe(1);
+    expect(b2.order).toBe(2);
     // When we flush
     await em.flush();
-    // Then the async default kicked in
+    // The defaults stayed
     expect(b1.order).toBe(1);
     expect(b2.order).toBe(2);
   });

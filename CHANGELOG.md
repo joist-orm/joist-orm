@@ -1,3 +1,10 @@
+# [1.201.0](https://github.com/joist-orm/joist-orm/compare/v1.200.0...v1.201.0) (2024-10-01)
+
+
+### Features
+
+* Update factories to set defaults immediately. ([#1251](https://github.com/joist-orm/joist-orm/issues/1251)) ([0ab8e3e](https://github.com/joist-orm/joist-orm/commit/0ab8e3e43fc5dbc9c3287dbb7098ed98bbdd477c))
+
 # [1.200.0](https://github.com/joist-orm/joist-orm/compare/v1.199.0...v1.200.0) (2024-09-27)
 
 

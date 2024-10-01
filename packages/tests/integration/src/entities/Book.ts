@@ -81,9 +81,10 @@ config.setDefault(
     tags: { publishers: "authors" },
     title: {},
   },
-  async (b, { em }) => {
+  (b, { em }) => {
     // Test returning a Reacted<Author> can pass type check
     const maybeAuthor = b.tags.get[0]?.publishers.get[0]?.authors.get[0];
+    // ...and also synchronously returning an entity from an async default
     if (maybeAuthor) return maybeAuthor;
     // See if we have an author with the same name as the book title
     return em.findOne(Author, { lastName: b.title });

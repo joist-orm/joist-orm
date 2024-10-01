@@ -70,8 +70,8 @@ describe("ReactiveQueryField", () => {
       "numberOfBookReviews",
       "type",
       "baseSyncDefault",
-      "titlesOfFavoriteBooks",
       "baseAsyncDefault",
+      "titlesOfFavoriteBooks",
     ]);
   });
 

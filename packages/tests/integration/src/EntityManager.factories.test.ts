@@ -64,12 +64,42 @@ describe("EntityManager.factories", () => {
 
   it("can create a child and a required parent if opt is undefined", async () => {
     const em = newEntityManager();
-    // Given we make a book with no existing/passed authors
-    newBook(em, { author: undefined });
+    // Given we make a BookReview with no existing/passed authors
+    newBookReview(em, { book: undefined });
+    // Then we still create the book b/c it's required and we assume the factory did
+    // `const { author } = opts` and doesn't _really_ want the author undefined.
+    // If they do, they can pass `null`.
+    await em.flush();
+  });
+
+  it("defers to setDefault when passed undefined", async () => {
+    const em = newEntityManager();
+    // Given two authors (to disable an obvious default)
+    const [a1] = [newAuthor(em), newAuthor(em)];
+    // And a publisher with a1 where Book.setDefault("author", ...) will find it
+    const p = newPublisher(em, { authors: [a1] });
+    // When we create the book
+    const b = newBook(em, { author: undefined, tags: [{ publishers: [p] }] });
+    // Then we did not make a new entity
+    expect(b).toMatchEntity({ author: a1 });
     // Then we still create the author b/c it's required and we assume the factory did
     // `const { author } = opts` and doesn't _really_ want the author undefined.
     // If they do, they can pass `null`.
     await em.flush();
+  });
+
+  // This test is primarily documenting current behavior, more so than desired state;
+  // i.e. it seems like `setDefault` should take precedence over `maybeNew`s.
+  it("respects maybeNew when passed over setDefault", async () => {
+    const em = newEntityManager();
+    // Given two authors (to disable an obvious default)
+    const [a1] = [newAuthor(em), newAuthor(em)];
+    // And a publisher with a1 where Book.setDefault("author", ...) will find it
+    const p = newPublisher(em, { authors: [a1] });
+    // When we create the book
+    const b = newBook(em, { author: maybeNew<Author>({}), tags: [{ publishers: [p] }] });
+    // Then we made a new entity
+    expect(em.entities.filter((e) => e instanceof Author)).toMatchEntity([{}, {}, {}]);
   });
 
   it("can create a child and a required parent with opts", async () => {
@@ -119,7 +149,7 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get).not.toMatchEntity(a2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Tag at EntityManager.factories.test.ts:112↩",
+       "Creating new Tag at EntityManager.factories.test.ts:142↩",
        "  created Tag#1 added to scope↩",
        "  books = creating new Book↩",
        "    author = creating new Author↩",
@@ -145,7 +175,7 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get).toEqual(a1);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book at EntityManager.factories.test.ts:142↩",
+       "Creating new Book at EntityManager.factories.test.ts:172↩",
        "  ...adding Author#1 opt to scope↩",
        "  author = Author#1 from scope↩",
        "  created Book#1 added to scope↩",
@@ -850,7 +880,7 @@ describe("EntityManager.factories", () => {
       await em.flush();
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new ChildGroup at EntityManager.factories.test.ts:841↩",
+         "Creating new ChildGroup at EntityManager.factories.test.ts:871↩",
          "  childGroupId = creating new Child↩",
          "    created Child#1 added to scope↩",
          "  parentGroup = creating new ParentGroup↩",

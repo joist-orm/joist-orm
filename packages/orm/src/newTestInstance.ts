@@ -23,7 +23,7 @@ import {
   PolymorphicField,
   PrimitiveField,
 } from "./EntityMetadata";
-import { hasDefaultValue } from "./defaults";
+import { hasDefaultValue, setAsyncDefaultsSynchronously } from "./defaults";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
 import { FactoryLogger } from "./logging/FactoryLogger";
@@ -94,12 +94,19 @@ export function newTestInstance<T extends Entity>(
     .map((field) => {
       const { fieldName } = field;
 
+      // Don't fill in required fields if told not to
+      const ignoreAllDefaults = "useFactoryDefaults" in opts && opts.useFactoryDefaults === "none";
+      // If the field has a default value, don't force fill it, even if passed `author: undefined`
+      const required = field.required && !ignoreAllDefaults && !hasDefaultValue(meta, fieldName);
+
       // Use the opts value if they passed one in
       if (fieldName in opts && (opts as any)[fieldName] !== defaultValueMarker) {
         const optValue = (opts as any)[fieldName];
         // We don't explicitly support null (callers should pass undefined), but we accept it
-        // for good measure.
-        if (optValue === null || (optValue === undefined && !field.required)) {
+        // because the factory might have done `const { author, ... } = opts` and is accidentally
+        // passing an `author: undefined` without meaning too.
+        const shouldRespectUndefined = !required;
+        if (optValue === null || (optValue === undefined && shouldRespectUndefined)) {
           return [];
         }
         switch (field.kind) {
@@ -132,10 +139,6 @@ export function newTestInstance<T extends Entity>(
             return assertNever(field);
         }
       }
-
-      // Don't fill in required fields if told not to
-      const ignoreAllDefaults = "useFactoryDefaults" in opts && opts.useFactoryDefaults === "none";
-      const required = field.required && !ignoreAllDefaults && !hasDefaultValue(meta, fieldName);
 
       if (
         field.kind === "primitive" &&
@@ -244,6 +247,12 @@ export function newTestInstance<T extends Entity>(
   }
 
   entity.set(Object.fromEntries(additionalOpts.filter((t) => t.length > 0)));
+
+  // em.create applied synchronous defaults automatically; since we're a factory with likely
+  // deeply-loaded instances, go ahead and synchronously invoke the async defaults, at least
+  // the ones that just use load hints + a synchronous lambda.
+  // (...would be nice to log these in the setFactoryLogging output)
+  setAsyncDefaultsSynchronously(em.ctx, entity);
 
   // Set it back to undefined
   logger?.dedent();

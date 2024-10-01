@@ -86,6 +86,7 @@ export interface BookFields {
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   prequel: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
+  reviewer: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   randomComment: { kind: "m2o"; type: Comment; nullable: undefined; derived: false };
 }
 
@@ -98,6 +99,7 @@ export interface BookOpts {
   deletedAt?: Date | null;
   prequel?: Book | BookId | null;
   author?: Author | AuthorId;
+  reviewer?: Author | AuthorId | null;
   randomComment?: Comment | CommentId | null;
   sequel?: Book | null;
   currentDraftAuthor?: Author | null;
@@ -112,6 +114,7 @@ export interface BookOpts {
 export interface BookIdsOpts {
   prequelId?: BookId | null;
   authorId?: AuthorId | null;
+  reviewerId?: AuthorId | null;
   randomCommentId?: CommentId | null;
   sequelId?: BookId | null;
   currentDraftAuthorId?: AuthorId | null;
@@ -136,6 +139,7 @@ export interface BookFilter {
   updatedAt?: ValueFilter<Date, never>;
   prequel?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
+  reviewer?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   randomComment?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null>;
   sequel?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   currentDraftAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
@@ -160,6 +164,7 @@ export interface BookGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   prequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  reviewer?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   randomComment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null>;
   sequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
@@ -184,6 +189,7 @@ export interface BookOrder {
   updatedAt?: OrderBy;
   prequel?: BookOrder;
   author?: AuthorOrder;
+  reviewer?: AuthorOrder;
   randomComment?: CommentOrder;
 }
 
@@ -432,6 +438,10 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   get author(): ManyToOneReference<Book, Author, never> {
     return this.__data.relations.author ??= hasOne(this, authorMeta, "author", "books");
+  }
+
+  get reviewer(): ManyToOneReference<Book, Author, undefined> {
+    return this.__data.relations.reviewer ??= hasOne(this, authorMeta, "reviewer", "reviewerBooks");
   }
 
   get randomComment(): ManyToOneReference<Book, Comment, undefined> {

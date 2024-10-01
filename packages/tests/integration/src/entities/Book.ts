@@ -73,23 +73,19 @@ config.setDefault('notes', (b) => `Notes for ${b.title}`);
 /** Example of an asynchronous default. */
 config.setDefault("order", { author: "books" }, (b) => b.author.get?.books.get.indexOf(b) + 1);
 
-/** Example of an asynchronous default that returns an entity. */
-config.setDefault(
-  "author",
-  {
-    // Elaborate hint to test returning a Reacted<Author>
-    tags: { publishers: "authors" },
-    title: {},
-  },
-  (b, { em }) => {
-    // Test returning a Reacted<Author> can pass type check
-    const maybeAuthor = b.tags.get[0]?.publishers.get[0]?.authors.get[0];
-    // ...and also synchronously returning an entity from an async default
-    if (maybeAuthor) return maybeAuthor;
-    // See if we have an author with the same name as the book title
-    return em.findOne(Author, { lastName: b.title });
-  },
-);
+/** Example of an asynchronous-but-sync default that returns an entity. */
+// Elaborate hint to test returning a Reacted<Author>
+config.setDefault("author", { tags: { publishers: "authors" } }, (b, { em }) => {
+  // Test returning a Reacted<Author> can pass type check
+  // ...and also synchronously returning an entity from an async default
+  return b.tags.get[0]?.publishers.get[0]?.authors.get[0];
+});
+
+/** Example of an asynchronous-and-actually-async default that returns an entity. */
+config.setDefault("reviewer", "title", async (b, { em }) => {
+  // See if we have an author with the same name as the book title
+  return em.findOne(Author, { lastName: b.title });
+});
 
 /** Example of cross-entity setDefault dependencies. */
 config.setDefault("authorsNickNames", { author: "nickNames" }, (b) => {

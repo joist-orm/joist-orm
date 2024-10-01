@@ -1,3 +1,10 @@
+## [1.201.1](https://github.com/joist-orm/joist-orm/compare/v1.201.0...v1.201.1) (2024-10-01)
+
+
+### Bug Fixes
+
+* Enforce async setDefaults use the async keyword. ([#1252](https://github.com/joist-orm/joist-orm/issues/1252)) ([272d803](https://github.com/joist-orm/joist-orm/commit/272d80325f716bb80daf54f94d6a3dc7c6c9d657))
+
 # [1.201.0](https://github.com/joist-orm/joist-orm/compare/v1.200.0...v1.201.0) (2024-10-01)
 
 

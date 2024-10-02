@@ -12,7 +12,8 @@ import {
   select,
 } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
-import { Author, Book, ImageType } from "./entities";
+import { updatePartial } from "joist-orm";
+import { Author, Book, ImageType, newAuthor } from "./entities";
 
 describe("EntityManager.createOrUpdatePartial", () => {
   it("can create new entity with valid data", async () => {
@@ -413,5 +414,24 @@ describe("EntityManager.createOrUpdatePartial", () => {
     const a1 = await em.createOrUpdatePartial(Author, { fullName2: "a1 l1" } as any);
     expect(a1.firstName).toEqual("a1");
     expect(a1.lastName).toEqual("l1");
+  });
+
+  describe("updatePartial", () => {
+    // Copy/pasting just a few of the createOrUpdatePartial tests for the updatePartial
+    it("can create new reference with valid data", async () => {
+      const em = newEntityManager();
+      const a1 = newAuthor(em);
+      await updatePartial(a1, {
+        firstName: "a1",
+        mentor: { firstName: "m1" },
+        // technically testing o2m while we're at it
+        books: [{ title: "b1" }],
+      });
+      expect(a1).toMatchEntity({
+        firstName: "a1",
+        mentor: { firstName: "m1" },
+        books: [{ title: "b1" }],
+      });
+    });
   });
 });

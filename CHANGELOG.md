@@ -1,3 +1,10 @@
+# [1.202.0](https://github.com/joist-orm/joist-orm/compare/v1.201.1...v1.202.0) (2024-10-02)
+
+
+### Features
+
+* Allow subtypes to specialize base FKs. ([#1253](https://github.com/joist-orm/joist-orm/issues/1253)) ([495435b](https://github.com/joist-orm/joist-orm/commit/495435b0de97fe24b31264ef1800ddf600bf13d7))
+
 ## [1.201.1](https://github.com/joist-orm/joist-orm/compare/v1.201.0...v1.201.1) (2024-10-01)
 
 

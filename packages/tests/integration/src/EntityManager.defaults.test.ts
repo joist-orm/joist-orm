@@ -51,6 +51,23 @@ describe("EntityManager.defaults", () => {
     expect(b2.order).toBe(2);
   });
 
+  it("can default an asynchronous field via em.setDefaults", async () => {
+    const em = newEntityManager();
+    // Given we create two books with their own author
+    const a = newAuthor(em);
+    // And we use em.create instead of the factory
+    const b1 = em.create(Book, { author: a, title: "b1" });
+    const b2 = em.create(Book, { author: a, title: "b2" });
+    // And the default didn't run
+    expect(b1.order).toBeUndefined();
+    expect(b2.order).toBeUndefined();
+    // When assign the defaults
+    await em.setDefaults([b1, b2]);
+    // Then the defaults were set
+    expect(b1.order).toBe(1);
+    expect(b2.order).toBe(2);
+  });
+
   it("can default an asynchronous m2o field", async () => {
     const em = newEntityManager();
     // Given an author with lastName t1

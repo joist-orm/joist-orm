@@ -66,7 +66,7 @@ import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
-import { MaybePromise, assertNever, fail, getOrSet, partition, toArray } from "./utils";
+import { MaybePromise, assertNever, fail, getOrSet, groupBy, partition, toArray } from "./utils";
 
 // polyfill
 (Symbol as any).asyncDispose ??= Symbol("Symbol.asyncDispose");
@@ -1162,6 +1162,21 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   }
 
   /**
+   * Immediately assigns async defaults to `entities`.
+   *
+   * Normally async defaults wait until `em.flush` to run, because their async nature requires
+   * an `await` / `Promise` to be evaluated, and `em.create` is synchronous.
+   *
+   * This `assignDefaults` methods like you move that up, and immediately invoke
+   * any default logic against the `entities`.
+   */
+  async setDefaults(entities: Entity[]): Promise<void> {
+    const suppressedTypeErrors: Error[] = [];
+    const entitiesByType = groupBy(entities, (e) => getMetadata(e));
+    await setAsyncDefaults(suppressedTypeErrors, this.ctx, entitiesByType);
+  }
+
+  /**
    * Flushes the SQL for any changed entities to the database.
    *
    * If this is run outside of an existing transaction, it will `BEGIN` and `COMMIT`
@@ -1224,7 +1239,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         await this.#fl.allowWrites(async () => {
           // Run our hooks
           let todos = createTodos([...pendingHooks]);
-          await setAsyncDefaults(suppressedDefaultTypeErrors, this.ctx, todos);
+
+          await setAsyncDefaults(suppressedDefaultTypeErrors, this.ctx, Todo.groupByType(todos));
           maybeBumpUpdatedAt(todos, now);
           await beforeCreate(this.ctx, todos);
           await beforeUpdate(this.ctx, todos);

@@ -1,11 +1,10 @@
 import { Entity } from "./Entity";
 import { EntityMetadata, EnumField, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "./EntityMetadata";
-import { Todo } from "./Todo";
 import { setField } from "./fields";
 import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint, ReactiveHint } from "./reactiveHints";
 import { isLoadedReference } from "./relations/index";
-import { fail, groupBy } from "./utils";
+import { fail } from "./utils";
 import { Deferred } from "./utils/Deferred";
 
 export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolean {
@@ -50,26 +49,19 @@ export function setSyncDefaults(entity: Entity): void {
 export function setAsyncDefaults(
   suppressedTypeErrors: Error[],
   ctx: unknown,
-  todos: Record<string, Todo>,
+  entitiesByType: Map<EntityMetadata, Entity[]>,
 ): Promise<unknown> {
-  const dt = new DependencyTracker(todos);
-  // For all N of these todo.inserts, go through default
-  const p = Object.values(todos).flatMap((todo) => {
-    // The todo.metadata will be the base meta, see if we need to look at subtypes
-    const entitiesByType: Map<EntityMetadata, Entity[]> = todo.metadata.inheritanceType
-      ? groupBy(todo.inserts, (e) => getMetadata(e))
-      : new Map([[todo.metadata, todo.inserts]]);
-    // flatMap because each meta might have N fields
-    const p = [...entitiesByType.entries()].flatMap(([meta, inserts]) => {
+  const dt = new DependencyTracker(entitiesByType);
+  return Promise.all(
+    [...entitiesByType.entries()].flatMap(([meta, inserts]) => {
+      // Let subtypes override base types
       const asyncDefaults: Record<string, AsyncDefault<any>> = getBaseAndSelfMetas(meta).reduce(
         (acc, m) => ({ ...acc, ...m.config.__data.asyncDefaults }),
         {},
       );
       return Object.values(asyncDefaults).map((df) => df.setOnEntities(ctx, dt, suppressedTypeErrors, meta, inserts));
-    });
-    return Promise.all(p);
-  });
-  return Promise.all(p);
+    }),
+  );
 }
 
 /** Sets async defaults *synchronously*, only safe for factories with `DeepNew` entities. */
@@ -262,15 +254,11 @@ class DependencyTracker {
   // Create a map "new entity -> fieldName -> deferred"
   #deferreds = new Map<string, Map<string, Deferred<void>>>();
 
-  constructor(todos: Record<string, Todo>) {
+  constructor(entitiesByType: Map<EntityMetadata, Entity[]>) {
     // Seed it with any entities that we're actively inserting (as any dependencies to
     // entities that aren't even having `setDefault` called can be skipped)
-    for (const todo of Object.values(todos)) {
-      if (todo.metadata.inheritanceType) {
-        new Set(todo.inserts.map((e) => getMetadata(e))).forEach((meta) => this.#deferreds.set(meta.type, new Map()));
-      } else {
-        this.#deferreds.set(todo.metadata.type, new Map());
-      }
+    for (const meta of [...entitiesByType.keys()]) {
+      this.#deferreds.set(meta.type, new Map());
     }
   }
 

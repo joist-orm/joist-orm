@@ -6,7 +6,7 @@ import {
   insertBookToTag,
   insertComment,
   insertPublisher,
-  insertPublisherGroup,
+  insertSmallPublisherGroup,
   insertTag,
   select,
   update,
@@ -94,7 +94,7 @@ describe("ReactiveField", () => {
 
   it("recalcs when o2m relation soft deleted", async () => {
     // Given a PublisherGroup with a will-be-stale numberOfBookReviews
-    await insertPublisherGroup({ name: "pg1", number_of_book_reviews: 100 });
+    await insertSmallPublisherGroup({ id: 1, name: "pg1", number_of_book_reviews: 100 });
     await insertPublisher({ name: "p1", group_id: 1 });
     const em = newEntityManager();
     // When we soft-delete the publisher

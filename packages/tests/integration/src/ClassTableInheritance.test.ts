@@ -24,6 +24,7 @@ import {
   insertPublisherGroup,
   insertPublisherOnly,
   insertPublisherToTag,
+  insertSmallPublisherGroup,
   insertTag,
   insertUser,
   select,
@@ -318,7 +319,7 @@ describe("ClassTableInheritance", () => {
   });
 
   it("can find entities from the sub type via base type m2o", async () => {
-    await insertPublisherGroup({ name: "pg1" });
+    await insertSmallPublisherGroup({ id: 1, name: "pg1" });
     await insertPublisher({ name: "sp1", group_id: 1 });
 
     const em = newEntityManager();

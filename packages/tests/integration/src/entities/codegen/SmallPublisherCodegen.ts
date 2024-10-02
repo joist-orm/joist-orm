@@ -20,6 +20,7 @@ import {
   type LoadHint,
   loadLens,
   type ManyToOneReference,
+  mustBeSubType,
   newChangesProxy,
   newRequiredRule,
   type OptsOf,
@@ -131,6 +132,7 @@ export interface SmallPublisherOrder extends PublisherOrder {
 export const smallPublisherConfig = new ConfigApi<SmallPublisher, Context>();
 
 smallPublisherConfig.addRule(newRequiredRule("city"));
+smallPublisherConfig.addRule("group", mustBeSubType("group"));
 
 export abstract class SmallPublisherCodegen extends Publisher implements Entity {
   static readonly tagName = "p";

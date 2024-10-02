@@ -28,7 +28,7 @@ config.afterMetadata((meta) => {
   SmallPublisher.afterMetadataHasBaseTypes = meta.baseTypes.length > 0;
 });
 
-// For testing SmallPublisher.group specialization
+// For testing `SmallPublisher.group: SmallPublisherGroup` specialization
 config.addRule({ group: "smallName" }, (sp) => {
   return [];
 });

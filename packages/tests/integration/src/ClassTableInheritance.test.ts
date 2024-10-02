@@ -8,6 +8,7 @@ import {
   newBook,
   newLargePublisher,
   newPublisher,
+  newPublisherGroup,
   newSmallPublisher,
   newUser,
   Publisher,
@@ -489,5 +490,28 @@ describe("ClassTableInheritance", () => {
     )
       // Then no authors are returned, because none can be of both types
       .toMatchEntity([]);
+  });
+
+  it("can specialize a base type m2o", async () => {
+    // Given we create a SmallPublisher
+    const em = newEntityManager();
+    const sp = newSmallPublisher(em, { group: {} });
+    // Then we know it's group is a SmallPublisherGroup
+    expect(sp.group.get?.smallName).toBe("small 1");
+  });
+
+  it("enforces a specialized base type m2o", async () => {
+    // Given we create a SmallPublisher
+    const em = newEntityManager();
+    // And try to give a non-small group
+    const pg = newPublisherGroup(em);
+    const sp = newSmallPublisher(
+      em,
+      // Then we get a compile error
+      // @ts-expect-error
+      { group: pg },
+    );
+    // And em.flush fails
+    await expect(em.flush()).rejects.toThrow("PublisherGroup#1 must be a SmallPublisherGroup");
   });
 });

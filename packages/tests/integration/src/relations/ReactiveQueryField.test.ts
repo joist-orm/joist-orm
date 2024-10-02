@@ -3,7 +3,7 @@ import {
   insertBook,
   insertBookReview,
   insertPublisher,
-  insertPublisherGroup,
+  insertSmallPublisherGroup,
   select,
 } from "@src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
@@ -107,7 +107,7 @@ describe("ReactiveQueryField", () => {
 
   it("can recalc dependent reactive fields", async () => {
     // Given an existing PublisherGroup with a valid value
-    await insertPublisherGroup({ name: "pg1", number_of_book_reviews: 1 });
+    await insertSmallPublisherGroup({ id: 1, name: "pg1", number_of_book_reviews: 1 });
     await insertPublisher({ id: 1, name: "p1", number_of_book_reviews: 1, group_id: 1 });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
@@ -124,7 +124,7 @@ describe("ReactiveQueryField", () => {
 
   it("is validated after changing", async () => {
     // Given an existing PublisherGroup with a valid value
-    await insertPublisherGroup({ name: "pg1", number_of_book_reviews: 1 });
+    await insertSmallPublisherGroup({ id: 1, name: "pg1", number_of_book_reviews: 1 });
     await insertPublisher({ id: 1, name: "p1", number_of_book_reviews: 1, group_id: 1 });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });

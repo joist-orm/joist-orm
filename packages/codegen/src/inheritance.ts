@@ -11,8 +11,34 @@ import { fail } from "./utils";
 export function applyInheritanceUpdates(config: Config, db: DbMetadata): void {
   const { entities, entitiesByName } = db;
   setClassTableInheritance(entities, entitiesByName);
+  setupClassTableInheritanceSubTypeSpecialization(config, entities);
   expandSingleTableInheritance(config, entitiesByName, entities);
   rewriteSingleTableForeignKeys(config, entities);
+}
+
+/**
+ * Looks for subtypes specializing a FK of their base type, and give them a specialized m2o.
+ *
+ * I.e. `SmallPublishers.group: SmallPublisherGroup`.
+ *
+ * This means the `publishers.group_id` FK will actually be in the `EntityDbMetadata` twice,
+ * once for the base and once for the child, which is unusual, but gets the types generated
+ * that we want, and then we fixup/dedupe them at runtime in `configure.ts` when creating
+ * `meta.allFields`.
+ */
+function setupClassTableInheritanceSubTypeSpecialization(config: Config, entities: EntityDbMetadata[]): void {
+  for (const entity of entities) {
+    if (entity.baseType && entity.baseType.inheritanceType === "cti") {
+      // Look through the base's m2o's, looking for a config specialization
+      for (const m2o of entity.baseType.manyToOnes) {
+        const subType = config.entities[entity.name]?.relations?.[m2o.fieldName]?.subType;
+        if (subType) {
+          const otherEntity = makeEntity(subType);
+          entity.manyToOnes.push({ ...m2o, otherEntity });
+        }
+      }
+    }
+  }
 }
 
 /**

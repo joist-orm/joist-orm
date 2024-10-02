@@ -28,6 +28,11 @@ config.afterMetadata((meta) => {
   SmallPublisher.afterMetadataHasBaseTypes = meta.baseTypes.length > 0;
 });
 
+// For testing `SmallPublisher.group: SmallPublisherGroup` specialization
+config.addRule({ group: "smallName" }, (sp) => {
+  return [];
+});
+
 config.addRule((p) => {
   if (p.name === "large") {
     return "name cannot be large";

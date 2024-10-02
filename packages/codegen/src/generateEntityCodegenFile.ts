@@ -400,9 +400,17 @@ function generateDefaultValidationRules(db: DbMetadata, meta: EntityDbMetadata, 
       // The `m2o.otherEntity` may already be pointing at the subtype, but stiEntities has subtypes in it as well...
       const target = stiEntities.get(m2o.otherEntity.name);
       if (target && m2o.otherEntity.name !== target.base.name) {
-        rules.push(code`${configName}.addRule("${m2o.fieldName}" ,${mustBeSubType}("${m2o.fieldName}"));`);
+        rules.push(code`${configName}.addRule("${m2o.fieldName}", ${mustBeSubType}("${m2o.fieldName}"));`);
       }
     }
+  }
+  // Add subtype specialization must match
+  if (meta.baseType) {
+    meta.manyToOnes
+      .filter((m2o) => meta.baseType?.manyToOnes?.find((o) => o.fieldName === m2o.fieldName))
+      .forEach((m2o) => {
+        rules.push(code`${configName}.addRule("${m2o.fieldName}", ${mustBeSubType}("${m2o.fieldName}"));`);
+      });
   }
   return rules;
 }
@@ -869,12 +877,15 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
   });
   // Specialize
   const m2oBase: Relation[] =
-    meta.baseType?.manyToOnes.map((m2o) => {
-      const { fieldName, otherEntity, notNull } = m2o;
-      const maybeOptional = notNull ? "never" : "undefined";
-      const decl = code`${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>`;
-      return { kind: "super", fieldName, decl };
-    }) ?? [];
+    meta.baseType?.manyToOnes
+      // Skip m2os that are already specialized to a different otherEntity, i.e. `SmallPublisher.group: SmallPublisherGroup`
+      .filter((m2o) => !meta.manyToOnes.find((o) => o.fieldName === m2o.fieldName))
+      .map((m2o) => {
+        const { fieldName, otherEntity, notNull } = m2o;
+        const maybeOptional = notNull ? "never" : "undefined";
+        const decl = code`${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>`;
+        return { kind: "super", fieldName, decl };
+      }) ?? [];
 
   // Add any recursive ManyToOne entities
   const m2oRecursive: Relation[] = meta.manyToOnes

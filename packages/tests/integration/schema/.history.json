@@ -205,6 +205,7 @@
     "savePublisher",
     "savePublisherGroup",
     "saveSmallPublisher",
+    "saveSmallPublisherGroup",
     "saveTag",
     "saveTask",
     "saveTaskItem",
@@ -406,6 +407,8 @@
     "updatedAt"
   ],
   "SavePublisherResult": ["publisher"],
+  "SaveSmallPublisherGroupInput": ["id", "name", "smallName"],
+  "SaveSmallPublisherGroupResult": ["smallPublisherGroup"],
   "SaveSmallPublisherInput": [
     "allAuthorNames",
     "baseAsyncDefault",
@@ -515,6 +518,7 @@
     "updatedAt",
     "users"
   ],
+  "SmallPublisherGroup": ["createdAt", "id", "name", "numberOfBookReviews", "publishers", "smallName", "updatedAt"],
   "Tag": ["authors", "bookReviews", "books", "createdAt", "id", "name", "publishers", "tasks", "updatedAt"],
   "Task": [
     "asyncDefault_1",

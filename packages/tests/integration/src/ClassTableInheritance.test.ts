@@ -8,6 +8,7 @@ import {
   newBook,
   newLargePublisher,
   newPublisher,
+  newPublisherGroup,
   newSmallPublisher,
   newUser,
   Publisher,
@@ -24,6 +25,7 @@ import {
   insertPublisherGroup,
   insertPublisherOnly,
   insertPublisherToTag,
+  insertSmallPublisherGroup,
   insertTag,
   insertUser,
   select,
@@ -318,7 +320,7 @@ describe("ClassTableInheritance", () => {
   });
 
   it("can find entities from the sub type via base type m2o", async () => {
-    await insertPublisherGroup({ name: "pg1" });
+    await insertSmallPublisherGroup({ id: 1, name: "pg1" });
     await insertPublisher({ name: "sp1", group_id: 1 });
 
     const em = newEntityManager();
@@ -488,5 +490,28 @@ describe("ClassTableInheritance", () => {
     )
       // Then no authors are returned, because none can be of both types
       .toMatchEntity([]);
+  });
+
+  it("can specialize a base type m2o", async () => {
+    // Given we create a SmallPublisher
+    const em = newEntityManager();
+    const sp = newSmallPublisher(em, { group: {} });
+    // Then we know it's group is a SmallPublisherGroup
+    expect(sp.group.get?.smallName).toBe("small 1");
+  });
+
+  it("enforces a specialized base type m2o", async () => {
+    // Given we create a SmallPublisher
+    const em = newEntityManager();
+    // And try to give a non-small group
+    const pg = newPublisherGroup(em);
+    const sp = newSmallPublisher(
+      em,
+      // Then we get a compile error
+      // @ts-expect-error
+      { group: pg },
+    );
+    // And em.flush fails
+    await expect(em.flush()).rejects.toThrow("PublisherGroup#1 must be a SmallPublisherGroup");
   });
 });

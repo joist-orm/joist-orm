@@ -8,7 +8,7 @@ import {
   insertBook,
   insertImage,
   insertPublisher,
-  insertPublisherGroup,
+  insertSmallPublisherGroup,
   insertTag,
 } from "src/entities/inserts";
 
@@ -110,7 +110,7 @@ describe("Entity.json", () => {
     });
 
     it("can nest multiple levels", async () => {
-      await insertPublisherGroup({ name: "pg1" });
+      await insertSmallPublisherGroup({ id: 1, name: "pg1" });
       await insertPublisher({ name: "p1", group_id: 1 });
       await insertAuthor({ first_name: "a1", publisher_id: 1 });
       const em = newEntityManager();
@@ -136,7 +136,7 @@ describe("Entity.json", () => {
     });
 
     it("can have custom names", async () => {
-      await insertPublisherGroup({ name: "pg1" });
+      await insertSmallPublisherGroup({ id: 1, name: "pg1" });
       await insertPublisher({ name: "p1", group_id: 1 });
       await insertAuthor({ first_name: "a1", publisher_id: 1 });
       const em = newEntityManager();

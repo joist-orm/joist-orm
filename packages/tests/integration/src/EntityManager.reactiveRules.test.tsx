@@ -295,6 +295,8 @@ describe("EntityManager.reactiveRules", () => {
     ]);
 
     expect(getReactiveRules(SmallPublisher)).toMatchObject([
+      { cstr: "SmallPublisher", name: sm(/SmallPublisherCodegen.ts:\d+/), fields: ["group"], path: [], fn },
+      { cstr: "SmallPublisher", name: sm(/SmallPublisher.ts:\d+/), fields: ["group"], path: [], fn },
       { cstr: "SmallPublisher", name: sm(/SmallPublisher.ts:\d+/), fields: [], path: [], fn },
     ]);
   });

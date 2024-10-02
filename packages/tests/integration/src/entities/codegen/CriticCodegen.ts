@@ -58,6 +58,8 @@ import {
   type PublisherGroupId,
   publisherGroupMeta,
   type PublisherGroupOrder,
+  SmallPublisherGroup,
+  type SmallPublisherGroupId,
 } from "../entities";
 
 export type CriticId = Flavor<string, Critic>;
@@ -93,6 +95,12 @@ export interface CriticFilter {
   updatedAt?: ValueFilter<Date, never>;
   favoriteLargePublisher?: EntityFilter<LargePublisher, LargePublisherId, FilterOf<LargePublisher>, null>;
   group?: EntityFilter<PublisherGroup, PublisherGroupId, FilterOf<PublisherGroup>, null>;
+  groupSmallPublisherGroup?: EntityFilter<
+    SmallPublisherGroup,
+    SmallPublisherGroupId,
+    FilterOf<SmallPublisherGroup>,
+    null
+  >;
   criticColumn?: EntityFilter<CriticColumn, CriticColumnId, FilterOf<CriticColumn>, null | undefined>;
   bookReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
 }
@@ -104,6 +112,12 @@ export interface CriticGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   favoriteLargePublisher?: EntityGraphQLFilter<LargePublisher, LargePublisherId, GraphQLFilterOf<LargePublisher>, null>;
   group?: EntityGraphQLFilter<PublisherGroup, PublisherGroupId, GraphQLFilterOf<PublisherGroup>, null>;
+  groupSmallPublisherGroup?: EntityGraphQLFilter<
+    SmallPublisherGroup,
+    SmallPublisherGroupId,
+    GraphQLFilterOf<SmallPublisherGroup>,
+    null
+  >;
   criticColumn?: EntityGraphQLFilter<CriticColumn, CriticColumnId, GraphQLFilterOf<CriticColumn>, null | undefined>;
   bookReviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
 }

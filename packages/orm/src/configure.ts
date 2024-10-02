@@ -109,7 +109,18 @@ function hookUpBaseTypeAndSubTypes(metas: EntityMetadata[]): void {
       // clauses.
       Object.entries(b.fields).forEach(([name, field]) => {
         // We use `b0` because that is what addTablePerClassJoinsAndClassTag uses to join in the base table
-        m.allFields[name] = { ...field, aliasSuffix: b.inheritanceType === "cti" ? "_b0" : "" };
+        const aliasSuffix = b.inheritanceType === "cti" ? "_b0" : "";
+        if (name in m.allFields && name !== "id") {
+          // If the base field (i.e. group) is already in `m.allFields`, it's from a CTI subtype specializing
+          // a base field (i.e. `SmallPublisher.group`), in which case we don't really want it inserted/updated
+          // in the `small_publishers` table itself, so we'll delete it from `m.fields`, *but* leave it in
+          // m.allFields, with appropriate/overridden `otherEntity: SmallPublisherGroup` config so that it
+          // can be used to reverse validation rules/RFs.
+          delete m.fields[name];
+          m.allFields[name].aliasSuffix = aliasSuffix;
+        } else {
+          m.allFields[name] = { ...field, aliasSuffix };
+        }
       });
     }
   }

@@ -1,3 +1,10 @@
+# [1.203.0](https://github.com/joist-orm/joist-orm/compare/v1.202.0...v1.203.0) (2024-10-02)
+
+
+### Features
+
+* Add em.setDefaults. ([#1255](https://github.com/joist-orm/joist-orm/issues/1255)) ([269f9aa](https://github.com/joist-orm/joist-orm/commit/269f9aa202d3c2fb9d308e050eff65b0d7fdf17d))
+
 # [1.202.0](https://github.com/joist-orm/joist-orm/compare/v1.201.1...v1.202.0) (2024-10-02)
 
 

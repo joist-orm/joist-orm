@@ -17,7 +17,8 @@ import {
 
 describe("getProperties", () => {
   it("should work", () => {
-    expect(getProperties(bookMeta)).toEqual({
+    const props = getProperties(bookMeta);
+    expect(props).toEqual({
       advances: expect.any(OneToManyCollection),
       reviews: expect.any(OneToManyCollection),
       comments: expect.any(OneToManyCollection),

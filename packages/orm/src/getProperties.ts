@@ -107,6 +107,7 @@ const ignoredKeys = new Set([
   "idTaggedMaybe",
   "set",
   "setPartial",
+  "setDeepPartial",
   "changes",
   "isSoftDeletedEntity",
   "load",

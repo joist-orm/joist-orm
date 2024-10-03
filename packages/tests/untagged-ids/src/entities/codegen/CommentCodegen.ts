@@ -3,6 +3,7 @@ import {
   type Changes,
   cleanStringValue,
   ConfigApi,
+  type DeepPartialOrNull,
   type EntityFilter,
   type EntityGraphQLFilter,
   type EntityMetadata,
@@ -32,6 +33,7 @@ import {
   toIdOf,
   toJSON,
   type ToJsonHint,
+  updatePartial,
   type ValueFilter,
   type ValueGraphQLFilter,
 } from "joist-orm";
@@ -195,6 +197,30 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
    */
   setPartial(opts: PartialOrNull<CommentOpts>): void {
     setOpts(this as any as Comment, opts as OptsOf<Comment>, { partial: true });
+  }
+
+  /**
+   * Partial update taking any nested subset of the entities fields.
+   *
+   * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
+   * is left as untouched.
+   *
+   * Collections are exhaustively set to the new values, however,
+   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   *
+   * @example
+   * ```
+   * entity.setDeepPartial({
+   *   firstName: 'foo' // updated
+   *   lastName: undefined // do nothing
+   *   age: null // unset, (i.e. set it as undefined)
+   *   books: [{ title: "b1" }], // create a child book
+   * });
+   * ```
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   */
+  setDeepPartial(opts: DeepPartialOrNull<Comment>): Promise<void> {
+    return updatePartial(this as any as Comment, opts);
   }
 
   /**

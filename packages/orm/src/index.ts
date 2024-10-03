@@ -30,7 +30,7 @@ export * from "./QueryParser";
 export * from "./changes";
 export { ConfigApi, EntityHook, resetBootFlag } from "./config";
 export { configureMetadata, getConstructorFromTaggedId, maybeGetConstructorFromReference } from "./configure";
-export { DeepPartialOrNull } from "./createOrUpdatePartial";
+export { createOrUpdatePartial, DeepPartialOrNull, updatePartial } from "./createOrUpdatePartial";
 export * from "./drivers";
 export { getField, isChangeableField, isFieldSet, setField } from "./fields";
 export * from "./getProperties";

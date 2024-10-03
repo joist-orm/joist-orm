@@ -1,7 +1,7 @@
 import { isPlainObject } from "joist-utils";
 import { Entity, isEntity } from "./Entity";
 import { EntityManager, IdOf, MaybeAbstractEntityConstructor, OptIdsOf, OptsOf, isKey } from "./EntityManager";
-import { getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { PartialOrNull, asConcreteCstr, getConstructorFromTaggedId, getProperties } from "./index";
 import { NullOrDefinedOr, toArray } from "./utils";
 
@@ -39,6 +39,19 @@ type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
 };
 
 /**
+ * A utility function to do partial-update style updates.
+ *
+ * The difference between this and `Entity.setPartial` is that we accept `DeepPartialOrNull`
+ * updates, similar to `createOrUpdateUnsafe`, instead of just a flat/shallow list of opts.
+ */
+export async function updatePartial<T extends Entity>(entity: T, opts: DeepPartialOrNull<T>): Promise<void> {
+  const meta = getMetadata(entity);
+  const [_opts, relationsToLoad] = await convertToOpts(entity.em, meta, opts);
+  await Promise.all(relationsToLoad.map((fieldName) => (entity as any)[fieldName].load()));
+  entity.setPartial(_opts);
+}
+
+/**
  * A utility function to create-or-update entities coming from a partial-update style API.
  */
 export async function createOrUpdatePartial<T extends Entity>(
@@ -46,11 +59,34 @@ export async function createOrUpdatePartial<T extends Entity>(
   constructor: MaybeAbstractEntityConstructor<T>,
   opts: DeepPartialOrNull<T>,
 ): Promise<T> {
-  const { id, ...others } = opts as any;
   const meta = getMetadata(constructor);
+  const [_opts, relationsToLoad] = await convertToOpts(em, meta, opts);
+  const { id } = opts;
+  const isNew = id === null || id === undefined;
+  if (isNew) {
+    // asConcreteCstr is not actually safe but for now we rely on our cstr runtime check to catch this
+    return em.createPartial(asConcreteCstr(constructor), _opts);
+  } else {
+    const entity = await em.load(constructor, id);
+    // For o2m and m2m .set to work, they need to be loaded so that they know what to remove.
+    // Note that we also have the `delete: true` pattern for flagging not only "remove" but "delete",
+    // for a parent's mutation to control the lifecycle of a child entity (i.e. line items).
+    // Musing: Maybe this should happen implicitly, like if a LineItem.parent is set to null, that
+    // LineItem knows to just `em.delete` itself? Instead of relying on hints from GraphQL mutations.
+    await Promise.all(relationsToLoad.map((fieldName) => (entity as any)[fieldName].load()));
+    entity.setPartial(_opts);
+    return entity;
+  }
+}
+
+async function convertToOpts<T extends Entity>(
+  em: EntityManager,
+  meta: EntityMetadata,
+  opts: DeepPartialOrNull<T>,
+): Promise<[OptsOf<T>, string[]]> {
+  const { id, ...others } = opts as any;
   const isNew = id === null || id === undefined;
   const relationsToLoad: string[] = [];
-
   // The values in others might be themselves partials, so walk through and resolve them to entities.
   const p = Object.entries(others).map(async ([key, value]) => {
     // Watch for the `bookId` / `bookIds` aliases
@@ -95,7 +131,7 @@ export async function createOrUpdatePartial<T extends Entity>(
           currentValue = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
         } else {
           // The parent exists, see if it has an existing child we can update
-          const parentEntity = await em.load(constructor, id, [name] as any);
+          const parentEntity = await em.load(meta.cstr, id, [name] as any);
           currentValue = (parentEntity as any)[name].get;
           if (currentValue) {
             await createOrUpdatePartial(em, field.otherMetadata().cstr, { id: currentValue.id, ...value });
@@ -177,19 +213,5 @@ export async function createOrUpdatePartial<T extends Entity>(
     }
   });
   const _opts = Object.fromEntries(await Promise.all(p)) as OptsOf<T>;
-
-  if (isNew) {
-    // asConcreteCstr is not actually safe but for now we rely on our cstr runtime check to catch this
-    return em.createPartial(asConcreteCstr(constructor), _opts);
-  } else {
-    const entity = await em.load(constructor, id);
-    // For o2m and m2m .set to work, they need to be loaded so that they know what to remove.
-    // Note that we also have the `delete: true` pattern for flagging not only "remove" but "delete",
-    // for a parent's mutation to control the lifecycle of a child entity (i.e. line items).
-    // Musing: Maybe this should happen implicitly, like if a LineItem.parent is set to null, that
-    // LineItem knows to just `em.delete` itself? Instead of relying on hints from GraphQL mutations.
-    await Promise.all(relationsToLoad.map((fieldName) => (entity as any)[fieldName].load()));
-    entity.setPartial(_opts);
-    return entity;
-  }
+  return [_opts, relationsToLoad];
 }

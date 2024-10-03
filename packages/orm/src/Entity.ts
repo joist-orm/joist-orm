@@ -1,5 +1,5 @@
-import { EntityManager, OptsOf, TaggedId } from "./EntityManager";
-import { BaseEntity, DeepPartialOrNull, PartialOrNull } from "./index";
+import { EntityManager, TaggedId } from "./EntityManager";
+import { BaseEntity } from "./index";
 
 export function isEntity(maybeEntity: unknown): maybeEntity is Entity {
   return maybeEntity instanceof BaseEntity;
@@ -19,9 +19,9 @@ export interface Entity {
   readonly isNewEntity: boolean;
   readonly isDeletedEntity: boolean;
   readonly isDirtyEntity: boolean;
-  set(opts: Partial<OptsOf<this>>): void;
-  setPartial(opts: PartialOrNull<OptsOf<this>>): void;
-  setDeepPartial(opts: DeepPartialOrNull<this>): Promise<void>;
+  set(opts: unknown): void;
+  setPartial(opts: unknown): void;
+  setDeepPartial(opts: unknown): Promise<void>;
   /**
    * Returns `type:id`, i.e. `Author:1` for persisted entities and `Author#1` for new entities.
    *

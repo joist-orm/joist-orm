@@ -1,16 +1,5 @@
 import { IdType } from "./Entity";
-import {
-  DeepPartialOrNull,
-  Entity,
-  EntityManager,
-  InstanceData,
-  OptsOf,
-  PartialOrNull,
-  TaggedId,
-  deTagId,
-  getMetadata,
-  keyToNumber,
-} from "./index";
+import { Entity, EntityManager, InstanceData, TaggedId, deTagId, getMetadata, keyToNumber } from "./index";
 
 export let currentlyInstantiatingEntity: Entity | undefined;
 
@@ -74,17 +63,17 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
     return deTagId(getMetadata(this), this.id);
   }
 
-  abstract set(values: Partial<OptsOf<Entity>>): void;
+  abstract set(opts: unknown): void;
 
   /**
    * Similar to `set` but applies "Partial API" semantics, i.e. `null` means unset and `undefined` means don't change.
    */
-  abstract setPartial(values: PartialOrNull<OptsOf<Entity>>): void;
+  abstract setPartial(opts: unknown): void;
 
   /**
    * Similar to `set` but applies "Partial API" semantics, i.e. `null` means unset and `undefined` means don't change.
    */
-  abstract setDeepPartial(values: DeepPartialOrNull<OptsOf<Entity>>): Promise<void>;
+  abstract setDeepPartial(opts: unknown): Promise<void>;
 
   /**
    * Returns whether the entity is new.

@@ -1,3 +1,10 @@
+# [1.204.0](https://github.com/joist-orm/joist-orm/compare/v1.203.0...v1.204.0) (2024-10-03)
+
+
+### Features
+
+* Add entity.setDeepPartial method. ([#1254](https://github.com/joist-orm/joist-orm/issues/1254)) ([f1a1264](https://github.com/joist-orm/joist-orm/commit/f1a126414f22604bf75534432c5979d300581e38))
+
 # [1.203.0](https://github.com/joist-orm/joist-orm/compare/v1.202.0...v1.203.0) (2024-10-02)
 
 

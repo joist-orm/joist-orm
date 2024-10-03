@@ -12,7 +12,6 @@ import {
   select,
 } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
-import { updatePartial } from "joist-orm";
 import { Author, Book, ImageType, newAuthor } from "./entities";
 
 describe("EntityManager.createOrUpdatePartial", () => {
@@ -421,7 +420,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
     it("can create new reference with valid data", async () => {
       const em = newEntityManager();
       const a1 = newAuthor(em);
-      await updatePartial(a1, {
+      await a1.setDeepPartial({
         firstName: "a1",
         mentor: { firstName: "m1" },
         // technically testing o2m while we're at it

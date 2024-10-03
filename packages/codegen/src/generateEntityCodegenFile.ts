@@ -22,6 +22,7 @@ import {
   Changes,
   Collection,
   ConfigApi,
+  DeepPartialOrNull,
   EntityFilter,
   EntityGraphQLFilter,
   EntityManager,
@@ -77,6 +78,7 @@ import {
   setOpts,
   toIdOf,
   toJSON,
+  updatePartial,
 } from "./symbols";
 import { tsdocComments } from "./tsdoc";
 import { assertNever, fail, uncapitalize } from "./utils";
@@ -270,6 +272,11 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       ${tsdocComments.entity.setPartial}
       setPartial(opts: ${PartialOrNull}<${entityName}Opts>): void {
         ${setOpts}(this as any as ${entityName}, opts as ${OptsOf}<${entityName}>, { partial: true });
+      }
+
+      ${tsdocComments.entity.setDeepPartial}
+      setDeepPartial(opts: ${DeepPartialOrNull}<${entityName}>): Promise<void> {
+        return ${updatePartial}(this as any as ${entityName}, opts);
       }
 
       ${tsdocComments.entity.changes}

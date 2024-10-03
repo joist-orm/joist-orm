@@ -1,5 +1,6 @@
 import { IdType } from "./Entity";
 import {
+  DeepPartialOrNull,
   Entity,
   EntityManager,
   InstanceData,
@@ -79,6 +80,11 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
    * Similar to `set` but applies "Partial API" semantics, i.e. `null` means unset and `undefined` means don't change.
    */
   abstract setPartial(values: PartialOrNull<OptsOf<Entity>>): void;
+
+  /**
+   * Similar to `set` but applies "Partial API" semantics, i.e. `null` means unset and `undefined` means don't change.
+   */
+  abstract setDeepPartial(values: DeepPartialOrNull<OptsOf<Entity>>): Promise<void>;
 
   /**
    * Returns whether the entity is new.

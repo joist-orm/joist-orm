@@ -4,6 +4,7 @@ import {
   cleanStringValue,
   type Collection,
   ConfigApi,
+  type DeepPartialOrNull,
   type EntityFilter,
   type EntityGraphQLFilter,
   type EntityMetadata,
@@ -32,6 +33,7 @@ import {
   toIdOf,
   toJSON,
   type ToJsonHint,
+  updatePartial,
   type ValueFilter,
   type ValueGraphQLFilter,
 } from "joist-orm";
@@ -179,6 +181,30 @@ export abstract class T2AuthorCodegen extends BaseEntity<EntityManager, number> 
    */
   setPartial(opts: PartialOrNull<T2AuthorOpts>): void {
     setOpts(this as any as T2Author, opts as OptsOf<T2Author>, { partial: true });
+  }
+
+  /**
+   * Partial update taking any nested subset of the entities fields.
+   *
+   * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
+   * is left as untouched.
+   *
+   * Collections are exhaustively set to the new values, however,
+   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   *
+   * @example
+   * ```
+   * entity.setDeepPartial({
+   *   firstName: 'foo' // updated
+   *   lastName: undefined // do nothing
+   *   age: null // unset, (i.e. set it as undefined)
+   *   books: [{ title: "b1" }], // create a child book
+   * });
+   * ```
+   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   */
+  setDeepPartial(opts: DeepPartialOrNull<T2Author>): Promise<void> {
+    return updatePartial(this as any as T2Author, opts);
   }
 
   /**

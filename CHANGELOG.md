@@ -1,3 +1,10 @@
+## [1.204.1](https://github.com/joist-orm/joist-orm/compare/v1.204.0...v1.204.1) (2024-10-03)
+
+
+### Bug Fixes
+
+* Simplify base setPartial/setDeepPartial types. ([#1256](https://github.com/joist-orm/joist-orm/issues/1256)) ([9be84e7](https://github.com/joist-orm/joist-orm/commit/9be84e7c8a5c7a6a4eb52bacb9ccf1973b54c75a))
+
 # [1.204.0](https://github.com/joist-orm/joist-orm/compare/v1.203.0...v1.204.0) (2024-10-03)
 
 

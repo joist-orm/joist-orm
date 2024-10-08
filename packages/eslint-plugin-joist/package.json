@@ -1,0 +1,33 @@
+{
+  "name": "eslint-plugin-joist",
+  "version": "1.195.0",
+  "license": "MIT",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "files": [
+    "build"
+  ],
+  "dependencies": {
+    "@typescript-eslint/utils": "^8.6.0"
+  },
+  "scripts": {
+    "format": "prettier --ignore-path ../../.prettierignore --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.6.5",
+    "@swc/jest": "^0.2.36",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.9",
+    "@typescript-eslint/rule-tester": "^8.6.0",
+    "@typescript-eslint/types": "^8.6.0",
+    "eslint": "^9.8.0",
+    "jest": "30.0.0-alpha.5",
+    "prettier": "^3.3.2",
+    "prettier-plugin-organize-imports": "^3.2.4",
+    "ts-node-dev": "^2.0.0",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.5.2",
+    "typescript-eslint": "^8.6.0"
+  }
+}

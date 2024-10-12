@@ -13,6 +13,8 @@ import {
   type GraphQLFilterOf,
   hasMany,
   hasOne,
+  hasRecursiveChildren,
+  hasRecursiveParents,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -25,6 +27,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type ReadOnlyCollection,
   setField,
   setOpts,
   type TaggedId,
@@ -66,12 +69,14 @@ export interface TaskNewFields extends TaskFields {
   specialNewField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   selfReferential: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
   specialNewAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  copiedFrom: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
 }
 
 export interface TaskNewOpts extends TaskOpts {
   specialNewField?: number | null;
   selfReferential?: TaskNew | TaskNewId | null;
   specialNewAuthor?: Author | AuthorId | null;
+  copiedFrom?: TaskNew | TaskNewId | null;
   newTaskTaskItems?: TaskItem[];
   selfReferentialTasks?: TaskNew[];
 }
@@ -79,6 +84,7 @@ export interface TaskNewOpts extends TaskOpts {
 export interface TaskNewIdsOpts extends TaskIdsOpts {
   selfReferentialId?: TaskNewId | null;
   specialNewAuthorId?: AuthorId | null;
+  copiedFromId?: TaskNewId | null;
   newTaskTaskItemIds?: TaskItemId[] | null;
   selfReferentialTaskIds?: TaskNewId[] | null;
 }
@@ -87,6 +93,7 @@ export interface TaskNewFilter extends TaskFilter {
   specialNewField?: ValueFilter<number, null>;
   selfReferential?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   specialNewAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
+  copiedFrom?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   newTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   selfReferentialTasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
 }
@@ -95,6 +102,7 @@ export interface TaskNewGraphQLFilter extends TaskGraphQLFilter {
   specialNewField?: ValueGraphQLFilter<number>;
   selfReferential?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   specialNewAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  copiedFrom?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   newTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   selfReferentialTasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
 }
@@ -103,11 +111,14 @@ export interface TaskNewOrder extends TaskOrder {
   specialNewField?: OrderBy;
   selfReferential?: TaskNewOrder;
   specialNewAuthor?: AuthorOrder;
+  copiedFrom?: TaskNewOrder;
 }
 
 export const taskNewConfig = new ConfigApi<TaskNew, Context>();
 
 taskNewConfig.addRule("selfReferential", mustBeSubType("selfReferential"));
+taskNewConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));
+taskNewConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));
 
 export abstract class TaskNewCodegen extends Task implements Entity {
   static readonly tagName = "task";
@@ -322,6 +333,32 @@ export abstract class TaskNewCodegen extends Task implements Entity {
 
   get specialNewAuthor(): ManyToOneReference<TaskNew, Author, undefined> {
     return this.__data.relations.specialNewAuthor ??= hasOne(this, authorMeta, "specialNewAuthor", "tasks");
+  }
+
+  get copiedFrom(): ManyToOneReference<TaskNew, TaskNew, undefined> {
+    return this.__data.relations.copiedFrom ??= hasOne(this, taskNewMeta, "copiedFrom", "copiedTo");
+  }
+
+  get copiedFromsRecursive(): ReadOnlyCollection<TaskNew, TaskNew> {
+    return this.__data.relations.copiedFromsRecursive ??= hasRecursiveParents(
+      this,
+      "copiedFromsRecursive",
+      "copiedFrom",
+      "copiedToRecursive",
+    );
+  }
+
+  get copiedToRecursive(): ReadOnlyCollection<TaskNew, TaskNew> {
+    return this.__data.relations.copiedToRecursive ??= hasRecursiveChildren(
+      this,
+      "copiedToRecursive",
+      "copiedTo",
+      "copiedFromsRecursive",
+    );
+  }
+
+  get copiedTo(): Collection<TaskNew, Task> {
+    return super.copiedTo as Collection<TaskNew, Task>;
   }
 
   get taskTaskItems(): Collection<TaskNew, TaskItem> {

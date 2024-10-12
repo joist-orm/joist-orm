@@ -39,3 +39,6 @@ config.addRule("deletedAt", (t) => {
 config.addRule((t) => {
   t.transientFields.oldSimpleRuleRan = true;
 });
+
+/** For testing that STI self-referential base FKs can be specialized with "self". */
+config.addRule({ copiedFrom: "specialOldField" }, (t) => {});

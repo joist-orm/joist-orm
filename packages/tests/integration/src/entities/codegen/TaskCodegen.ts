@@ -17,18 +17,23 @@ import {
   type GraphQLFilterOf,
   hasMany,
   hasManyToMany,
+  hasOne,
+  hasRecursiveChildren,
+  hasRecursiveParents,
   isLoaded,
   type JsonPayload,
   type Lens,
   type Loaded,
   type LoadHint,
   loadLens,
+  type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
+  type ReadOnlyCollection,
   type RelationsOf,
   setField,
   setOpts,
@@ -54,7 +59,9 @@ import {
   taskItemMeta,
   taskMeta,
   TaskNew,
+  type TaskNewId,
   TaskOld,
+  type TaskOldId,
   TaskType,
   TaskTypeDetails,
   TaskTypes,
@@ -74,6 +81,7 @@ export interface TaskFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   type: { kind: "enum"; type: TaskType; nullable: undefined };
+  copiedFrom: { kind: "m2o"; type: Task; nullable: undefined; derived: false };
 }
 
 export interface TaskOpts {
@@ -82,11 +90,15 @@ export interface TaskOpts {
   syncDefault?: string | null;
   asyncDefault_1?: string | null;
   asyncDefault_2?: string | null;
+  copiedFrom?: Task | TaskId | null;
+  copiedTo?: Task[];
   taskTaskItems?: TaskItem[];
   tags?: Tag[];
 }
 
 export interface TaskIdsOpts {
+  copiedFromId?: TaskId | null;
+  copiedToIds?: TaskId[] | null;
   taskTaskItemIds?: TaskItemId[] | null;
   tagIds?: TagId[] | null;
 }
@@ -103,6 +115,12 @@ export interface TaskFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   type?: ValueFilter<TaskType, null>;
+  copiedFrom?: EntityFilter<Task, TaskId, FilterOf<Task>, null>;
+  copiedFromTaskNew?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
+  copiedFromTaskOld?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
+  copiedTo?: EntityFilter<Task, TaskId, FilterOf<Task>, null | undefined>;
+  copiedToTaskNew?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
+  copiedToTaskOld?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
   taskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
@@ -119,6 +137,12 @@ export interface TaskGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   type?: ValueGraphQLFilter<TaskType>;
+  copiedFrom?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null>;
+  copiedFromTaskNew?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
+  copiedFromTaskOld?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
+  copiedTo?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null | undefined>;
+  copiedToTaskNew?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
+  copiedToTaskOld?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
   taskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
@@ -135,6 +159,7 @@ export interface TaskOrder {
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   type?: OrderBy;
+  copiedFrom?: TaskOrder;
 }
 
 export const taskConfig = new ConfigApi<Task, Context>();
@@ -397,6 +422,17 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
+  get copiedTo(): Collection<Task, Task> {
+    return this.__data.relations.copiedTo ??= hasMany(
+      this,
+      taskMeta,
+      "copiedTo",
+      "copiedFrom",
+      "copied_from_id",
+      undefined,
+    );
+  }
+
   get taskTaskItems(): Collection<Task, TaskItem> {
     return this.__data.relations.taskTaskItems ??= hasMany(
       this,
@@ -405,6 +441,28 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
       "task",
       "task_id",
       undefined,
+    );
+  }
+
+  get copiedFrom(): ManyToOneReference<Task, Task, undefined> {
+    return this.__data.relations.copiedFrom ??= hasOne(this, taskMeta, "copiedFrom", "copiedTo");
+  }
+
+  get copiedFromsRecursive(): ReadOnlyCollection<Task, Task> {
+    return this.__data.relations.copiedFromsRecursive ??= hasRecursiveParents(
+      this,
+      "copiedFromsRecursive",
+      "copiedFrom",
+      "copiedToRecursive",
+    );
+  }
+
+  get copiedToRecursive(): ReadOnlyCollection<Task, Task> {
+    return this.__data.relations.copiedToRecursive ??= hasRecursiveChildren(
+      this,
+      "copiedToRecursive",
+      "copiedTo",
+      "copiedFromsRecursive",
     );
   }
 

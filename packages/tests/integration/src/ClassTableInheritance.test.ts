@@ -512,6 +512,6 @@ describe("ClassTableInheritance", () => {
       { group: pg },
     );
     // And em.flush fails
-    await expect(em.flush()).rejects.toThrow("PublisherGroup#1 must be a SmallPublisherGroup");
+    await expect(em.flush()).rejects.toThrow("group must be a SmallPublisherGroup not PublisherGroup#1");
   });
 });

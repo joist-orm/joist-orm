@@ -355,6 +355,8 @@ export function up(b: MigrationBuilder): void {
     special_old_field: { type: "int", notNull: false },
     // Self-referential but only for a subtype
     parent_old_task_id: foreignKey("tasks", { notNull: false, otherFieldName: "tasks" }),
+    // Self-referential for both subtypes, but specialized to the specific one
+    copied_from_id: foreignKey("tasks", { notNull: false, otherFieldName: "copiedTo" }),
     // For testing soft-delete on STI tables
     deleted_at: { type: "timestamptz", notNull: false },
     // For testing defaults, where each subtype provides a different default

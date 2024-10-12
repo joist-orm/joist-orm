@@ -88,6 +88,7 @@
       },
       "relations": {
         "comments": { "stiType": "TaskOld" },
+        "copiedFrom": { "subType": "self" },
         "newTaskTaskItems": { "stiType": "TaskNew" },
         "oldTaskTaskItems": { "stiType": "TaskOld" },
         "parentOldTask": { "stiType": "TaskOld" },

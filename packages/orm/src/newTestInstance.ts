@@ -155,7 +155,7 @@ export function newTestInstance<T extends Entity>(
         // existing entity we found isn't already claimed
         const isUniqueAndAlreadyUsed =
           existing &&
-          isOneToOneField(field.otherMetadata().fields[field.otherFieldName]) &&
+          isOneToOneField(field.otherMetadata().allFields[field.otherFieldName]) &&
           (existing as any)[field.otherFieldName].isLoaded &&
           (existing as any)[field.otherFieldName].isSet;
         if (existing && !isUniqueAndAlreadyUsed && !ignoreAllDefaults) {

@@ -72,11 +72,13 @@ export interface TaskOldFields extends TaskFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   specialOldField: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   parentOldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
+  copiedFrom: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
 }
 
 export interface TaskOldOpts extends TaskOpts {
   specialOldField: number;
   parentOldTask?: TaskOld | TaskOldId | null;
+  copiedFrom?: TaskOld | TaskOldId | null;
   comments?: Comment[];
   oldTaskTaskItems?: TaskItem[];
   tasks?: TaskOld[];
@@ -85,6 +87,7 @@ export interface TaskOldOpts extends TaskOpts {
 
 export interface TaskOldIdsOpts extends TaskIdsOpts {
   parentOldTaskId?: TaskOldId | null;
+  copiedFromId?: TaskOldId | null;
   commentIds?: CommentId[] | null;
   oldTaskTaskItemIds?: TaskItemId[] | null;
   taskIds?: TaskOldId[] | null;
@@ -94,6 +97,7 @@ export interface TaskOldIdsOpts extends TaskIdsOpts {
 export interface TaskOldFilter extends TaskFilter {
   specialOldField?: ValueFilter<number, never>;
   parentOldTask?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
+  copiedFrom?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   oldTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   tasks?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null | undefined>;
@@ -103,6 +107,7 @@ export interface TaskOldFilter extends TaskFilter {
 export interface TaskOldGraphQLFilter extends TaskGraphQLFilter {
   specialOldField?: ValueGraphQLFilter<number>;
   parentOldTask?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
+  copiedFrom?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   oldTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   tasks?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null | undefined>;
@@ -112,12 +117,15 @@ export interface TaskOldGraphQLFilter extends TaskGraphQLFilter {
 export interface TaskOldOrder extends TaskOrder {
   specialOldField?: OrderBy;
   parentOldTask?: TaskOldOrder;
+  copiedFrom?: TaskOldOrder;
 }
 
 export const taskOldConfig = new ConfigApi<TaskOld, Context>();
 
 taskOldConfig.addRule(newRequiredRule("specialOldField"));
 taskOldConfig.addRule("parentOldTask", mustBeSubType("parentOldTask"));
+taskOldConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));
+taskOldConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));
 
 export abstract class TaskOldCodegen extends Task implements Entity {
   static readonly tagName = "task";
@@ -336,6 +344,10 @@ export abstract class TaskOldCodegen extends Task implements Entity {
     return this.__data.relations.parentOldTask ??= hasOne(this, taskOldMeta, "parentOldTask", "tasks");
   }
 
+  get copiedFrom(): ManyToOneReference<TaskOld, TaskOld, undefined> {
+    return this.__data.relations.copiedFrom ??= hasOne(this, taskOldMeta, "copiedFrom", "copiedTo");
+  }
+
   get parentOldTasksRecursive(): ReadOnlyCollection<TaskOld, TaskOld> {
     return this.__data.relations.parentOldTasksRecursive ??= hasRecursiveParents(
       this,
@@ -354,6 +366,24 @@ export abstract class TaskOldCodegen extends Task implements Entity {
     );
   }
 
+  get copiedFromsRecursive(): ReadOnlyCollection<TaskOld, TaskOld> {
+    return this.__data.relations.copiedFromsRecursive ??= hasRecursiveParents(
+      this,
+      "copiedFromsRecursive",
+      "copiedFrom",
+      "copiedToRecursive",
+    );
+  }
+
+  get copiedToRecursive(): ReadOnlyCollection<TaskOld, TaskOld> {
+    return this.__data.relations.copiedToRecursive ??= hasRecursiveChildren(
+      this,
+      "copiedToRecursive",
+      "copiedTo",
+      "copiedFromsRecursive",
+    );
+  }
+
   get publishers(): Collection<TaskOld, Publisher> {
     return this.__data.relations.publishers ??= hasManyToMany(
       this,
@@ -364,6 +394,10 @@ export abstract class TaskOldCodegen extends Task implements Entity {
       "tasks",
       "publisher_id",
     );
+  }
+
+  get copiedTo(): Collection<TaskOld, Task> {
+    return super.copiedTo as Collection<TaskOld, Task>;
   }
 
   get taskTaskItems(): Collection<TaskOld, TaskItem> {

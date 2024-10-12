@@ -11,9 +11,9 @@ import { fail } from "./utils";
 export function applyInheritanceUpdates(config: Config, db: DbMetadata): void {
   const { entities, entitiesByName } = db;
   setClassTableInheritance(entities, entitiesByName);
-  setupClassTableInheritanceSubTypeSpecialization(config, entities);
   expandSingleTableInheritance(config, entitiesByName, entities);
   rewriteSingleTableForeignKeys(config, entities);
+  setupClassTableInheritanceSubTypeSpecialization(config, entities);
 }
 
 /**
@@ -28,13 +28,18 @@ export function applyInheritanceUpdates(config: Config, db: DbMetadata): void {
  */
 function setupClassTableInheritanceSubTypeSpecialization(config: Config, entities: EntityDbMetadata[]): void {
   for (const entity of entities) {
-    if (entity.baseType && entity.baseType.inheritanceType === "cti") {
+    if (entity.baseType) {
       // Look through the base's m2o's, looking for a config specialization
       for (const m2o of entity.baseType.manyToOnes) {
-        const subType = config.entities[entity.name]?.relations?.[m2o.fieldName]?.subType;
-        if (subType) {
-          const otherEntity = makeEntity(subType);
-          entity.manyToOnes.push({ ...m2o, otherEntity });
+        const subType =
+          config.entities[entity.name]?.relations?.[m2o.fieldName]?.subType ??
+          config.entities[entity.baseType.name]?.relations?.[m2o.fieldName]?.subType;
+        if (subType === "self") {
+          // Specialize `TaskNew.copiedFrom: TaskNew` & `TaskOld.copiedFrom: TaskOld`
+          entity.manyToOnes.push({ ...m2o, otherEntity: makeEntity(entity.name) });
+        } else if (subType) {
+          // Otherwise specialize `SmallPublisher.group: SmallPublisherGroup`
+          entity.manyToOnes.push({ ...m2o, otherEntity: makeEntity(subType) });
         }
       }
     }

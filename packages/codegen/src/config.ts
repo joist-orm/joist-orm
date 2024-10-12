@@ -40,7 +40,12 @@ const relationConfig = z
     stiType: z.optional(z.string()),
     // Allow marking STI-subtype m2o FKs as required
     stiNotNull: z.optional(z.boolean()),
-    /** Allow specializing a base type relation (SmallPublisher.group: SmallPublisherGroup). */
+    /**
+     * Allow specializing a base type relation (SmallPublisher.group: SmallPublisherGroup).
+     *
+     * Self-referential FKs also support `subType: "self"` that means each subtype will point
+     * at its own subtype.
+     */
     subType: z.optional(z.string()),
     /** Allow skipping self-referential fields getting a `...Recursive` relation. */
     skipRecursiveRelations: z.optional(z.boolean()),

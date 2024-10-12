@@ -100,7 +100,7 @@ export function mustBeSubType<T extends Entity, K extends keyof Changes<T> & str
     const other = m2o.get;
     const otherCstr = m2o.otherMeta.cstr;
     if (other && !(other instanceof otherCstr)) {
-      return `${other} must be a ${otherCstr.name}`;
+      return `${relationName} must be a ${otherCstr.name} not ${other}`;
     }
   };
 }

@@ -114,6 +114,16 @@ describe("SingleTableInheritance", () => {
     expect(ot).toMatchEntity({ tasks: [ot2] });
   });
 
+  it("supports self-referential FKs specialized to our self subtype", async () => {
+    const em = newEntityManager();
+    const nt = newTaskNew(em);
+    const ot = newTaskOld(em);
+    const ot2 = newTaskOld(em, { copiedFrom: ot });
+    // @ts-expect-error
+    newTaskOld(em, { copiedFrom: nt });
+    await expect(em.flush()).rejects.toThrow("TaskOld#3 copiedFrom must be a TaskOld not TaskNew#1");
+  });
+
   it("only adds subtype fields to correct subtype", async () => {
     const em = newEntityManager();
     // @ts-expect-error
@@ -301,7 +311,7 @@ describe("SingleTableInheritance", () => {
     // @ts-expect-error
     newTaskItem(em, { task: nt, newTask: nt, oldTask: nt });
     await expect(em.flush()).rejects.toThrow(
-      "TaskItem#1 TaskOld#1 must be a TaskNew, TaskItem#2 TaskNew#1 must be a TaskOld",
+      "TaskItem#1 newTask must be a TaskNew not TaskOld#1, TaskItem#2 oldTask must be a TaskOld not TaskNew#1",
     );
   });
 

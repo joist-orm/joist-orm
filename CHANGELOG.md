@@ -1,3 +1,10 @@
+# [1.205.0](https://github.com/joist-orm/joist-orm/compare/v1.204.2...v1.205.0) (2024-10-12)
+
+
+### Features
+
+* Allow STI FKs to be specialized to each subtype ([#1261](https://github.com/joist-orm/joist-orm/issues/1261)) ([2433099](https://github.com/joist-orm/joist-orm/commit/2433099e4d2a6384f0b7497eb60657ca66124e22))
+
 ## [1.204.2](https://github.com/joist-orm/joist-orm/compare/v1.204.1...v1.204.2) (2024-10-12)
 
 

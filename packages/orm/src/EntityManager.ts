@@ -1157,6 +1157,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     await this.getLoader<Entity, Entity>("assign-new-ids", "global", async (entities) => {
       let todos = createTodos(entities);
       await this.driver.assignNewIds(this, todos);
+      for (const e of entities) this.#entityIndex.set(e.idTagged, e);
       return entities;
     }).loadMany(pendingEntities);
   }

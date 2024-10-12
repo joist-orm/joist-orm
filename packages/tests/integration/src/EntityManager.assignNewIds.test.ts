@@ -17,6 +17,7 @@ describe("EntityManager.assignNewIds", () => {
     expect(p1.id).toEqual("p:1");
     expect(p1.isNewEntity).toEqual(true);
     expect(isNew(p1)).toEqual(true);
+    expect(em.findExistingInstance("p:1")).toMatchEntity(p1);
 
     // And when I flush
     await em.flush();

@@ -1,3 +1,10 @@
+## [1.204.2](https://github.com/joist-orm/joist-orm/compare/v1.204.1...v1.204.2) (2024-10-12)
+
+
+### Bug Fixes
+
+* Fix inference for required hasReactiveReference. ([#1259](https://github.com/joist-orm/joist-orm/issues/1259)) ([505b831](https://github.com/joist-orm/joist-orm/commit/505b831f629f2f72edc07359cad311005e321024))
+
 ## [1.204.1](https://github.com/joist-orm/joist-orm/compare/v1.204.0...v1.204.1) (2024-10-03)
 
 

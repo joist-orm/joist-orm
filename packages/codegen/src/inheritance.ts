@@ -13,7 +13,7 @@ export function applyInheritanceUpdates(config: Config, db: DbMetadata): void {
   setClassTableInheritance(entities, entitiesByName);
   expandSingleTableInheritance(config, entitiesByName, entities);
   rewriteSingleTableForeignKeys(config, entities);
-  setupClassTableInheritanceSubTypeSpecialization(config, entities);
+  setupSubTypeSpecialization(config, entities);
 }
 
 /**
@@ -26,7 +26,7 @@ export function applyInheritanceUpdates(config: Config, db: DbMetadata): void {
  * that we want, and then we fixup/dedupe them at runtime in `configure.ts` when creating
  * `meta.allFields`.
  */
-function setupClassTableInheritanceSubTypeSpecialization(config: Config, entities: EntityDbMetadata[]): void {
+function setupSubTypeSpecialization(config: Config, entities: EntityDbMetadata[]): void {
   for (const entity of entities) {
     if (entity.baseType) {
       // Look through the base's m2o's, looking for a config specialization

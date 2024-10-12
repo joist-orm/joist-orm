@@ -117,12 +117,19 @@ export type Reacted<T extends Entity, H> = Entity & {
   readonly __orm: { entityType: T };
 } & MaybeTransientFields<T>;
 
-/** Allow returning reacted entities from `hasReactiveAsyncProperties`. */
-export type MaybeReactedEntity<V> = V extends (infer T extends Entity) | undefined
-  ? { __orm: { entityType: T } } | undefined
-  : V extends Entity
-    ? { __orm: { entityType: V } }
-    : V;
+/** Allow returning reacted entities from `hasReactiveReference`. */
+export type MaybeReactedEntity<V> = V extends Entity ? { __orm: { entityType: V } } : V;
+
+/**
+ * Allow returning reacted entities from `hasReactiveAsyncProperty`.
+ *
+ * The `MaybeReactedEntity` is used by `hasReactiveReference` which already has `undefined | never`
+ * broken out as a separate generic; `hasReactiveAsyncProperty` does not, and so this type conditionally
+ * pulls `undefined` out first, and then defers to `MaybeReactedEntity`.
+ */
+export type MaybeReactedPropertyEntity<V> = V extends infer V1 | undefined
+  ? MaybeReactedEntity<V1> | undefined
+  : MaybeReactedEntity<V>;
 
 /**
  * A reactive hint that only allows fields immediately on the entity, i.e. no nested hints.

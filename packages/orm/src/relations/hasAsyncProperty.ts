@@ -2,7 +2,7 @@ import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { getMetadata } from "../EntityMetadata";
 import { LoadHint, Loaded } from "../loadHints";
-import { MaybeReactedEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
+import { MaybeReactedPropertyEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { tryResolve } from "../utils";
 
 export const AsyncPropertyT = Symbol();
@@ -44,7 +44,7 @@ export function hasAsyncProperty<T extends Entity, const H extends LoadHint<T>, 
  */
 export function hasReactiveAsyncProperty<T extends Entity, const H extends ReactiveHint<T>, V>(
   reactiveHint: H,
-  fn: (entity: Reacted<T, H>) => MaybeReactedEntity<V>,
+  fn: (entity: Reacted<T, H>) => MaybeReactedPropertyEntity<V>,
 ): AsyncProperty<T, V> {
   const entity = currentlyInstantiatingEntity as T;
   return new AsyncPropertyImpl(entity, reactiveHint as any, fn as any, { isReactive: true });

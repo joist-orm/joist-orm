@@ -51,6 +51,19 @@ export interface ReactiveReference<T extends Entity, U extends Entity, N extends
   idUntaggedIfSet: string | undefined;
 }
 
+export function hasReactiveReference<T extends Entity, U extends Entity, const H extends ReactiveHint<T>>(
+  otherMeta: EntityMetadata<U>,
+  fieldName: keyof T & string,
+  hint: H,
+  fn: (entity: Reacted<T, H>) => MaybeReactedEntity<U>,
+): ReactiveReference<T, U, never>;
+export function hasReactiveReference<T extends Entity, U extends Entity, const H extends ReactiveHint<T>>(
+  otherMeta: EntityMetadata<U>,
+  fieldName: keyof T & string,
+  hint: H,
+  fn: (entity: Reacted<T, H>) => MaybeReactedEntity<U> | undefined,
+): ReactiveReference<T, U, undefined>;
+/** Creates a `ReactiveReference`. */
 export function hasReactiveReference<
   T extends Entity,
   U extends Entity,

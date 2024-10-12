@@ -1,4 +1,4 @@
-import { Deferred } from "@src/Deferred";
+import { Deferred } from "joist-utils";
 
 /** A utility class for enforcing deterministic order in asynchronous tests. */
 export class Stepper {

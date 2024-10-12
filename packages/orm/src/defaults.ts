@@ -1,3 +1,4 @@
+import { Deferred } from "joist-utils";
 import { Entity } from "./Entity";
 import { EntityMetadata, EnumField, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "./EntityMetadata";
 import { setField } from "./fields";
@@ -5,7 +6,6 @@ import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint, ReactiveHint } from "./reactiveHints";
 import { isLoadedReference } from "./relations/index";
 import { fail } from "./utils";
-import { Deferred } from "./utils/Deferred";
 
 export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolean {
   return getBaseAndSelfMetas(meta).some(

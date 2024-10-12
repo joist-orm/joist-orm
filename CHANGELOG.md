@@ -1,3 +1,10 @@
+## [1.205.2](https://github.com/joist-orm/joist-orm/compare/v1.205.1...v1.205.2) (2024-10-12)
+
+
+### Bug Fixes
+
+* Export Deferred from joist-utils. ([#1263](https://github.com/joist-orm/joist-orm/issues/1263)) ([9db6af6](https://github.com/joist-orm/joist-orm/commit/9db6af6e22fede57b40acc6a74259b786fb9d4e9))
+
 ## [1.205.1](https://github.com/joist-orm/joist-orm/compare/v1.205.0...v1.205.1) (2024-10-12)
 
 

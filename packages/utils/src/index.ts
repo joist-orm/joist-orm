@@ -1,4 +1,5 @@
 export { ConnectionConfig, newPgConnectionConfig } from "./connection";
+export { Deferred } from "./Deferred";
 export { isPlainObject } from "./is-plain-object";
 export { setupLatestPgTypes } from "./setupLatestPgTypes";
 

@@ -1,3 +1,10 @@
+## [1.205.1](https://github.com/joist-orm/joist-orm/compare/v1.205.0...v1.205.1) (2024-10-12)
+
+
+### Bug Fixes
+
+* Fix assignNewIds not indexing the entities. ([#1262](https://github.com/joist-orm/joist-orm/issues/1262)) ([0ae9821](https://github.com/joist-orm/joist-orm/commit/0ae98210e0e239cfbb709bd326e56123e60dcf7b))
+
 # [1.205.0](https://github.com/joist-orm/joist-orm/compare/v1.204.2...v1.205.0) (2024-10-12)
 
 

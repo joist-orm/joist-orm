@@ -1,3 +1,10 @@
+## [1.205.3](https://github.com/joist-orm/joist-orm/compare/v1.205.2...v1.205.3) (2024-10-13)
+
+
+### Bug Fixes
+
+* Fail on invalid factory keys. ([#1264](https://github.com/joist-orm/joist-orm/issues/1264)) ([e29944a](https://github.com/joist-orm/joist-orm/commit/e29944ae2a1159571cc60d8122860065e2be90a4)), closes [#1260](https://github.com/joist-orm/joist-orm/issues/1260)
+
 ## [1.205.2](https://github.com/joist-orm/joist-orm/compare/v1.205.1...v1.205.2) (2024-10-12)
 
 

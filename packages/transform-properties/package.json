@@ -1,6 +1,6 @@
 {
   "name": "joist-transform-properties",
-  "version": "1.205.2",
+  "version": "1.205.3",
   "license": "MIT",
   "main": "build/index.js",
   "types": "build/index.d.ts",

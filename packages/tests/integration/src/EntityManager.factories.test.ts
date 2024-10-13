@@ -392,6 +392,14 @@ describe("EntityManager.factories", () => {
     newBook(em, { tags: [new Date()] });
   });
 
+  it("cannot pass invalid fields", async () => {
+    const em = newEntityManager();
+    expect(() => {
+      // @ts-expect-error
+      newBook(em, { fooBar: null });
+    }).toThrow("Unknown field fooBar");
+  });
+
   it("can use tagged ids as shortcuts", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);
@@ -883,7 +891,7 @@ describe("EntityManager.factories", () => {
       await em.flush();
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new ChildGroup at EntityManager.factories.test.ts:874↩",
+         "Creating new ChildGroup at EntityManager.factories.test.ts:882↩",
          "  childGroupId = creating new Child↩",
          "    created Child#1 added to scope↩",
          "  parentGroup = creating new ParentGroup↩",

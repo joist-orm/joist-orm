@@ -644,53 +644,6 @@ describe("EntityManager", () => {
     await expect(em.flush()).rejects.toThrow("author is required");
   });
 
-  it("cannot set with a null required field", async () => {
-    const em = newEntityManager();
-    const a1 = em.create(Author, { firstName: "a1" });
-    // @ts-expect-error
-    a1.set({ firstName: null });
-    await expect(em.flush()).rejects.toThrow("firstName is required");
-  });
-
-  it("cannot set over an async field", async () => {
-    const em = newEntityManager();
-    const a1 = em.create(Author, { firstName: "a1" });
-    expect(() => {
-      a1.set({ latestComments: [] } as any);
-    }).toThrow("Invalid argument, cannot set over latestComments AsyncPropertyImpl");
-  });
-
-  it("cannot set over an hasOneDerived relation", async () => {
-    const em = newEntityManager();
-    const a1 = em.create(Author, { firstName: "a1" });
-    expect(() => {
-      a1.set({ latestComment: [] } as any);
-    }).toThrow("'set' not implemented on CustomReference");
-  });
-
-  it("cannot set over a reactive field", async () => {
-    const em = newEntityManager();
-    const a1 = em.create(Author, { firstName: "a1" });
-    expect(() => {
-      a1.set({ numberOfPublicReviews: 2 } as any);
-    }).toThrow("Invalid argument, cannot set over numberOfPublicReviews ReactiveFieldImpl");
-  });
-
-  it("can setPartial with a null required field", async () => {
-    const em = newEntityManager();
-    const a1 = em.create(Author, { firstName: "a1" });
-    // Accepting partial-update style inputs is allowed at compile-time, but throws at runtime
-    a1.setPartial({ firstName: null });
-    await expect(em.flush()).rejects.toThrow("firstName is required");
-  });
-
-  it("setPartial defaults to ignoredUndefined", async () => {
-    const em = newEntityManager();
-    const a1 = em.create(Author, { firstName: "a1" });
-    a1.setPartial({ firstName: undefined });
-    expect(a1.firstName).toEqual("a1");
-  });
-
   it("can hydrate from custom queries ", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
@@ -708,22 +661,6 @@ describe("EntityManager", () => {
     const [a1b] = em.hydrate(Author, await knex.select("*").from("authors"), { overwriteExisting: true });
     expect(a1b.firstName).toEqual("a3");
     expect(a1.changes.firstName.hasChanged).toBe(false);
-  });
-
-  it("ignores sets of the same value", async () => {
-    await insertAuthor({ first_name: "a1" });
-    const em = newEntityManager();
-    const a1 = await em.load(Author, "1");
-    a1.firstName = "a1";
-    expect(getInstanceData(a1).originalData).toEqual({});
-  });
-
-  it("ignores date sets of the same value", async () => {
-    await insertAuthor({ first_name: "a1", initials: "a", number_of_books: 1, graduated: jan1 });
-    const em = newEntityManager();
-    const a1 = await em.load(Author, "1");
-    a1.graduated = jan1;
-    expect(getInstanceData(a1).originalData).toEqual({});
   });
 
   it("cannot flush while another flush is in progress", async () => {

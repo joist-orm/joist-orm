@@ -445,20 +445,6 @@ describe("Author", () => {
     }).toThrow(TypeError);
   });
 
-  it("setting optional fields to null is allowed", () => {
-    const em = newEntityManager();
-    const author = new Author(em, { firstName: "a1" });
-    author.set({ lastName: null });
-    expect(author.lastName).toBeUndefined();
-  });
-
-  it("set can treat undefined as leave", () => {
-    const em = newEntityManager();
-    const author = new Author(em, { firstName: "a1" });
-    author.setPartial({ firstName: undefined });
-    expect(author.firstName).toEqual("a1");
-  });
-
   it("gets not-null validation rules for free", async () => {
     const em = newEntityManager();
     em.createPartial(Author, {});

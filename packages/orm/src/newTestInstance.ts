@@ -57,6 +57,8 @@ export const testPlainDate = Temporal?.PlainDate.from("2018-01-01");
 export const testPlainDateTime = testPlainDate?.toPlainDateTime("00:00:00");
 export const testZonedDateTime = testPlainDate?.toZonedDateTime("UTC");
 
+const knownUseKeys = ["use", "useLogging", "useExistingCheck", "useFactoryDefaults"];
+
 /**
  * Creates a test instance of `T`.
  *
@@ -213,10 +215,12 @@ export function newTestInstance<T extends Entity>(
   // null marker approach).
   const additionalOpts = Object.entries(opts).map(([fieldName, optValue]) => {
     const field = meta.allFields[fieldName];
-    // Check `!field` b/c `use` won't have a field
-    if (optValue === null || optValue === undefined || !field) {
-      return [];
+    // Look for `use` / etc
+    if (knownUseKeys.includes(fieldName)) return [];
+    if (!field) {
+      throw new Error(`Unknown field ${fieldName}`);
     }
+    if (optValue === null || optValue === undefined) return [];
     if (field.kind === "o2m") {
       // If this is a list of children, i.e. book.authors, handle partials to newTestInstance'd
       return [
@@ -238,7 +242,7 @@ export function newTestInstance<T extends Entity>(
       // If this is an o2o, i.e. author.image, just pass the optValue (i.e. it won't be a list)
       return [fieldName, resolveFactoryOpt(em, opts, field, optValue as any, entity)];
     } else {
-      return [];
+      return []; // Assume createOpts handled this
     }
   });
 

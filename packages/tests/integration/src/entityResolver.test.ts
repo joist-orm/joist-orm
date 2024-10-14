@@ -1,6 +1,6 @@
 import { GraphQLFileLoader } from "@graphql-tools/graphql-file-loader";
 import { loadSchema } from "@graphql-tools/load";
-import { Author } from "@src/entities";
+import { Author, BookRange } from "@src/entities";
 import { insertAuthor, insertBook, insertPublisher, update } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 import { entityResolver } from "joist-graphql-resolver-utils";
@@ -15,6 +15,14 @@ describe("entityResolver", () => {
     const result = entityResolver(Author).numberOfPublicReviews(a, {}, {}, undefined!);
     // Then we got the stale value
     expect(result).toBe(2);
+  });
+
+  it("can load derived enums", async () => {
+    await insertAuthor({ first_name: "a1", range_of_books: 1 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1");
+    const result = entityResolver(Author).rangeOfBooks(a, {}, {}, undefined!);
+    expect(result).toBe(BookRange.Few);
   });
 
   it("m2o calls populate if selection set", async () => {

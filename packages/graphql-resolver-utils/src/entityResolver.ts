@@ -87,7 +87,7 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
   const primitiveResolvers = Object.values(entityMetadata.allFields)
     .filter((ormField) => !isPrimaryKeyField(ormField) && !isReferenceField(ormField) && !isCollectionField(ormField))
     .map((ormField) => {
-      if (ormField.kind === "primitive" && ormField.derived === "async") {
+      if ("derived" in ormField && ormField.derived === "async") {
         return [ormField.fieldName, (entity: T) => (entity as any)[ormField.fieldName].get];
       } else {
         // Currently, we only support primitives, i.e. strings/numbers/etc. and not collections.

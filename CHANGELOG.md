@@ -1,3 +1,10 @@
+## [1.205.4](https://github.com/joist-orm/joist-orm/compare/v1.205.3...v1.205.4) (2024-10-14)
+
+
+### Bug Fixes
+
+* Fix entityResolver for derived enums. ([#1265](https://github.com/joist-orm/joist-orm/issues/1265)) ([d3ebf35](https://github.com/joist-orm/joist-orm/commit/d3ebf35ca0154ff53cde5c9e2f6e5135e066563f))
+
 ## [1.205.3](https://github.com/joist-orm/joist-orm/compare/v1.205.2...v1.205.3) (2024-10-13)
 
 

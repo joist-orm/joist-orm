@@ -1,3 +1,10 @@
+## [1.205.5](https://github.com/joist-orm/joist-orm/compare/v1.205.4...v1.205.5) (2024-10-16)
+
+
+### Bug Fixes
+
+* Pass root to the runField args lambda. ([#1266](https://github.com/joist-orm/joist-orm/issues/1266)) ([6149ce3](https://github.com/joist-orm/joist-orm/commit/6149ce332e2a093f84c9ffd812309855b46ae851))
+
 ## [1.205.4](https://github.com/joist-orm/joist-orm/compare/v1.205.3...v1.205.4) (2024-10-14)
 
 

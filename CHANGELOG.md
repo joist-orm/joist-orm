@@ -1,3 +1,10 @@
+## [1.205.6](https://github.com/joist-orm/joist-orm/compare/v1.205.5...v1.205.6) (2024-10-19)
+
+
+### Bug Fixes
+
+* Bump dependencies. ([#1267](https://github.com/joist-orm/joist-orm/issues/1267)) ([7e037ce](https://github.com/joist-orm/joist-orm/commit/7e037cec745e469ed6f5ed86343dcca630140904))
+
 ## [1.205.5](https://github.com/joist-orm/joist-orm/compare/v1.205.4...v1.205.5) (2024-10-16)
 
 

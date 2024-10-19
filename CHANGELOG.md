@@ -1,3 +1,10 @@
+# [1.206.0](https://github.com/joist-orm/joist-orm/compare/v1.205.6...v1.206.0) (2024-10-19)
+
+
+### Features
+
+* Add Relation.hasBeenSet. ([#1269](https://github.com/joist-orm/joist-orm/issues/1269)) ([cc722f1](https://github.com/joist-orm/joist-orm/commit/cc722f1be6ebd9dcd9c3698470010d7c632047b4))
+
 ## [1.205.6](https://github.com/joist-orm/joist-orm/compare/v1.205.5...v1.205.6) (2024-10-19)
 
 

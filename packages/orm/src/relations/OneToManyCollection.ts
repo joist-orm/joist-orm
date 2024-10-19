@@ -46,6 +46,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   // However, now with join preloading, the getPreloadedRelation might still have pre-load removed children.
   #addedBeforeLoaded: U[] | undefined;
   #removedBeforeLoaded: U[] | undefined;
+  #hasBeenSet = false;
 
   constructor(
     // These are public to our internal implementation but not exposed in the Collection API
@@ -139,6 +140,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded === undefined) {
       throw new Error("set was called when not loaded");
     }
+    this.#hasBeenSet = true;
 
     // If we're changing `a1.books = [b1, b2]` to `a1.books = [b2]`, then implicitly delete the old book
     const otherCannotChange = this.otherMeta.fields[this.otherFieldName].immutable;
@@ -284,6 +286,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   public get otherMeta(): EntityMetadata {
     return (getMetadata(this.entity).allFields[this.#fieldName] as OneToManyField).otherMetadata();
+  }
+
+  public get hasBeenSet(): boolean {
+    return this.#hasBeenSet;
   }
 
   public toString(): string {

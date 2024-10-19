@@ -159,6 +159,10 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
     return this.#otherFieldName;
   }
 
+  get hasBeenSet(): boolean {
+    return false;
+  }
+
   toString(): string {
     return `RecursiveParentsCollectionImpl(entity: ${this.entity}, fieldName: ${this.fieldName})`;
   }
@@ -246,6 +250,10 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
 
   get otherFieldName(): string {
     return this.#otherFieldName;
+  }
+
+  get hasBeenSet(): boolean {
+    return false;
   }
 
   toString(): string {

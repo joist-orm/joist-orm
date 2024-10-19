@@ -74,6 +74,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
   private _isLoaded = false;
   private field: PolymorphicField;
+  #hasBeenSet = false;
 
   constructor(
     entity: T,
@@ -174,6 +175,10 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     return maybeResolveReferenceToId(this.current());
   }
 
+  get hasBeenSet() {
+    return this.#hasBeenSet;
+  }
+
   // private impl
 
   setFromOpts(other: U): void {
@@ -208,6 +213,8 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
 
   // Internal method used by PolymorphicReference
   setImpl(other: U | N): void {
+    this.#hasBeenSet = true;
+
     if (sameEntity(other, this.current({ withDeleted: true }))) {
       return;
     }
@@ -229,7 +236,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     ensureNotDeleted(this.entity, "pending");
 
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    const changed = setField(this.entity, this.fieldName, isEntity(other) ? other?.idTaggedMaybe ?? other : other);
+    const changed = setField(this.entity, this.fieldName, isEntity(other) ? (other?.idTaggedMaybe ?? other) : other);
 
     if (typeof other === "string") {
       this.loaded = undefined;

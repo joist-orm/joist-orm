@@ -9,7 +9,7 @@ export const RelationU = Symbol();
 export interface Relation<T extends Entity, U extends Entity> {
   // Make our Relation somewhat non-structural, otherwise since it's a marker interface,
   // types like `number` or `string` will match it. This also seems to nudge the type
-  // inference inside of `LoadHint` to go beyond "this generic T of Entity has id and __orm"
+  // inference inside `LoadHint` to go beyond "this generic T of Entity has id and __orm"
   // to "no really this generic T has fields firstName, title, etc.".
   // See https://stackoverflow.com/questions/53448100/generic-type-of-extended-interface-not-inferred
   // And https://github.com/microsoft/TypeScript/issues/47213
@@ -17,6 +17,7 @@ export interface Relation<T extends Entity, U extends Entity> {
   [RelationU]: U;
   isLoaded: boolean;
   entity: Entity;
+  hasBeenSet: boolean;
 }
 
 /** Type guard utility for determining if an entity field is a Relation. */

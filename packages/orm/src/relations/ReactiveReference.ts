@@ -227,7 +227,7 @@ export class ReactiveReferenceImpl<
     }
 
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    setField(this.entity, this.fieldName, isEntity(_other) ? _other.idTaggedMaybe ?? _other : _other);
+    setField(this.entity, this.fieldName, isEntity(_other) ? (_other.idTaggedMaybe ?? _other) : _other);
 
     if (typeof _other === "string") {
       this.loaded = undefined;
@@ -316,6 +316,10 @@ export class ReactiveReferenceImpl<
 
   public get otherMeta(): EntityMetadata<U> {
     return (getMetadata(this.entity).allFields[this.#fieldName] as ManyToOneField).otherMetadata();
+  }
+
+  public get hasBeenSet(): boolean {
+    return false;
   }
 
   public toString(): string {

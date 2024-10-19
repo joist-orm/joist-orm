@@ -45,6 +45,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   #loaded: U[] | undefined;
   #addedBeforeLoaded: U[] | undefined;
   #removedBeforeLoaded: U[] | undefined;
+  #hasBeenSet = false;
 
   constructor(
     public joinTableName: string,
@@ -185,6 +186,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     if (this.#loaded === undefined) {
       throw new Error("set was called when not loaded");
     }
+    this.#hasBeenSet = true;
     // Make a copy for safe iteration
     const loaded = [...this.#loaded];
     // Remove old values
@@ -262,6 +264,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   private get isCascadeDelete(): boolean {
     return getMetadata(this.entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
+  }
+
+  public get hasBeenSet(): boolean {
+    return this.#hasBeenSet;
   }
 
   public toString(): string {

@@ -33,6 +33,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because
   // the value can become stale; we want to each `.get` call to repeatedly evaluate the latest value.
   private loadPromise: Promise<unknown> | undefined;
+  #hasBeenSet = false;
 
   constructor(
     entity: T,
@@ -111,6 +112,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
       throw new Error(`'set' not implemented on ${this}`);
     }
     set(this.entity, value);
+    this.#hasBeenSet = true;
   }
 
   setFromOpts(value: U): void {
@@ -126,6 +128,10 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     return Object.entries(getProperties(getMetadata(this.entity))).filter(
       ([key]) => (this.entity as any)[key] === this,
     )[0][0];
+  }
+
+  get hasBeenSet() {
+    return this.#hasBeenSet;
   }
 
   toString(): string {

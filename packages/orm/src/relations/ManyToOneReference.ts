@@ -77,6 +77,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   private loaded!: U | N | undefined;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
   private _isLoaded = false;
+  #hasBeenSet = false;
 
   constructor(
     entity: T,
@@ -211,6 +212,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   // Internal method used by OneToManyCollection
   setImpl(_other: U | IdOf<U> | N): void {
     ensureNotDeleted(this.entity, "pending");
+    this.#hasBeenSet = true;
+
     // If the project is not using tagged ids, we still want it tagged internally
     const other = ensureTagged(this.otherMeta, _other);
 
@@ -221,7 +224,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     const previousId = this.idTaggedMaybe;
     const previous = this.maybeFindEntity();
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    setField(this.entity, this.fieldName, isEntity(other) ? other?.idTaggedMaybe ?? other : other);
+    setField(this.entity, this.fieldName, isEntity(other) ? (other?.idTaggedMaybe ?? other) : other);
 
     if (typeof other === "string") {
       this.loaded = undefined;
@@ -344,6 +347,10 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   public get otherMeta(): EntityMetadata<U> {
     return (getMetadata(this.entity).allFields[this.#fieldName] as ManyToOneField).otherMetadata();
+  }
+
+  public get hasBeenSet(): boolean {
+    return true;
   }
 
   public toString(): string {

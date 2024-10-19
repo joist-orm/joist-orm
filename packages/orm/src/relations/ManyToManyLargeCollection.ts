@@ -111,6 +111,10 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
     (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).remove(this.entity, true);
   }
 
+  get hasBeenSet() {
+    return false;
+  }
+
   public get meta(): EntityMetadata {
     return getMetadata(this.entity);
   }

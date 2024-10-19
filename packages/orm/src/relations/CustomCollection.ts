@@ -35,6 +35,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because
   // the values can become stale; we want to each `.get` call to repeatedly evaluate the latest values.
   private loadPromise: Promise<any> | undefined;
+  #hasBeenSet = false;
 
   constructor(
     entity: T,
@@ -82,10 +83,12 @@ export class CustomCollection<T extends Entity, U extends Entity>
     const { set, add, remove } = this.opts;
     if (set !== undefined) {
       set(this.entity, values);
+      this.#hasBeenSet = true;
     } else if (add !== undefined && remove !== undefined) {
       const current = this.get;
       current.filter((value) => !values.includes(value)).forEach((value) => this.remove(value));
       values.filter((value) => !current.includes(value)).forEach((value) => this.add(value));
+      this.#hasBeenSet = true;
     } else {
       fail(`'set' not implemented and not inferrable from 'add'/'remove' on ${this}`);
     }
@@ -136,6 +139,10 @@ export class CustomCollection<T extends Entity, U extends Entity>
   /** Finds this CustomCollections field name by looking in the entity for the key that we're assigned to. */
   get fieldName(): string {
     return Object.entries(this.entity).filter((e) => e[1] === this)[0][0];
+  }
+
+  get hasBeenSet() {
+    return this.#hasBeenSet;
   }
 
   toString(): string {

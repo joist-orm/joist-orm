@@ -87,6 +87,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   private _isLoaded: boolean = false;
   private isCascadeDelete: boolean;
   readonly #otherMeta: EntityMetadata;
+  #hasBeenSet = false;
 
   constructor(
     // These are public to our internal implementation but not exposed in the Collection API
@@ -167,6 +168,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
 
   set(other: U, opts: { percolating?: boolean } = {}): void {
     ensureNotDeleted(this.entity, "pending");
+    this.#hasBeenSet = true;
     if (other === this.loaded) {
       return;
     }
@@ -243,6 +245,10 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     }
     this.loaded = undefined as any;
     this._isLoaded = true;
+  }
+
+  get hasBeenSet() {
+    return this.#hasBeenSet;
   }
 
   public toString(): string {

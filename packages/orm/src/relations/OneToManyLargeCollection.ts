@@ -79,6 +79,10 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
     this.getOtherRelation(other).set(undefined);
   }
 
+  get hasBeenSet() {
+    return false;
+  }
+
   public get meta(): EntityMetadata {
     return getMetadata(this.entity);
   }

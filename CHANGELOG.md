@@ -1,3 +1,10 @@
+## [1.206.1](https://github.com/joist-orm/joist-orm/compare/v1.206.0...v1.206.1) (2024-10-21)
+
+
+### Bug Fixes
+
+* Fix findWithNewOrChanged on m2os of new entity. ([#1270](https://github.com/joist-orm/joist-orm/issues/1270)) ([733784c](https://github.com/joist-orm/joist-orm/commit/733784c01b4be4a8dd59c28d0a814c4583c87800))
+
 # [1.206.0](https://github.com/joist-orm/joist-orm/compare/v1.205.6...v1.206.0) (2024-10-19)
 
 

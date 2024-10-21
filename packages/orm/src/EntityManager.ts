@@ -581,7 +581,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     options?: { populate?: H; softDeletes?: "include" | "exclude" },
   ): Promise<T[]> {
     const { softDeletes = "exclude", populate } = options ?? {};
-    const persisted = await this.find(type, where as any, { softDeletes });
+    // Make a copy of `where` because `em.find` will re-write new entities to `-1`, that our `entityMatches` could still match
+    const persisted = await this.find(type, { ...(where as any) }, { softDeletes });
     const unchanged = persisted.filter((e) => !e.isNewEntity && !e.isDirtyEntity && !e.isDeletedEntity);
     const maybeNew = this.entities.filter(
       (e) => e instanceof type && (e.isNewEntity || e.isDirtyEntity) && entityMatches(e, where),

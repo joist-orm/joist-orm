@@ -1325,6 +1325,26 @@ describe("EntityManager", () => {
       const authors = await em.findWithNewOrChanged(Author, { lastName: "last" }, { populate: "publisher" });
       expect(authors).toMatchEntity([{ publisher: { name: "p1" } }, { publisher: { name: "p2" } }]);
     });
+
+    it("finds changed entities w/m2o to new entity", async () => {
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      const a2 = await em.load(Author, "a:1");
+      const p = newPublisher(em);
+      a2.publisher.set(p);
+      const authors = await em.findWithNewOrChanged(Author, { publisher: p });
+      expect(authors).toMatchEntity([a2]);
+    });
+
+    it("finds changed entities w/m2o is newly undefined", async () => {
+      await insertPublisher({ name: "p1 " });
+      await insertAuthor({ first_name: "a2", publisher_id: 1 });
+      const em = newEntityManager();
+      const a2 = await em.load(Author, "a:1");
+      a2.publisher.set(undefined);
+      const authors = await em.findWithNewOrChanged(Author, { publisher: undefined });
+      expect(authors).toMatchEntity([a2]);
+    });
   });
 
   describe("touch", () => {

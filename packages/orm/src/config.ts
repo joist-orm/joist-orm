@@ -1,10 +1,12 @@
 import { AsyncDefault } from "./defaults";
 import { Entity } from "./Entity";
 import {
+  EntityConstructor,
   EntityField,
   EntityMetadata,
   fail,
   FieldsOf,
+  getBaseMeta,
   getMetadata,
   Loaded,
   LoadHint,
@@ -92,6 +94,11 @@ export class ConfigApi<T extends Entity, C> {
       };
       this.__data.rules.push({ name, fn, hint });
     }
+  }
+
+  /** If both this entity, and `cstr` entities, are in the same `em.flush`, run us first. */
+  runHooksBefore(cstr: EntityConstructor<any>): void {
+    this.__data.runHooksBefore.push(cstr);
   }
 
   /** Deletes any entity/entities pointed to by `relation` when this entity is deleted. */
@@ -285,6 +292,7 @@ type AfterMetadataCallback<T extends Entity> = (meta: EntityMetadata<T>) => void
 /** The internal state of an entity's configuration data, i.e. validation rules/hooks. */
 export class ConfigData<T extends Entity, C> {
   afterMetadataCallbacks: AfterMetadataCallback<T>[] = [];
+  runHooksBefore: EntityConstructor<any>[] = [];
   /** The validation rules for this entity type. */
   rules: ValidationRuleInternal<T>[] = [];
   /** The hooks for this entity type. */

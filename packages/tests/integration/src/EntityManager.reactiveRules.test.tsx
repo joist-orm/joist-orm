@@ -295,8 +295,9 @@ describe("EntityManager.reactiveRules", () => {
     ]);
 
     expect(getReactiveRules(SmallPublisher)).toMatchObject([
-      { cstr: "SmallPublisher", name: sm(/SmallPublisherCodegen.ts:\d+/), fields: ["group"], path: [], fn },
-      { cstr: "SmallPublisher", name: sm(/SmallPublisher.ts:\d+/), fields: ["group"], path: [], fn },
+      // SmallPublisher.group is read only, so fields is `[]` instead of `["group"]`
+      { cstr: "SmallPublisher", name: sm(/SmallPublisherCodegen.ts:\d+/), fields: [], path: [], fn },
+      { cstr: "SmallPublisher", name: sm(/SmallPublisher.ts:\d+/), fields: [], path: [], fn },
       { cstr: "SmallPublisher", name: sm(/SmallPublisher.ts:\d+/), fields: [], path: [], fn },
     ]);
   });

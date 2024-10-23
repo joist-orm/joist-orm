@@ -1,5 +1,7 @@
-import { newRequiredRule, ValidationErrors } from "joist-orm";
-import { Author } from "src/entities";
+import { getMetadata, newRequiredRule, ValidationErrors } from "joist-orm";
+import { Author, LargePublisher, Publisher, SmallPublisher } from "src/entities";
+import { insertAuthor } from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
 
 describe("ValidationErrors", () => {
   it("serialises even with prototype lost", () => {
@@ -10,6 +12,34 @@ describe("ValidationErrors", () => {
     it("cannot be used on o2o fields", () => {
       // @ts-expect-error
       newRequiredRule<Author>("image");
+    });
+  });
+
+  describe("cannotBeUpdated", () => {
+    it("cannot change wasEverPopular to false", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1");
+      a1.age = 101;
+      await expect(em.flush()).rejects.toThrow("Author:1 age cannot be updated");
+    });
+
+    it("marks the field as immutable", async () => {
+      const m = getMetadata(Author);
+      expect(m.fields["age"].immutable).toBe(true);
+      expect(m.allFields["age"].immutable).toBe(true);
+    });
+
+    it("subtype marks base type fields as immutable", async () => {
+      const p = getMetadata(Publisher);
+      expect(p.fields["group"].immutable).toBe(false);
+      expect(p.allFields["group"].immutable).toBe(false);
+
+      const sp = getMetadata(LargePublisher);
+      expect(sp.allFields["group"].immutable).toBe(false);
+
+      const lp = getMetadata(SmallPublisher);
+      expect(lp.allFields["group"].immutable).toBe(true);
     });
   });
 });

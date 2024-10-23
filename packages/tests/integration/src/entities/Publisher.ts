@@ -109,7 +109,7 @@ config.setDefault("type", () => PublisherType.Big);
 config.setDefault("baseSyncDefault", () => "BaseSyncDefault");
 config.setDefault("baseAsyncDefault", "authors", () => "BaseAsyncDefault");
 
-// Example of a rule against a base type
+// Example of a rule directly on a base type, against a base type field
 config.addRule(cannotBeUpdated("type"));
 
 config.addRule("authors", (p) => {

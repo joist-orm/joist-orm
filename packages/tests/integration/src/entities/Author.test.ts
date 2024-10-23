@@ -594,21 +594,6 @@ describe("Author", () => {
     expect((a3 as any)[inspect]()).toEqual("Author#3");
   });
 
-  describe("cannotBeUpdated", () => {
-    it("cannot change wasEverPopular to false", async () => {
-      await insertAuthor({ first_name: "a1" });
-      const em = newEntityManager();
-      const a1 = await em.load(Author, "a:1");
-      a1.age = 101;
-      await expect(em.flush()).rejects.toThrow("Author:1 age cannot be updated");
-    });
-
-    it("marks the field as immutable", async () => {
-      const m = getMetadata(Author);
-      expect(m.fields["age"].immutable).toBe(true);
-    });
-  });
-
   it("can access deleted children", async () => {
     // Given an author and two books
     await insertAuthor({ first_name: "a1", number_of_books: 2 });

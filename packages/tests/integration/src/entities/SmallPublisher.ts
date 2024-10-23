@@ -1,7 +1,5 @@
-import { Entity, PublisherGroup, SmallPublisherCodegen } from "./entities";
-
-import { hasReactiveField, ManyToOneReference, ReactiveField } from "joist-orm";
-import { smallPublisherConfig as config } from "./entities";
+import { cannotBeUpdated, hasReactiveField, ManyToOneReference, ReactiveField } from "joist-orm";
+import { smallPublisherConfig as config, Entity, PublisherGroup, SmallPublisherCodegen } from "./entities";
 
 // For testing an interface that is used on a subtype, with a relation from the base type
 type HasGroup<T extends Entity> = {
@@ -45,6 +43,9 @@ config.addRule("authors", (sp) => {
     return "SmallPublishers cannot have more than 5 authors";
   }
 });
+
+// Example of a rule on a subtype, against a base type field
+config.addRule(cannotBeUpdated("group"));
 
 // Noop rule to verify we can check both subtype & based type fields
 config.beforeFlush((sp) => {

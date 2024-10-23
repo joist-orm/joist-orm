@@ -19,8 +19,8 @@ const typeToMetaMap = new Map<string, EntityMetadata>();
 /** Performs our boot-time initialization, i.e. hooking up reactivity. */
 export function configureMetadata(metas: EntityMetadata[]): void {
   populateConstructorMaps(metas);
-  setImmutableFields(metas);
   hookUpBaseTypeAndSubTypes(metas);
+  setImmutableFields(metas);
   reverseIndexReactivity(metas);
   populatePolyComponentFields(metas);
   fireAfterMetadatas(metas);
@@ -69,11 +69,16 @@ function setImmutableFields(metas: EntityMetadata[]): void {
     // Scan rules for cannotBeUpdated so that we can set `field.immutable`
     meta.config.__data.rules.forEach((rule) => {
       if (isCannotBeUpdatedRule(rule.fn) && rule.fn.immutable) {
-        const field = meta.fields[rule.fn.field];
-        if (!field) {
-          throw new Error(`Missing field '${rule.fn.field}' for cannotBeUpdated at ${rule.name}`);
+        // Usually the field will exist directly in meta.fields
+        const selfField = meta.fields[rule.fn.field];
+        // Or it might have come in from a base type in meta.allFields
+        const baseField = meta.allFields[rule.fn.field];
+        // Either way, at least one should exist
+        if (!selfField && !baseField) {
+          throw new Error(`Missing field '${meta.type}.${rule.fn.field}' for cannotBeUpdated at ${rule.name}`);
         }
-        field.immutable = true;
+        if (selfField) selfField.immutable = true;
+        if (baseField) baseField.immutable = true;
       }
     });
   }

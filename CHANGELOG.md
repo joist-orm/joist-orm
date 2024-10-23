@@ -1,3 +1,10 @@
+# [1.208.0](https://github.com/joist-orm/joist-orm/compare/v1.207.0...v1.208.0) (2024-10-23)
+
+
+### Features
+
+* Allow o2m subtype specialization. ([#1273](https://github.com/joist-orm/joist-orm/issues/1273)) ([f951bf8](https://github.com/joist-orm/joist-orm/commit/f951bf8664a6958e98b0ec8dcd6b4ecec61baa72))
+
 # [1.207.0](https://github.com/joist-orm/joist-orm/compare/v1.206.1...v1.207.0) (2024-10-23)
 
 

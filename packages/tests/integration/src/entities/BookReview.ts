@@ -9,12 +9,21 @@ import {
   Reference,
   withLoaded,
 } from "joist-orm";
-import { Author, BookReviewCodegen, bookReviewConfig as config, Publisher } from "./entities";
+import { Author, Book, BookReviewCodegen, bookReviewConfig as config, Publisher } from "./entities";
+
+// For testing cross-entity hook ordering. Normally we'd used a transientFields flag, but we want
+// the `Book.beforeFlush` to be able to read this value without a `"reviews"` load hint, as that
+// would cause it's read to naturally fall after the `BookReview.beforeFlush` hook. Instead, we
+// want to test that only the `config.runHooksBefore` is causing the `Book` hooks to wait a bit.
+export const bookReviewBeforeFlushRan = { value: false };
 
 export class BookReview extends BookReviewCodegen {
   // Currently this infers as Reference<BookReview, Author, undefined> --> it should be never...
   readonly author: Reference<BookReview, Author, never> = hasOneThrough((review) => review.book.author);
-  transientFields = { numberOfIsPublicCalcs: 0, numberOfIsPublic2Calcs: 0 };
+  transientFields = {
+    numberOfIsPublicCalcs: 0,
+    numberOfIsPublic2Calcs: 0,
+  };
 
   // This is kind of silly domain wise, but used as an example of hasOneDerived with a load hint. We don't
   // technically have any conditional logic in `get` so could use a lens, but we want to test hasOneDerived.
@@ -62,6 +71,14 @@ export class BookReview extends BookReviewCodegen {
 
 // Example of cannotBeUpdated on a m2o so "it won't be reactive" (but really is b/c of creates & deletes)
 config.addRule(cannotBeUpdated("book"));
+
+// For testing cross-entity hook ordering
+config.runHooksBefore(Book);
+
+// For testing cross-entity hook ordering
+config.beforeFlush((br) => {
+  bookReviewBeforeFlushRan.value = true;
+});
 
 config.beforeDelete({ book: "author" }, (br) => {
   // to ensure relations are not cleared out until after all beforeDelete hooks are run, we walk through cascade delete

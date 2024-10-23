@@ -34,6 +34,7 @@ import {
   Publisher,
   PublisherSize,
   Tag,
+  bookReviewBeforeFlushRan,
   newAuthor,
   newBook,
   newBookReview,
@@ -684,6 +685,19 @@ describe("EntityManager", () => {
     expect(author.graduated).toBeUndefined();
     await em.flush();
     expect(author.graduated).toBeDefined();
+  });
+
+  it("can order hooks between entities", async () => {
+    // Given two new entities
+    const em = newEntityManager();
+    const b = newBook(em);
+    newBookReview(em);
+    // And the flag is false
+    bookReviewBeforeFlushRan.value = false;
+    // When we flush
+    await em.flush();
+    // Then the book hook was ran after the review hook
+    expect(b.transientFields.bookReviewBeforeFlushRan).toBe(true);
   });
 
   it("cannot modify an entity during a flush outside hooks", async () => {

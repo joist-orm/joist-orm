@@ -1,5 +1,5 @@
 import { AsyncProperty, hasReactiveAsyncProperty, hasReactiveField, ReactiveField } from "joist-orm";
-import { Author, BookCodegen, bookConfig as config } from "./entities";
+import { Author, BookCodegen, bookReviewBeforeFlushRan, bookConfig as config } from "./entities";
 
 export class Book extends BookCodegen {
   rulesInvoked = 0;
@@ -9,7 +9,7 @@ export class Book extends BookCodegen {
   numberOfBooks2RuleInvoked = 0;
   authorSetWhenDeleteRuns: boolean | undefined = undefined;
   afterCommitCheckTagsChanged: boolean | undefined = undefined;
-  transientFields = { throwNpeInSearch: false };
+  transientFields = { throwNpeInSearch: false, bookReviewBeforeFlushRan: false };
 
   /** For testing reacting to poly CommentParent properties. */
   readonly commentParentInfo: AsyncProperty<Book, string> = hasReactiveAsyncProperty(
@@ -113,6 +113,11 @@ config.beforeFlush((book) => {
   if (book.changes.fields.includes("tags") && book.title.includes("To be changed by hook")) {
     book.title = "Tags Changed";
   }
+});
+
+// For testing cross-entity hook ordering
+config.beforeFlush((b) => {
+  b.transientFields.bookReviewBeforeFlushRan = bookReviewBeforeFlushRan.value;
 });
 
 // Example to ensure the m2m changes are tracked until afterCommit is called

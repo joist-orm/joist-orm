@@ -1244,9 +1244,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 
           await setAsyncDefaults(suppressedDefaultTypeErrors, this.ctx, Todo.groupByType(todos));
           maybeBumpUpdatedAt(todos, now);
-          await beforeCreate(this.ctx, todos);
-          await beforeUpdate(this.ctx, todos);
-          await beforeFlush(this.ctx, todos);
+
+          for (const group of maybeSetupHookOrdering(todos)) {
+            await beforeCreate(this.ctx, group);
+            await beforeUpdate(this.ctx, group);
+            await beforeFlush(this.ctx, group);
+          }
 
           // Call `setField` just to get the column marked as dirty if needed.
           // This can come after the hooks, b/c if the hooks read any of these
@@ -2131,4 +2134,19 @@ export class ReadOnlyError extends Error {
   constructor() {
     super("EntityManager is read-only");
   }
+}
+
+function maybeSetupHookOrdering(todos: Record<string, Todo>): Record<string, Todo>[] {
+  // I'm too rushed to use a topo sort
+  const group1: Record<string, Todo> = {};
+  const group2: Record<string, Todo> = {};
+  for (const todo of Object.values(todos)) {
+    // If I should run before `cstr`, I go in group1
+    const shouldRunBeforeAnotherGroup = todo.metadata.config.__data.runHooksBefore.some(
+      (cstr) => getBaseMeta(getMetadata(cstr)).type in todos,
+    );
+    const group = shouldRunBeforeAnotherGroup ? group1 : group2;
+    group[todo.metadata.type] = todo;
+  }
+  return Object.keys(group1).length ? [group1, group2] : [group2];
 }

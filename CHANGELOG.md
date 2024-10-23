@@ -1,3 +1,10 @@
+# [1.207.0](https://github.com/joist-orm/joist-orm/compare/v1.206.1...v1.207.0) (2024-10-23)
+
+
+### Features
+
+* Add cross-entity hook ordering. ([#1271](https://github.com/joist-orm/joist-orm/issues/1271)) ([e74071d](https://github.com/joist-orm/joist-orm/commit/e74071d32964e514e749b5935974905cc3fd38ce))
+
 ## [1.206.1](https://github.com/joist-orm/joist-orm/compare/v1.206.0...v1.206.1) (2024-10-21)
 
 

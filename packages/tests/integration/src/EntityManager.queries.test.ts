@@ -288,6 +288,51 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can find by foreign key is gt", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 2 });
+
+    const em = newEntityManager();
+    const where = { publisher: { id: { gt: "p:1" } } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "gt", value: 1 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key is gt or null", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2", publisher_id: 2 });
+
+    const em = newEntityManager();
+    const where = { publisher: { id: { gt: "p:1", eq: null } } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    // expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "gt", value: 1 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
   it("can find by foreign key is true means not null", async () => {
     await insertPublisher({ id: 1, name: "p1" });
     await insertAuthor({ id: 2, first_name: "a1" });

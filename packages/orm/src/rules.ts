@@ -85,6 +85,17 @@ export function cannotBeUpdated<T extends Entity, K extends keyof Changes<T> & s
   return Object.assign(fn, { field, immutable: unless === undefined });
 }
 
+/**
+ * Creates a validation rule that a field cannot be updated; it can only be set on creation.
+ *
+ * If the optional `unless` function returns true, then the update is allowed.
+ */
+export function cannotBeUpdatedOnceSet<T extends Entity, K extends keyof Changes<T> & string>(
+  field: K,
+): ValidationRule<T> {
+  return cannotBeUpdated(field, (entity) => (entity as any).changes[field].originalValue === undefined);
+}
+
 type CannotBeUpdatedRule<T extends Entity> = ValidationRule<T> & { field: string; immutable: boolean };
 
 export function isCannotBeUpdatedRule(rule: Function): rule is CannotBeUpdatedRule<any> {

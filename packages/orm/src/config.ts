@@ -188,8 +188,7 @@ export class ConfigApi<T extends Entity, C> {
   /** Adds an asynchronous default for `fieldName` to the result of a hinted lambda. */
   setDefault<K extends keyof SettableFields<FieldsOf<T>> & string, const H extends ReactiveHint<T>, F = FieldsOf<T>[K]>(
     fieldName: K,
-    // We use a ReactiveHint so that we get field-level dependencies that means someday
-    // we could drive "which default to set first?" precedence decisions.
+    // We use a ReactiveHint so that we get field-level dependencies to drive precedence decisions
     hint: H,
     fn: (
       entity: Reacted<T, H>,

@@ -1,3 +1,10 @@
+## [1.208.1](https://github.com/joist-orm/joist-orm/compare/v1.208.0...v1.208.1) (2024-10-23)
+
+
+### Bug Fixes
+
+* Fix subtypes adding cannotBeUpdated to base field. ([#1274](https://github.com/joist-orm/joist-orm/issues/1274)) ([ebbfd38](https://github.com/joist-orm/joist-orm/commit/ebbfd387c8570d5e4118f12c9b592acbca3f2ba8))
+
 # [1.208.0](https://github.com/joist-orm/joist-orm/compare/v1.207.0...v1.208.0) (2024-10-23)
 
 

@@ -29,17 +29,22 @@ export function applyInheritanceUpdates(config: Config, db: DbMetadata): void {
 function setupSubTypeSpecialization(config: Config, entities: EntityDbMetadata[]): void {
   for (const entity of entities) {
     if (entity.baseType) {
-      // Look through the base's m2o's, looking for a config specialization
-      for (const m2o of entity.baseType.manyToOnes) {
+      // Look through the base's m2os & o2ms, looking for a config specialization
+      for (const rel of [...entity.baseType.manyToOnes, ...entity.baseType.oneToManys]) {
         const subType =
-          config.entities[entity.name]?.relations?.[m2o.fieldName]?.subType ??
-          config.entities[entity.baseType.name]?.relations?.[m2o.fieldName]?.subType;
-        if (subType === "self") {
+          config.entities[entity.name]?.relations?.[rel.fieldName]?.subType ??
+          config.entities[entity.baseType.name]?.relations?.[rel.fieldName]?.subType;
+        if (!subType) {
+          // continue...
+        } else if (subType === "self" && rel.kind === "m2o") {
           // Specialize `TaskNew.copiedFrom: TaskNew` & `TaskOld.copiedFrom: TaskOld`
-          entity.manyToOnes.push({ ...m2o, otherEntity: makeEntity(entity.name) });
-        } else if (subType) {
-          // Otherwise specialize `SmallPublisher.group: SmallPublisherGroup`
-          entity.manyToOnes.push({ ...m2o, otherEntity: makeEntity(subType) });
+          entity.manyToOnes.push({ ...rel, otherEntity: makeEntity(entity.name) });
+        } else if (rel.kind === "m2o") {
+          // Specialize `SmallPublisher.group: SmallPublisherGroup`
+          entity.manyToOnes.push({ ...rel, otherEntity: makeEntity(subType) });
+        } else if (rel.kind === "o2m") {
+          // Specialize `SmallPublisherGroup.publishers: SmallPublisher`
+          entity.oneToManys.push({ ...rel, otherEntity: makeEntity(subType) });
         }
       }
     }

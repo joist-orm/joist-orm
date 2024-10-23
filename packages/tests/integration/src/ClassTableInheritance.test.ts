@@ -10,6 +10,7 @@ import {
   newPublisher,
   newPublisherGroup,
   newSmallPublisher,
+  newSmallPublisherGroup,
   newUser,
   Publisher,
   PublisherGroup,
@@ -513,5 +514,13 @@ describe("ClassTableInheritance", () => {
     );
     // And em.flush fails
     await expect(em.flush()).rejects.toThrow("group must be a SmallPublisherGroup not PublisherGroup#1");
+  });
+
+  it("can specialize a base type o2m", async () => {
+    // Given we create a SmallPublisherGroup
+    const em = newEntityManager();
+    const spg = newSmallPublisherGroup(em, { publishers: [{}] });
+    // Then we know it's publishers are SmallPublishers
+    expect(spg.publishers.get[0].city).toBe("city");
   });
 });

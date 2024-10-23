@@ -4,10 +4,15 @@ import {
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
+  type EntityFilter,
+  type EntityGraphQLFilter,
   type EntityMetadata,
   failNoIdYet,
+  type FilterOf,
   type Flavor,
   getField,
+  type GraphQLFilterOf,
+  hasMany,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -33,7 +38,6 @@ import {
   type Entity,
   EntityManager,
   newSmallPublisherGroup,
-  Publisher,
   PublisherGroup,
   type PublisherGroupFields,
   type PublisherGroupFilter,
@@ -41,8 +45,11 @@ import {
   type PublisherGroupIdsOpts,
   type PublisherGroupOpts,
   type PublisherGroupOrder,
+  SmallPublisher,
   SmallPublisherGroup,
   smallPublisherGroupMeta,
+  type SmallPublisherId,
+  smallPublisherMeta,
 } from "../entities";
 
 export type SmallPublisherGroupId = Flavor<string, SmallPublisherGroup> & Flavor<string, "PublisherGroup">;
@@ -54,17 +61,21 @@ export interface SmallPublisherGroupFields extends PublisherGroupFields {
 
 export interface SmallPublisherGroupOpts extends PublisherGroupOpts {
   smallName?: string | null;
+  publishers?: SmallPublisher[];
 }
 
 export interface SmallPublisherGroupIdsOpts extends PublisherGroupIdsOpts {
+  publisherIds?: SmallPublisherId[] | null;
 }
 
 export interface SmallPublisherGroupFilter extends PublisherGroupFilter {
   smallName?: ValueFilter<string, null>;
+  publishers?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null | undefined>;
 }
 
 export interface SmallPublisherGroupGraphQLFilter extends PublisherGroupGraphQLFilter {
   smallName?: ValueGraphQLFilter<string>;
+  publishers?: EntityGraphQLFilter<SmallPublisher, SmallPublisherId, GraphQLFilterOf<SmallPublisher>, null | undefined>;
 }
 
 export interface SmallPublisherGroupOrder extends PublisherGroupOrder {
@@ -260,7 +271,14 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
-  get publishers(): Collection<SmallPublisherGroup, Publisher> {
-    return super.publishers as Collection<SmallPublisherGroup, Publisher>;
+  get publishers(): Collection<SmallPublisherGroup, SmallPublisher> {
+    return this.__data.relations.publishers ??= hasMany(
+      this,
+      smallPublisherMeta,
+      "publishers",
+      "group",
+      "group_id",
+      undefined,
+    );
   }
 }

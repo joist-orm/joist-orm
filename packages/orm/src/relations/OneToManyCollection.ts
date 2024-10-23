@@ -143,7 +143,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     this.#hasBeenSet = true;
 
     // If we're changing `a1.books = [b1, b2]` to `a1.books = [b2]`, then implicitly delete the old book
-    const otherCannotChange = this.otherMeta.fields[this.otherFieldName].immutable;
+    const otherCannotChange = this.otherMeta.allFields[this.otherFieldName].immutable;
     if (this.isCascadeDelete && otherCannotChange) {
       const implicitlyDeleted = this.loaded.filter((e) => !values.includes(e));
       implicitlyDeleted.forEach((e) => this.entity.em.delete(e));

@@ -76,7 +76,7 @@
       },
       "tag": "p"
     },
-    "SmallPublisherGroup": { "tag": "pg" },
+    "SmallPublisherGroup": { "relations": { "publishers": { "subType": "SmallPublisher" } }, "tag": "pg" },
     "Tag": { "tag": "t" },
     "Task": {
       "fields": {

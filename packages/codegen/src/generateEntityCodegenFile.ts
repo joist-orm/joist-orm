@@ -938,11 +938,14 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
   });
   // Specialize
   const o2mBase: Relation[] =
-    meta.baseType?.oneToManys.map((o2m) => {
-      const { fieldName, otherEntity } = o2m;
-      const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
-      return { kind: "super", fieldName, decl };
-    }) ?? [];
+    meta.baseType?.oneToManys
+      // Skip o2ms that are already specialized to a different otherEntity, i.e. `SmallPublisherGroup.publishers: SmallPublisher`
+      .filter((o2m) => !meta.oneToManys.find((o) => o.fieldName === o2m.fieldName))
+      .map((o2m) => {
+        const { fieldName, otherEntity } = o2m;
+        const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
+        return { kind: "super", fieldName, decl };
+      }) ?? [];
 
   // Add large OneToMany
   const lo2m: Relation[] = meta.largeOneToManys.map((o2m) => {

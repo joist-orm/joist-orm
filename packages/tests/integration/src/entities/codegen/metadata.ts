@@ -747,7 +747,11 @@ export const smallPublisherGroupMeta: EntityMetadata<SmallPublisherGroup> = {
   idDbType: "int",
   tagName: "pg",
   tableName: "small_publisher_groups",
-  fields: { "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("pg", "id", "id", "int"), immutable: true }, "smallName": { kind: "primitive", fieldName: "smallName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("smallName", "small_name", "text"), immutable: false } },
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("pg", "id", "id", "int"), immutable: true },
+    "smallName": { kind: "primitive", fieldName: "smallName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("smallName", "small_name", "text"), immutable: false },
+    "publishers": { kind: "o2m", fieldName: "publishers", fieldIdName: "publisherIds", required: false, otherMetadata: () => smallPublisherMeta, otherFieldName: "group", serde: undefined, immutable: false },
+  },
   allFields: {},
   orderBy: undefined,
   timestampFields: undefined!,

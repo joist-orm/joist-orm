@@ -36,7 +36,7 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
         conditions: [
           {
             kind: "column",
-            alias,
+            alias: `${alias}${meta.allFields[collection.otherFieldName].aliasSuffix}`,
             column: collection.otherColumnName,
             dbType: meta.idDbType,
             cond: { kind: "in", value: keys },

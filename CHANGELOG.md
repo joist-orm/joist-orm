@@ -1,3 +1,10 @@
+## [1.208.5](https://github.com/joist-orm/joist-orm/compare/v1.208.4...v1.208.5) (2024-10-29)
+
+
+### Bug Fixes
+
+* Specialize the o2m side of subType: self m2os. ([#1281](https://github.com/joist-orm/joist-orm/issues/1281)) ([74ebf33](https://github.com/joist-orm/joist-orm/commit/74ebf33e058cee648b0d8627bae41cbcfd01f1ae))
+
 ## [1.208.4](https://github.com/joist-orm/joist-orm/compare/v1.208.3...v1.208.4) (2024-10-29)
 
 

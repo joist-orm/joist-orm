@@ -5,12 +5,13 @@ import {
   isLoadedCollection,
   isLoadedReference,
   isReactiveField,
+  isRelation,
   LoadedCollection,
   LoadedProperty,
   LoadedReference,
   PolymorphicReference,
 } from "./relations";
-import { MaybePromise, maybePromiseThen } from "./utils";
+import { fail, MaybePromise, maybePromiseThen } from "./utils";
 
 // This type seems is overly complex for references, but it's necessary in order to ensure that potential
 // undefined references are properly propagated and that polymorphic references don't overwhelm the type system.
@@ -65,12 +66,16 @@ export function withLoaded<T extends Entity, H extends LoadHint<T>, L extends Lo
       new Proxy(loaded, {
         get: (target, prop) => {
           const value: any = (target as any)[prop];
-          return isLoadedReference(value) ||
-            isLoadedCollection(value) ||
-            isLoadedAsyncProperty(value) ||
-            isReactiveField(value)
-            ? value.get
-            : value;
+          if (isRelation(value)) {
+            return isLoadedReference(value) ||
+              isLoadedCollection(value) ||
+              isLoadedAsyncProperty(value) ||
+              isReactiveField(value)
+              ? value.get
+              : fail(`${target}.${String(prop)} is not loaded`);
+          } else {
+            return value;
+          }
         },
       }) as WithLoaded<T, H, L>,
   );

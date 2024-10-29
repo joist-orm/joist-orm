@@ -1,3 +1,10 @@
+## [1.208.2](https://github.com/joist-orm/joist-orm/compare/v1.208.1...v1.208.2) (2024-10-29)
+
+
+### Bug Fixes
+
+* withLoaded should fail when relations are unloaded. ([#1277](https://github.com/joist-orm/joist-orm/issues/1277)) ([202be0f](https://github.com/joist-orm/joist-orm/commit/202be0f6ea7dcbdb24173aa28d31d0ddaf32959c))
+
 ## [1.208.1](https://github.com/joist-orm/joist-orm/compare/v1.208.0...v1.208.1) (2024-10-23)
 
 

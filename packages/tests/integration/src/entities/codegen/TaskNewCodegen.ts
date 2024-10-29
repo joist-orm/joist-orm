@@ -79,6 +79,7 @@ export interface TaskNewOpts extends TaskOpts {
   copiedFrom?: TaskNew | TaskNewId | null;
   newTaskTaskItems?: TaskItem[];
   selfReferentialTasks?: TaskNew[];
+  copiedTo?: TaskNew[];
 }
 
 export interface TaskNewIdsOpts extends TaskIdsOpts {
@@ -87,6 +88,7 @@ export interface TaskNewIdsOpts extends TaskIdsOpts {
   copiedFromId?: TaskNewId | null;
   newTaskTaskItemIds?: TaskItemId[] | null;
   selfReferentialTaskIds?: TaskNewId[] | null;
+  copiedToIds?: TaskNewId[] | null;
 }
 
 export interface TaskNewFilter extends TaskFilter {
@@ -96,6 +98,7 @@ export interface TaskNewFilter extends TaskFilter {
   copiedFrom?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
   newTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   selfReferentialTasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
+  copiedTo?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
 }
 
 export interface TaskNewGraphQLFilter extends TaskGraphQLFilter {
@@ -105,6 +108,7 @@ export interface TaskNewGraphQLFilter extends TaskGraphQLFilter {
   copiedFrom?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   newTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   selfReferentialTasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
+  copiedTo?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
 }
 
 export interface TaskNewOrder extends TaskOrder {
@@ -322,6 +326,17 @@ export abstract class TaskNewCodegen extends Task implements Entity {
     );
   }
 
+  get copiedTo(): Collection<TaskNew, TaskNew> {
+    return this.__data.relations.copiedTo ??= hasMany(
+      this,
+      taskNewMeta,
+      "copiedTo",
+      "copiedFrom",
+      "copied_from_id",
+      undefined,
+    );
+  }
+
   get selfReferential(): ManyToOneReference<TaskNew, TaskNew, undefined> {
     return this.__data.relations.selfReferential ??= hasOne(
       this,
@@ -355,10 +370,6 @@ export abstract class TaskNewCodegen extends Task implements Entity {
       "copiedTo",
       "copiedFromsRecursive",
     );
-  }
-
-  get copiedTo(): Collection<TaskNew, Task> {
-    return super.copiedTo as Collection<TaskNew, Task>;
   }
 
   get taskTaskItems(): Collection<TaskNew, TaskItem> {

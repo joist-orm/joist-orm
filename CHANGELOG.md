@@ -1,3 +1,10 @@
+## [1.208.4](https://github.com/joist-orm/joist-orm/compare/v1.208.3...v1.208.4) (2024-10-29)
+
+
+### Bug Fixes
+
+* Fix withLoaded for RFs/RQFs/RGs. ([#1279](https://github.com/joist-orm/joist-orm/issues/1279)) ([f9c9ffe](https://github.com/joist-orm/joist-orm/commit/f9c9ffeb725ee9839ee0f92a8fe06eac68dd2bf7))
+
 ## [1.208.3](https://github.com/joist-orm/joist-orm/compare/v1.208.2...v1.208.3) (2024-10-29)
 
 

@@ -1,7 +1,7 @@
 import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { getMetadata } from "../EntityMetadata";
-import { LoadHint, Loaded } from "../loadHints";
+import { LoadHint, Loaded, isLoaded } from "../loadHints";
 import { MaybeReactedPropertyEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { tryResolve } from "../utils";
 
@@ -51,8 +51,9 @@ export function hasReactiveAsyncProperty<T extends Entity, const H extends React
 }
 
 export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> implements AsyncProperty<T, V> {
-  private loaded = false;
-  private loadPromise: any;
+  // We'll probe for loaded if undefined
+  #loaded: boolean | undefined = undefined;
+  #loadPromise: any;
 
   readonly #entity: T;
   #hint: H | undefined;
@@ -70,10 +71,10 @@ export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> imple
   }
 
   load(): Promise<V> {
-    const { loadHint, fn } = this;
-    if (!this.loaded) {
-      return (this.loadPromise ??= this.#entity.em.populate(this.#entity, loadHint).then((loaded) => {
-        this.loaded = true;
+    if (!this.isLoaded) {
+      const { loadHint, fn } = this;
+      return (this.#loadPromise ??= this.#entity.em.populate(this.#entity, loadHint).then((loaded) => {
+        this.#loaded = true;
         return fn(loaded);
       }));
     }
@@ -82,6 +83,7 @@ export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> imple
 
   get loadHint(): H {
     if (!this.#hint) {
+      // Would be nice to statically (but lazily?) cache this...
       this.#hint = convertToLoadHint(getMetadata(this.#entity), this.#reactiveHint as any) as H;
     }
     return this.#hint;
@@ -96,7 +98,11 @@ export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> imple
   }
 
   get isLoaded() {
-    return this.loaded;
+    // Probe the first time, which is useful for factories that are DeepNew
+    if (this.#loaded === undefined) {
+      this.#loaded = isLoaded(this.#entity, this.loadHint);
+    }
+    return !!this.#loaded;
   }
 
   [AsyncPropertyT] = undefined as any as T;

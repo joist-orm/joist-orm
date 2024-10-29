@@ -1,6 +1,7 @@
 import { Entity } from "./Entity";
 import { assertLoaded, Loaded, LoadHint } from "./loadHints";
 import {
+  isAsyncProperty,
   isLoadedAsyncProperty,
   isLoadedCollection,
   isLoadedReference,
@@ -66,7 +67,7 @@ export function withLoaded<T extends Entity, H extends LoadHint<T>, L extends Lo
       new Proxy(loaded, {
         get: (target, prop) => {
           const value: any = (target as any)[prop];
-          if (isRelation(value)) {
+          if (isRelation(value) || isAsyncProperty(value)) {
             return isLoadedReference(value) ||
               isLoadedCollection(value) ||
               isLoadedAsyncProperty(value) ||

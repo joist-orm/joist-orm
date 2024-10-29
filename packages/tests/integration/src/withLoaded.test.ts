@@ -4,6 +4,13 @@ import { withLoaded } from "joist-orm";
 import { insertAuthor, insertBook } from "src/entities/inserts";
 
 describe("withLoaded", () => {
+  it("with a async property", async () => {
+    const em = newEntityManager();
+    const author = newAuthor(em);
+    const { numberOfBooks2 } = withLoaded(author);
+    expect(numberOfBooks2).toBe(0);
+  });
+
   it("with a m2o", async () => {
     const em = newEntityManager();
     const author = newAuthor(em, { publisher: {} });

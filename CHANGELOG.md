@@ -1,3 +1,10 @@
+## [1.208.3](https://github.com/joist-orm/joist-orm/compare/v1.208.2...v1.208.3) (2024-10-29)
+
+
+### Bug Fixes
+
+* Fix withLoaded against Async Properties. ([#1278](https://github.com/joist-orm/joist-orm/issues/1278)) ([b41beb8](https://github.com/joist-orm/joist-orm/commit/b41beb888ff544552a1d36884e436dd93391c134))
+
 ## [1.208.2](https://github.com/joist-orm/joist-orm/compare/v1.208.1...v1.208.2) (2024-10-29)
 
 

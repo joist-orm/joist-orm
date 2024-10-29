@@ -10,11 +10,11 @@ import { ResolverResult, RunFn } from "./typeUtils";
 export function makeMakeRunInputMutation<C>(runFn: RunFn<C>): MakeRunInputMutation<C> {
   return (resolver) => {
     return (ctx, args) =>
-      runFn(ctx, async (ctx) => {
+      runFn(ctx, (ctx) => {
         const key = Object.keys(resolver)[0];
         return ((resolver as any)[key] as any)(
           {},
-          { input: args instanceof Function ? args() : args ?? {} },
+          { input: args instanceof Function ? args() : (args ?? {}) },
           ctx,
           undefined!,
         );

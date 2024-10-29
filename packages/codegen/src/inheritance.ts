@@ -33,12 +33,17 @@ function setupSubTypeSpecialization(config: Config, entities: EntityDbMetadata[]
       for (const rel of [...entity.baseType.manyToOnes, ...entity.baseType.oneToManys]) {
         const subType =
           config.entities[entity.name]?.relations?.[rel.fieldName]?.subType ??
-          config.entities[entity.baseType.name]?.relations?.[rel.fieldName]?.subType;
+          config.entities[entity.baseType.name]?.relations?.[rel.fieldName]?.subType ??
+          // Probe the otherFieldName for a `subType: "self"` on self-referential relations in STI tables
+          config.entities[entity.baseType.name]?.relations?.[rel.otherFieldName]?.subType;
         if (!subType) {
           // continue...
         } else if (subType === "self" && rel.kind === "m2o") {
           // Specialize `TaskNew.copiedFrom: TaskNew` & `TaskOld.copiedFrom: TaskOld`
           entity.manyToOnes.push({ ...rel, otherEntity: makeEntity(entity.name) });
+        } else if (subType === "self" && rel.kind === "o2m") {
+          // Specialize `TaskNew.copiedTo: TaskNew[]` & `TaskOld.copiedTo: TaskOld[]`
+          entity.oneToManys.push({ ...rel, otherEntity: makeEntity(entity.name) });
         } else if (rel.kind === "m2o") {
           // Specialize `SmallPublisher.group: SmallPublisherGroup`
           entity.manyToOnes.push({ ...rel, otherEntity: makeEntity(subType) });

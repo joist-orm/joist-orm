@@ -82,6 +82,7 @@ export interface TaskOldOpts extends TaskOpts {
   comments?: Comment[];
   oldTaskTaskItems?: TaskItem[];
   tasks?: TaskOld[];
+  copiedTo?: TaskOld[];
   publishers?: Publisher[];
 }
 
@@ -91,6 +92,7 @@ export interface TaskOldIdsOpts extends TaskIdsOpts {
   commentIds?: CommentId[] | null;
   oldTaskTaskItemIds?: TaskItemId[] | null;
   taskIds?: TaskOldId[] | null;
+  copiedToIds?: TaskOldId[] | null;
   publisherIds?: PublisherId[] | null;
 }
 
@@ -101,6 +103,7 @@ export interface TaskOldFilter extends TaskFilter {
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   oldTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
   tasks?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null | undefined>;
+  copiedTo?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null | undefined>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
 }
 
@@ -111,6 +114,7 @@ export interface TaskOldGraphQLFilter extends TaskGraphQLFilter {
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   oldTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   tasks?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null | undefined>;
+  copiedTo?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null | undefined>;
   publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
 }
 
@@ -340,6 +344,17 @@ export abstract class TaskOldCodegen extends Task implements Entity {
     );
   }
 
+  get copiedTo(): Collection<TaskOld, TaskOld> {
+    return this.__data.relations.copiedTo ??= hasMany(
+      this,
+      taskOldMeta,
+      "copiedTo",
+      "copiedFrom",
+      "copied_from_id",
+      undefined,
+    );
+  }
+
   get parentOldTask(): ManyToOneReference<TaskOld, TaskOld, undefined> {
     return this.__data.relations.parentOldTask ??= hasOne(this, taskOldMeta, "parentOldTask", "tasks");
   }
@@ -394,10 +409,6 @@ export abstract class TaskOldCodegen extends Task implements Entity {
       "tasks",
       "publisher_id",
     );
-  }
-
-  get copiedTo(): Collection<TaskOld, Task> {
-    return super.copiedTo as Collection<TaskOld, Task>;
   }
 
   get taskTaskItems(): Collection<TaskOld, TaskItem> {

@@ -6,12 +6,15 @@ import {
   isLoadedCollection,
   isLoadedReference,
   isReactiveField,
+  isReactiveGetter,
+  isReactiveQueryField,
   isRelation,
   LoadedCollection,
   LoadedProperty,
   LoadedReference,
   PolymorphicReference,
 } from "./relations";
+import { isLoadedReactiveQueryField } from "./relations/ReactiveQueryField";
 import { fail, MaybePromise, maybePromiseThen } from "./utils";
 
 // This type seems is overly complex for references, but it's necessary in order to ensure that potential
@@ -67,11 +70,19 @@ export function withLoaded<T extends Entity, H extends LoadHint<T>, L extends Lo
       new Proxy(loaded, {
         get: (target, prop) => {
           const value: any = (target as any)[prop];
-          if (isRelation(value) || isAsyncProperty(value)) {
+          if (
+            isRelation(value) ||
+            isAsyncProperty(value) ||
+            isReactiveField(value) ||
+            isReactiveGetter(value) ||
+            isReactiveQueryField(value)
+          ) {
             return isLoadedReference(value) ||
               isLoadedCollection(value) ||
               isLoadedAsyncProperty(value) ||
-              isReactiveField(value)
+              isReactiveField(value) ||
+              isLoadedReactiveQueryField(value) ||
+              isReactiveGetter(value)
               ? value.get
               : fail(`${target}.${String(prop)} is not loaded`);
           } else {

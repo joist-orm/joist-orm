@@ -1,4 +1,4 @@
-import { Book, newAuthor } from "@src/entities";
+import { Book, newAuthor, newBook, newPublisher } from "@src/entities";
 import { newEntityManager } from "@src/testEm";
 import { withLoaded } from "joist-orm";
 import { insertAuthor, insertBook } from "src/entities/inserts";
@@ -9,6 +9,35 @@ describe("withLoaded", () => {
     const author = newAuthor(em);
     const { numberOfBooks2 } = withLoaded(author);
     expect(numberOfBooks2).toBe(0);
+  });
+
+  it("with a reactive field", async () => {
+    const em = newEntityManager();
+    const author = newAuthor(em);
+    const { numberOfPublicReviews } = withLoaded(author);
+    expect(numberOfPublicReviews).toBe(0);
+  });
+
+  it("with a reactive reference", async () => {
+    const em = newEntityManager();
+    const author = newAuthor(em);
+    const book = newBook(em);
+    const { favoriteBook } = withLoaded(author);
+    expect(favoriteBook).toMatchEntity(book);
+  });
+
+  it("with a reactive getter", async () => {
+    const em = newEntityManager();
+    const author = newAuthor(em);
+    const { hasLowerCaseFirstName } = withLoaded(author);
+    expect(hasLowerCaseFirstName).toBe(true);
+  });
+
+  it("with a reactive query field", async () => {
+    const em = newEntityManager();
+    const publisher = newPublisher(em);
+    const { numberOfBookReviews } = withLoaded(publisher);
+    expect(numberOfBookReviews).toBe(0);
   });
 
   it("with a m2o", async () => {

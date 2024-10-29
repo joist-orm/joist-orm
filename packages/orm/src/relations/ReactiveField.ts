@@ -136,6 +136,7 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   }
 
   get isLoaded() {
+    // Constantly evaluating this is likely a performance issue--need to add caching
     const hintLoaded = isLoaded(this.entity, this.loadHint);
     if (hintLoaded) {
       this.#loaded = true;

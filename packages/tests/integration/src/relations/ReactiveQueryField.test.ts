@@ -59,7 +59,7 @@ describe("ReactiveQueryField", () => {
 
   it("preserves correct changed data to beforeCommit hooks", async () => {
     const em = newEntityManager();
-    const p = newLargePublisher(em);
+    const p = newLargePublisher(em, { tags: [{}] });
     newBookReview(em);
     await em.flush();
     expect(p.transientFields.wasNewInBeforeCommit).toBe(true);
@@ -73,6 +73,7 @@ describe("ReactiveQueryField", () => {
       "baseSyncDefault",
       "baseAsyncDefault",
       "titlesOfFavoriteBooks",
+      "tags",
     ]);
   });
 

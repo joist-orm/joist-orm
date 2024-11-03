@@ -99,43 +99,47 @@ export class AsyncDefault<T extends Entity> {
     baseMetadata: EntityMetadata,
     inserts: T[],
   ): Promise<any> {
-    // Ensure our dependencies have been set
-    // (...and only wait on dependencies that are actively being calculated)
-    const deps = this.deps(baseMetadata).filter((dep) => dt.hasMaybePending(dep.meta));
-    if (deps.length > 0) {
-      // console.log(
-      //   "WAITING ON",
-      //   deps.map((dep) => `${dep.meta.type}.${dep.fieldName}`),
-      //   `FOR ${baseMetadata.type}.${this.fieldName}`,
-      // );
-      await Promise.all(deps.map((dep) => dt.getDeferred(dep.meta, dep.fieldName).promise));
-    }
-    // Run our default for all entities
-    await Promise.all(
-      inserts
-        .map(async (entity) => {
-          const value = (entity as any)[this.fieldName];
-          if (value === undefined) {
-            (entity as any)[this.fieldName] = await this.getValue(entity, ctx);
-          } else if (isLoadedReference(value) && !value.isSet) {
-            value.set(await this.getValue(entity, ctx));
-          }
-        })
-        .map((promise) =>
-          promise.catch((reason) => {
-            // If we NPE-d because a required field wasn't set, hold on to this and
-            // let the validation failures reject the `em.flush` instead of us
-            if (reason instanceof TypeError) {
-              suppressedTypeErrors.push(reason);
-            } else {
-              throw reason;
+    try {
+      // Ensure our dependencies have been set
+      // (...and only wait on dependencies that are actively being calculated)
+      const deps = this.deps(baseMetadata).filter((dep) => dt.hasMaybePending(dep.meta));
+      if (deps.length > 0) {
+        // console.log(
+        //   "WAITING ON",
+        //   deps.map((dep) => `${dep.meta.type}.${dep.fieldName}`),
+        //   `FOR ${baseMetadata.type}.${this.fieldName}`,
+        // );
+        await Promise.all(deps.map((dep) => dt.getDeferred(dep.meta, dep.fieldName).promise));
+      }
+      // Run our default for all entities
+      await Promise.all(
+        inserts
+          .map(async (entity) => {
+            const value = (entity as any)[this.fieldName];
+            if (value === undefined) {
+              (entity as any)[this.fieldName] = await this.getValue(entity, ctx);
+            } else if (isLoadedReference(value) && !value.isSet) {
+              value.set(await this.getValue(entity, ctx));
             }
-          }),
-        ),
-    );
-    // Mark ourselves as complete
-    // console.log(`FINISHED ${baseMetadata.type}.${this.fieldName}`);
-    dt.getDeferred(baseMetadata, this.fieldName).resolve();
+          })
+          .map((promise) =>
+            promise.catch((reason) => {
+              // If we NPE-d because a required field wasn't set, hold on to this and
+              // let the validation failures reject the `em.flush` instead of us
+              if (reason instanceof TypeError) {
+                suppressedTypeErrors.push(reason);
+              } else {
+                throw reason;
+              }
+            }),
+          ),
+      );
+    } finally {
+      // Mark ourselves as complete (from a `finally` just in case our `setDefault`
+      // blows up, we don't forever block the other defaults waiting on us).
+      // console.log(`FINISHED ${baseMetadata.type}.${this.fieldName}`);
+      dt.getDeferred(baseMetadata, this.fieldName).resolve();
+    }
   }
 
   setOnFactoryEntity(ctx: unknown, entity: T): void {
@@ -251,7 +255,7 @@ export function getDefaultDependencies<T extends Entity>(
  * Really this is just a smaller wrapper around a map of `Deferred`s.
  */
 class DependencyTracker {
-  // Create a map "new entity -> fieldName -> deferred"
+  // Create a map "entityType -> fieldName -> deferred"
   #deferreds = new Map<string, Map<string, Deferred<void>>>();
 
   constructor(entitiesByType: Map<EntityMetadata, Entity[]>) {

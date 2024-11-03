@@ -1,3 +1,10 @@
+## [1.208.6](https://github.com/joist-orm/joist-orm/compare/v1.208.5...v1.208.6) (2024-11-03)
+
+
+### Bug Fixes
+
+* Resolve default deferreds in a promise. ([#1284](https://github.com/joist-orm/joist-orm/issues/1284)) ([57c5fff](https://github.com/joist-orm/joist-orm/commit/57c5fff5de5ab6d15f8d46d0cd3385f75fbf819b))
+
 ## [1.208.5](https://github.com/joist-orm/joist-orm/compare/v1.208.4...v1.208.5) (2024-10-29)
 
 

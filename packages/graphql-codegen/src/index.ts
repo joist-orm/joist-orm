@@ -1,4 +1,4 @@
-import { Config, EntityDbMetadata, EnumMetadata } from "joist-codegen";
+import { Config, DbMetadata } from "joist-codegen";
 import { CodegenFile } from "ts-poet";
 import { generateEnumDetailResolvers } from "./generateEnumDetailResolvers";
 import { generateEnumsGraphql } from "./generateEnumsGraphql";
@@ -9,13 +9,14 @@ import { generateSaveResolvers } from "./generateSaveResolvers";
 import { loadHistory, writeHistory } from "./history";
 import { Fs, newFsImpl } from "./utils";
 
-export async function run(config: Config, entities: EntityDbMetadata[], enums: EnumMetadata): Promise<CodegenFile[]> {
+export async function run(config: Config, dbMeta: DbMetadata): Promise<CodegenFile[]> {
   const fs = newFsImpl("./schema");
 
   // We upsert directly into schema files so we don't use the usual `CodeGenFile[]` return type;
-  await generateGraphqlSchemaFiles(fs, entities);
+  await generateGraphqlSchemaFiles(fs, dbMeta);
 
   // We use the history file to ensure we only generate these once
+  const { entities, enums } = dbMeta;
   const conditionalResolvers = [
     ...generateObjectResolvers(config, entities),
     ...generateSaveResolvers(config, entities),

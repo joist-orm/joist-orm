@@ -1,5 +1,5 @@
 import { snakeCase } from "change-case";
-import { EntityDbMetadata, EnumField, makeEntity, PrimitiveField } from "joist-codegen";
+import { EntityDbMetadata, EnumField, makeEntity, ManyToOneField, PrimitiveField } from "joist-codegen";
 import { plural } from "pluralize";
 import { imp } from "ts-poet";
 import { Fs } from "./utils";
@@ -89,6 +89,28 @@ export function newEnumField(fieldName: string, opts: Partial<EnumField> = {}): 
     enumRows: [],
     isArray: false,
     hasConfigDefault: false,
+    ...opts,
+  };
+}
+
+export function newManyToOneField(
+  fieldName: string,
+  otherEntity: string,
+  opts: Partial<ManyToOneField> = {},
+): ManyToOneField {
+  return {
+    kind: "m2o",
+    fieldName,
+    columnName: snakeCase(fieldName),
+    derived: false,
+    notNull: true,
+    hasConfigDefault: false,
+    dbType: "int",
+    otherFieldName: `other${fieldName}`,
+    otherEntity: makeEntity(otherEntity),
+    isDeferredAndDeferrable: true,
+    constraintName: "",
+    onDelete: "NO ACTION" as any,
     ...opts,
   };
 }

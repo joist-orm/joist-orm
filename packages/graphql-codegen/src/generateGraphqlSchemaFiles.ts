@@ -1,5 +1,5 @@
 import { camelCase } from "change-case";
-import { EntityDbMetadata } from "joist-codegen";
+import { DbMetadata, EntityDbMetadata } from "joist-codegen";
 import { groupBy } from "joist-utils";
 import { GqlField, GqlUnion, mapTypescriptTypeToGraphQLType, upsertIntoFile } from "./graphqlUtils";
 import { loadHistory, writeHistory } from "./history";
@@ -13,12 +13,13 @@ import { Fs } from "./utils";
  * and will only do them once, which allows programmers to manually add/edit/remove fields
  * without this stomping over their changes.
  */
-export async function generateGraphqlSchemaFiles(fs: Fs, entities: EntityDbMetadata[]): Promise<void> {
+export async function generateGraphqlSchemaFiles(fs: Fs, dbMeta: DbMetadata): Promise<void> {
+  const { entities } = dbMeta;
   // Generate the "ideal" fields based solely on the domain model
   const fields = [
     ...createSaveMutation(entities),
-    ...createEntityFields(entities),
-    ...createSaveEntityInputFields(entities),
+    ...createEntityFields(dbMeta),
+    ...createSaveEntityInputFields(dbMeta),
     ...createSaveEntityResultFields(entities),
   ];
 
@@ -71,7 +72,8 @@ function createPolymorphicUnions(entities: EntityDbMetadata[]): GqlUnion[] {
 }
 
 /** Make all the fields for `type Author`, `type Book`, etc. */
-function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
+function createEntityFields(dbMeta: DbMetadata): GqlField[] {
+  const { entities } = dbMeta;
   return entities.flatMap((e) => {
     const file = fileName(e);
     const objectType = "output" as const;
@@ -97,7 +99,9 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
     });
 
     const m2os = e.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
-      const fieldType = `${otherEntity.name}${maybeRequired(notNull)}`;
+      const other = dbMeta.entitiesByName[otherEntity.name];
+      const maybeLike = other.subTypes.length > 0 && !other.abstract ? "Like" : "";
+      const fieldType = `${otherEntity.name}${maybeLike}${maybeRequired(notNull)}`;
       return { ...common, fieldName, fieldType };
     });
 
@@ -119,8 +123,9 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
       return { ...common, fieldName, fieldType };
     });
 
+    // GraphQL wants base fields copy/pasted onto subtypes, so re-run ourselves against just the base type
     const inheritedFields = e.baseClassName
-      ? createEntityFields([findBaseEntity(entities, e.baseClassName)])
+      ? createEntityFields(findBaseEntity(dbMeta, e.baseClassName))
           .map((f) => ({ ...f, ...common }))
           .filter((f) => f.fieldName !== "id")
       : [];
@@ -148,7 +153,8 @@ function createSaveMutation(entities: EntityDbMetadata[]): GqlField[] {
 }
 
 /** Make all the fields for `type SaveAuthorInput`, `type SaveBookBook`, etc. */
-function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
+function createSaveEntityInputFields(dbMeta: DbMetadata): GqlField[] {
+  const { entities } = dbMeta;
   return entities.flatMap((e) => {
     const file = fileName(e);
     const objectType = "input" as const;
@@ -182,7 +188,7 @@ function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
     });
 
     const inherited = e.baseClassName
-      ? createSaveEntityInputFields([findBaseEntity(entities, e.baseClassName)])
+      ? createSaveEntityInputFields(findBaseEntity(dbMeta, e.baseClassName))
           .map((f) => ({ ...f, ...common }))
           .filter((f) => f.fieldName !== "id")
       : [];
@@ -215,6 +221,9 @@ function fileName(e: EntityDbMetadata): string {
   return `${camelCase(e.entity.name)}.graphql`;
 }
 
-function findBaseEntity(entities: EntityDbMetadata[], baseClassName: string): EntityDbMetadata {
-  return entities.find((e) => e.entity.name === baseClassName) as EntityDbMetadata;
+function findBaseEntity(dbMeta: DbMetadata, baseClassName: string): DbMetadata {
+  return {
+    ...dbMeta,
+    entities: dbMeta.entities.filter((e) => e.entity.name === baseClassName),
+  };
 }

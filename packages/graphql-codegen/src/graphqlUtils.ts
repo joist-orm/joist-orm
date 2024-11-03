@@ -76,9 +76,10 @@ function createFieldDoc(objectName: string, fields: GqlField[]): DocumentNode {
   const type = objectType === "output" ? "type" : objectType;
   const maybeArgs = (f: GqlField) => (f.argsString ? `(${f.argsString})` : "");
   const maybeExtends = fields.some((f: GqlField) => f.extends) ? "extend " : "";
-  return parse(`${maybeExtends}${type} ${objectName} {
+  const source = `${maybeExtends}${type} ${objectName} {
     ${fields.map((f) => `${f.fieldName}${maybeArgs(f)}: ${f.fieldType}`)}
-  }`);
+  }`;
+  return parse(source);
 }
 
 function createUnionDoc(union: GqlUnion): DocumentNode {

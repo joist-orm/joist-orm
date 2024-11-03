@@ -1,7 +1,9 @@
-import { EntityDbMetadata } from "joist-codegen";
+import { DbMetadata, EntityDbMetadata } from "joist-codegen";
 import { dateCode, plainDateCode, plainDateTimeCode, zonedDateTimeCode } from "joist-codegen/build/utils";
+import { keyBy } from "joist-utils";
 import { generateGraphqlSchemaFiles } from "./generateGraphqlSchemaFiles";
-import { newEntityMetadata, newEnumField, newFs, newPrimitiveField } from "./testUtils";
+import { newEntityMetadata, newEnumField, newFs, newManyToOneField, newPrimitiveField } from "./testUtils";
+import { Fs } from "./utils";
 
 describe("generateGraphqlSchemaFiles", () => {
   it("creates a new file", async () => {
@@ -10,7 +12,7 @@ describe("generateGraphqlSchemaFiles", () => {
     // And no existing graphql file
     const fs = newFs({});
     // When ran
-    await generateGraphqlSchemaFiles(fs, entities);
+    await generate(fs, entities);
     // We now have a graphql file
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
       "extend type Mutation {
@@ -46,7 +48,7 @@ describe("generateGraphqlSchemaFiles", () => {
       ".history.json": JSON.stringify({ Author: ["id"] }),
     });
     // When ran
-    await generateGraphqlSchemaFiles(fs, entities);
+    await generate(fs, entities);
     // Then we added the new field
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
       "type Author {
@@ -102,7 +104,7 @@ describe("generateGraphqlSchemaFiles", () => {
         "type Author { id: ID! customField: String } input SaveAuthorInput { id: ID customField: String }",
     });
     // When ran
-    await generateGraphqlSchemaFiles(fs, entities);
+    await generate(fs, entities);
     // We added the new field, but did not did the custom field
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
       "type Author {
@@ -142,7 +144,7 @@ describe("generateGraphqlSchemaFiles", () => {
       ".history.json": JSON.stringify({ Author: ["firstName"] }),
     });
     // When ran
-    await generateGraphqlSchemaFiles(fs, entities);
+    await generate(fs, entities);
     // Then we did not re-add it as a new field
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
       "type Author {
@@ -181,7 +183,7 @@ describe("generateGraphqlSchemaFiles", () => {
       `,
     });
     // When ran
-    await generateGraphqlSchemaFiles(fs, entities);
+    await generate(fs, entities);
     // Then we added the new field
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
       "" The author. "
@@ -221,7 +223,7 @@ describe("generateGraphqlSchemaFiles", () => {
     ];
     // When ran
     const fs = newFs({});
-    await generateGraphqlSchemaFiles(fs, entities);
+    await generate(fs, entities);
     // Then the input does not have the createdAt field
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
       "extend type Mutation {
@@ -264,8 +266,8 @@ describe("generateGraphqlSchemaFiles", () => {
     ];
     // When ran
     const fs = newFs({});
-    await generateGraphqlSchemaFiles(fs, entities);
-    // Then the input has both both types of fields as appropriate
+    await generate(fs, entities);
+    // Then the input has both types of fields as appropriate
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
       "extend type Mutation {
         saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
@@ -310,8 +312,8 @@ describe("generateGraphqlSchemaFiles", () => {
     ];
     // When ran
     const fs = newFs({});
-    await generateGraphqlSchemaFiles(fs, entities);
-    // Then the input has both both types of fields as appropriate
+    await generate(fs, entities);
+    // Then the Author links to a PublisherLike
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
       "extend type Mutation {
         saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
@@ -348,8 +350,8 @@ describe("generateGraphqlSchemaFiles", () => {
     ];
     // When ran
     const fs = newFs({});
-    await generateGraphqlSchemaFiles(fs, entities);
-    // Then the input has both both types of fields as appropriate
+    await generate(fs, entities);
+    // Then the input has both types of fields as appropriate
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
       "extend type Mutation {
         saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
@@ -382,8 +384,8 @@ describe("generateGraphqlSchemaFiles", () => {
     ];
     // When ran
     const fs = newFs({});
-    await generateGraphqlSchemaFiles(fs, entities);
-    // Then the input has both both types of fields as appropriate
+    await generate(fs, entities);
+    // Then the input has both types of fields as appropriate
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
       "extend type Mutation {
         saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
@@ -419,8 +421,8 @@ describe("generateGraphqlSchemaFiles", () => {
     ];
     // When ran
     const fs = newFs({});
-    await generateGraphqlSchemaFiles(fs, entities);
-    // Then the input has both both types of fields as appropriate
+    await generate(fs, entities);
+    // Then the input has both types of fields as appropriate
     expect(await fs.load("smallPublisher.graphql")).toMatchInlineSnapshot(`
       "extend type Mutation {
         saveSmallPublisher(input: SaveSmallPublisherInput!): SaveSmallPublisherResult!
@@ -444,4 +446,68 @@ describe("generateGraphqlSchemaFiles", () => {
       "
     `);
   });
+
+  it("assumes a Like interface for subclassed & concrete base types", async () => {
+    // Given a small publisher which inherits from publisher
+    const entities: EntityDbMetadata[] = [
+      newEntityMetadata("Publisher", {
+        primitives: [newPrimitiveField("name")],
+      }),
+      newEntityMetadata("SmallPublisher", {
+        baseClassName: "Publisher",
+        primitives: [newPrimitiveField("city")],
+      }),
+      newEntityMetadata("Author", {
+        manyToOnes: [newManyToOneField("publisher", "Publisher")],
+      }),
+    ];
+    // When ran
+    const fs = newFs({});
+    await generate(fs, entities);
+    // Then the input has both types of fields as appropriate
+    expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
+     "extend type Mutation {
+       saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
+
+     type Author {
+       id: ID!
+       publisher: PublisherLike!
+     }
+
+     input SaveAuthorInput {
+       id: ID
+       publisherId: ID
+     }
+
+     type SaveAuthorResult {
+       author: Author!
+     }
+     "
+    `);
+  });
 });
+
+async function generate(fs: Fs, opt: EntityDbMetadata[] | Partial<DbMetadata>) {
+  const entities = Array.isArray(opt) ? opt : (opt.entities ?? []);
+  const entitiesByName = keyBy(entities, "name");
+
+  // Hook up baseType/subTypes
+  for (const entity of entities) {
+    if (entity.baseClassName) {
+      const baseType = entitiesByName[entity.baseClassName];
+      entity.baseType = baseType;
+      baseType.subTypes.push(entity);
+    }
+  }
+
+  const dbMeta = {
+    entities,
+    enums: {},
+    pgEnums: {},
+    joinTables: [],
+    totalTables: 10,
+    entitiesByName,
+  } satisfies DbMetadata;
+  return generateGraphqlSchemaFiles(fs, dbMeta);
+}

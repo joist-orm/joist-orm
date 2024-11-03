@@ -1,3 +1,10 @@
+# [1.209.0](https://github.com/joist-orm/joist-orm/compare/v1.208.6...v1.209.0) (2024-11-03)
+
+
+### Features
+
+* Type GraphQL subtyped m2os as Like. ([#1286](https://github.com/joist-orm/joist-orm/issues/1286)) ([972e433](https://github.com/joist-orm/joist-orm/commit/972e4330c0038e4db60790b844e473e10ce6faf5)), closes [#1282](https://github.com/joist-orm/joist-orm/issues/1282)
+
 ## [1.208.6](https://github.com/joist-orm/joist-orm/compare/v1.208.5...v1.208.6) (2024-11-03)
 
 

@@ -14,6 +14,13 @@ import { merge, tableToEntityName } from "./utils";
 
 export type DPrintOptions = Record<string, unknown>;
 
+/**
+ * Provides an API for hooking into the codegen build step.
+ */
+export interface CodegenPlugin {
+  run(config: Config, dbMeta: DbMetadata): Promise<CodegenFile>;
+}
+
 /** Generates our `${Entity}` and `${Entity}Codegen` files based on the `db` schema. */
 export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise<CodegenFile[]> {
   const { entities, enums, pgEnums } = dbMeta;
@@ -107,13 +114,12 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     overwrite: false,
   };
 
-  // Look for modules to require and call the exported `.run(EntityDbMetadata[], Table[])` method
-
+  // Look for modules to require and call the exported `.run(Config, DbMeta)` method
   const pluginFiles: CodegenFile[] = (
     await Promise.all(
       (config.codegenPlugins ?? []).map((p) => {
-        const plugin = require(p);
-        return plugin.run(config, entities, enums);
+        const plugin = require(p) as CodegenPlugin;
+        return plugin.run(config, dbMeta);
       }),
     )
   ).flat();

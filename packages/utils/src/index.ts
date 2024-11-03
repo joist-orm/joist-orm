@@ -22,3 +22,22 @@ export function groupBy<T, Y = T>(
   });
   return result;
 }
+
+export function keyBy<T, K extends PropertyKey, Y = T>(
+  list: readonly T[],
+  fnOrKey: CallbackFn<T, K> | keyof T[][number],
+  valueFn?: CallbackFn<T, Y>,
+) {
+  const result = {} as Record<K, Y>;
+  const fn = typeof fnOrKey === "function" ? fnOrKey : (x: T) => x[fnOrKey] as K;
+  list.forEach((e, i, a) => {
+    const group = fn(e, i, a);
+    if (result[group] !== undefined) {
+      throw new Error(`${String(group)} already had a value assigned`);
+    }
+    result[group] = valueFn ? valueFn(e, i, a) : (e as any as Y);
+  });
+  return result;
+}
+
+export type CallbackFn<T, R = any> = (element: T, index: number, array: readonly T[]) => R;

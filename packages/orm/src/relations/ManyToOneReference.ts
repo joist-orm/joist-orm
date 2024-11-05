@@ -199,7 +199,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     return toIdOf(this.otherMeta, this.idTaggedMaybe);
   }
 
-  /** Returns the tagged id of the current value. */
+  /** Returns the tagged id of the current value, or undefined if unset or a new entity. */
   get idTaggedMaybe(): TaggedId | undefined {
     ensureNotDeleted(this.entity, "pending");
     return maybeResolveReferenceToId(this.current());

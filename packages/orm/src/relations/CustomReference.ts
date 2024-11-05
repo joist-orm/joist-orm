@@ -1,9 +1,18 @@
+import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { IdOf, TaggedId } from "../EntityManager";
 import { Reference, ensureNotDeleted, fail, getMetadata, getProperties } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
+
+/** An alias for creating `CustomReference`s. */
+export function hasCustomReference<T extends Entity, U extends Entity, N extends never | undefined>(
+  opts: CustomReferenceOpts<T, U, N>,
+): CustomReference<T, U, N> {
+  const entity = currentlyInstantiatingEntity as T;
+  return new CustomReference<T, U, N>(entity, opts);
+}
 
 export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends never | undefined> = {
   // We purposefully don't capture the return value of `load` b/c we want `get` to re-calc from `entity`
@@ -12,7 +21,7 @@ export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends ne
   get: (entity: T) => U | N;
   set?: (entity: T, other: U) => void;
   /** Whether the reference is loaded, even w/o an explicit `.load` call, i.e. for DeepNew test instances. */
-  isLoaded: () => boolean;
+  isLoaded: (entity: T) => boolean;
 };
 
 /**
@@ -51,7 +60,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   }
 
   get isLoaded(): boolean {
-    return this.opts.isLoaded();
+    return this.opts.isLoaded(this.entity);
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {

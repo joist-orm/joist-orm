@@ -1,3 +1,10 @@
+## [1.209.1](https://github.com/joist-orm/joist-orm/compare/v1.209.0...v1.209.1) (2024-11-05)
+
+
+### Bug Fixes
+
+* Add entty to CustomReferenceOpts.isLoaded. ([#1288](https://github.com/joist-orm/joist-orm/issues/1288)) ([f4b0988](https://github.com/joist-orm/joist-orm/commit/f4b09884d4359ffdf55c2641078fd9d84ced6bdd))
+
 # [1.209.0](https://github.com/joist-orm/joist-orm/compare/v1.208.6...v1.209.0) (2024-11-03)
 
 

@@ -17,7 +17,7 @@ type HasTagName = {
   idDbType: "bigint" | "int" | "uuid";
 };
 
-/** Converts our internal/always-tagged `id` to the domain entity's `id` type. */
+/** Converts our internal/always-tagged `id` to the domain entity's `id` type (could be a number or uuid). */
 export function toIdOf<T extends Entity>(meta: EntityMetadata<T>, id: TaggedId | undefined): IdOf<T> | undefined {
   if (!id) return undefined;
   switch (meta.idType) {

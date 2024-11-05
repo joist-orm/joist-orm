@@ -21,12 +21,14 @@ export const ReferenceN = Symbol();
 export interface Reference<T extends Entity, U extends Entity, N extends never | undefined> extends Relation<T, U> {
   [ReferenceN]: N;
 
+  // ...would be great to use a type-guard, but we're a property
   readonly isLoaded: boolean;
 
   load(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N>;
 
   set(other: U | N): void;
 
+  /** Returns the always-tagged id of the current value, or undefined if unset or new. */
   idTaggedMaybe: TaggedId | undefined;
 }
 

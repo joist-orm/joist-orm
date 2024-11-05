@@ -1,6 +1,6 @@
 export { Collection, LoadedCollection, isCollection, isLoadedCollection } from "./Collection";
 export { CustomCollection } from "./CustomCollection";
-export { CustomReference } from "./CustomReference";
+export { CustomReference, hasCustomReference } from "./CustomReference";
 export { AsyncMethod, LoadedMethod, hasAsyncMethod } from "./hasAsyncMethod";
 export {
   AsyncProperty,

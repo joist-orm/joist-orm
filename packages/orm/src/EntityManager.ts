@@ -38,6 +38,7 @@ import {
   PartialOrNull,
   PolymorphicReferenceImpl,
   ReactionLogger,
+  Reference,
   TimestampSerde,
   UniqueFilter,
   ValidationError,
@@ -53,6 +54,7 @@ import {
   getMetadata,
   getRelationEntries,
   getRelations,
+  isLoadedReference,
   keyToTaggedId,
   loadLens,
   parseFindQuery,
@@ -1749,6 +1751,11 @@ export function sameEntity(a: Entity | string | number | undefined, b: Entity | 
   const aId = isEntity(a) ? a.idTaggedMaybe : a;
   const bId = isEntity(b) ? b.idTaggedMaybe : b;
   return aId === bId;
+}
+
+/** Compares the value `a` to `b`, with handling of new entities w/o ids assigned yet. */
+export function sameReference<T extends Entity>(a: Reference<any, T, any>, b: Reference<any, T, any>): boolean {
+  return sameEntity(isLoadedReference(a) ? a.get : a.idTaggedMaybe, isLoadedReference(b) ? b.get : b.idTaggedMaybe);
 }
 
 /** Thrown by `findOneOrFail`, 'load' & 'loadAll' if an entity is not found. */

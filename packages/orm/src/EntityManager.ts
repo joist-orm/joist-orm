@@ -1244,7 +1244,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           // Run our hooks
           let todos = createTodos([...pendingHooks]);
 
-          await setAsyncDefaults(suppressedDefaultTypeErrors, this.ctx, Todo.groupByType(todos));
+          await setAsyncDefaults(suppressedDefaultTypeErrors, this.ctx, Todo.groupInsertsByTypeAndSubType(todos));
           maybeBumpUpdatedAt(todos, now);
 
           for (const group of maybeSetupHookOrdering(todos)) {

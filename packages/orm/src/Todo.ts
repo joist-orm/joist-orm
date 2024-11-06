@@ -8,7 +8,8 @@ import { groupBy } from "./utils";
 
 /** A group of insert/update/delete operations for a given entity. */
 export class Todo {
-  static groupByType(todos: Record<string, Todo>): Map<EntityMetadata, Entity[]> {
+  /** Groups `todos` by their base/subtype, currently only inserts. */
+  static groupInsertsByTypeAndSubType(todos: Record<string, Todo>): Map<EntityMetadata, Entity[]> {
     return new Map(
       Object.values(todos).flatMap((todo) => {
         return todo.metadata.inheritanceType

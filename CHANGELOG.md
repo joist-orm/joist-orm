@@ -1,3 +1,10 @@
+## [1.209.2](https://github.com/joist-orm/joist-orm/compare/v1.209.1...v1.209.2) (2024-11-06)
+
+
+### Bug Fixes
+
+* Fix specialized default dependencies. ([#1290](https://github.com/joist-orm/joist-orm/issues/1290)) ([1b41dcd](https://github.com/joist-orm/joist-orm/commit/1b41dcd9affd2987965ec8dd659ab57d45f789a2))
+
 ## [1.209.1](https://github.com/joist-orm/joist-orm/compare/v1.209.0...v1.209.1) (2024-11-05)
 
 

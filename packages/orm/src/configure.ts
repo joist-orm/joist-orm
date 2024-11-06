@@ -2,6 +2,7 @@ import { Entity } from "./Entity";
 import { MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
 import { EntityMetadata, ManyToOneField, OneToManyField, getMetadata } from "./EntityMetadata";
 import { setBooted } from "./config";
+import { AsyncDefault } from "./defaults";
 import { getFakeInstance } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { reverseReactiveHint } from "./reactiveHints";
@@ -24,6 +25,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
   reverseIndexReactivity(metas);
   populatePolyComponentFields(metas);
   fireAfterMetadatas(metas);
+  copyAsyncDefaults(metas);
   setBooted();
 }
 
@@ -127,6 +129,29 @@ function hookUpBaseTypeAndSubTypes(metas: EntityMetadata[]): void {
           m.allFields[name] = { ...field, aliasSuffix };
         }
       });
+    }
+  }
+}
+
+/** Copy/pastes base AsyncDefaults onto subtypes, so that subtypes can have their own default dependencies. */
+function copyAsyncDefaults(metas: EntityMetadata[]): void {
+  for (const m of metas) {
+    for (const b of m.baseTypes) {
+      // Clone in the base asyncDefaults, unless we override our own
+      for (const [fieldName, df] of Object.entries(b.config.__data.asyncDefaults)) {
+        if (!m.config.__data.asyncDefaults[fieldName]) {
+          // Given our subtype its own instance, because we might have different default dependencies.
+          // I.e. from a sample domain model, something like:
+          // - The base `PlanVersion.type` default depends on `{ identity: "type" }`
+          // - The base `Plan.type` has no default itself
+          // - The sub `SpecialPlanVersion` inherits type, and specializes `SPV.identity: SP`
+          // - The sub `SpecialPlan.type` does have a default
+          //
+          // So we need to eval `PlanVersion.type` separately from `SpecialPlanVersion.type`, even
+          // though they come from the same `config.setDefault` call/lambda in `PlanVersion.ts`.
+          m.config.__data.asyncDefaults[fieldName] = new AsyncDefault(df.fieldName, df.fieldHint, df.fn);
+        }
+      }
     }
   }
 }

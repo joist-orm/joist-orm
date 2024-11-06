@@ -49,29 +49,26 @@ export function setSyncDefaults(entity: Entity): void {
 export function setAsyncDefaults(
   suppressedTypeErrors: Error[],
   ctx: unknown,
-  entitiesByType: Map<EntityMetadata, Entity[]>,
+  // We want this to be per-subtype, so that a subtype can have its own default, and we still invoke
+  // the subtype `setOnEntities(...all subtype entities...)` and `setOnEntities(...any base types...)`
+  // as bulk calls.
+  insertsBySubType: Map<EntityMetadata, Entity[]>,
 ): Promise<unknown> {
-  const dt = new DependencyTracker(entitiesByType);
+  const dt = new DependencyTracker(insertsBySubType);
   return Promise.all(
-    [...entitiesByType.entries()].flatMap(([meta, inserts]) => {
-      // Let subtypes override base types
-      const asyncDefaults: Record<string, AsyncDefault<any>> = getBaseAndSelfMetas(meta).reduce(
-        (acc, m) => ({ ...acc, ...m.config.__data.asyncDefaults }),
-        {},
+    [...insertsBySubType.entries()].flatMap(([meta, inserts]) => {
+      // configure will have copy/pasted base defaults into our config, so we can loop over it directly
+      return Object.values(meta.config.__data.asyncDefaults).map((df) =>
+        df.setOnEntities(ctx, dt, suppressedTypeErrors, meta, inserts),
       );
-      return Object.values(asyncDefaults).map((df) => df.setOnEntities(ctx, dt, suppressedTypeErrors, meta, inserts));
     }),
   );
 }
 
 /** Sets async defaults *synchronously*, only safe for factories with `DeepNew` entities. */
 export function setAsyncDefaultsSynchronously(ctx: unknown, entity: Entity): void {
-  // Allow subtypes to override base setDefaults
-  const defaults: Record<string, AsyncDefault<any>> = getBaseAndSelfMetas(getMetadata(entity)).reduce(
-    (acc, m) => ({ ...acc, ...m.config.__data.asyncDefaults }),
-    {},
-  );
-  for (const df of Object.values(defaults)) {
+  // configure will have copy/pasted base defaults into our config, so we can loop over it directly
+  for (const df of Object.values(getMetadata(entity).config.__data.asyncDefaults)) {
     df.setOnFactoryEntity(ctx, entity);
   }
 }
@@ -79,16 +76,16 @@ export function setAsyncDefaultsSynchronously(ctx: unknown, entity: Entity): voi
 /** Wraps the hint + lambda of an async `setDefault`. */
 export class AsyncDefault<T extends Entity> {
   readonly fieldName: string;
-  #fieldHint: ReactiveHint<T>;
+  readonly fieldHint: ReactiveHint<T>;
+  readonly fn: (entity: any, ctx: any) => any;
   #loadHint: any;
   // We can't calc this until post-boot because it requires following metadata
   #deps: DefaultDependency[] | undefined;
-  #fn: (entity: any, ctx: any) => any;
 
   constructor(fieldName: string, fieldHint: ReactiveHint<T>, fn: (entity: T, ctx: any) => any) {
     this.fieldName = fieldName;
-    this.#fieldHint = fieldHint;
-    this.#fn = fn;
+    this.fieldHint = fieldHint;
+    this.fn = fn;
   }
 
   /** Given a list of inserts of the same type/subtype, set ourselves on each of them. */
@@ -145,11 +142,11 @@ export class AsyncDefault<T extends Entity> {
   setOnFactoryEntity(ctx: unknown, entity: T): void {
     // If the lambda uses the `async` keyword, it definitely makes a promise, so don't invoke it
     // from a synchronous factory call.
-    if (this.#fn.constructor.name === "AsyncFunction") return;
+    if (this.fn.constructor.name === "AsyncFunction") return;
     const value = (entity as any)[this.fieldName];
     try {
       if (value === undefined || (isLoadedReference(value) && !value.isSet)) {
-        const val = this.#fn(entity, ctx);
+        const val = this.fn(entity, ctx);
         // Even though we checked `async () => ...` above, a lambda could still return a Promise
         if (val instanceof Promise) {
           throw new Error(
@@ -178,13 +175,13 @@ export class AsyncDefault<T extends Entity> {
   /** For the given `entity`, returns what the default value should be. */
   private getValue(entity: T, ctx: any): Promise<any> {
     // We can't convert this until now, since it requires the `metadata`
-    this.#loadHint ??= convertToLoadHint(getMetadata(entity), this.#fieldHint);
-    return entity.em.populate(entity, this.#loadHint).then((loaded) => this.#fn(loaded, ctx));
+    this.#loadHint ??= convertToLoadHint(getMetadata(entity), this.fieldHint);
+    return entity.em.populate(entity, this.#loadHint).then((loaded) => this.fn(loaded, ctx));
   }
 
   // Calc once and cache
   private deps(meta: EntityMetadata): DefaultDependency[] {
-    return (this.#deps ??= getDefaultDependencies(meta, this.fieldName, this.#fieldHint));
+    return (this.#deps ??= getDefaultDependencies(meta, this.fieldName, this.fieldHint));
   }
 }
 
@@ -258,10 +255,10 @@ class DependencyTracker {
   // Create a map "entityType -> fieldName -> deferred"
   #deferreds = new Map<string, Map<string, Deferred<void>>>();
 
-  constructor(entitiesByType: Map<EntityMetadata, Entity[]>) {
+  constructor(insertsBySubType: Map<EntityMetadata, Entity[]>) {
     // Seed it with any entities that we're actively inserting (as any dependencies to
     // entities that aren't even having `setDefault` called can be skipped)
-    for (const meta of [...entitiesByType.keys()]) {
+    for (const meta of [...insertsBySubType.keys()]) {
       this.#deferreds.set(meta.type, new Map());
     }
   }

@@ -13,7 +13,7 @@ Installing Joist in your project has four main steps:
 
 A wrinkle is that each Node.js application can be pretty different, in terms of how you manage your local database (i.e. with Docker Compose), what your production application looks like (a REST API, a GraphQL API, etc.), etc.
 
-So, to simplify this page, we'll include some assumptions based on the [Joist sample app](https://github.com/joist-orm/joist-orm-sample), but you should be able to adjust these steps to your specific project.
+So, to simplify this page, we'll include some assumptions based on the [Joist sample app](https://github.com/joist-orm/joist-sample), but you should be able to adjust these steps to your specific project.
 
 :::info
 
@@ -31,7 +31,7 @@ Joist requires Node 18.
 
 The sample app uses `docker compose` and a `db.dockerfile` file to manage the local Postgres database.
 
-To start it, clone the [sample app](https://github.com/joist-orm/joist-orm-sample), and run:
+To start it, clone the [sample app](https://github.com/joist-orm/joist-sample), and run:
 
 ```bash
 docker compose build db

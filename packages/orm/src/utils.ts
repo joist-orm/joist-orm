@@ -22,6 +22,15 @@ export function maybePromiseThen<T, U>(promiseOrObj: MaybePromise<T>, callback: 
   return promiseOrObj instanceof Promise ? promiseOrObj.then(callback) : callback(promiseOrObj);
 }
 
+export function failIfAnyRejected<T>(results: PromiseSettledResult<T>[]): T[] {
+  const rejects = results.filter((r) => r.status === "rejected");
+  // For now just throw the 1st rejection; this should be pretty rare
+  if (rejects.length > 0 && rejects[0].status === "rejected") {
+    throw rejects[0].reason;
+  }
+  return results.map((r) => (r as PromiseFulfilledResult<T>).value);
+}
+
 export function getOrSet<T extends Record<keyof unknown, unknown>>(
   record: T,
   key: keyof T,

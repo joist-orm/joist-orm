@@ -5,7 +5,7 @@ import { setField } from "./fields";
 import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint, ReactiveHint } from "./reactiveHints";
 import { isLoadedReference } from "./relations/index";
-import { fail } from "./utils";
+import { fail, failIfAnyRejected } from "./utils";
 
 export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolean {
   return getBaseAndSelfMetas(meta).some(
@@ -46,16 +46,16 @@ export function setSyncDefaults(entity: Entity): void {
 }
 
 /** Runs the async defaults for all inserted entities in `todos`. */
-export function setAsyncDefaults(
+export async function setAsyncDefaults(
   suppressedTypeErrors: Error[],
   ctx: unknown,
   // We want this to be per-subtype, so that a subtype can have its own default, and we still invoke
   // the subtype `setOnEntities(...all subtype entities...)` and `setOnEntities(...any base types...)`
   // as bulk calls.
   insertsBySubType: Map<EntityMetadata, Entity[]>,
-): Promise<unknown> {
+): Promise<void> {
   const dt = new DependencyTracker(insertsBySubType);
-  return Promise.all(
+  const results = await Promise.allSettled(
     [...insertsBySubType.entries()].flatMap(([meta, inserts]) => {
       // configure will have copy/pasted base defaults into our config, so we can loop over it directly
       return Object.values(meta.config.__data.asyncDefaults).map((df) =>
@@ -63,6 +63,7 @@ export function setAsyncDefaults(
       );
     }),
   );
+  failIfAnyRejected(results);
 }
 
 /** Sets async defaults *synchronously*, only safe for factories with `DeepNew` entities. */
@@ -106,10 +107,11 @@ export class AsyncDefault<T extends Entity> {
         //   deps.map((dep) => `${dep.meta.type}.${dep.fieldName}`),
         //   `FOR ${baseMetadata.type}.${this.fieldName}`,
         // );
+        // deps promises shouldn't reject, so we should be fine w/o allSettled here
         await Promise.all(deps.map((dep) => dt.getDeferred(dep.meta, dep.fieldName).promise));
       }
-      // Run our default for all entities
-      await Promise.all(
+      // Run our default for all entities, use allSettled to avoid leaving lambdas running if one fails
+      const results = await Promise.allSettled(
         inserts
           .map(async (entity) => {
             const value = (entity as any)[this.fieldName];
@@ -131,6 +133,7 @@ export class AsyncDefault<T extends Entity> {
             }),
           ),
       );
+      failIfAnyRejected(results);
     } finally {
       // Mark ourselves as complete (from a `finally` just in case our `setDefault`
       // blows up, we don't forever block the other defaults waiting on us).

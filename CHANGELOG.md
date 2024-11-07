@@ -1,3 +1,10 @@
+## [1.209.3](https://github.com/joist-orm/joist-orm/compare/v1.209.2...v1.209.3) (2024-11-07)
+
+
+### Bug Fixes
+
+* Use Promise.allSettled to avoid orphaned lambdas. ([#1291](https://github.com/joist-orm/joist-orm/issues/1291)) ([ddd1aeb](https://github.com/joist-orm/joist-orm/commit/ddd1aeba7e4cb9573014dca8d809491ceb72dc18))
+
 ## [1.209.2](https://github.com/joist-orm/joist-orm/compare/v1.209.1...v1.209.2) (2024-11-06)
 
 

@@ -1,4 +1,5 @@
 import { DeepPartialOrNull, Entity, EntityConstructor, OptsOf } from "joist-orm";
+import { failIfAnyRejected } from "joist-orm/build/utils";
 import { Context } from "joist-test-utils";
 
 /** Given an GraphQL input, creates-or-updates an entity of `type`. */
@@ -20,9 +21,11 @@ export async function saveEntities<T extends Entity>(
 ): Promise<T[]> {
   const { em } = ctx;
   const { opts: entityOpts = {}, flush = true } = opts;
-  const entities = await Promise.all(input.map((input) => em.createOrUpdatePartial(type, { ...entityOpts, ...input })));
+  const results = await Promise.allSettled(
+    input.map((input) => em.createOrUpdatePartial(type, { ...entityOpts, ...input })),
+  );
   if (flush) {
     await ctx.em.flush();
   }
-  return entities;
+  return failIfAnyRejected(results);
 }

@@ -68,7 +68,7 @@ import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
-import { MaybePromise, assertNever, fail, getOrSet, groupBy, partition, toArray } from "./utils";
+import { MaybePromise, assertNever, fail, failIfAnyRejected, getOrSet, groupBy, partition, toArray } from "./utils";
 
 // polyfill
 (Symbol as any).asyncDispose ??= Symbol("Symbol.asyncDispose");
@@ -1840,13 +1840,13 @@ async function validateReactiveRules(
     return [...p1, ...p2];
   });
 
-  await Promise.all([...p1, ...p2]);
+  failIfAnyRejected(await Promise.allSettled([...p1, ...p2]));
 
   // Now that we've found the fn+entities to run, run them and collect any errors
   const p3 = [...fns.entries()].flatMap(([fn, entities]) =>
     [...entities].map(async (entity) => coerceError(entity, await fn(entity))),
   );
-  const errors = (await Promise.all(p3)).flat();
+  const errors = failIfAnyRejected(await Promise.allSettled(p3)).flat();
   if (errors.length > 0) {
     throw new ValidationErrors(errors);
   }
@@ -1866,7 +1866,7 @@ async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
           .flatMap(async ({ fn }) => coerceError(entity, await fn(entity)));
       });
   });
-  const errors = (await Promise.all(p)).flat();
+  const errors = failIfAnyRejected(await Promise.allSettled(p)).flat();
   if (errors.length > 0) {
     throw new ValidationErrors(errors);
   }
@@ -1900,11 +1900,9 @@ async function runHook(ctx: unknown, hook: EntityHook, entities: EntityW[]): Pro
     return hookFns.map(async (fn) => fn(entity, ctx as any));
   });
   // Use `allSettled` so that even if 1 hook blows up, we don't orphan other hooks mid-flush
-  const rejects = (await Promise.allSettled(p)).filter((r) => r.status === "rejected");
-  // For now just throw the 1st rejection; this should be pretty rare
-  if (rejects.length > 0 && rejects[0].status === "rejected") {
-    throw rejects[0].reason;
-  }
+  // (causes weird errors when/if they try to access the EntityManager that has "moved on")
+  const results = await Promise.allSettled(p);
+  failIfAnyRejected(results);
 }
 
 function beforeDelete(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {

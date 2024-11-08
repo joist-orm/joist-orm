@@ -57,7 +57,7 @@ import {
   type ParentGroupOrder,
 } from "../entities";
 
-export type ChildGroupId = Flavor<string, ChildGroup>;
+export type ChildGroupId = Flavor<string, "ChildGroup">;
 
 export interface ChildGroupFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

@@ -66,7 +66,7 @@ import {
   type UserOrder,
 } from "../entities";
 
-export type CommentId = Flavor<string, Comment>;
+export type CommentId = Flavor<string, "Comment">;
 
 export type CommentParent = Author | Book | BookReview | Publisher | TaskOld;
 export function getCommentParentConstructors(): MaybeAbstractEntityConstructor<CommentParent>[] {

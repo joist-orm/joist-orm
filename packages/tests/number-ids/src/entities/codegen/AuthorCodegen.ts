@@ -38,7 +38,7 @@ import {
 import { type Context } from "src/context";
 import { Author, authorMeta, Book, type BookId, bookMeta, type Entity, EntityManager, newAuthor } from "../entities";
 
-export type AuthorId = Flavor<number, Author>;
+export type AuthorId = Flavor<number, "Author">;
 
 export interface AuthorFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };

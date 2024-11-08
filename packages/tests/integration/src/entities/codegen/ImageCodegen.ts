@@ -63,7 +63,7 @@ import {
   type SmallPublisherId,
 } from "../entities";
 
-export type ImageId = Flavor<string, Image>;
+export type ImageId = Flavor<string, "Image">;
 
 export interface ImageFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

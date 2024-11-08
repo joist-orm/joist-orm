@@ -52,7 +52,7 @@ import {
   type ParentItemOrder,
 } from "../entities";
 
-export type ChildItemId = Flavor<string, ChildItem>;
+export type ChildItemId = Flavor<string, "ChildItem">;
 
 export interface ChildItemFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

@@ -69,7 +69,7 @@ import {
   userMeta,
 } from "../entities";
 
-export type SmallPublisherId = Flavor<string, SmallPublisher> & Flavor<string, "Publisher">;
+export type SmallPublisherId = Flavor<string, "Publisher">;
 
 export interface SmallPublisherFields extends PublisherFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

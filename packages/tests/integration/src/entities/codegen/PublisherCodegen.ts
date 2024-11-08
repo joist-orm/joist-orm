@@ -82,7 +82,7 @@ import {
   taskOldMeta,
 } from "../entities";
 
-export type PublisherId = Flavor<string, Publisher>;
+export type PublisherId = Flavor<string, "Publisher">;
 
 export interface PublisherFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

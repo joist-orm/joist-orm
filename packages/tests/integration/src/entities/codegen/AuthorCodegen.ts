@@ -94,7 +94,7 @@ import {
   userMeta,
 } from "../entities";
 
-export type AuthorId = Flavor<string, Author>;
+export type AuthorId = Flavor<string, "Author">;
 
 export interface AuthorFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

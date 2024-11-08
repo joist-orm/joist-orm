@@ -66,7 +66,7 @@ import {
   userMeta,
 } from "../entities";
 
-export type UserId = Flavor<string, User>;
+export type UserId = Flavor<string, "User">;
 
 export type UserFavoritePublisher = LargePublisher | SmallPublisher;
 export function getUserFavoritePublisherConstructors(): MaybeAbstractEntityConstructor<UserFavoritePublisher>[] {

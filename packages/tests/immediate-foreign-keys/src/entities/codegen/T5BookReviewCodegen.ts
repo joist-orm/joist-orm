@@ -48,7 +48,7 @@ import {
   t5BookReviewMeta,
 } from "../entities";
 
-export type T5BookReviewId = Flavor<number, T5BookReview>;
+export type T5BookReviewId = Flavor<number, "T5BookReview">;
 
 export interface T5BookReviewFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };

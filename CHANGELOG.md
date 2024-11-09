@@ -1,3 +1,10 @@
+# [1.210.0](https://github.com/joist-orm/joist-orm/compare/v1.209.3...v1.210.0) (2024-11-09)
+
+
+### Features
+
+* Simplify id flavors, fix for base types. ([#1293](https://github.com/joist-orm/joist-orm/issues/1293)) ([b28b561](https://github.com/joist-orm/joist-orm/commit/b28b5618894fa293f15afa6cb0cf634c398a4118))
+
 ## [1.209.3](https://github.com/joist-orm/joist-orm/compare/v1.209.2...v1.209.3) (2024-11-07)
 
 

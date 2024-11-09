@@ -64,7 +64,7 @@ import {
   type SmallPublisherGroupId,
 } from "../entities";
 
-export type CriticId = Flavor<string, Critic>;
+export type CriticId = Flavor<string, "Critic">;
 
 export interface CriticFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

@@ -55,7 +55,7 @@ import {
   type TaskOrder,
 } from "../entities";
 
-export type TaskItemId = Flavor<string, TaskItem>;
+export type TaskItemId = Flavor<string, "TaskItem">;
 
 export interface TaskItemFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

@@ -58,7 +58,7 @@ import {
   type SmallPublisherId,
 } from "../entities";
 
-export type BookAdvanceId = Flavor<string, BookAdvance>;
+export type BookAdvanceId = Flavor<string, "BookAdvance">;
 
 export interface BookAdvanceFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

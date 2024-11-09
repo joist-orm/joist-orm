@@ -50,7 +50,7 @@ import {
   type T2BookOrder,
 } from "../entities";
 
-export type T2AuthorId = Flavor<number, T2Author>;
+export type T2AuthorId = Flavor<number, "T2Author">;
 
 export interface T2AuthorFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };

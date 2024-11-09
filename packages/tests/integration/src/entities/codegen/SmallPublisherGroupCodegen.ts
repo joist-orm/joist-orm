@@ -52,7 +52,7 @@ import {
   smallPublisherMeta,
 } from "../entities";
 
-export type SmallPublisherGroupId = Flavor<string, SmallPublisherGroup> & Flavor<string, "PublisherGroup">;
+export type SmallPublisherGroupId = Flavor<string, "PublisherGroup">;
 
 export interface SmallPublisherGroupFields extends PublisherGroupFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

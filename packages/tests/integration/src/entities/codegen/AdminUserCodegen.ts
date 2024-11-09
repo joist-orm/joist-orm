@@ -48,7 +48,7 @@ import {
   type UserOrder,
 } from "../entities";
 
-export type AdminUserId = Flavor<string, AdminUser> & Flavor<string, "User">;
+export type AdminUserId = Flavor<string, "User">;
 
 export interface AdminUserFields extends UserFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

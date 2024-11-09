@@ -65,7 +65,7 @@ import {
   userMeta,
 } from "../entities";
 
-export type LargePublisherId = Flavor<string, LargePublisher> & Flavor<string, "Publisher">;
+export type LargePublisherId = Flavor<string, "Publisher">;
 
 export interface LargePublisherFields extends PublisherFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

@@ -47,7 +47,7 @@ import {
   t1BookMeta,
 } from "../entities";
 
-export type T1AuthorId = Flavor<number, T1Author>;
+export type T1AuthorId = Flavor<number, "T1Author">;
 
 export interface T1AuthorFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };

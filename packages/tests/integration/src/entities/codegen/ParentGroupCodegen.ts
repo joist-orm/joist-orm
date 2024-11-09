@@ -50,7 +50,7 @@ import {
   parentItemMeta,
 } from "../entities";
 
-export type ParentGroupId = Flavor<string, ParentGroup>;
+export type ParentGroupId = Flavor<string, "ParentGroup">;
 
 export interface ParentGroupFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

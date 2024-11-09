@@ -59,7 +59,7 @@ import {
   taskMeta,
 } from "../entities";
 
-export type TagId = Flavor<string, Tag>;
+export type TagId = Flavor<string, "Tag">;
 
 export interface TagFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

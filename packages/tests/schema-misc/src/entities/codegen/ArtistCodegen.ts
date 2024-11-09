@@ -47,7 +47,7 @@ import {
   paintingMeta,
 } from "../entities";
 
-export type ArtistId = Flavor<string, Artist>;
+export type ArtistId = Flavor<string, "Artist">;
 
 export interface ArtistFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

@@ -50,7 +50,7 @@ import {
   t2BookMeta,
 } from "../entities";
 
-export type T2BookId = Flavor<number, T2Book>;
+export type T2BookId = Flavor<number, "T2Book">;
 
 export interface T2BookFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };

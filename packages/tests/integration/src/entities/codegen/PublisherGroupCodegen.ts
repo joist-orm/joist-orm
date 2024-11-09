@@ -59,7 +59,7 @@ import {
   type SmallPublisherId,
 } from "../entities";
 
-export type PublisherGroupId = Flavor<string, PublisherGroup>;
+export type PublisherGroupId = Flavor<string, "PublisherGroup">;
 
 export interface PublisherGroupFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

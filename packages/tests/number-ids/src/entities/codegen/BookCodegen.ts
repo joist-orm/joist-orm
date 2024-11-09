@@ -48,7 +48,7 @@ import {
   newBook,
 } from "../entities";
 
-export type BookId = Flavor<number, Book>;
+export type BookId = Flavor<number, "Book">;
 
 export interface BookFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };

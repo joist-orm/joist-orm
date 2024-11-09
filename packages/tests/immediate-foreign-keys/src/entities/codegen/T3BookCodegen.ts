@@ -50,7 +50,7 @@ import {
   t3BookMeta,
 } from "../entities";
 
-export type T3BookId = Flavor<number, T3Book>;
+export type T3BookId = Flavor<number, "T3Book">;
 
 export interface T3BookFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };

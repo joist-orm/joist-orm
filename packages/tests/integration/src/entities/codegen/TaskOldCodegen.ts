@@ -66,7 +66,7 @@ import {
   type TaskOrder,
 } from "../entities";
 
-export type TaskOldId = Flavor<string, TaskOld> & Flavor<string, "Task">;
+export type TaskOldId = Flavor<string, "Task">;
 
 export interface TaskOldFields extends TaskFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

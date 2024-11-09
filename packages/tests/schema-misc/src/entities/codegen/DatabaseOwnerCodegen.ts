@@ -32,7 +32,7 @@ import {
 import { type Context } from "src/context";
 import { DatabaseOwner, databaseOwnerMeta, type Entity, EntityManager, newDatabaseOwner } from "../entities";
 
-export type DatabaseOwnerId = Flavor<string, DatabaseOwner>;
+export type DatabaseOwnerId = Flavor<string, "DatabaseOwner">;
 
 export interface DatabaseOwnerFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

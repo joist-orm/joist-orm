@@ -73,7 +73,7 @@ import {
   tagMeta,
 } from "../entities";
 
-export type BookId = Flavor<string, Book>;
+export type BookId = Flavor<string, "Book">;
 
 export interface BookFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

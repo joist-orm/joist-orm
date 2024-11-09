@@ -48,7 +48,7 @@ import {
   newAuthorSchedule,
 } from "../entities";
 
-export type AuthorScheduleId = Flavor<string, AuthorSchedule>;
+export type AuthorScheduleId = Flavor<string, "AuthorSchedule">;
 
 export interface AuthorScheduleFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

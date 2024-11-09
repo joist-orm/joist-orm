@@ -48,7 +48,7 @@ import {
   newCriticColumn,
 } from "../entities";
 
-export type CriticColumnId = Flavor<string, CriticColumn>;
+export type CriticColumnId = Flavor<string, "CriticColumn">;
 
 export interface CriticColumnFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

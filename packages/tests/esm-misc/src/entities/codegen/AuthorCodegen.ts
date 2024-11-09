@@ -40,7 +40,7 @@ import {
 import { type Context } from "../../context.js";
 import { Author, authorMeta, Book, type BookId, bookMeta, type Entity, EntityManager, newAuthor } from "../entities.js";
 
-export type AuthorId = Flavor<string, Author>;
+export type AuthorId = Flavor<string, "Author">;
 
 export interface AuthorFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

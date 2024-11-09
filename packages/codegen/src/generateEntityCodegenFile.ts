@@ -144,7 +144,6 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     ? code`extends ${imp("t:" + baseEntity.name + "GraphQLFilter@./entities.ts")}`
     : "";
   const maybeBaseOrder = baseEntity ? code`extends ${baseEntity.entity.orderType}` : "";
-  const maybeBaseId = baseEntity ? code` & Flavor<${idType}, "${baseEntity.name}">` : "";
   const maybePreventBaseTypeInstantiation = meta.abstract
     ? code`
     if (this.constructor === ${entity.type} && !(em as any).fakeInstance) {
@@ -194,7 +193,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   }
 
   return code`
-    export type ${entityName}Id = ${Flavor}<${idType}, ${entityName}> ${maybeBaseId};
+    export type ${entityName}Id = ${Flavor}<${idType}, "${baseEntity ? baseEntity.name : entityName}">;
 
     ${generatePolymorphicTypes(meta)}
     

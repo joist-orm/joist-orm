@@ -53,7 +53,7 @@ import {
   parentItemMeta,
 } from "../entities";
 
-export type ParentItemId = Flavor<string, ParentItem>;
+export type ParentItemId = Flavor<string, "ParentItem">;
 
 export interface ParentItemFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

@@ -47,7 +47,7 @@ import {
   newChild,
 } from "../entities";
 
-export type ChildId = Flavor<string, Child>;
+export type ChildId = Flavor<string, "Child">;
 
 export interface ChildFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };

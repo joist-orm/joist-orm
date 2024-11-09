@@ -40,7 +40,7 @@ import {
 import { type Context } from "src/context";
 import { Author, Book, Comment, commentMeta, type Entity, EntityManager, newComment } from "../entities";
 
-export type CommentId = Flavor<string, Comment>;
+export type CommentId = Flavor<string, "Comment">;
 
 export type CommentParent = Author | Book;
 export function getCommentParentConstructors(): MaybeAbstractEntityConstructor<CommentParent>[] {

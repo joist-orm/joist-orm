@@ -51,9 +51,9 @@ import {
 export type T5BookReviewId = Flavor<number, T5BookReview>;
 
 export interface T5BookReviewFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  book: { kind: "m2o"; type: T5Book; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: false; derived: true };
+  title: { kind: "primitive"; type: string; unique: false; nullable: false; derived: false };
+  book: { kind: "m2o"; type: T5Book; nullable: true; derived: false };
 }
 
 export interface T5BookReviewOpts {

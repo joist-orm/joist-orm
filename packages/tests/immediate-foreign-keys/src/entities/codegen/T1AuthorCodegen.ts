@@ -50,8 +50,8 @@ import {
 export type T1AuthorId = Flavor<number, T1Author>;
 
 export interface T1AuthorFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: false; derived: true };
+  firstName: { kind: "primitive"; type: string; unique: false; nullable: false; derived: false };
 }
 
 export interface T1AuthorOpts {

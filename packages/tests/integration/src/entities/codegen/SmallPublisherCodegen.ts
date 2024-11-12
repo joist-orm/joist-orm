@@ -72,12 +72,12 @@ import {
 export type SmallPublisherId = Flavor<string, SmallPublisher> & Flavor<string, "Publisher">;
 
 export interface SmallPublisherFields extends PublisherFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  city: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  allAuthorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
-  selfReferential: { kind: "m2o"; type: SmallPublisher; nullable: undefined; derived: false };
-  group: { kind: "m2o"; type: SmallPublisherGroup; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  city: { kind: "primitive"; type: string; unique: false; nullable: false; derived: false };
+  sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: true; derived: false };
+  allAuthorNames: { kind: "primitive"; type: string; unique: false; nullable: true; derived: true };
+  selfReferential: { kind: "m2o"; type: SmallPublisher; nullable: true; derived: false };
+  group: { kind: "m2o"; type: SmallPublisherGroup; nullable: true; derived: false };
 }
 
 export interface SmallPublisherOpts extends PublisherOpts {

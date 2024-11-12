@@ -62,11 +62,11 @@ import {
 export type PublisherGroupId = Flavor<string, PublisherGroup>;
 
 export interface PublisherGroupFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  name: { kind: "primitive"; type: string; unique: false; nullable: true; derived: false };
+  numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: false; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
 }
 
 export interface PublisherGroupOpts {

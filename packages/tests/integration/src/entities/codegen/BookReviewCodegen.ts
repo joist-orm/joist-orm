@@ -67,14 +67,14 @@ import {
 export type BookReviewId = Flavor<string, BookReview>;
 
 export interface BookReviewFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  rating: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  isPublic: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: true };
-  isTest: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: true };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  book: { kind: "m2o"; type: Book; nullable: never; derived: false };
-  critic: { kind: "m2o"; type: Critic; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  rating: { kind: "primitive"; type: number; unique: false; nullable: false; derived: false };
+  isPublic: { kind: "primitive"; type: boolean; unique: false; nullable: false; derived: true };
+  isTest: { kind: "primitive"; type: boolean; unique: false; nullable: false; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  book: { kind: "m2o"; type: Book; nullable: false; derived: false };
+  critic: { kind: "m2o"; type: Critic; nullable: true; derived: false };
 }
 
 export interface BookReviewOpts {

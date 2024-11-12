@@ -69,10 +69,10 @@ import {
 export type TaskOldId = Flavor<string, TaskOld> & Flavor<string, "Task">;
 
 export interface TaskOldFields extends TaskFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  specialOldField: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  parentOldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
-  copiedFrom: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  specialOldField: { kind: "primitive"; type: number; unique: false; nullable: false; derived: false };
+  parentOldTask: { kind: "m2o"; type: TaskOld; nullable: true; derived: false };
+  copiedFrom: { kind: "m2o"; type: TaskOld; nullable: true; derived: false };
 }
 
 export interface TaskOldOpts extends TaskOpts {

@@ -77,19 +77,19 @@ export function isUserFavoritePublisher(maybeEntity: unknown): maybeEntity is Us
 }
 
 export interface UserFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  email: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: undefined; derived: false };
-  password: { kind: "primitive"; type: PasswordValue; unique: false; nullable: undefined; derived: false };
-  bio: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  originalEmail: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  trialPeriod: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  manager: { kind: "m2o"; type: User; nullable: undefined; derived: false };
-  authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
-  favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: undefined };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  name: { kind: "primitive"; type: string; unique: false; nullable: false; derived: false };
+  email: { kind: "primitive"; type: string; unique: false; nullable: false; derived: false };
+  ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: true; derived: false };
+  password: { kind: "primitive"; type: PasswordValue; unique: false; nullable: true; derived: false };
+  bio: { kind: "primitive"; type: string; unique: false; nullable: false; derived: true };
+  originalEmail: { kind: "primitive"; type: string; unique: false; nullable: false; derived: true };
+  trialPeriod: { kind: "primitive"; type: string; unique: false; nullable: true; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  manager: { kind: "m2o"; type: User; nullable: true; derived: false };
+  authorManyToOne: { kind: "m2o"; type: Author; nullable: true; derived: false };
+  favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: true };
 }
 
 export interface UserOpts {
@@ -97,8 +97,6 @@ export interface UserOpts {
   email: string;
   ipAddress?: IpAddress | null;
   password?: PasswordValue | null;
-  bio?: string;
-  originalEmail?: string;
   trialPeriod?: string | null;
   manager?: User | UserId | null;
   authorManyToOne?: Author | AuthorId | null;
@@ -270,16 +268,8 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
     return getField(this, "bio");
   }
 
-  set bio(bio: string) {
-    setField(this, "bio", bio);
-  }
-
   get originalEmail(): string {
     return getField(this, "originalEmail");
-  }
-
-  set originalEmail(originalEmail: string) {
-    setField(this, "originalEmail", cleanStringValue(originalEmail));
   }
 
   get trialPeriod(): string | undefined {

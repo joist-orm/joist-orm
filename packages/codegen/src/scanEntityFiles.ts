@@ -26,6 +26,7 @@ export async function scanEntityFiles(config: Config, dbMeta: DbMetadata): Promi
           const field = defaultableFields.find((f) => f.fieldName === match[1]);
           if (field) {
             field.hasConfigDefault = true;
+            field.derived = "default";
           }
         }
       } catch (e) {

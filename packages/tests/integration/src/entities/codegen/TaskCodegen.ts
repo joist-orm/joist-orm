@@ -2,7 +2,6 @@ import {
   BaseEntity,
   cannotBeUpdated,
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -70,26 +69,22 @@ import {
 export type TaskId = Flavor<string, Task>;
 
 export interface TaskFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  durationInDays: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
-  syncDefault: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  asyncDefault_1: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  asyncDefault_2: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  syncDerived: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
-  asyncDerived: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  type: { kind: "enum"; type: TaskType; nullable: undefined };
-  copiedFrom: { kind: "m2o"; type: Task; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  durationInDays: { kind: "primitive"; type: number; unique: false; nullable: false; derived: true };
+  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: true; derived: false };
+  syncDefault: { kind: "primitive"; type: string; unique: false; nullable: true; derived: true };
+  asyncDefault_1: { kind: "primitive"; type: string; unique: false; nullable: true; derived: true };
+  asyncDefault_2: { kind: "primitive"; type: string; unique: false; nullable: true; derived: true };
+  syncDerived: { kind: "primitive"; type: string; unique: false; nullable: true; derived: true };
+  asyncDerived: { kind: "primitive"; type: string; unique: false; nullable: true; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  type: { kind: "enum"; type: TaskType; nullable: true };
+  copiedFrom: { kind: "m2o"; type: Task; nullable: true; derived: false };
 }
 
 export interface TaskOpts {
-  durationInDays?: number;
   deletedAt?: Date | null;
-  syncDefault?: string | null;
-  asyncDefault_1?: string | null;
-  asyncDefault_2?: string | null;
   copiedFrom?: Task | TaskId | null;
   copiedTo?: Task[];
   taskTaskItems?: TaskItem[];
@@ -209,10 +204,6 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
     return getField(this, "durationInDays");
   }
 
-  set durationInDays(durationInDays: number) {
-    setField(this, "durationInDays", durationInDays);
-  }
-
   get deletedAt(): Date | undefined {
     return getField(this, "deletedAt");
   }
@@ -225,24 +216,12 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
     return getField(this, "syncDefault");
   }
 
-  set syncDefault(syncDefault: string | undefined) {
-    setField(this, "syncDefault", cleanStringValue(syncDefault));
-  }
-
   get asyncDefault_1(): string | undefined {
     return getField(this, "asyncDefault_1");
   }
 
-  set asyncDefault_1(asyncDefault_1: string | undefined) {
-    setField(this, "asyncDefault_1", cleanStringValue(asyncDefault_1));
-  }
-
   get asyncDefault_2(): string | undefined {
     return getField(this, "asyncDefault_2");
-  }
-
-  set asyncDefault_2(asyncDefault_2: string | undefined) {
-    setField(this, "asyncDefault_2", cleanStringValue(asyncDefault_2));
   }
 
   abstract get syncDerived(): string | undefined;

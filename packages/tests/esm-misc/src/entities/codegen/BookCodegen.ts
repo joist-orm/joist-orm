@@ -51,9 +51,9 @@ import {
 export type BookId = Flavor<string, Book>;
 
 export interface BookFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  author: { kind: "m2o"; type: Author; nullable: never; derived: false };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  title: { kind: "primitive"; type: string; unique: false; nullable: false; derived: false };
+  author: { kind: "m2o"; type: Author; nullable: false; derived: false };
 }
 
 export interface BookOpts {

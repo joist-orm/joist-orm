@@ -470,10 +470,10 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
 
 // Make our fields type
 function generateFieldsType(config: Config, meta: EntityDbMetadata, idType: "string" | "number"): Code[] {
-  const id = code`id: { kind: "primitive"; type: ${idType}; unique: ${true}; nullable: never };`;
+  const id = code`id: { kind: "primitive"; type: ${idType}; unique: ${true}; nullable: false; derived: true };`;
   const primitives = meta.primitives.map((field) => {
     const { fieldName, fieldType, notNull, unique, derived } = field;
-    return code`${fieldName}: { kind: "primitive"; type: ${fieldType}; unique: ${unique}; nullable: ${undefinedOrNever(
+    return code`${fieldName}: { kind: "primitive"; type: ${fieldType}; unique: ${unique}; nullable: ${nullable(
       notNull,
     )}, derived: ${derived !== false} };`;
   });
@@ -483,20 +483,19 @@ function generateFieldsType(config: Config, meta: EntityDbMetadata, idType: "str
       // Arrays are always optional and we'll default to `[]`
       return code`${fieldName}: { kind: "enum"; type: ${enumType}[]; nullable: never };`;
     } else {
-      return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${undefinedOrNever(notNull)} };`;
+      return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${nullable(notNull)} };`;
     }
   });
   const pgEnums = meta.pgEnums.map(({ fieldName, enumType, notNull }) => {
-    const nullable = undefinedOrNever(notNull);
-    return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${nullable}; native: true };`;
+    return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${nullable(notNull)}; native: true };`;
   });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull, derived }) => {
-    return code`${fieldName}: { kind: "m2o"; type: ${otherEntity.type}; nullable: ${undefinedOrNever(
+    return code`${fieldName}: { kind: "m2o"; type: ${otherEntity.type}; nullable: ${nullable(
       notNull,
     )}, derived: ${derived !== false} };`;
   });
   const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
-    return code`${fieldName}: { kind: "poly"; type: ${fieldType}; nullable: ${undefinedOrNever(notNull)} };`;
+    return code`${fieldName}: { kind: "poly"; type: ${fieldType}; nullable: ${nullable(notNull)} };`;
   });
   return [id, ...primitives, ...enums, ...pgEnums, ...m2o, ...polys];
 }
@@ -1047,6 +1046,10 @@ function maybeUndefined(notNull: boolean): string {
 
 function undefinedOrNever(notNull: boolean): string {
   return notNull ? "never" : "undefined";
+}
+
+function nullable(notNull: boolean): string {
+  return notNull ? "false" : "true";
 }
 
 function nullOrNever(notNull: boolean): string {

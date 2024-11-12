@@ -66,14 +66,14 @@ import {
 export type ImageId = Flavor<string, Image>;
 
 export interface ImageFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  fileName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  type: { kind: "enum"; type: ImageType; nullable: never };
-  author: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
-  book: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
-  publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  fileName: { kind: "primitive"; type: string; unique: false; nullable: false; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  type: { kind: "enum"; type: ImageType; nullable: false };
+  author: { kind: "m2o"; type: Author; nullable: true; derived: false };
+  book: { kind: "m2o"; type: Book; nullable: true; derived: false };
+  publisher: { kind: "m2o"; type: Publisher; nullable: true; derived: false };
 }
 
 export interface ImageOpts {

@@ -51,8 +51,8 @@ import {
 export type AdminUserId = Flavor<string, AdminUser> & Flavor<string, "User">;
 
 export interface AdminUserFields extends UserFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  role: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  role: { kind: "primitive"; type: string; unique: false; nullable: false; derived: false };
 }
 
 export interface AdminUserOpts extends UserOpts {

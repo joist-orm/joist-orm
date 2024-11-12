@@ -56,11 +56,11 @@ import {
 export type ParentItemId = Flavor<string, ParentItem>;
 
 export interface ParentItemFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  parentGroup: { kind: "m2o"; type: ParentGroup; nullable: never; derived: false };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  name: { kind: "primitive"; type: string; unique: false; nullable: true; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  parentGroup: { kind: "m2o"; type: ParentGroup; nullable: false; derived: false };
 }
 
 export interface ParentItemOpts {

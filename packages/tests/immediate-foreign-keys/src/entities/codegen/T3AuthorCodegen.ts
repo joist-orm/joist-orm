@@ -53,9 +53,9 @@ import {
 export type T3AuthorId = Flavor<number, T3Author>;
 
 export interface T3AuthorFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  favoriteBook: { kind: "m2o"; type: T3Book; nullable: never; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: false; derived: true };
+  firstName: { kind: "primitive"; type: string; unique: false; nullable: false; derived: false };
+  favoriteBook: { kind: "m2o"; type: T3Book; nullable: false; derived: false };
 }
 
 export interface T3AuthorOpts {

@@ -76,32 +76,27 @@ import {
 export type BookId = Flavor<string, Book>;
 
 export interface BookFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  order: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
-  notes: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  acknowledgements: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  authorsNickNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  search: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
-  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  prequel: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
-  author: { kind: "m2o"; type: Author; nullable: never; derived: false };
-  reviewer: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
-  randomComment: { kind: "m2o"; type: Comment; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  title: { kind: "primitive"; type: string; unique: false; nullable: false; derived: false };
+  order: { kind: "primitive"; type: number; unique: false; nullable: false; derived: true };
+  notes: { kind: "primitive"; type: string; unique: false; nullable: false; derived: true };
+  acknowledgements: { kind: "primitive"; type: string; unique: false; nullable: true; derived: false };
+  authorsNickNames: { kind: "primitive"; type: string; unique: false; nullable: true; derived: true };
+  search: { kind: "primitive"; type: string; unique: false; nullable: true; derived: true };
+  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: true; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  prequel: { kind: "m2o"; type: Book; nullable: true; derived: false };
+  author: { kind: "m2o"; type: Author; nullable: false; derived: true };
+  reviewer: { kind: "m2o"; type: Author; nullable: true; derived: true };
+  randomComment: { kind: "m2o"; type: Comment; nullable: true; derived: false };
 }
 
 export interface BookOpts {
   title: string;
-  order?: number;
-  notes?: string;
   acknowledgements?: string | null;
-  authorsNickNames?: string | null;
   deletedAt?: Date | null;
   prequel?: Book | BookId | null;
-  author?: Author | AuthorId;
-  reviewer?: Author | AuthorId | null;
   randomComment?: Comment | CommentId | null;
   sequel?: Book | null;
   currentDraftAuthor?: Author | null;
@@ -115,8 +110,6 @@ export interface BookOpts {
 
 export interface BookIdsOpts {
   prequelId?: BookId | null;
-  authorId?: AuthorId | null;
-  reviewerId?: AuthorId | null;
   randomCommentId?: CommentId | null;
   sequelId?: BookId | null;
   currentDraftAuthorId?: AuthorId | null;
@@ -253,16 +246,8 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
     return getField(this, "order");
   }
 
-  set order(order: number) {
-    setField(this, "order", order);
-  }
-
   get notes(): string {
     return getField(this, "notes");
-  }
-
-  set notes(notes: string) {
-    setField(this, "notes", cleanStringValue(notes));
   }
 
   get acknowledgements(): string | undefined {
@@ -275,10 +260,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   get authorsNickNames(): string | undefined {
     return getField(this, "authorsNickNames");
-  }
-
-  set authorsNickNames(authorsNickNames: string | undefined) {
-    setField(this, "authorsNickNames", cleanStringValue(authorsNickNames));
   }
 
   abstract readonly search: ReactiveField<Book, string | undefined>;

@@ -85,21 +85,21 @@ import {
 export type PublisherId = Flavor<string, Publisher>;
 
 export interface PublisherFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  latitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
-  longitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
-  hugeNumber: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
-  numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
-  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
-  titlesOfFavoriteBooks: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
-  baseSyncDefault: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  baseAsyncDefault: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  size: { kind: "enum"; type: PublisherSize; nullable: undefined };
-  type: { kind: "enum"; type: PublisherType; nullable: never };
-  group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  name: { kind: "primitive"; type: string; unique: false; nullable: false; derived: false };
+  latitude: { kind: "primitive"; type: number; unique: false; nullable: true; derived: false };
+  longitude: { kind: "primitive"; type: number; unique: false; nullable: true; derived: false };
+  hugeNumber: { kind: "primitive"; type: number; unique: false; nullable: true; derived: false };
+  numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: false; derived: true };
+  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: true; derived: false };
+  titlesOfFavoriteBooks: { kind: "primitive"; type: string; unique: false; nullable: true; derived: true };
+  baseSyncDefault: { kind: "primitive"; type: string; unique: false; nullable: false; derived: true };
+  baseAsyncDefault: { kind: "primitive"; type: string; unique: false; nullable: false; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  size: { kind: "enum"; type: PublisherSize; nullable: true };
+  type: { kind: "enum"; type: PublisherType; nullable: false };
+  group: { kind: "m2o"; type: PublisherGroup; nullable: true; derived: false };
 }
 
 export interface PublisherOpts {
@@ -108,10 +108,7 @@ export interface PublisherOpts {
   longitude?: number | null;
   hugeNumber?: number | null;
   deletedAt?: Date | null;
-  baseSyncDefault?: string;
-  baseAsyncDefault?: string;
   size?: PublisherSize | null;
-  type?: PublisherType;
   group?: PublisherGroup | PublisherGroupId | null;
   authors?: Author[];
   bookAdvances?: BookAdvance[];
@@ -309,16 +306,8 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
     return getField(this, "baseSyncDefault");
   }
 
-  set baseSyncDefault(baseSyncDefault: string) {
-    setField(this, "baseSyncDefault", cleanStringValue(baseSyncDefault));
-  }
-
   get baseAsyncDefault(): string {
     return getField(this, "baseAsyncDefault");
-  }
-
-  set baseAsyncDefault(baseAsyncDefault: string) {
-    setField(this, "baseAsyncDefault", cleanStringValue(baseAsyncDefault));
   }
 
   get createdAt(): Date {
@@ -355,10 +344,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get typeDetails(): PublisherTypeDetails {
     return PublisherTypes.getByCode(this.type);
-  }
-
-  set type(type: PublisherType) {
-    setField(this, "type", type);
   }
 
   get isTypeSmall(): boolean {

@@ -61,12 +61,12 @@ import {
 export type BookAdvanceId = Flavor<string, BookAdvance>;
 
 export interface BookAdvanceFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  status: { kind: "enum"; type: AdvanceStatus; nullable: never };
-  book: { kind: "m2o"; type: Book; nullable: never; derived: false };
-  publisher: { kind: "m2o"; type: Publisher; nullable: never; derived: false };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  status: { kind: "enum"; type: AdvanceStatus; nullable: false };
+  book: { kind: "m2o"; type: Book; nullable: false; derived: false };
+  publisher: { kind: "m2o"; type: Publisher; nullable: false; derived: false };
 }
 
 export interface BookAdvanceOpts {

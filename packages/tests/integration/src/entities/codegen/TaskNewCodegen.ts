@@ -65,11 +65,11 @@ import {
 export type TaskNewId = Flavor<string, TaskNew> & Flavor<string, "Task">;
 
 export interface TaskNewFields extends TaskFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  specialNewField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
-  selfReferential: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
-  specialNewAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
-  copiedFrom: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  specialNewField: { kind: "primitive"; type: number; unique: false; nullable: true; derived: false };
+  selfReferential: { kind: "m2o"; type: TaskNew; nullable: true; derived: false };
+  specialNewAuthor: { kind: "m2o"; type: Author; nullable: true; derived: false };
+  copiedFrom: { kind: "m2o"; type: TaskNew; nullable: true; derived: false };
 }
 
 export interface TaskNewOpts extends TaskOpts {

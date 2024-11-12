@@ -51,11 +51,11 @@ export function isCommentParent(maybeEntity: unknown): maybeEntity is CommentPar
 }
 
 export interface CommentFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  text: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  parent: { kind: "poly"; type: CommentParent; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  text: { kind: "primitive"; type: string; unique: false; nullable: false; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  parent: { kind: "poly"; type: CommentParent; nullable: false };
 }
 
 export interface CommentOpts {

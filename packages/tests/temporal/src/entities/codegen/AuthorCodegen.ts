@@ -42,12 +42,12 @@ import { Author, authorMeta, Book, type BookId, bookMeta, type Entity, EntityMan
 export type AuthorId = Flavor<string, Author>;
 
 export interface AuthorFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
-  birthday: { kind: "primitive"; type: Temporal.PlainDate; unique: false; nullable: never; derived: false };
-  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  firstName: { kind: "primitive"; type: string; unique: false; nullable: false; derived: false };
+  lastName: { kind: "primitive"; type: string; unique: false; nullable: true; derived: false };
+  birthday: { kind: "primitive"; type: Temporal.PlainDate; unique: false; nullable: false; derived: false };
+  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: false; derived: true };
+  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: false; derived: true };
 }
 
 export interface AuthorOpts {

@@ -126,8 +126,45 @@ export interface FindCountFilterOptions<T extends Entity> {
  */
 export type MaybeAbstractEntityConstructor<T> = abstract new (em: EntityManager<any, any>, opts: any) => T;
 
+type PrimitiveMeta<T, U extends boolean, N> = {
+  kind: "primitive";
+  type: T;
+  unique: U;
+  nullable: N;
+};
+
+type EnumMeta<T, N> = {
+  kind: "enum";
+  type: T;
+  nullable: N;
+};
+
+type ManyToOneMeta<T, N extends boolean, D extends boolean> = {
+  kind: "m2o";
+  type: T;
+  nullable: N;
+  derived: D;
+};
+
+type MaybeNull<T, N> = N extends true ? T | null : T;
+
+type Simplify<T> = { [K in keyof T]: T[K] };
+
 /** Return the `FooOpts` type a given `Foo` entity constructor. */
-export type OptsOf<T> = T extends { __orm: { optsType: infer O } } ? O : never;
+export type OptsOf<T, F = FieldsOf<T>> = {
+  [K in keyof F as F[K] extends { nullable: true; derived: false } ? K : never]?: OptFieldType<F[K], null>;
+} & {
+  [K in keyof F as F[K] extends { nullable: false; derived: false } ? K : never]: OptFieldType<F[K], never>;
+};
+
+type OptFieldType<F, N> =
+  F extends PrimitiveMeta<infer T, any, any>
+    ? T | N
+    : F extends EnumMeta<infer T, any>
+      ? T | N
+      : F extends ManyToOneMeta<infer T, any, any>
+        ? T | N
+        : never;
 
 export type FieldsOf<T> = T extends { __orm: { fieldsType: infer F } } ? F : never;
 
@@ -648,7 +685,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     const { softDeletes = "exclude", populate } = options ?? {};
     const entity = await findOrCreateDataLoader(this, type, where, softDeletes).load({
       where,
-      ifNew: ifNew as OptsOf<T>,
+      ifNew: ifNew as any as OptsOf<T>,
       upsert,
     });
     if (populate) {

@@ -53,9 +53,9 @@ import {
 export type T2AuthorId = Flavor<number, T2Author>;
 
 export interface T2AuthorFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
-  favoriteBook: { kind: "m2o"; type: T2Book; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: number; unique: true; nullable: false; derived: true };
+  firstName: { kind: "primitive"; type: string; unique: false; nullable: false; derived: false };
+  favoriteBook: { kind: "m2o"; type: T2Book; nullable: true; derived: false };
 }
 
 export interface T2AuthorOpts {

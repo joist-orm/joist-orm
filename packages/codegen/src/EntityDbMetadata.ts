@@ -108,7 +108,7 @@ export type PrimitiveField = Field & {
   fieldType: PrimitiveTypescriptType | Import;
   rawFieldType: PrimitiveTypescriptType;
   notNull: boolean;
-  derived: "orm" | "sync" | "async" | false;
+  derived: "orm" | "sync" | "async" | "default" | false;
   protected: boolean;
   unique: boolean;
   superstruct: Import | undefined;
@@ -123,7 +123,7 @@ export type EnumField = Field & {
   columnName: string;
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
-  derived: "sync" | "async" | false;
+  derived: "sync" | "async" | "default" | false;
   enumName: string;
   enumType: Import;
   enumDetailType: Import;
@@ -138,6 +138,7 @@ export type PgEnumField = Field & {
   kind: "pg-enum";
   columnName: string;
   columnDefault: number | boolean | string | null;
+  derived: "sync" | "async" | "default" | false;
   /** I.e. `favorite_shape`. */
   dbType: string;
   /** I.e. `FavoriteShape`. */
@@ -158,7 +159,7 @@ export type ManyToOneField = Field & {
   notNull: boolean;
   isDeferredAndDeferrable: boolean;
   constraintName: string;
-  derived: "async" | false;
+  derived: "async" | "default" | false;
   hasConfigDefault: boolean;
   onDelete: Action;
 };
@@ -200,6 +201,7 @@ export type PolymorphicField = Field & {
   kind: "poly";
   fieldType: string; // The name of the type union, eg `CommentParent`
   notNull: boolean;
+  derived?: "default";
   hasConfigDefault: boolean;
   components: PolymorphicFieldComponent[];
 };
@@ -435,7 +437,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
     rawFieldType: fieldType,
     notNull: column.notNull,
     columnDefault: column.default,
-    derived: fieldDerived(config, entity, fieldName),
+    derived: fieldDerived(config, entity, fieldName, column.default),
     protected: isProtected(config, entity, fieldName),
     unique,
     ignore: isFieldIgnored(config, entity, fieldName, column.notNull, column.default !== null),
@@ -447,13 +449,20 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
   };
 }
 
-function fieldDerived(config: Config, entity: Entity, fieldName: string): PrimitiveField["derived"] {
+function fieldDerived(
+  config: Config,
+  entity: Entity,
+  fieldName: string,
+  columnDefault: unknown,
+): PrimitiveField["derived"] {
   if (ormMaintainedFields.includes(fieldName)) {
     return "orm";
   } else if (isGetterField(config, entity, fieldName)) {
     return "sync";
   } else if (isReactiveField(config, entity, fieldName)) {
     return "async";
+  } else if (columnDefault) {
+    return "default";
   } else {
     return false;
   }
@@ -484,7 +493,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
     columnName,
     columnType,
     columnDefault: column.default,
-    derived: fieldDerived(config, entity, fieldName) as EnumField["derived"],
+    derived: fieldDerived(config, entity, fieldName, column.default) as EnumField["derived"],
     enumName,
     enumType,
     enumDetailType,
@@ -515,7 +524,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
     columnName,
     columnType,
     columnDefault: column.default,
-    derived: fieldDerived(config, entity, fieldName) as EnumField["derived"],
+    derived: fieldDerived(config, entity, fieldName, column.default) as EnumField["derived"],
     enumName,
     enumType,
     enumDetailType,
@@ -543,6 +552,7 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
     enumValues: (column.type as EnumType).values,
     notNull: column.notNull,
     columnDefault: column.default,
+    derived: fieldDerived(config, entity, fieldName, column.default) as EnumField["derived"],
     ignore: isFieldIgnored(config, entity, fieldName, column.notNull, column.default !== null),
     hasConfigDefault: false, // updated by scanEntityFiles
   };

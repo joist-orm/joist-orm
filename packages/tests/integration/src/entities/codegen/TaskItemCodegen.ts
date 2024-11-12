@@ -58,12 +58,12 @@ import {
 export type TaskItemId = Flavor<string, TaskItem>;
 
 export interface TaskItemFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  newTask: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
-  oldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
-  task: { kind: "m2o"; type: Task; nullable: undefined; derived: false };
+  id: { kind: "primitive"; type: string; unique: true; nullable: false; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: false; derived: true };
+  newTask: { kind: "m2o"; type: TaskNew; nullable: true; derived: false };
+  oldTask: { kind: "m2o"; type: TaskOld; nullable: true; derived: false };
+  task: { kind: "m2o"; type: Task; nullable: true; derived: false };
 }
 
 export interface TaskItemOpts {

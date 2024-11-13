@@ -122,6 +122,21 @@ tagConfig.addRule(newRequiredRule("name"));
 tagConfig.addRule(newRequiredRule("createdAt"));
 tagConfig.addRule(newRequiredRule("updatedAt"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    Tag: {
+      entityType: Tag;
+      filterType: TagFilter;
+      gqlFilterType: TagGraphQLFilter;
+      orderType: TagOrder;
+      optsType: TagOpts;
+      fieldsType: TagFields;
+      optIdsType: TagIdsOpts;
+      factoryOptsType: Parameters<typeof newTag>[1];
+    };
+  }
+}
+
 export abstract class TagCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "t";
   static readonly metadata: EntityMetadata<Tag>;
@@ -131,11 +146,11 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
     filterType: TagFilter;
     gqlFilterType: TagGraphQLFilter;
     orderType: TagOrder;
-    optsType: TagOpts;
     fieldsType: TagFields;
     optIdsType: TagIdsOpts;
     factoryOptsType: Parameters<typeof newTag>[1];
   };
+  declare readonly __types: { 0: "Tag" };
 
   constructor(em: EntityManager, opts: TagOpts) {
     super(em, opts);

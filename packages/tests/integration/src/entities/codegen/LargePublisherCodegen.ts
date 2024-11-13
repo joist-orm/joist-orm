@@ -108,6 +108,21 @@ export interface LargePublisherOrder extends PublisherOrder {
 
 export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
 
+declare module "joist-orm" {
+  interface TypeMap {
+    LargePublisher: {
+      entityType: LargePublisher;
+      filterType: LargePublisherFilter;
+      gqlFilterType: LargePublisherGraphQLFilter;
+      orderType: LargePublisherOrder;
+      optsType: LargePublisherOpts;
+      fieldsType: LargePublisherFields;
+      optIdsType: LargePublisherIdsOpts;
+      factoryOptsType: Parameters<typeof newLargePublisher>[1];
+    };
+  }
+}
+
 export abstract class LargePublisherCodegen extends Publisher implements Entity {
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<LargePublisher>;
@@ -117,11 +132,11 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
     filterType: LargePublisherFilter;
     gqlFilterType: LargePublisherGraphQLFilter;
     orderType: LargePublisherOrder;
-    optsType: LargePublisherOpts;
     fieldsType: LargePublisherFields;
     optIdsType: LargePublisherIdsOpts;
     factoryOptsType: Parameters<typeof newLargePublisher>[1];
   };
+  declare readonly __types: { 0: "Publisher"; 1: "LargePublisher" };
 
   constructor(em: EntityManager, opts: LargePublisherOpts) {
     super(em, opts);

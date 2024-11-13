@@ -84,6 +84,21 @@ export const t1AuthorConfig = new ConfigApi<T1Author, Context>();
 
 t1AuthorConfig.addRule(newRequiredRule("firstName"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    T1Author: {
+      entityType: T1Author;
+      filterType: T1AuthorFilter;
+      gqlFilterType: T1AuthorGraphQLFilter;
+      orderType: T1AuthorOrder;
+      optsType: T1AuthorOpts;
+      fieldsType: T1AuthorFields;
+      optIdsType: T1AuthorIdsOpts;
+      factoryOptsType: Parameters<typeof newT1Author>[1];
+    };
+  }
+}
+
 export abstract class T1AuthorCodegen extends BaseEntity<EntityManager, number> implements Entity {
   static readonly tagName = "ta";
   static readonly metadata: EntityMetadata<T1Author>;
@@ -93,11 +108,11 @@ export abstract class T1AuthorCodegen extends BaseEntity<EntityManager, number> 
     filterType: T1AuthorFilter;
     gqlFilterType: T1AuthorGraphQLFilter;
     orderType: T1AuthorOrder;
-    optsType: T1AuthorOpts;
     fieldsType: T1AuthorFields;
     optIdsType: T1AuthorIdsOpts;
     factoryOptsType: Parameters<typeof newT1Author>[1];
   };
+  declare readonly __types: { 0: "T1Author" };
 
   constructor(em: EntityManager, opts: T1AuthorOpts) {
     super(em, opts);

@@ -32,7 +32,7 @@
     "prettier-plugin-organize-imports": "^4.1.0",
     "superstruct": "0.15.5",
     "tsconfig-paths": "^4.2.0",
-    "tsx": "^4.19.1",
-    "typescript": "5.5.4"
+    "tsx": "^4.19.2",
+    "typescript": "5.6.3"
   }
 }

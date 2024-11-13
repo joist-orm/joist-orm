@@ -97,6 +97,21 @@ authorScheduleConfig.addRule(newRequiredRule("createdAt"));
 authorScheduleConfig.addRule(newRequiredRule("updatedAt"));
 authorScheduleConfig.addRule(newRequiredRule("author"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    AuthorSchedule: {
+      entityType: AuthorSchedule;
+      filterType: AuthorScheduleFilter;
+      gqlFilterType: AuthorScheduleGraphQLFilter;
+      orderType: AuthorScheduleOrder;
+      optsType: AuthorScheduleOpts;
+      fieldsType: AuthorScheduleFields;
+      optIdsType: AuthorScheduleIdsOpts;
+      factoryOptsType: Parameters<typeof newAuthorSchedule>[1];
+    };
+  }
+}
+
 export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "authorSchedule";
   static readonly metadata: EntityMetadata<AuthorSchedule>;
@@ -106,11 +121,11 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
     filterType: AuthorScheduleFilter;
     gqlFilterType: AuthorScheduleGraphQLFilter;
     orderType: AuthorScheduleOrder;
-    optsType: AuthorScheduleOpts;
     fieldsType: AuthorScheduleFields;
     optIdsType: AuthorScheduleIdsOpts;
     factoryOptsType: Parameters<typeof newAuthorSchedule>[1];
   };
+  declare readonly __types: { 0: "AuthorSchedule" };
 
   constructor(em: EntityManager, opts: AuthorScheduleOpts) {
     super(em, opts);

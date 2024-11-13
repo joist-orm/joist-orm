@@ -292,3 +292,8 @@ export function failNoIdYet(entity: string): never {
 export function isNewEntity<T extends Entity>(entity: T): entity is New<T> {
   return entity.isNewEntity;
 }
+
+/**
+ * Provides a container for entities to attach their application-specific types.
+ */
+export interface TypeMap {}

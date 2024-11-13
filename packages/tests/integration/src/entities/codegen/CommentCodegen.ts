@@ -157,6 +157,21 @@ commentConfig.addRule(newRequiredRule("createdAt"));
 commentConfig.addRule(newRequiredRule("updatedAt"));
 commentConfig.addRule(newRequiredRule("parent"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    Comment: {
+      entityType: Comment;
+      filterType: CommentFilter;
+      gqlFilterType: CommentGraphQLFilter;
+      orderType: CommentOrder;
+      optsType: CommentOpts;
+      fieldsType: CommentFields;
+      optIdsType: CommentIdsOpts;
+      factoryOptsType: Parameters<typeof newComment>[1];
+    };
+  }
+}
+
 export abstract class CommentCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "comment";
   static readonly metadata: EntityMetadata<Comment>;
@@ -166,11 +181,11 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
     filterType: CommentFilter;
     gqlFilterType: CommentGraphQLFilter;
     orderType: CommentOrder;
-    optsType: CommentOpts;
     fieldsType: CommentFields;
     optIdsType: CommentIdsOpts;
     factoryOptsType: Parameters<typeof newComment>[1];
   };
+  declare readonly __types: { 0: "Comment" };
 
   constructor(em: EntityManager, opts: CommentOpts) {
     super(em, opts);

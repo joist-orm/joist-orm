@@ -131,6 +131,21 @@ taskOldConfig.addRule("parentOldTask", mustBeSubType("parentOldTask"));
 taskOldConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));
 taskOldConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    TaskOld: {
+      entityType: TaskOld;
+      filterType: TaskOldFilter;
+      gqlFilterType: TaskOldGraphQLFilter;
+      orderType: TaskOldOrder;
+      optsType: TaskOldOpts;
+      fieldsType: TaskOldFields;
+      optIdsType: TaskOldIdsOpts;
+      factoryOptsType: Parameters<typeof newTaskOld>[1];
+    };
+  }
+}
+
 export abstract class TaskOldCodegen extends Task implements Entity {
   static readonly tagName = "task";
   static readonly metadata: EntityMetadata<TaskOld>;
@@ -140,11 +155,11 @@ export abstract class TaskOldCodegen extends Task implements Entity {
     filterType: TaskOldFilter;
     gqlFilterType: TaskOldGraphQLFilter;
     orderType: TaskOldOrder;
-    optsType: TaskOldOpts;
     fieldsType: TaskOldFields;
     optIdsType: TaskOldIdsOpts;
     factoryOptsType: Parameters<typeof newTaskOld>[1];
   };
+  declare readonly __types: { 0: "Task"; 1: "TaskOld" };
 
   constructor(em: EntityManager, opts: TaskOldOpts) {
     super(em, opts);

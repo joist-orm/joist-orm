@@ -139,6 +139,21 @@ criticConfig.addRule(newRequiredRule("name"));
 criticConfig.addRule(newRequiredRule("createdAt"));
 criticConfig.addRule(newRequiredRule("updatedAt"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    Critic: {
+      entityType: Critic;
+      filterType: CriticFilter;
+      gqlFilterType: CriticGraphQLFilter;
+      orderType: CriticOrder;
+      optsType: CriticOpts;
+      fieldsType: CriticFields;
+      optIdsType: CriticIdsOpts;
+      factoryOptsType: Parameters<typeof newCritic>[1];
+    };
+  }
+}
+
 export abstract class CriticCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "c";
   static readonly metadata: EntityMetadata<Critic>;
@@ -148,11 +163,11 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
     filterType: CriticFilter;
     gqlFilterType: CriticGraphQLFilter;
     orderType: CriticOrder;
-    optsType: CriticOpts;
     fieldsType: CriticFields;
     optIdsType: CriticIdsOpts;
     factoryOptsType: Parameters<typeof newCritic>[1];
   };
+  declare readonly __types: { 0: "Critic" };
 
   constructor(em: EntityManager, opts: CriticOpts) {
     super(em, opts);

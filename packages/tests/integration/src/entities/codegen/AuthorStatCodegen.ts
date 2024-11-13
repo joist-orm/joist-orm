@@ -138,6 +138,21 @@ authorStatConfig.addRule(newRequiredRule("doublePrecision"));
 authorStatConfig.addRule(newRequiredRule("createdAt"));
 authorStatConfig.addRule(newRequiredRule("updatedAt"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    AuthorStat: {
+      entityType: AuthorStat;
+      filterType: AuthorStatFilter;
+      gqlFilterType: AuthorStatGraphQLFilter;
+      orderType: AuthorStatOrder;
+      optsType: AuthorStatOpts;
+      fieldsType: AuthorStatFields;
+      optIdsType: AuthorStatIdsOpts;
+      factoryOptsType: Parameters<typeof newAuthorStat>[1];
+    };
+  }
+}
+
 export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "as";
   static readonly metadata: EntityMetadata<AuthorStat>;
@@ -147,11 +162,11 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
     filterType: AuthorStatFilter;
     gqlFilterType: AuthorStatGraphQLFilter;
     orderType: AuthorStatOrder;
-    optsType: AuthorStatOpts;
     fieldsType: AuthorStatFields;
     optIdsType: AuthorStatIdsOpts;
     factoryOptsType: Parameters<typeof newAuthorStat>[1];
   };
+  declare readonly __types: { 0: "AuthorStat" };
 
   constructor(em: EntityManager, opts: AuthorStatOpts) {
     super(em, opts);

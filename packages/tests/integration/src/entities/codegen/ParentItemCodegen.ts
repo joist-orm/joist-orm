@@ -106,6 +106,21 @@ parentItemConfig.addRule(newRequiredRule("createdAt"));
 parentItemConfig.addRule(newRequiredRule("updatedAt"));
 parentItemConfig.addRule(newRequiredRule("parentGroup"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    ParentItem: {
+      entityType: ParentItem;
+      filterType: ParentItemFilter;
+      gqlFilterType: ParentItemGraphQLFilter;
+      orderType: ParentItemOrder;
+      optsType: ParentItemOpts;
+      fieldsType: ParentItemFields;
+      optIdsType: ParentItemIdsOpts;
+      factoryOptsType: Parameters<typeof newParentItem>[1];
+    };
+  }
+}
+
 export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "pi";
   static readonly metadata: EntityMetadata<ParentItem>;
@@ -115,11 +130,11 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
     filterType: ParentItemFilter;
     gqlFilterType: ParentItemGraphQLFilter;
     orderType: ParentItemOrder;
-    optsType: ParentItemOpts;
     fieldsType: ParentItemFields;
     optIdsType: ParentItemIdsOpts;
     factoryOptsType: Parameters<typeof newParentItem>[1];
   };
+  declare readonly __types: { 0: "ParentItem" };
 
   constructor(em: EntityManager, opts: ParentItemOpts) {
     super(em, opts);

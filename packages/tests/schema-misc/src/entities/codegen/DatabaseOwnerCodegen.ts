@@ -65,6 +65,21 @@ export const databaseOwnerConfig = new ConfigApi<DatabaseOwner, Context>();
 
 databaseOwnerConfig.addRule(newRequiredRule("name"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    DatabaseOwner: {
+      entityType: DatabaseOwner;
+      filterType: DatabaseOwnerFilter;
+      gqlFilterType: DatabaseOwnerGraphQLFilter;
+      orderType: DatabaseOwnerOrder;
+      optsType: DatabaseOwnerOpts;
+      fieldsType: DatabaseOwnerFields;
+      optIdsType: DatabaseOwnerIdsOpts;
+      factoryOptsType: Parameters<typeof newDatabaseOwner>[1];
+    };
+  }
+}
+
 export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "do";
   static readonly metadata: EntityMetadata<DatabaseOwner>;
@@ -74,11 +89,11 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
     filterType: DatabaseOwnerFilter;
     gqlFilterType: DatabaseOwnerGraphQLFilter;
     orderType: DatabaseOwnerOrder;
-    optsType: DatabaseOwnerOpts;
     fieldsType: DatabaseOwnerFields;
     optIdsType: DatabaseOwnerIdsOpts;
     factoryOptsType: Parameters<typeof newDatabaseOwner>[1];
   };
+  declare readonly __types: { 0: "DatabaseOwner" };
 
   constructor(em: EntityManager, opts: DatabaseOwnerOpts) {
     super(em, opts);

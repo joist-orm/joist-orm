@@ -198,6 +198,21 @@ userConfig.addRule(newRequiredRule("createdAt"));
 userConfig.addRule(newRequiredRule("updatedAt"));
 userConfig.setDefault("bio", "");
 
+declare module "joist-orm" {
+  interface TypeMap {
+    User: {
+      entityType: User;
+      filterType: UserFilter;
+      gqlFilterType: UserGraphQLFilter;
+      orderType: UserOrder;
+      optsType: UserOpts;
+      fieldsType: UserFields;
+      optIdsType: UserIdsOpts;
+      factoryOptsType: Parameters<typeof newUser>[1];
+    };
+  }
+}
+
 export abstract class UserCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "u";
   static readonly metadata: EntityMetadata<User>;
@@ -207,11 +222,11 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
     filterType: UserFilter;
     gqlFilterType: UserGraphQLFilter;
     orderType: UserOrder;
-    optsType: UserOpts;
     fieldsType: UserFields;
     optIdsType: UserIdsOpts;
     factoryOptsType: Parameters<typeof newUser>[1];
   };
+  declare readonly __types: { 0: "User" };
 
   constructor(em: EntityManager, opts: UserOpts) {
     super(em, opts);

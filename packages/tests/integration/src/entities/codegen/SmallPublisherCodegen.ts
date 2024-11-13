@@ -136,6 +136,21 @@ export const smallPublisherConfig = new ConfigApi<SmallPublisher, Context>();
 smallPublisherConfig.addRule(newRequiredRule("city"));
 smallPublisherConfig.addRule("group", mustBeSubType("group"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    SmallPublisher: {
+      entityType: SmallPublisher;
+      filterType: SmallPublisherFilter;
+      gqlFilterType: SmallPublisherGraphQLFilter;
+      orderType: SmallPublisherOrder;
+      optsType: SmallPublisherOpts;
+      fieldsType: SmallPublisherFields;
+      optIdsType: SmallPublisherIdsOpts;
+      factoryOptsType: Parameters<typeof newSmallPublisher>[1];
+    };
+  }
+}
+
 export abstract class SmallPublisherCodegen extends Publisher implements Entity {
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<SmallPublisher>;
@@ -145,11 +160,11 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
     filterType: SmallPublisherFilter;
     gqlFilterType: SmallPublisherGraphQLFilter;
     orderType: SmallPublisherOrder;
-    optsType: SmallPublisherOpts;
     fieldsType: SmallPublisherFields;
     optIdsType: SmallPublisherIdsOpts;
     factoryOptsType: Parameters<typeof newSmallPublisher>[1];
   };
+  declare readonly __types: { 0: "Publisher"; 1: "SmallPublisher" };
 
   constructor(em: EntityManager, opts: SmallPublisherOpts) {
     super(em, opts);

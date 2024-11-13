@@ -100,6 +100,21 @@ export const parentGroupConfig = new ConfigApi<ParentGroup, Context>();
 parentGroupConfig.addRule(newRequiredRule("createdAt"));
 parentGroupConfig.addRule(newRequiredRule("updatedAt"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    ParentGroup: {
+      entityType: ParentGroup;
+      filterType: ParentGroupFilter;
+      gqlFilterType: ParentGroupGraphQLFilter;
+      orderType: ParentGroupOrder;
+      optsType: ParentGroupOpts;
+      fieldsType: ParentGroupFields;
+      optIdsType: ParentGroupIdsOpts;
+      factoryOptsType: Parameters<typeof newParentGroup>[1];
+    };
+  }
+}
+
 export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "parentGroup";
   static readonly metadata: EntityMetadata<ParentGroup>;
@@ -109,11 +124,11 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
     filterType: ParentGroupFilter;
     gqlFilterType: ParentGroupGraphQLFilter;
     orderType: ParentGroupOrder;
-    optsType: ParentGroupOpts;
     fieldsType: ParentGroupFields;
     optIdsType: ParentGroupIdsOpts;
     factoryOptsType: Parameters<typeof newParentGroup>[1];
   };
+  declare readonly __types: { 0: "ParentGroup" };
 
   constructor(em: EntityManager, opts: ParentGroupOpts) {
     super(em, opts);

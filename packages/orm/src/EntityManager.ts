@@ -40,6 +40,7 @@ import {
   ReactionLogger,
   Reference,
   TimestampSerde,
+  TypeMap,
   UniqueFilter,
   ValidationError,
   ValidationErrors,
@@ -129,7 +130,26 @@ export interface FindCountFilterOptions<T extends Entity> {
 export type MaybeAbstractEntityConstructor<T> = abstract new (em: EntityManager<any, any>, opts: any) => T;
 
 /** Return the `FooOpts` type a given `Foo` entity constructor. */
-export type OptsOf<T> = T extends { __orm: { optsType: infer O } } ? O : never;
+export type OptsOf<T> =
+  TypeMapKey<T> extends infer K ? (K extends keyof TypeMap ? TypeMap[K]["optsType"] : unknown) : unknown;
+
+/** Returns a key like `"Author"` or `"SmallPublisher"` for looking up types in the `TypeMap`. */
+type TypeMapKey<T> = T extends { __types: { 1: infer K } } ? K : T extends { __types: { 0: infer K } } ? K : never;
+
+// export type OptsOf<T> = T extends { __types: { 1: infer K } }
+//     ? K extends keyof TypeMap
+//         ? TypeMap[K]["optsType"]
+//         : unknown
+//     : T extends { __types: { 0: infer K } }
+//         ? K extends keyof TypeMap
+//             ? TypeMap[K]["optsType"]
+//             : unknown
+//         : unknown;
+//
+// export type OptsOf<T> = T extends { __orm: { optsType: infer O } } ? O : never;
+
+// export type OptsOf2<T extends { foo: string; typeMap: Record<string, { optsType: unknown }> }> =
+//   T["typeMap"][T["foo"]]["optsType"];
 
 export type FieldsOf<T> = T extends { __orm: { fieldsType: infer F } } ? F : never;
 

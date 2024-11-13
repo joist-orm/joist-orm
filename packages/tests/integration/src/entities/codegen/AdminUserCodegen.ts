@@ -78,6 +78,21 @@ export const adminUserConfig = new ConfigApi<AdminUser, Context>();
 
 adminUserConfig.addRule(newRequiredRule("role"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    AdminUser: {
+      entityType: AdminUser;
+      filterType: AdminUserFilter;
+      gqlFilterType: AdminUserGraphQLFilter;
+      orderType: AdminUserOrder;
+      optsType: AdminUserOpts;
+      fieldsType: AdminUserFields;
+      optIdsType: AdminUserIdsOpts;
+      factoryOptsType: Parameters<typeof newAdminUser>[1];
+    };
+  }
+}
+
 export abstract class AdminUserCodegen extends User implements Entity {
   static readonly tagName = "u";
   static readonly metadata: EntityMetadata<AdminUser>;
@@ -87,11 +102,11 @@ export abstract class AdminUserCodegen extends User implements Entity {
     filterType: AdminUserFilter;
     gqlFilterType: AdminUserGraphQLFilter;
     orderType: AdminUserOrder;
-    optsType: AdminUserOpts;
     fieldsType: AdminUserFields;
     optIdsType: AdminUserIdsOpts;
     factoryOptsType: Parameters<typeof newAdminUser>[1];
   };
+  declare readonly __types: { 0: "User"; 1: "AdminUser" };
 
   constructor(em: EntityManager, opts: AdminUserOpts) {
     super(em, opts);

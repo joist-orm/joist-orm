@@ -84,6 +84,21 @@ export const t5AuthorConfig = new ConfigApi<T5Author, Context>();
 
 t5AuthorConfig.addRule(newRequiredRule("firstName"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    T5Author: {
+      entityType: T5Author;
+      filterType: T5AuthorFilter;
+      gqlFilterType: T5AuthorGraphQLFilter;
+      orderType: T5AuthorOrder;
+      optsType: T5AuthorOpts;
+      fieldsType: T5AuthorFields;
+      optIdsType: T5AuthorIdsOpts;
+      factoryOptsType: Parameters<typeof newT5Author>[1];
+    };
+  }
+}
+
 export abstract class T5AuthorCodegen extends BaseEntity<EntityManager, number> implements Entity {
   static readonly tagName = "t5Author";
   static readonly metadata: EntityMetadata<T5Author>;
@@ -93,11 +108,11 @@ export abstract class T5AuthorCodegen extends BaseEntity<EntityManager, number> 
     filterType: T5AuthorFilter;
     gqlFilterType: T5AuthorGraphQLFilter;
     orderType: T5AuthorOrder;
-    optsType: T5AuthorOpts;
     fieldsType: T5AuthorFields;
     optIdsType: T5AuthorIdsOpts;
     factoryOptsType: Parameters<typeof newT5Author>[1];
   };
+  declare readonly __types: { 0: "T5Author" };
 
   constructor(em: EntityManager, opts: T5AuthorOpts) {
     super(em, opts);

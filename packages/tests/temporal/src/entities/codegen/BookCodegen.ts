@@ -105,6 +105,21 @@ bookConfig.addRule(newRequiredRule("createdAt"));
 bookConfig.addRule(newRequiredRule("updatedAt"));
 bookConfig.addRule(newRequiredRule("author"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    Book: {
+      entityType: Book;
+      filterType: BookFilter;
+      gqlFilterType: BookGraphQLFilter;
+      orderType: BookOrder;
+      optsType: BookOpts;
+      fieldsType: BookFields;
+      optIdsType: BookIdsOpts;
+      factoryOptsType: Parameters<typeof newBook>[1];
+    };
+  }
+}
+
 export abstract class BookCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "b";
   static readonly metadata: EntityMetadata<Book>;
@@ -114,11 +129,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
     filterType: BookFilter;
     gqlFilterType: BookGraphQLFilter;
     orderType: BookOrder;
-    optsType: BookOpts;
     fieldsType: BookFields;
     optIdsType: BookIdsOpts;
     factoryOptsType: Parameters<typeof newBook>[1];
   };
+  declare readonly __types: { 0: "Book" };
 
   constructor(em: EntityManager, opts: BookOpts) {
     super(em, opts);

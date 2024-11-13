@@ -94,6 +94,21 @@ export const t3BookConfig = new ConfigApi<T3Book, Context>();
 t3BookConfig.addRule(newRequiredRule("title"));
 t3BookConfig.addRule(newRequiredRule("author"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    T3Book: {
+      entityType: T3Book;
+      filterType: T3BookFilter;
+      gqlFilterType: T3BookGraphQLFilter;
+      orderType: T3BookOrder;
+      optsType: T3BookOpts;
+      fieldsType: T3BookFields;
+      optIdsType: T3BookIdsOpts;
+      factoryOptsType: Parameters<typeof newT3Book>[1];
+    };
+  }
+}
+
 export abstract class T3BookCodegen extends BaseEntity<EntityManager, number> implements Entity {
   static readonly tagName = "t3Book";
   static readonly metadata: EntityMetadata<T3Book>;
@@ -103,11 +118,11 @@ export abstract class T3BookCodegen extends BaseEntity<EntityManager, number> im
     filterType: T3BookFilter;
     gqlFilterType: T3BookGraphQLFilter;
     orderType: T3BookOrder;
-    optsType: T3BookOpts;
     fieldsType: T3BookFields;
     optIdsType: T3BookIdsOpts;
     factoryOptsType: Parameters<typeof newT3Book>[1];
   };
+  declare readonly __types: { 0: "T3Book" };
 
   constructor(em: EntityManager, opts: T3BookOpts) {
     super(em, opts);

@@ -192,6 +192,16 @@ describe("EntityManager.reactiveRules", () => {
     expect(a.transientFields.graduatedRuleInvoked).toBe(2);
   });
 
+  it.withCtx("runs rule added via afterMetadata", async ({ em }) => {
+    // Given a publisher
+    const p = newPublisher(em);
+    await em.flush();
+    // When we change their name
+    p.name = "invalid";
+    // Then it can be caught by a rule added in the afterMetadata callback
+    await expect(em.flush()).rejects.toThrow("Name cannot be 'invalid'");
+  });
+
   it.withCtx("runs rule on parent of an immutable field", async ({ em }) => {
     // Given a book
     const b = newBook(em);

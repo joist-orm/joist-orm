@@ -22,10 +22,11 @@ export function configureMetadata(metas: EntityMetadata[]): void {
   populateConstructorMaps(metas);
   hookUpBaseTypeAndSubTypes(metas);
   setImmutableFields(metas);
-  reverseIndexReactivity(metas);
   populatePolyComponentFields(metas);
   fireAfterMetadatas(metas);
+  // Do these after `fireAfterMetadatas`, in case afterMetadata callbacks added more defaults/rules
   copyAsyncDefaults(metas);
+  reverseIndexReactivity(metas);
   setBooted();
 }
 

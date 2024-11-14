@@ -1,3 +1,10 @@
+## [1.210.1](https://github.com/joist-orm/joist-orm/compare/v1.210.0...v1.210.1) (2024-11-14)
+
+
+### Bug Fixes
+
+* Index rules added from afterMetadata callbacks ([#1296](https://github.com/joist-orm/joist-orm/issues/1296)) ([f335c3e](https://github.com/joist-orm/joist-orm/commit/f335c3ee2752a950074cc5fa2bef113b406346e5))
+
 # [1.210.0](https://github.com/joist-orm/joist-orm/compare/v1.209.3...v1.210.0) (2024-11-09)
 
 

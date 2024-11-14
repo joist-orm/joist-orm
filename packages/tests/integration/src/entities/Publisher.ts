@@ -100,6 +100,12 @@ export abstract class Publisher extends PublisherCodegen {
 
 config.afterMetadata((meta) => {
   Publisher.afterMetadataHasSubTypes = meta.subTypes.length > 0;
+  // For testing rules added from afterMetadatas
+  config.addRule("name", (p) => {
+    if (p.name === "invalid") {
+      return "Name cannot be 'invalid'";
+    }
+  });
 });
 
 /** Test the types for an enum default value (even though it is already matched by the db defaultValues). */

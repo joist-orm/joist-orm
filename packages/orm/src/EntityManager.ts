@@ -1685,17 +1685,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     this.#rm.setLogger(typeof arg === "boolean" ? (arg ? new ReactionLogger() : undefined) : arg);
   }
 
-  /**
-   * Turns on field logging.
-   * @param logger
-   */
-  setFieldLogging(logger: FieldLogger): void;
-  setFieldLogging(targets: string[]): void;
-  setFieldLogging(arg: FieldLogger | string[]): void {
-    // if (Array.isArray(arg)) {
-    // } else {
-    //   this.#fieldLogger = logger;
-    // }
+  setFieldLogging(logger: FieldLogger): void {
+    this.#fieldLogger = logger;
   }
 
   async [Symbol.asyncDispose](): Promise<void> {

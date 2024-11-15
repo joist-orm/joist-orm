@@ -1,6 +1,6 @@
 import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
-import { FieldsOf, IdOf, OptsOf, isId } from "./EntityManager";
+import { IdOf, isId } from "./EntityManager";
 import { getField, isChangeableField } from "./fields";
 import {
   Field,
@@ -10,6 +10,7 @@ import {
   getEmInternalApi,
   getMetadata,
 } from "./index";
+import { FieldsOf, OptsOf } from "./typeMap";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
 export interface FieldStatus<T> {

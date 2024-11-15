@@ -126,7 +126,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
     optIdsType: PaintingIdsOpts;
     factoryOptsType: Parameters<typeof newPainting>[1];
   };
-  declare readonly __types: { 0: "Painting" };
+  declare readonly __typeMapKeys: { 0: "Painting" };
 
   constructor(em: EntityManager, opts: PaintingOpts) {
     super(em, opts);

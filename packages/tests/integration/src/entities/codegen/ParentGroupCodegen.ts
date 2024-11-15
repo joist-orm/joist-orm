@@ -128,7 +128,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
     optIdsType: ParentGroupIdsOpts;
     factoryOptsType: Parameters<typeof newParentGroup>[1];
   };
-  declare readonly __types: { 0: "ParentGroup" };
+  declare readonly __typeMapKeys: { 0: "ParentGroup" };
 
   constructor(em: EntityManager, opts: ParentGroupOpts) {
     super(em, opts);

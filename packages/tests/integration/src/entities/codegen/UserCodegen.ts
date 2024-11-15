@@ -226,7 +226,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
     optIdsType: UserIdsOpts;
     factoryOptsType: Parameters<typeof newUser>[1];
   };
-  declare readonly __types: { 0: "User" };
+  declare readonly __typeMapKeys: { 0: "User" };
 
   constructor(em: EntityManager, opts: UserOpts) {
     super(em, opts);

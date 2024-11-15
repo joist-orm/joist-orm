@@ -1,8 +1,9 @@
 import { isPlainObject } from "joist-utils";
 import { Entity, isEntity } from "./Entity";
-import { EntityManager, IdOf, MaybeAbstractEntityConstructor, OptIdsOf, OptsOf, isKey } from "./EntityManager";
+import { EntityManager, IdOf, MaybeAbstractEntityConstructor, isKey } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { PartialOrNull, asConcreteCstr, getConstructorFromTaggedId, getProperties } from "./index";
+import { OptIdsOf, OptsOf } from "./typeMap";
 import { NullOrDefinedOr, toArray } from "./utils";
 
 /**

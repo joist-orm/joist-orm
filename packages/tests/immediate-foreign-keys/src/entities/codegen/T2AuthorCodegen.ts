@@ -121,7 +121,7 @@ export abstract class T2AuthorCodegen extends BaseEntity<EntityManager, number> 
     optIdsType: T2AuthorIdsOpts;
     factoryOptsType: Parameters<typeof newT2Author>[1];
   };
-  declare readonly __types: { 0: "T2Author" };
+  declare readonly __typeMapKeys: { 0: "T2Author" };
 
   constructor(em: EntityManager, opts: T2AuthorOpts) {
     super(em, opts);

@@ -245,7 +245,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       static readonly tagName = "${tagName}";
       static readonly metadata: ${EntityMetadata}<${entity.type}>;
 
-       declare readonly __orm: {
+      declare readonly __orm: {
         entityType: ${entityName};
         filterType: ${entityName}Filter;
         gqlFilterType: ${entityName}GraphQLFilter;
@@ -254,7 +254,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         optIdsType: ${entityName}IdsOpts;
         factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
       };     
-      declare readonly __types: {
+      declare readonly __typeMapKeys: {
         ${baseEntity ? `0: "${baseEntity.name}",` : ""}
         ${baseEntity ? 1 : 0}: "${entityName}", 
       };

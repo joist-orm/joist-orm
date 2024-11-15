@@ -106,7 +106,7 @@ export abstract class AdminUserCodegen extends User implements Entity {
     optIdsType: AdminUserIdsOpts;
     factoryOptsType: Parameters<typeof newAdminUser>[1];
   };
-  declare readonly __types: { 0: "User"; 1: "AdminUser" };
+  declare readonly __typeMapKeys: { 0: "User"; 1: "AdminUser" };
 
   constructor(em: EntityManager, opts: AdminUserOpts) {
     super(em, opts);

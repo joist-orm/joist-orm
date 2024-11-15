@@ -93,7 +93,7 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
     optIdsType: DatabaseOwnerIdsOpts;
     factoryOptsType: Parameters<typeof newDatabaseOwner>[1];
   };
-  declare readonly __types: { 0: "DatabaseOwner" };
+  declare readonly __typeMapKeys: { 0: "DatabaseOwner" };
 
   constructor(em: EntityManager, opts: DatabaseOwnerOpts) {
     super(em, opts);

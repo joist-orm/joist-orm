@@ -1,6 +1,6 @@
 import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
-import { EntityConstructor, MaybeAbstractEntityConstructor, OptsOf } from "./EntityManager";
+import { EntityConstructor, MaybeAbstractEntityConstructor } from "./EntityManager";
 import { getBaseMeta, getMetadata } from "./EntityMetadata";
 import { getDefaultDependencies, setSyncDefaults } from "./defaults";
 import { getProperties } from "./getProperties";
@@ -9,6 +9,7 @@ import { isAllSqlPaths } from "./loadLens";
 import { isAsyncProperty, isReactiveField, isReactiveGetter, isReactiveQueryField } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { TimestampSerde } from "./serde";
+import { OptsOf } from "./typeMap";
 import { fail } from "./utils";
 
 export const testing = { isAllSqlPaths, getDefaultDependencies };
@@ -87,6 +88,7 @@ export {
   ValidationRuleResult,
 } from "./rules";
 export * from "./serde";
+export * from "./typeMap";
 export { asNew, assertNever, cleanStringValue, fail, indexBy } from "./utils";
 export { ensureWithLoaded, WithLoaded, withLoaded } from "./withLoaded";
 
@@ -292,8 +294,3 @@ export function failNoIdYet(entity: string): never {
 export function isNewEntity<T extends Entity>(entity: T): entity is New<T> {
   return entity.isNewEntity;
 }
-
-/**
- * Provides a container for entities to attach their application-specific types.
- */
-export interface TypeMap {}

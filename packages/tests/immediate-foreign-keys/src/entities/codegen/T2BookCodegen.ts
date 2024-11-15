@@ -122,7 +122,7 @@ export abstract class T2BookCodegen extends BaseEntity<EntityManager, number> im
     optIdsType: T2BookIdsOpts;
     factoryOptsType: Parameters<typeof newT2Book>[1];
   };
-  declare readonly __types: { 0: "T2Book" };
+  declare readonly __typeMapKeys: { 0: "T2Book" };
 
   constructor(em: EntityManager, opts: T2BookOpts) {
     super(em, opts);

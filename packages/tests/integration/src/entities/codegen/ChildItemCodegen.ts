@@ -136,7 +136,7 @@ export abstract class ChildItemCodegen extends BaseEntity<EntityManager, string>
     optIdsType: ChildItemIdsOpts;
     factoryOptsType: Parameters<typeof newChildItem>[1];
   };
-  declare readonly __types: { 0: "ChildItem" };
+  declare readonly __typeMapKeys: { 0: "ChildItem" };
 
   constructor(em: EntityManager, opts: ChildItemOpts) {
     super(em, opts);

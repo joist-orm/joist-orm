@@ -159,7 +159,7 @@ export abstract class TaskOldCodegen extends Task implements Entity {
     optIdsType: TaskOldIdsOpts;
     factoryOptsType: Parameters<typeof newTaskOld>[1];
   };
-  declare readonly __types: { 0: "Task"; 1: "TaskOld" };
+  declare readonly __typeMapKeys: { 0: "Task"; 1: "TaskOld" };
 
   constructor(em: EntityManager, opts: TaskOldOpts) {
     super(em, opts);

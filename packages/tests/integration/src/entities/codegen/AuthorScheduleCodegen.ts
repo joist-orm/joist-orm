@@ -125,7 +125,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
     optIdsType: AuthorScheduleIdsOpts;
     factoryOptsType: Parameters<typeof newAuthorSchedule>[1];
   };
-  declare readonly __types: { 0: "AuthorSchedule" };
+  declare readonly __typeMapKeys: { 0: "AuthorSchedule" };
 
   constructor(em: EntityManager, opts: AuthorScheduleOpts) {
     super(em, opts);

@@ -166,7 +166,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
     optIdsType: AuthorStatIdsOpts;
     factoryOptsType: Parameters<typeof newAuthorStat>[1];
   };
-  declare readonly __types: { 0: "AuthorStat" };
+  declare readonly __typeMapKeys: { 0: "AuthorStat" };
 
   constructor(em: EntityManager, opts: AuthorStatOpts) {
     super(em, opts);

@@ -122,7 +122,7 @@ export abstract class T3BookCodegen extends BaseEntity<EntityManager, number> im
     optIdsType: T3BookIdsOpts;
     factoryOptsType: Parameters<typeof newT3Book>[1];
   };
-  declare readonly __types: { 0: "T3Book" };
+  declare readonly __typeMapKeys: { 0: "T3Book" };
 
   constructor(em: EntityManager, opts: T3BookOpts) {
     super(em, opts);

@@ -164,7 +164,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
     optIdsType: SmallPublisherIdsOpts;
     factoryOptsType: Parameters<typeof newSmallPublisher>[1];
   };
-  declare readonly __types: { 0: "Publisher"; 1: "SmallPublisher" };
+  declare readonly __typeMapKeys: { 0: "Publisher"; 1: "SmallPublisher" };
 
   constructor(em: EntityManager, opts: SmallPublisherOpts) {
     super(em, opts);

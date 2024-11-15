@@ -112,7 +112,7 @@ export abstract class T5AuthorCodegen extends BaseEntity<EntityManager, number> 
     optIdsType: T5AuthorIdsOpts;
     factoryOptsType: Parameters<typeof newT5Author>[1];
   };
-  declare readonly __types: { 0: "T5Author" };
+  declare readonly __typeMapKeys: { 0: "T5Author" };
 
   constructor(em: EntityManager, opts: T5AuthorOpts) {
     super(em, opts);

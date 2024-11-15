@@ -122,7 +122,7 @@ export abstract class T4AuthorCodegen extends BaseEntity<EntityManager, number> 
     optIdsType: T4AuthorIdsOpts;
     factoryOptsType: Parameters<typeof newT4Author>[1];
   };
-  declare readonly __types: { 0: "T4Author" };
+  declare readonly __typeMapKeys: { 0: "T4Author" };
 
   constructor(em: EntityManager, opts: T4AuthorOpts) {
     super(em, opts);

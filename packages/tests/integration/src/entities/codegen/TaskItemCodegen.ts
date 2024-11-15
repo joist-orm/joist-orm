@@ -144,7 +144,7 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
     optIdsType: TaskItemIdsOpts;
     factoryOptsType: Parameters<typeof newTaskItem>[1];
   };
-  declare readonly __types: { 0: "TaskItem" };
+  declare readonly __typeMapKeys: { 0: "TaskItem" };
 
   constructor(em: EntityManager, opts: TaskItemOpts) {
     super(em, opts);

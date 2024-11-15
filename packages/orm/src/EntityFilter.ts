@@ -1,7 +1,8 @@
 import { Alias } from "./Aliases";
 import { Entity } from "./Entity";
-import { FieldsOf, FilterOf, IdOf, OrderOf } from "./EntityManager";
+import { IdOf } from "./EntityManager";
 import { ColumnCondition, RawCondition } from "./QueryParser";
+import { FieldsOf, FilterOf, OrderOf } from "./typeMap";
 
 /** Combines a `where` filter with optional `orderBy`, `limit`, and `offset` settings. */
 export type FilterAndSettings<T extends Entity> = {

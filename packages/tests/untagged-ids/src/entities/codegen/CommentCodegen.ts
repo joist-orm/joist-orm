@@ -129,7 +129,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
     optIdsType: CommentIdsOpts;
     factoryOptsType: Parameters<typeof newComment>[1];
   };
-  declare readonly __types: { 0: "Comment" };
+  declare readonly __typeMapKeys: { 0: "Comment" };
 
   constructor(em: EntityManager, opts: CommentOpts) {
     super(em, opts);

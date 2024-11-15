@@ -122,7 +122,7 @@ export abstract class T3AuthorCodegen extends BaseEntity<EntityManager, number> 
     optIdsType: T3AuthorIdsOpts;
     factoryOptsType: Parameters<typeof newT3Author>[1];
   };
-  declare readonly __types: { 0: "T3Author" };
+  declare readonly __typeMapKeys: { 0: "T3Author" };
 
   constructor(em: EntityManager, opts: T3AuthorOpts) {
     super(em, opts);

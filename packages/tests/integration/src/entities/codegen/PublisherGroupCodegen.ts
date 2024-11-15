@@ -152,7 +152,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
     optIdsType: PublisherGroupIdsOpts;
     factoryOptsType: Parameters<typeof newPublisherGroup>[1];
   };
-  declare readonly __types: { 0: "PublisherGroup" };
+  declare readonly __typeMapKeys: { 0: "PublisherGroup" };
 
   constructor(em: EntityManager, opts: PublisherGroupOpts) {
     super(em, opts);

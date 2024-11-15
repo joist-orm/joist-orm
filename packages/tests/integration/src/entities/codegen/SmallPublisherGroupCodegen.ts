@@ -112,7 +112,7 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
     optIdsType: SmallPublisherGroupIdsOpts;
     factoryOptsType: Parameters<typeof newSmallPublisherGroup>[1];
   };
-  declare readonly __types: { 0: "PublisherGroup"; 1: "SmallPublisherGroup" };
+  declare readonly __typeMapKeys: { 0: "PublisherGroup"; 1: "SmallPublisherGroup" };
 
   constructor(em: EntityManager, opts: SmallPublisherGroupOpts) {
     super(em, opts);

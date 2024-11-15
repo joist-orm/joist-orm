@@ -364,7 +364,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     optIdsType: AuthorIdsOpts;
     factoryOptsType: Parameters<typeof newAuthor>[1];
   };
-  declare readonly __types: { 0: "Author" };
+  declare readonly __typeMapKeys: { 0: "Author" };
 
   abstract readonly rootMentor: ReactiveReference<Author, Author, undefined>;
 

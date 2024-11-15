@@ -128,7 +128,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
     optIdsType: ArtistIdsOpts;
     factoryOptsType: Parameters<typeof newArtist>[1];
   };
-  declare readonly __types: { 0: "Artist" };
+  declare readonly __typeMapKeys: { 0: "Artist" };
 
   constructor(em: EntityManager, opts: ArtistOpts) {
     super(em, opts);

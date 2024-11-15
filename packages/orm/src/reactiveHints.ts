@@ -1,5 +1,5 @@
 import { Entity } from "./Entity";
-import { FieldsOf, MaybeAbstractEntityConstructor, RelationsOf, getEmInternalApi } from "./EntityManager";
+import { MaybeAbstractEntityConstructor, getEmInternalApi } from "./EntityManager";
 import {
   EntityMetadata,
   ManyToManyField,
@@ -35,6 +35,7 @@ import { LoadedOneToOneReference } from "./relations/OneToOneReference";
 import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
 import { RecursiveParentsCollectionImpl } from "./relations/RecursiveCollection";
 import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
+import { FieldsOf, RelationsOf } from "./typeMap";
 import { fail, flatAndUnique, mergeNormalizedHints } from "./utils";
 
 /** The keys in `T` that rules & hooks can react to. */

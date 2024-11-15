@@ -157,7 +157,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
     optIdsType: BookAdvanceIdsOpts;
     factoryOptsType: Parameters<typeof newBookAdvance>[1];
   };
-  declare readonly __types: { 0: "BookAdvance" };
+  declare readonly __typeMapKeys: { 0: "BookAdvance" };
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
     super(em, opts);

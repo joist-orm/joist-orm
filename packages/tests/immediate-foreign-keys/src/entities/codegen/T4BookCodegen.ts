@@ -122,7 +122,7 @@ export abstract class T4BookCodegen extends BaseEntity<EntityManager, number> im
     optIdsType: T4BookIdsOpts;
     factoryOptsType: Parameters<typeof newT4Book>[1];
   };
-  declare readonly __types: { 0: "T4Book" };
+  declare readonly __typeMapKeys: { 0: "T4Book" };
 
   constructor(em: EntityManager, opts: T4BookOpts) {
     super(em, opts);

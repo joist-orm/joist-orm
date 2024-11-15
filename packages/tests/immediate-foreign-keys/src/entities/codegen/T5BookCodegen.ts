@@ -125,7 +125,7 @@ export abstract class T5BookCodegen extends BaseEntity<EntityManager, number> im
     optIdsType: T5BookIdsOpts;
     factoryOptsType: Parameters<typeof newT5Book>[1];
   };
-  declare readonly __types: { 0: "T5Book" };
+  declare readonly __typeMapKeys: { 0: "T5Book" };
 
   constructor(em: EntityManager, opts: T5BookOpts) {
     super(em, opts);

@@ -136,7 +136,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
     optIdsType: LargePublisherIdsOpts;
     factoryOptsType: Parameters<typeof newLargePublisher>[1];
   };
-  declare readonly __types: { 0: "Publisher"; 1: "LargePublisher" };
+  declare readonly __typeMapKeys: { 0: "Publisher"; 1: "LargePublisher" };
 
   constructor(em: EntityManager, opts: LargePublisherOpts) {
     super(em, opts);

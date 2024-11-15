@@ -166,7 +166,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     optIdsType: BookReviewIdsOpts;
     factoryOptsType: Parameters<typeof newBookReview>[1];
   };
-  declare readonly __types: { 0: "BookReview" };
+  declare readonly __typeMapKeys: { 0: "BookReview" };
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
     super(em, opts);

@@ -1,5 +1,4 @@
 import { Entity } from "./Entity";
-import { OptsOf } from "./EntityManager";
 import { NormalizeHint } from "./normalizeHints";
 import { getRelationFromMaybePolyKey } from "./reactiveHints";
 import {
@@ -17,6 +16,7 @@ import {
   Relation,
 } from "./relations";
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
+import { OptsOf } from "./typeMap";
 import { MaybePromise, NullOrDefinedOr, fail } from "./utils";
 
 const deepLoad = Symbol();

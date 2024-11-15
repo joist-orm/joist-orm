@@ -167,7 +167,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
     optIdsType: CriticIdsOpts;
     factoryOptsType: Parameters<typeof newCritic>[1];
   };
-  declare readonly __types: { 0: "Critic" };
+  declare readonly __typeMapKeys: { 0: "Critic" };
 
   constructor(em: EntityManager, opts: CriticOpts) {
     super(em, opts);

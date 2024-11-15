@@ -150,7 +150,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
     optIdsType: TagIdsOpts;
     factoryOptsType: Parameters<typeof newTag>[1];
   };
-  declare readonly __types: { 0: "Tag" };
+  declare readonly __typeMapKeys: { 0: "Tag" };
 
   constructor(em: EntityManager, opts: TagOpts) {
     super(em, opts);

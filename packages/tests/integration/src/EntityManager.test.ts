@@ -1760,7 +1760,6 @@ describe("EntityManager", () => {
       await em.findOne(type, {} as FilterWithAlias<JoistEntity>);
       await em.findOneOrFail(type, {} as FilterWithAlias<JoistEntity>);
       await em.findByUnique(type, {} as FilterWithAlias<JoistEntity>);
-      await em.load(type, {} as OptsOf<JoistEntity>);
       await em.loadAll(type, {} as FilterWithAlias<JoistEntity>);
       await em.populate(entity, []);
       await em.refresh(entity);

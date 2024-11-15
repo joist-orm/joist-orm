@@ -1,7 +1,7 @@
 import { Alias } from "./Aliases";
 import { Entity } from "./Entity";
 import { EntityFilter, ExpressionFilter } from "./EntityFilter";
-import { GraphQLFilterOf, OrderOf } from "./EntityManager";
+import { GraphQLFilterOf, OrderOf } from "./typeMap";
 
 export type GraphQLFilterWithAlias<T extends Entity> = { as?: Alias<T> } & GraphQLFilterOf<T>;
 

@@ -1,8 +1,9 @@
 import DataLoader from "dataloader";
 import { Entity, isEntity } from "../Entity";
-import { EntityConstructor, EntityManager, OptsOf, TooManyError, sameEntity } from "../EntityManager";
+import { EntityConstructor, EntityManager, TooManyError, sameEntity } from "../EntityManager";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { ManyToOneReference, PolymorphicReference, isLoadedReference } from "../relations";
+import { OptsOf } from "../typeMap";
 import { whereFilterHash } from "./findDataLoader";
 
 interface Key<T extends Entity> {

@@ -129,20 +129,26 @@ bookAdvanceConfig.addRule(newRequiredRule("status"));
 bookAdvanceConfig.addRule(newRequiredRule("book"));
 bookAdvanceConfig.addRule(newRequiredRule("publisher"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    BookAdvance: {
+      entityType: BookAdvance;
+      filterType: BookAdvanceFilter;
+      gqlFilterType: BookAdvanceGraphQLFilter;
+      orderType: BookAdvanceOrder;
+      optsType: BookAdvanceOpts;
+      fieldsType: BookAdvanceFields;
+      optIdsType: BookAdvanceIdsOpts;
+      factoryOptsType: Parameters<typeof newBookAdvance>[1];
+    };
+  }
+}
+
 export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "ba";
   static readonly metadata: EntityMetadata<BookAdvance>;
 
-  declare readonly __orm: {
-    entityType: BookAdvance;
-    filterType: BookAdvanceFilter;
-    gqlFilterType: BookAdvanceGraphQLFilter;
-    orderType: BookAdvanceOrder;
-    optsType: BookAdvanceOpts;
-    fieldsType: BookAdvanceFields;
-    optIdsType: BookAdvanceIdsOpts;
-    factoryOptsType: Parameters<typeof newBookAdvance>[1];
-  };
+  declare readonly __type: { 0: "BookAdvance" };
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
     super(em, opts);

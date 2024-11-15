@@ -98,20 +98,26 @@ paintingConfig.addRule(newRequiredRule("createdAt"));
 paintingConfig.addRule(newRequiredRule("updatedAt"));
 paintingConfig.addRule(newRequiredRule("artist"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    Painting: {
+      entityType: Painting;
+      filterType: PaintingFilter;
+      gqlFilterType: PaintingGraphQLFilter;
+      orderType: PaintingOrder;
+      optsType: PaintingOpts;
+      fieldsType: PaintingFields;
+      optIdsType: PaintingIdsOpts;
+      factoryOptsType: Parameters<typeof newPainting>[1];
+    };
+  }
+}
+
 export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<Painting>;
 
-  declare readonly __orm: {
-    entityType: Painting;
-    filterType: PaintingFilter;
-    gqlFilterType: PaintingGraphQLFilter;
-    orderType: PaintingOrder;
-    optsType: PaintingOpts;
-    fieldsType: PaintingFields;
-    optIdsType: PaintingIdsOpts;
-    factoryOptsType: Parameters<typeof newPainting>[1];
-  };
+  declare readonly __type: { 0: "Painting" };
 
   constructor(em: EntityManager, opts: PaintingOpts) {
     super(em, opts);

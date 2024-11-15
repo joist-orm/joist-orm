@@ -108,20 +108,26 @@ childItemConfig.addRule(newRequiredRule("updatedAt"));
 childItemConfig.addRule(newRequiredRule("childGroup"));
 childItemConfig.addRule(newRequiredRule("parentItem"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    ChildItem: {
+      entityType: ChildItem;
+      filterType: ChildItemFilter;
+      gqlFilterType: ChildItemGraphQLFilter;
+      orderType: ChildItemOrder;
+      optsType: ChildItemOpts;
+      fieldsType: ChildItemFields;
+      optIdsType: ChildItemIdsOpts;
+      factoryOptsType: Parameters<typeof newChildItem>[1];
+    };
+  }
+}
+
 export abstract class ChildItemCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "ci";
   static readonly metadata: EntityMetadata<ChildItem>;
 
-  declare readonly __orm: {
-    entityType: ChildItem;
-    filterType: ChildItemFilter;
-    gqlFilterType: ChildItemGraphQLFilter;
-    orderType: ChildItemOrder;
-    optsType: ChildItemOpts;
-    fieldsType: ChildItemFields;
-    optIdsType: ChildItemIdsOpts;
-    factoryOptsType: Parameters<typeof newChildItem>[1];
-  };
+  declare readonly __type: { 0: "ChildItem" };
 
   constructor(em: EntityManager, opts: ChildItemOpts) {
     super(em, opts);

@@ -144,20 +144,26 @@ imageConfig.addRule(newRequiredRule("createdAt"));
 imageConfig.addRule(newRequiredRule("updatedAt"));
 imageConfig.addRule(newRequiredRule("type"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    Image: {
+      entityType: Image;
+      filterType: ImageFilter;
+      gqlFilterType: ImageGraphQLFilter;
+      orderType: ImageOrder;
+      optsType: ImageOpts;
+      fieldsType: ImageFields;
+      optIdsType: ImageIdsOpts;
+      factoryOptsType: Parameters<typeof newImage>[1];
+    };
+  }
+}
+
 export abstract class ImageCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "i";
   static readonly metadata: EntityMetadata<Image>;
 
-  declare readonly __orm: {
-    entityType: Image;
-    filterType: ImageFilter;
-    gqlFilterType: ImageGraphQLFilter;
-    orderType: ImageOrder;
-    optsType: ImageOpts;
-    fieldsType: ImageFields;
-    optIdsType: ImageIdsOpts;
-    factoryOptsType: Parameters<typeof newImage>[1];
-  };
+  declare readonly __type: { 0: "Image" };
 
   constructor(em: EntityManager, opts: ImageOpts) {
     super(em, opts);

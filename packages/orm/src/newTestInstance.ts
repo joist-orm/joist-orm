@@ -1,14 +1,6 @@
 import { isPlainObject } from "joist-utils";
 import { Entity, isEntity } from "./Entity";
-import {
-  ActualFactoryOpts,
-  EntityConstructor,
-  EntityManager,
-  IdOf,
-  isId,
-  MaybeAbstractEntityConstructor,
-  OptsOf,
-} from "./EntityManager";
+import { EntityConstructor, EntityManager, IdOf, isId, MaybeAbstractEntityConstructor } from "./EntityManager";
 import {
   EntityMetadata,
   getBaseAndSelfMetas,
@@ -27,6 +19,7 @@ import { hasDefaultValue, setAsyncDefaultsSynchronously } from "./defaults";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
 import { FactoryLogger } from "./logging/FactoryLogger";
+import { ActualFactoryOpts, OptsOf } from "./typeMap";
 import { assertNever, maybeRequireTemporal } from "./utils";
 
 let logger: FactoryLogger | undefined = undefined;

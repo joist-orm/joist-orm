@@ -94,20 +94,26 @@ export const t3AuthorConfig = new ConfigApi<T3Author, Context>();
 t3AuthorConfig.addRule(newRequiredRule("firstName"));
 t3AuthorConfig.addRule(newRequiredRule("favoriteBook"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    T3Author: {
+      entityType: T3Author;
+      filterType: T3AuthorFilter;
+      gqlFilterType: T3AuthorGraphQLFilter;
+      orderType: T3AuthorOrder;
+      optsType: T3AuthorOpts;
+      fieldsType: T3AuthorFields;
+      optIdsType: T3AuthorIdsOpts;
+      factoryOptsType: Parameters<typeof newT3Author>[1];
+    };
+  }
+}
+
 export abstract class T3AuthorCodegen extends BaseEntity<EntityManager, number> implements Entity {
   static readonly tagName = "t3Author";
   static readonly metadata: EntityMetadata<T3Author>;
 
-  declare readonly __orm: {
-    entityType: T3Author;
-    filterType: T3AuthorFilter;
-    gqlFilterType: T3AuthorGraphQLFilter;
-    orderType: T3AuthorOrder;
-    optsType: T3AuthorOpts;
-    fieldsType: T3AuthorFields;
-    optIdsType: T3AuthorIdsOpts;
-    factoryOptsType: Parameters<typeof newT3Author>[1];
-  };
+  declare readonly __type: { 0: "T3Author" };
 
   constructor(em: EntityManager, opts: T3AuthorOpts) {
     super(em, opts);

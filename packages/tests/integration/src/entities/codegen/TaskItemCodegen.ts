@@ -116,20 +116,26 @@ taskItemConfig.addRule(newRequiredRule("updatedAt"));
 taskItemConfig.addRule("newTask", mustBeSubType("newTask"));
 taskItemConfig.addRule("oldTask", mustBeSubType("oldTask"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    TaskItem: {
+      entityType: TaskItem;
+      filterType: TaskItemFilter;
+      gqlFilterType: TaskItemGraphQLFilter;
+      orderType: TaskItemOrder;
+      optsType: TaskItemOpts;
+      fieldsType: TaskItemFields;
+      optIdsType: TaskItemIdsOpts;
+      factoryOptsType: Parameters<typeof newTaskItem>[1];
+    };
+  }
+}
+
 export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "ti";
   static readonly metadata: EntityMetadata<TaskItem>;
 
-  declare readonly __orm: {
-    entityType: TaskItem;
-    filterType: TaskItemFilter;
-    gqlFilterType: TaskItemGraphQLFilter;
-    orderType: TaskItemOrder;
-    optsType: TaskItemOpts;
-    fieldsType: TaskItemFields;
-    optIdsType: TaskItemIdsOpts;
-    factoryOptsType: Parameters<typeof newTaskItem>[1];
-  };
+  declare readonly __type: { 0: "TaskItem" };
 
   constructor(em: EntityManager, opts: TaskItemOpts) {
     super(em, opts);

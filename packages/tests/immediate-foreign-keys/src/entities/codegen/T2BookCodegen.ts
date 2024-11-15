@@ -94,20 +94,26 @@ export const t2BookConfig = new ConfigApi<T2Book, Context>();
 t2BookConfig.addRule(newRequiredRule("title"));
 t2BookConfig.addRule(newRequiredRule("author"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    T2Book: {
+      entityType: T2Book;
+      filterType: T2BookFilter;
+      gqlFilterType: T2BookGraphQLFilter;
+      orderType: T2BookOrder;
+      optsType: T2BookOpts;
+      fieldsType: T2BookFields;
+      optIdsType: T2BookIdsOpts;
+      factoryOptsType: Parameters<typeof newT2Book>[1];
+    };
+  }
+}
+
 export abstract class T2BookCodegen extends BaseEntity<EntityManager, number> implements Entity {
   static readonly tagName = "t2Book";
   static readonly metadata: EntityMetadata<T2Book>;
 
-  declare readonly __orm: {
-    entityType: T2Book;
-    filterType: T2BookFilter;
-    gqlFilterType: T2BookGraphQLFilter;
-    orderType: T2BookOrder;
-    optsType: T2BookOpts;
-    fieldsType: T2BookFields;
-    optIdsType: T2BookIdsOpts;
-    factoryOptsType: Parameters<typeof newT2Book>[1];
-  };
+  declare readonly __type: { 0: "T2Book" };
 
   constructor(em: EntityManager, opts: T2BookOpts) {
     super(em, opts);

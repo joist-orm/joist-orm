@@ -94,20 +94,26 @@ export const t4AuthorConfig = new ConfigApi<T4Author, Context>();
 t4AuthorConfig.addRule(newRequiredRule("firstName"));
 t4AuthorConfig.addRule(newRequiredRule("favoriteBook"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    T4Author: {
+      entityType: T4Author;
+      filterType: T4AuthorFilter;
+      gqlFilterType: T4AuthorGraphQLFilter;
+      orderType: T4AuthorOrder;
+      optsType: T4AuthorOpts;
+      fieldsType: T4AuthorFields;
+      optIdsType: T4AuthorIdsOpts;
+      factoryOptsType: Parameters<typeof newT4Author>[1];
+    };
+  }
+}
+
 export abstract class T4AuthorCodegen extends BaseEntity<EntityManager, number> implements Entity {
   static readonly tagName = "t4Author";
   static readonly metadata: EntityMetadata<T4Author>;
 
-  declare readonly __orm: {
-    entityType: T4Author;
-    filterType: T4AuthorFilter;
-    gqlFilterType: T4AuthorGraphQLFilter;
-    orderType: T4AuthorOrder;
-    optsType: T4AuthorOpts;
-    fieldsType: T4AuthorFields;
-    optIdsType: T4AuthorIdsOpts;
-    factoryOptsType: Parameters<typeof newT4Author>[1];
-  };
+  declare readonly __type: { 0: "T4Author" };
 
   constructor(em: EntityManager, opts: T4AuthorOpts) {
     super(em, opts);

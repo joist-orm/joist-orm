@@ -93,20 +93,26 @@ export const childConfig = new ConfigApi<Child, Context>();
 childConfig.addRule(newRequiredRule("createdAt"));
 childConfig.addRule(newRequiredRule("updatedAt"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    Child: {
+      entityType: Child;
+      filterType: ChildFilter;
+      gqlFilterType: ChildGraphQLFilter;
+      orderType: ChildOrder;
+      optsType: ChildOpts;
+      fieldsType: ChildFields;
+      optIdsType: ChildIdsOpts;
+      factoryOptsType: Parameters<typeof newChild>[1];
+    };
+  }
+}
+
 export abstract class ChildCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "child";
   static readonly metadata: EntityMetadata<Child>;
 
-  declare readonly __orm: {
-    entityType: Child;
-    filterType: ChildFilter;
-    gqlFilterType: ChildGraphQLFilter;
-    orderType: ChildOrder;
-    optsType: ChildOpts;
-    fieldsType: ChildFields;
-    optIdsType: ChildIdsOpts;
-    factoryOptsType: Parameters<typeof newChild>[1];
-  };
+  declare readonly __type: { 0: "Child" };
 
   constructor(em: EntityManager, opts: ChildOpts) {
     super(em, opts);

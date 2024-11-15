@@ -1,6 +1,6 @@
 import { groupBy } from "joist-utils";
 import { Entity, IdType } from "./Entity";
-import { FieldsOf, IdOf, MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
+import { IdOf, MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
 import {
   EntityMetadata,
   Field,
@@ -12,6 +12,7 @@ import {
 import { ColumnCondition, ParsedValueFilter, RawCondition, makeLike, mapToDb, skipCondition } from "./QueryParser";
 import { ExpressionCondition, ExpressionFilter, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
 import { Column } from "./serde";
+import { FieldsOf } from "./typeMap";
 import { fail } from "./utils";
 
 /** Creates an alias for complex filtering against `T`. */

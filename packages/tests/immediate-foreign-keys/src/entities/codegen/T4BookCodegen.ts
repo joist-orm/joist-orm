@@ -94,20 +94,26 @@ export const t4BookConfig = new ConfigApi<T4Book, Context>();
 t4BookConfig.addRule(newRequiredRule("title"));
 t4BookConfig.addRule(newRequiredRule("author"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    T4Book: {
+      entityType: T4Book;
+      filterType: T4BookFilter;
+      gqlFilterType: T4BookGraphQLFilter;
+      orderType: T4BookOrder;
+      optsType: T4BookOpts;
+      fieldsType: T4BookFields;
+      optIdsType: T4BookIdsOpts;
+      factoryOptsType: Parameters<typeof newT4Book>[1];
+    };
+  }
+}
+
 export abstract class T4BookCodegen extends BaseEntity<EntityManager, number> implements Entity {
   static readonly tagName = "t4Book";
   static readonly metadata: EntityMetadata<T4Book>;
 
-  declare readonly __orm: {
-    entityType: T4Book;
-    filterType: T4BookFilter;
-    gqlFilterType: T4BookGraphQLFilter;
-    orderType: T4BookOrder;
-    optsType: T4BookOpts;
-    fieldsType: T4BookFields;
-    optIdsType: T4BookIdsOpts;
-    factoryOptsType: Parameters<typeof newT4Book>[1];
-  };
+  declare readonly __type: { 0: "T4Book" };
 
   constructor(em: EntityManager, opts: T4BookOpts) {
     super(em, opts);

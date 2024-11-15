@@ -221,20 +221,26 @@ publisherConfig.addRule(newRequiredRule("type"));
 publisherConfig.setDefault("numberOfBookReviews", 0);
 publisherConfig.setDefault("type", PublisherType.Big);
 
+declare module "joist-orm" {
+  interface TypeMap {
+    Publisher: {
+      entityType: Publisher;
+      filterType: PublisherFilter;
+      gqlFilterType: PublisherGraphQLFilter;
+      orderType: PublisherOrder;
+      optsType: PublisherOpts;
+      fieldsType: PublisherFields;
+      optIdsType: PublisherIdsOpts;
+      factoryOptsType: Parameters<typeof newPublisher>[1];
+    };
+  }
+}
+
 export abstract class PublisherCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<Publisher>;
 
-  declare readonly __orm: {
-    entityType: Publisher;
-    filterType: PublisherFilter;
-    gqlFilterType: PublisherGraphQLFilter;
-    orderType: PublisherOrder;
-    optsType: PublisherOpts;
-    fieldsType: PublisherFields;
-    optIdsType: PublisherIdsOpts;
-    factoryOptsType: Parameters<typeof newPublisher>[1];
-  };
+  declare readonly __type: { 0: "Publisher" };
 
   constructor(em: EntityManager, opts: PublisherOpts) {
     super(em, opts);

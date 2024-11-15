@@ -244,7 +244,10 @@ export class Author extends AuthorCodegen {
     authorMeta,
     "rootMentor",
     "mentorsRecursive",
-    (a) => a.mentorsRecursive.get[a.mentorsRecursive.get.length - 1],
+    (a) => {
+      const value = a.mentorsRecursive.get[a.mentorsRecursive.get.length - 1];
+      return value;
+    },
   );
 
   /** Example of an async property that can be loaded via a populate hint. */

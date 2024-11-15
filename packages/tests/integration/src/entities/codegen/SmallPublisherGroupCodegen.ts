@@ -84,20 +84,26 @@ export interface SmallPublisherGroupOrder extends PublisherGroupOrder {
 
 export const smallPublisherGroupConfig = new ConfigApi<SmallPublisherGroup, Context>();
 
+declare module "joist-orm" {
+  interface TypeMap {
+    SmallPublisherGroup: {
+      entityType: SmallPublisherGroup;
+      filterType: SmallPublisherGroupFilter;
+      gqlFilterType: SmallPublisherGroupGraphQLFilter;
+      orderType: SmallPublisherGroupOrder;
+      optsType: SmallPublisherGroupOpts;
+      fieldsType: SmallPublisherGroupFields;
+      optIdsType: SmallPublisherGroupIdsOpts;
+      factoryOptsType: Parameters<typeof newSmallPublisherGroup>[1];
+    };
+  }
+}
+
 export abstract class SmallPublisherGroupCodegen extends PublisherGroup implements Entity {
   static readonly tagName = "pg";
   static readonly metadata: EntityMetadata<SmallPublisherGroup>;
 
-  declare readonly __orm: {
-    entityType: SmallPublisherGroup;
-    filterType: SmallPublisherGroupFilter;
-    gqlFilterType: SmallPublisherGroupGraphQLFilter;
-    orderType: SmallPublisherGroupOrder;
-    optsType: SmallPublisherGroupOpts;
-    fieldsType: SmallPublisherGroupFields;
-    optIdsType: SmallPublisherGroupIdsOpts;
-    factoryOptsType: Parameters<typeof newSmallPublisherGroup>[1];
-  };
+  declare readonly __type: { 0: "PublisherGroup"; 1: "SmallPublisherGroup" };
 
   constructor(em: EntityManager, opts: SmallPublisherGroupOpts) {
     super(em, opts);

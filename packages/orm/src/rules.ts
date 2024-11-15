@@ -1,9 +1,9 @@
-import { Entity } from "./Entity";
-import { FieldsOf } from "./EntityManager";
 import { Changes, EntityChanges } from "./changes";
+import { Entity } from "./Entity";
 import { getField } from "./fields";
 import { ReactiveHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl } from "./relations";
+import { FieldsOf } from "./typeMap";
 import { MaybePromise, groupBy, maybePromiseThen } from "./utils";
 
 /**

@@ -100,20 +100,26 @@ artistConfig.addRule(newRequiredRule("lastName"));
 artistConfig.addRule(newRequiredRule("createdAt"));
 artistConfig.addRule(newRequiredRule("updatedAt"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    Artist: {
+      entityType: Artist;
+      filterType: ArtistFilter;
+      gqlFilterType: ArtistGraphQLFilter;
+      orderType: ArtistOrder;
+      optsType: ArtistOpts;
+      fieldsType: ArtistFields;
+      optIdsType: ArtistIdsOpts;
+      factoryOptsType: Parameters<typeof newArtist>[1];
+    };
+  }
+}
+
 export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "artist";
   static readonly metadata: EntityMetadata<Artist>;
 
-  declare readonly __orm: {
-    entityType: Artist;
-    filterType: ArtistFilter;
-    gqlFilterType: ArtistGraphQLFilter;
-    orderType: ArtistOrder;
-    optsType: ArtistOpts;
-    fieldsType: ArtistFields;
-    optIdsType: ArtistIdsOpts;
-    factoryOptsType: Parameters<typeof newArtist>[1];
-  };
+  declare readonly __type: { 0: "Artist" };
 
   constructor(em: EntityManager, opts: ArtistOpts) {
     super(em, opts);

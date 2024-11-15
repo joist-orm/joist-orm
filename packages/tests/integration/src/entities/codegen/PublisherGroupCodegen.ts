@@ -124,20 +124,26 @@ publisherGroupConfig.addRule(newRequiredRule("numberOfBookReviews"));
 publisherGroupConfig.addRule(newRequiredRule("createdAt"));
 publisherGroupConfig.addRule(newRequiredRule("updatedAt"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    PublisherGroup: {
+      entityType: PublisherGroup;
+      filterType: PublisherGroupFilter;
+      gqlFilterType: PublisherGroupGraphQLFilter;
+      orderType: PublisherGroupOrder;
+      optsType: PublisherGroupOpts;
+      fieldsType: PublisherGroupFields;
+      optIdsType: PublisherGroupIdsOpts;
+      factoryOptsType: Parameters<typeof newPublisherGroup>[1];
+    };
+  }
+}
+
 export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "pg";
   static readonly metadata: EntityMetadata<PublisherGroup>;
 
-  declare readonly __orm: {
-    entityType: PublisherGroup;
-    filterType: PublisherGroupFilter;
-    gqlFilterType: PublisherGroupGraphQLFilter;
-    orderType: PublisherGroupOrder;
-    optsType: PublisherGroupOpts;
-    fieldsType: PublisherGroupFields;
-    optIdsType: PublisherGroupIdsOpts;
-    factoryOptsType: Parameters<typeof newPublisherGroup>[1];
-  };
+  declare readonly __type: { 0: "PublisherGroup" };
 
   constructor(em: EntityManager, opts: PublisherGroupOpts) {
     super(em, opts);

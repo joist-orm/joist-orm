@@ -225,20 +225,29 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
     ${generateDefaultValidationRules(dbMeta, meta, configName)}
     ${generateDefaultValues(config, meta, configName)};
-    
+
+    declare module "joist-orm" {
+      interface TypeMap {
+        ${entityName}: {
+          entityType: ${entityName};
+          filterType: ${entityName}Filter;
+          gqlFilterType: ${entityName}GraphQLFilter;
+          orderType: ${entityName}Order;
+          optsType: ${entityName}Opts;
+          fieldsType: ${entityName}Fields;
+          optIdsType: ${entityName}IdsOpts;
+          factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
+        };
+      }
+    }
+
     export abstract class ${entityName}Codegen extends ${base} implements ${ProjectEntity} {
       static readonly tagName = "${tagName}";
       static readonly metadata: ${EntityMetadata}<${entity.type}>;
 
-      declare readonly __orm: {
-        entityType: ${entityName};
-        filterType: ${entityName}Filter;
-        gqlFilterType: ${entityName}GraphQLFilter;
-        orderType: ${entityName}Order;
-        optsType: ${entityName}Opts;
-        fieldsType: ${entityName}Fields;
-        optIdsType: ${entityName}IdsOpts;
-        factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
+      declare readonly __type: {
+        ${baseEntity ? `0: "${baseEntity.name}",` : ""}
+        ${baseEntity ? 1 : 0}: "${entityName}", 
       };
 
       ${relations.filter((r) => r.kind === "abstract").map((r) => r.line)}

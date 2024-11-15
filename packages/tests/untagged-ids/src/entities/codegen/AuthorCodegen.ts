@@ -106,20 +106,26 @@ authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
 
+declare module "joist-orm" {
+  interface TypeMap {
+    Author: {
+      entityType: Author;
+      filterType: AuthorFilter;
+      gqlFilterType: AuthorGraphQLFilter;
+      orderType: AuthorOrder;
+      optsType: AuthorOpts;
+      fieldsType: AuthorFields;
+      optIdsType: AuthorIdsOpts;
+      factoryOptsType: Parameters<typeof newAuthor>[1];
+    };
+  }
+}
+
 export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static readonly tagName = "a";
   static readonly metadata: EntityMetadata<Author>;
 
-  declare readonly __orm: {
-    entityType: Author;
-    filterType: AuthorFilter;
-    gqlFilterType: AuthorGraphQLFilter;
-    orderType: AuthorOrder;
-    optsType: AuthorOpts;
-    fieldsType: AuthorFields;
-    optIdsType: AuthorIdsOpts;
-    factoryOptsType: Parameters<typeof newAuthor>[1];
-  };
+  declare readonly __type: { 0: "Author" };
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, opts);

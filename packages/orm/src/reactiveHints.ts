@@ -1,5 +1,5 @@
 import { Entity } from "./Entity";
-import { FieldsOf, MaybeAbstractEntityConstructor, RelationsOf, getEmInternalApi } from "./EntityManager";
+import { MaybeAbstractEntityConstructor, getEmInternalApi } from "./EntityManager";
 import {
   EntityMetadata,
   ManyToManyField,
@@ -35,6 +35,7 @@ import { LoadedOneToOneReference } from "./relations/OneToOneReference";
 import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
 import { RecursiveParentsCollectionImpl } from "./relations/RecursiveCollection";
 import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
+import { FieldsOf, RelationsOf } from "./typeMap";
 import { fail, flatAndUnique, mergeNormalizedHints } from "./utils";
 
 /** The keys in `T` that rules & hooks can react to. */
@@ -113,12 +114,10 @@ export type Reacted<T extends Entity, H> = Entity & {
   fullNonReactiveAccess: Loaded<T, H>;
   /** Allow detecting if a reactive change is due to nuances like `hasUpdated` or `hasChanged`. */
   changes: Changes<T, keyof (FieldsOf<T> & RelationsOf<T>), keyof NormalizeHint<H>>;
-  /** Allow returning reacted entities from `hasReactiveAsyncProperties`. */
-  readonly __orm: { entityType: T };
 } & MaybeTransientFields<T>;
 
 /** Allow returning reacted entities from `hasReactiveReference`. */
-export type MaybeReactedEntity<V> = V extends Entity ? { __orm: { entityType: V } } : V;
+export type MaybeReactedEntity<V> = V extends Entity ? { fullNonReactiveAccess: V } : V;
 
 /**
  * Allow returning reacted entities from `hasReactiveAsyncProperty`.
@@ -127,7 +126,7 @@ export type MaybeReactedEntity<V> = V extends Entity ? { __orm: { entityType: V 
  * broken out as a separate generic; `hasReactiveAsyncProperty` does not, and so this type conditionally
  * pulls `undefined` out first, and then defers to `MaybeReactedEntity`.
  */
-export type MaybeReactedPropertyEntity<V> = V extends infer V1 | undefined
+export type MaybeReactedPropertyEntity<V> = V extends (infer V1 extends Entity) | undefined
   ? MaybeReactedEntity<V1> | undefined
   : MaybeReactedEntity<V>;
 

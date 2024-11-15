@@ -1,3 +1,10 @@
+# [1.211.0](https://github.com/joist-orm/joist-orm/compare/v1.210.1...v1.211.0) (2024-11-15)
+
+
+### Features
+
+* Use TypeMap instead of orm field ([#1297](https://github.com/joist-orm/joist-orm/issues/1297)) ([718d656](https://github.com/joist-orm/joist-orm/commit/718d6562380054f384634189189bf6b6369e4ac3))
+
 ## [1.210.1](https://github.com/joist-orm/joist-orm/compare/v1.210.0...v1.210.1) (2024-11-14)
 
 

@@ -148,15 +148,6 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   static readonly tagName = "ba";
   static readonly metadata: EntityMetadata<BookAdvance>;
 
-  declare readonly __orm: {
-    entityType: BookAdvance;
-    filterType: BookAdvanceFilter;
-    gqlFilterType: BookAdvanceGraphQLFilter;
-    orderType: BookAdvanceOrder;
-    fieldsType: BookAdvanceFields;
-    optIdsType: BookAdvanceIdsOpts;
-    factoryOptsType: Parameters<typeof newBookAdvance>[1];
-  };
   declare readonly __typeMapKeys: { 0: "BookAdvance" };
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {

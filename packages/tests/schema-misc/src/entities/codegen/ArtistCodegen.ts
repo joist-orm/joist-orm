@@ -119,15 +119,6 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   static readonly tagName = "artist";
   static readonly metadata: EntityMetadata<Artist>;
 
-  declare readonly __orm: {
-    entityType: Artist;
-    filterType: ArtistFilter;
-    gqlFilterType: ArtistGraphQLFilter;
-    orderType: ArtistOrder;
-    fieldsType: ArtistFields;
-    optIdsType: ArtistIdsOpts;
-    factoryOptsType: Parameters<typeof newArtist>[1];
-  };
   declare readonly __typeMapKeys: { 0: "Artist" };
 
   constructor(em: EntityManager, opts: ArtistOpts) {

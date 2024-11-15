@@ -143,15 +143,6 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   static readonly tagName = "pg";
   static readonly metadata: EntityMetadata<PublisherGroup>;
 
-  declare readonly __orm: {
-    entityType: PublisherGroup;
-    filterType: PublisherGroupFilter;
-    gqlFilterType: PublisherGroupGraphQLFilter;
-    orderType: PublisherGroupOrder;
-    fieldsType: PublisherGroupFields;
-    optIdsType: PublisherGroupIdsOpts;
-    factoryOptsType: Parameters<typeof newPublisherGroup>[1];
-  };
   declare readonly __typeMapKeys: { 0: "PublisherGroup" };
 
   constructor(em: EntityManager, opts: PublisherGroupOpts) {

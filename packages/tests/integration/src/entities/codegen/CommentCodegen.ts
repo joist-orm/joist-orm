@@ -176,15 +176,6 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   static readonly tagName = "comment";
   static readonly metadata: EntityMetadata<Comment>;
 
-  declare readonly __orm: {
-    entityType: Comment;
-    filterType: CommentFilter;
-    gqlFilterType: CommentGraphQLFilter;
-    orderType: CommentOrder;
-    fieldsType: CommentFields;
-    optIdsType: CommentIdsOpts;
-    factoryOptsType: Parameters<typeof newComment>[1];
-  };
   declare readonly __typeMapKeys: { 0: "Comment" };
 
   constructor(em: EntityManager, opts: CommentOpts) {

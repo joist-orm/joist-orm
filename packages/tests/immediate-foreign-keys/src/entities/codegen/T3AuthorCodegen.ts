@@ -113,15 +113,6 @@ export abstract class T3AuthorCodegen extends BaseEntity<EntityManager, number> 
   static readonly tagName = "t3Author";
   static readonly metadata: EntityMetadata<T3Author>;
 
-  declare readonly __orm: {
-    entityType: T3Author;
-    filterType: T3AuthorFilter;
-    gqlFilterType: T3AuthorGraphQLFilter;
-    orderType: T3AuthorOrder;
-    fieldsType: T3AuthorFields;
-    optIdsType: T3AuthorIdsOpts;
-    factoryOptsType: Parameters<typeof newT3Author>[1];
-  };
   declare readonly __typeMapKeys: { 0: "T3Author" };
 
   constructor(em: EntityManager, opts: T3AuthorOpts) {

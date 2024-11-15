@@ -112,15 +112,6 @@ export abstract class T2AuthorCodegen extends BaseEntity<EntityManager, number> 
   static readonly tagName = "t2Author";
   static readonly metadata: EntityMetadata<T2Author>;
 
-  declare readonly __orm: {
-    entityType: T2Author;
-    filterType: T2AuthorFilter;
-    gqlFilterType: T2AuthorGraphQLFilter;
-    orderType: T2AuthorOrder;
-    fieldsType: T2AuthorFields;
-    optIdsType: T2AuthorIdsOpts;
-    factoryOptsType: Parameters<typeof newT2Author>[1];
-  };
   declare readonly __typeMapKeys: { 0: "T2Author" };
 
   constructor(em: EntityManager, opts: T2AuthorOpts) {

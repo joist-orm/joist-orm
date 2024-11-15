@@ -157,15 +157,6 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   static readonly tagName = "as";
   static readonly metadata: EntityMetadata<AuthorStat>;
 
-  declare readonly __orm: {
-    entityType: AuthorStat;
-    filterType: AuthorStatFilter;
-    gqlFilterType: AuthorStatGraphQLFilter;
-    orderType: AuthorStatOrder;
-    fieldsType: AuthorStatFields;
-    optIdsType: AuthorStatIdsOpts;
-    factoryOptsType: Parameters<typeof newAuthorStat>[1];
-  };
   declare readonly __typeMapKeys: { 0: "AuthorStat" };
 
   constructor(em: EntityManager, opts: AuthorStatOpts) {

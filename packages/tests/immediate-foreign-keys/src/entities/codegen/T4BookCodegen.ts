@@ -113,15 +113,6 @@ export abstract class T4BookCodegen extends BaseEntity<EntityManager, number> im
   static readonly tagName = "t4Book";
   static readonly metadata: EntityMetadata<T4Book>;
 
-  declare readonly __orm: {
-    entityType: T4Book;
-    filterType: T4BookFilter;
-    gqlFilterType: T4BookGraphQLFilter;
-    orderType: T4BookOrder;
-    fieldsType: T4BookFields;
-    optIdsType: T4BookIdsOpts;
-    factoryOptsType: Parameters<typeof newT4Book>[1];
-  };
   declare readonly __typeMapKeys: { 0: "T4Book" };
 
   constructor(em: EntityManager, opts: T4BookOpts) {

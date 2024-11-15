@@ -106,15 +106,6 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
   static readonly tagName = "tbr";
   static readonly metadata: EntityMetadata<T5BookReview>;
 
-  declare readonly __orm: {
-    entityType: T5BookReview;
-    filterType: T5BookReviewFilter;
-    gqlFilterType: T5BookReviewGraphQLFilter;
-    orderType: T5BookReviewOrder;
-    fieldsType: T5BookReviewFields;
-    optIdsType: T5BookReviewIdsOpts;
-    factoryOptsType: Parameters<typeof newT5BookReview>[1];
-  };
   declare readonly __typeMapKeys: { 0: "T5BookReview" };
 
   constructor(em: EntityManager, opts: T5BookReviewOpts) {

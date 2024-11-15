@@ -224,15 +224,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   static readonly tagName = "b";
   static readonly metadata: EntityMetadata<Book>;
 
-  declare readonly __orm: {
-    entityType: Book;
-    filterType: BookFilter;
-    gqlFilterType: BookGraphQLFilter;
-    orderType: BookOrder;
-    fieldsType: BookFields;
-    optIdsType: BookIdsOpts;
-    factoryOptsType: Parameters<typeof newBook>[1];
-  };
   declare readonly __typeMapKeys: { 0: "Book" };
 
   constructor(em: EntityManager, opts: BookOpts) {

@@ -240,15 +240,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<Publisher>;
 
-  declare readonly __orm: {
-    entityType: Publisher;
-    filterType: PublisherFilter;
-    gqlFilterType: PublisherGraphQLFilter;
-    orderType: PublisherOrder;
-    fieldsType: PublisherFields;
-    optIdsType: PublisherIdsOpts;
-    factoryOptsType: Parameters<typeof newPublisher>[1];
-  };
   declare readonly __typeMapKeys: { 0: "Publisher" };
 
   constructor(em: EntityManager, opts: PublisherOpts) {

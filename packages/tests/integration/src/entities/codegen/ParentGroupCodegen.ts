@@ -119,15 +119,6 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   static readonly tagName = "parentGroup";
   static readonly metadata: EntityMetadata<ParentGroup>;
 
-  declare readonly __orm: {
-    entityType: ParentGroup;
-    filterType: ParentGroupFilter;
-    gqlFilterType: ParentGroupGraphQLFilter;
-    orderType: ParentGroupOrder;
-    fieldsType: ParentGroupFields;
-    optIdsType: ParentGroupIdsOpts;
-    factoryOptsType: Parameters<typeof newParentGroup>[1];
-  };
   declare readonly __typeMapKeys: { 0: "ParentGroup" };
 
   constructor(em: EntityManager, opts: ParentGroupOpts) {

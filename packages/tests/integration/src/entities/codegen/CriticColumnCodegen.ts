@@ -117,15 +117,6 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   static readonly tagName = "cc";
   static readonly metadata: EntityMetadata<CriticColumn>;
 
-  declare readonly __orm: {
-    entityType: CriticColumn;
-    filterType: CriticColumnFilter;
-    gqlFilterType: CriticColumnGraphQLFilter;
-    orderType: CriticColumnOrder;
-    fieldsType: CriticColumnFields;
-    optIdsType: CriticColumnIdsOpts;
-    factoryOptsType: Parameters<typeof newCriticColumn>[1];
-  };
   declare readonly __typeMapKeys: { 0: "CriticColumn" };
 
   constructor(em: EntityManager, opts: CriticColumnOpts) {

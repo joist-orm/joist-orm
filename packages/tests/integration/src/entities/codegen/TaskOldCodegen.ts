@@ -150,15 +150,6 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   static readonly tagName = "task";
   static readonly metadata: EntityMetadata<TaskOld>;
 
-  declare readonly __orm: {
-    entityType: TaskOld;
-    filterType: TaskOldFilter;
-    gqlFilterType: TaskOldGraphQLFilter;
-    orderType: TaskOldOrder;
-    fieldsType: TaskOldFields;
-    optIdsType: TaskOldIdsOpts;
-    factoryOptsType: Parameters<typeof newTaskOld>[1];
-  };
   declare readonly __typeMapKeys: { 0: "Task"; 1: "TaskOld" };
 
   constructor(em: EntityManager, opts: TaskOldOpts) {

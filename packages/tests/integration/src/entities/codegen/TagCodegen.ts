@@ -141,15 +141,6 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   static readonly tagName = "t";
   static readonly metadata: EntityMetadata<Tag>;
 
-  declare readonly __orm: {
-    entityType: Tag;
-    filterType: TagFilter;
-    gqlFilterType: TagGraphQLFilter;
-    orderType: TagOrder;
-    fieldsType: TagFields;
-    optIdsType: TagIdsOpts;
-    factoryOptsType: Parameters<typeof newTag>[1];
-  };
   declare readonly __typeMapKeys: { 0: "Tag" };
 
   constructor(em: EntityManager, opts: TagOpts) {

@@ -136,15 +136,6 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   static readonly tagName = "cg";
   static readonly metadata: EntityMetadata<ChildGroup>;
 
-  declare readonly __orm: {
-    entityType: ChildGroup;
-    filterType: ChildGroupFilter;
-    gqlFilterType: ChildGroupGraphQLFilter;
-    orderType: ChildGroupOrder;
-    fieldsType: ChildGroupFields;
-    optIdsType: ChildGroupIdsOpts;
-    factoryOptsType: Parameters<typeof newChildGroup>[1];
-  };
   declare readonly __typeMapKeys: { 0: "ChildGroup" };
 
   constructor(em: EntityManager, opts: ChildGroupOpts) {

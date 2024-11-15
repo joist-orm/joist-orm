@@ -217,15 +217,6 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   static readonly tagName = "u";
   static readonly metadata: EntityMetadata<User>;
 
-  declare readonly __orm: {
-    entityType: User;
-    filterType: UserFilter;
-    gqlFilterType: UserGraphQLFilter;
-    orderType: UserOrder;
-    fieldsType: UserFields;
-    optIdsType: UserIdsOpts;
-    factoryOptsType: Parameters<typeof newUser>[1];
-  };
   declare readonly __typeMapKeys: { 0: "User" };
 
   constructor(em: EntityManager, opts: UserOpts) {

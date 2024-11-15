@@ -116,15 +116,6 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   static readonly tagName = "authorSchedule";
   static readonly metadata: EntityMetadata<AuthorSchedule>;
 
-  declare readonly __orm: {
-    entityType: AuthorSchedule;
-    filterType: AuthorScheduleFilter;
-    gqlFilterType: AuthorScheduleGraphQLFilter;
-    orderType: AuthorScheduleOrder;
-    fieldsType: AuthorScheduleFields;
-    optIdsType: AuthorScheduleIdsOpts;
-    factoryOptsType: Parameters<typeof newAuthorSchedule>[1];
-  };
   declare readonly __typeMapKeys: { 0: "AuthorSchedule" };
 
   constructor(em: EntityManager, opts: AuthorScheduleOpts) {

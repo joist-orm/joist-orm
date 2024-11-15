@@ -355,15 +355,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   static readonly tagName = "a";
   static readonly metadata: EntityMetadata<Author>;
 
-  declare readonly __orm: {
-    entityType: Author;
-    filterType: AuthorFilter;
-    gqlFilterType: AuthorGraphQLFilter;
-    orderType: AuthorOrder;
-    fieldsType: AuthorFields;
-    optIdsType: AuthorIdsOpts;
-    factoryOptsType: Parameters<typeof newAuthor>[1];
-  };
   declare readonly __typeMapKeys: { 0: "Author" };
 
   abstract readonly rootMentor: ReactiveReference<Author, Author, undefined>;

@@ -16,7 +16,7 @@ type TypeMapKey<T> = T extends { __typeMapKeys: { 1: infer K } }
     ? K
     : never;
 
-type TypeMapEntry<T, U extends string> =
+export type TypeMapEntry<T, U extends string> =
   TypeMapKey<T> extends infer K ? (K extends keyof TypeMap ? TypeMap[K][U] : unknown) : unknown;
 
 export type FieldsOf<T> = TypeMapEntry<T, "fieldsType">;

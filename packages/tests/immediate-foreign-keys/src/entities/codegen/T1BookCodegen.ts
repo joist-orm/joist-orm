@@ -107,15 +107,6 @@ export abstract class T1BookCodegen extends BaseEntity<EntityManager, number> im
   static readonly tagName = "tb";
   static readonly metadata: EntityMetadata<T1Book>;
 
-  declare readonly __orm: {
-    entityType: T1Book;
-    filterType: T1BookFilter;
-    gqlFilterType: T1BookGraphQLFilter;
-    orderType: T1BookOrder;
-    fieldsType: T1BookFields;
-    optIdsType: T1BookIdsOpts;
-    factoryOptsType: Parameters<typeof newT1Book>[1];
-  };
   declare readonly __typeMapKeys: { 0: "T1Book" };
 
   constructor(em: EntityManager, opts: T1BookOpts) {

@@ -97,15 +97,6 @@ export abstract class AdminUserCodegen extends User implements Entity {
   static readonly tagName = "u";
   static readonly metadata: EntityMetadata<AdminUser>;
 
-  declare readonly __orm: {
-    entityType: AdminUser;
-    filterType: AdminUserFilter;
-    gqlFilterType: AdminUserGraphQLFilter;
-    orderType: AdminUserOrder;
-    fieldsType: AdminUserFields;
-    optIdsType: AdminUserIdsOpts;
-    factoryOptsType: Parameters<typeof newAdminUser>[1];
-  };
   declare readonly __typeMapKeys: { 0: "User"; 1: "AdminUser" };
 
   constructor(em: EntityManager, opts: AdminUserOpts) {

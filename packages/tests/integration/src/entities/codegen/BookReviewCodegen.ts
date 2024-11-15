@@ -157,15 +157,6 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   static readonly tagName = "br";
   static readonly metadata: EntityMetadata<BookReview>;
 
-  declare readonly __orm: {
-    entityType: BookReview;
-    filterType: BookReviewFilter;
-    gqlFilterType: BookReviewGraphQLFilter;
-    orderType: BookReviewOrder;
-    fieldsType: BookReviewFields;
-    optIdsType: BookReviewIdsOpts;
-    factoryOptsType: Parameters<typeof newBookReview>[1];
-  };
   declare readonly __typeMapKeys: { 0: "BookReview" };
 
   constructor(em: EntityManager, opts: BookReviewOpts) {

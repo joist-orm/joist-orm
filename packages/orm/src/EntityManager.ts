@@ -139,7 +139,7 @@ export type OptIdsOf<T> = T extends { __orm: { optIdsType: infer O } } ? O : nev
 export type EntityOf<C> = C extends new (em: EntityManager, opts: any) => infer T ? T : never;
 
 /** Pulls the entity query type out of a given entity type T. */
-export type FilterOf<T> = T extends { __orm: { filterType: infer Q } } ? Q : never;
+export type FilterOf<T extends Entity> = T["__orm"]["filterType"];
 
 /** Pulls the entity GraphQL query type out of a given entity type T. */
 export type GraphQLFilterOf<T> = T extends { __orm: { gqlFilterType: infer Q } } ? Q : never;

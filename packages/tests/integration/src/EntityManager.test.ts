@@ -1761,7 +1761,7 @@ describe("EntityManager", () => {
       await em.findOneOrFail(type, {} as FilterWithAlias<JoistEntity>);
       await em.findByUnique(type, {} as FilterWithAlias<JoistEntity>);
       await em.load(type, {} as OptsOf<JoistEntity>);
-      await em.loadAll(type, {} as FilterWithAlias<JoistEntity>);
+      await em.loadAll(type, {} as any);
       await em.populate(entity, []);
       await em.refresh(entity);
       em.create(type2, {} as OptsOf<JoistEntity>);

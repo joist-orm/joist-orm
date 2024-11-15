@@ -36,5 +36,4 @@ export interface Entity {
    * name / display name.
    */
   toTaggedString(): string;
-  __typeMapKeys: unknown;
 }

@@ -28,7 +28,6 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   }
   // We use a protected field so that subclass getters can easily access `this.__data.relations`.
   protected readonly __data!: InstanceData;
-  declare readonly __typeMapKeys: {};
 
   protected constructor(em: EM, optsOrId: any) {
     const isNew = typeof optsOrId !== "string";

@@ -114,11 +114,10 @@ export type Reacted<T extends Entity, H> = Entity & {
   fullNonReactiveAccess: Loaded<T, H>;
   /** Allow detecting if a reactive change is due to nuances like `hasUpdated` or `hasChanged`. */
   changes: Changes<T, keyof (FieldsOf<T> & RelationsOf<T>), keyof NormalizeHint<H>>;
-  __typeMapKeys: T["__typeMapKeys"];
 } & MaybeTransientFields<T>;
 
 /** Allow returning reacted entities from `hasReactiveReference`. */
-export type MaybeReactedEntity<V> = V extends Entity ? { __typeMapKeys: V["__typeMapKeys"] } : V;
+export type MaybeReactedEntity<V> = V extends Entity ? { fullNonReactiveAccess: V } : V;
 
 /**
  * Allow returning reacted entities from `hasReactiveAsyncProperty`.
@@ -127,7 +126,7 @@ export type MaybeReactedEntity<V> = V extends Entity ? { __typeMapKeys: V["__typ
  * broken out as a separate generic; `hasReactiveAsyncProperty` does not, and so this type conditionally
  * pulls `undefined` out first, and then defers to `MaybeReactedEntity`.
  */
-export type MaybeReactedPropertyEntity<V> = V extends infer V1 extends Entity | undefined
+export type MaybeReactedPropertyEntity<V> = V extends (infer V1 extends Entity) | undefined
   ? MaybeReactedEntity<V1> | undefined
   : MaybeReactedEntity<V>;
 

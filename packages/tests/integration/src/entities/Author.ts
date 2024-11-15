@@ -3,7 +3,6 @@ import {
   AsyncProperty,
   Collection,
   Loaded,
-  OptsOf,
   ReactiveField,
   ReactiveGetter,
   ReactiveReference,
@@ -27,22 +26,10 @@ import {
   BookRange,
   BookReview,
   Comment,
-  CriticColumn,
-  LargePublisher,
   authorMeta,
   bookMeta,
   authorConfig as config,
 } from "./entities";
-
-// export type OptsOf2<T extends { foo: string; typeMap: Record<string, { optsType: unknown }> }> =
-//   T["typeMap"][T["foo"]]["optsType"];
-// type t = OptsOf2<CriticColumn>;
-type t = OptsOf<CriticColumn>;
-type s = OptsOf<Author>;
-type a = OptsOf<LargePublisher>;
-// need a per-entity key
-// need a per-application map
-// store on the context? the EM?
 
 export class Author extends AuthorCodegen {
   readonly reviews: Collection<Author, BookReview> = hasManyThrough((author) => author.books.reviews);

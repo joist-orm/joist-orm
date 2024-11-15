@@ -3,22 +3,43 @@ import { EntityManager } from "./EntityManager";
 
 /**
  * Provides a container for entities to attach their application-specific types.
+ *
+ * Downstream applications inject their types into this map, so we can look them up
+ * via types like `OptsOf<Author>` or `FilterOf<Author>`, by including a `declare module`
+ * snippet in each entity's `...Codegen` file.
+ *
+ * ```ts
+ * declare module "joist-orm" {
+ *   interface TypeMap {
+ *     Author: { optsType: AuthorOpts; fieldsType: AuthorFields; filterType: AuthorFilter };
+ *   }
+ * }
+ * ```
+ *
+ * Inspired by Tanstack Router, which uses a similar `declare module` approach.
  */
 export interface TypeMap {}
 
-/** Return the `FooOpts` type a given `Foo` entity constructor. */
-export type OptsOf<T> = TypeMapEntry<T, "optsType">;
-
-/** Returns a key like `"Author"` or `"SmallPublisher"` for looking up types in the `TypeMap`. */
+/**
+ * Returns a key like `"Author"` or `"SmallPublisher"` for looking up types in the `TypeMap`.
+ *
+ * This is currently hard-coded to look for two levels of inheritance: we probe for the subtype
+ * key (1) first, and then fallback on the base type key (0) that all entities will have.
+ */
 type TypeMapKey<T> = T extends { __typeMapKeys: { 1: infer K } }
   ? K
   : T extends { __typeMapKeys: { 0: infer K } }
     ? K
     : never;
 
+/** A helper type to look up `U` in the `TypeMap` for a given entity type `T`. */
 export type TypeMapEntry<T, U extends string> =
   TypeMapKey<T> extends infer K ? (K extends keyof TypeMap ? TypeMap[K][U] : unknown) : unknown;
 
+/** Return the `FooOpts` type for the given `Foo` entity. */
+export type OptsOf<T> = TypeMapEntry<T, "optsType">;
+
+/** Return the `FooFields` type for the given `Foo` entity. */
 export type FieldsOf<T> = TypeMapEntry<T, "fieldsType">;
 
 export type OptIdsOf<T> = TypeMapEntry<T, "optIdsType">;

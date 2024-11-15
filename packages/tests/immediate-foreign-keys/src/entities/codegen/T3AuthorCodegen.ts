@@ -113,7 +113,7 @@ export abstract class T3AuthorCodegen extends BaseEntity<EntityManager, number> 
   static readonly tagName = "t3Author";
   static readonly metadata: EntityMetadata<T3Author>;
 
-  declare readonly __typeMapKeys: { 0: "T3Author" };
+  declare readonly __type: { 0: "T3Author" };
 
   constructor(em: EntityManager, opts: T3AuthorOpts) {
     super(em, opts);

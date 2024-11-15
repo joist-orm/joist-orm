@@ -116,7 +116,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   static readonly tagName = "authorSchedule";
   static readonly metadata: EntityMetadata<AuthorSchedule>;
 
-  declare readonly __typeMapKeys: { 0: "AuthorSchedule" };
+  declare readonly __type: { 0: "AuthorSchedule" };
 
   constructor(em: EntityManager, opts: AuthorScheduleOpts) {
     super(em, opts);

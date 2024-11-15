@@ -163,7 +163,7 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   static readonly tagName = "i";
   static readonly metadata: EntityMetadata<Image>;
 
-  declare readonly __typeMapKeys: { 0: "Image" };
+  declare readonly __type: { 0: "Image" };
 
   constructor(em: EntityManager, opts: ImageOpts) {
     super(em, opts);

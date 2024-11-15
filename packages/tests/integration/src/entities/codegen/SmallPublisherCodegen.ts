@@ -155,7 +155,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<SmallPublisher>;
 
-  declare readonly __typeMapKeys: { 0: "Publisher"; 1: "SmallPublisher" };
+  declare readonly __type: { 0: "Publisher"; 1: "SmallPublisher" };
 
   constructor(em: EntityManager, opts: SmallPublisherOpts) {
     super(em, opts);

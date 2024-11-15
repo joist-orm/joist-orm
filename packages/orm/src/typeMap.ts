@@ -26,11 +26,7 @@ export interface TypeMap {}
  * This is currently hard-coded to look for two levels of inheritance: we probe for the subtype
  * key (1) first, and then fallback on the base type key (0) that all entities will have.
  */
-type TypeMapKey<T> = T extends { __typeMapKeys: { 1: infer K } }
-  ? K
-  : T extends { __typeMapKeys: { 0: infer K } }
-    ? K
-    : never;
+type TypeMapKey<T> = T extends { __type: { 1: infer K } } ? K : T extends { __type: { 0: infer K } } ? K : never;
 
 /** A helper type to look up `U` in the `TypeMap` for a given entity type `T`. */
 export type TypeMapEntry<T, U extends string> =

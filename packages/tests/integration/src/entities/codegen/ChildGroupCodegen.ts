@@ -136,7 +136,7 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   static readonly tagName = "cg";
   static readonly metadata: EntityMetadata<ChildGroup>;
 
-  declare readonly __typeMapKeys: { 0: "ChildGroup" };
+  declare readonly __type: { 0: "ChildGroup" };
 
   constructor(em: EntityManager, opts: ChildGroupOpts) {
     super(em, opts);

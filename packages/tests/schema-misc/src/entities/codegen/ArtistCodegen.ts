@@ -119,7 +119,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   static readonly tagName = "artist";
   static readonly metadata: EntityMetadata<Artist>;
 
-  declare readonly __typeMapKeys: { 0: "Artist" };
+  declare readonly __type: { 0: "Artist" };
 
   constructor(em: EntityManager, opts: ArtistOpts) {
     super(em, opts);

@@ -176,7 +176,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   static readonly tagName = "comment";
   static readonly metadata: EntityMetadata<Comment>;
 
-  declare readonly __typeMapKeys: { 0: "Comment" };
+  declare readonly __type: { 0: "Comment" };
 
   constructor(em: EntityManager, opts: CommentOpts) {
     super(em, opts);

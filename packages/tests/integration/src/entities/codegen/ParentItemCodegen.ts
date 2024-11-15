@@ -125,7 +125,7 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
   static readonly tagName = "pi";
   static readonly metadata: EntityMetadata<ParentItem>;
 
-  declare readonly __typeMapKeys: { 0: "ParentItem" };
+  declare readonly __type: { 0: "ParentItem" };
 
   constructor(em: EntityManager, opts: ParentItemOpts) {
     super(em, opts);

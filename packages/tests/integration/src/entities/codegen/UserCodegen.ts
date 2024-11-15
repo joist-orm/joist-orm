@@ -217,7 +217,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   static readonly tagName = "u";
   static readonly metadata: EntityMetadata<User>;
 
-  declare readonly __typeMapKeys: { 0: "User" };
+  declare readonly __type: { 0: "User" };
 
   constructor(em: EntityManager, opts: UserOpts) {
     super(em, opts);

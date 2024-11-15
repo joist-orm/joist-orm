@@ -84,7 +84,7 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
   static readonly tagName = "do";
   static readonly metadata: EntityMetadata<DatabaseOwner>;
 
-  declare readonly __typeMapKeys: { 0: "DatabaseOwner" };
+  declare readonly __type: { 0: "DatabaseOwner" };
 
   constructor(em: EntityManager, opts: DatabaseOwnerOpts) {
     super(em, opts);

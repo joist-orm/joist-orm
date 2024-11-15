@@ -113,7 +113,7 @@ export abstract class T2BookCodegen extends BaseEntity<EntityManager, number> im
   static readonly tagName = "t2Book";
   static readonly metadata: EntityMetadata<T2Book>;
 
-  declare readonly __typeMapKeys: { 0: "T2Book" };
+  declare readonly __type: { 0: "T2Book" };
 
   constructor(em: EntityManager, opts: T2BookOpts) {
     super(em, opts);

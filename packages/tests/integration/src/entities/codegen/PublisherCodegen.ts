@@ -240,7 +240,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<Publisher>;
 
-  declare readonly __typeMapKeys: { 0: "Publisher" };
+  declare readonly __type: { 0: "Publisher" };
 
   constructor(em: EntityManager, opts: PublisherOpts) {
     super(em, opts);

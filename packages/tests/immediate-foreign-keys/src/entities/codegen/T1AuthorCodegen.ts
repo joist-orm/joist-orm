@@ -103,7 +103,7 @@ export abstract class T1AuthorCodegen extends BaseEntity<EntityManager, number> 
   static readonly tagName = "ta";
   static readonly metadata: EntityMetadata<T1Author>;
 
-  declare readonly __typeMapKeys: { 0: "T1Author" };
+  declare readonly __type: { 0: "T1Author" };
 
   constructor(em: EntityManager, opts: T1AuthorOpts) {
     super(em, opts);

@@ -157,7 +157,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   static readonly tagName = "br";
   static readonly metadata: EntityMetadata<BookReview>;
 
-  declare readonly __typeMapKeys: { 0: "BookReview" };
+  declare readonly __type: { 0: "BookReview" };
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
     super(em, opts);

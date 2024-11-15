@@ -245,7 +245,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       static readonly tagName = "${tagName}";
       static readonly metadata: ${EntityMetadata}<${entity.type}>;
 
-      declare readonly __typeMapKeys: {
+      declare readonly __type: {
         ${baseEntity ? `0: "${baseEntity.name}",` : ""}
         ${baseEntity ? 1 : 0}: "${entityName}", 
       };

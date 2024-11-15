@@ -148,7 +148,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   static readonly tagName = "ba";
   static readonly metadata: EntityMetadata<BookAdvance>;
 
-  declare readonly __typeMapKeys: { 0: "BookAdvance" };
+  declare readonly __type: { 0: "BookAdvance" };
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
     super(em, opts);

@@ -143,7 +143,7 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   static readonly tagName = "task";
   static readonly metadata: EntityMetadata<TaskNew>;
 
-  declare readonly __typeMapKeys: { 0: "Task"; 1: "TaskNew" };
+  declare readonly __type: { 0: "Task"; 1: "TaskNew" };
 
   constructor(em: EntityManager, opts: TaskNewOpts) {
     super(em, opts);

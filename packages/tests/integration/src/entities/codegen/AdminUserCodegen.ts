@@ -97,7 +97,7 @@ export abstract class AdminUserCodegen extends User implements Entity {
   static readonly tagName = "u";
   static readonly metadata: EntityMetadata<AdminUser>;
 
-  declare readonly __typeMapKeys: { 0: "User"; 1: "AdminUser" };
+  declare readonly __type: { 0: "User"; 1: "AdminUser" };
 
   constructor(em: EntityManager, opts: AdminUserOpts) {
     super(em, opts);

@@ -141,7 +141,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   static readonly tagName = "t";
   static readonly metadata: EntityMetadata<Tag>;
 
-  declare readonly __typeMapKeys: { 0: "Tag" };
+  declare readonly __type: { 0: "Tag" };
 
   constructor(em: EntityManager, opts: TagOpts) {
     super(em, opts);

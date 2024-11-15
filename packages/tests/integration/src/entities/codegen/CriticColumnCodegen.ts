@@ -117,7 +117,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   static readonly tagName = "cc";
   static readonly metadata: EntityMetadata<CriticColumn>;
 
-  declare readonly __typeMapKeys: { 0: "CriticColumn" };
+  declare readonly __type: { 0: "CriticColumn" };
 
   constructor(em: EntityManager, opts: CriticColumnOpts) {
     super(em, opts);

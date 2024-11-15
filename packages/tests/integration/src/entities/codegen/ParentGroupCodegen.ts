@@ -119,7 +119,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   static readonly tagName = "parentGroup";
   static readonly metadata: EntityMetadata<ParentGroup>;
 
-  declare readonly __typeMapKeys: { 0: "ParentGroup" };
+  declare readonly __type: { 0: "ParentGroup" };
 
   constructor(em: EntityManager, opts: ParentGroupOpts) {
     super(em, opts);

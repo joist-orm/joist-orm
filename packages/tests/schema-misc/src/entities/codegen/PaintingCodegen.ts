@@ -117,7 +117,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<Painting>;
 
-  declare readonly __typeMapKeys: { 0: "Painting" };
+  declare readonly __type: { 0: "Painting" };
 
   constructor(em: EntityManager, opts: PaintingOpts) {
     super(em, opts);

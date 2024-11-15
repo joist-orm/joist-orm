@@ -188,7 +188,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   static readonly tagName = "task";
   static readonly metadata: EntityMetadata<Task>;
 
-  declare readonly __typeMapKeys: { 0: "Task" };
+  declare readonly __type: { 0: "Task" };
 
   constructor(em: EntityManager, opts: TaskOpts) {
     super(em, opts);

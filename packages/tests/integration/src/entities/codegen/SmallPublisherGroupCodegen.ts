@@ -103,7 +103,7 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
   static readonly tagName = "pg";
   static readonly metadata: EntityMetadata<SmallPublisherGroup>;
 
-  declare readonly __typeMapKeys: { 0: "PublisherGroup"; 1: "SmallPublisherGroup" };
+  declare readonly __type: { 0: "PublisherGroup"; 1: "SmallPublisherGroup" };
 
   constructor(em: EntityManager, opts: SmallPublisherGroupOpts) {
     super(em, opts);

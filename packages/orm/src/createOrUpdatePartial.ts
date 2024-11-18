@@ -143,7 +143,7 @@ async function convertToOpts<T extends Entity>(
         }
         return [name, currentValue];
       } else {
-        // This is a many-to-one partial into a new entity
+        // This is a many-to-one partial update to an existing entity (they passed an id)
         const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
         return [name, entity];
       }

@@ -1,3 +1,10 @@
+## [1.211.1](https://github.com/joist-orm/joist-orm/compare/v1.211.0...v1.211.1) (2024-11-20)
+
+
+### Bug Fixes
+
+* Fix lens through a non-null reference. ([#1301](https://github.com/joist-orm/joist-orm/issues/1301)) ([f810693](https://github.com/joist-orm/joist-orm/commit/f8106935792128e767dfba7ad4cad15bdf8f20c3))
+
 # [1.211.0](https://github.com/joist-orm/joist-orm/compare/v1.210.1...v1.211.0) (2024-11-15)
 
 

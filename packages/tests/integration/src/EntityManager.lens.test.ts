@@ -93,6 +93,19 @@ describe("EntityManager.lens", () => {
     expect(publisher).toBeUndefined();
   });
 
+  it("can navigate nullable then not-nullable references", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertImage({ type_id: 1, file_name: "f1", author_id: 1 });
+    const em = newEntityManager();
+    const i = await em.load(Image, "1");
+    const author = await i.load((i) => i.book.author);
+    // Verify that author is typed as `Author | undefined`, since we went through `i.book` which is `Book | undefined`
+    expect(() => {
+      // @ts-expect-error
+      noop(author.firstName);
+    }).toThrow(TypeError);
+  });
+
   it("can navigate collections then nullable references", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
@@ -332,3 +345,5 @@ describe("EntityManager.lens", () => {
     });
   });
 });
+
+function noop(arg: unknown): void {}

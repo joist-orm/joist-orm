@@ -19,13 +19,33 @@ type LoadLike<U> = { load(): Promise<U> };
 /** Generically matches a property or zero-arg method that returns a promise. */
 type PromiseFnLike<U> = () => PromiseLike<U>;
 
-/** Given a parent type P, and a new type V, returns V[] if P is already an array, i.e. we're in flatMap mode. */
+/**
+ * Given a parent type `R` (that is our current lens "return type", i.e. `Author` or `Author | undefined` or `Author[]`),
+ * and the type `V` of the "next step" of the traversal (i.e. itself `Book` or `Book | undefined` or `Book[]`, depending
+ * on the relation being traversed), returns `V` mapped to "the right format" based on `R`.
+ *
+ * I.e.:
+ *
+ * - `Author | undefined` that navigates a `Book` will become `Book | undefined`
+ * - `Author` that navigates a `Book | undefined` will also become `Book | undefined`
+ * - `Author[]` that navigates a `Book | undefined` will become a `Book[]`
+ * - `Author | undefined` that navigates a `Book[]` will become a `Book[]`
+ */
 // The extra `[]` around `V` and `ReadonlyArray<any>` are to keep the type as `Array<Foo | undefined>`
 // instead of `Foo[] | undefined[]`.
-//
 // When `P extends ReadonlyArray, i.e. we're in flatMap mode, we're also in filter undefined mode.
-type MaybeArray<P, V> =
-  P extends ReadonlyArray<any> ? ([V] extends [ReadonlyArray<infer U>] ? DropUndefined<U>[] : DropUndefined<V>[]) : V;
+type MaybeArray<R, V> =
+  R extends ReadonlyArray<any>
+    ? [V] extends [ReadonlyArray<infer U>]
+      ? DropUndefined<U>[]
+      : DropUndefined<V>[]
+    : V extends ReadonlyArray<any>
+      ? V
+      : [R] extends [undefined]
+        ? V | undefined
+        : V;
+
+// ([R] extends [undefined]) ? (V) : V;
 
 /** Given a type T that we come across in the path, de-array it to continue our flatMap-ish semantics. */
 type MaybeDropArray<T> = T extends ReadonlyArray<infer U> ? U : T;

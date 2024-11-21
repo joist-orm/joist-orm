@@ -1344,6 +1344,25 @@ describe("EntityManager", () => {
       expect(authors).toMatchEntity([]);
     });
 
+    it("ignores deleted entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      em.delete(a);
+      const authors = await em.findWithNewOrChanged(Author, { firstName: "a1" });
+      expect(authors).toMatchEntity([]);
+    });
+
+    it("ignores deleted and changed entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      a.lastName = "l1";
+      em.delete(a);
+      const authors = await em.findWithNewOrChanged(Author, { firstName: "a1" });
+      expect(authors).toMatchEntity([]);
+    });
+
     it("can populate found & created entities", async () => {
       await insertPublisher({ name: "p1" });
       await insertPublisher({ id: 2, name: "p2" });

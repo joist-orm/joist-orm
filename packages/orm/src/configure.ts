@@ -27,6 +27,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
   // Do these after `fireAfterMetadatas`, in case afterMetadata callbacks added more defaults/rules
   copyAsyncDefaults(metas);
   reverseIndexReactivity(metas);
+  copyRunBeforeBooksToBaseType(metas);
   setBooted();
 }
 
@@ -266,6 +267,14 @@ function populatePolyComponentFields(metas: EntityMetadata[]): void {
           } satisfies OneToManyField & { aliasSuffix: string };
         });
       }
+    }
+  }
+}
+
+function copyRunBeforeBooksToBaseType(meta: EntityMetadata[]): void {
+  for (const m of meta) {
+    for (const b of m.baseTypes) {
+      b.config.__data.runHooksBefore.push(...m.config.__data.runHooksBefore);
     }
   }
 }

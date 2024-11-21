@@ -554,7 +554,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     const persisted = await this.find(type, { ...(where as any) }, { softDeletes });
     const unchanged = persisted.filter((e) => !e.isNewEntity && !e.isDirtyEntity && !e.isDeletedEntity);
     const maybeNew = this.entities.filter(
-      (e) => e instanceof type && (e.isNewEntity || e.isDirtyEntity) && entityMatches(e, where),
+      (e) => e instanceof type && (e.isNewEntity || e.isDirtyEntity) && !e.isDeletedEntity && entityMatches(e, where),
     );
     const found = [...unchanged, ...maybeNew];
     if (populate) {

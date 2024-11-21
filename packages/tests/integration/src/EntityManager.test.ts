@@ -39,7 +39,9 @@ import {
   newBook,
   newBookReview,
   newPublisher,
+  newSmallPublisher,
   newTag,
+  smallPublisherBeforeFlushRan,
 } from "./entities";
 import { maybeBeginAndCommit } from "./setupDbTests";
 
@@ -698,6 +700,18 @@ describe("EntityManager", () => {
     await em.flush();
     // Then the book hook was ran after the review hook
     expect(b.transientFields.bookReviewBeforeFlushRan).toBe(true);
+  });
+
+  it("can order hooks between entities with inheritance", async () => {
+    // Given two new entities
+    const em = newEntityManager();
+    const sp = newSmallPublisher(em, { group: {} });
+    // And the flag is false
+    smallPublisherBeforeFlushRan.value = false;
+    // When we flush
+    await em.flush();
+    // Then the group hook didn't run until after the SP hook
+    expect(sp.group.get!.transientFields.smallPublisherBeforeFlushRan).toBe(true);
   });
 
   it("cannot modify an entity during a flush outside hooks", async () => {

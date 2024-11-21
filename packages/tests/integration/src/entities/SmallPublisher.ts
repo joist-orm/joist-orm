@@ -6,6 +6,8 @@ type HasGroup<T extends Entity> = {
   get group(): ManyToOneReference<T, PublisherGroup, undefined>;
 };
 
+export const smallPublisherBeforeFlushRan = { value: false };
+
 export class SmallPublisher extends SmallPublisherCodegen implements HasGroup<SmallPublisher> {
   // Used for testing a derived property that only exists on a subtype
   readonly allAuthorNames: ReactiveField<SmallPublisher, string> = hasReactiveField(
@@ -27,7 +29,7 @@ config.afterMetadata((meta) => {
 });
 
 // For testing `SmallPublisher.group: SmallPublisherGroup` specialization
-config.addRule({ group: "smallName" }, (sp) => {
+config.addRule({ group: "smallName" }, () => {
   return [];
 });
 
@@ -47,10 +49,18 @@ config.addRule("authors", (sp) => {
 // Example of a rule on a subtype, against a base type field
 config.addRule(cannotBeUpdated("group"));
 
+// For testing cross-entity hook ordering
+config.runHooksBefore(PublisherGroup);
+
 // Noop rule to verify we can check both subtype & based type fields
 config.beforeFlush((sp) => {
   if (sp.changes.city.hasChanged || sp.changes.name.hasChanged) {
   }
+});
+
+// For testing cross-entity hook ordering
+config.beforeFlush(() => {
+  smallPublisherBeforeFlushRan.value = true;
 });
 
 config.beforeFlush(async (sp) => {

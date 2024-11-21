@@ -76,7 +76,7 @@ config.addRule(cannotBeUpdated("book"));
 config.runHooksBefore(Book);
 
 // For testing cross-entity hook ordering
-config.beforeFlush((br) => {
+config.beforeFlush(() => {
   bookReviewBeforeFlushRan.value = true;
 });
 

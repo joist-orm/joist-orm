@@ -1,9 +1,11 @@
-import { PublisherGroupCodegen } from "./entities";
+import { PublisherGroupCodegen, smallPublisherBeforeFlushRan } from "./entities";
 
 import { hasReactiveField, ReactiveField } from "joist-orm";
 import { publisherGroupConfig as config } from "./entities";
 
 export class PublisherGroup extends PublisherGroupCodegen {
+  transientFields = { smallPublisherBeforeFlushRan: false };
+
   readonly numberOfBookReviews: ReactiveField<PublisherGroup, number> = hasReactiveField(
     "numberOfBookReviews",
     { publishers: "numberOfBookReviews" },
@@ -11,5 +13,7 @@ export class PublisherGroup extends PublisherGroupCodegen {
   );
 }
 
-// remove once you have actual rules/hooks
-config.placeholder();
+// For testing cross-entity hook ordering
+config.beforeFlush((b) => {
+  b.transientFields.smallPublisherBeforeFlushRan = smallPublisherBeforeFlushRan.value;
+});

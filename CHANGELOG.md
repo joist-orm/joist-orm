@@ -1,3 +1,10 @@
+## [1.211.3](https://github.com/joist-orm/joist-orm/compare/v1.211.2...v1.211.3) (2024-11-21)
+
+
+### Bug Fixes
+
+* Fix findWithNewOrChanged not filtering deleted changed items. ([#1303](https://github.com/joist-orm/joist-orm/issues/1303)) ([5e786b6](https://github.com/joist-orm/joist-orm/commit/5e786b647586c7bde313ea7f0ebdcc1f2e35482f))
+
 ## [1.211.2](https://github.com/joist-orm/joist-orm/compare/v1.211.1...v1.211.2) (2024-11-21)
 
 

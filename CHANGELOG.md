@@ -1,3 +1,10 @@
+## [1.211.2](https://github.com/joist-orm/joist-orm/compare/v1.211.1...v1.211.2) (2024-11-21)
+
+
+### Bug Fixes
+
+* Fix runHooksBefore when called from subtypes. ([#1302](https://github.com/joist-orm/joist-orm/issues/1302)) ([075e7fd](https://github.com/joist-orm/joist-orm/commit/075e7fd56488f20afafaaf8d650498bc92972298))
+
 ## [1.211.1](https://github.com/joist-orm/joist-orm/compare/v1.211.0...v1.211.1) (2024-11-20)
 
 

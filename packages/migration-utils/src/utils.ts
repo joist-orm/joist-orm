@@ -1,6 +1,11 @@
-import { ColumnDefinitions, MigrationBuilder, PgLiteral } from "node-pg-migrate";
-import { DropOptions } from "node-pg-migrate/dist/operations/generalTypes";
-import { ColumnDefinition, TableOptions } from "node-pg-migrate/dist/operations/tablesTypes";
+import {
+  ColumnDefinition,
+  ColumnDefinitions,
+  DropOptions,
+  MigrationBuilder,
+  PgLiteral,
+  TableOptions,
+} from "node-pg-migrate";
 import { singular } from "pluralize";
 
 /**

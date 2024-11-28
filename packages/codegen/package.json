@@ -26,9 +26,9 @@
     "fast-glob": "^3.3.2",
     "inquirer": "^9.3.7",
     "joist-utils": "workspace:*",
-    "jscodeshift": "^17.0.0",
+    "jscodeshift": "^17.1.1",
     "knex": "^3.1.0",
-    "pg": "^8.13.0",
+    "pg": "^8.13.1",
     "pg-structure": "^7.15.3",
     "pluralize": "^8.0.0",
     "semver": "^7.6.3",
@@ -36,16 +36,16 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@swc/jest": "^0.2.36",
-    "@types/jest": "^29.5.13",
-    "@types/node": "^22.7.6",
+    "@swc/jest": "^0.2.37",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.1",
     "jest": "30.0.0-alpha.6",
-    "prettier": "^3.3.3",
+    "prettier": "^3.4.1",
     "prettier-plugin-organize-imports": "^4.1.0",
     "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.19.2",
     "typescript": "5.6.3",
-    "zod-to-json-schema": "^3.23.3"
+    "zod-to-json-schema": "^3.23.5"
   }
 }

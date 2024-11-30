@@ -17,9 +17,6 @@ export function buildRawQuery(
 ): { sql: string; bindings: readonly any[] } {
   const { limit, offset } = settings;
 
-  // If we're doing o2m joins, add a `DISTINCT` clause to avoid duplicates
-  const needsDistinct = parsed.tables.some((t) => t.join === "outer" && t.distinct !== false);
-
   let sql = "";
   const bindings: any[] = [];
 
@@ -30,17 +27,9 @@ export function buildRawQuery(
 
   sql += "SELECT ";
   parsed.selects.forEach((s, i) => {
-    const maybeDistinct = i === 0 && needsDistinct ? "DISTINCT " : "";
     const maybeComma = i === parsed.selects.length - 1 ? "" : ", ";
-    sql += maybeDistinct + s + maybeComma;
+    sql += s + maybeComma;
   });
-
-  // If we're doing "select distinct" for o2m joins, then all order bys must be selects
-  if (needsDistinct && parsed.orderBys.length > 0) {
-    for (const { alias, column } of parsed.orderBys) {
-      sql += `, ${kqDot(alias, column)}`;
-    }
-  }
 
   // Make sure the primary is first
   const primary = parsed.tables.find((t) => t.join === "primary")!;
@@ -51,7 +40,7 @@ export function buildRawQuery(
     if (t.join === "inner") {
       sql += ` JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
     } else if (t.join === "outer") {
-      sql += ` LEFT OUTER JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
+      sql += ` CROSS JOIN LATERAL (SELECT COUNT(*) FROM ${as(t)} WHERE ${t.col1} = ${t.col2}) ${kq(t.alias)}`;
     } else if (t.join === "primary") {
       // handled above
     } else {

@@ -492,4 +492,23 @@ describe("OneToManyCollection", () => {
     expect(b2.id).toBe("b:2");
     expect(a.books.get).toMatchEntity([b2, b1]);
   });
+
+  it("can sort by an reactive field", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1, number_of_books: 2 });
+    await insertAuthor({ first_name: "a2", publisher_id: 1, number_of_books: 1 });
+    const em = newEntityManager();
+    const p = await em.load(Publisher, "1", "authors");
+    expect(p).toMatchEntity({ authors: [{ firstName: "a2" }, { firstName: "a1" }] });
+  });
+
+  it("can sort sort by unloaded reactive field", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1, number_of_books: 2 });
+    await insertAuthor({ first_name: "a2", publisher_id: 1, number_of_books: 1 });
+    const em = newEntityManager();
+    const p = await em.load(Publisher, "1", "authors");
+    newAuthor(em, { firstName: "a3", books: [{}] });
+    expect(p).toMatchEntity({ authors: [{ firstName: "a3" }, { firstName: "a2" }, { firstName: "a1" }] });
+  });
 });

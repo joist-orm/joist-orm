@@ -1,3 +1,10 @@
+# [1.212.0](https://github.com/joist-orm/joist-orm/compare/v1.211.3...v1.212.0) (2024-12-06)
+
+
+### Features
+
+* Allow ordering by ReactiveFields. ([#1308](https://github.com/joist-orm/joist-orm/issues/1308)) ([3c4c071](https://github.com/joist-orm/joist-orm/commit/3c4c0716e879f6a261e5fa8f29fefd0635127a23))
+
 ## [1.211.3](https://github.com/joist-orm/joist-orm/compare/v1.211.2...v1.211.3) (2024-11-21)
 
 

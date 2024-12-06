@@ -6,11 +6,15 @@ import {
   hasReactiveAsyncProperty,
   hasReactiveField,
   hasReactiveQueryField,
+  hasReactiveReference,
   isLoaded,
   Loaded,
   ReactiveField,
+  ReactiveReference,
 } from "joist-orm";
 import {
+  Author,
+  authorMeta,
   BookReview,
   publisherConfig as config,
   Image,
@@ -55,6 +59,17 @@ export abstract class Publisher extends PublisherCodegen {
           .map((b) => b.title)
           .join(", ") || undefined
       );
+    },
+  );
+
+  /** Example of a ReactiveReference in an entity with subtypes. */
+  readonly favoriteAuthor: ReactiveReference<Publisher, Author, undefined> = hasReactiveReference(
+    authorMeta,
+    "favoriteAuthor",
+    { authors: "books" },
+    (p) => {
+      // Prefer authors with the most books
+      return [...p.authors.get].sort((a, b) => b.books.get.length - a.books.get.length)[0];
     },
   );
 

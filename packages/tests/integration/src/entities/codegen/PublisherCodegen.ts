@@ -30,6 +30,7 @@ import {
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
+  type ReactiveReference,
   type RelationsOf,
   setField,
   setOpts,
@@ -46,6 +47,7 @@ import {
   Author,
   type AuthorId,
   authorMeta,
+  type AuthorOrder,
   BookAdvance,
   type BookAdvanceId,
   bookAdvanceMeta,
@@ -99,6 +101,7 @@ export interface PublisherFields {
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   size: { kind: "enum"; type: PublisherSize; nullable: undefined };
   type: { kind: "enum"; type: PublisherType; nullable: never };
+  favoriteAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: true };
   group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
 }
 
@@ -146,6 +149,7 @@ export interface PublisherFilter {
   updatedAt?: ValueFilter<Date, never>;
   size?: ValueFilter<PublisherSize, null>;
   type?: ValueFilter<PublisherType, never>;
+  favoriteAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   group?: EntityFilter<PublisherGroup, PublisherGroupId, FilterOf<PublisherGroup>, null>;
   groupSmallPublisherGroup?: EntityFilter<
     SmallPublisherGroup,
@@ -176,6 +180,7 @@ export interface PublisherGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   size?: ValueGraphQLFilter<PublisherSize>;
   type?: ValueGraphQLFilter<PublisherType>;
+  favoriteAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   group?: EntityGraphQLFilter<PublisherGroup, PublisherGroupId, GraphQLFilterOf<PublisherGroup>, null>;
   groupSmallPublisherGroup?: EntityGraphQLFilter<
     SmallPublisherGroup,
@@ -206,6 +211,7 @@ export interface PublisherOrder {
   updatedAt?: OrderBy;
   size?: OrderBy;
   type?: OrderBy;
+  favoriteAuthor?: AuthorOrder;
   group?: PublisherGroupOrder;
 }
 
@@ -241,6 +247,8 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   static readonly metadata: EntityMetadata<Publisher>;
 
   declare readonly __type: { 0: "Publisher" };
+
+  abstract readonly favoriteAuthor: ReactiveReference<Publisher, Author, undefined>;
 
   constructor(em: EntityManager, opts: PublisherOpts) {
     super(em, opts);

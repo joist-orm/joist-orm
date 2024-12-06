@@ -413,6 +413,14 @@ describe("EntityManager.reactiveRules", () => {
         path: ["favoriteAuthor", "publisher@LargePublisher"],
       },
       {
+        kind: "populate",
+        cstr: "LargePublisher",
+        name: "favoriteAuthor",
+        fields: ["author", "deletedAt"],
+        path: ["author", "publisher@LargePublisher"],
+      },
+
+      {
         kind: "query",
         cstr: "Publisher",
         name: "numberOfBookReviews",
@@ -427,6 +435,13 @@ describe("EntityManager.reactiveRules", () => {
         path: ["favoriteAuthor", "publisher"],
       },
       {
+        kind: "populate",
+        cstr: "Publisher",
+        name: "favoriteAuthor",
+        fields: ["author", "deletedAt"],
+        path: ["author", "publisher"],
+      },
+      {
         kind: "query",
         cstr: "SmallPublisher",
         name: "numberOfBookReviews",
@@ -439,6 +454,13 @@ describe("EntityManager.reactiveRules", () => {
         name: "titlesOfFavoriteBooks",
         fields: ["title"],
         path: ["favoriteAuthor", "publisher@SmallPublisher"],
+      },
+      {
+        kind: "populate",
+        cstr: "SmallPublisher",
+        name: "favoriteAuthor",
+        fields: ["author", "deletedAt"],
+        path: ["author", "publisher@SmallPublisher"],
       },
     ]);
     expect(getReactiveFields(BookReview)).toEqual([

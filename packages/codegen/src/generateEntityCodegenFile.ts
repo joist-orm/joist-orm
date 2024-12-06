@@ -895,6 +895,8 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     meta.baseType?.manyToOnes
       // Skip m2os that are already specialized to a different otherEntity, i.e. `SmallPublisher.group: SmallPublisherGroup`
       .filter((m2o) => !meta.manyToOnes.find((o) => o.fieldName === m2o.fieldName))
+      // Don't specialize hasReactiveReferences b/c they're fields, not getters
+      .filter((m2o) => m2o.derived !== "async")
       .map((m2o) => {
         const { fieldName, otherEntity, notNull } = m2o;
         const maybeOptional = notNull ? "never" : "undefined";

@@ -1,4 +1,4 @@
-import { Author, Book, BookReview, newAuthor } from "@src/entities";
+import { Author, Book, BookReview, newAuthor, newPublisher, newSmallPublisher } from "@src/entities";
 import { insertAuthor, insertBook, insertBookReview, insertPublisher, select, update } from "@src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import { ReactionLogger, setReactionLogging } from "joist-orm";
@@ -122,6 +122,37 @@ describe("ReactiveReference", () => {
     em.delete(b);
     // Then the `Book.favoriteAuthor` o2o does not blow up by setting `Author.favoriteBook` to null
     await em.flush();
+  });
+
+  it("works on CTI base types", async () => {
+    const em = newEntityManager();
+    // Given a LargePublisher (...that uses the Publisher.favoriteBook impl)
+    const p = newPublisher(em, {
+      authors: [
+        // Given one author with 1 book
+        { books: [{}] },
+        // And another author with 2 books
+        { books: [{}, {}] },
+      ],
+    });
+    await em.flush();
+    // Then the base favoriteAuthor impl picked the one with 2 books
+    expect(p.favoriteAuthor.get).toMatchEntity({ firstName: "a2" });
+  });
+
+  it("can be overriden by CTI subtypes", async () => {
+    const em = newEntityManager();
+    const sp = newSmallPublisher(em, {
+      authors: [
+        // Given one author with 1 book
+        { books: [{}] },
+        // And another author with 2 books
+        { books: [{}, {}] },
+      ],
+    });
+    await em.flush();
+    // Then the subtype favoriteAuthor impl picked the one with 1 book
+    expect(sp.favoriteAuthor.get).toMatchEntity({ firstName: "a1" });
   });
 
   it("drives recalc of downstream ReactiveFields", async () => {

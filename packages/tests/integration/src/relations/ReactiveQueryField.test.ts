@@ -20,7 +20,7 @@ describe("ReactiveQueryField", () => {
      [
        "BEGIN;",
        "select nextval('publishers_id_seq') from generate_series(1, 1)",
-       "INSERT INTO "publishers" ("id", "name", "latitude", "longitude", "huge_number", "number_of_book_reviews", "deleted_at", "titles_of_favorite_books", "base_sync_default", "base_async_default", "created_at", "updated_at", "size_id", "type_id", "group_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)",
+       "INSERT INTO "publishers" ("id", "name", "latitude", "longitude", "huge_number", "number_of_book_reviews", "deleted_at", "titles_of_favorite_books", "base_sync_default", "base_async_default", "created_at", "updated_at", "size_id", "type_id", "favorite_author_id", "group_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)",
        "INSERT INTO "large_publishers" ("id", "shared_column", "country") VALUES ($1, $2, $3)",
        "SELECT DISTINCT count(distinct "br".id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2",
        "COMMIT;",
@@ -44,7 +44,7 @@ describe("ReactiveQueryField", () => {
        "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::character varying), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, a.* FROM authors as a JOIN _find ON a.deleted_at IS NULL AND a.last_name = _find.arg0 GROUP BY a.id ORDER BY a.id ASC LIMIT 50000;",
        "select nextval('publishers_id_seq') from generate_series(1, 1) UNION ALL select nextval('authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('books_id_seq') from generate_series(1, 2) UNION ALL select nextval('book_reviews_id_seq') from generate_series(1, 2)",
        "BEGIN;",
-       "INSERT INTO "publishers" ("id", "name", "latitude", "longitude", "huge_number", "number_of_book_reviews", "deleted_at", "titles_of_favorite_books", "base_sync_default", "base_async_default", "created_at", "updated_at", "size_id", "type_id", "group_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)",
+       "INSERT INTO "publishers" ("id", "name", "latitude", "longitude", "huge_number", "number_of_book_reviews", "deleted_at", "titles_of_favorite_books", "base_sync_default", "base_async_default", "created_at", "updated_at", "size_id", "type_id", "favorite_author_id", "group_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)",
        "INSERT INTO "large_publishers" ("id", "shared_column", "country") VALUES ($1, $2, $3)",
        "INSERT INTO "authors" ("id", "first_name", "last_name", "ssn", "initials", "number_of_books", "book_comments", "is_popular", "age", "graduated", "nick_names", "nick_names_upper", "was_ever_popular", "mentor_names", "address", "business_address", "quotes", "number_of_atoms", "deleted_at", "number_of_public_reviews", "numberOfPublicReviews2", "tags_of_all_books", "search", "certificate", "created_at", "updated_at", "favorite_shape", "range_of_books", "favorite_colors", "mentor_id", "root_mentor_id", "current_draft_book_id", "favorite_book_id", "publisher_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34)",
        "INSERT INTO "books" ("id", "title", "order", "notes", "acknowledgements", "authors_nick_names", "search", "deleted_at", "created_at", "updated_at", "prequel_id", "author_id", "reviewer_id", "random_comment_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14),($15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)",
@@ -71,6 +71,7 @@ describe("ReactiveQueryField", () => {
       "numberOfBookReviews",
       "type",
       "baseSyncDefault",
+      "favoriteAuthor",
       "baseAsyncDefault",
       "titlesOfFavoriteBooks",
       "tags",
@@ -94,8 +95,8 @@ describe("ReactiveQueryField", () => {
     // Then we immediately see the recalc
     expect(p.numberOfBookReviews.get).toBe(1);
     await em.flush();
-    // And we only loaded the Publisher (and Author for a separate ReactiveField) into memory
-    expect(em.entities.length).toBe(2);
+    // And we only loaded the Publisher (...and two Authors for separate RFs/RRs) into memory
+    expect(em.entities.length).toBe(3);
     // And the value is updated in the database
     expect((await select("publishers"))[0]).toMatchObject({
       id: 1,

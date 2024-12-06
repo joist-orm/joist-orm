@@ -3,6 +3,7 @@ import { Entity } from "./Entity";
 import { OrderBy } from "./EntityFilter";
 import { isDefined } from "./EntityManager";
 import { New } from "./loadHints";
+import { isReactiveField } from "./relations";
 
 export type MaybePromise<T> = T | Promise<T>;
 
@@ -144,6 +145,12 @@ export function asNew<T extends Entity>(entity: T): New<T> {
 }
 
 export function compareValues(av: any, bv: any, direction: OrderBy): number {
+  if (isReactiveField(av)) {
+    av = !av.isSet ? -1 : av.get;
+  }
+  if (isReactiveField(bv)) {
+    bv = !bv.isSet ? -1 : bv.get;
+  }
   const d = direction === "ASC" ? 1 : -1;
   if (!isDefined(av) || !isDefined(bv)) {
     return !av && !bv ? 0 : (!av ? 1 : -1) * d;

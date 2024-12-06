@@ -61,6 +61,7 @@
     "Publisher": {
       "abstract": true,
       "fields": { "numberOfBookReviews": { "derived": "async" }, "titlesOfFavoriteBooks": { "derived": "async" } },
+      "relations": { "authors": { "orderBy": "numberOfBooks" } },
       "tag": "p"
     },
     "PublisherGroup": {

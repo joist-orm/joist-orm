@@ -517,14 +517,10 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get authors(): Collection<Publisher, Author> {
-    return this.__data.relations.authors ??= hasMany(
-      this,
-      authorMeta,
-      "authors",
-      "publisher",
-      "publisher_id",
-      undefined,
-    );
+    return this.__data.relations.authors ??= hasMany(this, authorMeta, "authors", "publisher", "publisher_id", {
+      "field": "numberOfBooks",
+      "direction": "ASC",
+    });
   }
 
   get bookAdvances(): Collection<Publisher, BookAdvance> {

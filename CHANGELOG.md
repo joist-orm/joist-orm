@@ -1,3 +1,10 @@
+# [1.213.0](https://github.com/joist-orm/joist-orm/compare/v1.212.0...v1.213.0) (2024-12-06)
+
+
+### Features
+
+* Support RRs on base types. ([#1309](https://github.com/joist-orm/joist-orm/issues/1309)) ([f848772](https://github.com/joist-orm/joist-orm/commit/f8487729824187488aab2067265605a4fe524fad))
+
 # [1.212.0](https://github.com/joist-orm/joist-orm/compare/v1.211.3...v1.212.0) (2024-12-06)
 
 

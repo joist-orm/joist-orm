@@ -1,5 +1,19 @@
-import { cannotBeUpdated, hasReactiveField, ManyToOneReference, ReactiveField } from "joist-orm";
-import { smallPublisherConfig as config, Entity, PublisherGroup, SmallPublisherCodegen } from "./entities";
+import {
+  cannotBeUpdated,
+  hasReactiveField,
+  hasReactiveReference,
+  ManyToOneReference,
+  ReactiveField,
+  ReactiveReference,
+} from "joist-orm";
+import {
+  Author,
+  authorMeta,
+  smallPublisherConfig as config,
+  Entity,
+  PublisherGroup,
+  SmallPublisherCodegen,
+} from "./entities";
 
 // For testing an interface that is used on a subtype, with a relation from the base type
 type HasGroup<T extends Entity> = {
@@ -9,12 +23,6 @@ type HasGroup<T extends Entity> = {
 export const smallPublisherBeforeFlushRan = { value: false };
 
 export class SmallPublisher extends SmallPublisherCodegen implements HasGroup<SmallPublisher> {
-  // Used for testing a derived property that only exists on a subtype
-  readonly allAuthorNames: ReactiveField<SmallPublisher, string> = hasReactiveField(
-    "allAuthorNames",
-    { authors: ["firstName"] },
-    (sp) => sp.authors.get.map((a) => a.firstName).join(", "),
-  );
   static afterMetadataHasBaseTypes = false;
   public beforeFlushRan = false;
   public beforeCreateRan = false;
@@ -22,6 +30,24 @@ export class SmallPublisher extends SmallPublisherCodegen implements HasGroup<Sm
   public beforeDeleteRan = false;
   public afterValidationRan = false;
   public afterCommitRan = false;
+
+  // Used for testing a derived property that only exists on a subtype
+  readonly allAuthorNames: ReactiveField<SmallPublisher, string> = hasReactiveField(
+    "allAuthorNames",
+    { authors: ["firstName"] },
+    (sp) => sp.authors.get.map((a) => a.firstName).join(", "),
+  );
+
+  /** Example of a ReactiveReference in an entity with subtypes. */
+  readonly favoriteAuthor: ReactiveReference<SmallPublisher, Author, undefined> = hasReactiveReference(
+    authorMeta,
+    "favoriteAuthor",
+    { authors: "books" },
+    (p) => {
+      // Prefer authors with the least books (swapped a - b)
+      return [...p.authors.get].sort((a, b) => a.books.get.length - b.books.get.length)[0];
+    },
+  );
 }
 
 config.afterMetadata((meta) => {

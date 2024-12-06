@@ -140,7 +140,7 @@ describe("ReactiveReference", () => {
     expect(p.favoriteAuthor.get).toMatchEntity({ firstName: "a2" });
   });
 
-  it("can be override by CTI subtypes", async () => {
+  it("can be overriden by CTI subtypes", async () => {
     const em = newEntityManager();
     const sp = newSmallPublisher(em, {
       authors: [

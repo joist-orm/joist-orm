@@ -63,19 +63,22 @@ describe("ReactiveQueryField", () => {
     newBookReview(em);
     await em.flush();
     expect(p.transientFields.wasNewInBeforeCommit).toBe(true);
-    expect(p.transientFields.changedInBeforeCommit).toEqual([
-      "id",
-      "createdAt",
-      "updatedAt",
-      "name",
-      "numberOfBookReviews",
-      "type",
-      "baseSyncDefault",
-      "favoriteAuthor",
-      "baseAsyncDefault",
-      "titlesOfFavoriteBooks",
-      "tags",
-    ]);
+    // sort b/c the order of `favoriteAuthor` can change for some reason...
+    expect(p.transientFields.changedInBeforeCommit.sort()).toEqual(
+      [
+        "id",
+        "createdAt",
+        "updatedAt",
+        "name",
+        "numberOfBookReviews",
+        "type",
+        "baseSyncDefault",
+        "favoriteAuthor",
+        "baseAsyncDefault",
+        "titlesOfFavoriteBooks",
+        "tags",
+      ].sort(),
+    );
   });
 
   it("can em.recalc to update the value", async () => {

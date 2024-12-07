@@ -19,10 +19,14 @@ Also note that `em.flush` enforces "temporary immutability" during its lifecycle
 
 This is a popular assertion on `/r/node`, but Joist generally considers it FUD, because in stereotypical CRUD apps:
 
-* Over 90-95% of SQL queries are boilerplate `SELECT` / `INSERT` / `UPDATE` queries that are tedious/straightforward to write (or an ORM like Joist to generate), and
-* Only 5% of SQL queries are actually complicated and best written in raw SQL but engineers that "know SQL"
+* Over 90-95% of SQL queries* are boilerplate `SELECT` / `INSERT` / `UPDATE` queries that are tedious/straightforward to write, and
+* Only 5% of SQL queries are actually complicated and best written in raw SQL by engineers deeply-crafting complicated SQL
+
+So why not let an ORM like Joist issue them, and then also get the benefits of auto-batching, ergonomic validation rules (there is only so much business logic that can be expressed in SQL constraints), type-safety, etc.
 
 I.e. just because Joist users don't want to write the same `INSERT INTO authors (...) VALUES (...)` over and over (and then remember, or more likely forget!, to run all the downstream validation rules and update the derived values), does not mean they "don't know SQL". :-)
+
+(*We have actually counted the SQL queries in a large, production app, and it was this 95/5 ratio.)
 
 ## Does Joist make it impossible to write the SQL query I want?
 

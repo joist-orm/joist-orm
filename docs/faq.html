@@ -5,7 +5,7 @@
 <meta name="generator" content="Docusaurus v3.5.2">
 <title data-rh="true">FAQ | Joist</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:url" content="https://joist-orm.io/docs/faq"><meta data-rh="true" property="og:locale" content="en"><meta data-rh="true" name="docusaurus_locale" content="en"><meta data-rh="true" name="docsearch:language" content="en"><meta data-rh="true" name="keywords" content="TypeScript, ORM, Reactivity, Domain Driven Design, Unit of Work, ActiveRecord"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="FAQ | Joist"><meta data-rh="true" name="description" content="Why use Entities &amp; Mutable Classes?"><meta data-rh="true" property="og:description" content="Why use Entities &amp; Mutable Classes?"><link data-rh="true" rel="canonical" href="https://joist-orm.io/docs/faq"><link data-rh="true" rel="alternate" href="https://joist-orm.io/docs/faq" hreflang="en"><link data-rh="true" rel="alternate" href="https://joist-orm.io/docs/faq" hreflang="x-default"><link rel="alternate" type="application/rss+xml" href="/blog/rss.xml" title="Joist RSS Feed">
 <link rel="alternate" type="application/atom+xml" href="/blog/atom.xml" title="Joist Atom Feed"><link rel="stylesheet" href="/assets/css/styles.31ac6ecd.css">
-<script src="/assets/js/runtime~main.f38b8e9f.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.a8e9b6bf.js" defer="defer"></script>
 <script src="/assets/js/main.0648e09f.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -18,10 +18,12 @@
 <h2 class="anchor anchorWithStickyNavbar_JmGV" id="arent-orms-only-for-programmers-who-wont-learn-sql">Aren&#x27;t ORMs only for programmers who won&#x27;t learn SQL?<a href="#arent-orms-only-for-programmers-who-wont-learn-sql" class="hash-link" aria-label="Direct link to Aren&#x27;t ORMs only for programmers who won&#x27;t learn SQL?" title="Direct link to Aren&#x27;t ORMs only for programmers who won&#x27;t learn SQL?">​</a></h2>
 <p>This is a popular assertion on <code>/r/node</code>, but Joist generally considers it FUD, because in stereotypical CRUD apps:</p>
 <ul>
-<li>Over 90-95% of SQL queries are boilerplate <code>SELECT</code> / <code>INSERT</code> / <code>UPDATE</code> queries that are tedious/straightforward to write (or an ORM like Joist to generate), and</li>
-<li>Only 5% of SQL queries are actually complicated and best written in raw SQL but engineers that &quot;know SQL&quot;</li>
+<li>Over 90-95% of SQL queries* are boilerplate <code>SELECT</code> / <code>INSERT</code> / <code>UPDATE</code> queries that are tedious/straightforward to write, and</li>
+<li>Only 5% of SQL queries are actually complicated and best written in raw SQL by engineers deeply-crafting complicated SQL</li>
 </ul>
+<p>So why not let an ORM like Joist issue them, and then also get the benefits of auto-batching, ergonomic validation rules (there is only so much business logic that can be expressed in SQL constraints), type-safety, etc.</p>
 <p>I.e. just because Joist users don&#x27;t want to write the same <code>INSERT INTO authors (...) VALUES (...)</code> over and over (and then remember, or more likely forget!, to run all the downstream validation rules and update the derived values), does not mean they &quot;don&#x27;t know SQL&quot;. :-)</p>
+<p>(*We have actually counted the SQL queries in a large, production app, and it was this 95/5 ratio.)</p>
 <h2 class="anchor anchorWithStickyNavbar_JmGV" id="does-joist-make-it-impossible-to-write-the-sql-query-i-want">Does Joist make it impossible to write the SQL query I want?<a href="#does-joist-make-it-impossible-to-write-the-sql-query-i-want" class="hash-link" aria-label="Direct link to Does Joist make it impossible to write the SQL query I want?" title="Direct link to Does Joist make it impossible to write the SQL query I want?">​</a></h2>
 <p>Some engineers have been validly burned by ORMs that force &quot;literally every database query&quot; to go through it&#x27;s psuedo SQL DSL.</p>
 <p>While Joist definitely has a (cute!) SQL DSL, see the <code>em.find</code> docs, it&#x27;s very pragmatic about <em>not</em> trying to create every SQL query you could possibly imagine.</p>

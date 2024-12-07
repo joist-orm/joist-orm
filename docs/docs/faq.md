@@ -17,14 +17,16 @@ Also note that `em.flush` enforces "temporary immutability" during its lifecycle
 
 ## Aren't ORMs only for programmers who won't learn SQL?
 
-This is a popular assertion on `/r/node`, but Joist generally considers it FUD, because in stereotypical CRUD apps:
+This is a popular assertion, particularly on `/r/node`, but Joist considers it FUD, because in stereotypical CRUD apps:
 
 * Over 90-95% of SQL queries* are boilerplate `SELECT` / `INSERT` / `UPDATE` queries that are tedious/straightforward to write, and
-* Only 5% of SQL queries are actually complicated and best written in raw SQL by engineers deeply-crafting complicated SQL
+* Only 5% of SQL queries are actually complicated and best written in raw, hand-crafted SQL
 
-So why not let an ORM like Joist issue them, and then also get the benefits of auto-batching, ergonomic validation rules (there is only so much business logic that can be expressed in SQL constraints), type-safety, etc.
+Given this ratio, Joist's assertion is to let it do the easy/dumb queries for you, not only b/c your code will be more succinct, but also to get the benefits of auto-batching, ergonomic validation rules (there is only so much business logic that can be expressed in SQL constraints), type-safety, etc.
 
-I.e. just because Joist users don't want to write the same `INSERT INTO authors (...) VALUES (...)` over and over (and then remember, or more likely forget!, to run all the downstream validation rules and update the derived values), does not mean they "don't know SQL". :-)
+I.e. just because Joist users don't want to write the same `INSERT INTO authors (...) VALUES (...)` over and over and over (and then remember, or more likely forget!, to run all the downstream validation rules and update the derived values), does not mean they "don't know SQL". :-)
+
+Granted, if the characteristics of your app change this ratio from 95/5 to 70/30 or 50/50 (perhaps OLAP/analytical applications that focus on complex, read-only reporting requirements), the trade-offs of using Joist, and an ORM in general, will change.
 
 (*We have actually counted the SQL queries in a large, production app, and it was this 95/5 ratio.)
 

@@ -5,7 +5,6 @@ import { run } from "src/resolvers/testUtils";
 
 describe("saveUser", () => {
   it.withCtx("can create", async (ctx) => {
-    const { em } = ctx;
     const result = await runSaveUser(ctx, () => ({
       name: "test user",
       email: "test@test.com",

@@ -1,3 +1,10 @@
+# [1.214.0](https://github.com/joist-orm/joist-orm/compare/v1.213.0...v1.214.0) (2024-12-12)
+
+
+### Features
+
+* Skip defaults on already-set fields. ([#1311](https://github.com/joist-orm/joist-orm/issues/1311)) ([47533a8](https://github.com/joist-orm/joist-orm/commit/47533a8c4fb28798871fd931dbfc4e5d986e0d3b))
+
 # [1.213.0](https://github.com/joist-orm/joist-orm/compare/v1.212.0...v1.213.0) (2024-12-06)
 
 

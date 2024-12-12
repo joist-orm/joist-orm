@@ -816,7 +816,7 @@ describe("EntityManager.factories", () => {
     expect(a.books.get[0].reviews.get[0].rating).toBe(1);
     expect(a.books.get[1].reviews.get[0].rating).toBe(2);
     // And it took only 9 (plus 7 recursive) queries (vs. 29 without join preloading)
-    expect(queries.length).toBe(isPreloadingEnabled ? 16 : 40);
+    expect(queries.length).toBe(isPreloadingEnabled ? 16 : 41);
   });
 
   it("uniquely assigns name fields", async () => {

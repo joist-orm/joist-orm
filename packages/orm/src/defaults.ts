@@ -296,5 +296,5 @@ class DependencyTracker {
 }
 
 function isRelation(field: Field): boolean {
-  return field.kind === "primitive" || field.kind === "enum";
+  return field.kind !== "primitive" && field.kind !== "enum";
 }

@@ -37,7 +37,13 @@ export function setSyncDefaults(entity: Entity): void {
     } else if (!isRelation(field)) {
       const hasBeenSet = fieldName in getInstanceData(entity).data;
       if (!hasBeenSet) {
-        (entity as any)[fieldName] = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
+        const value = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
+        // If the value is undefined, leave it unset, so that a default invoked during
+        // the constructor being called (before any other opts are set) can be called
+        // again during `em.flush` and get an opportunity to observe other fields.
+        if (value !== undefined) {
+          (entity as any)[fieldName] = value;
+        }
       }
     } else {
       // Only access `entity[fieldName]` after checking `fieldName in data`, as merely accessing

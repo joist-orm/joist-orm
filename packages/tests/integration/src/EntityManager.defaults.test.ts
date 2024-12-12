@@ -1,5 +1,5 @@
 import { EntityMetadata, noValue, testing } from "joist-orm";
-import { Author, Book, newAuthor, newBook, newUser } from "src/entities";
+import { Author, Book, LargePublisher, newAuthor, newBook, newUser } from "src/entities";
 import { select } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
@@ -35,6 +35,17 @@ describe("EntityManager.defaults", () => {
     expect(b.notes).toBe("my notes");
   });
 
+  it("does not overwrite existing sync default set to undefined", async () => {
+    const em = newEntityManager();
+    // Create a new book with explicit notes
+    const b = em.create(Book, {
+      title: "Book 1",
+      notes: undefined,
+    });
+    // Then the synchronous default did not overwrite them
+    expect(b.notes).toBeUndefined();
+  });
+
   it("can default an asynchronous field", async () => {
     const em = newEntityManager();
     // Given we create two books with their own author
@@ -68,13 +79,27 @@ describe("EntityManager.defaults", () => {
     expect(b2.order).toBe(2);
   });
 
+  it("skips default for an already-set reference", async () => {
+    const em = newEntityManager();
+    // Given we create a Publisher (w/o going through the factory triggered defaults)
+    const p = em.create(LargePublisher, { name: "p1" });
+    // And explicitly set the spotlightAuthor to undefined
+    p.spotlightAuthor.set(undefined);
+    // Even though there are authors that the setDefault could use
+    newAuthor(em, { publisher: p });
+    // When we flush
+    await em.flush();
+    // The spotlightAuthor stays unassigned
+    expect(p).toMatchEntity({ spotlightAuthor: undefined });
+  });
+
   it("can default an asynchronous m2o field", async () => {
     const em = newEntityManager();
     // Given an author with lastName t1
     const a1 = newAuthor(em, { firstName: "f1", lastName: "t1" });
     await em.flush();
     // When we create a book with no reviewer and a title of t1
-    const b1 = newBook(em, { reviewer: noValue(), title: "t1" });
+    const b1 = em.create(Book, { title: "t1", author: a1 });
     expect(b1.reviewer.get).toBeUndefined();
     // When we flush
     await em.flush();

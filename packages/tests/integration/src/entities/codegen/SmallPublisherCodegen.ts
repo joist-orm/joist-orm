@@ -385,6 +385,10 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
     return super.images as Collection<SmallPublisher, Image>;
   }
 
+  get spotlightAuthor(): ManyToOneReference<SmallPublisher, Author, undefined> {
+    return super.spotlightAuthor as ManyToOneReference<SmallPublisher, Author, undefined>;
+  }
+
   get tags(): Collection<SmallPublisher, Tag> {
     return super.tags as Collection<SmallPublisher, Tag>;
   }

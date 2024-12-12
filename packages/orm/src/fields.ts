@@ -18,9 +18,16 @@ export function getField(entity: Entity, fieldName: string): any {
   if (fieldName in data) {
     return data[fieldName];
   } else {
-    const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-    serde.setOnEntity(data, row);
-    return data[fieldName];
+    if (!entity.isNewEntity) {
+      const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
+      serde.setOnEntity(data, row);
+    }
+    // Don't access `data[fieldName]` because it will `undefined` as a side-effect
+    if (fieldName in data) {
+      return data[fieldName];
+    } else {
+      return undefined;
+    }
   }
 }
 
@@ -94,6 +101,9 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   // Push this logic into a field serde type abstraction?
   const currentValue = getField(entity, fieldName);
   if (equalOrSameEntity(currentValue, newValue)) {
+    // If we're doing `entity.field = undefined`, we'll be equal, but mark ourselves as "set"
+    // (previously `getField` would unwittingly do this as a side-effect, but we need it explicit now.)
+    if (!(fieldName in data)) data[fieldName] = undefined;
     return false;
   }
 

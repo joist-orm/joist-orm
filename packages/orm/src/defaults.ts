@@ -1,6 +1,7 @@
 import { Deferred } from "joist-utils";
+import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
-import { EntityMetadata, EnumField, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "./EntityMetadata";
+import { EntityMetadata, EnumField, Field, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "./EntityMetadata";
 import { setField } from "./fields";
 import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint, ReactiveHint } from "./reactiveHints";
@@ -22,7 +23,6 @@ export function setSyncDefaults(entity: Entity): void {
     {},
   );
   for (const [fieldName, maybeFn] of Object.entries(syncDefaults)) {
-    const value = (entity as any)[fieldName];
     const field = meta.allFields[fieldName];
     // Use allFields in case a subtype sets a default for one of its base fields
     if (
@@ -34,13 +34,27 @@ export function setSyncDefaults(entity: Entity): void {
       // not have been initialized yet (i.e. `entity[field]` will be undefined and not yet an
       // `instanceof ReactiveQueryField`). Thankfully we can just use setField.
       setField(entity, fieldName, maybeFn);
-    } else if (value === undefined) {
-      (entity as any)[fieldName] = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
-    } else if (isLoadedReference(value) && !value.isSet) {
-      // A sync default usually would never be for a reference, because reference defaults usually
-      // require a field hint (so would be async) to get "the other entity". However, something like:
-      // `config.setDefault("original", (self) => self);` is technically valid.
-      value.set(maybeFn instanceof Function ? maybeFn(entity) : maybeFn);
+    } else if (!isRelation(field)) {
+      const hasBeenSet = fieldName in getInstanceData(entity).data;
+      if (!hasBeenSet) {
+        const value = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
+        // If the value is undefined, leave it unset, so that a default invoked during
+        // the constructor being called (before any other opts are set) can be called
+        // again during `em.flush` and get an opportunity to observe other fields.
+        if (value !== undefined) {
+          (entity as any)[fieldName] = value;
+        }
+      }
+    } else {
+      // Only access `entity[fieldName]` after checking `fieldName in data`, as merely accessing
+      // `entity[fieldName]` will assign the value to `undefined` and we can't detect `hasBeenSet`.
+      const value = (entity as any)[fieldName];
+      if (isLoadedReference(value) && !value.isSet && !value.hasBeenSet) {
+        // A sync default usually would never be for a reference, because reference defaults usually
+        // require a field hint (so would be async) to get "the other entity". However, something like:
+        // `config.setDefault("original", (self) => self);` is technically valid.
+        value.set(maybeFn instanceof Function ? maybeFn(entity) : maybeFn);
+      }
     }
   }
 }
@@ -110,15 +124,21 @@ export class AsyncDefault<T extends Entity> {
         // deps promises shouldn't reject, so we should be fine w/o allSettled here
         await Promise.all(deps.map((dep) => dt.getDeferred(dep.meta, dep.fieldName).promise));
       }
+
       // Run our default for all entities, use allSettled to avoid leaving lambdas running if one fails
       const results = await Promise.allSettled(
         inserts
           .map(async (entity) => {
-            const value = (entity as any)[this.fieldName];
-            if (value === undefined) {
-              (entity as any)[this.fieldName] = await this.getValue(entity, ctx);
-            } else if (isLoadedReference(value) && !value.isSet) {
-              value.set(await this.getValue(entity, ctx));
+            if (!isRelation(baseMetadata.allFields[this.fieldName])) {
+              const hasBeenSet = this.fieldName in getInstanceData(entity).data;
+              if (!hasBeenSet) {
+                (entity as any)[this.fieldName] = await this.getValue(entity, ctx);
+              }
+            } else {
+              const value = (entity as any)[this.fieldName];
+              if (isLoadedReference(value) && !value.isSet && !value.hasBeenSet) {
+                value.set(await this.getValue(entity, ctx));
+              }
             }
           })
           .map((promise) =>
@@ -279,4 +299,8 @@ class DependencyTracker {
     }
     return deferred;
   }
+}
+
+function isRelation(field: Field): boolean {
+  return field.kind !== "primitive" && field.kind !== "enum";
 }

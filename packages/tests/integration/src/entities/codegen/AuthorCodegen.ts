@@ -166,6 +166,7 @@ export interface AuthorOpts {
   reviewerBooks?: Book[];
   schedules?: AuthorSchedule[];
   comments?: Comment[];
+  spotlightAuthorPublishers?: Publisher[];
   tasks?: TaskNew[];
   tags?: Tag[];
 }
@@ -181,6 +182,7 @@ export interface AuthorIdsOpts {
   reviewerBookIds?: BookId[] | null;
   scheduleIds?: AuthorScheduleId[] | null;
   commentIds?: CommentId[] | null;
+  spotlightAuthorPublisherIds?: PublisherId[] | null;
   taskIds?: TaskNewId[] | null;
   tagIds?: TagId[] | null;
 }
@@ -229,6 +231,19 @@ export interface AuthorFilter {
   reviewerBooks?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   schedules?: EntityFilter<AuthorSchedule, AuthorScheduleId, FilterOf<AuthorSchedule>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  spotlightAuthorPublishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
+  spotlightAuthorPublishersLargePublisher?: EntityFilter<
+    LargePublisher,
+    LargePublisherId,
+    FilterOf<LargePublisher>,
+    null
+  >;
+  spotlightAuthorPublishersSmallPublisher?: EntityFilter<
+    SmallPublisher,
+    SmallPublisherId,
+    FilterOf<SmallPublisher>,
+    null
+  >;
   tasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
@@ -287,6 +302,19 @@ export interface AuthorGraphQLFilter {
   reviewerBooks?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   schedules?: EntityGraphQLFilter<AuthorSchedule, AuthorScheduleId, GraphQLFilterOf<AuthorSchedule>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  spotlightAuthorPublishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
+  spotlightAuthorPublishersLargePublisher?: EntityGraphQLFilter<
+    LargePublisher,
+    LargePublisherId,
+    GraphQLFilterOf<LargePublisher>,
+    null
+  >;
+  spotlightAuthorPublishersSmallPublisher?: EntityGraphQLFilter<
+    SmallPublisher,
+    SmallPublisherId,
+    GraphQLFilterOf<SmallPublisher>,
+    null
+  >;
   tasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
@@ -760,6 +788,17 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
       "comments",
       "parent",
       "parent_author_id",
+      undefined,
+    );
+  }
+
+  get spotlightAuthorPublishers(): Collection<Author, Publisher> {
+    return this.__data.relations.spotlightAuthorPublishers ??= hasMany(
+      this,
+      publisherMeta,
+      "spotlightAuthorPublishers",
+      "spotlightAuthor",
+      "spotlight_author_id",
       undefined,
     );
   }

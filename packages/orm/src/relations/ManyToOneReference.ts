@@ -350,7 +350,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   public get hasBeenSet(): boolean {
-    return true;
+    return this.#hasBeenSet;
   }
 
   public toString(): string {

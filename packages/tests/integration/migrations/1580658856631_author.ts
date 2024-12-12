@@ -215,9 +215,11 @@ export function up(b: MigrationBuilder): void {
     "ALTER TABLE authors ADD CONSTRAINT authors_favorite_book_id_key UNIQUE (favorite_book_id) DEFERRABLE INITIALLY DEFERRED;",
   );
 
-  // For testing derived fks on subtypes
   addColumns(b, "publishers", {
+    // For testing derived fks on subtypes
     favorite_author_id: foreignKey("authors", { notNull: false }),
+    // For testing optional defaults that are set null
+    spotlight_author_id: foreignKey("authors", { notNull: false }),
   });
 
   createEntityTable(b, "book_advances", {

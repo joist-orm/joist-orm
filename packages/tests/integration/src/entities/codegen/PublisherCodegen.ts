@@ -103,6 +103,7 @@ export interface PublisherFields {
   type: { kind: "enum"; type: PublisherType; nullable: never };
   favoriteAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: true };
   group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
+  spotlightAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
 }
 
 export interface PublisherOpts {
@@ -116,6 +117,7 @@ export interface PublisherOpts {
   size?: PublisherSize | null;
   type?: PublisherType;
   group?: PublisherGroup | PublisherGroupId | null;
+  spotlightAuthor?: Author | AuthorId | null;
   authors?: Author[];
   bookAdvances?: BookAdvance[];
   comments?: Comment[];
@@ -126,6 +128,7 @@ export interface PublisherOpts {
 
 export interface PublisherIdsOpts {
   groupId?: PublisherGroupId | null;
+  spotlightAuthorId?: AuthorId | null;
   authorIds?: AuthorId[] | null;
   bookAdvanceIds?: BookAdvanceId[] | null;
   commentIds?: CommentId[] | null;
@@ -157,6 +160,7 @@ export interface PublisherFilter {
     FilterOf<SmallPublisherGroup>,
     null
   >;
+  spotlightAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   bookAdvances?: EntityFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
@@ -188,6 +192,7 @@ export interface PublisherGraphQLFilter {
     GraphQLFilterOf<SmallPublisherGroup>,
     null
   >;
+  spotlightAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   bookAdvances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, GraphQLFilterOf<BookAdvance>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
@@ -213,6 +218,7 @@ export interface PublisherOrder {
   type?: OrderBy;
   favoriteAuthor?: AuthorOrder;
   group?: PublisherGroupOrder;
+  spotlightAuthor?: AuthorOrder;
 }
 
 export const publisherConfig = new ConfigApi<Publisher, Context>();
@@ -565,6 +571,15 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get group(): ManyToOneReference<Publisher, PublisherGroup, undefined> {
     return this.__data.relations.group ??= hasOne(this, publisherGroupMeta, "group", "publishers");
+  }
+
+  get spotlightAuthor(): ManyToOneReference<Publisher, Author, undefined> {
+    return this.__data.relations.spotlightAuthor ??= hasOne(
+      this,
+      authorMeta,
+      "spotlightAuthor",
+      "spotlightAuthorPublishers",
+    );
   }
 
   get tags(): Collection<Publisher, Tag> {

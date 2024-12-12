@@ -346,6 +346,10 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
     return super.group as ManyToOneReference<LargePublisher, PublisherGroup, undefined>;
   }
 
+  get spotlightAuthor(): ManyToOneReference<LargePublisher, Author, undefined> {
+    return super.spotlightAuthor as ManyToOneReference<LargePublisher, Author, undefined>;
+  }
+
   get tags(): Collection<LargePublisher, Tag> {
     return super.tags as Collection<LargePublisher, Tag>;
   }

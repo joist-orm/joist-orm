@@ -1,4 +1,5 @@
 import { Deferred } from "joist-utils";
+import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityMetadata, EnumField, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "./EntityMetadata";
 import { setField } from "./fields";
@@ -22,7 +23,7 @@ export function setSyncDefaults(entity: Entity): void {
     {},
   );
   for (const [fieldName, maybeFn] of Object.entries(syncDefaults)) {
-    const value = (entity as any)[fieldName];
+    const hasBeenSet = fieldName in getInstanceData(entity).data;
     const field = meta.allFields[fieldName];
     // Use allFields in case a subtype sets a default for one of its base fields
     if (
@@ -34,13 +35,18 @@ export function setSyncDefaults(entity: Entity): void {
       // not have been initialized yet (i.e. `entity[field]` will be undefined and not yet an
       // `instanceof ReactiveQueryField`). Thankfully we can just use setField.
       setField(entity, fieldName, maybeFn);
-    } else if (value === undefined) {
+    } else if (!hasBeenSet) {
       (entity as any)[fieldName] = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
-    } else if (isLoadedReference(value) && !value.isSet) {
-      // A sync default usually would never be for a reference, because reference defaults usually
-      // require a field hint (so would be async) to get "the other entity". However, something like:
-      // `config.setDefault("original", (self) => self);` is technically valid.
-      value.set(maybeFn instanceof Function ? maybeFn(entity) : maybeFn);
+    } else {
+      // Only access `entity[fieldName]` after checking `fieldName in data`, as merely accessing
+      // `entity[fieldName]` will assign the value to `undefined` and we can't detect `hasBeenSet`.
+      const value = (entity as any)[fieldName];
+      if (isLoadedReference(value) && !value.isSet && !value.hasBeenSet) {
+        // A sync default usually would never be for a reference, because reference defaults usually
+        // require a field hint (so would be async) to get "the other entity". However, something like:
+        // `config.setDefault("original", (self) => self);` is technically valid.
+        value.set(maybeFn instanceof Function ? maybeFn(entity) : maybeFn);
+      }
     }
   }
 }
@@ -117,7 +123,7 @@ export class AsyncDefault<T extends Entity> {
             const value = (entity as any)[this.fieldName];
             if (value === undefined) {
               (entity as any)[this.fieldName] = await this.getValue(entity, ctx);
-            } else if (isLoadedReference(value) && !value.isSet) {
+            } else if (isLoadedReference(value) && !value.isSet && !value.hasBeenSet) {
               value.set(await this.getValue(entity, ctx));
             }
           })

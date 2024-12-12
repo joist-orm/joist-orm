@@ -1,7 +1,7 @@
 import { Deferred } from "joist-utils";
 import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
-import { EntityMetadata, EnumField, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "./EntityMetadata";
+import { EntityMetadata, EnumField, Field, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "./EntityMetadata";
 import { setField } from "./fields";
 import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint, ReactiveHint } from "./reactiveHints";
@@ -23,7 +23,6 @@ export function setSyncDefaults(entity: Entity): void {
     {},
   );
   for (const [fieldName, maybeFn] of Object.entries(syncDefaults)) {
-    const hasBeenSet = fieldName in getInstanceData(entity).data;
     const field = meta.allFields[fieldName];
     // Use allFields in case a subtype sets a default for one of its base fields
     if (
@@ -35,8 +34,11 @@ export function setSyncDefaults(entity: Entity): void {
       // not have been initialized yet (i.e. `entity[field]` will be undefined and not yet an
       // `instanceof ReactiveQueryField`). Thankfully we can just use setField.
       setField(entity, fieldName, maybeFn);
-    } else if (!hasBeenSet) {
-      (entity as any)[fieldName] = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
+    } else if (!isRelation(field)) {
+      const hasBeenSet = fieldName in getInstanceData(entity).data;
+      if (!hasBeenSet) {
+        (entity as any)[fieldName] = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
+      }
     } else {
       // Only access `entity[fieldName]` after checking `fieldName in data`, as merely accessing
       // `entity[fieldName]` will assign the value to `undefined` and we can't detect `hasBeenSet`.
@@ -116,15 +118,21 @@ export class AsyncDefault<T extends Entity> {
         // deps promises shouldn't reject, so we should be fine w/o allSettled here
         await Promise.all(deps.map((dep) => dt.getDeferred(dep.meta, dep.fieldName).promise));
       }
+
       // Run our default for all entities, use allSettled to avoid leaving lambdas running if one fails
       const results = await Promise.allSettled(
         inserts
           .map(async (entity) => {
-            const value = (entity as any)[this.fieldName];
-            if (value === undefined) {
-              (entity as any)[this.fieldName] = await this.getValue(entity, ctx);
-            } else if (isLoadedReference(value) && !value.isSet && !value.hasBeenSet) {
-              value.set(await this.getValue(entity, ctx));
+            if (!isRelation(baseMetadata.allFields[this.fieldName])) {
+              const hasBeenSet = this.fieldName in getInstanceData(entity).data;
+              if (!hasBeenSet) {
+                (entity as any)[this.fieldName] = await this.getValue(entity, ctx);
+              }
+            } else {
+              const value = (entity as any)[this.fieldName];
+              if (isLoadedReference(value) && !value.isSet && !value.hasBeenSet) {
+                value.set(await this.getValue(entity, ctx));
+              }
             }
           })
           .map((promise) =>
@@ -285,4 +293,8 @@ class DependencyTracker {
     }
     return deferred;
   }
+}
+
+function isRelation(field: Field): boolean {
+  return field.kind === "primitive" || field.kind === "enum";
 }

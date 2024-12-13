@@ -130,12 +130,18 @@ export class AsyncDefault<T extends Entity> {
             if (!isRelation(baseMetadata.allFields[this.fieldName])) {
               const hasBeenSet = this.fieldName in getInstanceData(entity).data;
               if (!hasBeenSet) {
-                (entity as any)[this.fieldName] = await this.getValue(entity, ctx);
+                const value = await this.getValue(entity, ctx);
+                if (value !== undefined) {
+                  (entity as any)[this.fieldName] = value;
+                }
               }
             } else {
               const value = (entity as any)[this.fieldName];
               if (isLoadedReference(value) && !value.isSet && !value.hasBeenSet) {
-                value.set(await this.getValue(entity, ctx));
+                const val = await this.getValue(entity, ctx);
+                if (val !== undefined) {
+                  value.set(val);
+                }
               }
             }
           })

@@ -93,6 +93,21 @@ describe("EntityManager.defaults", () => {
     expect(p).toMatchEntity({ spotlightAuthor: undefined });
   });
 
+  it("re-tries defaults during em.flush", async () => {
+    const em = newEntityManager();
+    // Given we create a Publisher (w/o going through the factory triggered defaults)
+    const p = em.create(LargePublisher, { name: "p1" });
+    // And invoke `em.setDefaults`
+    await em.setDefaults([p]);
+    // And the spotlightAuthor default returned undefined
+    expect(p).toMatchEntity({ spotlightAuthor: undefined });
+    // When we create data that would trigger the default, and em.flush
+    const a = newAuthor(em, { publisher: p });
+    await em.flush();
+    // Then the default is tried again
+    expect(p).toMatchEntity({ spotlightAuthor: a });
+  });
+
   it("can default an asynchronous m2o field", async () => {
     const em = newEntityManager();
     // Given an author with lastName t1

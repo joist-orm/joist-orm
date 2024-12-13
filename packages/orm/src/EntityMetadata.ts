@@ -33,7 +33,7 @@ export interface EntityMetadata<T extends Entity = any> {
   /** Whether id field is a tagged string. */
   idType: "tagged-string" | "untagged-string" | "number";
   /** The database column type, i.e. used to do `::type` casts in Postgres. */
-  idDbType: "bigint" | "int" | "uuid";
+  idDbType: "bigint" | "int" | "uuid" | "text";
   tableName: string;
   /** If we're a subtype, our immediate base type's name, e.g. for `SmallPublisher` this would be `Publisher`. */
   baseType: string | undefined;

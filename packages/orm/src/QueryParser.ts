@@ -581,7 +581,7 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
     return {
       kind: "in",
       value: filter.map((v: string | number | Entity) => {
-        return isEntity(v) ? v.idTaggedMaybe ?? nilIdValue(meta) : v;
+        return isEntity(v) ? (v.idTaggedMaybe ?? nilIdValue(meta)) : v;
       }),
     };
   } else if (isEntity(filter)) {
@@ -652,6 +652,8 @@ function nilIdValue(meta: EntityMetadata): any {
       return -1;
     case "uuid":
       return "00000000-0000-0000-0000-000000000000";
+    case "text":
+      return "0";
     default:
       return assertNever(meta.idDbType);
   }

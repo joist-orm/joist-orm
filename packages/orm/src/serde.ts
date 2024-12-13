@@ -297,13 +297,13 @@ export class DecimalToNumberSerde implements FieldSerde {
 export class KeySerde implements FieldSerde {
   isArray = false;
   columns = [this];
-  private meta: { tagName: string; idDbType: "bigint" | "int" | "uuid" };
+  private meta: { tagName: string; idDbType: "bigint" | "int" | "uuid" | "text" };
 
   constructor(
     tagName: string,
     private fieldName: string,
     public columnName: string,
-    public dbType: "bigint" | "int" | "uuid",
+    public dbType: "bigint" | "int" | "uuid" | "text",
   ) {
     this.meta = { tagName, idDbType: dbType };
   }

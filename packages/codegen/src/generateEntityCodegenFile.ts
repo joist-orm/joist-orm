@@ -376,7 +376,7 @@ function generatePolymorphicTypes(meta: EntityDbMetadata) {
 function generateDefaultValues(config: Config, meta: EntityDbMetadata, configName: string): Code[] {
   // Skip sync defaults b/c we'll just stomp the getter; leave async in case they're RQFs
   // where the row must fundamentally be inserted with a dummy value before the real value is calced.
-  function notSync(field: PrimitiveField): boolean {
+  function notSync(field: PrimitiveField | EnumField): boolean {
     return "derived" in field && field.derived !== "sync";
   }
 

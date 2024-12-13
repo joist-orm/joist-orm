@@ -71,6 +71,7 @@ describe("ReactiveQueryField", () => {
         "updatedAt",
         "name",
         "numberOfBookReviews",
+        "spotlightAuthor",
         "type",
         "baseSyncDefault",
         "favoriteAuthor",

@@ -46,8 +46,6 @@ export function setSyncDefaults(entity: Entity): void {
         }
       }
     } else {
-      // Only access `entity[fieldName]` after checking `fieldName in data`, as merely accessing
-      // `entity[fieldName]` will assign the value to `undefined` and we can't detect `hasBeenSet`.
       const value = (entity as any)[fieldName];
       if (isLoadedReference(value) && !value.isSet && !value.hasBeenSet) {
         // A sync default usually would never be for a reference, because reference defaults usually

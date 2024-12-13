@@ -22,12 +22,7 @@ export function getField(entity: Entity, fieldName: string): any {
       const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
       serde.setOnEntity(data, row);
     }
-    // Don't access `data[fieldName]` because it will `undefined` as a side-effect
-    if (fieldName in data) {
-      return data[fieldName];
-    } else {
-      return undefined;
-    }
+    return data[fieldName];
   }
 }
 
@@ -102,7 +97,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   const currentValue = getField(entity, fieldName);
   if (equalOrSameEntity(currentValue, newValue)) {
     // If we're doing `entity.field = undefined`, we'll be equal, but mark ourselves as "set"
-    // (previously `getField` would unwittingly do this as a side-effect, but we need it explicit now.)
+    // so that defaults know to respect the intent of keeping this field undefined.
     if (!(fieldName in data)) data[fieldName] = undefined;
     return false;
   }

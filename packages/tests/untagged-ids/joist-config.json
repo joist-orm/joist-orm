@@ -4,6 +4,7 @@
   "entities": {
     "Author": { "tag": "a" },
     "Book": { "tag": "b" },
+    "BookReview": { "tag": "br" },
     "Comment": { "relations": { "parent": { "polymorphic": "notNull" } }, "tag": "c" }
   },
   "entitiesDirectory": "./src/entities",

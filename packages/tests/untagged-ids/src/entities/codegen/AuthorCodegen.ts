@@ -42,6 +42,9 @@ import {
   Book,
   type BookId,
   bookMeta,
+  BookReview,
+  type BookReviewId,
+  bookReviewMeta,
   Comment,
   type CommentId,
   commentMeta,
@@ -64,11 +67,13 @@ export interface AuthorOpts {
   firstName: string;
   lastName?: string | null;
   books?: Book[];
+  bookReviews?: BookReview[];
   comments?: Comment[];
 }
 
 export interface AuthorIdsOpts {
   bookIds?: BookId[] | null;
+  bookReviewIds?: BookReviewId[] | null;
   commentIds?: CommentId[] | null;
 }
 
@@ -79,6 +84,7 @@ export interface AuthorFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  bookReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
 }
 
@@ -89,6 +95,7 @@ export interface AuthorGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  bookReviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
 }
 
@@ -310,6 +317,17 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   get books(): Collection<Author, Book> {
     return this.__data.relations.books ??= hasMany(this, bookMeta, "books", "author", "author_id", undefined);
+  }
+
+  get bookReviews(): Collection<Author, BookReview> {
+    return this.__data.relations.bookReviews ??= hasMany(
+      this,
+      bookReviewMeta,
+      "bookReviews",
+      "book",
+      "book_id",
+      undefined,
+    );
   }
 
   get comments(): Collection<Author, Comment> {

@@ -28,4 +28,12 @@ export function up(b: MigrationBuilder): void {
   });
   b.addIndex("comments", ["parent_author_id"], { method: "btree" });
   b.addIndex("comments", ["parent_book_id"], { method: "btree" });
+
+  // For testing cuid/etc ids
+  b.createTable("book_reviews", {
+    id: { type: "text", primaryKey: true },
+    rating: { type: "smallint", notNull: true },
+    book_id: { type: "uuid", references: "authors", notNull: true, deferrable: true, deferred: true },
+  });
+  b.createIndex("book_reviews", ["book_id"], { method: "btree" });
 }

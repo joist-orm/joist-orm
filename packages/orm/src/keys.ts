@@ -14,7 +14,7 @@ type HasTagName = {
   /** The type of the `id` field on the domain entity. */
   // idType: "tagged-string" | "untagged-string" | "number";
   /** The database column type, i.e. used to do `::type` casts in Postgres. */
-  idDbType: "bigint" | "int" | "uuid";
+  idDbType: "bigint" | "int" | "uuid" | "text";
 };
 
 /** Converts our internal/always-tagged `id` to the domain entity's `id` type (could be a number or uuid). */
@@ -64,10 +64,16 @@ export function keyToNumber(meta: HasTagName, value: any): number | undefined {
 
 // If we're using UUIDs, just lie to the type system and pretend they're numbers.
 function maybeNumberUnlessUuid(meta: HasTagName, key: string): number {
-  if (meta.idDbType === "uuid") {
-    return key as any;
+  switch (meta.idDbType) {
+    case "uuid":
+    case "text":
+      return key as any;
+    case "int":
+    case "bigint":
+      return Number(key);
+    default:
+      assertNever(meta.idDbType);
   }
-  return Number(key);
 }
 
 /** Converts `dbValue` (big int, int, uuid) to a tagged string, unless its undefined. */
@@ -104,6 +110,8 @@ export function isTaggedId(metaOrId: string | number | EntityMetadata, id?: stri
       return !Number.isNaN(Number(_id));
     } else if (metaOrId.idDbType === "uuid") {
       return uuidIshId.test(_id);
+    } else if (metaOrId.idDbType === "text") {
+      return true; // We should ask the IdAssigner what it thinks?
     } else {
       return assertNever(metaOrId.idDbType);
     }

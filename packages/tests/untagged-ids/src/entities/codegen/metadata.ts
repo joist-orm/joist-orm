@@ -2,8 +2,9 @@ import { configureMetadata, DateSerde, type Entity as Entity2, EntityManager as 
 import { type Context } from "src/context";
 import { Author } from "../Author";
 import { Book } from "../Book";
+import { BookReview } from "../BookReview";
 import { Comment } from "../Comment";
-import { authorConfig, bookConfig, commentConfig, newAuthor, newBook, newComment } from "../entities";
+import { authorConfig, bookConfig, bookReviewConfig, commentConfig, newAuthor, newBook, newBookReview, newComment } from "../entities";
 
 export class EntityManager extends EntityManager1<Context, Entity> {}
 
@@ -27,6 +28,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", serde: undefined, immutable: false },
+    "bookReviews": { kind: "o2m", fieldName: "bookReviews", fieldIdName: "bookReviewIds", required: false, otherMetadata: () => bookReviewMeta, otherFieldName: "book", serde: undefined, immutable: false },
     "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined, immutable: false },
   },
   allFields: {},
@@ -67,6 +69,30 @@ export const bookMeta: EntityMetadata<Book> = {
 
 (Book as any).metadata = bookMeta;
 
+export const bookReviewMeta: EntityMetadata<BookReview> = {
+  cstr: BookReview,
+  type: "BookReview",
+  baseType: undefined,
+  idType: "untagged-string",
+  idDbType: "text",
+  tagName: "br",
+  tableName: "book_reviews",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("br", "id", "id", "text"), immutable: true },
+    "rating": { kind: "primitive", fieldName: "rating", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("rating", "rating", "smallint"), immutable: false },
+    "book": { kind: "m2o", fieldName: "book", fieldIdName: "bookId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "bookReviews", serde: new KeySerde("a", "book", "book_id", "uuid"), immutable: false },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
+  config: bookReviewConfig,
+  factory: newBookReview,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(BookReview as any).metadata = bookReviewMeta;
+
 export const commentMeta: EntityMetadata<Comment> = {
   cstr: Comment,
   type: "Comment",
@@ -93,5 +119,5 @@ export const commentMeta: EntityMetadata<Comment> = {
 
 (Comment as any).metadata = commentMeta;
 
-export const allMetadata = [authorMeta, bookMeta, commentMeta];
+export const allMetadata = [authorMeta, bookMeta, bookReviewMeta, commentMeta];
 configureMetadata(allMetadata);

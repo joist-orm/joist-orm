@@ -139,7 +139,7 @@ describe("EntityManager", () => {
     expect(rows).toMatchObject([{ id: 1, name: "foo" }]);
   });
 
-  it("using EntityManager.transaction avoids anomalies", async () => {
+  it("using EntityManager.transaction does not avoid anomalies", async () => {
     const steps = new Stepper();
 
     const t1 = (async () => {
@@ -162,10 +162,13 @@ describe("EntityManager", () => {
     })();
 
     await t1;
-    await expect(t2).rejects.toThrow("could not serialize access");
+    await t2;
 
     const rows = await select("publishers");
-    expect(rows.length).toEqual(1);
-    expect(rows).toMatchObject([{ id: 1, name: "foo" }]);
+    expect(rows.length).toEqual(2);
+    expect(rows).toMatchObject([
+      { id: 1, name: "foo" },
+      { id: 2, name: "foo" },
+    ]);
   });
 });

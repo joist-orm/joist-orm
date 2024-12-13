@@ -1,3 +1,10 @@
+# [1.215.0](https://github.com/joist-orm/joist-orm/compare/v1.214.1...v1.215.0) (2024-12-13)
+
+
+### Features
+
+* Support CUIDs. ([#1315](https://github.com/joist-orm/joist-orm/issues/1315)) ([41cd9f7](https://github.com/joist-orm/joist-orm/commit/41cd9f72c00124ca09128406d367806e5bce591b))
+
 ## [1.214.1](https://github.com/joist-orm/joist-orm/compare/v1.214.0...v1.214.1) (2024-12-13)
 
 

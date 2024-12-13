@@ -105,8 +105,8 @@ export function up(b: MigrationBuilder): void {
     last_name: { type: "varchar(255)", notNull: false },
     // for testing findByUnique
     ssn: { type: "varchar(25)", notNull: false, unique: true },
-    // for testing sync derived values
-    initials: { type: "varchar(255)", notNull: true },
+    // for testing sync derived values (...with a default that our getter ignores)
+    initials: { type: "varchar(255)", notNull: true, default: "..." },
     // for testing async derived values
     number_of_books: { type: "integer", notNull: true },
     // for testing async derived enums

@@ -231,6 +231,8 @@ describe("EntityManager.reactiveRules", () => {
   it.withCtx("creates the right reactive rules", async () => {
     const fn = expect.any(Function);
     expect(getReactiveRules(Author)).toMatchObject([
+      // Author's numberOfBooks codegen-d rule
+      { cstr: "Author", name: sm(/AuthorCodegen.ts:\d+/), fields: ["numberOfBooks"], path: [], fn },
       // Author's firstName/book.title validation rule
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["firstName"], path: [], fn },
       // Author's "cannot have 13 books" rules
@@ -302,6 +304,8 @@ describe("EntityManager.reactiveRules", () => {
     expect(getReactiveRules(BookReview)).toMatchObject([
       // Book's "reviewsRuleInvoked", when BookReview.book is immutable field
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: [], path: ["book"], fn },
+      { cstr: "BookReview", name: sm(/BookReviewCodegen.ts:\d+/), fields: ["isPublic"], path: [], fn },
+      { cstr: "BookReview", name: sm(/BookReviewCodegen.ts:\d+/), fields: ["isTest"], path: [], fn },
     ]);
 
     expect(getReactiveRules(SmallPublisher)).toMatchObject([

@@ -374,8 +374,15 @@ function generatePolymorphicTypes(meta: EntityDbMetadata) {
 }
 
 function generateDefaultValues(config: Config, meta: EntityDbMetadata, configName: string): Code[] {
+  // Skip sync defaults b/c we'll just stomp the getter; leave async in case they're RQFs
+  // where the row must fundamentally be inserted with a dummy value before the real value is calced.
+  function notSync(field: PrimitiveField | EnumField): boolean {
+    return "derived" in field && field.derived !== "sync";
+  }
+
   const primitives = meta.primitives
     .filter((field) => fieldHasDefaultValue(field))
+    .filter(notSync)
     .map(({ fieldName, columnDefault }) => {
       return code`${configName}.setDefault("${fieldName}", ${columnDefault});`;
     });
@@ -386,6 +393,7 @@ function generateDefaultValues(config: Config, meta: EntityDbMetadata, configNam
     });
   const enums = meta.enums
     .filter((field) => !!field.columnDefault && !field.isArray)
+    .filter(notSync)
     .map(({ fieldName, columnDefault, enumRows, enumType, columnName }) => {
       const defaultRow =
         enumRows.find((r) => r.id === Number(columnDefault)) ||
@@ -400,8 +408,14 @@ function generateDefaultValidationRules(db: DbMetadata, meta: EntityDbMetadata, 
   const fields = [...meta.primitives, ...meta.enums, ...meta.manyToOnes, ...meta.polymorphics];
   const rules = fields
     .filter((p) => p.notNull)
-    .map(({ fieldName }) => {
-      return code`${configName}.addRule(${newRequiredRule}("${fieldName}"));`;
+    .map((p) => {
+      const { fieldName } = p;
+      const isReactive = "derived" in p && p.derived === "async";
+      if (isReactive) {
+        return code`${configName}.addRule("${fieldName}", ${newRequiredRule}("${fieldName}"));`;
+      } else {
+        return code`${configName}.addRule(${newRequiredRule}("${fieldName}"));`;
+      }
     });
   // Add STI discriminator cannot change
   if (meta.stiDiscriminatorField) {

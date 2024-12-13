@@ -120,7 +120,7 @@ export interface PublisherGroupOrder {
 
 export const publisherGroupConfig = new ConfigApi<PublisherGroup, Context>();
 
-publisherGroupConfig.addRule(newRequiredRule("numberOfBookReviews"));
+publisherGroupConfig.addRule("numberOfBookReviews", newRequiredRule("numberOfBookReviews"));
 publisherGroupConfig.addRule(newRequiredRule("createdAt"));
 publisherGroupConfig.addRule(newRequiredRule("updatedAt"));
 

@@ -1255,11 +1255,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       try {
         this.#isValidating = true;
         // Run simple rules first b/c it includes not-null/required rules, so that then when we run
-        // `validateReactiveRules` next, the lambdas won't see invalid entities.
+        // `validateReactiveRules` next, the app's lambdas won't see fundamentally invalid entities & NPE.
         await validateSimpleRules(entityTodos);
         // After we've let any "author is not set" simple rules fail before prematurely throwing
         // the "of course that caused an NPE" `TypeError`s, if all the authors *were* valid/set,
-        // and we still have TypeErrors, they were real, unrelated errors that the user should see.
+        // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
+        // that the user should see.
         if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
         await validateReactiveRules(entityTodos, joinRowTodos);
       } finally {

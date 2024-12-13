@@ -224,7 +224,7 @@ export interface PublisherOrder {
 export const publisherConfig = new ConfigApi<Publisher, Context>();
 
 publisherConfig.addRule(newRequiredRule("name"));
-publisherConfig.addRule(newRequiredRule("numberOfBookReviews"));
+publisherConfig.addRule("numberOfBookReviews", newRequiredRule("numberOfBookReviews"));
 publisherConfig.addRule(newRequiredRule("baseSyncDefault"));
 publisherConfig.addRule(newRequiredRule("baseAsyncDefault"));
 publisherConfig.addRule(newRequiredRule("createdAt"));

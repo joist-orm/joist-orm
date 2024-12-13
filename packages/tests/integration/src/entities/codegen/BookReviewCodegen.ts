@@ -132,8 +132,8 @@ export interface BookReviewOrder {
 export const bookReviewConfig = new ConfigApi<BookReview, Context>();
 
 bookReviewConfig.addRule(newRequiredRule("rating"));
-bookReviewConfig.addRule(newRequiredRule("isPublic"));
-bookReviewConfig.addRule(newRequiredRule("isTest"));
+bookReviewConfig.addRule("isPublic", newRequiredRule("isPublic"));
+bookReviewConfig.addRule("isTest", newRequiredRule("isTest"));
 bookReviewConfig.addRule(newRequiredRule("createdAt"));
 bookReviewConfig.addRule(newRequiredRule("updatedAt"));
 bookReviewConfig.addRule(newRequiredRule("book"));

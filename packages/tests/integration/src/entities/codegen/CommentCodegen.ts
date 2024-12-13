@@ -152,7 +152,7 @@ export interface CommentOrder {
 
 export const commentConfig = new ConfigApi<Comment, Context>();
 
-commentConfig.addRule(newRequiredRule("parentTags"));
+commentConfig.addRule("parentTags", newRequiredRule("parentTags"));
 commentConfig.addRule(newRequiredRule("createdAt"));
 commentConfig.addRule(newRequiredRule("updatedAt"));
 commentConfig.addRule(newRequiredRule("parent"));

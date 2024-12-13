@@ -360,7 +360,7 @@ export const authorConfig = new ConfigApi<Author, Context>();
 
 authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("initials"));
-authorConfig.addRule(newRequiredRule("numberOfBooks"));
+authorConfig.addRule("numberOfBooks", newRequiredRule("numberOfBooks"));
 authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
 

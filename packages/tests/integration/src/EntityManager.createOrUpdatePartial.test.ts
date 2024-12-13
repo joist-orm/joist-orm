@@ -12,7 +12,7 @@ import {
   select,
 } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
-import { Author, Book, ImageType, newAuthor } from "./entities";
+import { Author, Book, ImageType, LargePublisher, newAuthor } from "./entities";
 
 describe("EntityManager.createOrUpdatePartial", () => {
   it("can create new entity with valid data", async () => {
@@ -39,6 +39,27 @@ describe("EntityManager.createOrUpdatePartial", () => {
     const em = newEntityManager();
     await em.createOrUpdatePartial(Author, { id: "1", firstName: null });
     await expect(em.flush()).rejects.toThrow("firstName is required");
+  });
+
+  it("undefined doesn't prevent defaults from being set", async () => {
+    const em = newEntityManager();
+    const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", nickNames: undefined });
+    const p1 = await em.createOrUpdatePartial(LargePublisher, {
+      name: "p1",
+      baseSyncDefault: undefined,
+      baseAsyncDefault: undefined,
+    });
+    await em.flush();
+    expect(a1.nickNames).toEqual(["a1"]);
+    expect(p1.baseSyncDefault).toEqual("LPSyncDefault");
+    expect(p1.baseAsyncDefault).toEqual("LPAsyncDefault");
+  });
+
+  it("null does prevent defaults from being set", async () => {
+    const em = newEntityManager();
+    const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", nickNames: null });
+    await em.flush();
+    expect(a1.nickNames).toBeUndefined();
   });
 
   describe("m2o", () => {

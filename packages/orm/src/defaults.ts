@@ -173,6 +173,8 @@ export class AsyncDefault<T extends Entity> {
           throw new Error(
             `Use the \`async\` keyword for the setDefault "${this.fieldName}" function that returns a Promise`,
           );
+        } else if (val === undefined) {
+          // If val is undefined, let the setDefault get invoked again later
         } else {
           if (isLoadedReference(value)) {
             value.set(val);

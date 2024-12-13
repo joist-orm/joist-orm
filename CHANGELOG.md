@@ -1,3 +1,10 @@
+## [1.214.1](https://github.com/joist-orm/joist-orm/compare/v1.214.0...v1.214.1) (2024-12-13)
+
+
+### Bug Fixes
+
+* Fix sync defaults w/db defaults. ([#1313](https://github.com/joist-orm/joist-orm/issues/1313)) ([ce1adc7](https://github.com/joist-orm/joist-orm/commit/ce1adc7e5279d0dcf755fba04b0b15f915f3ef21))
+
 # [1.214.0](https://github.com/joist-orm/joist-orm/compare/v1.213.0...v1.214.0) (2024-12-12)
 
 

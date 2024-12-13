@@ -1,3 +1,10 @@
+## [1.215.3](https://github.com/joist-orm/joist-orm/compare/v1.215.2...v1.215.3) (2024-12-13)
+
+
+### Bug Fixes
+
+* Remove serializable isolation level ([#1319](https://github.com/joist-orm/joist-orm/issues/1319)) ([8bd7578](https://github.com/joist-orm/joist-orm/commit/8bd7578f59dd0797845c7b2d0688c74bc76eec03))
+
 ## [1.215.2](https://github.com/joist-orm/joist-orm/compare/v1.215.1...v1.215.2) (2024-12-13)
 
 

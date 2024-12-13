@@ -15,11 +15,7 @@ export interface Driver {
   /** Executes a raw SQL query with bindings. */
   executeQuery(em: EntityManager, sql: string, bindings: any[]): Promise<any[]>;
 
-  transaction<T>(
-    em: EntityManager,
-    fn: (txn: Knex.Transaction) => Promise<T>,
-    isolationLevel?: "serializable",
-  ): Promise<T>;
+  transaction<T>(em: EntityManager, fn: (txn: Knex.Transaction) => Promise<T>): Promise<T>;
 
   assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void>;
 

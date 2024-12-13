@@ -63,11 +63,7 @@ export class PostgresDriver implements Driver {
       .then((result) => result.rows);
   }
 
-  async transaction<T>(
-    em: EntityManager,
-    fn: (txn: Knex.Transaction) => Promise<T>,
-    isolationLevel?: "serializable",
-  ): Promise<T> {
+  async transaction<T>(em: EntityManager, fn: (txn: Knex.Transaction) => Promise<T>): Promise<T> {
     const knex = this.getMaybeInTxnKnex(em);
     const alreadyInTxn = "commit" in knex;
     if (alreadyInTxn) {
@@ -76,9 +72,6 @@ export class PostgresDriver implements Driver {
     return await knex.transaction(async (txn) => {
       em.currentTxnKnex = txn;
       try {
-        if (isolationLevel) {
-          await txn.raw("set transaction isolation level serializable;");
-        }
         await beforeTransaction(em, txn);
         const result = await fn(txn);
         await afterTransaction(em, txn);

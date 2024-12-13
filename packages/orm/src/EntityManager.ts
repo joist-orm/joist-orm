@@ -1046,21 +1046,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
    * cannot be enforced with database-level constraints.
    */
   public async transaction<T>(fn: (txn: Knex.Transaction) => Promise<T>): Promise<T> {
-    return this.driver.transaction(
-      this,
-      async (knex) => {
-        const result = await fn(knex);
-        // The lambda may have done some interstitial flushes (that would not
-        // have committed the transaction), but go ahead and do a final one
-        // in case they didn't explicitly call flush.
-        await this.flush();
-        return result;
-      },
-      // Application-enforced unique constraints (i.e. custom find + conditional insert) can be
-      // serialization anomalies, so we use the highest isolation level b/c it prevents this.
-      // See the EntityManager.txns.test.ts file.
-      "serializable",
-    );
+    return this.driver.transaction(this, async (knex) => {
+      const result = await fn(knex);
+      // The lambda may have done some interstitial flushes (that would not
+      // have committed the transaction), but go ahead and do a final one
+      // in case they didn't explicitly call flush.
+      await this.flush();
+      return result;
+    });
   }
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
@@ -1288,10 +1281,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
         // The driver will handle the right thing if we're already in an existing transaction.
-        // We also purposefully don't pass an isolation level b/c if we're only doing
-        // INSERTs and UPDATEs, then we don't really care about overlapping SELECT-then-INSERT
-        // serialization anomalies. (Although should we? Maybe we should run the flush hooks
-        // in this same transaction just as a matter of principle / safest default.)
         await this.driver.transaction(this, async () => {
           do {
             await this.driver.flushEntities(this, entityTodos);

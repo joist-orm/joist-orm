@@ -1,3 +1,10 @@
+## [1.215.1](https://github.com/joist-orm/joist-orm/compare/v1.215.0...v1.215.1) (2024-12-13)
+
+
+### Bug Fixes
+
+* Allow defaults to recalc during flush. ([#1316](https://github.com/joist-orm/joist-orm/issues/1316)) ([699cda3](https://github.com/joist-orm/joist-orm/commit/699cda3e3599dd4642b0561aa8ff006b88fc32dd))
+
 # [1.215.0](https://github.com/joist-orm/joist-orm/compare/v1.214.1...v1.215.0) (2024-12-13)
 
 

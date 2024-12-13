@@ -1,3 +1,10 @@
+## [1.215.2](https://github.com/joist-orm/joist-orm/compare/v1.215.1...v1.215.2) (2024-12-13)
+
+
+### Bug Fixes
+
+* Allow defaults to try twice. ([#1318](https://github.com/joist-orm/joist-orm/issues/1318)) ([22c2926](https://github.com/joist-orm/joist-orm/commit/22c2926997f1ec1acc07262cdea71136dfdb8659))
+
 ## [1.215.1](https://github.com/joist-orm/joist-orm/compare/v1.215.0...v1.215.1) (2024-12-13)
 
 

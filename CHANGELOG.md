@@ -1,3 +1,10 @@
+## [1.215.4](https://github.com/joist-orm/joist-orm/compare/v1.215.3...v1.215.4) (2024-12-19)
+
+
+### Bug Fixes
+
+* loosen dependencies ([#1324](https://github.com/joist-orm/joist-orm/issues/1324)) ([7e6d3f3](https://github.com/joist-orm/joist-orm/commit/7e6d3f3b9e26219fbd42cc29811c774ccd65795e))
+
 ## [1.215.3](https://github.com/joist-orm/joist-orm/compare/v1.215.2...v1.215.3) (2024-12-13)
 
 

@@ -591,7 +591,7 @@ describe("Author", () => {
     const a3 = newAuthor(em);
     expect((a1 as any)[inspect]()).toEqual("Author:1");
     expect((a2 as any)[inspect]()).toEqual("Author:2");
-    expect((a3 as any)[inspect]()).toEqual("Author#3");
+    expect((a3 as any)[inspect]()).toEqual("Author#1");
   });
 
   it("can access deleted children", async () => {

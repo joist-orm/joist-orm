@@ -24,6 +24,15 @@ describe("Entity", () => {
     expect(a.toString()).toBe("Author#1");
   });
 
+  it("can toString a new entity with existing entities", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1");
+    const a2 = newAuthor(em);
+    expect(a1.toString()).toBe("Author:1");
+    expect(a2.toString()).toBe("Author#1");
+  });
+
   it("can toJSON a new entity", () => {
     const em = newEntityManager();
     const a = newAuthor(em);

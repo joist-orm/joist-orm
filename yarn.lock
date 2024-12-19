@@ -4512,7 +4512,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/pluralize@npm:0.0.33":
+"@types/pluralize@npm:^0.0.33":
   version: 0.0.33
   resolution: "@types/pluralize@npm:0.0.33"
   checksum: 10/282d42dc0187e5e0912f9f36ee0f5615bfd273a08d40afe5bf5881cb28daf1977abe10564543032aa0f42352ebba739ff3d86bf5562ac4691c6d1761fcc7cf39
@@ -10956,7 +10956,7 @@ __metadata:
     "@types/jest": "npm:^29.5.14"
     "@types/jscodeshift": "npm:^0.12.0"
     "@types/node": "npm:^22.10.1"
-    "@types/pluralize": "npm:0.0.33"
+    "@types/pluralize": "npm:^0.0.33"
     "@types/semver": "npm:^7.5.8"
     change-case: "npm:^4.1.2"
     fast-glob: "npm:^3.3.2"
@@ -10998,7 +10998,7 @@ __metadata:
     joist-codegen: "workspace:*"
     joist-utils: "workspace:*"
     pluralize: "npm:^8.0.0"
-    prettier: "npm:3.4.1"
+    prettier: "npm:^3.4.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     ts-poet: "npm:^6.9.0"
     tsconfig-paths: "npm:^4.2.0"
@@ -11033,7 +11033,7 @@ __metadata:
     "@swc/jest": "npm:^0.2.37"
     "@types/jest": "npm:^29.5.14"
     "@types/node": "npm:^22.10.1"
-    "@types/pluralize": "npm:0.0.33"
+    "@types/pluralize": "npm:^0.0.33"
     jest: "npm:30.0.0-alpha.6"
     joist-utils: "workspace:*"
     node-pg-migrate: "npm:^7.8.0"
@@ -15250,7 +15250,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:*, prettier@npm:3.4.1, prettier@npm:^3.4.1":
+"prettier@npm:*, prettier@npm:^3.4.1":
   version: 3.4.1
   resolution: "prettier@npm:3.4.1"
   bin:

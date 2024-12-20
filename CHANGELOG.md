@@ -1,3 +1,10 @@
+## [1.215.5](https://github.com/joist-orm/joist-orm/compare/v1.215.4...v1.215.5) (2024-12-20)
+
+
+### Bug Fixes
+
+* Fix toString to sequentially assign new entities. ([#1325](https://github.com/joist-orm/joist-orm/issues/1325)) ([d3c9738](https://github.com/joist-orm/joist-orm/commit/d3c97381963992b1887e0f94ba504cdec8d9c095)), closes [Author#1](https://github.com/Author/issues/1) [#1](https://github.com/joist-orm/joist-orm/issues/1) [Author#5](https://github.com/Author/issues/5) [#5](https://github.com/joist-orm/joist-orm/issues/5)
+
 ## [1.215.4](https://github.com/joist-orm/joist-orm/compare/v1.215.3...v1.215.4) (2024-12-19)
 
 

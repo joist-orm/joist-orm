@@ -207,6 +207,7 @@ describe("EntityManager.clone", () => {
       "updatedAt",
       "firstName",
       "nickNames",
+      "isFunny",
       "favoriteColors",
       "publisher",
     ]);
@@ -216,7 +217,14 @@ describe("EntityManager.clone", () => {
     expect(a2.changes.publisher.hasChanged).toBe(false);
     expect(a2.changes.publisher.hasUpdated).toBe(false);
     expect(a2.changes.publisher.originalValue).toBe(undefined);
-    expect(a2.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "nickNames", "favoriteColors"]);
+    expect(a2.changes.fields).toEqual([
+      "createdAt",
+      "updatedAt",
+      "firstName",
+      "nickNames",
+      "isFunny",
+      "favoriteColors",
+    ]);
   });
 
   it("can clone entities and report what has changed w/undefined m2o", async () => {
@@ -229,7 +237,7 @@ describe("EntityManager.clone", () => {
     // Then it is new
     expect(a2.isNewEntity).toBe(true);
     // And only the currently set fields look changed
-    expect(a2.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "favoriteColors"]);
+    expect(a2.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "isFunny", "favoriteColors"]);
     // And specifically the publisher is not changed
     expect(a2.changes.publisher.hasChanged).toBe(false);
     expect(a2.changes.publisher.hasUpdated).toBe(false);

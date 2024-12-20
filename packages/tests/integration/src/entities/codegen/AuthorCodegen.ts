@@ -110,6 +110,7 @@ export interface AuthorFields {
   nickNames: { kind: "primitive"; type: string[]; unique: false; nullable: undefined; derived: false };
   nickNamesUpper: { kind: "primitive"; type: string[]; unique: false; nullable: undefined; derived: true };
   wasEverPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
+  isFunny: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: false };
   mentorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   address: { kind: "primitive"; type: Address; unique: false; nullable: undefined; derived: false };
   businessAddress: {
@@ -148,6 +149,7 @@ export interface AuthorOpts {
   graduated?: Date | null;
   nickNames?: string[] | null;
   wasEverPopular?: boolean | null;
+  isFunny?: boolean;
   address?: Address | null;
   businessAddress?: z.input<typeof AddressSchema> | null;
   quotes?: Quotes | null;
@@ -201,6 +203,7 @@ export interface AuthorFilter {
   nickNames?: ValueFilter<string[], null>;
   nickNamesUpper?: ValueFilter<string[], null>;
   wasEverPopular?: BooleanFilter<null>;
+  isFunny?: BooleanFilter<never>;
   mentorNames?: ValueFilter<string, null>;
   address?: ValueFilter<Address, null>;
   businessAddress?: ValueFilter<z.input<typeof AddressSchema>, null>;
@@ -262,6 +265,7 @@ export interface AuthorGraphQLFilter {
   nickNames?: ValueGraphQLFilter<string[]>;
   nickNamesUpper?: ValueGraphQLFilter<string[]>;
   wasEverPopular?: BooleanGraphQLFilter;
+  isFunny?: BooleanGraphQLFilter;
   mentorNames?: ValueGraphQLFilter<string>;
   address?: ValueGraphQLFilter<Address>;
   businessAddress?: ValueGraphQLFilter<z.input<typeof AddressSchema>>;
@@ -333,6 +337,7 @@ export interface AuthorOrder {
   nickNames?: OrderBy;
   nickNamesUpper?: OrderBy;
   wasEverPopular?: OrderBy;
+  isFunny?: OrderBy;
   mentorNames?: OrderBy;
   address?: OrderBy;
   businessAddress?: OrderBy;
@@ -361,8 +366,10 @@ export const authorConfig = new ConfigApi<Author, Context>();
 authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("initials"));
 authorConfig.addRule("numberOfBooks", newRequiredRule("numberOfBooks"));
+authorConfig.addRule(newRequiredRule("isFunny"));
 authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
+authorConfig.setDefault("isFunny", false);
 
 declare module "joist-orm" {
   interface TypeMap {
@@ -480,6 +487,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   protected setWasEverPopular(wasEverPopular: boolean | undefined) {
     setField(this, "wasEverPopular", wasEverPopular);
+  }
+
+  get isFunny(): boolean {
+    return getField(this, "isFunny");
+  }
+
+  set isFunny(isFunny: boolean) {
+    setField(this, "isFunny", isFunny);
   }
 
   abstract readonly mentorNames: ReactiveField<Author, string | undefined>;

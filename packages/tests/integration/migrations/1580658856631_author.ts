@@ -129,6 +129,8 @@ export function up(b: MigrationBuilder): void {
     favorite_shape: { type: "favorite_shape", notNull: false },
     // for testing protected fields
     was_ever_popular: { type: "boolean", notNull: false },
+    // for testing schema defaults that are falsye
+    is_funny: { type: "boolean", notNull: true, default: false },
     // for testing FieldConfig.ignore
     ignore_used_to_be_useful: { type: "boolean", notNull: false, default: true },
     ignore_used_to_be_useful_required_with_default: { type: "boolean", notNull: true, default: true },

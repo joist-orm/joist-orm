@@ -19,6 +19,13 @@ describe("EntityManager.defaults", () => {
     expect(b.notes).toBe("Notes for Book 1");
   });
 
+  it("can schema default a falsey value", async () => {
+    const em = newEntityManager();
+    const a = em.create(Author, { firstName: "a1" });
+    // Then the synchronous default was immediately applied
+    expect(a.isFunny).toBe(false);
+  });
+
   it("can default a required synchronous field", async () => {
     const em = newEntityManager();
     // Create a new user with a defaulted original email

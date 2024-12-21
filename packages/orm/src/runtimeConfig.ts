@@ -1,4 +1,10 @@
-export let runtimeConfig: RuntimeConfig | undefined = undefined;
+import { fail } from "./utils";
+
+let runtimeConfig: RuntimeConfig | undefined = undefined;
+
+export function getRuntimeConfig(): RuntimeConfig {
+  return runtimeConfig ?? fail("setRuntimeConfig in metadata.ts has not been invoked yet");
+}
 
 /**
  * Holds any `joist-config.json` values that we want to access at runtime.

@@ -15,7 +15,7 @@ import {
 } from "../index";
 import { JoinRowOperation } from "../JoinRows";
 import { kq, kqDot } from "../keywords";
-import { runtimeConfig } from "../runtimeConfig";
+import { getRuntimeConfig } from "../runtimeConfig";
 import { requireTemporal } from "../temporal";
 import { JoinRowTodo, Todo } from "../Todo";
 import { batched, cleanSql, partition, zeroTo } from "../utils";
@@ -50,7 +50,7 @@ export class PostgresDriver implements Driver {
     opts?: PostgresDriverOpts,
   ) {
     this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner();
-    setupLatestPgTypes(runtimeConfig!.temporal);
+    setupLatestPgTypes(getRuntimeConfig().temporal);
   }
 
   async executeFind(

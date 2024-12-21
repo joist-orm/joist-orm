@@ -10,7 +10,7 @@ import {
   keyToTaggedId,
   maybeResolveReferenceToId,
 } from "./index";
-import { runtimeConfig } from "./runtimeConfig";
+import { getRuntimeConfig } from "./runtimeConfig";
 import { requireTemporal } from "./temporal";
 import { groupBy } from "./utils";
 
@@ -161,7 +161,7 @@ export class PlainDateTimeSerde extends PrimitiveSerde implements TimestampSerde
   }
 
   mapFromNow(now: Date): Temporal.PlainDateTime {
-    const { timeZone } = runtimeConfig!.temporal as any;
+    const { timeZone } = getRuntimeConfig().temporal as any;
     return requireTemporal().toTemporalInstant.call(now).toZonedDateTimeISO(timeZone).toPlainDateTime();
   }
 
@@ -183,7 +183,7 @@ export class ZonedDateTimeSerde extends PrimitiveSerde implements TimestampSerde
   }
 
   mapFromNow(now: Date): Temporal.ZonedDateTime {
-    const { timeZone } = runtimeConfig!.temporal as any;
+    const { timeZone } = getRuntimeConfig().temporal as any;
     return requireTemporal().toTemporalInstant.call(now).toZonedDateTimeISO(timeZone);
   }
 

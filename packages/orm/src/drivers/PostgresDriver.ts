@@ -222,12 +222,13 @@ async function batchUpdate(knex: Knex, op: UpdateOp): Promise<void> {
   // reading Postgres's microsecond-level `timestamptz` values; using `date_trunc` "downgrades"
   // the pg data to match what we have in the JS Date.
   //
-  // Using Temporal.Instants would fix this.
+  // ...but Temporal's types don't have this flaw.
+  const truncateToMills = !getRuntimeConfig().temporal;
   const maybeUpdatedAt =
-    updatedAt && updatedAt.truncateToMills
-      ? ` AND date_trunc('milliseconds', ${kqDot(tableName, updatedAt.columnName!)}) = data.__original_updated_at`
+    updatedAt && truncateToMills
+      ? ` AND date_trunc('milliseconds', ${kqDot(tableName, updatedAt)}) = data.__original_updated_at`
       : updatedAt
-        ? ` AND ${kqDot(tableName, updatedAt.columnName!)} = data.__original_updated_at`
+        ? ` AND ${kqDot(tableName, updatedAt)} = data.__original_updated_at`
         : "";
 
   const sql = `

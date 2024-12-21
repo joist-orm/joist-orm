@@ -29,7 +29,7 @@ export type UpdateOp = {
   tableName: string;
   columns: OpColumn[];
   rows: any[][];
-  updatedAt: { columnName: string; truncateToMills: boolean } | undefined;
+  updatedAt: string | undefined;
 };
 export type DeleteOp = { tableName: string; ids: any[] };
 
@@ -211,12 +211,7 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
 
   const rows = collectBindings(entities, meta.tableName, columns, []);
   const updatedAtColumn = updatedAt ? (meta.fields[updatedAt] as PrimitiveField).serde.columns[0] : undefined;
-  return {
-    tableName: meta.tableName,
-    columns,
-    updatedAt: updatedAtColumn ? { columnName: updatedAtColumn.columnName, truncateToMills: true } : undefined,
-    rows,
-  };
+  return { tableName: meta.tableName, columns, updatedAt: updatedAtColumn?.columnName, rows };
 }
 
 function addDeletes(ops: Ops, todo: Todo): void {

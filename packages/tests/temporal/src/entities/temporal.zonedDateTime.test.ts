@@ -1,4 +1,4 @@
-import { newEntityManager } from "@src/setupDbTests";
+import { knex, newEntityManager } from "@src/setupDbTests";
 import { jan1DateTime, jan2DateTime, jan3DateTime } from "@src/utils";
 import { PrimitiveField, alias, getMetadata } from "joist-orm";
 import { Temporal } from "temporal-polyfill";
@@ -25,6 +25,14 @@ describe("Book", () => {
     await em.flush();
     expect(book.publishedAt).toEqual(jan2DateTime);
     expect(updatedAt).not.toEqual(book.updatedAt);
+  });
+
+  it("can load a zoned date time", async () => {
+    await knex.insert({ firstName: "a1", birthday: "2020-01-01" }).into("authors");
+    await knex.insert({ author_id: 1, title: "b1", published_at: toTimestampTzString(jan1DateTime) }).into("book");
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:1");
+    expect(book.publishedAt).toEqual(jan1DateTime);
   });
 
   it("can no-op when data is reverted before flush", async () => {
@@ -75,3 +83,7 @@ describe("Book", () => {
     expect(result).toEqual([a1, a2]);
   });
 });
+
+function toTimestampTzString(zonedDateTime: Temporal.ZonedDateTime) {
+  return `${zonedDateTime.toPlainDate().toString()} ${zonedDateTime.toPlainTime().toString()}${zonedDateTime.offset}`;
+}

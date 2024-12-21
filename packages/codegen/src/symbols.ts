@@ -98,3 +98,4 @@ export const toJSON = imp("toJSON@joist-orm");
 export const ReactiveField = imp("t:ReactiveField@joist-orm");
 export const ReactiveReference = imp("t:ReactiveReference@joist-orm");
 export const updatePartial = imp("updatePartial@joist-orm");
+export const setRuntimeConfig = imp("setRuntimeConfig@joist-orm");

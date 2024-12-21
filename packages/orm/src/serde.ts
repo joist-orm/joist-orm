@@ -5,13 +5,14 @@ import {
   Entity,
   EntityMetadata,
   getConstructorFromTaggedId,
-  isDefined,
   isEntity,
   keyToNumber,
   keyToTaggedId,
   maybeResolveReferenceToId,
 } from "./index";
-import { groupBy, requireTemporal } from "./utils";
+import { runtimeConfig } from "./runtimeConfig";
+import { requireTemporal } from "./temporal";
+import { groupBy } from "./utils";
 
 export function hasSerde(field: Field): field is SerdeField {
   return !!field.serde;
@@ -36,9 +37,15 @@ export interface FieldSerde {
   setOnEntity(data: any, row: any): void;
 }
 
+/**
+ * An interface that generalizes our Date-vs-Temporal support.
+ *
+ * @typeParam T - The domain type, i.e. `Date` or `Temporal.ZonedDateTime`.
+ */
 export interface TimestampSerde<T> extends FieldSerde {
-  mapFromInstant(value: Temporal.Instant): T;
-  mapFromDate(value: Date): T;
+  /** Given business logic that wants to "set this value to 'now'", converts its Date to our T. */
+  mapFromNow(now: Date): T;
+  /** Used for reading oplock values. */
   dbValue(data: any): any;
 }
 
@@ -95,7 +102,7 @@ export class PrimitiveSerde implements FieldSerde {
   columns = [this];
 
   constructor(
-    private fieldName: string,
+    protected fieldName: string,
     public columnName: string,
     public dbType: string,
     public isArray = false,
@@ -119,112 +126,73 @@ export class PrimitiveSerde implements FieldSerde {
 }
 
 export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
-  mapFromInstant(value: Temporal.Instant): Date {
-    return new Date(value.epochMilliseconds);
+  /** Accept the caller's date as-is. */
+  mapFromNow(now: Date): Date {
+    return now;
   }
 
   mapFromJsonAgg(value: any): any {
     if (value === null) return value;
     return new Date(value);
   }
+}
 
-  mapFromDate(value: Date) {
-    return value;
+export class PlainDateSerde extends PrimitiveSerde {
+  constructor(
+    protected fieldName: string,
+    public columnName: string,
+    public dbType: string,
+    public isArray = false,
+  ) {
+    super(fieldName, columnName, dbType, isArray);
   }
 }
 
-abstract class TemporalSerde<T> implements FieldSerde {
+export class PlainDateTimeSerde extends PrimitiveSerde implements TimestampSerde<Temporal.PlainDateTime> {
   columns = [this];
 
   constructor(
-    private fieldName: string,
+    protected fieldName: string,
     public columnName: string,
     public dbType: string,
-    public timeZone: string,
     public isArray = false,
-  ) {}
-
-  abstract toTemporal(value: Date): T;
-
-  abstract fromTemporal(value: T): Date;
-
-  private maybeToTemporal(value: any): any {
-    return isDefined(value) && value instanceof Date ? this.toTemporal(value) : value;
+  ) {
+    super(fieldName, columnName, dbType, isArray);
   }
 
-  private maybeFromTemporal(value: any): any {
-    return isDefined(value) && !(value instanceof Date) ? this.fromTemporal(value) : value;
+  mapFromNow(now: Date): Temporal.PlainDateTime {
+    const { timeZone } = runtimeConfig!.temporal as any;
+    return requireTemporal().toTemporalInstant.call(now).toZonedDateTimeISO(timeZone).toPlainDateTime();
   }
 
-  setOnEntity(data: any, row: any) {
-    let value = maybeNullToUndefined(row[this.columnName]);
-    if (this.isArray) {
-      if (Array.isArray(value)) value = value.map((v) => this.maybeToTemporal(v));
-    } else {
-      value = this.maybeToTemporal(value);
-    }
-    data[this.fieldName] = value;
+  dbValue(data: any) {
+    return data[this.fieldName].toString();
+  }
+}
+
+export class ZonedDateTimeSerde extends PrimitiveSerde implements TimestampSerde<Temporal.ZonedDateTime> {
+  columns = [this];
+
+  constructor(
+    protected fieldName: string,
+    public columnName: string,
+    public dbType: string,
+    public isArray = false,
+  ) {
+    super(fieldName, columnName, dbType, isArray);
+  }
+
+  mapFromNow(now: Date): Temporal.ZonedDateTime {
+    const { timeZone } = runtimeConfig!.temporal as any;
+    return requireTemporal().toTemporalInstant.call(now).toZonedDateTimeISO(timeZone);
   }
 
   dbValue(data: any) {
     return this.mapToDb(data[this.fieldName]);
   }
 
-  mapToDb(value: any) {
-    if (this.isArray) {
-      return Array.isArray(value) ? value.map((v) => this.maybeFromTemporal(v)) : value;
-    } else {
-      return this.maybeFromTemporal(value);
-    }
-  }
-
-  mapFromJsonAgg(value: any): any {
-    if (this.isArray) {
-      return Array.isArray(value) ? value.map((v) => this.toTemporal(new Date(v))) : value;
-    } else {
-      return isDefined(value) ? this.toTemporal(new Date(value)) : value;
-    }
-  }
-}
-
-export class PlainDateSerde extends TemporalSerde<Temporal.PlainDate> {
-  fromTemporal(value: Temporal.PlainDate): Date {
-    return new Date(value.toZonedDateTime(this.timeZone).epochMilliseconds);
-  }
-
-  toTemporal(value: Date): Temporal.PlainDate {
-    return requireTemporal().toTemporalInstant.call(value).toZonedDateTimeISO(this.timeZone).toPlainDate();
-  }
-}
-
-export class PlainDateTimeSerde extends TemporalSerde<Temporal.PlainDateTime> {
-  fromTemporal(value: Temporal.PlainDateTime): Date {
-    return new Date(value.toZonedDateTime(this.timeZone).epochMilliseconds);
-  }
-
-  toTemporal(value: Date): Temporal.PlainDateTime {
-    return requireTemporal().toTemporalInstant.call(value).toZonedDateTimeISO(this.timeZone).toPlainDateTime();
-  }
-}
-
-export class ZonedDateTimeSerde
-  extends TemporalSerde<Temporal.ZonedDateTime>
-  implements TimestampSerde<Temporal.ZonedDateTime>
-{
-  fromTemporal(value: Temporal.ZonedDateTime) {
-    return new Date(value.epochMilliseconds);
-  }
-
-  toTemporal(value: Date) {
-    return requireTemporal().toTemporalInstant.call(value).toZonedDateTimeISO(this.timeZone);
-  }
-
-  mapFromInstant(value: Temporal.Instant) {
-    return value.toZonedDateTimeISO(this.timeZone);
-  }
-
-  mapFromDate(value: Date) {
-    return this.toTemporal(value);
+  mapToDb(zdt: any) {
+    return `${zdt.toPlainDate().toString()} ${zdt.toPlainTime().toString()}${zdt.offset}`;
   }
 }
 

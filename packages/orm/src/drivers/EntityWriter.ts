@@ -17,7 +17,20 @@ import { groupBy } from "../utils";
 /** A simplified view of columns, with only the keys necessary to create SQL statements. */
 type OpColumn = { columnName: string; dbType: string };
 export type InsertOp = { tableName: string; columns: OpColumn[]; rows: any[][] };
-export type UpdateOp = { tableName: string; columns: OpColumn[]; rows: any[][]; updatedAt: string | undefined };
+/**
+ * A logical `update` operation.
+ *
+ * If we're using op locks, `columns` will include both the new `updatedAt` value (as bumped
+ * by the `EntityManager` on mutate), as well as an extra/last "original updated at" column
+ * (with respective pre-update values in the `rows` data), for including in the conditional
+ * update clause.
+ */
+export type UpdateOp = {
+  tableName: string;
+  columns: OpColumn[];
+  rows: any[][];
+  updatedAt: { columnName: string; truncateToMills: boolean } | undefined;
+};
 export type DeleteOp = { tableName: string; ids: any[] };
 
 type Ops = { inserts: InsertOp[]; updates: UpdateOp[]; deletes: DeleteOp[] };
@@ -197,10 +210,13 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
   }
 
   const rows = collectBindings(entities, meta.tableName, columns, []);
-  const updatedAtColumn = updatedAt
-    ? (meta.fields[updatedAt] as PrimitiveField).serde.columns[0].columnName
-    : undefined;
-  return { tableName: meta.tableName, columns, updatedAt: updatedAtColumn, rows };
+  const updatedAtColumn = updatedAt ? (meta.fields[updatedAt] as PrimitiveField).serde.columns[0] : undefined;
+  return {
+    tableName: meta.tableName,
+    columns,
+    updatedAt: updatedAtColumn ? { columnName: updatedAtColumn.columnName, truncateToMills: true } : undefined,
+    rows,
+  };
 }
 
 function addDeletes(ops: Ops, todo: Todo): void {

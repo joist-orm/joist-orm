@@ -76,7 +76,6 @@ export interface CustomSerde<DomainType, DbType> {
 
 export class CustomSerdeAdapter implements FieldSerde {
   columns = [this];
-
   isArray: boolean = false;
 
   public constructor(
@@ -84,7 +83,12 @@ export class CustomSerdeAdapter implements FieldSerde {
     public columnName: string,
     public dbType: string,
     private mapper: CustomSerde<any, any>,
-  ) {}
+    // Allow subtypes to override isArray
+    isArray?: boolean,
+  ) {
+    if (isArray !== undefined) this.isArray = isArray;
+  }
+
   setOnEntity(data: any, row: any): void {
     const value = maybeNullToUndefined(row[this.columnName]);
     data[this.fieldName] = value !== undefined ? this.mapper.fromDb(value) : undefined;
@@ -92,7 +96,11 @@ export class CustomSerdeAdapter implements FieldSerde {
 
   dbValue(data: any): any {
     const fieldData = data[this.fieldName];
-    return fieldData !== undefined ? this.mapper.toDb(data[this.fieldName]) : undefined;
+    return fieldData !== undefined
+      ? this.isArray
+        ? fieldData.map((value: any) => this.mapper.toDb(value))
+        : this.mapper.toDb(fieldData)
+      : undefined;
   }
 
   mapToDb(value: any): any {
@@ -104,7 +112,13 @@ export class CustomSerdeAdapter implements FieldSerde {
   }
 }
 
-/** Supports `string`, `int`, etc., as well as `string[]`, `int[]`, etc. */
+/**
+ * Supports `string`, `int`, etc., as well as `string[]`, `int[]`, etc.
+ *
+ * This is not generally meant for subclassing, because it assumes things like
+ * `string[]`s can be mapped 1:1. See `CustomSerdeAdapter` a good base class
+ * that will handle converting individual elements.
+ */
 export class PrimitiveSerde implements FieldSerde {
   columns = [this];
 
@@ -120,7 +134,6 @@ export class PrimitiveSerde implements FieldSerde {
   }
 
   dbValue(data: any) {
-    // Call `mapToDb` in-case subclasses override it
     return this.mapToDb(data[this.fieldName]);
   }
 
@@ -145,8 +158,16 @@ export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
   }
 }
 
-export class PlainDateSerde extends PrimitiveSerde {
-  // The PlainDate.toString() matches the db format, so nothing to do here.
+export class PlainDateSerde extends CustomSerdeAdapter {
+  private static mapper: CustomSerde<Temporal.PlainDateTime, string> = {
+    fromDb: (s) => s as any, // our driver lambda already converted it
+    // The toString() matches the db format, so nothing to do here.
+    toDb: (p) => p.toString(),
+  };
+
+  constructor(fieldName: string, columnName: string, dbType: string, isArray: boolean) {
+    super(fieldName, columnName, dbType, PlainDateSerde.mapper, isArray);
+  }
 }
 
 export class PlainDateTimeSerde extends PrimitiveSerde implements TimestampSerde<Temporal.PlainDateTime> {

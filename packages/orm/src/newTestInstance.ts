@@ -588,6 +588,7 @@ function getTestId<T extends Entity>(em: EntityManager, entity: T): string {
 const globalDate = global.Date;
 
 function defaultValueForField(em: EntityManager, cstr: EntityConstructor<any>, field: PrimitiveField): unknown {
+  if (field.serde.columns[0].isArray) return [];
   if (field.type === "string") {
     if (field.fieldName === "name") {
       return `${cstr.name} ${getTestIndex(em, cstr)}`;

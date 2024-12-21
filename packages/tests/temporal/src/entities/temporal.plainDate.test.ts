@@ -11,9 +11,10 @@ describe("Author", () => {
 
   it("can create with a plain date", async () => {
     const em = newEntityManager();
-    const author = newAuthor(em, { birthday: jan1 });
+    const author = newAuthor(em, { birthday: jan1, childrenBirthdays: [jan1] });
     await em.flush();
     expect(author.birthday).toEqual(jan1);
+    expect(author.childrenBirthdays).toEqual([jan1]);
   });
 
   it("can update a plain date", async () => {

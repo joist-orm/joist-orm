@@ -30,9 +30,10 @@ export interface FieldSerde {
   columns: Column[];
 
   /**
-   * Accepts a database `row` and sets the field's value(s) into the `__orm.data`.
+   * Accepts the database `row` and sets the field's value(s) into the `__orm.data`.
    *
-   * Used in EntityManager.hydrate to set row value on the entity
+   * Originally used in `EntityManager.hydrate` to set db values into the entity, although
+   * now we invoke it lazily in `getField` to avoid copying data until it's actually needed.
    */
   setOnEntity(data: any, row: any): void;
 }
@@ -62,6 +63,12 @@ export interface Column {
   isArray: boolean;
 }
 
+/**
+ * Provides a simplified, public API for mapping between db/domain values.
+ *
+ * Joist's internal `FieldSerde` API is admittedly a little crufty, and so this
+ * API is intended to be a simpler, more user-friendly way to define custom types.
+ */
 export interface CustomSerde<DomainType, DbType> {
   toDb(value: DomainType): DbType;
   fromDb(value: DbType): DomainType;
@@ -113,7 +120,8 @@ export class PrimitiveSerde implements FieldSerde {
   }
 
   dbValue(data: any) {
-    return data[this.fieldName];
+    // Call `mapToDb` in-case subclasses override it
+    return this.mapToDb(data[this.fieldName]);
   }
 
   mapToDb(value: any) {
@@ -138,59 +146,23 @@ export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
 }
 
 export class PlainDateSerde extends PrimitiveSerde {
-  constructor(
-    protected fieldName: string,
-    public columnName: string,
-    public dbType: string,
-    public isArray = false,
-  ) {
-    super(fieldName, columnName, dbType, isArray);
-  }
+  // The PlainDate.toString() matches the db format, so nothing to do here.
 }
 
 export class PlainDateTimeSerde extends PrimitiveSerde implements TimestampSerde<Temporal.PlainDateTime> {
-  columns = [this];
-
-  constructor(
-    protected fieldName: string,
-    public columnName: string,
-    public dbType: string,
-    public isArray = false,
-  ) {
-    super(fieldName, columnName, dbType, isArray);
-  }
-
   mapFromNow(now: Date): Temporal.PlainDateTime {
     const { timeZone } = getRuntimeConfig().temporal as any;
     return requireTemporal().toTemporalInstant.call(now).toZonedDateTimeISO(timeZone).toPlainDateTime();
   }
-
-  dbValue(data: any) {
-    return data[this.fieldName].toString();
-  }
 }
 
 export class ZonedDateTimeSerde extends PrimitiveSerde implements TimestampSerde<Temporal.ZonedDateTime> {
-  columns = [this];
-
-  constructor(
-    protected fieldName: string,
-    public columnName: string,
-    public dbType: string,
-    public isArray = false,
-  ) {
-    super(fieldName, columnName, dbType, isArray);
-  }
-
   mapFromNow(now: Date): Temporal.ZonedDateTime {
     const { timeZone } = getRuntimeConfig().temporal as any;
     return requireTemporal().toTemporalInstant.call(now).toZonedDateTimeISO(timeZone);
   }
 
-  dbValue(data: any) {
-    return this.mapToDb(data[this.fieldName]);
-  }
-
+  // Match the pg `TIMESTAMPTZ` format, i.e. "2021-01-01 12:00:00-05:00"
   mapToDb(zdt: any) {
     return `${zdt.toPlainDate().toString()} ${zdt.toPlainTime().toString()}${zdt.offset}`;
   }

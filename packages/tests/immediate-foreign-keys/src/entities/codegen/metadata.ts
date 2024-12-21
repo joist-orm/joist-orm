@@ -1,4 +1,4 @@
-import { configureMetadata, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PrimitiveSerde } from "joist-orm";
+import { configureMetadata, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PrimitiveSerde, setRuntimeConfig } from "joist-orm";
 import { type Context } from "src/context";
 import { T1Author } from "../T1Author";
 import { T1Book } from "../T1Book";
@@ -12,6 +12,8 @@ import { T5Author } from "../T5Author";
 import { T5Book } from "../T5Book";
 import { T5BookReview } from "../T5BookReview";
 import { newT1Author, newT1Book, newT2Author, newT2Book, newT3Author, newT3Book, newT4Author, newT4Book, newT5Author, newT5Book, newT5BookReview, t1AuthorConfig, t1BookConfig, t2AuthorConfig, t2BookConfig, t3AuthorConfig, t3BookConfig, t4AuthorConfig, t4BookConfig, t5AuthorConfig, t5BookConfig, t5BookReviewConfig } from "../entities";
+
+setRuntimeConfig({ temporal: false });
 
 export class EntityManager extends EntityManager1<Context, Entity> {}
 

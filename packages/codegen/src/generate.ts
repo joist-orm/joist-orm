@@ -9,7 +9,7 @@ import { generateFactoriesFiles } from "./generateFactoriesFiles";
 import { generateMetadataFile } from "./generateMetadataFile";
 import { generatePgEnumFile } from "./generatePgEnumFile";
 import { Config, DbMetadata } from "./index";
-import { configureMetadata, Entity, JoistEntityManager } from "./symbols";
+import { configureMetadata, Entity, JoistEntityManager, setRuntimeConfig } from "./symbols";
 import { merge, tableToEntityName } from "./utils";
 
 export type DPrintOptions = Record<string, unknown>;
@@ -79,6 +79,10 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
   const metadataFile: CodegenFile = {
     name: "./codegen/metadata.ts",
     contents: code`
+      ${setRuntimeConfig}({
+        temporal: ${config.temporal ? { timeZone: typeof config.temporal === "boolean" ? "UTC" : config.temporal.timeZone } : "false"},
+      });
+      
       export class ${def("EntityManager")} extends ${JoistEntityManager}<${contextType}, Entity> {}
 
       export interface ${def("Entity")} extends ${Entity} {

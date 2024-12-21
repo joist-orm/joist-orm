@@ -1,4 +1,4 @@
-import { newEntityManager } from "@src/setupDbTests";
+import { knex, newEntityManager } from "@src/setupDbTests";
 import { jan1, jan2, jan3 } from "@src/utils";
 import { PrimitiveField, alias, getMetadata } from "joist-orm";
 import { Temporal } from "temporal-polyfill";
@@ -25,6 +25,13 @@ describe("Author", () => {
     await em.flush();
     expect(author.birthday).toEqual(jan2);
     expect(updatedAt).not.toEqual(author.updatedAt);
+  });
+
+  it("can load a plain time", async () => {
+    await knex.insert({ firstName: "a1", birthday: "2018-01-01" }).into("authors");
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1");
+    expect(a.birthday).toEqual(jan1);
   });
 
   it("can no-op when data is reverted before flush", async () => {

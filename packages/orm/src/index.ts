@@ -87,6 +87,7 @@ export {
   ValidationRule,
   ValidationRuleResult,
 } from "./rules";
+export { setRuntimeConfig, type RuntimeConfig } from "./runtimeConfig";
 export * from "./serde";
 export * from "./typeMap";
 export { asNew, assertNever, cleanStringValue, fail, indexBy } from "./utils";
@@ -183,7 +184,7 @@ export function setOpts<T extends Entity>(
                 if (maybeSoftDelete) {
                   const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
                   const now = new Date();
-                  v.set({ [maybeSoftDelete]: serde.mapFromDate(now) });
+                  v.set({ [maybeSoftDelete]: serde.mapFromNow(now) });
                 } else {
                   entity.em.delete(v);
                 }

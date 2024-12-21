@@ -19,7 +19,8 @@ import {
 import { visitConditions } from "../QueryVisitor";
 import { kq, kqDot } from "../keywords";
 import { LoadHint } from "../loadHints";
-import { assertNever, cleanSql, maybeRequireTemporal } from "../utils";
+import { maybeRequireTemporal } from "../temporal";
+import { assertNever, cleanSql } from "../utils";
 
 export function findDataLoader<T extends Entity>(
   em: EntityManager,

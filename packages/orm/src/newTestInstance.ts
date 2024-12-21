@@ -19,8 +19,9 @@ import { hasDefaultValue, setAsyncDefaultsSynchronously } from "./defaults";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
 import { FactoryLogger } from "./logging/FactoryLogger";
+import { maybeRequireTemporal } from "./temporal";
 import { ActualFactoryOpts, OptsOf } from "./typeMap";
-import { assertNever, maybeRequireTemporal } from "./utils";
+import { assertNever } from "./utils";
 
 let logger: FactoryLogger | undefined = undefined;
 

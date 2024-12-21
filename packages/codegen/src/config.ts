@@ -104,7 +104,7 @@ export const config = z
     /**
      * Allows the user to have codegen output `Temporal` types (via `temporal-polyfill`) instead of the base JS `Date`
      *
-     * Additionally, allows for specifying the default time zone for `Temporal` tyeps when converting dates to/from
+     * Additionally, allows for specifying the default time zone for `Temporal` types when converting dates to/from
      * the database.
      */
     temporal: z.optional(z.union([z.boolean(), z.object({ timeZone: z.string() })])),

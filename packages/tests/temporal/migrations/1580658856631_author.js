@@ -10,6 +10,9 @@ exports.up = (b) => {
     children_birthdays: { type: "date[]", notNull: true, default: "{}" },
     timestamp: { type: "timestamp", notNull: true, default: "NOW()" },
     timestamps: { type: "timestamp[]", notNull: true, default: "{}" },
+    time: { type: "time without time zone", notNull: false, default: "00:00:00" },
+    times: { type: "time without time zone[]", notNull: true, default: "{}" },
+    time_to_micros: { type: "time(6)", notNull: false, default: "00:00:00" },
   });
 
   createEntityTable(b, "book", {

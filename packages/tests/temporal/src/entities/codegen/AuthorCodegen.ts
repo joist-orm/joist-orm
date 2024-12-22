@@ -49,6 +49,9 @@ export interface AuthorFields {
   childrenBirthdays: { kind: "primitive"; type: Temporal.PlainDate[]; unique: false; nullable: never; derived: false };
   timestamp: { kind: "primitive"; type: Temporal.PlainDateTime; unique: false; nullable: never; derived: false };
   timestamps: { kind: "primitive"; type: Temporal.PlainDateTime[]; unique: false; nullable: never; derived: false };
+  time: { kind: "primitive"; type: Temporal.PlainTime; unique: false; nullable: undefined; derived: false };
+  times: { kind: "primitive"; type: Temporal.PlainTime[]; unique: false; nullable: never; derived: false };
+  timeToMicros: { kind: "primitive"; type: Temporal.PlainTime; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
 }
@@ -60,6 +63,9 @@ export interface AuthorOpts {
   childrenBirthdays: Temporal.PlainDate[];
   timestamp: Temporal.PlainDateTime;
   timestamps: Temporal.PlainDateTime[];
+  time?: Temporal.PlainTime | null;
+  times: Temporal.PlainTime[];
+  timeToMicros?: Temporal.PlainTime | null;
   books?: Book[];
 }
 
@@ -75,6 +81,9 @@ export interface AuthorFilter {
   childrenBirthdays?: ValueFilter<Temporal.PlainDate[], never>;
   timestamp?: ValueFilter<Temporal.PlainDateTime, never>;
   timestamps?: ValueFilter<Temporal.PlainDateTime[], never>;
+  time?: ValueFilter<Temporal.PlainTime, null>;
+  times?: ValueFilter<Temporal.PlainTime[], never>;
+  timeToMicros?: ValueFilter<Temporal.PlainTime, null>;
   createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
@@ -88,6 +97,9 @@ export interface AuthorGraphQLFilter {
   childrenBirthdays?: ValueGraphQLFilter<Temporal.PlainDate[]>;
   timestamp?: ValueGraphQLFilter<Temporal.PlainDateTime>;
   timestamps?: ValueGraphQLFilter<Temporal.PlainDateTime[]>;
+  time?: ValueGraphQLFilter<Temporal.PlainTime>;
+  times?: ValueGraphQLFilter<Temporal.PlainTime[]>;
+  timeToMicros?: ValueGraphQLFilter<Temporal.PlainTime>;
   createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
@@ -101,6 +113,9 @@ export interface AuthorOrder {
   childrenBirthdays?: OrderBy;
   timestamp?: OrderBy;
   timestamps?: OrderBy;
+  time?: OrderBy;
+  times?: OrderBy;
+  timeToMicros?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
 }
@@ -112,6 +127,7 @@ authorConfig.addRule(newRequiredRule("birthday"));
 authorConfig.addRule(newRequiredRule("childrenBirthdays"));
 authorConfig.addRule(newRequiredRule("timestamp"));
 authorConfig.addRule(newRequiredRule("timestamps"));
+authorConfig.addRule(newRequiredRule("times"));
 authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
 
@@ -203,6 +219,30 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   set timestamps(timestamps: Temporal.PlainDateTime[]) {
     setField(this, "timestamps", timestamps);
+  }
+
+  get time(): Temporal.PlainTime | undefined {
+    return getField(this, "time");
+  }
+
+  set time(time: Temporal.PlainTime | undefined) {
+    setField(this, "time", time);
+  }
+
+  get times(): Temporal.PlainTime[] {
+    return getField(this, "times");
+  }
+
+  set times(times: Temporal.PlainTime[]) {
+    setField(this, "times", times);
+  }
+
+  get timeToMicros(): Temporal.PlainTime | undefined {
+    return getField(this, "timeToMicros");
+  }
+
+  set timeToMicros(timeToMicros: Temporal.PlainTime | undefined) {
+    setField(this, "timeToMicros", timeToMicros);
   }
 
   get createdAt(): Temporal.ZonedDateTime {

@@ -28,14 +28,14 @@ describe("plainDate", () => {
     expect(updatedAt).not.toEqual(author.updatedAt);
   });
 
-  it("can load a plain time", async () => {
+  it("can load a plain date", async () => {
     await knex.insert({ firstName: "a1", birthday: "2018-01-01" }).into("authors");
     const em = newEntityManager();
     const a = await em.load(Author, "a:1");
     expect(a.birthday).toEqual(jan1);
   });
 
-  it("can load a plain time array", async () => {
+  it("can load a plain date array", async () => {
     await knex
       .insert({ firstName: "a1", birthday: "2018-01-01", children_birthdays: ["2018-01-01", "2018-01-02"] })
       .into("authors");
@@ -57,7 +57,7 @@ describe("plainDate", () => {
     expect(updatedAt).toEqual(author.updatedAt);
   });
 
-  it("can find with where via a date ", async () => {
+  it("can find with where via a date", async () => {
     const em = newEntityManager();
     const [a1, a2] = [jan1, jan2, jan3].map((birthday) => newAuthor(em, { birthday }));
     await em.flush();

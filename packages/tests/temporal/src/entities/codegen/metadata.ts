@@ -1,4 +1,4 @@
-import { configureMetadata, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PlainDateSerde, PlainDateTimeSerde, PrimitiveSerde, setRuntimeConfig, ZonedDateTimeSerde } from "joist-orm";
+import { configureMetadata, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PlainDateSerde, PlainDateTimeSerde, PlainTimeSerde, PrimitiveSerde, setRuntimeConfig, ZonedDateTimeSerde } from "joist-orm";
 import { type Context } from "src/context";
 import { Temporal } from "temporal-polyfill";
 import { Author } from "../Author";
@@ -30,6 +30,9 @@ export const authorMeta: EntityMetadata<Author> = {
     "childrenBirthdays": { kind: "primitive", fieldName: "childrenBirthdays", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.PlainDate, serde: new PlainDateSerde("childrenBirthdays", "children_birthdays", "date[]", true), immutable: false, default: "schema" },
     "timestamp": { kind: "primitive", fieldName: "timestamp", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.PlainDateTime, serde: new PlainDateTimeSerde("timestamp", "timestamp", "timestamp without time zone"), immutable: false, default: "schema" },
     "timestamps": { kind: "primitive", fieldName: "timestamps", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.PlainDateTime, serde: new PlainDateTimeSerde("timestamps", "timestamps", "timestamp without time zone[]", true), immutable: false, default: "schema" },
+    "time": { kind: "primitive", fieldName: "time", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.PlainTime, serde: new PlainTimeSerde("time", "time", "time without time zone"), immutable: false, default: "schema" },
+    "times": { kind: "primitive", fieldName: "times", fieldIdName: undefined, derived: false, required: true, protected: false, type: Temporal.PlainTime, serde: new PlainTimeSerde("times", "times", "time without time zone[]", true), immutable: false, default: "schema" },
+    "timeToMicros": { kind: "primitive", fieldName: "timeToMicros", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.PlainTime, serde: new PlainTimeSerde("timeToMicros", "time_to_micros", "time without time zone"), immutable: false, default: "schema" },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", serde: undefined, immutable: false },

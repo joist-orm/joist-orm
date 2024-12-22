@@ -29,6 +29,7 @@ export const PrimitiveSerde = imp("PrimitiveSerde@joist-orm");
 export const BigIntSerde = imp("BigIntSerde@joist-orm");
 export const DateSerde = imp("DateSerde@joist-orm");
 export const PlainDateSerde = imp("PlainDateSerde@joist-orm");
+export const PlainTimeSerde = imp("PlainTimeSerde@joist-orm");
 export const PlainDateTimeSerde = imp("PlainDateTimeSerde@joist-orm");
 export const ZonedDateTimeSerde = imp("ZonedDateTimeSerde@joist-orm");
 export const JsonSerde = imp("JsonSerde@joist-orm");

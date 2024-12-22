@@ -20,6 +20,7 @@ import { visitConditions } from "../QueryVisitor";
 import { kq, kqDot } from "../keywords";
 import { LoadHint } from "../loadHints";
 import { maybeRequireTemporal } from "../temporal";
+import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "../temporalMappers";
 import { assertNever, cleanSql } from "../utils";
 
 export function findDataLoader<T extends Entity>(
@@ -154,11 +155,13 @@ function replacer(v: any) {
     return "alias";
   } else if (Temporal) {
     if (v instanceof Temporal.ZonedDateTime) {
-      return new Date(v.epochMilliseconds);
+      return zonedDateTimeMapper.toDb(v);
     } else if (v instanceof Temporal.PlainDateTime) {
-      return new Date(v.toZonedDateTime("UTC").epochMilliseconds);
+      return plainDateTimeMapper.toDb(v);
     } else if (v instanceof Temporal.PlainDate) {
-      return new Date(v.toZonedDateTime("UTC").epochMilliseconds);
+      return plainDateMapper.toDb(v);
+    } else if (v instanceof Temporal.PlainTime) {
+      return plainTimeMapper.toDb(v);
     }
   }
   return v;

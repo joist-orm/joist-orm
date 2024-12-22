@@ -14,6 +14,7 @@ import {
   KeySerde,
   PlainDateSerde,
   PlainDateTimeSerde,
+  PlainTimeSerde,
   PolymorphicKeySerde,
   PrimitiveSerde,
   SuperstructSerde,
@@ -107,6 +108,8 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         serdeType = config.temporal ? PlainDateTimeSerde : DateSerde;
       } else if (columnType === "timestamp with time zone") {
         serdeType = config.temporal ? ZonedDateTimeSerde : DateSerde;
+      } else if (columnType === "time without time zone") {
+        serdeType = config.temporal ? PlainTimeSerde : PrimitiveSerde;
       } else {
         serdeType = PrimitiveSerde;
       }

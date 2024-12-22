@@ -17,12 +17,16 @@ Also note that `em.flush` enforces "temporary immutability" during its lifecycle
 
 ## Aren't ORMs only for programmers who won't learn SQL?
 
-This is a popular assertion, particularly on `/r/node`, but Joist considers it FUD, because in stereotypical CRUD apps:
+This is a popular assertion, particularly on `/r/node`, but Joist considers it FUD, because in stereotypical CRUD apps queries can be categorized into two types:
 
-* Over 90-95% of SQL queries* are boilerplate `SELECT` / `INSERT` / `UPDATE` queries that are tedious/straightforward to write, and
-* Only 5% of SQL queries are actually complicated and best written in raw, hand-crafted SQL
+* Type 1: Over 90-95% of SQL queries* are boilerplate `SELECT` / `INSERT` / `UPDATE` queries that are tedious/straightforward to write, and
+* Type 2: Only 5% of SQL queries are actually complicated and best written in raw, hand-crafted SQL
 
-Given this ratio, Joist's assertion is to let it do the easy/dumb queries for you, not only b/c your code will be more succinct, but also to get the benefits of auto-batching, ergonomic validation rules (there is only so much business logic that can be expressed in SQL constraints), type-safety, etc.
+Given this ratio, Joist's assertion is to let it do the "Type 1" easy/dumb CRUD queries for you, but that you should keep writing the "Type 2" queries, that require deep/expert level knowledge of SQL, by-hand/with a lower-level query builder (typically knex).
+
+This approach should provide a huge ROI on the "Type 1" queries--not only because your code will be more succinct (working with entities & "walking the graph" to load data), but also to get the benefits of auto-batching, ergonomic validation rules (there is only so much business logic that can be expressed in SQL constraints), type-safety, etc.
+
+But you're always free, and encouraged, to escape-hatch to "expert-level SQL" when/if needed.
 
 I.e. just because Joist users don't want to write the same `INSERT INTO authors (...) VALUES (...)` over and over and over (and then remember, or more likely forget!, to run all the downstream validation rules and update the derived values), does not mean they "don't know SQL". :-)
 

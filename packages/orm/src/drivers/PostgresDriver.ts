@@ -17,7 +17,6 @@ import {
 import { JoinRowOperation } from "../JoinRows";
 import { kq, kqDot } from "../keywords";
 import { getRuntimeConfig } from "../runtimeConfig";
-import { requireTemporal } from "../temporal";
 import { JoinRowTodo, Todo } from "../Todo";
 import { batched, cleanSql, partition, zeroTo } from "../utils";
 import { buildRawQuery } from "./buildRawQuery";
@@ -268,13 +267,10 @@ async function batchDelete(knex: Knex, op: DeleteOp): Promise<void> {
  */
 export function setupLatestPgTypes(temporal: RuntimeConfig["temporal"]): void {
   if (temporal) {
-    const { Temporal } = requireTemporal();
-
-    const parseTimestampTz = (s: string) => {
-      return Temporal.ZonedDateTime.from(s.replace(" ", "T") + "[UTC]");
-    };
+    // Don't eagerly parse the strings, instead defer to the serde logic
+    const parseTimestampTz = (s: string) => s;
     const parseTimestampTzArray = (s: string) => array.parse(s, parseTimestampTz);
-    const parsePlainDate = Temporal.PlainDate.from;
+    const parsePlainDate = (s: string) => s;
     const parsePlainDateArray = (s: string) => array.parse(s, parsePlainDate);
 
     types.setTypeParser(types.builtins.TIMESTAMPTZ, parseTimestampTz);

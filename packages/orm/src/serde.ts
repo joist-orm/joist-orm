@@ -164,14 +164,13 @@ export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
 }
 
 export class PlainDateSerde extends CustomSerdeAdapter {
-  private static mapper: CustomSerde<Temporal.PlainDateTime, string> = {
-    fromDb: (s) => s as any, // our driver lambda already converted it
-    // The toString() matches the db format, so nothing to do here.
-    toDb: (p) => p.toString(),
-  };
-
   constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
-    super(fieldName, columnName, dbType, PlainDateSerde.mapper, isArray);
+    const { Temporal } = requireTemporal();
+    const mapper: CustomSerde<Temporal.PlainDate, string> = {
+      fromDb: Temporal.PlainDate.from,
+      toDb: (p) => p.toString(),
+    };
+    super(fieldName, columnName, dbType, mapper, isArray);
   }
 }
 
@@ -183,14 +182,14 @@ export class PlainDateTimeSerde extends PrimitiveSerde implements TimestampSerde
 }
 
 export class ZonedDateTimeSerde extends CustomSerdeAdapter implements TimestampSerde<Temporal.ZonedDateTime> {
-  private static mapper: CustomSerde<Temporal.ZonedDateTime, string> = {
-    fromDb: (s) => s as any, // our driver lambda already converted it
-    // Match the pg `TIMESTAMPTZ` format, i.e. "2021-01-01 12:00:00-05:00"
-    toDb: (zdt) => `${zdt.toPlainDate().toString()} ${zdt.toPlainTime().toString()}${zdt.offset}`,
-  };
-
   constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
-    super(fieldName, columnName, dbType, ZonedDateTimeSerde.mapper, isArray);
+    const { Temporal } = requireTemporal();
+    const mapper: CustomSerde<Temporal.ZonedDateTime, string> = {
+      fromDb: (s) => Temporal.ZonedDateTime.from(s.replace(" ", "T") + "[UTC]"),
+      // Match the pg `TIMESTAMPTZ` format, i.e. "2021-01-01 12:00:00-05:00"
+      toDb: (zdt) => `${zdt.toPlainDate().toString()} ${zdt.toPlainTime().toString()}${zdt.offset}`,
+    };
+    super(fieldName, columnName, dbType, mapper, isArray);
   }
 
   mapFromNow(now: Date): Temporal.ZonedDateTime {

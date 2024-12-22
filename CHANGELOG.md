@@ -1,3 +1,10 @@
+# [1.216.0](https://github.com/joist-orm/joist-orm/compare/v1.215.5...v1.216.0) (2024-12-22)
+
+
+### Features
+
+* Lazily parse Temporal dates ([#1328](https://github.com/joist-orm/joist-orm/issues/1328)) ([10b7a30](https://github.com/joist-orm/joist-orm/commit/10b7a30bc7d0589f59fb40b8d25357c9265d1a5c))
+
 ## [1.215.5](https://github.com/joist-orm/joist-orm/compare/v1.215.4...v1.215.5) (2024-12-20)
 
 

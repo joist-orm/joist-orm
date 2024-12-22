@@ -92,6 +92,7 @@ export function tableToEntityName(config: Config, table: Table): string {
 
 export const dateCode = code`Date`;
 export const plainDateCode = code`${imp("Temporal@temporal-polyfill")}.PlainDate`;
+export const plainTimeCode = code`${imp("Temporal@temporal-polyfill")}.PlainTime`;
 export const plainDateTimeCode = code`${imp("Temporal@temporal-polyfill")}.PlainDateTime`;
 export const zonedDateTimeCode = code`${imp("Temporal@temporal-polyfill")}.ZonedDateTime`;
 
@@ -121,6 +122,10 @@ export function mapSimpleDbTypeToTypescriptType(config: Config, dbType: Database
     case "tsvector":
     case "tstzrange":
       return "string";
+    case "time without time zone":
+      return config.temporal
+        ? plainTimeCode
+        : fail("Joist doen't support 'time without time zone' unless temporal is enabled");
     case "timestamp with time zone":
       return config.temporal ? zonedDateTimeCode : dateCode;
     case "timestamp without time zone":

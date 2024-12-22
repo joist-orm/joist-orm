@@ -79,6 +79,7 @@ export type DatabaseColumnType =
   | "citext"
   | "character varying"
   | "varchar"
+  | "time without time zone"
   | "timestamp with time zone"
   | "timestamp without time zone"
   | "date"

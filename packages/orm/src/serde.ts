@@ -12,6 +12,7 @@ import {
 } from "./index";
 import { getRuntimeConfig } from "./runtimeConfig";
 import { requireTemporal } from "./temporal";
+import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "./temporalMappers";
 import { groupBy } from "./utils";
 
 export function hasSerde(field: Field): field is SerdeField {
@@ -166,25 +167,21 @@ export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
 /** Converts `DATE`s `Temporal.PlainDate`s. */
 export class PlainDateSerde extends CustomSerdeAdapter {
   constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
-    const { Temporal } = requireTemporal();
-    const mapper: CustomSerde<Temporal.PlainDate, string> = {
-      fromDb: Temporal.PlainDate.from,
-      toDb: (p) => p.toString(),
-    };
-    super(fieldName, columnName, dbType, mapper, isArray);
+    super(fieldName, columnName, dbType, plainDateMapper, isArray);
+  }
+}
+
+/** Converts `TIME`s to `Temporal.PlainTime`s. */
+export class PlainTimeSerde extends CustomSerdeAdapter {
+  constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
+    super(fieldName, columnName, dbType, plainTimeMapper, isArray);
   }
 }
 
 /** Converts `TIMESTAMP`s to `Temporal.PlainDateTime`s. */
 export class PlainDateTimeSerde extends CustomSerdeAdapter implements TimestampSerde<Temporal.PlainDateTime> {
   constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
-    const { Temporal } = requireTemporal();
-    const mapper: CustomSerde<Temporal.PlainDateTime, string> = {
-      // Should look like `2018-01-01 10:00:00`
-      fromDb: (s) => Temporal.PlainDateTime.from(s),
-      toDb: (p) => p.toString(),
-    };
-    super(fieldName, columnName, dbType, mapper, isArray);
+    super(fieldName, columnName, dbType, plainDateTimeMapper, isArray);
   }
 
   mapFromNow(now: Date): Temporal.PlainDateTime {
@@ -196,16 +193,7 @@ export class PlainDateTimeSerde extends CustomSerdeAdapter implements TimestampS
 /** Converts `TIMESTAMP WITH TIME ZONE`s to `Temporal.ZonedDateTime`s. */
 export class ZonedDateTimeSerde extends CustomSerdeAdapter implements TimestampSerde<Temporal.ZonedDateTime> {
   constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
-    const { Temporal } = requireTemporal();
-    const mapper: CustomSerde<Temporal.ZonedDateTime, string> = {
-      // Should we use the application's time zone here? Afaiu we're using an explicit
-      // offset anyway, so I believe the time zone is effectively irrelevant, albeit maybe
-      // it would be used for DST/etc nuances when doing date calculations.
-      fromDb: (s) => Temporal.ZonedDateTime.from(s.replace(" ", "T") + "[UTC]"),
-      // Match the pg `TIMESTAMPTZ` format, i.e. "2021-01-01 12:00:00-05:00"
-      toDb: (zdt) => `${zdt.toPlainDate().toString()} ${zdt.toPlainTime().toString()}${zdt.offset}`,
-    };
-    super(fieldName, columnName, dbType, mapper, isArray);
+    super(fieldName, columnName, dbType, zonedDateTimeMapper, isArray);
   }
 
   mapFromNow(now: Date): Temporal.ZonedDateTime {

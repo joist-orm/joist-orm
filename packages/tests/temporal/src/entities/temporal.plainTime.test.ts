@@ -17,6 +17,14 @@ describe("plainTime", () => {
     expect(author.times).toEqual([ten01, ten02]);
   });
 
+  it("can create with a plain time in nanos", async () => {
+    const em = newEntityManager();
+    newAuthor(em, { timeToMicros: Temporal.PlainTime.from("10:01:00.12345678") });
+    await em.flush();
+    const rows = await knex.select("*").from("authors");
+    expect(rows[0].time_to_micros).toEqual("10:01:00.123457"); // rounded
+  });
+
   it("can update a plain time", async () => {
     const em = newEntityManager();
     const author = newAuthor(em, { time: ten01 });

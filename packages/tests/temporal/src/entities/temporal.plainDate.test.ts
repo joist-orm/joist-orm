@@ -1,5 +1,5 @@
 import { knex, newEntityManager } from "@src/setupDbTests";
-import { jan1, jan1at10am, jan2, jan3 } from "@src/utils";
+import { jan1, jan2, jan3 } from "@src/utils";
 import { PrimitiveField, alias, getMetadata } from "joist-orm";
 import { Temporal } from "temporal-polyfill";
 import { Author, Book, newAuthor, newBook } from "./entities";
@@ -29,7 +29,7 @@ describe("plainDate", () => {
   });
 
   it("can load a plain time", async () => {
-    await knex.insert({ firstName: "a1", birthday: "2018-01-01", timestamp: jan1at10am }).into("authors");
+    await knex.insert({ firstName: "a1", birthday: "2018-01-01" }).into("authors");
     const em = newEntityManager();
     const a = await em.load(Author, "a:1");
     expect(a.birthday).toEqual(jan1);
@@ -37,12 +37,7 @@ describe("plainDate", () => {
 
   it("can load a plain time array", async () => {
     await knex
-      .insert({
-        firstName: "a1",
-        birthday: "2018-01-01",
-        timestamp: jan1at10am,
-        children_birthdays: ["2018-01-01", "2018-01-02"],
-      })
+      .insert({ firstName: "a1", birthday: "2018-01-01", children_birthdays: ["2018-01-01", "2018-01-02"] })
       .into("authors");
     const em = newEntityManager();
     const a = await em.load(Author, "a:1");

@@ -1,5 +1,5 @@
 import { knex, newEntityManager } from "@src/setupDbTests";
-import { jan1, ten01, ten02, ten03 } from "@src/utils";
+import { jan1, ten01, ten01AndMicros, ten02, ten03 } from "@src/utils";
 import { PrimitiveField, alias, getMetadata } from "joist-orm";
 import { Temporal } from "temporal-polyfill";
 import { Author, newAuthor } from "./entities";
@@ -40,6 +40,13 @@ describe("plainTime", () => {
     const em = newEntityManager();
     const a = await em.load(Author, "a:1");
     expect(a.times).toEqual([ten01, ten02]);
+  });
+
+  it("can load a plain time with micros", async () => {
+    await knex.insert({ firstName: "a1", birthday: jan1, time_to_micros: "10:01:00.123456" }).into("authors");
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1");
+    expect(a.timeToMicros).toEqual(ten01AndMicros);
   });
 
   it("can no-op when data is reverted before flush", async () => {

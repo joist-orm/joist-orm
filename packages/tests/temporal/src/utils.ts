@@ -10,6 +10,7 @@ export const jan1at10am = Temporal.PlainDateTime.from("2018-01-01 10:00");
 export const jan1at11am = Temporal.PlainDateTime.from("2018-01-01 11:00");
 export const jan1at12pm = Temporal.PlainDateTime.from("2018-01-01 12:00");
 export const ten01 = Temporal.PlainTime.from("10:01");
+export const ten01AndMicros = Temporal.PlainTime.from("10:01:00.123456");
 export const ten02 = Temporal.PlainTime.from("10:02");
 export const ten03 = Temporal.PlainTime.from("10:03");
 

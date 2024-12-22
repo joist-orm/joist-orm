@@ -51,6 +51,7 @@ export interface AuthorFields {
   timestamps: { kind: "primitive"; type: Temporal.PlainDateTime[]; unique: false; nullable: never; derived: false };
   time: { kind: "primitive"; type: Temporal.PlainTime; unique: false; nullable: undefined; derived: false };
   times: { kind: "primitive"; type: Temporal.PlainTime[]; unique: false; nullable: never; derived: false };
+  timeToMicros: { kind: "primitive"; type: Temporal.PlainTime; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
 }
@@ -64,6 +65,7 @@ export interface AuthorOpts {
   timestamps: Temporal.PlainDateTime[];
   time?: Temporal.PlainTime | null;
   times: Temporal.PlainTime[];
+  timeToMicros?: Temporal.PlainTime | null;
   books?: Book[];
 }
 
@@ -81,6 +83,7 @@ export interface AuthorFilter {
   timestamps?: ValueFilter<Temporal.PlainDateTime[], never>;
   time?: ValueFilter<Temporal.PlainTime, null>;
   times?: ValueFilter<Temporal.PlainTime[], never>;
+  timeToMicros?: ValueFilter<Temporal.PlainTime, null>;
   createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
@@ -96,6 +99,7 @@ export interface AuthorGraphQLFilter {
   timestamps?: ValueGraphQLFilter<Temporal.PlainDateTime[]>;
   time?: ValueGraphQLFilter<Temporal.PlainTime>;
   times?: ValueGraphQLFilter<Temporal.PlainTime[]>;
+  timeToMicros?: ValueGraphQLFilter<Temporal.PlainTime>;
   createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
@@ -111,6 +115,7 @@ export interface AuthorOrder {
   timestamps?: OrderBy;
   time?: OrderBy;
   times?: OrderBy;
+  timeToMicros?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
 }
@@ -230,6 +235,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   set times(times: Temporal.PlainTime[]) {
     setField(this, "times", times);
+  }
+
+  get timeToMicros(): Temporal.PlainTime | undefined {
+    return getField(this, "timeToMicros");
+  }
+
+  set timeToMicros(timeToMicros: Temporal.PlainTime | undefined) {
+    setField(this, "timeToMicros", timeToMicros);
   }
 
   get createdAt(): Temporal.ZonedDateTime {

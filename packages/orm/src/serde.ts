@@ -163,6 +163,7 @@ export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
   }
 }
 
+/** Converts `DATE`s `Temporal.PlainDate`s. */
 export class PlainDateSerde extends CustomSerdeAdapter {
   constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
     const { Temporal } = requireTemporal();
@@ -174,11 +175,12 @@ export class PlainDateSerde extends CustomSerdeAdapter {
   }
 }
 
+/** Converts `TIMESTAMP`s to `Temporal.PlainDateTime`s. */
 export class PlainDateTimeSerde extends CustomSerdeAdapter implements TimestampSerde<Temporal.PlainDateTime> {
   constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
     const { Temporal } = requireTemporal();
     const mapper: CustomSerde<Temporal.PlainDateTime, string> = {
-      // Should look like `2018-0101 10:00:00`
+      // Should look like `2018-01-01 10:00:00`
       fromDb: (s) => Temporal.PlainDateTime.from(s),
       toDb: (p) => p.toString(),
     };
@@ -191,10 +193,14 @@ export class PlainDateTimeSerde extends CustomSerdeAdapter implements TimestampS
   }
 }
 
+/** Converts `TIMESTAMP WITH TIME ZONE`s to `Temporal.ZonedDateTime`s. */
 export class ZonedDateTimeSerde extends CustomSerdeAdapter implements TimestampSerde<Temporal.ZonedDateTime> {
   constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
     const { Temporal } = requireTemporal();
     const mapper: CustomSerde<Temporal.ZonedDateTime, string> = {
+      // Should we use the application's time zone here? Afaiu we're using an explicit
+      // offset anyway, so I believe the time zone is effectively irrelevant, albeit maybe
+      // it would be used for DST/etc nuances when doing date calculations.
       fromDb: (s) => Temporal.ZonedDateTime.from(s.replace(" ", "T") + "[UTC]"),
       // Match the pg `TIMESTAMPTZ` format, i.e. "2021-01-01 12:00:00-05:00"
       toDb: (zdt) => `${zdt.toPlainDate().toString()} ${zdt.toPlainTime().toString()}${zdt.offset}`,

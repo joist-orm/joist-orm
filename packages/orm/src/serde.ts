@@ -91,7 +91,12 @@ export class CustomSerdeAdapter implements FieldSerde {
 
   setOnEntity(data: any, row: any): void {
     const value = maybeNullToUndefined(row[this.columnName]);
-    data[this.fieldName] = value !== undefined ? this.mapper.fromDb(value) : undefined;
+    data[this.fieldName] =
+      value !== undefined
+        ? this.isArray
+          ? value.map((value: any) => this.mapper.fromDb(value))
+          : this.mapper.fromDb(value)
+        : undefined;
   }
 
   dbValue(data: any): any {
@@ -177,15 +182,20 @@ export class PlainDateTimeSerde extends PrimitiveSerde implements TimestampSerde
   }
 }
 
-export class ZonedDateTimeSerde extends PrimitiveSerde implements TimestampSerde<Temporal.ZonedDateTime> {
+export class ZonedDateTimeSerde extends CustomSerdeAdapter implements TimestampSerde<Temporal.ZonedDateTime> {
+  private static mapper: CustomSerde<Temporal.ZonedDateTime, string> = {
+    fromDb: (s) => s as any, // our driver lambda already converted it
+    // Match the pg `TIMESTAMPTZ` format, i.e. "2021-01-01 12:00:00-05:00"
+    toDb: (zdt) => `${zdt.toPlainDate().toString()} ${zdt.toPlainTime().toString()}${zdt.offset}`,
+  };
+
+  constructor(fieldName: string, columnName: string, dbType: string, isArray: boolean) {
+    super(fieldName, columnName, dbType, ZonedDateTimeSerde.mapper, isArray);
+  }
+
   mapFromNow(now: Date): Temporal.ZonedDateTime {
     const { timeZone } = getRuntimeConfig().temporal as any;
     return requireTemporal().toTemporalInstant.call(now).toZonedDateTimeISO(timeZone);
-  }
-
-  // Match the pg `TIMESTAMPTZ` format, i.e. "2021-01-01 12:00:00-05:00"
-  mapToDb(zdt: any) {
-    return `${zdt.toPlainDate().toString()} ${zdt.toPlainTime().toString()}${zdt.offset}`;
   }
 }
 

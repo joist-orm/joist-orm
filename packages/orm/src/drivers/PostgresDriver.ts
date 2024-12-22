@@ -1,6 +1,7 @@
 import { Knex } from "knex";
 import { types } from "pg";
 import { builtins, getTypeParser } from "pg-types";
+import array from "postgres-array";
 import { buildValuesCte } from "../dataloaders/findDataLoader";
 import {
   afterTransaction,
@@ -268,12 +269,16 @@ async function batchDelete(knex: Knex, op: DeleteOp): Promise<void> {
 export function setupLatestPgTypes(temporal: RuntimeConfig["temporal"]): void {
   if (temporal) {
     const { Temporal } = requireTemporal();
-    types.setTypeParser(types.builtins.TIMESTAMPTZ, (s) => {
+
+    const parseTimestampTz = (s: string) => {
       return Temporal.ZonedDateTime.from(s.replace(" ", "T") + "[UTC]");
-    });
-    types.setTypeParser(types.builtins.DATE, (s) => {
-      return Temporal.PlainDate.from(s);
-    });
+    };
+    const parseTimestampTzArray = (s: string) => array.parse(s, parseTimestampTz);
+    const parsePlainDate = (s: string) => Temporal.PlainDate.from(s);
+
+    types.setTypeParser(types.builtins.TIMESTAMPTZ, parseTimestampTz);
+    types.setTypeParser(1185, parseTimestampTzArray);
+    types.setTypeParser(types.builtins.DATE, parsePlainDate);
   } else {
     types.setTypeParser(types.builtins.TIMESTAMPTZ, getTypeParser(builtins.TIMESTAMPTZ));
   }

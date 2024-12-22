@@ -35,6 +35,21 @@ describe("Book", () => {
     expect(book.publishedAt).toEqual(jan1DateTime);
   });
 
+  it("can load a zoned date time array", async () => {
+    await knex.insert({ firstName: "a1", birthday: "2020-01-01" }).into("authors");
+    await knex
+      .insert({
+        author_id: 1,
+        title: "b1",
+        published_at: toTimestampTzString(jan1DateTime),
+        timestampTzs: [toTimestampTzString(jan1DateTime), toTimestampTzString(jan2DateTime)],
+      })
+      .into("book");
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:1");
+    expect(book.timestampTzs).toEqual([jan1DateTime, jan2DateTime]);
+  });
+
   it("can no-op when data is reverted before flush", async () => {
     const em = newEntityManager();
     const book = newBook(em, { publishedAt: jan1DateTime });

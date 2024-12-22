@@ -55,6 +55,7 @@ export interface BookFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   publishedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: false };
+  timestampTzs: { kind: "primitive"; type: Temporal.ZonedDateTime[]; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
@@ -63,6 +64,7 @@ export interface BookFields {
 export interface BookOpts {
   title: string;
   publishedAt: Temporal.ZonedDateTime;
+  timestampTzs: Temporal.ZonedDateTime[];
   author: Author | AuthorId;
 }
 
@@ -74,6 +76,7 @@ export interface BookFilter {
   id?: ValueFilter<BookId, never> | null;
   title?: ValueFilter<string, never>;
   publishedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  timestampTzs?: ValueFilter<Temporal.ZonedDateTime[], never>;
   createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
@@ -83,6 +86,7 @@ export interface BookGraphQLFilter {
   id?: ValueGraphQLFilter<BookId>;
   title?: ValueGraphQLFilter<string>;
   publishedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  timestampTzs?: ValueGraphQLFilter<Temporal.ZonedDateTime[]>;
   createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
@@ -92,6 +96,7 @@ export interface BookOrder {
   id?: OrderBy;
   title?: OrderBy;
   publishedAt?: OrderBy;
+  timestampTzs?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   author?: AuthorOrder;
@@ -101,6 +106,7 @@ export const bookConfig = new ConfigApi<Book, Context>();
 
 bookConfig.addRule(newRequiredRule("title"));
 bookConfig.addRule(newRequiredRule("publishedAt"));
+bookConfig.addRule(newRequiredRule("timestampTzs"));
 bookConfig.addRule(newRequiredRule("createdAt"));
 bookConfig.addRule(newRequiredRule("updatedAt"));
 bookConfig.addRule(newRequiredRule("author"));
@@ -161,6 +167,14 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   set publishedAt(publishedAt: Temporal.ZonedDateTime) {
     setField(this, "publishedAt", publishedAt);
+  }
+
+  get timestampTzs(): Temporal.ZonedDateTime[] {
+    return getField(this, "timestampTzs");
+  }
+
+  set timestampTzs(timestampTzs: Temporal.ZonedDateTime[]) {
+    setField(this, "timestampTzs", timestampTzs);
   }
 
   get createdAt(): Temporal.ZonedDateTime {

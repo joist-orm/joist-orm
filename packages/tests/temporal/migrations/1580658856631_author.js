@@ -14,5 +14,6 @@ exports.up = (b) => {
     title: { type: "varchar(255)", notNull: true },
     author_id: { type: "int", references: "authors", notNull: true, deferrable: true, deferred: true },
     published_at: { type: "timestamptz", notNull: true },
+    timestampTzs: { type: "timestamptz[]", notNull: true, default: "{}" },
   });
 };

@@ -11,9 +11,10 @@ describe("Book", () => {
 
   it("can create with a zoned date time", async () => {
     const em = newEntityManager();
-    const book = newBook(em, { publishedAt: jan1DateTime });
+    const book = newBook(em, { publishedAt: jan1DateTime, timestampTzs: [jan1DateTime, jan2DateTime] });
     await em.flush();
     expect(book.publishedAt).toEqual(jan1DateTime);
+    expect(book.timestampTzs).toEqual([jan1DateTime, jan2DateTime]);
   });
 
   it("can update a zoned date time", async () => {

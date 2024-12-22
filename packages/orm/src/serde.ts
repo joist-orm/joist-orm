@@ -170,7 +170,7 @@ export class PlainDateSerde extends CustomSerdeAdapter {
     toDb: (p) => p.toString(),
   };
 
-  constructor(fieldName: string, columnName: string, dbType: string, isArray: boolean) {
+  constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
     super(fieldName, columnName, dbType, PlainDateSerde.mapper, isArray);
   }
 }
@@ -189,7 +189,7 @@ export class ZonedDateTimeSerde extends CustomSerdeAdapter implements TimestampS
     toDb: (zdt) => `${zdt.toPlainDate().toString()} ${zdt.toPlainTime().toString()}${zdt.offset}`,
   };
 
-  constructor(fieldName: string, columnName: string, dbType: string, isArray: boolean) {
+  constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
     super(fieldName, columnName, dbType, ZonedDateTimeSerde.mapper, isArray);
   }
 

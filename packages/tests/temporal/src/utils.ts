@@ -6,6 +6,9 @@ export const jan3 = Temporal.PlainDate.from("2018-01-03");
 export const jan1DateTime = jan1.toZonedDateTime("UTC");
 export const jan2DateTime = jan2.toZonedDateTime("UTC");
 export const jan3DateTime = jan3.toZonedDateTime("UTC");
+export const jan1at10am = Temporal.PlainDateTime.from("2018-01-01 10:00");
+export const jan1at11am = Temporal.PlainDateTime.from("2018-01-01 11:00");
+export const jan1at12pm = Temporal.PlainDateTime.from("2018-01-01 12:00");
 
 export function fail(message?: string): never {
   throw new Error(message || "Failed");

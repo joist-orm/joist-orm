@@ -1,4 +1,7 @@
 import { Knex } from "knex";
+import { types } from "pg";
+import { builtins, getTypeParser } from "pg-types";
+import array from "postgres-array";
 import { buildValuesCte } from "../dataloaders/findDataLoader";
 import {
   afterTransaction,
@@ -9,9 +12,11 @@ import {
   keyToNumber,
   maybeResolveReferenceToId,
   ParsedFindQuery,
+  RuntimeConfig,
 } from "../index";
 import { JoinRowOperation } from "../JoinRows";
 import { kq, kqDot } from "../keywords";
+import { getRuntimeConfig } from "../runtimeConfig";
 import { JoinRowTodo, Todo } from "../Todo";
 import { batched, cleanSql, partition, zeroTo } from "../utils";
 import { buildRawQuery } from "./buildRawQuery";
@@ -45,6 +50,7 @@ export class PostgresDriver implements Driver {
     opts?: PostgresDriverOpts,
   ) {
     this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner();
+    setupLatestPgTypes(getRuntimeConfig().temporal);
   }
 
   async executeFind(
@@ -212,9 +218,18 @@ async function batchUpdate(knex: Knex, op: UpdateOp): Promise<void> {
 
   const cte = buildValuesCte("data", columns, rows);
 
-  const maybeUpdatedAt = updatedAt
-    ? ` AND date_trunc('milliseconds', ${kqDot(tableName, updatedAt!)}) = data.__original_updated_at`
-    : "";
+  // JS Dates only have millisecond-level precision, so we may have dropped/lost accuracy when
+  // reading Postgres's microsecond-level `timestamptz` values; using `date_trunc` "downgrades"
+  // the pg data to match what we have in the JS Date.
+  //
+  // ...but Temporal's types don't have this flaw.
+  const truncateToMills = !getRuntimeConfig().temporal;
+  const maybeUpdatedAt =
+    updatedAt && truncateToMills
+      ? ` AND date_trunc('milliseconds', ${kqDot(tableName, updatedAt)}) = data.__original_updated_at`
+      : updatedAt
+        ? ` AND ${kqDot(tableName, updatedAt)} = data.__original_updated_at`
+        : "";
 
   const sql = `
     ${cte}
@@ -241,4 +256,30 @@ async function batchUpdate(knex: Knex, op: UpdateOp): Promise<void> {
 async function batchDelete(knex: Knex, op: DeleteOp): Promise<void> {
   const { tableName, ids } = op;
   await knex(tableName).del().whereIn("id", ids);
+}
+
+/**
+ * Configures the `pg` driver with the best type parsers.
+ *
+ * In particular, pg's default `TIMESTAMPTZ` parser is very inefficient, and even just
+ * pulling in the latest `pg-types` and installing the fixed parser makes a noticable
+ * difference.
+ */
+export function setupLatestPgTypes(temporal: RuntimeConfig["temporal"]): void {
+  if (temporal) {
+    // Don't eagerly parse the strings, instead defer to the serde logic
+    const noop = (s: string) => s;
+    const noopArray = (s: string) => array.parse(s, noop);
+
+    const { TIMESTAMP, TIMESTAMPTZ, DATE } = builtins;
+    types.setTypeParser(DATE, noop);
+    types.setTypeParser(TIMESTAMP, noop);
+    types.setTypeParser(TIMESTAMPTZ, noop);
+
+    types.setTypeParser(1182, noopArray); // date[]
+    types.setTypeParser(1115, noopArray); // timestamp[]
+    types.setTypeParser(1185, noopArray); // timestamptz[]
+  } else {
+    types.setTypeParser(types.builtins.TIMESTAMPTZ, getTypeParser(builtins.TIMESTAMPTZ));
+  }
 }

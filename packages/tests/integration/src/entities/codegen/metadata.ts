@@ -1,4 +1,4 @@
-import { BigIntSerde, configureMetadata, CustomSerdeAdapter, DateSerde, DecimalToNumberSerde, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, EnumArrayFieldSerde, EnumFieldSerde, JsonSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, SuperstructSerde, ZodSerde } from "joist-orm";
+import { BigIntSerde, configureMetadata, CustomSerdeAdapter, DateSerde, DecimalToNumberSerde, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, EnumArrayFieldSerde, EnumFieldSerde, JsonSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, setRuntimeConfig, SuperstructSerde, ZodSerde } from "joist-orm";
 import { type Context } from "src/context";
 import { address, AddressSchema, PasswordValueSerde, quotes } from "src/entities/types";
 import { AdminUser } from "../AdminUser";
@@ -91,6 +91,8 @@ import {
   TaskTypes,
   userConfig,
 } from "../entities";
+
+setRuntimeConfig({ temporal: false });
 
 export class EntityManager extends EntityManager1<Context, Entity> {}
 

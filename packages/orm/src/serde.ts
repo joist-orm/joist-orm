@@ -5,13 +5,14 @@ import {
   Entity,
   EntityMetadata,
   getConstructorFromTaggedId,
-  isDefined,
   isEntity,
   keyToNumber,
   keyToTaggedId,
   maybeResolveReferenceToId,
 } from "./index";
-import { groupBy, requireTemporal } from "./utils";
+import { getRuntimeConfig } from "./runtimeConfig";
+import { requireTemporal } from "./temporal";
+import { groupBy } from "./utils";
 
 export function hasSerde(field: Field): field is SerdeField {
   return !!field.serde;
@@ -29,16 +30,23 @@ export interface FieldSerde {
   columns: Column[];
 
   /**
-   * Accepts a database `row` and sets the field's value(s) into the `__orm.data`.
+   * Accepts the database `row` and sets the field's value(s) into the `__orm.data`.
    *
-   * Used in EntityManager.hydrate to set row value on the entity
+   * Originally used in `EntityManager.hydrate` to set db values into the entity, although
+   * now we invoke it lazily in `getField` to avoid copying data until it's actually needed.
    */
   setOnEntity(data: any, row: any): void;
 }
 
+/**
+ * An interface that generalizes our Date-vs-Temporal support.
+ *
+ * @typeParam T - The domain type, i.e. `Date` or `Temporal.ZonedDateTime`.
+ */
 export interface TimestampSerde<T> extends FieldSerde {
-  mapFromInstant(value: Temporal.Instant): T;
-  mapFromDate(value: Date): T;
+  /** Given business logic that wants to "set this value to 'now'", converts its Date to our T. */
+  mapFromNow(now: Date): T;
+  /** Used for reading oplock values. */
   dbValue(data: any): any;
 }
 
@@ -55,6 +63,12 @@ export interface Column {
   isArray: boolean;
 }
 
+/**
+ * Provides a simplified, public API for mapping between db/domain values.
+ *
+ * Joist's internal `FieldSerde` API is admittedly a little crufty, and so this
+ * API is intended to be a simpler, more user-friendly way to define custom types.
+ */
 export interface CustomSerde<DomainType, DbType> {
   toDb(value: DomainType): DbType;
   fromDb(value: DbType): DomainType;
@@ -62,7 +76,6 @@ export interface CustomSerde<DomainType, DbType> {
 
 export class CustomSerdeAdapter implements FieldSerde {
   columns = [this];
-
   isArray: boolean = false;
 
   public constructor(
@@ -70,15 +83,29 @@ export class CustomSerdeAdapter implements FieldSerde {
     public columnName: string,
     public dbType: string,
     private mapper: CustomSerde<any, any>,
-  ) {}
+    // Allow subtypes to override isArray
+    isArray?: boolean,
+  ) {
+    if (isArray !== undefined) this.isArray = isArray;
+  }
+
   setOnEntity(data: any, row: any): void {
     const value = maybeNullToUndefined(row[this.columnName]);
-    data[this.fieldName] = value !== undefined ? this.mapper.fromDb(value) : undefined;
+    data[this.fieldName] =
+      value !== undefined
+        ? this.isArray
+          ? value.map((value: any) => this.mapper.fromDb(value))
+          : this.mapper.fromDb(value)
+        : undefined;
   }
 
   dbValue(data: any): any {
     const fieldData = data[this.fieldName];
-    return fieldData !== undefined ? this.mapper.toDb(data[this.fieldName]) : undefined;
+    return fieldData !== undefined
+      ? this.isArray
+        ? fieldData.map((value: any) => this.mapper.toDb(value))
+        : this.mapper.toDb(fieldData)
+      : undefined;
   }
 
   mapToDb(value: any): any {
@@ -90,12 +117,18 @@ export class CustomSerdeAdapter implements FieldSerde {
   }
 }
 
-/** Supports `string`, `int`, etc., as well as `string[]`, `int[]`, etc. */
+/**
+ * Supports `string`, `int`, etc., as well as `string[]`, `int[]`, etc.
+ *
+ * This is not generally meant for subclassing, because it assumes things like
+ * `string[]`s can be mapped 1:1. See `CustomSerdeAdapter` a good base class
+ * that will handle converting individual elements.
+ */
 export class PrimitiveSerde implements FieldSerde {
   columns = [this];
 
   constructor(
-    private fieldName: string,
+    protected fieldName: string,
     public columnName: string,
     public dbType: string,
     public isArray = false,
@@ -106,7 +139,7 @@ export class PrimitiveSerde implements FieldSerde {
   }
 
   dbValue(data: any) {
-    return data[this.fieldName];
+    return this.mapToDb(data[this.fieldName]);
   }
 
   mapToDb(value: any) {
@@ -119,112 +152,65 @@ export class PrimitiveSerde implements FieldSerde {
 }
 
 export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
-  mapFromInstant(value: Temporal.Instant): Date {
-    return new Date(value.epochMilliseconds);
+  /** Accept the caller's date as-is. */
+  mapFromNow(now: Date): Date {
+    return now;
   }
 
   mapFromJsonAgg(value: any): any {
     if (value === null) return value;
     return new Date(value);
   }
+}
 
-  mapFromDate(value: Date) {
-    return value;
+/** Converts `DATE`s `Temporal.PlainDate`s. */
+export class PlainDateSerde extends CustomSerdeAdapter {
+  constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
+    const { Temporal } = requireTemporal();
+    const mapper: CustomSerde<Temporal.PlainDate, string> = {
+      fromDb: Temporal.PlainDate.from,
+      toDb: (p) => p.toString(),
+    };
+    super(fieldName, columnName, dbType, mapper, isArray);
   }
 }
 
-abstract class TemporalSerde<T> implements FieldSerde {
-  columns = [this];
-
-  constructor(
-    private fieldName: string,
-    public columnName: string,
-    public dbType: string,
-    public timeZone: string,
-    public isArray = false,
-  ) {}
-
-  abstract toTemporal(value: Date): T;
-
-  abstract fromTemporal(value: T): Date;
-
-  private maybeToTemporal(value: any): any {
-    return isDefined(value) && value instanceof Date ? this.toTemporal(value) : value;
+/** Converts `TIMESTAMP`s to `Temporal.PlainDateTime`s. */
+export class PlainDateTimeSerde extends CustomSerdeAdapter implements TimestampSerde<Temporal.PlainDateTime> {
+  constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
+    const { Temporal } = requireTemporal();
+    const mapper: CustomSerde<Temporal.PlainDateTime, string> = {
+      // Should look like `2018-01-01 10:00:00`
+      fromDb: (s) => Temporal.PlainDateTime.from(s),
+      toDb: (p) => p.toString(),
+    };
+    super(fieldName, columnName, dbType, mapper, isArray);
   }
 
-  private maybeFromTemporal(value: any): any {
-    return isDefined(value) && !(value instanceof Date) ? this.fromTemporal(value) : value;
-  }
-
-  setOnEntity(data: any, row: any) {
-    let value = maybeNullToUndefined(row[this.columnName]);
-    if (this.isArray) {
-      if (Array.isArray(value)) value = value.map((v) => this.maybeToTemporal(v));
-    } else {
-      value = this.maybeToTemporal(value);
-    }
-    data[this.fieldName] = value;
-  }
-
-  dbValue(data: any) {
-    return this.mapToDb(data[this.fieldName]);
-  }
-
-  mapToDb(value: any) {
-    if (this.isArray) {
-      return Array.isArray(value) ? value.map((v) => this.maybeFromTemporal(v)) : value;
-    } else {
-      return this.maybeFromTemporal(value);
-    }
-  }
-
-  mapFromJsonAgg(value: any): any {
-    if (this.isArray) {
-      return Array.isArray(value) ? value.map((v) => this.toTemporal(new Date(v))) : value;
-    } else {
-      return isDefined(value) ? this.toTemporal(new Date(value)) : value;
-    }
+  mapFromNow(now: Date): Temporal.PlainDateTime {
+    const { timeZone } = getRuntimeConfig().temporal as any;
+    return requireTemporal().toTemporalInstant.call(now).toZonedDateTimeISO(timeZone).toPlainDateTime();
   }
 }
 
-export class PlainDateSerde extends TemporalSerde<Temporal.PlainDate> {
-  fromTemporal(value: Temporal.PlainDate): Date {
-    return new Date(value.toZonedDateTime(this.timeZone).epochMilliseconds);
+/** Converts `TIMESTAMP WITH TIME ZONE`s to `Temporal.ZonedDateTime`s. */
+export class ZonedDateTimeSerde extends CustomSerdeAdapter implements TimestampSerde<Temporal.ZonedDateTime> {
+  constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
+    const { Temporal } = requireTemporal();
+    const mapper: CustomSerde<Temporal.ZonedDateTime, string> = {
+      // Should we use the application's time zone here? Afaiu we're using an explicit
+      // offset anyway, so I believe the time zone is effectively irrelevant, albeit maybe
+      // it would be used for DST/etc nuances when doing date calculations.
+      fromDb: (s) => Temporal.ZonedDateTime.from(s.replace(" ", "T") + "[UTC]"),
+      // Match the pg `TIMESTAMPTZ` format, i.e. "2021-01-01 12:00:00-05:00"
+      toDb: (zdt) => `${zdt.toPlainDate().toString()} ${zdt.toPlainTime().toString()}${zdt.offset}`,
+    };
+    super(fieldName, columnName, dbType, mapper, isArray);
   }
 
-  toTemporal(value: Date): Temporal.PlainDate {
-    return requireTemporal().toTemporalInstant.call(value).toZonedDateTimeISO(this.timeZone).toPlainDate();
-  }
-}
-
-export class PlainDateTimeSerde extends TemporalSerde<Temporal.PlainDateTime> {
-  fromTemporal(value: Temporal.PlainDateTime): Date {
-    return new Date(value.toZonedDateTime(this.timeZone).epochMilliseconds);
-  }
-
-  toTemporal(value: Date): Temporal.PlainDateTime {
-    return requireTemporal().toTemporalInstant.call(value).toZonedDateTimeISO(this.timeZone).toPlainDateTime();
-  }
-}
-
-export class ZonedDateTimeSerde
-  extends TemporalSerde<Temporal.ZonedDateTime>
-  implements TimestampSerde<Temporal.ZonedDateTime>
-{
-  fromTemporal(value: Temporal.ZonedDateTime) {
-    return new Date(value.epochMilliseconds);
-  }
-
-  toTemporal(value: Date) {
-    return requireTemporal().toTemporalInstant.call(value).toZonedDateTimeISO(this.timeZone);
-  }
-
-  mapFromInstant(value: Temporal.Instant) {
-    return value.toZonedDateTimeISO(this.timeZone);
-  }
-
-  mapFromDate(value: Date) {
-    return this.toTemporal(value);
+  mapFromNow(now: Date): Temporal.ZonedDateTime {
+    const { timeZone } = getRuntimeConfig().temporal as any;
+    return requireTemporal().toTemporalInstant.call(now).toZonedDateTimeISO(timeZone);
   }
 }
 

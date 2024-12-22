@@ -19,8 +19,9 @@ import { hasDefaultValue, setAsyncDefaultsSynchronously } from "./defaults";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
 import { FactoryLogger } from "./logging/FactoryLogger";
+import { maybeRequireTemporal } from "./temporal";
 import { ActualFactoryOpts, OptsOf } from "./typeMap";
-import { assertNever, maybeRequireTemporal } from "./utils";
+import { assertNever } from "./utils";
 
 let logger: FactoryLogger | undefined = undefined;
 
@@ -587,6 +588,7 @@ function getTestId<T extends Entity>(em: EntityManager, entity: T): string {
 const globalDate = global.Date;
 
 function defaultValueForField(em: EntityManager, cstr: EntityConstructor<any>, field: PrimitiveField): unknown {
+  if (field.serde.columns[0].isArray) return [];
   if (field.type === "string") {
     if (field.fieldName === "name") {
       return `${cstr.name} ${getTestIndex(em, cstr)}`;

@@ -1,19 +1,20 @@
-import { newEntityManager } from "@src/setupDbTests";
-import { jan1DateTime, jan2DateTime, jan3DateTime } from "@src/utils";
-import { PrimitiveField, alias, getMetadata } from "joist-orm";
+import { knex, newEntityManager } from "@src/setupDbTests";
+import { jan1at10am, jan1DateTime, jan2DateTime, jan3DateTime } from "@src/utils";
+import { alias, getMetadata, PrimitiveField } from "joist-orm";
 import { Temporal } from "temporal-polyfill";
 import { Author, Book, newBook } from "./entities";
 
-describe("Book", () => {
+describe("zonedDateTime", () => {
   it("has the correct type for a zoned date time field", () => {
     expect((getMetadata(Book).fields["publishedAt"] as PrimitiveField).type).toBe(Temporal.ZonedDateTime);
   });
 
   it("can create with a zoned date time", async () => {
     const em = newEntityManager();
-    const book = newBook(em, { publishedAt: jan1DateTime });
+    const book = newBook(em, { publishedAt: jan1DateTime, timestampTzs: [jan1DateTime, jan2DateTime] });
     await em.flush();
     expect(book.publishedAt).toEqual(jan1DateTime);
+    expect(book.timestampTzs).toEqual([jan1DateTime, jan2DateTime]);
   });
 
   it("can update a zoned date time", async () => {
@@ -25,6 +26,29 @@ describe("Book", () => {
     await em.flush();
     expect(book.publishedAt).toEqual(jan2DateTime);
     expect(updatedAt).not.toEqual(book.updatedAt);
+  });
+
+  it("can load a zoned date time", async () => {
+    await knex.insert({ firstName: "a1", birthday: "2020-01-01", timestamp: jan1at10am }).into("authors");
+    await knex.insert({ author_id: 1, title: "b1", published_at: toTimestampTzString(jan1DateTime) }).into("book");
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:1");
+    expect(book.publishedAt).toEqual(jan1DateTime);
+  });
+
+  it("can load a zoned date time array", async () => {
+    await knex.insert({ firstName: "a1", birthday: "2020-01-01", timestamp: jan1at10am }).into("authors");
+    await knex
+      .insert({
+        author_id: 1,
+        title: "b1",
+        published_at: toTimestampTzString(jan1DateTime),
+        timestampTzs: [toTimestampTzString(jan1DateTime), toTimestampTzString(jan2DateTime)],
+      })
+      .into("book");
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:1");
+    expect(book.timestampTzs).toEqual([jan1DateTime, jan2DateTime]);
   });
 
   it("can no-op when data is reverted before flush", async () => {
@@ -75,3 +99,7 @@ describe("Book", () => {
     expect(result).toEqual([a1, a2]);
   });
 });
+
+function toTimestampTzString(zonedDateTime: Temporal.ZonedDateTime) {
+  return `${zonedDateTime.toPlainDate().toString()} ${zonedDateTime.toPlainTime().toString()}${zonedDateTime.offset}`;
+}

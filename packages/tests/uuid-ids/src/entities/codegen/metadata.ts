@@ -1,8 +1,10 @@
-import { configureMetadata, DateSerde, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, EnumFieldSerde, KeySerde, PrimitiveSerde } from "joist-orm";
+import { configureMetadata, DateSerde, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, EnumFieldSerde, KeySerde, PrimitiveSerde, setRuntimeConfig } from "joist-orm";
 import { type Context } from "src/context";
 import { Author } from "../Author";
 import { Book } from "../Book";
 import { authorConfig, bookConfig, BookStatuses, newAuthor, newBook } from "../entities";
+
+setRuntimeConfig({ temporal: false });
 
 export class EntityManager extends EntityManager1<Context, Entity> {}
 

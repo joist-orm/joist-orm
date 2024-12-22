@@ -110,16 +110,9 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       } else {
         serdeType = PrimitiveSerde;
       }
-      if (serdeType === PrimitiveSerde || serdeType === DateSerde) {
-        serde = isArray
-          ? code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}[]", true)`
-          : code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}")`;
-      } else {
-        const timeZone = typeof config.temporal === "object" ? config.temporal.timeZone : "UTC";
-        serde = isArray
-          ? code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}[]", "${timeZone}", true)`
-          : code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}", "${timeZone}")`;
-      }
+      serde = isArray
+        ? code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}[]", true)`
+        : code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}")`;
     }
     const extras = columnType === "citext" ? code`citext: true,` : "";
     fields[fieldName] = code`

@@ -1078,11 +1078,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       const now = new Date();
       if (createdAt) {
         const serde = baseMeta.fields[createdAt].serde as TimestampSerde<unknown>;
-        data[createdAt] = serde.mapFromDate(now);
+        data[createdAt] = serde.mapFromNow(now);
       }
       if (updatedAt) {
         const serde = baseMeta.fields[updatedAt].serde as TimestampSerde<unknown>;
-        data[updatedAt] = serde.mapFromDate(now);
+        data[updatedAt] = serde.mapFromNow(now);
       }
       // Set the discriminator for STI
       if (baseMeta.inheritanceType === "sti") {
@@ -2012,7 +2012,7 @@ function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Date): void {
         const orm = getInstanceData(e);
         orm.originalData[updatedAt] = getField(e, updatedAt);
         const serde = todo.metadata.fields[updatedAt].serde as TimestampSerde<unknown>;
-        orm.data[updatedAt] = serde.mapFromDate(now);
+        orm.data[updatedAt] = serde.mapFromNow(now);
       }
     }
   }

@@ -35,6 +35,16 @@ describe("Author", () => {
     expect(a.birthday).toEqual(jan1);
   });
 
+  it("can load a plain time array", async () => {
+    await knex
+      .insert({ firstName: "a1", birthday: "2018-01-01", children_birthdays: ["2018-01-01", "2018-01-02"] })
+      .into("authors");
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1");
+    expect(a.birthday).toEqual(jan1);
+    expect(a.childrenBirthdays).toEqual([jan1, jan2]);
+  });
+
   it("can no-op when data is reverted before flush", async () => {
     const em = newEntityManager();
     const author = newAuthor(em, { birthday: jan1 });

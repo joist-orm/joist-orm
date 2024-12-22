@@ -274,11 +274,13 @@ export function setupLatestPgTypes(temporal: RuntimeConfig["temporal"]): void {
       return Temporal.ZonedDateTime.from(s.replace(" ", "T") + "[UTC]");
     };
     const parseTimestampTzArray = (s: string) => array.parse(s, parseTimestampTz);
-    const parsePlainDate = (s: string) => Temporal.PlainDate.from(s);
+    const parsePlainDate = Temporal.PlainDate.from;
+    const parsePlainDateArray = (s: string) => array.parse(s, parsePlainDate);
 
     types.setTypeParser(types.builtins.TIMESTAMPTZ, parseTimestampTz);
     types.setTypeParser(1185, parseTimestampTzArray);
     types.setTypeParser(types.builtins.DATE, parsePlainDate);
+    types.setTypeParser(1182, parsePlainDateArray);
   } else {
     types.setTypeParser(types.builtins.TIMESTAMPTZ, getTypeParser(builtins.TIMESTAMPTZ));
   }

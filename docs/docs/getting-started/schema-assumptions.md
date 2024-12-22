@@ -3,7 +3,29 @@ title: Schema Assumptions
 sidebar_position: 1
 ---
 
-Joist makes a few assumptions about your database schema, which basically assume you have a modern/pleasant database schema that you want directly mapped to your TypeScript domain model.
+Joist makes a few assumptions about your database schema, primarily that you have a modern/pleasant database schema that you want directly mapped to your TypeScript domain model.
+
+## Surrogate Keys
+
+The term "surrogate key" basically means "all your tables have an `id` column".
+
+The opposite of a surrogate key is a natural key, like identifying rows in an `employees` table by an `ssn` column, or a composite key like `employer_id` + `employee_number`.
+
+Joist takes the opinionated/simplifying stance that natural keys are an older, legacy pattern of domain modeling, and that `id` surrogate keys are best practice for modern applications.
+
+If you have an existing schema that lacks surrogate keys, you should be able to add an `id` column to your existing tables, with a default value, and not break your existing application.
+
+:::info
+
+Joist supports several types of `id` columns:
+
+* `int` or `bigint` with a sequence
+* `uuid` with Joist's `RandomUuidAssigner`
+* `text` with an `IdAssigner` that manually assigns ids (i.e. [cuid](https://github.com/paralleldrive/cuid)s)
+
+We also currently require `id` columns for many-to-many tables, see [this issue](https://github.com/joist-orm/joist-orm/issues/1321).
+
+:::
 
 ## Entity Tables
 

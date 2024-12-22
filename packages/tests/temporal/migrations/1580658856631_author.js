@@ -8,6 +8,8 @@ exports.up = (b) => {
     lastName: { type: "varchar(255)", notNull: false },
     birthday: { type: "date", notNull: true },
     children_birthdays: { type: "date[]", notNull: true, default: "{}" },
+    timestamp: { type: "timestamp", notNull: true },
+    timestamps: { type: "timestamp[]", notNull: true, default: "{}" },
   });
 
   createEntityTable(b, "book", {

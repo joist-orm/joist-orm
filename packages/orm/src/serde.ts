@@ -174,7 +174,17 @@ export class PlainDateSerde extends CustomSerdeAdapter {
   }
 }
 
-export class PlainDateTimeSerde extends PrimitiveSerde implements TimestampSerde<Temporal.PlainDateTime> {
+export class PlainDateTimeSerde extends CustomSerdeAdapter implements TimestampSerde<Temporal.PlainDateTime> {
+  constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
+    const { Temporal } = requireTemporal();
+    const mapper: CustomSerde<Temporal.PlainDateTime, string> = {
+      // Should look like `2018-0101 10:00:00`
+      fromDb: (s) => Temporal.PlainDateTime.from(s),
+      toDb: (p) => p.toString(),
+    };
+    super(fieldName, columnName, dbType, mapper, isArray);
+  }
+
   mapFromNow(now: Date): Temporal.PlainDateTime {
     const { timeZone } = getRuntimeConfig().temporal as any;
     return requireTemporal().toTemporalInstant.call(now).toZonedDateTimeISO(timeZone).toPlainDateTime();

@@ -268,15 +268,17 @@ async function batchDelete(knex: Knex, op: DeleteOp): Promise<void> {
 export function setupLatestPgTypes(temporal: RuntimeConfig["temporal"]): void {
   if (temporal) {
     // Don't eagerly parse the strings, instead defer to the serde logic
-    const parseTimestampTz = (s: string) => s;
-    const parseTimestampTzArray = (s: string) => array.parse(s, parseTimestampTz);
-    const parsePlainDate = (s: string) => s;
-    const parsePlainDateArray = (s: string) => array.parse(s, parsePlainDate);
+    const noop = (s: string) => s;
+    const noopArray = (s: string) => array.parse(s, noop);
 
-    types.setTypeParser(types.builtins.TIMESTAMPTZ, parseTimestampTz);
-    types.setTypeParser(1185, parseTimestampTzArray);
-    types.setTypeParser(types.builtins.DATE, parsePlainDate);
-    types.setTypeParser(1182, parsePlainDateArray);
+    const { TIMESTAMP, TIMESTAMPTZ, DATE } = builtins;
+    types.setTypeParser(DATE, noop);
+    types.setTypeParser(TIMESTAMP, noop);
+    types.setTypeParser(TIMESTAMPTZ, noop);
+
+    types.setTypeParser(1182, noopArray); // date[]
+    types.setTypeParser(1115, noopArray); // timestamp[]
+    types.setTypeParser(1185, noopArray); // timestamptz[]
   } else {
     types.setTypeParser(types.builtins.TIMESTAMPTZ, getTypeParser(builtins.TIMESTAMPTZ));
   }

@@ -1,10 +1,10 @@
 import { knex, newEntityManager } from "@src/setupDbTests";
-import { jan1DateTime, jan2DateTime, jan3DateTime } from "@src/utils";
-import { PrimitiveField, alias, getMetadata } from "joist-orm";
+import { jan1at10am, jan1DateTime, jan2DateTime, jan3DateTime } from "@src/utils";
+import { alias, getMetadata, PrimitiveField } from "joist-orm";
 import { Temporal } from "temporal-polyfill";
 import { Author, Book, newBook } from "./entities";
 
-describe("Book", () => {
+describe("zonedDateTime", () => {
   it("has the correct type for a zoned date time field", () => {
     expect((getMetadata(Book).fields["publishedAt"] as PrimitiveField).type).toBe(Temporal.ZonedDateTime);
   });
@@ -29,7 +29,7 @@ describe("Book", () => {
   });
 
   it("can load a zoned date time", async () => {
-    await knex.insert({ firstName: "a1", birthday: "2020-01-01" }).into("authors");
+    await knex.insert({ firstName: "a1", birthday: "2020-01-01", timestamp: jan1at10am }).into("authors");
     await knex.insert({ author_id: 1, title: "b1", published_at: toTimestampTzString(jan1DateTime) }).into("book");
     const em = newEntityManager();
     const book = await em.load(Book, "b:1");
@@ -37,7 +37,7 @@ describe("Book", () => {
   });
 
   it("can load a zoned date time array", async () => {
-    await knex.insert({ firstName: "a1", birthday: "2020-01-01" }).into("authors");
+    await knex.insert({ firstName: "a1", birthday: "2020-01-01", timestamp: jan1at10am }).into("authors");
     await knex
       .insert({
         author_id: 1,

@@ -1,3 +1,10 @@
+# [1.217.0](https://github.com/joist-orm/joist-orm/compare/v1.216.0...v1.217.0) (2024-12-22)
+
+
+### Features
+
+* Add PlainTime support. ([#1330](https://github.com/joist-orm/joist-orm/issues/1330)) ([57cd9b8](https://github.com/joist-orm/joist-orm/commit/57cd9b843d7bb743f7e81b52c84a3ec306e423e0))
+
 # [1.216.0](https://github.com/joist-orm/joist-orm/compare/v1.215.5...v1.216.0) (2024-12-22)
 
 

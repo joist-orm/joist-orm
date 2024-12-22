@@ -70,6 +70,7 @@ export interface JoinTable {
   distinct?: boolean;
 }
 
+// ...Add a LateralJoinTable type here...
 export type ParsedTable = PrimaryTable | JoinTable;
 
 export interface ParsedOrderBy {
@@ -84,7 +85,11 @@ export interface ParsedFindQuery {
   /** The primary table plus any joins. */
   tables: ParsedTable[];
   /** Any cross lateral joins, where the `joins: string[]` has the full join as raw SQL; currently only for preloading. */
-  lateralJoins?: { joins: string[]; bindings: any[] };
+  lateralJoins?: {
+    // I.e. `cross join lateral join (select ... from ...) as _b`
+    joins: string[];
+    bindings: any[];
+  };
   /** The query's conditions. */
   condition?: ParsedExpressionFilter;
   /** Any optional orders to add before the default 'order by id'. */
@@ -109,6 +114,7 @@ export function parseFindQuery(
   const tables: ParsedTable[] = [];
   const orderBys: ParsedOrderBy[] = [];
   const query = { selects, tables, orderBys };
+  const lateralJoins = { joins: [] as string[], bindings: [] as any[] };
   const {
     orderBy = undefined,
     conditions: optsExpression = undefined,
@@ -116,6 +122,7 @@ export function parseFindQuery(
     pruneJoins = true,
     keepAliases = [],
   } = opts;
+
   const cb = new ConditionBuilder();
 
   const aliases: Record<string, number> = {};
@@ -140,6 +147,22 @@ export function parseFindQuery(
     }
   }
 
+  // ...how do we pull up data to use in any conditions?...
+  // what would the format look like? probably just nested JSON...
+  function addLateralJoin(meta: EntityMetadata, alias: string, col1: string, col2: string, filter: any) {
+    const join = `
+        cross join lateral (
+          select json_agg(json_build_array(${selects.join(", ")}) order by ${kq(otherAlias)}.id) as _
+          from ${kq(otherMeta.tableName)} ${kq(otherAlias)} ${m2mFrom}
+          ${subJoins.map((sb) => sb.join).join("\n")}
+          where ${where}
+          ${needsSubSelect ? ` AND ${kqDot(root.alias, "id")} = ANY(?)` : ""}
+        ) ${kq(otherAlias)}
+      `;
+    lateralJoins.joins.push(join);
+  }
+
+  /** Adds `meta` to the query, i.e. for m2o/o2o joins into parents. */
   function addTable(
     meta: EntityMetadata,
     alias: string,
@@ -178,6 +201,7 @@ export function parseFindQuery(
       filter[aliasMgmt].setAlias(meta, alias);
     }
 
+    // See if the clause says we must do a join into the relation
     if (ef && ef.kind === "join") {
       // subFilter really means we're matching against the entity columns/further joins
       Object.keys(ef.subFilter).forEach((key) => {
@@ -287,21 +311,34 @@ export function parseFindQuery(
             (ef.subFilter as any)[key],
           );
         } else if (field.kind === "o2m") {
+          // ...don't outer join, instead do a lateral join...
+          // old code
+          // const a = getAlias(field.otherMetadata().tableName);
+          // const otherField = field.otherMetadata().allFields[field.otherFieldName];
+          // let otherColumn = otherField.serde!.columns[0].columnName;
+          // // If the other field is a poly, we need to find the right column
+          // if (otherField.kind === "poly") {
+          //   // For a subcomponent that matches field's metadata
+          //   const otherComponent =
+          //     otherField.components.find((c) => c.otherMetadata() === meta) ??
+          //     fail(`No poly component found for ${otherField.fieldName}`);
+          //   otherColumn = otherComponent.columnName;
+          // }
+          // addTable(
+          //   field.otherMetadata(),
+          //   a,
+          //   "outer",
+          //   kqDot(alias, "id"),
+          //   kqDot(a, otherColumn),
+          //   (ef.subFilter as any)[key],
+          // );
+
           const a = getAlias(field.otherMetadata().tableName);
           const otherField = field.otherMetadata().allFields[field.otherFieldName];
           let otherColumn = otherField.serde!.columns[0].columnName;
-          // If the other field is a poly, we need to find the right column
-          if (otherField.kind === "poly") {
-            // For a subcomponent that matches field's metadata
-            const otherComponent =
-              otherField.components.find((c) => c.otherMetadata() === meta) ??
-              fail(`No poly component found for ${otherField.fieldName}`);
-            otherColumn = otherComponent.columnName;
-          }
-          addTable(
+          addLateralJoin(
             field.otherMetadata(),
             a,
-            "outer",
             kqDot(alias, "id"),
             kqDot(a, otherColumn),
             (ef.subFilter as any)[key],

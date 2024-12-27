@@ -2349,7 +2349,21 @@ describe("EntityManager.queries", () => {
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+        {
+          alias: "b",
+          table: "books",
+          join: "lateral",
+          query: {
+            condition: {
+              op: "and",
+              conditions: [
+                { alias: "b", column: "deleted_at", dbType: "timestamp with time zone", cond: { kind: "is-null" } },
+                { alias: "b", column: "acknowledgements", dbType: "text", cond: { kind: "is-null" } },
+                { op: "and", conditions: [{ condition: "a.id = b.author_id" }] },
+              ],
+            },
+          },
+        },
       ],
       condition: {
         op: "and",
@@ -2359,22 +2373,8 @@ describe("EntityManager.queries", () => {
             column: "deleted_at",
             dbType: "timestamp with time zone",
             cond: { kind: "is-null" },
-            pruneable: true,
           },
-          {
-            alias: "b",
-            column: "deleted_at",
-            dbType: "timestamp with time zone",
-            cond: { kind: "is-null" },
-            pruneable: true,
-          },
-          {
-            op: "and",
-            conditions: [
-              { alias: "b", column: "acknowledgements", dbType: "text", cond: { kind: "is-null" } },
-              { alias: "b", column: "id", dbType: "int", cond: { kind: "not-null" } },
-            ],
-          },
+          { alias: "b", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } },
         ],
       },
       orderBys: [expect.anything()],
@@ -2388,8 +2388,8 @@ describe("EntityManager.queries", () => {
     // And only the 1st author has a book
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    // When we query for books with a null book.id column
-    const where = { books: { id: null } } satisfies AuthorFilter;
+    // When we query for books with no books
+    const where = { books: { $count: 0 } } satisfies AuthorFilter;
     const authors = await em.find(Author, where);
     // Then we only get back 2nd author
     expect(authors).toMatchEntity([{ firstName: "a2" }]);
@@ -2397,9 +2397,12 @@ describe("EntityManager.queries", () => {
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+        { alias: "b", table: "books", join: "lateral" },
       ],
-      condition: { op: "and", conditions: [{ alias: "b", column: "id", dbType: "int", cond: { kind: "is-null" } }] },
+      condition: {
+        op: "and",
+        conditions: [{ alias: "b", column: "_", dbType: "int", cond: { kind: "eq", value: 0 } }],
+      },
       orderBys: [expect.anything()],
     });
   });

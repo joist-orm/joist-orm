@@ -166,9 +166,15 @@ export function parseFindQuery(
   // what would the format look like? probably just nested JSON...
   function addLateralJoin(meta: EntityMetadata, alias: string, col1: string, col2: string, filter: any) {
     const a = newAliasProxy(meta.cstr);
+    const subFilter = typeof filter === "string" ? { id: filter } : { ...filter };
+    let count = undefined;
+    if ("$count" in subFilter) {
+      count = subFilter["$count"];
+      delete subFilter["$count"];
+    }
     const subQuery = parseFindQuery(
       meta,
-      { as: a, ...(typeof filter === "string" ? { id: filter } : filter) },
+      { as: a, ...subFilter },
       {
         conditions: {
           and: [
@@ -194,7 +200,7 @@ export function parseFindQuery(
       alias,
       column: "_",
       dbType: "int",
-      cond: { kind: "gt", value: 0 },
+      cond: count !== undefined ? { kind: "eq", value: count } : { kind: "gt", value: 0 },
     });
   }
 

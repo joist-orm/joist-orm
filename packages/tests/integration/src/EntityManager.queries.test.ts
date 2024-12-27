@@ -2309,11 +2309,25 @@ describe("EntityManager.queries", () => {
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+        {
+          alias: "b",
+          table: "books",
+          join: "lateral",
+          query: {
+            condition: {
+              op: "and",
+              conditions: [
+                { alias: "b", column: "deleted_at", dbType: "timestamp with time zone", cond: { kind: "is-null" } },
+                { alias: "b", column: "id", dbType: "int", cond: { kind: "eq", value: 2 } },
+                { op: "and", conditions: [{ condition: "a.id = b.author_id" }] },
+              ],
+            },
+          },
+        },
       ],
       condition: {
         op: "and",
-        conditions: [{ alias: "b", column: "id", dbType: "int", cond: { kind: "eq", value: 2 } }],
+        conditions: [{ alias: "b", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } }],
       },
       orderBys: [expect.anything()],
     });

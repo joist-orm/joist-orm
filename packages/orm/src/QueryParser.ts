@@ -168,7 +168,7 @@ export function parseFindQuery(
     const a = newAliasProxy(meta.cstr);
     const subQuery = parseFindQuery(
       meta,
-      { as: a, ...filter },
+      { as: a, ...(typeof filter === "string" ? { id: filter } : filter) },
       {
         conditions: {
           and: [

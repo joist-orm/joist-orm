@@ -165,24 +165,13 @@ export function parseFindQuery(
   // ...how do we pull up data to use in any conditions?...
   // what would the format look like? probably just nested JSON...
   function addLateralJoin(meta: EntityMetadata, alias: string, col1: string, col2: string, filter: any) {
-    // const join = `
-    //   cross join lateral (
-    //     select count(*) as _
-    //     from ${kq(meta.tableName)} ${kq(alias)}
-    //     where ${col1} = ${col2} and b.title like 'b1%'
-    //     group by ${kq(alias)}.id
-    //   ) AS ${kq(alias)}
-    // `;
-    // lateralJoins.joins.push(join);
-
-    // recurse into the filter
     const a = newAliasProxy(meta.cstr);
     const subQuery = parseFindQuery(
       meta,
       { as: a, ...filter },
       {
         conditions: {
-          or: [
+          and: [
             {
               kind: "raw",
               aliases: [] as string[],

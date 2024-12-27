@@ -2231,6 +2231,14 @@ describe("EntityManager.queries", () => {
           query: {
             selects: [`count(*) as _`],
             tables: [{ alias: "b", table: "books", join: "primary" }],
+            condition: {
+              op: "and",
+              conditions: [
+                { alias: "b", column: "deleted_at", dbType: "timestamp with time zone", cond: { kind: "is-null" } },
+                { alias: "b", column: "title", dbType: "character varying", cond: { kind: "like", value: "b1%" } },
+                { op: "and", conditions: [{ kind: "raw", condition: "a.id = b.author_id" }] },
+              ],
+            },
           },
           join: "lateral",
         },
@@ -2259,11 +2267,29 @@ describe("EntityManager.queries", () => {
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+        {
+          alias: "b",
+          table: "books",
+          join: "lateral",
+          query: {
+            condition: {
+              op: "and",
+              conditions: [
+                { alias: "b", column: "deleted_at", dbType: "timestamp with time zone", cond: { kind: "is-null" } },
+                { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b3" } },
+                {
+                  kind: "exp",
+                  op: "and",
+                  conditions: [{ kind: "raw", condition: "a.id = b.author_id" }],
+                },
+              ],
+            },
+          },
+        },
       ],
       condition: {
         op: "and",
-        conditions: [{ alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b3" } }],
+        conditions: [{ alias: "b", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } }],
       },
       orderBys: [expect.anything()],
     });

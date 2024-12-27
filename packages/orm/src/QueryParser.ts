@@ -70,8 +70,14 @@ export interface JoinTable {
   distinct?: boolean;
 }
 
-// ...Add a LateralJoinTable type here...
-export type ParsedTable = PrimaryTable | JoinTable;
+export type ParsedTable = PrimaryTable | JoinTable | LateralJoinTable;
+
+export interface LateralJoinTable {
+  join: "lateral";
+  alias: string;
+  table: string;
+  query: ParsedFindQuery;
+}
 
 export interface ParsedOrderBy {
   alias: string;
@@ -90,8 +96,6 @@ export interface ParsedFindQuery {
     joins: string[];
     bindings: any[];
   };
-  /** Selects into m2m/o2m children. */
-  lateralJoins2?: { query: ParsedFindQuery; alias: string }[];
   /** The query's conditions. */
   condition?: ParsedExpressionFilter;
   /** Any optional orders to add before the default 'order by id'. */
@@ -119,7 +123,6 @@ export function parseFindQuery(
   const tables: ParsedTable[] = [];
   const orderBys: ParsedOrderBy[] = [];
   const query = { selects, tables, orderBys };
-  const lateralJoins: { query: ParsedFindQuery; alias: string }[] = [];
   const {
     orderBy = undefined,
     conditions: optsExpression = undefined,
@@ -188,7 +191,7 @@ export function parseFindQuery(
     );
     subQuery.selects = ["count(*) as _"];
     subQuery.orderBys = [];
-    lateralJoins.push({ query: subQuery, alias });
+    tables.push({ join: "lateral", table: meta.tableName, query: subQuery, alias });
 
     cb.addSimpleCondition({
       kind: "column",
@@ -216,6 +219,8 @@ export function parseFindQuery(
 
     if (join === "primary") {
       tables.push({ alias, table: meta.tableName, join });
+    } else if (join === "lateral") {
+      fail("Unexpected lateral join");
     } else {
       tables.push({ alias, table: meta.tableName, join, col1, col2 });
     }
@@ -512,10 +517,6 @@ export function parseFindQuery(
     pruneUnusedJoins(query, keepAliases);
   }
 
-  if (lateralJoins.length > 0) {
-    Object.assign(query, { lateralJoins2: lateralJoins });
-  }
-
   return query;
 }
 
@@ -587,7 +588,7 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   // Mark all usages via joins
   for (let i = 0; i < parsed.tables.length; i++) {
     const t = parsed.tables[i];
-    if (t.join !== "primary") {
+    if (t.join !== "primary" && t.join !== "lateral") {
       // If alias (col2) is required, ensure the col1 alias is also required
       const a2 = t.alias;
       const a1 = parseAlias(t.col1);
@@ -1130,17 +1131,20 @@ function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter |
   return { kind: "exp", op, conditions: valid.filter(isDefined) };
 }
 
-export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[]] {
+export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[], LateralJoinTable[]] {
   let primary: PrimaryTable;
   const joins: JoinTable[] = [];
+  const laterals: LateralJoinTable[] = [];
   for (const table of query.tables) {
     if (table.join === "primary") {
       primary = table;
+    } else if (table.join === "lateral") {
+      laterals.push(table);
     } else {
       joins.push(table);
     }
   }
-  return [primary!, joins];
+  return [primary!, joins, laterals];
 }
 
 export function joinKeywords(join: JoinTable): string {
@@ -1152,7 +1156,7 @@ export function joinClause(join: JoinTable): string {
 }
 
 export function joinClauses(joins: ParsedTable[]): string[] {
-  return joins.map((t) => (t.join !== "primary" ? joinClause(t) : ""));
+  return joins.map((t) => (t.join === "inner" || t.join === "outer" ? joinClause(t) : ""));
 }
 
 function needsClassPerTableJoins(meta: EntityMetadata): boolean {

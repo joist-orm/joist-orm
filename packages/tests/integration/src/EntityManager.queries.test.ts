@@ -2223,14 +2223,16 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [{ alias: "a", table: "authors", join: "primary" }],
-      lateralJoins2: [
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
         {
+          alias: "b",
+          table: "books",
           query: {
             selects: [`count(*) as _`],
             tables: [{ alias: "b", table: "books", join: "primary" }],
           },
-          alias: "b",
+          join: "lateral",
         },
       ],
       condition: {

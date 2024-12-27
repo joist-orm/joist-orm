@@ -54,6 +54,10 @@ export function buildRawQuery(
       sql += ` LEFT OUTER JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
     } else if (t.join === "primary") {
       // handled above
+    } else if (t.join === "lateral") {
+      const { sql: subQ, bindings: subB } = buildRawQuery(t.query, {});
+      sql += ` CROSS JOIN LATERAL (${subQ}) AS ${kq(t.alias)}`;
+      bindings.push(...subB);
     } else {
       assertNever(t.join);
     }
@@ -62,14 +66,6 @@ export function buildRawQuery(
   if (parsed.lateralJoins) {
     sql += " " + parsed.lateralJoins.joins.join("\n");
     bindings.push(...parsed.lateralJoins.bindings);
-  }
-
-  if (parsed.lateralJoins2) {
-    for (const { query, alias } of parsed.lateralJoins2) {
-      const { sql: subQ, bindings: subB } = buildRawQuery(query, {});
-      sql += ` CROSS JOIN LATERAL (${subQ}) AS ${kq(alias)}`;
-      bindings.push(...subB);
-    }
   }
 
   if (parsed.condition) {

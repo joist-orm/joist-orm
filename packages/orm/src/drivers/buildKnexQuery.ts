@@ -48,6 +48,8 @@ export function buildKnexQuery(
       case "primary":
         // ignore
         break;
+      case "lateral":
+        throw new Error("Lateral joins are not implemented in buildKnexQuery yet");
       default:
         assertNever(t);
     }

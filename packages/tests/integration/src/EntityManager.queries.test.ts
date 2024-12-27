@@ -2223,15 +2223,19 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      lateralJoins2: [
+        {
+          query: {
+            selects: [`count(*) as _`],
+            tables: [{ alias: "b", table: "books", join: "primary" }],
+          },
+          alias: "b",
+        },
       ],
       condition: {
         op: "and",
-        conditions: [
-          { alias: "b", column: "title", dbType: "character varying", cond: { kind: "like", value: "b1%" } },
-        ],
+        conditions: [{ alias: "b", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } }],
       },
       orderBys: [expect.anything()],
     });

@@ -1,5 +1,5 @@
 import { groupBy, isPlainObject } from "joist-utils";
-import { aliasMgmt, isAlias } from "./Aliases";
+import { aliasMgmt, isAlias, newAliasProxy } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
@@ -90,6 +90,8 @@ export interface ParsedFindQuery {
     joins: string[];
     bindings: any[];
   };
+  /** Selects into m2m/o2m children. */
+  lateralJoins2?: { query: ParsedFindQuery; alias: string }[];
   /** The query's conditions. */
   condition?: ParsedExpressionFilter;
   /** Any optional orders to add before the default 'order by id'. */
@@ -108,13 +110,16 @@ export function parseFindQuery(
     pruneJoins?: boolean;
     keepAliases?: string[];
     softDeletes?: "include" | "exclude";
+    // Allow recursively calling ourselves for putting together lateral joins
+    aliases?: Record<string, number>;
+    alias?: string;
   } = {},
 ): ParsedFindQuery {
   const selects: string[] = [];
   const tables: ParsedTable[] = [];
   const orderBys: ParsedOrderBy[] = [];
   const query = { selects, tables, orderBys };
-  const lateralJoins = { joins: [] as string[], bindings: [] as any[] };
+  const lateralJoins: { query: ParsedFindQuery; alias: string }[] = [];
   const {
     orderBy = undefined,
     conditions: optsExpression = undefined,
@@ -125,7 +130,7 @@ export function parseFindQuery(
 
   const cb = new ConditionBuilder();
 
-  const aliases: Record<string, number> = {};
+  const aliases: Record<string, number> = opts.aliases ?? {};
   function getAlias(tableName: string): string {
     const abbrev = abbreviation(tableName);
     const i = aliases[abbrev] || 0;
@@ -150,16 +155,48 @@ export function parseFindQuery(
   // ...how do we pull up data to use in any conditions?...
   // what would the format look like? probably just nested JSON...
   function addLateralJoin(meta: EntityMetadata, alias: string, col1: string, col2: string, filter: any) {
-    const join = `
-        cross join lateral (
-          select json_agg(json_build_array(${selects.join(", ")}) order by ${kq(otherAlias)}.id) as _
-          from ${kq(otherMeta.tableName)} ${kq(otherAlias)} ${m2mFrom}
-          ${subJoins.map((sb) => sb.join).join("\n")}
-          where ${where}
-          ${needsSubSelect ? ` AND ${kqDot(root.alias, "id")} = ANY(?)` : ""}
-        ) ${kq(otherAlias)}
-      `;
-    lateralJoins.joins.push(join);
+    // const join = `
+    //   cross join lateral (
+    //     select count(*) as _
+    //     from ${kq(meta.tableName)} ${kq(alias)}
+    //     where ${col1} = ${col2} and b.title like 'b1%'
+    //     group by ${kq(alias)}.id
+    //   ) AS ${kq(alias)}
+    // `;
+    // lateralJoins.joins.push(join);
+
+    // recurse into the filter
+    const a = newAliasProxy(meta.cstr);
+    const subQuery = parseFindQuery(
+      meta,
+      { as: a, ...filter },
+      {
+        conditions: {
+          or: [
+            {
+              kind: "raw",
+              aliases: [] as string[],
+              condition: `${col1} = ${col2}`,
+              pruneable: false,
+              bindings: [],
+            },
+          ],
+        },
+        aliases,
+        alias,
+      },
+    );
+    subQuery.selects = ["count(*) as _"];
+    subQuery.orderBys = [];
+    lateralJoins.push({ query: subQuery, alias });
+
+    cb.addSimpleCondition({
+      kind: "column",
+      alias,
+      column: "_",
+      dbType: "int",
+      cond: { kind: "gt", value: 0 },
+    });
   }
 
   /** Adds `meta` to the query, i.e. for m2o/o2o joins into parents. */
@@ -445,7 +482,7 @@ export function parseFindQuery(
   }
 
   // always add the main table
-  const alias = getAlias(meta.tableName);
+  const alias = opts.alias ?? getAlias(meta.tableName);
   selects.push(`${kq(alias)}.*`);
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
 
@@ -474,6 +511,11 @@ export function parseFindQuery(
   if (pruneJoins) {
     pruneUnusedJoins(query, keepAliases);
   }
+
+  if (lateralJoins.length > 0) {
+    Object.assign(query, { lateralJoins2: lateralJoins });
+  }
+
   return query;
 }
 

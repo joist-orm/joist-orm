@@ -64,6 +64,14 @@ export function buildRawQuery(
     bindings.push(...parsed.lateralJoins.bindings);
   }
 
+  if (parsed.lateralJoins2) {
+    for (const { query, alias } of parsed.lateralJoins2) {
+      const { sql: subQ, bindings: subB } = buildRawQuery(query, {});
+      sql += ` CROSS JOIN LATERAL (${subQ}) AS ${kq(alias)}`;
+      bindings.push(...subB);
+    }
+  }
+
   if (parsed.condition) {
     const where = buildWhereClause(parsed.condition, true);
     if (where) {

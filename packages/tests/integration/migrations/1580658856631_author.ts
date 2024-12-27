@@ -327,6 +327,9 @@ export function up(b: MigrationBuilder): void {
     text: "text",
   });
 
+  // For testing updated_ats that don't have a timezone
+  b.alterColumn("comments", "updated_at", { type: "timestamp" });
+
   createEntityTable(b, "author_stats", {
     smallint: { type: "smallint", notNull: true },
     integer: { type: "integer", notNull: true },

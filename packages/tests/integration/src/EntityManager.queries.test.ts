@@ -890,8 +890,8 @@ describe("EntityManager.queries", () => {
       ],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
-        { alias: "p_s0", table: "large_publishers", join: "outer", col1: "p.id", col2: "p_s0.id", distinct: false },
-        { alias: "p_s1", table: "small_publishers", join: "outer", col1: "p.id", col2: "p_s1.id", distinct: false },
+        { alias: "p_s0", table: "large_publishers", join: "outer", col1: "p.id", col2: "p_s0.id" },
+        { alias: "p_s1", table: "small_publishers", join: "outer", col1: "p.id", col2: "p_s1.id" },
       ],
       condition: {
         op: "and",
@@ -950,8 +950,8 @@ describe("EntityManager.queries", () => {
       ],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
-        { alias: "p_s0", table: "large_publishers", join: "outer", col1: "p.id", col2: "p_s0.id", distinct: false },
-        { alias: "p_s1", table: "small_publishers", join: "outer", col1: "p.id", col2: "p_s1.id", distinct: false },
+        { alias: "p_s0", table: "large_publishers", join: "outer", col1: "p.id", col2: "p_s0.id" },
+        { alias: "p_s1", table: "small_publishers", join: "outer", col1: "p.id", col2: "p_s1.id" },
       ],
       condition: {
         op: "and",
@@ -982,8 +982,8 @@ describe("EntityManager.queries", () => {
       ],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
-        { alias: "p_s0", table: "large_publishers", join: "outer", col1: "p.id", col2: "p_s0.id", distinct: false },
-        { alias: "p_s1", table: "small_publishers", join: "outer", col1: "p.id", col2: "p_s1.id", distinct: false },
+        { alias: "p_s0", table: "large_publishers", join: "outer", col1: "p.id", col2: "p_s0.id" },
+        { alias: "p_s1", table: "small_publishers", join: "outer", col1: "p.id", col2: "p_s1.id" },
       ],
       condition: {
         op: "and",
@@ -1625,8 +1625,8 @@ describe("EntityManager.queries", () => {
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.current_draft_book_id", col2: "b.id", distinct: false },
-        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id", distinct: false },
+        { alias: "b", table: "books", join: "outer", col1: "a.current_draft_book_id", col2: "b.id" },
+        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id" },
       ],
       orderBys: [
         { alias: "b", column: "title", order: "ASC" },
@@ -1654,8 +1654,8 @@ describe("EntityManager.queries", () => {
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id", distinct: false },
-        { alias: "b", table: "books", join: "outer", col1: "a.current_draft_book_id", col2: "b.id", distinct: false },
+        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id" },
+        { alias: "b", table: "books", join: "outer", col1: "a.current_draft_book_id", col2: "b.id" },
       ],
       orderBys: [
         { alias: "p", column: "name", order: "ASC" },
@@ -1682,7 +1682,7 @@ describe("EntityManager.queries", () => {
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id", distinct: false },
+        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id" },
       ],
       orderBys: [
         { alias: "p", column: "name", order: "ASC" },
@@ -2084,7 +2084,7 @@ describe("EntityManager.queries", () => {
       selects: [`u.*`, "u_s0.*", "u.id as id", expect.anything()],
       tables: [
         { alias: "u", table: "users", join: "primary" },
-        { alias: "u_s0", table: "admin_users", join: "outer", col1: "u.id", col2: "u_s0.id", distinct: false },
+        { alias: "u_s0", table: "admin_users", join: "outer", col1: "u.id", col2: "u_s0.id" },
       ],
       condition: {
         op: "or",

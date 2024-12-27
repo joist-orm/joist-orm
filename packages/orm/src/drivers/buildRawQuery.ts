@@ -1,9 +1,7 @@
-import { Knex } from "knex";
 import { ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
 import { assertNever } from "../utils";
 import { buildWhereClause } from "./buildUtils";
-import QueryBuilder = Knex.QueryBuilder;
 
 /**
  * Transforms `ParsedFindQuery` into a raw SQL string.
@@ -17,9 +15,6 @@ export function buildRawQuery(
 ): { sql: string; bindings: readonly any[] } {
   const { limit, offset } = settings;
 
-  // If we're doing o2m joins, add a `DISTINCT` clause to avoid duplicates
-  const needsDistinct = parsed.tables.some((t) => t.join === "outer" && t.distinct !== false);
-
   let sql = "";
   const bindings: any[] = [];
 
@@ -30,17 +25,9 @@ export function buildRawQuery(
 
   sql += "SELECT ";
   parsed.selects.forEach((s, i) => {
-    const maybeDistinct = i === 0 && needsDistinct ? "DISTINCT " : "";
     const maybeComma = i === parsed.selects.length - 1 ? "" : ", ";
-    sql += maybeDistinct + s + maybeComma;
+    sql += s + maybeComma;
   });
-
-  // If we're doing "select distinct" for o2m joins, then all order bys must be selects
-  if (needsDistinct && parsed.orderBys.length > 0) {
-    for (const { alias, column } of parsed.orderBys) {
-      sql += `, ${kqDot(alias, column)}`;
-    }
-  }
 
   // Make sure the primary is first
   const primary = parsed.tables.find((t) => t.join === "primary")!;

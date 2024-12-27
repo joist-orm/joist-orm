@@ -61,17 +61,24 @@ export interface PrimaryTable {
   table: string;
 }
 
+/**
+ * Joins into 0-1 relations, i.e. children up to a parent.
+ *
+ * Even though `LateralJoinTable` handles the "many children" case, we keep the
+ * `"outer"` join for doing joins to optional "0 or 1" relations, where we don't
+ * want a missing result to mean the primary entity itself is not returned.
+ */
 export interface JoinTable {
   join: "inner" | "outer";
   alias: string;
   table: string;
   col1: string;
   col2: string;
-  distinct?: boolean;
 }
 
 export type ParsedTable = PrimaryTable | JoinTable | LateralJoinTable;
 
+/** Joins into 0-N relations, i.e. parent down to many children. */
 export interface LateralJoinTable {
   join: "lateral";
   alias: string;
@@ -473,10 +480,9 @@ export function parseFindQuery(
           tables.push({
             alias: a,
             table,
-            join: "outer",
+            join: "outer", // don't drop the entity just b/c of a missing order by
             col1: kqDot(alias, column),
             col2: kqDot(a, "id"),
-            distinct: false,
           });
           addOrderBy(field.otherMetadata(), a, value);
         }
@@ -1037,7 +1043,6 @@ export function addTablePerClassJoinsAndClassTag(
       join: "outer",
       col1: kqDot(alias, "id"),
       col2: `${alias}_b${i}.id`,
-      distinct: false,
     });
   });
 
@@ -1059,7 +1064,6 @@ export function addTablePerClassJoinsAndClassTag(
         join: "outer",
         col1: kqDot(alias, "id"),
         col2: `${alias}_s${i}.id`,
-        distinct: false,
       });
       for (const field of Object.values(st.fields)) {
         if (field.fieldName !== "id" && field.serde) {

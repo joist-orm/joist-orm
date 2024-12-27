@@ -2423,13 +2423,25 @@ describe("EntityManager.queries", () => {
         { alias: "c", table: "critics", join: "primary" },
         { alias: "lp", table: "large_publishers", join: "outer", col1: "c.favorite_large_publisher_id", col2: "lp.id" },
         // Perhaps ideally the `col1` would be `lp_b0.id` but it doesn't matter
-        { alias: "a", table: "authors", join: "outer", col1: "lp.id", col2: "a.publisher_id" },
+        {
+          alias: "a",
+          table: "authors",
+          join: "lateral",
+          query: {
+            condition: {
+              op: "and",
+              conditions: [
+                { alias: "a", column: "deleted_at", dbType: "timestamp with time zone", cond: { kind: "is-null" } },
+                { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
+                { op: "and", conditions: [{ kind: "raw", condition: "lp.id = a.publisher_id" }] },
+              ],
+            },
+          },
+        },
       ],
       condition: {
         op: "and",
-        conditions: [
-          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
-        ],
+        conditions: [{ alias: "a", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } }],
       },
       orderBys: [expect.anything()],
     });

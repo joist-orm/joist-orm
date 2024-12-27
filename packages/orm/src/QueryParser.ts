@@ -42,8 +42,8 @@ export interface RawCondition {
   condition: string;
   /** The bindings within `condition`, i.e. `SUM(${alias}.amount) > ?`. */
   bindings: any[];
-  /** We assume raw conditions are never system-added, so can't be pruned. */
-  pruneable: false;
+  /** Used to mark system-added conditions (like `LATERAL JOIN` conditions), which can be ignored when pruning unused joins. */
+  pruneable: boolean;
 }
 
 /** A marker condition for alias methods to indicate they should be skipped/pruned. */
@@ -82,6 +82,7 @@ export type ParsedTable = PrimaryTable | JoinTable | LateralJoinTable;
 export interface LateralJoinTable {
   join: "lateral";
   alias: string;
+  fromAlias: string;
   table: string;
   query: ParsedFindQuery;
 }
@@ -164,7 +165,14 @@ export function parseFindQuery(
 
   // ...how do we pull up data to use in any conditions?...
   // what would the format look like? probably just nested JSON...
-  function addLateralJoin(meta: EntityMetadata, alias: string, col1: string, col2: string, filter: any) {
+  function addLateralJoin(
+    meta: EntityMetadata,
+    fromAlias: string,
+    alias: string,
+    col1: string,
+    col2: string,
+    filter: any,
+  ) {
     const a = newAliasProxy(meta.cstr);
     const subFilter = typeof filter === "string" ? { id: filter } : { ...filter };
     let count = undefined;
@@ -180,9 +188,9 @@ export function parseFindQuery(
           and: [
             {
               kind: "raw",
-              aliases: [] as string[],
+              aliases: [fromAlias, alias],
               condition: `${col1} = ${col2}`,
-              pruneable: false,
+              pruneable: true,
               bindings: [],
             },
           ],
@@ -193,7 +201,7 @@ export function parseFindQuery(
     );
     subQuery.selects = ["count(*) as _"];
     subQuery.orderBys = [];
-    tables.push({ join: "lateral", table: meta.tableName, query: subQuery, alias });
+    tables.push({ join: "lateral", table: meta.tableName, query: subQuery, alias, fromAlias });
 
     cb.addSimpleCondition({
       kind: "column",
@@ -201,6 +209,9 @@ export function parseFindQuery(
       column: "_",
       dbType: "int",
       cond: count !== undefined ? { kind: "eq", value: count } : { kind: "gt", value: 0 },
+      // Don't let this condition pin the join, unless the user asked for a specific count
+      // (or deepFindConditions finds a real condition from the above filter).
+      pruneable: count === undefined,
     });
   }
 
@@ -382,6 +393,7 @@ export function parseFindQuery(
           let otherColumn = otherField.serde!.columns[0].columnName;
           addLateralJoin(
             field.otherMetadata(),
+            alias,
             a,
             kqDot(alias, "id"),
             kqDot(a, otherColumn),
@@ -589,7 +601,21 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   // Mark all usages via joins
   for (let i = 0; i < parsed.tables.length; i++) {
     const t = parsed.tables[i];
-    if (t.join !== "primary" && t.join !== "lateral") {
+    if (t.join === "lateral") {
+      // Recurse into the join...
+      // pruneUnusedJoins(t.query, keepAliases);
+      // how can I tell if this join is used?
+      const hasRealCondition = deepFindConditions(t.query.condition).some((c) => !c.pruneable);
+      if (hasRealCondition) used.add(t.alias);
+      const a1 = t.fromAlias;
+      const a2 = t.alias;
+      // the a.count is getting seen
+      if (used.has(a2) && !used.has(a1)) {
+        used.add(a1);
+        // Restart at zero to find dependencies before us
+        i = 0;
+      }
+    } else if (t.join !== "primary") {
       // If alias (col2) is required, ensure the col1 alias is also required
       const a2 = t.alias;
       const a1 = parseAlias(t.col1);

@@ -149,20 +149,6 @@ export function parseFindQuery(
     return i === 0 ? abbrev : `${abbrev}${i}`;
   }
 
-  function maybeAddNotSoftDeleted(meta: EntityMetadata, alias: string): void {
-    if (filterSoftDeletes(meta, softDeletes)) {
-      const column = meta.allFields[getBaseMeta(meta).timestampFields.deletedAt!].serde?.columns[0]!;
-      cb.addSimpleCondition({
-        kind: "column",
-        alias,
-        column: column.columnName,
-        dbType: column.dbType,
-        cond: { kind: "is-null" },
-        pruneable: true,
-      });
-    }
-  }
-
   // ...how do we pull up data to use in any conditions?...
   // what would the format look like? probably just nested JSON...
   function addLateralJoin(
@@ -251,7 +237,7 @@ export function parseFindQuery(
       addStiSubtypeFilter(cb, meta, alias);
     }
 
-    maybeAddNotSoftDeleted(meta, alias);
+    maybeAddNotSoftDeleted(cb, softDeletes, meta, alias);
     bindAlias(filter, meta, alias);
 
     // See if the clause says we must do a join into the relation
@@ -1113,20 +1099,27 @@ export function addTablePerClassJoinsAndClassTag(
 }
 
 export function maybeAddNotSoftDeleted(
-  conditions: ColumnCondition[],
+  // Within this file we pass ConditionBuilder, but findByUniqueDataLoader passes ColumnCondition[]
+  cb: ConditionBuilder | ColumnCondition[],
+  softDeletes: "include" | "exclude",
   meta: EntityMetadata,
   alias: string,
-  softDeletes: "include" | "exclude",
 ): void {
   if (filterSoftDeletes(meta, softDeletes)) {
     const column = meta.allFields[getBaseMeta(meta).timestampFields.deletedAt!].serde?.columns[0]!;
-    conditions.push({
+    const condition = {
       kind: "column",
       alias,
       column: column.columnName,
       dbType: column.dbType,
       cond: { kind: "is-null" },
-    });
+      pruneable: true,
+    } satisfies ColumnCondition;
+    if (cb instanceof ConditionBuilder) {
+      cb.addSimpleCondition(condition);
+    } else {
+      cb.push(condition);
+    }
   }
 }
 

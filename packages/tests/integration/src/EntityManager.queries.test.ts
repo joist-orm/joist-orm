@@ -2211,6 +2211,7 @@ describe("EntityManager.queries", () => {
   it("can find through o2m with all children matching", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });
+    await insertAuthor({ first_name: "a3" });
     await insertBook({ title: "b10", author_id: 1 });
     await insertBook({ title: "b11", author_id: 1 });
     await insertBook({ title: "b2", author_id: 2 });

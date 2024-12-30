@@ -173,8 +173,16 @@ export function parseFindQuery(
     col2: string,
     filter: any,
   ) {
+    const ef = parseEntityFilter(meta, filter);
+    // Maybe skip
+    if (!ef && !isAlias(filter)) return;
+
+    bindAlias(filter, meta, alias);
+
+    // Create an alias to use for our subquery's `where parent_id = id` condition
     const a = newAliasProxy(meta.cstr);
-    const subFilter = typeof filter === "string" ? { id: filter } : { ...filter };
+
+    const subFilter = ef && ef.kind === "join" ? ef.subFilter : (ef ?? {});
     let count = undefined;
     if ("$count" in subFilter) {
       count = subFilter["$count"];
@@ -226,9 +234,8 @@ export function parseFindQuery(
   ): void {
     // look at filter, is it `{ book: "b2" }` or `{ book: { ... } }`
     const ef = parseEntityFilter(meta, filter);
-    if (!ef && join !== "primary" && !isAlias(filter)) {
-      return;
-    }
+    // Maybe skip
+    if (!ef && join !== "primary" && !isAlias(filter)) return;
 
     if (join === "primary") {
       tables.push({ alias, table: meta.tableName, join });
@@ -245,16 +252,7 @@ export function parseFindQuery(
     }
 
     maybeAddNotSoftDeleted(meta, alias);
-
-    // The user's locally declared aliases, i.e. `const [a, b] = aliases(Author, Book)`,
-    // aren't guaranteed to line up with the aliases we've assigned internally, like `a`
-    // might actually be `a1` if there are two `authors` tables in the query, so push the
-    // canonical alias value for the current clause into the Alias.
-    if (filter && typeof filter === "object" && "as" in filter && isAlias(filter.as)) {
-      filter.as[aliasMgmt].setAlias(meta, alias);
-    } else if (isAlias(filter)) {
-      filter[aliasMgmt].setAlias(meta, alias);
-    }
+    bindAlias(filter, meta, alias);
 
     // See if the clause says we must do a join into the relation
     if (ef && ef.kind === "join") {
@@ -1202,6 +1200,25 @@ function addStiSubtypeFilter(cb: ConditionBuilder, subtypeMeta: EntityMetadata, 
     dbType: column.dbType,
     cond: { kind: "eq", value: subtypeMeta.stiDiscriminatorValue },
   });
+}
+
+/**
+ * Given a filter that might be an `alias(Author)` placeholder, or have an `as: author`
+ * binding, tells the `Alias` its canonical meta/alias.
+ *
+ * That way, when we later walk `conditions` and build the `AND/OR` tree, each condition
+ * will know the canonical alias to output into the SQL clause.
+ */
+function bindAlias(filter: any, meta: EntityMetadata, alias: string) {
+  // The user's locally declared aliases, i.e. `const [a, b] = aliases(Author, Book)`,
+  // aren't guaranteed to line up with the aliases we've assigned internally, like `a`
+  // might actually be `a1` if there are two `authors` tables in the query, so push the
+  // canonical alias value for the current clause into the Alias.
+  if (filter && typeof filter === "object" && "as" in filter && isAlias(filter.as)) {
+    filter.as[aliasMgmt].setAlias(meta, alias);
+  } else if (isAlias(filter)) {
+    filter[aliasMgmt].setAlias(meta, alias);
+  }
 }
 
 /** Converts a search term like `foo bar` into a SQL `like` pattern like `%foo%bar%`. */

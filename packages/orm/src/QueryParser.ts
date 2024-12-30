@@ -175,11 +175,7 @@ export function parseFindQuery(
     const a = newAliasProxy(meta.cstr);
 
     const subFilter = ef && ef.kind === "join" ? ef.subFilter : (ef ?? {});
-    let count = undefined;
-    if ("$count" in subFilter) {
-      count = subFilter["$count"];
-      delete subFilter["$count"];
-    }
+    const count = "$count" in subFilter ? subFilter["$count"] : undefined;
     const subQuery = parseFindQuery(
       meta,
       { as: a, ...subFilter },
@@ -261,7 +257,7 @@ export function parseFindQuery(
       // subFilter really means we're matching against the entity columns/further joins
       Object.keys(ef.subFilter).forEach((key) => {
         // Skip the `{ as: ... }` alias binding
-        if (key === "as") return;
+        if (key === "as" || key === "$count") return;
         const field =
           meta.allFields[key] ??
           meta.polyComponentFields?.[key] ??

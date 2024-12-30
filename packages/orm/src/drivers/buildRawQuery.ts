@@ -26,7 +26,12 @@ export function buildRawQuery(
   sql += "SELECT ";
   parsed.selects.forEach((s, i) => {
     const maybeComma = i === parsed.selects.length - 1 ? "" : ", ";
-    sql += s + maybeComma;
+    if (typeof s === "string") {
+      sql += s + maybeComma;
+    } else {
+      sql += s.sql + maybeComma;
+      bindings.push(...s.bindings);
+    }
   });
 
   // Make sure the primary is first

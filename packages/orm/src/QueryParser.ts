@@ -6,6 +6,7 @@ import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
 import { abbreviation } from "./QueryBuilder";
 import { visitConditions } from "./QueryVisitor";
 import { getMetadataForTable } from "./configure";
+import { buildCondition } from "./drivers/buildUtils";
 import { Column, getConstructorFromTaggedId, isDefined, keyToNumber, maybeResolveReferenceToId } from "./index";
 import { kq, kqDot } from "./keywords";
 import { assertNever, fail, partition } from "./utils";
@@ -95,7 +96,7 @@ export interface ParsedOrderBy {
 
 /** The result of parsing an `em.find` filter. */
 export interface ParsedFindQuery {
-  selects: string[];
+  selects: (string | { sql: string; bindings: any[] })[];
   /** The primary table plus any joins. */
   tables: ParsedTable[];
   /** Any cross lateral joins, where the `joins: string[]` has the full join as raw SQL; currently only for preloading. */
@@ -149,6 +150,11 @@ export function parseFindQuery(
     return i === 0 ? abbrev : `${abbrev}${i}`;
   }
 
+  // If they passed extra `conditions: ...`, parse that.
+  // We can do this up-front b/c it doesn't require any join-tree metadata to perform,
+  // and then it's available for our `addLateralJoin`s to rewrite.
+  if (optsExpression) cb.maybeAddExpression(optsExpression);
+
   // ...how do we pull up data to use in any conditions?...
   // what would the format look like? probably just nested JSON...
   function addLateralJoin(
@@ -197,16 +203,26 @@ export function parseFindQuery(
     subQuery.orderBys = [];
     tables.push({ join: "lateral", table: meta.tableName, query: subQuery, alias, fromAlias });
 
-    cb.addSimpleCondition({
-      kind: "column",
-      alias,
-      column: "_",
-      dbType: "int",
-      cond: count !== undefined ? { kind: "eq", value: count } : { kind: "gt", value: 0 },
-      // Don't let this condition pin the join, unless the user asked for a specific count
-      // (or deepFindConditions finds a real condition from the above filter).
-      pruneable: count === undefined,
-    });
+    // Look for complex conditions...
+    const complexConditions = cb.findAndRewrite(alias);
+    for (const cc of complexConditions) {
+      const [sql, bindings] = buildCondition(cc.cond);
+      subQuery.selects.push({ sql: `BOOL_OR(${sql}) as ${cc.as}`, bindings });
+    }
+
+    // If there are complex conditions looking at our data, we don't need an extra check
+    if (complexConditions.length === 0) {
+      cb.addSimpleCondition({
+        kind: "column",
+        alias,
+        column: "_",
+        dbType: "int",
+        cond: count !== undefined ? { kind: "eq", value: count } : { kind: "gt", value: 0 },
+        // Don't let this condition pin the join, unless the user asked for a specific count
+        // (or deepFindConditions finds a real condition from the above filter).
+        pruneable: count === undefined,
+      });
+    }
   }
 
   /** Adds `meta` to the query, i.e. for m2o/o2o joins into parents. */
@@ -488,11 +504,6 @@ export function parseFindQuery(
   selects.push(`${kq(alias)}.*`);
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
 
-  // If they passed extra `conditions: ...`, parse that
-  if (optsExpression) {
-    cb.maybeAddExpression(optsExpression);
-  }
-
   Object.assign(query, {
     condition: cb.toExpressionFilter(),
   });
@@ -563,7 +574,9 @@ function maybeAddIdNotNulls(query: ParsedFindQuery): void {
 function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void {
   // Mark all terminal usages
   const used = new Set<string>();
-  parsed.selects.forEach((s) => used.add(parseAlias(s)));
+  parsed.selects.forEach((s) => {
+    if (typeof s === "string") used.add(parseAlias(s));
+  });
   parsed.orderBys.forEach((o) => used.add(o.alias));
   keepAliases.forEach((a) => used.add(a));
   deepFindConditions(parsed.condition)
@@ -948,6 +961,34 @@ export class ConditionBuilder {
     }
     return undefined;
   }
+
+  findAndRewrite(alias: string): { cond: ColumnCondition; as: string }[] {
+    let j = 0;
+    const found: { cond: ColumnCondition; as: string }[] = [];
+    const todo: ParsedExpressionCondition[][] = [this.conditions];
+    for (const exp of this.expressions) todo.push(exp.conditions);
+    while (todo.length > 0) {
+      const array = todo.pop()!;
+      array.forEach((cond, i) => {
+        if (cond.kind === "column") {
+          if (cond.alias === alias) {
+            const as = `_${alias}_${cond.column}_${j++}`;
+            array[i] = {
+              kind: "raw",
+              aliases: [alias],
+              condition: `${alias}.${as}`,
+              bindings: [],
+              pruneable: false,
+            } satisfies RawCondition;
+            found.push({ cond, as });
+          }
+        } else if (cond.kind === "exp") {
+          todo.push(cond.conditions);
+        }
+      });
+    }
+    return found;
+  }
 }
 
 /** Converts domain-level values like string ids/enums into their db equivalent. */
@@ -1132,13 +1173,16 @@ function filterSoftDeletes(meta: EntityMetadata, softDeletes: "include" | "exclu
   );
 }
 
+/** Parses user-facing `{ and: ... }` or `{ or: ... }` into a `ParsedExpressionFilter`. */
 function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter | undefined {
+  // Look for `{ and: [...] }` or `{ or: [...] }`
   const [op, expressions] =
     "and" in expression && expression.and
       ? ["and" as const, expression.and]
       : "or" in expression && expression.or
         ? ["or" as const, expression.or]
         : fail(`Invalid expression ${expression}`);
+  // Potentially recurse into nested expressions
   const conditions = expressions.map((exp) => (exp && ("and" in exp || "or" in exp) ? parseExpression(exp) : exp));
   const [skip, valid] = partition(conditions, (cond) => cond === undefined || cond === skipCondition);
   if ((skip.length > 0 && expression.pruneIfUndefined === "any") || valid.length === 0) {

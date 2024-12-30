@@ -33,7 +33,7 @@ function buildRawCondition(raw: RawCondition): [string, any[]] {
 }
 
 /** Returns a tuple of `["column op ?"`, bindings]`. */
-function buildCondition(cc: ColumnCondition): [string, any[]] {
+export function buildCondition(cc: ColumnCondition): [string, any[]] {
   const { alias, column, cond } = cc;
   const columnName = kqDot(alias, column);
   switch (cond.kind) {

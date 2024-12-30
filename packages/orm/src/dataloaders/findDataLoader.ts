@@ -89,6 +89,7 @@ export function findDataLoader<T extends Entity>(
 
       // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
       const groupBys = selects
+        .filter((s) => typeof s === "string")
         .filter((s) => !s.includes("array_agg") && !s.includes("CASE") && !s.includes(" as "))
         .map((s) => s.replace("*", "id"));
 

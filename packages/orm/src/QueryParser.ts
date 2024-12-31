@@ -174,7 +174,14 @@ export function parseFindQuery(
     // Create an alias to use for our subquery's `where parent_id = id` condition
     const a = newAliasProxy(meta.cstr);
 
-    const subFilter = ef && ef.kind === "join" ? ef.subFilter : (ef ?? {});
+    const subFilter =
+      // subFilter will be unprocessed, so we can pass it recursively into `parseFindQuery`
+      ef && ef.kind === "join"
+        ? ef.subFilter
+        : // If `ef` is set, it's already parsed, which `parseFindQuery` won't expect, so pass the original `filter`
+          ef !== undefined
+          ? { id: filter }
+          : {};
     const count = "$count" in subFilter ? subFilter["$count"] : undefined;
     const subQuery = parseFindQuery(
       meta,
@@ -182,13 +189,7 @@ export function parseFindQuery(
       {
         conditions: {
           and: [
-            {
-              kind: "raw",
-              aliases: [fromAlias, alias],
-              condition: `${col1} = ${col2}`,
-              pruneable: true,
-              bindings: [],
-            },
+            { kind: "raw", aliases: [fromAlias, alias], condition: `${col1} = ${col2}`, pruneable: true, bindings: [] },
           ],
         },
         aliases,

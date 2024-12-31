@@ -952,6 +952,9 @@ export class ConditionBuilder {
     if (conditions.length === 0 && expressions.length === 1) {
       // If no inline conditions, and just 1 opt expression, just use that
       return expressions[0];
+    } else if (expressions.length === 1 && expressions[0].op === "and") {
+      // Merge the 1 `AND` expression with the other simple conditions
+      return { kind: "exp", op: "and", conditions: [...conditions, ...expressions[0].conditions] };
     } else if (conditions.length > 0 || expressions.length > 0) {
       // Combine the conditions within the `em.find` join literal & the `conditions` as ANDs
       return { kind: "exp", op: "and", conditions: [...conditions, ...expressions] };

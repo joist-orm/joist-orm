@@ -94,9 +94,12 @@ export interface ParsedOrderBy {
   order: OrderBy;
 }
 
+type ParsedSelect = string | ParsedSelectWithBindings;
+type ParsedSelectWithBindings = { sql: string; bindings: any[]; aliases: string[] };
+
 /** The result of parsing an `em.find` filter. */
 export interface ParsedFindQuery {
-  selects: (string | { sql: string; bindings: any[] })[];
+  selects: ParsedSelect[];
   /** The primary table plus any joins. */
   tables: ParsedTable[];
   /** Any cross lateral joins, where the `joins: string[]` has the full join as raw SQL; currently only for preloading. */
@@ -126,10 +129,11 @@ export function parseFindQuery(
     // Allow recursively calling ourselves for putting together lateral joins
     aliases?: Record<string, number>;
     alias?: string;
-    topLevelCondition?: ParsedExpressionFilter;
+    topLevelCondition?: ConditionBuilder;
+    outerLateralJoins?: { alias: string; select: ParsedSelect[] }[];
   } = {},
 ): ParsedFindQuery {
-  const selects: string[] = [];
+  const selects: ParsedSelect[] = [];
   const tables: ParsedTable[] = [];
   const orderBys: ParsedOrderBy[] = [];
   const query = { selects, tables, orderBys };
@@ -196,21 +200,30 @@ export function parseFindQuery(
         aliases,
         alias,
         // Let the subquery's pruneUnusedJoins know about the top-level WHERE clauses
-        topLevelCondition: opts.topLevelCondition ?? cb.expressions[0],
+        topLevelCondition: opts.topLevelCondition ?? cb,
+        outerLateralJoins: [{ alias, select: selects }, ...(opts.outerLateralJoins ?? [])],
       },
     );
-    subQuery.selects = ["count(*) as _"];
     subQuery.orderBys = [];
     tables.push({ join: "lateral", table: meta.tableName, query: subQuery, alias, fromAlias });
 
     // Look for complex conditions...
-    const complexConditions = cb.findAndRewrite(alias);
+    const topLevelAlias = opts.outerLateralJoins?.[opts.outerLateralJoins?.length - 1]?.alias;
+    const complexConditions = (opts.topLevelCondition ?? cb).findAndRewrite(topLevelAlias ?? alias, alias);
     for (const cc of complexConditions) {
       if (cc.cond.kind === "column" && cc.cond.column === "$count") {
-        subQuery.selects.push({ sql: `count(*) > ${(cc.cond.cond as any).value} as ${cc.as}`, bindings: [] });
+        subQuery.selects.push({
+          sql: `count(*) > ${(cc.cond.cond as any).value} as ${cc.as}`,
+          aliases: [cc.cond.alias],
+          bindings: [],
+        });
       } else {
         const [sql, bindings] = buildCondition(cc.cond);
-        subQuery.selects.push({ sql: `BOOL_OR(${sql}) as ${cc.as}`, bindings });
+        subQuery.selects.push({
+          sql: `BOOL_OR(${sql}) as ${cc.as}`,
+          aliases: [cc.cond.alias],
+          bindings,
+        });
       }
     }
 
@@ -259,6 +272,36 @@ export function parseFindQuery(
 
     maybeAddNotSoftDeleted(cb, softDeletes, meta, alias);
     bindAlias(filter, meta, alias);
+
+    // If we're inside a lateral join, look for top-level conditions that need to be rewritten as `BOOL_OR(...)`
+    if (opts.topLevelCondition) {
+      const topLevelAlias = opts.outerLateralJoins?.[opts.outerLateralJoins?.length - 1]?.alias;
+      const complexConditions = opts.topLevelCondition.findAndRewrite(topLevelAlias ?? alias, alias);
+      for (const cc of complexConditions) {
+        if (cc.cond.kind === "column" && cc.cond.column === "$count") {
+          selects.push({
+            sql: `count(*) > ${(cc.cond.cond as any).value} as ${cc.as}`,
+            aliases: [cc.cond.alias],
+            bindings: [],
+          });
+        } else {
+          const [sql, bindings] = buildCondition(cc.cond);
+          selects.push({
+            sql: `BOOL_OR(${sql}) as ${cc.as}`,
+            aliases: [cc.cond.alias],
+            bindings,
+          });
+        }
+        opts.outerLateralJoins?.forEach(({ alias, select }, i) => {
+          const isLast = i === opts.outerLateralJoins!.length - 1;
+          if (!isLast) {
+            select.push({ sql: `BOOL_OR(${alias}.${cc.as}) as ${cc.as}`, bindings: [], aliases: [alias] });
+          }
+        });
+      }
+      // prune needs to see the immediate, not necessarily the whole conditions...
+      // only rewriting needs to see the whole thing
+    }
 
     // See if the clause says we must do a join into the relation
     if (ef && ef.kind === "join") {
@@ -491,7 +534,11 @@ export function parseFindQuery(
 
   // always add the main table
   const alias = opts.alias ?? getAlias(meta.tableName);
-  selects.push(`${kq(alias)}.*`);
+  if (opts.topLevelCondition === undefined) {
+    selects.push(`${kq(alias)}.*`);
+  } else {
+    selects.push("count(*) as _");
+  }
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
 
   Object.assign(query, {
@@ -512,7 +559,11 @@ export function parseFindQuery(
   maybeAddOrderBy(query, meta, alias);
 
   if (pruneJoins) {
-    pruneUnusedJoins(query, opts.topLevelCondition ?? cb.expressions[0], keepAliases);
+    pruneUnusedJoins(
+      query,
+      // (opts.topLevelCondition ?? cb).expressions[0],
+      keepAliases,
+    );
   }
 
   return query;
@@ -561,22 +612,22 @@ function maybeAddIdNotNulls(query: ParsedFindQuery): void {
 }
 
 // Remove any joins that are not used in the select or conditions
-function pruneUnusedJoins(
-  parsed: ParsedFindQuery,
-  topLevelCondition: ParsedExpressionFilter | undefined,
-  keepAliases: string[],
-): void {
+function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void {
   // Mark all terminal usages
   const used = new Set<string>();
   parsed.selects.forEach((s) => {
-    if (typeof s === "string") used.add(parseAlias(s));
+    if (typeof s === "string") {
+      used.add(parseAlias(s));
+    } else {
+      for (const a of s.aliases) used.add(a);
+    }
   });
   parsed.orderBys.forEach((o) => used.add(o.alias));
   keepAliases.forEach((a) => used.add(a));
   const allConditions = [
     ...deepFindConditions(parsed.condition, true),
     // topLevelCondition will be set if we're within a lateral join
-    ...deepFindConditions(topLevelCondition, true),
+    // ...deepFindConditions(topLevelCondition, true),
   ];
   allConditions.forEach((c) => {
     if (c.kind === "column") {
@@ -595,7 +646,10 @@ function pruneUnusedJoins(
       // pruneUnusedJoins(t.query, keepAliases);
       // how can I tell if this join is used?
       const hasRealCondition =
-        [...deepFindConditions(topLevelCondition, true), ...deepFindConditions(t.query.condition, true)].length > 0;
+        [
+          // ...deepFindConditions(topLevelCondition, true),
+          ...deepFindConditions(t.query.condition, true),
+        ].length > 0;
       if (hasRealCondition) used.add(t.alias);
       const a1 = t.fromAlias;
       const a2 = t.alias;
@@ -967,7 +1021,7 @@ export class ConditionBuilder {
     return undefined;
   }
 
-  findAndRewrite(alias: string): { cond: ColumnCondition; as: string }[] {
+  findAndRewrite(topLevelLateralJoin: string, alias: string): { cond: ColumnCondition; as: string }[] {
     let j = 0;
     const found: { cond: ColumnCondition; as: string }[] = [];
     const todo: ParsedExpressionCondition[][] = [this.conditions];
@@ -980,8 +1034,8 @@ export class ConditionBuilder {
             const as = `_${alias}_${cond.column}_${j++}`;
             array[i] = {
               kind: "raw",
-              aliases: [alias],
-              condition: `${alias}.${as}`,
+              aliases: [topLevelLateralJoin],
+              condition: `${topLevelLateralJoin}.${as}`,
               bindings: [],
               pruneable: false,
             } satisfies RawCondition;

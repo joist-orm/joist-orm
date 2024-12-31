@@ -2568,7 +2568,7 @@ describe("EntityManager.queries", () => {
       await insertBook({ title: "b1", author_id: 1 });
       const em = newEntityManager();
       const b = alias(Book);
-      const authors = await em.find(Author, { books: b }, { conditions: { and: [b.id.eq(null)] } });
+      const authors = await em.find(Author, { books: b }, { conditions: { and: [b.$count.eq(0)] } });
       expect(authors.length).toEqual(1);
     });
 

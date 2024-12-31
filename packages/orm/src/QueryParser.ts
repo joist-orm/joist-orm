@@ -203,8 +203,12 @@ export function parseFindQuery(
     // Look for complex conditions...
     const complexConditions = cb.findAndRewrite(alias);
     for (const cc of complexConditions) {
-      const [sql, bindings] = buildCondition(cc.cond);
-      subQuery.selects.push({ sql: `BOOL_OR(${sql}) as ${cc.as}`, bindings });
+      if (cc.cond.kind === "column" && cc.cond.column === "$count") {
+        subQuery.selects.push({ sql: `count(*) > ${(cc.cond.cond as any).value} as ${cc.as}`, bindings: [] });
+      } else {
+        const [sql, bindings] = buildCondition(cc.cond);
+        subQuery.selects.push({ sql: `BOOL_OR(${sql}) as ${cc.as}`, bindings });
+      }
     }
 
     // If there are complex conditions looking at our data, we don't need an extra check

@@ -382,10 +382,9 @@ describe("EntityManager.find.batch", () => {
     expect(queries).toEqual([
       [
         `WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) )`,
-        ` SELECT _find.tag as tag, count(distinct "as".id) as count`,
-        ` FROM author_schedules as "as"`,
-        ` JOIN _find ON "as".id = _find.arg0`,
-        ` GROUP BY _find.tag`,
+        ` SELECT _find.tag as tag, _data.count as count`,
+        ` FROM _find AS _find`,
+        ` CROSS JOIN LATERAL (SELECT count(*) as count FROM author_schedules AS "as" WHERE "as".id = _find.arg0) AS _data`,
       ].join(""),
     ]);
     expect(q1).toEqual(0);

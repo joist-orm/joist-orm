@@ -215,7 +215,7 @@ export function collectAndReplaceArgs(query: ParsedFindQuery): { columnName: str
           return {
             kind: "raw",
             aliases: [c.alias],
-            condition: `${negate ? "NOT " : ""}${c.alias}.${c.column} ${op}`,
+            condition: `${negate ? "NOT " : ""}${kqDot(c.alias, c.column)} ${op}`,
             pruneable: c.pruneable ?? false,
             bindings: [],
           } satisfies RawCondition;

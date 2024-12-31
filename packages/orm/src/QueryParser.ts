@@ -184,9 +184,11 @@ export function parseFindQuery(
       ef && ef.kind === "join"
         ? ef.subFilter
         : // If `ef` is set, it's already parsed, which `parseFindQuery` won't expect, so pass the original `filter`
-          ef !== undefined
+          typeof filter === "string"
           ? { id: filter }
-          : {};
+          : ef !== undefined
+            ? filter
+            : {};
     const count = "$count" in subFilter ? subFilter["$count"] : undefined;
     const subQuery = parseFindQuery(
       meta,

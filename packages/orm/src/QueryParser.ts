@@ -126,6 +126,7 @@ export function parseFindQuery(
     // Allow recursively calling ourselves for putting together lateral joins
     aliases?: Record<string, number>;
     alias?: string;
+    topLevelCondition?: ParsedExpressionFilter;
   } = {},
 ): ParsedFindQuery {
   const selects: string[] = [];
@@ -194,6 +195,8 @@ export function parseFindQuery(
         },
         aliases,
         alias,
+        // Let the subquery's pruneUnusedJoins know about the top-level WHERE clauses
+        topLevelCondition: opts.topLevelCondition ?? cb.expressions[0],
       },
     );
     subQuery.selects = ["count(*) as _"];
@@ -509,7 +512,7 @@ export function parseFindQuery(
   maybeAddOrderBy(query, meta, alias);
 
   if (pruneJoins) {
-    pruneUnusedJoins(query, keepAliases);
+    pruneUnusedJoins(query, opts.topLevelCondition ?? cb.expressions[0], keepAliases);
   }
 
   return query;
@@ -558,7 +561,11 @@ function maybeAddIdNotNulls(query: ParsedFindQuery): void {
 }
 
 // Remove any joins that are not used in the select or conditions
-function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void {
+function pruneUnusedJoins(
+  parsed: ParsedFindQuery,
+  topLevelCondition: ParsedExpressionFilter | undefined,
+  keepAliases: string[],
+): void {
   // Mark all terminal usages
   const used = new Set<string>();
   parsed.selects.forEach((s) => {
@@ -566,7 +573,12 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   });
   parsed.orderBys.forEach((o) => used.add(o.alias));
   keepAliases.forEach((a) => used.add(a));
-  deepFindConditions(parsed.condition, true).forEach((c) => {
+  const allConditions = [
+    ...deepFindConditions(parsed.condition, true),
+    // topLevelCondition will be set if we're within a lateral join
+    ...deepFindConditions(topLevelCondition, true),
+  ];
+  allConditions.forEach((c) => {
     if (c.kind === "column") {
       used.add(c.alias);
     } else if (c.kind === "raw") {
@@ -582,7 +594,8 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
       // Recurse into the join...
       // pruneUnusedJoins(t.query, keepAliases);
       // how can I tell if this join is used?
-      const hasRealCondition = deepFindConditions(t.query.condition, true).length > 0;
+      const hasRealCondition =
+        [...deepFindConditions(topLevelCondition, true), ...deepFindConditions(t.query.condition, true)].length > 0;
       if (hasRealCondition) used.add(t.alias);
       const a1 = t.fromAlias;
       const a2 = t.alias;
@@ -877,9 +890,9 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
 /** Converts domain-level values like string ids/enums into their db equivalent. */
 export class ConditionBuilder {
   /** Simple, single-column conditions, which will be AND-d together. */
-  private conditions: ColumnCondition[] = [];
+  conditions: ColumnCondition[] = [];
   /** Complex expressions, which will also be AND-d together with `conditions`. */
-  private expressions: ParsedExpressionFilter[] = [];
+  expressions: ParsedExpressionFilter[] = [];
 
   /** Accepts a raw user-facing DSL filter, and parses it into a `ParsedExpressionFilter`. */
   maybeAddExpression(expression: ExpressionFilter): void {

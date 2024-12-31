@@ -12,6 +12,7 @@ import {
   ParsedExpressionFilter,
   ParsedFindQuery,
   ParsedValueFilter,
+  RawCondition,
   getTables,
   joinKeywords,
   parseFindQuery,
@@ -194,6 +195,41 @@ export function collectArgs(query: ParsedFindQuery): { columnName: string; dbTyp
   return args;
 }
 
+export function collectAndReplaceArgs(query: ParsedFindQuery): { columnName: string; dbType: string }[] {
+  const args: { columnName: string; dbType: string }[] = [];
+  let argsIndex = 0;
+  visitConditions(query, {
+    visitCond(c: ColumnCondition) {
+      if ("value" in c.cond) {
+        const { kind } = c.cond;
+        if (kind === "in" || kind === "nin") {
+          args.push({ columnName: `arg${args.length}`, dbType: `${c.dbType}[]` });
+        } else if (kind === "between") {
+          // between has two values
+          args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
+          args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
+        } else {
+          args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
+          const [op, argsTaken, negate] = makeOp(c.cond, argsIndex);
+          argsIndex += argsTaken;
+          return {
+            kind: "raw",
+            aliases: [c.alias],
+            condition: `${negate ? "NOT " : ""}${c.alias}.${c.column} ${op}`,
+            pruneable: c.pruneable ?? false,
+            bindings: [],
+          } satisfies RawCondition;
+        }
+      } else if (c.cond.kind === "is-null" || c.cond.kind === "not-null") {
+        // leave it alone
+      } else {
+        throw new Error("Unsupported");
+      }
+    },
+  });
+  return args;
+}
+
 export function createBindings(meta: EntityMetadata, queries: readonly FilterAndSettings<any>[]): any[] {
   const bindings: any[] = [];
   queries.forEach((query, i) => {
@@ -277,6 +313,7 @@ export function buildConditions(ef: ParsedExpressionFilter, argsIndex: number = 
   return [conditions.join(` ${ef.op.toUpperCase()} `), argsTaken];
 }
 
+/** Returns [operator, argsTaken, negate], i.e. `["=", 1, false]`. */
 function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, number, boolean] {
   switch (cond.kind) {
     case "eq":

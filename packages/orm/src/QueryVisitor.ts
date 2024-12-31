@@ -4,7 +4,7 @@ import { ColumnCondition, ParsedExpressionFilter, ParsedFindQuery, RawCondition 
 interface Visitor {
   visitExp?(c: ParsedExpressionFilter): ParsedExpressionFilter | void;
   visitRaw?(c: RawCondition): RawCondition | ParsedExpressionFilter | void;
-  visitCond(c: ColumnCondition): ColumnCondition | ParsedExpressionFilter | void;
+  visitCond(c: ColumnCondition): ColumnCondition | ParsedExpressionFilter | RawCondition | void;
 }
 
 /**
@@ -36,4 +36,12 @@ export function visitConditions(query: ParsedFindQuery, visitor: Visitor): void 
     });
   }
   if (query.condition) visit(query.condition);
+  for (const table of query.tables) {
+    // ...we probably need better recursion here?
+    if (table.join === "lateral") {
+      if (table.query.condition) {
+        visit(table.query.condition);
+      }
+    }
+  }
 }

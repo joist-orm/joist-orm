@@ -227,8 +227,14 @@ export function parseFindQuery(
       }
     }
 
-    // If there are complex conditions looking at our data, we don't need an extra check
-    if (complexConditions.length === 0) {
+    // If there are complex conditions looking at our data, we don't want a "make sure at least one matched"
+    const usedByComplexCondition =
+      selects.some((s) => typeof s === "object" && "aliases" in s && s.aliases.includes(alias)) ||
+      (!opts.topLevelCondition &&
+        deepFindConditions(cb.expressions[0], true).some((c) => {
+          return c.kind === "raw" && c.aliases.includes(alias);
+        }));
+    if (!usedByComplexCondition) {
       cb.addSimpleCondition({
         kind: "column",
         alias,

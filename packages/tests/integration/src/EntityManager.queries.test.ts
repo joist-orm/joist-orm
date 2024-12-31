@@ -2831,8 +2831,40 @@ describe("EntityManager.queries", () => {
         tables: [
           { alias: "a", table: "authors", join: "primary" },
           { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id" },
-          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+          {
+            alias: "b",
+            fromAlias: "a",
+            table: "books",
+            join: "lateral",
+            query: {
+              selects: ["count(*) as _"],
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                kind: "exp",
+                op: "and",
+                conditions: [
+                  {
+                    kind: "column",
+                    alias: "b",
+                    column: "deleted_at",
+                    dbType: "timestamp with time zone",
+                    cond: { kind: "is-null" },
+                    pruneable: true,
+                  },
+                  { kind: "raw", aliases: ["a", "b"], condition: "a.id = b.author_id", bindings: [], pruneable: true },
+                ],
+              },
+              orderBys: [],
+            },
+          },
         ],
+        condition: {
+          kind: "exp",
+          op: "and",
+          conditions: [
+            { kind: "column", alias: "b", column: "_", dbType: "int", cond: { kind: "gt", value: 0 }, pruneable: true },
+          ],
+        },
         orderBys: [expect.anything()],
       });
     });

@@ -566,22 +566,15 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   });
   parsed.orderBys.forEach((o) => used.add(o.alias));
   keepAliases.forEach((a) => used.add(a));
-  deepFindConditions(parsed.condition)
-    .filter((c) => !c.pruneable)
-    .forEach((c) => {
-      switch (c.kind) {
-        case "column":
-          used.add(c.alias);
-          break;
-        case "raw":
-          for (const alias of c.aliases) {
-            used.add(alias);
-          }
-          break;
-        default:
-          assertNever(c);
-      }
-    });
+  deepFindConditions(parsed.condition, true).forEach((c) => {
+    if (c.kind === "column") {
+      used.add(c.alias);
+    } else if (c.kind === "raw") {
+      for (const alias of c.aliases) used.add(alias);
+    } else {
+      assertNever(c);
+    }
+  });
   // Mark all usages via joins
   for (let i = 0; i < parsed.tables.length; i++) {
     const t = parsed.tables[i];
@@ -589,7 +582,7 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
       // Recurse into the join...
       // pruneUnusedJoins(t.query, keepAliases);
       // how can I tell if this join is used?
-      const hasRealCondition = deepFindConditions(t.query.condition).some((c) => !c.pruneable);
+      const hasRealCondition = deepFindConditions(t.query.condition, true).length > 0;
       if (hasRealCondition) used.add(t.alias);
       const a1 = t.fromAlias;
       const a2 = t.alias;
@@ -630,7 +623,10 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
 }
 
 /** Pulls out a flat list of all `ColumnCondition`s from a `ParsedExpressionFilter` tree. */
-function deepFindConditions(condition: ParsedExpressionFilter | undefined): (ColumnCondition | RawCondition)[] {
+function deepFindConditions(
+  condition: ParsedExpressionFilter | undefined,
+  filterPruneable: boolean,
+): (ColumnCondition | RawCondition)[] {
   const todo = condition ? [condition] : [];
   const result: (ColumnCondition | RawCondition)[] = [];
   while (todo.length !== 0) {
@@ -638,8 +634,10 @@ function deepFindConditions(condition: ParsedExpressionFilter | undefined): (Col
     for (const c of cc.conditions) {
       if (c.kind === "exp") {
         todo.push(c);
+      } else if (c.kind === "column" || c.kind === "raw") {
+        if (!filterPruneable || !c.pruneable) result.push(c);
       } else {
-        result.push(c);
+        assertNever(c);
       }
     }
   }

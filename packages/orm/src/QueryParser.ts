@@ -633,6 +633,10 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
       }
     });
   }
+  // Remove any `{ and: [...] }`s that are empty; we should probably do this deeply?
+  if (parsed.condition && parsed.condition.conditions.length === 0) {
+    parsed.condition = undefined;
+  }
 }
 
 /** Pulls out a flat list of all `ColumnCondition`s from a `ParsedExpressionFilter` tree. */

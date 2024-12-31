@@ -3030,7 +3030,7 @@ describe("EntityManager.queries", () => {
       const conditionalFilter: ExpressionFilter | undefined = undefined;
       expect(
         parseFindQuery(am, where, {
-          conditions: { and: [a.firstName.eq("a"), undefined] },
+          conditions: { and: [a.firstName.eq("a"), conditionalFilter] },
         }),
       ).toMatchObject({
         selects: [`a.*`],
@@ -3045,12 +3045,7 @@ describe("EntityManager.queries", () => {
               cond: { kind: "is-null" },
               pruneable: true,
             },
-            {
-              conditions: [
-                { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a" } },
-              ],
-              op: "and",
-            },
+            { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a" } },
           ],
         },
         orderBys: [expect.anything()],

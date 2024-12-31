@@ -363,31 +363,17 @@ export function parseFindQuery(
             (ef.subFilter as any)[key],
           );
         } else if (field.kind === "o2m") {
-          // ...don't outer join, instead do a lateral join...
-          // old code
-          // const a = getAlias(field.otherMetadata().tableName);
-          // const otherField = field.otherMetadata().allFields[field.otherFieldName];
-          // let otherColumn = otherField.serde!.columns[0].columnName;
-          // // If the other field is a poly, we need to find the right column
-          // if (otherField.kind === "poly") {
-          //   // For a subcomponent that matches field's metadata
-          //   const otherComponent =
-          //     otherField.components.find((c) => c.otherMetadata() === meta) ??
-          //     fail(`No poly component found for ${otherField.fieldName}`);
-          //   otherColumn = otherComponent.columnName;
-          // }
-          // addTable(
-          //   field.otherMetadata(),
-          //   a,
-          //   "outer",
-          //   kqDot(alias, "id"),
-          //   kqDot(a, otherColumn),
-          //   (ef.subFilter as any)[key],
-          // );
-
           const a = getAlias(field.otherMetadata().tableName);
           const otherField = field.otherMetadata().allFields[field.otherFieldName];
           let otherColumn = otherField.serde!.columns[0].columnName;
+          // If the other field is a poly, we need to find the right column
+          if (otherField.kind === "poly") {
+            // For a subcomponent that matches field's metadata
+            const otherComponent =
+              otherField.components.find((c) => c.otherMetadata() === meta) ??
+              fail(`No poly component found for ${otherField.fieldName}`);
+            otherColumn = otherComponent.columnName;
+          }
           addLateralJoin(
             field.otherMetadata(),
             alias,

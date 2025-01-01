@@ -13,6 +13,7 @@ import {
   ParsedFindQuery,
   ParsedValueFilter,
   RawCondition,
+  getTables,
   parseAlias,
   parseFindQuery,
 } from "../QueryParser";
@@ -99,6 +100,14 @@ export function findDataLoader<T extends Entity>(
           const alias = parseAlias(s);
           return { alias, column: "id" };
         });
+
+      // Also because of our `array_agg` group by, add any order bys to the group by
+      const [primary] = getTables(query);
+      for (const { alias, column } of query.orderBys) {
+        if (alias !== primary.alias) {
+          query.groupBys.push({ alias, column });
+        }
+      }
 
       // const { preloader } = getEmInternalApi(em);
       // const preloadJoins = preloader && hint && preloader.getPreloadJoins(em, meta, buildHintTree(hint), query);
@@ -192,10 +201,28 @@ export function collectAndReplaceArgs(query: ParsedFindQuery): { columnName: str
         const { kind } = c.cond;
         if (kind === "in" || kind === "nin") {
           args.push({ columnName: `arg${args.length}`, dbType: `${c.dbType}[]` });
+          const [op, argsTaken, negate] = makeOp(c.cond, argsIndex);
+          argsIndex += argsTaken;
+          return {
+            kind: "raw",
+            aliases: [c.alias],
+            condition: `${negate ? "NOT " : ""}${kqDot(c.alias, c.column)} ${op}`,
+            pruneable: c.pruneable ?? false,
+            bindings: [],
+          } satisfies RawCondition;
         } else if (kind === "between") {
           // between has two values
           args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
           args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
+          const [op, argsTaken, negate] = makeOp(c.cond, argsIndex);
+          argsIndex += argsTaken;
+          return {
+            kind: "raw",
+            aliases: [c.alias],
+            condition: `${negate ? "NOT " : ""}${kqDot(c.alias, c.column)} ${op}`,
+            pruneable: c.pruneable ?? false,
+            bindings: [],
+          } satisfies RawCondition;
         } else {
           args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
           const [op, argsTaken, negate] = makeOp(c.cond, argsIndex);

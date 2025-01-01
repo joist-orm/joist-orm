@@ -171,7 +171,7 @@ export function whereFilterHash(where: FilterAndSettings<any>): any {
 }
 
 class ArgCounter {
-  index = 0;
+  private index = 0;
   next(): number {
     return this.index++;
   }

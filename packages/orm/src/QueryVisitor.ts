@@ -35,12 +35,13 @@ export function visitConditions(query: ParsedFindQuery, visitor: Visitor): void 
       }
     });
   }
-  if (query.condition) visit(query.condition);
-  for (const table of query.tables) {
-    // ...we probably need better recursion here?
-    if (table.join === "lateral") {
-      if (table.query.condition) {
-        visit(table.query.condition);
+  const todo = [query];
+  while (todo.length > 0) {
+    const query = todo.pop()!;
+    if (query.condition) visit(query.condition);
+    for (const table of query.tables) {
+      if (table.join === "lateral") {
+        todo.push(table.query);
       }
     }
   }

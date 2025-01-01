@@ -9,6 +9,8 @@ import {
   getTables,
   HintNode,
   JoinResult,
+  JoinTable,
+  keyToNumber,
   keyToTaggedId,
   kq,
   kqDot,
@@ -46,12 +48,16 @@ export class JsonAggregatePreloader implements PreloadPlugin {
     const alias = getTables(query)[0].alias;
     const joins = addJoins(em, getAlias, { tree: root, alias, meta }, root, alias, meta);
     // If there are no sql-based preload in the hints, just return
-    if (joins.length === 0) {
-      return undefined;
-    }
+    if (joins.length === 0) return undefined;
 
     // Include the aggregate `books._ as books`, `comments._ as comments`
-    query.selects.push(...joins.map((j) => `${kqDot(j.alias, "_")} as ${kq(j.alias)}`));
+    query.selects.push(
+      ...joins.map((j) => ({
+        sql: `${kqDot(j.alias, "_")} as ${kq(j.alias)}`,
+        aliases: [j.alias],
+        bindings: [],
+      })),
+    );
     query.tables.push(...joins.map((j) => j.join));
 
     return (rows, entities) => {
@@ -144,7 +150,7 @@ function addJoins<I extends EntityOrId>(
       const aliasMaybeSuffix = kq(`${parentAlias}${field.aliasSuffix}`);
 
       const cb = new ConditionBuilder();
-      let m2mFrom = "";
+      let m2mTable: JoinTable | undefined;
       if (otherField.kind === "m2o") {
         cb.addRawCondition({
           aliases: [otherAlias, parentAlias],
@@ -177,24 +183,33 @@ function addJoins<I extends EntityOrId>(
       } else if (otherField.kind === "m2m") {
         const m2mAlias = getAlias(otherField.joinTableName);
         // Get the m2m row's id to track in JoinRows
-        // selects.unshift(kqDot(m2mAlias, "id"));
-        m2mFrom = `, ${kq(otherField.joinTableName)} ${kq(m2mAlias)}`;
-        // where = `
-        //     ${kqDot(parentAlias, "id")} = ${kqDot(m2mAlias, otherField.columnNames[1])} AND
-        //     ${kqDot(m2mAlias, otherField.columnNames[0])} = ${kqDot(otherAlias, "id")}
-        //   `;
-        throw new Error("Not implemented yet");
+        selects.unshift(kqDot(m2mAlias, "id"));
+        m2mTable = {
+          join: "inner",
+          table: otherField.joinTableName,
+          alias: m2mAlias,
+          col1: kqDot(parentAlias, "id"),
+          col2: kqDot(m2mAlias, otherField.columnNames[1]),
+        };
+        cb.addRawCondition({
+          aliases: [m2mAlias, otherAlias],
+          condition: `${kqDot(m2mAlias, otherField.columnNames[0])} = ${kqDot(otherAlias, "id")}`,
+          pruneable: true,
+        });
       } else {
         throw new Error(`Unsupported otherField.kind ${otherField.kind}`);
       }
 
       const needsSubSelect = subTree.entities.size !== root.tree.entities.size;
       if (needsSubSelect) {
-        // bindings.push(
-        //   [...subTree.entities]
-        //     .filter((e) => typeof e === "string" || !e.isNewEntity)
-        //     .map((e) => keyToNumber(root.meta, typeof e === "string" ? e : e.id)),
-        // );
+        cb.addRawCondition({
+          aliases: [root.alias],
+          condition: `${kqDot(root.alias, "id")} = ANY(?)`,
+          bindings: [...subTree.entities]
+            .filter((e) => typeof e === "string" || !e.isNewEntity)
+            .map((e) => keyToNumber(root.meta, typeof e === "string" ? e : e.id)),
+          pruneable: true,
+        });
       }
 
       const join: LateralJoinTable = {
@@ -206,21 +221,13 @@ function addJoins<I extends EntityOrId>(
           selects: [`json_agg(json_build_array(${selects.join(", ")}) order by ${kq(otherAlias)}.id) as _`],
           tables: [
             { join: "primary", table: otherMeta.tableName, alias: otherAlias },
+            ...(m2mTable ? [m2mTable] : []),
             ...subJoins.map((sj) => sj.join),
           ],
           condition: cb.toExpressionFilter(),
           orderBys: [],
         },
       };
-      // const f = `
-      //   cross join lateral (
-      //     select
-      //     from ${kq(otherMeta.tableName)} ${kq(otherAlias)} ${m2mFrom}
-      //     ${subJoins.map((sb) => sb.join).join("\n")}
-      //     where ${where}
-      //     ${needsSubSelect ? ` AND ${kqDot(root.alias, "id")} = ANY(?)` : ""}
-      //   ) ${kq(otherAlias)}
-      // `;
 
       const hydrator: AggregateJsonHydrator = (root, parent, arrays) => {
         // If we had overlapping load hints, i.e. `author.books` for [a1, a2] and `author.comments` for [a1], and

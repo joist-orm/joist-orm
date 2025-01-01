@@ -1047,8 +1047,10 @@ export class ConditionBuilder {
    * `ConditionBuilder`s for building their internal query, but it's not exposed to the user,
    * so won't have any truly-complex conditions that should need rewritten).
    *
-   * @param topLevelLateralJoin
-   * @param alias
+   * @param topLevelLateralJoin the outermost lateral join alias, as that will be the only alias
+   *   that is visible to the rewritten condition, i.e. `_alias._whatever_condition_`.
+   * @param alias the alias being "hidden" in a lateral join, and so its columns/data won't be
+   *   available for the top-level condition to directly AND/OR against.
    */
   findAndRewrite(topLevelLateralJoin: string, alias: string): { cond: ColumnCondition; as: string }[] {
     let j = 0;

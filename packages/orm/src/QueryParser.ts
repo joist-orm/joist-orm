@@ -197,7 +197,7 @@ export function parseFindQuery(
           : ef !== undefined
             ? filter
             : {};
-    const count = "$count" in subFilter ? subFilter["$count"] : undefined;
+    const count = subFilter && "$count" in subFilter ? subFilter["$count"] : subFilter === null ? 0 : undefined;
     const subQuery = parseFindQuery(
       meta,
       { as: a, ...subFilter },

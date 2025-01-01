@@ -715,6 +715,17 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can find by o2m is null", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+
+    const em = newEntityManager();
+    const where = { books: null } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+  });
+
   it("can find through a o2o entity", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });

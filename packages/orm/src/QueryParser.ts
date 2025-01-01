@@ -207,6 +207,12 @@ export function parseFindQuery(
       meta,
       { as: a, ...subFilter },
       {
+        // Only pass through a subset of the opts...
+        softDeletes: opts.softDeletes,
+        pruneJoins: opts.pruneJoins,
+        keepAliases: opts.keepAliases,
+        ...opts,
+        // And set our own complex condition as the join condition
         conditions: {
           and: [
             { kind: "raw", aliases: [fromAlias, alias], condition: `${col1} = ${col2}`, pruneable: true, bindings: [] },
@@ -630,58 +636,52 @@ function maybeAddIdNotNulls(query: ParsedFindQuery): void {
 
 // Remove any joins that are not used in the select or conditions
 function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void {
-  // Mark all terminal usages
-  const used = new Set<string>();
-  parsed.selects.forEach((s) => {
-    if (typeof s === "string") {
-      used.add(parseAlias(s));
-    } else {
-      for (const a of s.aliases) used.add(a);
-    }
-  });
-  parsed.orderBys.forEach((o) => used.add(o.alias));
-  keepAliases.forEach((a) => used.add(a));
-  deepFindConditions(parsed.condition, true).forEach((c) => {
-    if (c.kind === "column") {
-      used.add(c.alias);
-    } else if (c.kind === "raw") {
-      for (const alias of c.aliases) used.add(alias);
-    } else {
-      assertNever(c);
-    }
-  });
-  // Mark all usages via joins
-  for (let i = 0; i < parsed.tables.length; i++) {
-    const t = parsed.tables[i];
+  const dt = new DependencyTracker();
+
+  // First setup the alias -> alias dependencies...
+  const todo = [...parsed.tables];
+  while (todo.length > 0) {
+    const t = todo.pop()!;
     if (t.join === "lateral") {
-      // Recurse into the join...
-      // pruneUnusedJoins(t.query, keepAliases);
-      // how can I tell if this join is used?
-      const hasRealCondition = deepFindConditions(t.query.condition, true).length > 0;
-      if (hasRealCondition) used.add(t.alias);
-      const a1 = t.fromAlias;
-      const a2 = t.alias;
-      // the a.count is getting seen
-      if (used.has(a2) && !used.has(a1)) {
-        used.add(a1);
-        // Restart at zero to find dependencies before us
-        i = 0;
-      }
+      dt.addAlias(t.alias, [t.fromAlias]);
+      // Recurse into lateral joins...
+      todo.push(...t.query.tables);
     } else if (t.join === "cross") {
       // Doesn't have any conditions
     } else if (t.join !== "primary") {
-      // If alias (col2) is required, ensure the col1 alias is also required
-      const a2 = t.alias;
-      const a1 = parseAlias(t.col1);
-      if (used.has(a2) && !used.has(a1)) {
-        used.add(a1);
-        // Restart at zero to find dependencies before us
-        i = 0;
-      }
+      dt.addAlias(t.alias, [parseAlias(t.col1)]);
     }
   }
+
+  // Mark all terminal usages
+  parsed.selects.forEach((s) => {
+    if (typeof s === "string") {
+      if (!s.includes("count(")) dt.markRequired(parseAlias(s));
+    } else {
+      for (const a of s.aliases) dt.markRequired(a);
+    }
+  });
+  parsed.orderBys.forEach((o) => dt.markRequired(o.alias));
+  keepAliases.forEach((a) => dt.markRequired(a));
+  // Look recursively into lateral join conditions
+  const todo2 = [parsed];
+  while (todo2.length > 0) {
+    const query = todo2.pop()!;
+    deepFindConditions(query.condition, true).forEach((c) => {
+      if (c.kind === "column") {
+        dt.markRequired(c.alias);
+      } else if (c.kind === "raw") {
+        for (const alias of c.aliases) dt.markRequired(alias);
+      } else {
+        assertNever(c);
+      }
+    });
+    todo2.push(...query.tables.filter((t) => t.join === "lateral").map((t) => t.query));
+  }
+
   // Now remove any unused joins
-  parsed.tables = parsed.tables.filter((t) => used.has(t.alias));
+  parsed.tables = parsed.tables.filter((t) => dt.required.has(t.alias));
+
   // And then remove any inline soft-delete conditions we don't need anymore
   if (parsed.condition && parsed.condition.op === "and") {
     parsed.condition.conditions = parsed.condition.conditions.filter((c) => {
@@ -1333,4 +1333,27 @@ function bindAlias(filter: any, meta: EntityMetadata, alias: string) {
 /** Converts a search term like `foo bar` into a SQL `like` pattern like `%foo%bar%`. */
 export function makeLike(search: any | undefined): any {
   return search ? `%${search.replace(/\s+/g, "%")}%` : undefined;
+}
+
+/** Track join dependencies for `pruneUnusedJoins`. */
+class DependencyTracker {
+  private nodes: Map<string, string[]> = new Map();
+  required: Set<string> = new Set();
+
+  addAlias(alias: string, dependencies: string[] = []): void {
+    this.nodes.set(alias, dependencies);
+  }
+
+  markRequired(alias: string): void {
+    const marked = new Set<string>();
+    const todo = [alias];
+    while (todo.length > 0) {
+      const alias = todo.pop()!;
+      if (!marked.has(alias)) {
+        marked.add(alias);
+        todo.push(...(this.nodes.get(alias) || []));
+      }
+    }
+    this.required = new Set([...this.required, ...marked]);
+  }
 }

@@ -580,11 +580,7 @@ export function parseFindQuery(
   maybeAddOrderBy(query, meta, alias);
 
   if (pruneJoins) {
-    pruneUnusedJoins(
-      query,
-      // (opts.topLevelCondition ?? cb).expressions[0],
-      keepAliases,
-    );
+    pruneUnusedJoins(query, keepAliases);
   }
 
   return query;
@@ -645,12 +641,7 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   });
   parsed.orderBys.forEach((o) => used.add(o.alias));
   keepAliases.forEach((a) => used.add(a));
-  const allConditions = [
-    ...deepFindConditions(parsed.condition, true),
-    // topLevelCondition will be set if we're within a lateral join
-    // ...deepFindConditions(topLevelCondition, true),
-  ];
-  allConditions.forEach((c) => {
+  deepFindConditions(parsed.condition, true).forEach((c) => {
     if (c.kind === "column") {
       used.add(c.alias);
     } else if (c.kind === "raw") {
@@ -666,11 +657,7 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
       // Recurse into the join...
       // pruneUnusedJoins(t.query, keepAliases);
       // how can I tell if this join is used?
-      const hasRealCondition =
-        [
-          // ...deepFindConditions(topLevelCondition, true),
-          ...deepFindConditions(t.query.condition, true),
-        ].length > 0;
+      const hasRealCondition = deepFindConditions(t.query.condition, true).length > 0;
       if (hasRealCondition) used.add(t.alias);
       const a1 = t.fromAlias;
       const a2 = t.alias;

@@ -172,6 +172,9 @@ export function whereFilterHash(where: FilterAndSettings<any>): any {
 
 class ArgCounter {
   index = 0;
+  next(): number {
+    return this.index++;
+  }
 }
 
 /**
@@ -209,8 +212,7 @@ export function collectAndReplaceArgs(query: ParsedFindQuery): { columnName: str
 }
 
 function rewriteToRawCondition(c: ColumnCondition, argsIndex: ArgCounter): RawCondition {
-  const [op, argsTaken, negate] = makeOp(c.cond, argsIndex.index);
-  argsIndex.index += argsTaken;
+  const [op, negate] = makeOp(c.cond, argsIndex);
   return {
     kind: "raw",
     aliases: [c.alias],
@@ -260,7 +262,7 @@ function stripValues(query: ParsedFindQuery): void {
 }
 
 /** Returns [operator, argsTaken, negate], i.e. `["=", 1, false]`. */
-function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, number, boolean] {
+function makeOp(cond: ParsedValueFilter<any>, argsIndex: ArgCounter): [string, boolean] {
   switch (cond.kind) {
     case "eq":
     case "ne":
@@ -280,23 +282,23 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, numbe
     case "overlaps":
     case "containedBy": {
       const fn = opToFn[cond.kind] ?? fail(`Invalid operator ${cond.kind}`);
-      return [`${fn} _find.arg${argsIndex}`, 1, false];
+      return [`${fn} _find.arg${argsIndex.next()}`, false];
     }
     case "noverlaps":
     case "ncontains": {
       const fn = (opToFn as any)[cond.kind.substring(1)] ?? fail(`Invalid operator ${cond.kind}`);
-      return [`${fn} _find.arg${argsIndex}`, 1, true];
+      return [`${fn} _find.arg${argsIndex.next()}`, true];
     }
     case "is-null":
-      return [`IS NULL`, 0, false];
+      return [`IS NULL`, false];
     case "not-null":
-      return [`IS NOT NULL`, 0, false];
+      return [`IS NOT NULL`, false];
     case "in":
-      return [`= ANY(_find.arg${argsIndex})`, 1, false];
+      return [`= ANY(_find.arg${argsIndex.next()})`, false];
     case "nin":
-      return [`!= ALL(_find.arg${argsIndex})`, 1, false];
+      return [`!= ALL(_find.arg${argsIndex.next()})`, false];
     case "between":
-      return [`BETWEEN _find.arg${argsIndex} AND _find.arg${argsIndex + 1}`, 2, false];
+      return [`BETWEEN _find.arg${argsIndex.next()} AND _find.arg${argsIndex.next()}`, false];
     default:
       assertNever(cond);
   }

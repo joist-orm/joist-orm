@@ -113,12 +113,6 @@ export interface ParsedFindQuery {
   selects: ParsedSelect[];
   /** The primary table plus any joins. */
   tables: ParsedTable[];
-  /** Any cross lateral joins, where the `joins: string[]` has the full join as raw SQL; currently only for preloading. */
-  lateralJoins?: {
-    // I.e. `cross join lateral join (select ... from ...) as _b`
-    joins: string[];
-    bindings: any[];
-  };
   /** The query's conditions. */
   condition?: ParsedExpressionFilter;
   /** Any optional orders to add before the default 'order by id'. */

@@ -57,11 +57,6 @@ export function buildRawQuery(
     }
   }
 
-  if (parsed.lateralJoins) {
-    sql += " " + parsed.lateralJoins.joins.join("\n");
-    bindings.push(...parsed.lateralJoins.bindings);
-  }
-
   if (parsed.condition) {
     const where = buildWhereClause(parsed.condition, true);
     if (where) {

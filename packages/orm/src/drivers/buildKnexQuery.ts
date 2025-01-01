@@ -54,10 +54,6 @@ export function buildKnexQuery(
     }
   });
 
-  if (parsed.lateralJoins) {
-    query.joinRaw(parsed.lateralJoins.joins.join("\n"), parsed.lateralJoins.bindings);
-  }
-
   if (parsed.condition) {
     const where = buildWhereClause(parsed.condition, true);
     if (where) {

@@ -205,9 +205,11 @@ function addJoins<I extends EntityOrId>(
         cb.addRawCondition({
           aliases: [root.alias],
           condition: `${kqDot(root.alias, "id")} = ANY(?)`,
-          bindings: [...subTree.entities]
-            .filter((e) => typeof e === "string" || !e.isNewEntity)
-            .map((e) => keyToNumber(root.meta, typeof e === "string" ? e : e.id)),
+          bindings: [
+            [...subTree.entities]
+              .filter((e) => typeof e === "string" || !e.isNewEntity)
+              .map((e) => keyToNumber(root.meta, typeof e === "string" ? e : e.id)),
+          ],
           pruneable: true,
         });
       }

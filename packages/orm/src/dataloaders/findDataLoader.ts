@@ -109,24 +109,25 @@ export function findDataLoader<T extends Entity>(
         }
       }
 
-      // const { preloader } = getEmInternalApi(em);
-      // const preloadJoins = preloader && hint && preloader.getPreloadJoins(em, meta, buildHintTree(hint), query);
-      // if (preloadJoins) {
-      //   selects.push(
-      //     ...preloadJoins.flatMap((j) =>
-      //       // Because we 'group by primary.id' to collapse the "a1 matched multiple finds" into
-      //       // a single row, we also need to pick just the first value of each preload column
-      //       j.selects.map((s) => `(array_agg(${s.value}))[1] AS ${s.as}`),
-      //     ),
-      //   );
-      // }
+      const { preloader } = getEmInternalApi(em);
+      const preloadJoins = preloader && hint && preloader.getPreloadJoins(em, meta, buildHintTree(hint), query);
+      if (preloadJoins) {
+        query.selects.push(
+          ...preloadJoins.flatMap((j) =>
+            // Because we 'group by primary.id' to collapse the "a1 matched multiple finds" into
+            // a single row, we also need to pick just the first value of each preload column
+            j.selects.map((s) => `(array_agg(${s.value}))[1] AS ${s.as}`),
+          ),
+        );
+        query.tables.push(...preloadJoins.map((j) => j.join));
+      }
 
       const { sql, bindings } = buildRawQuery(query, { limit: em.entityLimit });
       const rows = await em.driver.executeQuery(em, cleanSql(sql), bindings);
       ensureUnderLimit(em, rows);
 
       const entities = em.hydrate(type, rows);
-      // preloadJoins?.forEach((j) => j.hydrator(rows, entities));
+      preloadJoins?.forEach((j) => j.hydrator(rows, entities));
 
       // Make an empty array for each batched query, per the dataloader contract
       const results = queries.map(() => [] as T[]);

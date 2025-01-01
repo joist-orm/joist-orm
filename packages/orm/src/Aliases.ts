@@ -37,7 +37,10 @@ export type Alias<T extends Entity> = {
         : FieldsOf<T>[P] extends { kind: "poly"; type: infer U extends Entity }
           ? PolyReferenceAlias<U>
           : never;
-} & { $count: CountAlias };
+} & {
+  /** Allow querying on "a parent that has no children". This is only valid when bound to child/collection relations. */
+  $count: CountAlias;
+};
 
 export interface PrimitiveAlias<V, N extends null | never> {
   eq(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
@@ -72,8 +75,8 @@ export interface EntityAlias<T> {
 /**
  * Allows complex conditions on the number of matching children.
  *
- * The `$count` value will only children that match *inline* conditions, i.e.
- * a query like:
+ * Note that `$count` value will only count children that match *inline* conditions,
+ * i.e. a query like:
  *
  * ```ts
  * await em.find(Author, { books: { $count: 1, status: BookStatus.Draft } });

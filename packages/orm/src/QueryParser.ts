@@ -954,7 +954,7 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
 /** Converts domain-level values like string ids/enums into their db equivalent. */
 export class ConditionBuilder {
   /** Simple, single-column conditions, which will be AND-d together. */
-  conditions: ColumnCondition[] = [];
+  conditions: (ColumnCondition | RawCondition)[] = [];
   /** Complex expressions, which will also be AND-d together with `conditions`. */
   expressions: ParsedExpressionFilter[] = [];
 
@@ -967,6 +967,15 @@ export class ConditionBuilder {
   /** Adds an already-db-level condition to the simple conditions list. */
   addSimpleCondition(condition: ColumnCondition): void {
     this.conditions.push(condition);
+  }
+
+  /** Adds an already-db-level condition to the simple conditions list. */
+  addRawCondition(condition: PartialSome<RawCondition, "kind" | "bindings">): void {
+    this.conditions.push({
+      kind: "raw",
+      bindings: [],
+      ...condition,
+    });
   }
 
   /** Adds an already-db-level expression to the expressions list. */
@@ -1357,3 +1366,5 @@ class DependencyTracker {
     this.required = new Set([...this.required, ...marked]);
   }
 }
+
+type PartialSome<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;

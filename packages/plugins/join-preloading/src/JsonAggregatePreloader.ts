@@ -9,7 +9,6 @@ import {
   getTables,
   HintNode,
   JoinResult,
-  keyToNumber,
   keyToTaggedId,
   kq,
   kqDot,
@@ -54,7 +53,6 @@ export class JsonAggregatePreloader implements PreloadPlugin {
     // Include the aggregate `books._ as books`, `comments._ as comments`
     query.selects.push(...joins.map((j) => `${kqDot(j.alias, "_")} as ${kq(j.alias)}`));
     query.tables.push(...joins.map((j) => j.join));
-    // bindings: joins.flatMap((j) => j.bindings),
 
     return (rows, entities) => {
       rows.forEach((row, i) => {
@@ -88,7 +86,6 @@ export class JsonAggregatePreloader implements PreloadPlugin {
             join.hydrator(parent, parent, row[join.alias] ?? []);
           });
         },
-        bindings: join.bindings,
       };
     });
   }
@@ -191,14 +188,13 @@ function addJoins<I extends EntityOrId>(
         throw new Error(`Unsupported otherField.kind ${otherField.kind}`);
       }
 
-      const bindings = subJoins.flatMap((sj) => sj.bindings);
       const needsSubSelect = subTree.entities.size !== root.tree.entities.size;
       if (needsSubSelect) {
-        bindings.push(
-          [...subTree.entities]
-            .filter((e) => typeof e === "string" || !e.isNewEntity)
-            .map((e) => keyToNumber(root.meta, typeof e === "string" ? e : e.id)),
-        );
+        // bindings.push(
+        //   [...subTree.entities]
+        //     .filter((e) => typeof e === "string" || !e.isNewEntity)
+        //     .map((e) => keyToNumber(root.meta, typeof e === "string" ? e : e.id)),
+        // );
       }
 
       const join: LateralJoinTable = {
@@ -269,7 +265,7 @@ function addJoins<I extends EntityOrId>(
         getEmInternalApi(em).setPreloadedRelation(parent.idTagged, key, children);
       };
 
-      results.push({ alias: otherAlias, join, bindings, hydrator });
+      results.push({ alias: otherAlias, join, hydrator });
     }
   });
 
@@ -284,6 +280,4 @@ type AggregateJoinResult = {
   join: LateralJoinTable;
   /** The hydrator for this child's lateral join, which itself might recursively hydrator subjoins. */
   hydrator: AggregateJsonHydrator;
-  /** Any bindings for filtering subjoins by a subset of the root entities, to avoid over-fetching. */
-  bindings: any[];
 };

@@ -81,6 +81,4 @@ export type JoinResult = {
   join: LateralJoinTable;
   /** The processor for this child's lateral join, which itself might recursively processor subjoins. */
   hydrator: PreloadHydrator;
-  /** Any bindings for filtering subjoins by a subset of the root entities, to avoid over-fetching. */
-  bindings: any[];
 };

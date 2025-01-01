@@ -30,7 +30,11 @@ export function buildKnexQuery(
   let query: Knex.QueryBuilder = knex.from(asRaw(primary));
 
   parsed.selects.forEach((s) => {
-    query.select(knex.raw(s));
+    if (typeof s === "string") {
+      query.select(knex.raw(s));
+    } else {
+      query.select(knex.raw(s.sql));
+    }
   });
 
   parsed.tables.forEach((t) => {

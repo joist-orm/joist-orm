@@ -21,10 +21,8 @@ import {
   PreloadHydrator,
   PreloadPlugin,
 } from "joist-orm";
-import { builders } from "prettier/doc";
 import { canPreload } from "./canPreload";
 import { partitionHint } from "./partitionHint";
-import join = builders.join;
 
 /**
  * A PreloadPlugin implementation that uses `CROSS LATERAL JOIN` and `json_aggregate`

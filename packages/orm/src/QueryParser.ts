@@ -1282,18 +1282,6 @@ export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[], L
   return [primary!, joins, laterals, crosses];
 }
 
-export function joinKeywords(join: JoinTable): string {
-  return join.join === "inner" ? "JOIN" : "LEFT OUTER JOIN";
-}
-
-export function joinClause(join: JoinTable): string {
-  return `${joinKeywords(join)} ${kq(join.table)} ${kq(join.alias)} ON ${join.col1} = ${join.col2}`;
-}
-
-export function joinClauses(joins: ParsedTable[]): string[] {
-  return joins.map((t) => (t.join === "inner" || t.join === "outer" ? joinClause(t) : ""));
-}
-
 function needsClassPerTableJoins(meta: EntityMetadata): boolean {
   return meta.inheritanceType === "cti" && (meta.subTypes.length > 0 || meta.baseTypes.length > 0);
 }

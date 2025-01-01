@@ -50,6 +50,8 @@ export function buildRawQuery(
       const { sql: subQ, bindings: subB } = buildRawQuery(t.query, {});
       sql += ` CROSS JOIN LATERAL (${subQ}) AS ${kq(t.alias)}`;
       bindings.push(...subB);
+    } else if (t.join === "cross") {
+      sql += ` CROSS JOIN ${as(t)}`;
     } else {
       assertNever(t.join);
     }
@@ -66,6 +68,10 @@ export function buildRawQuery(
       sql += " WHERE " + where[0];
       bindings.push(...where[1]);
     }
+  }
+
+  if (parsed.groupBys && parsed.groupBys.length > 0) {
+    sql += " GROUP BY " + parsed.groupBys.map((ob) => kqDot(ob.alias, ob.column)).join(", ");
   }
 
   if (parsed.orderBys.length > 0) {

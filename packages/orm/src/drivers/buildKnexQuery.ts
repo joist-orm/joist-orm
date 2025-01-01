@@ -46,6 +46,9 @@ export function buildKnexQuery(
         break;
       case "lateral":
         throw new Error("Lateral joins are not implemented in buildKnexQuery yet");
+      case "cross":
+        query.crossJoin(asRaw(t));
+        break;
       default:
         assertNever(t);
     }

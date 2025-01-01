@@ -35,12 +35,14 @@ describe("EntityManager.find.batch", () => {
         ` SELECT array_agg(_find.tag) as _tags, p.*, p_s0.*, p_s1.*, p.id as id,`,
         ` COALESCE(p_s0.shared_column, p_s1.shared_column) as shared_column,`,
         ` CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class`,
-        ` FROM publishers as p`,
-        ` LEFT OUTER JOIN large_publishers p_s0 ON p.id = p_s0.id`,
-        ` LEFT OUTER JOIN small_publishers p_s1 ON p.id = p_s1.id`,
-        ` JOIN _find ON p.deleted_at IS NULL AND p.id = _find.arg0 GROUP BY p.id, p_s0.id, p_s1.id`,
+        ` FROM publishers AS p`,
+        ` CROSS JOIN _find AS _find`,
+        ` LEFT OUTER JOIN large_publishers AS p_s0 ON p.id = p_s0.id`,
+        ` LEFT OUTER JOIN small_publishers AS p_s1 ON p.id = p_s1.id`,
+        ` WHERE p.deleted_at IS NULL AND p.id = _find.arg0`,
+        ` GROUP BY p.id, p_s0.id, p_s1.id`,
         ` ORDER BY p.id ASC`,
-        ` LIMIT 50000;`,
+        ` LIMIT $5`,
       ].join(""),
     ]);
     expect(q1.length).toEqual(1);
@@ -64,11 +66,12 @@ describe("EntityManager.find.batch", () => {
         `WITH _find (tag, arg0, arg1) AS (VALUES`,
         ` ($1::int, $2::character varying, $3::character varying), ($4, $5, $6) )`,
         ` SELECT array_agg(_find.tag) as _tags, a.*`,
-        ` FROM authors as a`,
-        ` JOIN _find ON a.deleted_at IS NULL AND a.first_name = _find.arg0 AND a.last_name = _find.arg1`,
+        ` FROM authors AS a`,
+        ` CROSS JOIN _find AS _find`,
+        ` WHERE a.deleted_at IS NULL AND a.first_name = _find.arg0 AND a.last_name = _find.arg1`,
         ` GROUP BY a.id`,
         ` ORDER BY a.id ASC`,
-        ` LIMIT 50000;`,
+        ` LIMIT $7`,
       ].join(""),
     ]);
   });
@@ -91,11 +94,12 @@ describe("EntityManager.find.batch", () => {
         `WITH _find (tag, arg0, arg1) AS (VALUES`,
         ` ($1::int, $2::character varying, $3::character varying), ($4, $5, $6) )`,
         ` SELECT array_agg(_find.tag) as _tags, a.*`,
-        ` FROM authors as a`,
-        ` JOIN _find ON a.deleted_at IS NULL AND (a.first_name = _find.arg0 OR a.last_name = _find.arg1)`,
+        ` FROM authors AS a`,
+        ` CROSS JOIN _find AS _find`,
+        ` WHERE a.deleted_at IS NULL AND (a.first_name = _find.arg0 OR a.last_name = _find.arg1)`,
         ` GROUP BY a.id`,
         ` ORDER BY a.id ASC`,
-        ` LIMIT 50000;`,
+        ` LIMIT $7`,
       ].join(""),
     ]);
   });
@@ -128,9 +132,9 @@ describe("EntityManager.find.batch", () => {
     expect(numberOfQueries).toEqual(1);
     // And it is still auto-batched
     expect(queries).toMatchInlineSnapshot(`
-      [
-        "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, a.* FROM authors as a JOIN _find ON a.id = _find.arg0 GROUP BY a.id ORDER BY a.first_name DESC, a.id ASC LIMIT 50000;",
-      ]
+     [
+       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.id = _find.arg0 GROUP BY a.id ORDER BY a.first_name DESC, a.id ASC LIMIT $5",
+     ]
     `);
     // And the results are the expected reverse of each other
     expect(a1.reverse()).toEqual(a2);

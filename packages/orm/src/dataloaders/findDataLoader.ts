@@ -13,11 +13,11 @@ import {
   ParsedFindQuery,
   ParsedValueFilter,
   RawCondition,
-  getTables,
-  joinKeywords,
+  parseAlias,
   parseFindQuery,
 } from "../QueryParser";
 import { visitConditions } from "../QueryVisitor";
+import { buildRawQuery } from "../drivers/buildRawQuery";
 import { kq, kqDot } from "../keywords";
 import { LoadHint } from "../loadHints";
 import { maybeRequireTemporal } from "../temporal";
@@ -66,70 +66,58 @@ export function findDataLoader<T extends Entity>(
         return [entities];
       }
 
-      // WITH data(tag, arg1, arg2) AS (VALUES
+      // WITH _find (tag, arg1, arg2) AS (VALUES
       //   (0::int, 'a'::varchar, 'a'::varchar),
       //   (1, 'b', 'b'),
       //   (2, 'c', 'c')
       // )
-      // SELECT array_agg(d.tag), a.*
+      // SELECT a.*, array_agg(_find.tag) AS _tags
       // FROM authors a
-      // JOIN data d ON (d.arg1 = a.first_name OR d.arg2 = a.last_name)
-      // group by a.id;
+      // CROSS JOIN _find AS _find
+      // WHERE a.first_name = _find.arg0 OR a.last_name = _find.arg1
+      // GROUP BY a.id
 
       // Build the list of 'arg1', 'arg2', ... strings
-      const args = collectArgs(query);
+      const { where, ...options } = queries[0];
+      const query = parseFindQuery(getMetadata(type), where, options);
+      const args = collectAndReplaceArgs(query);
       args.unshift({ columnName: "tag", dbType: "int" });
 
-      const selects = ["array_agg(_find.tag) as _tags", ...query.selects];
-      const [primary, joins] = getTables(query);
-
-      // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
-      const bindings = createBindings(meta, queries);
-      // Create the JOIN clause, i.e. ON a.firstName = _find.arg0
-      const [conditions] = buildConditions(query.condition!);
-
+      query.selects.unshift("array_agg(_find.tag) as _tags");
+      // Inject a cross join into the query
+      query.tables.unshift({ join: "cross", table: "_find", alias: "_find" });
+      query.cte = {
+        sql: buildValuesCte("_find", args, queries),
+        bindings: createBindings(meta, queries),
+      };
       // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
-      const groupBys = selects
+      query.groupBys = query.selects
         .filter((s) => typeof s === "string")
         .filter((s) => !s.includes("array_agg") && !s.includes("CASE") && !s.includes(" as "))
-        .map((s) => s.replace("*", "id"));
+        .map((s) => {
+          // Make a liberal assumption that this is a `a.id` or `a_st0.id` string
+          const alias = parseAlias(s);
+          return { alias, column: "id" };
+        });
 
-      // Also because of our `array_agg` group by, add any order bys to the group by
-      for (const o of query.orderBys) {
-        if (o.alias !== primary.alias) {
-          groupBys.push(kqDot(o.alias, o.column));
-        }
-      }
+      // const { preloader } = getEmInternalApi(em);
+      // const preloadJoins = preloader && hint && preloader.getPreloadJoins(em, meta, buildHintTree(hint), query);
+      // if (preloadJoins) {
+      //   selects.push(
+      //     ...preloadJoins.flatMap((j) =>
+      //       // Because we 'group by primary.id' to collapse the "a1 matched multiple finds" into
+      //       // a single row, we also need to pick just the first value of each preload column
+      //       j.selects.map((s) => `(array_agg(${s.value}))[1] AS ${s.as}`),
+      //     ),
+      //   );
+      // }
 
-      const { preloader } = getEmInternalApi(em);
-      const preloadJoins = preloader && hint && preloader.getPreloadJoins(em, meta, buildHintTree(hint), query);
-      if (preloadJoins) {
-        selects.push(
-          ...preloadJoins.flatMap((j) =>
-            // Because we 'group by primary.id' to collapse the "a1 matched multiple finds" into
-            // a single row, we also need to pick just the first value of each preload column
-            j.selects.map((s) => `(array_agg(${s.value}))[1] AS ${s.as}`),
-          ),
-        );
-      }
-
-      const sql = `
-        ${buildValuesCte("_find", args, queries)}
-        SELECT ${selects.join(", ")}
-        FROM ${primary.table} as ${kq(primary.alias)}
-        ${joins.map((j) => `${joinKeywords(j)} ${j.table} ${kq(j.alias)} ON ${j.col1} = ${j.col2}`).join(" ")}
-        JOIN _find ON ${conditions}
-        ${preloadJoins?.map((j) => j.join).join(" ") ?? ""}
-        GROUP BY ${groupBys.join(", ")}
-        ORDER BY ${query.orderBys.map((o) => `${kq(o.alias)}.${o.column} ${o.order}`).join(", ")}
-        LIMIT ${em.entityLimit};
-      `;
-
+      const { sql, bindings } = buildRawQuery(query, { limit: em.entityLimit });
       const rows = await em.driver.executeQuery(em, cleanSql(sql), bindings);
       ensureUnderLimit(em, rows);
 
       const entities = em.hydrate(type, rows);
-      preloadJoins?.forEach((j) => j.hydrator(rows, entities));
+      // preloadJoins?.forEach((j) => j.hydrator(rows, entities));
 
       // Make an empty array for each batched query, per the dataloader contract
       const results = queries.map(() => [] as T[]);

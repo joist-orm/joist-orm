@@ -77,7 +77,13 @@ export interface JoinTable {
   col2: string;
 }
 
-export type ParsedTable = PrimaryTable | JoinTable | LateralJoinTable;
+export interface CrossJoinTable {
+  join: "cross";
+  alias: string;
+  table: string;
+}
+
+export type ParsedTable = PrimaryTable | JoinTable | CrossJoinTable | LateralJoinTable;
 
 /** Joins into 0-N relations, i.e. parent down to many children. */
 export interface LateralJoinTable {
@@ -92,6 +98,11 @@ export interface ParsedOrderBy {
   alias: string;
   column: string;
   order: OrderBy;
+}
+
+export interface ParsedGroupBy {
+  alias: string;
+  column: string;
 }
 
 type ParsedSelect = string | ParsedSelectWithBindings;
@@ -112,6 +123,8 @@ export interface ParsedFindQuery {
   condition?: ParsedExpressionFilter;
   /** Any optional orders to add before the default 'order by id'. */
   orderBys: ParsedOrderBy[];
+  /** Extremely optional group bys; we generally don't support adhoc/aggregate queries, but the auto-batching infra uses these. */
+  groupBys?: ParsedGroupBy[];
   /** Optional CTE to prefix to the query, i.e. for recursive relations. */
   cte?: { sql: string; bindings: readonly any[] };
 }
@@ -667,6 +680,8 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
         // Restart at zero to find dependencies before us
         i = 0;
       }
+    } else if (t.join === "cross") {
+      // Doesn't have any conditions
     } else if (t.join !== "primary") {
       // If alias (col2) is required, ensure the col1 alias is also required
       const a2 = t.alias;
@@ -720,7 +735,7 @@ function deepFindConditions(
 }
 
 /** Returns the `a` from `"a".*`. */
-function parseAlias(alias: string): string {
+export function parseAlias(alias: string): string {
   return alias.split(".")[0].replaceAll(`"`, "");
 }
 
@@ -1258,20 +1273,23 @@ function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter |
   return { kind: "exp", op, conditions: valid.filter(isDefined) };
 }
 
-export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[], LateralJoinTable[]] {
+export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[], LateralJoinTable[], CrossJoinTable[]] {
   let primary: PrimaryTable;
   const joins: JoinTable[] = [];
   const laterals: LateralJoinTable[] = [];
+  const crosses: CrossJoinTable[] = [];
   for (const table of query.tables) {
     if (table.join === "primary") {
       primary = table;
     } else if (table.join === "lateral") {
       laterals.push(table);
+    } else if (table.join === "cross") {
+      crosses.push(table);
     } else {
       joins.push(table);
     }
   }
-  return [primary!, joins, laterals];
+  return [primary!, joins, laterals, crosses];
 }
 
 export function joinKeywords(join: JoinTable): string {

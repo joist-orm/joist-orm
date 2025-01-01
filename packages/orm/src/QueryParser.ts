@@ -206,7 +206,6 @@ export function parseFindQuery(
         softDeletes: opts.softDeletes,
         pruneJoins: opts.pruneJoins,
         keepAliases: opts.keepAliases,
-        ...opts,
         // And set our own complex condition as the join condition
         conditions: {
           and: [

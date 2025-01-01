@@ -9,7 +9,6 @@ import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { buildHintTree } from "../HintTree";
 import {
   ColumnCondition,
-  ParsedExpressionFilter,
   ParsedFindQuery,
   ParsedValueFilter,
   RawCondition,
@@ -258,50 +257,6 @@ function stripValues(query: ParsedFindQuery): void {
       }
     },
   });
-}
-
-/**
- * Creates the `a1.firstName = _find.args1` AND a2.lastName = _find.args2` condition
- * that joins our `_find` CTE (1 row per query that's getting auto-joined together)
- * into the main table.
- *
- * We return a tuple for `[SQL, argsTaken]`, but `argsTaken` is only used for recursive
- * calls to know which `_find.argsX` they should use, as we match up columns of the `_find`
- * CTE (`args0`, `args1`, `args2`, ...) to positions in the `JOIN ON (...)` "batched where"
- * clause.
- */
-export function buildConditions(ef: ParsedExpressionFilter, argsIndex: number = 0): [string, number] {
-  const conditions = [] as string[];
-  const originalIndex = argsIndex;
-  ef.conditions.forEach((c) => {
-    if (c.kind === "column") {
-      const [op, argsTaken, negate] = makeOp(c.cond, argsIndex);
-      if (c.alias === "unset") {
-        throw new Error("Alias was not bound in em.find");
-      }
-      if (negate) {
-        conditions.push(`NOT (${kqDot(c.alias, c.column)} ${op})`);
-      } else {
-        conditions.push(`${kqDot(c.alias, c.column)} ${op}`);
-      }
-      argsIndex += argsTaken;
-    } else if (c.kind === "exp") {
-      let [cond, argsTaken] = buildConditions(c, argsIndex);
-      const needsWrap = !("cond" in c);
-      if (needsWrap) cond = `(${cond})`;
-      conditions.push(cond);
-      argsIndex += argsTaken;
-    } else if (c.kind === "raw") {
-      conditions.push(c.condition);
-      if (c.bindings.length > 0) {
-        throw new Error("RawConditions with bindings is not batchable yet");
-      }
-    } else {
-      throw new Error(`Unsupported condition kind ${c}`);
-    }
-  });
-  const argsTaken = argsIndex - originalIndex;
-  return [conditions.join(` ${ef.op.toUpperCase()} `), argsTaken];
 }
 
 /** Returns [operator, argsTaken, negate], i.e. `["=", 1, false]`. */

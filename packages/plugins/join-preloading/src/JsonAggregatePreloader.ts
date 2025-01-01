@@ -21,8 +21,10 @@ import {
   PreloadHydrator,
   PreloadPlugin,
 } from "joist-orm";
+import { builders } from "prettier/doc";
 import { canPreload } from "./canPreload";
 import { partitionHint } from "./partitionHint";
+import join = builders.join;
 
 /**
  * A PreloadPlugin implementation that uses `CROSS LATERAL JOIN` and `json_aggregate`
@@ -51,19 +53,21 @@ export class JsonAggregatePreloader implements PreloadPlugin {
     if (joins.length === 0) return undefined;
 
     // Include the aggregate `books._ as books`, `comments._ as comments`
-    query.selects.push(
-      ...joins.map((j) => ({
-        sql: `${kqDot(j.alias, "_")} as ${kq(j.alias)}`,
-        aliases: [j.alias],
+    for (const { alias, join } of joins) {
+      query.selects.push({
+        sql: `${kqDot(alias, "_")} as ${kq(alias)}`,
+        aliases: [alias],
         bindings: [],
-      })),
-    );
-    query.tables.push(...joins.map((j) => j.join));
+      });
+      query.tables.push(join);
+    }
 
     return (rows, entities) => {
       rows.forEach((row, i) => {
         const parent = entities[i];
-        joins.forEach((join) => join.hydrator(parent, parent, row[join.alias] ?? []));
+        for (const { alias, hydrator } of joins) {
+          hydrator(parent, parent, row[alias] ?? []);
+        }
       });
     };
   }

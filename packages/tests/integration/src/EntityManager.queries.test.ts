@@ -2235,7 +2235,6 @@ describe("EntityManager.queries", () => {
             condition: {
               op: "and",
               conditions: [
-                { alias: "b", column: "deleted_at", dbType: "timestamp with time zone", cond: { kind: "is-null" } },
                 { alias: "b", column: "title", dbType: "character varying", cond: { kind: "like", value: "b1%" } },
                 { kind: "raw", condition: "a.id = b.author_id" },
               ],
@@ -2276,7 +2275,6 @@ describe("EntityManager.queries", () => {
             condition: {
               op: "and",
               conditions: [
-                { alias: "b", column: "deleted_at", dbType: "timestamp with time zone", cond: { kind: "is-null" } },
                 { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b3" } },
                 { kind: "raw", condition: "a.id = b.author_id" },
               ],
@@ -2314,7 +2312,6 @@ describe("EntityManager.queries", () => {
             condition: {
               op: "and",
               conditions: [
-                { alias: "b", column: "deleted_at", dbType: "timestamp with time zone", cond: { kind: "is-null" } },
                 { alias: "b", column: "id", dbType: "int", cond: { kind: "eq", value: 2 } },
                 { condition: "a.id = b.author_id" },
               ],
@@ -2428,7 +2425,6 @@ describe("EntityManager.queries", () => {
             condition: {
               op: "and",
               conditions: [
-                { alias: "a", column: "deleted_at", dbType: "timestamp with time zone", cond: { kind: "is-null" } },
                 { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
                 { kind: "raw", condition: "lp.id = a.publisher_id" },
               ],
@@ -2843,14 +2839,6 @@ describe("EntityManager.queries", () => {
                 kind: "exp",
                 op: "and",
                 conditions: [
-                  {
-                    kind: "column",
-                    alias: "b",
-                    column: "deleted_at",
-                    dbType: "timestamp with time zone",
-                    cond: { kind: "is-null" },
-                    pruneable: true,
-                  },
                   { kind: "raw", aliases: ["a", "b"], condition: "a.id = b.author_id", bindings: [], pruneable: true },
                 ],
               },
@@ -2908,10 +2896,7 @@ describe("EntityManager.queries", () => {
               selects: ["count(*) as _", { sql: "BOOL_OR(b.title = ?) as _b_title_0", bindings: ["b1"] }],
               tables: [{ table: "books", join: "primary" }],
               condition: {
-                conditions: [
-                  { kind: "column", column: "deleted_at" },
-                  { kind: "raw", condition: "a.id = b.author_id" },
-                ],
+                conditions: [{ kind: "raw", condition: "a.id = b.author_id" }],
               },
             },
           },

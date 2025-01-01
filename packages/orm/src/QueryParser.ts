@@ -133,8 +133,9 @@ export function parseFindQuery(
     pruneJoins?: boolean;
     keepAliases?: string[];
     softDeletes?: "include" | "exclude";
-    // Allow recursively calling ourselves for putting together lateral joins
+    // Let `addLateralJoin` pass in a shared `aliases` instance
     aliases?: Record<string, number>;
+    // Let `addLateralJoin` pass in its existing alias for the subquery's primary table
     alias?: string;
     topLevelCondition?: ConditionBuilder;
     outerLateralJoins?: { alias: string; select: ParsedSelect[] }[];
@@ -1034,6 +1035,21 @@ export class ConditionBuilder {
     return undefined;
   }
 
+  /**
+   * Finds `child.column.eq(...)` complex conditions that need pushed down into each lateral join.
+   *
+   * Once we find something like `{ column: "first_name", cond: { eq: "a1" } }`, we return it to the
+   * caller (for injection into the lateral join's `SELECT` clause), and replace it with a boolean
+   * expression that is basically "did any of my children match this condition?".
+   *
+   * We also assume that `findAndRewrite` is only called on the top-level/user-facing `ParsedFindQuery`,
+   * and not any intermediate `LateralJoinTable` queries (which are allowed to have their own
+   * `ConditionBuilder`s for building their internal query, but it's not exposed to the user,
+   * so won't have any truly-complex conditions that should need rewritten).
+   *
+   * @param topLevelLateralJoin
+   * @param alias
+   */
   findAndRewrite(topLevelLateralJoin: string, alias: string): { cond: ColumnCondition; as: string }[] {
     let j = 0;
     const found: { cond: ColumnCondition; as: string }[] = [];
@@ -1051,11 +1067,26 @@ export class ConditionBuilder {
               condition: `${topLevelLateralJoin}.${as}`,
               bindings: [],
               pruneable: false,
+              ...{ rewritten: true },
             } satisfies RawCondition;
             found.push({ cond, as });
           }
         } else if (cond.kind === "exp") {
           todo.push(cond.conditions);
+        } else if (cond.kind === "raw") {
+          // what would we do here?
+          if (cond.aliases.includes(alias)) {
+            // Look for a hacky hint that this is our own already-rewritten query; this is likely
+            // because `findAndRewrite` is mutating condition expressions that get passed into
+            // `parseFindQuery` multiple times, i.e. while batching/dataloading.
+            //
+            // ...although in theory parseExpression should already be making a copy of any user-facing
+            // `em.find` conditions. :thinking:
+            if ("rewritten" in cond) return;
+            throw new Error("Joist doesn't support raw conditions in lateral joins yet");
+          }
+        } else {
+          assertNever(cond);
         }
       });
     }

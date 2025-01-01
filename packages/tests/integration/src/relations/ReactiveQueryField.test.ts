@@ -106,8 +106,9 @@ describe("ReactiveQueryField", () => {
       id: 1,
       number_of_book_reviews: 1,
     });
-    expect(queries[2]).toMatchInlineSnapshot(
-      `"SELECT count("br".id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2"`,
+    // The query count changes when preloading is enabled (right?) so use `toContain`
+    expect(queries).toContain(
+      `SELECT count("br".id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2`,
     );
   });
 

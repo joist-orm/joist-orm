@@ -170,70 +170,33 @@ export function whereFilterHash(where: FilterAndSettings<any>): any {
   return hash(where, { replacer, algorithm: "md5" });
 }
 
-/** Collects & names all the args in a query, i.e. `['arg1', 'arg2']`--not the actual values. */
-export function collectArgs(query: ParsedFindQuery): { columnName: string; dbType: string }[] {
-  const args: { columnName: string; dbType: string }[] = [];
-  visitConditions(query, {
-    visitCond(c: ColumnCondition) {
-      if ("value" in c.cond) {
-        const { kind } = c.cond;
-        if (kind === "in" || kind === "nin") {
-          args.push({ columnName: `arg${args.length}`, dbType: `${c.dbType}[]` });
-        } else if (kind === "between") {
-          // between has two values
-          args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
-          args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
-        } else {
-          args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
-        }
-      }
-    },
-  });
-  return args;
+class ArgCounter {
+  index = 0;
 }
 
+/**
+ * Recursively finds args in `query` and replaces them with `_find.argX` placeholders.
+ *
+ * We also return the name/type of each found/rewritten arg so we can build the `_find` CTE table.
+ */
 export function collectAndReplaceArgs(query: ParsedFindQuery): { columnName: string; dbType: string }[] {
   const args: { columnName: string; dbType: string }[] = [];
-  let argsIndex = 0;
+  const argsIndex = new ArgCounter();
   visitConditions(query, {
     visitCond(c: ColumnCondition) {
       if ("value" in c.cond) {
         const { kind } = c.cond;
         if (kind === "in" || kind === "nin") {
           args.push({ columnName: `arg${args.length}`, dbType: `${c.dbType}[]` });
-          const [op, argsTaken, negate] = makeOp(c.cond, argsIndex);
-          argsIndex += argsTaken;
-          return {
-            kind: "raw",
-            aliases: [c.alias],
-            condition: `${negate ? "NOT " : ""}${kqDot(c.alias, c.column)} ${op}`,
-            pruneable: c.pruneable ?? false,
-            bindings: [],
-          } satisfies RawCondition;
+          return rewriteToRawCondition(c, argsIndex);
         } else if (kind === "between") {
           // between has two values
           args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
           args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
-          const [op, argsTaken, negate] = makeOp(c.cond, argsIndex);
-          argsIndex += argsTaken;
-          return {
-            kind: "raw",
-            aliases: [c.alias],
-            condition: `${negate ? "NOT " : ""}${kqDot(c.alias, c.column)} ${op}`,
-            pruneable: c.pruneable ?? false,
-            bindings: [],
-          } satisfies RawCondition;
+          return rewriteToRawCondition(c, argsIndex);
         } else {
           args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
-          const [op, argsTaken, negate] = makeOp(c.cond, argsIndex);
-          argsIndex += argsTaken;
-          return {
-            kind: "raw",
-            aliases: [c.alias],
-            condition: `${negate ? "NOT " : ""}${kqDot(c.alias, c.column)} ${op}`,
-            pruneable: c.pruneable ?? false,
-            bindings: [],
-          } satisfies RawCondition;
+          return rewriteToRawCondition(c, argsIndex);
         }
       } else if (c.cond.kind === "is-null" || c.cond.kind === "not-null") {
         // leave it alone
@@ -243,6 +206,18 @@ export function collectAndReplaceArgs(query: ParsedFindQuery): { columnName: str
     },
   });
   return args;
+}
+
+function rewriteToRawCondition(c: ColumnCondition, argsIndex: ArgCounter): RawCondition {
+  const [op, argsTaken, negate] = makeOp(c.cond, argsIndex.index);
+  argsIndex.index += argsTaken;
+  return {
+    kind: "raw",
+    aliases: [c.alias],
+    condition: `${negate ? "NOT " : ""}${kqDot(c.alias, c.column)} ${op}`,
+    pruneable: c.pruneable ?? false,
+    bindings: [],
+  };
 }
 
 export function createBindings(meta: EntityMetadata, queries: readonly FilterAndSettings<any>[]): any[] {

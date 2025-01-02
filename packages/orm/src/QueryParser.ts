@@ -324,6 +324,10 @@ export function parseFindQuery(
     bindAlias(filter, meta, alias);
 
     // If we're inside a lateral join, look for top-level conditions that need to be rewritten as `BOOL_OR(...)`
+    // I.e. we might be a regular m2o join, but we just came from a lateral join, so any complex conditions
+    // like `ourTable.column.eq(...)` need to be:
+    // a) injected as a `BOOL_OR(ourTable.column.eq(...)) as _b_column_0` select to surface outside the lateral join, and
+    // b) rewritten in the top-level query to be just `_b_column_0`
     if (opts.topLevelCondition) {
       const topLevelAlias = opts.outerLateralJoins?.[opts.outerLateralJoins?.length - 1]?.alias;
       const complexConditions = opts.topLevelCondition.findAndRewrite(topLevelAlias ?? alias, alias);
@@ -336,15 +340,13 @@ export function parseFindQuery(
           });
         } else {
           const [sql, bindings] = buildCondition(cc.cond);
-          selects.push({
-            sql: `BOOL_OR(${sql}) as ${cc.as}`,
-            aliases: [cc.cond.alias],
-            bindings,
-          });
+          selects.push({ sql: `BOOL_OR(${sql}) as ${cc.as}`, aliases: [cc.cond.alias], bindings });
         }
+        // Expose the `_b_column_0` through `SELECT`s all the up the tree
+        // (...until the top-level query, which doesn't need to SELECT it, only WHERE against it)
         opts.outerLateralJoins?.forEach(({ alias, select }, i) => {
-          const isLast = i === opts.outerLateralJoins!.length - 1;
-          if (!isLast) {
+          const isTopLevel = i === opts.outerLateralJoins!.length - 1;
+          if (!isTopLevel) {
             select.push({ sql: `BOOL_OR(${alias}.${cc.as}) as ${cc.as}`, bindings: [], aliases: [alias] });
           }
         });

@@ -1,3 +1,10 @@
+## [1.218.1](https://github.com/joist-orm/joist-orm/compare/v1.218.0...v1.218.1) (2025-01-02)
+
+
+### Bug Fixes
+
+* Fix typo. ([#1333](https://github.com/joist-orm/joist-orm/issues/1333)) ([fc337a9](https://github.com/joist-orm/joist-orm/commit/fc337a972cfd27ce95d01db18f3bbb5e841519e1))
+
 # [1.218.0](https://github.com/joist-orm/joist-orm/compare/v1.217.0...v1.218.0) (2025-01-02)
 
 

@@ -200,6 +200,8 @@ export function parseFindQuery(
           return { subFilter: {}, count: { kind: "eq", value: 0 } };
         } else if (ef.kind === "eq") {
           return { subFilter: { id: ef.value }, count: undefined };
+        } else if (ef.kind === "in") {
+          return { subFilter: { id: { in: ef.value } }, count: undefined };
         } else {
           // If `ef` is set, it's already parsed, which `parseFindQuery` won't expect, so pass the original `filter`
           return { subFilter: { id: filter }, count: undefined };

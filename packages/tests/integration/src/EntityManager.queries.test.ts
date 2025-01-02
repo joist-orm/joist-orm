@@ -2193,18 +2193,19 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(1);
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
-      selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
-      ],
-      condition: {
-        op: "and",
-        conditions: [{ alias: "att", column: "tag_id", dbType: "int", cond: { kind: "eq", value: 1 } }],
-      },
-      orderBys: [expect.anything()],
-    });
+    // We used to only join into the `author_to_tags`, but for now we lateral join into tags itself
+    // expect(parseFindQuery(am, where, opts)).toMatchObject({
+    //   selects: [`a.*`],
+    //   tables: [
+    //     { alias: "a", table: "authors", join: "primary" },
+    //     { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
+    //   ],
+    //   condition: {
+    //     op: "and",
+    //     conditions: [{ alias: "att", column: "tag_id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+    //   },
+    //   orderBys: [expect.anything()],
+    // });
   });
 
   it("can find through m2m matching on new values and not fail", async () => {
@@ -2220,11 +2221,22 @@ describe("EntityManager.queries", () => {
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
+        {
+          alias: "t",
+          table: "tags",
+          query: {
+            condition: {
+              conditions: [
+                { aliases: ["att", "t"], condition: "att.tag_id = t.id", bindings: [] },
+                { alias: "t", column: "id", dbType: "int", cond: { kind: "in", value: [-1] } },
+              ],
+            },
+          },
+        },
       ],
       condition: {
         op: "and",
-        conditions: [{ alias: "att", column: "tag_id", dbType: "int", cond: { kind: "in", value: [-1] } }],
+        conditions: [{ alias: "t", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } }],
       },
       orderBys: [expect.anything()],
     });
@@ -2245,12 +2257,77 @@ describe("EntityManager.queries", () => {
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
-        { alias: "t", table: "tags", join: "outer", col1: "att.tag_id", col2: "t.id" },
+        {
+          alias: "t",
+          table: "tags",
+          join: "lateral",
+          fromAlias: "a",
+          query: {
+            selects: ["count(*) as _"],
+            orderBys: [],
+            tables: [
+              { alias: "att", table: "authors_to_tags", join: "inner", col1: "a.id", col2: "att.author_id" },
+              { alias: "t", table: "tags", join: "primary" },
+            ],
+            condition: {
+              op: "and",
+              conditions: [
+                { aliases: ["att", "t"], condition: "att.tag_id = t.id", bindings: [] },
+                { alias: "t", column: "name", dbType: "citext", cond: { kind: "eq", value: "t1" } },
+              ],
+            },
+          },
+        },
       ],
       condition: {
         op: "and",
-        conditions: [{ alias: "t", column: "name", dbType: "citext", cond: { kind: "eq", value: "t1" } }],
+        conditions: [{ alias: "t", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through m2m matching multiple m2m children", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertTag({ name: "t1" });
+    await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+    await insertTag({ name: "t2" });
+    await insertAuthorToTag({ author_id: 1, tag_id: 2 });
+
+    const em = newEntityManager();
+    const where = { tags: { name: ["t1", "t2"] } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        {
+          alias: "t",
+          table: "tags",
+          join: "lateral",
+          fromAlias: "a",
+          query: {
+            selects: ["count(*) as _"],
+            orderBys: [],
+            tables: [
+              { alias: "att", table: "authors_to_tags", join: "inner", col1: "a.id", col2: "att.author_id" },
+              { alias: "t", table: "tags", join: "primary" },
+            ],
+            condition: {
+              op: "and",
+              conditions: [
+                { aliases: ["att", "t"], condition: "att.tag_id = t.id", bindings: [] },
+                { alias: "t", column: "name", dbType: "citext", cond: { kind: "in", value: ["t1", "t2"] } },
+              ],
+            },
+          },
+        },
+      ],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "t", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } }],
       },
       orderBys: [expect.anything()],
     });
@@ -2859,12 +2936,29 @@ describe("EntityManager.queries", () => {
         tables: [
           { alias: "b", table: "books", join: "primary" },
           { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
-          { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
-          { alias: "t", table: "tags", join: "outer", col1: "att.tag_id", col2: "t.id" },
+          {
+            alias: "t",
+            table: "tags",
+            join: "lateral",
+            fromAlias: "a",
+            query: {
+              selects: ["count(*) as _", { sql: "BOOL_OR(t.id = ?) as _t_id_0", bindings: [1], aliases: ["t"] }],
+              orderBys: [],
+              tables: [
+                { alias: "att", table: "authors_to_tags", join: "inner", col1: "a.id", col2: "att.author_id" },
+                { alias: "t", table: "tags", join: "primary" },
+              ],
+              condition: {
+                op: "and",
+                conditions: [{ aliases: ["att", "t"], condition: "att.tag_id = t.id", bindings: [] }],
+              },
+            },
+          },
         ],
         condition: {
           op: "or",
-          conditions: [{ alias: "t", column: "id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+          // conditions: [{ alias: "t", column: "id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+          conditions: [{ aliases: ["t"], condition: "t._t_id_0" }],
         },
         orderBys: expect.anything(),
       });

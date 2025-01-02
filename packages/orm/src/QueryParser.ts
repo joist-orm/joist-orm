@@ -7,7 +7,7 @@ import { abbreviation } from "./QueryBuilder";
 import { visitConditions } from "./QueryVisitor";
 import { getMetadataForTable } from "./configure";
 import { buildCondition } from "./drivers/buildUtils";
-import { Column, getConstructorFromTaggedId, isDefined, keyToNumber, maybeResolveReferenceToId } from "./index";
+import { Column, getConstructorFromTaggedId, isDefined } from "./index";
 import { kq, kqDot } from "./keywords";
 import { assertNever, fail, partition } from "./utils";
 
@@ -192,8 +192,10 @@ export function parseFindQuery(
     fromAlias: string,
     alias: string,
     filter: any,
-    // The one (for o2m) or two (for m2m) conditions
-    conditions: RawCondition[],
+    // The join condition for the subquery from the outer table
+    condition: RawCondition,
+    // If we're a m2m, the join table to inject (which will use the outer table)
+    joinTable: JoinTable | undefined,
   ) {
     const ef = parseEntityFilter(meta, filter);
     // Maybe skip
@@ -245,13 +247,14 @@ export function parseFindQuery(
         aliases,
         alias,
         // And set our own complex condition as the join condition (for o2m, two for m2m)
-        rawConditions: conditions,
+        rawConditions: [condition],
         // Let the subquery's pruneUnusedJoins know about the top-level WHERE clauses
         topLevelCondition: opts.topLevelCondition ?? cb,
         outerLateralJoins: [{ alias, select: selects }, ...(opts.outerLateralJoins ?? [])],
       },
     );
     subQuery.orderBys = [];
+    if (joinTable) subQuery.tables.unshift(joinTable);
     tables.push({ join: "lateral", table: meta.tableName, query: subQuery, alias, fromAlias });
 
     // Look for complex conditions...
@@ -479,7 +482,11 @@ export function parseFindQuery(
               fail(`No poly component found for ${otherField.fieldName}`);
             otherColumn = otherComponent.columnName;
           }
-          addLateralJoin(field.otherMetadata(), alias, a, (ef.subFilter as any)[key], [
+          addLateralJoin(
+            field.otherMetadata(),
+            alias,
+            a,
+            (ef.subFilter as any)[key],
             {
               kind: "raw",
               aliases: [a, alias],
@@ -487,59 +494,33 @@ export function parseFindQuery(
               pruneable: true,
               bindings: [],
             },
-          ]);
+            undefined,
+          );
         } else if (field.kind === "m2m") {
           // Always join into the m2m table
           const ja = getAlias(field.joinTableName);
-          tables.push({
+          const jt: JoinTable = {
             alias: ja,
-            join: "outer",
+            join: "inner",
             table: field.joinTableName,
             col1: kqDot(alias, "id"),
             col2: kqDot(ja, field.columnNames[0]),
-          });
-          // But conditionally join into the alias table
-          const sub = (ef.subFilter as any)[key];
-          if (isAlias(sub)) {
-            const a = getAlias(field.otherMetadata().tableName);
-            addTable(field.otherMetadata(), a, "outer", kqDot(ja, field.columnNames[1]), kqDot(a, "id"), sub);
-          }
-          const f = parseEntityFilter(field.otherMetadata(), sub);
-          // Probe the filter and see if it's just an id, if so we can avoid the join
-          if (!f) {
-            // skip
-          } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata(), softDeletes)) {
-            const a = getAlias(field.otherMetadata().tableName);
-            addTable(
-              field.otherMetadata(),
-              a,
-              "outer",
-              kqDot(ja, field.columnNames[1]),
-              kqDot(a, "id"),
-              (ef.subFilter as any)[key],
-            );
-          } else {
-            const meta = field.otherMetadata();
-            // We normally don't have `columns` for m2m fields, b/c they don't go through normal serde
-            // codepaths, so make one up to leverage the existing `mapToDb` function.
-            const column: any = {
-              columnName: field.columnNames[1],
-              dbType: meta.idDbType,
-              mapToDb(value: any) {
-                // Check for `typeof value === number` in case this is a new entity, and we've been given the nilIdValue
-                return value === null || isNilIdValue(value)
-                  ? value
-                  : keyToNumber(meta, maybeResolveReferenceToId(value));
-              },
-            };
-            cb.addSimpleCondition({
-              kind: "column",
-              alias: ja,
-              column: field.columnNames[1],
-              dbType: meta.idDbType,
-              cond: mapToDb(column, f),
-            });
-          }
+          };
+          const a = getAlias(field.otherMetadata().tableName);
+          addLateralJoin(
+            field.otherMetadata(),
+            alias,
+            a,
+            (ef.subFilter as any)[key],
+            {
+              kind: "raw",
+              aliases: [ja, a],
+              condition: `${kqDot(ja, field.columnNames[1])} = ${kqDot(a, "id")}`,
+              pruneable: true,
+              bindings: [],
+            },
+            jt,
+          );
         } else {
           throw new Error(`Unsupported field ${key}`);
         }

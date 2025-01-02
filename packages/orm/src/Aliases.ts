@@ -453,6 +453,7 @@ class PolyReferenceAlias<T extends Entity> {
 class CountAliasImpl implements CountAlias {
   constructor(protected callbacks: BindCallback[]) {}
   eq(count: number | undefined | null): ExpressionCondition {
+    if (count === undefined) return skipCondition;
     const cond: ColumnCondition = {
       kind: "column",
       alias: "unset",

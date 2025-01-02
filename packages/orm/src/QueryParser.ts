@@ -1,4 +1,5 @@
 import { groupBy, isPlainObject } from "joist-utils";
+import { PartialSome } from "ts-patch/utils";
 import { aliasMgmt, isAlias, newAliasProxy } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
@@ -262,11 +263,7 @@ export function parseFindQuery(
     const complexConditions = (opts.topLevelCondition ?? cb).findAndRewrite(topLevelAlias ?? alias, alias);
     for (const cc of complexConditions) {
       if (cc.cond.kind === "column" && cc.cond.column === "$count") {
-        subQuery.selects.push({
-          sql: `count(*) > ${(cc.cond.cond as any).value} as ${cc.as}`,
-          aliases: [cc.cond.alias],
-          bindings: [],
-        });
+        subQuery.selects.push(buildCountStar(cc));
       } else {
         const [sql, bindings] = buildCondition(cc.cond);
         subQuery.selects.push({
@@ -339,11 +336,7 @@ export function parseFindQuery(
       const complexConditions = opts.topLevelCondition.findAndRewrite(topLevelAlias ?? alias, alias);
       for (const cc of complexConditions) {
         if (cc.cond.kind === "column" && cc.cond.column === "$count") {
-          selects.push({
-            sql: `count(*) > ${(cc.cond.cond as any).value} as ${cc.as}`,
-            aliases: [cc.cond.alias],
-            bindings: [],
-          });
+          selects.push(buildCountStar(cc));
         } else {
           const [sql, bindings] = buildCondition(cc.cond);
           selects.push({ sql: `BOOL_OR(${sql}) as ${cc.as}`, aliases: [cc.cond.alias], bindings });
@@ -1395,6 +1388,20 @@ class DependencyTracker {
     }
     this.required = new Set([...this.required, ...marked]);
   }
+}
+
+/** Takes a `{ column: "$count", kind: eq/gt/etc }` and turns it into a ParsedSelect. */
+function buildCountStar(cc: { as: string; cond: ColumnCondition }): ParsedSelect {
+  // Reuse buildCondition to get the et/gt/etc --> operator
+  const [op, bindings] = buildCondition(cc.cond);
+  // But swap the dummy column name with `count(*)`
+  const parts = op.split(" ");
+  parts[0] = "count(*)";
+  return {
+    sql: `${parts.join(" ")} as ${cc.as}`,
+    aliases: [cc.cond.alias],
+    bindings,
+  };
 }
 
 type PartialSome<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;

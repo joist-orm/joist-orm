@@ -2704,6 +2704,25 @@ describe("EntityManager.queries", () => {
       expect(authors.length).toEqual(1);
     });
 
+    it("can use aliases as an o2m entity filter with zero or some children", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1 });
+      const em = newEntityManager();
+      const b = alias(Book);
+      const authors = await em.find(
+        Author,
+        { books: b },
+        {
+          conditions: {
+            or: [b.$count.eq(0), b.id.in(["b:1"])],
+          },
+        },
+      );
+      expect(authors.length).toEqual(2);
+    });
+
     it("can use aliases as an o2m entity filter with primary key in tagged ids", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });

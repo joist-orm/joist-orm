@@ -89,6 +89,7 @@ export {
 } from "./rules";
 export { setRuntimeConfig, type RuntimeConfig } from "./runtimeConfig";
 export * from "./serde";
+export * from "./temporalMappers";
 export * from "./typeMap";
 export { asNew, assertNever, cleanStringValue, fail, indexBy } from "./utils";
 export { ensureWithLoaded, WithLoaded, withLoaded } from "./withLoaded";

@@ -9,6 +9,7 @@ const temporalNotAvailable = {
   toDb: () => fail("Temporal not available"),
 };
 
+/** Converts Postgres `DATE` to/from Temporal.PlainDate. */
 export const plainDateMapper: CustomSerde<Temporal.PlainDate, string> = t
   ? {
       fromDb: t.PlainDate.from,
@@ -16,6 +17,7 @@ export const plainDateMapper: CustomSerde<Temporal.PlainDate, string> = t
     }
   : temporalNotAvailable;
 
+/** Converts Postgres `TIME` to/from Temporal.PlainTime. */
 export const plainTimeMapper: CustomSerde<Temporal.PlainTime, string> = t
   ? {
       fromDb: t.PlainTime.from,
@@ -23,6 +25,7 @@ export const plainTimeMapper: CustomSerde<Temporal.PlainTime, string> = t
     }
   : temporalNotAvailable;
 
+/** Converts Postgres `TIMESTAMP` / `TIMESTAMP WITHOUT TIME ZONE` to/from Temporal.PlainDateTime. */
 export const plainDateTimeMapper: CustomSerde<Temporal.PlainDateTime, string> = t
   ? {
       // Should look like `2018-01-01 10:00:00`
@@ -31,6 +34,14 @@ export const plainDateTimeMapper: CustomSerde<Temporal.PlainDateTime, string> = 
     }
   : temporalNotAvailable;
 
+/**
+ * Converts Postgres `TIMESTAMPTZ`, `TIMESTAMPTZ WITH TIME ZONE` to/from Temporal.PlainDateTime.
+ *
+ * Specifically Postgres uses ISO 8601, which Temporal does as well, except that:
+ *
+ * - PG uses a space instead of `T` between the date/time, and
+ * - Temporal needs `[UTC]`appended, b/c even with the numeric offset, it wants to know which specific zone.
+ */
 export const zonedDateTimeMapper: CustomSerde<Temporal.ZonedDateTime, string> = t
   ? {
       // Should we use the application's time zone here? Afaiu we're using an explicit

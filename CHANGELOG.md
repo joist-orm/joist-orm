@@ -1,3 +1,10 @@
+# [1.218.0](https://github.com/joist-orm/joist-orm/compare/v1.217.0...v1.218.0) (2025-01-02)
+
+
+### Features
+
+* Export temporal CustomSerde mappers. ([#1332](https://github.com/joist-orm/joist-orm/issues/1332)) ([3ff492b](https://github.com/joist-orm/joist-orm/commit/3ff492bf32047200c861f25a5009bde52f9f3d45))
+
 # [1.217.0](https://github.com/joist-orm/joist-orm/compare/v1.216.0...v1.217.0) (2024-12-22)
 
 

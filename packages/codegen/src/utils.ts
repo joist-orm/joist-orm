@@ -125,7 +125,7 @@ export function mapSimpleDbTypeToTypescriptType(config: Config, dbType: Database
     case "time without time zone":
       return config.temporal
         ? plainTimeCode
-        : fail("Joist doen't support 'time without time zone' unless temporal is enabled");
+        : fail("Joist doesn't support 'time without time zone' unless temporal is enabled");
     case "timestamp with time zone":
       return config.temporal ? zonedDateTimeCode : dateCode;
     case "timestamp without time zone":

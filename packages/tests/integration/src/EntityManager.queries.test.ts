@@ -2294,8 +2294,8 @@ describe("EntityManager.queries", () => {
             condition: {
               op: "and",
               conditions: [
-                { alias: "b", column: "title", dbType: "character varying", cond: { kind: "like", value: "b1%" } },
                 { kind: "raw", condition: "a.id = b.author_id" },
+                { alias: "b", column: "title", dbType: "character varying", cond: { kind: "like", value: "b1%" } },
               ],
             },
           },
@@ -2334,8 +2334,8 @@ describe("EntityManager.queries", () => {
             condition: {
               op: "and",
               conditions: [
-                { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b3" } },
                 { kind: "raw", condition: "a.id = b.author_id" },
+                { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b3" } },
               ],
             },
           },
@@ -2371,8 +2371,8 @@ describe("EntityManager.queries", () => {
             condition: {
               op: "and",
               conditions: [
-                { alias: "b", column: "id", dbType: "int", cond: { kind: "eq", value: 2 } },
                 { condition: "a.id = b.author_id" },
+                { alias: "b", column: "id", dbType: "int", cond: { kind: "eq", value: 2 } },
               ],
             },
           },
@@ -2410,9 +2410,9 @@ describe("EntityManager.queries", () => {
             condition: {
               op: "and",
               conditions: [
+                { kind: "raw", condition: "a.id = b.author_id" },
                 { alias: "b", column: "deleted_at", dbType: "timestamp with time zone", cond: { kind: "is-null" } },
                 { alias: "b", column: "acknowledgements", dbType: "text", cond: { kind: "is-null" } },
-                { kind: "raw", condition: "a.id = b.author_id" },
               ],
             },
           },
@@ -2484,8 +2484,8 @@ describe("EntityManager.queries", () => {
             condition: {
               op: "and",
               conditions: [
-                { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
                 { kind: "raw", condition: "lp.id = a.publisher_id" },
+                { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
               ],
             },
           },
@@ -2898,7 +2898,7 @@ describe("EntityManager.queries", () => {
                 kind: "exp",
                 op: "and",
                 conditions: [
-                  { kind: "raw", aliases: ["a", "b"], condition: "a.id = b.author_id", bindings: [], pruneable: true },
+                  { kind: "raw", aliases: ["b", "a"], condition: "a.id = b.author_id", bindings: [], pruneable: true },
                 ],
               },
               orderBys: [],
@@ -3548,7 +3548,7 @@ describe("EntityManager.queries", () => {
     const where = { books: { title: "b1" } } satisfies AuthorFilter;
     const q = buildQuery(em.ctx.knex, Author, { where });
     expect(q.toSQL().sql).toMatchInlineSnapshot(
-      `"select a.* from authors as a cross join lateral (select count(*) as _ from books as b where b.deleted_at IS NULL AND b.title = ? AND a.id = b.author_id) as b where a.deleted_at IS NULL AND b._ > ? order by a.id ASC"`,
+      `"select a.* from authors as a cross join lateral (select count(*) as _ from books as b where a.id = b.author_id AND b.deleted_at IS NULL AND b.title = ?) as b where a.deleted_at IS NULL AND b._ > ? order by a.id ASC"`,
     );
     const rows = await q;
     expect(rows.length).toBe(0);

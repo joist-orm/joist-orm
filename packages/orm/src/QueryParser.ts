@@ -149,6 +149,8 @@ export function parseFindQuery(
     alias?: string;
     topLevelCondition?: ConditionBuilder;
     outerLateralJoins?: { alias: string; select: ParsedSelect[] }[];
+    // Let `addLateralJoin` pass in its join conditions
+    rawConditions?: RawCondition[];
   } = {},
 ): ParsedFindQuery {
   const selects: ParsedSelect[] = [];
@@ -178,15 +180,20 @@ export function parseFindQuery(
   // and then it's available for our `addLateralJoin`s to rewrite.
   if (optsExpression) cb.maybeAddExpression(optsExpression);
 
+  // Also see if outer `addLateralJoin` is passing us its join conditions
+  if (opts.rawConditions) {
+    for (const rc of opts.rawConditions) cb.addRawCondition(rc);
+  }
+
   // ...how do we pull up data to use in any conditions?...
   // what would the format look like? probably just nested JSON...
   function addLateralJoin(
     meta: EntityMetadata,
     fromAlias: string,
     alias: string,
-    col1: string,
-    col2: string,
     filter: any,
+    // The one (for o2m) or two (for m2m) conditions
+    conditions: RawCondition[],
   ) {
     const ef = parseEntityFilter(meta, filter);
     // Maybe skip
@@ -235,14 +242,10 @@ export function parseFindQuery(
         softDeletes: opts.softDeletes,
         pruneJoins: opts.pruneJoins,
         keepAliases: opts.keepAliases,
-        // And set our own complex condition as the join condition
-        conditions: {
-          and: [
-            { kind: "raw", aliases: [fromAlias, alias], condition: `${col1} = ${col2}`, pruneable: true, bindings: [] },
-          ],
-        },
         aliases,
         alias,
+        // And set our own complex condition as the join condition (for o2m, two for m2m)
+        rawConditions: conditions,
         // Let the subquery's pruneUnusedJoins know about the top-level WHERE clauses
         topLevelCondition: opts.topLevelCondition ?? cb,
         outerLateralJoins: [{ alias, select: selects }, ...(opts.outerLateralJoins ?? [])],
@@ -476,14 +479,15 @@ export function parseFindQuery(
               fail(`No poly component found for ${otherField.fieldName}`);
             otherColumn = otherComponent.columnName;
           }
-          addLateralJoin(
-            field.otherMetadata(),
-            alias,
-            a,
-            kqDot(alias, "id"),
-            kqDot(a, otherColumn),
-            (ef.subFilter as any)[key],
-          );
+          addLateralJoin(field.otherMetadata(), alias, a, (ef.subFilter as any)[key], [
+            {
+              kind: "raw",
+              aliases: [a, alias],
+              condition: `${kqDot(alias, "id")} = ${kqDot(a, otherColumn)}`,
+              pruneable: true,
+              bindings: [],
+            },
+          ]);
         } else if (field.kind === "m2m") {
           // Always join into the m2m table
           const ja = getAlias(field.joinTableName);

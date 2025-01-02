@@ -15,7 +15,7 @@ describe("QueryParser", () => {
         "SELECT b.*",
         " FROM books AS b",
         " JOIN authors AS a ON b.author_id = a.id",
-        ' CROSS JOIN LATERAL (SELECT count(*) as _ FROM author_schedules AS "as" WHERE "as".id = ? AND a.id = "as".author_id) AS "as"',
+        ' CROSS JOIN LATERAL (SELECT count(*) as _ FROM author_schedules AS "as" WHERE a.id = "as".author_id AND "as".id = ?) AS "as"',
         " WHERE b.deleted_at IS NULL",
         " AND a.deleted_at IS NULL",
         " AND a.first_name = ?",

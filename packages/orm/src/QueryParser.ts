@@ -622,12 +622,15 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
     // Look for subFilter values being EntityFilter-ish instances like ManyToOneReference
     // that have an id, and so structurally match the entity filter without really being filters,
     // and convert them over here before getting into parseValueFilter.
+    const subFilter = {} as any;
     for (const [key, value] of Object.entries(filter)) {
       if (value && typeof value === "object" && !isPlainObject(value) && "idTaggedMaybe" in value) {
-        filter[key] = value.idTaggedMaybe || nilIdValue(meta);
+        subFilter[key] = value.idTaggedMaybe || nilIdValue(meta);
+      } else {
+        subFilter[key] = value;
       }
     }
-    return { kind: "join", subFilter: filter };
+    return { kind: "join", subFilter };
   } else {
     throw new Error(`Unrecognized filter ${filter}`);
   }
@@ -907,8 +910,7 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
       filter.value = column.mapToDb(filter.value);
       return filter;
     case "between":
-      filter.value[0] = column.mapToDb(filter.value[0]);
-      filter.value[1] = column.mapToDb(filter.value[1]);
+      filter.value = [column.mapToDb(filter.value[0]), column.mapToDb(filter.value[1])];
       return filter;
     case "is-null":
     case "not-null":

@@ -2,7 +2,7 @@ import { knex, newEntityManager } from "@src/setupDbTests";
 import { jan1at10am, jan1DateTime, jan2DateTime, jan3DateTime } from "@src/utils";
 import { alias, getMetadata, PrimitiveField } from "joist-orm";
 import { Temporal } from "temporal-polyfill";
-import { Author, Book, newBook } from "./entities";
+import { Author, Book, BookFilter, newBook } from "./entities";
 
 describe("zonedDateTime", () => {
   it("has the correct type for a zoned date time field", () => {
@@ -97,6 +97,16 @@ describe("zonedDateTime", () => {
     await em.flush();
     const result = await em.find(Author, { books: { publishedAt: { lte: jan2DateTime } } });
     expect(result).toEqual([a1, a2]);
+  });
+
+  it("between where filters aren't mutated", async () => {
+    const em = newEntityManager();
+    const [, b2] = [jan1DateTime, jan2DateTime, jan3DateTime].map((publishedAt) => newBook(em, { publishedAt }));
+    await em.flush();
+    const where = { publishedAt: { between: [jan2DateTime, jan2DateTime] } } satisfies BookFilter;
+    const result = await em.findOne(Book, where);
+    expect(result).toMatchEntity(b2);
+    expect(where.publishedAt.between[0]).toEqual(jan2DateTime);
   });
 });
 

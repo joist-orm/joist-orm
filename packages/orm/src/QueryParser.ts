@@ -1,5 +1,4 @@
 import { groupBy, isPlainObject } from "joist-utils";
-import { PartialSome } from "ts-patch/utils";
 import { aliasMgmt, isAlias, newAliasProxy } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";

@@ -219,8 +219,10 @@ function addJoins<I extends EntityOrId>(
       const join: LateralJoinTable = {
         join: "lateral",
         alias: otherAlias,
+        // Do we need to say which alias we're coming from, to avoid having it pruned?
+        // ...maybe not because preloading is always on the primary table?
         fromAlias: "unset",
-        table: "...unused...",
+        table: otherMeta.tableName,
         query: {
           selects: [`json_agg(json_build_array(${selects.join(", ")}) order by ${kq(otherAlias)}.id) as _`],
           tables: [

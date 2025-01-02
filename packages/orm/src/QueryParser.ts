@@ -85,12 +85,22 @@ export interface CrossJoinTable {
 
 export type ParsedTable = PrimaryTable | JoinTable | CrossJoinTable | LateralJoinTable;
 
-/** Joins into 0-N relations, i.e. parent down to many children. */
+/**
+ * Joins into 0-N relations, i.e. parent down to many children.
+ *
+ * It's expect that the `query` will fundamentally be an aggregate query that
+ * counts (for `em.find`s) or rolls up (for JSON preloading) the children into
+ * a single row, such that our top-level query does not need to DISTINCT-away
+ * any duplication that comes from having multiple children rows.
+ */
 export interface LateralJoinTable {
   join: "lateral";
   alias: string;
+  /** Used for join dependency tracking. */
   fromAlias: string;
+  /** Used more for bookkeeping/consistency with other join tables than the query itself. */
   table: string;
+  /** The subquery that will look for/roll-up N children. */
   query: ParsedFindQuery;
 }
 

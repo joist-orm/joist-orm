@@ -1,3 +1,10 @@
+## [1.218.2](https://github.com/joist-orm/joist-orm/compare/v1.218.1...v1.218.2) (2025-01-02)
+
+
+### Bug Fixes
+
+* Don't mutate between filters. ([#1334](https://github.com/joist-orm/joist-orm/issues/1334)) ([d7352e2](https://github.com/joist-orm/joist-orm/commit/d7352e2946ec5f06de872f1b882c1bf77d19e345))
+
 ## [1.218.1](https://github.com/joist-orm/joist-orm/compare/v1.218.0...v1.218.1) (2025-01-02)
 
 

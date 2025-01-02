@@ -187,17 +187,34 @@ export function parseFindQuery(
     // Create an alias to use for our subquery's `where parent_id = id` condition
     const a = newAliasProxy(meta.cstr);
 
-    const subFilter =
-      // subFilter will be unprocessed, so we can pass it recursively into `parseFindQuery`
-      ef && ef.kind === "join"
-        ? ef.subFilter
-        : // If `ef` is set, it's already parsed, which `parseFindQuery` won't expect, so pass the original `filter`
-          typeof filter === "string"
-          ? { id: filter }
-          : ef !== undefined
-            ? filter
-            : {};
-    const count = subFilter && "$count" in subFilter ? subFilter["$count"] : subFilter === null ? 0 : undefined;
+    // This is kinda janky, but take the `ef: ParsedEntityFilter` and re-work it back into a
+    // `subFilter/count` pair that we can use for our recursive `parseFindQuery` call.
+    function convertFilter(): { subFilter: object; count: ParsedValueFilter<number> | undefined } {
+      if (ef) {
+        if (ef.kind === "join") {
+          // subFilter will be unprocessed, so we can pass it recursively into `parseFindQuery`
+          return { subFilter: ef.subFilter, count: undefined };
+        } else if (typeof filter === "string") {
+          // If `ef` is set, it's already parsed, which `parseFindQuery` won't expect, so pass the original `filter`
+          return { subFilter: { id: filter }, count: undefined };
+        } else if (ef.kind === "not-null") {
+          return { subFilter: {}, count: { kind: "gt", value: 0 } };
+        } else if (ef.kind === "is-null") {
+          return { subFilter: {}, count: { kind: "eq", value: 0 } };
+        } else {
+          return { subFilter: { id: ef }, count: undefined };
+        }
+      } else {
+        return { subFilter: {}, count: undefined };
+      }
+    }
+
+    const {
+      subFilter,
+      // If `ef` was is-null/not-null, use that as the count, otherwise probe for subFilter[$count]
+      count = subFilter && "$count" in subFilter ? { kind: "eq", value: subFilter["$count"] } : undefined,
+    } = convertFilter();
+
     const subQuery = parseFindQuery(
       meta,
       { as: a, ...subFilter },
@@ -255,7 +272,7 @@ export function parseFindQuery(
         alias,
         column: "_",
         dbType: "int",
-        cond: count !== undefined ? { kind: "eq", value: count } : { kind: "gt", value: 0 },
+        cond: count ?? { kind: "gt", value: 0 },
         // Don't let this condition pin the join, unless the user asked for a specific count
         // (or deepFindConditions finds a real condition from the above filter).
         pruneable: count === undefined,

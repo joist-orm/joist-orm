@@ -33,7 +33,7 @@ export function buildKnexQuery(
     if (typeof s === "string") {
       query.select(knex.raw(s));
     } else {
-      query.select(knex.raw(s.sql));
+      query.select(knex.raw(s.sql, s.bindings));
     }
   });
 
@@ -49,7 +49,9 @@ export function buildKnexQuery(
         // ignore
         break;
       case "lateral":
-        throw new Error("Lateral joins are not implemented in buildKnexQuery yet");
+        const { sql, bindings } = buildKnexQuery(knex, t.query, {}).toSQL();
+        query.crossJoin(knex.raw(`lateral (${sql}) as ${kq(t.alias)}`, bindings));
+        break;
       case "cross":
         query.crossJoin(asRaw(t));
         break;

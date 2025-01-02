@@ -21,6 +21,7 @@ import {
   UniqueFilter,
   alias,
   aliases,
+  buildQuery,
   getMetadata,
   parseFindQuery,
 } from "joist-orm";
@@ -3540,6 +3541,17 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const users = await em.find(User, { password });
     expect(users.length).toBe(1);
+  });
+
+  it("supports buildKnexQuery", async () => {
+    const em = newEntityManager();
+    const where = { books: { title: "b1" } } satisfies AuthorFilter;
+    const q = buildQuery(em.ctx.knex, Author, { where });
+    expect(q.toSQL().sql).toMatchInlineSnapshot(
+      `"select a.* from authors as a cross join lateral (select count(*) as _ from books as b where b.deleted_at IS NULL AND b.title = ? AND a.id = b.author_id) as b where a.deleted_at IS NULL AND b._ > ? order by a.id ASC"`,
+    );
+    const rows = await q;
+    expect(rows.length).toBe(0);
   });
 });
 

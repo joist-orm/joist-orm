@@ -737,6 +737,18 @@ describe("EntityManager.queries", () => {
     expect(authors).toMatchEntity([{ firstName: "a1" }]);
   });
 
+  it("can find by o2m has list of ids", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+
+    const em = newEntityManager();
+    const where = { books: ["b:1"] } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+  });
+
   it("can find through a o2o entity", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });

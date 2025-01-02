@@ -194,15 +194,13 @@ export function parseFindQuery(
         if (ef.kind === "join") {
           // subFilter will be unprocessed, so we can pass it recursively into `parseFindQuery`
           return { subFilter: ef.subFilter, count: undefined };
-        } else if (typeof filter === "string") {
-          // If `ef` is set, it's already parsed, which `parseFindQuery` won't expect, so pass the original `filter`
-          return { subFilter: { id: filter }, count: undefined };
         } else if (ef.kind === "not-null") {
           return { subFilter: {}, count: { kind: "gt", value: 0 } };
         } else if (ef.kind === "is-null") {
           return { subFilter: {}, count: { kind: "eq", value: 0 } };
         } else {
-          return { subFilter: { id: ef }, count: undefined };
+          // If `ef` is set, it's already parsed, which `parseFindQuery` won't expect, so pass the original `filter`
+          return { subFilter: { id: filter }, count: undefined };
         }
       } else {
         return { subFilter: {}, count: undefined };

@@ -149,7 +149,8 @@ export function parseFindQuery(
     alias?: string;
     topLevelCondition?: ConditionBuilder;
     outerLateralJoins?: { alias: string; select: ParsedSelect[]; outerCb: ConditionBuilder }[];
-    // Let `addLateralJoin` pass in its join conditions
+    // Let `addLateralJoin` pass in its join conditions (...we could probably avoid this
+    // param if instead the join was passed into the unparsed `conditions` opt).
     rawConditions?: RawCondition[];
   } = {},
 ): ParsedFindQuery {
@@ -157,13 +158,7 @@ export function parseFindQuery(
   const tables: ParsedTable[] = [];
   const orderBys: ParsedOrderBy[] = [];
   const query = { selects, tables, orderBys };
-  const {
-    orderBy = undefined,
-    conditions: optsExpression = undefined,
-    softDeletes = "exclude",
-    pruneJoins = true,
-    keepAliases = [],
-  } = opts;
+  const { orderBy = undefined, softDeletes = "exclude", pruneJoins = true, keepAliases = [] } = opts;
 
   const cb = new ConditionBuilder();
 
@@ -178,15 +173,13 @@ export function parseFindQuery(
   // If they passed extra `conditions: ...`, parse that.
   // We can do this up-front b/c it doesn't require any join-tree metadata to perform,
   // and then it's available for our `addLateralJoin`s to rewrite.
-  if (optsExpression) cb.maybeAddExpression(optsExpression);
+  if (opts.conditions) cb.maybeAddExpression(opts.conditions);
 
   // Also see if outer `addLateralJoin` is passing us its join conditions
   if (opts.rawConditions) {
     for (const rc of opts.rawConditions) cb.addRawCondition(rc);
   }
 
-  // ...how do we pull up data to use in any conditions?...
-  // what would the format look like? probably just nested JSON...
   function addLateralJoin(
     meta: EntityMetadata,
     fromAlias: string,
@@ -496,18 +489,13 @@ export function parseFindQuery(
               fail(`No poly component found for ${otherField.fieldName}`);
             otherColumn = otherComponent.columnName;
           }
+          const condition = `${kqDot(alias, "id")} = ${kqDot(a + otherField.aliasSuffix, otherColumn)}`;
           addLateralJoin(
             field.otherMetadata(),
             alias,
             a,
             (ef.subFilter as any)[key],
-            {
-              kind: "raw",
-              aliases: [a, alias],
-              condition: `${kqDot(alias, "id")} = ${kqDot(a + otherField.aliasSuffix, otherColumn)}`,
-              pruneable: true,
-              bindings: [],
-            },
+            { kind: "raw", aliases: [a, alias], condition, pruneable: true, bindings: [] },
             undefined,
           );
         } else if (field.kind === "m2m") {
@@ -521,18 +509,13 @@ export function parseFindQuery(
             col2: kqDot(ja, field.columnNames[0]),
           };
           const a = getAlias(field.otherMetadata().tableName);
+          const condition = `${kqDot(ja, field.columnNames[1])} = ${kqDot(a, "id")}`;
           addLateralJoin(
             field.otherMetadata(),
             alias,
             a,
             (ef.subFilter as any)[key],
-            {
-              kind: "raw",
-              aliases: [ja, a],
-              condition: `${kqDot(ja, field.columnNames[1])} = ${kqDot(a, "id")}`,
-              pruneable: true,
-              bindings: [],
-            },
+            { kind: "raw", aliases: [ja, a], condition, bindings: [], pruneable: true },
             jt,
           );
         } else {

@@ -317,7 +317,14 @@ export function parseFindQuery(
     }
 
     // Maybe only do this if we're the primary, or have a field that needs it?
-    addTablePerClassJoinsAndClassTag(query, meta, alias, join === "primary");
+    addTablePerClassJoinsAndClassTag(
+      query,
+      meta,
+      alias,
+      // Use opts.topLevelCondition to tell we're in a `addLateralJoin` and don't want the `CASE ... END as __class`
+      // select clause, which won't work because it's not an aggregate
+      join === "primary" && !opts.topLevelCondition,
+    );
     if (needsStiDiscriminator(meta)) {
       addStiSubtypeFilter(cb, meta, alias);
     }
@@ -482,7 +489,7 @@ export function parseFindQuery(
             {
               kind: "raw",
               aliases: [a, alias],
-              condition: `${kqDot(alias, "id")} = ${kqDot(a, otherColumn)}`,
+              condition: `${kqDot(alias, "id")} = ${kqDot(a + otherField.aliasSuffix, otherColumn)}`,
               pruneable: true,
               bindings: [],
             },
@@ -1068,7 +1075,8 @@ export class ConditionBuilder {
       const array = todo.pop()!;
       array.forEach((cond, i) => {
         if (cond.kind === "column") {
-          if (cond.alias === alias) {
+          // Use startsWith to look for `_b0` / `_s0` base/subtype conditions
+          if (cond.alias === alias || cond.alias.startsWith(`${alias}_`)) {
             const as = `_${alias}_${cond.column}_${j++}`;
             array[i] = {
               kind: "raw",

@@ -8,6 +8,7 @@ import {
   insertImage,
   insertLargePublisher,
   insertPublisher,
+  insertSmallPublisherGroup,
   insertTag,
   insertUser,
   update,
@@ -48,6 +49,7 @@ import {
   PublisherId,
   PublisherSize,
   SmallPublisher,
+  SmallPublisherGroup,
   Tag,
   TaskItem,
   TaskItemFilter,
@@ -2721,6 +2723,21 @@ describe("EntityManager.queries", () => {
         },
       );
       expect(authors.length).toEqual(2);
+    });
+
+    it("can use aliases as an o2m entity filter against a base type", async () => {
+      await insertSmallPublisherGroup({ id: 1, name: "pg1" });
+      await insertPublisher({ name: "p1", group_id: 1 });
+      const em = newEntityManager();
+      const p = alias(SmallPublisher);
+      const pgs = await em.find(
+        SmallPublisherGroup,
+        { publishers: p },
+        {
+          conditions: { and: [p.name.eq("p1")] },
+        },
+      );
+      expect(pgs.length).toEqual(1);
     });
 
     it("can use aliases as an o2m entity filter with primary key in tagged ids", async () => {

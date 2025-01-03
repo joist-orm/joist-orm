@@ -1,22 +1,25 @@
 import {
   AliasAssigner,
+  ConditionBuilder,
   Entity,
   EntityManager,
   EntityMetadata,
   EntityOrId,
+  getEmInternalApi,
+  getTables,
   HintNode,
   JoinResult,
+  JoinTable,
+  keyToNumber,
+  keyToTaggedId,
+  kq,
+  kqDot,
+  LateralJoinTable,
   LoadHint,
   NestedLoadHint,
   ParsedFindQuery,
   PreloadHydrator,
   PreloadPlugin,
-  getEmInternalApi,
-  getTables,
-  keyToNumber,
-  keyToTaggedId,
-  kq,
-  kqDot,
 } from "joist-orm";
 import { canPreload } from "./canPreload";
 import { partitionHint } from "./partitionHint";
@@ -45,21 +48,24 @@ export class JsonAggregatePreloader implements PreloadPlugin {
     const alias = getTables(query)[0].alias;
     const joins = addJoins(em, getAlias, { tree: root, alias, meta }, root, alias, meta);
     // If there are no sql-based preload in the hints, just return
-    if (joins.length === 0) {
-      return undefined;
-    }
+    if (joins.length === 0) return undefined;
 
     // Include the aggregate `books._ as books`, `comments._ as comments`
-    query.selects.push(...joins.map((j) => `${kqDot(j.alias, "_")} as ${kq(j.alias)}`));
-    query.lateralJoins = {
-      joins: joins.map((j) => j.join),
-      bindings: joins.flatMap((j) => j.bindings),
-    };
+    for (const { alias, join } of joins) {
+      query.selects.push({
+        sql: `${kqDot(alias, "_")} as ${kq(alias)}`,
+        aliases: [alias],
+        bindings: [],
+      });
+      query.tables.push(join);
+    }
 
     return (rows, entities) => {
       rows.forEach((row, i) => {
         const parent = entities[i];
-        joins.forEach((join) => join.hydrator(parent, parent, row[join.alias] ?? []));
+        for (const { alias, hydrator } of joins) {
+          hydrator(parent, parent, row[alias] ?? []);
+        }
       });
     };
   }
@@ -88,7 +94,6 @@ export class JsonAggregatePreloader implements PreloadPlugin {
             join.hydrator(parent, parent, row[join.alias] ?? []);
           });
         },
-        bindings: join.bindings,
       };
     });
   }
@@ -146,53 +151,89 @@ function addJoins<I extends EntityOrId>(
 
       const aliasMaybeSuffix = kq(`${parentAlias}${field.aliasSuffix}`);
 
-      let where: string;
-      let m2mFrom = "";
+      const cb = new ConditionBuilder();
+      let m2mTable: JoinTable | undefined;
       if (otherField.kind === "m2o") {
-        where = `${kqDot(otherAlias, otherField.serde.columns[0].columnName)} = ${kqDot(parentAlias, "id")}`;
+        cb.addRawCondition({
+          aliases: [otherAlias, parentAlias],
+          condition: `${kqDot(otherAlias, otherField.serde.columns[0].columnName)} = ${kqDot(parentAlias, "id")}`,
+          pruneable: true,
+        });
       } else if (otherField.kind === "poly") {
         // Get the component that points to us
         // const comp = otherField.components.find((c) => getAllMetas(parentMeta).some((m) => m.cstr === c.otherMetadata().cstr)) ??
         const comp =
           otherField.components.find((c) => parentMeta.cstr === c.otherMetadata().cstr) ??
           fail(`No component found for ${field.fieldName} -> ${otherField.fieldName}`);
-        where = `${kqDot(otherAlias, comp.columnName)} = ${kqDot(parentAlias, "id")}`;
+        cb.addRawCondition({
+          aliases: [otherAlias, parentAlias],
+          condition: `${kqDot(otherAlias, comp.columnName)} = ${kqDot(parentAlias, "id")}`,
+          pruneable: true,
+        });
       } else if (otherField.kind === "o2m" || otherField.kind === "lo2m") {
-        where = `${kqDot(otherAlias, "id")} = ${aliasMaybeSuffix}.${kq(field.serde!.columns[0].columnName)}`;
+        cb.addRawCondition({
+          aliases: [otherAlias, aliasMaybeSuffix],
+          condition: `${kqDot(otherAlias, "id")} = ${aliasMaybeSuffix}.${kq(field.serde!.columns[0].columnName)}`,
+          pruneable: true,
+        });
       } else if (otherField.kind === "o2o") {
-        where = `${kqDot(otherAlias, "id")} = ${aliasMaybeSuffix}.${kq(field.serde!.columns[0].columnName)}`;
+        cb.addRawCondition({
+          aliases: [otherAlias, aliasMaybeSuffix],
+          condition: `${kqDot(otherAlias, "id")} = ${aliasMaybeSuffix}.${kq(field.serde!.columns[0].columnName)}`,
+          pruneable: true,
+        });
       } else if (otherField.kind === "m2m") {
         const m2mAlias = getAlias(otherField.joinTableName);
         // Get the m2m row's id to track in JoinRows
         selects.unshift(kqDot(m2mAlias, "id"));
-        m2mFrom = `, ${kq(otherField.joinTableName)} ${kq(m2mAlias)}`;
-        where = `
-            ${kqDot(parentAlias, "id")} = ${kqDot(m2mAlias, otherField.columnNames[1])} AND
-            ${kqDot(m2mAlias, otherField.columnNames[0])} = ${kqDot(otherAlias, "id")}
-          `;
+        m2mTable = {
+          join: "inner",
+          table: otherField.joinTableName,
+          alias: m2mAlias,
+          col1: kqDot(parentAlias, "id"),
+          col2: kqDot(m2mAlias, otherField.columnNames[1]),
+        };
+        cb.addRawCondition({
+          aliases: [m2mAlias, otherAlias],
+          condition: `${kqDot(m2mAlias, otherField.columnNames[0])} = ${kqDot(otherAlias, "id")}`,
+          pruneable: true,
+        });
       } else {
         throw new Error(`Unsupported otherField.kind ${otherField.kind}`);
       }
 
-      const bindings = subJoins.flatMap((sj) => sj.bindings);
       const needsSubSelect = subTree.entities.size !== root.tree.entities.size;
       if (needsSubSelect) {
-        bindings.push(
-          [...subTree.entities]
-            .filter((e) => typeof e === "string" || !e.isNewEntity)
-            .map((e) => keyToNumber(root.meta, typeof e === "string" ? e : e.id)),
-        );
+        cb.addRawCondition({
+          aliases: [root.alias],
+          condition: `${kqDot(root.alias, "id")} = ANY(?)`,
+          bindings: [
+            [...subTree.entities]
+              .filter((e) => typeof e === "string" || !e.isNewEntity)
+              .map((e) => keyToNumber(root.meta, typeof e === "string" ? e : e.id)),
+          ],
+          pruneable: true,
+        });
       }
 
-      const join = `
-        cross join lateral (
-          select json_agg(json_build_array(${selects.join(", ")}) order by ${kq(otherAlias)}.id) as _
-          from ${kq(otherMeta.tableName)} ${kq(otherAlias)} ${m2mFrom}
-          ${subJoins.map((sb) => sb.join).join("\n")}
-          where ${where}
-          ${needsSubSelect ? ` AND ${kqDot(root.alias, "id")} = ANY(?)` : ""}
-        ) ${kq(otherAlias)}
-      `;
+      const join: LateralJoinTable = {
+        join: "lateral",
+        alias: otherAlias,
+        // Do we need to say which alias we're coming from, to avoid having it pruned?
+        // ...maybe not because preloading is always on the primary table?
+        fromAlias: "unset",
+        table: otherMeta.tableName,
+        query: {
+          selects: [`json_agg(json_build_array(${selects.join(", ")}) order by ${kq(otherAlias)}.id) as _`],
+          tables: [
+            { join: "primary", table: otherMeta.tableName, alias: otherAlias },
+            ...(m2mTable ? [m2mTable] : []),
+            ...subJoins.map((sj) => sj.join),
+          ],
+          condition: cb.toExpressionFilter(),
+          orderBys: [],
+        },
+      };
 
       const hydrator: AggregateJsonHydrator = (root, parent, arrays) => {
         // If we had overlapping load hints, i.e. `author.books` for [a1, a2] and `author.comments` for [a1], and
@@ -237,7 +278,7 @@ function addJoins<I extends EntityOrId>(
         getEmInternalApi(em).setPreloadedRelation(parent.idTagged, key, children);
       };
 
-      results.push({ alias: otherAlias, join, bindings, hydrator });
+      results.push({ alias: otherAlias, join, hydrator });
     }
   });
 
@@ -249,9 +290,7 @@ type AggregateJoinResult = {
   /** The alias for this child's single json-array-d column, i.e. `b._` or `c._`. */
   alias: string;
   /** The SQL for this child's lateral join, which itself might have recursive lateral joins. */
-  join: string;
+  join: LateralJoinTable;
   /** The hydrator for this child's lateral join, which itself might recursively hydrator subjoins. */
   hydrator: AggregateJsonHydrator;
-  /** Any bindings for filtering subjoins by a subset of the root entities, to avoid over-fetching. */
-  bindings: any[];
 };

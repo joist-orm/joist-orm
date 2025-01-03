@@ -1,9 +1,7 @@
-import { Knex } from "knex";
 import { ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
 import { assertNever } from "../utils";
 import { buildWhereClause } from "./buildUtils";
-import QueryBuilder = Knex.QueryBuilder;
 
 /**
  * Transforms `ParsedFindQuery` into a raw SQL string.
@@ -17,9 +15,6 @@ export function buildRawQuery(
 ): { sql: string; bindings: readonly any[] } {
   const { limit, offset } = settings;
 
-  // If we're doing o2m joins, add a `DISTINCT` clause to avoid duplicates
-  const needsDistinct = parsed.tables.some((t) => t.join === "outer" && t.distinct !== false);
-
   let sql = "";
   const bindings: any[] = [];
 
@@ -30,17 +25,14 @@ export function buildRawQuery(
 
   sql += "SELECT ";
   parsed.selects.forEach((s, i) => {
-    const maybeDistinct = i === 0 && needsDistinct ? "DISTINCT " : "";
     const maybeComma = i === parsed.selects.length - 1 ? "" : ", ";
-    sql += maybeDistinct + s + maybeComma;
-  });
-
-  // If we're doing "select distinct" for o2m joins, then all order bys must be selects
-  if (needsDistinct && parsed.orderBys.length > 0) {
-    for (const { alias, column } of parsed.orderBys) {
-      sql += `, ${kqDot(alias, column)}`;
+    if (typeof s === "string") {
+      sql += s + maybeComma;
+    } else {
+      sql += s.sql + maybeComma;
+      bindings.push(...s.bindings);
     }
-  }
+  });
 
   // Make sure the primary is first
   const primary = parsed.tables.find((t) => t.join === "primary")!;
@@ -54,14 +46,15 @@ export function buildRawQuery(
       sql += ` LEFT OUTER JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
     } else if (t.join === "primary") {
       // handled above
+    } else if (t.join === "lateral") {
+      const { sql: subQ, bindings: subB } = buildRawQuery(t.query, {});
+      sql += ` CROSS JOIN LATERAL (${subQ}) AS ${kq(t.alias)}`;
+      bindings.push(...subB);
+    } else if (t.join === "cross") {
+      sql += ` CROSS JOIN ${as(t)}`;
     } else {
       assertNever(t.join);
     }
-  }
-
-  if (parsed.lateralJoins) {
-    sql += " " + parsed.lateralJoins.joins.join("\n");
-    bindings.push(...parsed.lateralJoins.bindings);
   }
 
   if (parsed.condition) {
@@ -70,6 +63,10 @@ export function buildRawQuery(
       sql += " WHERE " + where[0];
       bindings.push(...where[1]);
     }
+  }
+
+  if (parsed.groupBys && parsed.groupBys.length > 0) {
+    sql += " GROUP BY " + parsed.groupBys.map((ob) => kqDot(ob.alias, ob.column)).join(", ");
   }
 
   if (parsed.orderBys.length > 0) {

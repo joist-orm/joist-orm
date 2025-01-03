@@ -1,3 +1,10 @@
+# [1.219.0](https://github.com/joist-orm/joist-orm/compare/v1.218.2...v1.219.0) (2025-01-03)
+
+
+### Features
+
+* Remove DISTINCT usage in em.find queries ([#1331](https://github.com/joist-orm/joist-orm/issues/1331)) ([fbe42ef](https://github.com/joist-orm/joist-orm/commit/fbe42efc8d3c9ceee775cb0976f535ee86f86afb))
+
 ## [1.218.2](https://github.com/joist-orm/joist-orm/compare/v1.218.1...v1.218.2) (2025-01-02)
 
 

@@ -189,10 +189,12 @@ export function parseFindQuery(
     condition: RawCondition,
     // If we're a m2m, the join table to inject (which will use the outer table)
     joinTable: JoinTable | undefined,
-  ) {
+    // Allow addOrderBy to do its own post-addTable lateral join building
+    orderByTables: ParsedTable[] | undefined = undefined,
+  ): LateralJoinTable | undefined {
     const ef = parseEntityFilter(meta, filter);
     // Maybe skip
-    if (!ef && !isAlias(filter)) return;
+    if (!ef && !isAlias(filter) && !orderByTables) return;
 
     bindAlias(filter, meta, alias);
 
@@ -248,7 +250,8 @@ export function parseFindQuery(
     );
     subQuery.orderBys = [];
     if (joinTable) subQuery.tables.unshift(joinTable);
-    tables.push({ join: "lateral", table: meta.tableName, query: subQuery, alias, fromAlias });
+    const join: LateralJoinTable = { join: "lateral", table: meta.tableName, query: subQuery, alias, fromAlias };
+    (orderByTables ?? tables).push(join);
 
     // Look for complex conditions...
     const topLevelAlias = opts.outerLateralJoins?.[opts.outerLateralJoins?.length - 1]?.alias;
@@ -300,6 +303,8 @@ export function parseFindQuery(
         });
       });
     }
+
+    return join;
   }
 
   /** Adds `meta` to the query, i.e. for m2o/o2o joins into parents. */
@@ -528,38 +533,94 @@ export function parseFindQuery(
     }
   }
 
-  function addOrderBy(meta: EntityMetadata, alias: string, orderBy: Record<string, any>): void {
+  function addOrderBy(
+    meta: EntityMetadata,
+    alias: string,
+    orderBy: Record<string, any>,
+    lateralJoins: LateralJoinTable[],
+  ): void {
     const entries = Object.entries(orderBy);
+    // If we're recursing for lateral joins, look in the local query's tables,
+    const tables = (lateralJoins[lateralJoins.length - 1]?.query ?? query).tables;
     if (entries.length === 0) return;
     for (const [key, value] of entries) {
       if (!value) continue; // prune undefined
       const field = meta.allFields[key] ?? fail(`${key} not found on ${meta.tableName}`);
       if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
         const column = field.serde.columns[0];
-        orderBys.push({
-          alias: `${alias}${field.aliasSuffix ?? ""}`,
-          column: column.columnName,
-          order: value as OrderBy,
-        });
+        if (lateralJoins.length === 0) {
+          // We can add the orderBy directly against the column
+          orderBys.push({
+            alias: `${alias}${field.aliasSuffix ?? ""}`,
+            column: column.columnName,
+            order: value as OrderBy,
+          });
+        } else {
+          // We need to orderBy the summed column
+          const [topJoin, ...rest] = lateralJoins;
+          const lastJoin = rest[rest.length - 1] ?? topJoin;
+          const as = `_${alias}_${column.columnName}_sum`;
+          lastJoin.query.selects.push({
+            sql: `SUM(${alias}.${column.columnName}) AS ${as}`,
+            aliases: [alias],
+            bindings: [],
+          });
+          for (const join of lateralJoins) {
+            if (join !== lastJoin) {
+              join.query.selects.push({
+                sql: `SUM(${alias}.${as}) AS ${as}`,
+                aliases: [join.alias],
+                bindings: [],
+              });
+            }
+          }
+          orderBys.push({ alias: `${topJoin.alias}`, column: as, order: value as OrderBy });
+        }
       } else if (field.kind === "m2o") {
         // Do we already this table joined in?
         let table = tables.find((t) => t.table === field.otherMetadata().tableName);
-        if (table) {
-          addOrderBy(field.otherMetadata(), table.alias, value);
-        } else {
-          const table = field.otherMetadata().tableName;
-          const a = getAlias(table);
+        if (!table) {
+          const { tableName } = field.otherMetadata();
+          const a = getAlias(tableName);
           const column = field.serde.columns[0].columnName;
-          // If we don't have a join, don't force this to be an inner join
-          tables.push({
+          table = {
             alias: a,
-            table,
+            table: tableName,
+            // If we don't have a join, don't force this to be an inner join
             join: "outer", // don't drop the entity just b/c of a missing order by
             col1: kqDot(alias, column),
             col2: kqDot(a, "id"),
-          });
-          addOrderBy(field.otherMetadata(), a, value);
+          } satisfies JoinTable;
+          tables.push(table);
         }
+        addOrderBy(field.otherMetadata(), table.alias, value, lateralJoins);
+      } else if (field.kind === "o2m") {
+        let table = tables.filter((t) => t.join === "lateral").find((t) => t.table === field.otherMetadata().tableName);
+        if (!table) {
+          // ...big copy/paste from up above...
+          const a = getAlias(field.otherMetadata().tableName);
+          const otherField = field.otherMetadata().allFields[field.otherFieldName];
+          let otherColumn = otherField.serde!.columns[0].columnName;
+          // If the other field is a poly, we need to find the right column
+          if (otherField.kind === "poly") {
+            // For a subcomponent that matches field's metadata
+            const otherComponent =
+              otherField.components.find((c) => c.otherMetadata() === meta) ??
+              fail(`No poly component found for ${otherField.fieldName}`);
+            otherColumn = otherComponent.columnName;
+          }
+          const condition = `${kqDot(alias, "id")} = ${kqDot(a + otherField.aliasSuffix, otherColumn)}`;
+          table = addLateralJoin(
+            field.otherMetadata(),
+            alias,
+            a,
+            undefined,
+            { kind: "raw", aliases: [a, alias], condition, pruneable: true, bindings: [] },
+            undefined,
+            tables,
+          )!;
+        }
+        addOrderBy(field.otherMetadata(), table.alias, value, [...lateralJoins, table]);
       } else {
         throw new Error(`Unsupported field ${key}`);
       }
@@ -585,9 +646,9 @@ export function parseFindQuery(
 
   if (orderBy) {
     if (Array.isArray(orderBy)) {
-      for (const ob of orderBy) addOrderBy(meta, alias, ob);
+      for (const ob of orderBy) addOrderBy(meta, alias, ob, []);
     } else {
-      addOrderBy(meta, alias, orderBy);
+      addOrderBy(meta, alias, orderBy, []);
     }
   }
   maybeAddOrderBy(query, meta, alias);

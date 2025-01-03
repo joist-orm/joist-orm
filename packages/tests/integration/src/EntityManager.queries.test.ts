@@ -3567,6 +3567,33 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  describe("orderBy", () => {
+    it("can order by child m2o", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ author_id: 1, title: "b1" });
+      await insertBook({ author_id: 1, title: "b2" });
+      await insertBookReview({ book_id: 1, rating: 1 });
+      await insertBookReview({ book_id: 2, rating: 1 });
+      await insertBookReview({ book_id: 2, rating: 1 });
+      const em = newEntityManager();
+      const books = await em.find(Book, {}, { orderBy: { reviews: { rating: "DESC" } } });
+      expect(books).toMatchEntity([{ title: "b2" }, { title: "b1" }]);
+    });
+
+    it("can order by nested child m2o", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ author_id: 1, title: "b1" });
+      await insertBook({ author_id: 2, title: "b2" });
+      await insertBookReview({ book_id: 1, rating: 1 });
+      await insertBookReview({ book_id: 2, rating: 1 });
+      await insertBookReview({ book_id: 2, rating: 1 });
+      const em = newEntityManager();
+      const authors = await em.find(Author, {}, { orderBy: { books: { reviews: { rating: "DESC" } } } });
+      expect(authors).toMatchEntity([{ firstName: "a2" }, { firstName: "a1" }]);
+    });
+  });
+
   describe("count", () => {
     it("can count", async () => {
       await insertAuthor({ first_name: "a1" });

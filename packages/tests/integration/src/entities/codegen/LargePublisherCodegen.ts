@@ -44,6 +44,7 @@ import {
   Critic,
   type CriticId,
   criticMeta,
+  type CriticOrder,
   type Entity,
   EntityManager,
   Image,
@@ -63,6 +64,7 @@ import {
   User,
   type UserId,
   userMeta,
+  type UserOrder,
 } from "../entities";
 
 export type LargePublisherId = Flavor<string, "Publisher">;
@@ -104,6 +106,8 @@ export interface LargePublisherGraphQLFilter extends PublisherGraphQLFilter {
 export interface LargePublisherOrder extends PublisherOrder {
   sharedColumn?: OrderBy;
   country?: OrderBy;
+  critics?: CriticOrder;
+  users?: UserOrder;
 }
 
 export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();

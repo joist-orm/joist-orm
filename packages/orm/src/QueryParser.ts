@@ -276,11 +276,15 @@ export function parseFindQuery(
     // If there are complex conditions looking at our data, we don't want a "make sure at least one matched"
     const usedByComplexCondition =
       selects.some((s) => typeof s === "object" && "aliases" in s && s.aliases.includes(alias)) ||
+      // If we're the very 1st addLateralJoin, we don't push our selects into the next-up
+      // lateral join, so instead look through the top-level condition
       (!opts.topLevelCondition &&
         deepFindConditions(cb.expressions[0], true).some((c) => {
           return c.kind === "raw" && c.aliases.includes(alias);
         }));
-    if (!usedByComplexCondition) {
+    // If there are literally no conditions on this child relation, don't add the "make sure at least one matched"
+    const hasAnyFilter = deepFindConditions(subQuery.condition, true).length > 0 || count !== undefined;
+    if (!usedByComplexCondition && hasAnyFilter) {
       cb.addSimpleCondition({
         kind: "column",
         alias,
@@ -695,13 +699,15 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   if (parsed.condition && parsed.condition.op === "and") {
     parsed.condition.conditions = parsed.condition.conditions.filter((c) => {
       if (c.kind === "column") {
-        const prune = c.pruneable && !parsed.tables.some((t) => t.alias === c.alias);
+        const prune = c.pruneable && !dt.required.has(c.alias);
+        // if (prune) console.log(`DROPPING`, c);
         return !prune;
       } else {
         return c;
       }
     });
   }
+
   // Remove any `{ and: [...] }`s that are empty; we should probably do this deeply?
   if (parsed.condition && parsed.condition.conditions.length === 0) {
     parsed.condition = undefined;

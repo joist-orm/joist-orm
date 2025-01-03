@@ -776,6 +776,38 @@ describe("EntityManager.queries", () => {
     expect(authors).toMatchEntity([{ firstName: "a1" }]);
   });
 
+  it("can find by o2m that is empty", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    // Given a `where` that will pull in the joins, but get pruned away
+    const where = { publisher: { authors: { firstName: undefined } } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where, opts);
+    // Then we find all authors
+    expect(authors.length).toBe(2);
+    // And the query didn't have the extra joins or extra conditions
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: undefined,
+      orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+    });
+    // And if we ask for pruneJoins: false
+    expect(parseFindQuery(am, where, { ...opts, pruneJoins: false })).toMatchObject({
+      selects: [`a.*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        // Then the joins themselves stay
+        { alias: "p", table: "publishers", join: "outer" },
+        { alias: "a1", table: "authors", join: "lateral" },
+      ],
+      // But the "at least 1 child" condition was not added
+      condition: undefined,
+      orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+    });
+  });
+
   it("can find through a o2o entity", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });
@@ -3035,13 +3067,7 @@ describe("EntityManager.queries", () => {
             },
           },
         ],
-        condition: {
-          kind: "exp",
-          op: "and",
-          conditions: [
-            { kind: "column", alias: "b", column: "_", dbType: "int", cond: { kind: "gt", value: 0 }, pruneable: true },
-          ],
-        },
+        condition: undefined,
         orderBys: [expect.anything()],
       });
     });
@@ -3054,13 +3080,7 @@ describe("EntityManager.queries", () => {
           { alias: "a", table: "authors", join: "primary" },
           { alias: "b", table: "books", join: "lateral", fromAlias: "a", query: expect.anything() },
         ],
-        condition: {
-          kind: "exp",
-          op: "and",
-          conditions: [
-            { kind: "column", alias: "b", column: "_", dbType: "int", cond: { kind: "gt", value: 0 }, pruneable: true },
-          ],
-        },
+        condition: undefined,
         orderBys: [expect.anything()],
       });
     });

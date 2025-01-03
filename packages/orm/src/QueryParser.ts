@@ -148,7 +148,7 @@ export function parseFindQuery(
     // Let `addLateralJoin` pass in its existing alias for the subquery's primary table
     alias?: string;
     topLevelCondition?: ConditionBuilder;
-    outerLateralJoins?: { alias: string; select: ParsedSelect[] }[];
+    outerLateralJoins?: { alias: string; select: ParsedSelect[]; outerCb: ConditionBuilder }[];
     // Let `addLateralJoin` pass in its join conditions
     rawConditions?: RawCondition[];
   } = {},
@@ -250,7 +250,7 @@ export function parseFindQuery(
         rawConditions: [condition],
         // Let the subquery's pruneUnusedJoins know about the top-level WHERE clauses
         topLevelCondition: opts.topLevelCondition ?? cb,
-        outerLateralJoins: [{ alias, select: selects }, ...(opts.outerLateralJoins ?? [])],
+        outerLateralJoins: [{ alias, select: selects, outerCb: cb }, ...(opts.outerLateralJoins ?? [])],
       },
     );
     subQuery.orderBys = [];
@@ -294,6 +294,17 @@ export function parseFindQuery(
         // Don't let this condition pin the join, unless the user asked for a specific count
         // (or deepFindConditions finds a real condition from the above filter).
         pruneable: count === undefined,
+      });
+      // Go up the tree and make sure any parent lateral joins have a "at least 1 match"
+      opts.outerLateralJoins?.forEach(({ alias, outerCb }) => {
+        outerCb.addSimpleCondition({
+          kind: "column",
+          alias,
+          column: "_",
+          dbType: "int",
+          cond: { kind: "gt", value: 0 },
+          pruneable: true,
+        });
       });
     }
   }
@@ -1083,6 +1094,7 @@ export class ConditionBuilder {
         if (cond.kind === "column") {
           // Use startsWith to look for `_b0` / `_s0` base/subtype conditions
           if (cond.alias === alias || cond.alias.startsWith(`${alias}_`)) {
+            if (cond.column === "_") return; // Hack to skip rewriting `alias._ > 0`
             const as = `_${alias}_${cond.column}_${j++}`;
             array[i] = {
               kind: "raw",

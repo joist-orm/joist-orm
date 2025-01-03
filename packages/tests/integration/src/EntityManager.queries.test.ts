@@ -752,7 +752,7 @@ describe("EntityManager.queries", () => {
     expect(authors).toMatchEntity([{ firstName: "a1" }]);
   });
 
-  it("can find by o2m has as id", async () => {
+  it("can find by o2m is an id", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });
     await insertBook({ title: "b1", author_id: 1 });
@@ -760,6 +760,17 @@ describe("EntityManager.queries", () => {
 
     const em = newEntityManager();
     const where = { books: { id: "b:1" } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+  });
+
+  it("can find by nested o2m is an id", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 1 });
+    const em = newEntityManager();
+    const where = { books: { reviews: { id: "br:1" } } } satisfies AuthorFilter;
     const authors = await em.find(Author, where);
     expect(authors).toMatchEntity([{ firstName: "a1" }]);
   });

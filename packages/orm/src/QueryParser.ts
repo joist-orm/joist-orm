@@ -551,7 +551,7 @@ export function parseFindQuery(
         if (lateralJoins.length === 0) {
           // We can add the orderBy directly against the column
           orderBys.push({
-            alias: `${alias}${field.aliasSuffix ?? ""}`,
+            alias: `${alias}${field.aliasSuffix}`,
             column: column.columnName,
             order: value as OrderBy,
           });
@@ -561,7 +561,7 @@ export function parseFindQuery(
           const lastJoin = rest[rest.length - 1] ?? topJoin;
           const as = `_${alias}_${column.columnName}_sum`;
           lastJoin.query.selects.push({
-            sql: `SUM(${alias}.${column.columnName}) AS ${as}`,
+            sql: `SUM(${alias}${field.aliasSuffix}.${column.columnName}) AS ${as}`,
             aliases: [alias],
             bindings: [],
           });

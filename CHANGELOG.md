@@ -1,3 +1,10 @@
+# [1.220.0](https://github.com/joist-orm/joist-orm/compare/v1.219.0...v1.220.0) (2025-01-04)
+
+
+### Features
+
+* Support ordering by o2m attributes. ([#1335](https://github.com/joist-orm/joist-orm/issues/1335)) ([b1e5c5d](https://github.com/joist-orm/joist-orm/commit/b1e5c5d0b724ae048fb369b8a3ba8b3d607ecfdc))
+
 # [1.219.0](https://github.com/joist-orm/joist-orm/compare/v1.218.2...v1.219.0) (2025-01-03)
 
 

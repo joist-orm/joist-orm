@@ -54,10 +54,12 @@ import {
   BookAdvance,
   type BookAdvanceId,
   bookAdvanceMeta,
+  type BookAdvanceOrder,
   bookMeta,
   BookReview,
   type BookReviewId,
   bookReviewMeta,
+  type BookReviewOrder,
   Comment,
   type CommentId,
   commentMeta,
@@ -193,6 +195,9 @@ export interface BookOrder {
   author?: AuthorOrder;
   reviewer?: AuthorOrder;
   randomComment?: CommentOrder;
+  advances?: BookAdvanceOrder;
+  reviews?: BookReviewOrder;
+  comments?: CommentOrder;
 }
 
 export const bookConfig = new ConfigApi<Book, Context>();

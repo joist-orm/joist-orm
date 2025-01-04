@@ -44,6 +44,7 @@ import {
   BookReview,
   type BookReviewId,
   bookReviewMeta,
+  type BookReviewOrder,
   Critic,
   CriticColumn,
   type CriticColumnId,
@@ -131,6 +132,7 @@ export interface CriticOrder {
   updatedAt?: OrderBy;
   favoriteLargePublisher?: LargePublisherOrder;
   group?: PublisherGroupOrder;
+  bookReviews?: BookReviewOrder;
 }
 
 export const criticConfig = new ConfigApi<Critic, Context>();

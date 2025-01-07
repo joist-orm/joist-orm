@@ -1649,12 +1649,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   setFieldLogging(spec: string[]): void;
   /** Sets this EntityManager's field logger. */
   setFieldLogging(logger: FieldLogger): void;
-  setFieldLogging(arg: FieldLogger | string | string[]): void {
-    if (typeof arg === "string" || Array.isArray(arg)) {
+  /** Enables/disables field logging for all fields. */
+  setFieldLogging(enabled: boolean): void;
+  setFieldLogging(arg: FieldLogger | string | string[] | boolean): void {
+    if (typeof arg === "boolean") {
+      this.#fieldLogger = arg ? new FieldLogger([]) : undefined;
+    } else if (typeof arg === "string" || Array.isArray(arg)) {
       const specs = Array.isArray(arg) ? arg : [arg];
       const watching: FieldLoggerWatch[] = specs.map((spec) => {
         const breakpoint = spec.endsWith("!");
-        const [entity, fields] = spec.replace(/!$/, "").split("#");
+        const [entity, fields] = spec.replace(/!$/, "").split(".");
         return { entity, fieldNames: fields.split(","), breakpoint };
       });
       this.#fieldLogger = new FieldLogger(watching);

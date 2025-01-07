@@ -1,3 +1,10 @@
+## [1.220.1](https://github.com/joist-orm/joist-orm/compare/v1.220.0...v1.220.1) (2025-01-07)
+
+
+### Bug Fixes
+
+* Check STI subtype in em.load/loadAll. ([#1336](https://github.com/joist-orm/joist-orm/issues/1336)) ([7a491b9](https://github.com/joist-orm/joist-orm/commit/7a491b980cd28fa7f71dc8f40a155792b8773ef1)), closes [#1310](https://github.com/joist-orm/joist-orm/issues/1310)
+
 # [1.220.0](https://github.com/joist-orm/joist-orm/compare/v1.219.0...v1.220.0) (2025-01-04)
 
 

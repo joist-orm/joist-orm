@@ -523,4 +523,16 @@ describe("ClassTableInheritance", () => {
     // Then we know it's publishers are SmallPublishers
     expect(spg.publishers.get[0].city).toBe("city");
   });
+
+  it("load throws on loading a small publisher as a large publisher", async () => {
+    await insertPublisher({ name: "sp1" });
+    const em = newEntityManager();
+    await expect(em.load(LargePublisher, "p:1")).rejects.toThrow("p:1 was not found");
+  });
+
+  it("loadAll throws on loading a small publisher as a large publisher", async () => {
+    await insertPublisher({ name: "sp1" });
+    const em = newEntityManager();
+    await expect(em.loadAll(LargePublisher, ["p:1"])).rejects.toThrow("p:1 were not found");
+  });
 });

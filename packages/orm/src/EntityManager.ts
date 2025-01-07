@@ -29,6 +29,7 @@ import {
   EnumField,
   ExpressionFilter,
   FieldLogger,
+  FieldLoggerWatch,
   FilterWithAlias,
   GraphQLFilterOf,
   GraphQLFilterWithAlias,
@@ -1642,8 +1643,24 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     this.#rm.setLogger(typeof arg === "boolean" ? (arg ? new ReactionLogger() : undefined) : arg);
   }
 
-  setFieldLogging(logger: FieldLogger): void {
-    this.#fieldLogger = logger;
+  /** Accepts `Author#firstName,lastName`. */
+  setFieldLogging(spec: string): void;
+  /** Accepts `["Author#firstName,lastName", "Book#title"]`. */
+  setFieldLogging(spec: string[]): void;
+  /** Sets this EntityManager's field logger. */
+  setFieldLogging(logger: FieldLogger): void;
+  setFieldLogging(arg: FieldLogger | string | string[]): void {
+    if (typeof arg === "string" || Array.isArray(arg)) {
+      const specs = Array.isArray(arg) ? arg : [arg];
+      const watching: FieldLoggerWatch[] = specs.map((spec) => {
+        const breakpoint = spec.endsWith("!");
+        const [entity, fields] = spec.replace(/!$/, "").split("#");
+        return { entity, fieldNames: fields.split(","), breakpoint };
+      });
+      this.#fieldLogger = new FieldLogger(watching);
+    } else {
+      this.#fieldLogger = arg;
+    }
   }
 
   async [Symbol.asyncDispose](): Promise<void> {

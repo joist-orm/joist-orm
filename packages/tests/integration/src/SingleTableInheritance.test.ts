@@ -439,4 +439,16 @@ describe("SingleTableInheritance", () => {
       asyncDerived: "SyncDerivedNew AsyncDerived",
     });
   });
+
+  it("load throws on loading a small publisher as a large publisher", async () => {
+    await insertTask({ type: "NEW", special_new_field: 1 });
+    const em = newEntityManager();
+    await expect(em.load(TaskOld, "task:1")).rejects.toThrow("TaskNew:1 is TaskNew but should be TaskOld");
+  });
+
+  it("loadAll throws on loading a small publisher as a large publisher", async () => {
+    await insertTask({ type: "NEW", special_new_field: 1 });
+    const em = newEntityManager();
+    await expect(em.loadAll(TaskOld, ["task:1"])).rejects.toThrow("TaskNew:1 were not of type TaskOld");
+  });
 });

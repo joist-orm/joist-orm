@@ -838,6 +838,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     if (hint) {
       await this.populate(entity, hint);
     }
+    if (meta.inheritanceType === "sti" && !(entity instanceof type)) {
+      throw new Error(`${entity} is ${entity.constructor.name} but should be ${type.name}`);
+    }
     return entity as T;
   }
 
@@ -869,6 +872,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     }
     if (hint) {
       await this.populate(entities as T[], hint);
+    }
+    if (meta.inheritanceType === "sti" && meta.baseType) {
+      const wrongType = entities.filter((e) => !(e instanceof meta.cstr));
+      if (wrongType.length > 0) {
+        throw new Error(`${wrongType.join(", ")} were not of type ${meta.cstr.name}`);
+      }
     }
     return entities as T[];
   }

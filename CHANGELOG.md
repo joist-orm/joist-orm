@@ -1,3 +1,10 @@
+# [1.221.0](https://github.com/joist-orm/joist-orm/compare/v1.220.1...v1.221.0) (2025-01-07)
+
+
+### Features
+
+* Add easier overloads to EM.setFieldLogging. ([#1337](https://github.com/joist-orm/joist-orm/issues/1337)) ([1a2eacf](https://github.com/joist-orm/joist-orm/commit/1a2eacf836ab57a54ec1736993679da1d99c0d1f)), closes [#1275](https://github.com/joist-orm/joist-orm/issues/1275)
+
 ## [1.220.1](https://github.com/joist-orm/joist-orm/compare/v1.220.0...v1.220.1) (2025-01-07)
 
 

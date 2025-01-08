@@ -56,6 +56,7 @@ import {
   TaskItem,
   type TaskItemId,
   taskItemMeta,
+  type TaskItemOrder,
   TaskNew,
   taskNewMeta,
   type TaskOpts,
@@ -116,6 +117,9 @@ export interface TaskNewOrder extends TaskOrder {
   selfReferential?: TaskNewOrder;
   specialNewAuthor?: AuthorOrder;
   copiedFrom?: TaskNewOrder;
+  newTaskTaskItems?: TaskItemOrder;
+  selfReferentialTasks?: TaskNewOrder;
+  copiedTo?: TaskNewOrder;
 }
 
 export const taskNewConfig = new ConfigApi<TaskNew, Context>();

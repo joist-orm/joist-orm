@@ -41,6 +41,7 @@ import {
   ChildGroup,
   type ChildGroupId,
   childGroupMeta,
+  type ChildGroupOrder,
   childMeta,
   type Entity,
   EntityManager,
@@ -86,6 +87,7 @@ export interface ChildOrder {
   name?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  groups?: ChildGroupOrder;
 }
 
 export const childConfig = new ConfigApi<Child, Context>();

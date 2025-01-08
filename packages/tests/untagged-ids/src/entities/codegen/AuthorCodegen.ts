@@ -42,12 +42,15 @@ import {
   Book,
   type BookId,
   bookMeta,
+  type BookOrder,
   BookReview,
   type BookReviewId,
   bookReviewMeta,
+  type BookReviewOrder,
   Comment,
   type CommentId,
   commentMeta,
+  type CommentOrder,
   type Entity,
   EntityManager,
   newAuthor,
@@ -105,6 +108,9 @@ export interface AuthorOrder {
   lastName?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  books?: BookOrder;
+  bookReviews?: BookReviewOrder;
+  comments?: CommentOrder;
 }
 
 export const authorConfig = new ConfigApi<Author, Context>();

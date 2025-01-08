@@ -48,6 +48,7 @@ import {
   Comment,
   type CommentId,
   commentMeta,
+  type CommentOrder,
   type Entity,
   EntityManager,
   newBook,
@@ -98,6 +99,7 @@ export interface BookOrder {
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   author?: AuthorOrder;
+  comments?: CommentOrder;
 }
 
 export const bookConfig = new ConfigApi<Book, Context>();

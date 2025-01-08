@@ -3,7 +3,7 @@ import { EntityManager } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { EntityOrId, HintNode } from "../HintTree";
 import { LoadHint, NestedLoadHint } from "../loadHints";
-import { ParsedFindQuery } from "../QueryParser";
+import { LateralJoinTable, ParsedFindQuery } from "../QueryParser";
 
 /**
  * This is a plugin API dedicated to preloading data for subtrees of entities.
@@ -78,9 +78,7 @@ export type JoinResult = {
   /** The select clause(s) for this join, i.e. `b._ as _b` or `c._ as _c`. */
   selects: { value: string; as: string }[];
   /** The SQL for this child's lateral join, which itself might have recursive lateral joins. */
-  join: string;
+  join: LateralJoinTable;
   /** The processor for this child's lateral join, which itself might recursively processor subjoins. */
   hydrator: PreloadHydrator;
-  /** Any bindings for filtering subjoins by a subset of the root entities, to avoid over-fetching. */
-  bindings: any[];
 };

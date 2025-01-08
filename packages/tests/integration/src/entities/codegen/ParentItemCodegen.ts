@@ -42,6 +42,7 @@ import {
   ChildItem,
   type ChildItemId,
   childItemMeta,
+  type ChildItemOrder,
   type Entity,
   EntityManager,
   newParentItem,
@@ -98,6 +99,7 @@ export interface ParentItemOrder {
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   parentGroup?: ParentGroupOrder;
+  childItems?: ChildItemOrder;
 }
 
 export const parentItemConfig = new ConfigApi<ParentItem, Context>();

@@ -50,6 +50,7 @@ import {
   smallPublisherGroupMeta,
   type SmallPublisherId,
   smallPublisherMeta,
+  type SmallPublisherOrder,
 } from "../entities";
 
 export type SmallPublisherGroupId = Flavor<string, "PublisherGroup">;
@@ -80,6 +81,7 @@ export interface SmallPublisherGroupGraphQLFilter extends PublisherGroupGraphQLF
 
 export interface SmallPublisherGroupOrder extends PublisherGroupOrder {
   smallName?: OrderBy;
+  publishers?: SmallPublisherOrder;
 }
 
 export const smallPublisherGroupConfig = new ConfigApi<SmallPublisherGroup, Context>();

@@ -4,7 +4,7 @@ import { ColumnCondition, ParsedExpressionFilter, ParsedFindQuery, RawCondition 
 interface Visitor {
   visitExp?(c: ParsedExpressionFilter): ParsedExpressionFilter | void;
   visitRaw?(c: RawCondition): RawCondition | ParsedExpressionFilter | void;
-  visitCond(c: ColumnCondition): ColumnCondition | ParsedExpressionFilter | void;
+  visitCond(c: ColumnCondition): ColumnCondition | ParsedExpressionFilter | RawCondition | void;
 }
 
 /**
@@ -35,5 +35,14 @@ export function visitConditions(query: ParsedFindQuery, visitor: Visitor): void 
       }
     });
   }
-  if (query.condition) visit(query.condition);
+  const todo = [query];
+  while (todo.length > 0) {
+    const query = todo.pop()!;
+    if (query.condition) visit(query.condition);
+    for (const table of query.tables) {
+      if (table.join === "lateral") {
+        todo.push(table.query);
+      }
+    }
+  }
 }

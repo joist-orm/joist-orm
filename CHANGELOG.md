@@ -1,3 +1,10 @@
+# [1.222.0](https://github.com/joist-orm/joist-orm/compare/v1.221.0...v1.222.0) (2025-01-08)
+
+
+### Features
+
+* Revert using lateral joins for o2m/m2m finds ([#1339](https://github.com/joist-orm/joist-orm/issues/1339)) ([d89e6f8](https://github.com/joist-orm/joist-orm/commit/d89e6f8dcb107ea622d9db364cf7b5d42970d119)), closes [#1335](https://github.com/joist-orm/joist-orm/issues/1335) [#1331](https://github.com/joist-orm/joist-orm/issues/1331)
+
 # [1.221.0](https://github.com/joist-orm/joist-orm/compare/v1.220.1...v1.221.0) (2025-01-07)
 
 

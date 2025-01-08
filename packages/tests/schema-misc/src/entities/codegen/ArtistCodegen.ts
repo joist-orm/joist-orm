@@ -45,6 +45,7 @@ import {
   Painting,
   type PaintingId,
   paintingMeta,
+  type PaintingOrder,
 } from "../entities";
 
 export type ArtistId = Flavor<string, "Artist">;
@@ -92,6 +93,7 @@ export interface ArtistOrder {
   lastName?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  paintings?: PaintingOrder;
 }
 
 export interface ArtistFactoryExtras {

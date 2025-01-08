@@ -36,7 +36,17 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import { type Context } from "src/context";
-import { Author, authorMeta, Book, type BookId, bookMeta, type Entity, EntityManager, newAuthor } from "../entities";
+import {
+  Author,
+  authorMeta,
+  Book,
+  type BookId,
+  bookMeta,
+  type BookOrder,
+  type Entity,
+  EntityManager,
+  newAuthor,
+} from "../entities";
 
 export type AuthorId = Flavor<number, "Author">;
 
@@ -83,6 +93,7 @@ export interface AuthorOrder {
   lastName?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  books?: BookOrder;
 }
 
 export interface AuthorFactoryExtras {

@@ -31,7 +31,7 @@ export function findByUniqueDataLoader<T extends Entity>(
     };
 
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
-    maybeAddNotSoftDeleted(conditions, meta, alias, softDeletes);
+    maybeAddNotSoftDeleted(conditions, softDeletes, meta, alias);
 
     let column: Column;
     switch (field.kind) {

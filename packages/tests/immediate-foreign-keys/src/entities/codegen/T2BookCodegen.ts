@@ -88,6 +88,7 @@ export interface T2BookOrder {
   id?: OrderBy;
   title?: OrderBy;
   author?: T2AuthorOrder;
+  t2Authors?: T2AuthorOrder;
 }
 
 export interface T2BookFactoryExtras {

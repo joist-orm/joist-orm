@@ -2,6 +2,11 @@
   "name": "joist-utils",
   "version": "1.222.0",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joist-orm/joist-orm.git",
+    "directory": "packages/utils"
+  },
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "files": [

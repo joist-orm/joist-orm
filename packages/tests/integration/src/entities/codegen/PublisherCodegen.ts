@@ -51,17 +51,14 @@ import {
   BookAdvance,
   type BookAdvanceId,
   bookAdvanceMeta,
-  type BookAdvanceOrder,
   Comment,
   type CommentId,
   commentMeta,
-  type CommentOrder,
   type Entity,
   EntityManager,
   Image,
   type ImageId,
   imageMeta,
-  type ImageOrder,
   LargePublisher,
   newPublisher,
   Publisher,
@@ -222,10 +219,6 @@ export interface PublisherOrder {
   favoriteAuthor?: AuthorOrder;
   group?: PublisherGroupOrder;
   spotlightAuthor?: AuthorOrder;
-  authors?: AuthorOrder;
-  bookAdvances?: BookAdvanceOrder;
-  comments?: CommentOrder;
-  images?: ImageOrder;
 }
 
 export const publisherConfig = new ConfigApi<Publisher, Context>();

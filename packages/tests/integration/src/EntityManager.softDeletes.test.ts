@@ -1,7 +1,8 @@
 import { insertAuthor, insertBook, insertBookToTag, insertPublisher, insertTag } from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
 import { Author, Book, Publisher, Tag } from "./entities";
 import { jan1 } from "./testDates";
+
+import { newEntityManager } from "@src/testEm";
 
 describe("EntityManager.softDeletes", () => {
   it("o2m.get skips soft deleted entities", async () => {

@@ -37,17 +37,7 @@ import {
 } from "joist-orm";
 import { type Context } from "src/context";
 import { Temporal } from "temporal-polyfill";
-import {
-  Author,
-  authorMeta,
-  Book,
-  type BookId,
-  bookMeta,
-  type BookOrder,
-  type Entity,
-  EntityManager,
-  newAuthor,
-} from "../entities";
+import { Author, authorMeta, Book, type BookId, bookMeta, type Entity, EntityManager, newAuthor } from "../entities";
 
 export type AuthorId = Flavor<string, "Author">;
 
@@ -128,7 +118,6 @@ export interface AuthorOrder {
   timeToMicros?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
-  books?: BookOrder;
 }
 
 export const authorConfig = new ConfigApi<Author, Context>();

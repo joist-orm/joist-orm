@@ -57,7 +57,6 @@ import {
   AuthorSchedule,
   type AuthorScheduleId,
   authorScheduleMeta,
-  type AuthorScheduleOrder,
   Book,
   type BookId,
   bookMeta,
@@ -69,7 +68,6 @@ import {
   Comment,
   type CommentId,
   commentMeta,
-  type CommentOrder,
   type Entity,
   EntityManager,
   FavoriteShape,
@@ -91,7 +89,6 @@ import {
   TaskNew,
   type TaskNewId,
   taskNewMeta,
-  type TaskNewOrder,
   User,
   type UserId,
   userMeta,
@@ -362,13 +359,6 @@ export interface AuthorOrder {
   currentDraftBook?: BookOrder;
   favoriteBook?: BookOrder;
   publisher?: PublisherOrder;
-  mentees?: AuthorOrder;
-  books?: BookOrder;
-  reviewerBooks?: BookOrder;
-  schedules?: AuthorScheduleOrder;
-  comments?: CommentOrder;
-  spotlightAuthorPublishers?: PublisherOrder;
-  tasks?: TaskNewOrder;
 }
 
 export const authorConfig = new ConfigApi<Author, Context>();

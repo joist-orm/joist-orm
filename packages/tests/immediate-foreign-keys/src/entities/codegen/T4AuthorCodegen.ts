@@ -87,7 +87,6 @@ export interface T4AuthorOrder {
   id?: OrderBy;
   firstName?: OrderBy;
   favoriteBook?: T4BookOrder;
-  t4Books?: T4BookOrder;
 }
 
 export const t4AuthorConfig = new ConfigApi<T4Author, Context>();

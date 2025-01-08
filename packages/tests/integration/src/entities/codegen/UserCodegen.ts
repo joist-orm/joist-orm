@@ -57,7 +57,6 @@ import {
   Comment,
   type CommentId,
   commentMeta,
-  type CommentOrder,
   type Entity,
   EntityManager,
   LargePublisher,
@@ -187,8 +186,6 @@ export interface UserOrder {
   updatedAt?: OrderBy;
   manager?: UserOrder;
   authorManyToOne?: AuthorOrder;
-  createdComments?: CommentOrder;
-  directs?: UserOrder;
 }
 
 export const userConfig = new ConfigApi<User, Context>();

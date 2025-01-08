@@ -46,7 +46,6 @@ import {
   ChildItem,
   type ChildItemId,
   childItemMeta,
-  type ChildItemOrder,
   childMeta,
   type ChildOrder,
   type Entity,
@@ -109,7 +108,6 @@ export interface ChildGroupOrder {
   updatedAt?: OrderBy;
   childGroupId?: ChildOrder;
   parentGroup?: ParentGroupOrder;
-  childItems?: ChildItemOrder;
 }
 
 export const childGroupConfig = new ConfigApi<ChildGroup, Context>();

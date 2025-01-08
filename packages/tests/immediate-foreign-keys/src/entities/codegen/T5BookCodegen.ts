@@ -51,7 +51,6 @@ import {
   T5BookReview,
   type T5BookReviewId,
   t5BookReviewMeta,
-  type T5BookReviewOrder,
 } from "../entities";
 
 export type T5BookId = Flavor<number, "T5Book">;
@@ -91,7 +90,6 @@ export interface T5BookOrder {
   id?: OrderBy;
   title?: OrderBy;
   author?: T5AuthorOrder;
-  reviews?: T5BookReviewOrder;
 }
 
 export const t5BookConfig = new ConfigApi<T5Book, Context>();

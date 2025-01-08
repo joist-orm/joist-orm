@@ -52,7 +52,6 @@ import {
   Book,
   type BookId,
   bookMeta,
-  type BookOrder,
   BookReview,
   Comment,
   commentMeta,
@@ -149,7 +148,6 @@ export interface CommentOrder {
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   user?: UserOrder;
-  books?: BookOrder;
 }
 
 export const commentConfig = new ConfigApi<Comment, Context>();

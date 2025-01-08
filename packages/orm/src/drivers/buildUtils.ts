@@ -25,13 +25,15 @@ export function buildWhereClause(exp: ParsedExpressionFilter, topLevel = false):
   return [sql, tuples.flatMap(([, bindings]) => bindings)];
 }
 
-/** Returns a tuple of `["column op ?"`, bindings]`. */
 function buildRawCondition(raw: RawCondition): [string, any[]] {
-  return [raw.condition, raw.bindings];
+  if (raw.bindings.length > 0) {
+    throw new Error("Not implemented");
+  }
+  return [raw.condition, []];
 }
 
 /** Returns a tuple of `["column op ?"`, bindings]`. */
-export function buildCondition(cc: ColumnCondition): [string, any[]] {
+function buildCondition(cc: ColumnCondition): [string, any[]] {
   const { alias, column, cond } = cc;
   const columnName = kqDot(alias, column);
   switch (cond.kind) {

@@ -678,10 +678,7 @@ function generateOrderFields(meta: EntityDbMetadata): Code[] {
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${otherEntity.orderType};`;
   });
-  const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
-    return code`${fieldName}?: ${otherEntity.orderType};`;
-  });
-  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2m];
+  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o];
 }
 
 function createPrimitives(meta: EntityDbMetadata, entity: Entity) {

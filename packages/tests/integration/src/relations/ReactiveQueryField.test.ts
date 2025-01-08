@@ -22,7 +22,7 @@ describe("ReactiveQueryField", () => {
        "select nextval('publishers_id_seq') from generate_series(1, 1)",
        "INSERT INTO "publishers" ("id", "name", "latitude", "longitude", "huge_number", "number_of_book_reviews", "deleted_at", "titles_of_favorite_books", "base_sync_default", "base_async_default", "created_at", "updated_at", "size_id", "type_id", "favorite_author_id", "group_id", "spotlight_author_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)",
        "INSERT INTO "large_publishers" ("id", "shared_column", "country") VALUES ($1, $2, $3)",
-       "SELECT count("br".id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2",
+       "SELECT DISTINCT count(distinct "br".id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2",
        "COMMIT;",
      ]
     `);
@@ -41,7 +41,7 @@ describe("ReactiveQueryField", () => {
     // After the INSERTs, there is a SELECT to calc the data, and then an `UPDATE`
     expect(queries).toMatchInlineSnapshot(`
      [
-       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::character varying), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.deleted_at IS NULL AND a.last_name = _find.arg0 GROUP BY a.id ORDER BY a.id ASC LIMIT $5",
+       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::character varying), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, a.* FROM authors as a JOIN _find ON a.deleted_at IS NULL AND a.last_name = _find.arg0 GROUP BY a.id ORDER BY a.id ASC LIMIT 50000;",
        "select nextval('publishers_id_seq') from generate_series(1, 1) UNION ALL select nextval('authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('books_id_seq') from generate_series(1, 2) UNION ALL select nextval('book_reviews_id_seq') from generate_series(1, 2)",
        "BEGIN;",
        "INSERT INTO "publishers" ("id", "name", "latitude", "longitude", "huge_number", "number_of_book_reviews", "deleted_at", "titles_of_favorite_books", "base_sync_default", "base_async_default", "created_at", "updated_at", "size_id", "type_id", "favorite_author_id", "group_id", "spotlight_author_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)",
@@ -49,7 +49,7 @@ describe("ReactiveQueryField", () => {
        "INSERT INTO "authors" ("id", "first_name", "last_name", "ssn", "initials", "number_of_books", "book_comments", "is_popular", "age", "graduated", "nick_names", "nick_names_upper", "was_ever_popular", "is_funny", "mentor_names", "address", "business_address", "quotes", "number_of_atoms", "deleted_at", "number_of_public_reviews", "numberOfPublicReviews2", "tags_of_all_books", "search", "certificate", "created_at", "updated_at", "favorite_shape", "range_of_books", "favorite_colors", "mentor_id", "root_mentor_id", "current_draft_book_id", "favorite_book_id", "publisher_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35)",
        "INSERT INTO "books" ("id", "title", "order", "notes", "acknowledgements", "authors_nick_names", "search", "deleted_at", "created_at", "updated_at", "prequel_id", "author_id", "reviewer_id", "random_comment_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14),($15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)",
        "INSERT INTO "book_reviews" ("id", "rating", "is_public", "is_test", "created_at", "updated_at", "book_id", "critic_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8),($9, $10, $11, $12, $13, $14, $15, $16)",
-       "SELECT count("br".id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2",
+       "SELECT DISTINCT count(distinct "br".id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2",
        "WITH data (id, number_of_book_reviews, updated_at, __original_updated_at) AS (VALUES ($1::int, $2::int, $3::timestamp with time zone, $4::timestamptz) ) UPDATE publishers SET number_of_book_reviews = data.number_of_book_reviews, updated_at = data.updated_at FROM data WHERE publishers.id = data.id AND date_trunc('milliseconds', publishers.updated_at) = data.__original_updated_at RETURNING publishers.id",
        "COMMIT;",
        "select * from "publishers" order by "id" asc",
@@ -106,9 +106,8 @@ describe("ReactiveQueryField", () => {
       id: 1,
       number_of_book_reviews: 1,
     });
-    // The query count changes when preloading is enabled (right?) so use `toContain`
     expect(queries).toContain(
-      `SELECT count("br".id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2`,
+      `SELECT DISTINCT count(distinct "br".id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2`,
     );
   });
 

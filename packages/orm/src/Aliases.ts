@@ -37,9 +37,6 @@ export type Alias<T extends Entity> = {
         : FieldsOf<T>[P] extends { kind: "poly"; type: infer U extends Entity }
           ? PolyReferenceAlias<U>
           : never;
-} & {
-  /** Allow querying on "a parent that has no children". This is only valid when bound to child/collection relations. */
-  $count: CountAlias;
 };
 
 export interface PrimitiveAlias<V, N extends null | never> {
@@ -70,22 +67,6 @@ export interface EntityAlias<T> {
   gte(value: IdOf<T> | null | undefined): ExpressionCondition;
   lt(value: IdOf<T> | null | undefined): ExpressionCondition;
   lte(value: IdOf<T> | null | undefined): ExpressionCondition;
-}
-
-/**
- * Allows complex conditions on the number of matching children.
- *
- * Note that `$count` value will only count children that match *inline* conditions,
- * i.e. a query like:
- *
- * ```ts
- * await em.find(Author, { books: { $count: 1, status: BookStatus.Draft } });
- * ```
- *
- * Will find Author's that have a single book in Draft status.
- */
-export interface CountAlias {
-  eq(count: number | undefined | null): ExpressionCondition;
 }
 
 export const aliasMgmt = Symbol("aliasMgmt");
@@ -119,9 +100,6 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
     get(target, key: PropertyKey): any {
       if (key === aliasMgmt) {
         return mgmt;
-      }
-      if (key === "$count") {
-        return new CountAliasImpl(callbacks);
       }
       const field = meta.allFields[key as string] ?? fail(`No field ${String(key)} on ${cstr.name}`);
       switch (field.kind) {
@@ -445,24 +423,6 @@ class PolyReferenceAlias<T extends Entity> {
     // Track the conditions we've created to re-write the alias when we're bound
     this.callbacks.push((newMeta, newAlias) => {
       cond.alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
-    });
-    return cond;
-  }
-}
-
-class CountAliasImpl implements CountAlias {
-  constructor(protected callbacks: BindCallback[]) {}
-  eq(count: number | undefined | null): ExpressionCondition {
-    if (count === undefined) return skipCondition;
-    const cond: ColumnCondition = {
-      kind: "column",
-      alias: "unset",
-      column: "$count",
-      dbType: "int",
-      cond: { kind: "eq", value: count },
-    };
-    this.callbacks.push((_, newAlias) => {
-      cond.alias = newAlias;
     });
     return cond;
   }

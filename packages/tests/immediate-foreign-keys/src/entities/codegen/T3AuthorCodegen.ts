@@ -87,7 +87,6 @@ export interface T3AuthorOrder {
   id?: OrderBy;
   firstName?: OrderBy;
   favoriteBook?: T3BookOrder;
-  t3Books?: T3BookOrder;
 }
 
 export const t3AuthorConfig = new ConfigApi<T3Author, Context>();

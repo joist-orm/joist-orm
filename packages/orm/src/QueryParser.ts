@@ -1,13 +1,12 @@
 import { groupBy, isPlainObject } from "joist-utils";
-import { aliasMgmt, isAlias, newAliasProxy } from "./Aliases";
+import { aliasMgmt, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
 import { abbreviation } from "./QueryBuilder";
 import { visitConditions } from "./QueryVisitor";
 import { getMetadataForTable } from "./configure";
-import { buildCondition } from "./drivers/buildUtils";
-import { Column, getConstructorFromTaggedId, isDefined } from "./index";
+import { Column, getConstructorFromTaggedId, isDefined, keyToNumber, maybeResolveReferenceToId } from "./index";
 import { kq, kqDot } from "./keywords";
 import { assertNever, fail, partition } from "./utils";
 
@@ -43,8 +42,8 @@ export interface RawCondition {
   condition: string;
   /** The bindings within `condition`, i.e. `SUM(${alias}.amount) > ?`. */
   bindings: any[];
-  /** Used to mark system-added conditions (like `LATERAL JOIN` conditions), which can be ignored when pruning unused joins. */
-  pruneable: boolean;
+  /** We assume raw conditions are never system-added, so can't be pruned. */
+  pruneable: false;
 }
 
 /** A marker condition for alias methods to indicate they should be skipped/pruned. */
@@ -62,47 +61,16 @@ export interface PrimaryTable {
   table: string;
 }
 
-/**
- * Joins into 0-1 relations, i.e. children up to a parent.
- *
- * Even though `LateralJoinTable` handles the "many children" case, we keep the
- * `"outer"` join for doing joins to optional "0 or 1" relations, where we don't
- * want a missing result to mean the primary entity itself is not returned.
- */
 export interface JoinTable {
   join: "inner" | "outer";
   alias: string;
   table: string;
   col1: string;
   col2: string;
+  distinct?: boolean;
 }
 
-export interface CrossJoinTable {
-  join: "cross";
-  alias: string;
-  table: string;
-}
-
-export type ParsedTable = PrimaryTable | JoinTable | CrossJoinTable | LateralJoinTable;
-
-/**
- * Joins into 0-N relations, i.e. parent down to many children.
- *
- * It's expect that the `query` will fundamentally be an aggregate query that
- * counts (for `em.find`s) or rolls up (for JSON preloading) the children into
- * a single row, such that our top-level query does not need to DISTINCT-away
- * any duplication that comes from having multiple children rows.
- */
-export interface LateralJoinTable {
-  join: "lateral";
-  alias: string;
-  /** Used for join dependency tracking. */
-  fromAlias: string;
-  /** Used more for bookkeeping/consistency with other join tables than the query itself. */
-  table: string;
-  /** The subquery that will look for/roll-up N children. */
-  query: ParsedFindQuery;
-}
+export type ParsedTable = PrimaryTable | JoinTable;
 
 export interface ParsedOrderBy {
   alias: string;
@@ -110,25 +78,17 @@ export interface ParsedOrderBy {
   order: OrderBy;
 }
 
-export interface ParsedGroupBy {
-  alias: string;
-  column: string;
-}
-
-type ParsedSelect = string | ParsedSelectWithBindings;
-type ParsedSelectWithBindings = { sql: string; bindings: any[]; aliases: string[] };
-
 /** The result of parsing an `em.find` filter. */
 export interface ParsedFindQuery {
-  selects: ParsedSelect[];
+  selects: string[];
   /** The primary table plus any joins. */
   tables: ParsedTable[];
+  /** Any cross lateral joins, where the `joins: string[]` has the full join as raw SQL; currently only for preloading. */
+  lateralJoins?: { joins: string[]; bindings: any[] };
   /** The query's conditions. */
   condition?: ParsedExpressionFilter;
   /** Any optional orders to add before the default 'order by id'. */
   orderBys: ParsedOrderBy[];
-  /** Extremely optional group bys; we generally don't support adhoc/aggregate queries, but the auto-batching infra uses these. */
-  groupBys?: ParsedGroupBy[];
   /** Optional CTE to prefix to the query, i.e. for recursive relations. */
   cte?: { sql: string; bindings: readonly any[] };
 }
@@ -143,26 +103,22 @@ export function parseFindQuery(
     pruneJoins?: boolean;
     keepAliases?: string[];
     softDeletes?: "include" | "exclude";
-    // Let `addLateralJoin` pass in a shared `aliases` instance
-    aliases?: Record<string, number>;
-    // Let `addLateralJoin` pass in its existing alias for the subquery's primary table
-    alias?: string;
-    topLevelCondition?: ConditionBuilder;
-    outerLateralJoins?: { alias: string; select: ParsedSelect[]; outerCb: ConditionBuilder }[];
-    // Let `addLateralJoin` pass in its join conditions (...we could probably avoid this
-    // param if instead the join was passed into the unparsed `conditions` opt).
-    rawConditions?: RawCondition[];
   } = {},
 ): ParsedFindQuery {
-  const selects: ParsedSelect[] = [];
+  const selects: string[] = [];
   const tables: ParsedTable[] = [];
   const orderBys: ParsedOrderBy[] = [];
   const query = { selects, tables, orderBys };
-  const { orderBy = undefined, softDeletes = "exclude", pruneJoins = true, keepAliases = [] } = opts;
-
+  const {
+    orderBy = undefined,
+    conditions: optsExpression = undefined,
+    softDeletes = "exclude",
+    pruneJoins = true,
+    keepAliases = [],
+  } = opts;
   const cb = new ConditionBuilder();
 
-  const aliases: Record<string, number> = opts.aliases ?? {};
+  const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
     const abbrev = abbreviation(tableName);
     const i = aliases[abbrev] || 0;
@@ -170,139 +126,20 @@ export function parseFindQuery(
     return i === 0 ? abbrev : `${abbrev}${i}`;
   }
 
-  // If they passed extra `conditions: ...`, parse that.
-  // We can do this up-front b/c it doesn't require any join-tree metadata to perform,
-  // and then it's available for our `addLateralJoin`s to rewrite.
-  if (opts.conditions) cb.maybeAddExpression(opts.conditions);
-
-  // Also see if outer `addLateralJoin` is passing us its join conditions
-  if (opts.rawConditions) {
-    for (const rc of opts.rawConditions) cb.addRawCondition(rc);
-  }
-
-  function addLateralJoin(
-    meta: EntityMetadata,
-    fromAlias: string,
-    alias: string,
-    filter: any,
-    // The join condition for the subquery from the outer table
-    condition: RawCondition,
-    // If we're a m2m, the join table to inject (which will use the outer table)
-    joinTable: JoinTable | undefined,
-  ) {
-    const ef = parseEntityFilter(meta, filter);
-    // Maybe skip
-    if (!ef && !isAlias(filter)) return;
-
-    bindAlias(filter, meta, alias);
-
-    // Create an alias to use for our subquery's `where parent_id = id` condition
-    const a = newAliasProxy(meta.cstr);
-
-    // This is kinda janky, but take the `ef: ParsedEntityFilter` and re-work it back into a
-    // `subFilter/count` pair that we can use for our recursive `parseFindQuery` call.
-    function convertFilter(): { subFilter: object; count: ParsedValueFilter<number> | undefined } {
-      if (ef) {
-        if (ef.kind === "join") {
-          // subFilter will be unprocessed, so we can pass it recursively into `parseFindQuery`
-          return { subFilter: ef.subFilter, count: undefined };
-        } else if (ef.kind === "not-null") {
-          return { subFilter: {}, count: { kind: "gt", value: 0 } };
-        } else if (ef.kind === "is-null") {
-          return { subFilter: {}, count: { kind: "eq", value: 0 } };
-        } else if (ef.kind === "eq") {
-          return { subFilter: { id: ef.value }, count: undefined };
-        } else if (ef.kind === "in") {
-          return { subFilter: { id: { in: ef.value } }, count: undefined };
-        } else {
-          // If `ef` is set, it's already parsed, which `parseFindQuery` won't expect, so pass the original `filter`
-          return { subFilter: { id: filter }, count: undefined };
-        }
-      } else {
-        return { subFilter: {}, count: undefined };
-      }
-    }
-
-    const {
-      subFilter,
-      // If `ef` was is-null/not-null, use that as the count, otherwise probe for subFilter[$count]
-      count = subFilter && "$count" in subFilter ? { kind: "eq", value: subFilter["$count"] } : undefined,
-    } = convertFilter();
-
-    const subQuery = parseFindQuery(
-      meta,
-      { as: a, ...subFilter },
-      {
-        // Only pass through a subset of the opts...
-        softDeletes: opts.softDeletes,
-        pruneJoins: opts.pruneJoins,
-        keepAliases: opts.keepAliases,
-        aliases,
-        alias,
-        // And set our own complex condition as the join condition (for o2m, two for m2m)
-        rawConditions: [condition],
-        // Let the subquery's pruneUnusedJoins know about the top-level WHERE clauses
-        topLevelCondition: opts.topLevelCondition ?? cb,
-        outerLateralJoins: [{ alias, select: selects, outerCb: cb }, ...(opts.outerLateralJoins ?? [])],
-      },
-    );
-    subQuery.orderBys = [];
-    if (joinTable) subQuery.tables.unshift(joinTable);
-    tables.push({ join: "lateral", table: meta.tableName, query: subQuery, alias, fromAlias });
-
-    // Look for complex conditions...
-    const topLevelAlias = opts.outerLateralJoins?.[opts.outerLateralJoins?.length - 1]?.alias;
-    const complexConditions = (opts.topLevelCondition ?? cb).findAndRewrite(topLevelAlias ?? alias, alias);
-    for (const cc of complexConditions) {
-      if (cc.cond.kind === "column" && cc.cond.column === "$count") {
-        subQuery.selects.push(buildCountStar(cc));
-      } else {
-        const [sql, bindings] = buildCondition(cc.cond);
-        subQuery.selects.push({
-          sql: `BOOL_OR(${sql}) as ${cc.as}`,
-          aliases: [cc.cond.alias],
-          bindings,
-        });
-      }
-    }
-
-    // If there are complex conditions looking at our data, we don't want a "make sure at least one matched"
-    const usedByComplexCondition =
-      selects.some((s) => typeof s === "object" && "aliases" in s && s.aliases.includes(alias)) ||
-      // If we're the very 1st addLateralJoin, we don't push our selects into the next-up
-      // lateral join, so instead look through the top-level condition
-      (!opts.topLevelCondition &&
-        deepFindConditions(cb.expressions[0], true).some((c) => {
-          return c.kind === "raw" && c.aliases.includes(alias);
-        }));
-    // If there are literally no conditions on this child relation, don't add the "make sure at least one matched"
-    const hasAnyFilter = deepFindConditions(subQuery.condition, true).length > 0 || count !== undefined;
-    if (!usedByComplexCondition && hasAnyFilter) {
+  function maybeAddNotSoftDeleted(meta: EntityMetadata, alias: string): void {
+    if (filterSoftDeletes(meta, softDeletes)) {
+      const column = meta.allFields[getBaseMeta(meta).timestampFields.deletedAt!].serde?.columns[0]!;
       cb.addSimpleCondition({
         kind: "column",
         alias,
-        column: "_",
-        dbType: "int",
-        cond: count ?? { kind: "gt", value: 0 },
-        // Don't let this condition pin the join, unless the user asked for a specific count
-        // (or deepFindConditions finds a real condition from the above filter).
-        pruneable: count === undefined,
-      });
-      // Go up the tree and make sure any parent lateral joins have a "at least 1 match"
-      opts.outerLateralJoins?.forEach(({ alias, outerCb }) => {
-        outerCb.addSimpleCondition({
-          kind: "column",
-          alias,
-          column: "_",
-          dbType: "int",
-          cond: { kind: "gt", value: 0 },
-          pruneable: true,
-        });
+        column: column.columnName,
+        dbType: column.dbType,
+        cond: { kind: "is-null" },
+        pruneable: true,
       });
     }
   }
 
-  /** Adds `meta` to the query, i.e. for m2o/o2o joins into parents. */
   function addTable(
     meta: EntityMetadata,
     alias: string,
@@ -313,67 +150,39 @@ export function parseFindQuery(
   ): void {
     // look at filter, is it `{ book: "b2" }` or `{ book: { ... } }`
     const ef = parseEntityFilter(meta, filter);
-    // Maybe skip
-    if (!ef && join !== "primary" && !isAlias(filter)) return;
+    if (!ef && join !== "primary" && !isAlias(filter)) {
+      return;
+    }
 
     if (join === "primary") {
       tables.push({ alias, table: meta.tableName, join });
-    } else if (join === "lateral") {
-      fail("Unexpected lateral join");
     } else {
       tables.push({ alias, table: meta.tableName, join, col1, col2 });
     }
 
     // Maybe only do this if we're the primary, or have a field that needs it?
-    addTablePerClassJoinsAndClassTag(
-      query,
-      meta,
-      alias,
-      // Use opts.topLevelCondition to tell we're in a `addLateralJoin` and don't want the `CASE ... END as __class`
-      // select clause, which won't work because it's not an aggregate
-      join === "primary" && !opts.topLevelCondition,
-    );
+    addTablePerClassJoinsAndClassTag(query, meta, alias, join === "primary");
     if (needsStiDiscriminator(meta)) {
       addStiSubtypeFilter(cb, meta, alias);
     }
 
-    maybeAddNotSoftDeleted(cb, softDeletes, meta, alias);
-    bindAlias(filter, meta, alias);
+    maybeAddNotSoftDeleted(meta, alias);
 
-    // If we're inside a lateral join, look for top-level conditions that need to be rewritten as `BOOL_OR(...)`
-    // I.e. we might be a regular m2o join, but we just came from a lateral join, so any complex conditions
-    // like `ourTable.column.eq(...)` need to be:
-    // a) injected as a `BOOL_OR(ourTable.column.eq(...)) as _b_column_0` select to surface outside the lateral join, and
-    // b) rewritten in the top-level query to be just `_b_column_0`
-    if (opts.topLevelCondition) {
-      const topLevelAlias = opts.outerLateralJoins?.[opts.outerLateralJoins?.length - 1]?.alias;
-      const complexConditions = opts.topLevelCondition.findAndRewrite(topLevelAlias ?? alias, alias);
-      for (const cc of complexConditions) {
-        if (cc.cond.kind === "column" && cc.cond.column === "$count") {
-          selects.push(buildCountStar(cc));
-        } else {
-          const [sql, bindings] = buildCondition(cc.cond);
-          selects.push({ sql: `BOOL_OR(${sql}) as ${cc.as}`, aliases: [cc.cond.alias], bindings });
-        }
-        // Expose the `_b_column_0` through `SELECT`s all the up the tree
-        // (...until the top-level query, which doesn't need to SELECT it, only WHERE against it)
-        opts.outerLateralJoins?.forEach(({ alias, select }, i) => {
-          const isTopLevel = i === opts.outerLateralJoins!.length - 1;
-          if (!isTopLevel) {
-            select.push({ sql: `BOOL_OR(${alias}.${cc.as}) as ${cc.as}`, bindings: [], aliases: [alias] });
-          }
-        });
-      }
-      // prune needs to see the immediate, not necessarily the whole conditions...
-      // only rewriting needs to see the whole thing
+    // The user's locally declared aliases, i.e. `const [a, b] = aliases(Author, Book)`,
+    // aren't guaranteed to line up with the aliases we've assigned internally, like `a`
+    // might actually be `a1` if there are two `authors` tables in the query, so push the
+    // canonical alias value for the current clause into the Alias.
+    if (filter && typeof filter === "object" && "as" in filter && isAlias(filter.as)) {
+      filter.as[aliasMgmt].setAlias(meta, alias);
+    } else if (isAlias(filter)) {
+      filter[aliasMgmt].setAlias(meta, alias);
     }
 
-    // See if the clause says we must do a join into the relation
     if (ef && ef.kind === "join") {
       // subFilter really means we're matching against the entity columns/further joins
       Object.keys(ef.subFilter).forEach((key) => {
         // Skip the `{ as: ... }` alias binding
-        if (key === "as" || key === "$count") return;
+        if (key === "as") return;
         const field =
           meta.allFields[key] ??
           meta.polyComponentFields?.[key] ??
@@ -489,35 +298,66 @@ export function parseFindQuery(
               fail(`No poly component found for ${otherField.fieldName}`);
             otherColumn = otherComponent.columnName;
           }
-          const condition = `${kqDot(alias, "id")} = ${kqDot(a + otherField.aliasSuffix, otherColumn)}`;
-          addLateralJoin(
+          addTable(
             field.otherMetadata(),
-            alias,
             a,
+            "outer",
+            kqDot(alias, "id"),
+            kqDot(a, otherColumn),
             (ef.subFilter as any)[key],
-            { kind: "raw", aliases: [a, alias], condition, pruneable: true, bindings: [] },
-            undefined,
           );
         } else if (field.kind === "m2m") {
           // Always join into the m2m table
           const ja = getAlias(field.joinTableName);
-          const jt: JoinTable = {
+          tables.push({
             alias: ja,
-            join: "inner",
+            join: "outer",
             table: field.joinTableName,
             col1: kqDot(alias, "id"),
             col2: kqDot(ja, field.columnNames[0]),
-          };
-          const a = getAlias(field.otherMetadata().tableName);
-          const condition = `${kqDot(ja, field.columnNames[1])} = ${kqDot(a, "id")}`;
-          addLateralJoin(
-            field.otherMetadata(),
-            alias,
-            a,
-            (ef.subFilter as any)[key],
-            { kind: "raw", aliases: [ja, a], condition, bindings: [], pruneable: true },
-            jt,
-          );
+          });
+          // But conditionally join into the alias table
+          const sub = (ef.subFilter as any)[key];
+          if (isAlias(sub)) {
+            const a = getAlias(field.otherMetadata().tableName);
+            addTable(field.otherMetadata(), a, "outer", kqDot(ja, field.columnNames[1]), kqDot(a, "id"), sub);
+          }
+          const f = parseEntityFilter(field.otherMetadata(), sub);
+          // Probe the filter and see if it's just an id, if so we can avoid the join
+          if (!f) {
+            // skip
+          } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata(), softDeletes)) {
+            const a = getAlias(field.otherMetadata().tableName);
+            addTable(
+              field.otherMetadata(),
+              a,
+              "outer",
+              kqDot(ja, field.columnNames[1]),
+              kqDot(a, "id"),
+              (ef.subFilter as any)[key],
+            );
+          } else {
+            const meta = field.otherMetadata();
+            // We normally don't have `columns` for m2m fields, b/c they don't go through normal serde
+            // codepaths, so make one up to leverage the existing `mapToDb` function.
+            const column: any = {
+              columnName: field.columnNames[1],
+              dbType: meta.idDbType,
+              mapToDb(value: any) {
+                // Check for `typeof value === number` in case this is a new entity, and we've been given the nilIdValue
+                return value === null || isNilIdValue(value)
+                  ? value
+                  : keyToNumber(meta, maybeResolveReferenceToId(value));
+              },
+            };
+            cb.addSimpleCondition({
+              kind: "column",
+              alias: ja,
+              column: field.columnNames[1],
+              dbType: meta.idDbType,
+              cond: mapToDb(column, f),
+            });
+          }
         } else {
           throw new Error(`Unsupported field ${key}`);
         }
@@ -554,9 +394,10 @@ export function parseFindQuery(
           tables.push({
             alias: a,
             table,
-            join: "outer", // don't drop the entity just b/c of a missing order by
+            join: "outer",
             col1: kqDot(alias, column),
             col2: kqDot(a, "id"),
+            distinct: false,
           });
           addOrderBy(field.otherMetadata(), a, value);
         }
@@ -567,13 +408,14 @@ export function parseFindQuery(
   }
 
   // always add the main table
-  const alias = opts.alias ?? getAlias(meta.tableName);
-  if (opts.topLevelCondition === undefined) {
-    selects.push(`${kq(alias)}.*`);
-  } else {
-    selects.push("count(*) as _");
-  }
+  const alias = getAlias(meta.tableName);
+  selects.push(`${kq(alias)}.*`);
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
+
+  // If they passed extra `conditions: ...`, parse that
+  if (optsExpression) {
+    cb.maybeAddExpression(optsExpression);
+  }
 
   Object.assign(query, {
     condition: cb.toExpressionFilter(),
@@ -595,7 +437,6 @@ export function parseFindQuery(
   if (pruneJoins) {
     pruneUnusedJoins(query, keepAliases);
   }
-
   return query;
 }
 
@@ -643,76 +484,58 @@ function maybeAddIdNotNulls(query: ParsedFindQuery): void {
 
 // Remove any joins that are not used in the select or conditions
 function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void {
-  const dt = new DependencyTracker();
-
-  // First setup the alias -> alias dependencies...
-  const todo = [...parsed.tables];
-  while (todo.length > 0) {
-    const t = todo.pop()!;
-    if (t.join === "lateral") {
-      dt.addAlias(t.alias, [t.fromAlias]);
-      // Recurse into lateral joins...
-      todo.push(...t.query.tables);
-    } else if (t.join === "cross") {
-      // Doesn't have any conditions
-    } else if (t.join !== "primary") {
-      dt.addAlias(t.alias, [parseAlias(t.col1)]);
-    }
-  }
-
   // Mark all terminal usages
-  parsed.selects.forEach((s) => {
-    if (typeof s === "string") {
-      if (!s.includes("count(")) dt.markRequired(parseAlias(s));
-    } else {
-      for (const a of s.aliases) dt.markRequired(a);
-    }
-  });
-  parsed.orderBys.forEach((o) => dt.markRequired(o.alias));
-  keepAliases.forEach((a) => dt.markRequired(a));
-  // Look recursively into lateral join conditions
-  const todo2 = [parsed];
-  while (todo2.length > 0) {
-    const query = todo2.pop()!;
-    deepFindConditions(query.condition, true).forEach((c) => {
-      if (c.kind === "column") {
-        dt.markRequired(c.alias);
-      } else if (c.kind === "raw") {
-        for (const alias of c.aliases) dt.markRequired(alias);
-      } else {
-        assertNever(c);
+  const used = new Set<string>();
+  parsed.selects.forEach((s) => used.add(parseAlias(s)));
+  parsed.orderBys.forEach((o) => used.add(o.alias));
+  keepAliases.forEach((a) => used.add(a));
+  deepFindConditions(parsed.condition)
+    .filter((c) => !c.pruneable)
+    .forEach((c) => {
+      switch (c.kind) {
+        case "column":
+          used.add(c.alias);
+          break;
+        case "raw":
+          for (const alias of c.aliases) {
+            used.add(alias);
+          }
+          break;
+        default:
+          assertNever(c);
       }
     });
-    todo2.push(...query.tables.filter((t) => t.join === "lateral").map((t) => t.query));
+  // Mark all usages via joins
+  for (let i = 0; i < parsed.tables.length; i++) {
+    const t = parsed.tables[i];
+    if (t.join !== "primary") {
+      // If alias (col2) is required, ensure the col1 alias is also required
+      const a2 = t.alias;
+      const a1 = parseAlias(t.col1);
+      if (used.has(a2) && !used.has(a1)) {
+        used.add(a1);
+        // Restart at zero to find dependencies before us
+        i = 0;
+      }
+    }
   }
-
   // Now remove any unused joins
-  parsed.tables = parsed.tables.filter((t) => dt.required.has(t.alias));
-
+  parsed.tables = parsed.tables.filter((t) => used.has(t.alias));
   // And then remove any inline soft-delete conditions we don't need anymore
   if (parsed.condition && parsed.condition.op === "and") {
     parsed.condition.conditions = parsed.condition.conditions.filter((c) => {
       if (c.kind === "column") {
-        const prune = c.pruneable && !dt.required.has(c.alias);
-        // if (prune) console.log(`DROPPING`, c);
+        const prune = c.pruneable && !parsed.tables.some((t) => t.alias === c.alias);
         return !prune;
       } else {
         return c;
       }
     });
   }
-
-  // Remove any `{ and: [...] }`s that are empty; we should probably do this deeply?
-  if (parsed.condition && parsed.condition.conditions.length === 0) {
-    parsed.condition = undefined;
-  }
 }
 
 /** Pulls out a flat list of all `ColumnCondition`s from a `ParsedExpressionFilter` tree. */
-function deepFindConditions(
-  condition: ParsedExpressionFilter | undefined,
-  filterPruneable: boolean,
-): (ColumnCondition | RawCondition)[] {
+function deepFindConditions(condition: ParsedExpressionFilter | undefined): (ColumnCondition | RawCondition)[] {
   const todo = condition ? [condition] : [];
   const result: (ColumnCondition | RawCondition)[] = [];
   while (todo.length !== 0) {
@@ -720,10 +543,8 @@ function deepFindConditions(
     for (const c of cc.conditions) {
       if (c.kind === "exp") {
         todo.push(c);
-      } else if (c.kind === "column" || c.kind === "raw") {
-        if (!filterPruneable || !c.pruneable) result.push(c);
       } else {
-        assertNever(c);
+        result.push(c);
       }
     }
   }
@@ -731,7 +552,7 @@ function deepFindConditions(
 }
 
 /** Returns the `a` from `"a".*`. */
-export function parseAlias(alias: string): string {
+function parseAlias(alias: string): string {
   return alias.split(".")[0].replaceAll(`"`, "");
 }
 
@@ -963,9 +784,9 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
 /** Converts domain-level values like string ids/enums into their db equivalent. */
 export class ConditionBuilder {
   /** Simple, single-column conditions, which will be AND-d together. */
-  conditions: (ColumnCondition | RawCondition)[] = [];
+  private conditions: ColumnCondition[] = [];
   /** Complex expressions, which will also be AND-d together with `conditions`. */
-  expressions: ParsedExpressionFilter[] = [];
+  private expressions: ParsedExpressionFilter[] = [];
 
   /** Accepts a raw user-facing DSL filter, and parses it into a `ParsedExpressionFilter`. */
   maybeAddExpression(expression: ExpressionFilter): void {
@@ -976,15 +797,6 @@ export class ConditionBuilder {
   /** Adds an already-db-level condition to the simple conditions list. */
   addSimpleCondition(condition: ColumnCondition): void {
     this.conditions.push(condition);
-  }
-
-  /** Adds an already-db-level condition to the simple conditions list. */
-  addRawCondition(condition: PartialSome<RawCondition, "kind" | "bindings">): void {
-    this.conditions.push({
-      kind: "raw",
-      bindings: [],
-      ...condition,
-    });
   }
 
   /** Adds an already-db-level expression to the expressions list. */
@@ -1039,76 +851,11 @@ export class ConditionBuilder {
     if (conditions.length === 0 && expressions.length === 1) {
       // If no inline conditions, and just 1 opt expression, just use that
       return expressions[0];
-    } else if (expressions.length === 1 && expressions[0].op === "and") {
-      // Merge the 1 `AND` expression with the other simple conditions
-      return { kind: "exp", op: "and", conditions: [...conditions, ...expressions[0].conditions] };
     } else if (conditions.length > 0 || expressions.length > 0) {
       // Combine the conditions within the `em.find` join literal & the `conditions` as ANDs
       return { kind: "exp", op: "and", conditions: [...conditions, ...expressions] };
     }
     return undefined;
-  }
-
-  /**
-   * Finds `child.column.eq(...)` complex conditions that need pushed down into each lateral join.
-   *
-   * Once we find something like `{ column: "first_name", cond: { eq: "a1" } }`, we return it to the
-   * caller (for injection into the lateral join's `SELECT` clause), and replace it with a boolean
-   * expression that is basically "did any of my children match this condition?".
-   *
-   * We also assume that `findAndRewrite` is only called on the top-level/user-facing `ParsedFindQuery`,
-   * and not any intermediate `LateralJoinTable` queries (which are allowed to have their own
-   * `ConditionBuilder`s for building their internal query, but it's not exposed to the user,
-   * so won't have any truly-complex conditions that should need rewritten).
-   *
-   * @param topLevelLateralJoin the outermost lateral join alias, as that will be the only alias
-   *   that is visible to the rewritten condition, i.e. `_alias._whatever_condition_`.
-   * @param alias the alias being "hidden" in a lateral join, and so its columns/data won't be
-   *   available for the top-level condition to directly AND/OR against.
-   */
-  findAndRewrite(topLevelLateralJoin: string, alias: string): { cond: ColumnCondition; as: string }[] {
-    let j = 0;
-    const found: { cond: ColumnCondition; as: string }[] = [];
-    const todo: ParsedExpressionCondition[][] = [this.conditions];
-    for (const exp of this.expressions) todo.push(exp.conditions);
-    while (todo.length > 0) {
-      const array = todo.pop()!;
-      array.forEach((cond, i) => {
-        if (cond.kind === "column") {
-          // Use startsWith to look for `_b0` / `_s0` base/subtype conditions
-          if (cond.alias === alias || cond.alias.startsWith(`${alias}_`)) {
-            if (cond.column === "_") return; // Hack to skip rewriting `alias._ > 0`
-            const as = `_${alias}_${cond.column}_${j++}`;
-            array[i] = {
-              kind: "raw",
-              aliases: [topLevelLateralJoin],
-              condition: `${topLevelLateralJoin}.${as}`,
-              bindings: [],
-              pruneable: false,
-              ...{ rewritten: true },
-            } satisfies RawCondition;
-            found.push({ cond, as });
-          }
-        } else if (cond.kind === "exp") {
-          todo.push(cond.conditions);
-        } else if (cond.kind === "raw") {
-          // what would we do here?
-          if (cond.aliases.includes(alias)) {
-            // Look for a hacky hint that this is our own already-rewritten query; this is likely
-            // because `findAndRewrite` is mutating condition expressions that get passed into
-            // `parseFindQuery` multiple times, i.e. while batching/dataloading.
-            //
-            // ...although in theory parseExpression should already be making a copy of any user-facing
-            // `em.find` conditions. :thinking:
-            if ("rewritten" in cond) return;
-            throw new Error("Joist doesn't support raw conditions in lateral joins yet");
-          }
-        } else {
-          assertNever(cond);
-        }
-      });
-    }
-    return found;
   }
 }
 
@@ -1210,6 +957,7 @@ export function addTablePerClassJoinsAndClassTag(
       join: "outer",
       col1: kqDot(alias, "id"),
       col2: `${alias}_b${i}.id`,
+      distinct: false,
     });
   });
 
@@ -1231,6 +979,7 @@ export function addTablePerClassJoinsAndClassTag(
         join: "outer",
         col1: kqDot(alias, "id"),
         col2: `${alias}_s${i}.id`,
+        distinct: false,
       });
       for (const field of Object.values(st.fields)) {
         if (field.fieldName !== "id" && field.serde) {
@@ -1261,27 +1010,20 @@ export function addTablePerClassJoinsAndClassTag(
 }
 
 export function maybeAddNotSoftDeleted(
-  // Within this file we pass ConditionBuilder, but findByUniqueDataLoader passes ColumnCondition[]
-  cb: ConditionBuilder | ColumnCondition[],
-  softDeletes: "include" | "exclude",
+  conditions: ColumnCondition[],
   meta: EntityMetadata,
   alias: string,
+  softDeletes: "include" | "exclude",
 ): void {
   if (filterSoftDeletes(meta, softDeletes)) {
     const column = meta.allFields[getBaseMeta(meta).timestampFields.deletedAt!].serde?.columns[0]!;
-    const condition = {
+    conditions.push({
       kind: "column",
       alias,
       column: column.columnName,
       dbType: column.dbType,
       cond: { kind: "is-null" },
-      pruneable: true,
-    } satisfies ColumnCondition;
-    if (cb instanceof ConditionBuilder) {
-      cb.addSimpleCondition(condition);
-    } else {
-      cb.push(condition);
-    }
+    });
   }
 }
 
@@ -1294,16 +1036,13 @@ function filterSoftDeletes(meta: EntityMetadata, softDeletes: "include" | "exclu
   );
 }
 
-/** Parses user-facing `{ and: ... }` or `{ or: ... }` into a `ParsedExpressionFilter`. */
 function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter | undefined {
-  // Look for `{ and: [...] }` or `{ or: [...] }`
   const [op, expressions] =
     "and" in expression && expression.and
       ? ["and" as const, expression.and]
       : "or" in expression && expression.or
         ? ["or" as const, expression.or]
         : fail(`Invalid expression ${expression}`);
-  // Potentially recurse into nested expressions
   const conditions = expressions.map((exp) => (exp && ("and" in exp || "or" in exp) ? parseExpression(exp) : exp));
   const [skip, valid] = partition(conditions, (cond) => cond === undefined || cond === skipCondition);
   if ((skip.length > 0 && expression.pruneIfUndefined === "any") || valid.length === 0) {
@@ -1312,23 +1051,29 @@ function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter |
   return { kind: "exp", op, conditions: valid.filter(isDefined) };
 }
 
-export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[], LateralJoinTable[], CrossJoinTable[]] {
+export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[]] {
   let primary: PrimaryTable;
   const joins: JoinTable[] = [];
-  const laterals: LateralJoinTable[] = [];
-  const crosses: CrossJoinTable[] = [];
   for (const table of query.tables) {
     if (table.join === "primary") {
       primary = table;
-    } else if (table.join === "lateral") {
-      laterals.push(table);
-    } else if (table.join === "cross") {
-      crosses.push(table);
     } else {
       joins.push(table);
     }
   }
-  return [primary!, joins, laterals, crosses];
+  return [primary!, joins];
+}
+
+export function joinKeywords(join: JoinTable): string {
+  return join.join === "inner" ? "JOIN" : "LEFT OUTER JOIN";
+}
+
+export function joinClause(join: JoinTable): string {
+  return `${joinKeywords(join)} ${kq(join.table)} ${kq(join.alias)} ON ${join.col1} = ${join.col2}`;
+}
+
+export function joinClauses(joins: ParsedTable[]): string[] {
+  return joins.map((t) => (t.join !== "primary" ? joinClause(t) : ""));
 }
 
 function needsClassPerTableJoins(meta: EntityMetadata): boolean {
@@ -1351,65 +1096,7 @@ function addStiSubtypeFilter(cb: ConditionBuilder, subtypeMeta: EntityMetadata, 
   });
 }
 
-/**
- * Given a filter that might be an `alias(Author)` placeholder, or have an `as: author`
- * binding, tells the `Alias` its canonical meta/alias.
- *
- * That way, when we later walk `conditions` and build the `AND/OR` tree, each condition
- * will know the canonical alias to output into the SQL clause.
- */
-function bindAlias(filter: any, meta: EntityMetadata, alias: string) {
-  // The user's locally declared aliases, i.e. `const [a, b] = aliases(Author, Book)`,
-  // aren't guaranteed to line up with the aliases we've assigned internally, like `a`
-  // might actually be `a1` if there are two `authors` tables in the query, so push the
-  // canonical alias value for the current clause into the Alias.
-  if (filter && typeof filter === "object" && "as" in filter && isAlias(filter.as)) {
-    filter.as[aliasMgmt].setAlias(meta, alias);
-  } else if (isAlias(filter)) {
-    filter[aliasMgmt].setAlias(meta, alias);
-  }
-}
-
 /** Converts a search term like `foo bar` into a SQL `like` pattern like `%foo%bar%`. */
 export function makeLike(search: any | undefined): any {
   return search ? `%${search.replace(/\s+/g, "%")}%` : undefined;
 }
-
-/** Track join dependencies for `pruneUnusedJoins`. */
-class DependencyTracker {
-  private nodes: Map<string, string[]> = new Map();
-  required: Set<string> = new Set();
-
-  addAlias(alias: string, dependencies: string[] = []): void {
-    this.nodes.set(alias, dependencies);
-  }
-
-  markRequired(alias: string): void {
-    const marked = new Set<string>();
-    const todo = [alias];
-    while (todo.length > 0) {
-      const alias = todo.pop()!;
-      if (!marked.has(alias)) {
-        marked.add(alias);
-        todo.push(...(this.nodes.get(alias) || []));
-      }
-    }
-    this.required = new Set([...this.required, ...marked]);
-  }
-}
-
-/** Takes a `{ column: "$count", kind: eq/gt/etc }` and turns it into a ParsedSelect. */
-function buildCountStar(cc: { as: string; cond: ColumnCondition }): ParsedSelect {
-  // Reuse buildCondition to get the et/gt/etc --> operator
-  const [op, bindings] = buildCondition(cc.cond);
-  // But swap the dummy column name with `count(*)`
-  const parts = op.split(" ");
-  parts[0] = "count(*)";
-  return {
-    sql: `${parts.join(" ")} as ${cc.as}`,
-    aliases: [cc.cond.alias],
-    bindings,
-  };
-}
-
-type PartialSome<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;

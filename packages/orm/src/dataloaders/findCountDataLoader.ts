@@ -3,12 +3,13 @@ import { Entity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
-import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
-import { buildRawQuery } from "../drivers/buildRawQuery";
+import { getTables, joinKeywords, parseFindQuery } from "../QueryParser";
+import { kq } from "../keywords";
 import { cleanSql, fail } from "../utils";
 import {
+  buildConditions,
   buildValuesCte,
-  collectAndReplaceArgs,
+  collectArgs,
   createBindings,
   getBatchKeyFromGenericStructure,
   whereFilterHash,
@@ -21,7 +22,7 @@ export function findCountDataLoader<T extends Entity>(
 ): DataLoader<FilterAndSettings<T>, number> {
   const { where, ...opts } = filter;
   if (opts.limit || opts.offset) {
-    throw new Error("Cannot use limit/offset with findCountDataLoader");
+    throw new Error("Cannot use limit/offset with findDataLoader");
   }
 
   const meta = getMetadata(type);
@@ -39,50 +40,44 @@ export function findCountDataLoader<T extends Entity>(
         const { where, ...options } = queries[0];
         const query = parseFindQuery(getMetadata(type), where, options);
         const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");
-        query.selects = [`count("${primary.alias}".id) as count`];
+        query.selects = [`count(distinct "${primary.alias}".id) as count`];
         query.orderBys = [];
         const rows = await em.driver.executeFind(em, query, {});
         return [Number(rows[0].count)];
       }
 
-      // WITH _find (tag, arg1, arg2) AS (VALUES
+      // WITH data(tag, arg1, arg2) AS (VALUES
       //   (0::int, 'a'::varchar, 'a'::varchar),
       //   (1, 'b', 'b'),
       //   (2, 'c', 'c')
       // )
-      // SELECT _find.tag, _data.count
-      // FROM _find
-      // CROSS JOIN LATERAL (
-      //   SELECT count(*) as count
-      //   FROM author a WHERE a.first_name = _find.arg1 OR a.last_name = _find.arg2
-      // ) _data
+      // SELECT d.tag, count(*)
+      // FROM authors a
+      // JOIN data d ON (d.arg1 = a.first_name OR d.arg2 = a.last_name)
+      // group by d.tag;
 
       // Build the list of 'arg1', 'arg2', ... strings
-      const { where, ...options } = queries[0];
-      const query = parseFindQuery(getMetadata(type), where, options);
-      const args = collectAndReplaceArgs(query);
+      const args = collectArgs(query);
       args.unshift({ columnName: "tag", dbType: "int" });
 
-      // We're not returning the entities, just counting them...
-      query.selects = ["count(*) as count"];
-      query.orderBys = [];
+      const [primary, joins] = getTables(query);
+      // Use count(distinct id) in case two o2m joins end up duplicating rows
+      const selects = ["_find.tag as tag", `count(distinct ${kq(primary.alias)}.id) as count`];
 
-      const query2: ParsedFindQuery = {
-        selects: ["_find.tag as tag", "_data.count as count"],
-        tables: [
-          { join: "primary", table: "_find", alias: "_find" },
-          // Not sure what fromAlias is for/that it matters...
-          { join: "lateral", query: query, table: meta.tableName, alias: "_data", fromAlias: "_f" },
-        ],
-        // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
-        cte: {
-          sql: buildValuesCte("_find", args, queries),
-          bindings: createBindings(meta, queries),
-        },
-        orderBys: [],
-      };
+      // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
+      const bindings = createBindings(meta, queries);
+      // Create the JOIN clause, i.e. ON a.firstName = _find.arg0
+      const [conditions] = buildConditions(query.condition!);
 
-      const { sql, bindings } = buildRawQuery(query2, {});
+      const sql = `
+        ${buildValuesCte("_find", args, queries)}
+        SELECT ${selects.join(", ")}
+        FROM ${primary.table} as ${kq(primary.alias)}
+        ${joins.map((j) => `${joinKeywords(j)} ${j.table} ${kq(j.alias)} ON ${j.col1} = ${j.col2}`).join(" ")}
+        JOIN _find ON ${conditions}
+        GROUP BY _find.tag
+      `;
+
       const rows = await em.driver.executeQuery(em, cleanSql(sql), bindings);
 
       // Make an empty array for each batched query, per the dataloader contract

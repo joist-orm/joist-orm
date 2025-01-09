@@ -1,3 +1,10 @@
+# [1.223.0](https://github.com/joist-orm/joist-orm/compare/v1.222.0...v1.223.0) (2025-01-09)
+
+
+### Features
+
+* Allow factories to set derived values. ([#1344](https://github.com/joist-orm/joist-orm/issues/1344)) ([702210e](https://github.com/joist-orm/joist-orm/commit/702210e326dc5af320cdef1a48b7012859f3d4dc))
+
 # [1.222.0](https://github.com/joist-orm/joist-orm/compare/v1.221.0...v1.222.0) (2025-01-08)
 
 

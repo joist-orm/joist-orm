@@ -69,7 +69,7 @@ export function newTestInstance<T extends Entity>(
   em: EntityManager,
   cstr: EntityConstructor<T>,
   /** The test's test-specific override opts. */
-  testOpts: FactoryOpts<T> = {} as FactoryOpts<T>,
+  testOpts: FactoryOpts<T> = {},
   /** The factory file's default opts. */
   factoryOpts: FactoryOpts<T> & {
     useExisting?: (opts: OptsOf<T>, existing: DeepNew<T>) => boolean;

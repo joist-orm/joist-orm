@@ -2582,6 +2582,23 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  // write a test that uses a complex condition on the author.books collection but with
+  // and AND of conditions that the 1st matches on one book, an the 2nd matches on the 2nd
+  // book, and so the test case should fail/not pass
+  it("can find through o2m with complex and conditions", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "foo", author_id: 1 });
+    await insertBook({ title: "bar", author_id: 1 });
+
+    const em = newEntityManager();
+    const b = alias(Book);
+    const where = { books: b } satisfies AuthorFilter;
+    const authors = await em.find(Author, where, {
+      conditions: { and: [b.title.like("fo%"), b.title.like("%ar")] },
+    });
+    expect(authors.length).toEqual(0);
+  });
+
   it("can find through o2m via inheritance", async () => {
     await insertLargePublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });

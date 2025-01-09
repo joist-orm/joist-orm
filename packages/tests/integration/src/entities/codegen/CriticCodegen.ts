@@ -133,6 +133,9 @@ export interface CriticOrder {
   group?: PublisherGroupOrder;
 }
 
+export interface CriticFactoryExtras {
+}
+
 export const criticConfig = new ConfigApi<Critic, Context>();
 
 criticConfig.addRule(newRequiredRule("name"));
@@ -149,6 +152,7 @@ declare module "joist-orm" {
       optsType: CriticOpts;
       fieldsType: CriticFields;
       optIdsType: CriticIdsOpts;
+      factoryExtrasType: CriticFactoryExtras;
       factoryOptsType: Parameters<typeof newCritic>[1];
     };
   }

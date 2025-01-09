@@ -100,6 +100,9 @@ export interface ParentItemOrder {
   parentGroup?: ParentGroupOrder;
 }
 
+export interface ParentItemFactoryExtras {
+}
+
 export const parentItemConfig = new ConfigApi<ParentItem, Context>();
 
 parentItemConfig.addRule(newRequiredRule("createdAt"));
@@ -116,6 +119,7 @@ declare module "joist-orm" {
       optsType: ParentItemOpts;
       fieldsType: ParentItemFields;
       optIdsType: ParentItemIdsOpts;
+      factoryExtrasType: ParentItemFactoryExtras;
       factoryOptsType: Parameters<typeof newParentItem>[1];
     };
   }

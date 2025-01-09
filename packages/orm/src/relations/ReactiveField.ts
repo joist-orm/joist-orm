@@ -82,6 +82,7 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   readonly #reactiveHint: H;
   #loadPromise: any;
   #loaded: boolean;
+  #useFactoryValue = false;
   constructor(
     entity: T,
     public fieldName: keyof T & string,
@@ -110,7 +111,7 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     const { fn } = this;
     // Check #loaded to make sure we don't revert to stale values if our subgraph has been changed since
     // the last `.load()`. It's better to fail and tell the user.
-    if (this.#loaded || this.isLoaded) {
+    if (!this.#useFactoryValue && (this.#loaded || this.isLoaded)) {
       const newValue = fn(this.entity as Reacted<T, H>);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update (...unless we're accessing it
@@ -147,6 +148,11 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   get loadHint(): any {
     const meta = getMetadata(this.entity);
     return (meta.config.__data.cachedReactiveLoadHints[this.fieldName] ??= convertToLoadHint(meta, this.reactiveHint));
+  }
+
+  setFactoryValue(newValue: any): void {
+    this.#useFactoryValue = true;
+    setField(this.entity, this.fieldName, newValue);
   }
 
   [AsyncPropertyT] = undefined as any as T;

@@ -124,6 +124,9 @@ export interface AuthorStatOrder {
   updatedAt?: OrderBy;
 }
 
+export interface AuthorStatFactoryExtras {
+}
+
 export const authorStatConfig = new ConfigApi<AuthorStat, Context>();
 
 authorStatConfig.addRule(newRequiredRule("smallint"));
@@ -148,6 +151,7 @@ declare module "joist-orm" {
       optsType: AuthorStatOpts;
       fieldsType: AuthorStatFields;
       optIdsType: AuthorStatIdsOpts;
+      factoryExtrasType: AuthorStatFactoryExtras;
       factoryOptsType: Parameters<typeof newAuthorStat>[1];
     };
   }

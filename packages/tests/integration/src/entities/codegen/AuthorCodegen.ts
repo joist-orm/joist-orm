@@ -361,6 +361,18 @@ export interface AuthorOrder {
   publisher?: PublisherOrder;
 }
 
+export interface AuthorFactoryExtras {
+  withNumberOfBooks?: number;
+  withBookComments?: string | null;
+  withNickNamesUpper?: string[] | null;
+  withMentorNames?: string | null;
+  withNumberOfPublicReviews?: number | null;
+  withNumberOfPublicReviews2?: number | null;
+  withTagsOfAllBooks?: string | null;
+  withSearch?: string | null;
+  withRangeOfBooks?: BookRange | null;
+}
+
 export const authorConfig = new ConfigApi<Author, Context>();
 
 authorConfig.addRule(newRequiredRule("firstName"));
@@ -381,6 +393,7 @@ declare module "joist-orm" {
       optsType: AuthorOpts;
       fieldsType: AuthorFields;
       optIdsType: AuthorIdsOpts;
+      factoryExtrasType: AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newAuthor>[1];
     };
   }

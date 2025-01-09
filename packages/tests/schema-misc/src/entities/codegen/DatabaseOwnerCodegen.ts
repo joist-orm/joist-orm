@@ -61,6 +61,9 @@ export interface DatabaseOwnerOrder {
   name?: OrderBy;
 }
 
+export interface DatabaseOwnerFactoryExtras {
+}
+
 export const databaseOwnerConfig = new ConfigApi<DatabaseOwner, Context>();
 
 databaseOwnerConfig.addRule(newRequiredRule("name"));
@@ -75,6 +78,7 @@ declare module "joist-orm" {
       optsType: DatabaseOwnerOpts;
       fieldsType: DatabaseOwnerFields;
       optIdsType: DatabaseOwnerIdsOpts;
+      factoryExtrasType: DatabaseOwnerFactoryExtras;
       factoryOptsType: Parameters<typeof newDatabaseOwner>[1];
     };
   }

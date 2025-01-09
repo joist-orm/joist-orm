@@ -92,6 +92,9 @@ export interface T5BookOrder {
   author?: T5AuthorOrder;
 }
 
+export interface T5BookFactoryExtras {
+}
+
 export const t5BookConfig = new ConfigApi<T5Book, Context>();
 
 t5BookConfig.addRule(newRequiredRule("title"));
@@ -107,6 +110,7 @@ declare module "joist-orm" {
       optsType: T5BookOpts;
       fieldsType: T5BookFields;
       optIdsType: T5BookIdsOpts;
+      factoryExtrasType: T5BookFactoryExtras;
       factoryOptsType: Parameters<typeof newT5Book>[1];
     };
   }

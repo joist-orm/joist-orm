@@ -131,6 +131,10 @@ export interface SmallPublisherOrder extends PublisherOrder {
   group?: SmallPublisherGroupOrder;
 }
 
+export interface SmallPublisherFactoryExtras {
+  withAllAuthorNames?: string | null;
+}
+
 export const smallPublisherConfig = new ConfigApi<SmallPublisher, Context>();
 
 smallPublisherConfig.addRule(newRequiredRule("city"));
@@ -146,6 +150,7 @@ declare module "joist-orm" {
       optsType: SmallPublisherOpts;
       fieldsType: SmallPublisherFields;
       optIdsType: SmallPublisherIdsOpts;
+      factoryExtrasType: SmallPublisherFactoryExtras;
       factoryOptsType: Parameters<typeof newSmallPublisher>[1];
     };
   }

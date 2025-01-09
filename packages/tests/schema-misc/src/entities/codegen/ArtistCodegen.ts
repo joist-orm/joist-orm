@@ -93,6 +93,9 @@ export interface ArtistOrder {
   updatedAt?: OrderBy;
 }
 
+export interface ArtistFactoryExtras {
+}
+
 export const artistConfig = new ConfigApi<Artist, Context>();
 
 artistConfig.addRule(newRequiredRule("firstName"));
@@ -110,6 +113,7 @@ declare module "joist-orm" {
       optsType: ArtistOpts;
       fieldsType: ArtistFields;
       optIdsType: ArtistIdsOpts;
+      factoryExtrasType: ArtistFactoryExtras;
       factoryOptsType: Parameters<typeof newArtist>[1];
     };
   }

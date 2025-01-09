@@ -49,6 +49,9 @@ export type GraphQLFilterOf<T> = TypeMapEntry<T, "gqlFilterType">;
 /** Pulls the entity order type out of a given entity type T. */
 export type OrderOf<T> = TypeMapEntry<T, "orderType">;
 
+/** Returns the factory "extras" type, like `withDerivedField`. */
+export type FactoryExtrasOf<T> = TypeMapEntry<T, "factoryExtrasType">;
+
 /**
  * Returns the opts of the entity's `newEntity` factory method, as exists in the actual file.
  *

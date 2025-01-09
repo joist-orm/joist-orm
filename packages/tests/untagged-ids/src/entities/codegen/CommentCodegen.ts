@@ -94,6 +94,9 @@ export interface CommentOrder {
   updatedAt?: OrderBy;
 }
 
+export interface CommentFactoryExtras {
+}
+
 export const commentConfig = new ConfigApi<Comment, Context>();
 
 commentConfig.addRule(newRequiredRule("text"));
@@ -111,6 +114,7 @@ declare module "joist-orm" {
       optsType: CommentOpts;
       fieldsType: CommentFields;
       optIdsType: CommentIdsOpts;
+      factoryExtrasType: CommentFactoryExtras;
       factoryOptsType: Parameters<typeof newComment>[1];
     };
   }

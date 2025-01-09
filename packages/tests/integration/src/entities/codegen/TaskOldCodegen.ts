@@ -124,6 +124,9 @@ export interface TaskOldOrder extends TaskOrder {
   copiedFrom?: TaskOldOrder;
 }
 
+export interface TaskOldFactoryExtras {
+}
+
 export const taskOldConfig = new ConfigApi<TaskOld, Context>();
 
 taskOldConfig.addRule(newRequiredRule("specialOldField"));
@@ -141,6 +144,7 @@ declare module "joist-orm" {
       optsType: TaskOldOpts;
       fieldsType: TaskOldFields;
       optIdsType: TaskOldIdsOpts;
+      factoryExtrasType: TaskOldFactoryExtras;
       factoryOptsType: Parameters<typeof newTaskOld>[1];
     };
   }

@@ -198,15 +198,15 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     ${generatePolymorphicTypes(meta)}
     
     export interface ${entityName}Fields ${maybeBaseFields} {
-      ${generateFieldsType(config, meta, idType)}
+      ${generateFieldsType(meta, idType)}
     }
 
     export interface ${entityName}Opts ${maybeBaseOpts} {
-      ${generateOptsFields(config, meta)}
+      ${generateOptsFields(meta)}
     }
 
     export interface ${entityName}IdsOpts ${maybeBaseIdOpts} {
-      ${generateOptIdsFields(config, meta)}
+      ${generateOptIdsFields(meta)}
     }
 
     export interface ${entityName}Filter ${maybeBaseFilter} {
@@ -219,6 +219,10 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
     export interface ${entityName}Order ${maybeBaseOrder} {
       ${generateOrderFields(meta)}
+    }
+    
+    export interface ${entityName}FactoryExtras {
+      ${generateFactoryExtrasType(meta)}
     }
 
     export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
@@ -236,6 +240,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
           optsType: ${entityName}Opts;
           fieldsType: ${entityName}Fields;
           optIdsType: ${entityName}IdsOpts;
+          factoryExtrasType: ${entityName}FactoryExtras;
           factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
         };
       }
@@ -445,7 +450,7 @@ function generateDefaultValidationRules(db: DbMetadata, meta: EntityDbMetadata, 
 }
 
 // Make our opts type
-function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
+function generateOptsFields(meta: EntityDbMetadata): Code[] {
   const primitives = meta.primitives.map((field) => {
     const { fieldName, fieldType, notNull, derived } = field;
     if (derived) return code``;
@@ -491,7 +496,7 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
 }
 
 // Make our fields type
-function generateFieldsType(config: Config, meta: EntityDbMetadata, idType: "string" | "number"): Code[] {
+function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number"): Code[] {
   const id = code`id: { kind: "primitive"; type: ${idType}; unique: ${true}; nullable: never };`;
   const primitives = meta.primitives.map((field) => {
     const { fieldName, fieldType, notNull, unique, derived } = field;
@@ -526,7 +531,7 @@ function generateFieldsType(config: Config, meta: EntityDbMetadata, idType: "str
 // We know the OptIds types are only used in partials, so we make everything optional.
 // This especially needs to be the case b/c both `book: ...` and `bookId: ...` will be
 // in the partial type and of course the caller will only be setting one.
-function generateOptIdsFields(config: Config, meta: EntityDbMetadata): Code[] {
+function generateOptIdsFields(meta: EntityDbMetadata): Code[] {
   const m2o = meta.manyToOnes
     .filter(({ derived }) => !derived)
     .map(({ fieldName, otherEntity }) => {
@@ -679,6 +684,29 @@ function generateOrderFields(meta: EntityDbMetadata): Code[] {
     return code`${fieldName}?: ${otherEntity.orderType};`;
   });
   return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o];
+}
+
+function generateFactoryExtrasType(meta: EntityDbMetadata): Code[] {
+  function withName(fieldName: string): string {
+    return `with${fieldName[0].toUpperCase() + fieldName.substring(1)}`;
+  }
+  const primitives = meta.primitives
+    .filter((f) => f.derived === "async")
+    .map((field) => {
+      const { fieldName, fieldType, notNull } = field;
+      return code`${withName(fieldName)}?: ${fieldType}${maybeUnionNull(notNull)};`;
+    });
+  const enums = meta.enums
+    .filter((f) => f.derived === "async")
+    .map((field) => {
+      const { fieldName, enumType, notNull, isArray } = field;
+      if (isArray) {
+        return code`${withName(fieldName)}?: ${enumType}[];`;
+      } else {
+        return code`${withName(fieldName)}?: ${enumType}${maybeUnionNull(notNull)};`;
+      }
+    });
+  return [...primitives, ...enums];
 }
 
 function createPrimitives(meta: EntityDbMetadata, entity: Entity) {

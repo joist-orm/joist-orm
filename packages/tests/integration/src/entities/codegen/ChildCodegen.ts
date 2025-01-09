@@ -88,6 +88,9 @@ export interface ChildOrder {
   updatedAt?: OrderBy;
 }
 
+export interface ChildFactoryExtras {
+}
+
 export const childConfig = new ConfigApi<Child, Context>();
 
 childConfig.addRule(newRequiredRule("createdAt"));
@@ -103,6 +106,7 @@ declare module "joist-orm" {
       optsType: ChildOpts;
       fieldsType: ChildFields;
       optIdsType: ChildIdsOpts;
+      factoryExtrasType: ChildFactoryExtras;
       factoryOptsType: Parameters<typeof newChild>[1];
     };
   }

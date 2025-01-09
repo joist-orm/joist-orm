@@ -83,6 +83,9 @@ export interface T1BookOrder {
   author?: T1AuthorOrder;
 }
 
+export interface T1BookFactoryExtras {
+}
+
 export const t1BookConfig = new ConfigApi<T1Book, Context>();
 
 t1BookConfig.addRule(newRequiredRule("title"));
@@ -98,6 +101,7 @@ declare module "joist-orm" {
       optsType: T1BookOpts;
       fieldsType: T1BookFields;
       optIdsType: T1BookIdsOpts;
+      factoryExtrasType: T1BookFactoryExtras;
       factoryOptsType: Parameters<typeof newT1Book>[1];
     };
   }

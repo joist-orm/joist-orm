@@ -162,6 +162,10 @@ export interface TaskOrder {
   copiedFrom?: TaskOrder;
 }
 
+export interface TaskFactoryExtras {
+  withAsyncDerived?: string | null;
+}
+
 export const taskConfig = new ConfigApi<Task, Context>();
 
 taskConfig.addRule(newRequiredRule("durationInDays"));
@@ -179,6 +183,7 @@ declare module "joist-orm" {
       optsType: TaskOpts;
       fieldsType: TaskFields;
       optIdsType: TaskIdsOpts;
+      factoryExtrasType: TaskFactoryExtras;
       factoryOptsType: Parameters<typeof newTask>[1];
     };
   }

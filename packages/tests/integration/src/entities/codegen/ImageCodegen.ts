@@ -137,6 +137,9 @@ export interface ImageOrder {
   publisher?: PublisherOrder;
 }
 
+export interface ImageFactoryExtras {
+}
+
 export const imageConfig = new ConfigApi<Image, Context>();
 
 imageConfig.addRule(newRequiredRule("fileName"));
@@ -154,6 +157,7 @@ declare module "joist-orm" {
       optsType: ImageOpts;
       fieldsType: ImageFields;
       optIdsType: ImageIdsOpts;
+      factoryExtrasType: ImageFactoryExtras;
       factoryOptsType: Parameters<typeof newImage>[1];
     };
   }

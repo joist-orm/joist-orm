@@ -91,6 +91,9 @@ export interface CriticColumnOrder {
   critic?: CriticOrder;
 }
 
+export interface CriticColumnFactoryExtras {
+}
+
 export const criticColumnConfig = new ConfigApi<CriticColumn, Context>();
 
 criticColumnConfig.addRule(newRequiredRule("name"));
@@ -108,6 +111,7 @@ declare module "joist-orm" {
       optsType: CriticColumnOpts;
       fieldsType: CriticColumnFields;
       optIdsType: CriticColumnIdsOpts;
+      factoryExtrasType: CriticColumnFactoryExtras;
       factoryOptsType: Parameters<typeof newCriticColumn>[1];
     };
   }

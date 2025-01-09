@@ -388,7 +388,9 @@ describe("EntityManager.factories", () => {
 
   it("cannot pass invalid customized opts", async () => {
     const em = newEntityManager();
-    // @ts-expect-error
+    // Adding the FactoryExtrasOf is somehow making this type-error not get caught,
+    // maybe because it makes `{}` "too much" of an okay type
+    // // @ts-expect-error
     newBook(em, { tags: [new Date()] });
   });
 
@@ -891,7 +893,7 @@ describe("EntityManager.factories", () => {
       await em.flush();
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new ChildGroup at EntityManager.factories.test.ts:882↩",
+         "Creating new ChildGroup at EntityManager.factories.test.ts:884↩",
          "  childGroupId = creating new Child↩",
          "    created Child#1 added to scope↩",
          "  parentGroup = creating new ParentGroup↩",
@@ -1015,6 +1017,30 @@ describe("EntityManager.factories", () => {
         parentGroupBranchValue[0] = true;
       }
     });
+  });
+
+  it("can set ReactiveFields", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em, { withNumberOfBooks: 10 });
+    await em.flush();
+    expect(a.numberOfBooks.get).toBe(10);
+    expect(a.transientFields.numberOfBooksCalcInvoked).toBe(0);
+
+    const em2 = newEntityManager();
+    const a2 = await em2.load(Author, "a:1");
+    expect(a2.numberOfBooks.get).toBe(10);
+  });
+
+  it("can set ReactiveQueryFields", async () => {
+    const em = newEntityManager();
+    const p = newPublisher(em, { withNumberOfBookReviews: 10 });
+    await em.flush();
+    expect(p.numberOfBookReviews.get).toBe(10);
+    expect(p.transientFields.numberOfBookReviewCalcs).toBe(0);
+
+    const em2 = newEntityManager();
+    const p2 = await em2.load(Publisher, "p:1");
+    expect(p2.numberOfBookReviews.get).toBe(10);
   });
 });
 

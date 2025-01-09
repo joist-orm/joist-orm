@@ -121,6 +121,9 @@ export interface BookAdvanceOrder {
   publisher?: PublisherOrder;
 }
 
+export interface BookAdvanceFactoryExtras {
+}
+
 export const bookAdvanceConfig = new ConfigApi<BookAdvance, Context>();
 
 bookAdvanceConfig.addRule(newRequiredRule("createdAt"));
@@ -139,6 +142,7 @@ declare module "joist-orm" {
       optsType: BookAdvanceOpts;
       fieldsType: BookAdvanceFields;
       optIdsType: BookAdvanceIdsOpts;
+      factoryExtrasType: BookAdvanceFactoryExtras;
       factoryOptsType: Parameters<typeof newBookAdvance>[1];
     };
   }

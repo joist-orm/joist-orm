@@ -91,6 +91,9 @@ export interface AuthorScheduleOrder {
   author?: AuthorOrder;
 }
 
+export interface AuthorScheduleFactoryExtras {
+}
+
 export const authorScheduleConfig = new ConfigApi<AuthorSchedule, Context>();
 
 authorScheduleConfig.addRule(newRequiredRule("createdAt"));
@@ -107,6 +110,7 @@ declare module "joist-orm" {
       optsType: AuthorScheduleOpts;
       fieldsType: AuthorScheduleFields;
       optIdsType: AuthorScheduleIdsOpts;
+      factoryExtrasType: AuthorScheduleFactoryExtras;
       factoryOptsType: Parameters<typeof newAuthorSchedule>[1];
     };
   }

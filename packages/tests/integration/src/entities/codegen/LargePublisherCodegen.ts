@@ -106,6 +106,9 @@ export interface LargePublisherOrder extends PublisherOrder {
   country?: OrderBy;
 }
 
+export interface LargePublisherFactoryExtras {
+}
+
 export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
 
 declare module "joist-orm" {
@@ -118,6 +121,7 @@ declare module "joist-orm" {
       optsType: LargePublisherOpts;
       fieldsType: LargePublisherFields;
       optIdsType: LargePublisherIdsOpts;
+      factoryExtrasType: LargePublisherFactoryExtras;
       factoryOptsType: Parameters<typeof newLargePublisher>[1];
     };
   }

@@ -80,6 +80,9 @@ export interface T1AuthorOrder {
   firstName?: OrderBy;
 }
 
+export interface T1AuthorFactoryExtras {
+}
+
 export const t1AuthorConfig = new ConfigApi<T1Author, Context>();
 
 t1AuthorConfig.addRule(newRequiredRule("firstName"));
@@ -94,6 +97,7 @@ declare module "joist-orm" {
       optsType: T1AuthorOpts;
       fieldsType: T1AuthorFields;
       optIdsType: T1AuthorIdsOpts;
+      factoryExtrasType: T1AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newT1Author>[1];
     };
   }

@@ -91,6 +91,9 @@ export interface AuthorOrder {
   updatedAt?: OrderBy;
 }
 
+export interface AuthorFactoryExtras {
+}
+
 export const authorConfig = new ConfigApi<Author, Context>();
 
 authorConfig.addRule(newRequiredRule("firstName"));
@@ -107,6 +110,7 @@ declare module "joist-orm" {
       optsType: AuthorOpts;
       fieldsType: AuthorFields;
       optIdsType: AuthorIdsOpts;
+      factoryExtrasType: AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newAuthor>[1];
     };
   }

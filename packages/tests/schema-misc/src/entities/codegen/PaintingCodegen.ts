@@ -91,6 +91,9 @@ export interface PaintingOrder {
   artist?: ArtistOrder;
 }
 
+export interface PaintingFactoryExtras {
+}
+
 export const paintingConfig = new ConfigApi<Painting, Context>();
 
 paintingConfig.addRule(newRequiredRule("title"));
@@ -108,6 +111,7 @@ declare module "joist-orm" {
       optsType: PaintingOpts;
       fieldsType: PaintingFields;
       optIdsType: PaintingIdsOpts;
+      factoryExtrasType: PaintingFactoryExtras;
       factoryOptsType: Parameters<typeof newPainting>[1];
     };
   }

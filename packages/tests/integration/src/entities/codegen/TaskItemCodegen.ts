@@ -109,6 +109,9 @@ export interface TaskItemOrder {
   task?: TaskOrder;
 }
 
+export interface TaskItemFactoryExtras {
+}
+
 export const taskItemConfig = new ConfigApi<TaskItem, Context>();
 
 taskItemConfig.addRule(newRequiredRule("createdAt"));
@@ -126,6 +129,7 @@ declare module "joist-orm" {
       optsType: TaskItemOpts;
       fieldsType: TaskItemFields;
       optIdsType: TaskItemIdsOpts;
+      factoryExtrasType: TaskItemFactoryExtras;
       factoryOptsType: Parameters<typeof newTaskItem>[1];
     };
   }

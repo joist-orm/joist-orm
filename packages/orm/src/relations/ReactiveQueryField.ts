@@ -40,6 +40,7 @@ export class ReactiveQueryFieldImpl<T extends Entity, H1 extends ReactiveHint<T>
   readonly #dbHint: H2;
   #loadPromise: any;
   #loaded: boolean;
+  #useFactoryValue = false;
 
   constructor(
     entity: T,
@@ -67,7 +68,10 @@ export class ReactiveQueryFieldImpl<T extends Entity, H1 extends ReactiveHint<T>
     // if (!this.isSet || opts?.forceReload) {
     return (this.#loadPromise ??= this.entity.em
       .populate(this.entity, { hint: this.loadHint } as any)
-      .then(() => this.fn(this.entity as Reacted<T, H1>))
+      .then(() => {
+        // Even if the factory used a `with...`, we'll still go through the RFQ logic, but just ignore the new value
+        return this.#useFactoryValue ? this.fieldValue : this.fn(this.entity as Reacted<T, H1>);
+      })
       .then((newValue) => {
         setField(this.entity, this.fieldName, newValue);
         this.#loadPromise = undefined;
@@ -116,6 +120,11 @@ export class ReactiveQueryFieldImpl<T extends Entity, H1 extends ReactiveHint<T>
     // Only convert the paramHint, so we don't pull the dbHint-referenced data into memory
     const meta = getMetadata(this.entity);
     return (meta.config.__data.cachedReactiveLoadHints[this.fieldName] ??= convertToLoadHint(meta, this.#paramHint));
+  }
+
+  setFactoryValue(newValue: any): void {
+    this.#useFactoryValue = true;
+    setField(this.entity, this.fieldName, newValue);
   }
 
   [AsyncPropertyT] = undefined as any as T;

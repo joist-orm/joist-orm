@@ -118,6 +118,9 @@ export interface TaskNewOrder extends TaskOrder {
   copiedFrom?: TaskNewOrder;
 }
 
+export interface TaskNewFactoryExtras {
+}
+
 export const taskNewConfig = new ConfigApi<TaskNew, Context>();
 
 taskNewConfig.addRule("selfReferential", mustBeSubType("selfReferential"));
@@ -134,6 +137,7 @@ declare module "joist-orm" {
       optsType: TaskNewOpts;
       fieldsType: TaskNewFields;
       optIdsType: TaskNewIdsOpts;
+      factoryExtrasType: TaskNewFactoryExtras;
       factoryOptsType: Parameters<typeof newTaskNew>[1];
     };
   }

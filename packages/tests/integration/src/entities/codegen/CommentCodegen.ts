@@ -150,6 +150,11 @@ export interface CommentOrder {
   user?: UserOrder;
 }
 
+export interface CommentFactoryExtras {
+  withParentTaggedId?: string | null;
+  withParentTags?: string;
+}
+
 export const commentConfig = new ConfigApi<Comment, Context>();
 
 commentConfig.addRule("parentTags", newRequiredRule("parentTags"));
@@ -167,6 +172,7 @@ declare module "joist-orm" {
       optsType: CommentOpts;
       fieldsType: CommentFields;
       optIdsType: CommentIdsOpts;
+      factoryExtrasType: CommentFactoryExtras;
       factoryOptsType: Parameters<typeof newComment>[1];
     };
   }

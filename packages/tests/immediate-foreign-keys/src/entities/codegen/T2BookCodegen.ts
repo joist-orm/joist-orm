@@ -89,6 +89,9 @@ export interface T2BookOrder {
   author?: T2AuthorOrder;
 }
 
+export interface T2BookFactoryExtras {
+}
+
 export const t2BookConfig = new ConfigApi<T2Book, Context>();
 
 t2BookConfig.addRule(newRequiredRule("title"));
@@ -104,6 +107,7 @@ declare module "joist-orm" {
       optsType: T2BookOpts;
       fieldsType: T2BookFields;
       optIdsType: T2BookIdsOpts;
+      factoryExtrasType: T2BookFactoryExtras;
       factoryOptsType: Parameters<typeof newT2Book>[1];
     };
   }

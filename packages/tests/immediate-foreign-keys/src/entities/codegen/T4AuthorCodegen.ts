@@ -89,6 +89,9 @@ export interface T4AuthorOrder {
   favoriteBook?: T4BookOrder;
 }
 
+export interface T4AuthorFactoryExtras {
+}
+
 export const t4AuthorConfig = new ConfigApi<T4Author, Context>();
 
 t4AuthorConfig.addRule(newRequiredRule("firstName"));
@@ -104,6 +107,7 @@ declare module "joist-orm" {
       optsType: T4AuthorOpts;
       fieldsType: T4AuthorFields;
       optIdsType: T4AuthorIdsOpts;
+      factoryExtrasType: T4AuthorFactoryExtras;
       factoryOptsType: Parameters<typeof newT4Author>[1];
     };
   }

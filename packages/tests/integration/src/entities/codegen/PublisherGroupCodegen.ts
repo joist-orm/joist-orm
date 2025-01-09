@@ -118,6 +118,10 @@ export interface PublisherGroupOrder {
   updatedAt?: OrderBy;
 }
 
+export interface PublisherGroupFactoryExtras {
+  withNumberOfBookReviews?: number;
+}
+
 export const publisherGroupConfig = new ConfigApi<PublisherGroup, Context>();
 
 publisherGroupConfig.addRule("numberOfBookReviews", newRequiredRule("numberOfBookReviews"));
@@ -134,6 +138,7 @@ declare module "joist-orm" {
       optsType: PublisherGroupOpts;
       fieldsType: PublisherGroupFields;
       optIdsType: PublisherGroupIdsOpts;
+      factoryExtrasType: PublisherGroupFactoryExtras;
       factoryOptsType: Parameters<typeof newPublisherGroup>[1];
     };
   }

@@ -6,8 +6,11 @@ import { getDefaultDependencies, setSyncDefaults } from "./defaults";
 import { getProperties } from "./getProperties";
 import { New } from "./loadHints";
 import { isAllSqlPaths } from "./loadLens";
+import { FactoryInitialValue } from "./newTestInstance";
 import { isAsyncProperty, isReactiveField, isReactiveGetter, isReactiveQueryField } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
+import { ReactiveFieldImpl } from "./relations/ReactiveField";
+import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
 import { TimestampSerde } from "./serde";
 import { OptsOf } from "./typeMap";
 import { fail } from "./utils";
@@ -217,13 +220,20 @@ export function setOpts<T extends Entity>(
         } else {
           current.set(value);
         }
-      } else if (
-        isAsyncProperty(current) ||
-        isReactiveField(current) ||
-        isReactiveGetter(current) ||
-        isReactiveQueryField(current)
-      ) {
+      } else if (isAsyncProperty(current) || isReactiveGetter(current)) {
         throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
+      } else if (isReactiveField(current) || isReactiveQueryField(current)) {
+        if (value instanceof FactoryInitialValue) {
+          if (current instanceof ReactiveFieldImpl) {
+            current.setFactoryValue(value.value);
+          } else if (current instanceof ReactiveQueryFieldImpl) {
+            current.setFactoryValue(value.value);
+          } else {
+            throw new Error(`Unhandled case ${current.constructor.name}`);
+          }
+        } else {
+          throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
+        }
       } else {
         (entity as any)[key] = value;
       }

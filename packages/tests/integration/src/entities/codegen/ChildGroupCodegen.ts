@@ -110,6 +110,9 @@ export interface ChildGroupOrder {
   parentGroup?: ParentGroupOrder;
 }
 
+export interface ChildGroupFactoryExtras {
+}
+
 export const childGroupConfig = new ConfigApi<ChildGroup, Context>();
 
 childGroupConfig.addRule(newRequiredRule("createdAt"));
@@ -127,6 +130,7 @@ declare module "joist-orm" {
       optsType: ChildGroupOpts;
       fieldsType: ChildGroupFields;
       optIdsType: ChildGroupIdsOpts;
+      factoryExtrasType: ChildGroupFactoryExtras;
       factoryOptsType: Parameters<typeof newChildGroup>[1];
     };
   }

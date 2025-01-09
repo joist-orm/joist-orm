@@ -16,7 +16,7 @@ import {
   PrimitiveField,
 } from "./EntityMetadata";
 import { hasDefaultValue, setAsyncDefaultsSynchronously } from "./defaults";
-import { DeepNew, New } from "./index";
+import { DeepNew, FactoryExtrasOf, New } from "./index";
 import { tagId } from "./keys";
 import { FactoryLogger } from "./logging/FactoryLogger";
 import { maybeRequireTemporal } from "./temporal";
@@ -41,6 +41,10 @@ export type FactoryOpts<T extends Entity> = DeepPartialOpts<T> & {
   useFactoryDefaults?: boolean | "none";
   useExistingCheck?: boolean;
   useLogging?: boolean;
+} & {
+  // We use a mapped type here with an explicit `?`, instead of just `FactoryExtrasOf<T>`,
+  // so that tsc knows that `{}` is a valid default opts value.
+  [K in keyof FactoryExtrasOf<T>]?: FactoryExtrasOf<T>[K];
 };
 
 // Chosen b/c it's a monday https://www.timeanddate.com/calendar/monthly.html?year=2018&month=1&country=1
@@ -65,7 +69,7 @@ export function newTestInstance<T extends Entity>(
   em: EntityManager,
   cstr: EntityConstructor<T>,
   /** The test's test-specific override opts. */
-  testOpts: FactoryOpts<T> = {},
+  testOpts: FactoryOpts<T> = {} as FactoryOpts<T>,
   /** The factory file's default opts. */
   factoryOpts: FactoryOpts<T> & {
     useExisting?: (opts: OptsOf<T>, existing: DeepNew<T>) => boolean;
@@ -173,6 +177,7 @@ export function newTestInstance<T extends Entity>(
       } else if (field.kind === "poly" && required) {
         return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
       }
+
       return [];
     })
     .filter((t) => t.length > 0);
@@ -212,6 +217,14 @@ export function newTestInstance<T extends Entity>(
     // Look for `use` / etc
     if (knownUseKeys.includes(fieldName)) return [];
     if (!field) {
+      // Look for extra/derived fields
+      if (fieldName.startsWith("with")) {
+        const realName = fieldName[4].toLowerCase() + fieldName.substring(5);
+        const realField = meta.allFields[realName];
+        if (realField && "derived" in realField && realField.derived === "async") {
+          return [realName, new FactoryInitialValue(optValue)];
+        }
+      }
       throw new Error(`Unknown field ${fieldName}`);
     }
     if (optValue === null || optValue === undefined) return [];
@@ -793,4 +806,9 @@ class CopyMap extends Map<Function, UseMapValue> {
 /** Enables factory logging for all factories. */
 export function setFactoryLogging(enabled: boolean): void {
   logger = enabled ? new FactoryLogger() : undefined;
+}
+
+/** Marker for tests setting derived values during test setup. */
+export class FactoryInitialValue {
+  constructor(public readonly value: any) {}
 }

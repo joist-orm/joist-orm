@@ -129,6 +129,11 @@ export interface BookReviewOrder {
   critic?: CriticOrder;
 }
 
+export interface BookReviewFactoryExtras {
+  withIsPublic?: boolean;
+  withIsTest?: boolean;
+}
+
 export const bookReviewConfig = new ConfigApi<BookReview, Context>();
 
 bookReviewConfig.addRule(newRequiredRule("rating"));
@@ -148,6 +153,7 @@ declare module "joist-orm" {
       optsType: BookReviewOpts;
       fieldsType: BookReviewFields;
       optIdsType: BookReviewIdsOpts;
+      factoryExtrasType: BookReviewFactoryExtras;
       factoryOptsType: Parameters<typeof newBookReview>[1];
     };
   }

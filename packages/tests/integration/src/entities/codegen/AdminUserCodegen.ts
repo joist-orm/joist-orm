@@ -74,6 +74,9 @@ export interface AdminUserOrder extends UserOrder {
   role?: OrderBy;
 }
 
+export interface AdminUserFactoryExtras {
+}
+
 export const adminUserConfig = new ConfigApi<AdminUser, Context>();
 
 adminUserConfig.addRule(newRequiredRule("role"));
@@ -88,6 +91,7 @@ declare module "joist-orm" {
       optsType: AdminUserOpts;
       fieldsType: AdminUserFields;
       optIdsType: AdminUserIdsOpts;
+      factoryExtrasType: AdminUserFactoryExtras;
       factoryOptsType: Parameters<typeof newAdminUser>[1];
     };
   }

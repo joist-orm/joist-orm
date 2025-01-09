@@ -91,6 +91,9 @@ export interface BookOrder {
   author?: AuthorOrder;
 }
 
+export interface BookFactoryExtras {
+}
+
 export const bookConfig = new ConfigApi<Book, Context>();
 
 bookConfig.addRule(newRequiredRule("title"));
@@ -108,6 +111,7 @@ declare module "joist-orm" {
       optsType: BookOpts;
       fieldsType: BookFields;
       optIdsType: BookIdsOpts;
+      factoryExtrasType: BookFactoryExtras;
       factoryOptsType: Parameters<typeof newBook>[1];
     };
   }

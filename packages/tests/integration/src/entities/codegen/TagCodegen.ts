@@ -116,6 +116,9 @@ export interface TagOrder {
   updatedAt?: OrderBy;
 }
 
+export interface TagFactoryExtras {
+}
+
 export const tagConfig = new ConfigApi<Tag, Context>();
 
 tagConfig.addRule(newRequiredRule("name"));
@@ -132,6 +135,7 @@ declare module "joist-orm" {
       optsType: TagOpts;
       fieldsType: TagFields;
       optIdsType: TagIdsOpts;
+      factoryExtrasType: TagFactoryExtras;
       factoryOptsType: Parameters<typeof newTag>[1];
     };
   }

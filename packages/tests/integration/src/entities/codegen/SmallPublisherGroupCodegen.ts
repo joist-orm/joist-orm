@@ -82,6 +82,9 @@ export interface SmallPublisherGroupOrder extends PublisherGroupOrder {
   smallName?: OrderBy;
 }
 
+export interface SmallPublisherGroupFactoryExtras {
+}
+
 export const smallPublisherGroupConfig = new ConfigApi<SmallPublisherGroup, Context>();
 
 declare module "joist-orm" {
@@ -94,6 +97,7 @@ declare module "joist-orm" {
       optsType: SmallPublisherGroupOpts;
       fieldsType: SmallPublisherGroupFields;
       optIdsType: SmallPublisherGroupIdsOpts;
+      factoryExtrasType: SmallPublisherGroupFactoryExtras;
       factoryOptsType: Parameters<typeof newSmallPublisherGroup>[1];
     };
   }

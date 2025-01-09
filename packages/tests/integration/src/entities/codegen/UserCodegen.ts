@@ -188,6 +188,9 @@ export interface UserOrder {
   authorManyToOne?: AuthorOrder;
 }
 
+export interface UserFactoryExtras {
+}
+
 export const userConfig = new ConfigApi<User, Context>();
 
 userConfig.addRule(newRequiredRule("name"));
@@ -208,6 +211,7 @@ declare module "joist-orm" {
       optsType: UserOpts;
       fieldsType: UserFields;
       optIdsType: UserIdsOpts;
+      factoryExtrasType: UserFactoryExtras;
       factoryOptsType: Parameters<typeof newUser>[1];
     };
   }

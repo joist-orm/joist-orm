@@ -29,6 +29,7 @@ const allImagesHint = { images: [], authors: { image: [], books: "image" } } as 
 export abstract class Publisher extends PublisherCodegen {
   transientFields = {
     numberOfBookReviewEvals: 0,
+    numberOfBookReviewCalcs: 0,
     wasNewInBeforeCommit: undefined as boolean | undefined,
     changedInBeforeCommit: [] as string[],
   };
@@ -43,7 +44,10 @@ export abstract class Publisher extends PublisherCodegen {
     // this hint will recalc + not be available on `p`
     { authors: { books: "reviews" } },
     // findCount is N+1 safe
-    (p) => p.em.findCount(BookReview, { book: { author: { publisher: p.id } } }),
+    (p) => {
+      p.transientFields.numberOfBookReviewCalcs++;
+      return p.em.findCount(BookReview, { book: { author: { publisher: p.id } } });
+    },
   );
 
   /** Example of a ReactiveField reacting to ReactiveReferences. */

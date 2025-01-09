@@ -221,6 +221,11 @@ export interface PublisherOrder {
   spotlightAuthor?: AuthorOrder;
 }
 
+export interface PublisherFactoryExtras {
+  withNumberOfBookReviews?: number;
+  withTitlesOfFavoriteBooks?: string | null;
+}
+
 export const publisherConfig = new ConfigApi<Publisher, Context>();
 
 publisherConfig.addRule(newRequiredRule("name"));
@@ -243,6 +248,7 @@ declare module "joist-orm" {
       optsType: PublisherOpts;
       fieldsType: PublisherFields;
       optIdsType: PublisherIdsOpts;
+      factoryExtrasType: PublisherFactoryExtras;
       factoryOptsType: Parameters<typeof newPublisher>[1];
     };
   }

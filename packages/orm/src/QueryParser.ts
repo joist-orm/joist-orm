@@ -3,11 +3,10 @@ import { aliasMgmt, isAlias, newAliasProxy } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
-import { abbreviation } from "./QueryBuilder";
 import { visitConditions } from "./QueryVisitor";
 import { getMetadataForTable } from "./configure";
 import { buildCondition } from "./drivers/buildUtils";
-import { Column, getConstructorFromTaggedId, isDefined } from "./index";
+import { AliasAssigner, Column, getConstructorFromTaggedId, isDefined } from "./index";
 import { kq, kqDot } from "./keywords";
 import { assertNever, fail, partition } from "./utils";
 
@@ -144,7 +143,7 @@ export function parseFindQuery(
     keepAliases?: string[];
     softDeletes?: "include" | "exclude";
     // Let `addLateralJoin` pass in a shared `aliases` instance
-    aliases?: Record<string, number>;
+    aliases?: AliasAssigner;
     // Let `addLateralJoin` pass in its existing alias for the subquery's primary table
     alias?: string;
     topLevelCondition?: ConditionBuilder;
@@ -162,13 +161,8 @@ export function parseFindQuery(
 
   const cb = new ConditionBuilder();
 
-  const aliases: Record<string, number> = opts.aliases ?? {};
-  function getAlias(tableName: string): string {
-    const abbrev = abbreviation(tableName);
-    const i = aliases[abbrev] || 0;
-    aliases[abbrev] = i + 1;
-    return i === 0 ? abbrev : `${abbrev}${i}`;
-  }
+  const aliases = opts.aliases ?? new AliasAssigner();
+  const getAlias = aliases.getAlias.bind(aliases);
 
   // If they passed extra `conditions: ...`, parse that.
   // We can do this up-front b/c it doesn't require any join-tree metadata to perform,
@@ -1127,7 +1121,7 @@ export class ConditionBuilder {
    * @param alias the alias being "hidden" in a lateral join, and so its columns/data won't be
    *   available for the top-level condition to directly AND/OR against.
    */
-  findAndRewrite2(topLevelLateralJoin: string, alias: string): { cond: ColumnCondition; as: string }[] {
+  findAndRewrite(topLevelLateralJoin: string, alias: string): { cond: ColumnCondition; as: string }[] {
     let j = 0;
     const found: { cond: ColumnCondition; as: string }[] = [];
     const todo: ParsedExpressionCondition[][] = [this.conditions];

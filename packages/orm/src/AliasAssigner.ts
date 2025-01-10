@@ -41,3 +41,10 @@ export class AliasAssigner {
     this.#aliases[tag] = Math.max(ourN, newN);
   }
 }
+
+// function getAlias(tableName: string): string {
+//   const abbrev = abbreviation(tableName);
+//   const i = aliases[abbrev] || 0;
+//   aliases[abbrev] = i + 1;
+//   return i === 0 ? abbrev : `${abbrev}${i}`;
+// }

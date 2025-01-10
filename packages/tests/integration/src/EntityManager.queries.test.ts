@@ -2594,8 +2594,16 @@ describe("EntityManager.queries", () => {
     const b = alias(Book);
     const where = { books: b } satisfies AuthorFilter;
     const authors = await em.find(Author, where, {
-      conditions: { and: [b.title.like("fo%"), b.title.like("%ar")] },
+      conditions: {
+        and: [
+          // Given a condition where "some book" matches the 1st condition
+          b.title.eq("foo"),
+          // And some "other book" matches the 2nd condition
+          b.title.eq("bar"),
+        ],
+      },
     });
+    // Then we don't match
     expect(authors.length).toEqual(0);
   });
 

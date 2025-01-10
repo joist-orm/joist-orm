@@ -1127,7 +1127,7 @@ export class ConditionBuilder {
    * @param alias the alias being "hidden" in a lateral join, and so its columns/data won't be
    *   available for the top-level condition to directly AND/OR against.
    */
-  findAndRewrite(topLevelLateralJoin: string, alias: string): { cond: ColumnCondition; as: string }[] {
+  findAndRewrite2(topLevelLateralJoin: string, alias: string): { cond: ColumnCondition; as: string }[] {
     let j = 0;
     const found: { cond: ColumnCondition; as: string }[] = [];
     const todo: ParsedExpressionCondition[][] = [this.conditions];

@@ -39,6 +39,10 @@ export class AliasAssigner {
     return this.#ctes[alias] || fail(`No CTEs found for alias ${alias}`);
   }
 
+  getCtePath(alias: string): string[] {
+    return this.getCtes(alias).map((cte) => cte.alias);
+  }
+
   setTable(alias: string, table: ParsedTable, ctes: CteJoinTable[]): void {
     this.#tables[alias] = table;
     this.#ctes[alias] = ctes;

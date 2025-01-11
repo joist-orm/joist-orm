@@ -102,7 +102,7 @@ export interface CteJoinTable {
   col1: string;
   /** The column within the CTE we're joining to. */
   col2: string;
-  /** Whether to use an outer join. */
+  /** Whether to use an outer join, i.e. b/c its optional to have a child from this join. */
   outer?: boolean;
 }
 
@@ -571,6 +571,7 @@ export function parseFindQuery(
       cb.maybeAddExpression(opts.conditions);
       const condition = cb.toExpressionFilter();
       if (condition) {
+        // We could make sure there is at least 1 CTE before calling this...
         rewriteTopLevelCondition(aliases, condition);
         Object.assign(query, { condition });
       }
@@ -594,7 +595,7 @@ export function parseFindQuery(
   }
   maybeAddOrderBy(query, meta, alias);
 
-  if (pruneJoins) {
+  if (isTopLevelQuery && pruneJoins) {
     pruneUnusedJoins(query, keepAliases);
   }
 
@@ -667,13 +668,28 @@ function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpre
         });
         // How many child CTEs does it touch, if any?
         const touchedCtes = [...used].map((a) => aliases.getCtes(a)[0]).filter((c) => !!c);
-        // If it only touches one, we can push it down
-        if (touchedCtes.length === 1) {
+        if (touchedCtes.length === 0) {
+          // Nothing to do, leave this condition in-place
+        } else if (touchedCtes.length === 1) {
+          // If it only touches one, we can push it down directly to that CTE
           const [cte] = touchedCtes;
-          if (cte) {
+          cte.query.condition!.conditions.push(c);
+          cc.splice(i, 1);
+          // ...need to ensure this CTE, and it's parent CTEs, have "at least one" enabled
+        } else {
+          // Find the common parent CTE, if any
+          const ctePaths = [...used].map((a) => aliases.getCtePath(a));
+          const target = deepestCommonCte(ctePaths);
+          if (!target) {
+            // leave it here and rewrite
+          } else {
+            // Push it into the target
+            const cte = aliases.getCtes(target)[0];
             cte.query.condition!.conditions.push(c);
             cc.splice(i, 1);
           }
+          // Are these the same path?
+          // console.log(touchedCtes);
         }
 
         // Pick where to push this...
@@ -1585,3 +1601,31 @@ type PartialSome<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 //   // prune needs to see the immediate, not necessarily the whole conditions...
 //   // only rewriting needs to see the whole thing
 // }
+
+function deepestCommonCte(ctePaths: string[][]): string | undefined {
+  // First turn them all into `books`, `books/reviews/ratings`, etc.
+  const paths = ctePaths.map((path) => path.join("/"));
+  // Then find the longest common prefix
+  const prefix = longestCommonPrefix(paths);
+  if (!prefix) return undefined;
+  const aliases = prefix.split("/");
+  return aliases[aliases.length - 1];
+}
+
+function longestCommonPrefix(paths: string[]): string | undefined {
+  if (paths.length === 0) return undefined;
+  // Function to find the common prefix between two strings
+  const commonPrefix = (str1: string, str2: string): string => {
+    let i = 0;
+    while (i < str1.length && i < str2.length && str1[i] === str2[i]) i++;
+    return str1.substring(0, i);
+  };
+  // Initialize the prefix with the first string
+  let prefix = paths[0];
+  // Iterate through the paths to find the common prefix
+  for (let i = 1; i < paths.length; i++) {
+    prefix = commonPrefix(prefix, paths[i]);
+    if (prefix === "") return undefined;
+  }
+  return prefix;
+}

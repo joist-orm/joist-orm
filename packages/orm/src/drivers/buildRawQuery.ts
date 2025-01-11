@@ -26,7 +26,7 @@ export function buildRawQuery(
   const [primary, , , , ctes] = getTables(parsed);
   for (const cte of ctes) {
     const { sql: subQ, bindings: subB } = buildRawQuery(cte.query, {});
-    sql += ` WITH ${kq(cte.alias)} AS (${subQ})`;
+    sql += `WITH ${kq(cte.alias)} AS (${subQ}) `;
     bindings.push(...subB);
   }
 
@@ -46,12 +46,14 @@ export function buildRawQuery(
 
   // Then the joins
   for (const t of parsed.tables) {
-    if (t.join === "primary" || t.join === "cte") {
+    if (t.join === "primary") {
       // handled above
     } else if (t.join === "inner") {
       sql += ` JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
     } else if (t.join === "outer") {
       sql += ` LEFT OUTER JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
+    } else if (t.join === "cte") {
+      sql += ` JOIN ${t.alias} ON ${t.col1} = ${t.col2}`;
     } else if (t.join === "lateral") {
       const { sql: subQ, bindings: subB } = buildRawQuery(t.query, {});
       sql += ` CROSS JOIN LATERAL (${subQ}) AS ${kq(t.alias)}`;

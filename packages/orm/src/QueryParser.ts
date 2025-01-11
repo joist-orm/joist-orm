@@ -95,11 +95,13 @@ export interface CrossJoinTable {
 export interface CteJoinTable {
   join: "cte";
   alias: string;
-  /** Used for join dependency tracking. */
-  fromAlias: string;
   /** Used more for bookkeeping/consistency with other join tables than the query itself. */
   table: string;
   query: ParsedFindQuery;
+  /** The column within the current query we're joining from. */
+  col1: string;
+  /** The column within the CTE we're joining to. */
+  col2: string;
 }
 
 export interface LateralJoinTable {
@@ -160,9 +162,6 @@ export function parseFindQuery(
     alias?: string;
     topLevelCondition?: ConditionBuilder;
     outerLateralJoins?: { alias: string; select: ParsedSelect[]; outerCb: ConditionBuilder }[];
-    // Let `addLateralJoin` pass in its join conditions (...we could probably avoid this
-    // param if instead the join was passed into the unparsed `conditions` opt).
-    rawConditions?: RawCondition[];
   } = {},
 ): ParsedFindQuery {
   const selects: ParsedSelect[] = [];
@@ -181,18 +180,12 @@ export function parseFindQuery(
   // and then it's available for our `addLateralJoin`s to rewrite.
   if (opts.conditions) cb.maybeAddExpression(opts.conditions);
 
-  // Also see if outer `addLateralJoin` is passing us its join conditions
-  if (opts.rawConditions) {
-    for (const rc of opts.rawConditions) cb.addRawCondition(rc);
-  }
-
   function addLateralJoin(
     meta: EntityMetadata,
-    fromAlias: string,
     alias: string,
     filter: any,
-    // The join condition for the subquery from the outer table
-    condition: RawCondition,
+    col1: string,
+    col2: string,
     // If we're a m2m, the join table to inject (which will use the outer table)
     joinTable: JoinTable | undefined,
     // Allow addOrderBy to do its own post-addTable lateral join building
@@ -225,16 +218,16 @@ export function parseFindQuery(
         keepAliases: opts.keepAliases,
         aliases,
         alias,
-        // And set our own complex condition as the join condition (for o2m, two for m2m)
-        rawConditions: [condition],
         // Let the subquery's pruneUnusedJoins know about the top-level WHERE clauses
         topLevelCondition: opts.topLevelCondition ?? cb,
         outerLateralJoins: [{ alias, select: selects, outerCb: cb }, ...(opts.outerLateralJoins ?? [])],
       },
     );
     subQuery.orderBys = [];
+    subQuery.selects.unshift(col2);
+    subQuery.groupBys = [{ alias, column: parseColumn(col2) }];
     if (joinTable) subQuery.tables.unshift(joinTable);
-    const join: CteJoinTable = { join: "cte", table: meta.tableName, query: subQuery, alias, fromAlias };
+    const join: CteJoinTable = { join: "cte", table: meta.tableName, query: subQuery, alias, col1, col2 };
     (orderByTables ?? tables).push(join);
     aliases.setTable(alias, join);
 
@@ -403,13 +396,12 @@ export function parseFindQuery(
               fail(`No poly component found for ${otherField.fieldName}`);
             otherColumn = otherComponent.columnName;
           }
-          const condition = `${kqDot(alias, "id")} = ${kqDot(a + otherField.aliasSuffix, otherColumn)}`;
           addLateralJoin(
             field.otherMetadata(),
-            alias,
             a,
             (ef.subFilter as any)[key],
-            { kind: "raw", aliases: [a, alias], condition, pruneable: true, bindings: [] },
+            kqDot(alias, "id"),
+            kqDot(a + otherField.aliasSuffix, otherColumn),
             undefined,
           );
         } else if (field.kind === "m2m") {
@@ -423,13 +415,12 @@ export function parseFindQuery(
             col2: kqDot(ja, field.columnNames[0]),
           };
           const a = getAlias(field.otherMetadata().tableName);
-          const condition = `${kqDot(ja, field.columnNames[1])} = ${kqDot(a, "id")}`;
           addLateralJoin(
             field.otherMetadata(),
-            alias,
             a,
             (ef.subFilter as any)[key],
-            { kind: "raw", aliases: [ja, a], condition, bindings: [], pruneable: true },
+            kqDot(ja, field.columnNames[1]),
+            kqDot(a, "id"),
             jt,
           );
         } else {
@@ -518,18 +509,18 @@ export function parseFindQuery(
               fail(`No poly component found for ${otherField.fieldName}`);
             otherColumn = otherComponent.columnName;
           }
-          const condition = `${kqDot(alias, "id")} = ${kqDot(a + otherField.aliasSuffix, otherColumn)}`;
-          table = addLateralJoin(
-            field.otherMetadata(),
-            alias,
-            a,
-            undefined,
-            { kind: "raw", aliases: [a, alias], condition, pruneable: true, bindings: [] },
-            undefined,
-            tables,
-          )!;
+          // const condition = `${kqDot(alias, "id")} = ${kqDot(a + otherField.aliasSuffix, otherColumn)}`;
+          // table = addLateralJoin(
+          //   field.otherMetadata(),
+          //   alias,
+          //   a,
+          //   undefined,
+          //   { kind: "raw", aliases: [a, alias], condition, pruneable: true, bindings: [] },
+          //   undefined,
+          //   tables,
+          // )!;
         }
-        addOrderBy(field.otherMetadata(), table.alias, value, [...lateralJoins, table]);
+        // addOrderBy(field.otherMetadata(), table.alias, value, [...lateralJoins, table]);
       } else {
         throw new Error(`Unsupported field ${key}`);
       }
@@ -624,7 +615,7 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
       // Recurse into lateral joins...
       todo.push(...t.query.tables);
     } else if (t.join === "cte") {
-      dt.addAlias(t.alias, [t.fromAlias]);
+      dt.addAlias(t.alias, [parseAlias(t.col1)]);
       todo.push(...t.query.tables);
     } else if (t.join === "cross") {
       // Doesn't have any conditions
@@ -706,6 +697,11 @@ function deepFindConditions(
 /** Returns the `a` from `"a".*`. */
 export function parseAlias(alias: string): string {
   return alias.split(".")[0].replaceAll(`"`, "");
+}
+
+/** Returns the `column` from `a."column"`. */
+export function parseColumn(alias: string): string {
+  return alias.split(".")[1].replaceAll(`"`, "");
 }
 
 /** An ADT version of `EntityFilter`. */

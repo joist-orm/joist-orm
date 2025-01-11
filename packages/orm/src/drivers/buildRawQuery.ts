@@ -25,20 +25,10 @@ export function buildRawQuery(
     bindings.push(...parsed.cte.bindings);
   }
 
-  const [primary, , , , ctes] = getTables(parsed);
   // Pull all CTEs up to the top
   if (isTopLevel) {
-    const allCtes: CteJoinTable[] = [];
-    const todo = [...ctes];
-    while (todo.length > 0) {
-      const cte = todo.pop()!;
-      allCtes.push(cte);
-      const [, , , , ctes] = getTables(cte.query);
-      todo.push(...ctes);
-    }
     let i = 0;
-    allCtes.reverse();
-    for (const cte of allCtes) {
+    for (const cte of deepFindCtes(parsed)) {
       const commaOrWith = i === 0 ? "WITH" : ",";
       const { sql: subQ, bindings: subB } = buildRawQuery(cte.query, { isTopLevel: false });
       sql += `${commaOrWith} ${kq(cte.alias)} AS (${subQ}) `;
@@ -59,6 +49,7 @@ export function buildRawQuery(
   });
 
   // Make sure the primary is first
+  const [primary] = getTables(parsed);
   sql += ` FROM ${as(primary)}`;
 
   // Then the joins
@@ -119,3 +110,15 @@ export function buildRawQuery(
 }
 
 const as = (t: ParsedTable) => `${kq(t.table)} AS ${kq(t.alias)}`;
+
+function deepFindCtes(query: ParsedFindQuery): CteJoinTable[] {
+  const all: CteJoinTable[] = [];
+  const todo = getTables(query)[4];
+  while (todo.length > 0) {
+    const cte = todo.pop()!;
+    all.push(cte);
+    todo.push(...getTables(cte.query)[4]);
+  }
+  all.reverse();
+  return all;
+}

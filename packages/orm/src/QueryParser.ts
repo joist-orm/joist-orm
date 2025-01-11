@@ -656,7 +656,7 @@ function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpre
       for (let i = cc.length - 1; i >= 0; i--) {
         const c = cc[i];
 
-        // Collect all the aliases used in this condition
+        // Collect all the aliases used in this condition (which might be just one, if it's a simple column condition)
         const used = findUsedAliases(c);
         // How many child CTEs does it touch, if any?
         const touchedCtes = used.map((a) => aliases.getCtes(a)[0]).filter((c) => !!c);
@@ -674,13 +674,15 @@ function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpre
           const ctePaths = used.map((a) => aliases.getCtePath(a));
           const target = deepestCommonCte(ctePaths);
           if (!target) {
-            // leave it here and rewrite
+            // leave it here and rewrite (should be similar to our OR handling?)
+            throw new Error("todo rewrite top-level condition");
           } else {
-            // Push it into the target
+            // Push it into the target (which may not be a 1st-level CTE), but [0] currently gets back to that...
             const cte = aliases.getCtes(target)[0];
-            // Rewrite it within its target
+            // Rewrite it within its target...
             cte.query.condition!.conditions.push(c);
             cc.splice(i, 1);
+            rewriteIfNeeded(cte, aliases, cte.query.condition!.conditions, i);
           }
         }
       }
@@ -692,6 +694,65 @@ function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpre
     // If it's a condition, we need to inject a condition...
     throw new Error("todo");
   }
+}
+
+/** ...we've decided that `conditions[i]` must "stay put", but get its components rewritten into o2ms? */
+function rewriteIfNeeded(
+  targetCte: CteJoinTable | undefined,
+  aliases: AliasAssigner,
+  conditions: ParsedExpressionCondition[],
+  i: number,
+): void {
+  let j = 0;
+  type Todo = { conditions: ParsedExpressionCondition[]; i: number };
+  const todo: Todo[] = [{ conditions, i }];
+  while (todo.length) {
+    const { conditions, i } = todo.pop()!;
+    const c = conditions[i];
+    if (c.kind === "exp" && c.op === "or") {
+      // Dumb recursion...
+      for (let j = 0; j < c.conditions.length; j++) {
+        todo.push({ conditions: c.conditions, i: j });
+      }
+    } else if (c.kind === "column") {
+      // Which CTE if any does this column belong to?
+      const ctes = aliases.getCtes(c.alias);
+      const leafCte = ctes[ctes.length - 1];
+      if (leafCte === targetCte) {
+        // we're fine
+      } else if (leafCte) {
+        const as = `_${c.alias}_${c.column}_${j++}`;
+        // Replace this condition with a reference
+        conditions[i] = {
+          kind: "raw",
+          aliases: [leafCte.alias],
+          condition: `${leafCte.alias}.${as}`,
+          bindings: [],
+          pruneable: false,
+        } satisfies RawCondition;
+        // add to select...
+        const [sql, bindings] = buildCondition(c);
+        leafCte.query.selects.push({ sql: `BOOL_OR(${sql}) as ${as}`, aliases: [c.alias], bindings });
+      } else {
+        throw new Error("todo2");
+      }
+    } else {
+      throw new Error("todo2");
+    }
+  }
+  const c = conditions[i];
+
+  // Do any of the conditions within it nested inside of CTEs?
+
+  //   const as = `_${alias}_${cond.column}_${j++}`;
+  //   conditions[i] = {
+  //     kind: "raw",
+  //     aliases: [topLevelLateralJoin],
+  //     condition: `${topLevelLateralJoin}.${as}`,
+  //     bindings: [],
+  //     pruneable: false,
+  //     ...{ rewritten: true },
+  //   } satisfies RawCondition;
 }
 
 // Remove any joins that are not used in the select or conditions

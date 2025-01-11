@@ -1,4 +1,4 @@
-import { ParsedFindQuery, ParsedTable } from "../QueryParser";
+import { getTables, ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
 import { assertNever } from "../utils";
 import { buildWhereClause } from "./buildUtils";
@@ -23,6 +23,13 @@ export function buildRawQuery(
     bindings.push(...parsed.cte.bindings);
   }
 
+  const [primary, , , , ctes] = getTables(parsed);
+  for (const cte of ctes) {
+    const { sql: subQ, bindings: subB } = buildRawQuery(cte.query, {});
+    sql += ` WITH ${kq(cte.alias)} AS (${subQ})`;
+    bindings.push(...subB);
+  }
+
   sql += "SELECT ";
   parsed.selects.forEach((s, i) => {
     const maybeComma = i === parsed.selects.length - 1 ? "" : ", ";
@@ -35,17 +42,16 @@ export function buildRawQuery(
   });
 
   // Make sure the primary is first
-  const primary = parsed.tables.find((t) => t.join === "primary")!;
   sql += ` FROM ${as(primary)}`;
 
   // Then the joins
   for (const t of parsed.tables) {
-    if (t.join === "inner") {
+    if (t.join === "primary" || t.join === "cte") {
+      // handled above
+    } else if (t.join === "inner") {
       sql += ` JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
     } else if (t.join === "outer") {
       sql += ` LEFT OUTER JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
-    } else if (t.join === "primary") {
-      // handled above
     } else if (t.join === "lateral") {
       const { sql: subQ, bindings: subB } = buildRawQuery(t.query, {});
       sql += ` CROSS JOIN LATERAL (${subQ}) AS ${kq(t.alias)}`;

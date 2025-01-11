@@ -82,7 +82,14 @@ export interface CrossJoinTable {
   table: string;
 }
 
-export type ParsedTable = PrimaryTable | JoinTable | CrossJoinTable | LateralJoinTable;
+/** Not "just the CTE" but how its joined into the primary query. */
+export interface CteJoinTable {
+  join: "cte";
+  alias: string;
+  /** Used more for bookkeeping/consistency with other join tables than the query itself. */
+  table: string;
+  query: ParsedFindQuery;
+}
 
 /**
  * Joins into 0-N relations, i.e. parent down to many children.
@@ -102,6 +109,8 @@ export interface LateralJoinTable {
   /** The subquery that will look for/roll-up N children. */
   query: ParsedFindQuery;
 }
+
+export type ParsedTable = PrimaryTable | JoinTable | CrossJoinTable | LateralJoinTable | CteJoinTable;
 
 export interface ParsedOrderBy {
   alias: string;
@@ -246,7 +255,7 @@ export function parseFindQuery(
     let table: ParsedTable;
     if (join === "primary") {
       table = { alias, table: meta.tableName, join };
-    } else if (join === "lateral") {
+    } else if (join === "lateral" || join === "cte") {
       fail("Unexpected lateral join");
     } else {
       table = { alias, table: meta.tableName, join, col1, col2 };
@@ -610,6 +619,9 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
     if (t.join === "lateral") {
       dt.addAlias(t.alias, [t.fromAlias]);
       // Recurse into lateral joins...
+      todo.push(...t.query.tables);
+    } else if (t.join === "cte") {
+      // TODO some alias things
       todo.push(...t.query.tables);
     } else if (t.join === "cross") {
       // Doesn't have any conditions
@@ -1270,11 +1282,14 @@ function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter |
   return { kind: "exp", op, conditions: valid.filter(isDefined) };
 }
 
-export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[], LateralJoinTable[], CrossJoinTable[]] {
+export function getTables(
+  query: ParsedFindQuery,
+): [PrimaryTable, JoinTable[], LateralJoinTable[], CrossJoinTable[], CteJoinTable[]] {
   let primary: PrimaryTable;
   const joins: JoinTable[] = [];
   const laterals: LateralJoinTable[] = [];
   const crosses: CrossJoinTable[] = [];
+  const ctes: CteJoinTable[] = [];
   for (const table of query.tables) {
     if (table.join === "primary") {
       primary = table;
@@ -1282,11 +1297,13 @@ export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[], L
       laterals.push(table);
     } else if (table.join === "cross") {
       crosses.push(table);
+    } else if (table.join === "cte") {
+      ctes.push(table);
     } else {
       joins.push(table);
     }
   }
-  return [primary!, joins, laterals, crosses];
+  return [primary!, joins, laterals, crosses, ctes];
 }
 
 function needsClassPerTableJoins(meta: EntityMetadata): boolean {

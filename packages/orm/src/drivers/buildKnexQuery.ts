@@ -55,6 +55,8 @@ export function buildKnexQuery(
       case "cross":
         query.crossJoin(asRaw(t));
         break;
+      case "cte":
+        throw new Error("CTE joins aren't supported by buildKnexQuery yet");
       default:
         assertNever(t);
     }

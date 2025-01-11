@@ -221,12 +221,16 @@ export function parseFindQuery(
     subQuery.groupBys = [{ alias, column: parseColumn(col2) }];
     join.query = subQuery;
 
+    // We start out as optional/outer, and then are flipped to required/inner if we find a filter
+    const hasInlineConditions = deepFindConditions(subQuery.condition, true).length > 0;
+    join.outer = !hasInlineConditions;
+
     if (joinTable) subQuery.tables.unshift(joinTable);
     aliases.setTable(alias, join, ctes);
 
+    // If the user did `books: null` or `books: { $count: 0 }`, we need to be an outer join and enforce "no matches"
     const isZero = count && count.kind === "is-null";
     if (isZero) {
-      join.outer = true;
       // and add the condition on null
       cb.addSimpleCondition({
         kind: "column",
@@ -237,28 +241,33 @@ export function parseFindQuery(
         pruneable: false,
       });
     } else if (count) {
-      // I.e. [`skip.count(*) > ?`, [0]]
-      const [op, bindings] = buildCondition({
-        kind: "column",
-        dbType: "int",
-        alias: "skip",
-        column: "count(*)",
-        cond: count,
-      });
-      subQuery.having = {
-        kind: "exp",
-        op: "and",
-        conditions: [
-          {
-            kind: "raw",
-            aliases: [alias],
-            // Kinda ugly but turn `skip."count(*)"` into "just count(*)"
-            condition: op.replace("skip.", "").replaceAll(/"/g, ""),
-            bindings,
-            pruneable: false,
-          },
-        ],
-      };
+      // If the count is just "non-zero", we don't need a HAVING for that
+      if (count.kind === "gt" && count.value === 0) {
+        // Good as-is, because we flip `outer.join = false`
+      } else {
+        const [op, bindings] = buildCondition({
+          kind: "column",
+          dbType: "int",
+          alias: "skip",
+          column: "count(*)",
+          cond: count,
+        });
+        subQuery.having = {
+          kind: "exp",
+          op: "and",
+          conditions: [
+            {
+              kind: "raw",
+              aliases: [alias],
+              // Kinda ugly but turn `skip."count(*)"` into "just count(*)"
+              condition: op.replace("skip.", "").replaceAll(/"/g, ""),
+              bindings,
+              pruneable: false,
+            },
+          ],
+        };
+      }
+      join.outer = false;
     }
 
     return join;
@@ -669,6 +678,7 @@ function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpre
           cte.query.condition!.conditions.push(c);
           cc.splice(i, 1);
           // ...need to ensure this CTE, and it's parent CTEs, have "at least one" enabled
+          cte.outer = false;
         } else {
           // Find the common parent CTE, if any
           const ctePaths = used.map((a) => aliases.getCtePath(a));
@@ -683,6 +693,7 @@ function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpre
             cte.query.condition!.conditions.push(c);
             cc.splice(i, 1);
             rewriteIfNeeded(cte, aliases, cte.query.condition!.conditions, i);
+            cte.outer = false;
           }
         }
       }
@@ -804,7 +815,8 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   }
 
   // Now remove any unused joins
-  parsed.tables = parsed.tables.filter((t) => dt.required.has(t.alias));
+  // ...any CTE that's been flipped to `outer = false` has been voted as required, even if there isn't a condition
+  parsed.tables = parsed.tables.filter((t) => dt.required.has(t.alias) || (t.join === "cte" && t.outer === false));
 
   // And then remove any inline soft-delete conditions we don't need anymore
   if (parsed.condition && parsed.condition.op === "and") {

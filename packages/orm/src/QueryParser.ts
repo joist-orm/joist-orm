@@ -3,7 +3,7 @@ import { aliasMgmt, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
-import { visitConditions } from "./QueryVisitor";
+import { visitConditions, visitFilter } from "./QueryVisitor";
 import { getMetadataForTable } from "./configure";
 import { buildCondition } from "./drivers/buildUtils";
 import { AliasAssigner, Column, getConstructorFromTaggedId, isDefined } from "./index";
@@ -654,17 +654,34 @@ function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpre
       const { conditions: cc } = condition;
       for (let i = cc.length - 1; i >= 0; i--) {
         const c = cc[i];
-        // Pick where to push this...
-        // what aliases to do you use? what's the 1st o2m/m2m, if any?
-        if (c.kind === "column") {
-          const [cte] = aliases.getCtes(c.alias);
+
+        // Collect all the aliases used in this condition
+        const used: Set<string> = new Set();
+        visitFilter(c, {
+          visitCond(c: ColumnCondition) {
+            used.add(c.alias);
+          },
+          visitRaw(c: RawCondition) {
+            for (const a of c.aliases) used.add(a);
+          },
+        });
+        // How many child CTEs does it touch, if any?
+        const touchedCtes = [...used].map((a) => aliases.getCtes(a)[0]).filter((c) => !!c);
+        // If it only touches one, we can push it down
+        if (touchedCtes.length === 1) {
+          const [cte] = touchedCtes;
           if (cte) {
             cte.query.condition!.conditions.push(c);
             cc.splice(i, 1);
           }
-        } else {
-          throw new Error("todo");
         }
+
+        // Pick where to push this...
+        // what aliases to do you use? what's the 1st o2m/m2m, if any?
+        // if (c.kind === "column") {
+        // } else {
+        //   throw new Error("todo");
+        // }
       }
       return;
     }

@@ -1,4 +1,4 @@
-import { getTables, ParsedFindQuery, ParsedTable } from "../QueryParser";
+import { CteJoinTable, getTables, ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
 import { assertNever } from "../utils";
 import { buildWhereClause } from "./buildUtils";
@@ -11,12 +11,14 @@ import { buildWhereClause } from "./buildUtils";
  */
 export function buildRawQuery(
   parsed: ParsedFindQuery,
-  settings: { limit?: number; offset?: number },
+  settings: { limit?: number; offset?: number; isTopLevel?: boolean },
 ): { sql: string; bindings: readonly any[] } {
   const { limit, offset } = settings;
 
   let sql = "";
   const bindings: any[] = [];
+
+  const isTopLevel = settings.isTopLevel ?? true;
 
   if (parsed.cte) {
     sql += parsed.cte.sql + " ";
@@ -24,10 +26,25 @@ export function buildRawQuery(
   }
 
   const [primary, , , , ctes] = getTables(parsed);
-  for (const cte of ctes) {
-    const { sql: subQ, bindings: subB } = buildRawQuery(cte.query, {});
-    sql += `WITH ${kq(cte.alias)} AS (${subQ}) `;
-    bindings.push(...subB);
+  // Pull all CTEs up to the top
+  if (isTopLevel) {
+    const allCtes: CteJoinTable[] = [];
+    const todo = [...ctes];
+    while (todo.length > 0) {
+      const cte = todo.pop()!;
+      allCtes.push(cte);
+      const [, , , , ctes] = getTables(cte.query);
+      todo.push(...ctes);
+    }
+    let i = 0;
+    allCtes.reverse();
+    for (const cte of allCtes) {
+      const commaOrWith = i === 0 ? "WITH" : ",";
+      const { sql: subQ, bindings: subB } = buildRawQuery(cte.query, { isTopLevel: false });
+      sql += `${commaOrWith} ${kq(cte.alias)} AS (${subQ}) `;
+      bindings.push(...subB);
+      i++;
+    }
   }
 
   sql += "SELECT ";

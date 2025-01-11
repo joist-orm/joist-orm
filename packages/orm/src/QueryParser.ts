@@ -657,17 +657,10 @@ function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpre
         const c = cc[i];
 
         // Collect all the aliases used in this condition
-        const used: Set<string> = new Set();
-        visitFilter(c, {
-          visitCond(c: ColumnCondition) {
-            used.add(c.alias);
-          },
-          visitRaw(c: RawCondition) {
-            for (const a of c.aliases) used.add(a);
-          },
-        });
+        const used = findUsedAliases(c);
         // How many child CTEs does it touch, if any?
-        const touchedCtes = [...used].map((a) => aliases.getCtes(a)[0]).filter((c) => !!c);
+        const touchedCtes = used.map((a) => aliases.getCtes(a)[0]).filter((c) => !!c);
+
         if (touchedCtes.length === 0) {
           // Nothing to do, leave this condition in-place
         } else if (touchedCtes.length === 1) {
@@ -678,26 +671,18 @@ function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpre
           // ...need to ensure this CTE, and it's parent CTEs, have "at least one" enabled
         } else {
           // Find the common parent CTE, if any
-          const ctePaths = [...used].map((a) => aliases.getCtePath(a));
+          const ctePaths = used.map((a) => aliases.getCtePath(a));
           const target = deepestCommonCte(ctePaths);
           if (!target) {
             // leave it here and rewrite
           } else {
             // Push it into the target
             const cte = aliases.getCtes(target)[0];
+            // Rewrite it within its target
             cte.query.condition!.conditions.push(c);
             cc.splice(i, 1);
           }
-          // Are these the same path?
-          // console.log(touchedCtes);
         }
-
-        // Pick where to push this...
-        // what aliases to do you use? what's the 1st o2m/m2m, if any?
-        // if (c.kind === "column") {
-        // } else {
-        //   throw new Error("todo");
-        // }
       }
       return;
     }
@@ -1628,4 +1613,18 @@ function longestCommonPrefix(paths: string[]): string | undefined {
     if (prefix === "") return undefined;
   }
   return prefix;
+}
+
+// Collect all the aliases used in this condition
+function findUsedAliases(c: ParsedExpressionCondition): string[] {
+  const used: Set<string> = new Set();
+  visitFilter(c, {
+    visitCond(c: ColumnCondition) {
+      used.add(c.alias);
+    },
+    visitRaw(c: RawCondition) {
+      for (const a of c.aliases) used.add(a);
+    },
+  });
+  return [...used];
 }

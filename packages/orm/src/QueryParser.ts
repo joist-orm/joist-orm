@@ -1,5 +1,4 @@
 import { groupBy, isPlainObject } from "joist-utils";
-import { builders } from "prettier/doc";
 import { aliasMgmt, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
@@ -10,7 +9,6 @@ import { buildCondition } from "./drivers/buildUtils";
 import { AliasAssigner, Column, getConstructorFromTaggedId, isDefined } from "./index";
 import { kq, kqDot } from "./keywords";
 import { assertNever, fail, partition } from "./utils";
-import join = builders.join;
 
 /** A tree of ANDs/ORs with conditions or nested conditions. */
 export interface ParsedExpressionFilter {
@@ -166,7 +164,7 @@ export function parseFindQuery(
     aliases?: AliasAssigner;
     // Let `addLateralJoin` pass in its existing alias for the subquery's primary table
     alias?: string;
-    outerLateralJoins?: { alias: string; select: ParsedSelect[]; outerCb: ConditionBuilder }[];
+    ctes?: CteJoinTable[];
   } = {},
 ): ParsedFindQuery {
   const selects: ParsedSelect[] = [];
@@ -180,11 +178,6 @@ export function parseFindQuery(
   const aliases = opts.aliases ?? new AliasAssigner();
   const getAlias = aliases.getAlias.bind(aliases);
   const isTopLevelQuery = opts.aliases === undefined;
-
-  // If they passed extra `conditions: ...`, parse that.
-  // We can do this up-front b/c it doesn't require any join-tree metadata to perform,
-  // and then it's available for our `addLateralJoin`s to rewrite.
-  if (opts.conditions) cb.maybeAddExpression(opts.conditions);
 
   function addLateralJoin(
     meta: EntityMetadata,
@@ -210,6 +203,10 @@ export function parseFindQuery(
       count = subFilter && "$count" in subFilter ? { kind: "eq", value: subFilter["$count"] } : undefined,
     } = unparseFilter(filter, ef);
 
+    const join: CteJoinTable = { join: "cte", table: meta.tableName, query: undefined!, alias, col1, col2 };
+    (orderByTables ?? tables).push(join);
+    const ctes = [...(opts.ctes ?? []), join];
+
     const subQuery = parseFindQuery(meta, subFilter, {
       // Only pass through a subset of the opts...
       softDeletes: opts.softDeletes,
@@ -217,16 +214,15 @@ export function parseFindQuery(
       keepAliases: opts.keepAliases,
       aliases,
       alias,
-      outerLateralJoins: [{ alias, select: selects, outerCb: cb }, ...(opts.outerLateralJoins ?? [])],
+      ctes,
     });
     subQuery.orderBys = [];
     subQuery.selects.unshift(col2);
     subQuery.groupBys = [{ alias, column: parseColumn(col2) }];
+    join.query = subQuery;
 
     if (joinTable) subQuery.tables.unshift(joinTable);
-    const join: CteJoinTable = { join: "cte", table: meta.tableName, query: subQuery, alias, col1, col2 };
-    (orderByTables ?? tables).push(join);
-    aliases.setTable(alias, join);
+    aliases.setTable(alias, join, ctes);
 
     const isZero = count && count.kind === "is-null";
     if (isZero) {
@@ -291,7 +287,7 @@ export function parseFindQuery(
       table = { alias, table: meta.tableName, join, col1, col2 };
     }
     tables.push(table);
-    aliases.setTable(alias, table);
+    aliases.setTable(alias, table, opts.ctes ?? []);
 
     // Maybe only do this if we're the primary, or have a field that needs it?
     addTablePerClassJoinsAndClassTag(
@@ -569,9 +565,21 @@ export function parseFindQuery(
   }
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
 
-  Object.assign(query, {
-    condition: cb.toExpressionFilter(),
-  });
+  // If they passed extra `conditions: ...`, parse that.
+  if (opts.conditions) {
+    if (isTopLevelQuery) {
+      cb.maybeAddExpression(opts.conditions);
+      const condition = cb.toExpressionFilter();
+      if (condition) {
+        rewriteTopLevelCondition(aliases, condition);
+        Object.assign(query, { condition });
+      }
+    } else {
+      throw new Error("Unexpected opts.conditions when !isTopLevelQuery");
+    }
+  } else {
+    Object.assign(query, { condition: cb.toExpressionFilter() });
+  }
 
   if (query.tables.some((t) => t.join === "outer")) {
     maybeAddIdNotNulls(query);
@@ -633,6 +641,39 @@ function maybeAddIdNotNulls(query: ParsedFindQuery): void {
       return c;
     },
   });
+}
+
+function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpressionFilter): void {
+  type Todo = { condition: ParsedExpressionFilter; isTopLevelAnd: boolean };
+  const todo: Todo[] = [{ condition, isTopLevelAnd: condition.kind === "exp" && condition.op === "and" }];
+  while (todo.length > 0) {
+    const { condition, isTopLevelAnd } = todo.pop()!;
+
+    // Only top-level ands can completely push down their conditions
+    if (isTopLevelAnd && condition.kind === "exp" && condition.op === "and") {
+      const { conditions: cc } = condition;
+      for (let i = cc.length - 1; i >= 0; i--) {
+        const c = cc[i];
+        // Pick where to push this...
+        // what aliases to do you use? what's the 1st o2m/m2m, if any?
+        if (c.kind === "column") {
+          const [cte] = aliases.getCtes(c.alias);
+          if (cte) {
+            cte.query.condition!.conditions.push(c);
+            cc.splice(i, 1);
+          }
+        } else {
+          throw new Error("todo");
+        }
+      }
+      return;
+    }
+
+    // Otherwise we need to inject things
+    // If it's an expression...
+    // If it's a condition, we need to inject a condition...
+    throw new Error("todo");
+  }
 }
 
 // Remove any joins that are not used in the select or conditions

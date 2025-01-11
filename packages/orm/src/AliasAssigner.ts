@@ -1,9 +1,11 @@
 import { abbreviation } from "./QueryBuilder";
-import { ParsedFindQuery, ParsedTable } from "./QueryParser";
+import { CteJoinTable, ParsedFindQuery, ParsedTable } from "./QueryParser";
+import { fail } from "./utils";
 
 export class AliasAssigner {
   #aliases: Record<string, number> = {};
   #tables: Record<string, ParsedTable> = {};
+  #ctes: Record<string, CteJoinTable[]> = {};
 
   constructor(query?: ParsedFindQuery) {
     this.getAlias = this.getAlias.bind(this);
@@ -33,8 +35,13 @@ export class AliasAssigner {
     return i === 0 ? abbrev : `${abbrev}${i}`;
   }
 
-  setTable(alias: string, table: ParsedTable): void {
+  getCtes(alias: string): CteJoinTable[] {
+    return this.#ctes[alias] || fail(`No CTEs found for alias ${alias}`);
+  }
+
+  setTable(alias: string, table: ParsedTable, ctes: CteJoinTable[]): void {
     this.#tables[alias] = table;
+    this.#ctes[alias] = ctes;
   }
 
   /** Given an existing alias, like `a5`, make sure our internal `a = N` is at least 5 or higher. */

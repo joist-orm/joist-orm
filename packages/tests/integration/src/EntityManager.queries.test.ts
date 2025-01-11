@@ -2764,6 +2764,22 @@ describe("EntityManager.queries", () => {
       expect(authors.length).toEqual(1);
     });
 
+    it("can use aliases as an o2m single-child OR", async () => {
+      // Given one author that matches the 1st OR
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", order: 1, author_id: 1 });
+      // And another author that matches the 2nd OR
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b2", order: 2, author_id: 1 });
+      // And one author that matches either
+      await insertAuthor({ first_name: "a3" });
+      const em = newEntityManager();
+      const b = alias(Book);
+      const authors = await em.find(Author, { books: b }, { conditions: { or: [b.title.eq("b1"), b.order.eq(2)] } });
+      // Then we return the two authors
+      expect(authors.length).toEqual(2);
+    });
+
     it("can use aliases as an o2m entity filter with primary key is null", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });

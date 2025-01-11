@@ -53,7 +53,7 @@ export function buildRawQuery(
     } else if (t.join === "outer") {
       sql += ` LEFT OUTER JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
     } else if (t.join === "cte") {
-      sql += ` JOIN ${t.alias} ON ${t.col1} = ${t.col2}`;
+      sql += `${t.outer ? " LEFT OUTER" : ""} JOIN ${t.alias} ON ${t.col1} = ${t.col2}`;
     } else if (t.join === "lateral") {
       const { sql: subQ, bindings: subB } = buildRawQuery(t.query, {});
       sql += ` CROSS JOIN LATERAL (${subQ}) AS ${kq(t.alias)}`;
@@ -75,6 +75,14 @@ export function buildRawQuery(
 
   if (parsed.groupBys && parsed.groupBys.length > 0) {
     sql += " GROUP BY " + parsed.groupBys.map((ob) => kqDot(ob.alias, ob.column)).join(", ");
+  }
+
+  if (parsed.having) {
+    const where = buildWhereClause(parsed.having, true);
+    if (where) {
+      sql += " HAVING " + where[0];
+      bindings.push(...where[1]);
+    }
   }
 
   if (parsed.orderBys.length > 0) {

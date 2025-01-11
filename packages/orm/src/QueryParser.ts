@@ -1,5 +1,6 @@
 import { groupBy, isPlainObject } from "joist-utils";
-import { aliasMgmt, isAlias, newAliasProxy } from "./Aliases";
+import { builders } from "prettier/doc";
+import { aliasMgmt, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
@@ -9,6 +10,7 @@ import { buildCondition } from "./drivers/buildUtils";
 import { AliasAssigner, Column, getConstructorFromTaggedId, isDefined } from "./index";
 import { kq, kqDot } from "./keywords";
 import { assertNever, fail, partition } from "./utils";
+import join = builders.join;
 
 /** A tree of ANDs/ORs with conditions or nested conditions. */
 export interface ParsedExpressionFilter {
@@ -102,6 +104,8 @@ export interface CteJoinTable {
   col1: string;
   /** The column within the CTE we're joining to. */
   col2: string;
+  /** Whether to use an outer join. */
+  outer?: boolean;
 }
 
 export interface LateralJoinTable {
@@ -142,6 +146,8 @@ export interface ParsedFindQuery {
   orderBys: ParsedOrderBy[];
   /** Extremely optional group bys; we generally don't support adhoc/aggregate queries, but the auto-batching infra uses these. */
   groupBys?: ParsedGroupBy[];
+  /** Used by o2m/m2m CTE joins to do `having count(*) > 0`. */
+  having?: ParsedExpressionFilter;
   /** Optional CTE to prefix to the query, i.e. for recursive relations. */
   cte?: { sql: string; bindings: readonly any[] };
 }
@@ -194,42 +200,72 @@ export function parseFindQuery(
     const ef = parseEntityFilter(meta, filter);
     // Maybe skip
     if (!ef && !isAlias(filter) && !orderByTables) return;
-
     bindAlias(filter, meta, alias);
-
-    // Create an alias to use for our subquery's `where parent_id = id` condition
-    const a = newAliasProxy(meta.cstr);
 
     // This is kinda janky, but take the `ef: ParsedEntityFilter` and re-work it back into a
     // `subFilter/count` pair that we can use for our recursive `parseFindQuery` call.
     const {
       subFilter,
       // If `ef` was is-null/not-null, use that as the count, otherwise probe for subFilter[$count]
-      // count = subFilter && "$count" in subFilter ? { kind: "eq", value: subFilter["$count"] } : undefined,
+      count = subFilter && "$count" in subFilter ? { kind: "eq", value: subFilter["$count"] } : undefined,
     } = unparseFilter(filter, ef);
 
-    const subQuery = parseFindQuery(
-      meta,
-      { as: a, ...subFilter },
-      {
-        // Only pass through a subset of the opts...
-        softDeletes: opts.softDeletes,
-        pruneJoins: opts.pruneJoins,
-        keepAliases: opts.keepAliases,
-        aliases,
-        alias,
-        // Let the subquery's pruneUnusedJoins know about the top-level WHERE clauses
-        topLevelCondition: opts.topLevelCondition ?? cb,
-        outerLateralJoins: [{ alias, select: selects, outerCb: cb }, ...(opts.outerLateralJoins ?? [])],
-      },
-    );
+    const subQuery = parseFindQuery(meta, subFilter, {
+      // Only pass through a subset of the opts...
+      softDeletes: opts.softDeletes,
+      pruneJoins: opts.pruneJoins,
+      keepAliases: opts.keepAliases,
+      aliases,
+      alias,
+      // Let the subquery's pruneUnusedJoins know about the top-level WHERE clauses
+      topLevelCondition: opts.topLevelCondition ?? cb,
+      outerLateralJoins: [{ alias, select: selects, outerCb: cb }, ...(opts.outerLateralJoins ?? [])],
+    });
     subQuery.orderBys = [];
     subQuery.selects.unshift(col2);
     subQuery.groupBys = [{ alias, column: parseColumn(col2) }];
+
     if (joinTable) subQuery.tables.unshift(joinTable);
     const join: CteJoinTable = { join: "cte", table: meta.tableName, query: subQuery, alias, col1, col2 };
     (orderByTables ?? tables).push(join);
     aliases.setTable(alias, join);
+
+    const isZero = count && count.kind === "is-null";
+    if (isZero) {
+      join.outer = true;
+      // and add the condition on null
+      cb.addSimpleCondition({
+        kind: "column",
+        alias,
+        column: "_",
+        dbType: "int",
+        cond: count,
+        pruneable: false,
+      });
+    } else if (count) {
+      // I.e. [`skip.count(*) > ?`, [0]]
+      const [op, bindings] = buildCondition({
+        kind: "column",
+        dbType: "int",
+        alias: "skip",
+        column: "count(*)",
+        cond: count,
+      });
+      subQuery.having = {
+        kind: "exp",
+        op: "and",
+        conditions: [
+          {
+            kind: "raw",
+            aliases: [alias],
+            // Kinda ugly but turn `skip."count(*)"` into "just count(*)"
+            condition: op.replace("skip.", "").replaceAll(/"/g, ""),
+            bindings,
+            pruneable: false,
+          },
+        ],
+      };
+    }
 
     return join;
   }
@@ -634,11 +670,11 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   });
   parsed.orderBys.forEach((o) => dt.markRequired(o.alias));
   keepAliases.forEach((a) => dt.markRequired(a));
-  // Look recursively into lateral join conditions
+  // Look recursively into CTE & lateral join conditions
   const todo2 = [parsed];
   while (todo2.length > 0) {
     const query = todo2.pop()!;
-    deepFindConditions(query.condition, true).forEach((c) => {
+    [...deepFindConditions(query.condition, true), ...deepFindConditions(query.having, true)].forEach((c) => {
       if (c.kind === "column") {
         dt.markRequired(c.alias);
       } else if (c.kind === "raw") {
@@ -1397,8 +1433,9 @@ function unparseFilter(
     } else if (ef.kind === "not-null") {
       return { subFilter: {}, count: { kind: "gt", value: 0 } };
     } else if (ef.kind === "is-null") {
-      return { subFilter: {}, count: { kind: "eq", value: 0 } };
+      return { subFilter: {}, count: { kind: "is-null" } };
     } else if (ef.kind === "eq") {
+      // Should eq === 0 be returned as is-null?
       return { subFilter: { id: ef.value }, count: undefined };
     } else if (ef.kind === "in") {
       return { subFilter: { id: { in: ef.value } }, count: undefined };

@@ -1,8 +1,9 @@
 import { abbreviation } from "./QueryBuilder";
-import { ParsedFindQuery } from "./QueryParser";
+import { ParsedFindQuery, ParsedTable } from "./QueryParser";
 
 export class AliasAssigner {
   #aliases: Record<string, number> = {};
+  #tables: Record<string, ParsedTable> = {};
 
   constructor(query?: ParsedFindQuery) {
     this.getAlias = this.getAlias.bind(this);
@@ -30,6 +31,10 @@ export class AliasAssigner {
     const i = this.#aliases[abbrev] || 0;
     this.#aliases[abbrev] = i + 1;
     return i === 0 ? abbrev : `${abbrev}${i}`;
+  }
+
+  setTable(alias: string, table: ParsedTable): void {
+    this.#tables[alias] = table;
   }
 
   /** Given an existing alias, like `a5`, make sure our internal `a = N` is at least 5 or higher. */

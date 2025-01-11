@@ -197,33 +197,11 @@ export function parseFindQuery(
 
     // This is kinda janky, but take the `ef: ParsedEntityFilter` and re-work it back into a
     // `subFilter/count` pair that we can use for our recursive `parseFindQuery` call.
-    function convertFilter(): { subFilter: object; count: ParsedValueFilter<number> | undefined } {
-      if (ef) {
-        if (ef.kind === "join") {
-          // subFilter will be unprocessed, so we can pass it recursively into `parseFindQuery`
-          return { subFilter: ef.subFilter, count: undefined };
-        } else if (ef.kind === "not-null") {
-          return { subFilter: {}, count: { kind: "gt", value: 0 } };
-        } else if (ef.kind === "is-null") {
-          return { subFilter: {}, count: { kind: "eq", value: 0 } };
-        } else if (ef.kind === "eq") {
-          return { subFilter: { id: ef.value }, count: undefined };
-        } else if (ef.kind === "in") {
-          return { subFilter: { id: { in: ef.value } }, count: undefined };
-        } else {
-          // If `ef` is set, it's already parsed, which `parseFindQuery` won't expect, so pass the original `filter`
-          return { subFilter: { id: filter }, count: undefined };
-        }
-      } else {
-        return { subFilter: {}, count: undefined };
-      }
-    }
-
     const {
       subFilter,
       // If `ef` was is-null/not-null, use that as the count, otherwise probe for subFilter[$count]
-      count = subFilter && "$count" in subFilter ? { kind: "eq", value: subFilter["$count"] } : undefined,
-    } = convertFilter();
+      // count = subFilter && "$count" in subFilter ? { kind: "eq", value: subFilter["$count"] } : undefined,
+    } = unparseFilter(filter, ef);
 
     const subQuery = parseFindQuery(
       meta,
@@ -246,57 +224,7 @@ export function parseFindQuery(
     if (joinTable) subQuery.tables.unshift(joinTable);
     const join: LateralJoinTable = { join: "lateral", table: meta.tableName, query: subQuery, alias, fromAlias };
     (orderByTables ?? tables).push(join);
-
-    // Look for complex conditions...
-    const topLevelAlias = opts.outerLateralJoins?.[opts.outerLateralJoins?.length - 1]?.alias;
-    const complexConditions = (opts.topLevelCondition ?? cb).findAndRewrite(topLevelAlias ?? alias, alias);
-    for (const cc of complexConditions) {
-      if (cc.cond.kind === "column" && cc.cond.column === "$count") {
-        subQuery.selects.push(buildCountStar(cc));
-      } else {
-        const [sql, bindings] = buildCondition(cc.cond);
-        subQuery.selects.push({
-          sql: `BOOL_OR(${sql}) as ${cc.as}`,
-          aliases: [cc.cond.alias],
-          bindings,
-        });
-      }
-    }
-
-    // If there are complex conditions looking at our data, we don't want a "make sure at least one matched"
-    const usedByComplexCondition =
-      selects.some((s) => typeof s === "object" && "aliases" in s && s.aliases.includes(alias)) ||
-      // If we're the very 1st addLateralJoin, we don't push our selects into the next-up
-      // lateral join, so instead look through the top-level condition
-      (!opts.topLevelCondition &&
-        deepFindConditions(cb.expressions[0], true).some((c) => {
-          return c.kind === "raw" && c.aliases.includes(alias);
-        }));
-    // If there are literally no conditions on this child relation, don't add the "make sure at least one matched"
-    const hasAnyFilter = deepFindConditions(subQuery.condition, true).length > 0 || count !== undefined;
-    if (!usedByComplexCondition && hasAnyFilter) {
-      cb.addSimpleCondition({
-        kind: "column",
-        alias,
-        column: "_",
-        dbType: "int",
-        cond: count ?? { kind: "gt", value: 0 },
-        // Don't let this condition pin the join, unless the user asked for a specific count
-        // (or deepFindConditions finds a real condition from the above filter).
-        pruneable: count === undefined,
-      });
-      // Go up the tree and make sure any parent lateral joins have a "at least 1 match"
-      opts.outerLateralJoins?.forEach(({ alias, outerCb }) => {
-        outerCb.addSimpleCondition({
-          kind: "column",
-          alias,
-          column: "_",
-          dbType: "int",
-          cond: { kind: "gt", value: 0 },
-          pruneable: true,
-        });
-      });
-    }
+    aliases.setTable(alias, join);
 
     return join;
   }
@@ -315,13 +243,16 @@ export function parseFindQuery(
     // Maybe skip
     if (!ef && join !== "primary" && !isAlias(filter)) return;
 
+    let table: ParsedTable;
     if (join === "primary") {
-      tables.push({ alias, table: meta.tableName, join });
+      table = { alias, table: meta.tableName, join };
     } else if (join === "lateral") {
       fail("Unexpected lateral join");
     } else {
-      tables.push({ alias, table: meta.tableName, join, col1, col2 });
+      table = { alias, table: meta.tableName, join, col1, col2 };
     }
+    tables.push(table);
+    aliases.setTable(alias, table);
 
     // Maybe only do this if we're the primary, or have a field that needs it?
     addTablePerClassJoinsAndClassTag(
@@ -338,34 +269,6 @@ export function parseFindQuery(
 
     maybeAddNotSoftDeleted(cb, softDeletes, meta, alias);
     bindAlias(filter, meta, alias);
-
-    // If we're inside a lateral join, look for top-level conditions that need to be rewritten as `BOOL_OR(...)`
-    // I.e. we might be a regular m2o join, but we just came from a lateral join, so any complex conditions
-    // like `ourTable.column.eq(...)` need to be:
-    // a) injected as a `BOOL_OR(ourTable.column.eq(...)) as _b_column_0` select to surface outside the lateral join, and
-    // b) rewritten in the top-level query to be just `_b_column_0`
-    if (opts.topLevelCondition) {
-      const topLevelAlias = opts.outerLateralJoins?.[opts.outerLateralJoins?.length - 1]?.alias;
-      const complexConditions = opts.topLevelCondition.findAndRewrite(topLevelAlias ?? alias, alias);
-      for (const cc of complexConditions) {
-        if (cc.cond.kind === "column" && cc.cond.column === "$count") {
-          selects.push(buildCountStar(cc));
-        } else {
-          const [sql, bindings] = buildCondition(cc.cond);
-          selects.push({ sql: `BOOL_OR(${sql}) as ${cc.as}`, aliases: [cc.cond.alias], bindings });
-        }
-        // Expose the `_b_column_0` through `SELECT`s all the up the tree
-        // (...until the top-level query, which doesn't need to SELECT it, only WHERE against it)
-        opts.outerLateralJoins?.forEach(({ alias, select }, i) => {
-          const isTopLevel = i === opts.outerLateralJoins!.length - 1;
-          if (!isTopLevel) {
-            select.push({ sql: `BOOL_OR(${alias}.${cc.as}) as ${cc.as}`, bindings: [], aliases: [alias] });
-          }
-        });
-      }
-      // prune needs to see the immediate, not necessarily the whole conditions...
-      // only rewriting needs to see the whole thing
-    }
 
     // See if the clause says we must do a join into the relation
     if (ef && ef.kind === "join") {
@@ -1467,4 +1370,110 @@ function buildCountStar(cc: { as: string; cond: ColumnCondition }): ParsedSelect
   };
 }
 
+function unparseFilter(
+  filter: any,
+  ef: ParsedEntityFilter | undefined,
+): { subFilter: object; count: ParsedValueFilter<number> | undefined } {
+  if (ef) {
+    if (ef.kind === "join") {
+      // subFilter will be unprocessed, so we can pass it recursively into `parseFindQuery`
+      return { subFilter: ef.subFilter, count: undefined };
+    } else if (ef.kind === "not-null") {
+      return { subFilter: {}, count: { kind: "gt", value: 0 } };
+    } else if (ef.kind === "is-null") {
+      return { subFilter: {}, count: { kind: "eq", value: 0 } };
+    } else if (ef.kind === "eq") {
+      return { subFilter: { id: ef.value }, count: undefined };
+    } else if (ef.kind === "in") {
+      return { subFilter: { id: { in: ef.value } }, count: undefined };
+    } else {
+      // If `ef` is set, it's already parsed, which `parseFindQuery` won't expect, so pass the original `filter`
+      return { subFilter: { id: filter }, count: undefined };
+    }
+  } else {
+    return { subFilter: {}, count: undefined };
+  }
+}
+
 type PartialSome<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
+// // If there are complex conditions looking at our data, we don't want a "make sure at least one matched"
+// const usedByComplexCondition =
+//     selects.some((s) => typeof s === "object" && "aliases" in s && s.aliases.includes(alias)) ||
+//     // If we're the very 1st addLateralJoin, we don't push our selects into the next-up
+//     // lateral join, so instead look through the top-level condition
+//     (!opts.topLevelCondition &&
+//         deepFindConditions(cb.expressions[0], true).some((c) => {
+//           return c.kind === "raw" && c.aliases.includes(alias);
+//         }));
+// // If there are literally no conditions on this child relation, don't add the "make sure at least one matched"
+// const hasAnyFilter = deepFindConditions(subQuery.condition, true).length > 0 || count !== undefined;
+// if (!usedByComplexCondition && hasAnyFilter) {
+//   cb.addSimpleCondition({
+//     kind: "column",
+//     alias,
+//     column: "_",
+//     dbType: "int",
+//     cond: count ?? { kind: "gt", value: 0 },
+//     // Don't let this condition pin the join, unless the user asked for a specific count
+//     // (or deepFindConditions finds a real condition from the above filter).
+//     pruneable: count === undefined,
+//   });
+//   // Go up the tree and make sure any parent lateral joins have a "at least 1 match"
+//   opts.outerLateralJoins?.forEach(({ alias, outerCb }) => {
+//     outerCb.addSimpleCondition({
+//       kind: "column",
+//       alias,
+//       column: "_",
+//       dbType: "int",
+//       cond: { kind: "gt", value: 0 },
+//       pruneable: true,
+//     });
+//   });
+// }
+
+//
+// // Look for complex conditions...
+// const topLevelAlias = opts.outerLateralJoins?.[opts.outerLateralJoins?.length - 1]?.alias;
+// const complexConditions = (opts.topLevelCondition ?? cb).findAndRewrite(topLevelAlias ?? alias, alias);
+// for (const cc of complexConditions) {
+//   if (cc.cond.kind === "column" && cc.cond.column === "$count") {
+//     subQuery.selects.push(buildCountStar(cc));
+//   } else {
+//     const [sql, bindings] = buildCondition(cc.cond);
+//     subQuery.selects.push({
+//       sql: `BOOL_OR(${sql}) as ${cc.as}`,
+//       aliases: [cc.cond.alias],
+//       bindings,
+//     });
+//   }
+// }
+
+//
+// // If we're inside a lateral join, look for top-level conditions that need to be rewritten as `BOOL_OR(...)`
+// // I.e. we might be a regular m2o join, but we just came from a lateral join, so any complex conditions
+// // like `ourTable.column.eq(...)` need to be:
+// // a) injected as a `BOOL_OR(ourTable.column.eq(...)) as _b_column_0` select to surface outside the lateral join, and
+// // b) rewritten in the top-level query to be just `_b_column_0`
+// if (opts.topLevelCondition) {
+//   const topLevelAlias = opts.outerLateralJoins?.[opts.outerLateralJoins?.length - 1]?.alias;
+//   const complexConditions = opts.topLevelCondition.findAndRewrite(topLevelAlias ?? alias, alias);
+//   for (const cc of complexConditions) {
+//     if (cc.cond.kind === "column" && cc.cond.column === "$count") {
+//       selects.push(buildCountStar(cc));
+//     } else {
+//       const [sql, bindings] = buildCondition(cc.cond);
+//       selects.push({ sql: `BOOL_OR(${sql}) as ${cc.as}`, aliases: [cc.cond.alias], bindings });
+//     }
+//     // Expose the `_b_column_0` through `SELECT`s all the up the tree
+//     // (...until the top-level query, which doesn't need to SELECT it, only WHERE against it)
+//     opts.outerLateralJoins?.forEach(({ alias, select }, i) => {
+//       const isTopLevel = i === opts.outerLateralJoins!.length - 1;
+//       if (!isTopLevel) {
+//         select.push({ sql: `BOOL_OR(${alias}.${cc.as}) as ${cc.as}`, bindings: [], aliases: [alias] });
+//       }
+//     });
+//   }
+//   // prune needs to see the immediate, not necessarily the whole conditions...
+//   // only rewriting needs to see the whole thing
+// }

@@ -811,7 +811,7 @@ describe("EntityManager.queries", () => {
         { alias: "a", table: "authors", join: "primary" },
         // Then the joins themselves stay
         { alias: "p", table: "publishers", join: "outer" },
-        { alias: "a1", table: "authors", join: "lateral" },
+        { alias: "a1", table: "authors", join: "cte" },
       ],
       // But the "at least 1 child" condition was not added
       condition: undefined,

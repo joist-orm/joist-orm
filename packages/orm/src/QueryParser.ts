@@ -166,7 +166,6 @@ export function parseFindQuery(
     aliases?: AliasAssigner;
     // Let `addLateralJoin` pass in its existing alias for the subquery's primary table
     alias?: string;
-    topLevelCondition?: ConditionBuilder;
     outerLateralJoins?: { alias: string; select: ParsedSelect[]; outerCb: ConditionBuilder }[];
   } = {},
 ): ParsedFindQuery {
@@ -180,6 +179,7 @@ export function parseFindQuery(
 
   const aliases = opts.aliases ?? new AliasAssigner();
   const getAlias = aliases.getAlias.bind(aliases);
+  const isTopLevelQuery = opts.aliases === undefined;
 
   // If they passed extra `conditions: ...`, parse that.
   // We can do this up-front b/c it doesn't require any join-tree metadata to perform,
@@ -217,8 +217,6 @@ export function parseFindQuery(
       keepAliases: opts.keepAliases,
       aliases,
       alias,
-      // Let the subquery's pruneUnusedJoins know about the top-level WHERE clauses
-      topLevelCondition: opts.topLevelCondition ?? cb,
       outerLateralJoins: [{ alias, select: selects, outerCb: cb }, ...(opts.outerLateralJoins ?? [])],
     });
     subQuery.orderBys = [];
@@ -300,9 +298,8 @@ export function parseFindQuery(
       query,
       meta,
       alias,
-      // Use opts.topLevelCondition to tell we're in a `addLateralJoin` and don't want the `CASE ... END as __class`
-      // select clause, which won't work because it's not an aggregate
-      join === "primary" && !opts.topLevelCondition,
+      // Skip the `CASE ... END as __class` if we're inside a o2m/m2m join
+      join === "primary" && isTopLevelQuery,
     );
     if (needsStiDiscriminator(meta)) {
       addStiSubtypeFilter(cb, meta, alias);
@@ -565,7 +562,7 @@ export function parseFindQuery(
 
   // always add the main table
   const alias = opts.alias ?? getAlias(meta.tableName);
-  if (opts.topLevelCondition === undefined) {
+  if (isTopLevelQuery) {
     selects.push(`${kq(alias)}.*`);
   } else {
     selects.push("count(*) as _");

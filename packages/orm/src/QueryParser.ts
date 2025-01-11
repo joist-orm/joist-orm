@@ -64,9 +64,9 @@ export interface PrimaryTable {
 /**
  * Joins into 0-1 relations, i.e. children up to a parent.
  *
- * Even though `LateralJoinTable` handles the "many children" case, we keep the
- * `"outer"` join for doing joins to optional "0 or 1" relations, where we don't
- * want a missing result to mean the primary entity itself is not returned.
+ * Even though `CteJoinTable` handles the "many children" case, we keep the `"outer"`
+ * join for doing joins to optional "0 or 1" relations, where we don't want a missing
+ * result to mean the primary entity itself is not returned.
  */
 export interface JoinTable {
   join: "inner" | "outer";
@@ -82,15 +82,6 @@ export interface CrossJoinTable {
   table: string;
 }
 
-/** Not "just the CTE" but how its joined into the primary query. */
-export interface CteJoinTable {
-  join: "cte";
-  alias: string;
-  /** Used more for bookkeeping/consistency with other join tables than the query itself. */
-  table: string;
-  query: ParsedFindQuery;
-}
-
 /**
  * Joins into 0-N relations, i.e. parent down to many children.
  *
@@ -98,7 +89,19 @@ export interface CteJoinTable {
  * counts (for `em.find`s) or rolls up (for JSON preloading) the children into
  * a single row, such that our top-level query does not need to DISTINCT-away
  * any duplication that comes from having multiple children rows.
+ *
+ * Note: This is not "just the CTE" but also how it's joined into the primary query.
  */
+export interface CteJoinTable {
+  join: "cte";
+  alias: string;
+  /** Used for join dependency tracking. */
+  fromAlias: string;
+  /** Used more for bookkeeping/consistency with other join tables than the query itself. */
+  table: string;
+  query: ParsedFindQuery;
+}
+
 export interface LateralJoinTable {
   join: "lateral";
   alias: string;
@@ -194,7 +197,7 @@ export function parseFindQuery(
     joinTable: JoinTable | undefined,
     // Allow addOrderBy to do its own post-addTable lateral join building
     orderByTables: ParsedTable[] | undefined = undefined,
-  ): LateralJoinTable | undefined {
+  ): CteJoinTable | undefined {
     const ef = parseEntityFilter(meta, filter);
     // Maybe skip
     if (!ef && !isAlias(filter) && !orderByTables) return;
@@ -231,7 +234,7 @@ export function parseFindQuery(
     );
     subQuery.orderBys = [];
     if (joinTable) subQuery.tables.unshift(joinTable);
-    const join: LateralJoinTable = { join: "lateral", table: meta.tableName, query: subQuery, alias, fromAlias };
+    const join: CteJoinTable = { join: "cte", table: meta.tableName, query: subQuery, alias, fromAlias };
     (orderByTables ?? tables).push(join);
     aliases.setTable(alias, join);
 
@@ -443,7 +446,7 @@ export function parseFindQuery(
     meta: EntityMetadata,
     alias: string,
     orderBy: Record<string, any>,
-    lateralJoins: LateralJoinTable[],
+    lateralJoins: CteJoinTable[],
   ): void {
     const entries = Object.entries(orderBy);
     // If we're recursing for lateral joins, look in the local query's tables,
@@ -501,7 +504,7 @@ export function parseFindQuery(
         }
         addOrderBy(field.otherMetadata(), table.alias, value, lateralJoins);
       } else if (field.kind === "o2m") {
-        let table = tables.filter((t) => t.join === "lateral").find((t) => t.table === field.otherMetadata().tableName);
+        let table = tables.filter((t) => t.join === "cte").find((t) => t.table === field.otherMetadata().tableName);
         if (!table) {
           // ...big copy/paste from up above...
           const a = getAlias(field.otherMetadata().tableName);
@@ -621,7 +624,7 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
       // Recurse into lateral joins...
       todo.push(...t.query.tables);
     } else if (t.join === "cte") {
-      // TODO some alias things
+      dt.addAlias(t.alias, [t.fromAlias]);
       todo.push(...t.query.tables);
     } else if (t.join === "cross") {
       // Doesn't have any conditions
@@ -653,7 +656,7 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
         assertNever(c);
       }
     });
-    todo2.push(...query.tables.filter((t) => t.join === "lateral").map((t) => t.query));
+    todo2.push(...query.tables.filter((t) => t.join === "lateral" || t.join === "cte").map((t) => t.query));
   }
 
   // Now remove any unused joins
@@ -1027,7 +1030,7 @@ export class ConditionBuilder {
    * expression that is basically "did any of my children match this condition?".
    *
    * We also assume that `findAndRewrite` is only called on the top-level/user-facing `ParsedFindQuery`,
-   * and not any intermediate `LateralJoinTable` queries (which are allowed to have their own
+   * and not any intermediate `CteJoinTable` queries (which are allowed to have their own
    * `ConditionBuilder`s for building their internal query, but it's not exposed to the user,
    * so won't have any truly-complex conditions that should need rewritten).
    *

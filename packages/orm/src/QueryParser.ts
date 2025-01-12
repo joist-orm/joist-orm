@@ -1,4 +1,5 @@
 import { groupBy, isPlainObject } from "joist-utils";
+import { builders } from "prettier/doc";
 import { aliasMgmt, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
@@ -9,6 +10,7 @@ import { buildCondition } from "./drivers/buildUtils";
 import { AliasAssigner, Column, getConstructorFromTaggedId, isDefined } from "./index";
 import { kq, kqDot } from "./keywords";
 import { assertNever, fail, partition } from "./utils";
+import join = builders.join;
 
 /** A tree of ANDs/ORs with conditions or nested conditions. */
 export interface ParsedExpressionFilter {
@@ -102,7 +104,15 @@ export interface CteJoinTable {
   col1: string;
   /** The column within the CTE we're joining to. */
   col2: string;
-  /** Whether to use an outer join, i.e. b/c its optional to have a child from this join. */
+  /**
+   * Whether to use an outer join (default true), i.e. if its optional to have a matching child.
+   *
+   * - outer: default
+   * - inner: if there is an inline condition that implies this is a required join
+   * - inner: if there is a $count > 0 + a `HAVING` to do the count check
+   * - outer: if there is a $count = 0 + a `_ IS NULL` to do the none-matched check
+   * - outer: if there is a condition from this CTE join (or children) in an `OR` clause
+   */
   outer?: boolean;
 }
 
@@ -200,7 +210,9 @@ export function parseFindQuery(
     const {
       subFilter,
       // If `ef` was is-null/not-null, use that as the count, otherwise probe for subFilter[$count]
-      count = subFilter && "$count" in subFilter ? { kind: "eq", value: subFilter["$count"] } : undefined,
+      count = subFilter && "$count" in subFilter
+        ? ({ kind: "eq", value: subFilter["$count"] } as ParsedValueFilter<number>)
+        : undefined,
     } = unparseFilter(filter, ef);
 
     const join: CteJoinTable = { join: "cte", table: meta.tableName, query: undefined!, alias, col1, col2 };
@@ -217,7 +229,6 @@ export function parseFindQuery(
     const groupByCol = joinTable ? kqDot(joinTable.alias, parseColumn(col2)) : col2;
 
     const subQuery = parseFindQuery(meta, subFilter, {
-      // Only pass through a subset of the opts...
       softDeletes: opts.softDeletes,
       pruneJoins: opts.pruneJoins,
       keepAliases: opts.keepAliases,
@@ -241,47 +252,8 @@ export function parseFindQuery(
       ctes.forEach((cte) => (cte.outer = false));
     }
 
-    // If the user did `books: null` or `books: { $count: 0 }`, we need to be an outer join and enforce "no matches"
-    const isZeroOrNull = count && ((count.kind === "eq" && count.value === 0) || count.kind === "is-null");
-    if (isZeroOrNull) {
-      // and add the condition on null
-      cb.addSimpleCondition({
-        kind: "column",
-        alias,
-        column: "_",
-        dbType: "int",
-        cond: { kind: "is-null" },
-        pruneable: false,
-      });
-    } else if (count) {
-      // If the count is just "non-zero", we don't need a HAVING for that
-      if (count.kind === "gt" && count.value === 0) {
-        // Good as-is, because we flip `outer.join = false`
-      } else {
-        const [op, bindings] = buildCondition({
-          kind: "column",
-          dbType: "int",
-          alias: "skip",
-          column: "count(*)",
-          cond: count,
-        });
-        subQuery.having = {
-          kind: "exp",
-          op: "and",
-          conditions: [
-            {
-              kind: "raw",
-              aliases: [alias],
-              // Kinda ugly but turn `skip."count(*)"` into "just count(*)"
-              condition: op.replace("skip.", "").replaceAll(/"/g, ""),
-              bindings,
-              pruneable: false,
-            },
-          ],
-        };
-      }
-      join.outer = false;
-    }
+    // If $count=0, this might mark the join as required...
+    if (count) handleCount(cb, join, count);
 
     return join;
   }
@@ -1695,6 +1667,49 @@ type PartialSome<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 //   // prune needs to see the immediate, not necessarily the whole conditions...
 //   // only rewriting needs to see the whole thing
 // }
+
+function handleCount(cb: ConditionBuilder, join: CteJoinTable, count: ParsedValueFilter<number>): void {
+  const { alias } = join;
+  const isZeroOrNull = count && ((count.kind === "eq" && count.value === 0) || count.kind === "is-null");
+  if (isZeroOrNull) {
+    // If the user did `books: null` or `books: { $count: 0 }`, we leave ourselves as an outer join and enforce "no matches"
+    cb.addSimpleCondition({
+      kind: "column",
+      alias,
+      column: "_",
+      dbType: "int",
+      cond: { kind: "is-null" },
+      pruneable: false,
+    });
+  } else if (count.kind === "gt" && count.value === 0) {
+    // If the count is "any N >= 0", we don't need a HAVING for that, and can just flip to required
+    join.outer = false;
+  } else {
+    // Otherwise they want some specific `count: 1/2/n` so we need a `HAVING`
+    const [op, bindings] = buildCondition({
+      kind: "column",
+      dbType: "int",
+      alias: "skip",
+      column: "count(*)",
+      cond: count,
+    });
+    join.query.having = {
+      kind: "exp",
+      op: "and",
+      conditions: [
+        {
+          kind: "raw",
+          aliases: [alias],
+          // Kinda ugly but turn `skip."count(*)"` into "just count(*)"
+          condition: op.replace("skip.", "").replaceAll(/"/g, ""),
+          bindings,
+          pruneable: false,
+        },
+      ],
+    };
+    join.outer = false;
+  }
+}
 
 function deepestCommonCte(ctePaths: string[][]): string | undefined {
   // First turn them all into `books`, `books/reviews/ratings`, etc.

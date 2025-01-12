@@ -2622,22 +2622,21 @@ describe("EntityManager.queries", () => {
         {
           alias: "a",
           table: "authors",
-          join: "lateral",
+          join: "cte",
+          col1: "lp.id",
+          col2: "a.publisher_id",
           query: {
             condition: {
               op: "and",
               conditions: [
-                { kind: "raw", condition: "lp.id = a.publisher_id" },
                 { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
               ],
             },
           },
+          outer: false,
         },
       ],
-      condition: {
-        op: "and",
-        conditions: [{ alias: "a", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } }],
-      },
+      condition: undefined,
       orderBys: [expect.anything()],
     });
   });
@@ -3140,21 +3139,18 @@ describe("EntityManager.queries", () => {
           { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id" },
           {
             alias: "b",
-            fromAlias: "a",
             table: "books",
-            join: "lateral",
+            join: "cte",
+            col1: "a.id",
+            col2: "b.author_id",
             query: {
-              selects: ["count(*) as _"],
+              selects: ["b.author_id", "count(*) as _"],
               tables: [{ alias: "b", table: "books", join: "primary" }],
-              condition: {
-                kind: "exp",
-                op: "and",
-                conditions: [
-                  { kind: "raw", aliases: ["b", "a"], condition: "a.id = b.author_id", bindings: [], pruneable: true },
-                ],
-              },
+              condition: undefined,
+              groupBys: [{ alias: "b", column: "author_id" }],
               orderBys: [],
             },
+            outer: true,
           },
         ],
         condition: undefined,
@@ -3168,7 +3164,15 @@ describe("EntityManager.queries", () => {
         selects: [`a.*`],
         tables: [
           { alias: "a", table: "authors", join: "primary" },
-          { alias: "b", table: "books", join: "lateral", fromAlias: "a", query: expect.anything() },
+          {
+            alias: "b",
+            table: "books",
+            join: "cte",
+            col1: "a.id",
+            col2: "b.author_id",
+            outer: true,
+            query: expect.anything(),
+          },
         ],
         condition: undefined,
         orderBys: [expect.anything()],

@@ -222,8 +222,12 @@ export function parseFindQuery(
     });
     subQuery.orderBys = [];
     subQuery.selects.unshift(col2);
-    subQuery.groupBys = [{ alias, column: parseColumn(col2) }];
+    // Use parseAlias instead of just `alias` so that we get base type suffixes like `sp_b0`
+    subQuery.groupBys = [{ alias: parseAlias(col2), column: parseColumn(col2) }];
+    subQuery.condition ??= { kind: "exp", op: "and", conditions: [] };
     join.query = subQuery;
+    // If our join column is in a base table, col2 will be `sp_b0.foo_id`, but our alias will be just `sp`
+    join.col2 = `${kq(parseAlias(col2).split("_")[0])}.${kq(parseColumn(col2))}`;
 
     const hasInlineConditions = deepFindConditions(subQuery.condition, true).length > 0;
     if (hasInlineConditions) {

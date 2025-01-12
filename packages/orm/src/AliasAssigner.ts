@@ -36,7 +36,11 @@ export class AliasAssigner {
   }
 
   getCtes(alias: string): CteJoinTable[] {
-    return this.#ctes[alias] || fail(`No CTEs found for alias ${alias}`);
+    return (
+      this.#ctes[alias] ??
+      this.#ctes[alias.split("_")[0]] ?? // Accept sp_b0 and look for sp
+      fail(`No CTEs found for alias ${alias}`)
+    );
   }
 
   getCtePath(alias: string): string[] {

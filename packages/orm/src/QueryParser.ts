@@ -714,10 +714,26 @@ function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpre
       return;
     }
 
-    // Otherwise we need to inject things
-    // If it's an expression...
-    // If it's a condition, we need to inject a condition...
-    throw new Error("todo");
+    // We're not a top-level AND, so just rewrite normally
+    const { conditions: cc } = condition;
+    for (let i = cc.length - 1; i >= 0; i--) {
+      const c = cc[i];
+
+      // Collect all the aliases used in this condition (which might be just one, if it's a simple column condition)
+      const used = findUsedAliases(c);
+      // How many child CTEs does it touch, if any?
+      const touchedCtes = used.map((a) => aliases.getCtes(a)[0]).filter((c) => !!c);
+
+      if (touchedCtes.length === 0) {
+        // Nothing to do, leave this condition in-place
+      } else {
+        if (c.kind === "column") {
+          throw new Error("todo");
+        } else {
+          throw new Error("todo");
+        }
+      }
+    }
   }
 }
 

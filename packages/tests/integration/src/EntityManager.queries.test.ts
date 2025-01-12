@@ -2269,20 +2269,22 @@ describe("EntityManager.queries", () => {
         {
           alias: "t",
           table: "tags",
+          join: "cte",
+          col1: "a.id",
+          col2: "t.author_id",
           query: {
+            tables: [
+              { alias: "att", table: "authors_to_tags", join: "inner", col1: "t.id", col2: "att.tag_id" },
+              { alias: "t", table: "tags", join: "primary" },
+            ],
             condition: {
-              conditions: [
-                { aliases: ["att", "t"], condition: "att.tag_id = t.id", bindings: [] },
-                { alias: "t", column: "id", dbType: "int", cond: { kind: "in", value: [-1] } },
-              ],
+              conditions: [{ alias: "t", column: "id", dbType: "int", cond: { kind: "in", value: [-1] } }],
             },
           },
+          outer: false,
         },
       ],
-      condition: {
-        op: "and",
-        conditions: [{ alias: "t", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } }],
-      },
+      condition: undefined,
       orderBys: [expect.anything()],
     });
   });
@@ -2305,29 +2307,24 @@ describe("EntityManager.queries", () => {
         {
           alias: "t",
           table: "tags",
-          join: "lateral",
-          fromAlias: "a",
+          join: "cte",
+          col1: "a.id",
+          col2: "t.author_id",
           query: {
-            selects: ["count(*) as _"],
-            orderBys: [],
+            selects: ["att.author_id", "count(*) as _"],
             tables: [
-              { alias: "att", table: "authors_to_tags", join: "inner", col1: "a.id", col2: "att.author_id" },
+              { alias: "att", table: "authors_to_tags", join: "inner", col1: "t.id", col2: "att.tag_id" },
               { alias: "t", table: "tags", join: "primary" },
             ],
             condition: {
               op: "and",
-              conditions: [
-                { aliases: ["att", "t"], condition: "att.tag_id = t.id", bindings: [] },
-                { alias: "t", column: "name", dbType: "citext", cond: { kind: "eq", value: "t1" } },
-              ],
+              conditions: [{ alias: "t", column: "name", dbType: "citext", cond: { kind: "eq", value: "t1" } }],
             },
           },
+          outer: false,
         },
       ],
-      condition: {
-        op: "and",
-        conditions: [{ alias: "t", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } }],
-      },
+      condition: undefined,
       orderBys: [expect.anything()],
     });
   });
@@ -2351,29 +2348,21 @@ describe("EntityManager.queries", () => {
         {
           alias: "t",
           table: "tags",
-          join: "lateral",
-          fromAlias: "a",
+          join: "cte",
           query: {
-            selects: ["count(*) as _"],
             orderBys: [],
             tables: [
-              { alias: "att", table: "authors_to_tags", join: "inner", col1: "a.id", col2: "att.author_id" },
+              { alias: "att", table: "authors_to_tags", join: "inner", col1: "t.id", col2: "att.tag_id" },
               { alias: "t", table: "tags", join: "primary" },
             ],
             condition: {
               op: "and",
-              conditions: [
-                { aliases: ["att", "t"], condition: "att.tag_id = t.id", bindings: [] },
-                { alias: "t", column: "name", dbType: "citext", cond: { kind: "in", value: ["t1", "t2"] } },
-              ],
+              conditions: [{ alias: "t", column: "name", dbType: "citext", cond: { kind: "in", value: ["t1", "t2"] } }],
             },
           },
         },
       ],
-      condition: {
-        op: "and",
-        conditions: [{ alias: "t", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } }],
-      },
+      condition: undefined,
       orderBys: [expect.anything()],
     });
   });

@@ -211,6 +211,10 @@ export function parseFindQuery(
     (orderByTables ?? tables).push(join);
     const ctes = [...(opts.ctes ?? []), join];
 
+    // If we're doing a m2m, the "outside" join uses `(entity).other_column_id` but within the join
+    // we need to select/group by the `(m2m).other_column_id`.
+    const groupByCol = joinTable ? kqDot(joinTable.alias, parseColumn(col2)) : col2;
+
     const subQuery = parseFindQuery(meta, subFilter, {
       // Only pass through a subset of the opts...
       softDeletes: opts.softDeletes,
@@ -221,9 +225,9 @@ export function parseFindQuery(
       ctes,
     });
     subQuery.orderBys = [];
-    subQuery.selects.unshift(col2);
+    subQuery.selects.unshift(groupByCol);
     // Use parseAlias instead of just `alias` so that we get base type suffixes like `sp_b0`
-    subQuery.groupBys = [{ alias: parseAlias(col2), column: parseColumn(col2) }];
+    subQuery.groupBys = [{ alias: parseAlias(groupByCol), column: parseColumn(groupByCol) }];
     subQuery.condition ??= { kind: "exp", op: "and", conditions: [] };
     join.query = subQuery;
     // If our join column is in a base table, col2 will be `sp_b0.foo_id`, but our alias will be just `sp`
@@ -454,21 +458,21 @@ export function parseFindQuery(
           );
         } else if (field.kind === "m2m") {
           // Always join into the m2m table
+          const a = getAlias(field.otherMetadata().tableName);
           const ja = getAlias(field.joinTableName);
           const jt: JoinTable = {
             alias: ja,
             join: "inner",
             table: field.joinTableName,
-            col1: kqDot(alias, "id"),
-            col2: kqDot(ja, field.columnNames[0]),
+            col1: kqDot(a, "id"),
+            col2: kqDot(ja, field.columnNames[1]),
           };
-          const a = getAlias(field.otherMetadata().tableName);
           addLateralJoin(
             field.otherMetadata(),
             a,
             (ef.subFilter as any)[key],
-            kqDot(ja, field.columnNames[1]),
-            kqDot(a, "id"),
+            kqDot(alias, "id"),
+            kqDot(a, field.columnNames[0]),
             jt,
           );
         } else {

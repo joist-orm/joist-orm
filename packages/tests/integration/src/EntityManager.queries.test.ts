@@ -2568,11 +2568,11 @@ describe("EntityManager.queries", () => {
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "lateral" },
+        { alias: "b", table: "books", join: "cte", outer: true },
       ],
       condition: {
         op: "and",
-        conditions: [{ alias: "b", column: "_", dbType: "int", cond: { kind: "eq", value: 0 } }],
+        conditions: [{ alias: "b", column: "_", dbType: "int", cond: { kind: "is-null" } }],
       },
       orderBys: [expect.anything()],
     });

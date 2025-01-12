@@ -235,15 +235,15 @@ export function parseFindQuery(
     aliases.setTable(alias, join, ctes);
 
     // If the user did `books: null` or `books: { $count: 0 }`, we need to be an outer join and enforce "no matches"
-    const isZero = count && count.kind === "is-null";
-    if (isZero) {
+    const isZeroOrNull = count && ((count.kind === "eq" && count.value === 0) || count.kind === "is-null");
+    if (isZeroOrNull) {
       // and add the condition on null
       cb.addSimpleCondition({
         kind: "column",
         alias,
         column: "_",
         dbType: "int",
-        cond: count,
+        cond: { kind: "is-null" },
         pruneable: false,
       });
     } else if (count) {
@@ -1570,7 +1570,6 @@ function unparseFilter(
     } else if (ef.kind === "is-null") {
       return { subFilter: {}, count: { kind: "is-null" } };
     } else if (ef.kind === "eq") {
-      // Should eq === 0 be returned as is-null?
       return { subFilter: { id: ef.value }, count: undefined };
     } else if (ef.kind === "in") {
       return { subFilter: { id: { in: ef.value } }, count: undefined };

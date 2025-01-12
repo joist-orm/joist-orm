@@ -210,6 +210,7 @@ export function parseFindQuery(
     join.outer = true;
     (orderByTables ?? tables).push(join);
     const ctes = [...(opts.ctes ?? []), join];
+    aliases.setTable(alias, join, ctes);
 
     // If we're doing a m2m, the "outside" join uses `(entity).other_column_id` but within the join
     // we need to select/group by the `(m2m).other_column_id`.
@@ -226,6 +227,7 @@ export function parseFindQuery(
     });
     subQuery.orderBys = [];
     subQuery.selects.unshift(groupByCol);
+    if (joinTable) subQuery.tables.unshift(joinTable);
     // Use parseAlias instead of just `alias` so that we get base type suffixes like `sp_b0`
     subQuery.groupBys = [{ alias: parseAlias(groupByCol), column: parseColumn(groupByCol) }];
     subQuery.condition ??= { kind: "exp", op: "and", conditions: [] };
@@ -238,9 +240,6 @@ export function parseFindQuery(
       // Mark both our CTE join & any parent CTE joins
       ctes.forEach((cte) => (cte.outer = false));
     }
-
-    if (joinTable) subQuery.tables.unshift(joinTable);
-    aliases.setTable(alias, join, ctes);
 
     // If the user did `books: null` or `books: { $count: 0 }`, we need to be an outer join and enforce "no matches"
     const isZeroOrNull = count && ((count.kind === "eq" && count.value === 0) || count.kind === "is-null");

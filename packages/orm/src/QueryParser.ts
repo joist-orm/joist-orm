@@ -204,6 +204,10 @@ export function parseFindQuery(
     } = unparseFilter(filter, ef);
 
     const join: CteJoinTable = { join: "cte", table: meta.tableName, query: undefined!, alias, col1, col2 };
+    // We start out as optional/outer, and then are flipped to required/inner if we find a filter
+    // Note it's important to set `outer: true` *before* we recurse into `parseFindQuery`, so that any
+    // child CTEs with inline conditions that flip us to `outer: false`.
+    join.outer = true;
     (orderByTables ?? tables).push(join);
     const ctes = [...(opts.ctes ?? []), join];
 
@@ -221,9 +225,11 @@ export function parseFindQuery(
     subQuery.groupBys = [{ alias, column: parseColumn(col2) }];
     join.query = subQuery;
 
-    // We start out as optional/outer, and then are flipped to required/inner if we find a filter
     const hasInlineConditions = deepFindConditions(subQuery.condition, true).length > 0;
-    join.outer = !hasInlineConditions;
+    if (hasInlineConditions) {
+      // Mark both our CTE join & any parent CTE joins
+      ctes.forEach((cte) => (cte.outer = false));
+    }
 
     if (joinTable) subQuery.tables.unshift(joinTable);
     aliases.setTable(alias, join, ctes);

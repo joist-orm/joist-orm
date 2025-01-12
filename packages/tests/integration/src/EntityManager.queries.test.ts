@@ -3803,7 +3803,7 @@ describe("EntityManager.queries", () => {
     const where = { books: { title: "b1" } } satisfies AuthorFilter;
     const q = buildQuery(em.ctx.knex, Author, { where });
     expect(q.toSQL().sql).toMatchInlineSnapshot(
-      `"select a.* from authors as a cross join lateral (select count(*) as _ from books as b where a.id = b.author_id AND b.deleted_at IS NULL AND b.title = ?) as b where a.deleted_at IS NULL AND b._ > ? order by a.id ASC"`,
+      `"with "b" as (select b.author_id, count(*) as _ from books as b where b.deleted_at IS NULL AND b.title = ? group by b.author_id) select a.* from authors as a where a.deleted_at IS NULL order by a.id ASC"`,
     );
     const rows = await q;
     expect(rows.length).toBe(0);

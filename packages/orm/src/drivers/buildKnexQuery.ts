@@ -2,7 +2,7 @@ import { Knex } from "knex";
 import { ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
 import { assertNever } from "../utils";
-import { buildWhereClause } from "./buildUtils";
+import { buildWhereClause, deepFindCtes } from "./buildUtils";
 import QueryBuilder = Knex.QueryBuilder;
 
 /**
@@ -37,6 +37,11 @@ export function buildKnexQuery(
     }
   });
 
+  for (const cte of deepFindCtes(parsed)) {
+    const { sql, bindings } = buildKnexQuery(knex, cte.query, {}).toSQL();
+    query.with(cte.alias, knex.raw(sql, bindings));
+  }
+
   parsed.tables.forEach((t) => {
     switch (t.join) {
       case "inner":
@@ -56,7 +61,8 @@ export function buildKnexQuery(
         query.crossJoin(asRaw(t));
         break;
       case "cte":
-        throw new Error("CTE joins aren't supported by buildKnexQuery yet");
+        // Handled above
+        break;
       default:
         assertNever(t);
     }
@@ -73,6 +79,11 @@ export function buildKnexQuery(
   parsed.orderBys &&
     parsed.orderBys.forEach(({ alias, column, order }) => {
       query.orderBy(knex.raw(kqDot(alias, column)) as any, order);
+    });
+
+  parsed.groupBys &&
+    parsed.groupBys.forEach(({ alias, column }) => {
+      query.groupByRaw(kqDot(alias, column));
     });
 
   if (limit) query.limit(limit);

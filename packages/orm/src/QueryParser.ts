@@ -698,7 +698,9 @@ function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpre
           const ctePaths = used.map((a) => aliases.getCtePath(a));
           const target = deepestCommonCte(ctePaths);
           if (!target) {
-            // leave it here and rewrite (should be similar to our OR handling?)
+            // This condition is using multiple CTEs, so we have to leave it here leave it here and rewrite
+            // (should be similar to our OR handling?)
+            // ...probably just push it onto the queue
             throw new Error("todo rewrite top-level condition");
           } else {
             // Push it into the target (which may not be a 1st-level CTE), but [0] currently gets back to that...
@@ -714,26 +716,32 @@ function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpre
       return;
     }
 
-    // We're not a top-level AND, so just rewrite normally
-    const { conditions: cc } = condition;
-    for (let i = cc.length - 1; i >= 0; i--) {
-      const c = cc[i];
-
-      // Collect all the aliases used in this condition (which might be just one, if it's a simple column condition)
+    // We're not a top-level AND, so we can't push down, we can only group & rewrite/replace
+    const cc = condition.conditions.map((c) => {
       const used = findUsedAliases(c);
-      // How many child CTEs does it touch, if any?
       const touchedCtes = used.map((a) => aliases.getCtes(a)[0]).filter((c) => !!c);
+      return { condition: c, used, touchedCtes };
+    });
 
+    // group by top-level CTE(s), like `[]` or `[a]` or `[a,b]`
+    const grouped = groupBy(cc, (c) => {
+      return c.touchedCtes.map((c) => c.alias).join(",");
+    });
+
+    // Transform the conditions, which might be condensing ones that go into the same CTE
+    condition.conditions = Object.values(grouped).flatMap((group) => {
+      // This group will all have the same touchedCtes, which might be [] or [a] or [a,b]
+      const touchedCtes = group[0].touchedCtes;
       if (touchedCtes.length === 0) {
-        // Nothing to do, leave this condition in-place
+        // Nothing to do, leave these conditions as-is
+        return group.map((g) => g.condition);
+      } else if (touchedCtes.length === 1) {
+        // We can push it down directly to that CTE, but need to keep the condition here
+        throw new Error("todo0");
       } else {
-        if (c.kind === "column") {
-          throw new Error("todo");
-        } else {
-          throw new Error("todo");
-        }
+        throw new Error("todo");
       }
-    }
+    });
   }
 }
 

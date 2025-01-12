@@ -3072,7 +3072,11 @@ describe("EntityManager.queries", () => {
 
       const em = newEntityManager();
       const t = alias(Tag);
-      const books = await em.find(Book, { author: { tags: t } }, { conditions: { or: [t.id.eq("t:1")] } });
+      const books = await em.find(
+        Book,
+        { author: { tags: t } },
+        { conditions: { or: [t.id.eq("t:1"), t.id.eq("t:2")] } },
+      );
       expect(books.length).toEqual(1);
 
       expect(

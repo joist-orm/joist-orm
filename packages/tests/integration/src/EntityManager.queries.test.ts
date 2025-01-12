@@ -2408,26 +2408,25 @@ describe("EntityManager.queries", () => {
       tables: [
         { alias: "a", table: "authors", join: "primary" },
         {
+          join: "cte",
           alias: "b",
           table: "books",
+          col1: "a.id",
+          col2: "b.author_id",
           query: {
-            selects: [`count(*) as _`],
+            selects: ["b.author_id", `count(*) as _`],
             tables: [{ alias: "b", table: "books", join: "primary" }],
             condition: {
               op: "and",
               conditions: [
-                { kind: "raw", condition: "a.id = b.author_id" },
                 { alias: "b", column: "title", dbType: "character varying", cond: { kind: "like", value: "b1%" } },
               ],
             },
           },
-          join: "lateral",
+          outer: false,
         },
       ],
-      condition: {
-        op: "and",
-        conditions: [{ alias: "b", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } }],
-      },
+      condition: undefined,
       orderBys: [expect.anything()],
     });
   });
@@ -2451,22 +2450,21 @@ describe("EntityManager.queries", () => {
         {
           alias: "b",
           table: "books",
-          join: "lateral",
+          join: "cte",
+          col1: "a.id",
+          col2: "b.author_id",
           query: {
             condition: {
               op: "and",
               conditions: [
-                { kind: "raw", condition: "a.id = b.author_id" },
                 { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b3" } },
               ],
             },
           },
+          outer: false,
         },
       ],
-      condition: {
-        op: "and",
-        conditions: [{ alias: "b", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } }],
-      },
+      condition: undefined,
       orderBys: [expect.anything()],
     });
   });
@@ -2488,22 +2486,19 @@ describe("EntityManager.queries", () => {
         {
           alias: "b",
           table: "books",
-          join: "lateral",
+          join: "cte",
+          col1: "a.id",
+          col2: "b.author_id",
           query: {
             condition: {
               op: "and",
-              conditions: [
-                { condition: "a.id = b.author_id" },
-                { alias: "b", column: "id", dbType: "int", cond: { kind: "eq", value: 2 } },
-              ],
+              conditions: [{ alias: "b", column: "id", dbType: "int", cond: { kind: "eq", value: 2 } }],
             },
           },
+          outer: false,
         },
       ],
-      condition: {
-        op: "and",
-        conditions: [{ alias: "b", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } }],
-      },
+      condition: undefined,
       orderBys: [expect.anything()],
     });
   });
@@ -2527,17 +2522,19 @@ describe("EntityManager.queries", () => {
         {
           alias: "b",
           table: "books",
-          join: "lateral",
+          join: "cte",
+          col1: "a.id",
+          col2: "b.author_id",
           query: {
             condition: {
               op: "and",
               conditions: [
-                { kind: "raw", condition: "a.id = b.author_id" },
                 { alias: "b", column: "deleted_at", dbType: "timestamp with time zone", cond: { kind: "is-null" } },
                 { alias: "b", column: "acknowledgements", dbType: "text", cond: { kind: "is-null" } },
               ],
             },
           },
+          outer: false,
         },
       ],
       condition: {
@@ -2549,7 +2546,6 @@ describe("EntityManager.queries", () => {
             dbType: "timestamp with time zone",
             cond: { kind: "is-null" },
           },
-          { alias: "b", column: "_", dbType: "int", cond: { kind: "gt", value: 0 } },
         ],
       },
       orderBys: [expect.anything()],

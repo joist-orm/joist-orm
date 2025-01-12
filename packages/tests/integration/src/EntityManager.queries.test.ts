@@ -3135,7 +3135,7 @@ describe("EntityManager.queries", () => {
             query: {
               selects: ["b.author_id", "count(*) as _"],
               tables: [{ alias: "b", table: "books", join: "primary" }],
-              condition: undefined,
+              condition: { kind: "exp", op: "and", conditions: [] },
               groupBys: [{ alias: "b", column: "author_id" }],
               orderBys: [],
             },
@@ -3183,28 +3183,19 @@ describe("EntityManager.queries", () => {
           {
             alias: "b",
             table: "books",
-            join: "lateral",
+            join: "cte",
+            col1: "a.id",
+            col2: "b.author_id",
             query: {
-              selects: ["count(*) as _", { sql: "BOOL_OR(b.title = ?) as _b_title_0", bindings: ["b1"] }],
+              selects: ["b.author_id", "count(*) as _"],
               tables: [{ table: "books", join: "primary" }],
               condition: {
-                conditions: [{ kind: "raw", condition: "a.id = b.author_id" }],
+                conditions: [{ kind: "column", cond: { kind: "eq", value: "b1" } }],
               },
             },
           },
         ],
-        condition: {
-          op: "and",
-          conditions: [
-            {
-              kind: "raw",
-              aliases: ["b"],
-              condition: "b._b_title_0",
-              bindings: [],
-              pruneable: false,
-            },
-          ],
-        },
+        condition: undefined,
         orderBys: [expect.anything()],
       });
     });

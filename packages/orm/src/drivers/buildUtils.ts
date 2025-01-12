@@ -1,6 +1,13 @@
 import { opToFn } from "../EntityGraphQLFilter";
 import { isDefined } from "../EntityManager";
-import { ColumnCondition, ParsedExpressionFilter, RawCondition } from "../QueryParser";
+import {
+  ColumnCondition,
+  CteJoinTable,
+  getTables,
+  ParsedExpressionFilter,
+  ParsedFindQuery,
+  RawCondition,
+} from "../QueryParser";
 import { kqDot } from "../keywords";
 import { assertNever } from "../utils";
 
@@ -73,4 +80,16 @@ export function buildCondition(cc: ColumnCondition): [string, any[]] {
     default:
       assertNever(cond);
   }
+}
+
+export function deepFindCtes(query: ParsedFindQuery): CteJoinTable[] {
+  const all: CteJoinTable[] = [];
+  const todo = getTables(query)[4];
+  while (todo.length > 0) {
+    const cte = todo.pop()!;
+    all.push(cte);
+    todo.push(...getTables(cte.query)[4]);
+  }
+  all.reverse();
+  return all;
 }

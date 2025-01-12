@@ -1,7 +1,7 @@
-import { CteJoinTable, getTables, ParsedFindQuery, ParsedTable } from "../QueryParser";
+import { getTables, ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
 import { assertNever } from "../utils";
-import { buildWhereClause } from "./buildUtils";
+import { buildWhereClause, deepFindCtes } from "./buildUtils";
 
 /**
  * Transforms `ParsedFindQuery` into a raw SQL string.
@@ -110,15 +110,3 @@ export function buildRawQuery(
 }
 
 const as = (t: ParsedTable) => `${kq(t.table)} AS ${kq(t.alias)}`;
-
-function deepFindCtes(query: ParsedFindQuery): CteJoinTable[] {
-  const all: CteJoinTable[] = [];
-  const todo = getTables(query)[4];
-  while (todo.length > 0) {
-    const cte = todo.pop()!;
-    all.push(cte);
-    todo.push(...getTables(cte.query)[4]);
-  }
-  all.reverse();
-  return all;
-}

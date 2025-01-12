@@ -3,8 +3,11 @@ import { CteJoinTable, ParsedFindQuery, ParsedTable } from "./QueryParser";
 import { fail } from "./utils";
 
 export class AliasAssigner {
+  /** A counter of tag/prefix => next available index. */
   #aliases: Record<string, number> = {};
+  /** The table of each alias in the query. */
   #tables: Record<string, ParsedTable> = {};
+  /** For every alias in the query, the stack of CTEs, including itself if it is one. */
   #ctes: Record<string, CteJoinTable[]> = {};
 
   constructor(query?: ParsedFindQuery) {

@@ -253,7 +253,10 @@ export function parseFindQuery(
     }
 
     // If $count=0, this might mark the join as required...
-    if (count) handleCount(cb, join, count);
+    if (count) {
+      const maybeIsNull = handleCount(join, count);
+      if (maybeIsNull) cb.addSimpleCondition(maybeIsNull);
+    }
 
     return join;
   }
@@ -660,10 +663,19 @@ function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpre
         } else if (touchedCtes.length === 1) {
           // If it only touches one, we can push it down directly to that CTE
           const [cte] = touchedCtes;
-          cte.query.condition!.conditions.push(c);
-          cc.splice(i, 1);
-          // ...need to ensure this CTE, and it's parent CTEs, have "at least one" enabled
-          cte.outer = false;
+          if (c.kind === "column" && c.column === "$count") {
+            const maybeIsNull = handleCount(cte, c.cond as ParsedValueFilter<number>);
+            if (maybeIsNull) {
+              cc[i] = maybeIsNull;
+            } else {
+              cc.splice(i, 1);
+            }
+          } else {
+            cte.query.condition!.conditions.push(c);
+            cc.splice(i, 1);
+            // ...need to ensure this CTE, and it's parent CTEs, have "at least one" enabled
+            cte.outer = false;
+          }
         } else {
           // Find the common parent CTE, if any
           const ctePaths = used.map((a) => aliases.getCtePath(a));
@@ -1668,19 +1680,28 @@ type PartialSome<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 //   // only rewriting needs to see the whole thing
 // }
 
-function handleCount(cb: ConditionBuilder, join: CteJoinTable, count: ParsedValueFilter<number>): void {
+/**
+ * Handles `count(*)` and `null/not-null` child relation filters.
+ *
+ * I.e.:
+ *
+ * - adds a `HAVING` if we need an explicit `1/2/n` condition, or
+ * - massages the join to `required` for "any N >= 0" conditions, or
+ * - returns a `_ is NULL` for our parent to enforce "no matches".
+ */
+function handleCount(join: CteJoinTable, count: ParsedValueFilter<number>): ColumnCondition | undefined {
   const { alias } = join;
   const isZeroOrNull = count && ((count.kind === "eq" && count.value === 0) || count.kind === "is-null");
   if (isZeroOrNull) {
     // If the user did `books: null` or `books: { $count: 0 }`, we leave ourselves as an outer join and enforce "no matches"
-    cb.addSimpleCondition({
+    return {
       kind: "column",
       alias,
       column: "_",
       dbType: "int",
       cond: { kind: "is-null" },
       pruneable: false,
-    });
+    };
   } else if (count.kind === "gt" && count.value === 0) {
     // If the count is "any N >= 0", we don't need a HAVING for that, and can just flip to required
     join.outer = false;

@@ -150,7 +150,7 @@ export interface ParsedFindQuery {
   cte?: { sql: string; bindings: readonly any[] };
 }
 
-/** Parses an `em.find` filter into a `ParsedFindQuery` for simpler execution. */
+/** Parses an `em.find` filter into a `ParsedFindQuery` AST for simpler execution. */
 export function parseFindQuery(
   meta: EntityMetadata,
   filter: any,
@@ -179,7 +179,7 @@ export function parseFindQuery(
   const getAlias = aliases.getAlias.bind(aliases);
   const isTopLevelQuery = opts.aliases === undefined;
 
-  function addLateralJoin(
+  function addCteJoin(
     meta: EntityMetadata,
     alias: string,
     filter: any,
@@ -448,7 +448,7 @@ export function parseFindQuery(
               fail(`No poly component found for ${otherField.fieldName}`);
             otherColumn = otherComponent.columnName;
           }
-          addLateralJoin(
+          addCteJoin(
             field.otherMetadata(),
             a,
             (ef.subFilter as any)[key],
@@ -467,7 +467,7 @@ export function parseFindQuery(
             col1: kqDot(a, "id"),
             col2: kqDot(ja, field.columnNames[1]),
           };
-          addLateralJoin(
+          addCteJoin(
             field.otherMetadata(),
             a,
             (ef.subFilter as any)[key],

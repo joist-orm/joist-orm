@@ -656,9 +656,13 @@ function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpre
         // Collect all the aliases used in this condition (which might be just one, if it's a simple column condition)
         const used = findUsedAliases(c);
         // How many child CTEs does it touch, if any?
-        const touchedCtes = used.map((a) => aliases.getCtes(a)[0]).filter((c) => !!c);
+        const touchedCtes: Array<CteJoinTable | "root"> = used
+          .map((a) => aliases.getCtes(a)[0])
+          .map((c) => c ?? "root");
 
         if (touchedCtes.length === 0) {
+          // Nothing to do, leave this condition in-place
+        } else if (touchedCtes.length === 1 && touchedCtes[0] === "root") {
           // Nothing to do, leave this condition in-place
         } else if (touchedCtes.length === 1) {
           // If it only touches one, we can push it down directly to that CTE
@@ -684,7 +688,7 @@ function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpre
             // This condition is using multiple CTEs, so we have to leave it here leave it here and rewrite
             // (should be similar to our OR handling?)
             // ...probably just push it onto the queue
-            throw new Error("todo rewrite top-level condition");
+            todo.push({ condition: c, isTopLevelAnd: false });
           } else {
             // Push it into the target (which may not be a 1st-level CTE), but [0] currently gets back to that...
             const cte = aliases.getCtes(target)[0];

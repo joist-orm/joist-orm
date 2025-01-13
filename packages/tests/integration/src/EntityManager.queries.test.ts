@@ -2785,6 +2785,39 @@ describe("EntityManager.queries", () => {
       expect(authors.length).toEqual(2);
     });
 
+    it("can use aliases as an o2m single-CTE OR w/root AND", async () => {
+      // Given one author that matches the 1st OR
+      await insertAuthor({ first_name: "a1", age: 10 });
+      await insertBook({ title: "b1", author_id: 1, order: 1 });
+      // And another author that matches the 2nd OR
+      await insertAuthor({ first_name: "a2", age: 10 });
+      await insertBook({ title: "b2", author_id: 2, order: 2 });
+      // And one author that matches either
+      await insertAuthor({ first_name: "a3", age: 10 });
+      await insertBook({ title: "b3", author_id: 3, order: 3 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const authors = await em.find(
+        Author,
+        { as: a, books: b },
+        {
+          conditions: {
+            and: [
+              b.order.gt(0),
+              {
+                or: [
+                  { and: [a.firstName.eq("a1"), b.title.eq("b1")] },
+                  { and: [a.firstName.eq("a2"), b.title.eq("b2")] },
+                ],
+              },
+            ],
+          },
+        },
+      );
+      // Then we return the two authors
+      expect(authors.length).toEqual(2);
+    });
+
     it("can use aliases as an o2m single-path grand-child OR", async () => {
       // Given one author that matches the 1st OR
       await insertAuthor({ first_name: "a1" });

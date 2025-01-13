@@ -2,7 +2,7 @@ import { Knex } from "knex";
 import { ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
 import { assertNever } from "../utils";
-import { buildWhereClause } from "./buildUtils";
+import { buildWhereClause, deepFindCtes } from "./buildUtils";
 import QueryBuilder = Knex.QueryBuilder;
 
 /**
@@ -22,20 +22,25 @@ export function buildKnexQuery(
 ): QueryBuilder<{}, unknown[]> {
   const { limit, offset } = settings;
 
-  // If we're doing o2m joins, add a `DISTINCT` clause to avoid duplicates
-  const needsDistinct = parsed.tables.some((t) => t.join === "outer" && t.distinct !== false);
-
   // We need the `knex` param to call `knex.raw`
   const asRaw = (t: ParsedTable) => knex.raw(`${kq(t.table)} as ${kq(t.alias)}`);
 
   const primary = parsed.tables.find((t) => t.join === "primary")!;
 
-  let query: Knex.QueryBuilder<any, any> = knex.from(asRaw(primary));
+  let query: Knex.QueryBuilder = knex.from(asRaw(primary));
 
-  parsed.selects.forEach((s, i) => {
-    const maybeDistinct = i === 0 && needsDistinct ? "distinct " : "";
-    query.select(knex.raw(`${maybeDistinct}${s}`));
+  parsed.selects.forEach((s) => {
+    if (typeof s === "string") {
+      query.select(knex.raw(s));
+    } else {
+      query.select(knex.raw(s.sql, s.bindings));
+    }
   });
+
+  for (const cte of deepFindCtes(parsed)) {
+    const { sql, bindings } = buildKnexQuery(knex, cte.query, {}).toSQL();
+    query.with(cte.alias, knex.raw(sql, bindings));
+  }
 
   parsed.tables.forEach((t) => {
     switch (t.join) {
@@ -48,14 +53,20 @@ export function buildKnexQuery(
       case "primary":
         // ignore
         break;
+      case "lateral":
+        const { sql, bindings } = buildKnexQuery(knex, t.query, {}).toSQL();
+        query.crossJoin(knex.raw(`lateral (${sql}) as ${kq(t.alias)}`, bindings));
+        break;
+      case "cross":
+        query.crossJoin(asRaw(t));
+        break;
+      case "cte":
+        // Handled above
+        break;
       default:
         assertNever(t);
     }
   });
-
-  if (parsed.lateralJoins) {
-    query.joinRaw(parsed.lateralJoins.joins.join("\n"), parsed.lateralJoins.bindings);
-  }
 
   if (parsed.condition) {
     const where = buildWhereClause(parsed.condition, true);
@@ -67,11 +78,12 @@ export function buildKnexQuery(
 
   parsed.orderBys &&
     parsed.orderBys.forEach(({ alias, column, order }) => {
-      // If we're doing "select distinct" for o2m joins, then all order bys must be selects
-      if (needsDistinct) {
-        query.select(knex.raw(kqDot(alias, column)));
-      }
       query.orderBy(knex.raw(kqDot(alias, column)) as any, order);
+    });
+
+  parsed.groupBys &&
+    parsed.groupBys.forEach(({ alias, column }) => {
+      query.groupByRaw(kqDot(alias, column));
     });
 
   if (limit) query.limit(limit);

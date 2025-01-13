@@ -33,7 +33,7 @@ export type EntityFilter<T extends Entity, I = IdOf<T>, F = FilterOf<T>, N = nev
   | I
   | readonly I[]
   // Note that this is a weak type (all optional keys) but TS still enforces at least one overlap
-  | ({ as?: Alias<T> } & F)
+  | ({ as?: Alias<T>; $count?: number } & F)
   // Always allow `undefined` for condition pruning
   | undefined
   // But only allow `null` for `nullable` relations

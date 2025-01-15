@@ -552,7 +552,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   ): Promise<T[]> {
     const { softDeletes = "exclude", populate } = options ?? {};
     // Make a copy of `where` because `em.find` will re-write new entities to `-1`, that our `entityMatches` could still match
-    const persisted = await this.find(type, { ...(where as any) }, { softDeletes });
+    // ...and also prune `undefined` here, since `em.find` will do it anyway, but `entityMatches` does not.
+    const copy: any = Object.fromEntries(Object.entries(where).filter(([, v]) => v !== undefined));
+    const persisted = await this.find(type, copy, { softDeletes });
     const unchanged = persisted.filter((e) => !e.isNewEntity && !e.isDirtyEntity && !e.isDeletedEntity);
     const maybeNew = this.entities.filter(
       (e) => e instanceof type && (e.isNewEntity || e.isDirtyEntity) && !e.isDeletedEntity && entityMatches(e, where),
@@ -1727,8 +1729,9 @@ export function sameEntity(a: Entity | string | number | undefined, b: Entity | 
   if (a === b) {
     return true;
   }
-  if (a === undefined || b === undefined) {
-    return a === undefined && b === undefined;
+  // Throw in null handling for findWithNewOrChanged ambivalence
+  if (a === undefined || b === undefined || a === null || b === null) {
+    return (a === undefined || a === null) && (b === undefined || b === null);
   }
   // If both are entities, return if they are the same reference
   if (isEntity(a) && isEntity(b)) {

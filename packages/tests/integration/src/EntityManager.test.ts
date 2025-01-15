@@ -1383,14 +1383,48 @@ describe("EntityManager", () => {
       expect(authors).toMatchEntity([a2]);
     });
 
-    it("finds changed entities w/m2o is newly undefined", async () => {
+    it("finds changed entities w/m2o is newly unset with undefined", async () => {
       await insertPublisher({ name: "p1 " });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
       await insertAuthor({ first_name: "a2", publisher_id: 1 });
+      await insertAuthor({ first_name: "a3" });
       const em = newEntityManager();
-      const a2 = await em.load(Author, "a:1");
-      a2.publisher.set(undefined);
-      const authors = await em.findWithNewOrChanged(Author, { publisher: undefined });
-      expect(authors).toMatchEntity([a2]);
+      const a1 = await em.load(Author, "a:1");
+      a1.publisher.set(undefined);
+      const authors = await em.findWithNewOrChanged(Author, { publisher: undefined }); // pruned
+      expect(authors).toMatchEntity([{ firstName: "a2" }, { firstName: "a3" }, { firstName: "a1" }]);
+    });
+
+    it("finds changed entities w/m2o is newly unset with null", async () => {
+      await insertPublisher({ name: "p1 " });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertAuthor({ first_name: "a2", publisher_id: 1 });
+      await insertAuthor({ first_name: "a3" });
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1");
+      a1.publisher.set(undefined);
+      const authors = await em.findWithNewOrChanged(Author, { publisher: null });
+      expect(authors).toMatchEntity([{ firstName: "a3" }, { firstName: "a1" }]);
+    });
+
+    it("finds changed entities w/m2o is persisted unset with undefined", async () => {
+      await insertPublisher({ name: "p1 " });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertAuthor({ first_name: "a2", publisher_id: 1 });
+      await insertAuthor({ first_name: "a3" });
+      const em = newEntityManager();
+      const authors = await em.findWithNewOrChanged(Author, { publisher: undefined }); // pruned
+      expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }, { firstName: "a3" }]);
+    });
+
+    it("finds changed entities w/m2o is persisted unset with null", async () => {
+      await insertPublisher({ name: "p1 " });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertAuthor({ first_name: "a2", publisher_id: 1 });
+      await insertAuthor({ first_name: "a3" });
+      const em = newEntityManager();
+      const authors = await em.findWithNewOrChanged(Author, { publisher: null });
+      expect(authors).toMatchEntity([{ firstName: "a3" }]);
     });
   });
 

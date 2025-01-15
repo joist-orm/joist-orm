@@ -1,3 +1,10 @@
+## [1.223.1](https://github.com/joist-orm/joist-orm/compare/v1.223.0...v1.223.1) (2025-01-15)
+
+
+### Bug Fixes
+
+* Fix findWithNewOrChanged on null relations. ([#1347](https://github.com/joist-orm/joist-orm/issues/1347)) ([2031f9e](https://github.com/joist-orm/joist-orm/commit/2031f9e3fe67d2b5ac2a0bf0e4c59aa56762daa6))
+
 # [1.223.0](https://github.com/joist-orm/joist-orm/compare/v1.222.0...v1.223.0) (2025-01-09)
 
 

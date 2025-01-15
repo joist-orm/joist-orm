@@ -1654,9 +1654,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     this.#rm.setLogger(typeof arg === "boolean" ? (arg ? new ReactionLogger() : undefined) : arg);
   }
 
-  /** Accepts `Author#firstName,lastName`. */
+  /** Accepts `Author.firstName,lastName`. */
   setFieldLogging(spec: string): void;
-  /** Accepts `["Author#firstName,lastName", "Book#title"]`. */
+  /** Accepts `["Author.firstName,lastName", "Book.title"]`. */
   setFieldLogging(spec: string[]): void;
   /** Sets this EntityManager's field logger. */
   setFieldLogging(logger: FieldLogger): void;

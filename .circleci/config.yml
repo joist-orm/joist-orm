@@ -69,14 +69,14 @@ jobs:
           steps:
             - run:
                 name: Run tests
-                command: yarn workspaces foreach --all --exclude packages/tests/bun run test
+                command: yarn workspaces foreach --all --exclude joist-tests-bun run test
       - when:
           condition:
             equal: [ << parameters.node-version >>, "bun" ]
           steps:
             - run:
                 name: Run tests
-                command: yarn workspaces foreach --include packages/tests/bun run test
+                command: yarn workspace joist-tests-bun run test
 
       - store_test_results:
           path: ./artifacts

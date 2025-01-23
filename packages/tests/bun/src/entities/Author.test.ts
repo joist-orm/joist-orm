@@ -1,11 +1,14 @@
-import { describe, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { newAuthor } from "src/entities/index.js";
 import { newEntityManager } from "src/setupDbTests.js";
 
 describe("Author", () => {
   test("works", async () => {
     const em = newEntityManager();
-    newAuthor(em);
+    const a = newAuthor(em);
     await em.flush();
+    expect(a).toMatchEntity({
+      firstName: "firstName",
+    });
   });
 });

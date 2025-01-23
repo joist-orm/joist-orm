@@ -24,6 +24,7 @@
     "packages/plugins/join-preloading",
     "packages/utils",
     "packages/test-utils",
+    "packages/tests/bun",
     "packages/tests/integration",
     "packages/tests/schema-misc",
     "packages/tests/esm-misc",
@@ -52,5 +53,5 @@
   "dependencies": {
     "typescript": "5.7.2"
   },
-  "packageManager": "yarn@4.4.1"
+  "packageManager": "yarn@4.6.0"
 }

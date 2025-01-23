@@ -28,7 +28,6 @@ jobs:
     resource_class: large
     steps:
       - checkout
-
       - when:
           condition:
             not:
@@ -49,9 +48,7 @@ jobs:
             - run:
                 when: << parameters.node-version >> == "bun"
                 command: bun install
-
       - run: yarn build
-
       - run:
           name: Start Postgres database
           command: |
@@ -63,7 +60,6 @@ jobs:
       - run:
           name: Run codegen
           command: yarn codegen
-
       - run:
           when: << parameters.node-version >> != "bun"
           name: Run tests
@@ -74,7 +70,6 @@ jobs:
           command: yarn workspaces foreach --include packages/tests/bun run test
       - store_test_results:
           path: ./artifacts
-
       - when:
           condition:
             and:

@@ -32,7 +32,7 @@ jobs:
       - when:
           condition:
             not:
-              equal: [ << parameters.node-version >>, "bun" ]
+              equal: [ << parameters.node-version >>, bun ]
           steps:
             - node/install:
                 node-version: << parameters.node-version >>
@@ -41,7 +41,7 @@ jobs:
                 pkg-manager: yarn
       - when:
           condition:
-            equal: [ << parameters.node-version >>, "bun" ]
+            equal: [ << parameters.node-version >>, bun ]
           steps:
             - node/install:
                 node-version: "23"
@@ -65,14 +65,14 @@ jobs:
       - when:
           condition:
             not:
-              equal: [ << parameters.node-version >>, "bun" ]
+              equal: [ << parameters.node-version >>, bun ]
           steps:
             - run:
                 name: Run tests
                 command: yarn workspaces foreach --all --exclude joist-tests-bun run test
       - when:
           condition:
-            equal: [ << parameters.node-version >>, "bun" ]
+            equal: [ << parameters.node-version >>, bun ]
           steps:
             - run:
                 name: Run tests

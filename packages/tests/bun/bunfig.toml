@@ -1,2 +1,3 @@
 [test]
 preload = ["./src/setupDbTests.ts"]
+root = "./src"

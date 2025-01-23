@@ -1,4 +1,3 @@
-import CustomMatcherResult = jest.CustomMatcherResult;
 import {
   AsyncProperty,
   BaseEntity,
@@ -14,6 +13,7 @@ import {
   Reference,
 } from "joist-orm";
 import { isPlainObject } from "joist-utils";
+import { CustomMatcherResult } from "./index";
 
 // This might be undefined if running outside of jest
 const jestMatchers = (globalThis as any)[Symbol.for("$$jest-matchers-object")];
@@ -29,7 +29,7 @@ const matchers = jestMatchers?.matchers;
  * - We prune the expected/actual values to be as minimal as possible, to avoid Jest
  *   recursively crawling into connection pools or other misc non-useful things in the diffs
  */
-export function toMatchEntity<T extends object>(actual: T, expected: MatchedEntity<T>): CustomMatcherResult {
+export function toMatchEntity<T>(this: any, actual: unknown, expected: MatchedEntity<T>): CustomMatcherResult {
   // We're given expected, which is an object literal of what the user wants to match
   // against (some intermixed POJOs & entities) and actual (which similarly could be
   // intermixed POJOs & entities, but will likely be more sprawling because it's the
@@ -40,14 +40,24 @@ export function toMatchEntity<T extends object>(actual: T, expected: MatchedEnti
   // same "clean clone" of actual, and compare the two.
   const cleanExpected = deepClone(expected);
   const cleanActual = deepClone(deepMirror(cleanExpected, actual));
+
   // Watch for `expect(someAuthor).toMatchEntity(a1)` as we'll turn `someAuthor` into "a:1",
   // so can't use toMatchObject anymore.
-  if (typeof cleanActual !== "object") {
-    // @ts-ignore
-    return matchers.toEqual.call(this, cleanActual, cleanExpected);
+  if (matchers) {
+    // this is jest
+    if (typeof cleanActual !== "object") {
+      // @ts-ignore
+      return matchers.toEqual.call(this, cleanActual, cleanExpected);
+    } else {
+      // @ts-ignore
+      return matchers.toMatchObject.call(this, cleanActual, cleanExpected);
+    }
   } else {
-    // @ts-ignore
-    return matchers.toMatchObject.call(this, cleanActual, cleanExpected);
+    // this is bun--it's matcherHint actually seems to do `toMatchObject` already?
+    return {
+      pass: this.equals(cleanActual, cleanExpected),
+      message: () => this.utils.matcherHint("toMatchEntity", cleanActual, cleanExpected),
+    };
   }
 }
 

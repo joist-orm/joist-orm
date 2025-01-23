@@ -5,11 +5,22 @@ export { ContextFn, makeRun, makeRunEach, newContext, run, runEach } from "./run
 export { seed } from "./seed";
 export { toMatchEntity } from "./toMatchEntity";
 
+export interface CustomMatcherResult {
+  pass: boolean;
+  message: () => string;
+}
+
 declare global {
   namespace jest {
     interface Matchers<R, T = {}> {
       toMatchEntity(expected: MatchedEntity<T>): CustomMatcherResult;
     }
+  }
+}
+// @ts-ignore
+declare module "bun:test" {
+  interface Matchers<T = unknown> {
+    toMatchEntity(expected: MatchedEntity<T>): CustomMatcherResult;
   }
 }
 

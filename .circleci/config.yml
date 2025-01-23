@@ -28,21 +28,29 @@ jobs:
     resource_class: large
     steps:
       - checkout
-      - node/install:
-          when: << parameters.node-version >> != "bun"
-          node-version: << parameters.node-version >>
-          install-yarn: true
-      - node/install-packages:
-          when: << parameters.node-version >> != "bun"
-          pkg-manager: yarn
-      - run:
-          when: << parameters.node-version >> == "bun"
-          name: Install bun
-          command: curl -fsSL https://bun.sh/install | bash
-      - run:
-          when: << parameters.node-version >> == "bun"
-          command: bun install
+      -
+      - when:
+          condition:
+            not: [<< parameters.node-version >>, "bun"]
+          steps:
+            - node/install:
+                node-version: << parameters.node-version >>
+                install-yarn: true
+            - node/install-packages:
+                pkg-manager: yarn
+      - when:
+          condition:
+            equal: [<< parameters.node-version >>, "bun"]
+          steps:
+            - run:
+                name: Install bun
+                command: curl -fsSL https://bun.sh/install | bash
+            - run:
+                when: << parameters.node-version >> == "bun"
+                command: bun install
+
       - run: yarn build
+
       - run:
           name: Start Postgres database
           command: |
@@ -54,6 +62,7 @@ jobs:
       - run:
           name: Run codegen
           command: yarn codegen
+
       - run:
           when: << parameters.node-version >> != "bun"
           name: Run tests
@@ -64,6 +73,7 @@ jobs:
           command: yarn workspaces foreach --include packages/tests/bun run test
       - store_test_results:
           path: ./artifacts
+
       - when:
           condition:
             and:

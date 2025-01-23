@@ -27,6 +27,8 @@ RUN echo "#!/bin/bash" > /reset.sh && \
   echo "  CREATE DATABASE uuid_ids OWNER ${APP_USERNAME};" >> /reset.sh && \
   echo "  DROP DATABASE IF EXISTS esm WITH (FORCE);" >> /reset.sh && \
   echo "  CREATE DATABASE esm OWNER ${APP_USERNAME};" >> /reset.sh && \
+  echo "  DROP DATABASE IF EXISTS bun WITH (FORCE);" >> /reset.sh && \
+  echo "  CREATE DATABASE bun OWNER ${APP_USERNAME};" >> /reset.sh && \
   echo "  DROP DATABASE IF EXISTS schema_misc WITH (FORCE);" >> /reset.sh && \
   echo "  CREATE DATABASE schema_misc OWNER ${APP_USERNAME};" >> /reset.sh && \
   echo "  DROP DATABASE IF EXISTS number_ids WITH (FORCE);" >> /reset.sh && \

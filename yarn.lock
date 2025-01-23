@@ -4710,6 +4710,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/ws@npm:~8.5.10":
+  version: 8.5.13
+  resolution: "@types/ws@npm:8.5.13"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10/21369beafa75c91ae3b00d3a2671c7408fceae1d492ca2abd5ac7c8c8bf4596d513c1599ebbddeae82c27c4a2d248976d0d714c4b3d34362b2ae35b964e2e637
+  languageName: node
+  linkType: hard
+
 "@types/yargs-parser@npm:*":
   version: 15.0.0
   resolution: "@types/yargs-parser@npm:15.0.0"
@@ -5805,6 +5814,16 @@ __metadata:
   dependencies:
     semver: "npm:^7.0.0"
   checksum: 10/90136fa0ba98b7a3aea33190b1262a5297164731efb6a323b0231acf60cc2ea0b2b1075dbf107038266b8b77d6045fa9631d1c3f90efc1c594ba61218fbfbb4c
+  languageName: node
+  linkType: hard
+
+"bun-types@npm:^1.2.0":
+  version: 1.2.0
+  resolution: "bun-types@npm:1.2.0"
+  dependencies:
+    "@types/node": "npm:*"
+    "@types/ws": "npm:~8.5.10"
+  checksum: 10/c900beb8dbef64bfd2fe9c4673c9ccb3cdc672744975313931d69f0254eed024fd4c7b0fb1ecec75b4de5215338522adf3057444212a0f83d194d12237b6c689
   languageName: node
   linkType: hard
 
@@ -11108,6 +11127,23 @@ __metadata:
     prettier-plugin-organize-imports: "npm:^4.1.0"
     ts-node-dev: "npm:^2.0.0"
     tsconfig-paths: "npm:^4.2.0"
+    typescript: "npm:5.7.2"
+  languageName: unknown
+  linkType: soft
+
+"joist-tests-bun@workspace:packages/tests/bun":
+  version: 0.0.0-use.local
+  resolution: "joist-tests-bun@workspace:packages/tests/bun"
+  dependencies:
+    "@types/node": "npm:^22.10.1"
+    bun-types: "npm:^1.2.0"
+    joist-codegen: "workspace:*"
+    joist-migration-utils: "workspace:*"
+    joist-orm: "workspace:*"
+    joist-test-utils: "workspace:*"
+    node-pg-migrate: "npm:^7.8.0"
+    prettier: "npm:^3.4.1"
+    prettier-plugin-organize-imports: "npm:^4.1.0"
     typescript: "npm:5.7.2"
   languageName: unknown
   linkType: soft
@@ -18078,11 +18114,11 @@ __metadata:
 
 "typescript@patch:typescript@npm%3A5.7.2#optional!builtin<compat/typescript>":
   version: 5.7.2
-  resolution: "typescript@patch:typescript@npm%3A5.7.2#optional!builtin<compat/typescript>::version=5.7.2&hash=8c6c40"
+  resolution: "typescript@patch:typescript@npm%3A5.7.2#optional!builtin<compat/typescript>::version=5.7.2&hash=5786d5"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 10/ff27fc124bceb8969be722baa38af945b2505767cf794de3e2715e58f61b43780284060287d651fcbbdfb6f917f4653b20f4751991f17e0706db389b9bb3f75d
+  checksum: 10/d75ca10141afc64fd3474b41a8b082b640555bed388d237558aed64e5827ddadb48f90932c7f4205883f18f5bcab8b6a739a2cfac95855604b0dfeb34bc2f3eb
   languageName: node
   linkType: hard
 

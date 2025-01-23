@@ -1,0 +1,32 @@
+{
+  "name": "joist-tests-bun",
+  "version": "1.0.0",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joist-orm/joist-orm.git",
+    "directory": "packages/tests/bun"
+  },
+  "scripts": {
+    "migrate": "DATABASE_URL=postgres://joist:local@localhost:5435/bun node-pg-migrate up --decamelize=false --migrations-dir=./migrations",
+    "format": "prettier --ignore-path ../../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "codegen": "node ../../codegen",
+    "test": "bun test --reporter=junit --reporter-outfile=../../../artifacts/junit-tests-bun.xml"
+  },
+  "dependencies": {
+    "bun-types": "^1.2.0",
+    "joist-orm": "workspace:*",
+    "node-pg-migrate": "^7.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "joist-codegen": "workspace:*",
+    "joist-migration-utils": "workspace:*",
+    "joist-test-utils": "workspace:*",
+    "prettier": "^3.4.1",
+    "prettier-plugin-organize-imports": "^4.1.0",
+    "typescript": "5.7.2"
+  }
+}

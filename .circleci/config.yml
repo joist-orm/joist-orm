@@ -15,6 +15,7 @@ workflows:
                 - "20" # EOL 30 Apr 2026
                 - "22" # EOL 30 Apr 2027
                 - "23" # Current
+                - "bun"
 
 jobs:
   build:
@@ -27,11 +28,30 @@ jobs:
     resource_class: large
     steps:
       - checkout
-      - node/install:
-          node-version: << parameters.node-version >>
-          install-yarn: true
-      - node/install-packages:
-          pkg-manager: yarn
+
+      - when:
+          condition:
+            not:
+              equal: [ << parameters.node-version >>, bun ]
+          steps:
+            - node/install:
+                node-version: << parameters.node-version >>
+                install-yarn: true
+            - node/install-packages:
+                pkg-manager: yarn
+      - when:
+          condition:
+            equal: [ << parameters.node-version >>, bun ]
+          steps:
+            - node/install:
+                node-version: "23"
+                install-yarn: true
+            - node/install-packages:
+                pkg-manager: yarn
+            - run:
+                name: Install Bun
+                command: curl -fsSL https://bun.sh/install | bash
+
       - run: yarn build
       - run:
           name: Start Postgres database
@@ -44,17 +64,32 @@ jobs:
       - run:
           name: Run codegen
           command: yarn codegen
-      - run:
-          name: Run tests
-          command: yarn test
+
+      - when:
+          condition:
+            not:
+              equal: [ << parameters.node-version >>, bun ]
+          steps:
+            - run:
+                name: Run tests
+                command: yarn workspaces foreach --worktree --parallel --include 'packages/tests/*' --exclude packages/tests/bun run test
+      - when:
+          condition:
+            equal: [ << parameters.node-version >>, bun ]
+          steps:
+            - run:
+                name: Run tests
+                command: yarn workspace joist-tests-bun run test
+
       - store_test_results:
           path: ./artifacts
       - when:
           condition:
             and:
-              - equal: [main, << pipeline.git.branch >>]
-              - equal: ["22", << parameters.node-version >>]
+              - equal: [ main, << pipeline.git.branch >> ]
+              - equal: [ "22", << parameters.node-version >> ]
           steps:
             - run:
                 name: Release
                 command: yarn semantic-release
+

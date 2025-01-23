@@ -1,0 +1,14 @@
+{
+  "codegenPlugins": [],
+  "contextType": "Context@../../context.js",
+  "databaseUrl": "postgres://joist:local@localhost:5435/bun",
+  "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
+  "entitiesDirectory": "./src/entities",
+  "esm": true,
+  "ignoredTables": ["pgmigrations"],
+  "timestampColumns": {
+    "createdAt": { "names": ["created_at", "createdAt"], "required": false },
+    "updatedAt": { "names": ["updated_at", "updatedAt"], "required": false }
+  },
+  "version": "0.0.1"
+}

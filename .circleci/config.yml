@@ -43,12 +43,11 @@ jobs:
           condition:
             equal: [ << parameters.node-version >>, "bun" ]
           steps:
-            - run:
-                name: Install bun
-                command: curl -fsSL https://bun.sh/install | bash
-            - run:
-                name: Install packages
-                command: bun install
+            - node/install:
+                node-version: "23"
+                install-yarn: true
+            - node/install-packages:
+                pkg-manager: yarn
 
       - run: yarn build
       - run:

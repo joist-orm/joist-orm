@@ -28,6 +28,7 @@ jobs:
     resource_class: large
     steps:
       - checkout
+
       - when:
           condition:
             not:
@@ -46,8 +47,9 @@ jobs:
                 name: Install bun
                 command: curl -fsSL https://bun.sh/install | bash
             - run:
-                when: << parameters.node-version >> == "bun"
+                name: Install packages
                 command: bun install
+
       - run: yarn build
       - run:
           name: Start Postgres database
@@ -60,14 +62,23 @@ jobs:
       - run:
           name: Run codegen
           command: yarn codegen
-      - run:
-          when: << parameters.node-version >> != "bun"
-          name: Run tests
-          command: yarn workspaces foreach --all --exclude packages/tests/bun run test
-      - run:
-          when: << parameters.node-version >> == "bun"
-          name: Run tests
-          command: yarn workspaces foreach --include packages/tests/bun run test
+
+      - when:
+          condition:
+            not:
+              equal: [ << parameters.node-version >>, "bun" ]
+          steps:
+            - run:
+                name: Run tests
+                command: yarn workspaces foreach --all --exclude packages/tests/bun run test
+      - when:
+          condition:
+            equal: [ << parameters.node-version >>, "bun" ]
+          steps:
+            - run:
+                name: Run tests
+                command: yarn workspaces foreach --include packages/tests/bun run test
+
       - store_test_results:
           path: ./artifacts
       - when:

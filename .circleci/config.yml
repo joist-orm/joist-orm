@@ -28,10 +28,11 @@ jobs:
     resource_class: large
     steps:
       - checkout
-      -
+
       - when:
           condition:
-            not: [<< parameters.node-version >>, "bun"]
+            not:
+              equal: [ << parameters.node-version >>, "bun" ]
           steps:
             - node/install:
                 node-version: << parameters.node-version >>
@@ -40,7 +41,7 @@ jobs:
                 pkg-manager: yarn
       - when:
           condition:
-            equal: [<< parameters.node-version >>, "bun"]
+            equal: [ << parameters.node-version >>, "bun" ]
           steps:
             - run:
                 name: Install bun
@@ -77,9 +78,10 @@ jobs:
       - when:
           condition:
             and:
-              - equal: [main, << pipeline.git.branch >>]
-              - equal: ["22", << parameters.node-version >>]
+              - equal: [ main, << pipeline.git.branch >> ]
+              - equal: [ "22", << parameters.node-version >> ]
           steps:
             - run:
                 name: Release
                 command: yarn semantic-release
+

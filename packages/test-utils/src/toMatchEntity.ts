@@ -56,10 +56,7 @@ export function toMatchEntity<T>(this: any, actual: unknown, expected: MatchedEn
     // this is bun--it's matcherHint actually seems to do `toMatchObject` already?
     return {
       pass: this.equals(cleanActual, cleanExpected),
-      message: () =>
-        this.utils.matcherHint("toMatchEntity", cleanActual, cleanExpected, {
-          comment: "asdf",
-        }),
+      message: () => this.utils.matcherHint("toMatchEntity", cleanActual, cleanExpected),
     };
   }
 }

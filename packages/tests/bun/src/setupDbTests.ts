@@ -4,7 +4,6 @@ import { knex as createKnex, Knex } from "knex";
 import { EntityManager } from "src/entities";
 
 // expect.extend({ toMatchEntity });
-// expect.addEqualityTesters([areEntitiesEqual]);
 
 export let knex: Knex = createKnex({
   client: "pg",

@@ -1,6 +1,4 @@
-import { AuthorCodegen } from "./entities.js";
-
-import { authorConfig as config } from "./entities.js";
+import { AuthorCodegen, authorConfig as config } from "src/entities/index.js";
 
 export class Author extends AuthorCodegen {}
 

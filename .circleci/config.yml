@@ -48,6 +48,9 @@ jobs:
                 install-yarn: true
             - node/install-packages:
                 pkg-manager: yarn
+            - run:
+                name: Install Bun
+                command: curl -fsSL https://bun.sh/install | bash
 
       - run: yarn build
       - run:

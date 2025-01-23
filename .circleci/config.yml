@@ -72,7 +72,7 @@ jobs:
           steps:
             - run:
                 name: Run tests
-                command: yarn workspaces foreach --all --exclude joist-tests-bun run test
+                command: yarn workspaces foreach --worktree --parallel --include 'packages/tests/*' --exclude packages/tests/bun run test
       - when:
           condition:
             equal: [ << parameters.node-version >>, bun ]

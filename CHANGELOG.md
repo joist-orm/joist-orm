@@ -1,3 +1,10 @@
+# [1.224.0](https://github.com/joist-orm/joist-orm/compare/v1.223.1...v1.224.0) (2025-01-23)
+
+
+### Features
+
+* Basic toMatchEntity working in Bun. ([#1350](https://github.com/joist-orm/joist-orm/issues/1350)) ([b41c377](https://github.com/joist-orm/joist-orm/commit/b41c37728a3baf143fe504f9353ec82bd29d6456))
+
 ## [1.223.1](https://github.com/joist-orm/joist-orm/compare/v1.223.0...v1.223.1) (2025-01-15)
 
 

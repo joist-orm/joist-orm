@@ -15,6 +15,7 @@ workflows:
                 - "20" # EOL 30 Apr 2026
                 - "22" # EOL 30 Apr 2027
                 - "23" # Current
+                - "bun"
 
 jobs:
   build:
@@ -28,10 +29,19 @@ jobs:
     steps:
       - checkout
       - node/install:
+          when: << parameters.node-version >> != "bun"
           node-version: << parameters.node-version >>
           install-yarn: true
       - node/install-packages:
+          when: << parameters.node-version >> != "bun"
           pkg-manager: yarn
+      - run:
+          when: << parameters.node-version >> == "bun"
+          name: Install bun
+          command: curl -fsSL https://bun.sh/install | bash
+      - run:
+          when: << parameters.node-version >> == "bun"
+          command: bun install
       - run: yarn build
       - run:
           name: Start Postgres database
@@ -45,8 +55,13 @@ jobs:
           name: Run codegen
           command: yarn codegen
       - run:
+          when: << parameters.node-version >> != "bun"
           name: Run tests
-          command: yarn test
+          command: yarn workspaces foreach --all --exclude packages/tests/bun run test
+      - run:
+          when: << parameters.node-version >> == "bun"
+          name: Run tests
+          command: yarn workspaces foreach --include packages/tests/bun run test
       - store_test_results:
           path: ./artifacts
       - when:

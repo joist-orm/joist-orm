@@ -1,6 +1,13 @@
 import { opToFn } from "../EntityGraphQLFilter";
 import { isDefined } from "../EntityManager";
-import { ColumnCondition, ParsedExpressionFilter, RawCondition } from "../QueryParser";
+import {
+  ColumnCondition,
+  CteJoinTable,
+  getTables,
+  ParsedExpressionFilter,
+  ParsedFindQuery,
+  RawCondition,
+} from "../QueryParser";
 import { kqDot } from "../keywords";
 import { assertNever } from "../utils";
 
@@ -25,15 +32,13 @@ export function buildWhereClause(exp: ParsedExpressionFilter, topLevel = false):
   return [sql, tuples.flatMap(([, bindings]) => bindings)];
 }
 
+/** Returns a tuple of `["column op ?"`, bindings]`. */
 function buildRawCondition(raw: RawCondition): [string, any[]] {
-  if (raw.bindings.length > 0) {
-    throw new Error("Not implemented");
-  }
-  return [raw.condition, []];
+  return [raw.condition, raw.bindings];
 }
 
 /** Returns a tuple of `["column op ?"`, bindings]`. */
-function buildCondition(cc: ColumnCondition): [string, any[]] {
+export function buildCondition(cc: ColumnCondition): [string, any[]] {
   const { alias, column, cond } = cc;
   const columnName = kqDot(alias, column);
   switch (cond.kind) {
@@ -75,4 +80,16 @@ function buildCondition(cc: ColumnCondition): [string, any[]] {
     default:
       assertNever(cond);
   }
+}
+
+export function deepFindCtes(query: ParsedFindQuery): CteJoinTable[] {
+  const all: CteJoinTable[] = [];
+  const todo = getTables(query)[4];
+  while (todo.length > 0) {
+    const cte = todo.pop()!;
+    all.push(cte);
+    todo.push(...getTables(cte.query)[4]);
+  }
+  all.reverse();
+  return all;
 }

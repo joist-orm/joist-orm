@@ -9,14 +9,15 @@ import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { buildHintTree } from "../HintTree";
 import {
   ColumnCondition,
-  ParsedExpressionFilter,
   ParsedFindQuery,
   ParsedValueFilter,
+  RawCondition,
   getTables,
-  joinKeywords,
+  parseAlias,
   parseFindQuery,
 } from "../QueryParser";
 import { visitConditions } from "../QueryVisitor";
+import { buildRawQuery } from "../drivers/buildRawQuery";
 import { kq, kqDot } from "../keywords";
 import { LoadHint } from "../loadHints";
 import { maybeRequireTemporal } from "../temporal";
@@ -65,64 +66,62 @@ export function findDataLoader<T extends Entity>(
         return [entities];
       }
 
-      // WITH data(tag, arg1, arg2) AS (VALUES
+      // WITH _find (tag, arg1, arg2) AS (VALUES
       //   (0::int, 'a'::varchar, 'a'::varchar),
       //   (1, 'b', 'b'),
       //   (2, 'c', 'c')
       // )
-      // SELECT array_agg(d.tag), a.*
+      // SELECT a.*, array_agg(_find.tag) AS _tags
       // FROM authors a
-      // JOIN data d ON (d.arg1 = a.first_name OR d.arg2 = a.last_name)
-      // group by a.id;
+      // CROSS JOIN _find AS _find
+      // WHERE a.first_name = _find.arg0 OR a.last_name = _find.arg1
+      // GROUP BY a.id
 
       // Build the list of 'arg1', 'arg2', ... strings
-      const args = collectArgs(query);
+      const { where, ...options } = queries[0];
+      const query = parseFindQuery(getMetadata(type), where, options);
+      const args = collectAndReplaceArgs(query);
       args.unshift({ columnName: "tag", dbType: "int" });
 
-      const selects = ["array_agg(_find.tag) as _tags", ...query.selects];
-      const [primary, joins] = getTables(query);
-
-      // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
-      const bindings = createBindings(meta, queries);
-      // Create the JOIN clause, i.e. ON a.firstName = _find.arg0
-      const [conditions] = buildConditions(query.condition!);
-
+      query.selects.unshift("array_agg(_find.tag) as _tags");
+      // Inject a cross join into the query
+      query.tables.unshift({ join: "cross", table: "_find", alias: "_find" });
+      query.cte = {
+        sql: buildValuesCte("_find", args, queries),
+        bindings: createBindings(meta, queries),
+      };
       // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
-      const groupBys = selects
+      query.groupBys = query.selects
+        .filter((s) => typeof s === "string")
         .filter((s) => !s.includes("array_agg") && !s.includes("CASE") && !s.includes(" as "))
-        .map((s) => s.replace("*", "id"));
+        .map((s) => {
+          // Make a liberal assumption that this is a `a.id` or `a_st0.id` string
+          const alias = parseAlias(s);
+          return { alias, column: "id" };
+        });
 
       // Also because of our `array_agg` group by, add any order bys to the group by
-      for (const o of query.orderBys) {
-        if (o.alias !== primary.alias) {
-          groupBys.push(kqDot(o.alias, o.column));
+      const [primary] = getTables(query);
+      for (const { alias, column } of query.orderBys) {
+        if (alias !== primary.alias) {
+          query.groupBys.push({ alias, column });
         }
       }
 
       const { preloader } = getEmInternalApi(em);
       const preloadJoins = preloader && hint && preloader.getPreloadJoins(em, meta, buildHintTree(hint), query);
       if (preloadJoins) {
-        selects.push(
+        query.selects.push(
           ...preloadJoins.flatMap((j) =>
             // Because we 'group by primary.id' to collapse the "a1 matched multiple finds" into
             // a single row, we also need to pick just the first value of each preload column
             j.selects.map((s) => `(array_agg(${s.value}))[1] AS ${s.as}`),
           ),
         );
+        query.tables.push(...preloadJoins.map((j) => j.join));
       }
 
-      const sql = `
-        ${buildValuesCte("_find", args, queries)}
-        SELECT ${selects.join(", ")}
-        FROM ${primary.table} as ${kq(primary.alias)}
-        ${joins.map((j) => `${joinKeywords(j)} ${j.table} ${kq(j.alias)} ON ${j.col1} = ${j.col2}`).join(" ")}
-        JOIN _find ON ${conditions}
-        ${preloadJoins?.map((j) => j.join).join(" ") ?? ""}
-        GROUP BY ${groupBys.join(", ")}
-        ORDER BY ${query.orderBys.map((o) => `${kq(o.alias)}.${o.column} ${o.order}`).join(", ")}
-        LIMIT ${em.entityLimit};
-      `;
-
+      const { sql, bindings } = buildRawQuery(query, { limit: em.entityLimit });
       const rows = await em.driver.executeQuery(em, cleanSql(sql), bindings);
       ensureUnderLimit(em, rows);
 
@@ -171,26 +170,56 @@ export function whereFilterHash(where: FilterAndSettings<any>): any {
   return hash(where, { replacer, algorithm: "md5" });
 }
 
-/** Collects & names all the args in a query, i.e. `['arg1', 'arg2']`--not the actual values. */
-export function collectArgs(query: ParsedFindQuery): { columnName: string; dbType: string }[] {
+class ArgCounter {
+  private index = 0;
+  next(): number {
+    return this.index++;
+  }
+}
+
+/**
+ * Recursively finds args in `query` and replaces them with `_find.argX` placeholders.
+ *
+ * We also return the name/type of each found/rewritten arg so we can build the `_find` CTE table.
+ */
+export function collectAndReplaceArgs(query: ParsedFindQuery): { columnName: string; dbType: string }[] {
   const args: { columnName: string; dbType: string }[] = [];
+  const argsIndex = new ArgCounter();
   visitConditions(query, {
     visitCond(c: ColumnCondition) {
       if ("value" in c.cond) {
         const { kind } = c.cond;
         if (kind === "in" || kind === "nin") {
           args.push({ columnName: `arg${args.length}`, dbType: `${c.dbType}[]` });
+          return rewriteToRawCondition(c, argsIndex);
         } else if (kind === "between") {
           // between has two values
           args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
           args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
+          return rewriteToRawCondition(c, argsIndex);
         } else {
           args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
+          return rewriteToRawCondition(c, argsIndex);
         }
+      } else if (c.cond.kind === "is-null" || c.cond.kind === "not-null") {
+        // leave it alone
+      } else {
+        throw new Error("Unsupported");
       }
     },
   });
   return args;
+}
+
+function rewriteToRawCondition(c: ColumnCondition, argsIndex: ArgCounter): RawCondition {
+  const [op, negate] = makeOp(c.cond, argsIndex);
+  return {
+    kind: "raw",
+    aliases: [c.alias],
+    condition: `${negate ? "NOT " : ""}${kqDot(c.alias, c.column)} ${op}`,
+    pruneable: c.pruneable ?? false,
+    bindings: [],
+  };
 }
 
 export function createBindings(meta: EntityMetadata, queries: readonly FilterAndSettings<any>[]): any[] {
@@ -232,51 +261,8 @@ function stripValues(query: ParsedFindQuery): void {
   });
 }
 
-/**
- * Creates the `a1.firstName = _find.args1` AND a2.lastName = _find.args2` condition
- * that joins our `_find` CTE (1 row per query that's getting auto-joined together)
- * into the main table.
- *
- * We return a tuple for `[SQL, argsTaken]`, but `argsTaken` is only used for recursive
- * calls to know which `_find.argsX` they should use, as we match up columns of the `_find`
- * CTE (`args0`, `args1`, `args2`, ...) to positions in the `JOIN ON (...)` "batched where"
- * clause.
- */
-export function buildConditions(ef: ParsedExpressionFilter, argsIndex: number = 0): [string, number] {
-  const conditions = [] as string[];
-  const originalIndex = argsIndex;
-  ef.conditions.forEach((c) => {
-    if (c.kind === "column") {
-      const [op, argsTaken, negate] = makeOp(c.cond, argsIndex);
-      if (c.alias === "unset") {
-        throw new Error("Alias was not bound in em.find");
-      }
-      if (negate) {
-        conditions.push(`NOT (${kqDot(c.alias, c.column)} ${op})`);
-      } else {
-        conditions.push(`${kqDot(c.alias, c.column)} ${op}`);
-      }
-      argsIndex += argsTaken;
-    } else if (c.kind === "exp") {
-      let [cond, argsTaken] = buildConditions(c, argsIndex);
-      const needsWrap = !("cond" in c);
-      if (needsWrap) cond = `(${cond})`;
-      conditions.push(cond);
-      argsIndex += argsTaken;
-    } else if (c.kind === "raw") {
-      conditions.push(c.condition);
-      if (c.bindings.length > 0) {
-        throw new Error("RawConditions with bindings is not batchable yet");
-      }
-    } else {
-      throw new Error(`Unsupported condition kind ${c}`);
-    }
-  });
-  const argsTaken = argsIndex - originalIndex;
-  return [conditions.join(` ${ef.op.toUpperCase()} `), argsTaken];
-}
-
-function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, number, boolean] {
+/** Returns [operator, argsTaken, negate], i.e. `["=", 1, false]`. */
+function makeOp(cond: ParsedValueFilter<any>, argsIndex: ArgCounter): [string, boolean] {
   switch (cond.kind) {
     case "eq":
     case "ne":
@@ -296,23 +282,23 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, numbe
     case "overlaps":
     case "containedBy": {
       const fn = opToFn[cond.kind] ?? fail(`Invalid operator ${cond.kind}`);
-      return [`${fn} _find.arg${argsIndex}`, 1, false];
+      return [`${fn} _find.arg${argsIndex.next()}`, false];
     }
     case "noverlaps":
     case "ncontains": {
       const fn = (opToFn as any)[cond.kind.substring(1)] ?? fail(`Invalid operator ${cond.kind}`);
-      return [`${fn} _find.arg${argsIndex}`, 1, true];
+      return [`${fn} _find.arg${argsIndex.next()}`, true];
     }
     case "is-null":
-      return [`IS NULL`, 0, false];
+      return [`IS NULL`, false];
     case "not-null":
-      return [`IS NOT NULL`, 0, false];
+      return [`IS NOT NULL`, false];
     case "in":
-      return [`= ANY(_find.arg${argsIndex})`, 1, false];
+      return [`= ANY(_find.arg${argsIndex.next()})`, false];
     case "nin":
-      return [`!= ALL(_find.arg${argsIndex})`, 1, false];
+      return [`!= ALL(_find.arg${argsIndex.next()})`, false];
     case "between":
-      return [`BETWEEN _find.arg${argsIndex} AND _find.arg${argsIndex + 1}`, 2, false];
+      return [`BETWEEN _find.arg${argsIndex.next()} AND _find.arg${argsIndex.next()}`, false];
     default:
       assertNever(cond);
   }

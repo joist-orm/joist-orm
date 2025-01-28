@@ -1148,7 +1148,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
    */
   async setDefaults(entities: Entity[]): Promise<void> {
     const suppressedTypeErrors: Error[] = [];
-    const entitiesByType = groupBy(entities, (e) => getMetadata(e));
+    const entitiesByType = groupBy(
+      entities.filter((e) => e.isNewEntity),
+      (e) => getMetadata(e),
+    );
     await setAsyncDefaults(suppressedTypeErrors, this.ctx, entitiesByType);
   }
 

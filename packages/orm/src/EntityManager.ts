@@ -142,7 +142,7 @@ export function isId(value: any): value is IdOf<unknown> {
 
 export type EntityManagerHook = "beforeTransaction" | "afterTransaction";
 
-type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;
+type HookFn<TX> = (em: EntityManager, txn: TX) => MaybePromise<any>;
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
@@ -152,8 +152,8 @@ export interface TimestampFields {
   deletedAt: string | undefined;
 }
 
-export interface EntityManagerOpts {
-  driver: Driver;
+export interface EntityManagerOpts<TX = unknown> {
+  driver: Driver<TX>;
   preloadPlugin?: PreloadPlugin;
 }
 
@@ -187,10 +187,13 @@ export type EntityManagerMode = "read-only" | "in-memory-writes" | "writes";
  * ```
  *
  * @param C The type of your application-specific app-wide/request-wide Context object that will be passed to hooks
+ * @typeParam C - the application-specific context (typically the request-level context)
+ * @typeParam Entity - the application's based entity type (i.e. with number ids or string ids)
+ * @typeParamTX - the application's Transaction type, i.e. `Knex`
  */
-export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
+export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX extends unknown = unknown> {
   public readonly ctx: C;
-  public driver: Driver;
+  public driver: Driver<TX>;
   public currentTxnKnex: Knex | undefined;
   public entityLimit: number = defaultEntityLimit;
   readonly #entities: Entity[] = [];
@@ -215,16 +218,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   readonly #rm = new ReactionsManager(this);
   /** Ensures our `em.flush` method is not interrupted. */
   readonly #fl = new FlushLock();
-  readonly #hooks: Record<EntityManagerHook, HookFn[]> = { beforeTransaction: [], afterTransaction: [] };
+  readonly #hooks: Record<EntityManagerHook, HookFn<any>[]> = { beforeTransaction: [], afterTransaction: [] };
   readonly #preloader: PreloadPlugin | undefined;
   #fieldLogger: FieldLogger | undefined;
   private __api: EntityManagerInternalApi;
   mode: EntityManagerMode = "writes";
 
-  constructor(em: EntityManager<C>);
-  constructor(ctx: C, opts: EntityManagerOpts);
-  constructor(ctx: C, driver: Driver);
-  constructor(emOrCtx: EntityManager<C> | C, driverOrOpts?: EntityManagerOpts | Driver) {
+  constructor(em: EntityManager<C, Entity, TX>);
+  constructor(ctx: C, opts: EntityManagerOpts<TX>);
+  constructor(ctx: C, driver: Driver<TX>);
+  constructor(emOrCtx: EntityManager<C, Entity, TX> | C, driverOrOpts?: EntityManagerOpts<TX> | Driver<TX>) {
     if (emOrCtx instanceof EntityManager) {
       const em = emOrCtx;
       this.driver = em.driver;
@@ -939,24 +942,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     return result;
   }
 
-  /** Loads entities from a knex QueryBuilder. */
-  public async loadFromQuery<T extends EntityW>(type: EntityConstructor<T>, query: Knex.QueryBuilder): Promise<T[]>;
+  /** Loads entities from database rows. */
+  public async loadFromQuery<T extends EntityW>(type: EntityConstructor<T>, rows: unknown[]): Promise<T[]>;
   public async loadFromQuery<T extends EntityW, const H extends LoadHint<T>>(
     type: EntityConstructor<T>,
-    query: Knex.QueryBuilder,
+    rows: unknown[],
     populate: H,
   ): Promise<Loaded<T, H>[]>;
   public async loadFromQuery<T extends EntityW>(
     type: EntityConstructor<T>,
-    query: Knex.QueryBuilder,
+    rows: unknown[],
     populate?: any,
   ): Promise<T[]> {
-    // Enforce this em's entity limit if this query doesn't already have a limit present.
-    // Knex doesn't have an api to inspect a query, so we have to go through its internal `_single` property
-    if ((query as any)._single.limit === undefined) {
-      query.limit(this.entityLimit);
-    }
-    const rows = await query;
     const entities = this.hydrate(type, rows);
     if (populate) {
       await this.populate(entities, populate);
@@ -1057,7 +1054,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
    * transaction, which is useful for enforcing cross-table/application-level invariants that
    * cannot be enforced with database-level constraints.
    */
-  public async transaction<T>(fn: (txn: Knex.Transaction) => Promise<T>): Promise<T> {
+  public async transaction<T>(fn: (txn: TX) => Promise<T>): Promise<T> {
     return this.driver.transaction(this, async (knex) => {
       const result = await fn(knex);
       // The lambda may have done some interstitial flushes (that would not
@@ -1593,11 +1590,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     await this.#rm.recalcPendingDerivedValues("reactiveFields");
   }
 
-  public beforeTransaction(fn: HookFn) {
+  public beforeTransaction(fn: HookFn<TX>) {
     this.#hooks.beforeTransaction.push(fn);
   }
 
-  public afterTransaction(fn: HookFn) {
+  public afterTransaction(fn: HookFn<TX>) {
     this.#hooks.afterTransaction.push(fn);
   }
 
@@ -1697,7 +1694,7 @@ export interface EntityManagerInternalApi {
   getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined;
   setPreloadedRelation<U>(taggedId: string, fieldName: string, children: U[]): void;
 
-  hooks: Record<EntityManagerHook, HookFn[]>;
+  hooks: Record<EntityManagerHook, HookFn<any>[]>;
   rm: ReactionsManager;
   preloader: PreloadPlugin | undefined;
   isValidating: boolean;

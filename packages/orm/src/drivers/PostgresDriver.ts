@@ -42,7 +42,7 @@ export interface PostgresDriverOpts {
  *
  * - We use a pg-specific bulk update syntax.
  */
-export class PostgresDriver implements Driver {
+export class PostgresDriver implements Driver<Knex.Transaction> {
   private readonly idAssigner: IdAssigner;
 
   constructor(
@@ -62,7 +62,7 @@ export class PostgresDriver implements Driver {
     return this.executeQuery(em, sql, bindings);
   }
 
-  async executeQuery(em: EntityManager<unknown>, sql: string, bindings: readonly any[]): Promise<any[]> {
+  async executeQuery(em: EntityManager, sql: string, bindings: readonly any[]): Promise<any[]> {
     // Still go through knex to use the connection pool
     return this.getMaybeInTxnKnex(em)
       .raw(sql, bindings)

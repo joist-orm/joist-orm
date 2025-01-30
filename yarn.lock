@@ -5827,6 +5827,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"bun-types@npm:^1.2.1":
+  version: 1.2.1
+  resolution: "bun-types@npm:1.2.1"
+  dependencies:
+    "@types/node": "npm:*"
+    "@types/ws": "npm:~8.5.10"
+  checksum: 10/c3f002c1567b69df72d00b53512f8188ac919be420217aaa2bd8564af0042357fab89b9c079201f2a86c153ec57478832c6eb521a0bf42583a7c1f04dbcddc4f
+  languageName: node
+  linkType: hard
+
 "bytes@npm:3.0.0":
   version: 3.0.0
   resolution: "bytes@npm:3.0.0"
@@ -11004,6 +11014,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-driver-bun-pg@workspace:packages/drivers/bun-pg"
   dependencies:
+    bun-types: "npm:^1.2.1"
     joist-orm: "workspace:*"
     prettier: "npm:^3.4.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"

@@ -1,5 +1,12 @@
+import { sql, TransactionSQL } from "bun";
 import { Driver, IdAssigner } from "joist-orm";
 
-export class BunPgDriver implements Driver {
+async function main() {
+  await sql.begin(async (tx) => {
+    return [tx`asdfa`];
+  });
+}
+
+export class BunPgDriver implements Driver<TransactionSQL> {
   private readonly idAssigner: IdAssigner;
 }

@@ -19,6 +19,7 @@
     "build"
   ],
   "dependencies": {
+    "bun-types": "^1.2.1",
     "joist-orm": "workspace:*"
   },
   "devDependencies": {

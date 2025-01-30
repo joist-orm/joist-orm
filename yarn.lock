@@ -11000,6 +11000,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"joist-driver-bun-pg@workspace:packages/drivers/bun-pg":
+  version: 0.0.0-use.local
+  resolution: "joist-driver-bun-pg@workspace:packages/drivers/bun-pg"
+  dependencies:
+    joist-orm: "workspace:*"
+    prettier: "npm:^3.4.1"
+    prettier-plugin-organize-imports: "npm:^4.1.0"
+    tsconfig-paths: "npm:^4.2.0"
+    typescript: "npm:5.7.2"
+  languageName: unknown
+  linkType: soft
+
 "joist-graphql-codegen@workspace:*, joist-graphql-codegen@workspace:packages/graphql-codegen":
   version: 0.0.0-use.local
   resolution: "joist-graphql-codegen@workspace:packages/graphql-codegen"

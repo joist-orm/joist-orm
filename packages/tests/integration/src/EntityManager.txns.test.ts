@@ -38,7 +38,8 @@ describe("EntityManager", () => {
     const t1 = (async () => {
       // Use the default transaction isolation level
       await knex.transaction(async (knex) => {
-        await steps.on(1, () => knex.select("*").from("publishers").where({ name: "foo" }));
+        const r = await steps.on(1, () => knex.select("*").from("publishers").where({ name: "foo" }));
+        expect(r.length).toEqual(0);
         await steps.on(3, () =>
           knex.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers"),
         );
@@ -47,7 +48,8 @@ describe("EntityManager", () => {
 
     const t2 = (async () => {
       await knex.transaction(async (knex) => {
-        await steps.on(2, () => knex.select("*").from("publishers").where({ name: "foo" }));
+        const r = await steps.on(2, () => knex.select("*").from("publishers").where({ name: "foo" }));
+        expect(r.length).toEqual(0);
         await steps.on(4, () =>
           knex.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers"),
         );
@@ -66,7 +68,8 @@ describe("EntityManager", () => {
     const t1 = (async () => {
       const txn = await knex.transaction();
       await txn.raw("set transaction isolation level serializable;");
-      await steps.on(1, () => txn.select("*").from("publishers").where({ name: "foo" }));
+      const r = await steps.on(1, () => txn.select("*").from("publishers").where({ name: "foo" }));
+      expect(r.length).toEqual(0);
       await steps.on(3, async () => {
         await txn.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers");
         await txn.commit();
@@ -77,7 +80,8 @@ describe("EntityManager", () => {
       const txn = await knex.transaction();
       try {
         await txn.raw("set transaction isolation level serializable;");
-        await steps.on(2, () => txn.select("*").from("publishers").where({ name: "foo" }));
+        const r = await steps.on(2, () => txn.select("*").from("publishers").where({ name: "foo" }));
+        expect(r.length).toEqual(0);
         await steps.on(4, () =>
           txn.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers"),
         );

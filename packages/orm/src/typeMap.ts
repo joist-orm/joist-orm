@@ -30,7 +30,13 @@ type TypeMapKey<T> = T extends { __type: { 1: infer K } } ? K : T extends { __ty
 
 /** A helper type to look up `U` in the `TypeMap` for a given entity type `T`. */
 export type TypeMapEntry<T, U extends string> =
-  TypeMapKey<T> extends infer K ? (K extends keyof TypeMap ? TypeMap[K][U] : unknown) : unknown;
+  TypeMapKey<T> extends infer K
+    ? K extends keyof TypeMap
+      ? U extends keyof TypeMap[K]
+        ? TypeMap[K][U]
+        : unknown
+      : unknown
+    : unknown;
 
 /** Return the `FooOpts` type for the given `Foo` entity. */
 export type OptsOf<T> = TypeMapEntry<T, "optsType">;

@@ -5,7 +5,7 @@ import { Todo } from "../Todo";
 import { keyToTaggedId } from "../keys";
 
 export interface IdAssigner {
-  assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void>;
+  assignNewIds(todos: Record<string, Todo>): Promise<void>;
 }
 
 /**
@@ -15,7 +15,13 @@ export interface IdAssigner {
  * need to first be INSERTed.
  */
 export class SequenceIdAssigner implements IdAssigner {
-  async assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void> {
+  #knex: Knex;
+
+  public constructor(knex: Knex) {
+    this.#knex = knex;
+  }
+
+  async assignNewIds(todos: Record<string, Todo>): Promise<void> {
     const seqStatements: string[] = [];
     Object.values(todos).forEach((todo) => {
       // Even if we have INSERTs, the user may have already assigned ids...
@@ -29,7 +35,7 @@ export class SequenceIdAssigner implements IdAssigner {
     if (seqStatements.length > 0) {
       // There will be 1 per table; 1 single insert should be fine but we might need to batch for super-large schemas?
       const sql = seqStatements.join(" UNION ALL ");
-      const result = await knex.raw(sql);
+      const result = await this.#knex.raw(sql);
       let i = 0;
       Object.values(todos).forEach((todo) => {
         for (const insert of todo.inserts.filter((e) => e.idMaybe === undefined)) {
@@ -47,7 +53,7 @@ export class SequenceIdAssigner implements IdAssigner {
  * See {@link TestUuidAssigner} for creating stable-ish ids for tests
  */
 export class RandomUuidAssigner implements IdAssigner {
-  async assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void> {
+  async assignNewIds(todos: Record<string, Todo>): Promise<void> {
     Object.values(todos).forEach((todo) => {
       for (const insert of todo.inserts) {
         getInstanceData(insert).data["id"] = keyToTaggedId(todo.metadata, crypto.randomUUID());
@@ -75,7 +81,7 @@ export class RandomUuidAssigner implements IdAssigner {
 export class TestUuidAssigner implements IdAssigner {
   private nextId: Record<string, number> = {};
 
-  async assignNewIds(_: Knex, todos: Record<string, Todo>): Promise<void> {
+  async assignNewIds(todos: Record<string, Todo>): Promise<void> {
     Object.entries(todos).forEach(([, todo]) => {
       if (todo.inserts.length > 0) {
         const tag = todo.metadata.tagName.substring(0, 4).padStart(4, "0");

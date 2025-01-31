@@ -49,7 +49,7 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
     private readonly knex: Knex,
     opts?: PostgresDriverOpts,
   ) {
-    this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner();
+    this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner(knex);
     setupLatestPgTypes(getRuntimeConfig().temporal);
   }
 
@@ -89,13 +89,12 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
   }
 
   async assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
-    const knex = this.getMaybeInTxnKnex(em);
-    return this.idAssigner.assignNewIds(knex, todos);
+    return this.idAssigner.assignNewIds(todos);
   }
 
   async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
     const knex = this.getMaybeInTxnKnex(em);
-    await this.idAssigner.assignNewIds(knex, todos);
+    await this.idAssigner.assignNewIds(todos);
 
     const ops = generateOps(todos);
 

@@ -1,3 +1,10 @@
+## [1.224.1](https://github.com/joist-orm/joist-orm/compare/v1.224.0...v1.224.1) (2025-01-31)
+
+
+### Bug Fixes
+
+* Add additional keyof check to TypeMapEntry. ([#1352](https://github.com/joist-orm/joist-orm/issues/1352)) ([43663f9](https://github.com/joist-orm/joist-orm/commit/43663f94e06f758acefee9d9201ea035b3d82fc1))
+
 # [1.224.0](https://github.com/joist-orm/joist-orm/compare/v1.223.1...v1.224.0) (2025-01-23)
 
 

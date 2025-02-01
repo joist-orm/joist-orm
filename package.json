@@ -26,6 +26,7 @@
     "packages/utils",
     "packages/test-utils",
     "packages/tests/bun",
+    "packages/tests/bun-sql-pg",
     "packages/tests/integration",
     "packages/tests/schema-misc",
     "packages/tests/esm-misc",

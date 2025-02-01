@@ -8,6 +8,7 @@
     { "path": "./packages/orm" },
     { "path": "./packages/plugins/join-preloading" },
     { "path": "./packages/tests/bun" },
+    { "path": "./packages/tests/bun-sql-pg"},
     { "path": "./packages/tests/immediate-foreign-keys" },
     { "path": "./packages/tests/integration" },
     { "path": "./packages/tests/number-ids" },

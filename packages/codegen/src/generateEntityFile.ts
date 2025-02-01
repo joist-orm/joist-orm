@@ -6,7 +6,7 @@ import { Config } from "./config";
 export function generateEntityFile(config: Config, meta: EntityDbMetadata): Code {
   const entityName = meta.entity.name;
   const codegenClass = imp(`${entityName}Codegen@./entities.ts`);
-  const esmExt = config.esm ? ".js" : "";
+  const esmExt = config.esm ? (config.allowImportingTsExtensions ? ".ts" : ".js") : "";
 
   return code`
     import { ${meta.entity.configConst.symbol} as config } from "./entities${esmExt}";

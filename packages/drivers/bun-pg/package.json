@@ -1,0 +1,31 @@
+{
+  "name": "joist-driver-bun-pg",
+  "version": "1.224.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joist-orm/joist-orm.git",
+    "directory": "packages/drivers/bun-pg"
+  },
+  "engines": {
+    "node": "^12.17.0 || ^13.10.0 || ^14 || >= 16.0.0 < 16.2.0 || >= 16.3.0"
+  },
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "scripts": {
+    "format": "prettier --ignore-path ../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
+  },
+  "files": [
+    "build"
+  ],
+  "dependencies": {
+    "bun-types": "^1.2.1",
+    "joist-orm": "workspace:*"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.1",
+    "prettier-plugin-organize-imports": "^4.1.0",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "5.7.2"
+  }
+}

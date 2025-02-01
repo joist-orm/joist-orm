@@ -84,11 +84,12 @@ async function main() {
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */
 export async function generateAndSaveFiles(config: Config, dbMeta: DbMetadata): Promise<void> {
   const files = await generateFiles(config, dbMeta);
+  const esmExt = config.esm ? (config.allowImportingTsExtensions ? "ts" : "js") : "";
   await saveFiles({
     toolName: "joist-codegen",
     directory: config.entitiesDirectory,
     files,
-    toStringOpts: { importExtensions: config.esm ? "js" : false },
+    toStringOpts: { importExtensions: esmExt || false },
   });
 }
 

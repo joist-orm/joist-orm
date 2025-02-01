@@ -112,9 +112,10 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
 
   const factoriesFiles: CodegenFile[] = generateFactoriesFiles(entities);
 
+  const esmExt = config.esm ? (config.allowImportingTsExtensions ? ".ts" : ".js") : "";
   const indexFile: CodegenFile = {
     name: "./index.ts",
-    contents: code`export * from "./entities${config.esm ? ".js" : ""}"`,
+    contents: code`export * from "./entities${esmExt}"`,
     overwrite: false,
   };
 

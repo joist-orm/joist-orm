@@ -42,14 +42,14 @@ export interface PostgresDriverOpts {
  *
  * - We use a pg-specific bulk update syntax.
  */
-export class PostgresDriver implements Driver {
+export class PostgresDriver implements Driver<Knex.Transaction> {
   private readonly idAssigner: IdAssigner;
 
   constructor(
     private readonly knex: Knex,
     opts?: PostgresDriverOpts,
   ) {
-    this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner();
+    this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner(knex);
     setupLatestPgTypes(getRuntimeConfig().temporal);
   }
 
@@ -62,7 +62,7 @@ export class PostgresDriver implements Driver {
     return this.executeQuery(em, sql, bindings);
   }
 
-  async executeQuery(em: EntityManager<unknown>, sql: string, bindings: readonly any[]): Promise<any[]> {
+  async executeQuery(em: EntityManager, sql: string, bindings: readonly any[]): Promise<any[]> {
     // Still go through knex to use the connection pool
     return this.getMaybeInTxnKnex(em)
       .raw(sql, bindings)
@@ -89,13 +89,12 @@ export class PostgresDriver implements Driver {
   }
 
   async assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
-    const knex = this.getMaybeInTxnKnex(em);
-    return this.idAssigner.assignNewIds(knex, todos);
+    return this.idAssigner.assignNewIds(todos);
   }
 
   async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
     const knex = this.getMaybeInTxnKnex(em);
-    await this.idAssigner.assignNewIds(knex, todos);
+    await this.idAssigner.assignNewIds(todos);
 
     const ops = generateOps(todos);
 

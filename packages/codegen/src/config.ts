@@ -3,6 +3,7 @@ import { getBuffer } from "@dprint/json";
 import { DbMetadata, Entity, EntityDbMetadata } from "EntityDbMetadata";
 import { promises as fs } from "fs";
 import { groupBy } from "joist-utils";
+import ts from "typescript";
 import { z } from "zod";
 import { getThisVersion } from "./codemods";
 import { getStiEntities } from "./inheritance";
@@ -128,6 +129,8 @@ export const config = z
     nonDeferredForeignKeys: z.optional(z.union([z.literal("error"), z.literal("warn"), z.literal("ignore")])),
     /** Enables esm output. */
     esm: z.optional(z.boolean()),
+    /** Auto-set by probing the project's `tsconfig.json` file. */
+    allowImportingTsExtensions: z.optional(z.boolean()),
     // The version of Joist that generated this config.
     version: z.string().default("0.0.0"),
   })
@@ -264,6 +267,7 @@ export function isFieldIgnored(
 }
 
 const configPath = "./joist-config.json";
+
 export async function loadConfig(): Promise<Config> {
   const exists = await trueIfResolved(fs.access(configPath));
   if (exists) {
@@ -276,12 +280,28 @@ export async function loadConfig(): Promise<Config> {
           .join("\n")}`,
       );
     }
+    result.data.allowImportingTsExtensions ??= projectIsUsingEsmWithImports();
     return result.data;
   }
   // This will create the initial `joist-config.json` on the first run, and
   // initialize it with our current Joist version, so that they're not prompted
   // to run any historical codemods.
-  return config.parse({ version: getThisVersion() });
+  const initial = config.parse({ version: getThisVersion() });
+  initial.allowImportingTsExtensions ??= projectIsUsingEsmWithImports();
+  return initial;
+}
+
+function projectIsUsingEsmWithImports(): boolean {
+  // Attempt to find the project's tsconfig.json in the current directory or up the directory hierarchy
+  const configPath = ts.findConfigFile("./", ts.sys.fileExists, "tsconfig.json");
+  if (!configPath) {
+    return false;
+  }
+  const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
+  if (configFile.error) {
+    return false;
+  }
+  return configFile.config?.compilerOptions?.allowImportingTsExtensions === true;
 }
 
 /**
@@ -293,6 +313,7 @@ export async function loadConfig(): Promise<Config> {
 export async function writeConfig(config: Config): Promise<void> {
   const sorted = sortKeys(config);
   delete sorted.__tableToEntityName;
+  delete sorted.allowImportingTsExtensions;
   const input = JSON.stringify(sorted);
   const content = jsonFormatter.formatText("test.json", input);
   await fs.writeFile(configPath, content);

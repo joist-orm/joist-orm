@@ -331,7 +331,7 @@ describe("EntityManager", () => {
   it("can load custom queries", async () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
     const em = newEntityManager();
-    const authors = await em.loadFromQuery(Author, knex.select("*").from("authors"));
+    const authors = await em.loadFromQuery(Author, await knex.select("*").from("authors"));
     expect(authors.length).toEqual(1);
   });
 
@@ -339,14 +339,14 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
-    const authors = await em.loadFromQuery(Author, knex.select("*").from("authors"));
+    const authors = await em.loadFromQuery(Author, await knex.select("*").from("authors"));
     expect(authors[0]).toStrictEqual(a1);
   });
 
   it("can load custom queries and populate", async () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
     const em = newEntityManager();
-    const authors = await em.loadFromQuery(Author, knex.select("*").from("authors"), "books");
+    const authors = await em.loadFromQuery(Author, await knex.select("*").from("authors"), "books");
     expect(authors[0].books.get).toEqual([]);
   });
 
@@ -1023,7 +1023,7 @@ describe("EntityManager", () => {
   it("findOrCreate resolves dups with different upsert clauses in a loop", async () => {
     const em = newEntityManager();
     // Given two findOrCreates that should create the same existing entity
-    const [a1, a2] = await Promise.all([
+    const [a1] = await Promise.all([
       em.findOrCreate(Author, { firstName: "a1" }, {}, { lastName: "B" }),
       em.findOrCreate(Author, { firstName: "a1" }, {}, { lastName: "C" }),
     ]);

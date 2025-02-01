@@ -5,7 +5,7 @@ import { Config } from "./config";
 /** Creates the placeholder file for our entity's test. */
 export function generateEntityTestFile(config: Config, meta: EntityDbMetadata): Code {
   const entityName = meta.entity.name;
-  const esmExt = config.esm ? ".js" : "";
+  const esmExt = config.esm ? (config.allowImportingTsExtensions ? ".ts" : ".js") : "";
   return code`
     import { new${entityName} } from "./entities${esmExt}";
 

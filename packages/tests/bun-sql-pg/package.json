@@ -1,5 +1,5 @@
 {
-  "name": "joist-tests-esm-misc",
+  "name": "joist-tests-bun-sql-pg",
   "version": "1.0.0",
   "license": "MIT",
   "private": true,
@@ -7,36 +7,26 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/joist-orm/joist-orm.git",
-    "directory": "packages/tests/esm-misc"
+    "directory": "packages/tests/bun-sql-pg"
   },
   "scripts": {
-    "migrate": "DATABASE_URL=postgres://joist:local@localhost:5435/esm node-pg-migrate up --decamelize=false --migrations-dir=./migrations",
     "format": "prettier --ignore-path ../../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "codegen": "node ../../codegen",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand --logHeapUsage"
+    "test-skip": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand --logHeapUsage"
   },
   "dependencies": {
+    "bun-types": "^1.2.0",
     "joist-orm": "workspace:*",
     "node-pg-migrate": "^7.8.0"
   },
   "devDependencies": {
-    "@swc/core": "^1.9.3",
-    "@swc/jest": "^0.2.37",
-    "@types/jest": "^29.5.14",
     "@types/node": "^22.10.1",
     "jest": "30.0.0-alpha.6",
-    "jest-junit": "^16.0.0",
     "joist-codegen": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
     "prettier": "^3.4.1",
     "prettier-plugin-organize-imports": "^4.1.0",
-    "superstruct": "0.15.5",
-    "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0",
     "typescript": "5.7.2"
-  },
-  "imports": {
-    "src/": "src/*"
   }
 }

@@ -18,6 +18,13 @@ declare global {
   }
 }
 // @ts-ignore
+declare module "expect" {
+  interface Matchers<R, T = {}> {
+    toMatchEntity(expected: MatchedEntity<T>): CustomMatcherResult;
+  }
+}
+
+// @ts-ignore
 declare module "bun:test" {
   interface Matchers<T = unknown> {
     toMatchEntity(expected: MatchedEntity<T>): CustomMatcherResult;

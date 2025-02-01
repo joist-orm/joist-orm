@@ -8,6 +8,9 @@ export interface IdAssigner {
   assignNewIds(todos: Record<string, Todo>): Promise<void>;
 }
 
+/** Super-small/dumb wrapper around maybe-Knex/maybe-postgres.js/maybe-Bun-sql libraries. */
+type QueryRunner = (sql: string) => Promise<any[]>;
+
 /**
  * Assigns all new entities an id directly from their corresponding sequence generator, instead of via INSERTs.
  *
@@ -15,10 +18,16 @@ export interface IdAssigner {
  * need to first be INSERTed.
  */
 export class SequenceIdAssigner implements IdAssigner {
-  #knex: Knex;
+  #runner: QueryRunner;
 
-  public constructor(knex: Knex) {
-    this.#knex = knex;
+  public constructor(knex: Knex);
+  public constructor(runner: QueryRunner);
+  public constructor(runner: Knex | QueryRunner) {
+    if ("raw" in runner) {
+      this.#runner = async (sql: string) => (await runner.raw(sql)).rows;
+    } else {
+      this.#runner = runner;
+    }
   }
 
   async assignNewIds(todos: Record<string, Todo>): Promise<void> {
@@ -35,12 +44,12 @@ export class SequenceIdAssigner implements IdAssigner {
     if (seqStatements.length > 0) {
       // There will be 1 per table; 1 single insert should be fine but we might need to batch for super-large schemas?
       const sql = seqStatements.join(" UNION ALL ");
-      const result = await this.#knex.raw(sql);
+      const result = await this.#runner(sql);
       let i = 0;
       Object.values(todos).forEach((todo) => {
         for (const insert of todo.inserts.filter((e) => e.idMaybe === undefined)) {
           // Use todo.metadata so that all subtypes get their base type's tag
-          getInstanceData(insert).data["id"] = keyToTaggedId(todo.metadata, result.rows![i++]["nextval"]);
+          getInstanceData(insert).data["id"] = keyToTaggedId(todo.metadata, result[i++]["nextval"]);
         }
       });
     }

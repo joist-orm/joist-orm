@@ -10,7 +10,6 @@
     "directory": "packages/tests/bun-sql-pg"
   },
   "scripts": {
-    "migrate": "DATABASE_URL=postgres://joist:local@localhost:5435/bun node-pg-migrate up --decamelize=false --migrations-dir=./migrations",
     "format": "prettier --ignore-path ../../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "codegen": "node ../../codegen",
     "test": "jest --runInBand --logHeapUsage"

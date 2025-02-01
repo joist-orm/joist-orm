@@ -16,7 +16,7 @@ export function generateEntitiesFile(
   const baseClasses = entities.filter((e) => e.baseClassName === undefined);
   const subClasses = entities.filter((e) => e.baseClassName !== undefined);
 
-  const esmExt = config.esm ? ".js" : "";
+  const esmExt = config.esm ? (config.allowImportingTsExtensions ? ".ts" : ".js") : "";
 
   return code`
     // organize-imports-ignore

@@ -65,6 +65,7 @@ jobs:
           name: Run codegen
           command: yarn codegen
 
+      # For all Node targets, run everything -- except tests/bun and tests/esm-misc (Jest doesn't load `jest.config.ts` in Node 18/20)
       - when:
           condition:
             not:
@@ -72,7 +73,16 @@ jobs:
           steps:
             - run:
                 name: Run tests
-                command: yarn workspaces foreach --worktree --parallel --include 'packages/tests/*' --exclude packages/tests/bun run test
+                command: yarn workspaces foreach --worktree --parallel --include 'packages/tests/*' --exclude packages/tests/bun --exclude packages/tests/esm-misc run test
+      # For Node 23, run esm-misc
+      - when:
+          condition:
+            equal: [ << parameters.node-version >>, 23 ]
+          steps:
+            - run:
+                name: Run esm tests
+                command: yarn workspace joist-tests-esm-misc run test
+      # For bun (with the default node-pg/knex driver), run only the bun:test-based tests
       - when:
           condition:
             equal: [ << parameters.node-version >>, bun ]

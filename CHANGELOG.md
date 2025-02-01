@@ -1,3 +1,10 @@
+# [1.225.0](https://github.com/joist-orm/joist-orm/compare/v1.224.1...v1.225.0) (2025-02-01)
+
+
+### Features
+
+* Move Knex to EntityManager generic ([#1353](https://github.com/joist-orm/joist-orm/issues/1353)) ([eec067a](https://github.com/joist-orm/joist-orm/commit/eec067a1987f40bd1a45303348ebddd89a10ee6c))
+
 ## [1.224.1](https://github.com/joist-orm/joist-orm/compare/v1.224.0...v1.224.1) (2025-01-31)
 
 

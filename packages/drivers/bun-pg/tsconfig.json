@@ -7,5 +7,5 @@
     "types": ["bun-types"]
   },
   "include": ["./src"],
-  "references": [{}]
+  "references": [{ "path": "../../orm" }]
 }

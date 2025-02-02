@@ -1,3 +1,10 @@
+## [1.225.2](https://github.com/joist-orm/joist-orm/compare/v1.225.1...v1.225.2) (2025-02-02)
+
+
+### Bug Fixes
+
+* Add transactionType config to get txn types back. ([#1355](https://github.com/joist-orm/joist-orm/issues/1355)) ([3ed6155](https://github.com/joist-orm/joist-orm/commit/3ed6155ab33ad07bf52c608c57e8ff63b2d267f0))
+
 ## [1.225.1](https://github.com/joist-orm/joist-orm/compare/v1.225.0...v1.225.1) (2025-02-02)
 
 

@@ -1,3 +1,10 @@
+## [1.225.1](https://github.com/joist-orm/joist-orm/compare/v1.225.0...v1.225.1) (2025-02-02)
+
+
+### Bug Fixes
+
+* Restore loadFromQuery w/PromiseLike rows. ([#1354](https://github.com/joist-orm/joist-orm/issues/1354)) ([a41f7a8](https://github.com/joist-orm/joist-orm/commit/a41f7a8ce5644f96d99d333e20356628d3e88fe8))
+
 # [1.225.0](https://github.com/joist-orm/joist-orm/compare/v1.224.1...v1.225.0) (2025-02-01)
 
 

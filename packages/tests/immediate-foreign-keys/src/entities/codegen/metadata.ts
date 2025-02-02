@@ -15,7 +15,7 @@ import { newT1Author, newT1Book, newT2Author, newT2Book, newT3Author, newT3Book,
 
 setRuntimeConfig({ temporal: false });
 
-export class EntityManager extends EntityManager1<Context, Entity> {}
+export class EntityManager extends EntityManager1<Context, Entity, unknown> {}
 
 export interface Entity extends Entity2 {
   id: number;

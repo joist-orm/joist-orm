@@ -86,6 +86,14 @@ config.beforeDelete((book, ctx) => {
 
 And the `ctx` param will be correctly typed to your application's specific `Context` type.
 
+### `transactionType`
+
+This optional key specifies your application-specific `Transaction` type, which is usually based on which database client library you're using.
+
+I.e. for Knex this would be `Knex.Transaction@knex`, for Bun it would be `TransactionSQL@bun`.
+
+Setting this value will ensure the correct typing for `EntityManager.transaction`, `afterTransaction`, and `beforeTransaction` methods.
+
 ### `entitiesDirectory`
 
 This controls whether Joist outputs the entity, codegen, and metadata files.
@@ -128,18 +136,18 @@ Allows ignoring tables, i.e. not generating TypeScript entities for them.
 
 This setting controls how `joist-codegen` handles non-deferred foreign keys:
 
-* `"error"` will have Joist error out & require the key to be made deferred
-  * This is recommended but not required
-* `"warn"` will have Joist report any non-deferred keys, but still generate the output
-  * This is the default, to encourage users to convert their FKs to deferred
-* `"ignore"` will have Joist ignore any non-deferred keys
-  * If you don't want to use deferred FKs, this setting will have Joist just ignore them
+- `"error"` will have Joist error out & require the key to be made deferred
+  - This is recommended but not required
+- `"warn"` will have Joist report any non-deferred keys, but still generate the output
+  - This is the default, to encourage users to convert their FKs to deferred
+- `"ignore"` will have Joist ignore any non-deferred keys
+  - If you don't want to use deferred FKs, this setting will have Joist just ignore them
 
 Note that, without deferred FKs, Joist will still behave correctly, i.e. if calling `em.flush` with both a new `Author` and a new `Book`, both with FKs that point to the other not-yet-inserted entity, then Joist will:
 
-* Insert the `authors` row with `book_id=NULL` to let the `INSERT` succeed
-* Insert the `books` rows with `author_id=1` for the book `INSERT`
-* Update the `authors` row to set `book_id=1` now that the `books` rows is available
+- Insert the `authors` row with `book_id=NULL` to let the `INSERT` succeed
+- Insert the `books` rows with `author_id=1` for the book `INSERT`
+- Update the `authors` row to set `book_id=1` now that the `books` rows is available
 
 This approach works, but requires the extra "fixup" `UPDATE` after the two `INSERT`s, which is why we recommend using deferred FKs.
 
@@ -294,16 +302,16 @@ export interface FieldConfig {
 
 Where:
 
-* `derived` controls whether this field is derived from business logic (...link to docs...)
-* `protected` controls whether this is field is `protected` and so can only be accessed internally by the domain model code
-* `ignore` controls whether to ignore the field
-* `superstruct` links to the superstruct type to use for [`jsonb` columns](../modeling/jsonb-fields.md), i.e. `commentStreamReads@src/entities/superstruct`
-* `zodSchema` links to the Zod schema to use for [`jsonb` columns](../modeling/jsonb-fields.md), i.e. `CommentStreamReads@src/entities/schemas` 
-* `type` links to an TypeScript type to use instead of the schema derived one
+- `derived` controls whether this field is derived from business logic (...link to docs...)
+- `protected` controls whether this is field is `protected` and so can only be accessed internally by the domain model code
+- `ignore` controls whether to ignore the field
+- `superstruct` links to the superstruct type to use for [`jsonb` columns](../modeling/jsonb-fields.md), i.e. `commentStreamReads@src/entities/superstruct`
+- `zodSchema` links to the Zod schema to use for [`jsonb` columns](../modeling/jsonb-fields.md), i.e. `CommentStreamReads@src/entities/schemas`
+- `type` links to an TypeScript type to use instead of the schema derived one
 
-   Currently, the `type` must be a [branded type](https://typescript.tv/best-practices/improve-your-type-safety-with-branded-types/) of the runtime type, b/c Joist will still instantiate the value with whatever it's schema-derived value is.
+  Currently, the `type` must be a [branded type](https://typescript.tv/best-practices/improve-your-type-safety-with-branded-types/) of the runtime type, b/c Joist will still instantiate the value with whatever it's schema-derived value is.
 
-   See [this discussion](https://github.com/joist-orm/joist-orm/discussions/674#discussioncomment-6092907) for a future `serde` feature that would allow you to instantiate custom runtime values.
+  See [this discussion](https://github.com/joist-orm/joist-orm/discussions/674#discussioncomment-6092907) for a future `serde` feature that would allow you to instantiate custom runtime values.
 
 ### `entities.relations`
 
@@ -319,17 +327,17 @@ export interface RelationConfig {
 
 The supported values are:
 
-* `polymorphic` creates this relation as a [polymorphic relation](/docs/modeling/relations#polymorphic-references), which logical combines several physical foreign keys into a single field
-* `large` indicates that a collection is too big to be fully loaded into memory and changes the generated type to `LargeCollection`  
-* `orderBy` allows setting an order specific to this collection, the value must be a primitive, synchronous field on the entities within the collection
+- `polymorphic` creates this relation as a [polymorphic relation](/docs/modeling/relations#polymorphic-references), which logical combines several physical foreign keys into a single field
+- `large` indicates that a collection is too big to be fully loaded into memory and changes the generated type to `LargeCollection`
+- `orderBy` allows setting an order specific to this collection, the value must be a primitive, synchronous field on the entities within the collection
 
 ## Runtime Configuration
 
 There are three main things to configure at runtime:
 
-* Connection pool
-* Driver
-* EntityManager
+- Connection pool
+- Driver
+- EntityManager
 
 ### Connection Pool
 
@@ -362,9 +370,9 @@ const driver = new PostgresDriver(knex);
 
 When creating the `PostgresDriver`, you can pass an `IdAssigner` instance, which currently has three implementations:
 
-* `SequenceIdAssigner` assigns numeric ids from each entity's `SEQUENCE`
-* `RandomUuidAssigner` assigns random UUIDs if you're using UUID columns
-* `TestUuidAssigner` assigns deterministic UUIDs for unit testing
+- `SequenceIdAssigner` assigns numeric ids from each entity's `SEQUENCE`
+- `RandomUuidAssigner` assigns random UUIDs if you're using UUID columns
+- `TestUuidAssigner` assigns deterministic UUIDs for unit testing
 
 ### EntityManager
 

@@ -50,7 +50,8 @@ export interface EntityMetadata<T extends Entity = any> {
   config: ConfigApi<any, any>;
   orderBy: string | undefined;
   timestampFields: TimestampFields;
-  factory: (em: EntityManager<any, any>, opts?: any) => DeepNew<T>;
+  // Ideally this would be the application-specific EntityManager (to avoid anys), but it doesn't really matter
+  factory: (em: EntityManager<any, any, any>, opts?: any) => DeepNew<T>;
   /** The list of base types for this subtype, e.g. for Dog it'd be [Animal, Mammal]. */
   baseTypes: EntityMetadata[];
   /** The list of subtypes for this base type, e.g. for Animal it'd be `[Mammal, Dog]`. */

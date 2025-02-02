@@ -83,7 +83,7 @@ import { MaybePromise, assertNever, fail, failIfAnyRejected, getOrSet, groupBy, 
  * implement this and instead only have the `AbsEntityConstructor` type.
  */
 export interface EntityConstructor<T> {
-  new (em: EntityManager<any, any>, opts: any): T;
+  new (em: EntityManager<any, any, any>, opts: any): T;
 
   // Use any for now to pass the `.includes` test in `EntityConstructor.test.ts`. We could
   // probably do some sort of `tagOf(T)` look up, similar to filter types, which would return
@@ -129,7 +129,7 @@ export interface FindCountFilterOptions<T extends Entity> {
  *
  * I.e. this is more like "MaybeAbstractEntityConstructor".
  */
-export type MaybeAbstractEntityConstructor<T> = abstract new (em: EntityManager<any, any>, opts: any) => T;
+export type MaybeAbstractEntityConstructor<T> = abstract new (em: EntityManager<any, any, any>, opts: any) => T;
 
 /** Pulls the entity's id type out of a given entity type T. */
 export type IdOf<T> = T extends { id: infer I } ? I : never;

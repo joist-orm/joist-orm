@@ -32,7 +32,7 @@
     "pg-structure": "^7.15.3",
     "pluralize": "^8.0.0",
     "semver": "^7.6.3",
-    "ts-poet": "^6.9.0",
+    "ts-poet": "^6.10.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

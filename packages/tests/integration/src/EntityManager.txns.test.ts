@@ -7,6 +7,13 @@ import { Pool } from "pg";
 import { knex, newEntityManager } from "@src/testEm";
 
 describe("EntityManager", () => {
+  it("has a typed txn parameter", async () => {
+    const em = newEntityManager();
+    await em.transaction(async (txn) => {
+      await txn.raw("select 1");
+    });
+  });
+
   it("reproduces anomalies w/o transactions", async () => {
     const steps = new Stepper();
 

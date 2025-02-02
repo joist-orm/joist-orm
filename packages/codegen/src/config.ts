@@ -86,6 +86,8 @@ export const config = z
     databaseUrl: z.optional(z.string()),
     /** Your application's request-level `Context` type. */
     contextType: z.optional(z.string()),
+    /** Your application's database client's `Transaction` type. */
+    transactionType: z.optional(z.string()),
     /**
      * Allows the user to specify the `updated_at` / `created_at` column names to look up, and if they're optional.
      *

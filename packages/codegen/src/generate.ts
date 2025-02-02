@@ -75,6 +75,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     .reduce(merge, []);
 
   const contextType = config.contextType ? imp(`t:${config.contextType}`) : "{}";
+  const txnType = config.transactionType ? imp(`t:${config.transactionType}`) : "unknown";
 
   const metadataFile: CodegenFile = {
     name: "./codegen/metadata.ts",
@@ -83,7 +84,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
         temporal: ${config.temporal ? { timeZone: typeof config.temporal === "boolean" ? "UTC" : config.temporal.timeZone } : "false"},
       });
       
-      export class ${def("EntityManager")} extends ${JoistEntityManager}<${contextType}, Entity> {}
+      export class ${def("EntityManager")} extends ${JoistEntityManager}<${contextType}, Entity, ${txnType}> {}
 
       export interface ${def("Entity")} extends ${Entity} {
         id: ${getIdType(config)};

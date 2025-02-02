@@ -9,7 +9,7 @@ import { artistConfig, authorConfig, bookConfig, databaseOwnerConfig, newArtist,
 
 setRuntimeConfig({ temporal: false });
 
-export class EntityManager extends EntityManager1<Context, Entity> {}
+export class EntityManager extends EntityManager1<Context, Entity, unknown> {}
 
 export interface Entity extends Entity2 {
   id: string;

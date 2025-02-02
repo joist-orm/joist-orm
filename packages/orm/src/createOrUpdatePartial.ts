@@ -56,7 +56,7 @@ export async function updatePartial<T extends Entity>(entity: T, opts: DeepParti
  * A utility function to create-or-update entities coming from a partial-update style API.
  */
 export async function createOrUpdatePartial<T extends Entity>(
-  em: EntityManager<any, any>,
+  em: EntityManager<any, any, any>,
   constructor: MaybeAbstractEntityConstructor<T>,
   opts: DeepPartialOrNull<T>,
 ): Promise<T> {

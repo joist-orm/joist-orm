@@ -16,7 +16,7 @@ let makeApiCall: Function = null!;
 
 export function newEntityManager(): EntityManager {
   const ctx = { knex };
-  const opts: EntityManagerOpts = {
+  const opts: EntityManagerOpts<any> = {
     driver: testDriver.driver,
     preloadPlugin: isPreloadingEnabled ? new JsonAggregatePreloader() : undefined,
   };

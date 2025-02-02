@@ -112,5 +112,6 @@
     }
   },
   "entitiesDirectory": "./src/entities",
+  "transactionType": "Knex.Transaction@knex",
   "version": "0.0.1"
 }

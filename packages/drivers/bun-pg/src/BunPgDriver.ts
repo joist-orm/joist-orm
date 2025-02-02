@@ -1,4 +1,4 @@
-import { sql, TransactionSQL } from "bun";
+import { sql, type TransactionSQL } from "bun";
 import { Driver, EntityManager, IdAssigner, ParsedFindQuery, SequenceIdAssigner } from "joist-orm";
 import { JoinRowTodo, Todo } from "joist-orm/build/Todo";
 

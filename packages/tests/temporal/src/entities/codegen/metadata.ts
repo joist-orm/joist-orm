@@ -7,7 +7,7 @@ import { authorConfig, bookConfig, newAuthor, newBook } from "../entities";
 
 setRuntimeConfig({ temporal: { "timeZone": "America/Los_Angeles" } });
 
-export class EntityManager extends EntityManager1<Context, Entity> {}
+export class EntityManager extends EntityManager1<Context, Entity, unknown> {}
 
 export interface Entity extends Entity2 {
   id: string;

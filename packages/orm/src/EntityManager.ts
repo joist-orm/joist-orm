@@ -942,23 +942,50 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     return result;
   }
 
-  /** Loads entities from database rows. */
-  public async loadFromQuery<T extends EntityW>(type: EntityConstructor<T>, rows: unknown[]): Promise<T[]>;
-  public async loadFromQuery<T extends EntityW, const H extends LoadHint<T>>(
+  /**
+   * Loads entities from database rows that were queried directly using a query builder.
+   *
+   * This overload is synchronous since there is no population/querying to do.
+   */
+  public loadFromQuery<T extends EntityW>(type: EntityConstructor<T>, rows: unknown[]): T[];
+  /**
+   * Loads entities from database rows from a Knex-ish query builder that needs an `await`.
+   *
+   * This overload is async because it triggers the `rows` query.
+   */
+  public loadFromQuery<T extends EntityW>(type: EntityConstructor<T>, rows: PromiseLike<unknown[]>): Promise<T[]>;
+  /**
+   * Loads & populates entities from database rows that were queried directly using a query builder.
+   */
+  public loadFromQuery<T extends EntityW, const H extends LoadHint<T>>(
     type: EntityConstructor<T>,
     rows: unknown[],
     populate: H,
   ): Promise<Loaded<T, H>[]>;
-  public async loadFromQuery<T extends EntityW>(
+  /**
+   * Loads & populates entities from database rows from a Knex-ish query builder that needs an `await`.
+   */
+  public loadFromQuery<T extends EntityW, const H extends LoadHint<T>>(
     type: EntityConstructor<T>,
-    rows: unknown[],
+    rows: PromiseLike<unknown[]>,
+    populate: H,
+  ): Promise<Loaded<T, H>[]>;
+  public loadFromQuery<T extends EntityW>(
+    type: EntityConstructor<T>,
+    rows: unknown[] | PromiseLike<unknown[]>,
     populate?: any,
-  ): Promise<T[]> {
-    const entities = this.hydrate(type, rows);
-    if (populate) {
-      await this.populate(entities, populate);
+  ): PromiseLike<T[]> | T[] {
+    if (Array.isArray(rows)) {
+      const entities = this.hydrate(type, rows);
+      if (populate) return this.populate(entities, populate);
+      return entities;
+    } else {
+      return rows.then((rows) => {
+        const entities = this.hydrate(type, rows);
+        if (populate) return this.populate(entities, populate);
+        return entities;
+      });
     }
-    return entities;
   }
 
   /** Loads entities from rows. */

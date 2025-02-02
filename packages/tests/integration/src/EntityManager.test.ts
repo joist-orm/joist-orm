@@ -328,10 +328,19 @@ describe("EntityManager", () => {
     expect(a1.isPopular).toBeUndefined();
   });
 
-  it("can load custom queries", async () => {
+  it("can load custom queries that are PromiseLike", async () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
     const em = newEntityManager();
-    const authors = await em.loadFromQuery(Author, await knex.select("*").from("authors"));
+    // Pass in a knex thennable/PromiseLike
+    const authors = await em.loadFromQuery(Author, knex.select("*").from("authors"));
+    expect(authors.length).toEqual(1);
+  });
+
+  it("can load custom queries that are rows", async () => {
+    await insertAuthor({ first_name: "a1", is_popular: null });
+    const em = newEntityManager();
+    // Pass in the already-loaded rows
+    const authors = em.loadFromQuery(Author, await knex.select("*").from("authors"));
     expect(authors.length).toEqual(1);
   });
 
@@ -343,9 +352,18 @@ describe("EntityManager", () => {
     expect(authors[0]).toStrictEqual(a1);
   });
 
-  it("can load custom queries and populate", async () => {
+  it("can load custom queries and populate that are PromiseLike", async () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
     const em = newEntityManager();
+    // Pass in a knex thennable/PromiseLike
+    const authors = await em.loadFromQuery(Author, knex.select("*").from("authors"), "books");
+    expect(authors[0].books.get).toEqual([]);
+  });
+
+  it("can load custom queries and populate that are rows", async () => {
+    await insertAuthor({ first_name: "a1", is_popular: null });
+    const em = newEntityManager();
+    // Pass in the already-loaded rows
     const authors = await em.loadFromQuery(Author, await knex.select("*").from("authors"), "books");
     expect(authors[0].books.get).toEqual([]);
   });

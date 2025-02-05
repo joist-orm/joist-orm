@@ -1,8 +1,8 @@
-import { afterAll, beforeEach, expect } from "bun:test";
+import { afterAll, beforeEach, expect } from "@jest/globals";
 import { newPgConnectionConfig, PostgresDriver } from "joist-orm";
 import { toMatchEntity } from "joist-test-utils";
 import { knex as createKnex, Knex } from "knex";
-import { EntityManager } from "src/entities";
+import { EntityManager } from "src/entities/index.ts";
 
 expect.extend({ toMatchEntity });
 

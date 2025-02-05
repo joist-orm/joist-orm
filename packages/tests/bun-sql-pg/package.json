@@ -28,5 +28,8 @@
     "prettier": "^3.4.1",
     "prettier-plugin-organize-imports": "^4.1.0",
     "typescript": "5.7.2"
+  },
+  "imports": {
+    "src/": "src/*"
   }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
-import { newAuthor } from "src/entities/index.js";
-import { newEntityManager } from "src/setupDbTests.js";
+import { newAuthor } from "src/entities/index.ts";
+import { newEntityManager } from "src/setupDbTests.ts";
 
 describe("Author", () => {
   test("works", async () => {

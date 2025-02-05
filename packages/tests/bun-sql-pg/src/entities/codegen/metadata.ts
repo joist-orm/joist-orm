@@ -1,8 +1,8 @@
 import { configureMetadata, DateSerde, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PrimitiveSerde, setRuntimeConfig } from "joist-orm";
-import { type Context } from "../../context.js";
-import { Author } from "../Author.js";
-import { Book } from "../Book.js";
-import { authorConfig, bookConfig, newAuthor, newBook } from "../entities.js";
+import { type Context } from "../../context.ts";
+import { Author } from "../Author.ts";
+import { Book } from "../Book.ts";
+import { authorConfig, bookConfig, newAuthor, newBook } from "../entities.ts";
 
 setRuntimeConfig({ temporal: false });
 

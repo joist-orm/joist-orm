@@ -1,6 +1,6 @@
 import { describe, test } from "bun:test";
-import { newBook } from "src/entities/index.js";
-import { newEntityManager } from "src/setupDbTests.js";
+import { newBook } from "src/entities/index.ts";
+import { newEntityManager } from "src/setupDbTests.ts";
 
 describe("Book", () => {
   test("works", async () => {

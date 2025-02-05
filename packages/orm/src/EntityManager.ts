@@ -1801,7 +1801,7 @@ async function validateReactiveRules(
   // From the given triggered entities, follow the entity's ReactiveRule back
   // to the reactive rules that need ran, and queue them in the `fn` map
   async function followAndQueue(triggered: Entity[], rule: ReactiveRule): Promise<void> {
-    (await followReverseHint(triggered, rule.path))
+    (await followReverseHint(rule.name, triggered, rule.path))
       .filter((entity) => !entity.isDeletedEntity)
       .filter((e) => e instanceof rule.cstr)
       .forEach((entity) => {

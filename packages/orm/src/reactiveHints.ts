@@ -19,6 +19,7 @@ import { LoadHint, Loadable, Loaded } from "./loadHints";
 import { NormalizeHint, SuffixSeperator, normalizeHint, suffixRe } from "./normalizeHints";
 import {
   AsyncProperty,
+  AsyncPropertyImpl,
   Collection,
   LoadedCollection,
   LoadedProperty,
@@ -34,7 +35,6 @@ import {
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
 import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
 import { RecursiveParentsCollectionImpl } from "./relations/RecursiveCollection";
-import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
 import { FieldsOf, RelationsOf } from "./typeMap";
 import { fail, flatAndUnique, mergeNormalizedHints } from "./utils";
 
@@ -358,7 +358,11 @@ function maybeAddTypeFilterSuffix(
  * - When we traverse through `b1.author`, we use both the current value and original value, so that both
  *   "our prior author" and "our new author" see their latest `author.books` collection values.
  */
-export async function followReverseHint(entities: Entity[], reverseHint: string[]): Promise<Entity[]> {
+export async function followReverseHint(
+  reactionName: string,
+  entities: Entity[],
+  reverseHint: string[],
+): Promise<Entity[]> {
   // Start at the current (unique) entities
   let current = new Set(entities);
   const paths = [...reverseHint];
@@ -369,7 +373,12 @@ export async function followReverseHint(entities: Entity[], reverseHint: string[
     const promises = new Array(current.size);
     // The path might touch either a reference or a collection
     for (const c of current as Set<any>) {
-      const currentValuePromise = maybeApplyTypeFilter(c[fieldName].load(), viaType);
+      const relation =
+        c[fieldName] ??
+        fail(
+          `Attempting to react for ${reactionName}, but there is no "reverse walkable" field ${c.constructor.name}.${fieldName}`,
+        );
+      const currentValuePromise = maybeApplyTypeFilter(relation.load(), viaType);
       // Always wait for the relation itself
       promises.push(currentValuePromise);
       // If we're going from Book.author back to Author to re-validate the Author.books collection,

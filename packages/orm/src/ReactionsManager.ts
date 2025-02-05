@@ -161,7 +161,7 @@ export class ReactionsManager {
           pending.todo.clear();
           for (const doing of todo) pending.done.add(doing);
           // Walk back from the source to any downstream fields
-          const relations = (await followReverseHint(todo, rf.path))
+          const relations = (await followReverseHint(rf.name, todo, rf.path))
             .filter((entity) => !entity.isDeletedEntity)
             .filter((e) => e instanceof rf.cstr)
             .map((entity) => (entity as any)[rf.name]);

@@ -1,3 +1,10 @@
+## [1.225.3](https://github.com/joist-orm/joist-orm/compare/v1.225.2...v1.225.3) (2025-02-05)
+
+
+### Bug Fixes
+
+* Better error message for unsupported reactivity. ([#1356](https://github.com/joist-orm/joist-orm/issues/1356)) ([6d162e2](https://github.com/joist-orm/joist-orm/commit/6d162e2c200714d04448edc719a5d54b1307ca58))
+
 ## [1.225.2](https://github.com/joist-orm/joist-orm/compare/v1.225.1...v1.225.2) (2025-02-02)
 
 

@@ -262,6 +262,21 @@ describe("Author", () => {
       expect(a1.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "isFunny"]);
     });
 
+    fit("detects changes on offseting a date value", async () => {
+      const em = newEntityManager();
+      const a1 = new Author(em, { graduated: jan1, firstName: "f1", lastName: "ln" });
+      expect(a1.changes.graduated.hasChanged).toBe(true);
+      expect(a1.changes.graduated.hasUpdated).toBe(false);
+      expect(a1.changes.graduated.originalValue).toBe(undefined);
+      expect(a1.changes.fields).toEqual(["createdAt", "updatedAt", "graduated", "firstName", "lastName", "isFunny"]);
+      a1.graduated = undefined;
+      await em.flush();
+      expect(a1.changes.graduated.hasChanged).toBe(true); // currently returning undefined
+      expect(a1.changes.graduated.hasUpdated).toBe(true); // currently returning undefined
+      expect(a1.changes.graduated.originalValue).toBe(jan1); // currently returning undefined
+      expect(a1.changes.fields).toEqual(["createdAt", "updatedAt", "graduated", "firstName", "lastName", "isFunny"]);
+    });
+
     it("after initial load nothing is considered changed", async () => {
       await insertAuthor({ first_name: "a1" });
       const em = newEntityManager();

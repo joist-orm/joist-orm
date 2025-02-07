@@ -103,8 +103,9 @@ describe("ClassTableInheritance", () => {
   });
 
   it("can update a subtype across two tables", async () => {
+    await insertAuthor({ first_name: "a1" });
     await insertPublisher({ name: "sp1", updated_at: jan1 });
-    await insertLargePublisher({ id: 2, name: "lp1" });
+    await insertLargePublisher({ id: 2, name: "lp1", spotlight_author_id: 1 });
 
     const em = newEntityManager();
     const sp = await em.load(SmallPublisher, "p:1");
@@ -190,8 +191,9 @@ describe("ClassTableInheritance", () => {
   });
 
   it("can load a subtype from separate tables via the base type", async () => {
+    await insertAuthor({ first_name: "a1" });
     await insertPublisher({ name: "sp1" });
-    await insertLargePublisher({ id: 2, name: "lp2" });
+    await insertLargePublisher({ id: 2, name: "lp2", spotlight_author_id: 1 });
 
     const em = newEntityManager();
     const sp = await em.load(Publisher, "p:1");
@@ -204,8 +206,9 @@ describe("ClassTableInheritance", () => {
   });
 
   it("can load a subtype from separate tables via the sub type", async () => {
+    await insertAuthor({ first_name: "a1" });
     await insertPublisher({ name: "sp1" });
-    await insertLargePublisher({ id: 2, name: "lp2" });
+    await insertLargePublisher({ id: 2, name: "lp2", spotlight_author_id: 1 });
 
     const em = newEntityManager();
     const sp = await em.load(SmallPublisher, "p:1");
@@ -234,7 +237,9 @@ describe("ClassTableInheritance", () => {
 
   it("can load m2o across separate tables", async () => {
     await insertPublisher({ name: "sp1" });
-    await insertLargePublisher({ id: 2, name: "lp1" });
+    // spotlight_author_id is enforced in the runtime, not in the db, so it is safe to be invalid here since
+    // we aren't asserting against spotlight author
+    await insertLargePublisher({ id: 2, name: "lp1", spotlight_author_id: undefined as any });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertAuthor({ first_name: "a2", publisher_id: 2 });
 
@@ -251,9 +256,10 @@ describe("ClassTableInheritance", () => {
   });
 
   it("can load o2m across separate tables", async () => {
+    await insertAuthor({ first_name: "a1" });
     await insertPublisherGroup({ name: "pg1" });
     await insertPublisher({ name: "sp1", group_id: 1 });
-    await insertLargePublisher({ id: 2, name: "lp1", group_id: 1 });
+    await insertLargePublisher({ id: 2, name: "lp1", group_id: 1, spotlight_author_id: 1 });
 
     const em = newEntityManager();
     const pg = await em.load(PublisherGroup, "pg:1", "publishers");
@@ -267,9 +273,10 @@ describe("ClassTableInheritance", () => {
   });
 
   it("can load m2m across separate tables", async () => {
+    await insertAuthor({ first_name: "a1" });
     await insertTag({ name: "t" });
     await insertPublisher({ name: "sp1" });
-    await insertLargePublisher({ id: 2, name: "lp1" });
+    await insertLargePublisher({ id: 2, name: "lp1", spotlight_author_id: 1 });
     await insertPublisherToTag({ publisher_id: 1, tag_id: 1 });
     await insertPublisherToTag({ publisher_id: 2, tag_id: 1 });
 
@@ -296,8 +303,9 @@ describe("ClassTableInheritance", () => {
   });
 
   it("can find entities from the base type", async () => {
+    await insertAuthor({ first_name: "a1" });
     await insertPublisher({ name: "sp1" });
-    await insertLargePublisher({ id: 2, name: "lp1" });
+    await insertLargePublisher({ id: 2, name: "lp1", spotlight_author_id: 1 });
 
     const em = newEntityManager();
     const [sp, lp] = await em.find(Publisher, { name: { like: "%p%" } });
@@ -310,8 +318,9 @@ describe("ClassTableInheritance", () => {
   });
 
   it("can find entities from the sub type", async () => {
+    await insertAuthor({ first_name: "a1" });
     await insertPublisher({ name: "sp1" });
-    await insertLargePublisher({ id: 2, name: "lp1", country: "country" });
+    await insertLargePublisher({ id: 2, name: "lp1", country: "country", spotlight_author_id: 1 });
 
     const em = newEntityManager();
     const [sp] = await em.find(SmallPublisher, { name: { like: "%p%" }, city: { like: "c%" } });
@@ -332,8 +341,9 @@ describe("ClassTableInheritance", () => {
   });
 
   it("can find entities from the sub type via a join", async () => {
+    await insertAuthor({ first_name: "a1" });
     await insertPublisher({ name: "sp1" });
-    await insertLargePublisher({ id: 2, name: "lp1", country: "country" });
+    await insertLargePublisher({ id: 2, name: "lp1", country: "country", spotlight_author_id: 1 });
     await insertCritic({ name: "c1", favorite_large_publisher_id: 2 });
 
     const em = newEntityManager();
@@ -376,7 +386,8 @@ describe("ClassTableInheritance", () => {
 
   it("can ignore persisted fields from a different subtype", async () => {
     // Given a large publisher
-    await insertLargePublisher({ name: "lp1" });
+    await insertAuthor({ first_name: "a1" });
+    await insertLargePublisher({ name: "lp1", spotlight_author_id: 1 });
     const em = newEntityManager();
     // When we make an author
     newAuthor(em, { publisher: "p:1" });
@@ -404,6 +415,20 @@ describe("ClassTableInheritance", () => {
     await expect(em.flush()).resolves.toBeDefined();
   });
 
+  it("can mark subtype fields as required", async () => {
+    const em = newEntityManager();
+    // Given a small publisher with no spotlight author
+    newSmallPublisher(em, { name: "lp1", spotlightAuthor: null as any });
+    // When we flush
+    const result = em.flush();
+    // Then the flush succeeds because spotlight author is not required
+    await expect(result).resolves.not.toThrow();
+    // But when we are given a large publisher with no spotlightAuthor
+    newLargePublisher(em, { name: "lp1", spotlightAuthor: null as any });
+    // Then the flush fails because spotlight author is required
+    await expect(em.flush()).rejects.toThrow("spotlightAuthor is required");
+  });
+
   it("can cascade delete relations that are on the base type", async () => {
     const em = newEntityManager();
     // Given a large publisher
@@ -420,9 +445,10 @@ describe("ClassTableInheritance", () => {
   });
 
   it("supports columns that are shared across subtypes", async () => {
+    await insertAuthor({ first_name: "a1" });
     await insertPublisher({ id: 1, name: "sp1", shared_column: "sp1" });
-    await insertLargePublisher({ id: 2, name: "lp1", shared_column: "lp1" });
-    await insertLargePublisher({ id: 3, name: "lp2" });
+    await insertLargePublisher({ id: 2, name: "lp1", shared_column: "lp1", spotlight_author_id: 1 });
+    await insertLargePublisher({ id: 3, name: "lp2", spotlight_author_id: 1 });
     const em = newEntityManager();
     resetQueryCount();
     const [sp1, lp1, lp2] = await em.find(Publisher, {}, { orderBy: { id: "ASC" } });
@@ -445,7 +471,7 @@ describe("ClassTableInheritance", () => {
   it("setDefaults work as expected for subtypes", async () => {
     const em = newEntityManager();
     const sp = newSmallPublisher(em, {});
-    const lp = newLargePublisher(em, {});
+    const lp = newLargePublisher(em, { authors: [{}] });
     await em.flush();
 
     const publishers = await select("publishers");

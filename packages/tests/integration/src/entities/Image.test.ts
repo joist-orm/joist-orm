@@ -14,6 +14,7 @@ describe("Image", () => {
 
   it("cannot have multiple owners", async () => {
     const em = newEntityManager();
+
     const p1 = em.create(SmallPublisher, { name: "p1", city: "c1" });
     const a1 = em.create(Author, { firstName: "a1" });
     const i = em.create(Image, { type: ImageType.AuthorImage, author: a1, publisher: p1, fileName: "f1" });

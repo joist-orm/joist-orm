@@ -573,6 +573,7 @@ export const largePublisherMeta: EntityMetadata<LargePublisher> = {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("p", "id", "id", "int"), immutable: true },
     "sharedColumn": { kind: "primitive", fieldName: "sharedColumn", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("sharedColumn", "shared_column", "text"), immutable: false },
     "country": { kind: "primitive", fieldName: "country", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("country", "country", "text"), immutable: false },
+    "spotlightAuthor": { kind: "m2o", fieldName: "spotlightAuthor", fieldIdName: "spotlightAuthorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "spotlightAuthorPublishers", serde: new KeySerde("a", "spotlightAuthor", "spotlight_author_id", "int"), immutable: false },
     "critics": { kind: "o2m", fieldName: "critics", fieldIdName: "criticIds", required: false, otherMetadata: () => criticMeta, otherFieldName: "favoriteLargePublisher", serde: undefined, immutable: false },
     "users": { kind: "o2m", fieldName: "users", fieldIdName: "userIds", required: false, otherMetadata: () => userMeta, otherFieldName: "favoritePublisher", serde: undefined, immutable: false },
   },

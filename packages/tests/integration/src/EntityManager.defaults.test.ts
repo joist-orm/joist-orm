@@ -1,5 +1,5 @@
 import { EntityMetadata, noValue, testing } from "joist-orm";
-import { Author, Book, LargePublisher, newAuthor, newBook, newUser } from "src/entities";
+import { Author, Book, newAuthor, newBook, newUser, SmallPublisher } from "src/entities";
 import { select } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
@@ -89,7 +89,7 @@ describe("EntityManager.defaults", () => {
   it("skips default for an already-set reference", async () => {
     const em = newEntityManager();
     // Given we create a Publisher (w/o going through the factory triggered defaults)
-    const p = em.create(LargePublisher, { name: "p1" });
+    const p = em.create(SmallPublisher, { name: "p1", city: "c1" });
     // And explicitly set the spotlightAuthor to undefined
     p.spotlightAuthor.set(undefined);
     // Even though there are authors that the setDefault could use
@@ -103,7 +103,7 @@ describe("EntityManager.defaults", () => {
   it("re-tries defaults during em.flush", async () => {
     const em = newEntityManager();
     // Given we create a Publisher (w/o going through the factory triggered defaults)
-    const p = em.create(LargePublisher, { name: "p1" });
+    const p = em.create(SmallPublisher, { name: "p1", city: "c1" });
     // And invoke `em.setDefaults`
     await em.setDefaults([p]);
     // And the spotlightAuthor default returned undefined

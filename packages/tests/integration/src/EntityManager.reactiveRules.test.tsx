@@ -194,7 +194,7 @@ describe("EntityManager.reactiveRules", () => {
 
   it.withCtx("runs rule added via afterMetadata", async ({ em }) => {
     // Given a publisher
-    const p = newPublisher(em);
+    const p = newPublisher(em, { authors: [{}] });
     await em.flush();
     // When we change their name
     p.name = "invalid";

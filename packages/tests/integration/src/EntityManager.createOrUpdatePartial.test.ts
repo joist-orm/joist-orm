@@ -43,12 +43,12 @@ describe("EntityManager.createOrUpdatePartial", () => {
 
   it("undefined doesn't prevent defaults from being set", async () => {
     const em = newEntityManager();
-    const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", nickNames: undefined });
     const p1 = await em.createOrUpdatePartial(LargePublisher, {
       name: "p1",
       baseSyncDefault: undefined,
       baseAsyncDefault: undefined,
     });
+    const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", nickNames: undefined, publisher: p1 });
     await em.flush();
     expect(a1.nickNames).toEqual(["a1"]);
     expect(p1.baseSyncDefault).toEqual("LPSyncDefault");

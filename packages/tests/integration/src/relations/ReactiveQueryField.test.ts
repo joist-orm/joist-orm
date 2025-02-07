@@ -12,16 +12,17 @@ import { Book, BookReview, Publisher, newBookReview, newLargePublisher } from ".
 describe("ReactiveQueryField", () => {
   it("skips UPDATE after INSERT if value hasn't changed", async () => {
     const em = newEntityManager();
-    newLargePublisher(em);
+    newLargePublisher(em, { authors: [{}] });
     await em.flush();
     // We don't actually have an `UPDATE` here b/c the default value of 0 from the `INSERT`
     // is the same as the post-INSERT calculated value, so there is no need to `UPDATE`.
     expect(queries).toMatchInlineSnapshot(`
      [
+       "select nextval('publishers_id_seq') from generate_series(1, 1) UNION ALL select nextval('authors_id_seq') from generate_series(1, 1)",
        "BEGIN;",
-       "select nextval('publishers_id_seq') from generate_series(1, 1)",
        "INSERT INTO "publishers" ("id", "name", "latitude", "longitude", "huge_number", "number_of_book_reviews", "deleted_at", "titles_of_favorite_books", "base_sync_default", "base_async_default", "created_at", "updated_at", "size_id", "type_id", "favorite_author_id", "group_id", "spotlight_author_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)",
        "INSERT INTO "large_publishers" ("id", "shared_column", "country") VALUES ($1, $2, $3)",
+       "INSERT INTO "authors" ("id", "first_name", "last_name", "ssn", "initials", "number_of_books", "book_comments", "is_popular", "age", "graduated", "nick_names", "nick_names_upper", "was_ever_popular", "is_funny", "mentor_names", "address", "business_address", "quotes", "number_of_atoms", "deleted_at", "number_of_public_reviews", "numberOfPublicReviews2", "tags_of_all_books", "search", "certificate", "created_at", "updated_at", "favorite_shape", "range_of_books", "favorite_colors", "mentor_id", "root_mentor_id", "current_draft_book_id", "favorite_book_id", "publisher_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35)",
        "SELECT DISTINCT count(distinct "br".id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2",
        "COMMIT;",
      ]

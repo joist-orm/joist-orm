@@ -24,7 +24,8 @@ const fieldConfig = z
     serde: z.optional(z.string()),
     stiDiscriminator: z.optional(z.record(z.string(), z.string())),
     stiType: z.optional(z.string()),
-    stiNotNull: z.optional(z.boolean()),
+    // Allow subclasses to mark fields as required
+    notNull: z.optional(z.boolean()),
   })
   .strict();
 
@@ -39,8 +40,6 @@ const relationConfig = z
     orderBy: z.optional(z.string()),
     // Allow pushing m2o/m2m/o2o relations in a base type (Task) down to a subtype (TaskOld)
     stiType: z.optional(z.string()),
-    // Allow marking STI-subtype m2o FKs as required
-    stiNotNull: z.optional(z.boolean()),
     /**
      * Allow specializing a base type relation (SmallPublisher.group: SmallPublisherGroup).
      *
@@ -50,6 +49,8 @@ const relationConfig = z
     subType: z.optional(z.string()),
     /** Allow skipping self-referential fields getting a `...Recursive` relation. */
     skipRecursiveRelations: z.optional(z.boolean()),
+    // Allow marking m2o FKs as required on subclasses
+    notNull: z.optional(z.boolean()),
   })
   .strict();
 

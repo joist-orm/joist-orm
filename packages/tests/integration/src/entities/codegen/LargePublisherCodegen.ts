@@ -13,6 +13,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasMany,
+  hasOne,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -20,7 +21,9 @@ import {
   type LoadHint,
   loadLens,
   type ManyToOneReference,
+  mustBeSubType,
   newChangesProxy,
+  newRequiredRule,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -39,6 +42,9 @@ import {
   AdminUser,
   type AdminUserId,
   Author,
+  type AuthorId,
+  authorMeta,
+  type AuthorOrder,
   BookAdvance,
   Comment,
   Critic,
@@ -71,16 +77,19 @@ export interface LargePublisherFields extends PublisherFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   country: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  spotlightAuthor: { kind: "m2o"; type: Author; nullable: never; derived: false };
 }
 
 export interface LargePublisherOpts extends PublisherOpts {
   sharedColumn?: string | null;
   country?: string | null;
+  spotlightAuthor: Author | AuthorId;
   critics?: Critic[];
   users?: User[];
 }
 
 export interface LargePublisherIdsOpts extends PublisherIdsOpts {
+  spotlightAuthorId?: AuthorId | null;
   criticIds?: CriticId[] | null;
   userIds?: UserId[] | null;
 }
@@ -88,6 +97,7 @@ export interface LargePublisherIdsOpts extends PublisherIdsOpts {
 export interface LargePublisherFilter extends PublisherFilter {
   sharedColumn?: ValueFilter<string, null>;
   country?: ValueFilter<string, null>;
+  spotlightAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
   critics?: EntityFilter<Critic, CriticId, FilterOf<Critic>, null | undefined>;
   users?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   usersAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
@@ -96,6 +106,7 @@ export interface LargePublisherFilter extends PublisherFilter {
 export interface LargePublisherGraphQLFilter extends PublisherGraphQLFilter {
   sharedColumn?: ValueGraphQLFilter<string>;
   country?: ValueGraphQLFilter<string>;
+  spotlightAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
   critics?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, null | undefined>;
   users?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   usersAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
@@ -104,12 +115,16 @@ export interface LargePublisherGraphQLFilter extends PublisherGraphQLFilter {
 export interface LargePublisherOrder extends PublisherOrder {
   sharedColumn?: OrderBy;
   country?: OrderBy;
+  spotlightAuthor?: AuthorOrder;
 }
 
 export interface LargePublisherFactoryExtras {
 }
 
 export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
+
+largePublisherConfig.addRule(newRequiredRule("spotlightAuthor"));
+largePublisherConfig.addRule("spotlightAuthor", mustBeSubType("spotlightAuthor"));
 
 declare module "joist-orm" {
   interface TypeMap {
@@ -330,6 +345,15 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
     );
   }
 
+  get spotlightAuthor(): ManyToOneReference<LargePublisher, Author, never> {
+    return this.__data.relations.spotlightAuthor ??= hasOne(
+      this,
+      authorMeta,
+      "spotlightAuthor",
+      "spotlightAuthorPublishers",
+    );
+  }
+
   get authors(): Collection<LargePublisher, Author> {
     return super.authors as Collection<LargePublisher, Author>;
   }
@@ -348,10 +372,6 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
 
   get group(): ManyToOneReference<LargePublisher, PublisherGroup, undefined> {
     return super.group as ManyToOneReference<LargePublisher, PublisherGroup, undefined>;
-  }
-
-  get spotlightAuthor(): ManyToOneReference<LargePublisher, Author, undefined> {
-    return super.spotlightAuthor as ManyToOneReference<LargePublisher, Author, undefined>;
   }
 
   get tags(): Collection<LargePublisher, Tag> {

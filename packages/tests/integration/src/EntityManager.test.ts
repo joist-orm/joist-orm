@@ -378,7 +378,7 @@ describe("EntityManager", () => {
 
   it("can save enums", async () => {
     const em = newEntityManager();
-    newPublisher(em, { name: "a1", size: PublisherSize.Large });
+    newPublisher(em, { name: "a1", size: PublisherSize.Large, authors: [{}] });
     await em.flush();
     const rows = await select("publishers");
     expect(rows[0].size_id).toEqual(2);
@@ -1165,7 +1165,7 @@ describe("EntityManager", () => {
     // Given two queries with exactly the same where clause
     await em.find(Publisher, { id: "1" });
     // And we flush before executing the next query
-    newPublisher(em, { name: "p2" });
+    newPublisher(em, { name: "p2", authors: [{}] });
     await em.flush();
     // Then we re-issue the SQL query
     resetQueryCount();

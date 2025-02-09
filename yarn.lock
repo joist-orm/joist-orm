@@ -11186,6 +11186,7 @@ __metadata:
     node-pg-migrate: "npm:^7.8.0"
     prettier: "npm:^3.4.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
+    tsx: "npm:^4.19.2"
     typescript: "npm:5.7.2"
   languageName: unknown
   linkType: soft

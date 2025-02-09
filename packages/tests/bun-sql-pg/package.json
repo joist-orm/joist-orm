@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "bun-types": "^1.2.0",
+    "joist-driver-bun-pg": "workspace:*",
     "joist-orm": "workspace:*",
     "node-pg-migrate": "^7.8.0"
   },

@@ -1,4 +1,4 @@
-import { BookCodegen, bookConfig as config } from "src/entities/index.ts";
+import { BookCodegen, bookConfig as config } from "src/entities/entities.ts";
 
 export class Book extends BookCodegen {}
 

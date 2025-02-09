@@ -1,5 +1,4 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
-import { Knex } from "knex";
 import { getInstanceData } from "./BaseEntity";
 import { setAsyncDefaults } from "./defaults";
 import { getField, setField } from "./fields";
@@ -17,7 +16,7 @@ import { findDataLoader } from "./dataloaders/findDataLoader";
 import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { populateDataLoader } from "./dataloaders/populateDataLoader";
-import { Driver } from "./drivers/Driver";
+import { Driver } from "./drivers";
 import {
   BaseEntity,
   Changes,
@@ -194,7 +193,8 @@ export type EntityManagerMode = "read-only" | "in-memory-writes" | "writes";
 export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX extends unknown = unknown> {
   public readonly ctx: C;
   public driver: Driver<TX>;
-  public currentTxnKnex: Knex | undefined;
+  /** When we're flushing, the connection/transaction. */
+  public txn: TX | undefined;
   public entityLimit: number = defaultEntityLimit;
   readonly #entities: Entity[] = [];
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
@@ -1077,13 +1077,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   /**
    * Executes `fn` with a transaction, and automatically calls `flush`/`commit` at the end.
    *
-   * This ensures both any `.find` as well as `.flush` operations happen within the same
+   * This ensures both any `.find` and `.flush` operations happen within the same
    * transaction, which is useful for enforcing cross-table/application-level invariants that
    * cannot be enforced with database-level constraints.
    */
   public async transaction<T>(fn: (txn: TX) => Promise<T>): Promise<T> {
-    return this.driver.transaction(this, async (knex) => {
-      const result = await fn(knex);
+    return this.driver.transaction(this, async (txn) => {
+      const result = await fn(txn);
       // The lambda may have done some interstitial flushes (that would not
       // have committed the transaction), but go ahead and do a final one
       // in case they didn't explicitly call flush.
@@ -1322,8 +1322,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
           do {
-            await this.driver.flushEntities(this, entityTodos);
-            await this.driver.flushJoinTables(this, joinRowTodos);
+            if (Object.keys(entityTodos).length > 0) {
+              await this.driver.flushEntities(this, entityTodos);
+            }
+            if (Object.keys(joinRowTodos).length > 0) {
+              await this.driver.flushJoinTables(this, joinRowTodos);
+            }
             // Now that we've flushed, look for ReactiveQueries that need to be recalculated
             if (this.#rm.hasPendingReactiveQueries()) {
               // Reset all flushed entities to we only flush net-new changes
@@ -1889,12 +1893,12 @@ async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
   }
 }
 
-export function beforeTransaction(em: EntityManager, knex: Knex.Transaction): Promise<unknown> {
-  return Promise.all(getEmInternalApi(em).hooks.beforeTransaction.map((fn) => fn(em, knex)));
+export function beforeTransaction<TXN>(em: EntityManager<any, any, TXN>, txn: TXN): Promise<unknown> {
+  return Promise.all(getEmInternalApi(em).hooks.beforeTransaction.map((fn) => fn(em, txn)));
 }
 
-export function afterTransaction(em: EntityManager, knex: Knex.Transaction): Promise<unknown> {
-  return Promise.all(getEmInternalApi(em).hooks.afterTransaction.map((fn) => fn(em, knex)));
+export function afterTransaction<TXN>(em: EntityManager<any, any, TXN>, txn: TXN): Promise<unknown> {
+  return Promise.all(getEmInternalApi(em).hooks.afterTransaction.map((fn) => fn(em, txn)));
 }
 
 async function runHookOnTodos(

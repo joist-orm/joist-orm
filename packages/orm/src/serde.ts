@@ -162,6 +162,11 @@ export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
     if (value === null) return value;
     return new Date(value);
   }
+
+  mapToDb(value: Date) {
+    // bun.sql needs this, node-pg does it out of the box
+    return value?.toISOString();
+  }
 }
 
 /** Converts `DATE`s `Temporal.PlainDate`s. */

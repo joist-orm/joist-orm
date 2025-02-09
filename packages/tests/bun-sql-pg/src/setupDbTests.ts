@@ -1,30 +1,23 @@
-import { afterAll, beforeEach, expect } from "@jest/globals";
-import { newPgConnectionConfig, PostgresDriver } from "joist-orm";
+import { SQL } from "bun";
+import { beforeEach, expect } from "bun:test";
+import { BunPgDriver } from "joist-driver-bun-pg";
 import { toMatchEntity } from "joist-test-utils";
-import { knex as createKnex, Knex } from "knex";
 import { EntityManager } from "src/entities/index.ts";
 
 expect.extend({ toMatchEntity });
 
-export let knex: Knex = createKnex({
-  client: "pg",
-  connection: newPgConnectionConfig() as any,
-  asyncStackTraces: true,
-});
+// Any connections settings...
+const sql = new SQL();
 
 export function newEntityManager(): EntityManager {
-  const ctx = { knex };
+  const ctx = { sql };
   const em = new EntityManager(ctx as any, {
-    driver: new PostgresDriver(knex),
+    driver: new BunPgDriver(sql),
   });
   Object.assign(ctx, { em });
   return em;
 }
 
 beforeEach(async () => {
-  await knex.select(knex.raw("flush_database()"));
-});
-
-afterAll(async () => {
-  await knex.destroy();
+  await sql`select flush_database()`;
 });

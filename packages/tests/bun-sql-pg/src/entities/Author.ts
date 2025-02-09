@@ -1,4 +1,4 @@
-import { AuthorCodegen, authorConfig as config } from "src/entities/index.ts";
+import { AuthorCodegen, authorConfig as config } from "src/entities/entities.ts";
 
 export class Author extends AuthorCodegen {}
 

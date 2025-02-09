@@ -13,13 +13,16 @@ describe("Driver", () => {
       setField(author, "initials", "a");
       setField(author, "numberOfBooks", 0);
       setField(author, "tagsOfAllBooks", "");
-      await em.driver.flushEntities(em, {
-        Author: {
-          metadata: getMetadata(Author),
-          inserts: [author],
-          deletes: [],
-          updates: [],
-        },
+      await em.ctx.knex.transaction(async (txn) => {
+        em.txn = txn;
+        await em.driver.flushEntities(em, {
+          Author: {
+            metadata: getMetadata(Author),
+            inserts: [author],
+            deletes: [],
+            updates: [],
+          },
+        });
       });
       const authors = await select("authors");
       expect(authors.length).toEqual(1);

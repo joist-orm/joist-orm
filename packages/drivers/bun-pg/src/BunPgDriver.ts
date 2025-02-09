@@ -108,7 +108,6 @@ function batchInsert(txn: TransactionSQL, op: InsertOp): Promise<unknown> {
     VALUES ${rows.map((_, i) => `(${columns.map((_, j) => `\$${i * columns.length + j + 1}`).join(", ")})`).join(",")}
   `);
   const params = rows.flat();
-  console.log({ sql, params });
   return txn.unsafe(sql, params);
 }
 

@@ -1,3 +1,10 @@
+# [1.226.0](https://github.com/joist-orm/joist-orm/compare/v1.225.3...v1.226.0) (2025-02-09)
+
+
+### Features
+
+* Minimal bun:sql inserts working. ([#1359](https://github.com/joist-orm/joist-orm/issues/1359)) ([e8c5389](https://github.com/joist-orm/joist-orm/commit/e8c5389901b27cc684a6315ee8eddc6f72e061f8))
+
 ## [1.225.3](https://github.com/joist-orm/joist-orm/compare/v1.225.2...v1.225.3) (2025-02-05)
 
 

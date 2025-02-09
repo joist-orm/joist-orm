@@ -1,4 +1,4 @@
-import { describe, expect, test } from "@jest/globals";
+import { describe, expect, test } from "bun:test";
 import { newAuthor } from "src/entities/index.ts";
 import { newEntityManager } from "src/setupDbTests.ts";
 

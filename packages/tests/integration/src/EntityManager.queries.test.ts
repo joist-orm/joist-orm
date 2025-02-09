@@ -1276,7 +1276,9 @@ describe("EntityManager.queries", () => {
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
-        conditions: [{ alias: "a", column: "graduated", dbType: "date", cond: { kind: "eq", value: jan2 } }],
+        conditions: [
+          { alias: "a", column: "graduated", dbType: "date", cond: { kind: "eq", value: jan2.toISOString() } },
+        ],
       },
       orderBys: [expect.anything()],
     });

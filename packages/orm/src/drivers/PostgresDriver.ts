@@ -8,6 +8,7 @@ import {
   beforeTransaction,
   deTagId,
   EntityManager,
+  fail,
   getMetadata,
   keyToNumber,
   maybeResolveReferenceToId,
@@ -70,20 +71,19 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
   }
 
   async transaction<T>(em: EntityManager, fn: (txn: Knex.Transaction) => Promise<T>): Promise<T> {
-    const knex = this.getMaybeInTxnKnex(em);
-    const alreadyInTxn = "commit" in knex;
-    if (alreadyInTxn) {
-      return fn(knex as Knex.Transaction);
+    // `em.transaction` might have already opened a transaction
+    if (em.txn) {
+      return fn(em.txn as Knex.Transaction);
     }
-    return await knex.transaction(async (txn) => {
-      em.currentTxnKnex = txn;
+    return this.knex.transaction(async (txn) => {
+      em.txn = txn;
       try {
         await beforeTransaction(em, txn);
         const result = await fn(txn);
         await afterTransaction(em, txn);
         return result;
       } finally {
-        em.currentTxnKnex = undefined;
+        em.txn = undefined;
       }
     });
   }
@@ -93,7 +93,7 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
   }
 
   async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
-    const knex = this.getMaybeInTxnKnex(em);
+    const knex = (em.txn ?? fail("Expected EntityManager.txn to be set")) as Knex.Transaction;
     await this.idAssigner.assignNewIds(todos);
 
     const ops = generateOps(todos);
@@ -132,7 +132,7 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
   }
 
   async flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void> {
-    const knex = this.getMaybeInTxnKnex(em);
+    const knex = (em.txn ?? fail("Expected EntityManager.txn to be set")) as Knex.Transaction;
     for (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
       if (newRows.length > 0) {
         const sql = cleanSql(`
@@ -196,7 +196,7 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
   }
 
   private getMaybeInTxnKnex(em: EntityManager): Knex {
-    return em.currentTxnKnex || this.knex;
+    return (em.txn || this.knex) as Knex.Transaction;
   }
 }
 

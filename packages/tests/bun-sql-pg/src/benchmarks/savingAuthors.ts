@@ -1,7 +1,7 @@
 import { SQL } from "bun";
 import { BunPgDriver } from "joist-driver-bun-pg";
 import { Author, EntityManager } from "src/entities";
-import { Context } from "./context.ts";
+import { Context } from "../context.ts";
 
 const sql = new SQL();
 const driver = new BunPgDriver(sql);

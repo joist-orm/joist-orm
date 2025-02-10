@@ -1,3 +1,10 @@
+# [1.227.0](https://github.com/joist-orm/joist-orm/compare/v1.226.0...v1.227.0) (2025-02-10)
+
+
+### Features
+
+* Add notNull config support for CTI based subclasses ([#1358](https://github.com/joist-orm/joist-orm/issues/1358)) ([3cc0212](https://github.com/joist-orm/joist-orm/commit/3cc02128d15eaceee7f7a4d5e4de42dd73deb2f6))
+
 # [1.226.0](https://github.com/joist-orm/joist-orm/compare/v1.225.3...v1.226.0) (2025-02-09)
 
 

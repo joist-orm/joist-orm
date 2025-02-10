@@ -112,6 +112,21 @@ After this, Joist will enforce that all `Animal`s must be either `Dog`s or `Cat`
 
 For example, if an `em.load(Animal, "a:1")` finds a row only in the `animals` table, and no matching row in the `dogs` or `cats` table, then the `em.load` method will fail with an error message.
 
+## SubType Configuration
+
+In some situations a subtype may want to override the behavior of a field or relation it inherits from its base type.  In such situations you may manually configure the `joist-config.json` for the subtype to give Joist hints about "which subtype" a given relation should be or about its nullability.
+
+For example, instead of the `Dog.breed` relation (from the `animals.breed_id` FK) being typed as `Breed`, you want it to be typed as `DogBreed` because you know a `Dog` can't be a Maine Coon.
+
+These hints in `joist-config.json` generally look like:
+
+1. Adding `subType: "DogBreed"` to the `breed` relation in the `Dog` section of `joist-config.json` so that dogs can only be breeds of their species
+   - The value of `"DogBreed"` or `"CatBreed"` should match a subclass
+   - Currently, we only support a relation being a single subtype
+2. Adding `notNull: true` to any fields or relations that you want Joist to enforce as not null
+    - For example, if you want `breed` to be required for all `Dog`s but not `Cats`s, you can add `notNull: true` to the `breed` relation on `Dog`
+
+
 ## But Isn't Inheritance Bad Design?
 
 Yes, inheritance can be abused, particularly with deep inheritance hierarchies and/or just bad design decisions.

@@ -29,27 +29,42 @@ export function applyInheritanceUpdates(config: Config, db: DbMetadata): void {
 function setupSubTypeSpecialization(config: Config, entities: EntityDbMetadata[]): void {
   for (const entity of entities) {
     if (entity.baseType) {
+      const entityConfig = config.entities[entity.name];
+      const baseConfig = config.entities[entity.baseType.name];
       // Look through the base's m2os & o2ms, looking for a config specialization
       for (const rel of [...entity.baseType.manyToOnes, ...entity.baseType.oneToManys]) {
+        const { notNull } = entityConfig?.relations?.[rel.fieldName] ?? {};
         const subType =
-          config.entities[entity.name]?.relations?.[rel.fieldName]?.subType ??
-          config.entities[entity.baseType.name]?.relations?.[rel.fieldName]?.subType ??
+          entityConfig?.relations?.[rel.fieldName]?.subType ??
+          baseConfig?.relations?.[rel.fieldName]?.subType ??
           // Probe the otherFieldName for a `subType: "self"` on self-referential relations in STI tables
-          config.entities[entity.baseType.name]?.relations?.[rel.otherFieldName]?.subType;
+          baseConfig?.relations?.[rel.otherFieldName]?.subType ??
+          // if we are only marking the relation as required and not specifying a subtype, then use the original type
+          (notNull ? rel.otherEntity.name : undefined);
+
         if (!subType) {
           // continue...
         } else if (subType === "self" && rel.kind === "m2o") {
           // Specialize `TaskNew.copiedFrom: TaskNew` & `TaskOld.copiedFrom: TaskOld`
-          entity.manyToOnes.push({ ...rel, otherEntity: makeEntity(entity.name) });
+          entity.manyToOnes.push({ ...rel, ...(notNull ? { notNull } : {}), otherEntity: makeEntity(entity.name) });
         } else if (subType === "self" && rel.kind === "o2m") {
           // Specialize `TaskNew.copiedTo: TaskNew[]` & `TaskOld.copiedTo: TaskOld[]`
-          entity.oneToManys.push({ ...rel, otherEntity: makeEntity(entity.name) });
+          entity.oneToManys.push({ ...rel, ...(notNull ? { notNull } : {}), otherEntity: makeEntity(entity.name) });
         } else if (rel.kind === "m2o") {
           // Specialize `SmallPublisher.group: SmallPublisherGroup`
-          entity.manyToOnes.push({ ...rel, otherEntity: makeEntity(subType) });
+          entity.manyToOnes.push({ ...rel, ...(notNull ? { notNull } : {}), otherEntity: makeEntity(subType) });
         } else if (rel.kind === "o2m") {
           // Specialize `SmallPublisherGroup.publishers: SmallPublisher`
-          entity.oneToManys.push({ ...rel, otherEntity: makeEntity(subType) });
+          entity.oneToManys.push({ ...rel, ...(notNull ? { notNull } : {}), otherEntity: makeEntity(subType) });
+        }
+      }
+
+      // Look through the base's primitives looking for a config specialization
+      for (const field of entity.baseType?.primitives ?? []) {
+        // the only specialization a primitive can have is nullability
+        const { notNull } = entityConfig?.fields?.[field.fieldName] ?? {};
+        if (notNull) {
+          entity.primitives.push({ ...field, notNull });
         }
       }
     }
@@ -125,7 +140,7 @@ function expandSingleTableInheritance(
         // Make fields as required
         function maybeRequired<T extends { notNull: boolean; fieldName: string }>(field: T): T {
           const config = subTypeFields.find(([name]) => name === field.fieldName)?.[1]!;
-          if (config.stiNotNull) field.notNull = true;
+          if (config.notNull) field.notNull = true;
           return field;
         }
 

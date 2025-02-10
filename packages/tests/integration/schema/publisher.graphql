@@ -18,6 +18,7 @@ type Publisher {
   deletedAt: DateTime
   baseSyncDefault: String
   baseAsyncDefault: String!
+  rating: Int
 }
 
 input SavePublisherInput {
@@ -34,6 +35,7 @@ input SavePublisherInput {
   deletedAt: DateTime
   baseSyncDefault: String
   baseAsyncDefault: String
+  rating: Int
 }
 
 type SavePublisherResult {

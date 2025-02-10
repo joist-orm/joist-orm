@@ -8,7 +8,7 @@ describe("EntityManager.assignNewIds", () => {
     const em = newEntityManager();
 
     // Given an entity
-    const p1 = newPublisher(em, { name: "p1" });
+    const p1 = newPublisher(em, { name: "p1", authors: [{}] });
     expect(p1.idMaybe).toBeUndefined();
 
     // When I ask to assign the ids

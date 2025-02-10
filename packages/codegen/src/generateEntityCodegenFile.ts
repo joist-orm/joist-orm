@@ -441,7 +441,11 @@ function generateDefaultValidationRules(db: DbMetadata, meta: EntityDbMetadata, 
   // Add subtype specialization must match
   if (meta.baseType) {
     meta.manyToOnes
-      .filter((m2o) => meta.baseType?.manyToOnes?.find((o) => o.fieldName === m2o.fieldName))
+      .filter((m2o) =>
+        meta.baseType?.manyToOnes?.find(
+          (o) => o.fieldName === m2o.fieldName && o.otherEntity.name !== m2o.otherEntity.name,
+        ),
+      )
       .forEach((m2o) => {
         rules.push(code`${configName}.addRule("${m2o.fieldName}", ${mustBeSubType}("${m2o.fieldName}"));`);
       });

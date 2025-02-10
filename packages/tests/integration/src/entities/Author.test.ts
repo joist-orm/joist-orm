@@ -386,7 +386,7 @@ describe("Author", () => {
 
     it("works for references when already loaded", async () => {
       const em = newEntityManager();
-      const [p1, p2] = [newPublisher(em), newPublisher(em)];
+      const [p1, p2] = [newPublisher(em), newPublisher(em, { authors: [{}] })];
       const a1 = newAuthor(em, { publisher: p1 });
       expect(a1.changes.publisher.hasChanged).toBe(true);
       expect(a1.changes.publisher.hasUpdated).toBe(false);

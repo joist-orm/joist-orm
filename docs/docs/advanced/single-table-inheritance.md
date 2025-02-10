@@ -27,7 +27,7 @@ The`joist-config.json` might look like:
       "fields": {
         "type": { "stiDiscriminator": { "DOG": "Dog", "CAT": "Cat" } },
         "canBark": { "stiType": "Dog" },
-        "canMeow": { "stiType": "Cat", "stiNotNull": true }
+        "canMeow": { "stiType": "Cat", "notNull": true }
       },
       "tag": "a"
     },
@@ -91,9 +91,9 @@ These hints in `joist-config.json` generally look like:
 2. Adding `stiType: "Dog"` or `stiType: "Cat"` to any field (like `canBark` or `canMeow`) in the `animals` table that should be limited to a specific subtype
    - The value of `"Dog"` or `"Cat"` should match a name in the `stiDiscriminator` mapping
    - Currently, we only support a field being in a single subtype
-3. Adding `stiNotNull: true` to any fields that you want Joist to enforce as not null
-   - For example, if you want `canMewo` to be required for all `Cat`s, you can add `stiNotNull: true` to the `canMeow` field
-   - Without an explicit `stiNotNull` set, we assume subtype fields are nullable, which is how they're represented in the database
+3. Adding `notNull: true` to any fields that you want Joist to enforce as not null
+   - For example, if you want `canMewo` to be required for all `Cat`s, you can add `notNull: true` to the `canMeow` field
+   - Without an explicit `notNull` set, we assume subtype fields are nullable, which is how they're represented in the database
    - See the "Pros/Cons" section later for why this can't be encoded in the database
 4. On any FKs that point _to_ your base type, add `stiType: "SubType"` to indicate that the FK is only valid for the given subtype.
    - See the `DogPack` example in the above example config

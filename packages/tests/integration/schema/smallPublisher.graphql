@@ -28,6 +28,7 @@ type SmallPublisher {
   baseAsyncDefault: String!
   selfReferential: SmallPublisher
   smallPublishers: [SmallPublisher!]!
+  rating: Int
 }
 
 input SaveSmallPublisherInput {
@@ -45,6 +46,7 @@ input SaveSmallPublisherInput {
   baseSyncDefault: String
   baseAsyncDefault: String
   selfReferentialId: ID
+  rating: Int
 }
 
 type SaveSmallPublisherResult {

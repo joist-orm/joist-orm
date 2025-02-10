@@ -349,7 +349,7 @@ describe("EntityManager.clone", () => {
     it("can skip the main entity you asked to clone", async () => {
       const em = newEntityManager();
       // Given an entity to clone
-      const p1 = newPublisher(em, { name: "p1" });
+      const p1 = newPublisher(em, { name: "p1", authors: [{}] });
       await em.flush();
       // When I attempt to clone it, but ask to skip the entity
       await expect(em.clone(p1, { skipIf: (e) => e === p1 }))

@@ -330,11 +330,11 @@ describe("SingleTableInheritance", () => {
 
   it("can mark subtype fields as required", async () => {
     const em = newEntityManager();
-    // Given we've configured specialOldField to be stiNotNull
+    // Given we've configured specialOldField to be notNull: true
     const ot = newTaskOld(em, {});
     // Then we can access it without a null check
     expect(ot.specialOldField.toString()).toBe("0");
-    // But fields without the stiNotNull
+    // But fields without the notNull
     const nt = newTaskNew(em, { specialNewField: 2 });
     // Do require the null check
     // @ts-expect-error

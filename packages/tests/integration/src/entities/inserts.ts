@@ -182,11 +182,14 @@ export async function insertLargePublisher(row: {
   updated_at?: Date;
   base_sync_default?: string;
   base_async_default?: string;
+  spotlight_author_id?: number;
+  rating?: number;
 }) {
   const { country = "country", shared_column, ...others } = row;
   await testDriver.insert("publishers", {
     base_sync_default: "FactorySyncDefault",
     base_async_default: "FactoryAsyncDefault",
+    rating: 5,
     ...others,
   });
   await testDriver.insert("large_publishers", { id: row.id ?? 1, country, shared_column }, true);

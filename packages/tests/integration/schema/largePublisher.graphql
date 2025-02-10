@@ -26,6 +26,7 @@ type LargePublisher {
   sharedColumn: String
   baseSyncDefault: String
   baseAsyncDefault: String!
+  rating: Int!
 }
 
 input SaveLargePublisherInput {
@@ -42,6 +43,7 @@ input SaveLargePublisherInput {
   sharedColumn: String
   baseSyncDefault: String
   baseAsyncDefault: String
+  rating: Int
 }
 
 type SaveLargePublisherResult {

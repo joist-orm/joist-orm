@@ -55,7 +55,11 @@
     },
     "CriticColumn": { "tag": "cc" },
     "Image": { "tag": "i" },
-    "LargePublisher": { "tag": "p" },
+    "LargePublisher": {
+      "fields": { "rating": { "notNull": true } },
+      "relations": { "spotlightAuthor": { "notNull": true } },
+      "tag": "p"
+    },
     "ParentGroup": { "tag": "parentGroup" },
     "ParentItem": { "tag": "pi" },
     "Publisher": {
@@ -83,7 +87,7 @@
       "fields": {
         "asyncDerived": { "derived": "async" },
         "specialNewField": { "stiType": "NEW" },
-        "specialOldField": { "stiNotNull": true, "stiType": "TaskOld" },
+        "specialOldField": { "notNull": true, "stiType": "TaskOld" },
         "syncDerived": { "derived": "sync" },
         "type": { "stiDiscriminator": { "NEW": "TaskNew", "OLD": "TaskOld" } }
       },

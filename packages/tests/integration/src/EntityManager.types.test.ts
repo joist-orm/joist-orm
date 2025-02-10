@@ -7,7 +7,7 @@ describe("EntityManager.types", () => {
   it("supports decimals", async () => {
     const em = newEntityManager();
     // Given we make an entity with some decimals
-    await em.create(SmallPublisher, { name: "p1", latitude: 38.46281, longitude: -122.72805, city: "c1" });
+    em.create(SmallPublisher, { name: "p1", latitude: 38.46281, longitude: -122.72805, city: "c1" });
     await em.flush();
     const rows = await select("publishers");
     if (testDriver.isInMemory) {
@@ -39,7 +39,7 @@ describe("EntityManager.types", () => {
   it("supports null decimals", async () => {
     const em = newEntityManager();
     // Given longitude is left null
-    await em.create(SmallPublisher, { name: "p1", latitude: 38.46281, city: "c1" });
+    em.create(SmallPublisher, { name: "p1", latitude: 38.46281, city: "c1" });
     await em.flush();
     // Then we'll read it as undefined
     const em2 = newEntityManager();

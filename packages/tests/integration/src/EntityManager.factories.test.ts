@@ -38,10 +38,10 @@ describe("EntityManager.factories", () => {
   it("can create a single top-level entity", async () => {
     const em = newEntityManager();
     // Given a simple entity that has no required parents/children
-    const p1 = newPublisher(em);
+    const p1 = newSmallPublisher(em);
     await em.flush();
     // Then we create only that entity
-    expect(p1.name).toEqual("LargePublisher 1");
+    expect(p1.name).toEqual("SmallPublisher 1");
     expect(em.numberOfEntities).toEqual(1);
   });
 
@@ -1033,7 +1033,7 @@ describe("EntityManager.factories", () => {
 
   it("can set ReactiveQueryFields", async () => {
     const em = newEntityManager();
-    const p = newPublisher(em, { withNumberOfBookReviews: 10 });
+    const p = newPublisher(em, { withNumberOfBookReviews: 10, authors: [{}] });
     await em.flush();
     expect(p.numberOfBookReviews.get).toBe(10);
     expect(p.transientFields.numberOfBookReviewCalcs).toBe(0);

@@ -417,6 +417,20 @@ describe("ClassTableInheritance", () => {
 
   it("can mark subtype fields as required", async () => {
     const em = newEntityManager();
+    // Given a small publisher with no rating
+    newSmallPublisher(em, { name: "lp1", rating: null as any });
+    // When we flush
+    const result = em.flush();
+    // Then the flush succeeds because rating is not required
+    await expect(result).resolves.not.toThrow();
+    // But when we are given a large publisher with no spotlightAuthor
+    newLargePublisher(em, { name: "lp1", rating: null as any });
+    // Then the flush fails because rating is required
+    await expect(em.flush()).rejects.toThrow("rating is required");
+  });
+
+  it("can mark subtype relations as required", async () => {
+    const em = newEntityManager();
     // Given a small publisher with no spotlight author
     newSmallPublisher(em, { name: "lp1", spotlightAuthor: null as any });
     // When we flush

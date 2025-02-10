@@ -77,12 +77,14 @@ export interface LargePublisherFields extends PublisherFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   sharedColumn: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   country: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  rating: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   spotlightAuthor: { kind: "m2o"; type: Author; nullable: never; derived: false };
 }
 
 export interface LargePublisherOpts extends PublisherOpts {
   sharedColumn?: string | null;
   country?: string | null;
+  rating: number;
   spotlightAuthor: Author | AuthorId;
   critics?: Critic[];
   users?: User[];
@@ -97,6 +99,7 @@ export interface LargePublisherIdsOpts extends PublisherIdsOpts {
 export interface LargePublisherFilter extends PublisherFilter {
   sharedColumn?: ValueFilter<string, null>;
   country?: ValueFilter<string, null>;
+  rating?: ValueFilter<number, never>;
   spotlightAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
   critics?: EntityFilter<Critic, CriticId, FilterOf<Critic>, null | undefined>;
   users?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
@@ -106,6 +109,7 @@ export interface LargePublisherFilter extends PublisherFilter {
 export interface LargePublisherGraphQLFilter extends PublisherGraphQLFilter {
   sharedColumn?: ValueGraphQLFilter<string>;
   country?: ValueGraphQLFilter<string>;
+  rating?: ValueGraphQLFilter<number>;
   spotlightAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
   critics?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, null | undefined>;
   users?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
@@ -115,6 +119,7 @@ export interface LargePublisherGraphQLFilter extends PublisherGraphQLFilter {
 export interface LargePublisherOrder extends PublisherOrder {
   sharedColumn?: OrderBy;
   country?: OrderBy;
+  rating?: OrderBy;
   spotlightAuthor?: AuthorOrder;
 }
 
@@ -123,6 +128,7 @@ export interface LargePublisherFactoryExtras {
 
 export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
 
+largePublisherConfig.addRule(newRequiredRule("rating"));
 largePublisherConfig.addRule(newRequiredRule("spotlightAuthor"));
 largePublisherConfig.addRule("spotlightAuthor", mustBeSubType("spotlightAuthor"));
 
@@ -183,6 +189,14 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
 
   set country(country: string | undefined) {
     setField(this, "country", cleanStringValue(country));
+  }
+
+  get rating(): number {
+    return getField(this, "rating");
+  }
+
+  set rating(rating: number) {
+    setField(this, "rating", rating);
   }
 
   /**

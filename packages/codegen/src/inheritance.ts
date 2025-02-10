@@ -33,11 +33,7 @@ function setupSubTypeSpecialization(config: Config, entities: EntityDbMetadata[]
       const baseConfig = config.entities[entity.baseType.name];
       // Look through the base's m2os & o2ms, looking for a config specialization
       for (const rel of [...entity.baseType.manyToOnes, ...entity.baseType.oneToManys]) {
-        const notNull =
-          entityConfig?.relations?.[rel.fieldName]?.notNull ??
-          baseConfig?.relations?.[rel.fieldName]?.notNull ??
-          // Probe the otherFieldName for a `subType: "self"` on self-referential relations in STI tables
-          baseConfig?.relations?.[rel.otherFieldName]?.notNull;
+        const { notNull } = entityConfig?.relations?.[rel.fieldName] ?? {};
         const subType =
           entityConfig?.relations?.[rel.fieldName]?.subType ??
           baseConfig?.relations?.[rel.fieldName]?.subType ??
@@ -60,6 +56,15 @@ function setupSubTypeSpecialization(config: Config, entities: EntityDbMetadata[]
         } else if (rel.kind === "o2m") {
           // Specialize `SmallPublisherGroup.publishers: SmallPublisher`
           entity.oneToManys.push({ ...rel, ...(notNull ? { notNull } : {}), otherEntity: makeEntity(subType) });
+        }
+      }
+
+      // Look through the base's primitives looking for a config specialization
+      for (const field of entity.baseType?.primitives ?? []) {
+        // the only specialization a primitive can have is nullability
+        const { notNull } = entityConfig?.fields?.[field.fieldName] ?? {};
+        if (notNull) {
+          entity.primitives.push({ ...field, notNull });
         }
       }
     }

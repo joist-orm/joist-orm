@@ -120,11 +120,11 @@ For example, instead of the `Dog.breed` relation (from the `animals.breed_id` FK
 
 These hints in `joist-config.json` generally look like:
 
-1. Adding `subType: "DogBreed"` to any relation (like `breed`) from the `animals` table that should be limited to a specific subtype in `Cat` or `Dog`
-    - The value of `"DogBreed"` or `"CatBreed"` should match a subclass
-    - Currently, we only support a relation being a single subtype
+1. Adding `subType: "DogBreed"` to the `breed` relation in the `Dog` section of `joist-config.json` so that dogs can only be breeds of their species
+   - The value of `"DogBreed"` or `"CatBreed"` should match a subclass
+   - Currently, we only support a relation being a single subtype
 2. Adding `notNull: true` to any fields or relations that you want Joist to enforce as not null
-    - For example, if you want `breed` to be required for all `Dog`s but not `Cats`s, you can add `notNull: true` to the `breed` field on `Dog`
+    - For example, if you want `breed` to be required for all `Dog`s but not `Cats`s, you can add `notNull: true` to the `breed` relation on `Dog`
 
 
 ## But Isn't Inheritance Bad Design?

@@ -99,6 +99,7 @@ export interface PublisherFields {
   baseAsyncDefault: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  rating: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   size: { kind: "enum"; type: PublisherSize; nullable: undefined };
   type: { kind: "enum"; type: PublisherType; nullable: never };
   favoriteAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: true };
@@ -114,6 +115,7 @@ export interface PublisherOpts {
   deletedAt?: Date | null;
   baseSyncDefault?: string;
   baseAsyncDefault?: string;
+  rating?: number | null;
   size?: PublisherSize | null;
   type?: PublisherType;
   group?: PublisherGroup | PublisherGroupId | null;
@@ -150,6 +152,7 @@ export interface PublisherFilter {
   baseAsyncDefault?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  rating?: ValueFilter<number, null>;
   size?: ValueFilter<PublisherSize, null>;
   type?: ValueFilter<PublisherType, never>;
   favoriteAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
@@ -182,6 +185,7 @@ export interface PublisherGraphQLFilter {
   baseAsyncDefault?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  rating?: ValueGraphQLFilter<number>;
   size?: ValueGraphQLFilter<PublisherSize>;
   type?: ValueGraphQLFilter<PublisherType>;
   favoriteAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
@@ -214,6 +218,7 @@ export interface PublisherOrder {
   baseAsyncDefault?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  rating?: OrderBy;
   size?: OrderBy;
   type?: OrderBy;
   favoriteAuthor?: AuthorOrder;
@@ -353,6 +358,14 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get updatedAt(): Date {
     return getField(this, "updatedAt");
+  }
+
+  get rating(): number | undefined {
+    return getField(this, "rating");
+  }
+
+  set rating(rating: number | undefined) {
+    setField(this, "rating", rating);
   }
 
   get size(): PublisherSize | undefined {

@@ -47,7 +47,10 @@
                     "superstruct": { "type": "string" },
                     "zodSchema": { "type": "string" },
                     "type": { "type": "string" },
-                    "serde": { "type": "string" }
+                    "serde": { "type": "string" },
+                    "stiType": { "type":  "string" },
+                    "notNull": { "type": "boolean" },
+                    "stiDiscriminator": { "type": "object" }
                   },
                   "additionalProperties": false
                 }
@@ -57,9 +60,14 @@
                 "additionalProperties": {
                   "type": "object",
                   "properties": {
+                    "derived": { "type": "string", "enum": ["async"] },
                     "polymorphic": { "type": ["string", "boolean"], "enum": ["notNull", true] },
                     "large": { "type": "boolean" },
-                    "orderBy": { "type": "string" }
+                    "orderBy": { "type": "string" },
+                    "subType": { "type":  "string" },
+                    "stiType": { "type":  "string" },
+                    "notNull": { "type": "boolean" },
+                    "skipRecursiveRelations": { "type": "boolean" }
                   },
                   "additionalProperties": false
                 }
@@ -74,7 +82,8 @@
         },
         "ignoredTables": { "type": "array", "items": { "type": "string" } },
         "idType": { "type": "string", "enum": ["tagged-string", "untagged-string", "number"] },
-        "version": { "type":  "string " }
+        "version": { "type":  "string" },
+        "transactionType": { "type": "string" }
       },
       "additionalProperties": false
     }

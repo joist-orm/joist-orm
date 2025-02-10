@@ -55,7 +55,11 @@
     },
     "CriticColumn": { "tag": "cc" },
     "Image": { "tag": "i" },
-    "LargePublisher": { "relations": { "spotlightAuthor": { "notNull": true } }, "tag": "p" },
+    "LargePublisher": {
+      "fields": { "rating": { "notNull": true } },
+      "relations": { "spotlightAuthor": { "notNull": true } },
+      "tag": "p"
+    },
     "ParentGroup": { "tag": "parentGroup" },
     "ParentItem": { "tag": "pi" },
     "Publisher": {

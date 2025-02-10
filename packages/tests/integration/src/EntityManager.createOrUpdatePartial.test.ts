@@ -47,6 +47,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       name: "p1",
       baseSyncDefault: undefined,
       baseAsyncDefault: undefined,
+      rating: 5,
     });
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", nickNames: undefined, publisher: p1 });
     await em.flush();

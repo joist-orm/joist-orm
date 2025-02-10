@@ -21,7 +21,6 @@ import {
   type LoadHint,
   loadLens,
   type ManyToOneReference,
-  mustBeSubType,
   newChangesProxy,
   newRequiredRule,
   type OptsOf,
@@ -130,7 +129,6 @@ export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
 
 largePublisherConfig.addRule(newRequiredRule("rating"));
 largePublisherConfig.addRule(newRequiredRule("spotlightAuthor"));
-largePublisherConfig.addRule("spotlightAuthor", mustBeSubType("spotlightAuthor"));
 
 declare module "joist-orm" {
   interface TypeMap {

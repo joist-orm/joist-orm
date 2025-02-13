@@ -1,3 +1,10 @@
+## [1.227.1](https://github.com/joist-orm/joist-orm/compare/v1.227.0...v1.227.1) (2025-02-13)
+
+
+### Bug Fixes
+
+* Fix buildQuery/loadFromQuery w/base types. ([#1361](https://github.com/joist-orm/joist-orm/issues/1361)) ([ddf9c19](https://github.com/joist-orm/joist-orm/commit/ddf9c190050edc9a11c9222ed73efc4cafbc1113))
+
 # [1.227.0](https://github.com/joist-orm/joist-orm/compare/v1.226.0...v1.227.0) (2025-02-10)
 
 

@@ -1,10 +1,9 @@
 import { Knex } from "knex";
 import { Entity } from "./Entity";
 import { FilterAndSettings } from "./EntityFilter";
-import { EntityConstructor } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
 import { buildKnexQuery } from "./drivers/buildKnexQuery";
-import { parseFindQuery } from "./index";
+import { MaybeAbstractEntityConstructor, parseFindQuery } from "./index";
 
 /**
  * Builds the SQL/knex queries for `EntityManager.find` calls.
@@ -23,7 +22,7 @@ import { parseFindQuery } from "./index";
  */
 export function buildQuery<T extends Entity>(
   knex: Knex,
-  type: EntityConstructor<T>,
+  type: MaybeAbstractEntityConstructor<T>,
   filter: FilterAndSettings<T> & {
     pruneJoins?: boolean;
     keepAliases?: string[];

@@ -947,18 +947,21 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    *
    * This overload is synchronous since there is no population/querying to do.
    */
-  public loadFromQuery<T extends EntityW>(type: EntityConstructor<T>, rows: unknown[]): T[];
+  public loadFromQuery<T extends EntityW>(type: MaybeAbstractEntityConstructor<T>, rows: unknown[]): T[];
   /**
    * Loads entities from database rows from a Knex-ish query builder that needs an `await`.
    *
    * This overload is async because it triggers the `rows` query.
    */
-  public loadFromQuery<T extends EntityW>(type: EntityConstructor<T>, rows: PromiseLike<unknown[]>): Promise<T[]>;
+  public loadFromQuery<T extends EntityW>(
+    type: MaybeAbstractEntityConstructor<T>,
+    rows: PromiseLike<unknown[]>,
+  ): Promise<T[]>;
   /**
    * Loads & populates entities from database rows that were queried directly using a query builder.
    */
   public loadFromQuery<T extends EntityW, const H extends LoadHint<T>>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     rows: unknown[],
     populate: H,
   ): Promise<Loaded<T, H>[]>;
@@ -966,12 +969,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * Loads & populates entities from database rows from a Knex-ish query builder that needs an `await`.
    */
   public loadFromQuery<T extends EntityW, const H extends LoadHint<T>>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     rows: PromiseLike<unknown[]>,
     populate: H,
   ): Promise<Loaded<T, H>[]>;
   public loadFromQuery<T extends EntityW>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     rows: unknown[] | PromiseLike<unknown[]>,
     populate?: any,
   ): PromiseLike<T[]> | T[] {
@@ -989,14 +992,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   /** Loads entities from rows. */
-  public async loadFromRows<T extends EntityW>(type: EntityConstructor<T>, rows: unknown[]): Promise<T[]>;
+  public async loadFromRows<T extends EntityW>(type: MaybeAbstractEntityConstructor<T>, rows: unknown[]): Promise<T[]>;
   public async loadFromRows<T extends EntityW, const H extends LoadHint<T>>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     rows: unknown[],
     populate: H,
   ): Promise<Loaded<T, H>[]>;
   public async loadFromRows<T extends EntityW>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     rows: unknown[],
     populate?: any,
   ): Promise<T[]> {

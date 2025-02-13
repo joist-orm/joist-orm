@@ -20,6 +20,7 @@ import {
   Loaded,
   MaybeAbstractEntityConstructor,
   OptsOf,
+  buildQuery,
   getInstanceData,
   sameEntity,
 } from "joist-orm";
@@ -33,6 +34,7 @@ import {
   EntityManager,
   Publisher,
   PublisherSize,
+  SmallPublisher,
   Tag,
   bookReviewBeforeFlushRan,
   newAuthor,
@@ -366,6 +368,15 @@ describe("EntityManager", () => {
     // Pass in the already-loaded rows
     const authors = await em.loadFromQuery(Author, await knex.select("*").from("authors"), "books");
     expect(authors[0].books.get).toEqual([]);
+  });
+
+  it("can load custom queries that are base types", async () => {
+    await insertPublisher({ name: "p1" });
+    const em = newEntityManager();
+    const q = buildQuery(knex, Publisher, { where: {} });
+    const publishers = await em.loadFromQuery(Publisher, q);
+    expect(publishers.length).toEqual(1);
+    expect(publishers[0]).toBeInstanceOf(SmallPublisher);
   });
 
   it("can load from rows", async () => {

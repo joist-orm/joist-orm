@@ -10,9 +10,11 @@ tags: []
 
 Joist's mission is to model your application's business logic, with first-class support for domain modeling features & concepts.
 
-A great example of this is Joist's support for something as simple as default values (i.e. the `Author.status` field should default to `Active`).
+A great example of this is Joist's support for something as simple as default values: for example, the `Author.status` field should default to `Active`.
 
-Specifically, we can observe how Joist's support for default values has grown from "the simplest thing possible" to a more robust, first-class feature over time.
+Joist's default values support grew from "the simplest thing possible" (requiring adhoc patterns that engineers would copy/paste around) to a robust, first-class feature (an explicit `setDefault` API that "just works").
+
+This is a microcosm of Joist's goal to identify the repeated patterns and pain points involved in "building a domain model", and provide elegant features with a great DX.
 
 ### Version 1. Schema Defaults
 

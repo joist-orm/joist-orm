@@ -3378,13 +3378,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@octokit/openapi-types@npm:^22.0.1":
-  version: 22.0.1
-  resolution: "@octokit/openapi-types@npm:22.0.1"
-  checksum: 10/7336c78f575f6d003faa80d44e666beb46f8a280542cdcacce60a21f2f7e9928a5a2cc501a1138951ceb259b6fee00dfeea2c17b231c355bf93f7ab2521e5fa3
-  languageName: node
-  linkType: hard
-
 "@octokit/openapi-types@npm:^23.0.1":
   version: 23.0.1
   resolution: "@octokit/openapi-types@npm:23.0.1"
@@ -3450,16 +3443,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@octokit/types@npm:^13.0.0":
-  version: 13.4.0
-  resolution: "@octokit/types@npm:13.4.0"
-  dependencies:
-    "@octokit/openapi-types": "npm:^22.0.1"
-  checksum: 10/2bb31fa1bd23eee1f4d4def83a97a40ea8306234c62cf659664046b88cf1fe569468b8259b55b64e88b745007923dbd4fa4e521e5f081b8d9420e501699f2e22
-  languageName: node
-  linkType: hard
-
-"@octokit/types@npm:^13.6.2, @octokit/types@npm:^13.7.0":
+"@octokit/types@npm:^13.0.0, @octokit/types@npm:^13.6.2, @octokit/types@npm:^13.7.0":
   version: 13.8.0
   resolution: "@octokit/types@npm:13.8.0"
   dependencies:
@@ -4718,16 +4702,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/ws@npm:^8.5.5":
-  version: 8.5.10
-  resolution: "@types/ws@npm:8.5.10"
-  dependencies:
-    "@types/node": "npm:*"
-  checksum: 10/9b414dc5e0b6c6f1ea4b1635b3568c58707357f68076df9e7cd33194747b7d1716d5189c0dbdd68c8d2521b148e88184cf881bac7429eb0e5c989b001539ed31
-  languageName: node
-  linkType: hard
-
-"@types/ws@npm:~8.5.10":
+"@types/ws@npm:^8.5.5, @types/ws@npm:~8.5.10":
   version: 8.5.13
   resolution: "@types/ws@npm:8.5.13"
   dependencies:
@@ -5834,17 +5809,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bun-types@npm:^1.2.0":
-  version: 1.2.0
-  resolution: "bun-types@npm:1.2.0"
-  dependencies:
-    "@types/node": "npm:*"
-    "@types/ws": "npm:~8.5.10"
-  checksum: 10/c900beb8dbef64bfd2fe9c4673c9ccb3cdc672744975313931d69f0254eed024fd4c7b0fb1ecec75b4de5215338522adf3057444212a0f83d194d12237b6c689
-  languageName: node
-  linkType: hard
-
-"bun-types@npm:^1.2.1":
+"bun-types@npm:^1.2.0, bun-types@npm:^1.2.1":
   version: 1.2.1
   resolution: "bun-types@npm:1.2.1"
   dependencies:

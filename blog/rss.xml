@@ -4,7 +4,7 @@
         <title>Joist Blog</title>
         <link>https://joist-orm.io/blog</link>
         <description>Joist Blog</description>
-        <lastBuildDate>Wed, 13 Nov 2024 00:00:00 GMT</lastBuildDate>
+        <lastBuildDate>Mon, 17 Feb 2025 00:00:00 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <language>en</language>
@@ -12,7 +12,7 @@
             <title><![CDATA[Evolution of Defaults]]></title>
             <link>https://joist-orm.io/blog/evolution-of-defaults</link>
             <guid>https://joist-orm.io/blog/evolution-of-defaults</guid>
-            <pubDate>Wed, 13 Nov 2024 00:00:00 GMT</pubDate>
+            <pubDate>Mon, 17 Feb 2025 00:00:00 GMT</pubDate>
             <description><![CDATA[Joist's mission is to model your application's business logic, with first-class support for domain modeling features & concepts.]]></description>
             <content:encoded><![CDATA[<p>Joist's mission is to model your application's business logic, with first-class support for domain modeling features &amp; concepts.</p>
 <p>A great example of this is Joist's support for something as simple as default values: for example, the <code>Author.status</code> field should default to <code>Active</code>.</p>

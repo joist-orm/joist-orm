@@ -2,7 +2,7 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
     <id>https://joist-orm.io/blog</id>
     <title>Joist Blog</title>
-    <updated>2024-11-13T00:00:00.000Z</updated>
+    <updated>2025-02-17T00:00:00.000Z</updated>
     <generator>https://github.com/jpmonette/feed</generator>
     <link rel="alternate" href="https://joist-orm.io/blog"/>
     <subtitle>Joist Blog</subtitle>
@@ -10,7 +10,7 @@
         <title type="html"><![CDATA[Evolution of Defaults]]></title>
         <id>https://joist-orm.io/blog/evolution-of-defaults</id>
         <link href="https://joist-orm.io/blog/evolution-of-defaults"/>
-        <updated>2024-11-13T00:00:00.000Z</updated>
+        <updated>2025-02-17T00:00:00.000Z</updated>
         <summary type="html"><![CDATA[Joist's mission is to model your application's business logic, with first-class support for domain modeling features & concepts.]]></summary>
         <content type="html"><![CDATA[<p>Joist's mission is to model your application's business logic, with first-class support for domain modeling features &amp; concepts.</p>
 <p>A great example of this is Joist's support for something as simple as default values: for example, the <code>Author.status</code> field should default to <code>Active</code>.</p>

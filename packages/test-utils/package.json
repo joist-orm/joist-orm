@@ -15,11 +15,11 @@
     "joist-utils": "workspace:*"
   },
   "devDependencies": {
-    "@swc/core": "^1.9.3",
+    "@swc/core": "^1.10.16",
     "@swc/jest": "^0.2.37",
     "@types/jest": "^29.5.14",
-    "jest": "30.0.0-alpha.6",
-    "prettier": "^3.4.1",
+    "jest": "30.0.0-alpha.7",
+    "prettier": "^3.5.1",
     "prettier-plugin-organize-imports": "^4.1.0",
     "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^4.2.0",

@@ -11,7 +11,7 @@ export function makeMakeRunQuery<C>(runFn: RunFn<C>): MakeRunQuery<C> {
     return (ctx, args) =>
       runFn(ctx, async (ctx) => {
         const key = Object.keys(resolver)[0];
-        return ((resolver as any)[key] as any)({}, args instanceof Function ? args() : args ?? {}, ctx, undefined!);
+        return ((resolver as any)[key] as any)({}, args instanceof Function ? args() : (args ?? {}), ctx, undefined!);
       });
   };
 }

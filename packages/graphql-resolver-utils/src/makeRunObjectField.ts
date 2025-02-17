@@ -13,7 +13,7 @@ export function makeMakeRunObjectField<C>(runFn: RunFn<C>): MakeRunObjectField<C
       runFn(ctx, async (ctx) => {
         // Sneak in a Joist-ism that will load the entity in the new em
         const _root = isEntity(root) ? await (ctx as any).em.load((root as any).id) : root;
-        return (resolvers[key] as any)(_root, args instanceof Function ? args(_root) : args ?? {}, ctx, undefined!);
+        return (resolvers[key] as any)(_root, args instanceof Function ? args(_root) : (args ?? {}), ctx, undefined!);
       });
   };
 }

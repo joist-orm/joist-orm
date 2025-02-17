@@ -47,7 +47,7 @@
     "@tsconfig/node20": "^20.1.4",
     "env-cmd": "^10.1.0",
     "expect-type": "^1.1.0",
-    "mprocs": "^0.7.1",
+    "mprocs": "^0.7.2",
     "semantic-release": "^24.2.3",
     "ts-patch": "^3.3.0",
     "typescript-transform-paths": "^3.5.3"

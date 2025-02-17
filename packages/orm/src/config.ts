@@ -6,7 +6,6 @@ import {
   EntityMetadata,
   fail,
   FieldsOf,
-  getBaseMeta,
   getMetadata,
   Loaded,
   LoadHint,

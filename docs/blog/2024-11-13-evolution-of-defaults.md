@@ -49,7 +49,7 @@ Being limited to static `DEFAULT` values is not great, so the first way of imple
 
 ```ts
 /** Any author created w/non-zero amount of books defaults to Published. */
-config.beforeCreate("books", a => {
+authorConfig.beforeCreate("books", a => {
   if (a.status === undefined) {
     a.status = a.books.get.length > 0 ? AuthorStatus.Published : AuthorStatus.Draft;
   }  
@@ -82,7 +82,7 @@ So we added `config.setDefault`, which accepts the field name, it's dependencies
 
 ```ts
 /** Calculate the Author.status default, based on number of books. */
-config.setDefault("status", "books", a => {
+authorConfig.setDefault("status", "books", a => {
   return a.books.get.length > 0 ? AuthorStatus.Published : AuthorStatus.Draft;
 })
 ```
@@ -103,13 +103,13 @@ For example, maybe our `Author.status` default needs to know whether any of the 
 
 ```ts
 // In `Author.ts`
-config.setDefault("status", { books: "status" }, a => {
+authorConfig.setDefault("status", { books: "status" }, a => {
   const anyBookPublished = a.books.get.some(b => b.status === BookStatus.Published);
   return anyBookPublished ? AuthorStatus.Published : AuthorStatus.Draft;
 })
 
 // In `Book.ts`
-config.setDefault("status", {}, b => {
+bookConfig.setDefault("status", {}, b => {
   // Some business logic that dynamically determines the status
   return BookStatus.Published;
 });
@@ -157,7 +157,7 @@ This works even for `setDefault`s that use load hints, like "author status depen
 
 ```ts
 // In `Author.ts`
-config.setDefault("status", { books: "status" }, a => {
+authorConfig.setDefault("status", { books: "status" }, a => {
   const anyBookPublished = a.books.get.some(b => b.status === BookStatus.Published);
   return anyBookPublished ? AuthorStatus.Published : AuthorStatus.Draft;
 })

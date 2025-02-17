@@ -84,7 +84,8 @@ So we added `config.setDefault`, which accepts the field name, it's dependencies
 
 ```ts
 /** Calculate the Author.status default, based on number of books. */
-authorConfig.setDefault("status", "books", a => {
+authorConfig.setDefault("status", "books", (a) => {
+  // a.books.get is available, but a.firstName is not, b/c it's not listed as a dependency
   return a.books.get.length > 0 ? AuthorStatus.Published : AuthorStatus.Draft;
 })
 ```
@@ -93,9 +94,12 @@ This was a great start, but we pushed it out knowingly half-baked:
 
 * Pro: Provided scaffolding of a better future
   - Gave an idiomatic way to "declare defaults"
+* Pro: The type system enforces that the lambda only calls fields explicitly listed in the dependency param
+  - This reused our `ReactiveField` infra and is great for ensuring dependencies aren't missed
+* Con: The dependencies weren't actually used yet
+  - "...ship early!"
 * Con: `setDefault` lambdas were still not invoked until `em.flush`
   * So we still had the "write defaults twice" problem with test factories 
-* Con: The dependencies weren't actually used yet
 
 ### Version 4: Dependency Aware
 
@@ -148,12 +152,12 @@ The lack of `await`s is very nice! But it does mean, if we really wanted `b.titl
 ```ts
 export function newBook(em: EntityManager): DeepNew<Book> {
   return newTestInstance(em, Book, {
-    title: "recode the default here",
+    title: "recode the Book default logic here",
   });
 }
 ```
 
-As before, for a while this was "good enough"--but finally in this iteration, we taught the factories to leverage their "each test's data is already in memory" and just invoke the defaults immediately during the `newTestInstance` calls.
+As before, for a while this was "good enough"--but finally in this iteration, we taught the factories to leverage their "each test's data is already in memory" advantage and just invoke the defaults immediately during the `newTestInstance` calls.
 
 This works even for `setDefault`s that use load hints, like "author status depends on its books":
 
@@ -177,14 +181,14 @@ Always looking ahead, the next itch we have is that, currently, default lambdas 
 
 Which means, for these defaults, we still have remnants of the "write it twice" defaults anti-pattern--albeit very few of them!
 
-We should be able to lift this restriction as well, with a little bit of work.
+We should be able to lift this restriction as well, with a little bit of work (...maybe :thinking:, the `newBook` call is fundamentally synchronous, so maybe not).
 
 ## Slow Grind to Perfection
 
-Stepping back, besides a "walk down memory lane", the larger point of this post is just to highlight Joist's journey of continually grinding through DX polish--we're about five years into [Joel's Good Software Takes 10 Years](https://www.joelonsoftware.com/2001/07/21/good-software-takes-ten-years-get-used-to-it/). :-)
+Wrapping up, besides a "walk down memory lane", the larger point of this post is highlighting Joist's journey of continually grinding on DX polish--we're about five years into [Joel's Good Software Takes 10 Years](https://www.joelonsoftware.com/2001/07/21/good-software-takes-ten-years-get-used-to-it/), so only another 5 to go! :smile:
 
 Of course, it'd be great for this evolution to happen more quickly--i.e. if we had a dependency-aware, factory-aware, amazing `setDefault` API from day one.
 
 But, often times jumping to an abstraction can be premature, and result in a rushed design--so sometimes it doesn't hurt to "sit with the itch" for a little while, evolve it through multiple iterations of "good enough", until finally a pleasant/robust solution emerges.
 
-And, perhaps most pragmatically, small iterations helps spread the implementation out over enough hack days that it can actually get shipped. :-)
+And, perhaps most pragmatically, small iterations helps spread the implementation out over enough hack days that it can actually get shipped. :ship:

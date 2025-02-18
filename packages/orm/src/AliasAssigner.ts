@@ -1,5 +1,5 @@
-import { abbreviation } from "./QueryBuilder";
 import { ParsedFindQuery } from "./QueryParser";
+import { abbreviation } from "./utils";
 
 export class AliasAssigner {
   #aliases: Record<string, number> = {};

@@ -139,6 +139,13 @@ export function assertNever(x: never): never {
   throw new Error("Unexpected object: " + x);
 }
 
+export function abbreviation(tableName: string): string {
+  return tableName
+    .split("_")
+    .map((w) => w[0])
+    .join("");
+}
+
 /**
  * Utility method for casting `entity` to a `New` entity.
  *

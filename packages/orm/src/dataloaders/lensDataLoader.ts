@@ -9,7 +9,6 @@ import {
   getBaseMeta,
   getMetadata,
 } from "../EntityMetadata";
-import { abbreviation } from "../QueryBuilder";
 import {
   ColumnCondition,
   ParsedFindQuery,
@@ -20,7 +19,7 @@ import {
 } from "../QueryParser";
 import { deTagIds, tagId } from "../keys";
 import { mapPathsToTarget } from "../loadLens";
-import { groupBy } from "../utils";
+import { abbreviation, groupBy } from "../utils";
 
 /**
  * Loads lens paths via SQL.

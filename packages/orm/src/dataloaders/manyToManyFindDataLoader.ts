@@ -1,14 +1,8 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
-import {
-  abbreviation,
-  keyToNumber,
-  ManyToManyCollection,
-  ManyToManyLargeCollection,
-  ParsedFindQuery,
-  tagId,
-} from "../index";
+import { keyToNumber, ManyToManyCollection, ManyToManyLargeCollection, ParsedFindQuery, tagId } from "../index";
+import { abbreviation } from "../utils";
 
 /** Batches m2m.find/include calls (i.e. that don't fully load the m2m relation). */
 export function manyToManyFindDataLoader<T extends Entity, U extends Entity>(

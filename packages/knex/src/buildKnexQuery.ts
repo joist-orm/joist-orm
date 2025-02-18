@@ -1,8 +1,6 @@
+import { internals, kq, kqDot, ParsedFindQuery, ParsedTable } from "joist-orm";
 import { Knex } from "knex";
-import { ParsedFindQuery, ParsedTable } from "../QueryParser";
-import { kq, kqDot } from "../keywords";
-import { assertNever } from "../utils";
-import { buildWhereClause } from "./buildUtils";
+import { assertNever } from "./utils";
 import QueryBuilder = Knex.QueryBuilder;
 
 /**
@@ -58,7 +56,7 @@ export function buildKnexQuery(
   }
 
   if (parsed.condition) {
-    const where = buildWhereClause(parsed.condition, true);
+    const where = internals.buildWhereClause(parsed.condition, true);
     if (where) {
       const [sql, bindings] = where;
       query.whereRaw(sql, bindings);

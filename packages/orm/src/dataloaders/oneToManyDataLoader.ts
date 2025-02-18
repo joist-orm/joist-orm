@@ -3,7 +3,6 @@ import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
 import { getField } from "../fields";
 import {
-  abbreviation,
   addTablePerClassJoinsAndClassTag,
   assertIdsAreTagged,
   deTagIds,
@@ -11,7 +10,7 @@ import {
   OneToManyCollection,
   ParsedFindQuery,
 } from "../index";
-import { groupBy } from "../utils";
+import { abbreviation, groupBy } from "../utils";
 
 export function oneToManyDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,

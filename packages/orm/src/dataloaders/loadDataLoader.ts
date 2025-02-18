@@ -4,11 +4,10 @@ import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { buildHintTree } from "../HintTree";
-import { abbreviation } from "../QueryBuilder";
 import { ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "../QueryParser";
 import { keyToNumber } from "../keys";
 import { LoadHint } from "../loadHints";
-import { indexBy } from "../utils";
+import { abbreviation, indexBy } from "../utils";
 
 export function loadDataLoader<T extends Entity>(
   em: EntityManager,

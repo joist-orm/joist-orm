@@ -2,8 +2,8 @@ import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import { JoinRow } from "../JoinRows";
-import { ManyToManyCollection, ParsedFindQuery, abbreviation, getMetadata, keyToNumber } from "../index";
-import { getOrSet } from "../utils";
+import { ManyToManyCollection, ParsedFindQuery, getMetadata, keyToNumber } from "../index";
+import { abbreviation, getOrSet } from "../utils";
 
 /** Batches m2m.load calls. */
 export function manyToManyDataLoader<T extends Entity, U extends Entity>(

@@ -1,9 +1,6 @@
+import { Entity, FilterAndSettings, getMetadata, MaybeAbstractEntityConstructor, parseFindQuery } from "joist-orm";
 import { Knex } from "knex";
-import { Entity } from "./Entity";
-import { FilterAndSettings } from "./EntityFilter";
-import { getMetadata } from "./EntityMetadata";
-import { buildKnexQuery } from "./drivers/buildKnexQuery";
-import { MaybeAbstractEntityConstructor, parseFindQuery } from "./index";
+import { buildKnexQuery } from "./buildKnexQuery";
 
 /**
  * Builds the SQL/knex queries for `EntityManager.find` calls.
@@ -41,11 +38,4 @@ export function buildQuery<T extends Entity>(
   } = filter;
   const parsed = parseFindQuery(meta, where, { conditions, orderBy, pruneJoins, keepAliases, softDeletes });
   return buildKnexQuery(knex, parsed, { limit, offset });
-}
-
-export function abbreviation(tableName: string): string {
-  return tableName
-    .split("_")
-    .map((w) => w[0])
-    .join("");
 }

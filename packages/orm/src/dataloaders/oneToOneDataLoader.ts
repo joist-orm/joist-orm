@@ -4,7 +4,6 @@ import { EntityManager } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { getField } from "../fields";
 import {
-  abbreviation,
   addTablePerClassJoinsAndClassTag,
   assertIdsAreTagged,
   deTagIds,
@@ -12,7 +11,7 @@ import {
   ParsedFindQuery,
 } from "../index";
 import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
-import { groupBy } from "../utils";
+import { abbreviation, groupBy } from "../utils";
 
 export function oneToOneDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,

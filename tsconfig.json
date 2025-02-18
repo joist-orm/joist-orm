@@ -4,6 +4,7 @@
     { "path": "./packages/drivers/bun-pg" },
     { "path": "./packages/graphql-codegen" },
     { "path": "./packages/graphql-resolver-utils" },
+    { "path": "./packages/knex" },
     { "path": "./packages/migration-utils" },
     { "path": "./packages/orm" },
     { "path": "./packages/plugins/join-preloading" },

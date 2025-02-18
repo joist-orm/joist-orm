@@ -3,16 +3,7 @@ import { Knex } from "knex";
 import { assertNever } from "./utils";
 import QueryBuilder = Knex.QueryBuilder;
 
-/**
- * Transforms `ParsedFindQuery` into a Knex query.
- *
- * In theory this should be implemented within each Driver, because it's generally
- * a private API, but:
- *
- * a) Multiple drivers will likely be based on Knex, and
- * b) We've already leaked the `QueryBuilder.ts` `buildQuery` API for letting Joist
- * do the boilerplate joins/conditions, and then letting the user had more as needed.
- */
+/** Transforms Joist's internal `ParsedFindQuery` AST into a Knex query builder. */
 export function buildKnexQuery(
   knex: Knex,
   parsed: ParsedFindQuery,

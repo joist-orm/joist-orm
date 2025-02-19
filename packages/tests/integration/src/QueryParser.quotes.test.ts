@@ -1,10 +1,16 @@
 import { Book } from "@src/entities";
-import { knex } from "@src/testEm";
 import { buildQuery } from "joist-knex";
+import { newPgConnectionConfig } from "joist-utils";
+import { knex as createKnex } from "knex";
 
 describe("QueryParser", () => {
   it("quotes with abbreviation", () => {
     // This is technically testing the old knex-based flow/quoting...
+    const knex = createKnex({
+      client: "pg",
+      connection: newPgConnectionConfig() as any,
+      asyncStackTraces: true,
+    });
     const q = buildQuery(knex, Book, { where: { author: { firstName: "jeff", schedules: { id: "4" } } } });
     expect(q.toSQL().sql).toEqual(
       [

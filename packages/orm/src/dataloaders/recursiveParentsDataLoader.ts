@@ -49,7 +49,7 @@ export function recursiveParentsDataLoader<T extends Entity, U extends Entity>(
             // b is our base case, which is the immediate parents of the children we're loading,
             // and r is the recursive case of finding their parents.
             sql: `
-              SELECT b.id, b.${columnName} FROM ${kq(meta.tableName)} b WHERE b.id = ANY(?)
+              SELECT b.id, b.${columnName} FROM ${kq(meta.tableName)} b WHERE b.id = ANY($0)
               UNION
               SELECT r.id, r.${columnName} FROM ${kq(meta.tableName)} r JOIN ${alias}_cte ON r.id = ${alias}_cte.${columnName}
             `,

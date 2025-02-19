@@ -114,11 +114,11 @@ export function buildRawQuery(
   }
 
   if (limit) {
-    sql += ` LIMIT ?`;
+    sql += ` LIMIT $0`;
     bindings.push(limit);
   }
   if (offset) {
-    sql += ` OFFSET ?`;
+    sql += ` OFFSET $0`;
     bindings.push(offset);
   }
 

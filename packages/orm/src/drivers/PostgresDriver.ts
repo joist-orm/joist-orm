@@ -1,8 +1,6 @@
-import { Knex } from "knex";
-import { types } from "pg";
-import { builtins, getTypeParser } from "pg-types";
-import array from "postgres-array";
+import { PendingQuery, Sql, TransactionSql } from "postgres";
 import {
+  appendStack,
   driverAfterBegin,
   driverAfterCommit,
   driverBeforeBegin,
@@ -13,7 +11,6 @@ import {
   keyToNumber,
   ParsedFindQuery,
   PreloadPlugin,
-  RuntimeConfig,
 } from "../index";
 import { JoinRow, JoinRowOperation, ManyToManyLike } from "../JoinRows";
 import { kq, kqDot } from "../keywords";
@@ -46,17 +43,16 @@ export interface PostgresDriverOpts {
  *
  * - We use a pg-specific bulk update syntax.
  */
-export class PostgresDriver implements Driver<Knex.Transaction> {
+export class PostgresDriver implements Driver<TransactionSql> {
   readonly #idAssigner: IdAssigner;
   readonly #preloadPlugin: PreloadPlugin | undefined;
 
   constructor(
-    private readonly knex: Knex,
+    private readonly sql: Sql,
     opts?: PostgresDriverOpts,
   ) {
-    this.#idAssigner = opts?.idAssigner ?? new SequenceIdAssigner(knex);
+    this.#idAssigner = opts?.idAssigner ?? new SequenceIdAssigner((s) => sql.unsafe(s));
     this.#preloadPlugin = opts?.preloadPlugin;
-    setupLatestPgTypes(getRuntimeConfig().temporal);
   }
 
   async executeFind(
@@ -65,35 +61,45 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
     settings: { limit?: number; offset?: number },
   ): Promise<any[]> {
     const { sql, bindings } = buildRawQuery(parsed, { limit: em.entityLimit, ...settings });
-    return this.executeQuery(em, sql, bindings);
+    return this.executeQuery(em, sql, bindings as any[]);
   }
 
-  async executeQuery(em: EntityManager, sql: string, bindings: readonly any[]): Promise<any[]> {
-    // Still go through knex to use the connection pool
-    return this.getMaybeInTxnKnex(em)
-      .raw(sql, bindings)
-      .then((result) => result.rows);
+  async executeQuery(em: EntityManager, sql: string, bindings: any[]): Promise<any[]> {
+    return convertToSql(this.getMaybeInTxnKnex(em), sql, bindings).catch(function executeQuery(err) {
+      throw appendStack(err, new Error());
+    });
   }
 
-  async transaction<T>(em: EntityManager, fn: (txn: Knex.Transaction) => Promise<T>): Promise<T> {
+  async transaction<T>(em: EntityManager, fn: (txn: TransactionSql) => Promise<T>): Promise<T> {
     // `em.transaction` might have already opened a transaction
     if (em.txn) {
-      return fn(em.txn as Knex.Transaction);
+      return fn(em.txn as TransactionSql);
     }
-    await driverBeforeBegin(em, this.knex);
-    const result = await this.knex.transaction(async (txn) => {
-      em.txn = txn;
+    // Get a connection from the pool and run the transaction. We use this sql.reserve() API instead
+    // of sql.begin so that we can call driverBeforeBegin/AfterCommit with the same connection as
+    // the transaction itself.
+    const sql = await this.sql.reserve();
+    const txn = (em.txn = sql as any as TransactionSql);
+    let result: any;
+    try {
+      await driverBeforeBegin(em, txn);
+      await sql`begin`;
+      await driverAfterBegin(em, txn);
+      result = await fn(txn);
+      await driverBeforeCommit(em, txn);
+      await sql`commit`;
+      await driverAfterCommit(em, txn);
+      return result;
+    } catch (e) {
+      // Probably need more logging here...
       try {
-        await driverAfterBegin(em, txn);
-        const result = await fn(txn);
-        await driverBeforeCommit(em, txn);
-        return result;
-      } finally {
-        em.txn = undefined;
-      }
-    });
-    await driverAfterCommit(em, this.knex);
-    return result;
+        await sql`rollback`;
+      } catch (e) {}
+      throw e;
+    } finally {
+      em.txn = undefined;
+      sql.release();
+    }
   }
 
   async assignNewIds(_: EntityManager, todos: Record<string, Todo>): Promise<void> {
@@ -105,7 +111,7 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
     entityTodos: Record<string, Todo>,
     joinRows: Record<string, JoinRowTodo>,
   ): Promise<void> {
-    const txn = (em.txn ?? fail("Expected EntityManager.txn to be set")) as Knex.Transaction;
+    const txn = (em.txn ?? fail("Expected EntityManager.txn to be set")) as TransactionSql;
     await this.#idAssigner.assignNewIds(entityTodos);
     const ops = generateOps(entityTodos);
     // Do INSERTs+UPDATEs first so that we avoid DELETE cascades invalidating oplocks
@@ -124,12 +130,12 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
     return { preloadPlugin: this.#preloadPlugin };
   }
 
-  private getMaybeInTxnKnex(em: EntityManager): Knex {
-    return (em.txn || this.knex) as Knex.Transaction;
+  private getMaybeInTxnKnex(em: EntityManager): Sql | TransactionSql {
+    return (em.txn || this.sql) as Sql | TransactionSql;
   }
 }
 
-async function batchInsert(txn: Knex.Transaction, op: InsertOp): Promise<unknown> {
+async function batchInsert(txn: TransactionSql, op: InsertOp): Promise<unknown> {
   const { tableName, columns, columnValues } = op;
   const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
   const sql = cleanSql(`
@@ -137,10 +143,12 @@ async function batchInsert(txn: Knex.Transaction, op: InsertOp): Promise<unknown
     INSERT INTO ${kq(tableName)} (${columns.map((c) => kq(c.columnName)).join(", ")})
     SELECT * FROM data
   `);
-  return txn.raw(sql, bindings);
+  return convertToSql(txn, sql, bindings).catch(function batchInsert(err) {
+    throw appendStack(err, new Error());
+  });
 }
 
-async function batchUpdate(txn: Knex.Transaction, op: UpdateOp): Promise<void> {
+async function batchUpdate(txn: TransactionSql, op: UpdateOp): Promise<void> {
   const { tableName, columns, columnValues, updatedAt } = op;
 
   const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
@@ -170,8 +178,9 @@ async function batchUpdate(txn: Knex.Transaction, op: UpdateOp): Promise<void> {
     RETURNING ${kq(tableName)}.id
   `;
 
-  const result = await txn.raw(cleanSql(sql), bindings);
-  const results = result.rows;
+  const results = await convertToSql(txn, cleanSql(sql), bindings).catch(function batchUpdate(err) {
+    throw appendStack(err, new Error());
+  });
 
   const ids = columnValues[0]; // assume id is the 1st column
   if (results.length !== ids.length) {
@@ -181,9 +190,19 @@ async function batchUpdate(txn: Knex.Transaction, op: UpdateOp): Promise<void> {
   }
 }
 
-async function batchDelete(txn: Knex.Transaction, op: DeleteOp): Promise<void> {
+async function batchDelete(txn: TransactionSql, op: DeleteOp): Promise<void> {
   const { tableName, ids } = op;
-  await txn.raw(`DELETE FROM ${kq(tableName)} WHERE id = ANY(?)`, [ids]);
+  await txn`DELETE FROM ${txn(tableName)} WHERE id IN ${txn(ids)}`;
+}
+
+// Match $0 which we'll replace with $1, $2, etc.
+const param = /\$0/g;
+
+/** Converts our `$0` params to $1, $2, etc. */
+function convertToSql(sql: Sql | TransactionSql, query: string, bindings: any[]): PendingQuery<any> {
+  let count = 0;
+  const _sql = query.replace(param, () => `$${++count}`);
+  return sql.unsafe(_sql, bindings, { prepare: true });
 }
 
 /** Creates a CTE named `tableName` that bulk-injects the `columnValues` into a SQL query. */
@@ -192,25 +211,25 @@ function buildUnnestCte(tableName: string, columns: OpColumn[], columnValues: an
   const selects = columns.map((c) => {
     if (c.dbType.endsWith("[]")) {
       if (c.isNullableArray) {
-        return `unnest_arrays(?::${c.dbType}[], true) as ${kq(c.columnName)}`;
+        return `unnest_arrays($0::${c.dbType}[], true) as ${kq(c.columnName)}`;
       } else {
-        return `unnest_arrays(?::${c.dbType}[]) as ${kq(c.columnName)}`;
+        return `unnest_arrays($0::${c.dbType}[]) as ${kq(c.columnName)}`;
       }
     } else {
-      return `unnest(?::${c.dbType}[]) as ${kq(c.columnName)}`;
+      return `unnest($0::${c.dbType}[]) as ${kq(c.columnName)}`;
     }
   });
   const sql = `WITH ${tableName} AS (SELECT ${selects.join(", ")})`;
   return [sql, columnValues];
 }
 
-async function m2mBatchInsert(txn: Knex.Transaction, joinTableName: string, m2m: ManyToManyLike, newRows: JoinRow[]) {
+async function m2mBatchInsert(txn: TransactionSql, joinTableName: string, m2m: ManyToManyLike, newRows: JoinRow[]) {
   if (newRows.length === 0) return;
   // const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
   const sql = cleanSql(`
     INSERT INTO ${kq(joinTableName)} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
     VALUES ${zeroTo(newRows.length)
-      .map(() => "(?, ?) ")
+      .map(() => "($0, $0) ")
       .join(", ")}
     ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO UPDATE SET id = ${kq(joinTableName)}.id
     RETURNING id;
@@ -223,24 +242,21 @@ async function m2mBatchInsert(txn: Knex.Transaction, joinTableName: string, m2m:
       keyToNumber(meta2, row.columns[m2m.otherColumnName].idTagged),
     ];
   });
-  const { rows } = await txn.raw(sql, bindings);
+  const rows = await convertToSql(txn, sql, bindings).catch(function m2mBatchInsert(err) {
+    throw appendStack(err, new Error());
+  });
   for (let i = 0; i < rows.length; i++) {
     newRows[i].id = rows[i].id;
     newRows[i].op = JoinRowOperation.Flushed;
   }
 }
 
-async function m2mBatchDelete(
-  txn: Knex.Transaction,
-  joinTableName: string,
-  m2m: ManyToManyLike,
-  deletedRows: JoinRow[],
-) {
+async function m2mBatchDelete(txn: TransactionSql, joinTableName: string, m2m: ManyToManyLike, deletedRows: JoinRow[]) {
   if (deletedRows.length === 0) return;
   // `remove`s that were done against unloaded ManyToManyCollections will not have row ids
   const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== -1);
   if (haveIds.length > 0) {
-    await txn.raw(`DELETE FROM ${kq(joinTableName)} WHERE id = ANY(?)`, [haveIds.map((r) => r.id!)]);
+    await txn`DELETE FROM ${txn(joinTableName)} WHERE id IN ${txn(haveIds.map((r) => r.id!))}`;
   }
   if (noIds.length > 0) {
     const data = noIds
@@ -259,45 +275,15 @@ async function m2mBatchDelete(
           ] as any,
       );
     if (data.length > 0) {
-      await txn.raw(
-        `
-        DELETE FROM ${kq(joinTableName)}
-        WHERE (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) IN (
-          SELECT (data->>0)::int, (data->>1)::int FROM jsonb_array_elements(?) data
-        )`,
-        [JSON.stringify(data)],
-      );
+      await txn`
+        DELETE FROM ${txn(joinTableName)}
+        WHERE (${txn(m2m.columnName)}, ${txn(m2m.otherColumnName)}) IN (
+          SELECT (data->>0)::int, (data->>1)::int FROM jsonb_array_elements(${data}) data
+        )`;
     }
   }
   deletedRows.forEach((row) => {
     row.id = undefined;
     row.op = JoinRowOperation.Flushed;
   });
-}
-
-/**
- * Configures the `pg` driver with the best type parsers.
- *
- * In particular, pg's default `TIMESTAMPTZ` parser is very inefficient, and even just
- * pulling in the latest `pg-types` and installing the fixed parser makes a noticable
- * difference.
- */
-export function setupLatestPgTypes(temporal: RuntimeConfig["temporal"]): void {
-  if (temporal) {
-    // Don't eagerly parse the strings, instead defer to the serde logic
-    const noop = (s: string) => s;
-    const noopArray = (s: string) => array.parse(s, noop);
-
-    const { TIMESTAMP, TIMESTAMPTZ, DATE } = types.builtins;
-    types.setTypeParser(DATE, noop);
-    types.setTypeParser(TIMESTAMP, noop);
-    types.setTypeParser(TIMESTAMPTZ, noop);
-
-    // Use `as number` b/c the typings of shadowed pg-types from `pg` and `pg-types` top-level don't line up
-    types.setTypeParser(1182 as number, noopArray); // date[]
-    types.setTypeParser(1115 as number, noopArray); // timestamp[]
-    types.setTypeParser(1185 as number, noopArray); // timestamptz[]
-  } else {
-    types.setTypeParser(types.builtins.TIMESTAMPTZ, getTypeParser(builtins.TIMESTAMPTZ));
-  }
 }

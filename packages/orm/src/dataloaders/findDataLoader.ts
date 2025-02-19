@@ -343,7 +343,7 @@ export function buildValuesCte(
     query: {
       kind: "raw",
       sql: `VALUES
-        ${rows.map((_, i) => `(${columns.map((c) => (i === 0 ? `?::${c.dbType}` : `?`)).join(", ")})`).join(", ")}
+        ${rows.map((_, i) => `(${columns.map((c) => (i === 0 ? `$0::${c.dbType}` : `$0`)).join(", ")})`).join(", ")}
       `,
       bindings,
     },

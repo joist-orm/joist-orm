@@ -57,7 +57,9 @@ export function buildKnexQuery(
     const where = internals.buildWhereClause(parsed.condition, true);
     if (where) {
       const [sql, bindings] = where;
-      query.whereRaw(sql, bindings);
+      // Convert our $0-style bindings to Knex ?-style bindings
+      const _sql = sql.replaceAll("$0", "?");
+      query.whereRaw(_sql, bindings);
     }
   }
 

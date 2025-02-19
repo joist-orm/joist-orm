@@ -58,5 +58,7 @@ export const zonedDateTimeMapper: CustomSerde<Temporal.ZonedDateTime, string> = 
       },
       // Match a PG `TIMESTAMPTZ` input format, i.e. "2021-01-01T12:00:00-05:00"
       toDb: (zdt) => zdt.toString({ timeZoneName: "never" }),
+      // TODO(postgresjs) we might need?
+      // typeof zdt === "string" ? zdt : `${zdt.toPlainDate().toString()} ${zdt.toPlainTime().toString()}${zdt.offset}`,
     }
   : temporalNotAvailable;

@@ -529,7 +529,7 @@ export class SuperstructSerde implements FieldSerde {
   }
 
   dbValue(data: any) {
-    return JSON.stringify(data[this.fieldName]);
+    return data[this.fieldName]; // postgres.js will JSON.stringify
   }
 
   // JSON is returned by postgres already parsed, so we should just be able to return our data directly. Unlike with
@@ -540,7 +540,7 @@ export class SuperstructSerde implements FieldSerde {
   }
 
   mapToDb(value: any) {
-    return JSON.stringify(value);
+    return value; // postgres.js will JSON.stringify
   }
 
   mapFromJsonAgg(value: any): any {
@@ -605,8 +605,7 @@ export class ZodSerde implements FieldSerde {
   }
 
   dbValue(data: any) {
-    // assume the data is already valid b/c it came from the entity
-    return JSON.stringify(data[this.fieldName]);
+    return data[this.fieldName]; // postgres.js will JSON.stringify
   }
 
   // JSON is returned by postgres already parsed, so we should just be able to return our data directly. Unlike with
@@ -617,7 +616,7 @@ export class ZodSerde implements FieldSerde {
   }
 
   mapToDb(value: any) {
-    return JSON.stringify(value);
+    return value; // postgres.js will JSON.stringify
   }
 
   mapFromJsonAgg(value: any): any {

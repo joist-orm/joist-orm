@@ -3,47 +3,38 @@ import { EntityManager } from "@src/entities";
 import { PostgresDriver, PostgresDriverOpts } from "joist-orm";
 import { toMatchEntity } from "joist-test-utils";
 import { newPgConnectionConfig } from "joist-utils";
-import { Knex, knex as createKnex } from "knex";
+import postgres from "postgres";
 
-// Create a shared test context that tests can use and also we'll use to auto-flush the db between tests.
-export let knex: Knex;
-
-export function newEntityManager(opts?: PostgresDriverOpts) {
-  const ctx = { knex };
-  const em = new EntityManager(
-    ctx as any,
-    new PostgresDriver(knex, {
-      ...opts,
-    }),
-  );
-  Object.assign(ctx, { em });
-  return em;
-}
+const sql = postgres({
+  ...newPgConnectionConfig(),
+  onquery: (e: any) => {
+    return (q: any) => {
+      numberOfQueries++;
+      const sql = q.strings.join("?");
+      queries.push(sql);
+    };
+  },
+} as any);
 
 export let numberOfQueries = 0;
 export let queries: string[] = [];
 
+export function newEntityManager(opts?: PostgresDriverOpts) {
+  const ctx = { sql };
+  const em = new EntityManager(ctx as any, new PostgresDriver(sql, { ...opts }));
+  Object.assign(ctx, { em });
+  return em;
+}
+
 expect.extend({ toMatchEntity });
 
-beforeAll(async () => {
-  knex = createKnex({
-    client: "pg",
-    connection: newPgConnectionConfig(),
-    debug: false,
-    asyncStackTraces: true,
-  }).on("query", (e: any) => {
-    numberOfQueries++;
-    queries.push(e.sql);
-  });
-});
-
 beforeEach(async () => {
-  await knex.select(knex.raw("flush_database()"));
+  await sql`select flush_database()`;
   resetQueryCount();
 });
 
 afterAll(async () => {
-  await knex.destroy();
+  await sql.end();
 });
 
 export function resetQueryCount() {
@@ -54,5 +45,5 @@ export function resetQueryCount() {
 type itWithCtxFn = (ctx: Context) => Promise<void>;
 it.withCtx = (name: string, fnOrOpts: itWithCtxFn | ContextOpts, maybeFn?: itWithCtxFn) => {
   const fn: itWithCtxFn = typeof fnOrOpts === "function" ? fnOrOpts : maybeFn!;
-  it(name, async () => fn({ em: newEntityManager(), knex }));
+  it(name, async () => fn({ em: newEntityManager(), sql }));
 };

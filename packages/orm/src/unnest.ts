@@ -16,12 +16,12 @@ export function buildUnnestCte(alias: string, columns: OpColumn[], columnValues:
   const selects = columns.map((c) => {
     if (c.dbType.endsWith("[]")) {
       if (c.isNullableArray) {
-        return `unnest_arrays(?::${c.dbType}[], true)`;
+        return `unnest_arrays($0::${c.dbType}[], true)`;
       } else {
-        return `unnest_arrays(?::${c.dbType}[])`;
+        return `unnest_arrays($0::${c.dbType}[])`;
       }
     } else {
-      return `unnest(?::${c.dbType}[])`;
+      return `unnest($0::${c.dbType}[])`;
     }
   });
   return {

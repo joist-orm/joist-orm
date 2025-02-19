@@ -2,14 +2,14 @@ import { testDriver } from "src/testEm";
 
 describe("FlushDatabase", () => {
   it("uses sequences for this schema", async () => {
-    const result = await testDriver.knex.raw(`
+    const result = await testDriver.sql`
       SELECT pg_get_functiondef(p.oid) AS source
       FROM pg_proc p
       JOIN pg_namespace n ON p.pronamespace = n.oid
       WHERE p.proname = 'flush_database'
       AND n.nspname = 'public';
-    `);
-    const { source } = result.rows[0];
+    `;
+    const { source } = result[0];
     expect(source).toMatchInlineSnapshot(`
      "CREATE OR REPLACE FUNCTION public.flush_database()
       RETURNS void

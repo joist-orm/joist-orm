@@ -1,3 +1,10 @@
+## [1.228.1](https://github.com/joist-orm/joist-orm/compare/v1.228.0...v1.228.1) (2025-02-19)
+
+
+### Bug Fixes
+
+* use the correct meta for inherited recursive relations ([#1372](https://github.com/joist-orm/joist-orm/issues/1372)) ([1ed2eed](https://github.com/joist-orm/joist-orm/commit/1ed2eedccca65197295d622424be3aad0a24e1d5))
+
 # [1.228.0](https://github.com/joist-orm/joist-orm/compare/v1.227.1...v1.228.0) (2025-02-19)
 
 

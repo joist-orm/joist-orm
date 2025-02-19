@@ -13,7 +13,7 @@ import {
   getInstanceData,
   maybeResolveReferenceToId,
 } from "../index";
-import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { ReferenceN } from "./Reference";
@@ -93,9 +93,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   private get isCascadeDelete(): boolean {
-    return (
-      this.currentComponent?.otherMetadata().config.__data.cascadeDeleteFields.includes(this.fieldName as any) ?? false
-    );
+    return isCascadeDelete(this, this.fieldName);
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {

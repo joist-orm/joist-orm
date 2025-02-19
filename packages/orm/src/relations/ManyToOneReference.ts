@@ -18,7 +18,7 @@ import {
   toTaggedId,
 } from "../index";
 import { maybeAdd, maybeRemove } from "../utils";
-import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
@@ -381,7 +381,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   private get isCascadeDelete(): boolean {
-    return getMetadata(this.entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
+    return isCascadeDelete(this, this.#fieldName);
   }
 
   /**

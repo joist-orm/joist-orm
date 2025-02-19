@@ -13,7 +13,7 @@ import {
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
 import { maybeAdd, maybeRemove, remove } from "../utils";
-import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `ManyToManyCollections`s. */
@@ -263,7 +263,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   private get isCascadeDelete(): boolean {
-    return getMetadata(this.entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
+    return isCascadeDelete(this, this.#fieldName);
   }
 
   public get hasBeenSet(): boolean {

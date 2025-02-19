@@ -5,7 +5,6 @@ import {
   ensureNotDeleted,
   Entity,
   EntityMetadata,
-  getBaseAndSelfMetas,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
@@ -16,7 +15,7 @@ import {
   sameEntity,
 } from "../index";
 import { clear, compareValues, maybeAdd, maybeRemove, remove } from "../utils";
-import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
 import { RelationT, RelationU } from "./Relation";
 
@@ -315,9 +314,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   private get isCascadeDelete(): boolean {
-    return getBaseAndSelfMetas(getMetadata(this.entity)).some((meta) =>
-      meta.config.__data.cascadeDeleteFields.includes(this.#fieldName as any),
-    );
+    return isCascadeDelete(this, this.#fieldName);
   }
 
   private getPreloaded(): U[] | undefined {

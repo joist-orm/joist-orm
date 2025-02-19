@@ -19,7 +19,7 @@ import { Entity } from "../Entity";
 import { IdOf } from "../EntityManager";
 import { getField, setField } from "../fields";
 import { MaybeReactedEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
-import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";
 import { Reference, ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
@@ -345,7 +345,7 @@ export class ReactiveReferenceImpl<
   }
 
   private get isCascadeDelete(): boolean {
-    return getMetadata(this.entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
+    return isCascadeDelete(this, this.#fieldName);
   }
 
   /**

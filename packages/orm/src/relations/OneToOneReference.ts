@@ -1,9 +1,9 @@
 import { deTagId, ensureNotDeleted, getEmInternalApi, getInstanceData, IdOf, LoadedReference, TaggedId } from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity } from "../Entity";
-import { EntityMetadata, getMetadata } from "../EntityMetadata";
+import { EntityMetadata } from "../EntityMetadata";
 import { setField } from "../fields";
-import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId, ManyToOneReference } from "./ManyToOneReference";
 import { isReactiveReference } from "./ReactiveReference";
 import { Reference, ReferenceN } from "./Reference";
@@ -85,7 +85,6 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
 {
   private loaded: U | undefined;
   private _isLoaded: boolean = false;
-  private isCascadeDelete: boolean;
   readonly #otherMeta: EntityMetadata;
   #hasBeenSet = false;
 
@@ -99,7 +98,6 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   ) {
     super(entity);
     this.#otherMeta = otherMeta;
-    this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
     if (getInstanceData(entity).isOrWasNew) {
       this._isLoaded = true;
     }
@@ -267,6 +265,10 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   private getPreloaded(): U[] | undefined {
     if (this.entity.isNewEntity) return undefined;
     return getEmInternalApi(this.entity.em).getPreloadedRelation(this.entity.idTagged, this.fieldName);
+  }
+
+  private get isCascadeDelete(): boolean {
+    return isCascadeDelete(this, this.fieldName);
   }
 
   [RelationT] = null!;

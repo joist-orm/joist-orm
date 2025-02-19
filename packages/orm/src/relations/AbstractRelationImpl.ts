@@ -1,3 +1,4 @@
+import { getBaseAndSelfMetas, getMetadata } from "../EntityMetadata";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
 
 /**
@@ -40,4 +41,10 @@ export abstract class AbstractRelationImpl<T, U> extends AbstractPropertyImpl<T>
    * hook after the relation is fully loaded.
    */
   abstract maybeCascadeDelete(): void;
+}
+
+export function isCascadeDelete(relation: AbstractRelationImpl<any, any>, fieldName: string): boolean {
+  return getBaseAndSelfMetas(getMetadata(relation.entity)).some((meta) =>
+    meta.config.__data.cascadeDeleteFields.includes(fieldName as any),
+  );
 }

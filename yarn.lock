@@ -8203,10 +8203,10 @@ __metadata:
     dataloader: "npm:^2.2.3"
     jest: "npm:30.0.0-alpha.7"
     joist-utils: "workspace:*"
-    knex: "npm:^3.1.0"
     object-hash: "npm:^3.0.0"
     pg: "npm:^8.13.3"
     pg-types: "npm:^4.0.2"
+    postgres: "patch:postgres@npm%3A3.4.5#~/.yarn/patches/postgres-npm-3.4.5-8a680ccbcd.patch"
     prettier: "npm:^3.5.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     temporal-polyfill: "npm:^0.2.5"
@@ -8362,7 +8362,7 @@ __metadata:
     joist-transform-properties: "workspace:*"
     kelonio: "npm:^0.10.0"
     mitata: "npm:^0.1.14"
-    postgres: "npm:^3.4.5"
+    postgres: "patch:postgres@npm%3A3.4.5#~/.yarn/patches/postgres-npm-3.4.5-8a680ccbcd.patch"
     prettier: "npm:^3.5.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     superstruct: "npm:0.15.5"
@@ -11686,10 +11686,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postgres@npm:^3.4.5":
+"postgres@npm:3.4.5":
   version: 3.4.5
   resolution: "postgres@npm:3.4.5"
   checksum: 10/b51341a8640bd63c42caf2a866c8b6bcac0d4cc1b85985f01eb3fd941eb7bf3fe5200bcf6983eaa1d42ae7555d85f4ff51d35916b5543b95aecfe98b76213611
+  languageName: node
+  linkType: hard
+
+"postgres@patch:postgres@npm%3A3.4.5#~/.yarn/patches/postgres-npm-3.4.5-8a680ccbcd.patch":
+  version: 3.4.5
+  resolution: "postgres@patch:postgres@npm%3A3.4.5#~/.yarn/patches/postgres-npm-3.4.5-8a680ccbcd.patch::version=3.4.5&hash=aedacb"
+  checksum: 10/a3f2788cd7235c513790b3dd7459ed0d4862d90a9749d84d611fecf779096ef2f8237a1c47ee1a13178fb360a23ddc166c743235b0af9e1f7e48562610d5b2de
   languageName: node
   linkType: hard
 

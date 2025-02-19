@@ -5,10 +5,10 @@ import {
   OneToManyCollection,
   OneToManyLargeCollection,
   ParsedFindQuery,
-  abbreviation,
   addTablePerClassJoinsAndClassTag,
   keyToNumber,
 } from "../index";
+import { abbreviation } from "../utils";
 
 /** Batches o2m.find/include calls (i.e. that don't fully load the o2m relation). */
 export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(

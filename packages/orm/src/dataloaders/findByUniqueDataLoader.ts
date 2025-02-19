@@ -2,7 +2,6 @@ import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { Field, getMetadata } from "../EntityMetadata";
-import { abbreviation } from "../QueryBuilder";
 import {
   ColumnCondition,
   ParsedFindQuery,
@@ -10,7 +9,7 @@ import {
   maybeAddNotSoftDeleted,
 } from "../QueryParser";
 import { Column } from "../serde";
-import { groupBy } from "../utils";
+import { abbreviation, groupBy } from "../utils";
 
 export function findByUniqueDataLoader<T extends Entity>(
   em: EntityManager,

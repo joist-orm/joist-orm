@@ -39,6 +39,7 @@
     "jest-junit": "^16.0.0",
     "joist-codegen": "workspace:*",
     "joist-graphql-codegen": "workspace:*",
+    "joist-knex": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
     "joist-transform-properties": "workspace:*",

@@ -13,6 +13,7 @@ import {
   update,
 } from "@src/entities/inserts";
 import { isPreloadingEnabled, knex, newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
+import { buildQuery } from "joist-knex";
 import {
   EntityConstructor,
   FilterWithAlias,
@@ -20,7 +21,6 @@ import {
   Loaded,
   MaybeAbstractEntityConstructor,
   OptsOf,
-  buildQuery,
   getInstanceData,
   sameEntity,
 } from "joist-orm";

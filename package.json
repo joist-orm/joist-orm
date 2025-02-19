@@ -20,6 +20,7 @@
     "packages/drivers/bun-pg",
     "packages/graphql-codegen",
     "packages/graphql-resolver-utils",
+    "packages/knex",
     "packages/migration-utils",
     "packages/orm",
     "packages/plugins/join-preloading",

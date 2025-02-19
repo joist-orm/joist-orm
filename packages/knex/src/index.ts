@@ -1,16 +1,20 @@
+import { Entity, FilterAndSettings, getMetadata, MaybeAbstractEntityConstructor, parseFindQuery } from "joist-orm";
 import { Knex } from "knex";
-import { Entity } from "./Entity";
-import { FilterAndSettings } from "./EntityFilter";
-import { getMetadata } from "./EntityMetadata";
-import { buildKnexQuery } from "./drivers/buildKnexQuery";
-import { MaybeAbstractEntityConstructor, parseFindQuery } from "./index";
+import { buildKnexQuery } from "./buildKnexQuery";
 
 /**
- * Builds the SQL/knex queries for `EntityManager.find` calls.
+ * Builds the Knex queries from `em.find`-style parameters.
  *
- * Note this is generally for our own internal implementation details and not meant to
- * be a user-facing QueryBuilder, i.e. users should use Knex for that and just use SQL
- * directly (for any non-trivial queries that `EntityManager.find` does not support).
+ * This is useful for the "last 5%" of SQL queries that require SQL features that `em.find`
+ * itself doesn't support, i.e. primarily aggregation, but also complicated joins. etc.
+ *
+ * You can also `buildQuery` to get the regular `em.find` niceties around great join syntax,
+ * join pruning, inline conditions, etc., but then take the `QueryBuilder` that it produces
+ * and "muck with it". I.e. add different order bys, group bys, etc.
+ *
+ * The Knex API is actually well-suited for this, as it provides structure-aware methods like
+ * `clearOrder`, `clearSelect`, etc. that mean you can munge the initial query without any
+ * complicated string parsing.
  *
  * @param knex The Knex instance to use for building the query.
  * @param type The primary entity type that `filter` is based on.
@@ -41,11 +45,4 @@ export function buildQuery<T extends Entity>(
   } = filter;
   const parsed = parseFindQuery(meta, where, { conditions, orderBy, pruneJoins, keepAliases, softDeletes });
   return buildKnexQuery(knex, parsed, { limit, offset });
-}
-
-export function abbreviation(tableName: string): string {
-  return tableName
-    .split("_")
-    .map((w) => w[0])
-    .join("");
 }

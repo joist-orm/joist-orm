@@ -3,12 +3,11 @@ import { aliasMgmt, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
-import { abbreviation } from "./QueryBuilder";
 import { visitConditions } from "./QueryVisitor";
 import { getMetadataForTable } from "./configure";
 import { Column, getConstructorFromTaggedId, isDefined, keyToNumber, maybeResolveReferenceToId } from "./index";
 import { kq, kqDot } from "./keywords";
-import { assertNever, fail, partition } from "./utils";
+import { abbreviation, assertNever, fail, partition } from "./utils";
 
 /** A tree of ANDs/ORs with conditions or nested conditions. */
 export interface ParsedExpressionFilter {

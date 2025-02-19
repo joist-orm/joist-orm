@@ -1,9 +1,7 @@
-import { Knex } from "knex";
 import { ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
 import { assertNever } from "../utils";
 import { buildWhereClause } from "./buildUtils";
-import QueryBuilder = Knex.QueryBuilder;
 
 /**
  * Transforms `ParsedFindQuery` into a raw SQL string.

@@ -1,17 +1,12 @@
 import { Book } from "@src/entities";
 import { knex } from "@src/testEm";
-import { getMetadata, ParsedFindQuery, parseFindQuery } from "joist-orm";
-import { buildKnexQuery } from "joist-orm/build/drivers/buildKnexQuery";
-
-function generateSql(t: ParsedFindQuery) {
-  return buildKnexQuery(knex, t, {}).toSQL().sql;
-}
-
-const bm = getMetadata(Book);
+import { buildQuery } from "joist-knex";
 
 describe("QueryParser", () => {
   it("quotes with abbreviation", () => {
-    expect(generateSql(parseFindQuery(bm, { author: { firstName: "jeff", schedules: { id: 4 } } }))).toEqual(
+    // This is technically testing the old knex-based flow/quoting...
+    const q = buildQuery(knex, Book, { where: { author: { firstName: "jeff", schedules: { id: "4" } } } });
+    expect(q.toSQL().sql).toEqual(
       [
         "select distinct b.*, b.title, b.id",
         " from books as b",

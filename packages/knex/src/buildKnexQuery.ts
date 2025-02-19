@@ -1,20 +1,9 @@
+import { internals, kq, kqDot, ParsedFindQuery, ParsedTable } from "joist-orm";
 import { Knex } from "knex";
-import { ParsedFindQuery, ParsedTable } from "../QueryParser";
-import { kq, kqDot } from "../keywords";
-import { assertNever } from "../utils";
-import { buildWhereClause } from "./buildUtils";
+import { assertNever } from "./utils";
 import QueryBuilder = Knex.QueryBuilder;
 
-/**
- * Transforms `ParsedFindQuery` into a Knex query.
- *
- * In theory this should be implemented within each Driver, because it's generally
- * a private API, but:
- *
- * a) Multiple drivers will likely be based on Knex, and
- * b) We've already leaked the `QueryBuilder.ts` `buildQuery` API for letting Joist
- * do the boilerplate joins/conditions, and then letting the user had more as needed.
- */
+/** Transforms Joist's internal `ParsedFindQuery` AST into a Knex query builder. */
 export function buildKnexQuery(
   knex: Knex,
   parsed: ParsedFindQuery,
@@ -58,7 +47,7 @@ export function buildKnexQuery(
   }
 
   if (parsed.condition) {
-    const where = buildWhereClause(parsed.condition, true);
+    const where = internals.buildWhereClause(parsed.condition, true);
     if (where) {
       const [sql, bindings] = where;
       query.whereRaw(sql, bindings);

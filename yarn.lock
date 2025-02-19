@@ -11517,6 +11517,25 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"joist-knex@workspace:*, joist-knex@workspace:packages/knex":
+  version: 0.0.0-use.local
+  resolution: "joist-knex@workspace:packages/knex"
+  dependencies:
+    "@swc/core": "npm:^1.10.16"
+    "@swc/jest": "npm:^0.2.37"
+    "@types/jest": "npm:^29.5.14"
+    "@types/node": "npm:^22.13.4"
+    jest: "npm:30.0.0-alpha.7"
+    knex: "npm:^3.1.0"
+    pg: "npm:^8.13.3"
+    prettier: "npm:^3.5.1"
+    prettier-plugin-organize-imports: "npm:^4.1.0"
+    ts-node-dev: "npm:^2.0.0"
+    tsconfig-paths: "npm:^4.2.0"
+    typescript: "npm:5.7.3"
+  languageName: unknown
+  linkType: soft
+
 "joist-migration-utils@workspace:*, joist-migration-utils@workspace:packages/migration-utils":
   version: 0.0.0-use.local
   resolution: "joist-migration-utils@workspace:packages/migration-utils"
@@ -11705,6 +11724,7 @@ __metadata:
     joist-codegen: "workspace:*"
     joist-graphql-codegen: "workspace:*"
     joist-graphql-resolver-utils: "workspace:*"
+    joist-knex: "workspace:*"
     joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
     joist-plugin-join-preloading: "workspace:*"

@@ -2,7 +2,6 @@ import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import {
-  abbreviation,
   addTablePerClassJoinsAndClassTag,
   getField,
   isLoadedCollection,
@@ -16,7 +15,7 @@ import {
   unsafeDeTagIds,
 } from "../index";
 import { RecursiveChildrenCollectionImpl } from "../relations/RecursiveCollection";
-import { groupBy } from "../utils";
+import { abbreviation, groupBy } from "../utils";
 
 export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,

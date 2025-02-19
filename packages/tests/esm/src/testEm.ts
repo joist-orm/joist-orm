@@ -1,5 +1,5 @@
 import { type EntityManagerOpts } from "joist-orm";
-import type { Knex } from "knex";
+import { type Sql } from "postgres";
 import { EntityManager } from "src/entities/index.js";
 import { PostgresTestDriver, type TestDriver } from "src/testDrivers.js";
 
@@ -7,14 +7,14 @@ import { PostgresTestDriver, type TestDriver } from "src/testDrivers.js";
 const plugins = (process.env.PLUGINS ?? "join-preloading").split(",");
 export const isPreloadingEnabled = plugins.includes("join-preloading");
 export let testDriver: TestDriver = new PostgresTestDriver(isPreloadingEnabled);
-export let knex: Knex = testDriver.knex;
+export let sql: Sql = testDriver.sql;
 export let numberOfQueries = 0;
 export let queries: string[] = [];
 
 let makeApiCall: Function = null!;
 
 export function newEntityManager(): EntityManager {
-  const ctx = { knex };
+  const ctx = { sql };
   const opts: EntityManagerOpts<any> = { driver: testDriver.driver };
   const em = new EntityManager(ctx as any, opts);
   Object.assign(ctx, { em, makeApiCall });

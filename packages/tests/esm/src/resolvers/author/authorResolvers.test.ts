@@ -5,7 +5,7 @@ import { makeRunObjectField, makeRunObjectFields } from "src/resolvers/testUtils
 describe("authorResolvers", () => {
   it.withCtx("can return", async (ctx) => {
     const { em } = ctx;
-    // Given a Author
+    // Given an Author
     const a = newAuthor(em);
     // Then we can query it
     const result = await runFields(ctx, a, ["firstName", "lastName", "delete", "createdAt", "updatedAt"]);

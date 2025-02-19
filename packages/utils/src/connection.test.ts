@@ -9,7 +9,7 @@ describe("connection", () => {
       password: "local",
       port: 5432,
       user: "joist",
-      ssl: false,
+      ssl: undefined,
     });
   });
 

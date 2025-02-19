@@ -21,14 +21,12 @@
   ],
   "dependencies": {
     "@types/object-hash": "^3.0.6",
-    "@types/pg": "^8.15.5",
     "ansis": "^3.17.0",
     "dataloader": "^2.2.3",
     "joist-utils": "workspace:*",
-    "knex": "^3.1.0",
     "object-hash": "^3.0.0",
-    "pg": "^8.16.3",
-    "pg-types": "^4.1.0"
+    "pg-types": "^4.0.2",
+    "postgres": "github:stephenh/postgres"
   },
   "devDependencies": {
     "@swc/core": "^1.13.20",

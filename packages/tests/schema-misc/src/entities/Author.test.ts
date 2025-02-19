@@ -14,10 +14,10 @@ describe("Author", () => {
     // Then we generate an insert
     expect(queries).toMatchInlineSnapshot(`
      [
-       "BEGIN;",
+       "begin",
        "select nextval('authors_id_seq') from generate_series(1, 1)",
        "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::character varying[]) as "firstName", unnest($3::character varying[]) as "lastName", unnest($4::boolean[]) as "delete", unnest($5::timestamp with time zone[]) as "createdAt", unnest($6::timestamp with time zone[]) as "updatedAt") INSERT INTO authors (id, "firstName", "lastName", "delete", "createdAt", "updatedAt") SELECT * FROM data",
-       "COMMIT;",
+       "commit",
      ]
     `);
 
@@ -29,9 +29,9 @@ describe("Author", () => {
     // Then we issued a valid SQL update
     expect(queries).toMatchInlineSnapshot(`
      [
-       "BEGIN;",
+       "begin",
        "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::character varying[]) as "lastName", unnest($3::boolean[]) as "delete", unnest($4::timestamp with time zone[]) as "updatedAt", unnest($5::timestamptz[]) as __original_updated_at) UPDATE authors SET "lastName" = data."lastName", "delete" = data."delete", "updatedAt" = data."updatedAt" FROM data WHERE authors.id = data.id AND date_trunc('milliseconds', authors."updatedAt") = data.__original_updated_at RETURNING authors.id",
-       "COMMIT;",
+       "commit",
      ]
     `);
   });

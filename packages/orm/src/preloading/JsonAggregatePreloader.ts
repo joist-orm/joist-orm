@@ -190,7 +190,7 @@ function calcLateralJoins<I extends EntityOrId>(
       if (needsSubSelect) {
         cb.addRawCondition({
           aliases: [root.alias],
-          condition: `${kqDot(root.alias, "id")} = ANY(?)`,
+          condition: `${kqDot(root.alias, "id")} = ANY($0)`,
           bindings: [
             [...subTree.entities]
               .filter((e) => typeof e === "string" || !e.isNewEntity)

@@ -55,15 +55,15 @@ async function main() {
     { iterations, serial },
   );
   await benchmark.record(
-      `Pgjs ${numberOfEntities} Authors individually but pipelined`,
-      async () => {
-        await sql.begin((sql) => {
-          return zeroTo(numberOfEntities).map((i) => {
-            return sql`INSERT INTO "authors" (first_name, initials, number_of_books) VALUES (${`a${i}`}, ${"a"}, ${0})`;
-          });
+    `Pgjs ${numberOfEntities} Authors individually but pipelined`,
+    async () => {
+      await sql.begin((sql) => {
+        return zeroTo(numberOfEntities).map((i) => {
+          return sql`INSERT INTO "authors" (first_name, initials, number_of_books) VALUES (${`a${i}`}, ${"a"}, ${0})`;
         });
-      },
-      { iterations, serial },
+      });
+    },
+    { iterations, serial },
   );
 
   await benchmark.record(
@@ -81,17 +81,16 @@ async function main() {
     { iterations, serial },
   );
   await benchmark.record(
-      `Pgjs ${numberOfEntities} Authors with VALUES`,
-      async () => {
-        await sql.begin(async (sql) => {
-          await sql`INSERT INTO "authors" ${sql(
-              zeroTo(numberOfEntities).map((i) => ({ first_name: `a${i}`, initials: "a", number_of_books: 0 })),
-          )}`;
-        });
-      },
-      { iterations, serial },
+    `Pgjs ${numberOfEntities} Authors with VALUES`,
+    async () => {
+      await sql.begin(async (sql) => {
+        await sql`INSERT INTO "authors" ${sql(
+          zeroTo(numberOfEntities).map((i) => ({ first_name: `a${i}`, initials: "a", number_of_books: 0 })),
+        )}`;
+      });
+    },
+    { iterations, serial },
   );
-
 
   await benchmark.record(
     `Knex ${numberOfEntities} Authors & ${numberOfEntities} Books with VALUES in txn`,
@@ -116,18 +115,18 @@ async function main() {
     { iterations, serial },
   );
   await benchmark.record(
-      `Pgjs ${numberOfEntities} Authors & ${numberOfEntities} Books with VALUES in txn`,
-      async () => {
-        await sql.begin(async (sql) => {
-          await Promise.all([
-            sql`INSERT INTO "authors" ${sql(
-                zeroTo(numberOfEntities).map((i) => ({ first_name: `a${i}`, initials: "a", number_of_books: 0 })),
-            )}`,
-            sql`INSERT INTO "books" ${sql(zeroTo(numberOfEntities).map((i) => ({ title: `b${i}`, author_id: 1 })))}`,
-          ]);
-        });
-      },
-      { iterations, serial },
+    `Pgjs ${numberOfEntities} Authors & ${numberOfEntities} Books with VALUES in txn`,
+    async () => {
+      await sql.begin(async (sql) => {
+        await Promise.all([
+          sql`INSERT INTO "authors" ${sql(
+            zeroTo(numberOfEntities).map((i) => ({ first_name: `a${i}`, initials: "a", number_of_books: 0 })),
+          )}`,
+          sql`INSERT INTO "books" ${sql(zeroTo(numberOfEntities).map((i) => ({ title: `b${i}`, author_id: 1 })))}`,
+        ]);
+      });
+    },
+    { iterations, serial },
   );
 
   await benchmark.record(

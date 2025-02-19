@@ -1,4 +1,4 @@
-import { knex, newEntityManager } from "@src/setupDbTests";
+import { newEntityManager, sql } from "@src/setupDbTests";
 import { jan1, ten01, ten01AndMicros, ten02, ten03 } from "@src/utils";
 import { PrimitiveField, alias, getMetadata } from "joist-orm";
 import { Temporal } from "temporal-polyfill";
@@ -21,7 +21,7 @@ describe("plainTime", () => {
     const em = newEntityManager();
     newAuthor(em, { timeToMicros: Temporal.PlainTime.from("10:01:00.12345678") });
     await em.flush();
-    const rows = await knex.select("*").from("authors");
+    const rows = await sql`select * from authors`;
     expect(rows[0].time_to_micros).toEqual("10:01:00.123457"); // rounded
   });
 
@@ -37,21 +37,21 @@ describe("plainTime", () => {
   });
 
   it("can load a plain time", async () => {
-    await knex.insert({ firstName: "a1", birthday: jan1, time: "10:01:00" }).into("authors");
+    await sql`INSERT INTO authors ("firstName", birthday, time) VALUES ('a1', ${jan1}, ${ten01})`;
     const em = newEntityManager();
     const a = await em.load(Author, "a:1");
     expect(a.time).toEqual(ten01);
   });
 
   it("can load a plain time array", async () => {
-    await knex.insert({ firstName: "a1", birthday: "2018-01-01", times: [ten01, ten02] }).into("authors");
+    await sql`INSERT INTO authors ("firstName", birthday, times) VALUES ('a1', ${jan1}, ${[ten01, ten02]})`;
     const em = newEntityManager();
     const a = await em.load(Author, "a:1");
     expect(a.times).toEqual([ten01, ten02]);
   });
 
   it("can load a plain time with micros", async () => {
-    await knex.insert({ firstName: "a1", birthday: jan1, time_to_micros: "10:01:00.123456" }).into("authors");
+    await sql`INSERT INTO authors ("firstName", birthday, time_to_micros) VALUES ('a1', ${jan1}, '10:01:00.123456')`;
     const em = newEntityManager();
     const a = await em.load(Author, "a:1");
     expect(a.timeToMicros).toEqual(ten01AndMicros);

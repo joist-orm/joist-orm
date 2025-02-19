@@ -1,4 +1,5 @@
 import DataLoader from "dataloader";
+import { getMetadataForType } from "../configure";
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import {
@@ -21,7 +22,10 @@ export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
   collection: RecursiveChildrenCollectionImpl<T, U>,
 ): DataLoader<Entity, U[]> {
-  const { meta, fieldName } = collection;
+  let { meta, fieldName } = collection;
+  // This could be called from subtypes to get relations defined on the parent. So we need to make sure we are using the
+  // correct meta by walking the inheritance tree until we find the meta that actually has the root o2m field
+  while (!(collection.o2mFieldName in meta.fields) && meta.baseType) meta = getMetadataForType(meta.baseType);
   const batchKey = `${meta.tableName}-${fieldName}`;
   return em.getLoader("o2m-recursive", batchKey, async (parents) => {
     const o2m = meta.allFields[collection.o2mFieldName] as OneToManyField | OneToOneField;

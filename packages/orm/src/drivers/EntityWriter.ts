@@ -15,8 +15,8 @@ import { Column, TimestampSerde, hasSerde } from "../serde";
 import { groupBy } from "../utils";
 
 /** A simplified view of columns, with only the keys necessary to create SQL statements. */
-type OpColumn = { columnName: string; dbType: string };
-export type InsertOp = { tableName: string; columns: OpColumn[]; rows: any[][] };
+export type OpColumn = { columnName: string; dbType: string; isNullableArray?: boolean };
+export type InsertOp = { tableName: string; columns: OpColumn[]; columnValues: any[][] };
 /**
  * A logical `update` operation.
  *
@@ -28,7 +28,7 @@ export type InsertOp = { tableName: string; columns: OpColumn[]; rows: any[][] }
 export type UpdateOp = {
   tableName: string;
   columns: OpColumn[];
-  rows: any[][];
+  columnValues: any[][];
   updatedAt: string | undefined;
 };
 export type DeleteOp = { tableName: string; ids: any[] };
@@ -103,8 +103,8 @@ function newInsertOp(meta: EntityMetadata, entities: Entity[], fixups: InsertFix
   const columns = Object.values(meta.fields)
     .filter(hasSerde)
     .flatMap((f) => f.serde.columns);
-  const rows = collectBindings(entities, meta.tableName, columns, fixups);
-  return { tableName: meta.tableName, columns, rows };
+  const columnValues = collectBindings(entities, meta.tableName, columns, fixups);
+  return { tableName: meta.tableName, columns, columnValues };
 }
 
 function newStiInsertOp(root: EntityMetadata, entities: Entity[], fixups: InsertFixup[]): InsertOp {
@@ -123,8 +123,8 @@ function newStiInsertOp(root: EntityMetadata, entities: Entity[], fixups: Insert
   }
   const columns = fields.filter(hasSerde).flatMap((f) => f.serde.columns);
   // And then collect the same bindings across each STI
-  const rows = collectBindings(entities, root.tableName, columns, fixups);
-  return { tableName: root.tableName, columns, rows };
+  const columnValues = collectBindings(entities, root.tableName, columns, fixups);
+  return { tableName: root.tableName, columns, columnValues };
 }
 
 function addUpdates(ops: Ops, todo: Todo): void {
@@ -209,9 +209,9 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     });
   }
 
-  const rows = collectBindings(entities, meta.tableName, columns, []);
+  const columnValues = collectBindings(entities, meta.tableName, columns, []);
   const updatedAtColumn = updatedAt ? (meta.fields[updatedAt] as PrimitiveField).serde.columns[0] : undefined;
-  return { tableName: meta.tableName, columns, updatedAt: updatedAtColumn?.columnName, rows };
+  return { tableName: meta.tableName, columns, updatedAt: updatedAtColumn?.columnName, columnValues };
 }
 
 function addDeletes(ops: Ops, todo: Todo): void {
@@ -245,22 +245,28 @@ function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata, Entity
 
 type BindingColumn = OpColumn & Pick<Column, "dbValue">;
 
+/**
+ * Builds a *columnar* array of bindings for the given `entities` and `columns`.
+ *
+ * We use a columnar approach, instead of `rows[]`, to best match the unnest-based
+ * column operations in our `batchInsert` / `batchUpdate` SQL statements.
+ */
 function collectBindings(
   entities: Entity[],
   tableName: string,
   columns: BindingColumn[],
   fixups: InsertFixup[] | undefined,
 ): any[][] {
-  const rows = [];
-  for (const entity of entities) {
-    const { data } = getInstanceData(entity);
-    const bindings = [];
-    for (const column of columns) {
-      bindings.push(column.dbValue(data, entity, tableName, fixups) ?? null);
+  const bindings: any[][] = [];
+  for (const column of columns) {
+    const columnValues: any[] = [];
+    for (const entity of entities) {
+      const { data } = getInstanceData(entity);
+      columnValues.push(column.dbValue(data, entity, tableName, fixups) ?? null);
     }
-    rows.push(bindings);
+    bindings.push(columnValues);
   }
-  return rows;
+  return bindings;
 }
 /**
  * Given `fixups` that indicate where we inserted `NULL` into non-deferred FKs, create `UPDATE`s
@@ -273,8 +279,12 @@ function translateFixupsIntoUpdates(ops: Ops, fixups: InsertFixup[]): void {
     ops.updates.push({
       tableName,
       columns: [getMetadata(entity).fields["id"].serde!.columns[0], column],
+      columnValues: [
+        // Make 1 column of ids, and 1 column of values
+        fixups.map((fixup) => fixup.entity.id),
+        fixups.map((fixup) => fixup.value),
+      ],
       updatedAt: undefined,
-      rows: fixups.map((fixup) => [fixup.entity.id, fixup.value]),
     });
   });
 }

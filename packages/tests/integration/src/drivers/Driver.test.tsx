@@ -5,7 +5,7 @@ import { getMetadata, setField } from "joist-orm";
 
 // This will test whatever driver the test suite is currently being run against
 describe("Driver", () => {
-  describe("flushEntities", () => {
+  describe("flush", () => {
     it("can insert", async () => {
       const em = newEntityManager();
       const author = new Author(em, { firstName: "a1" });
@@ -13,16 +13,20 @@ describe("Driver", () => {
       setField(author, "initials", "a");
       setField(author, "numberOfBooks", 0);
       setField(author, "tagsOfAllBooks", "");
-      await em.ctx.knex.transaction(async (txn) => {
+      await em.ctx.sql.begin(async (txn) => {
         em.txn = txn;
-        await em.driver.flushEntities(em, {
-          Author: {
-            metadata: getMetadata(Author),
-            inserts: [author],
-            deletes: [],
-            updates: [],
+        await em.driver.flush(
+          em,
+          {
+            Author: {
+              metadata: getMetadata(Author),
+              inserts: [author],
+              deletes: [],
+              updates: [],
+            },
           },
-        });
+          {},
+        );
       });
       const authors = await select("authors");
       expect(authors.length).toEqual(1);
@@ -41,7 +45,7 @@ describe("Driver", () => {
       // author.__orm.data.updated_at = jan1;
       // author.__orm.data.id = "a:1";
       // author.firstName = "changed";
-      // await em.driver.flushEntities(em, {
+      // await em.driver.flush(em, {
       //   Author: {
       //     metadata: getMetadata(Author),
       //     inserts: [],

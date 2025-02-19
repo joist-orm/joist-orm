@@ -1,7 +1,8 @@
-import { sql, SQL, type TransactionSQL } from "bun";
+import { sql, SQL, type SQLQuery, type TransactionSQL } from "bun";
 import {
   afterTransaction,
   beforeTransaction,
+  buildUnnestCte,
   Driver,
   EntityManager,
   fail,
@@ -12,10 +13,9 @@ import {
   SequenceIdAssigner,
 } from "joist-orm";
 import { JoinRowTodo, Todo } from "joist-orm/build/Todo";
-import { buildValuesCte } from "joist-orm/build/dataloaders/findDataLoader";
 import { DeleteOp, generateOps, InsertOp, UpdateOp } from "joist-orm/build/drivers/EntityWriter";
 import { getRuntimeConfig } from "joist-orm/build/runtimeConfig";
-import { batched, cleanSql } from "joist-orm/build/utils";
+import { cleanSql } from "joist-orm/build/utils";
 
 export class BunPgDriver implements Driver<TransactionSQL> {
   readonly #idAssigner: IdAssigner;
@@ -23,7 +23,7 @@ export class BunPgDriver implements Driver<TransactionSQL> {
 
   constructor(_sql: SQL = sql) {
     this.#sql = _sql;
-    this.#idAssigner = new SequenceIdAssigner((s) => this.#sql(s));
+    this.#idAssigner = new SequenceIdAssigner((s) => this.#sql.unsafe(s));
   }
 
   executeFind(
@@ -60,43 +60,17 @@ export class BunPgDriver implements Driver<TransactionSQL> {
     throw new Error("Method not implemented.");
   }
 
-  async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
+  async flush(em: EntityManager, todos: Record<string, Todo>, joinRows: Record<string, JoinRowTodo>): Promise<void> {
     const sql = (em.txn ?? fail("Expected EntityManager.txn to be set")) as TransactionSQL;
     await this.#idAssigner.assignNewIds(todos);
-
     const ops = generateOps(todos);
-
     // Do INSERTs+UPDATEs first so that we avoid DELETE cascades invalidating oplocks
     // See https://github.com/joist-orm/joist-orm/issues/591
-    // We want 10k params maximum per batch insert
-    const parameterLimit = 10_000;
-    for (const insert of ops.inserts) {
-      const parameterTotal = insert.columns.length * insert.rows.length;
-      if (parameterTotal > parameterLimit) {
-        const batchSize = Math.floor(parameterLimit / insert.columns.length);
-        await Promise.all(batched(insert.rows, batchSize).map((batch) => batchInsert(sql, { ...insert, rows: batch })));
-      } else {
-        await batchInsert(sql, insert);
-      }
-    }
-
-    for (const update of ops.updates) {
-      const parameterTotal = update.columns.length * update.rows.length;
-      if (parameterTotal > parameterLimit) {
-        const batchSize = Math.floor(parameterLimit / update.columns.length);
-        await Promise.all(batched(update.rows, batchSize).map((batch) => batchUpdate(sql, { ...update, rows: batch })));
-      } else {
-        await batchUpdate(sql, update);
-      }
-    }
-
-    for (const del of ops.deletes) {
-      await batchDelete(sql, del);
-    }
-  }
-
-  flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void> {
-    throw new Error("Method not implemented.");
+    await Promise.all([
+      ...ops.inserts.map((op) => batchInsert(sql, op)),
+      ...ops.updates.map((op) => batchUpdate(sql, op)),
+      ...ops.deletes.map((op) => batchDelete(sql, op)),
+    ]);
   }
 
   get defaultPlugins() {
@@ -104,22 +78,21 @@ export class BunPgDriver implements Driver<TransactionSQL> {
   }
 }
 
-// Issue 1 INSERT statement with N `VALUES (..., ...), (..., ...), ...`
 function batchInsert(txn: TransactionSQL, op: InsertOp): Promise<unknown> {
-  const { tableName, columns, rows } = op;
+  const { tableName, columns, columnValues } = op;
+  const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
   const sql = cleanSql(`
+    ${cte}
     INSERT INTO ${kq(tableName)} (${columns.map((c) => kq(c.columnName)).join(", ")})
-    VALUES ${rows.map((_, i) => `(${columns.map((_, j) => `\$${i * columns.length + j + 1}`).join(", ")})`).join(",")}
+    SELECT * FROM data
   `);
-  const params = rows.flat();
-  return txn.unsafe(sql, params);
+  return convertToSql(txn, sql, bindings);
 }
 
-// Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...`
 async function batchUpdate(txn: TransactionSQL, op: UpdateOp): Promise<void> {
-  const { tableName, columns, rows, updatedAt } = op;
+  const { tableName, columns, columnValues, updatedAt } = op;
 
-  const cte = buildValuesCte("data", columns, rows);
+  const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
 
   // JS Dates only have millisecond-level precision, so we may have dropped/lost accuracy when
   // reading Postgres's microsecond-level `timestamptz` values; using `date_trunc` "downgrades"
@@ -146,12 +119,12 @@ async function batchUpdate(txn: TransactionSQL, op: UpdateOp): Promise<void> {
     RETURNING ${kq(tableName)}.id
   `;
 
-  const bindings = rows.flat();
-  const result = await txn(cleanSql(sql), bindings);
+  const results = await convertToSql(txn, sql, bindings);
 
-  if (result.rows.length !== rows.length) {
-    const updated = new Set(result.rows.map((r: any) => r.id));
-    const missing = rows.map((r) => r[0]).filter((id) => !updated.has(id));
+  const ids = columnValues[0]; // assume id is the 1st column
+  if (results.length !== ids.length) {
+    const updated = new Set(results.map((r: any) => r.id));
+    const missing = ids.filter((id) => !updated.has(id));
     throw new Error(`Oplock failure for ${tableName} rows ${missing.join(", ")}`);
   }
 }
@@ -159,4 +132,17 @@ async function batchUpdate(txn: TransactionSQL, op: UpdateOp): Promise<void> {
 async function batchDelete(txn: TransactionSQL, op: DeleteOp): Promise<void> {
   const { tableName, ids } = op;
   // await txn(tableName).del().whereIn("id", ids);
+}
+
+function convertToSql(sql: TransactionSQL, query: string, bindings: any[]): SQLQuery {
+  // Split the query string by the placeholder character '?'
+  const fragments = query.split("?");
+  if (fragments.length - 1 !== bindings.length) {
+    throw new Error(`Mismatch between placeholders (${fragments.length - 1}) and bindings (${bindings.length})`);
+  }
+  // postgres.js does runtime detection of the `raw` property to determine if it's a template string
+  const templateStrings = Object.assign(fragments, {
+    raw: fragments,
+  }) as unknown as TemplateStringsArray;
+  return sql(templateStrings, ...bindings);
 }

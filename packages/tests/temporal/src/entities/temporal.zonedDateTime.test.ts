@@ -1,5 +1,5 @@
-import { knex, newEntityManager } from "@src/setupDbTests";
-import { jan1at10am, jan1DateTime, jan2DateTime, jan3DateTime } from "@src/utils";
+import { newEntityManager, sql } from "@src/setupDbTests";
+import { jan1, jan1at10am, jan1DateTime, jan2DateTime, jan3DateTime } from "@src/utils";
 import { alias, getMetadata, PrimitiveField } from "joist-orm";
 import { Temporal } from "temporal-polyfill";
 import { Author, Book, BookFilter, newBook } from "./entities";
@@ -29,23 +29,16 @@ describe("zonedDateTime", () => {
   });
 
   it("can load a zoned date time", async () => {
-    await knex.insert({ firstName: "a1", birthday: "2020-01-01", timestamp: jan1at10am }).into("authors");
-    await knex.insert({ author_id: 1, title: "b1", published_at: toTimestampTzString(jan1DateTime) }).into("book");
+    await sql`INSERT INTO authors ("firstName", birthday, timestamp) VALUES ('a1', ${jan1}, ${jan1at10am})`;
+    await sql`INSERT INTO book (author_id, title, published_at) VALUES (1, 'b1', ${jan1DateTime})`;
     const em = newEntityManager();
     const book = await em.load(Book, "b:1");
     expect(book.publishedAt).toEqual(jan1DateTime);
   });
 
   it("can load a zoned date time array", async () => {
-    await knex.insert({ firstName: "a1", birthday: "2020-01-01", timestamp: jan1at10am }).into("authors");
-    await knex
-      .insert({
-        author_id: 1,
-        title: "b1",
-        published_at: toTimestampTzString(jan1DateTime),
-        timestampTzs: [toTimestampTzString(jan1DateTime), toTimestampTzString(jan2DateTime)],
-      })
-      .into("book");
+    await sql`INSERT INTO authors ("firstName", birthday, timestamp) VALUES ('a1', ${jan1}, ${jan1at10am})`;
+    await sql`INSERT INTO book (author_id, title, published_at, "timestampTzs") VALUES (1, 'b1', ${jan1DateTime}, ${[jan1DateTime, jan2DateTime]})`;
     const em = newEntityManager();
     const book = await em.load(Book, "b:1");
     expect(book.timestampTzs).toEqual([jan1DateTime, jan2DateTime]);

@@ -1,5 +1,5 @@
 import { BigIntSerde, configureMetadata, CustomSerdeAdapter, DateSerde, DecimalToNumberSerde, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, EnumArrayFieldSerde, EnumFieldSerde, JsonSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, setRuntimeConfig, SuperstructSerde, ZodSerde } from "joist-orm";
-import { type Knex } from "knex";
+import { type TransactionSql } from "postgres";
 import { type Context } from "src/context";
 import { address, AddressSchema, PasswordValueSerde, quotes } from "src/entities/types";
 import { AdminUser } from "../AdminUser";
@@ -95,7 +95,7 @@ import {
 
 setRuntimeConfig({ temporal: false });
 
-export class EntityManager extends EntityManager1<Context, Entity, Knex.Transaction> {}
+export class EntityManager extends EntityManager1<Context, Entity, TransactionSql> {}
 
 export interface Entity extends Entity2 {
   id: string;
@@ -142,8 +142,8 @@ export const authorMeta: EntityMetadata<Author> = {
     "isPopular": { kind: "primitive", fieldName: "isPopular", fieldIdName: undefined, derived: false, required: false, protected: false, type: "boolean", serde: new PrimitiveSerde("isPopular", "is_popular", "boolean"), immutable: false },
     "age": { kind: "primitive", fieldName: "age", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new PrimitiveSerde("age", "age", "int"), immutable: false },
     "graduated": { kind: "primitive", fieldName: "graduated", fieldIdName: undefined, derived: false, required: false, protected: false, type: Date, serde: new DateSerde("graduated", "graduated", "date"), immutable: false },
-    "nickNames": { kind: "primitive", fieldName: "nickNames", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("nickNames", "nick_names", "character varying[]", true), immutable: false, default: "config" },
-    "nickNamesUpper": { kind: "primitive", fieldName: "nickNamesUpper", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("nickNamesUpper", "nick_names_upper", "character varying[]", true), immutable: false },
+    "nickNames": { kind: "primitive", fieldName: "nickNames", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("nickNames", "nick_names", "character varying[]", true, true), immutable: false, default: "config" },
+    "nickNamesUpper": { kind: "primitive", fieldName: "nickNamesUpper", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("nickNamesUpper", "nick_names_upper", "character varying[]", true, true), immutable: false },
     "wasEverPopular": { kind: "primitive", fieldName: "wasEverPopular", fieldIdName: undefined, derived: false, required: false, protected: true, type: "boolean", serde: new PrimitiveSerde("wasEverPopular", "was_ever_popular", "boolean"), immutable: false },
     "isFunny": { kind: "primitive", fieldName: "isFunny", fieldIdName: undefined, derived: false, required: true, protected: false, type: "boolean", serde: new PrimitiveSerde("isFunny", "is_funny", "boolean"), immutable: false, default: "schema" },
     "mentorNames": { kind: "primitive", fieldName: "mentorNames", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("mentorNames", "mentor_names", "text"), immutable: false },
@@ -161,7 +161,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
     "favoriteShape": { kind: "primitive", fieldName: "favoriteShape", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("favoriteShape", "favorite_shape", "favorite_shape"), immutable: false },
     "rangeOfBooks": { kind: "enum", fieldName: "rangeOfBooks", fieldIdName: undefined, required: false, derived: "async", enumDetailType: BookRanges, serde: new EnumFieldSerde("rangeOfBooks", "range_of_books", "int", BookRanges), immutable: false },
-    "favoriteColors": { kind: "enum", fieldName: "favoriteColors", fieldIdName: undefined, required: false, derived: false, enumDetailType: Colors, serde: new EnumArrayFieldSerde("favoriteColors", "favorite_colors", "int[]", Colors), immutable: false, default: "schema" },
+    "favoriteColors": { kind: "enum", fieldName: "favoriteColors", fieldIdName: undefined, required: false, derived: false, enumDetailType: Colors, serde: new EnumArrayFieldSerde("favoriteColors", "favorite_colors", "int[]", true, Colors), immutable: false, default: "schema" },
     "mentor": { kind: "m2o", fieldName: "mentor", fieldIdName: "mentorId", derived: false, required: false, otherMetadata: () => authorMeta, otherFieldName: "mentees", serde: new KeySerde("a", "mentor", "mentor_id", "int"), immutable: false },
     "rootMentor": { kind: "m2o", fieldName: "rootMentor", fieldIdName: "rootMentorId", derived: "async", required: false, otherMetadata: () => authorMeta, otherFieldName: "rootMentorAuthors", serde: new KeySerde("a", "rootMentor", "root_mentor_id", "int"), immutable: false },
     "currentDraftBook": { kind: "m2o", fieldName: "currentDraftBook", fieldIdName: "currentDraftBookId", derived: false, required: false, otherMetadata: () => bookMeta, otherFieldName: "currentDraftAuthor", serde: new KeySerde("b", "currentDraftBook", "current_draft_book_id", "int"), immutable: false },

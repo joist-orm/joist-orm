@@ -3389,7 +3389,7 @@ describe("EntityManager.queries", () => {
       await insertAuthor({ first_name: "a1", graduated: jan1 });
       await insertAuthor({ first_name: "a2", graduated: jan2 });
       await insertAuthor({ first_name: "a3", graduated: jan3 });
-      await insertAuthor({ first_name: "a4", graduated: undefined });
+      await insertAuthor({ first_name: "a4", graduated: null });
       const em = newEntityManager();
       const q1 = await em.findCount(Author, { graduated: { between: [jan2, jan3] } });
       expect(q1).toBe(2);

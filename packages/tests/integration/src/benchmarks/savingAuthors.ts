@@ -1,30 +1,26 @@
 import { PostgresDriver } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
-import { knex as createKnex } from "knex";
+import postgres from "postgres";
 import { Context } from "src/context";
 import { Author, EntityManager } from "src/entities";
 
-const knex = createKnex({
-  client: "pg",
-  connection: newPgConnectionConfig() as any,
-  debug: false,
-  asyncStackTraces: true,
-});
-const driver = new PostgresDriver(knex);
+const sql = postgres(newPgConnectionConfig());
+const driver = new PostgresDriver(sql);
+const makeApiCall: any = () => {};
 
 async function main() {
   const mitata = await import("mitata");
-  const { run, bench, group, baseline } = mitata;
+  const { run, bench, group } = mitata;
 
   group("integration-knex", () => {
     bench("saving 1 author", async () => {
-      const em = new EntityManager({} as Context, { driver });
+      const em = new EntityManager({ makeApiCall } as Context, { driver });
       const a = em.create(Author, { firstName: "a" });
       await em.flush();
     });
 
     bench("saving 20 authors", async () => {
-      const em = new EntityManager({} as Context, { driver });
+      const em = new EntityManager({ makeApiCall } as Context, { driver });
       for (let i = 0; i < 20; i++) {
         const a = em.create(Author, { firstName: `a${i}` });
       }
@@ -33,7 +29,7 @@ async function main() {
   });
 
   await run({});
-  await knex.destroy();
+  await sql.end();
 }
 
 // yarn clinic flame -- node --env-file .env --import=tsx ./src/benchmarks/loading-authors.ts

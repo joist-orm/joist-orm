@@ -10,7 +10,7 @@
     },
     "plugins": [{ "transform": "../../transform-properties/src/index.ts", "type": "raw" }]
   },
-  "include": ["./src", "./migrations"],
+  "include": ["./src", "./migrations", "./benchmark.ts"],
   "references": [
     { "path": "../../codegen" },
     { "path": "../../graphql-codegen" },

@@ -6,7 +6,7 @@ import { ManyToOneReference, PolymorphicReference, isLoadedReference } from "../
 import { OptsOf } from "../typeMap";
 import { whereFilterHash } from "./findDataLoader";
 
-interface Key<T extends Entity> {
+interface FindOrCreateKey<T extends Entity> {
   where: Partial<OptsOf<T>>;
   ifNew: OptsOf<T>;
   upsert: Partial<OptsOf<T>> | undefined;
@@ -17,19 +17,23 @@ export function findOrCreateDataLoader<T extends Entity>(
   type: EntityConstructor<T>,
   where: Partial<OptsOf<T>>,
   softDeletes: "include" | "exclude",
-): DataLoader<Key<T>, T> {
+): DataLoader<FindOrCreateKey<T>, T> {
   const meta = getMetadata(type);
 
   // Do some extra logic to make citext not create duplicate entities
   const hasAnyCitext = Object.values(meta.allFields).some((f) => f.kind === "primitive" && f.citext);
-  const cacheKeyFn: (key: Key<T>) => Key<T> = !hasAnyCitext
-    ? whereFilterHash
-    : (key) =>
-        whereFilterHash({
-          where: maybeLower(meta, key.where),
-          ifNew: maybeLower(meta, key.ifNew as any),
-          upsert: maybeLower(meta, key.upsert),
-        } as any) as Key<T>;
+
+  const cacheKeyFn: (key: FindOrCreateKey<T>) => FindOrCreateKey<T> =
+    // If no citext, we can use our regular `whereFilterHash` that replaces `Author(...)` with `id=1`
+    !hasAnyCitext
+      ? whereFilterHash
+      : // Otherwise rewrite each of the `{ firstName: "AaA" }` values in each of where/ifNew/upsert hashes
+        (key) =>
+          whereFilterHash({
+            where: maybeLower(meta, key.where),
+            ifNew: maybeLower(meta, key.ifNew as any),
+            upsert: maybeLower(meta, key.upsert),
+          } as any) as FindOrCreateKey<T>;
 
   // Use `whereFilterHash` to batch the same `findOrCreate` `where: { firstName: "a1" }` calls together
   // to avoid creating duplicates. Also use `whereFilterHash` b/c if a new entity is included in `where`,
@@ -37,7 +41,20 @@ export function findOrCreateDataLoader<T extends Entity>(
   const whereValue = whereFilterHash(!hasAnyCitext ? (where as any) : (maybeLower(meta, where) as any));
   const batchKey = `${type.name}-${whereValue}-${softDeletes}`;
 
-  return em.getLoader<Key<T>, T>(
+  const invalidKeys = Object.keys(where).filter((key) => {
+    const field = meta.allFields[key];
+    const supported =
+      field.kind === "primitive" || field.kind === "enum" || field.kind === "m2o" || field.kind === "poly";
+    return !supported;
+  });
+  if (invalidKeys.length > 0) {
+    throw new Error(
+      "findOrCreate only supports primitive, enum, o2m, or poly fields in the where clause. Invalid keys: " +
+        invalidKeys.join(", "),
+    );
+  }
+
+  return em.getLoader<FindOrCreateKey<T>, T>(
     "find-or-create",
     batchKey,
     async (keys) => {
@@ -53,7 +70,7 @@ export function findOrCreateDataLoader<T extends Entity>(
 
       // Before we find/create an entity, see if we have a maybe-new one in the EM already.
       // This will also use any WIP changes we've made to the found entity, which ideally is
-      // something `em.find` would do as well, but its queries are much more complex..
+      // something `em.find` would do as well, but its queries are much more complex...
       const inMemory = em.entities.filter((e) => e instanceof type && entityMatches(e, where));
       if (inMemory.length > 1) {
         throw new TooManyError(`Found more than one existing ${type.name} with ${whereAsString(where)}`);

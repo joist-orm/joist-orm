@@ -1,7 +1,5 @@
 import { Knex } from "knex";
-import { types } from "pg";
-import { builtins, getTypeParser } from "pg-types";
-import array from "postgres-array";
+import { Sql, TransactionSql } from "postgres";
 import { buildValuesCte } from "../dataloaders/findDataLoader";
 import {
   afterTransaction,
@@ -13,7 +11,6 @@ import {
   keyToNumber,
   maybeResolveReferenceToId,
   ParsedFindQuery,
-  RuntimeConfig,
 } from "../index";
 import { JoinRowOperation } from "../JoinRows";
 import { kq, kqDot } from "../keywords";
@@ -43,15 +40,14 @@ export interface PostgresDriverOpts {
  *
  * - We use a pg-specific bulk update syntax.
  */
-export class PostgresDriver implements Driver<Knex.Transaction> {
+export class PostgresDriver implements Driver<TransactionSql> {
   private readonly idAssigner: IdAssigner;
 
   constructor(
-    private readonly knex: Knex,
+    private readonly sql: Sql,
     opts?: PostgresDriverOpts,
   ) {
-    this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner(knex);
-    setupLatestPgTypes(getRuntimeConfig().temporal);
+    this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner((s) => sql.unsafe(s));
   }
 
   async executeFind(
@@ -60,22 +56,20 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
     settings: { limit?: number; offset?: number },
   ): Promise<any[]> {
     const { sql, bindings } = buildRawQuery(parsed, { limit: em.entityLimit, ...settings });
-    return this.executeQuery(em, sql, bindings);
+    return this.executeQuery(em, sql, bindings as any[]);
   }
 
-  async executeQuery(em: EntityManager, sql: string, bindings: readonly any[]): Promise<any[]> {
+  async executeQuery(em: EntityManager, sql: string, bindings: any[]): Promise<any[]> {
     // Still go through knex to use the connection pool
-    return this.getMaybeInTxnKnex(em)
-      .raw(sql, bindings)
-      .then((result) => result.rows);
+    return this.getMaybeInTxnKnex(em).unsafe(sql, bindings);
   }
 
-  async transaction<T>(em: EntityManager, fn: (txn: Knex.Transaction) => Promise<T>): Promise<T> {
+  transaction<T>(em: EntityManager, fn: (txn: TransactionSql) => Promise<T>): Promise<T> {
     // `em.transaction` might have already opened a transaction
     if (em.txn) {
-      return fn(em.txn as Knex.Transaction);
+      return fn(em.txn as TransactionSql);
     }
-    return this.knex.transaction(async (txn) => {
+    return this.sql.begin(async (txn) => {
       em.txn = txn;
       try {
         await beforeTransaction(em, txn);
@@ -85,7 +79,7 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
       } finally {
         em.txn = undefined;
       }
-    });
+    }) as Promise<T>;
   }
 
   async assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
@@ -195,8 +189,8 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
     }
   }
 
-  private getMaybeInTxnKnex(em: EntityManager): Knex {
-    return (em.txn || this.knex) as Knex.Transaction;
+  private getMaybeInTxnKnex(em: EntityManager): Sql | TransactionSql {
+    return (em.txn || this.sql) as Sql | TransactionSql;
   }
 }
 
@@ -255,30 +249,4 @@ async function batchUpdate(knex: Knex, op: UpdateOp): Promise<void> {
 async function batchDelete(knex: Knex, op: DeleteOp): Promise<void> {
   const { tableName, ids } = op;
   await knex(tableName).del().whereIn("id", ids);
-}
-
-/**
- * Configures the `pg` driver with the best type parsers.
- *
- * In particular, pg's default `TIMESTAMPTZ` parser is very inefficient, and even just
- * pulling in the latest `pg-types` and installing the fixed parser makes a noticable
- * difference.
- */
-export function setupLatestPgTypes(temporal: RuntimeConfig["temporal"]): void {
-  if (temporal) {
-    // Don't eagerly parse the strings, instead defer to the serde logic
-    const noop = (s: string) => s;
-    const noopArray = (s: string) => array.parse(s, noop);
-
-    const { TIMESTAMP, TIMESTAMPTZ, DATE } = builtins;
-    types.setTypeParser(DATE, noop);
-    types.setTypeParser(TIMESTAMP, noop);
-    types.setTypeParser(TIMESTAMPTZ, noop);
-
-    types.setTypeParser(1182, noopArray); // date[]
-    types.setTypeParser(1115, noopArray); // timestamp[]
-    types.setTypeParser(1185, noopArray); // timestamptz[]
-  } else {
-    types.setTypeParser(types.builtins.TIMESTAMPTZ, getTypeParser(builtins.TIMESTAMPTZ));
-  }
 }

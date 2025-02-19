@@ -1,16 +1,15 @@
 import { Stepper } from "@src/Stepper.test";
 import { Publisher, SmallPublisher } from "@src/entities";
 import { select } from "@src/entities/inserts";
+import { newEntityManager, sql } from "@src/testEm";
 import { newPgConnectionConfig } from "joist-orm";
 import { Pool } from "pg";
-
-import { knex, newEntityManager } from "@src/testEm";
 
 describe("EntityManager", () => {
   it("has a typed txn parameter", async () => {
     const em = newEntityManager();
     await em.transaction(async (txn) => {
-      await txn.raw("select 1");
+      await txn`select 1`;
     });
   });
 
@@ -18,16 +17,28 @@ describe("EntityManager", () => {
     const steps = new Stepper();
 
     const t1 = (async () => {
-      await steps.on(1, () => knex.select("*").from("publishers").where({ name: "foo" }));
-      await steps.on(3, () =>
-        knex.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers"),
+      await steps.on(1, () => sql`select * from publishers where name = 'foo'`);
+      await steps.on(
+        3,
+        () =>
+          sql`insert into publishers ${sql({
+            name: "foo",
+            base_sync_default: "foo",
+            base_async_default: "foo",
+          })}`,
       );
     })();
 
     const t2 = (async () => {
-      await steps.on(2, () => knex.select("*").from("publishers").where({ name: "foo" }));
-      await steps.on(4, () =>
-        knex.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers"),
+      await steps.on(2, () => sql`select * from publishers where name = 'foo'`);
+      await steps.on(
+        4,
+        () =>
+          sql`insert into publishers ${sql({
+            name: "foo",
+            base_sync_default: "foo",
+            base_async_default: "foo",
+          })}`,
       );
     })();
 
@@ -44,19 +55,31 @@ describe("EntityManager", () => {
 
     const t1 = (async () => {
       // Use the default transaction isolation level
-      await knex.transaction(async (knex) => {
-        await steps.on(1, () => knex.select("*").from("publishers").where({ name: "foo" }));
-        await steps.on(3, () =>
-          knex.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers"),
+      await sql.begin(async (sql) => {
+        await steps.on(1, () => sql`select * from publishers where name = 'foo'`);
+        await steps.on(
+          3,
+          () =>
+            sql`insert into publishers ${sql({
+              name: "foo",
+              base_sync_default: "foo",
+              base_async_default: "foo",
+            })}`,
         );
       });
     })();
 
     const t2 = (async () => {
-      await knex.transaction(async (knex) => {
-        await steps.on(2, () => knex.select("*").from("publishers").where({ name: "foo" }));
-        await steps.on(4, () =>
-          knex.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers"),
+      await sql.begin(async (sql) => {
+        await steps.on(2, () => sql`select * from publishers where name = 'foo'`);
+        await steps.on(
+          4,
+          () =>
+            sql`insert into publishers ${sql({
+              name: "foo",
+              base_sync_default: "foo",
+              base_async_default: "foo",
+            })}`,
         );
       });
     })();
@@ -67,40 +90,40 @@ describe("EntityManager", () => {
     expect(rows.length).toEqual(2);
   });
 
-  it("using serializable avoids anomalies", async () => {
-    const steps = new Stepper();
-
-    const t1 = (async () => {
-      const txn = await knex.transaction();
-      await txn.raw("set transaction isolation level serializable;");
-      await steps.on(1, () => txn.select("*").from("publishers").where({ name: "foo" }));
-      await steps.on(3, async () => {
-        await txn.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers");
-        await txn.commit();
-      });
-    })();
-
-    const t2 = (async () => {
-      const txn = await knex.transaction();
-      try {
-        await txn.raw("set transaction isolation level serializable;");
-        await steps.on(2, () => txn.select("*").from("publishers").where({ name: "foo" }));
-        await steps.on(4, () =>
-          txn.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers"),
-        );
-      } catch (e) {
-        await txn.rollback();
-        throw e;
-      }
-    })();
-
-    await t1;
-    await expect(t2).rejects.toThrow("could not serialize access");
-
-    const rows = await knex.select("*").from("publishers");
-    expect(rows.length).toEqual(1);
-    expect(rows).toMatchObject([{ id: 1, name: "foo" }]);
-  });
+  // it("using serializable avoids anomalies", async () => {
+  //   const steps = new Stepper();
+  //
+  //   const t1 = (async () => {
+  //     const txn = await knex.transaction();
+  //     await txn.raw("set transaction isolation level serializable;");
+  //     await steps.on(1, () => txn.select("*").from("publishers").where({ name: "foo" }));
+  //     await steps.on(3, async () => {
+  //       await txn.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers");
+  //       await txn.commit();
+  //     });
+  //   })();
+  //
+  //   const t2 = (async () => {
+  //     const txn = await knex.transaction();
+  //     try {
+  //       await txn.raw("set transaction isolation level serializable;");
+  //       await steps.on(2, () => txn.select("*").from("publishers").where({ name: "foo" }));
+  //       await steps.on(4, () =>
+  //         txn.insert({ name: "foo", base_sync_default: "foo", base_async_default: "foo" }).into("publishers"),
+  //       );
+  //     } catch (e) {
+  //       await txn.rollback();
+  //       throw e;
+  //     }
+  //   })();
+  //
+  //   await t1;
+  //   await expect(t2).rejects.toThrow("could not serialize access");
+  //
+  //   const rows = await knex.select("*").from("publishers");
+  //   expect(rows.length).toEqual(1);
+  //   expect(rows).toMatchObject([{ id: 1, name: "foo" }]);
+  // });
 
   it("using serializable via node-pg avoids anomalies", async () => {
     const steps = new Stepper();

@@ -1,8 +1,8 @@
-import { Knex } from "knex";
+import { Sql } from "postgres";
 import { EntityManager } from "src/entities";
 
 export interface Context {
-  knex: Knex;
+  sql: Sql;
   makeApiCall(request: string): Promise<void>;
   em: EntityManager;
 }

@@ -12,7 +12,7 @@ import {
   select,
   update,
 } from "@src/entities/inserts";
-import { isPreloadingEnabled, knex, newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
+import { isPreloadingEnabled, newEntityManager, numberOfQueries, queries, resetQueryCount, sql } from "@src/testEm";
 import { buildQuery } from "joist-knex";
 import {
   EntityConstructor,
@@ -236,7 +236,7 @@ describe("EntityManager", () => {
     // Then we didn't issue any queries
     expect(queries).toEqual([]);
     // And the sequence value did not get ticked
-    const { rows } = await knex.raw("SELECT nextval('authors_id_seq')");
+    const rows = await sql`SELECT nextval('authors_id_seq')`;
     expect(rows[0].nextval).toBe("1");
     // And we didn't run afterCommit b/c it never touched the db
     expect(a.transientFields.afterCommitRan).toBe(false);
@@ -334,7 +334,7 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
     const em = newEntityManager();
     // Pass in a knex thennable/PromiseLike
-    const authors = await em.loadFromQuery(Author, knex.select("*").from("authors"));
+    const authors = await em.loadFromQuery(Author, sql`select * from authors`);
     expect(authors.length).toEqual(1);
   });
 
@@ -342,7 +342,7 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
     const em = newEntityManager();
     // Pass in the already-loaded rows
-    const authors = em.loadFromQuery(Author, await knex.select("*").from("authors"));
+    const authors = em.loadFromQuery(Author, await sql`select * from authors`);
     expect(authors.length).toEqual(1);
   });
 
@@ -350,7 +350,7 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
-    const authors = await em.loadFromQuery(Author, await knex.select("*").from("authors"));
+    const authors = await em.loadFromQuery(Author, await sql`select * from authors`);
     expect(authors[0]).toStrictEqual(a1);
   });
 
@@ -358,7 +358,7 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
     const em = newEntityManager();
     // Pass in a knex thennable/PromiseLike
-    const authors = await em.loadFromQuery(Author, knex.select("*").from("authors"), "books");
+    const authors = await em.loadFromQuery(Author, sql`select * from authors`, "books");
     expect(authors[0].books.get).toEqual([]);
   });
 
@@ -366,14 +366,14 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
     const em = newEntityManager();
     // Pass in the already-loaded rows
-    const authors = await em.loadFromQuery(Author, await knex.select("*").from("authors"), "books");
+    const authors = await em.loadFromQuery(Author, await sql`select * from authors`, "books");
     expect(authors[0].books.get).toEqual([]);
   });
 
   it("can load custom queries that are base types", async () => {
     await insertPublisher({ name: "p1" });
     const em = newEntityManager();
-    const q = buildQuery(knex, Publisher, { where: {} });
+    const q = buildQuery(sql as any, Publisher, { where: {} });
     const publishers = await em.loadFromQuery(Publisher, q);
     expect(publishers.length).toEqual(1);
     expect(publishers[0]).toBeInstanceOf(SmallPublisher);
@@ -382,7 +382,7 @@ describe("EntityManager", () => {
   it("can load from rows", async () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
     const em = newEntityManager();
-    const rows = await knex.select("*").from("authors");
+    const rows = await sql`select * from authors`;
     const authors = await em.loadFromRows(Author, rows);
     expect(authors.length).toEqual(1);
   });
@@ -679,7 +679,7 @@ describe("EntityManager", () => {
   it("can hydrate from custom queries ", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    const [a1] = em.hydrate(Author, await knex.select("*").from("authors"));
+    const [a1] = em.hydrate(Author, await sql`select * from authors`);
     expect(a1.firstName).toEqual("a1");
   });
 
@@ -689,8 +689,8 @@ describe("EntityManager", () => {
     const a1 = await em.load(Author, "1");
     a1.firstName = "a2";
     expect(a1.changes.firstName.hasChanged).toBe(true);
-    await knex.update({ first_name: "a3" }).into("authors");
-    const [a1b] = em.hydrate(Author, await knex.select("*").from("authors"), { overwriteExisting: true });
+    await sql`update authors set first_name = 'a3'`;
+    const [a1b] = em.hydrate(Author, await sql`select * from authors`, { overwriteExisting: true });
     expect(a1b.firstName).toEqual("a3");
     expect(a1.changes.firstName.hasChanged).toBe(false);
   });

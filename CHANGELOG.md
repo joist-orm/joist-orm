@@ -1,3 +1,10 @@
+## [1.228.3](https://github.com/joist-orm/joist-orm/compare/v1.228.2...v1.228.3) (2025-02-19)
+
+
+### Bug Fixes
+
+* findOrCreate should reject collections. ([#1376](https://github.com/joist-orm/joist-orm/issues/1376)) ([78d879d](https://github.com/joist-orm/joist-orm/commit/78d879dcd159bb8de8ccd4f1d518bf73c7c07fa0)), closes [#1375](https://github.com/joist-orm/joist-orm/issues/1375)
+
 ## [1.228.2](https://github.com/joist-orm/joist-orm/compare/v1.228.1...v1.228.2) (2025-02-19)
 
 

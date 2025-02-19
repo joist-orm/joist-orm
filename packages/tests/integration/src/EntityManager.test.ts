@@ -1089,6 +1089,13 @@ describe("EntityManager", () => {
     expect(b1.author.get).toEqual(a1);
   });
 
+  it("cannot findOrCreate with o2ms", async () => {
+    const em = newEntityManager();
+    const b1 = newBook(em);
+    const promise = em.findOrCreate(Author, { firstName: "a2", books: [b1] }, {}, {});
+    await expect(promise).rejects.toThrow("findOrCreate only supports");
+  });
+
   it("can set derived values", async () => {
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1", lastName: "last" });

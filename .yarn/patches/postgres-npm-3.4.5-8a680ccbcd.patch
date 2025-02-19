@@ -1,0 +1,101 @@
+diff --git a/cjs/src/connection.js b/cjs/src/connection.js
+index f7f58d147f344cb7f2420c2bd24c6b7917162033..0df1532639ddd7d093953d92dd2ca255078ed60a 100644
+--- a/cjs/src/connection.js
++++ b/cjs/src/connection.js
+@@ -165,6 +165,7 @@ function Connection(options, queues = {}, { onopen = noop, onend = noop, onclose
+         : (query = q, query.active = true)
+ 
+       build(q)
++      q.onquery && (q.onquery = q.onquery(q))
+       return write(toBuffer(q))
+         && !q.describeFirst
+         && !q.cursorFn
+diff --git a/cjs/src/index.js b/cjs/src/index.js
+index 40ac2c180fe2c12978715ad94d069335f801397a..aa3f4b0cc9dbcea8d66b52021e2b38fb0639008e 100644
+--- a/cjs/src/index.js
++++ b/cjs/src/index.js
+@@ -85,6 +85,7 @@ function Postgres(a, b) {
+ 
+   function Sql(handler) {
+     handler.debug = options.debug
++    handler.onquery = options.onquery
+ 
+     Object.entries(options.types).reduce((acc, [name, type]) => {
+       acc[name] = (x) => new Parameter(x, type.to)
+@@ -491,6 +493,7 @@ function parseOptions(a, b) {
+     onclose         : o.onclose,
+     onparameter     : o.onparameter,
+     socket          : o.socket,
++    onquery         : o.onquery,
+     transform       : parseTransform(o.transform || { undefined: undefined }),
+     parameters      : {},
+     shared          : { retries: 0, typeArrayMap: {} },
+diff --git a/cjs/src/query.js b/cjs/src/query.js
+index 45327f2fabcdbf8f8ec5020675012c310c04fee6..da3d545fdfd7ae90f783133ef5b8a03027dcc11f 100644
+--- a/cjs/src/query.js
++++ b/cjs/src/query.js
+@@ -13,6 +13,9 @@ const Query = module.exports.Query = class Query extends Promise {
+       reject = b
+     })
+ 
++    this.resolver = resolve
++    this.rejecter = reject
++
+     this.tagged = Array.isArray(strings.raw)
+     this.strings = strings
+     this.args = args
+@@ -23,19 +27,29 @@ const Query = module.exports.Query = class Query extends Promise {
+     this.state = null
+     this.statement = null
+ 
+-    this.resolve = x => (this.active = false, resolve(x))
+-    this.reject = x => (this.active = false, reject(x))
+-
+     this.active = false
+     this.cancelled = null
+     this.executed = false
+     this.signature = ''
++    this.onquery = handler.onquery;
+ 
+-    this[originError] = this.handler.debug
++    this[originError] = handler.debug
+       ? new Error()
+       : this.tagged && cachedError(this.strings)
+   }
+ 
++  resolve(x) {
++    this.active = false
++    this.onquery && (this.onquery = this.onquery(x))
++    this.resolver(x)
++  }
++
++  reject(x) {
++    this.active = false
++    this.onquery && (this.onquery = this.onquery(x))
++    this.rejecter(x)
++  }
++
+   get origin() {
+     return (this.handler.debug
+       ? this[originError].stack
+@@ -131,13 +146,19 @@ const Query = module.exports.Query = class Query extends Promise {
+     return this
+   }
+ 
+   values() {
+     this.isRaw = 'values'
+     return this
+   }
+ 
+   async handle() {
+-    !this.executed && (this.executed = true) && await 1 && this.handler(this)
++    if (this.executed)
++      return
++
++    this.executed = true
++    await 1
++    this.onquery && (this.onquery = this.onquery(this))
++    this.handler(this)
+   }
+ 
+   execute() {

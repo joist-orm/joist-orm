@@ -9,11 +9,11 @@ describe("T2Author", () => {
     expect(b.author.get.favoriteBook.get).toBeUndefined();
     await em.flush();
     expect(queries).toEqual([
-      `BEGIN;`,
+      `begin `,
       `select nextval('t2_authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('t2_books_id_seq') from generate_series(1, 1)`,
       `INSERT INTO "t2_authors" ("id", "first_name", \"favorite_book_id") VALUES ($1, $2, $3)`,
       `INSERT INTO "t2_books" ("id", "title", "author_id") VALUES ($1, $2, $3)`,
-      `COMMIT;`,
+      `commit`,
     ]);
   });
 
@@ -27,12 +27,12 @@ describe("T2Author", () => {
 
     await em.flush();
     expect(queries).toEqual([
-      `BEGIN;`,
+      `begin `,
       `select nextval('t2_authors_id_seq') from generate_series(1, 2) UNION ALL select nextval('t2_books_id_seq') from generate_series(1, 2)`,
       `INSERT INTO "t2_authors" ("id", "first_name", \"favorite_book_id") VALUES ($1, $2, $3),($4, $5, $6)`,
       `INSERT INTO "t2_books" ("id", "title", "author_id") VALUES ($1, $2, $3),($4, $5, $6)`,
       `WITH data (id, favorite_book_id) AS (VALUES ($1::int, $2::int), ($3, $4) ) UPDATE t2_authors SET favorite_book_id = data.favorite_book_id FROM data WHERE t2_authors.id = data.id RETURNING t2_authors.id`,
-      `COMMIT;`,
+      `commit`,
     ]);
     const rows = await select("t2_authors");
     expect(rows[0].favorite_book_id).toBe(1);

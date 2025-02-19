@@ -1,3 +1,10 @@
+# [1.228.0](https://github.com/joist-orm/joist-orm/compare/v1.227.1...v1.228.0) (2025-02-19)
+
+
+### Features
+
+* Extract buildQuery to joist-knex. ([#1370](https://github.com/joist-orm/joist-orm/issues/1370)) ([18e2872](https://github.com/joist-orm/joist-orm/commit/18e28725d74fdee4541210d319c5ae0bd62b3500))
+
 ## [1.227.1](https://github.com/joist-orm/joist-orm/compare/v1.227.0...v1.227.1) (2025-02-13)
 
 

@@ -1,3 +1,10 @@
+## [1.228.2](https://github.com/joist-orm/joist-orm/compare/v1.228.1...v1.228.2) (2025-02-19)
+
+
+### Bug Fixes
+
+* unified behavior of cascade delete in relation implementations ([#1374](https://github.com/joist-orm/joist-orm/issues/1374)) ([cf8efe0](https://github.com/joist-orm/joist-orm/commit/cf8efe02389b9cc99a008dbaf68337987d5c7877))
+
 ## [1.228.1](https://github.com/joist-orm/joist-orm/compare/v1.228.0...v1.228.1) (2025-02-19)
 
 

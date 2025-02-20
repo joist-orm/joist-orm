@@ -60,7 +60,11 @@ export function maybeGetConstructorFromReference(
 function populateConstructorMaps(metas: EntityMetadata[]): void {
   for (const meta of metas) {
     // Add each (root) constructor into our tag -> constructor map for future lookups
-    if (!meta.baseType) tagToConstructorMap.set(meta.tagName, meta.cstr);
+    if (!meta.baseType) {
+      const existing = tagToConstructorMap.get(meta.tagName);
+      if (existing) throw new Error(`Duplicate tag '${meta.tagName}' for ${meta.type} and ${existing.name}`);
+      tagToConstructorMap.set(meta.tagName, meta.cstr);
+    }
     // Same for tables, but include subclass tables
     tableToMetaMap.set(meta.tableName, meta);
     typeToMetaMap.set(meta.type, meta);

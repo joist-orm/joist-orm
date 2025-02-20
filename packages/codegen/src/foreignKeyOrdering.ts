@@ -5,16 +5,14 @@ import { logger } from "./logger";
 import { sortByNonDeferredForeignKeys } from "./sortForeignKeys";
 import { assertNever } from "./utils";
 
-export async function maybeSetForeignKeyOrdering(config: Config, entities: EntityDbMetadata[]): Promise<boolean> {
+export async function maybeSetForeignKeyOrdering(config: Config, entities: EntityDbMetadata[]): Promise<void> {
   // Hopefully all FKs are deferred, but if not...
   const hasAnyNonDeferredFks = entities.some((e) => e.nonDeferredFks.length > 0);
   if (!hasAnyNonDeferredFks) {
     // Great, nothing to do
     for (const entity of entities) entity.nonDeferredFkOrder = 0;
-    return false;
+    return;
   }
-
-  let hasError = false;
 
   // Topo sort the non-deferred FKs into a DAG to establish insert/flush order
   const { notNullCycles } = sortByNonDeferredForeignKeys(entities);
@@ -37,8 +35,6 @@ export async function maybeSetForeignKeyOrdering(config: Config, entities: Entit
     console.log("");
 
     await writeAlterTables(nonDeferredFks);
-
-    if (setting === "error") hasError = true;
   } else if (setting === "ignore") {
     // We trust the user to know what they're doing
   } else {
@@ -56,10 +52,7 @@ export async function maybeSetForeignKeyOrdering(config: Config, entities: Entit
     console.log("");
     console.log("Please make one of the FKs involved in the cycle nullable.");
     console.log("");
-    hasError ??= true;
   }
-
-  return hasError;
 }
 
 async function writeAlterTables(

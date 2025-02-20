@@ -181,7 +181,7 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
       ...entity.largeManyToManys,
       ...entity.polymorphics,
     ];
-    for (const [name, config] of Object.entries(entityConfig.relations || {})) {
+    for (const [name, _] of Object.entries(entityConfig.relations || {})) {
       let relation = relations.find((r) => r.fieldName === name);
       // STI types might be in the subtypes
       if (!relation && entity.stiDiscriminatorField) {

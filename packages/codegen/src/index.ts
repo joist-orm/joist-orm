@@ -49,11 +49,14 @@ async function main() {
   // Look for STI tables to synthesize separate metas
   applyInheritanceUpdates(config, dbMetadata);
 
+  // Assign any new tags and write them back to the config file
+  assignTags(config, dbMetadata);
+
   // Scan `*.ts` files after we've expanded `Task` -> `TaskOld.ts`
   await scanEntityFiles(config, dbMetadata);
 
   // If we're not using deferred FKs, determine our DAG insert order
-  const hasError = await maybeSetForeignKeyOrdering(config, dbMetadata.entities);
+  await maybeSetForeignKeyOrdering(config, dbMetadata.entities);
 
   // Generate the flush function for tests
   await maybeGenerateFlushFunctions(config, client, pgConfig, dbMetadata);
@@ -62,9 +65,6 @@ async function main() {
 
   // Apply any codemods to the user's codebase, if we have them
   await maybeRunTransforms(config);
-
-  // Assign any new tags and write them back to the config file
-  assignTags(config, dbMetadata);
 
   // Do some warnings
   for (const entity of entities) failIfOverlappingFieldNames(entity);
@@ -75,10 +75,6 @@ async function main() {
 
   stripStiPlaceholders(config, entities);
   await writeConfig(config);
-
-  if (hasError) {
-    throw new Error("A fatal error was found during codegen");
-  }
 }
 
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */

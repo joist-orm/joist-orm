@@ -1,6 +1,8 @@
 import { camelCase, snakeCase } from "change-case";
+import { groupBy } from "joist-utils";
 import { Config } from "./config";
 import { DbMetadata } from "./index";
+import { logger } from "./logger";
 
 /**
  * Looks for any entities that don't have tags in `config` yet, and guesses at what a good tag would be.
@@ -11,27 +13,36 @@ import { DbMetadata } from "./index";
  * We also mutate `config` by putting the new tag into the `config`'s entity entry.
  */
 export function assignTags(config: Config, dbMetadata: DbMetadata): void {
-  const existingTags = Object.fromEntries(
-    Object.entries(config.entities).map(([name, conf]) => {
-      return [name, conf.tag];
-    }),
-  );
+  // Existing names (Author, Book) to find new/missing entities
+  const existingEntities = Object.keys(config.entities);
 
-  const existingTagNames = Object.values(existingTags);
+  // Group by tag to get existing tag names + check for duplicates
+  const existingByTag = groupBy(
+    Object.entries(config.entities).filter(([name]) => !dbMetadata.entitiesByName[name].baseType),
+    ([, ec]) => ec.tag,
+    ([name]) => name,
+  );
+  for (const [tag, entities] of Object.entries(existingByTag)) {
+    if (entities.length > 1) {
+      logger.error(`Tag ${tag} is used by multiple entities: ${entities.join(", ")}`);
+    }
+  }
+
+  const existingTagNames = Object.keys(existingByTag);
 
   dbMetadata.entities
-    .filter((e) => !existingTags[e.name])
+    .filter((e) => !existingEntities.includes(e.name))
     // Subclass entities share their base entity's tag
     .filter((e) => !e.baseClassName)
     .forEach((e) => {
       const abbreviatedTag = guessTagName(e.name);
       // If the abbreviation is taken, fallback on the full name
       const tagName = existingTagNames.includes(abbreviatedTag) ? camelCase(e.name) : abbreviatedTag;
-      const oc = config.entities[e.name];
-      if (!oc) {
+      const entityConfig = config.entities[e.name];
+      if (!entityConfig) {
         config.entities[e.name] = { tag: tagName };
       } else {
-        oc.tag = tagName;
+        entityConfig.tag = tagName;
       }
       e.tagName = tagName;
       existingTagNames.push(tagName);
@@ -41,17 +52,15 @@ export function assignTags(config: Config, dbMetadata: DbMetadata): void {
   dbMetadata.entities
     .filter((e) => e.baseClassName)
     .forEach((e) => {
-      const oc = config.entities[e.name];
-      const tagName = config.entities[e.baseClassName!].tag;
-      if (!oc) {
-        config.entities[e.name] = { tag: tagName };
+      const entityConfig = config.entities[e.name];
+      const baseTypeTagName = config.entities[e.baseClassName!].tag;
+      if (!entityConfig) {
+        config.entities[e.name] = { tag: baseTypeTagName };
       } else {
-        oc.tag = tagName;
+        entityConfig.tag = baseTypeTagName;
       }
-      e.tagName = tagName;
+      e.tagName = baseTypeTagName;
     });
-
-  // TODO ensure tags are unique
 }
 
 /** Abbreviates `BookReview` -> `book_review` -> `br`. */

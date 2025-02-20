@@ -1,3 +1,10 @@
+## [1.228.4](https://github.com/joist-orm/joist-orm/compare/v1.228.3...v1.228.4) (2025-02-20)
+
+
+### Bug Fixes
+
+* Warn on duplicate tags in joist-config. ([#1377](https://github.com/joist-orm/joist-orm/issues/1377)) ([d95eb6b](https://github.com/joist-orm/joist-orm/commit/d95eb6b66902c7c81049162476a5edb7d2fb08ef)), closes [#1371](https://github.com/joist-orm/joist-orm/issues/1371)
+
 ## [1.228.3](https://github.com/joist-orm/joist-orm/compare/v1.228.2...v1.228.3) (2025-02-19)
 
 

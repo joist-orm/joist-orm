@@ -237,6 +237,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         afterTransaction: [...em.#hooks.afterTransaction],
       };
       this.ctx = em.ctx;
+      if (this.ctx && typeof this.ctx === "object" && "em" in this.ctx) {
+        this.ctx = Object.assign(this.ctx, { em: this });
+      }
     } else if (driverOrOpts && "executeFind" in driverOrOpts) {
       this.ctx = emOrCtx;
       this.driver = driverOrOpts;

@@ -1,3 +1,10 @@
+## [1.228.5](https://github.com/joist-orm/joist-orm/compare/v1.228.4...v1.228.5) (2025-02-21)
+
+
+### Bug Fixes
+
+* Fixup ctx.em when creating new EntityManager. ([#1379](https://github.com/joist-orm/joist-orm/issues/1379)) ([368d6a5](https://github.com/joist-orm/joist-orm/commit/368d6a566acfb0254c49c641d27249f8c8769561))
+
 ## [1.228.4](https://github.com/joist-orm/joist-orm/compare/v1.228.3...v1.228.4) (2025-02-20)
 
 

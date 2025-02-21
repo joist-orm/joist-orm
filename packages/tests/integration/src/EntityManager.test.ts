@@ -1902,6 +1902,16 @@ describe("EntityManager", () => {
     const rows = await select("authors");
     expect(rows[0].first_name).toEqual("f2");
   });
+
+  it("can create an em2 with a valid context", async () => {
+    // Given an em that is within its own context
+    const em = newEntityManager();
+    expect(em.ctx.em).toBe(em);
+    // When we make a new em2
+    const em2 = new EntityManager(em);
+    // Then the ctx.em is updated
+    expect(em2.ctx.em).toBe(em2);
+  });
 });
 
 function delay(ms: number): Promise<void> {

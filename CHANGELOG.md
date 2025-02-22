@@ -1,3 +1,10 @@
+## [1.228.7](https://github.com/joist-orm/joist-orm/compare/v1.228.6...v1.228.7) (2025-02-22)
+
+
+### Bug Fixes
+
+* Fix Matchers generic. ([#1381](https://github.com/joist-orm/joist-orm/issues/1381)) ([b796c35](https://github.com/joist-orm/joist-orm/commit/b796c35ca7d15b0fc00fa63fe7c80c2e6886ab0c))
+
 ## [1.228.6](https://github.com/joist-orm/joist-orm/compare/v1.228.5...v1.228.6) (2025-02-22)
 
 

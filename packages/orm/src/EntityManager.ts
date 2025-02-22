@@ -837,7 +837,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const meta = getMetadata(type);
     const tagged = toTaggedId(meta, id);
     const entity =
-      this.findExistingInstance<T>(tagged) || (await loadDataLoader(this, meta).load({ entity: tagged, hint }));
+      this.findExistingInstance<T>(tagged) ||
+      (await loadDataLoader(this, meta)
+        .load({ entity: tagged, hint })
+        .catch(function load(err) {
+          Object.defineProperties(err, {
+            stack: { value: err.stack + new Error().stack.replace(/.*\n/, "\n") },
+          });
+          throw err;
+        }));
     if (!entity) {
       throw new NotFoundError(`${tagged} was not found`);
     }

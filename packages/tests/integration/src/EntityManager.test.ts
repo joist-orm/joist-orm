@@ -49,6 +49,7 @@ import { maybeBeginAndCommit } from "./setupDbTests";
 
 describe("EntityManager", () => {
   it("can load an entity", async () => {
+    // await sql`select * from authors where id = ?`;
     await insertAuthor({ first_name: "f" });
     const em = newEntityManager();
     const author = await em.load(Author, "1");

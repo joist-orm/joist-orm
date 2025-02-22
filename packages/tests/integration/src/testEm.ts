@@ -31,7 +31,7 @@ export function resetQueryCount() {
 }
 
 export function recordQuery(sql: string): void {
-  console.log({ sql });
+  console.log(sql);
   numberOfQueries++;
   queries.push(sql);
 }

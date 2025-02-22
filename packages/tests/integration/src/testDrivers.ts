@@ -33,14 +33,14 @@ export class PostgresTestDriver implements TestDriver {
   constructor() {
     this.sql = postgres({
       ...newPgConnectionConfig(),
+      // debug: true,
       onquery: () => {
         // queued
         return (q: any) => {
           // sent
           recordQuery(
             q.query ?? // q might be a PostgresError
-              q.statement?.string ??
-              q.strings?.join("?"),
+              q.statement?.string,
           );
           return () => {
             // finished

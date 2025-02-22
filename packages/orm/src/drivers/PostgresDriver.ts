@@ -61,7 +61,14 @@ export class PostgresDriver implements Driver<TransactionSql> {
 
   async executeQuery(em: EntityManager, sql: string, bindings: any[]): Promise<any[]> {
     // Still go through knex to use the connection pool
-    return this.getMaybeInTxnKnex(em).unsafe(sql, bindings);
+    return this.getMaybeInTxnKnex(em)
+      .unsafe(sql, bindings)
+      .catch(function executeQuery(err) {
+        Object.defineProperties(err, {
+          stack: { value: err.stack + new Error().stack.replace(/.*\n/, "\n") },
+        });
+        throw err;
+      });
   }
 
   transaction<T>(em: EntityManager, fn: (txn: TransactionSql) => Promise<T>): Promise<T> {

@@ -172,6 +172,9 @@ config.addRule(["name", "numberOfBookReviews"], (p) => {
   }
 });
 
+// For testing touchOnChange from base types
+config.touchOnChange("tags");
+
 // Example of an abstract/base CTI cascade deleting
 config.cascadeDelete("bookAdvances");
 

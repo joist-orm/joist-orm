@@ -1,3 +1,4 @@
+import { resetConstructorMap } from "./configure";
 import { AsyncDefault } from "./defaults";
 import { Entity } from "./Entity";
 import {
@@ -245,6 +246,7 @@ function isRunningInNextJs(): boolean {
  */
 export function resetBootFlag(): void {
   booted = false;
+  resetConstructorMap();
 }
 
 /**

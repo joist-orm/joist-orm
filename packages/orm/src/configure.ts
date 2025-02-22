@@ -37,6 +37,10 @@ function fireAfterMetadatas(metas: EntityMetadata[]): void {
   }
 }
 
+export function resetConstructorMap(): void {
+  tagToConstructorMap.clear();
+}
+
 export function getConstructorFromTaggedId(id: TaggedId): MaybeAbstractEntityConstructor<any> {
   const tag = tagFromId(id);
   return tagToConstructorMap.get(tag) ?? fail(`Unknown tag: "${tag}" `);

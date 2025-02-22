@@ -1,3 +1,10 @@
+## [1.228.8](https://github.com/joist-orm/joist-orm/compare/v1.228.7...v1.228.8) (2025-02-22)
+
+
+### Bug Fixes
+
+* resetBootFlag should reset the constructor map. ([#1382](https://github.com/joist-orm/joist-orm/issues/1382)) ([9472956](https://github.com/joist-orm/joist-orm/commit/947295651fe878fd3f710cef8bc6d76d288c05a2))
+
 ## [1.228.7](https://github.com/joist-orm/joist-orm/compare/v1.228.6...v1.228.7) (2025-02-22)
 
 

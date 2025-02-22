@@ -1,3 +1,10 @@
+## [1.228.6](https://github.com/joist-orm/joist-orm/compare/v1.228.5...v1.228.6) (2025-02-22)
+
+
+### Bug Fixes
+
+* Fix touchOnChange against base types. ([#1380](https://github.com/joist-orm/joist-orm/issues/1380)) ([55aa42d](https://github.com/joist-orm/joist-orm/commit/55aa42d289481b075aeed41dc281db384239907c))
+
 ## [1.228.5](https://github.com/joist-orm/joist-orm/compare/v1.228.4...v1.228.5) (2025-02-21)
 
 

@@ -12,7 +12,7 @@ export interface CustomMatcherResult {
 
 declare global {
   namespace jest {
-    interface Matchers<R, T = {}> {
+    interface Matchers<R extends void | Promise<void>, T = {}> {
       toMatchEntity(expected: MatchedEntity<T>): CustomMatcherResult;
     }
   }

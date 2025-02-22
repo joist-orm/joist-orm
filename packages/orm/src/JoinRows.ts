@@ -1,5 +1,5 @@
 import { Entity } from "./Entity";
-import { getMetadata } from "./EntityMetadata";
+import { getBaseAndSelfMetas } from "./EntityMetadata";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo } from "./Todo";
 import { keyToTaggedId } from "./keys";
@@ -37,10 +37,10 @@ export class JoinRows {
     }
     this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
     this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
-    if (getMetadata(e1).config.__data.touchOnChange.has(m2m.fieldName)) {
+    if (getBaseAndSelfMetas(e1).some((meta) => meta.config.__data.touchOnChange.has(m2m.fieldName))) {
       em.touch(e1);
     }
-    if (getMetadata(e2).config.__data.touchOnChange.has(m2m.otherFieldName)) {
+    if (getBaseAndSelfMetas(e2).some((meta) => meta.config.__data.touchOnChange.has(m2m.otherFieldName))) {
       em.touch(e2);
     }
   }
@@ -63,10 +63,10 @@ export class JoinRows {
     }
     this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
     this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
-    if (getMetadata(e1).config.__data.touchOnChange.has(m2m.fieldName)) {
+    if (getBaseAndSelfMetas(e1).some((meta) => meta.config.__data.touchOnChange.has(m2m.fieldName))) {
       em.touch(e1);
     }
-    if (getMetadata(e2).config.__data.touchOnChange.has(m2m.otherFieldName)) {
+    if (getBaseAndSelfMetas(e2).some((meta) => meta.config.__data.touchOnChange.has(m2m.otherFieldName))) {
       em.touch(e2);
     }
   }

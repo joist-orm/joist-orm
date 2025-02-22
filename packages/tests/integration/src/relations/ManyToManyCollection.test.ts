@@ -8,7 +8,7 @@ import {
   select,
 } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
-import { Author, Book, Tag, newAuthor, newBook, newBookReview, newTag, newUser } from "../entities";
+import { Author, Book, Tag, newAuthor, newBook, newBookReview, newSmallPublisher, newTag, newUser } from "../entities";
 import { zeroTo } from "../utils";
 
 describe("ManyToManyCollection", () => {
@@ -598,7 +598,7 @@ describe("ManyToManyCollection", () => {
     expect(user.likedComments).toBeDefined();
   });
 
-  describe("can identify changes on the many-to-many", () => {
+  describe("touchOnChange", () => {
     it("detects adds m2m - using factories", async () => {
       const em = newEntityManager();
       const book = newBook(em, { title: "To be changed by hook" });
@@ -674,6 +674,18 @@ describe("ManyToManyCollection", () => {
       await em.flush();
       // Then we observed `book.changes.fields` had tags in it
       expect(book.afterCommitCheckTagsChanged).toBe(true);
+    });
+
+    it("detects adds m2m on subtypes", async () => {
+      const em = newEntityManager();
+      const sp = newSmallPublisher(em);
+      const t1 = newTag(em, { name: "t1" });
+      await em.flush();
+      sp.beforeFlushRan = false;
+      // When we set the m2m relation
+      sp.tags.add(t1);
+      await em.flush();
+      expect(sp.beforeFlushRan).toBe(true);
     });
   });
 });

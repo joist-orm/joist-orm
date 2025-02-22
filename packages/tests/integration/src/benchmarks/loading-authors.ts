@@ -1,5 +1,7 @@
 import { Author, Book } from "@src/entities";
-import { knex, newEntityManager, testDriver } from "@src/testEm";
+import { newEntityManager, testDriver } from "@src/testEm";
+import { newPgConnectionConfig } from "joist-utils";
+import { knex as createKnex } from "knex";
 import postgres from "postgres";
 
 async function main() {
@@ -7,6 +9,7 @@ async function main() {
   const { run, bench, group, baseline } = mitata;
 
   const sql = postgres("postgres://joist:local@localhost:5435/joist", { max: 4 });
+  const knex = createKnex(newPgConnectionConfig() as any);
 
   /*
   SELECT flush_database();

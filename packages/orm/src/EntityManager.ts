@@ -840,7 +840,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const meta = getMetadata(type);
     const tagged = toTaggedId(meta, id);
     const entity =
-      this.findExistingInstance<T>(tagged) || (await loadDataLoader(this, meta).load({ entity: tagged, hint }));
+      this.findExistingInstance<T>(tagged) ||
+      (await loadDataLoader(this, meta)
+        .load({ entity: tagged, hint })
+        .catch(function load(err) {
+          Object.defineProperties(err, {
+            stack: { value: err.stack + new Error().stack.replace(/.*\n/, "\n") },
+          });
+          throw err;
+        }));
     if (!entity) {
       throw new NotFoundError(`${tagged} was not found`);
     }
@@ -950,7 +958,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    *
    * This overload is synchronous since there is no population/querying to do.
    */
-  public loadFromQuery<T extends EntityW>(type: MaybeAbstractEntityConstructor<T>, rows: unknown[]): T[];
+  public loadFromQuery<T extends EntityW>(type: MaybeAbstractEntityConstructor<T>, rows: readonly unknown[]): T[];
   /**
    * Loads entities from database rows from a Knex-ish query builder that needs an `await`.
    *
@@ -958,14 +966,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   public loadFromQuery<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    rows: PromiseLike<unknown[]>,
+    rows: PromiseLike<readonly unknown[]>,
   ): Promise<T[]>;
   /**
    * Loads & populates entities from database rows that were queried directly using a query builder.
    */
   public loadFromQuery<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    rows: unknown[],
+    rows: readonly unknown[],
     populate: H,
   ): Promise<Loaded<T, H>[]>;
   /**
@@ -973,12 +981,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   public loadFromQuery<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    rows: PromiseLike<unknown[]>,
+    rows: PromiseLike<readonly unknown[]>,
     populate: H,
   ): Promise<Loaded<T, H>[]>;
   public loadFromQuery<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    rows: unknown[] | PromiseLike<unknown[]>,
+    rows: readonly unknown[] | PromiseLike<readonly unknown[]>,
     populate?: any,
   ): PromiseLike<T[]> | T[] {
     if (Array.isArray(rows)) {
@@ -986,7 +994,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       if (populate) return this.populate(entities, populate);
       return entities;
     } else {
-      return rows.then((rows) => {
+      return (rows as Promise<unknown[]>).then((rows) => {
         const entities = this.hydrate(type, rows);
         if (populate) return this.populate(entities, populate);
         return entities;
@@ -1525,7 +1533,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   public hydrate<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    rows: any[],
+    rows: readonly any[],
     options?: { overwriteExisting?: boolean },
   ): T[] {
     const maybeBaseMeta = getMetadata(type);

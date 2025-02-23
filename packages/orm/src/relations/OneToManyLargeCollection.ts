@@ -1,6 +1,6 @@
 import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
 import { Entity } from "../Entity";
-import { IdOf, sameEntity } from "../EntityManager";
+import { appendStack, IdOf, sameEntity } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { ensureNotDeleted, getMetadata, ManyToOneReferenceImpl } from "../index";
 import { remove } from "../utils";
@@ -54,7 +54,11 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
 
     // Make a cacheable tuple to look up this specific o2m row
     const key = `id=${id},${this.otherColumnName}=${this.entity.id}`;
-    return oneToManyFindDataLoader(this.entity.em, this).load(key);
+    return oneToManyFindDataLoader(this.entity.em, this)
+      .load(key)
+      .catch(function find(err) {
+        throw appendStack(err, new Error());
+      });
   }
 
   async includes(other: U): Promise<boolean> {

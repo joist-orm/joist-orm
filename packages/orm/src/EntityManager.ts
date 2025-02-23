@@ -325,7 +325,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ): Promise<T[]> {
     const { populate, ...rest } = options || {};
     const settings = { where, ...rest };
-    const result = await findDataLoader(this, type, settings, populate).load(settings);
+    const result = await findDataLoader(this, type, settings, populate)
+      .load(settings)
+      .catch(function find(err) {
+        throw appendStack(err, new Error());
+      });
     if (populate) {
       await this.populate(result, populate);
     }
@@ -483,7 +487,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     }
     const [fieldName, value] = entries[0];
     const field = getMetadata(type).allFields[fieldName];
-    const row = await findByUniqueDataLoader(this, type, field, softDeletes).load(value);
+    const row = await findByUniqueDataLoader(this, type, field, softDeletes)
+      .load(value)
+      .catch(function findByUnique(err) {
+        throw appendStack(err, new Error());
+      });
     if (!row) {
       return undefined;
     } else {
@@ -509,8 +517,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     options: FindCountFilterOptions<T> = {},
   ): Promise<number> {
     const settings = { where, ...options };
-    let count = await findCountDataLoader(this, type, settings).load(settings);
-
+    let count = await findCountDataLoader(this, type, settings)
+      .load(settings)
+      .catch(function findCount(err) {
+        throw appendStack(err, new Error());
+      });
     // If the user is do "count all", we can adjust the number up/down based on
     // WIP creates/deletes. We can't do this if the WHERE clause is populated b/c
     // then we'd also have to eval each created/deleted entity against the WHERE
@@ -624,11 +635,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     options?: { populate?: H; softDeletes?: "include" | "exclude" },
   ): Promise<T> {
     const { softDeletes = "exclude", populate } = options ?? {};
-    const entity = await findOrCreateDataLoader(this, type, where, softDeletes).load({
-      where,
-      ifNew: ifNew as OptsOf<T>,
-      upsert,
-    });
+    const entity = await findOrCreateDataLoader(this, type, where, softDeletes)
+      .load({ where, ifNew: ifNew as OptsOf<T>, upsert })
+      .catch(function findOrCreate(err) {
+        throw appendStack(err, new Error());
+      });
     if (populate) {
       await this.populate(entity, populate);
     }
@@ -840,7 +851,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const meta = getMetadata(type);
     const tagged = toTaggedId(meta, id);
     const entity =
-      this.findExistingInstance<T>(tagged) || (await loadDataLoader(this, meta).load({ entity: tagged, hint }));
+      this.findExistingInstance<T>(tagged) ||
+      (await loadDataLoader(this, meta)
+        .load({ entity: tagged, hint })
+        .catch(function load(err) {
+          throw appendStack(err, new Error());
+        }));
     if (!entity) {
       throw new NotFoundError(`${tagged} was not found`);
     }
@@ -872,7 +888,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const ids = _ids.map((id) => tagId(meta, id));
     const entities = await Promise.all(
       ids.map((id) => {
-        return this.findExistingInstance(id) || loadDataLoader(this, meta).load({ entity: id, hint });
+        return (
+          this.findExistingInstance(id) ||
+          loadDataLoader(this, meta)
+            .load({ entity: id, hint })
+            .catch(function loadAll(err) {
+              throw appendStack(err, new Error());
+            })
+        );
       }),
     );
     const idsNotFound = ids.filter((_, i) => entities[i] === undefined);
@@ -911,7 +934,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const entities = (
       await Promise.all(
         ids.map((id) => {
-          return this.findExistingInstance(id) || loadDataLoader(this, meta).load({ entity: id, hint });
+          return (
+            this.findExistingInstance(id) ||
+            loadDataLoader(this, meta)
+              .load({ entity: id, hint })
+              .catch(function loadAllIfExists(err) {
+                throw appendStack(err, new Error());
+              })
+          );
         }),
       )
     ).filter(Boolean);
@@ -1164,7 +1194,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       await this.driver.assignNewIds(this, todos);
       for (const e of entities) this.#entityIndex.set(e.idTagged, e);
       return entities;
-    }).loadMany(pendingEntities);
+    })
+      .loadMany(pendingEntities)
+      .catch(function assignNewIds(err) {
+        throw appendStack(err, new Error());
+      });
   }
 
   /**
@@ -1454,7 +1488,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             const hint = getRelationEntries(entity)
               .filter(([_, r]) => deepLoad || r.isLoaded)
               .map(([k]) => k);
-            return loadDataLoader(this, getMetadata(entity), true).load({ entity: entity.idTagged, hint });
+            return loadDataLoader(this, getMetadata(entity), true)
+              .load({ entity: entity.idTagged, hint })
+              .catch(function refresh(err) {
+                throw appendStack(err, new Error());
+              });
           }),
       );
 
@@ -2181,4 +2219,17 @@ function maybeSetupHookOrdering(todos: Record<string, Todo>): Record<string, Tod
     group[todo.metadata.type] = todo;
   }
   return Object.keys(group1).length ? [group1, group2] : [group2];
+}
+
+/**
+ * Given an `err` thrown in "a different context", i.e. a database error or dataloader error
+ * that doesn't include our stack trace, append our stack for better debugging.
+ *
+ * See https://github.com/brianc/node-postgres/pull/2983
+ */
+export function appendStack(err: unknown, dummy: Error): unknown {
+  if (err && typeof err === "object" && "stack" in err) {
+    err.stack += dummy.stack!.replace(/.*\n/, "\n");
+  }
+  return err;
 }

@@ -1,6 +1,6 @@
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
 import { Entity } from "../Entity";
-import { IdOf } from "../EntityManager";
+import { appendStack, IdOf } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { ensureNotDeleted, getMetadata, ManyToManyCollection, toTaggedId } from "../index";
 import { remove } from "../utils";
@@ -70,7 +70,11 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
 
     // Make a cacheable tuple to look up this specific m2m row
     const key = `${this.columnName}=${this.entity.id},${this.otherColumnName}=${id}`;
-    const includes = await manyToManyFindDataLoader(this.entity.em, this).load(key);
+    const includes = await manyToManyFindDataLoader(this.entity.em, this)
+      .load(key)
+      .catch(function find(err) {
+        throw appendStack(err, new Error());
+      });
     const taggedId = toTaggedId(this.otherMeta, id);
     return includes ? (this.entity.em.load(taggedId) as Promise<U>) : undefined;
   }
@@ -92,7 +96,11 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
 
     // Make a cacheable tuple to look up this specific m2m row
     const key = `${this.columnName}=${this.entity.id},${this.otherColumnName}=${other.id}`;
-    return manyToManyFindDataLoader(this.entity.em, this).load(key);
+    return manyToManyFindDataLoader(this.entity.em, this)
+      .load(key)
+      .catch(function includes(err) {
+        throw appendStack(err, new Error());
+      });
   }
 
   add(other: U): void {

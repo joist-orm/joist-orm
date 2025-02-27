@@ -312,7 +312,7 @@ config.addRule((a) => {
 
 config.addRule((a) => {
   if (a.lastName === "NotAllowedLastName") {
-    return "lastName is invalid";
+    return { field: "lastName", code: "invalid-name", message: "lastName is invalid" };
   }
 });
 

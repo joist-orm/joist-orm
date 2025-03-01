@@ -19,7 +19,7 @@ declare global {
 }
 // @ts-ignore
 declare module "expect" {
-  interface Matchers<R, T = {}> {
+  interface Matchers<R extends void | Promise<void>, T = unknown> {
     toMatchEntity(expected: MatchedEntity<T>): CustomMatcherResult;
   }
 }

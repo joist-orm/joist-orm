@@ -1,4 +1,5 @@
 import {
+  appendStack,
   Collection,
   ensureNotDeleted,
   Entity,
@@ -79,7 +80,13 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     ensureNotDeleted(this.entity, "pending");
     if (this.#loaded === undefined || (opts.forceReload && !this.entity.isNewEntity)) {
       const key = `${this.columnName}=${this.entity.id}`;
-      this.#loaded = this.getPreloaded() ?? (await manyToManyDataLoader(this.entity.em, this).load(key));
+      this.#loaded =
+        this.getPreloaded() ??
+        (await manyToManyDataLoader(this.entity.em, this)
+          .load(key)
+          .catch(function load(err) {
+            throw appendStack(err, new Error());
+          }));
       this.maybeApplyAddedAndRemovedBeforeLoaded();
     }
     return this.filterDeleted(this.#loaded!, opts) as ReadonlyArray<U>;
@@ -96,7 +103,11 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       }
       // Make a cacheable tuple to look up this specific m2m row
       const key = `${this.columnName}=${this.entity.id},${this.otherColumnName}=${id}`;
-      const includes = await manyToManyFindDataLoader(this.entity.em, this).load(key);
+      const includes = await manyToManyFindDataLoader(this.entity.em, this)
+        .load(key)
+        .catch(function load(err) {
+          throw appendStack(err, new Error());
+        });
       const taggedId = toTaggedId(this.otherMeta, id);
       return includes ? (this.entity.em.load(taggedId) as Promise<U>) : undefined;
     }
@@ -114,7 +125,11 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       }
       // Make a cacheable tuple to look up this specific m2m row
       const key = `${this.columnName}=${this.entity.id},${this.otherColumnName}=${other.id}`;
-      return manyToManyFindDataLoader(this.entity.em, this).load(key);
+      return manyToManyFindDataLoader(this.entity.em, this)
+        .load(key)
+        .catch(function includes(err) {
+          throw appendStack(err, new Error());
+        });
     }
   }
 

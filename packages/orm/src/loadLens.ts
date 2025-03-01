@@ -1,4 +1,5 @@
 import { Entity, isEntity } from "./Entity";
+import { appendStack } from "./EntityManager";
 import {
   EntityMetadata,
   Field,
@@ -111,10 +112,18 @@ export async function loadLens<T extends Entity, U, V>(
       // TODO We can only do this is _none_ of the paths are loaded, otherwise we'll miss WIP mutations
       if (Array.isArray(start)) {
         const em = start[0].em;
-        return (await lensDataLoader(em, meta.cstr, true, paths).loadMany(start.map((e) => e.idTagged))) as V;
+        return (await lensDataLoader(em, meta.cstr, true, paths)
+          .loadMany(start.map((e) => e.idTagged))
+          .catch(function loadLens(err) {
+            throw appendStack(err, new Error());
+          })) as V;
       } else {
         const em = start.em;
-        return (await lensDataLoader(em, meta.cstr, false, paths).load(start.idTagged)) as V;
+        return (await lensDataLoader(em, meta.cstr, false, paths)
+          .load(start.idTagged)
+          .catch(function loadLens(err) {
+            throw appendStack(err, new Error());
+          })) as V;
       }
     }
   }

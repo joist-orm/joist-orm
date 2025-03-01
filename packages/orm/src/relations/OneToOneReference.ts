@@ -1,4 +1,13 @@
-import { deTagId, ensureNotDeleted, getEmInternalApi, getInstanceData, IdOf, LoadedReference, TaggedId } from "../";
+import {
+  appendStack,
+  deTagId,
+  ensureNotDeleted,
+  getEmInternalApi,
+  getInstanceData,
+  IdOf,
+  LoadedReference,
+  TaggedId,
+} from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity } from "../Entity";
 import { EntityMetadata } from "../EntityMetadata";
@@ -157,7 +166,11 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
         const joinLoaded = this.getPreloaded();
         this.loaded = joinLoaded
           ? joinLoaded[0]
-          : await oneToOneDataLoader(this.entity.em, this).load(this.entity.idTagged);
+          : await oneToOneDataLoader(this.entity.em, this)
+              .load(this.entity.idTagged)
+              .catch(function load(err) {
+                throw appendStack(err, new Error());
+              });
       }
       this._isLoaded = true;
     }

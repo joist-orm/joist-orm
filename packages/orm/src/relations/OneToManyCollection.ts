@@ -1,6 +1,7 @@
 import { oneToManyDataLoader } from "../dataloaders/oneToManyDataLoader";
 import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
 import {
+  appendStack,
   Collection,
   ensureNotDeleted,
   Entity,
@@ -79,7 +80,11 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       // d) called `forceReload: true`
       // e) we'll ask the dataloader for a new array, and will be missing our WIP changes
       const dl = oneToManyDataLoader(this.entity.em, this);
-      this.loaded = this.getPreloaded() ?? (await dl.load(this.entity.idTagged!));
+      this.loaded =
+        this.getPreloaded() ??
+        (await dl.load(this.entity.idTagged!).catch(function load(err) {
+          throw appendStack(err, new Error());
+        }));
       this.maybeAppendAddedBeforeLoaded();
     }
     return this.filterDeleted(this.loaded, opts);
@@ -96,7 +101,11 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       }
       // Make a cacheable tuple to look up this specific o2m row
       const key = `id=${id},${this.otherColumnName}=${this.entity.id}`;
-      return oneToManyFindDataLoader(this.entity.em, this).load(key);
+      return oneToManyFindDataLoader(this.entity.em, this)
+        .load(key)
+        .catch(function find(err) {
+          throw appendStack(err, new Error());
+        });
     }
   }
 

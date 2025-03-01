@@ -1,6 +1,7 @@
 import { recursiveChildrenDataLoader } from "../dataloaders/recursiveChildrenDataLoader";
 import { recursiveParentsDataLoader } from "../dataloaders/recursiveParentsDataLoader";
 import {
+  appendStack,
   ensureNotDeleted,
   Entity,
   EntityMetadata,
@@ -130,13 +131,21 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
       // be `newlyCreatedParent`, it doesn't have an id yet.
       const entityToLoad = opts.forceReload ? this.entity : this.findUnloadedReference()?.entity;
       if (entityToLoad && !entityToLoad.isNewEntity) {
-        await recursiveParentsDataLoader(this.entity.em, this).load(entityToLoad);
+        await recursiveParentsDataLoader(this.entity.em, this)
+          .load(entityToLoad)
+          .catch(function load(err) {
+            throw appendStack(err, new Error());
+          });
         // See if there are any WIP changes, i.e. new parents, that the ^ SQL query didn't know to load.
         // We don't have to `while` loop this, because if parent itself has WIP changes above it, then
         // its own `RecursiveParentsCollectionImpl.load` will load it, before returning to this method.
         const unloadedParent = this.findUnloadedReference();
         if (unloadedParent) {
-          await recursiveParentsDataLoader(this.entity.em, this).load(unloadedParent.entity);
+          await recursiveParentsDataLoader(this.entity.em, this)
+            .load(unloadedParent.entity)
+            .catch(function load(err) {
+              throw appendStack(err, new Error());
+            });
         }
       }
     }
@@ -223,7 +232,11 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
     ensureNotDeleted(this.entity, "pending");
     if (!this.isLoaded || opts.forceReload) {
       if (!this.entity.isNewEntity) {
-        await recursiveChildrenDataLoader(this.entity.em, this).load(this.entity);
+        await recursiveChildrenDataLoader(this.entity.em, this)
+          .load(this.entity)
+          .catch(function load(err) {
+            throw appendStack(err, new Error());
+          });
       }
       const unloaded = this.findUnloadedCollections();
       if (unloaded.length > 0) {

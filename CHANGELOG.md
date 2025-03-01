@@ -1,3 +1,10 @@
+## [1.228.9](https://github.com/joist-orm/joist-orm/compare/v1.228.8...v1.228.9) (2025-03-01)
+
+
+### Bug Fixes
+
+* Improve post-dataloader stack traces. ([#1384](https://github.com/joist-orm/joist-orm/issues/1384)) ([62740e4](https://github.com/joist-orm/joist-orm/commit/62740e4f9eecbbb99a8ba62caa2068b5cc6b82ad))
+
 ## [1.228.8](https://github.com/joist-orm/joist-orm/compare/v1.228.7...v1.228.8) (2025-02-22)
 
 

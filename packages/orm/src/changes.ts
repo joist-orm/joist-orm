@@ -41,22 +41,24 @@ export class ManyToManyFieldStatus<T extends Entity, U extends Entity> {
   get added(): Promise<U[]> {
     const m2m = this.#entity[this.#fieldName] as ManyToManyCollection<T, any>;
     const joinRow = getEmInternalApi(this.#entity.em).joinRows(m2m);
-    return Promise.resolve(joinRow.addedFor(m2m, this.#entity) as U[]);
+    return Promise.resolve(joinRow.addedFor(m2m, this.#entity).sort(entityCompare) as U[]);
   }
 
   get removed(): Promise<U[]> {
     const m2m = this.#entity[this.#fieldName] as ManyToManyCollection<T, any>;
     const joinRow = getEmInternalApi(this.#entity.em).joinRows(m2m);
-    return Promise.resolve(joinRow.removedFor(m2m, this.#entity) as U[]);
+    return Promise.resolve(joinRow.removedFor(m2m, this.#entity).sort(entityCompare) as U[]);
   }
 
   get changed(): Promise<U[]> {
     const m2m = this.#entity[this.#fieldName] as ManyToManyCollection<T, any>;
     const joinRow = getEmInternalApi(this.#entity.em).joinRows(m2m);
     return Promise.resolve(
-      [...(joinRow.addedFor(m2m, this.#entity) as U[]), ...(joinRow.removedFor(m2m, this.#entity) as U[])].sort(
-        (a, b) => a.toString().localeCompare(b.toString()),
-      ),
+      [
+        // Append added & removed
+        ...(joinRow.addedFor(m2m, this.#entity) as U[]),
+        ...(joinRow.removedFor(m2m, this.#entity) as U[]),
+      ].sort(entityCompare),
     );
   }
 
@@ -198,3 +200,7 @@ function getChangedFieldNames<T extends Entity>(entity: T): (keyof OptsOf<T>)[] 
 
   return [...fieldsChanged, ...m2mFieldsChanged] as any;
 }
+
+const entityCompare: (a: Entity, b: Entity) => number = (a, b) => {
+  return a.toString().localeCompare(b.toString());
+};

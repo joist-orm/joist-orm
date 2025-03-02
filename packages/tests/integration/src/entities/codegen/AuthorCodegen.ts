@@ -138,6 +138,7 @@ export interface AuthorFields {
   currentDraftBook: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
   favoriteBook: { kind: "m2o"; type: Book; nullable: undefined; derived: true };
   publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
+  tags: { kind: "m2m"; type: Tag };
 }
 
 export interface AuthorOpts {

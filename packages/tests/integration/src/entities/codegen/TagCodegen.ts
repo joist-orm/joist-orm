@@ -66,6 +66,11 @@ export interface TagFields {
   name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  authors: { kind: "m2m"; type: Author };
+  books: { kind: "m2m"; type: Book };
+  bookReviews: { kind: "m2m"; type: BookReview };
+  publishers: { kind: "m2m"; type: Publisher };
+  tasks: { kind: "m2m"; type: Task };
 }
 
 export interface TagOpts {

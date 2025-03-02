@@ -73,6 +73,7 @@ export interface TaskOldFields extends TaskFields {
   specialOldField: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   parentOldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
   copiedFrom: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
+  publishers: { kind: "m2m"; type: Publisher };
 }
 
 export interface TaskOldOpts extends TaskOpts {

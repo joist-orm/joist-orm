@@ -90,6 +90,7 @@ export interface BookFields {
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
   reviewer: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   randomComment: { kind: "m2o"; type: Comment; nullable: undefined; derived: false };
+  tags: { kind: "m2m"; type: Tag };
 }
 
 export interface BookOpts {

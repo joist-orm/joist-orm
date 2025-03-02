@@ -75,6 +75,7 @@ export interface BookReviewFields {
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   book: { kind: "m2o"; type: Book; nullable: never; derived: false };
   critic: { kind: "m2o"; type: Critic; nullable: undefined; derived: false };
+  tags: { kind: "m2m"; type: Tag };
 }
 
 export interface BookReviewOpts {

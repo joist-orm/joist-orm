@@ -12,6 +12,8 @@ export class JoinRows {
   private readonly rows: JoinRow[] = [];
 
   constructor(
+    // This could be either side of the m2m relation, depending on which is accessed first.
+    // Regardless of which m2m side, we still have a single `JoinRows` instance in memory per m2m table.
     readonly m2m: ManyToManyCollection<any, any>,
     private rm: ReactionsManager,
   ) {}
@@ -78,6 +80,14 @@ export class JoinRows {
     // `tag_id=t1`, are marked for deletion, and then `.map` them to the removed book.
     const rows = this.rows.filter((r) => r[columnName] === e1 && r.deleted);
     return rows.map((r) => r[otherColumnName] as Entity);
+  }
+
+  addedFor(m2m: ManyToManyCollection<any, any>, e1: Entity): Entity[] {
+    const { columnName, otherColumnName } = m2m;
+    const newRows = this.rows.filter(
+      (r) => r.id === undefined && r.deleted !== true && r.op === "pending" && r[columnName] === e1,
+    );
+    return newRows.map((r) => r[otherColumnName] as Entity);
   }
 
   /** Adds an existing join row to this table. */

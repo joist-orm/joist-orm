@@ -90,6 +90,7 @@ export interface UserFields {
   manager: { kind: "m2o"; type: User; nullable: undefined; derived: false };
   authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: undefined };
+  likedComments: { kind: "m2m"; type: Comment };
 }
 
 export interface UserOpts {

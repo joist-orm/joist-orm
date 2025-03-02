@@ -529,7 +529,10 @@ function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number")
   const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
     return code`${fieldName}: { kind: "poly"; type: ${fieldType}; nullable: ${undefinedOrNever(notNull)} };`;
   });
-  return [id, ...primitives, ...enums, ...pgEnums, ...m2o, ...polys];
+  const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
+    return code`${fieldName}: { kind: "m2m"; type: ${otherEntity.type} };`;
+  });
+  return [id, ...primitives, ...enums, ...pgEnums, ...m2o, ...polys, ...m2m];
 }
 
 // We know the OptIds types are only used in partials, so we make everything optional.

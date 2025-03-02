@@ -85,6 +85,7 @@ export interface CommentFields {
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   user: { kind: "m2o"; type: User; nullable: undefined; derived: false };
   parent: { kind: "poly"; type: CommentParent; nullable: never };
+  likedByUsers: { kind: "m2m"; type: User };
 }
 
 export interface CommentOpts {

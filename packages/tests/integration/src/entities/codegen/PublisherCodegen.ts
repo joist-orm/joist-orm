@@ -105,6 +105,8 @@ export interface PublisherFields {
   favoriteAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: true };
   group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
   spotlightAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  tags: { kind: "m2m"; type: Tag };
+  tasks: { kind: "m2m"; type: TaskOld };
 }
 
 export interface PublisherOpts {

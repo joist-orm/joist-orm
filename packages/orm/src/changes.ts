@@ -10,6 +10,7 @@ import {
   getEmInternalApi,
   getMetadata,
 } from "./index";
+import { JoinRows } from "./JoinRows";
 import { FieldsOf, OptsOf } from "./typeMap";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
@@ -30,42 +31,36 @@ export interface ManyToOneFieldStatus<T extends Entity> extends FieldStatus<IdOf
 
 /** Provides access to a m2m relation's added/removed/changed/original values. */
 export class ManyToManyFieldStatus<T extends Entity, U extends Entity> {
-  #entity: T;
-  #fieldName: keyof T;
+  readonly #entity: T;
+  readonly #m2m: ManyToManyCollection<T, any>;
+  readonly #joinRows: JoinRows;
 
   constructor(entity: T, fieldName: keyof T) {
     this.#entity = entity;
-    this.#fieldName = fieldName;
+    this.#m2m = entity[fieldName] as ManyToManyCollection<T, any>;
+    this.#joinRows = getEmInternalApi(entity.em).joinRows(this.#m2m);
   }
 
   get added(): Promise<U[]> {
-    const m2m = this.#entity[this.#fieldName] as ManyToManyCollection<T, any>;
-    const joinRow = getEmInternalApi(this.#entity.em).joinRows(m2m);
-    return Promise.resolve(joinRow.addedFor(m2m, this.#entity).sort(entityCompare) as U[]);
+    return Promise.resolve(this.#joinRows.addedFor(this.#m2m, this.#entity).sort(entityCompare) as U[]);
   }
 
   get removed(): Promise<U[]> {
-    const m2m = this.#entity[this.#fieldName] as ManyToManyCollection<T, any>;
-    const joinRow = getEmInternalApi(this.#entity.em).joinRows(m2m);
-    return Promise.resolve(joinRow.removedFor(m2m, this.#entity).sort(entityCompare) as U[]);
+    return Promise.resolve(this.#joinRows.removedFor(this.#m2m, this.#entity).sort(entityCompare) as U[]);
   }
 
   get changed(): Promise<U[]> {
-    const m2m = this.#entity[this.#fieldName] as ManyToManyCollection<T, any>;
-    const joinRow = getEmInternalApi(this.#entity.em).joinRows(m2m);
     return Promise.resolve(
       [
         // Append added & removed
-        ...(joinRow.addedFor(m2m, this.#entity) as U[]),
-        ...(joinRow.removedFor(m2m, this.#entity) as U[]),
+        ...(this.#joinRows.addedFor(this.#m2m, this.#entity) as U[]),
+        ...(this.#joinRows.removedFor(this.#m2m, this.#entity) as U[]),
       ].sort(entityCompare),
     );
   }
 
   get hasUpdated(): boolean {
-    const m2m = this.#entity[this.#fieldName] as ManyToManyCollection<T, any>;
-    const joinRow = getEmInternalApi(this.#entity.em).joinRows(m2m);
-    return joinRow.hasChanges;
+    return this.#joinRows.hasChanges;
   }
 }
 

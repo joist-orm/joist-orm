@@ -606,8 +606,10 @@ describe("ManyToManyCollection", () => {
       const t = newTag(em, { authors: [a] });
       expect(await t.changes.authors.added).toMatchEntity([a]);
       expect(await a.changes.tags.added).toMatchEntity([t]);
-      expect(t.changes.authors.hasUpdated).toBe(true);
-      expect(a.changes.tags.hasUpdated).toBe(true);
+      expect(t.changes.authors.hasChanged).toBe(true);
+      expect(t.changes.authors.hasUpdated).toBe(false);
+      expect(a.changes.tags.hasChanged).toBe(true);
+      expect(a.changes.tags.hasUpdated).toBe(false);
     });
 
     it("detects removes", async () => {

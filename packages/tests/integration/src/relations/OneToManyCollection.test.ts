@@ -20,14 +20,22 @@ describe("OneToManyCollection", () => {
       const em = newEntityManager();
       // Given an author with no (loaded) books
       const a1 = await em.load(Author, "1", "books");
-      // Add a new book
+      // When we add a new book
       const b1 = em.create(Book, { title: "b1", author: a1 });
-      // Check changes
+      // Then it shows up as added/changed
       expect(a1.changes.books.added).toMatchEntity([b1]);
       expect(a1.changes.books.removed).toMatchEntity([]);
       expect(a1.changes.books.changed).toMatchEntity([b1]);
       expect(a1.changes.books.hasUpdated).toBe(true);
       expect(a1.changes.fields).toContain("books");
+      // And when we flush
+      await em.flush();
+      // Then it's no longer changed
+      expect(a1.changes.books.added).toMatchEntity([]);
+      expect(a1.changes.books.removed).toMatchEntity([]);
+      expect(a1.changes.books.changed).toMatchEntity([]);
+      expect(a1.changes.books.hasUpdated).toBe(false);
+      expect(a1.changes.fields).toEqual([]);
     });
 
     it("tracks added/unloaded entities", async () => {

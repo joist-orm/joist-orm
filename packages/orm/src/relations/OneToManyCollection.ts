@@ -93,12 +93,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   async find(id: IdOf<U>): Promise<U | undefined> {
     ensureNotDeleted(this.entity, "pending");
     if (this.loaded !== undefined) {
-      return this.loaded.find((other) => other.id === id);
+      return this.loaded.find((other) => !other.isNewEntity && other.id === id);
     } else {
-      const added = this.#added?.find((u) => u.id === id);
-      if (added) {
-        return added;
-      }
+      const added = this.#added?.find((u) => !u.isNewEntity && u.id === id);
+      if (added) return added;
       // Make a cacheable tuple to look up this specific o2m row
       const key = `id=${id},${this.otherColumnName}=${this.entity.id}`;
       return oneToManyFindDataLoader(this.entity.em, this)
@@ -182,6 +180,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded !== undefined) {
       maybeAdd(this.loaded, other);
     }
+    this.registerAsMutated();
     // This will no-op and mark other dirty if necessary
     this.getOtherRelation(other).set(this.entity);
   }
@@ -199,6 +198,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded !== undefined) {
       remove(this.loaded, other);
     }
+    this.registerAsMutated();
     // This will no-op and mark other dirty if necessary
     this.getOtherRelation(other).set(undefined);
   }
@@ -227,6 +227,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded !== undefined) {
       remove(this.loaded, other);
     }
+    this.registerAsMutated();
   }
 
   maybeCascadeDelete(): void {
@@ -299,6 +300,12 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
   }
 
+  /** Called after `em.flush` to reset our dirty tracking. */
+  public resetAddedRemoved(): void {
+    this.#added = undefined;
+    this.#removed = undefined;
+  }
+
   /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
   private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
     const list =
@@ -324,6 +331,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   private getPreloaded(): U[] | undefined {
     if (this.entity.isNewEntity) return undefined;
     return getEmInternalApi(this.entity.em).getPreloadedRelation<U>(this.entity.idTagged, this.fieldName);
+  }
+
+  private registerAsMutated(): void {
+    getEmInternalApi(this.entity.em).mutatedCollections.add(this);
   }
 
   // Exposed for changes

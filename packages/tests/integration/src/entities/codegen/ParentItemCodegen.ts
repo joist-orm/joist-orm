@@ -61,6 +61,7 @@ export interface ParentItemFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   parentGroup: { kind: "m2o"; type: ParentGroup; nullable: never; derived: false };
+  childItems: { kind: "o2m"; type: ChildItem };
 }
 
 export interface ParentItemOpts {

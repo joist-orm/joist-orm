@@ -70,6 +70,9 @@ export interface TaskNewFields extends TaskFields {
   selfReferential: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
   specialNewAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   copiedFrom: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
+  newTaskTaskItems: { kind: "o2m"; type: TaskItem };
+  selfReferentialTasks: { kind: "o2m"; type: TaskNew };
+  copiedTo: { kind: "o2m"; type: TaskNew };
 }
 
 export interface TaskNewOpts extends TaskOpts {

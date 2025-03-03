@@ -83,6 +83,8 @@ export interface TaskFields {
   type: { kind: "enum"; type: TaskType; nullable: undefined };
   copiedFrom: { kind: "m2o"; type: Task; nullable: undefined; derived: false };
   tags: { kind: "m2m"; type: Tag };
+  copiedTo: { kind: "o2m"; type: Task };
+  taskTaskItems: { kind: "o2m"; type: TaskItem };
 }
 
 export interface TaskOpts {

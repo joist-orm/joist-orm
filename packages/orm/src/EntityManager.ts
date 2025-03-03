@@ -258,6 +258,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         return getOrSet(em.#joinRows, m2m.joinTableName, () => new JoinRows(m2m, em.#rm));
       },
       pendingChildren: this.#pendingChildren,
+      mutatedCollections: new Set(),
       getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined {
         return em.#preloadedRelations.get(taggedId)?.get(fieldName) as U[] | undefined;
       },
@@ -1417,6 +1418,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         for (const joinRow of Object.values(joinRowTodos)) {
           joinRow.resetAfterFlushed();
         }
+        const { mutatedCollections } = getEmInternalApi(this);
+        for (const o2m of mutatedCollections.values()) {
+          o2m.resetAddedRemoved();
+        }
+        mutatedCollections.clear();
 
         // Reset the find caches b/c data will have changed in the db
         this.#dataloaders = {};
@@ -1764,6 +1770,9 @@ export interface EntityManagerInternalApi {
 
   /** Map of taggedId -> fieldName -> pending children. */
   pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>>;
+
+  /** List of mutated o2m collections to reset added/removed post-flush. */
+  mutatedCollections: Set<OneToManyCollection<any, any>>;
 
   /** Map of taggedId -> fieldName -> join-loaded data. */
   getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined;

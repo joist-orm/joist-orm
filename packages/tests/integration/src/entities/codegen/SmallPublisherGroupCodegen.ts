@@ -57,6 +57,7 @@ export type SmallPublisherGroupId = Flavor<string, "PublisherGroup">;
 export interface SmallPublisherGroupFields extends PublisherGroupFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   smallName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  publishers: { kind: "o2m"; type: SmallPublisher };
 }
 
 export interface SmallPublisherGroupOpts extends PublisherGroupOpts {

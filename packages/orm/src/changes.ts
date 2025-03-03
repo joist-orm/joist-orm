@@ -5,6 +5,7 @@ import { getField, isChangeableField } from "./fields";
 import {
   Field,
   ManyToManyCollection,
+  OneToManyCollection,
   RelationsOf,
   getConstructorFromTaggedId,
   getEmInternalApi,
@@ -68,6 +69,48 @@ export class ManyToManyFieldStatus<T extends Entity, U extends Entity> {
   }
 }
 
+/** Provides access to an o2m relation's added/removed/changed entities. */
+export class OneToManyFieldStatus<T extends Entity, U extends Entity> {
+  readonly #entity: T;
+  readonly #o2m: OneToManyCollection<T, U>;
+
+  constructor(entity: T, fieldName: keyof T) {
+    this.#entity = entity;
+    this.#o2m = entity[fieldName] as OneToManyCollection<T, U>;
+  }
+
+  // This doesn't have to be a promise, b/c even if o2m is unloaded, to mutate
+  // the o2m (calling `add(other)` or `remove(other)` or `other.otherField = me`), all
+  // require having the "other entity" in memory.
+  get added(): U[] {
+    return [
+      ...this.#o2m.added(),
+      ...(this.#entity.isNewEntity
+        ? []
+        : ((getEmInternalApi(this.#entity.em).pendingChildren.get(this.#entity.idTagged)?.get(this.#o2m.fieldName)
+            ?.adds as U[]) ?? [])),
+    ].sort(entityCompare);
+  }
+
+  get removed(): U[] {
+    return [
+      ...this.#o2m.removed(),
+      ...(this.#entity.isNewEntity
+        ? []
+        : ((getEmInternalApi(this.#entity.em).pendingChildren.get(this.#entity.idTagged)?.get(this.#o2m.fieldName)
+            ?.removes as U[]) ?? [])),
+    ].sort(entityCompare);
+  }
+
+  get changed(): U[] {
+    return [...this.added, ...this.removed].sort(entityCompare);
+  }
+
+  get hasUpdated(): boolean {
+    return this.changed.length > 0;
+  }
+}
+
 /**
  * Creates the `this.changes.firstName` changes API for a given entity `T`.
  *
@@ -85,11 +128,13 @@ export type Changes<T extends Entity, K = keyof (FieldsOf<T> & RelationsOf<T>), 
 } & {
   [P in keyof FieldsOf<T> & R]: FieldsOf<T>[P] extends { kind: "m2m"; type: infer U extends Entity }
     ? ManyToManyFieldStatus<T, U>
-    : FieldsOf<T>[P] extends { type: infer U | undefined }
-      ? U extends Entity
-        ? ManyToOneFieldStatus<U>
-        : FieldStatus<U>
-      : never;
+    : FieldsOf<T>[P] extends { kind: "o2m"; type: infer U extends Entity }
+      ? OneToManyFieldStatus<T, U>
+      : FieldsOf<T>[P] extends { type: infer U | undefined }
+        ? U extends Entity
+          ? ManyToOneFieldStatus<U>
+          : FieldStatus<U>
+        : never;
 };
 
 // type A1 = never extends string ? 1 : 2;
@@ -112,13 +157,20 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
     get(
       target,
       p: PropertyKey,
-    ): FieldStatus<any> | ManyToOneFieldStatus<any> | ManyToManyFieldStatus<any, any> | (keyof OptsOf<T>)[] {
+    ):
+      | FieldStatus<any>
+      | ManyToOneFieldStatus<any>
+      | ManyToManyFieldStatus<any, any>
+      | OneToManyFieldStatus<any, any>
+      | (keyof OptsOf<T>)[] {
       if (p === "fields") {
         return getChangedFieldNames(entity);
       } else if (typeof p === "symbol") {
         throw new Error(`Unsupported call to ${String(p)}`);
       } else if (getMetadata(entity).allFields[p]?.kind === "m2m") {
         return new ManyToManyFieldStatus(entity, p as keyof T);
+      } else if (getMetadata(entity).allFields[p]?.kind === "o2m") {
+        return new OneToManyFieldStatus(entity, p as keyof T);
       } else if (!isChangeableField(entity, p as any)) {
         throw new Error(`Invalid changes field ${p}`);
       }
@@ -175,7 +227,7 @@ const addOriginalEntity: Record<Field["kind"], boolean> = {
   primitive: false,
 };
 
-/** Scans `entity` for changes primitive + m2m fields. */
+/** Scans `entity` for changes primitive + m2m/o2m fields. */
 function getChangedFieldNames<T extends Entity>(entity: T): (keyof OptsOf<T>)[] {
   const fieldsChanged = entity.isNewEntity
     ? // Cloning sometimes leaves unset keys in data as undefined, so drop them
@@ -187,7 +239,7 @@ function getChangedFieldNames<T extends Entity>(entity: T): (keyof OptsOf<T>)[] 
   // scan the join rows to get if the relation has any rows
   const m2mFieldsChanged: (keyof RelationsOf<T>)[] = [];
   const emApi = getEmInternalApi(entity.em);
-  // we will report changes only on the m2m relations for now
+  // check m2m relations
   const m2mFields = Object.values(getMetadata(entity).allFields).filter((f) => f.kind === "m2m");
   for (const field of m2mFields) {
     const m2m = (entity as any)[field.fieldName as keyof T] as ManyToManyCollection<any, any>;
@@ -197,7 +249,17 @@ function getChangedFieldNames<T extends Entity>(entity: T): (keyof OptsOf<T>)[] 
     }
   }
 
-  return [...fieldsChanged, ...m2mFieldsChanged] as any;
+  // check o2m relations
+  const o2mFieldsChanged: (keyof RelationsOf<T>)[] = [];
+  const o2mFields = Object.values(getMetadata(entity).allFields).filter((f) => f.kind === "o2m");
+  for (const field of o2mFields) {
+    const status = new OneToManyFieldStatus(entity, field.fieldName as keyof T);
+    if (status.hasUpdated) {
+      o2mFieldsChanged.push(field.fieldName as keyof RelationsOf<T>);
+    }
+  }
+
+  return [...fieldsChanged, ...m2mFieldsChanged, ...o2mFieldsChanged] as any;
 }
 
 const entityCompare: (a: Entity, b: Entity) => number = (a, b) => {

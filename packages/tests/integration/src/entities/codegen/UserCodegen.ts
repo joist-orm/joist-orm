@@ -91,6 +91,8 @@ export interface UserFields {
   authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: undefined };
   likedComments: { kind: "m2m"; type: Comment };
+  createdComments: { kind: "o2m"; type: Comment };
+  directs: { kind: "o2m"; type: User };
 }
 
 export interface UserOpts {

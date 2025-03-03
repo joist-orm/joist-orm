@@ -75,6 +75,7 @@ describe("ReactiveQueryField", () => {
         "rating",
         "spotlightAuthor",
         "type",
+        "authors",
         "baseSyncDefault",
         "favoriteAuthor",
         "baseAsyncDefault",

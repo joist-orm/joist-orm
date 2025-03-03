@@ -107,6 +107,10 @@ export interface PublisherFields {
   spotlightAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   tags: { kind: "m2m"; type: Tag };
   tasks: { kind: "m2m"; type: TaskOld };
+  authors: { kind: "o2m"; type: Author };
+  bookAdvances: { kind: "o2m"; type: BookAdvance };
+  comments: { kind: "o2m"; type: Comment };
+  images: { kind: "o2m"; type: Image };
 }
 
 export interface PublisherOpts {

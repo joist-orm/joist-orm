@@ -14,6 +14,141 @@ describe("OneToManyCollection", () => {
     expect(books.length).toEqual(2);
   });
 
+  describe("changes tracking", () => {
+    it("tracks added/loaded entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      // Given an author with no (loaded) books
+      const a1 = await em.load(Author, "1", "books");
+      // When we add a new book
+      const b1 = em.create(Book, { title: "b1", author: a1 });
+      // Then it shows up as added/changed
+      expect(a1.changes.books.added).toMatchEntity([b1]);
+      expect(a1.changes.books.removed).toMatchEntity([]);
+      expect(a1.changes.books.changed).toMatchEntity([b1]);
+      expect(a1.changes.books.hasUpdated).toBe(true);
+      expect(a1.changes.fields).toContain("books");
+      // And when we flush
+      await em.flush();
+      // Then it's no longer changed
+      expect(a1.changes.books.added).toMatchEntity([]);
+      expect(a1.changes.books.removed).toMatchEntity([]);
+      expect(a1.changes.books.changed).toMatchEntity([]);
+      expect(a1.changes.books.hasUpdated).toBe(false);
+      expect(a1.changes.fields).toEqual([]);
+    });
+
+    it("tracks added/unloaded entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      // Given an author with no (unloaded) books
+      const a1 = await em.load(Author, "1");
+      // Add a new book
+      const b1 = em.create(Book, { title: "b1", author: a1 });
+      // Check changes
+      expect(a1.changes.books.added).toMatchEntity([b1]);
+      expect(a1.changes.books.removed).toMatchEntity([]);
+      expect(a1.changes.books.changed).toMatchEntity([b1]);
+      expect(a1.changes.books.hasUpdated).toBe(true);
+      expect(a1.changes.fields).toContain("books");
+    });
+
+    it("tracks removed/loaded entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      // Given an author with one (loaded) books
+      const a1 = await em.load(Author, "1", "books");
+      const b1 = a1.books.get[0];
+      // When we remove the book
+      b1.author.set(newAuthor(em));
+      // Then we see it removed
+      expect(a1.changes.books.added).toMatchEntity([]);
+      expect(a1.changes.books.removed).toMatchEntity([b1]);
+      expect(a1.changes.books.changed).toMatchEntity([b1]);
+      expect(a1.changes.books.hasUpdated).toBe(true);
+      expect(a1.changes.fields).toContain("books");
+    });
+
+    it("tracks removed/unloaded entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      // Given an author with one (unloaded) books
+      const a1 = await em.load(Author, "a:1");
+      const b1 = await em.load(Book, "b:1");
+      // When we remove the book
+      b1.author.set(newAuthor(em));
+      // Then we see it removed
+      expect(a1.changes.books.added).toMatchEntity([]);
+      expect(a1.changes.books.removed).toMatchEntity([b1]);
+      expect(a1.changes.books.changed).toMatchEntity([b1]);
+      expect(a1.changes.books.hasUpdated).toBe(true);
+      expect(a1.changes.fields).toContain("books");
+    });
+
+    it("tracks removed/earlier entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      // Given we first load the book, w/o the author being in memory
+      const b1 = await em.load(Book, "b:1");
+      // And move it do a different author
+      b1.author.set(newAuthor(em));
+      // When we later load the author
+      const a1 = await em.load(Author, "a:1");
+      // Then we see it removed
+      expect(a1.changes.books.added).toMatchEntity([]);
+      expect(a1.changes.books.removed).toMatchEntity([b1]);
+      expect(a1.changes.books.changed).toMatchEntity([b1]);
+      expect(a1.changes.books.hasUpdated).toBe(true);
+      expect(a1.changes.fields).toContain("books");
+    });
+
+    it("tracks both added and removed entities", async () => {
+      // Given an author with one book
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1");
+      const b1 = await em.load(Book, "b:1");
+      // Add a new book
+      const b2 = em.create(Book, { title: "b2", author: a1 });
+      // And remove an existing book
+      b1.author.set(newAuthor(em));
+      // Check changes
+      expect(a1.changes.books.added).toMatchEntity([b2]);
+      expect(a1.changes.books.removed).toMatchEntity([b1]);
+      expect(a1.changes.books.changed).toMatchEntity([b1, b2]);
+      expect(a1.changes.books.hasUpdated).toBe(true);
+      expect(a1.changes.fields).toContain("books");
+    });
+
+    it("tracks when a collection is set", async () => {
+      // Given an author with two books
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1 });
+
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "1", "books");
+      const [b1, b2] = a1.books.get;
+
+      // Create a new book
+      const b3 = em.create(Book, { title: "b3" });
+
+      // Set the collection to a new set of books
+      a1.books.set([b2, b3]);
+
+      // Check changes
+      expect(await a1.changes.books.added).toMatchEntity([b3]);
+      expect(await a1.changes.books.removed).toMatchEntity([b1]);
+      expect(await a1.changes.books.changed).toMatchEntity([b1, b3]);
+      expect(a1.changes.books.hasUpdated).toBe(true);
+      expect(a1.changes.fields).toContain("books");
+    });
+  });
+
   it("loads collections with instances already in the UoW", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });

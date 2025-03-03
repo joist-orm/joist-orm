@@ -67,6 +67,8 @@ export interface PublisherGroupFields {
   numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  publishers: { kind: "o2m"; type: Publisher };
+  critics: { kind: "o2m"; type: Critic };
 }
 
 export interface PublisherGroupOpts {

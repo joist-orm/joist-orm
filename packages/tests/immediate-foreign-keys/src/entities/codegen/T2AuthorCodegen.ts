@@ -56,6 +56,7 @@ export interface T2AuthorFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   favoriteBook: { kind: "m2o"; type: T2Book; nullable: undefined; derived: false };
+  t2Books: { kind: "o2m"; type: T2Book };
 }
 
 export interface T2AuthorOpts {

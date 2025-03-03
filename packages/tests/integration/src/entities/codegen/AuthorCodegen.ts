@@ -139,6 +139,13 @@ export interface AuthorFields {
   favoriteBook: { kind: "m2o"; type: Book; nullable: undefined; derived: true };
   publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
   tags: { kind: "m2m"; type: Tag };
+  mentees: { kind: "o2m"; type: Author };
+  books: { kind: "o2m"; type: Book };
+  reviewerBooks: { kind: "o2m"; type: Book };
+  schedules: { kind: "o2m"; type: AuthorSchedule };
+  comments: { kind: "o2m"; type: Comment };
+  spotlightAuthorPublishers: { kind: "o2m"; type: Publisher };
+  tasks: { kind: "o2m"; type: TaskNew };
 }
 
 export interface AuthorOpts {

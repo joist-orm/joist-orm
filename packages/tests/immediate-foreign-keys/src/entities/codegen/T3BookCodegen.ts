@@ -56,6 +56,7 @@ export interface T3BookFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   author: { kind: "m2o"; type: T3Author; nullable: never; derived: false };
+  t3Authors: { kind: "o2m"; type: T3Author };
 }
 
 export interface T3BookOpts {

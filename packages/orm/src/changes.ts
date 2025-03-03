@@ -107,8 +107,12 @@ export class OneToManyFieldStatus<T extends Entity, U extends Entity> {
     return [...this.added, ...this.removed].sort(entityCompare);
   }
 
-  get hasUpdated(): boolean {
+  get hasChanged(): boolean {
     return this.changed.length > 0;
+  }
+
+  get hasUpdated(): boolean {
+    return !this.#entity.isNewEntity && this.hasChanged;
   }
 }
 

@@ -1,3 +1,10 @@
+# [1.230.0](https://github.com/joist-orm/joist-orm/compare/v1.229.1...v1.230.0) (2025-03-03)
+
+
+### Features
+
+* Add o2m.changes.added/removed. ([#1389](https://github.com/joist-orm/joist-orm/issues/1389)) ([f37b88b](https://github.com/joist-orm/joist-orm/commit/f37b88bc2475a2df08af8d523a59570674654633))
+
 ## [1.229.1](https://github.com/joist-orm/joist-orm/compare/v1.229.0...v1.229.1) (2025-03-03)
 
 

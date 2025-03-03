@@ -1,3 +1,10 @@
+## [1.229.1](https://github.com/joist-orm/joist-orm/compare/v1.229.0...v1.229.1) (2025-03-03)
+
+
+### Bug Fixes
+
+* Add m2m.changes.hasChanged ([#1388](https://github.com/joist-orm/joist-orm/issues/1388)) ([bf29ad3](https://github.com/joist-orm/joist-orm/commit/bf29ad30b2b1c8ed898dfb2a4b068958231ae1fc))
+
 # [1.229.0](https://github.com/joist-orm/joist-orm/compare/v1.228.9...v1.229.0) (2025-03-02)
 
 

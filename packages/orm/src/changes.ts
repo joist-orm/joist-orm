@@ -42,22 +42,23 @@ export class ManyToManyFieldStatus<T extends Entity, U extends Entity> {
     this.#joinRows = getEmInternalApi(entity.em).joinRows(this.#m2m);
   }
 
-  get added(): Promise<U[]> {
-    return Promise.resolve(this.#joinRows.addedFor(this.#m2m, this.#entity).sort(entityCompare) as U[]);
+  // Similar to the o2m.added/removed methods, these don't have to be async because currently
+  // any m2m mutation requires having both entities in-memory anyway, i.e. we can't do id-only/unloaded
+  // mutation of m2m relations.
+  get added(): U[] {
+    return this.#joinRows.addedFor(this.#m2m, this.#entity).sort(entityCompare) as U[];
   }
 
-  get removed(): Promise<U[]> {
-    return Promise.resolve(this.#joinRows.removedFor(this.#m2m, this.#entity).sort(entityCompare) as U[]);
+  get removed(): U[] {
+    return this.#joinRows.removedFor(this.#m2m, this.#entity).sort(entityCompare) as U[];
   }
 
-  get changed(): Promise<U[]> {
-    return Promise.resolve(
-      [
-        // Append added & removed
-        ...(this.#joinRows.addedFor(this.#m2m, this.#entity) as U[]),
-        ...(this.#joinRows.removedFor(this.#m2m, this.#entity) as U[]),
-      ].sort(entityCompare),
-    );
+  get changed(): U[] {
+    return [
+      // Append added & removed
+      ...(this.#joinRows.addedFor(this.#m2m, this.#entity) as U[]),
+      ...(this.#joinRows.removedFor(this.#m2m, this.#entity) as U[]),
+    ].sort(entityCompare);
   }
 
   get hasChanged(): boolean {

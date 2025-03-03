@@ -59,8 +59,12 @@ export class ManyToManyFieldStatus<T extends Entity, U extends Entity> {
     );
   }
 
-  get hasUpdated(): boolean {
+  get hasChanged(): boolean {
     return this.#joinRows.hasChanges;
+  }
+
+  get hasUpdated(): boolean {
+    return !this.#entity.isNewEntity && this.#joinRows.hasChanges;
   }
 }
 

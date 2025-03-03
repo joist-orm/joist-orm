@@ -1,3 +1,10 @@
+## [1.230.1](https://github.com/joist-orm/joist-orm/compare/v1.230.0...v1.230.1) (2025-03-03)
+
+
+### Bug Fixes
+
+* Remove promises from m2m.changes methods. ([#1390](https://github.com/joist-orm/joist-orm/issues/1390)) ([6d7928d](https://github.com/joist-orm/joist-orm/commit/6d7928dad4737580bdce5acb1310a2af9559ce46))
+
 # [1.230.0](https://github.com/joist-orm/joist-orm/compare/v1.229.1...v1.230.0) (2025-03-03)
 
 

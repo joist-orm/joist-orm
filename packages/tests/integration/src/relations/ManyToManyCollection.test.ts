@@ -604,8 +604,8 @@ describe("ManyToManyCollection", () => {
       const em = newEntityManager();
       const a = newAuthor(em);
       const t = newTag(em, { authors: [a] });
-      expect(await t.changes.authors.added).toMatchEntity([a]);
-      expect(await a.changes.tags.added).toMatchEntity([t]);
+      expect(t.changes.authors.added).toMatchEntity([a]);
+      expect(a.changes.tags.added).toMatchEntity([t]);
       expect(t.changes.authors.hasChanged).toBe(true);
       expect(t.changes.authors.hasUpdated).toBe(false);
       expect(a.changes.tags.hasChanged).toBe(true);
@@ -630,8 +630,8 @@ describe("ManyToManyCollection", () => {
       // When we remove a1 from t1
       t1.authors.remove(a1);
       // Then both sides show the removal
-      expect(await t1.changes.authors.removed).toMatchEntity([a1]);
-      expect(await a1.changes.tags.removed).toMatchEntity([t1]);
+      expect(t1.changes.authors.removed).toMatchEntity([a1]);
+      expect(a1.changes.tags.removed).toMatchEntity([t1]);
       // And are considered updated
       expect(t1.changes.authors.hasUpdated).toBe(true);
       expect(a1.changes.tags.hasUpdated).toBe(true);
@@ -657,10 +657,10 @@ describe("ManyToManyCollection", () => {
       // And add a1 to t2
       t2.authors.add(a1);
       // Then a1.changed shows both added/removed
-      expect(await a1.changes.tags.changed).toMatchEntity([t1, t2]);
+      expect(a1.changes.tags.changed).toMatchEntity([t1, t2]);
       // And t1/t2.changed reflect show the same change
-      expect(await t1.changes.authors.changed).toMatchEntity([a1]);
-      expect(await t2.changes.authors.changed).toMatchEntity([a1]);
+      expect(t1.changes.authors.changed).toMatchEntity([a1]);
+      expect(t2.changes.authors.changed).toMatchEntity([a1]);
       expect(a1.changes.tags.hasUpdated).toBe(true);
       expect(t1.changes.authors.hasUpdated).toBe(true);
       expect(t2.changes.authors.hasUpdated).toBe(true);

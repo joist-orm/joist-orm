@@ -107,8 +107,12 @@ export class OneToManyFieldStatus<T extends Entity, U extends Entity> {
     return [...this.added, ...this.removed].sort(entityCompare);
   }
 
-  get hasUpdated(): boolean {
+  get hasChanged(): boolean {
     return this.changed.length > 0;
+  }
+
+  get hasUpdated(): boolean {
+    return !this.#entity.isNewEntity && this.hasChanged;
   }
 }
 
@@ -237,30 +241,21 @@ function getChangedFieldNames<T extends Entity>(entity: T): (keyof OptsOf<T>)[] 
         .map(([key]) => key)
     : Object.keys(getInstanceData(entity).originalData);
 
-  // scan the join rows to get if the relation has any rows
-  const m2mFieldsChanged: (keyof RelationsOf<T>)[] = [];
-  const emApi = getEmInternalApi(entity.em);
-  // check m2m relations
-  const m2mFields = Object.values(getMetadata(entity).allFields).filter((f) => f.kind === "m2m");
-  for (const field of m2mFields) {
-    const m2m = (entity as any)[field.fieldName as keyof T] as ManyToManyCollection<any, any>;
-    const joinRow = emApi.joinRows(m2m);
-    if (joinRow.hasChanges) {
-      m2mFieldsChanged.push(field.fieldName as keyof RelationsOf<T>);
+  for (const field of Object.values(getMetadata(entity).allFields)) {
+    if (field.kind === "m2m") {
+      const status = new ManyToManyFieldStatus(entity, field.fieldName as keyof T);
+      if (status.hasChanged) {
+        fieldsChanged.push(field.fieldName);
+      }
+    } else if (field.kind === "o2m") {
+      const status = new OneToManyFieldStatus(entity, field.fieldName as keyof T);
+      if (status.hasChanged) {
+        fieldsChanged.push(field.fieldName);
+      }
     }
   }
 
-  // check o2m relations
-  const o2mFieldsChanged: (keyof RelationsOf<T>)[] = [];
-  const o2mFields = Object.values(getMetadata(entity).allFields).filter((f) => f.kind === "o2m");
-  for (const field of o2mFields) {
-    const status = new OneToManyFieldStatus(entity, field.fieldName as keyof T);
-    if (status.hasUpdated) {
-      o2mFieldsChanged.push(field.fieldName as keyof RelationsOf<T>);
-    }
-  }
-
-  return [...fieldsChanged, ...m2mFieldsChanged, ...o2mFieldsChanged] as any;
+  return fieldsChanged as any;
 }
 
 const entityCompare: (a: Entity, b: Entity) => number = (a, b) => {

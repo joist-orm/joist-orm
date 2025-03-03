@@ -87,6 +87,24 @@ describe("OneToManyCollection", () => {
       expect(a1.changes.fields).toContain("books");
     });
 
+    it("tracks removed/earlier entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      // Given we first load the book, w/o the author being in memory
+      const b1 = await em.load(Book, "b:1");
+      // And move it do a different author
+      b1.author.set(newAuthor(em));
+      // When we later load the author
+      const a1 = await em.load(Author, "a:1");
+      // Then we see it removed
+      expect(a1.changes.books.added).toMatchEntity([]);
+      expect(a1.changes.books.removed).toMatchEntity([b1]);
+      expect(a1.changes.books.changed).toMatchEntity([b1]);
+      expect(a1.changes.books.hasUpdated).toBe(true);
+      expect(a1.changes.fields).toContain("books");
+    });
+
     it("tracks both added and removed entities", async () => {
       // Given an author with one book
       await insertAuthor({ first_name: "a1" });

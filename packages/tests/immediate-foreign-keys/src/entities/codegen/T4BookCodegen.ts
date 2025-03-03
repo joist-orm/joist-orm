@@ -56,6 +56,7 @@ export interface T4BookFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   author: { kind: "m2o"; type: T4Author; nullable: never; derived: false };
+  t4Authors: { kind: "o2m"; type: T4Author };
 }
 
 export interface T4BookOpts {

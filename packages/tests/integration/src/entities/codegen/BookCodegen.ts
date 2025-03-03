@@ -91,6 +91,9 @@ export interface BookFields {
   reviewer: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   randomComment: { kind: "m2o"; type: Comment; nullable: undefined; derived: false };
   tags: { kind: "m2m"; type: Tag };
+  advances: { kind: "o2m"; type: BookAdvance };
+  reviews: { kind: "o2m"; type: BookReview };
+  comments: { kind: "o2m"; type: Comment };
 }
 
 export interface BookOpts {

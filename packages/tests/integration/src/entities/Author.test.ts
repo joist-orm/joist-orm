@@ -307,15 +307,6 @@ describe("Author", () => {
       expect(a1.changes.fields).toEqual([]);
     });
 
-    it("does not have collections", async () => {
-      const em = newEntityManager();
-      const a1 = new Author(em, { firstName: "f1", lastName: "ln" });
-      expect(() => {
-        // @ts-expect-error
-        a1.changes.books;
-      }).toThrow("Invalid changes field books");
-    });
-
     it("has the right type for strings", async () => {
       const em = newEntityManager();
       const a1 = new Author(em, { firstName: "f1", lastName: "ln" });

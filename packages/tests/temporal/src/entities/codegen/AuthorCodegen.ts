@@ -54,6 +54,7 @@ export interface AuthorFields {
   timeToMicros: { kind: "primitive"; type: Temporal.PlainTime; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  books: { kind: "o2m"; type: Book };
 }
 
 export interface AuthorOpts {

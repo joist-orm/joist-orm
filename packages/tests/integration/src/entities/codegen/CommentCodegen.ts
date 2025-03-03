@@ -86,6 +86,7 @@ export interface CommentFields {
   user: { kind: "m2o"; type: User; nullable: undefined; derived: false };
   parent: { kind: "poly"; type: CommentParent; nullable: never };
   likedByUsers: { kind: "m2m"; type: User };
+  books: { kind: "o2m"; type: Book };
 }
 
 export interface CommentOpts {

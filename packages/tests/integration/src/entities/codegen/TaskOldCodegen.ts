@@ -74,6 +74,10 @@ export interface TaskOldFields extends TaskFields {
   parentOldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
   copiedFrom: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
   publishers: { kind: "m2m"; type: Publisher };
+  comments: { kind: "o2m"; type: Comment };
+  oldTaskTaskItems: { kind: "o2m"; type: TaskItem };
+  tasks: { kind: "o2m"; type: TaskOld };
+  copiedTo: { kind: "o2m"; type: TaskOld };
 }
 
 export interface TaskOldOpts extends TaskOpts {

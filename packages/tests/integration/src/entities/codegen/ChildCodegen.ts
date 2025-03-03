@@ -54,6 +54,7 @@ export interface ChildFields {
   name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  groups: { kind: "o2m"; type: ChildGroup };
 }
 
 export interface ChildOpts {

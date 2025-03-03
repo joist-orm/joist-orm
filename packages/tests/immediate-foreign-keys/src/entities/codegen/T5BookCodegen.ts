@@ -59,6 +59,7 @@ export interface T5BookFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   author: { kind: "m2o"; type: T5Author; nullable: never; derived: false };
+  reviews: { kind: "o2m"; type: T5BookReview };
 }
 
 export interface T5BookOpts {

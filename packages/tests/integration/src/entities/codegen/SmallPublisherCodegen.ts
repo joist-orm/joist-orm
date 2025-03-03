@@ -78,6 +78,8 @@ export interface SmallPublisherFields extends PublisherFields {
   allAuthorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   selfReferential: { kind: "m2o"; type: SmallPublisher; nullable: undefined; derived: false };
   group: { kind: "m2o"; type: SmallPublisherGroup; nullable: undefined; derived: false };
+  smallPublishers: { kind: "o2m"; type: SmallPublisher };
+  users: { kind: "o2m"; type: User };
 }
 
 export interface SmallPublisherOpts extends PublisherOpts {

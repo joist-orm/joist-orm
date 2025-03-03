@@ -44,8 +44,8 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   // groups the hydrated rows by their _current parent m2o field value_, which for a removed child will no
   // longer be us, so it will effectively not show up in our post-load `loaded` array.
   // However, now with join preloading, the getPreloadedRelation might still have pre-load removed children.
-  #addedBeforeLoaded: U[] | undefined;
-  #removedBeforeLoaded: U[] | undefined;
+  #added: U[] | undefined;
+  #removed: U[] | undefined;
   #hasBeenSet = false;
 
   constructor(
@@ -95,7 +95,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded !== undefined) {
       return this.loaded.find((other) => other.id === id);
     } else {
-      const added = this.#addedBeforeLoaded?.find((u) => u.id === id);
+      const added = this.#added?.find((u) => u.id === id);
       if (added) {
         return added;
       }
@@ -176,11 +176,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   add(other: U): void {
     ensureNotDeleted(this.entity);
-    if (this.loaded === undefined) {
-      this.#addedBeforeLoaded ??= [];
-      maybeAdd(this.#addedBeforeLoaded, other);
-      maybeRemove(this.#removedBeforeLoaded, other);
-    } else {
+    this.#added ??= [];
+    maybeAdd(this.#added, other);
+    maybeRemove(this.#removed, other);
+    if (this.loaded !== undefined) {
       maybeAdd(this.loaded, other);
     }
     // This will no-op and mark other dirty if necessary
@@ -194,11 +193,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded === undefined && opts.requireLoaded) {
       throw new Error("remove was called when not loaded");
     }
-    if (this.loaded === undefined) {
-      this.#removedBeforeLoaded ??= [];
-      maybeAdd(this.#removedBeforeLoaded, other);
-      maybeRemove(this.#addedBeforeLoaded, other);
-    } else {
+    this.#removed ??= [];
+    maybeAdd(this.#removed, other);
+    maybeRemove(this.#added, other);
+    if (this.loaded !== undefined) {
       remove(this.loaded, other);
     }
     // This will no-op and mark other dirty if necessary
@@ -223,12 +221,11 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   removeIfLoaded(other: U) {
+    this.#removed ??= [];
+    maybeRemove(this.#added, other);
+    maybeAdd(this.#removed, other);
     if (this.loaded !== undefined) {
       remove(this.loaded, other);
-    } else {
-      this.#removedBeforeLoaded ??= [];
-      maybeRemove(this.#addedBeforeLoaded, other);
-      maybeAdd(this.#removedBeforeLoaded, other);
     }
   }
 
@@ -251,7 +248,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       }
     });
     this.loaded = [];
-    this.#addedBeforeLoaded = [];
+    this.#added = [];
   }
 
   private maybeAppendAddedBeforeLoaded(): void {
@@ -266,26 +263,24 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       const { em } = this.entity;
       const pending = getEmInternalApi(em).pendingChildren.get(this.entity.idTagged!)?.get(this.fieldName);
       if (pending) {
-        (this.#addedBeforeLoaded ??= []).push(...(pending.adds as U[]));
-        (this.#removedBeforeLoaded ??= []).push(...(pending.removes as U[]));
+        (this.#added ??= []).push(...(pending.adds as U[]));
+        (this.#removed ??= []).push(...(pending.removes as U[]));
         clear(pending.adds);
         clear(pending.removes);
       }
     }
-    if (this.#addedBeforeLoaded) {
-      const newEntities = this.#addedBeforeLoaded.filter((e) => !this.loaded?.includes(e));
+    if (this.#added) {
+      const newEntities = this.#added.filter((e) => !this.loaded?.includes(e));
       // Push on the end to better match the db order of "newer things come last"
       this.loaded!.push(...newEntities);
-      this.#addedBeforeLoaded = undefined;
     }
-    if (this.#removedBeforeLoaded) {
-      this.#removedBeforeLoaded.forEach((e) => remove(this.loaded!, e));
-      this.#removedBeforeLoaded = undefined;
+    if (this.#removed) {
+      this.#removed.forEach((e) => remove(this.loaded!, e));
     }
   }
 
   current(opts?: { withDeleted?: boolean }): U[] {
-    return this.filterDeleted(this.loaded ?? this.#addedBeforeLoaded ?? [], opts);
+    return this.filterDeleted(this.loaded ?? this.#added ?? [], opts);
   }
 
   public get meta(): EntityMetadata {
@@ -329,6 +324,15 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   private getPreloaded(): U[] | undefined {
     if (this.entity.isNewEntity) return undefined;
     return getEmInternalApi(this.entity.em).getPreloadedRelation<U>(this.entity.idTagged, this.fieldName);
+  }
+
+  // Exposed for changes
+  added(): U[] {
+    return this.#added ?? [];
+  }
+
+  removed(): U[] {
+    return this.#removed ?? [];
   }
 
   [RelationT]: T = null!;

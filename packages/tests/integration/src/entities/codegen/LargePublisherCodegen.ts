@@ -78,6 +78,8 @@ export interface LargePublisherFields extends PublisherFields {
   country: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   rating: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   spotlightAuthor: { kind: "m2o"; type: Author; nullable: never; derived: false };
+  critics: { kind: "o2m"; type: Critic };
+  users: { kind: "o2m"; type: User };
 }
 
 export interface LargePublisherOpts extends PublisherOpts {

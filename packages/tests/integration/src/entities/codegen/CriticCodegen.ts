@@ -73,6 +73,7 @@ export interface CriticFields {
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   favoriteLargePublisher: { kind: "m2o"; type: LargePublisher; nullable: undefined; derived: false };
   group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
+  bookReviews: { kind: "o2m"; type: BookReview };
 }
 
 export interface CriticOpts {

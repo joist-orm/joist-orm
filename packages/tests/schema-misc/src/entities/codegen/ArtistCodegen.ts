@@ -55,6 +55,7 @@ export interface ArtistFields {
   lastName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  paintings: { kind: "o2m"; type: Painting };
 }
 
 export interface ArtistOpts {

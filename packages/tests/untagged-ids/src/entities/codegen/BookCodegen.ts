@@ -61,6 +61,7 @@ export interface BookFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
+  comments: { kind: "o2m"; type: Comment };
 }
 
 export interface BookOpts {

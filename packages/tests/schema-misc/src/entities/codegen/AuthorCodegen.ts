@@ -49,6 +49,7 @@ export interface AuthorFields {
   delete: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  books: { kind: "o2m"; type: Book };
 }
 
 export interface AuthorOpts {

@@ -2007,7 +2007,8 @@ function afterCommit(ctx: unknown, entities: Set<EntityW>): Promise<unknown> {
   return runHook(ctx, "afterCommit", [...entities]);
 }
 
-function coerceError(entity: Entity, maybeError: ValidationRuleResult<any>): ValidationError[] {
+/** Given a validation rule result `maybeError`, returns a canonical `ValidationError[]`. */
+function coerceError(entity: Entity, maybeError: ValidationRuleResult): ValidationError[] {
   if (maybeError === undefined) {
     return [];
   } else if (typeof maybeError === "string") {

@@ -13,20 +13,16 @@ export const notMinValueCode = "not-min-value";
 export const notMaxValueCode = "not-max-value";
 
 /**
- * The return type of `ValidationRule`.
+ * The return type of `ValidationRule` lambdas.
  *
- * Consumers can extend `GenericError` to add fields relevant for their application.
+ * We're flexible and allow rules to return a variety of shapes, like just a string, string[], etc.
+ *
+ * Returning `undefined` means the rule passed.
  */
-export type ValidationRuleResult<E extends GenericError> =
-  | string
-  | string[]
-  | E
-  | E[]
-  | { field: string; message: string }
-  | undefined;
+export type ValidationRuleResult = string | string[] | GenericError | GenericError[] | undefined | void;
 
 /** An entity validation rule. */
-export type ValidationRule<T extends Entity> = (entity: T) => MaybePromise<ValidationRuleResult<any>>;
+export type ValidationRule<T extends Entity> = (entity: T) => MaybePromise<ValidationRuleResult>;
 
 /** Internal metadata for an async/reactive validation rule. */
 export type ValidationRuleInternal<T extends Entity> = {
@@ -35,11 +31,11 @@ export type ValidationRuleInternal<T extends Entity> = {
   fn: ValidationRule<T>;
 };
 
-/** A generic error which contains only a message field */
-export type GenericError = { message: string };
+/** A generic error which contains a message, and optional field/codes. */
+export type GenericError = { message: string; field?: string; code?: string };
 
-/** An extension to GenericError which associates the error to a specific entity */
-export type ValidationError = { entity: Entity; field?: string; code?: string } & GenericError;
+/** Combines the GenericError with the `entity` that caused it. */
+export type ValidationError = { entity: Entity } & GenericError;
 
 export class ValidationErrors extends Error {
   public errors: Array<GenericError | ValidationError>;

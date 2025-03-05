@@ -1,3 +1,11 @@
+# [1.231.0](https://github.com/joist-orm/joist-orm/compare/v1.230.2...v1.231.0) (2025-03-05)
+
+
+### Features
+
+* add hasDefault to entity config ([#1393](https://github.com/joist-orm/joist-orm/issues/1393)) ([562b98a](https://github.com/joist-orm/joist-orm/commit/562b98ac787c8630af36ae98236b1b096e456326))
+* Add ValidationError field and code  ([#1392](https://github.com/joist-orm/joist-orm/issues/1392)) ([e01f166](https://github.com/joist-orm/joist-orm/commit/e01f16608e89d735f89e52dfe5b1c3c2dc890535))
+
 ## [1.230.2](https://github.com/joist-orm/joist-orm/compare/v1.230.1...v1.230.2) (2025-03-03)
 
 

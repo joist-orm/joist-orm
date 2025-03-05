@@ -61,11 +61,16 @@ describe("Author", () => {
   it("can return field & code from validation errors", async () => {
     expect.assertions(1);
     const em = newEntityManager();
-    new Author(em, { firstName: 'foo', lastName: "NotAllowedLastName" });
+    const author = newAuthor(em, { lastName: "NotAllowedLastName" });
     try {
-      await em.flush()
-    } catch(err: any) {
-      expect(err.errors[0]).toMatchObject({ field: "lastName", code: 'invalid-name' })
+      await em.flush();
+    } catch (err: any) {
+      expect(err.errors[0]).toMatchEntity({
+        entity: author,
+        field: "lastName",
+        code: "invalid-name",
+        message: "lastName is invalid",
+      });
     }
   });
 

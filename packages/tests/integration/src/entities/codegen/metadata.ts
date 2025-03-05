@@ -729,7 +729,7 @@ export const smallPublisherMeta: EntityMetadata<SmallPublisher> = {
   tableName: "small_publishers",
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("p", "id", "id", "int"), immutable: true },
-    "city": { kind: "primitive", fieldName: "city", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("city", "city", "text"), immutable: false },
+    "city": { kind: "primitive", fieldName: "city", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("city", "city", "text"), immutable: false, default: "config" },
     "sharedColumn": { kind: "primitive", fieldName: "sharedColumn", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("sharedColumn", "shared_column", "text"), immutable: false },
     "allAuthorNames": { kind: "primitive", fieldName: "allAuthorNames", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("allAuthorNames", "all_author_names", "text"), immutable: false },
     "selfReferential": { kind: "m2o", fieldName: "selfReferential", fieldIdName: "selfReferentialId", derived: false, required: false, otherMetadata: () => smallPublisherMeta, otherFieldName: "smallPublishers", serde: new KeySerde("p", "selfReferential", "self_referential_id", "int"), immutable: false },

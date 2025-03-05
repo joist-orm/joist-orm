@@ -26,6 +26,8 @@ const fieldConfig = z
     stiType: z.optional(z.string()),
     // Allow subclasses to mark fields as required
     notNull: z.optional(z.boolean()),
+    // Allow overriding scanEntities default detection for fields with defaults added by helpers
+    hasDefault: z.optional(z.boolean()),
   })
   .strict();
 
@@ -51,6 +53,8 @@ const relationConfig = z
     skipRecursiveRelations: z.optional(z.boolean()),
     // Allow marking m2o FKs as required on subclasses
     notNull: z.optional(z.boolean()),
+    // Allow overriding scanEntities default detection for fields with defaults added by helpers
+    hasDefault: z.optional(z.boolean()),
   })
   .strict();
 
@@ -267,6 +271,12 @@ export function isFieldIgnored(
     );
   }
   return ignore;
+}
+
+export function isFieldHasDefault(config: Config, entity: Entity, fieldName: string): boolean {
+  const entityConfig = config.entities[entity.name] ?? {};
+  const fieldConfig = entityConfig.fields?.[fieldName] ?? entityConfig.relations?.[fieldName] ?? {};
+  return fieldConfig.hasDefault === true;
 }
 
 const configPath = "./joist-config.json";

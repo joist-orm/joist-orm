@@ -83,7 +83,7 @@ export interface SmallPublisherFields extends PublisherFields {
 }
 
 export interface SmallPublisherOpts extends PublisherOpts {
-  city: string;
+  city?: string;
   sharedColumn?: string | null;
   selfReferential?: SmallPublisher | SmallPublisherId | null;
   group?: SmallPublisherGroup | SmallPublisherGroupId | null;

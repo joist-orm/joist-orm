@@ -50,7 +50,8 @@
                     "serde": { "type": "string" },
                     "stiType": { "type":  "string" },
                     "notNull": { "type": "boolean" },
-                    "stiDiscriminator": { "type": "object" }
+                    "stiDiscriminator": { "type": "object" },
+                    "hasDefault": { "type": "boolean" }
                   },
                   "additionalProperties": false
                 }
@@ -67,7 +68,8 @@
                     "subType": { "type":  "string" },
                     "stiType": { "type":  "string" },
                     "notNull": { "type": "boolean" },
-                    "skipRecursiveRelations": { "type": "boolean" }
+                    "skipRecursiveRelations": { "type": "boolean" },
+                    "hasDefault": { "type": "boolean" }
                   },
                   "additionalProperties": false
                 }

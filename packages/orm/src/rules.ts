@@ -6,6 +6,12 @@ import { ManyToOneReferenceImpl } from "./relations";
 import { FieldsOf } from "./typeMap";
 import { MaybePromise, groupBy, maybePromiseThen } from "./utils";
 
+export const requiredCode = "required";
+export const notUpdatableCode = "not-updatable";
+export const notNumericValueCode = "not-numeric-value";
+export const notMinValueCode = "not-min-value";
+export const notMaxValueCode = "not-max-value";
+
 /**
  * The return type of `ValidationRule`.
  *
@@ -57,7 +63,7 @@ export class ValidationErrors extends Error {
 export function newRequiredRule<T extends Entity>(key: keyof FieldsOf<T> & string): ValidationRule<T> {
   // Use getField so that we peer through relations
   return (entity) =>
-    getField(entity, key) === undefined ? { field: key, code: "required", message: `${key} is required` } : undefined;
+    getField(entity, key) === undefined ? { field: key, code: requiredCode, message: `${key} is required` } : undefined;
 }
 
 /**
@@ -75,7 +81,7 @@ export function cannotBeUpdated<T extends Entity, K extends keyof Changes<T> & s
     if ((entity as any as EntityChanges<T>).changes[field].hasUpdated) {
       return maybePromiseThen(unless ? unless(entity) : false, (result) => {
         if (!result) {
-          return { field, code: "not-updatable", message: `${field} cannot be updated` };
+          return { field, code: notUpdatableCode, message: `${field} cannot be updated` };
         }
         return undefined;
       });
@@ -133,20 +139,16 @@ export function minValueRule<T extends Entity, K extends keyof T & string>(
 ): ValidationRule<T> {
   return (entity) => {
     const value = entity[field];
-
     // Ignore undefined and null values
     if (value === undefined || value === null) return;
-
     // Show an error when the value type is not a number
     if (typeof value !== "number") {
-      return { field, code: "expect-number", message: `${field} must be a number` };
+      return { field, code: notNumericValueCode, message: `${field} must be a number` };
     }
-
     // Show an error when the value is smaller than the minimum value
     if (value < minValue) {
-      return { field, code: "expect-number-lt-min", message: `${field} must be greater than or equal to ${minValue}` };
+      return { field, code: notMinValueCode, message: `${field} must be greater than or equal to ${minValue}` };
     }
-
     return;
   };
 }
@@ -168,18 +170,15 @@ export function maxValueRule<T extends Entity, K extends keyof T & string>(
 ): ValidationRule<T> {
   return (entity) => {
     const value = entity[field];
-
     // Ignore undefined and null values
     if (value === undefined || value === null) return;
-
     // Show an error when the value type is not a number
     if (typeof value !== "number") {
-      return `${field} must be a number`;
+      return { field, code: notNumericValueCode, message: `${field} must be a number` };
     }
-
     // Show an error when the value is smaller than the minimum value
     if (value > maxValue) {
-      return { field, code: "expect-number-gt-max", message: `${field} must be smaller than or equal to ${maxValue}` };
+      return { field, code: notMaxValueCode, message: `${field} must be smaller than or equal to ${maxValue}` };
     }
 
     return;

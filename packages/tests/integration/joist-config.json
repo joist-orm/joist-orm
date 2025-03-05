@@ -74,7 +74,7 @@
       "tag": "pg"
     },
     "SmallPublisher": {
-      "fields": { "allAuthorNames": { "derived": "async" } },
+      "fields": { "allAuthorNames": { "derived": "async" }, "city": { "hasDefault": true } },
       "relations": {
         "group": { "subType": "SmallPublisherGroup" },
         "selfReferential": { "skipRecursiveRelations": true }

@@ -7,6 +7,7 @@ import {
   Config,
   fieldTypeConfig,
   getTimestampConfig,
+  isFieldHasDefault,
   isFieldIgnored,
   isGetterField,
   isLargeCollection,
@@ -427,6 +428,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
   const userFieldType = fieldTypeConfig(config, entity, fieldName);
   const maybeUserType = determineUserType(fieldType, superstruct, zodSchema, userFieldType);
   const unique = column.uniqueIndexes.find(isOneToOneIndex) !== undefined;
+  const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "primitive",
     fieldName,
@@ -444,7 +446,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
     zodSchema: fieldType === "Object" && zodSchema ? Import.from(zodSchema) : undefined,
     customSerde: customSerde ? serdeType(customSerde) : undefined,
     isArray: array,
-    hasConfigDefault: false, // updated by scanEntityFiles
+    hasConfigDefault, // can be set to true by scanEntityFiles
   };
 }
 
@@ -479,6 +481,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
   const enumDetailsType = imp(`${enumName}Details@./entities.ts`);
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
+  const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "enum",
     fieldName,
@@ -494,7 +497,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
     ignore,
     enumRows: enums[r.targetTable.name].rows,
     isArray: false,
-    hasConfigDefault: false, // updated by scanEntityFiles
+    hasConfigDefault, // can be set to true by scanEntityFiles
   };
 }
 
@@ -510,6 +513,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
   const enumDetailsType = imp(`${enumName}Details@./entities.ts`);
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
+  const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "enum",
     fieldName,
@@ -525,7 +529,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
     ignore,
     enumRows: enums[enumTable].rows,
     isArray: true,
-    hasConfigDefault: false, // updated by scanEntityFiles
+    hasConfigDefault, // can be set to true by scanEntityFiles
   };
 }
 
@@ -534,6 +538,7 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
   const columnName = column.name;
   const enumName = pascalCase(column.type.name);
   const enumType = imp(`${enumName}@./entities.ts`);
+  const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "pg-enum",
     fieldName,
@@ -545,7 +550,7 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
     notNull: column.notNull,
     columnDefault: column.default,
     ignore: isFieldIgnored(config, entity, fieldName, column.notNull, column.default !== null),
-    hasConfigDefault: false, // updated by scanEntityFiles
+    hasConfigDefault, // can be set to true by scanEntityFiles
   };
 }
 
@@ -563,6 +568,7 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
   const isDeferredAndDeferrable = r.foreignKey.isDeferred && r.foreignKey.isDeferrable;
   const derived = fkFieldDerived(config, entity, fieldName);
+  const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "m2o",
     fieldName,
@@ -575,7 +581,7 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
     dbType,
     isDeferredAndDeferrable,
     constraintName: r.foreignKey.name,
-    hasConfigDefault: false, // updated by scanEntityFiles
+    hasConfigDefault, // can be set to true by scanEntityFiles
     onDelete: r.foreignKey.onDelete,
   };
 }
@@ -644,13 +650,14 @@ function newPolymorphicField(config: Config, table: Table, entity: Entity, pr: P
     .filter((r) => polymorphicFieldName(config, r) === fieldName)
     .map((r) => newPolymorphicFieldComponent(config, entity, r));
   const fieldType = `${entity.name}${pascalCase(fieldName)}`;
+  const hasConfigDefault = isFieldHasDefault(config, entity, fieldName);
   return {
     kind: "poly" as const,
     fieldName,
     fieldType,
     notNull,
     components,
-    hasConfigDefault: false, // updated by scanEntityFiles
+    hasConfigDefault, // can be set to true by scanEntityFiles
   };
 }
 

@@ -43,7 +43,7 @@ export async function scanEntityFiles(config: Config, dbMeta: DbMetadata): Promi
  * with `TaskNew` and/or `TaskOld`.
  *
  * NOTE: I suspect here could be some edge cases here that will need to be ironed out, but should work
- * for simple inheritence structures. In particular, there may be unexpected side effects if a base
+ * for simple inheritance structures. In particular, there may be unexpected side effects if a base
  * class field has a default set in one subtype, but not another.
  */
 function recursiveDefaultableFields(

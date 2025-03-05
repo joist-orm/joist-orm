@@ -1,11 +1,13 @@
 import {
   cannotBeUpdated,
+  ConfigApi,
   hasReactiveField,
   hasReactiveReference,
   ManyToOneReference,
   ReactiveField,
   ReactiveReference,
 } from "joist-orm";
+import { Context } from "src/context";
 import {
   Author,
   authorMeta,
@@ -112,3 +114,11 @@ config.beforeDelete((sp) => {
 config.afterCommit((sp) => {
   sp.afterCommitRan = true;
 });
+
+// add a default for city in such a way that scanEntities won't pick it up so that we can test overriding defaults
+// via config
+function addCityDefault(config: ConfigApi<SmallPublisher, Context>) {
+  config["setDefault"]("city", "default city");
+}
+
+addCityDefault(config);

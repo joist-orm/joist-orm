@@ -163,6 +163,13 @@ describe("EntityManager.defaults", () => {
     await expect(em.flush()).rejects.toThrow("Book#1 author is required");
   });
 
+  it("supports defaults specified via hasDefault config", async () => {
+    const em = newEntityManager();
+    const sp = em.create(SmallPublisher, { name: "p1" });
+    await em.flush();
+    expect(sp.city).toEqual("default city");
+  });
+
   describe("getDefaultDependencies", () => {
     it("works with primitives", () => {
       expect(getDeps(Book.metadata, "someField", "order")).toEqual([["Book", "order"]]);

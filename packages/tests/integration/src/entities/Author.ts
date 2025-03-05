@@ -311,13 +311,13 @@ config.addRule((a) => {
 });
 
 // Example of a rule returning a field and code
-config.addRule("lastName", (a) => {
+config.addRule((a) => {
   if (a.lastName === "NotAllowedLastName") {
     return { code: "invalid-name", field: "lastName", message: "lastName is invalid" };
   }
 });
 
-// Example of a rule returning a field and code
+// Example of a reactive rule returning a field and code
 config.addRule("lastName", (a) => {
   if (!a.isNewEntity) {
     return { code: "invalid-name", field: "lastName", message: "lastName cannot be changed" };

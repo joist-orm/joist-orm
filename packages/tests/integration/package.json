@@ -19,8 +19,7 @@
     "format": "prettier --ignore-path ../../../.prettierignore --ignore-path ../../.prettierignore --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "codegen": "env-cmd tsx ../../codegen",
     "docker:up": "docker compose up -d db",
-    "docker:reset": "docker compose exec db ./reset.sh",
-    "type-check": "tspc"
+    "docker:reset": "docker compose exec db ./reset.sh"
   },
   "dependencies": {
     "joist-graphql-resolver-utils": "workspace:*",

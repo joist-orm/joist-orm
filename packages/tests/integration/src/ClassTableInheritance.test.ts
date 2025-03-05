@@ -88,7 +88,7 @@ describe("ClassTableInheritance", () => {
     expect(await testDriver.select("small_publishers")).toMatchObject([
       {
         id: 1,
-        city: "city",
+        city: "default city",
       },
     ]);
   });
@@ -561,7 +561,7 @@ describe("ClassTableInheritance", () => {
     const em = newEntityManager();
     const spg = newSmallPublisherGroup(em, { publishers: [{}] });
     // Then we know it's publishers are SmallPublishers
-    expect(spg.publishers.get[0].city).toBe("city");
+    expect(spg.publishers.get[0].city).toBe("default city");
   });
 
   it("load throws on loading a small publisher as a large publisher", async () => {

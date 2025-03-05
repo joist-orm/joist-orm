@@ -86,6 +86,7 @@ export {
   mustBeSubType,
   newRequiredRule,
   rangeValueRule,
+  ValidationCode,
   ValidationError,
   ValidationErrors,
   ValidationRule,

@@ -6,15 +6,25 @@ import { ManyToOneReferenceImpl } from "./relations";
 import { FieldsOf } from "./typeMap";
 import { MaybePromise, groupBy, maybePromiseThen } from "./utils";
 
+export enum ValidationCode {
+  required = "required",
+  cannotBeUpdated = "not-updatable",
+  numeric = "not-numeric",
+  minValue = "under-min",
+  maxValue = "over-max",
+}
+
 /**
- * The return type of `ValidationRule`.
+ * The return type of `ValidationRule` lambdas.
  *
- * Consumers can extend `GenericError` to add fields relevant for their application.
+ * We're flexible and allow rules to return a variety of shapes, like just a string, string[], etc.
+ *
+ * Returning `undefined` means the rule passed.
  */
-export type ValidationRuleResult<E extends GenericError> = string | string[] | E | E[] | undefined;
+export type ValidationRuleResult = string | string[] | GenericError | GenericError[] | undefined | void;
 
 /** An entity validation rule. */
-export type ValidationRule<T extends Entity> = (entity: T) => MaybePromise<ValidationRuleResult<any>>;
+export type ValidationRule<T extends Entity> = (entity: T) => MaybePromise<ValidationRuleResult>;
 
 /** Internal metadata for an async/reactive validation rule. */
 export type ValidationRuleInternal<T extends Entity> = {
@@ -23,17 +33,10 @@ export type ValidationRuleInternal<T extends Entity> = {
   fn: ValidationRule<T>;
 };
 
-/** Internal metadata for an async derived field. */
-export type AsyncDerivedFieldInternal<T extends Entity> = {
-  name: string;
-  hint: ReactiveHint<T>;
-  fn: (entity: T) => Promise<void>;
-};
+/** A generic error which contains a message, and optional field/codes. */
+export type GenericError = { message: string; field?: string; code?: string };
 
-/** A generic error which contains only a message field */
-export type GenericError = { message: string };
-
-/** An extension to GenericError which associates the error to a specific entity */
+/** Combines the GenericError with the `entity` that caused it. */
 export type ValidationError = { entity: Entity } & GenericError;
 
 export class ValidationErrors extends Error {
@@ -57,7 +60,10 @@ export class ValidationErrors extends Error {
  */
 export function newRequiredRule<T extends Entity>(key: keyof FieldsOf<T> & string): ValidationRule<T> {
   // Use getField so that we peer through relations
-  return (entity) => (getField(entity, key) === undefined ? `${key} is required` : undefined);
+  return (entity) =>
+    getField(entity, key) === undefined
+      ? { field: key, code: ValidationCode.required, message: `${key} is required` }
+      : undefined;
 }
 
 /**
@@ -75,7 +81,7 @@ export function cannotBeUpdated<T extends Entity, K extends keyof Changes<T> & s
     if ((entity as any as EntityChanges<T>).changes[field].hasUpdated) {
       return maybePromiseThen(unless ? unless(entity) : false, (result) => {
         if (!result) {
-          return `${field} cannot be updated`;
+          return { field, code: ValidationCode.cannotBeUpdated, message: `${field} cannot be updated` };
         }
         return undefined;
       });
@@ -133,20 +139,20 @@ export function minValueRule<T extends Entity, K extends keyof T & string>(
 ): ValidationRule<T> {
   return (entity) => {
     const value = entity[field];
-
     // Ignore undefined and null values
     if (value === undefined || value === null) return;
-
     // Show an error when the value type is not a number
     if (typeof value !== "number") {
-      return `${field} must be a number`;
+      return { field, code: ValidationCode.numeric, message: `${field} must be a number` };
     }
-
     // Show an error when the value is smaller than the minimum value
     if (value < minValue) {
-      return `${field} must be greater than or equal to ${minValue}`;
+      return {
+        field,
+        code: ValidationCode.minValue,
+        message: `${field} must be greater than or equal to ${minValue}`,
+      };
     }
-
     return;
   };
 }
@@ -168,18 +174,19 @@ export function maxValueRule<T extends Entity, K extends keyof T & string>(
 ): ValidationRule<T> {
   return (entity) => {
     const value = entity[field];
-
     // Ignore undefined and null values
     if (value === undefined || value === null) return;
-
     // Show an error when the value type is not a number
     if (typeof value !== "number") {
-      return `${field} must be a number`;
+      return { field, code: ValidationCode.numeric, message: `${field} must be a number` };
     }
-
     // Show an error when the value is smaller than the minimum value
     if (value > maxValue) {
-      return `${field} must be smaller than or equal to ${maxValue}`;
+      return {
+        field,
+        code: ValidationCode.maxValue,
+        message: `${field} must be smaller than or equal to ${maxValue}`,
+      };
     }
 
     return;

@@ -233,6 +233,8 @@ describe("EntityManager.reactiveRules", () => {
     expect(getReactiveRules(Author)).toMatchObject([
       // Author's numberOfBooks codegen-d rule
       { cstr: "Author", name: sm(/AuthorCodegen.ts:\d+/), fields: ["numberOfBooks"], path: [], fn },
+      // Author's lastName NotAllowedLastName rule
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["lastName"], path: [], fn },
       // Author's firstName/book.title validation rule
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["firstName"], path: [], fn },
       // Author's "cannot have 13 books" rules

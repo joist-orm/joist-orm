@@ -58,6 +58,22 @@ describe("Author", () => {
     );
   });
 
+  it("can return field & code from validation errors", async () => {
+    expect.assertions(1);
+    const em = newEntityManager();
+    const author = newAuthor(em, { lastName: "NotAllowedLastName" });
+    try {
+      await em.flush();
+    } catch (err: any) {
+      expect(err.errors[0]).toMatchEntity({
+        entity: author,
+        field: "lastName",
+        code: "invalid-name",
+        message: "lastName is invalid",
+      });
+    }
+  });
+
   it("can have async validation rules", async () => {
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });

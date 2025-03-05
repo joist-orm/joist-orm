@@ -80,17 +80,13 @@ export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiv
 export * from "./relations";
 export {
   cannotBeUpdated,
-  cannotBeUpdatedCode,
   GenericError,
-  maxValueCode,
   maxValueRule,
-  minValueCode,
   minValueRule,
   mustBeSubType,
   newRequiredRule,
-  numericCode,
   rangeValueRule,
-  requiredCode,
+  ValidationCode,
   ValidationError,
   ValidationErrors,
   ValidationRule,

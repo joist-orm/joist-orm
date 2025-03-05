@@ -1,4 +1,4 @@
-import { getMetadata, newRequiredRule, notUpdatableCode, ValidationErrors } from "joist-orm";
+import { cannotBeUpdatedCode, getMetadata, newRequiredRule, ValidationErrors } from "joist-orm";
 import { Author, LargePublisher, Publisher, SmallPublisher } from "src/entities";
 import { insertAuthor } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
@@ -27,7 +27,7 @@ describe("ValidationErrors", () => {
       } catch (err: any) {
         expect(err.errors[0]).toMatchEntity({
           entity: a1,
-          code: notUpdatableCode,
+          code: cannotBeUpdatedCode,
           message: "age cannot be updated",
         });
         expect(err.message).toBe("Validation error: Author:1 age cannot be updated");

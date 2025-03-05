@@ -16,7 +16,7 @@ export type ValidationRuleResult<E extends GenericError> =
   | string[]
   | E
   | E[]
-  | { field: string; msg: string }
+  | { field: string; message: string }
   | undefined;
 
 /** An entity validation rule. */
@@ -33,7 +33,7 @@ export type ValidationRuleInternal<T extends Entity> = {
 export type GenericError = { message: string };
 
 /** An extension to GenericError which associates the error to a specific entity */
-export type ValidationError = { entity: Entity; field?: string, code?: string } & GenericError;
+export type ValidationError = { entity: Entity; field?: string; code?: string } & GenericError;
 
 export class ValidationErrors extends Error {
   public errors: Array<GenericError | ValidationError>;

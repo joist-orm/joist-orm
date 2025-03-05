@@ -17,7 +17,7 @@ describe("ValidationErrors", () => {
 
   describe("cannotBeUpdated", () => {
     it("cannot change wasEverPopular to false", async () => {
-      expect.assertions(1);
+      expect.assertions(2);
       await insertAuthor({ first_name: "a1" });
       const em = newEntityManager();
       const a1 = await em.load(Author, "a:1");
@@ -30,6 +30,7 @@ describe("ValidationErrors", () => {
           code: notUpdatableCode,
           message: "age cannot be updated",
         });
+        expect(err.message).toBe("Validation error: Author:1 age cannot be updated");
       }
     });
 

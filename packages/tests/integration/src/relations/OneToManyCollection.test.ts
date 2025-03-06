@@ -27,6 +27,7 @@ describe("OneToManyCollection", () => {
       expect(a1.changes.books.removed).toMatchEntity([]);
       expect(a1.changes.books.changed).toMatchEntity([b1]);
       expect(a1.changes.books.hasUpdated).toBe(true);
+      expect(await a1.changes.books.originalEntities).toMatchEntity([]);
       expect(a1.changes.fields).toContain("books");
       // And when we flush
       await em.flush();
@@ -35,6 +36,7 @@ describe("OneToManyCollection", () => {
       expect(a1.changes.books.removed).toMatchEntity([]);
       expect(a1.changes.books.changed).toMatchEntity([]);
       expect(a1.changes.books.hasUpdated).toBe(false);
+      expect(await a1.changes.books.originalEntities).toMatchEntity([b1]);
       expect(a1.changes.fields).toEqual([]);
     });
 
@@ -67,6 +69,7 @@ describe("OneToManyCollection", () => {
       expect(a1.changes.books.removed).toMatchEntity([b1]);
       expect(a1.changes.books.changed).toMatchEntity([b1]);
       expect(a1.changes.books.hasUpdated).toBe(true);
+      expect(await a1.changes.books.originalEntities).toMatchEntity([b1]);
       expect(a1.changes.fields).toContain("books");
     });
 

@@ -658,9 +658,12 @@ describe("ManyToManyCollection", () => {
       t2.authors.add(a1);
       // Then a1.changed shows both added/removed
       expect(a1.changes.tags.changed).toMatchEntity([t1, t2]);
+      expect(await a1.changes.tags.originalEntities).toMatchEntity([t1]);
       // And t1/t2.changed reflect show the same change
       expect(t1.changes.authors.changed).toMatchEntity([a1]);
       expect(t2.changes.authors.changed).toMatchEntity([a1]);
+      expect(await t1.changes.authors.originalEntities).toMatchEntity([a1, { id: "a:2" }]);
+      expect(await t2.changes.authors.originalEntities).toMatchEntity([{ id: "a:2" }, { id: "a:3" }]);
       expect(a1.changes.tags.hasUpdated).toBe(true);
       expect(t1.changes.authors.hasUpdated).toBe(true);
       expect(t2.changes.authors.hasUpdated).toBe(true);

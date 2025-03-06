@@ -68,6 +68,15 @@ export class ManyToManyFieldStatus<T extends Entity, U extends Entity> {
   get hasUpdated(): boolean {
     return !this.#entity.isNewEntity && this.#joinRows.hasChanges;
   }
+
+  get originalEntities(): Promise<readonly U[]> {
+    return this.#m2m.load().then((list) => {
+      const set = new Set(this.added);
+      const copy = list.filter((e) => !set.has(e));
+      copy.push(...this.removed);
+      return copy.sort(entityCompare);
+    });
+  }
 }
 
 /** Provides access to an o2m relation's added/removed/changed entities. */
@@ -113,6 +122,15 @@ export class OneToManyFieldStatus<T extends Entity, U extends Entity> {
 
   get hasUpdated(): boolean {
     return !this.#entity.isNewEntity && this.hasChanged;
+  }
+
+  get originalEntities(): Promise<readonly U[]> {
+    return this.#o2m.load().then((list) => {
+      const set = new Set(this.added);
+      const copy = list.filter((e) => !set.has(e));
+      copy.push(...this.removed);
+      return copy.sort(entityCompare);
+    });
   }
 }
 

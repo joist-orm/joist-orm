@@ -1,3 +1,10 @@
+# [1.232.0](https://github.com/joist-orm/joist-orm/compare/v1.231.0...v1.232.0) (2025-03-06)
+
+
+### Features
+
+* Add o2m/m2m changes.originalEntities. ([#1394](https://github.com/joist-orm/joist-orm/issues/1394)) ([a68a860](https://github.com/joist-orm/joist-orm/commit/a68a860c1a8e6dc0cc49c12e9162413c1e63adaa)), closes [#1207](https://github.com/joist-orm/joist-orm/issues/1207)
+
 # [1.231.0](https://github.com/joist-orm/joist-orm/compare/v1.230.2...v1.231.0) (2025-03-05)
 
 

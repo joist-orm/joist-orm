@@ -1,11 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  // disable Tailwind's reset
-  corePlugins: { preflight: false },
-  // my markdown stuff is in ../docs, not /src
-  content: ["./src/**/*.{js,jsx,ts,tsx}", "../docs/**/*.mdx"],
-  // hooks into docusaurus' dark mode settings
-  darkMode: ["class", '[data-theme="dark"]'],
-  theme: { extend: {} },
-  plugins: [],
-};
+  content: ['./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}'],
+  theme: {
+    extend: {},
+  },
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
+}

@@ -3,7 +3,8 @@ import { Entity, EntityManager, InstanceData, TaggedId, deTagId, getMetadata, ke
 
 export let currentlyInstantiatingEntity: Entity | undefined;
 
-/** Should only be used by our `joist-transform-properties` to lazy init properties. */
+/** Used by our `joist-transform-properties` to lazy init properties and by sync defaults to reset if an entity is
+ * created as a default. */
 export function setCurrentlyInstantiatingEntity(entity: Entity): void {
   currentlyInstantiatingEntity = entity;
 }

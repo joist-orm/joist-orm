@@ -7,7 +7,8 @@ export async function getStaticPaths() {
   
   return posts.map((post) => {
     // Use the post's slug from frontmatter if available, otherwise generate from filename
-    const slug = post.data.slug || post.id.replace(/^\d{4}-\d{2}-\d{2}-/, '');
+    // And remove .md suffix
+    const slug = (post.data.slug || post.id.replace(/^\d{4}-\d{2}-\d{2}-/, '')).replace(/\.md$/, '');
     return {
       params: { slug },
       props: { post },

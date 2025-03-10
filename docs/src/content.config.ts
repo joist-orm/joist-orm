@@ -5,7 +5,7 @@ import { docsSchema } from '@astrojs/starlight/schema';
 const blogSchema = z.object({
   title: z.string(),
   description: z.string(),
-  slug: z.string().optional(),
+  slug: z.string(),
   pubDate: z.date().optional().transform((str) => new Date(str)),
   authors: z.array(z.object({
     name: z.string(),

@@ -1,0 +1,42 @@
+---
+import { ViewTransitions } from 'astro:transitions';
+import '../tailwind.css';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    <ViewTransitions />
+  </head>
+  <body class="min-h-screen bg-white">
+    <header class="bg-blue-600 text-white">
+      <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+        <a href="/" class="text-2xl font-bold">Joist ORM</a>
+        <nav>
+          <ul class="flex space-x-6">
+            <li><a href="/" class="hover:underline">Home</a></li>
+            <li><a href="/blog" class="hover:underline">Blog</a></li>
+            <li><a href="https://github.com/joist-orm/joist" target="_blank" rel="noopener noreferrer" class="hover:underline">GitHub</a></li>
+          </ul>
+        </nav>
+      </div>
+    </header>
+    <slot />
+    <footer class="bg-gray-100 py-8">
+      <div class="container mx-auto px-4 text-center text-gray-600">
+        <p>&copy; {new Date().getFullYear()} Joist ORM. All rights reserved.</p>
+      </div>
+    </footer>
+  </body>
+</html>

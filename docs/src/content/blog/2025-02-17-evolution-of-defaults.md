@@ -1,5 +1,6 @@
 ---
 title: Evolution of Defaults
+description: How Joist's approach to default values evolved from simple schema defaults to a robust, first-class feature.
 slug: evolution-of-defaults
 authors:
   - name: Stephen Haberman

@@ -1,0 +1,110 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map((post) => {
+    // Use the post's slug from frontmatter if available, otherwise generate from filename
+    const slug = post.data.slug || post.id.replace(/^\d{4}-\d{2}-\d{2}-/, '');
+    return {
+      params: { slug },
+      props: { post },
+    };
+  });
+}
+
+const { post } = Astro.props;
+const { Content } = await post.render();
+
+// Format the date from the filename (2024-04-13-first-post.md)
+const dateStr = post.id.split('-').slice(0, 3).join('-');
+const formattedDate = new Date(dateStr).toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+});
+---
+
+<Layout title={`${post.data.title} | Joist ORM Blog`}>
+  <main class="container mx-auto px-4 py-8 max-w-3xl">
+    <article class="prose lg:prose-lg mx-auto">
+      <a href="/blog" class="text-blue-600 hover:underline mb-4 inline-block">&larr; Back to Blog</a>
+
+      <h1 class="text-4xl font-bold mt-8 mb-4">{post.data.title}</h1>
+
+      <div class="flex items-center mb-8">
+        <div class="text-gray-600">
+          <time datetime={dateStr}>{formattedDate}</time>
+          {post.data.authors && post.data.authors.length > 0 && (
+            <span>
+              &nbsp;•&nbsp;
+              <span class="flex items-center mt-2">
+                {post.data.authors[0].image_url && (
+                  <img
+                    src={post.data.authors[0].image_url}
+                    alt={post.data.authors[0].name}
+                    class="w-8 h-8 rounded-full mr-2"
+                  />
+                )}
+                <span>
+                  {post.data.authors[0].url ? (
+                    <a href={post.data.authors[0].url} target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">
+                      {post.data.authors[0].name}
+                    </a>
+                  ) : (
+                    post.data.authors[0].name
+                  )}
+                </span>
+              </span>
+            </span>
+          )}
+        </div>
+      </div>
+
+      {post.data.tags && post.data.tags.length > 0 && (
+        <div class="flex flex-wrap gap-2 mb-8">
+          {post.data.tags.map((tag: string) => (
+            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-sm">
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div class="blog-content">
+        <Content />
+      </div>
+    </article>
+  </main>
+</Layout>
+
+<style>
+  .blog-content :global(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.375rem;
+  }
+
+  .blog-content :global(a) {
+    color: #3b82f6;
+    text-decoration: none;
+  }
+
+  .blog-content :global(a:hover) {
+    text-decoration: underline;
+  }
+
+  .blog-content :global(pre) {
+    background-color: #f3f4f6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    overflow-x: auto;
+  }
+
+  .blog-content :global(blockquote) {
+    border-left: 4px solid #e5e7eb;
+    padding-left: 1rem;
+    font-style: italic;
+  }
+</style>

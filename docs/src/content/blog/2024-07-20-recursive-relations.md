@@ -1,5 +1,6 @@
 ---
 title: Recursive Relations
+description: Announcing a new feature in Joist - recursive relations!
 slug: recursive-relations
 authors:
   - name: Stephen Haberman

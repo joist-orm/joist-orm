@@ -1,3 +1,10 @@
+## [1.232.1](https://github.com/joist-orm/joist-orm/compare/v1.232.0...v1.232.1) (2025-03-11)
+
+
+### Bug Fixes
+
+* reset currentlyInstantiatingEntity inside setSyncDefaults ([#1395](https://github.com/joist-orm/joist-orm/issues/1395)) ([1ff41a8](https://github.com/joist-orm/joist-orm/commit/1ff41a8b34540fcd5d4b2c7d69e4b96ed4ff114e))
+
 # [1.232.0](https://github.com/joist-orm/joist-orm/compare/v1.231.0...v1.232.0) (2025-03-06)
 
 

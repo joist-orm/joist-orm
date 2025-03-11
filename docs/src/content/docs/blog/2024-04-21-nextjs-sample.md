@@ -1,12 +1,13 @@
 ---
 title: New NextJS Sample App
-description: We've added a new NextJS sample app to the Joist repository.
-slug: nextjs-sample-app
+slug: blog/nextjs-sample-app
+date: 2024-04-21
 authors:
   - name: Stephen Haberman
     url: https://github.com/stephenh
     image_url: https://github.com/stephenh.png
 tags: []
+excerpt: We've added a new NextJS sample app to the Joist repository.
 ---
 
 We've added a new [NextJS + Joist](https://github.com/joist-orm/joist-nextjs-sample/) sample app that shows how Joist can be used in a NextJS application, with several benefits:

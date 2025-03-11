@@ -2,6 +2,7 @@
 import starlight from "@astrojs/starlight";
 import tailwind from "@astrojs/tailwind";
 import { defineConfig } from "astro/config";
+import starlightBlog from "starlight-blog";
 
 // https://astro.build/config
 export default defineConfig({
@@ -23,6 +24,7 @@ export default defineConfig({
         { label: "FAQ", link: "/faq/" },
         { label: "Blog", link: "/blog" },
       ],
+      plugins: [starlightBlog()],
     }),
   ],
 });

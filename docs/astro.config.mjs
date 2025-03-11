@@ -7,7 +7,7 @@ import { defineConfig } from "astro/config";
 export default defineConfig({
   site: "https://joist-orm.io",
   integrations: [
-    tailwind(),
+    tailwind({ applyBaseStyles: false }),
     starlight({
       title: "Joist ORM",
       customCss: ["./src/tailwind.css"],
@@ -20,7 +20,6 @@ export default defineConfig({
         { label: "Advanced Features", autogenerate: { directory: "advanced" } },
         { label: "Logging", autogenerate: { directory: "logging" } },
         { label: "Testing", autogenerate: { directory: "testing" } },
-        { label: "Why Joist?", link: "/why-joist/" },
         { label: "FAQ", link: "/faq/" },
         { label: "Blog", link: "/blog" },
       ],

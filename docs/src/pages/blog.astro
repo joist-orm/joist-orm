@@ -1,6 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
-import Layout from '../../layouts/Layout.astro';
+import Layout from '../layouts/Layout.astro';
 
 // Get all blog posts sorted by date
 const posts = await getCollection('blog');
@@ -16,11 +16,13 @@ const sortedPosts = posts.sort((a, b) => {
   <main class="container mx-auto px-4 py-8 max-w-4xl">
     <h1 class="text-4xl font-bold mb-8">Joist ORM Blog</h1>
 
+    {posts.length}
+
     <div class="grid gap-8">
       {sortedPosts.map((post) => (
         <article class="border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
           <h2 class="text-2xl font-bold mb-2">
-            <a href={`/blog/${post.data.slug}`} class="text-blue-600 hover:underline">
+            <a href={`/blog/${post.slug}`} class="text-blue-600 hover:underline">
               {post.data.title}
             </a>
           </h2>
@@ -36,7 +38,7 @@ const sortedPosts = posts.sort((a, b) => {
             {post.data.description}
           </p>
           <div class="mt-4">
-            <a href={`/blog/${post.data.slug}`} class="text-blue-600 hover:underline">
+            <a href={`/blog/${post.slug}`} class="text-blue-600 hover:underline">
               Read more →
             </a>
           </div>

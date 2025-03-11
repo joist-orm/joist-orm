@@ -4,13 +4,9 @@ import Layout from '../../layouts/Layout.astro';
 
 export async function getStaticPaths() {
   const posts = await getCollection('blog');
-  
   return posts.map((post) => {
-    // Use the post's slug from frontmatter if available, otherwise generate from filename
-    // And remove .md suffix
-    const slug = (post.data.slug || post.id.replace(/^\d{4}-\d{2}-\d{2}-/, '')).replace(/\.md$/, '');
     return {
-      params: { slug },
+      params: { slug: post.slug },
       props: { post },
     };
   });
@@ -22,8 +18,8 @@ const { Content } = await post.render();
 // Format the date from the filename (2024-04-13-first-post.md)
 const dateStr = post.id.split('-').slice(0, 3).join('-');
 const formattedDate = new Date(dateStr).toLocaleDateString('en-US', {
-  year: 'numeric', 
-  month: 'long', 
+  year: 'numeric',
+  month: 'long',
   day: 'numeric'
 });
 ---
@@ -32,9 +28,9 @@ const formattedDate = new Date(dateStr).toLocaleDateString('en-US', {
   <main class="container mx-auto px-4 py-8 max-w-3xl">
     <article class="prose lg:prose-lg mx-auto">
       <a href="/blog" class="text-blue-600 hover:underline mb-4 inline-block">&larr; Back to Blog</a>
-      
+
       <h1 class="text-4xl font-bold mt-8 mb-4">{post.data.title}</h1>
-      
+
       <div class="flex items-center mb-8">
         <div class="text-gray-600">
           <time datetime={dateStr}>{formattedDate}</time>
@@ -43,9 +39,9 @@ const formattedDate = new Date(dateStr).toLocaleDateString('en-US', {
               &nbsp;•&nbsp;
               <span class="flex items-center mt-2">
                 {post.data.authors[0].image_url && (
-                  <img 
-                    src={post.data.authors[0].image_url} 
-                    alt={post.data.authors[0].name} 
+                  <img
+                    src={post.data.authors[0].image_url}
+                    alt={post.data.authors[0].name}
                     class="w-8 h-8 rounded-full mr-2"
                   />
                 )}
@@ -73,7 +69,7 @@ const formattedDate = new Date(dateStr).toLocaleDateString('en-US', {
           ))}
         </div>
       )}
-      
+
       <div class="blog-content">
         <Content />
       </div>
@@ -87,12 +83,12 @@ const formattedDate = new Date(dateStr).toLocaleDateString('en-US', {
     height: auto;
     border-radius: 0.375rem;
   }
-  
+
   .blog-content :global(a) {
     color: #3b82f6;
     text-decoration: none;
   }
-  
+
   .blog-content :global(a:hover) {
     text-decoration: underline;
   }

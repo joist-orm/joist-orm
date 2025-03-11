@@ -103,7 +103,13 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
         // Use the `info` to see if the query is only returning `{ id }` and if so avoid fetching the entity
         if ((ormField.kind === "m2o" || ormField.kind === "poly") && info?.fieldNodes.length === 1) {
           const selectionSet = info.fieldNodes[0].selectionSet;
-          if (selectionSet) {
+          // We can't do this if the expected return type uses inheritance, as graphql wouldn't know how to map to a
+          // resolver with just an id since there could be multiple implementations
+          const hasAbstractType =
+            (ormField.kind === "m2o" && ormField.otherMetadata().inheritanceType !== undefined) ||
+            (ormField.kind === "poly" &&
+              ormField.components.some((c) => c.otherMetadata().inheritanceType !== undefined));
+          if (selectionSet && !hasAbstractType) {
             if (
               selectionSet.selections.length === 1 &&
               selectionSet.selections[0].kind === "Field" &&

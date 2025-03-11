@@ -1,5 +1,5 @@
 import { Deferred } from "joist-utils";
-import { getInstanceData } from "./BaseEntity";
+import { getInstanceData, setCurrentlyInstantiatingEntity } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityMetadata, EnumField, Field, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "./EntityMetadata";
 import { setField } from "./fields";
@@ -52,6 +52,9 @@ export function setSyncDefaults(entity: Entity): void {
         // require a field hint (so would be async) to get "the other entity". However, something like:
         // `config.setDefault("original", (self) => self);` is technically valid.
         value.set(maybeFn instanceof Function ? maybeFn(entity) : maybeFn);
+        // Since a reference is an entity, maybeFn could have returned a new entity. If so, the new
+        // entity would have set currentlyInstantiatingEntity to itself, so we need to reset now to this entity;
+        setCurrentlyInstantiatingEntity(entity);
       }
     }
   }

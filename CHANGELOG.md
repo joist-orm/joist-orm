@@ -1,3 +1,10 @@
+## [1.232.2](https://github.com/joist-orm/joist-orm/compare/v1.232.1...v1.232.2) (2025-03-11)
+
+
+### Bug Fixes
+
+* skip entityResolver optimization for references that return a inheritance based type ([#1399](https://github.com/joist-orm/joist-orm/issues/1399)) ([2c073a0](https://github.com/joist-orm/joist-orm/commit/2c073a0704ab017cd209ec4136ba459791d55932))
+
 ## [1.232.1](https://github.com/joist-orm/joist-orm/compare/v1.232.0...v1.232.1) (2025-03-11)
 
 

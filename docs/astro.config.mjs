@@ -10,13 +10,8 @@ export default defineConfig({
     tailwind(),
     starlight({
       title: "Joist ORM",
-      customCss: [
-        // Path to your tailwind.css file
-        "./src/tailwind.css",
-      ],
-      social: {
-        github: "https://github.com/joist-orm/joist",
-      },
+      customCss: ["./src/tailwind.css"],
+      social: { github: "https://github.com/joist-orm/joist" },
       sidebar: [
         { label: "Getting Started", autogenerate: { directory: "getting-started" } },
         { label: "Goals", autogenerate: { directory: "goals" } },

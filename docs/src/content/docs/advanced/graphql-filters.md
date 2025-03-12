@@ -1,6 +1,8 @@
 ---
-title: Graphql Filters
+title: GraphQL Filters
 description: Documentation for Graphql Filters
+sidebar:
+  order: 4
 ---
 
 

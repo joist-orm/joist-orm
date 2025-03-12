@@ -1,6 +1,8 @@
 ---
 title: Validation Rules
 description: Documentation for Validation Rules
+sidebar:
+  order: 7
 ---
 
 Entities can have validation rules that are run during `EntityManager.flush()`:

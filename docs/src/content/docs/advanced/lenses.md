@@ -1,6 +1,8 @@
 ---
 title: Lens Traversal
 description: Documentation for Lens Traversal
+sidebar:
+  order: 8
 ---
 
 Lenses provide quick navigation the object graph, for example to navigate from an `Author` `a:1` to all of its books, and all of its book's reviews, you can write:

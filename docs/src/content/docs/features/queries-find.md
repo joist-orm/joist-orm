@@ -1,6 +1,8 @@
 ---
 title: Find Queries
 description: Documentation for Find Queries
+sidebar:
+  order: 3
 ---
 
 Find queries are Joist's ergonomic API for issuing `SELECT` queries to load entities from your database. They look like this:

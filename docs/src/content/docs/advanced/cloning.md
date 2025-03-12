@@ -1,6 +1,8 @@
 ---
 title: Entity Cloning
 description: Documentation for Entity Cloning
+sidebar:
+  order: 4
 ---
 
 Joist supports cloning entities, to easily implement feature requests like "duplicate this author", or "duplicate this author and all of their books".

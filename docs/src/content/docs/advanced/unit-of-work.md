@@ -1,6 +1,8 @@
 ---
 title: Unit of Work
 description: Documentation for Unit of Work
+sidebar:
+  order: 1
 ---
 
 Joist's `EntityManager` acts as a [Unit of Work](https://www.martinfowler.com/eaaCatalog/unitOfWork.html), which allows it to provide several features:

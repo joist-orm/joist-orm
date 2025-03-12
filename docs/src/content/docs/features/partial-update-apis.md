@@ -1,6 +1,8 @@
 ---
 title: Partial Update APIs
 description: Documentation for Partial Update APIs
+sidebar:
+  order: 6
 ---
 
 Joist has built-in support for building "partial update"-style APIs on top of your domain model.

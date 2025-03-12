@@ -1,6 +1,8 @@
 ---
 title: JSONB Fields
 description: Documentation for JSONB Fields
+sidebar:
+  order: 9
 ---
 
 Postgres has rich support for [storing JSON](https://www.postgresql.org/docs/current/datatype-json.html), which Joist supports.

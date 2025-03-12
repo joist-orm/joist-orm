@@ -1,6 +1,8 @@
 ---
 title: Single Table Inheritance
 description: Documentation for Single Table Inheritance
+sidebar:
+   order: 11
 ---
 
 Joist supports [Single Table Inheritance](https://www.martinfowler.com/eaaCatalog/singleTableInheritance.html), which allows inheritance/subtyping of entities (like `class Dog extends Animal`), by automatically mapping multiple logical polymorphic entities (`Dog`, `Cat`, and `Animal`) into a single physical SQL table (`animals`).

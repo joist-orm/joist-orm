@@ -1,6 +1,8 @@
 ---
 title: Quick Tour
 description: Documentation for Quick Tour
+sidebar:
+  order: 1
 ---
 
 This page gives a quick overview/scan of "what using Joist looks like". Joist's docs dive into these features in more detail, and see [Installation](./installation.md) for a true "getting started".

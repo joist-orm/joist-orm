@@ -1,6 +1,8 @@
 ---
 title: Cascading Deletes
 description: Documentation for Cascading Deletes
+sidebar:
+  order: 5
 ---
 
 You can have a parent cascade delete its children by doing:

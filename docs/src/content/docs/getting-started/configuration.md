@@ -1,6 +1,8 @@
 ---
 title: Configuration
 description: Documentation for Configuration
+sidebar:
+  order: 4
 ---
 
 Joist prefers convention over configuration, but it still has some knobs to control its behavior.

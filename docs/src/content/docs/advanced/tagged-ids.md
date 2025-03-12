@@ -1,6 +1,8 @@
 ---
 title: Tagged Ids
 description: Documentation for Tagged Ids
+sidebar:
+  order: 2
 ---
 
 Joist automatically "tags" entity ids, by prefixing them with a per-entity identifier.

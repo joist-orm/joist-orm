@@ -1,6 +1,8 @@
 ---
 title: Why Entities?
 description: Documentation for Why Entities?
+sidebar:
+  order: 1
 ---
 
 One of Joist's biggest differentiators is its focus on **entities** and **domain modeling**.

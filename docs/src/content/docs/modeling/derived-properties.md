@@ -1,6 +1,8 @@
 ---
 title: Derived Properties
 description: Documentation for Derived Properties
+sidebar:
+  order: 6
 ---
 
 In Joist, Derived Properties are values that can be calculated/derived from other data within your domain model, for example:

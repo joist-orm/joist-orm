@@ -1,6 +1,8 @@
 ---
 title: Async Disposable
 description: Documentation for Async Disposable
+sidebar:
+  order: 15
 ---
 
 Joist's `EntityManager` can be used with the new `using` keyword in TypeScript 5.2, to auto-`flush` changes to the database.

@@ -1,6 +1,8 @@
 ---
 title: Relations
 description: Documentation for Relations
+sidebar:
+  order: 4
 ---
 
 Relations are relationships between entities in your domain model, for example an `Author`'s list of `Book`s or an `Author`'s current `Publisher`.

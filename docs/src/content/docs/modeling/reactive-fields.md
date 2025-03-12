@@ -1,6 +1,8 @@
 ---
 title: Reactive Fields
 description: Documentation for Reactive Fields
+sidebar:
+  order: 5
 ---
 
 In Joist, Reactive Fields are values that can be calculated/derived from other data within your domain model, for example:

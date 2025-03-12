@@ -1,6 +1,8 @@
 ---
 title: Json Payloads
 description: Documentation for Json Payloads
+sidebar:
+  order: 7
 ---
 
 If you're using Joist for a REST API, or in React Server components passing props to client-side components, the `toJSON` function can succinctly and type-safely create JSON output. 

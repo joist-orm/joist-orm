@@ -1,6 +1,8 @@
 ---
 title: Schema Assumptions
 description: Documentation for Schema Assumptions
+sidebar:
+  order: 3
 ---
 
 Joist makes a few assumptions about your database schema, primarily that you have a modern/pleasant database schema that you want directly mapped to your TypeScript domain model.

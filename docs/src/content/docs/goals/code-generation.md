@@ -1,6 +1,8 @@
 ---
 title: Code Generation
 description: Documentation for Code Generation
+sidebar:
+  order: 2
 ---
 
 One of the primary ways Joist achieves ActiveRecord-level productivity is by generating the boilerplate part of domain models from the database schema.

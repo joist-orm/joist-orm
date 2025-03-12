@@ -1,6 +1,8 @@
 ---
 title: Loading Entities
 description: Documentation for Loading Entities
+sidebar:
+  order: 2
 ---
 
 Joist has several ways to load entities, and which to use depends on how much control you need over the query.

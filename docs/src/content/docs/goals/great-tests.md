@@ -1,6 +1,8 @@
 ---
 title: Great Tests
 description: Documentation for Great Tests
+sidebar:
+  order: 5
 ---
 
 Joist focuses not just on great production code & business logic, but also on enabling great test coverage of your business logic, by facilitating tests that are:

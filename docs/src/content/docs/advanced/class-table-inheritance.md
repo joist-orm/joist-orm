@@ -1,6 +1,8 @@
 ---
 title: Class Table Inheritance
 description: Documentation for Class Table Inheritance
+sidebar:
+   order: 10
 ---
 
 Joist supports [Class Table Inheritance](https://www.martinfowler.com/eaaCatalog/classTableInheritance.html), which allows inheritance/subtyping of entities (like `class Dog extends Animal`), by automatically mapping single/logical polymorphic entities across separate per-subtype/physical SQL tables.

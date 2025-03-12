@@ -1,6 +1,8 @@
 ---
 title: Soft Deletes
 description: Documentation for Soft Deletes
+sidebar:
+  order: 3
 ---
 
 Joist has built-in support for the soft-delete pattern, of marking rows with a `deleted_at` column and then "mostly ignoring them" within the application.

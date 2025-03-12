@@ -1,6 +1,8 @@
 ---
 title: Optimistic Locking
 description: Documentation for Optimistic Locking
+sidebar:
+   order: 9
 ---
 
 Joist implements optimistic locking to avoid conflicting/dropped `UPDATE`s.

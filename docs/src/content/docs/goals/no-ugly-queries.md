@@ -1,6 +1,8 @@
 ---
 title: No Ugly Queries
 description: Documentation for No Ugly Queries
+sidebar:
+  order: 6
 ---
 
 Historically, ORMs have a reputation for creating "ugly queries", particularly when the ORM's query API adds too much abstraction on top of raw SQL, and what "looks simple" in the query API is actually a big, gnarly SQL string that no programmer would ever write by hand.

@@ -1,6 +1,8 @@
 ---
 title: Installation
 description: Documentation for Installation
+sidebar:
+  order: 2
 ---
 
 Installing Joist in your project has four main steps:

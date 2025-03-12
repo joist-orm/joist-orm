@@ -1,6 +1,8 @@
 ---
 title: Recursive Relations
 description: Documentation for Recursive Relations
+sidebar:
+  order: 5
 ---
 
 ### Overview

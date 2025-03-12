@@ -1,6 +1,8 @@
 ---
 title: Changed Fields
 description: Documentation for Changed Fields
+sidebar:
+  order: 4
 ---
 
 Each entity tracks which of its fields has changed within the current unit of work/`EntityManager`:

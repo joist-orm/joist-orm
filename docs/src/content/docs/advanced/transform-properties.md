@@ -1,6 +1,8 @@
 ---
 title: Properties Transform
 description: Documentation for Properties Transform
+sidebar:
+  order: 13
 ---
 
 A key feature of Joist is defining custom properties on your domain model, i.e. `hasOneThrough`, `hasManyThrough`, `hasAsyncProperty`, `hasReactiveField`, etc.

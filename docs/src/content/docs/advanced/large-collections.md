@@ -1,6 +1,8 @@
 ---
 title: Large Collections
 description: Documentation for Large Collections
+sidebar:
+  order: 6
 ---
 
 In Joist, large collections are one-to-many collections (like `author.books`) that would fundamentally load too much data (like a single author having 100k books), such that we want to prevent code from accidentally loading the collection by mistake.

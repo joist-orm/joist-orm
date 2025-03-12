@@ -1,6 +1,8 @@
 ---
 title: Full Text Search
 description: Documentation for Full Text Search
+sidebar:
+  order: 12
 ---
 
 Postgres has rich support for [full text search functionality](https://www.postgresql.org/docs/current/functions-textsearch.html), which can be a replacement for more dedicated solutions such as Elasticsearch.

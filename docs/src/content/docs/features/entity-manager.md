@@ -1,6 +1,8 @@
 ---
 title: Entity Manager
 description: Documentation for Entity Manager
+sidebar:
+  order: 1
 ---
 
 Joist's `EntityManager` is how entities are loaded from & saved to the database.

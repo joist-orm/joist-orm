@@ -1,6 +1,8 @@
 ---
 title: Load-Safe Relations
 description: Documentation for Load-Safe Relations
+sidebar:
+  order: 4
 ---
 
 Joist models all relations as async-by-default, i.e. you must access them via `await` calls:

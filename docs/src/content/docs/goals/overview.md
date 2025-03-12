@@ -1,6 +1,8 @@
 ---
-title: Goals
+title: Overview
 description: Documentation for Goals
+sidebar:
+  order: 1
 ---
 
 Joist's mission is to help you build great domain models.

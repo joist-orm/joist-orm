@@ -1,6 +1,8 @@
 ---
 title: Avoiding N+1s
 description: Documentation for Avoiding N+1s
+sidebar:
+  order: 3
 ---
 
 Joist is built on Facebook's [dataloader](https://github.com/graphql/dataloader) library, which means Joist avoids N+1s in a fundamental, systematic way that just works.

@@ -1,6 +1,8 @@
 ---
 title: Fields
 description: Documentation for Fields
+sidebar:
+  order: 2
 ---
 
 Fields are the primitive columns in your domain model, so all of the (non-foreign key) `int`, `varchar`, `datetime`, etc. columns.

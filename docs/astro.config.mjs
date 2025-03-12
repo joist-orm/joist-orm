@@ -12,7 +12,11 @@ export default defineConfig({
     starlight({
       title: "Joist ORM",
       customCss: ["./src/tailwind.css"],
-      social: { github: "https://github.com/joist-orm/joist" },
+      social: {
+        github: "https://github.com/joist-orm/joist-orm",
+        ["x.com"]: "https://x.com/Joist_Orm",
+        discord: "https://discord.gg/ky9VTQugqu",
+      },
       sidebar: [
         { label: "Getting Started", autogenerate: { directory: "getting-started" } },
         { label: "Goals", autogenerate: { directory: "goals" } },

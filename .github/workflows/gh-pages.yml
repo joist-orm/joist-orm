@@ -1,7 +1,9 @@
 name: github pages
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 on:
   push:
@@ -14,24 +16,29 @@ on:
     paths:
       - ".github/workflows/gh-pages.yml"
       - "docs/**"
+  # Allows you to run this workflow manually from the Actions tab on GitHub.
+  workflow_dispatch:
 
 jobs:
-  deploy:
-    runs-on: ubuntu-22.04
-    defaults:
-      run:
-        working-directory: docs
+  build:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout your repository using git
+        uses: actions/checkout@v4
+      - name: Install, build, and upload your site
+        uses: withastro/action@v3
         with:
-          node-version: "21.x"
-      - run: yarn install --frozen-lockfile
-      - run: yarn build
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        if: github.ref == 'refs/heads/main'
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/build
-          commit_message: "[skip ci] ${{ github.event.head_commit.message }}"
+          path: docs
+          package-manager: yarn
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

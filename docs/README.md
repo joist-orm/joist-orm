@@ -1,33 +1,78 @@
-# Website
+# Joist ORM Documentation
 
-This website is built using [Docusaurus 2](https://docusaurus.io/), a modern static website generator.
+[![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
 
-### Installation
+This is the documentation site for Joist ORM, built with [Astro Starlight](https://starlight.astro.build).
 
-```
-$ yarn
-```
+## Getting Started
 
-### Local Development
+To run the documentation site locally:
 
-```
-$ yarn start
-```
+```bash
+# Install dependencies
+yarn install
 
-This command starts a local development server and opens up a browser window. Most changes are reflected live without having to restart the server.
-
-### Build
-
-```
-$ yarn build
+# Start the dev server
+yarn dev
 ```
 
-This command generates static content into the `build` directory and can be served using any static contents hosting service.
+This will start a local development server at http://localhost:4321/
 
-### Deployment
+## Project Structure
 
 ```
-$ GIT_USER=<Your GitHub username> USE_SSH=true yarn deploy
+.
+├── public/              # Static assets (images, logos, etc.)
+├── src/
+│   ├── assets/          # Images used in the site
+│   ├── content/
+│   │   ├── docs/        # Markdown documentation files
+│   │   └── config.ts    # Content configuration
+│   └── tailwind.css     # Global styles with Tailwind
+├── astro.config.mjs     # Astro configuration (with Starlight)
+├── package.json         # Project dependencies
+├── tailwind.config.js   # Tailwind configuration
+└── tsconfig.json        # TypeScript configuration
 ```
 
-If you are using GitHub pages for hosting, this command is a convenient way to build the website and push to the `gh-pages` branch.
+## Documentation Organization
+
+The documentation is organized into the following sections:
+
+- **Getting Started** - Installation and setup guides
+- **Goals** - The key goals and design principles of Joist
+- **Domain Modeling** - How to model your domain with Joist
+- **Features** - Core features and functionality
+- **Advanced Features** - More complex features and use cases
+- **Logging** - Information about Joist's logging capabilities
+- **Testing** - Testing utilities and patterns
+
+## Adding Content
+
+To add a new documentation page:
+
+1. Create a new Markdown file in the appropriate directory under `src/content/docs/`
+2. Add frontmatter with at least a `title` and `description`:
+
+```md
+---
+title: My New Page
+description: Description of what this page covers
+---
+
+Content goes here...
+```
+
+## Commands
+
+| Command           | Action                                       |
+| :---------------- | :------------------------------------------- |
+| `yarn install`    | Install dependencies                         |
+| `yarn dev`        | Start local dev server at `localhost:4321`   |
+| `yarn build`      | Build for production to `./dist/`            |
+| `yarn preview`    | Preview the production build                 |
+
+## Starlight Resources
+
+- [Starlight Documentation](https://starlight.astro.build/)
+- [Astro Documentation](https://docs.astro.build)

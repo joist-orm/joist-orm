@@ -1,11 +1,9 @@
 ---
-title: Joist ORM
+title: Joist
 description: An idiomatic TypeScript ORM for creating great domain models
 template: splash
 hero:
-  tagline: A TypeScript ORM with great domain modeling
-  image:
-    file: ../../assets/logos/logo-1.png
+  tagline: A TypeScript ORM for building great domain models
   actions:
     - text: Quick Tour
       link: /getting-started/tour/
@@ -21,15 +19,20 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 
 <CardGrid>
   <Card title="Type-safe Domain Models" icon="seti:typescript">
-    Built to leverage TypeScript's type system for compile-time safety.
+    <p>
+      Robust [Domain Modeling](/modeling/why-entities/) that leverages TypeScript for compile-time safety.
+    </p>
+    <p>
+      I.e. tracking [relation loaded-ness](/goals/load-safe-relations) in the type system.
+    </p>
   </Card>
   <Card title="N+1 Safe by Default" icon="rocket">
-    Avoids N+1 query performance problems through batched loading and pre-loading.
+    [Bulletproof N+1 Preventation](/goals/avoiding-n-plus-1s/) avoids N+1 query performance problems through batched loading and pre-loading.
   </Card>
-  <Card title="Great Developer Experience" icon="laptop">
-    Rich autocompletion, clean APIs, and simple tools for modeling your domain.
+  <Card title="Backend Reactivity" icon="laptop">
+    [Reactive Fields](/modeling/reactive-fields) and [validation rules](/modeling/validation-rules) bring the ergonomics of declarative business logic to the backend.
   </Card>
   <Card title="Rich Test Support" icon="test-tube">
-    Fast test database resets and entity factories make testing your code a breeze.
+    Out-of-the-box [test factories](/testing/test-factories) and [fast test database resets](/testing/fast-database-resets) make testing your code a breeze.
   </Card>
 </CardGrid>

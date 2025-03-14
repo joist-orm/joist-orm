@@ -10,7 +10,12 @@ export default defineConfig({
   integrations: [
     tailwind({ applyBaseStyles: false }),
     starlight({
-      title: "Joist ORM",
+      title: "Joist",
+      logo: {
+        light: "./src/assets/logos/logo-1.png",
+        dark: "./src/assets/logos/logo-2.png",
+        replacesTitle: true,
+      },
       customCss: ["./src/tailwind.css"],
       social: {
         github: "https://github.com/joist-orm/joist-orm",

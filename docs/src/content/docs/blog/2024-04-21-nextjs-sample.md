@@ -7,7 +7,7 @@ authors:
     url: https://github.com/stephenh
     image_url: https://github.com/stephenh.png
 tags: []
-excerpt: We've added a new NextJS sample app to the Joist repository.
+_excerpt: We've added a new NextJS sample app to the Joist repository.
 ---
 
 We've added a new [NextJS + Joist](https://github.com/joist-orm/joist-nextjs-sample/) sample app that shows how Joist can be used in a NextJS application, with several benefits:

@@ -7,7 +7,7 @@ authors:
     url: https://github.com/stephenh
     image_url: https://github.com/stephenh.png
 tags: []
-excerpt: A thought experiment on whether Joist is the best ORM ever.
+_excerpt: A thought experiment on whether Joist is the best ORM ever.
 ---
 
 I've been working on the Joist docs lately, specifically a [Why Joist?](/docs/why-joist) page, which ended up focusing more on "why Domain Models?" than a feature-by-feature description of Joist.

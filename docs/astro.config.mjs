@@ -33,7 +33,17 @@ export default defineConfig({
         { label: "FAQ", link: "/faq/" },
         { label: "Blog", link: "/blog" },
       ],
-      plugins: [starlightBlog()],
+      plugins: [
+        starlightBlog({
+          authors: {
+            shaberman: {
+              name: "Stephen Haberman",
+              picture: "https://github.com/stephenh.png",
+              url: "https://github.com/stephenh",
+            },
+          },
+        }),
+      ],
     }),
   ],
 });

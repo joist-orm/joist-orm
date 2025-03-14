@@ -2,12 +2,9 @@
 title: Evolution of Defaults
 slug: blog/evolution-of-defaults
 date: 2025-02-27
-authors:
-  - name: Stephen Haberman
-    url: https://github.com/stephenh
-    image_url: https://github.com/stephenh.png
+authors: shaberman
 tags: []
-excerpt: How Joist's approach to default values evolved from simple schema defaults to a robust, first-class feature.
+_excerpt: How Joist's approach to default values evolved from simple schema defaults to a robust, first-class feature. 
 ---
 
 Joist's mission is to model your application's business logic, with first-class support for domain modeling features & concepts.

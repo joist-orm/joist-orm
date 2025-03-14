@@ -7,7 +7,7 @@ authors:
     url: https://github.com/stephenh
     image_url: https://github.com/stephenh.png
 tags: []
-excerpt: First post on the Joist blog.
+_excerpt: First post on the Joist blog.
 ---
 
 Hello! This is just a "Hello World" post to show the Joist blog, using [**Docusaurus**](https://docusaurus.io/), is working :tada:.

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://joist-orm.io/sitemap-index.xml

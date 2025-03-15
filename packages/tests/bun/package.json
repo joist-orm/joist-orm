@@ -21,13 +21,13 @@
     "node-pg-migrate": "^7.9.1"
   },
   "devDependencies": {
-    "@types/node": "^22.13.4",
+    "@types/node": "^22.13.10",
     "joist-codegen": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
     "prettier": "^3.5.1",
     "prettier-plugin-organize-imports": "^4.1.0",
-    "tsx": "^4.19.2",
-    "typescript": "5.7.3"
+    "tsx": "^4.19.3",
+    "typescript": "5.8.2"
   }
 }

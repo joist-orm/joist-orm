@@ -47,14 +47,14 @@
     "@semantic-release/release-notes-generator": "^14.0.3",
     "@tsconfig/node20": "^20.1.4",
     "env-cmd": "^10.1.0",
-    "expect-type": "^1.1.0",
+    "expect-type": "^1.2.0",
     "mprocs": "^0.7.2",
     "semantic-release": "^24.2.3",
     "ts-patch": "^3.3.0",
-    "typescript-transform-paths": "^3.5.3"
+    "typescript-transform-paths": "^3.5.4"
   },
   "dependencies": {
-    "typescript": "5.7.3"
+    "typescript": "5.8.2"
   },
   "packageManager": "yarn@4.6.0"
 }

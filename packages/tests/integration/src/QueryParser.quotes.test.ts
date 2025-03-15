@@ -1,11 +1,11 @@
 import { Book } from "@src/entities";
-import { knex } from "@src/testEm";
+import { sql } from "@src/testEm";
 import { buildQuery } from "joist-knex";
 
 describe("QueryParser", () => {
   it("quotes with abbreviation", () => {
     // This is technically testing the old knex-based flow/quoting...
-    const q = buildQuery(knex, Book, { where: { author: { firstName: "jeff", schedules: { id: "4" } } } });
+    const q = buildQuery(sql as any, Book, { where: { author: { firstName: "jeff", schedules: { id: "4" } } } });
     expect(q.toSQL().sql).toEqual(
       [
         "select distinct b.*, b.title, b.id",

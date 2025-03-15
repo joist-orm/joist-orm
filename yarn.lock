@@ -38,17 +38,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/compiler@npm:^2.10.3, @astrojs/compiler@npm:^2.10.4":
-  version: 2.10.4
-  resolution: "@astrojs/compiler@npm:2.10.4"
-  checksum: 10/f13e5018bfedc461b1fb337fc025d065d6c84282dfaf794abf6a5bb539c70a60ca47d0b026b5a8fe044473694250c164dd14af0f49c467604f22cdd0e7891666
-  languageName: node
-  linkType: hard
-
-"@astrojs/internal-helpers@npm:0.6.0":
-  version: 0.6.0
-  resolution: "@astrojs/internal-helpers@npm:0.6.0"
-  checksum: 10/6cfe01eddecf74881e788b88d3e1f6f4d53d5f3dc2897b513507aa4fe0fcc2da44e07c2c4165827c411d07b946a43350e34847761ca99adfb86055a9d424f0b1
+"@astrojs/compiler@npm:^2.10.3, @astrojs/compiler@npm:^2.11.0":
+  version: 2.11.0
+  resolution: "@astrojs/compiler@npm:2.11.0"
+  checksum: 10/41e6727d35d7002d1a59a20faf046def0a17bdeff911c211414338fb84081410d8aa5aec230dbd989d1851d15c0e2771e735480a002363a0d6c982d59ed965f7
   languageName: node
   linkType: hard
 
@@ -95,35 +88,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/markdown-remark@npm:6.2.0":
-  version: 6.2.0
-  resolution: "@astrojs/markdown-remark@npm:6.2.0"
-  dependencies:
-    "@astrojs/internal-helpers": "npm:0.6.0"
-    "@astrojs/prism": "npm:3.2.0"
-    github-slugger: "npm:^2.0.0"
-    hast-util-from-html: "npm:^2.0.3"
-    hast-util-to-text: "npm:^4.0.2"
-    import-meta-resolve: "npm:^4.1.0"
-    js-yaml: "npm:^4.1.0"
-    mdast-util-definitions: "npm:^6.0.0"
-    rehype-raw: "npm:^7.0.0"
-    rehype-stringify: "npm:^10.0.1"
-    remark-gfm: "npm:^4.0.0"
-    remark-parse: "npm:^11.0.0"
-    remark-rehype: "npm:^11.1.1"
-    remark-smartypants: "npm:^3.0.2"
-    shiki: "npm:^1.29.2"
-    smol-toml: "npm:^1.3.1"
-    unified: "npm:^11.0.5"
-    unist-util-remove-position: "npm:^5.0.0"
-    unist-util-visit: "npm:^5.0.0"
-    unist-util-visit-parents: "npm:^6.0.1"
-    vfile: "npm:^6.0.3"
-  checksum: 10/beff5de696168fb8b22691b71855294b7da10be54478e7dbe4a645dfa6d8672fc22f1ccdeda73a83f90a85caddf1f6fefe7a1ced66dd75263776863e3ae8c40b
-  languageName: node
-  linkType: hard
-
 "@astrojs/markdown-remark@npm:6.2.1":
   version: 6.2.1
   resolution: "@astrojs/markdown-remark@npm:6.2.1"
@@ -150,6 +114,35 @@ __metadata:
     unist-util-visit-parents: "npm:^6.0.1"
     vfile: "npm:^6.0.3"
   checksum: 10/5aaaa42d61aa9de89c26ba81a35ba2d15dac9dc629ea137be049e753633abb81fbe0617da133c7d9e7373b50d964e01aafe57f2ba7dff856e2424ae4fdba030d
+  languageName: node
+  linkType: hard
+
+"@astrojs/markdown-remark@npm:6.3.0":
+  version: 6.3.0
+  resolution: "@astrojs/markdown-remark@npm:6.3.0"
+  dependencies:
+    "@astrojs/internal-helpers": "npm:0.6.1"
+    "@astrojs/prism": "npm:3.2.0"
+    github-slugger: "npm:^2.0.0"
+    hast-util-from-html: "npm:^2.0.3"
+    hast-util-to-text: "npm:^4.0.2"
+    import-meta-resolve: "npm:^4.1.0"
+    js-yaml: "npm:^4.1.0"
+    mdast-util-definitions: "npm:^6.0.0"
+    rehype-raw: "npm:^7.0.0"
+    rehype-stringify: "npm:^10.0.1"
+    remark-gfm: "npm:^4.0.1"
+    remark-parse: "npm:^11.0.0"
+    remark-rehype: "npm:^11.1.1"
+    remark-smartypants: "npm:^3.0.2"
+    shiki: "npm:^1.29.2"
+    smol-toml: "npm:^1.3.1"
+    unified: "npm:^11.0.5"
+    unist-util-remove-position: "npm:^5.0.0"
+    unist-util-visit: "npm:^5.0.0"
+    unist-util-visit-parents: "npm:^6.0.1"
+    vfile: "npm:^6.0.3"
+  checksum: 10/2fb11f9f4b4958246e3b7b331db330c69ef7e8f5585bc79f95737017abe975b1aff134e768f8ec0bb282d61ed3b4e859dc32cc593b442725c04bf95cae772584
   languageName: node
   linkType: hard
 
@@ -1167,84 +1160,85 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@graphql-tools/graphql-file-loader@npm:^8.0.14":
-  version: 8.0.14
-  resolution: "@graphql-tools/graphql-file-loader@npm:8.0.14"
+"@graphql-tools/graphql-file-loader@npm:^8.0.19":
+  version: 8.0.19
+  resolution: "@graphql-tools/graphql-file-loader@npm:8.0.19"
   dependencies:
-    "@graphql-tools/import": "npm:7.0.13"
-    "@graphql-tools/utils": "npm:^10.8.1"
+    "@graphql-tools/import": "npm:7.0.18"
+    "@graphql-tools/utils": "npm:^10.8.6"
     globby: "npm:^11.0.3"
     tslib: "npm:^2.4.0"
     unixify: "npm:^1.0.0"
   peerDependencies:
     graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
-  checksum: 10/6f3b4ff1811f3a0b47bc953085d95ece6e6e7abdc6a1e52b3fc15230ad3347f600c7a38b207a132426eff8ae51709499b294cb872f41843375f8435a673cdaa4
+  checksum: 10/f7b8871582fdb925ba4b54463bdad651777a53769eafbf1febe1783ab25208a1c787fa2f3a16caabee0f9c1621adad47df539973539c57037f748c6c9d4ef103
   languageName: node
   linkType: hard
 
-"@graphql-tools/import@npm:7.0.13":
-  version: 7.0.13
-  resolution: "@graphql-tools/import@npm:7.0.13"
+"@graphql-tools/import@npm:7.0.18":
+  version: 7.0.18
+  resolution: "@graphql-tools/import@npm:7.0.18"
   dependencies:
-    "@graphql-tools/utils": "npm:^10.8.1"
+    "@graphql-tools/utils": "npm:^10.8.6"
     resolve-from: "npm:5.0.0"
     tslib: "npm:^2.4.0"
   peerDependencies:
     graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
-  checksum: 10/124a937270c4bf4019f0ae6a9b19fd6bf2a7998276c4ff9abf1f0c9d819d4d814cac5409ff3f29f08a8f7513a5c49c1746c965f3eb5975f138db70692d83f82d
+  checksum: 10/739086fcaffefa8efa38648477fd4aea41a87b5fa3f78552a2a7b6249dce1d84d84e164e61c73811d6ce9e8f5754b6bab675f7255482bf5ba080f83759a37138
   languageName: node
   linkType: hard
 
-"@graphql-tools/load@npm:^8.0.14":
-  version: 8.0.14
-  resolution: "@graphql-tools/load@npm:8.0.14"
+"@graphql-tools/load@npm:^8.0.19":
+  version: 8.0.19
+  resolution: "@graphql-tools/load@npm:8.0.19"
   dependencies:
-    "@graphql-tools/schema": "npm:^10.0.18"
-    "@graphql-tools/utils": "npm:^10.8.1"
+    "@graphql-tools/schema": "npm:^10.0.23"
+    "@graphql-tools/utils": "npm:^10.8.6"
     p-limit: "npm:3.1.0"
     tslib: "npm:^2.4.0"
   peerDependencies:
     graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
-  checksum: 10/c044804a01b48457ae173e12f22ebd099fa1bc25bc0b357df14c2bdbc160bf65bf490b2ec75b03f64f4235d0ada134c6034e0f736651d15e6763042dee670338
+  checksum: 10/e1526a03db9187de748c54db32673fc20b1ae1be0bb9b3e9a477c43428e964f51f98ff8f4fe1564030058ecf199f1eeab65b9f4ec10a7792bbc2bebee7494d46
   languageName: node
   linkType: hard
 
-"@graphql-tools/merge@npm:^9.0.19":
-  version: 9.0.19
-  resolution: "@graphql-tools/merge@npm:9.0.19"
+"@graphql-tools/merge@npm:^9.0.24":
+  version: 9.0.24
+  resolution: "@graphql-tools/merge@npm:9.0.24"
   dependencies:
-    "@graphql-tools/utils": "npm:^10.8.1"
+    "@graphql-tools/utils": "npm:^10.8.6"
     tslib: "npm:^2.4.0"
   peerDependencies:
     graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
-  checksum: 10/96074ce9fc84f316cd041954cbbae6b08f25c828dbda6fdaf6b2ff570aabeec1ddb882b5f95832346bf79ea9532ff3a2291ceaa8bd04ecd90cb8d309741ed783
+  checksum: 10/95f77ff141f10d5d726cd8d1ae1ad84ed944c84346bf20461adca9b1543bb94cb524b0347885fe61d3158ccf5ffe1dddec361787ae40bfcc3449aad51528dd77
   languageName: node
   linkType: hard
 
-"@graphql-tools/schema@npm:^10.0.18":
-  version: 10.0.18
-  resolution: "@graphql-tools/schema@npm:10.0.18"
+"@graphql-tools/schema@npm:^10.0.23":
+  version: 10.0.23
+  resolution: "@graphql-tools/schema@npm:10.0.23"
   dependencies:
-    "@graphql-tools/merge": "npm:^9.0.19"
-    "@graphql-tools/utils": "npm:^10.8.1"
+    "@graphql-tools/merge": "npm:^9.0.24"
+    "@graphql-tools/utils": "npm:^10.8.6"
     tslib: "npm:^2.4.0"
   peerDependencies:
     graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
-  checksum: 10/4c77a394fb17b8c3899e3552bb046d386b08c75e646da2b400fe5622b4b1cfe83d40069ea481917ac739fc6126b47c082aaaf85218ce65a1d7eb5d6e8cc7ee06
+  checksum: 10/f0960dae161a478941276df1802af09844825c8135e4695b36f5f7e7384f43ff8e1288a67546023fc861951d783327f239112ccf563cb4be1f22038fc78acf21
   languageName: node
   linkType: hard
 
-"@graphql-tools/utils@npm:^10.8.1":
-  version: 10.8.1
-  resolution: "@graphql-tools/utils@npm:10.8.1"
+"@graphql-tools/utils@npm:^10.8.6":
+  version: 10.8.6
+  resolution: "@graphql-tools/utils@npm:10.8.6"
   dependencies:
     "@graphql-typed-document-node/core": "npm:^3.1.1"
+    "@whatwg-node/promise-helpers": "npm:^1.0.0"
     cross-inspect: "npm:1.0.1"
     dset: "npm:^3.1.4"
     tslib: "npm:^2.4.0"
   peerDependencies:
     graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
-  checksum: 10/2c79fb70bc2a2bf29ea54793d2b52bb4db0e59bd8b3318ddf55b6a6ba1bfb5880e3e10d5a5f7236fb16582409a700b421dfd6f6353e92602f21ad02afdca0625
+  checksum: 10/98329aef966b489d3674eb086b784f6fb4500afaf9bc46fbe6a14ca32e98fec480c7395d3488c5eb2f450b75a538e98edf0527ed4bf24af352230e850c914389
   languageName: node
   linkType: hard
 
@@ -3448,6 +3442,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@whatwg-node/promise-helpers@npm:^1.0.0":
+  version: 1.2.4
+  resolution: "@whatwg-node/promise-helpers@npm:1.2.4"
+  dependencies:
+    tslib: "npm:^2.6.3"
+  checksum: 10/0cb7b02c800c2784097b02118bc2d8a97dd1a542af320286fbfdff6b1ffd8341279fc538bd38bbebb3c9243202b6f173057411953ea4bb3d978827d6f74ba74d
+  languageName: node
+  linkType: hard
+
 "abbrev@npm:1":
   version: 1.1.1
   resolution: "abbrev@npm:1.1.1"
@@ -3487,12 +3490,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"acorn@npm:^8.0.0, acorn@npm:^8.14.0, acorn@npm:^8.4.1":
-  version: 8.14.0
-  resolution: "acorn@npm:8.14.0"
+"acorn@npm:^8.0.0, acorn@npm:^8.14.0, acorn@npm:^8.14.1, acorn@npm:^8.4.1":
+  version: 8.14.1
+  resolution: "acorn@npm:8.14.1"
   bin:
     acorn: bin/acorn
-  checksum: 10/6df29c35556782ca9e632db461a7f97947772c6c1d5438a81f0c873a3da3a792487e83e404d1c6c25f70513e91aa18745f6eafb1fcc3a43ecd1920b21dd173d2
+  checksum: 10/d1379bbee224e8d44c3c3946e6ba6973e999fbdd4e22e41c3455d7f9b6f72f7ce18d3dc218002e1e48eea789539cf1cb6d1430c81838c6744799c712fb557d92
   languageName: node
   linkType: hard
 
@@ -3818,22 +3821,22 @@ __metadata:
   languageName: node
   linkType: hard
 
-"astro@npm:^5.4.2":
-  version: 5.4.2
-  resolution: "astro@npm:5.4.2"
+"astro@npm:^5.5.2":
+  version: 5.5.2
+  resolution: "astro@npm:5.5.2"
   dependencies:
-    "@astrojs/compiler": "npm:^2.10.4"
-    "@astrojs/internal-helpers": "npm:0.6.0"
-    "@astrojs/markdown-remark": "npm:6.2.0"
+    "@astrojs/compiler": "npm:^2.11.0"
+    "@astrojs/internal-helpers": "npm:0.6.1"
+    "@astrojs/markdown-remark": "npm:6.3.0"
     "@astrojs/telemetry": "npm:3.2.0"
     "@oslojs/encoding": "npm:^1.1.0"
     "@rollup/pluginutils": "npm:^5.1.4"
     "@types/cookie": "npm:^0.6.0"
-    acorn: "npm:^8.14.0"
+    acorn: "npm:^8.14.1"
     aria-query: "npm:^5.3.2"
     axobject-query: "npm:^4.1.0"
     boxen: "npm:8.0.1"
-    ci-info: "npm:^4.1.0"
+    ci-info: "npm:^4.2.0"
     clsx: "npm:^2.1.1"
     common-ancestor-path: "npm:^1.0.1"
     cookie: "npm:^0.7.2"
@@ -3859,8 +3862,8 @@ __metadata:
     neotraverse: "npm:^0.6.18"
     p-limit: "npm:^6.2.0"
     p-queue: "npm:^8.1.0"
+    package-manager-detector: "npm:^1.0.0"
     picomatch: "npm:^4.0.2"
-    preferred-pm: "npm:^4.1.1"
     prompts: "npm:^2.4.2"
     rehype: "npm:^13.0.2"
     semver: "npm:^7.7.1"
@@ -3873,9 +3876,8 @@ __metadata:
     unist-util-visit: "npm:^5.0.0"
     unstorage: "npm:^1.15.0"
     vfile: "npm:^6.0.3"
-    vite: "npm:^6.2.0"
+    vite: "npm:^6.2.1"
     vitefu: "npm:^1.0.6"
-    which-pm: "npm:^3.0.1"
     xxhash-wasm: "npm:^1.1.0"
     yargs-parser: "npm:^21.1.1"
     yocto-spinner: "npm:^0.2.1"
@@ -3887,7 +3889,7 @@ __metadata:
       optional: true
   bin:
     astro: astro.js
-  checksum: 10/e3e9ad6b6455230ab1d17ab449dbcec82eae444ff9d4e6245e476190f14f27031349ea68fb0ec0560a0895d8bccdeb1bb382bdae099a2f17ecb9c4aabf1fca9f
+  checksum: 10/2a560ef82634da7764fe5df2a893844707cd4879b55d290a4b9feff56267482044d1dd242f5109cdde71c90d4170a173b8b4586c5ad5fc822367e7a66bcb7fb7
   languageName: node
   linkType: hard
 
@@ -4471,7 +4473,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ci-info@npm:^4.0.0, ci-info@npm:^4.1.0":
+"ci-info@npm:^4.0.0, ci-info@npm:^4.1.0, ci-info@npm:^4.2.0":
   version: 4.2.0
   resolution: "ci-info@npm:4.2.0"
   checksum: 10/928d8457f3476ffc4a66dec93b9cdf1944d5e60dba69fbd6a0fc95b652386f6ef64857f6e32372533210ef6d8954634af2c7693d7c07778ee015f3629a5e0dd9
@@ -6007,16 +6009,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"find-yarn-workspace-root2@npm:1.2.16":
-  version: 1.2.16
-  resolution: "find-yarn-workspace-root2@npm:1.2.16"
-  dependencies:
-    micromatch: "npm:^4.0.2"
-    pkg-dir: "npm:^4.2.0"
-  checksum: 10/398aa473ac245d9c9e9af5a75806b5a6828bd9a759f138faf4666f00c5fcb78af679d43f5cfbe73fe667cf6ec3ef6c9e157b09400181e5b9edc3adc47080e9bb
-  languageName: node
-  linkType: hard
-
 "flattie@npm:^1.1.1":
   version: 1.1.1
   resolution: "flattie@npm:1.1.1"
@@ -6371,7 +6363,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"graceful-fs@npm:^4.1.2, graceful-fs@npm:^4.1.5, graceful-fs@npm:^4.1.6, graceful-fs@npm:^4.2.0, graceful-fs@npm:^4.2.11, graceful-fs@npm:^4.2.4, graceful-fs@npm:^4.2.6, graceful-fs@npm:^4.2.9":
+"graceful-fs@npm:^4.1.2, graceful-fs@npm:^4.1.6, graceful-fs@npm:^4.2.0, graceful-fs@npm:^4.2.11, graceful-fs@npm:^4.2.4, graceful-fs@npm:^4.2.6, graceful-fs@npm:^4.2.9":
   version: 4.2.11
   resolution: "graceful-fs@npm:4.2.11"
   checksum: 10/bf152d0ed1dc159239db1ba1f74fdbc40cb02f626770dcd5815c427ce0688c2635a06ed69af364396da4636d0408fcf7d4afdf7881724c3307e46aff30ca49e2
@@ -8077,7 +8069,7 @@ __metadata:
     tsx: "npm:^4.19.3"
     typescript: "npm:5.8.2"
     zod: "npm:^3.24.2"
-    zod-to-json-schema: "npm:^3.24.1"
+    zod-to-json-schema: "npm:^3.24.4"
   languageName: unknown
   linkType: soft
 
@@ -8090,7 +8082,7 @@ __metadata:
     "@astrojs/starlight-tailwind": "npm:^3.0.0"
     "@astrojs/tailwind": "npm:^6.0.0"
     "@tailwindcss/typography": "npm:^0.5.16"
-    astro: "npm:^5.4.2"
+    astro: "npm:^5.5.2"
     sharp: "npm:^0.33.5"
     starlight-blog: "npm:^0.18.0"
     tailwindcss: "npm:^3.4.17"
@@ -8350,8 +8342,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-integration@workspace:packages/tests/integration"
   dependencies:
-    "@graphql-tools/graphql-file-loader": "npm:^8.0.14"
-    "@graphql-tools/load": "npm:^8.0.14"
+    "@graphql-tools/graphql-file-loader": "npm:^8.0.19"
+    "@graphql-tools/load": "npm:^8.0.19"
     "@swc/core": "npm:^1.11.9"
     "@swc/jest": "npm:^0.2.37"
     "@types/jest": "npm:^29.5.14"
@@ -8568,7 +8560,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"js-yaml@npm:^3.13.0, js-yaml@npm:^3.13.1":
+"js-yaml@npm:^3.13.1":
   version: 3.14.1
   resolution: "js-yaml@npm:3.14.1"
   dependencies:
@@ -8968,18 +8960,6 @@ __metadata:
     pify: "npm:^3.0.0"
     strip-bom: "npm:^3.0.0"
   checksum: 10/8f5d6d93ba64a9620445ee9bde4d98b1eac32cf6c8c2d20d44abfa41a6945e7969456ab5f1ca2fb06ee32e206c9769a20eec7002fe290de462e8c884b6b8b356
-  languageName: node
-  linkType: hard
-
-"load-yaml-file@npm:^0.2.0":
-  version: 0.2.0
-  resolution: "load-yaml-file@npm:0.2.0"
-  dependencies:
-    graceful-fs: "npm:^4.1.5"
-    js-yaml: "npm:^3.13.0"
-    pify: "npm:^4.0.1"
-    strip-bom: "npm:^3.0.0"
-  checksum: 10/b1bfa7e80114933e43ccc1cf3772582b7e13c8a71dc8d560de2aeecdabf545014daf8a5afabe634c1e9f71c75f6f8528bbd944c9cbbbdf2ab8c927118bd48fd2
   languageName: node
   linkType: hard
 
@@ -11041,6 +11021,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"package-manager-detector@npm:^1.0.0":
+  version: 1.0.0
+  resolution: "package-manager-detector@npm:1.0.0"
+  checksum: 10/bcff7a96d8e953b5763fd8207b4a971f8269492bf746a8b4b4de927303d4bb37c32248d078fdff6b4eb3663877326b36396d647e09c297572bc6a16eda116fa7
+  languageName: node
+  linkType: hard
+
 "pacote@npm:^17.0.0, pacote@npm:^17.0.4, pacote@npm:^17.0.6":
   version: 17.0.7
   resolution: "pacote@npm:17.0.7"
@@ -11706,17 +11693,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"preferred-pm@npm:^4.1.1":
-  version: 4.1.1
-  resolution: "preferred-pm@npm:4.1.1"
-  dependencies:
-    find-up-simple: "npm:^1.0.0"
-    find-yarn-workspace-root2: "npm:1.2.16"
-    which-pm: "npm:^3.0.1"
-  checksum: 10/f187b3c76721d251de8a75bd0a33c9ab6ceb19d4defbb0f6eb509d47950edeb9b0748930cab8641df55e3ad9492794bee100de0fd9309da73168971efc328a97
-  languageName: node
-  linkType: hard
-
 "prettier-plugin-organize-imports@npm:^4.1.0":
   version: 4.1.0
   resolution: "prettier-plugin-organize-imports@npm:4.1.0"
@@ -12282,7 +12258,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"remark-gfm@npm:^4.0.0, remark-gfm@npm:^4.0.1":
+"remark-gfm@npm:^4.0.1":
   version: 4.0.1
   resolution: "remark-gfm@npm:4.0.1"
   dependencies:
@@ -13962,10 +13938,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tslib@npm:^2.0.1, tslib@npm:^2.0.3, tslib@npm:^2.1.0, tslib@npm:^2.4.0, tslib@npm:^2.6.2":
-  version: 2.6.2
-  resolution: "tslib@npm:2.6.2"
-  checksum: 10/bd26c22d36736513980091a1e356378e8b662ded04204453d353a7f34a4c21ed0afc59b5f90719d4ba756e581a162ecbf93118dc9c6be5acf70aa309188166ca
+"tslib@npm:^2.0.1, tslib@npm:^2.0.3, tslib@npm:^2.1.0, tslib@npm:^2.4.0, tslib@npm:^2.6.2, tslib@npm:^2.6.3":
+  version: 2.8.1
+  resolution: "tslib@npm:2.8.1"
+  checksum: 10/3e2e043d5c2316461cb54e5c7fe02c30ef6dccb3384717ca22ae5c6b5bc95232a6241df19c622d9c73b809bea33b187f6dbc73030963e29950c2141bc32a79f7
   languageName: node
   linkType: hard
 
@@ -14516,9 +14492,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:^6.2.0":
-  version: 6.2.1
-  resolution: "vite@npm:6.2.1"
+"vite@npm:^6.2.1":
+  version: 6.2.2
+  resolution: "vite@npm:6.2.2"
   dependencies:
     esbuild: "npm:^0.25.0"
     fsevents: "npm:~2.3.3"
@@ -14564,7 +14540,7 @@ __metadata:
       optional: true
   bin:
     vite: bin/vite.js
-  checksum: 10/a37cbc33a3d9746434e8e96614dd6d8d45d821e61e9d266f389808da290b3128ac93ba0059ab09a098cdeab8b790d6d3ae7cdd5e1ce7d55c31b8bece650b3790
+  checksum: 10/30896cbdbc082131cca3a343461ada8c2e8c30eed640dfaca39fd44b2f2fa4a1a312fe298e037063106af09f3026239be822a6b2f49e3d8239b8a64e86e83193
   languageName: node
   linkType: hard
 
@@ -14861,15 +14837,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"which-pm@npm:^3.0.1":
-  version: 3.0.1
-  resolution: "which-pm@npm:3.0.1"
-  dependencies:
-    load-yaml-file: "npm:^0.2.0"
-  checksum: 10/abb8e11cfe4011e6c57b7cb2dafa78c592dec8a112d2a248699b5935ca22e8de138d04ed22c9e2708f36c909ddff29ab5789fa4a0a88589687beb3de35eb0207
-  languageName: node
-  linkType: hard
-
 "which@npm:^2.0.1, which@npm:^2.0.2":
   version: 2.0.2
   resolution: "which@npm:2.0.2"
@@ -15148,12 +15115,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod-to-json-schema@npm:^3.24.1, zod-to-json-schema@npm:^3.24.3":
-  version: 3.24.3
-  resolution: "zod-to-json-schema@npm:3.24.3"
+"zod-to-json-schema@npm:^3.24.3, zod-to-json-schema@npm:^3.24.4":
+  version: 3.24.4
+  resolution: "zod-to-json-schema@npm:3.24.4"
   peerDependencies:
     zod: ^3.24.1
-  checksum: 10/9dc6fafc3a9b5e088a92e2296bee6bc7b1c149f1d762c535a17626ce471721ef0c472d287f137f5408dad6368469621fe538ed8f0bf79811c7a69d67a1a7908b
+  checksum: 10/ff4d67add8090f915c28476116ded009a25d23eee0947f7d0b7e41cc90643a0c6f6c3e2a9793f5d334499521d678fcd5a7bfc403af6d120d7619e3f187e42e58
   languageName: node
   linkType: hard
 

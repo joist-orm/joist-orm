@@ -16,6 +16,7 @@
     "build"
   ],
   "dependencies": {
+    "@types/pg": "^8.11.11",
     "@types/pluralize": "^0.0.33",
     "joist-utils": "workspace:*",
     "node-pg-migrate": "^7.9.1",

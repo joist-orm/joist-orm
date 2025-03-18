@@ -9,7 +9,7 @@ async function main() {
   const { run, bench, group, baseline } = mitata;
 
   const sql = postgres("postgres://joist:local@localhost:5435/joist", { max: 4 });
-  const knex = createKnex(newPgConnectionConfig() as any);
+  const knex = createKnex({ client: "pg", connection: newPgConnectionConfig() });
 
   /*
   SELECT flush_database();
@@ -63,6 +63,7 @@ async function main() {
 
   await run({});
   await testDriver.destroy();
+  await knex.destroy();
   await sql.end();
 }
 

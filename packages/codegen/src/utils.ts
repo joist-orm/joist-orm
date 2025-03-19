@@ -195,5 +195,5 @@ function isIgnored(config: Config, t: Table): boolean {
 }
 
 function shouldIncludeSchema(config: Config, t: Table): boolean {
-  return config.includeSchema ? config.includeSchema.includes(t.schema.name) : t.schema.name === "public";
+  return config.schemas ? config.schemas.includes(t.schema.name) : t.schema.name === "public";
 }

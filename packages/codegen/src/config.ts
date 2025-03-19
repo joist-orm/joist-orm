@@ -142,7 +142,7 @@ export const config = z
     version: z.string().default("0.0.0"),
 
     /** A list of postgres schemas to use for finding tables */
-    includeSchema: z.optional(z.array(z.string())),
+    schemas: z.optional(z.array(z.string())),
   })
   .strict();
 

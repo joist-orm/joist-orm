@@ -1,3 +1,10 @@
+# [1.233.0](https://github.com/joist-orm/joist-orm/compare/v1.232.2...v1.233.0) (2025-03-19)
+
+
+### Features
+
+* add includeSchema option to config, with default of public ([#1406](https://github.com/joist-orm/joist-orm/issues/1406)) ([ac4ac09](https://github.com/joist-orm/joist-orm/commit/ac4ac099ad0c667020267f16ee81652cf3d4b181))
+
 ## [1.232.2](https://github.com/joist-orm/joist-orm/compare/v1.232.1...v1.232.2) (2025-03-11)
 
 

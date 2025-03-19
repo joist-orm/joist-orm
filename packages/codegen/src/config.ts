@@ -140,7 +140,9 @@ export const config = z
     allowImportingTsExtensions: z.optional(z.boolean()),
     // The version of Joist that generated this config.
     version: z.string().default("0.0.0"),
-    includeSchema: z.array(z.string()).default(['public']),
+
+    /** A list of postgres schemas to use for finding tables */
+    includeSchema: z.array(z.string()).default(["public"]),
   })
   .strict();
 

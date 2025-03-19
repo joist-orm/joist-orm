@@ -191,9 +191,9 @@ export function uncapitalize(s: string): string {
 }
 
 function isIgnored(config: Config, t: Table): boolean {
-  return (config.ignoredTables || ["migrations", "pgmigrations"]).includes(t.name) || !shouldIncludeSchema(t);
+  return (config.ignoredTables || ["migrations", "pgmigrations"]).includes(t.name) || !shouldIncludeSchema(config, t);
 }
 
-function shouldIncludeSchema(t: Table): boolean {
-  return t.schema.name === "public";
+function shouldIncludeSchema(config: Config, t: Table): boolean {
+  return config.includeSchema.includes(t.schema.name);
 }

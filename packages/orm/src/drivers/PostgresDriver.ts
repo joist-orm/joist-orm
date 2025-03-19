@@ -1,4 +1,4 @@
-import { Sql, TransactionSql } from "postgres";
+import { PendingQuery, Sql, TransactionSql } from "postgres";
 import { buildValuesCte } from "../dataloaders/findDataLoader";
 import {
   afterTransaction,
@@ -60,11 +60,9 @@ export class PostgresDriver implements Driver<TransactionSql> {
   }
 
   async executeQuery(em: EntityManager, sql: string, bindings: any[]): Promise<any[]> {
-    return this.getMaybeInTxnKnex(em)
-      .unsafe(replaceQuestionMarks(sql), bindings)
-      .catch(function executeQuery(err) {
-        throw appendStack(err, new Error());
-      });
+    return convertToSql(this.getMaybeInTxnKnex(em), sql, bindings).catch(function executeQuery(err) {
+      throw appendStack(err, new Error());
+    });
   }
 
   transaction<T>(em: EntityManager, fn: (txn: TransactionSql) => Promise<T>): Promise<T> {
@@ -85,7 +83,7 @@ export class PostgresDriver implements Driver<TransactionSql> {
     }) as Promise<T>;
   }
 
-  async assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
+  async assignNewIds(_: EntityManager, todos: Record<string, Todo>): Promise<void> {
     return this.idAssigner.assignNewIds(todos);
   }
 
@@ -144,7 +142,7 @@ export class PostgresDriver implements Driver<TransactionSql> {
             keyToNumber(meta2, maybeResolveReferenceToId(row[m2m.otherColumnName] as any))!,
           ];
         });
-        const rows = await txn.unsafe(replaceQuestionMarks(sql), bindings);
+        const rows = await convertToSql(txn, sql, bindings);
         for (let i = 0; i < rows.length; i++) {
           newRows[i].id = rows[i].id;
           newRows[i].op = JoinRowOperation.Flushed;
@@ -200,7 +198,7 @@ function batchInsert(txn: TransactionSql, op: InsertOp): Promise<unknown> {
     VALUES ${rows.map(() => `(${columns.map(() => `?`).join(", ")})`).join(",")}
   `);
   const bindings = rows.flat();
-  return txn.unsafe(replaceQuestionMarks(sql), bindings);
+  return convertToSql(txn, sql, bindings);
 }
 
 // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...`
@@ -235,7 +233,7 @@ async function batchUpdate(txn: TransactionSql, op: UpdateOp): Promise<void> {
   `;
 
   const bindings = rows.flat();
-  const results = await txn.unsafe(replaceQuestionMarks(cleanSql(sql)), bindings);
+  const results = await convertToSql(txn, cleanSql(sql), bindings);
 
   if (results.length !== rows.length) {
     const updated = new Set(results.map((r: any) => r.id));
@@ -249,17 +247,23 @@ async function batchDelete(txn: TransactionSql, op: DeleteOp): Promise<void> {
   await txn`DELETE FROM ${txn(tableName)} WHERE id IN ${txn(ids)}`;
 }
 
-const questionMark = /(\\*)(\?)/g;
-
-/** Replaces knex-style `?` placeholders with `$1/$2/etc` placeholders. */
-function replaceQuestionMarks(sql: string): string {
-  let questionCount = 0;
-  return sql.replace(questionMark, (_, escapes) => {
-    if (escapes.length % 2) {
-      return "?";
-    } else {
-      questionCount++;
-      return `$${questionCount}`;
-    }
-  });
+/**
+ * Interleaves a SQL query with placeholders (?) and bindings for template literal use
+ *
+ * @param sql - the postgres.js Sql instance
+ * @param query - SQL query string with ? placeholders
+ * @param bindings - Array of values to bind to the placeholders
+ * @returns An array with string fragments and binding values interleaved
+ */
+function convertToSql(sql: Sql, query: string, bindings: any[]): PendingQuery<any> {
+  // Split the query string by the placeholder character '?'
+  const fragments = query.split("?");
+  if (fragments.length - 1 !== bindings.length) {
+    throw new Error(`Mismatch between placeholders (${fragments.length - 1}) and bindings (${bindings.length})`);
+  }
+  // postgres.js does runtime detection of the `raw` property to determine if it's a template string
+  const templateStrings = Object.assign(fragments, {
+    raw: fragments,
+  }) as unknown as TemplateStringsArray;
+  return sql(templateStrings, ...bindings);
 }

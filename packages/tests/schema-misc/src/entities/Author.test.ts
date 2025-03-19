@@ -16,7 +16,7 @@ describe("Author", () => {
      [
        "begin ",
        "select nextval('authors_id_seq') from generate_series(1, 1)",
-       "INSERT INTO "authors" ("id", "firstName", "lastName", "delete", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6)",
+       "INSERT INTO "authors" ("id", "firstName", "lastName", "delete", "createdAt", "updatedAt") VALUES (?, ?, ?, ?, ?, ?)",
        "commit",
      ]
     `);
@@ -30,7 +30,7 @@ describe("Author", () => {
     expect(queries).toMatchInlineSnapshot(`
      [
        "begin ",
-       "WITH data (id, "lastName", "delete", "updatedAt", __original_updated_at) AS (VALUES ($1::int, $2::character varying, $3::boolean, $4::timestamp with time zone, $5::timestamptz) ) UPDATE authors SET "lastName" = data."lastName", "delete" = data."delete", "updatedAt" = data."updatedAt" FROM data WHERE authors.id = data.id AND date_trunc('milliseconds', authors."updatedAt") = data.__original_updated_at RETURNING authors.id",
+       "WITH data (id, "lastName", "delete", "updatedAt", __original_updated_at) AS (VALUES (?::int, ?::character varying, ?::boolean, ?::timestamp with time zone, ?::timestamptz) ) UPDATE authors SET "lastName" = data."lastName", "delete" = data."delete", "updatedAt" = data."updatedAt" FROM data WHERE authors.id = data.id AND date_trunc('milliseconds', authors."updatedAt") = data.__original_updated_at RETURNING authors.id",
        "commit",
      ]
     `);

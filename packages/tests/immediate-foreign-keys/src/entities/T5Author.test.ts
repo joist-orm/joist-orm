@@ -12,9 +12,9 @@ describe("T5Author", () => {
      [
        "begin ",
        "select nextval('t5_authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('t5_books_id_seq') from generate_series(1, 2) UNION ALL select nextval('t5_book_reviews_id_seq') from generate_series(1, 2)",
-       "INSERT INTO "t5_authors" ("id", "first_name") VALUES ($1, $2)",
-       "INSERT INTO "t5_books" ("id", "title", "author_id") VALUES ($1, $2, $3),($4, $5, $6)",
-       "INSERT INTO "t5_book_reviews" ("id", "title", "book_id") VALUES ($1, $2, $3),($4, $5, $6)",
+       "INSERT INTO "t5_authors" ("id", "first_name") VALUES (?, ?)",
+       "INSERT INTO "t5_books" ("id", "title", "author_id") VALUES (?, ?, ?),(?, ?, ?)",
+       "INSERT INTO "t5_book_reviews" ("id", "title", "book_id") VALUES (?, ?, ?),(?, ?, ?)",
        "commit",
      ]
     `);
@@ -29,9 +29,9 @@ describe("T5Author", () => {
      [
        "begin ",
        "select nextval('t5_book_reviews_id_seq') from generate_series(1, 1) UNION ALL select nextval('t5_authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('t5_books_id_seq') from generate_series(1, 1)",
-       "INSERT INTO "t5_authors" ("id", "first_name") VALUES ($1, $2)",
-       "INSERT INTO "t5_books" ("id", "title", "author_id") VALUES ($1, $2, $3)",
-       "INSERT INTO "t5_book_reviews" ("id", "title", "book_id") VALUES ($1, $2, $3)",
+       "INSERT INTO "t5_authors" ("id", "first_name") VALUES (?, ?)",
+       "INSERT INTO "t5_books" ("id", "title", "author_id") VALUES (?, ?, ?)",
+       "INSERT INTO "t5_book_reviews" ("id", "title", "book_id") VALUES (?, ?, ?)",
        "commit",
      ]
     `);

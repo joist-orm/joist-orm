@@ -98,13 +98,7 @@ export class PostgresDriver implements Driver<TransactionSql> {
     // We want 10k params maximum per batch insert
     const parameterLimit = 10_000;
     for (const insert of ops.inserts) {
-      const parameterTotal = insert.columns.length * insert.rows.length;
-      if (parameterTotal > parameterLimit) {
-        const batchSize = Math.floor(parameterLimit / insert.columns.length);
-        await Promise.all(batched(insert.rows, batchSize).map((batch) => batchInsert(txn, { ...insert, rows: batch })));
-      } else {
-        await batchInsert(txn, insert);
-      }
+      await batchInsert(txn, insert);
     }
 
     for (const update of ops.updates) {
@@ -190,15 +184,24 @@ export class PostgresDriver implements Driver<TransactionSql> {
   }
 }
 
-// Issue 1 INSERT statement with N `VALUES (..., ...), (..., ...), ...`
 function batchInsert(txn: TransactionSql, op: InsertOp): Promise<unknown> {
   const { tableName, columns, rows } = op;
   const sql = cleanSql(`
-    INSERT INTO "${tableName}" (${columns.map((c) => `"${c.columnName}"`).join(", ")})
-    VALUES ${rows.map(() => `(${columns.map(() => `?`).join(", ")})`).join(",")}
+    INSERT INTO ${kq(tableName)} (${columns.map((c) => kq(c.columnName)).join(", ")})
+    SELECT
+      ${columns
+        .map((c, i) => {
+          if (c.dbType.endsWith("[]")) {
+            return `array(select jsonb_array_elements_text((row->>${i})::jsonb))::${c.dbType}`;
+          } else {
+            return `(row->>${i})::${c.dbType}`;
+          }
+        })
+        .join(", ")}
+      FROM jsonb_array_elements(?::jsonb) row
   `);
-  const bindings = rows.flat();
-  return convertToSql(txn, sql, bindings);
+  console.log(rows);
+  return convertToSql(txn, sql, [rows]);
 }
 
 // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...`

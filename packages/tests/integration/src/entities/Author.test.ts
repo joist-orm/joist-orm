@@ -6,7 +6,7 @@ import {
   insertPublisher,
   select,
 } from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
+import { newEntityManager, sql } from "@src/testEm";
 import { defaultValue, getMetadata, isNewEntity } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
@@ -178,6 +178,13 @@ describe("Author", () => {
   });
 
   it("can skip validations", async () => {
+    const rows = await sql`select (row->>0)::int, (row->>1)::text from jsonb_array_elements(${[
+      [1, "a"],
+      [2, "b"],
+      [3, "c"],
+    ]}::jsonb) row`;
+    console.log(rows);
+
     // Given an author with the same first and last name
     // Given that a validation exists preventing the firstName and lastName from being the same values
     const em = newEntityManager();

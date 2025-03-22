@@ -129,10 +129,12 @@ CREATE OR REPLACE FUNCTION unnest_2d_1d(arr ANYARRAY, nullable BOOLEAN = false, 
 $func$
 BEGIN
   FOREACH a SLICE 1 IN ARRAY arr LOOP
-    a := array_remove(a, NULL);
-    IF nullable AND array_length(a, 1) IS NULL THEN
-      a := NULL;
+    IF nullable THEN
+      IF a[1] IS NULL THEN a := NULL;
+      ELSE a := a[2:array_length(a, 1)];
+      END IF;
     END IF;
+    a := array_remove(a, NULL);
     RETURN NEXT;
   END LOOP;
 END

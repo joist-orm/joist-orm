@@ -136,7 +136,9 @@ export class PostgresDriver implements Driver<TransactionSql> {
             keyToNumber(meta2, maybeResolveReferenceToId(row[m2m.otherColumnName] as any))!,
           ];
         });
-        const rows = await convertToSql(txn, sql, bindings);
+        const rows = await convertToSql(txn, sql, bindings).catch(function flushJoinTables(err) {
+          throw appendStack(err, new Error());
+        });
         for (let i = 0; i < rows.length; i++) {
           newRows[i].id = rows[i].id;
           newRows[i].op = JoinRowOperation.Flushed;
@@ -253,7 +255,9 @@ async function batchUpdate(txn: TransactionSql, op: UpdateOp): Promise<void> {
   `;
 
   const bindings = rows.flat();
-  const results = await convertToSql(txn, cleanSql(sql), bindings);
+  const results = await convertToSql(txn, cleanSql(sql), bindings).catch(function batchUpdate(err) {
+    throw appendStack(err, new Error());
+  });
 
   if (results.length !== rows.length) {
     const updated = new Set(results.map((r: any) => r.id));

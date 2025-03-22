@@ -353,7 +353,7 @@ export class PolymorphicKeySerde implements FieldSerde {
 
     return this.field.components.map((comp) => ({
       columnName: comp.columnName,
-      dbType: "int",
+      dbType: comp.otherMetadata().idDbType,
       isArray: false,
       otherMetadata: comp.otherMetadata,
       dbValue(data: any): any {

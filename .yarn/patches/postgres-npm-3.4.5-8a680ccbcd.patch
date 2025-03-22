@@ -99,3 +99,15 @@ index 45327f2fabcdbf8f8ec5020675012c310c04fee6..da3d545fdfd7ae90f783133ef5b8a030
    }
  
    execute() {
+diff --git a/cjs/src/types.js b/cjs/src/types.js
+index 0578284c5a691d0cb535cda8dc40177d87cd62a1..b995e86f8f1c6db94511ae973e96bf17c9e852cc 100644
+--- a/cjs/src/types.js
++++ b/cjs/src/types.js
+@@ -224,7 +224,6 @@ const inferType = module.exports.inferType = function inferType(x) {
+     x instanceof Uint8Array ? 17 :
+     (x === true || x === false) ? 16 :
+     typeof x === 'bigint' ? 20 :
+-    Array.isArray(x) ? inferType(x[0]) :
+     0
+   )
+ }

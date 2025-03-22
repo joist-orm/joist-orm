@@ -123,13 +123,16 @@ export function createUpdatedAtFunction(b: MigrationBuilder): void {
 }
 
 export const unnest_2d_1d = `
-CREATE OR REPLACE FUNCTION unnest_2d_1d(arr ANYARRAY, OUT a ANYARRAY)
+CREATE OR REPLACE FUNCTION unnest_2d_1d(arr ANYARRAY, nullable BOOLEAN = false, OUT a ANYARRAY)
   RETURNS SETOF ANYARRAY
   LANGUAGE plpgsql IMMUTABLE STRICT AS
 $func$
 BEGIN
   FOREACH a SLICE 1 IN ARRAY arr LOOP
     a := array_remove(a, NULL);
+    IF nullable AND array_length(a, 1) IS NULL THEN
+      a := NULL;
+    END IF;
     RETURN NEXT;
   END LOOP;
 END

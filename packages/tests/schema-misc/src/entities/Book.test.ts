@@ -18,8 +18,8 @@ describe("Book", () => {
      [
        "begin ",
        "select nextval('authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('book_id_seq') from generate_series(1, 1)",
-       "INSERT INTO authors (id, "firstName", "lastName", "delete", "createdAt", "updatedAt") SELECT unnest(?::int[]), unnest(?::character varying[]), unnest(?::character varying[]), unnest(?::boolean[]), unnest(?::timestamp with time zone[]), unnest(?::timestamp with time zone[])",
-       "INSERT INTO book (id, title, "authorId") SELECT unnest(?::int[]), unnest(?::character varying[]), unnest(?::int[])",
+       "WITH data AS ( SELECT unnest(?::int[]) as id, unnest(?::character varying[]) as "firstName", unnest(?::character varying[]) as "lastName", unnest(?::boolean[]) as "delete", unnest(?::timestamp with time zone[]) as "createdAt", unnest(?::timestamp with time zone[]) as "updatedAt" ) INSERT INTO authors (id, "firstName", "lastName", "delete", "createdAt", "updatedAt") SELECT * FROM data",
+       "WITH data AS ( SELECT unnest(?::int[]) as id, unnest(?::character varying[]) as title, unnest(?::int[]) as "authorId" ) INSERT INTO book (id, title, "authorId") SELECT * FROM data",
        "commit",
      ]
     `);

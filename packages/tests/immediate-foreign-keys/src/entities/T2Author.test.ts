@@ -12,8 +12,8 @@ describe("T2Author", () => {
      [
        "begin ",
        "select nextval('t2_authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('t2_books_id_seq') from generate_series(1, 1)",
-       "INSERT INTO t2_authors (id, first_name, favorite_book_id) SELECT unnest(?::int[]), unnest(?::character varying[]), unnest(?::int[])",
-       "INSERT INTO t2_books (id, title, author_id) SELECT unnest(?::int[]), unnest(?::character varying[]), unnest(?::int[])",
+       "WITH data AS ( SELECT unnest(?::int[]) as id, unnest(?::character varying[]) as first_name, unnest(?::int[]) as favorite_book_id ) INSERT INTO t2_authors (id, first_name, favorite_book_id) SELECT * FROM data",
+       "WITH data AS ( SELECT unnest(?::int[]) as id, unnest(?::character varying[]) as title, unnest(?::int[]) as author_id ) INSERT INTO t2_books (id, title, author_id) SELECT * FROM data",
        "commit",
      ]
     `);
@@ -32,9 +32,9 @@ describe("T2Author", () => {
      [
        "begin ",
        "select nextval('t2_authors_id_seq') from generate_series(1, 2) UNION ALL select nextval('t2_books_id_seq') from generate_series(1, 2)",
-       "INSERT INTO t2_authors (id, first_name, favorite_book_id) SELECT unnest(?::int[]), unnest(?::character varying[]), unnest(?::int[])",
-       "INSERT INTO t2_books (id, title, author_id) SELECT unnest(?::int[]), unnest(?::character varying[]), unnest(?::int[])",
-       "WITH data (id, favorite_book_id) AS (VALUES (?::int, ?::int), (?, ?) ) UPDATE t2_authors SET favorite_book_id = data.favorite_book_id FROM data WHERE t2_authors.id = data.id RETURNING t2_authors.id",
+       "WITH data AS ( SELECT unnest(?::int[]) as id, unnest(?::character varying[]) as first_name, unnest(?::int[]) as favorite_book_id ) INSERT INTO t2_authors (id, first_name, favorite_book_id) SELECT * FROM data",
+       "WITH data AS ( SELECT unnest(?::int[]) as id, unnest(?::character varying[]) as title, unnest(?::int[]) as author_id ) INSERT INTO t2_books (id, title, author_id) SELECT * FROM data",
+       "WITH data AS ( SELECT unnest(?::int[]) as id, unnest(?::int[]) as favorite_book_id ) UPDATE t2_authors SET favorite_book_id = data.favorite_book_id FROM data WHERE t2_authors.id = data.id RETURNING t2_authors.id",
        "commit",
      ]
     `);

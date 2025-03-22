@@ -10,12 +10,12 @@ describe("T5Author", () => {
     await em.flush();
     expect(queries).toMatchInlineSnapshot(`
      [
-       "BEGIN;",
+       "begin ",
        "select nextval('t5_authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('t5_books_id_seq') from generate_series(1, 2) UNION ALL select nextval('t5_book_reviews_id_seq') from generate_series(1, 2)",
-       "INSERT INTO "t5_authors" ("id", "first_name") VALUES ($1, $2)",
-       "INSERT INTO "t5_books" ("id", "title", "author_id") VALUES ($1, $2, $3),($4, $5, $6)",
-       "INSERT INTO "t5_book_reviews" ("id", "title", "book_id") VALUES ($1, $2, $3),($4, $5, $6)",
-       "COMMIT;",
+       "INSERT INTO t5_authors (id, first_name) SELECT unnest(?::int[]), unnest(?::character varying[])",
+       "INSERT INTO t5_books (id, title, author_id) SELECT unnest(?::int[]), unnest(?::character varying[]), unnest(?::int[])",
+       "INSERT INTO t5_book_reviews (id, title, book_id) SELECT unnest(?::int[]), unnest(?::character varying[]), unnest(?::int[])",
+       "commit",
      ]
     `);
   });
@@ -27,12 +27,12 @@ describe("T5Author", () => {
     await em.flush();
     expect(queries).toMatchInlineSnapshot(`
      [
-       "BEGIN;",
+       "begin ",
        "select nextval('t5_book_reviews_id_seq') from generate_series(1, 1) UNION ALL select nextval('t5_authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('t5_books_id_seq') from generate_series(1, 1)",
-       "INSERT INTO "t5_authors" ("id", "first_name") VALUES ($1, $2)",
-       "INSERT INTO "t5_books" ("id", "title", "author_id") VALUES ($1, $2, $3)",
-       "INSERT INTO "t5_book_reviews" ("id", "title", "book_id") VALUES ($1, $2, $3)",
-       "COMMIT;",
+       "INSERT INTO t5_authors (id, first_name) SELECT unnest(?::int[]), unnest(?::character varying[])",
+       "INSERT INTO t5_books (id, title, author_id) SELECT unnest(?::int[]), unnest(?::character varying[]), unnest(?::int[])",
+       "INSERT INTO t5_book_reviews (id, title, book_id) SELECT unnest(?::int[]), unnest(?::character varying[]), unnest(?::int[])",
+       "commit",
      ]
     `);
   });

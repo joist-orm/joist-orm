@@ -15,7 +15,7 @@ import { Column, TimestampSerde, hasSerde } from "../serde";
 import { groupBy } from "../utils";
 
 /** A simplified view of columns, with only the keys necessary to create SQL statements. */
-type OpColumn = { columnName: string; dbType: string };
+export type OpColumn = { columnName: string; dbType: string };
 export type InsertOp = { tableName: string; columns: OpColumn[]; rows: any[][] };
 /**
  * A logical `update` operation.

@@ -14,10 +14,10 @@ describe("Author", () => {
     // Then we generate an insert
     expect(queries).toMatchInlineSnapshot(`
      [
-       "BEGIN;",
+       "begin ",
        "select nextval('authors_id_seq') from generate_series(1, 1)",
-       "INSERT INTO "authors" ("id", "firstName", "lastName", "delete", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6)",
-       "COMMIT;",
+       "INSERT INTO authors (id, "firstName", "lastName", "delete", "createdAt", "updatedAt") SELECT unnest(?::int[]), unnest(?::character varying[]), unnest(?::character varying[]), unnest(?::boolean[]), unnest(?::timestamp with time zone[]), unnest(?::timestamp with time zone[])",
+       "commit",
      ]
     `);
 
@@ -29,9 +29,9 @@ describe("Author", () => {
     // Then we issued a valid SQL update
     expect(queries).toMatchInlineSnapshot(`
      [
-       "BEGIN;",
-       "WITH data (id, "lastName", "delete", "updatedAt", __original_updated_at) AS (VALUES ($1::int, $2::character varying, $3::boolean, $4::timestamp with time zone, $5::timestamptz) ) UPDATE authors SET "lastName" = data."lastName", "delete" = data."delete", "updatedAt" = data."updatedAt" FROM data WHERE authors.id = data.id AND date_trunc('milliseconds', authors."updatedAt") = data.__original_updated_at RETURNING authors.id",
-       "COMMIT;",
+       "begin ",
+       "WITH data (id, "lastName", "delete", "updatedAt", __original_updated_at) AS (VALUES (?::int, ?::character varying, ?::boolean, ?::timestamp with time zone, ?::timestamptz) ) UPDATE authors SET "lastName" = data."lastName", "delete" = data."delete", "updatedAt" = data."updatedAt" FROM data WHERE authors.id = data.id AND date_trunc('milliseconds', authors."updatedAt") = data.__original_updated_at RETURNING authors.id",
+       "commit",
      ]
     `);
   });

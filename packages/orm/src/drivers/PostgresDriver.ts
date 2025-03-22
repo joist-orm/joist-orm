@@ -269,10 +269,13 @@ function findArrayMaxSize(columns: OpColumn[], rows: readonly any[]): number[] {
 
 // Because postgres array-of-arrays must be rectangular, we fill all arrays up the same max size
 // to put on the wire, and then later strip the padded nulls during the unnest_2d_1d call.
-function fillArrayWithNulls(array: any[] | undefined, maxSize: number): any[] {
+function fillArrayWithNulls(c: OpColumn, array: any[] | undefined, maxSize: number): any[] {
+  const wasNull = array === null;
   const result = array ? [...array] : [];
   const nullsToAdd = Math.max(0, maxSize - (array?.length ?? 0));
   for (let i = 0; i < nullsToAdd; i++) result.push(null);
+  // Add our unset marker
+  if (c.isNullableArray) result.unshift(wasNull ? null : 1);
   return result;
 }
 
@@ -300,10 +303,13 @@ export function buildUnnestCte(tableName: string, columns: OpColumn[], rows: rea
     const fillTo = arrayMaxSize[i];
     const columnValues = [];
     for (const row of rows) {
-      columnValues.push(fillTo === -1 ? row[i] : fillArrayWithNulls(row[i], fillTo));
+      columnValues.push(fillTo === -1 ? row[i] : fillArrayWithNulls(columns[i], row[i], fillTo));
     }
     bindings.push(columnValues);
   }
+
+  // console.log(sql);
+  // console.log(bindings);
 
   return [sql, bindings];
 }

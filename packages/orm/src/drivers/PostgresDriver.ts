@@ -276,16 +276,19 @@ function fillArrayWithNulls(array: any[] | undefined, maxSize: number): any[] {
   return result;
 }
 
-export function buildUnnestCte(
-  tableName: string,
-  columns: { columnName: string; dbType: string }[],
-  rows: readonly any[],
-): [string, any[]] {
+export function buildUnnestCte(tableName: string, columns: OpColumn[], rows: readonly any[]): [string, any[]] {
   const sql = `WITH ${tableName} AS (
     SELECT ${columns
       .map((c) => {
-        const fn = c.dbType.endsWith("[]") ? "unnest_2d_1d" : "unnest";
-        return `${fn}(?::${c.dbType}[]) as ${kq(c.columnName)}`;
+        if (c.dbType.endsWith("[]")) {
+          if (c.isNullableArray) {
+            return `unnest_2d_1d(?::${c.dbType}[], true) as ${kq(c.columnName)}`;
+          } else {
+            return `unnest_2d_1d(?::${c.dbType}[]) as ${kq(c.columnName)}`;
+          }
+        } else {
+          return `unnest(?::${c.dbType}[]) as ${kq(c.columnName)}`;
+        }
       })
       .join(", ")}
   )`;

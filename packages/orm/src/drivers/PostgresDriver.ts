@@ -89,20 +89,14 @@ export class PostgresDriver implements Driver<TransactionSql> {
   async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
     const txn = (em.txn ?? fail("Expected EntityManager.txn to be set")) as TransactionSql;
     await this.idAssigner.assignNewIds(todos);
-
     const ops = generateOps(todos);
-
     // Do INSERTs+UPDATEs first so that we avoid DELETE cascades invalidating oplocks
     // See https://github.com/joist-orm/joist-orm/issues/591
-    for (const insert of ops.inserts) {
-      await batchInsert(txn, insert);
-    }
-    for (const update of ops.updates) {
-      await batchUpdate(txn, update);
-    }
-    for (const del of ops.deletes) {
-      await batchDelete(txn, del);
-    }
+    await Promise.all([
+      ...ops.inserts.map((insert) => batchInsert(txn, insert)),
+      ...ops.updates.map((update) => batchUpdate(txn, update)),
+    ]);
+    await Promise.all(ops.deletes.map((op) => batchDelete(txn, op)));
   }
 
   async flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void> {

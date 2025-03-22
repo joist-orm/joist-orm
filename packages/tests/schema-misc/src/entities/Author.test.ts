@@ -16,7 +16,7 @@ describe("Author", () => {
      [
        "begin ",
        "select nextval('authors_id_seq') from generate_series(1, 1)",
-       "INSERT INTO "authors" ("id", "firstName", "lastName", "delete", "createdAt", "updatedAt") VALUES (?, ?, ?, ?, ?, ?)",
+       "INSERT INTO authors (id, "firstName", "lastName", "delete", "createdAt", "updatedAt") SELECT unnest(?::int[]), unnest(?::character varying[]), unnest(?::character varying[]), unnest(?::boolean[]), unnest(?::timestamp with time zone[]), unnest(?::timestamp with time zone[])",
        "commit",
      ]
     `);

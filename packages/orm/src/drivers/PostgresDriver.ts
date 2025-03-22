@@ -93,10 +93,10 @@ export class PostgresDriver implements Driver<TransactionSql> {
     // Do INSERTs+UPDATEs first so that we avoid DELETE cascades invalidating oplocks
     // See https://github.com/joist-orm/joist-orm/issues/591
     await Promise.all([
-      ...ops.inserts.map((insert) => batchInsert(txn, insert)),
-      ...ops.updates.map((update) => batchUpdate(txn, update)),
+      ...ops.inserts.map((op) => batchInsert(txn, op)),
+      ...ops.updates.map((op) => batchUpdate(txn, op)),
+      ...ops.deletes.map((op) => batchDelete(txn, op)),
     ]);
-    await Promise.all(ops.deletes.map((op) => batchDelete(txn, op)));
   }
 
   async flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void> {

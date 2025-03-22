@@ -11703,8 +11703,8 @@ __metadata:
 
 "postgres@patch:postgres@npm%3A3.4.5#~/.yarn/patches/postgres-npm-3.4.5-8a680ccbcd.patch":
   version: 3.4.5
-  resolution: "postgres@patch:postgres@npm%3A3.4.5#~/.yarn/patches/postgres-npm-3.4.5-8a680ccbcd.patch::version=3.4.5&hash=aedacb"
-  checksum: 10/a3f2788cd7235c513790b3dd7459ed0d4862d90a9749d84d611fecf779096ef2f8237a1c47ee1a13178fb360a23ddc166c743235b0af9e1f7e48562610d5b2de
+  resolution: "postgres@patch:postgres@npm%3A3.4.5#~/.yarn/patches/postgres-npm-3.4.5-8a680ccbcd.patch::version=3.4.5&hash=dcc479"
+  checksum: 10/854e8bcac3a1c24336971f0d16bd4a164b7bafd5d0beca90ff5f7fa2005602713016988d73f46f3e24bbb33af8aff0c4e26d6a29768061b209cdcb63ef961c84
   languageName: node
   linkType: hard
 

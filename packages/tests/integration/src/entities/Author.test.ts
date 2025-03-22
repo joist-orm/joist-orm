@@ -178,13 +178,6 @@ describe("Author", () => {
   });
 
   it("can skip validations", async () => {
-    const rows = await sql`select (row->>0)::int, (row->>1)::text from jsonb_array_elements(${[
-      [1, "a"],
-      [2, "b"],
-      [3, "c"],
-    ]}::jsonb) row`;
-    console.log(rows);
-
     // Given an author with the same first and last name
     // Given that a validation exists preventing the firstName and lastName from being the same values
     const em = newEntityManager();
@@ -198,6 +191,14 @@ describe("Author", () => {
         lastName: "a1",
       }),
     ]);
+  });
+
+  it("unnests", async () => {
+    // inferType incorrectly types `[false]` as boolean
+    console.log(await sql`SELECT unnest(${[false]}::boolean[])`);
+    // Without for our jsonb fix, this is a) encoded as a int[][] i.e. `{{"1","2"},{"5"}}`
+    const jsonb = [[1, 2], [5]];
+    console.log(await sql`SELECT unnest(${jsonb}::jsonb[])::json`);
   });
 
   it("can skip reactive validation rules", async () => {

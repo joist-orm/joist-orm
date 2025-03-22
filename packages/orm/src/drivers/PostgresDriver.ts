@@ -19,7 +19,7 @@ import { JoinRowTodo, Todo } from "../Todo";
 import { batched, cleanSql, partition, zeroTo } from "../utils";
 import { buildRawQuery } from "./buildRawQuery";
 import { Driver } from "./Driver";
-import { DeleteOp, generateOps, InsertOp, UpdateOp } from "./EntityWriter";
+import { DeleteOp, generateOps, InsertOp, OpColumn, UpdateOp } from "./EntityWriter";
 import { IdAssigner, SequenceIdAssigner } from "./IdAssigner";
 
 export interface PostgresDriverOpts {
@@ -184,24 +184,41 @@ export class PostgresDriver implements Driver<TransactionSql> {
   }
 }
 
-function batchInsert(txn: TransactionSql, op: InsertOp): Promise<unknown> {
-  const { tableName, columns, rows } = op;
+async function batchInsert(txn: TransactionSql, op: InsertOp): Promise<unknown> {
+  const { tableName, rows, columns } = op;
+
+  // const blessed = ["id", "first_name", "number_of_books", "quotes"];
+  // const columns = op.columns.filter((c) => blessed.includes(c.columnName));
+
   const sql = cleanSql(`
     INSERT INTO ${kq(tableName)} (${columns.map((c) => kq(c.columnName)).join(", ")})
     SELECT
       ${columns
-        .map((c, i) => {
-          if (c.dbType.endsWith("[]")) {
-            return `array(select jsonb_array_elements_text((row->>${i})::jsonb))::${c.dbType}`;
-          } else {
-            return `(row->>${i})::${c.dbType}`;
-          }
+        .map((c) => {
+          const fn = c.dbType.endsWith("[]") ? "unnest_2d_1d" : "unnest";
+          return `${fn}(?::${c.dbType}[])`;
         })
         .join(", ")}
-      FROM jsonb_array_elements(?::jsonb) row
   `);
-  console.log(rows);
-  return convertToSql(txn, sql, [rows]);
+  // Make 1 array parameter per column: [[...all first names...], [...all last names...], ...]
+  const bindings = [] as any[][];
+  const arrayMaxSize = findArrayMaxSize(columns, rows);
+  for (let i = 0; i < columns.length; i++) {
+    // const i = op.columns.indexOf(columns[j]);
+    const fillTo = arrayMaxSize[i];
+    const columnValues = [];
+    for (const row of rows) {
+      columnValues.push(fillTo === -1 ? row[i] : fillArrayWithNulls(row[i], fillTo));
+    }
+    bindings.push(columnValues);
+  }
+
+  // console.log(sql);
+  // console.log(bindings);
+
+  return convertToSql(txn, sql, bindings).catch(function batchInsert(err) {
+    throw appendStack(err, new Error());
+  });
 }
 
 // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...`
@@ -269,4 +286,24 @@ function convertToSql(sql: Sql, query: string, bindings: any[]): PendingQuery<an
     raw: fragments,
   }) as unknown as TemplateStringsArray;
   return sql(templateStrings, ...bindings);
+}
+
+function findArrayMaxSize(columns: OpColumn[], rows: any[]): number[] {
+  return columns.map((c, i) => {
+    if (c.dbType.endsWith("[]")) {
+      let max = 1; // postgres really doesn't like `{{}}` so always send at least 1 element
+      for (let r = 0; r < rows.length; r++) max = Math.max(max, rows[r][i].length);
+      return max;
+    }
+    return -1;
+  });
+}
+
+// Because postgres array-of-arrays must be rectangular, we fill all arrays up the same max size
+// to put on the wire, and then later strip the padded nulls during the unnest_2d_1d call.
+function fillArrayWithNulls(array: any[], maxSize: number): any[] {
+  const result = [...array];
+  const nullsToAdd = Math.max(0, maxSize - array.length);
+  for (let i = 0; i < nullsToAdd; i++) result.push(null);
+  return result;
 }

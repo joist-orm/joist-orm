@@ -178,31 +178,13 @@ export class PostgresDriver implements Driver<TransactionSql> {
 async function batchInsert(txn: TransactionSql, op: InsertOp): Promise<unknown> {
   const { tableName, rows, columns } = op;
 
-  // const blessed = ["id", "first_name", "number_of_books", "quotes"];
-  // const columns = op.columns.filter((c) => blessed.includes(c.columnName));
+  const [cte, bindings] = buildUnnestCte("data", columns, rows);
 
   const sql = cleanSql(`
+    ${cte}
     INSERT INTO ${kq(tableName)} (${columns.map((c) => kq(c.columnName)).join(", ")})
-    SELECT
-      ${columns
-        .map((c) => {
-          const fn = c.dbType.endsWith("[]") ? "unnest_2d_1d" : "unnest";
-          return `${fn}(?::${c.dbType}[])`;
-        })
-        .join(", ")}
+    SELECT * FROM data
   `);
-  // Make 1 array parameter per column: [[...all first names...], [...all last names...], ...]
-  const bindings = [] as any[][];
-  const arrayMaxSize = findArrayMaxSize(columns, rows);
-  for (let i = 0; i < columns.length; i++) {
-    // const i = op.columns.indexOf(columns[j]);
-    const fillTo = arrayMaxSize[i];
-    const columnValues = [];
-    for (const row of rows) {
-      columnValues.push(fillTo === -1 ? row[i] : fillArrayWithNulls(row[i], fillTo));
-    }
-    bindings.push(columnValues);
-  }
 
   // console.log(sql);
   // console.log(bindings);
@@ -314,6 +296,7 @@ export function buildUnnestCte(
       .join(", ")}
   )`;
 
+  // Make 1 array parameter per column: [[...all first names...], [...all last names...], ...]
   const bindings = [] as any[][];
   const arrayMaxSize = findArrayMaxSize(columns, rows);
   for (let i = 0; i < columns.length; i++) {

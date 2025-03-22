@@ -11,8 +11,8 @@ describe("T1Author", () => {
      [
        "begin ",
        "select nextval('t1_authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('t1_books_id_seq') from generate_series(1, 1)",
-       "INSERT INTO t1_authors (id, first_name) SELECT unnest(?::int[]), unnest(?::character varying[])",
-       "INSERT INTO t1_books (id, title, author_id) SELECT unnest(?::int[]), unnest(?::character varying[]), unnest(?::int[])",
+       "WITH data AS ( SELECT unnest(?::int[]) as id, unnest(?::character varying[]) as first_name ) INSERT INTO t1_authors (id, first_name) SELECT * FROM data",
+       "WITH data AS ( SELECT unnest(?::int[]) as id, unnest(?::character varying[]) as title, unnest(?::int[]) as author_id ) INSERT INTO t1_books (id, title, author_id) SELECT * FROM data",
        "commit",
      ]
     `);

@@ -133,6 +133,7 @@ export class PrimitiveSerde implements FieldSerde {
     public columnName: string,
     public dbType: string,
     public isArray = false,
+    public isNullableArray = false, // only set for nullable arrays
   ) {}
 
   setOnEntity(data: any, row: any): void {
@@ -422,6 +423,7 @@ export class EnumArrayFieldSerde implements FieldSerde {
     private fieldName: string,
     public columnName: string,
     public dbType: "int[]" | "uuid[]",
+    public isNullableArray: boolean,
     private enumObject: any,
   ) {}
 

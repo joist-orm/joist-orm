@@ -292,7 +292,7 @@ function findArrayMaxSize(columns: OpColumn[], rows: any[]): number[] {
   return columns.map((c, i) => {
     if (c.dbType.endsWith("[]")) {
       let max = 1; // postgres really doesn't like `{{}}` so always send at least 1 element
-      for (let r = 0; r < rows.length; r++) max = Math.max(max, rows[r][i].length);
+      for (let r = 0; r < rows.length; r++) max = Math.max(max, rows[r][i]?.length ?? 0);
       return max;
     }
     return -1;
@@ -301,9 +301,9 @@ function findArrayMaxSize(columns: OpColumn[], rows: any[]): number[] {
 
 // Because postgres array-of-arrays must be rectangular, we fill all arrays up the same max size
 // to put on the wire, and then later strip the padded nulls during the unnest_2d_1d call.
-function fillArrayWithNulls(array: any[], maxSize: number): any[] {
-  const result = [...array];
-  const nullsToAdd = Math.max(0, maxSize - array.length);
+function fillArrayWithNulls(array: any[] | undefined, maxSize: number): any[] {
+  const result = array ? [...array] : [];
+  const nullsToAdd = Math.max(0, maxSize - (array?.length ?? 0));
   for (let i = 0; i < nullsToAdd; i++) result.push(null);
   return result;
 }

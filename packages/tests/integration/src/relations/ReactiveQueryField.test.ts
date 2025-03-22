@@ -16,7 +16,17 @@ describe("ReactiveQueryField", () => {
     await em.flush();
     // We don't actually have an `UPDATE` here b/c the default value of 0 from the `INSERT`
     // is the same as the post-INSERT calculated value, so there is no need to `UPDATE`.
-    expect(queries).toMatchInlineSnapshot(`[]`);
+    expect(queries).toMatchInlineSnapshot(`
+     [
+       "select nextval('publishers_id_seq') from generate_series(1, 1) UNION ALL select nextval('authors_id_seq') from generate_series(1, 1)",
+       "begin ",
+       "INSERT INTO publishers (id, name, latitude, longitude, huge_number, number_of_book_reviews, deleted_at, titles_of_favorite_books, book_advance_titles_snapshot, number_of_book_advances_snapshot, base_sync_default, base_async_default, created_at, updated_at, favorite_author_name, rating, size_id, type_id, favorite_author_id, group_id, spotlight_author_id) SELECT unnest($1::int[]), unnest($2::character varying[]), unnest($3::decimal[]), unnest($4::decimal[]), unnest($5::decimal[]), unnest($6::int[]), unnest($7::timestamp with time zone[]), unnest($8::text[]), unnest($9::text[]), unnest($10::text[]), unnest($11::text[]), unnest($12::text[]), unnest($13::timestamp with time zone[]), unnest($14::timestamp with time zone[]), unnest($15::text[]), unnest($16::int[]), unnest($17::int[]), unnest($18::int[]), unnest($19::int[]), unnest($20::int[]), unnest($21::int[])",
+       "INSERT INTO large_publishers (id, shared_column, country) SELECT unnest($1::int[]), unnest($2::text[]), unnest($3::text[])",
+       "INSERT INTO authors (id, first_name, last_name, ssn, initials, number_of_books, book_comments, is_popular, age, graduated, nick_names, nick_names_upper, was_ever_popular, is_funny, mentor_names, address, business_address, quotes, number_of_atoms, deleted_at, number_of_public_reviews, "numberOfPublicReviews2", tags_of_all_books, search, certificate, created_at, updated_at, favorite_shape, range_of_books, favorite_colors, mentor_id, root_mentor_id, current_draft_book_id, favorite_book_id, publisher_id) SELECT unnest($1::int[]), unnest($2::character varying[]), unnest($3::character varying[]), unnest($4::character varying[]), unnest($5::character varying[]), unnest($6::int[]), unnest($7::text[]), unnest($8::boolean[]), unnest($9::int[]), unnest($10::date[]), unnest_2d_1d($11::character varying[][]), unnest_2d_1d($12::character varying[][]), unnest($13::boolean[]), unnest($14::boolean[]), unnest($15::text[]), unnest($16::jsonb[]), unnest($17::jsonb[]), unnest($18::jsonb[]), unnest($19::bigint[]), unnest($20::timestamp with time zone[]), unnest($21::int[]), unnest($22::int[]), unnest($23::character varying[]), unnest($24::text[]), unnest($25::bytea[]), unnest($26::timestamp with time zone[]), unnest($27::timestamp with time zone[]), unnest($28::favorite_shape[]), unnest($29::int[]), unnest_2d_1d($30::int[][]), unnest($31::int[]), unnest($32::int[]), unnest($33::int[]), unnest($34::int[]), unnest($35::int[])",
+       "SELECT DISTINCT count(distinct "br".id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2",
+       "commit",
+     ]
+    `);
   });
 
   it("issues UPDATE after initial INSERT with calculated value", async () => {
@@ -30,7 +40,22 @@ describe("ReactiveQueryField", () => {
       number_of_book_reviews: 2,
     });
     // After the INSERTs, there is a SELECT to calc the data, and then an `UPDATE`
-    expect(queries).toMatchInlineSnapshot(`[]`);
+    expect(queries).toMatchInlineSnapshot(`
+     [
+       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::character varying), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, a.* FROM authors as a JOIN _find ON a.deleted_at IS NULL AND a.last_name = _find.arg0 GROUP BY a.id ORDER BY a.id ASC LIMIT 50000;",
+       "select nextval('publishers_id_seq') from generate_series(1, 1) UNION ALL select nextval('authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('books_id_seq') from generate_series(1, 2) UNION ALL select nextval('book_reviews_id_seq') from generate_series(1, 2)",
+       "begin ",
+       "INSERT INTO publishers (id, name, latitude, longitude, huge_number, number_of_book_reviews, deleted_at, titles_of_favorite_books, book_advance_titles_snapshot, number_of_book_advances_snapshot, base_sync_default, base_async_default, created_at, updated_at, favorite_author_name, rating, size_id, type_id, favorite_author_id, group_id, spotlight_author_id) SELECT unnest($1::int[]), unnest($2::character varying[]), unnest($3::decimal[]), unnest($4::decimal[]), unnest($5::decimal[]), unnest($6::int[]), unnest($7::timestamp with time zone[]), unnest($8::text[]), unnest($9::text[]), unnest($10::text[]), unnest($11::text[]), unnest($12::text[]), unnest($13::timestamp with time zone[]), unnest($14::timestamp with time zone[]), unnest($15::text[]), unnest($16::int[]), unnest($17::int[]), unnest($18::int[]), unnest($19::int[]), unnest($20::int[]), unnest($21::int[])",
+       "INSERT INTO large_publishers (id, shared_column, country) SELECT unnest($1::int[]), unnest($2::text[]), unnest($3::text[])",
+       "INSERT INTO authors (id, first_name, last_name, ssn, initials, number_of_books, book_comments, is_popular, age, graduated, nick_names, nick_names_upper, was_ever_popular, is_funny, mentor_names, address, business_address, quotes, number_of_atoms, deleted_at, number_of_public_reviews, "numberOfPublicReviews2", tags_of_all_books, search, certificate, created_at, updated_at, favorite_shape, range_of_books, favorite_colors, mentor_id, root_mentor_id, current_draft_book_id, favorite_book_id, publisher_id) SELECT unnest($1::int[]), unnest($2::character varying[]), unnest($3::character varying[]), unnest($4::character varying[]), unnest($5::character varying[]), unnest($6::int[]), unnest($7::text[]), unnest($8::boolean[]), unnest($9::int[]), unnest($10::date[]), unnest_2d_1d($11::character varying[][]), unnest_2d_1d($12::character varying[][]), unnest($13::boolean[]), unnest($14::boolean[]), unnest($15::text[]), unnest($16::jsonb[]), unnest($17::jsonb[]), unnest($18::jsonb[]), unnest($19::bigint[]), unnest($20::timestamp with time zone[]), unnest($21::int[]), unnest($22::int[]), unnest($23::character varying[]), unnest($24::text[]), unnest($25::bytea[]), unnest($26::timestamp with time zone[]), unnest($27::timestamp with time zone[]), unnest($28::favorite_shape[]), unnest($29::int[]), unnest_2d_1d($30::int[][]), unnest($31::int[]), unnest($32::int[]), unnest($33::int[]), unnest($34::int[]), unnest($35::int[])",
+       "INSERT INTO books (id, title, "order", notes, acknowledgements, authors_nick_names, search, deleted_at, created_at, updated_at, prequel_id, author_id, reviewer_id, random_comment_id) SELECT unnest($1::int[]), unnest($2::character varying[]), unnest($3::int[]), unnest($4::text[]), unnest($5::text[]), unnest($6::text[]), unnest($7::text[]), unnest($8::timestamp with time zone[]), unnest($9::timestamp with time zone[]), unnest($10::timestamp with time zone[]), unnest($11::int[]), unnest($12::int[]), unnest($13::int[]), unnest($14::int[])",
+       "INSERT INTO book_reviews (id, rating, is_public, is_test, created_at, updated_at, book_id, critic_id) SELECT unnest($1::int[]), unnest($2::int[]), unnest($3::boolean[]), unnest($4::boolean[]), unnest($5::timestamp with time zone[]), unnest($6::timestamp with time zone[]), unnest($7::int[]), unnest($8::int[])",
+       "SELECT DISTINCT count(distinct "br".id) as count FROM book_reviews AS br JOIN books AS b ON br.book_id = b.id JOIN authors AS a ON b.author_id = a.id LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE b.deleted_at IS NULL AND a.deleted_at IS NULL AND p.deleted_at IS NULL AND p.id = $1 LIMIT $2",
+       "WITH data (id, number_of_book_reviews, updated_at, __original_updated_at) AS (VALUES ($1::int, $2::int, $3::timestamp with time zone, $4::timestamptz) ) UPDATE publishers SET number_of_book_reviews = data.number_of_book_reviews, updated_at = data.updated_at FROM data WHERE publishers.id = data.id AND date_trunc('milliseconds', publishers.updated_at) = data.__original_updated_at RETURNING publishers.id",
+       "commit",
+       "select * from "publishers" order by id",
+     ]
+    `);
   });
 
   it("preserves correct changed data to beforeCommit hooks", async () => {

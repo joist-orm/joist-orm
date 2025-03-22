@@ -1,5 +1,4 @@
 import { PendingQuery, Sql, TransactionSql } from "postgres";
-import { buildValuesCte } from "../dataloaders/findDataLoader";
 import {
   afterTransaction,
   appendStack,
@@ -16,7 +15,7 @@ import { JoinRowOperation } from "../JoinRows";
 import { kq, kqDot } from "../keywords";
 import { getRuntimeConfig } from "../runtimeConfig";
 import { JoinRowTodo, Todo } from "../Todo";
-import { batched, cleanSql, partition, zeroTo } from "../utils";
+import { cleanSql, partition, zeroTo } from "../utils";
 import { buildRawQuery } from "./buildRawQuery";
 import { Driver } from "./Driver";
 import { DeleteOp, generateOps, InsertOp, OpColumn, UpdateOp } from "./EntityWriter";
@@ -95,22 +94,12 @@ export class PostgresDriver implements Driver<TransactionSql> {
 
     // Do INSERTs+UPDATEs first so that we avoid DELETE cascades invalidating oplocks
     // See https://github.com/joist-orm/joist-orm/issues/591
-    // We want 10k params maximum per batch insert
-    const parameterLimit = 10_000;
     for (const insert of ops.inserts) {
       await batchInsert(txn, insert);
     }
-
     for (const update of ops.updates) {
-      const parameterTotal = update.columns.length * update.rows.length;
-      if (parameterTotal > parameterLimit) {
-        const batchSize = Math.floor(parameterLimit / update.columns.length);
-        await Promise.all(batched(update.rows, batchSize).map((batch) => batchUpdate(txn, { ...update, rows: batch })));
-      } else {
-        await batchUpdate(txn, update);
-      }
+      await batchUpdate(txn, update);
     }
-
     for (const del of ops.deletes) {
       await batchDelete(txn, del);
     }
@@ -227,7 +216,7 @@ async function batchInsert(txn: TransactionSql, op: InsertOp): Promise<unknown> 
 async function batchUpdate(txn: TransactionSql, op: UpdateOp): Promise<void> {
   const { tableName, columns, rows, updatedAt } = op;
 
-  const cte = buildValuesCte("data", columns, rows);
+  const [cte, bindings] = buildUnnestCte("data", columns, rows);
 
   // JS Dates only have millisecond-level precision, so we may have dropped/lost accuracy when
   // reading Postgres's microsecond-level `timestamptz` values; using `date_trunc` "downgrades"
@@ -254,7 +243,6 @@ async function batchUpdate(txn: TransactionSql, op: UpdateOp): Promise<void> {
     RETURNING ${kq(tableName)}.id
   `;
 
-  const bindings = rows.flat();
   const results = await convertToSql(txn, cleanSql(sql), bindings).catch(function batchUpdate(err) {
     throw appendStack(err, new Error());
   });
@@ -292,7 +280,7 @@ function convertToSql(sql: Sql, query: string, bindings: any[]): PendingQuery<an
   return sql(templateStrings, ...bindings);
 }
 
-function findArrayMaxSize(columns: OpColumn[], rows: any[]): number[] {
+function findArrayMaxSize(columns: OpColumn[], rows: readonly any[]): number[] {
   return columns.map((c, i) => {
     if (c.dbType.endsWith("[]")) {
       let max = 1; // postgres really doesn't like `{{}}` so always send at least 1 element
@@ -310,4 +298,32 @@ function fillArrayWithNulls(array: any[] | undefined, maxSize: number): any[] {
   const nullsToAdd = Math.max(0, maxSize - (array?.length ?? 0));
   for (let i = 0; i < nullsToAdd; i++) result.push(null);
   return result;
+}
+
+export function buildUnnestCte(
+  tableName: string,
+  columns: { columnName: string; dbType: string }[],
+  rows: readonly any[],
+): [string, any[]] {
+  const sql = `WITH ${tableName} AS (
+    SELECT ${columns
+      .map((c) => {
+        const fn = c.dbType.endsWith("[]") ? "unnest_2d_1d" : "unnest";
+        return `${fn}(?::${c.dbType}[]) as ${kq(c.columnName)}`;
+      })
+      .join(", ")}
+  )`;
+
+  const bindings = [] as any[][];
+  const arrayMaxSize = findArrayMaxSize(columns, rows);
+  for (let i = 0; i < columns.length; i++) {
+    const fillTo = arrayMaxSize[i];
+    const columnValues = [];
+    for (const row of rows) {
+      columnValues.push(fillTo === -1 ? row[i] : fillArrayWithNulls(row[i], fillTo));
+    }
+    bindings.push(columnValues);
+  }
+
+  return [sql, bindings];
 }

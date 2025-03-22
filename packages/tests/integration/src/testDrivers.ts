@@ -1,7 +1,6 @@
 import { recordQuery } from "@src/testEm";
 import { Driver, PostgresDriver } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
-import { builtins } from "pg-types";
 import postgres, { Sql } from "postgres";
 
 /**
@@ -36,11 +35,22 @@ export class PostgresTestDriver implements TestDriver {
       // transform: { undefined: null },
       ...newPgConnectionConfig(),
       types: {
-        jsonb: {
-          to: builtins.JSONB,
-          from: [builtins.JSONB],
-          serialize: (s: any) => JSON.stringify(s),
-          parse: (s: any) => JSON.parse(s),
+        // why did we need this?
+        // jsonb: {
+        //   to: builtins.JSONB,
+        //   from: [builtins.JSONB],
+        //   serialize: (s: any) => JSON.stringify(s),
+        //   parse: (s: any) => JSON.parse(s),
+        // },
+        // jsonb[] were serialized as `{{1,2},{3,4}}` but we need `{"[1,2]","[3,4]"}`
+        _jsonb: {
+          to: 3807,
+          from: [3807],
+          serialize: (s: any) =>
+            `{${(s as any[]).map((s) => `"${JSON.stringify(s).replace(/"/g, '\\"')}"`).join(",")}}`,
+          parse: (s: any) => {
+            throw new Error("Not implemented");
+          },
         },
       },
       // debug: true,

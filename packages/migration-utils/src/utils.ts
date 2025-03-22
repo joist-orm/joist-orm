@@ -122,6 +122,24 @@ export function createUpdatedAtFunction(b: MigrationBuilder): void {
   );
 }
 
+export const unnest_2d_1d = `
+CREATE OR REPLACE FUNCTION unnest_2d_1d(arr ANYARRAY, OUT a ANYARRAY)
+  RETURNS SETOF ANYARRAY
+  LANGUAGE plpgsql IMMUTABLE STRICT AS
+$func$
+BEGIN
+  FOREACH a SLICE 1 IN ARRAY arr LOOP
+    a := array_remove(a, NULL);
+    RETURN NEXT;
+  END LOOP;
+END
+$func$;
+`;
+
+export function createUnnest2d1dFunction(b: MigrationBuilder): void {
+  b.sql(unnest_2d_1d);
+}
+
 export function createCreatedAtFunction(b: MigrationBuilder): void {
   b.createFunction(
     "trigger_maybe_set_created_at",

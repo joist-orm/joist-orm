@@ -182,7 +182,6 @@ async function batchInsert(txn: TransactionSql, op: InsertOp): Promise<unknown> 
   });
 }
 
-// Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...`
 async function batchUpdate(txn: TransactionSql, op: UpdateOp): Promise<void> {
   const { tableName, columns, columnValues, updatedAt } = op;
 

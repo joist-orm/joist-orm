@@ -23,7 +23,7 @@ export class BunPgDriver implements Driver<TransactionSQL> {
 
   constructor(_sql: SQL = sql) {
     this.#sql = _sql;
-    this.#idAssigner = new SequenceIdAssigner((s) => this.#sql(s));
+    this.#idAssigner = new SequenceIdAssigner((s) => this.#sql.unsafe(s));
   }
 
   executeFind(

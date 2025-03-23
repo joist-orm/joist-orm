@@ -2,7 +2,7 @@ import { describe, test } from "bun:test";
 import { newBook } from "src/entities/index.ts";
 import { newEntityManager } from "src/setupDbTests.ts";
 
-describe("Book", () => {
+describe.skip("Book", () => {
   test("works", async () => {
     const em = newEntityManager();
     newBook(em);

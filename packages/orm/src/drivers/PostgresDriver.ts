@@ -170,19 +170,13 @@ export class PostgresDriver implements Driver<TransactionSql> {
 }
 
 async function batchInsert(txn: TransactionSql, op: InsertOp): Promise<unknown> {
-  const { tableName, rows, columns } = op;
-
-  const [cte, bindings] = buildUnnestCte("data", columns, rows);
-
+  const { tableName, columns, columnValues } = op;
+  const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
   const sql = cleanSql(`
     ${cte}
     INSERT INTO ${kq(tableName)} (${columns.map((c) => kq(c.columnName)).join(", ")})
     SELECT * FROM data
   `);
-
-  // console.log(sql);
-  // console.log(bindings);
-
   return convertToSql(txn, sql, bindings).catch(function batchInsert(err) {
     throw appendStack(err, new Error());
   });
@@ -190,9 +184,9 @@ async function batchInsert(txn: TransactionSql, op: InsertOp): Promise<unknown> 
 
 // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...`
 async function batchUpdate(txn: TransactionSql, op: UpdateOp): Promise<void> {
-  const { tableName, columns, rows, updatedAt } = op;
+  const { tableName, columns, columnValues, updatedAt } = op;
 
-  const [cte, bindings] = buildUnnestCte("data", columns, rows);
+  const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
 
   // JS Dates only have millisecond-level precision, so we may have dropped/lost accuracy when
   // reading Postgres's microsecond-level `timestamptz` values; using `date_trunc` "downgrades"
@@ -223,9 +217,10 @@ async function batchUpdate(txn: TransactionSql, op: UpdateOp): Promise<void> {
     throw appendStack(err, new Error());
   });
 
-  if (results.length !== rows.length) {
+  const ids = columnValues[0]; // assume id is the 1st column
+  if (results.length !== ids.length) {
     const updated = new Set(results.map((r: any) => r.id));
-    const missing = rows.map((r) => r[0]).filter((id) => !updated.has(id));
+    const missing = ids.filter((id) => !updated.has(id));
     throw new Error(`Oplock failure for ${tableName} rows ${missing.join(", ")}`);
   }
 }
@@ -256,20 +251,15 @@ function convertToSql(sql: Sql, query: string, bindings: any[]): PendingQuery<an
   return sql(templateStrings, ...bindings);
 }
 
-function findArrayMaxSize(columns: OpColumn[], rows: readonly any[]): number[] {
-  return columns.map((c, i) => {
-    if (c.dbType.endsWith("[]")) {
-      let max = 1; // postgres really doesn't like `{{}}` so always send at least 1 element
-      for (let r = 0; r < rows.length; r++) max = Math.max(max, rows[r][i]?.length ?? 0);
-      return max;
-    }
-    return -1;
-  });
+function findArrayMaxSize(columnValues: readonly any[][]): number {
+  let max = 1; // postgres really doesn't like `{{}}` so always send at least 1 element
+  for (let i = 0; i < columnValues.length; i++) max = Math.max(max, columnValues[i]?.length ?? 0);
+  return max;
 }
 
 // Because postgres array-of-arrays must be rectangular, we fill all arrays up the same max size
 // to put on the wire, and then later strip the padded nulls during the unnest_2d_1d call.
-function fillArrayWithNulls(c: OpColumn, array: any[] | undefined, maxSize: number): any[] {
+function fillArrayWithNulls(c: OpColumn, array: any[] | null, maxSize: number): any[] {
   const wasNull = array === null;
   const result = array ? [...array] : [];
   const nullsToAdd = Math.max(0, maxSize - (array?.length ?? 0));
@@ -279,7 +269,8 @@ function fillArrayWithNulls(c: OpColumn, array: any[] | undefined, maxSize: numb
   return result;
 }
 
-export function buildUnnestCte(tableName: string, columns: OpColumn[], rows: readonly any[]): [string, any[]] {
+/** Creates a CTE named `tableName` that bulk-injects the `columnValues` into a SQL query. */
+export function buildUnnestCte(tableName: string, columns: OpColumn[], columnValues: any[][]): [string, any[][]] {
   const sql = `WITH ${tableName} AS (
     SELECT ${columns
       .map((c) => {
@@ -296,20 +287,20 @@ export function buildUnnestCte(tableName: string, columns: OpColumn[], rows: rea
       .join(", ")}
   )`;
 
-  // Make 1 array parameter per column: [[...all first names...], [...all last names...], ...]
-  const bindings = [] as any[][];
-  const arrayMaxSize = findArrayMaxSize(columns, rows);
+  // Make any arrays-of-arrays rectangular by filling them with nulls
   for (let i = 0; i < columns.length; i++) {
-    const fillTo = arrayMaxSize[i];
-    const columnValues = [];
-    for (const row of rows) {
-      columnValues.push(fillTo === -1 ? row[i] : fillArrayWithNulls(columns[i], row[i], fillTo));
+    const column = columns[i];
+    if (column.dbType.endsWith("[]")) {
+      const values = columnValues[i];
+      const fillTo = findArrayMaxSize(values);
+      for (let j = 0; j < values.length; j++) {
+        values[j] = fillArrayWithNulls(column, values[j], fillTo);
+      }
     }
-    bindings.push(columnValues);
   }
 
   // console.log(sql);
   // console.log(bindings);
 
-  return [sql, bindings];
+  return [sql, columnValues];
 }

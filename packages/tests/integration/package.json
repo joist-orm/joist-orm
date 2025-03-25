@@ -44,7 +44,7 @@
     "joist-test-utils": "workspace:*",
     "joist-transform-properties": "workspace:*",
     "kelonio": "^0.10.0",
-    "postgres": "patch:postgres@npm%3A3.4.5#~/.yarn/patches/postgres-npm-3.4.5-8a680ccbcd.patch",
+    "postgres": "github:stephenh/postgres",
     "prettier": "^3.5.1",
     "prettier-plugin-organize-imports": "^4.1.0",
     "superstruct": "0.15.5",

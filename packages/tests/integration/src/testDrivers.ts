@@ -56,7 +56,7 @@ export class PostgresTestDriver implements TestDriver {
       // debug: true,
       onquery: () => {
         // queued
-        return (q: Query) => {
+        return (q: any) => {
           // sent
           recordQuery(
             q.query ?? // q might be a PostgresError

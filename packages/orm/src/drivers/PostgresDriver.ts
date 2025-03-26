@@ -87,26 +87,24 @@ export class PostgresDriver implements Driver<TransactionSql> {
     return this.idAssigner.assignNewIds(todos);
   }
 
-  async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
+  async flush(
+    em: EntityManager,
+    entityTodos: Record<string, Todo>,
+    joinRows: Record<string, JoinRowTodo>,
+  ): Promise<void> {
     const txn = (em.txn ?? fail("Expected EntityManager.txn to be set")) as TransactionSql;
-    await this.idAssigner.assignNewIds(todos);
-    const ops = generateOps(todos);
+    await this.idAssigner.assignNewIds(entityTodos);
+    const ops = generateOps(entityTodos);
     // Do INSERTs+UPDATEs first so that we avoid DELETE cascades invalidating oplocks
     // See https://github.com/joist-orm/joist-orm/issues/591
     await Promise.all([
       ...ops.inserts.map((op) => batchInsert(txn, op)),
       ...ops.updates.map((op) => batchUpdate(txn, op)),
       ...ops.deletes.map((op) => batchDelete(txn, op)),
-    ]);
-  }
-
-  async flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void> {
-    const txn = (em.txn ?? fail("Expected EntityManager.txn to be set")) as TransactionSql;
-    await Promise.all(
-      Object.entries(joinRows).flatMap(([joinTableName, { m2m, newRows, deletedRows }]) => {
+      ...Object.entries(joinRows).flatMap(([joinTableName, { m2m, newRows, deletedRows }]) => {
         return [m2mBatchInsert(txn, joinTableName, m2m, newRows), m2mBatchDelete(txn, joinTableName, m2m, deletedRows)];
       }),
-    );
+    ]);
   }
 
   private getMaybeInTxnKnex(em: EntityManager): Sql | TransactionSql {

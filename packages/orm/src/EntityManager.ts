@@ -1363,12 +1363,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
           do {
-            if (Object.keys(entityTodos).length > 0) {
-              await this.driver.flushEntities(this, entityTodos);
-            }
-            if (Object.keys(joinRowTodos).length > 0) {
-              await this.driver.flushJoinTables(this, joinRowTodos);
-            }
+            await this.driver.flush(this, entityTodos, joinRowTodos);
             // Now that we've flushed, look for ReactiveQueries that need to be recalculated
             if (this.#rm.hasPendingReactiveQueries()) {
               // Reset all flushed entities to we only flush net-new changes

@@ -60,7 +60,7 @@ export class BunPgDriver implements Driver<TransactionSQL> {
     throw new Error("Method not implemented.");
   }
 
-  async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
+  async flush(em: EntityManager, todos: Record<string, Todo>, joinRows: Record<string, JoinRowTodo>): Promise<void> {
     const sql = (em.txn ?? fail("Expected EntityManager.txn to be set")) as TransactionSQL;
     await this.#idAssigner.assignNewIds(todos);
     const ops = generateOps(todos);
@@ -71,10 +71,6 @@ export class BunPgDriver implements Driver<TransactionSQL> {
       ...ops.updates.map((op) => batchUpdate(sql, op)),
       ...ops.deletes.map((op) => batchDelete(sql, op)),
     ]);
-  }
-
-  flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void> {
-    throw new Error("Method not implemented.");
   }
 }
 

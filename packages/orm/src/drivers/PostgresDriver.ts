@@ -8,10 +8,11 @@ import {
   fail,
   getMetadata,
   keyToNumber,
+  ManyToManyCollection,
   maybeResolveReferenceToId,
   ParsedFindQuery,
 } from "../index";
-import { JoinRowOperation } from "../JoinRows";
+import { JoinRow, JoinRowOperation } from "../JoinRows";
 import { kq, kqDot } from "../keywords";
 import { getRuntimeConfig } from "../runtimeConfig";
 import { JoinRowTodo, Todo } from "../Todo";
@@ -101,67 +102,11 @@ export class PostgresDriver implements Driver<TransactionSql> {
 
   async flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void> {
     const txn = (em.txn ?? fail("Expected EntityManager.txn to be set")) as TransactionSql;
-    for (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
-      if (newRows.length > 0) {
-        const sql = cleanSql(`
-          INSERT INTO ${joinTableName} (${m2m.columnName}, ${m2m.otherColumnName})
-          VALUES ${zeroTo(newRows.length)
-            .map(() => "(?, ?) ")
-            .join(", ")}
-          ON CONFLICT (${m2m.columnName}, ${m2m.otherColumnName}) DO UPDATE SET id = ${joinTableName}.id
-          RETURNING id;
-        `);
-        const meta1 = getMetadata(m2m.entity);
-        const meta2 = m2m.otherMeta;
-        const bindings = newRows.flatMap((row) => {
-          return [
-            keyToNumber(meta1, maybeResolveReferenceToId(row[m2m.columnName] as any))!,
-            keyToNumber(meta2, maybeResolveReferenceToId(row[m2m.otherColumnName] as any))!,
-          ];
-        });
-        const rows = await convertToSql(txn, sql, bindings).catch(function flushJoinTables(err) {
-          throw appendStack(err, new Error());
-        });
-        for (let i = 0; i < rows.length; i++) {
-          newRows[i].id = rows[i].id;
-          newRows[i].op = JoinRowOperation.Flushed;
-        }
-      }
-      if (deletedRows.length > 0) {
-        // `remove`s that were done against unloaded ManyToManyCollections will not have row ids
-        const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== -1);
-
-        if (haveIds.length > 0) {
-          await txn`DELETE FROM ${txn(joinTableName)} WHERE id IN ${txn(haveIds.map((r) => r.id!))}`;
-        }
-
-        if (noIds.length > 0) {
-          const data = noIds
-            .map(
-              (e) =>
-                [
-                  deTagId(m2m.meta, maybeResolveReferenceToId(e[m2m.columnName] as any)!),
-                  deTagId(m2m.otherMeta, maybeResolveReferenceToId(e[m2m.otherColumnName] as any)!),
-                ] as any,
-            )
-            // Watch for m2m rows that got added-then-removed to entities that were themselves added-then-removed,
-            // as the deTagId will be undefined for those, as we're skipping adding them to the database.
-            .filter(([id1, id2]) => id1 !== undefined && id2 !== undefined);
-          if (data.length > 0) {
-            await txn`
-              DELETE FROM ${txn(joinTableName)}
-              WHERE (${txn(m2m.columnName)}, ${txn(m2m.otherColumnName)}) IN (
-                SELECT (data->>0)::int, (data->>1)::int FROM jsonb_array_elements(${data}) data
-              )`;
-          }
-        }
-
-        deletedRows.forEach((row) => {
-          row.id = undefined;
-          row.op = JoinRowOperation.Flushed;
-        });
-      }
-    }
+    await Promise.all(
+      Object.entries(joinRows).flatMap(([joinTableName, { m2m, newRows, deletedRows }]) => {
+        return [m2mBatchInsert(txn, joinTableName, m2m, newRows), m2mBatchDelete(txn, joinTableName, m2m, deletedRows)];
+      }),
+    );
   }
 
   private getMaybeInTxnKnex(em: EntityManager): Sql | TransactionSql {
@@ -302,4 +247,75 @@ export function buildUnnestCte(tableName: string, columns: OpColumn[], columnVal
   // console.log(bindings);
 
   return [sql, columnValues];
+}
+
+async function m2mBatchInsert(
+  txn: TransactionSql,
+  joinTableName: string,
+  m2m: ManyToManyCollection<any, any>,
+  newRows: JoinRow[],
+) {
+  if (newRows.length === 0) return;
+  // const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
+  const sql = cleanSql(`
+    INSERT INTO ${joinTableName} (${m2m.columnName}, ${m2m.otherColumnName})
+    VALUES ${zeroTo(newRows.length)
+      .map(() => "(?, ?) ")
+      .join(", ")}
+    ON CONFLICT (${m2m.columnName}, ${m2m.otherColumnName}) DO UPDATE SET id = ${joinTableName}.id
+    RETURNING id;
+  `);
+  const meta1 = getMetadata(m2m.entity);
+  const meta2 = m2m.otherMeta;
+  const bindings = newRows.flatMap((row) => {
+    return [
+      keyToNumber(meta1, maybeResolveReferenceToId(row[m2m.columnName] as any))!,
+      keyToNumber(meta2, maybeResolveReferenceToId(row[m2m.otherColumnName] as any))!,
+    ];
+  });
+  const rows = await convertToSql(txn, sql, bindings).catch(function m2mBatchInsert(err) {
+    throw appendStack(err, new Error());
+  });
+  for (let i = 0; i < rows.length; i++) {
+    newRows[i].id = rows[i].id;
+    newRows[i].op = JoinRowOperation.Flushed;
+  }
+}
+
+async function m2mBatchDelete(
+  txn: TransactionSql,
+  joinTableName: string,
+  m2m: ManyToManyCollection<any, any>,
+  deletedRows: JoinRow[],
+) {
+  if (deletedRows.length === 0) return;
+  // `remove`s that were done against unloaded ManyToManyCollections will not have row ids
+  const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== -1);
+  if (haveIds.length > 0) {
+    await txn`DELETE FROM ${txn(joinTableName)} WHERE id IN ${txn(haveIds.map((r) => r.id!))}`;
+  }
+  if (noIds.length > 0) {
+    const data = noIds
+      .map(
+        (e) =>
+          [
+            deTagId(m2m.meta, maybeResolveReferenceToId(e[m2m.columnName] as any)!),
+            deTagId(m2m.otherMeta, maybeResolveReferenceToId(e[m2m.otherColumnName] as any)!),
+          ] as any,
+      )
+      // Watch for m2m rows that got added-then-removed to entities that were themselves added-then-removed,
+      // as the deTagId will be undefined for those, as we're skipping adding them to the database.
+      .filter(([id1, id2]) => id1 !== undefined && id2 !== undefined);
+    if (data.length > 0) {
+      await txn`
+        DELETE FROM ${txn(joinTableName)}
+        WHERE (${txn(m2m.columnName)}, ${txn(m2m.otherColumnName)}) IN (
+          SELECT (data->>0)::int, (data->>1)::int FROM jsonb_array_elements(${data}) data
+        )`;
+    }
+  }
+  deletedRows.forEach((row) => {
+    row.id = undefined;
+    row.op = JoinRowOperation.Flushed;
+  });
 }

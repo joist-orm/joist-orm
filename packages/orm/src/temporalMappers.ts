@@ -49,6 +49,7 @@ export const zonedDateTimeMapper: CustomSerde<Temporal.ZonedDateTime, string> = 
       // it would be used for DST/etc nuances when doing date calculations.
       fromDb: (s) => t.ZonedDateTime.from(s.replace(" ", "T") + "[UTC]"),
       // Match the pg `TIMESTAMPTZ` format, i.e. "2021-01-01 12:00:00-05:00"
-      toDb: (zdt) => `${zdt.toPlainDate().toString()} ${zdt.toPlainTime().toString()}${zdt.offset}`,
+      toDb: (zdt) =>
+        typeof zdt === "string" ? zdt : `${zdt.toPlainDate().toString()} ${zdt.toPlainTime().toString()}${zdt.offset}`,
     }
   : temporalNotAvailable;

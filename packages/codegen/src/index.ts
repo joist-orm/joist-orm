@@ -34,6 +34,12 @@ async function main() {
   const config = await loadConfig();
 
   maybeSetDatabaseUrl(config);
+  if (!process.env.DATABASE_URL && !process.env.DB_USER) {
+    console.log(`Database connection information not found, please set either:`);
+    console.log(`  - the DATABASE_URL env variable (i.e. using .env and dotenv), or`);
+    console.log(`  - the databaseUrl key in joist-config.json`);
+    return;
+  }
   const pgConfig = newPgConnectionConfig();
 
   const client = new Client(pgConfig);

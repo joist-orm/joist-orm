@@ -1,3 +1,10 @@
+## [1.233.3](https://github.com/joist-orm/joist-orm/compare/v1.233.2...v1.233.3) (2025-04-01)
+
+
+### Bug Fixes
+
+* Skip codemods in new projects. ([#1413](https://github.com/joist-orm/joist-orm/issues/1413)) ([99e30cb](https://github.com/joist-orm/joist-orm/commit/99e30cb1b9d110a5056469fadea75c5b0efe7b35))
+
 ## [1.233.2](https://github.com/joist-orm/joist-orm/compare/v1.233.1...v1.233.2) (2025-04-01)
 
 

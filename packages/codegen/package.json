@@ -9,6 +9,7 @@
   },
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "bin": "build/index.js",
   "scripts": {
     "format": "prettier --ignore-path ../../.prettierignore --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
   },

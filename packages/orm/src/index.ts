@@ -4,6 +4,7 @@ import { EntityConstructor, MaybeAbstractEntityConstructor } from "./EntityManag
 import { getBaseMeta, getMetadata } from "./EntityMetadata";
 import { getDefaultDependencies, setSyncDefaults } from "./defaults";
 import { buildWhereClause } from "./drivers/buildUtils";
+import { getField, setField } from "./fields";
 import { getProperties } from "./getProperties";
 import { New } from "./loadHints";
 import { isAllSqlPaths } from "./loadLens";
@@ -155,7 +156,10 @@ export function setOpts<T extends Entity>(
       }
       // We let optional opts fields be `| null` for convenience, and convert to undefined.
       const value = _value === null ? undefined : _value;
-      const current = (entity as any)[key];
+      // Use `getField` to side-step `id` blowing up on new entities that are setting an
+      // explicit id; otherwise use `entity[key]` to get back the relation.
+      const current = key === "id" ? getField(entity, key) : (entity as any)[key];
+      // const current = (entity as any)[key];
       if (current instanceof AbstractRelationImpl) {
         if (calledFromConstructor) {
           current.setFromOpts(value);
@@ -237,7 +241,13 @@ export function setOpts<T extends Entity>(
           throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
         }
       } else {
-        (entity as any)[key] = value;
+        // If setting an explicit id, go through setField, otherwise use
+        // `entity[key]` to set the value directly to that we go through setters.
+        if (key === "id" && entity.isNewEntity) {
+          setField(entity, key, value);
+        } else {
+          (entity as any)[key] = value;
+        }
       }
     });
   }

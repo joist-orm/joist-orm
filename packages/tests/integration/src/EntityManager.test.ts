@@ -1570,6 +1570,16 @@ describe("EntityManager", () => {
     expect(rows[0].favorite_colors).toEqual([2]);
   });
 
+  it("can create with an explicit primary key", async () => {
+    const em = newEntityManager();
+    em.create(Author, { id: "a:10", firstName: "a1" });
+    // Include an extra author that touches author_id_seq, so that flush_database knows to reset authors
+    em.create(Author, { firstName: "a2" });
+    await em.flush();
+    const rows = await select("authors");
+    expect(rows[0].id).toEqual(1);
+  });
+
   it("can create with a foreign key id", async () => {
     await insertAuthor({ first_name: "f" });
     const em = newEntityManager();

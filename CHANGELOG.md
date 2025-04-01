@@ -1,3 +1,10 @@
+## [1.233.4](https://github.com/joist-orm/joist-orm/compare/v1.233.3...v1.233.4) (2025-04-01)
+
+
+### Bug Fixes
+
+* Add joist-codegen bin config. ([#1414](https://github.com/joist-orm/joist-orm/issues/1414)) ([632e792](https://github.com/joist-orm/joist-orm/commit/632e7926d35d938ccf049b925486e600eb70d429))
+
 ## [1.233.3](https://github.com/joist-orm/joist-orm/compare/v1.233.2...v1.233.3) (2025-04-01)
 
 

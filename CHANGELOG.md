@@ -1,3 +1,11 @@
+## [1.233.2](https://github.com/joist-orm/joist-orm/compare/v1.233.1...v1.233.2) (2025-04-01)
+
+
+### Bug Fixes
+
+* Fix codegen failing on tables w/o id. ([#1411](https://github.com/joist-orm/joist-orm/issues/1411)) ([5323784](https://github.com/joist-orm/joist-orm/commit/53237845ee3c1d72b62d1fd524b7e51d055a23b7))
+* Mention databaseUrl in the error message. ([#1412](https://github.com/joist-orm/joist-orm/issues/1412)) ([1a97abb](https://github.com/joist-orm/joist-orm/commit/1a97abbb654f8b7c881284e476bfad9c78c8e558))
+
 ## [1.233.1](https://github.com/joist-orm/joist-orm/compare/v1.233.0...v1.233.1) (2025-03-27)
 
 

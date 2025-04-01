@@ -22,24 +22,27 @@ export function isEntityTable(config: Config, t: Table): boolean {
   const hasCreatedAt = createdAtConf.names.some((c) => columnNames.includes(c));
   const hasUpdatedAt = updatedAtConf.names.some((c) => columnNames.includes(c));
 
+  // Entities always require an id column
+  const hasIdColumn = columnNames.includes("id");
+  if (!hasIdColumn) return false;
+
   // If we have no timestamp columns, but do have `name` and `code`, we're probably an enum.
-  const idMatch = columnNames.includes("id");
-  if (idMatch && !hasCreatedAt && !hasUpdatedAt) {
+  if (hasIdColumn && !hasCreatedAt && !hasUpdatedAt) {
     if (["name", "code"].every((c) => columnNames.includes(c))) {
       return false;
     }
   }
 
   // If the ID column is a FK then we're a subclass
-  if (isSubClassTable(t)) {
-    return true;
-  }
+  if (isSubClassTable(t)) return true;
 
-  return idMatch && (hasCreatedAt || !createdAtConf.required) && (hasUpdatedAt || !updatedAtConf.required);
+  // Otherwise respect the created_at/updated_at required rules
+  return hasIdColumn && (hasCreatedAt || !createdAtConf.required) && (hasUpdatedAt || !updatedAtConf.required);
 }
 
 export function isSubClassTable(t: Table): boolean {
-  return t.columns.get("id")?.foreignKeys.length === 1;
+  // Note that `.get("id")` will blow up if there is no id column
+  return t.columns.get("id").foreignKeys.length === 1;
 }
 
 export function isEnumTable(config: Config, t: Table): boolean {

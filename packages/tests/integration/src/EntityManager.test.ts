@@ -1572,9 +1572,10 @@ describe("EntityManager", () => {
 
   it("can create with an explicit primary key", async () => {
     const em = newEntityManager();
-    em.create(Author, { id: "a:10", firstName: "a1" });
+    const a10 = em.create(Author, { id: "a:10", firstName: "a1" });
     // Include an extra author that touches author_id_seq, so that flush_database knows to reset authors
     em.create(Author, { firstName: "a2" });
+    expect(em.getEntity("a:10")).toMatchEntity(a10);
     await em.flush();
     const rows = await select("authors");
     expect(rows[0].id).toEqual(1);

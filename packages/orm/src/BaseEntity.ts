@@ -36,7 +36,7 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
     // This makes it non-enumerable to avoid Jest/recursive things tripping over it
     Object.defineProperty(this, "__data", { value: data, enumerable: false, writable: false, configurable: false });
     // Only do em.register for em.create-d entities, otherwise defer to hydrate to em.register
-    if (isNew) em.register(this);
+    if (isNew) em.register(this, optsOrId?.id);
     currentlyInstantiatingEntity = this;
   }
 

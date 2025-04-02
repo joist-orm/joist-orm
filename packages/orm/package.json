@@ -21,26 +21,26 @@
   ],
   "dependencies": {
     "@types/object-hash": "^3.0.6",
-    "@types/pg": "^8.11.11",
+    "@types/pg": "^8.11.14",
     "ansis": "^3.15.0",
     "dataloader": "^2.2.3",
     "joist-utils": "workspace:*",
     "knex": "^3.1.0",
     "object-hash": "^3.0.0",
-    "pg": "^8.13.3",
+    "pg": "^8.15.5",
     "pg-types": "^4.0.2"
   },
   "devDependencies": {
-    "@swc/core": "^1.11.9",
-    "@swc/jest": "^0.2.37",
+    "@swc/core": "^1.11.22",
+    "@swc/jest": "^0.2.38",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.13.10",
     "jest": "30.0.0-alpha.7",
-    "prettier": "^3.5.1",
+    "prettier": "^3.5.3",
     "prettier-plugin-organize-imports": "^4.1.0",
-    "temporal-polyfill": "^0.2.5",
+    "temporal-polyfill": "^0.3.0",
     "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "5.8.2"
+    "typescript": "5.8.3"
   }
 }

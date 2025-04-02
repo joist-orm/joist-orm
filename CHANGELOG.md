@@ -1,3 +1,10 @@
+# [1.234.0](https://github.com/joist-orm/joist-orm/compare/v1.233.4...v1.234.0) (2025-04-02)
+
+
+### Features
+
+* Allow expliciting setting ids. ([#1415](https://github.com/joist-orm/joist-orm/issues/1415)) ([560b76b](https://github.com/joist-orm/joist-orm/commit/560b76bd509d105715de11228554319f406799d1))
+
 ## [1.233.4](https://github.com/joist-orm/joist-orm/compare/v1.233.3...v1.233.4) (2025-04-01)
 
 

@@ -1,3 +1,10 @@
+## [1.234.1](https://github.com/joist-orm/joist-orm/compare/v1.234.0...v1.234.1) (2025-04-02)
+
+
+### Bug Fixes
+
+* Fix em.getEntity for explicitly set ids. ([#1417](https://github.com/joist-orm/joist-orm/issues/1417)) ([7ef48f8](https://github.com/joist-orm/joist-orm/commit/7ef48f8dc51bd1619023c6e42582444409b9b998))
+
 # [1.234.0](https://github.com/joist-orm/joist-orm/compare/v1.233.4...v1.234.0) (2025-04-02)
 
 

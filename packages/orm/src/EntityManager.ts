@@ -1130,12 +1130,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
-  register(entity: Entity): void {
-    if (entity.idTaggedMaybe) {
-      if (this.findExistingInstance(entity.idTagged) !== undefined) {
+  register(entity: Entity, maybeExplicitId?: string): void {
+    const maybeId = entity.idTaggedMaybe ?? maybeExplicitId;
+    if (maybeId) {
+      if (this.findExistingInstance(maybeId) !== undefined) {
         throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
       }
-      this.#entityIndex.set(entity.idTagged, entity);
+      this.#entityIndex.set(maybeId, entity);
     }
 
     this.#entities.push(entity);

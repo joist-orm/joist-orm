@@ -18,6 +18,7 @@ import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { IdOf } from "../EntityManager";
 import { getField, setField } from "../fields";
+import { IsLoadedCachable } from "../IsLoadedCache";
 import { MaybeReactedEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";
@@ -86,7 +87,7 @@ export class ReactiveReferenceImpl<
     N extends never | undefined,
   >
   extends AbstractRelationImpl<T, U>
-  implements ReactiveReference<T, U, N>
+  implements ReactiveReference<T, U, N>, IsLoadedCachable
 {
   readonly #fieldName: keyof T & string;
   readonly #otherMeta: EntityMetadata;
@@ -94,7 +95,7 @@ export class ReactiveReferenceImpl<
   // Either the loaded entity, or N/undefined if we're allowed to be null
   private loaded!: U | N | undefined;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
-  private _isLoaded: "ref" | "full" | false = false;
+  private _isLoaded: "ref" | "full" | false | undefined = undefined;
   private loadPromise: any;
   constructor(
     entity: T,
@@ -192,21 +193,29 @@ export class ReactiveReferenceImpl<
   }
 
   get isLoaded(): boolean {
-    return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
-      const maybeDirty = getEmInternalApi(this.entity.em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
-      // If we might be dirty, it doesn't matter what our last _isLoaded value was, we need to
-      // check if our tree is loaded, b/c it might have recently been mutated.
-      if (maybeDirty) {
-        const hintLoaded = isLoaded(this.entity, this.loadHint);
-        if (hintLoaded) {
-          this._isLoaded = "full";
-        }
-        return hintLoaded;
+    if (this._isLoaded !== undefined) return !!this._isLoaded;
+    getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+    // return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
+    const maybeDirty = getEmInternalApi(this.entity.em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
+    // If we might be dirty, it doesn't matter what our last _isLoaded value was, we need to
+    // check if our tree is loaded, b/c it might have recently been mutated.
+    if (maybeDirty) {
+      const hintLoaded = isLoaded(this.entity, this.loadHint);
+      if (hintLoaded) {
+        this._isLoaded = "full";
       } else {
-        // If we're not dirty, then either being "full" or "ref" loaded is fine
-        return !!this._isLoaded;
+        this._isLoaded = false;
       }
-    });
+      return hintLoaded;
+    } else {
+      // If we're not dirty, then either being "full" or "ref" loaded is fine
+      return !!this._isLoaded;
+    }
+    // });
+  }
+
+  resetIsLoaded(): void {
+    this._isLoaded = undefined;
   }
 
   set(other: U | N): void {

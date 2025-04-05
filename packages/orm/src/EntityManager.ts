@@ -5,6 +5,7 @@ import { getField, setField } from "./fields";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
 import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
+import { IsLoadedCache } from "./IsLoadedCache";
 import { JoinRows } from "./JoinRows";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo, Todo, combineJoinRows, createTodos } from "./Todo";
@@ -221,9 +222,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   readonly #hooks: Record<EntityManagerHook, HookFn<any>[]> = { beforeTransaction: [], afterTransaction: [] };
   readonly #preloader: PreloadPlugin | undefined;
   #fieldLogger: FieldLogger | undefined;
+  #isLoadedStats: Map<string, { count: number; duration: number }> = new Map();
+  #isLoadedCache = new IsLoadedCache();
   private __api: EntityManagerInternalApi;
   mode: EntityManagerMode = "writes";
-  isLoadedStats: Map<string, { count: number; duration: number }> = new Map();
 
   constructor(em: EntityManager<C, Entity, TX>);
   constructor(ctx: C, opts: EntityManagerOpts<TX>);
@@ -260,6 +262,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       mutatedCollections: new Set(),
       hooks: this.#hooks,
       rm: this.#rm,
+      isLoadedCache: this.#isLoadedCache,
 
       joinRows(m2m: ManyToManyCollection<any, any>): JoinRows {
         return getOrSet(em.#joinRows, m2m.joinTableName, () => new JoinRows(m2m, em.#rm));
@@ -295,17 +298,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       trackIsLoaded(relation: { entity: any; fieldName: string }, fn: () => boolean): boolean {
         const key = `${relation.entity.constructor.name}:${relation.fieldName}(${relation.constructor.name})`;
-        let stats = em.isLoadedStats.get(key);
+        let stats = em.#isLoadedStats.get(key);
         if (!stats) {
           stats = { count: 0, duration: 0 };
-          em.isLoadedStats.set(key, stats);
+          em.#isLoadedStats.set(key, stats);
         }
         stats.count += 1;
         return fn();
       },
 
       outputIsLoadedStats() {
-        const entries = [...em.isLoadedStats.entries()];
+        const entries = [...em.#isLoadedStats.entries()];
         entries.sort((a, b) => b[1].count - a[1].count);
         for (const [key, stats] of entries) {
           console.log(`${key}.isLoaded = ${stats.count}`);
@@ -1818,6 +1821,7 @@ export interface EntityManagerInternalApi {
   get fieldLogger(): FieldLogger | undefined;
   trackIsLoaded(relation: { fieldName: string }, fn: () => boolean): boolean;
   outputIsLoadedStats(): void;
+  get isLoadedCache(): IsLoadedCache;
 }
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {

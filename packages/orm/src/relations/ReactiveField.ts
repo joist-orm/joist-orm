@@ -4,6 +4,7 @@ import { getEmInternalApi } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { getField, isFieldSet, setField } from "../fields";
 import { isLoaded } from "../index";
+import { IsLoadedCachable } from "../IsLoadedCache";
 import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { tryResolve } from "../utils";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
@@ -77,11 +78,11 @@ export function hasReactiveField<T extends Entity, const H extends ReactiveHint<
 
 export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   extends AbstractPropertyImpl<T>
-  implements ReactiveField<T, V>
+  implements ReactiveField<T, V>, IsLoadedCachable
 {
   readonly #reactiveHint: H;
   #loadPromise: any;
-  #loaded: boolean;
+  #loaded: boolean | undefined;
   #useFactoryValue = false;
   constructor(
     entity: T,
@@ -91,7 +92,6 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   ) {
     super(entity);
     this.#reactiveHint = reactiveHint;
-    this.#loaded = false;
   }
 
   load(opts?: { forceReload?: boolean }): Promise<V> {
@@ -137,15 +137,19 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   }
 
   get isLoaded() {
-    if (this.#loaded) return true;
-    return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
-      // Constantly evaluating this is likely a performance issue--need to add caching
-      const hintLoaded = isLoaded(this.entity, this.loadHint);
-      if (hintLoaded) {
-        this.#loaded = true;
-      }
-      return hintLoaded;
-    });
+    if (this.#loaded !== undefined) return this.#loaded;
+    // return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
+    // Constantly evaluating this is a performance issue, so cache it
+    this.#loaded = isLoaded(this.entity, this.loadHint);
+    getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+    return this.#loaded;
+    // });
+  }
+
+  resetIsLoaded(): void {
+    // ...if we reset this on every mutation, we'll have tons of false positives, from
+    // loaded collections that are not longer loaded...
+    this.#loaded = undefined;
   }
 
   get loadHint(): any {

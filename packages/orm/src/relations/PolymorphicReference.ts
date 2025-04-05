@@ -1,5 +1,5 @@
 import { Entity, isEntity } from "../Entity";
-import { IdOf, TaggedId, getEmInternalApi, sameEntity } from "../EntityManager";
+import { IdOf, TaggedId, sameEntity } from "../EntityManager";
 import { PolymorphicFieldComponent, getMetadata } from "../EntityMetadata";
 import { maybeGetConstructorFromReference } from "../configure";
 import { getField, setField } from "../fields";
@@ -116,9 +116,9 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   get isLoaded(): boolean {
-    return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
-      return this._isLoaded;
-    });
+    // return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
+    return this._isLoaded;
+    // });
   }
 
   get isPreloaded(): boolean {

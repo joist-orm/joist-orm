@@ -82,7 +82,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   constructor(
     entity: T,
     otherMeta: EntityMetadata,
-    private fieldName: keyof T & string,
+    fieldName: keyof T & string,
     public otherFieldName: keyof U & string,
   ) {
     super(entity);
@@ -117,8 +117,10 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   get isLoaded(): boolean {
-    // Even if `.load()` has not been called, `.get` will detect
-    return this._isLoaded || this.current() === undefined || !!this.maybeFindEntity();
+    return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
+      // Even if `.load()` has not been called, `.get` will detect
+      return this._isLoaded || this.current() === undefined || !!this.maybeFindEntity();
+    });
   }
 
   get isPreloaded(): boolean {
@@ -203,6 +205,10 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   get idTaggedMaybe(): TaggedId | undefined {
     ensureNotDeleted(this.entity, "pending");
     return maybeResolveReferenceToId(this.current());
+  }
+
+  get fieldName(): string {
+    return this.#fieldName;
   }
 
   private get idUntaggedMaybe(): string | undefined {

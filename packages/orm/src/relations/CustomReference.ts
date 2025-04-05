@@ -1,7 +1,7 @@
 import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { IdOf, TaggedId } from "../EntityManager";
-import { Reference, ensureNotDeleted, fail, getMetadata, getProperties } from "../index";
+import { ensureNotDeleted, fail, getMetadata, getProperties, Reference } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
@@ -60,7 +60,10 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   }
 
   get isLoaded(): boolean {
+    // For some reason this locks up graphql-service, but like weirdly
+    // return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
     return this.opts.isLoaded(this.entity);
+    // });
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {

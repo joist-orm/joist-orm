@@ -6,6 +6,7 @@ import {
   Entity,
   EntityMetadata,
   fail,
+  getEmInternalApi,
   getMetadata,
   isCollection,
   isLoadedCollection,
@@ -113,6 +114,7 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
   readonly #fieldName: keyof T & string;
   readonly #m2oName: keyof T & string;
   readonly #otherFieldName: keyof T & string;
+  #loaded: boolean | undefined = undefined;
 
   constructor(entity: T, fieldName: keyof T & string, m2oName: keyof T & string, otherFieldName: keyof T & string) {
     super(entity);
@@ -153,7 +155,10 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
   }
 
   get isLoaded(): boolean {
-    return this.findUnloadedReference() === undefined;
+    if (this.#loaded !== undefined) return this.#loaded;
+    return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
+      return (this.#loaded = this.findUnloadedReference() === undefined);
+    });
   }
 
   get fieldName(): string {
@@ -250,7 +255,9 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
   }
 
   get isLoaded(): boolean {
-    return this.findUnloadedCollections().length === 0;
+    return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
+      return this.findUnloadedCollections().length === 0;
+    });
   }
 
   get fieldName(): string {

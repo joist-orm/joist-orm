@@ -167,7 +167,9 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   get isLoaded(): boolean {
-    return this.#loaded !== undefined;
+    return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
+      return this.#loaded !== undefined;
+    });
   }
 
   get isPreloaded(): boolean {

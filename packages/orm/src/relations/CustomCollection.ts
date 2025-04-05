@@ -53,7 +53,9 @@ export class CustomCollection<T extends Entity, U extends Entity>
   }
 
   get isLoaded(): boolean {
+    // return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
     return this.opts.isLoaded();
+    // });
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
@@ -138,7 +140,8 @@ export class CustomCollection<T extends Entity, U extends Entity>
 
   /** Finds this CustomCollections field name by looking in the entity for the key that we're assigned to. */
   get fieldName(): string {
-    return Object.entries(this.entity).filter((e) => e[1] === this)[0][0];
+    // Something about running transformed breaks this...
+    return Object.entries(this.entity).filter((e) => e[1] === this)[0]?.[0];
   }
 
   get hasBeenSet() {

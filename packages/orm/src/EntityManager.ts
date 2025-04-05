@@ -223,6 +223,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   #fieldLogger: FieldLogger | undefined;
   private __api: EntityManagerInternalApi;
   mode: EntityManagerMode = "writes";
+  isLoadedStats: Map<string, { count: number; duration: number }> = new Map();
 
   constructor(em: EntityManager<C, Entity, TX>);
   constructor(ctx: C, opts: EntityManagerOpts<TX>);
@@ -252,16 +253,24 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     // Expose some of our private fields as the EntityManagerInternalApi
     const em = this;
+
     this.__api = {
       preloader: this.#preloader,
+      pendingChildren: this.#pendingChildren,
+      mutatedCollections: new Set(),
+      hooks: this.#hooks,
+      rm: this.#rm,
+
       joinRows(m2m: ManyToManyCollection<any, any>): JoinRows {
         return getOrSet(em.#joinRows, m2m.joinTableName, () => new JoinRows(m2m, em.#rm));
       },
-      pendingChildren: this.#pendingChildren,
-      mutatedCollections: new Set(),
+
+      /** Returns `a:1.books` if it's in our preload cache. */
       getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined {
         return em.#preloadedRelations.get(taggedId)?.get(fieldName) as U[] | undefined;
       },
+
+      /** Stores `a:1.books` in our preload cache. */
       setPreloadedRelation<U>(taggedId: string, fieldName: string, children: U[]): void {
         let map = em.#preloadedRelations.get(taggedId);
         if (!map) {
@@ -270,17 +279,37 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         }
         map.set(fieldName, children as any);
       },
-      hooks: this.#hooks,
-      rm: this.#rm,
+
       get isValidating() {
         return em.#isValidating;
       },
+
       checkWritesAllowed(): void {
         if (em.mode === "read-only") throw new ReadOnlyError();
         return em.#fl.checkWritesAllowed();
       },
+
       get fieldLogger() {
         return em.#fieldLogger;
+      },
+
+      trackIsLoaded(relation: { entity: any; fieldName: string }, fn: () => boolean): boolean {
+        const key = `${relation.entity.constructor.name}:${relation.fieldName}(${relation.constructor.name})`;
+        let stats = em.isLoadedStats.get(key);
+        if (!stats) {
+          stats = { count: 0, duration: 0 };
+          em.isLoadedStats.set(key, stats);
+        }
+        stats.count += 1;
+        return fn();
+      },
+
+      outputIsLoadedStats() {
+        const entries = [...em.isLoadedStats.entries()];
+        entries.sort((a, b) => b[1].count - a[1].count);
+        for (const [key, stats] of entries) {
+          console.log(`${key}.isLoaded = ${stats.count}`);
+        }
       },
     };
   }
@@ -1354,6 +1383,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // the full set of entities that will be INSERT/UPDATE/DELETE-d in the database.
       let entityTodos = createTodos(entitiesToFlush);
       let joinRowTodos = combineJoinRows(this.#joinRows);
+      getEmInternalApi(this).outputIsLoadedStats();
+
       if (!skipValidation) {
         await runValidation(entityTodos, joinRowTodos);
       }
@@ -1785,6 +1816,8 @@ export interface EntityManagerInternalApi {
   isValidating: boolean;
   checkWritesAllowed: () => void;
   get fieldLogger(): FieldLogger | undefined;
+  trackIsLoaded(relation: { fieldName: string }, fn: () => boolean): boolean;
+  outputIsLoadedStats(): void;
 }
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {

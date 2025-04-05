@@ -41,6 +41,8 @@ export abstract class AbstractRelationImpl<T, U> extends AbstractPropertyImpl<T>
    * hook after the relation is fully loaded.
    */
   abstract maybeCascadeDelete(): void;
+
+  abstract get fieldName(): string;
 }
 
 export function isCascadeDelete(relation: AbstractRelationImpl<any, any>, fieldName: string): boolean {

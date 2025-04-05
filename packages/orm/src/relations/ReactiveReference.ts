@@ -98,7 +98,7 @@ export class ReactiveReferenceImpl<
   private loadPromise: any;
   constructor(
     entity: T,
-    private fieldName: keyof T & string,
+    public fieldName: keyof T & string,
     otherMeta: EntityMetadata,
     public reactiveHint: H,
     private fn: (entity: Reacted<T, H>) => MaybeReactedEntity<U> | N,
@@ -192,19 +192,21 @@ export class ReactiveReferenceImpl<
   }
 
   get isLoaded(): boolean {
-    const maybeDirty = getEmInternalApi(this.entity.em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
-    // If we might be dirty, it doesn't matter what our last _isLoaded value was, we need to
-    // check if our tree is loaded, b/c it might have recently been mutated.
-    if (maybeDirty) {
-      const hintLoaded = isLoaded(this.entity, this.loadHint);
-      if (hintLoaded) {
-        this._isLoaded = "full";
+    return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
+      const maybeDirty = getEmInternalApi(this.entity.em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
+      // If we might be dirty, it doesn't matter what our last _isLoaded value was, we need to
+      // check if our tree is loaded, b/c it might have recently been mutated.
+      if (maybeDirty) {
+        const hintLoaded = isLoaded(this.entity, this.loadHint);
+        if (hintLoaded) {
+          this._isLoaded = "full";
+        }
+        return hintLoaded;
+      } else {
+        // If we're not dirty, then either being "full" or "ref" loaded is fine
+        return !!this._isLoaded;
       }
-      return hintLoaded;
-    } else {
-      // If we're not dirty, then either being "full" or "ref" loaded is fine
-      return !!this._isLoaded;
-    }
+    });
   }
 
   set(other: U | N): void {

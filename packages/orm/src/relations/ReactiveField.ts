@@ -98,6 +98,10 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     if (!this.isLoaded || opts?.forceReload) {
       // Even without `forceReload=true`, any explicit calls to `.load()` ==> ensure a fresh value,
       // because `.get` may have cached the stale/previously-calculated value.
+      //
+      // (Currently `em.populate` / `populateDataLoader` has a hack/escape hatch that ignores calling
+      // RF.load(), to avoid pulling in the RF subgraph over using the materialized value, which ideally would be
+      // replaced with us learning to do the maybeDirty approach.)
       this.#isCached = false;
       return (this.#loadPromise ??= this.entity.em.populate(this.entity, { hint: this.loadHint } as any).then(() => {
         this.#loadPromise = undefined;

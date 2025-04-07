@@ -115,8 +115,10 @@ export class ReactiveReferenceImpl<
   readonly #reactiveHint: H;
   // Either the loaded entity, or N/undefined if we're allowed to be null
   #loaded!: U | N | undefined;
-  // We need a separate boolean b/c loaded == undefined can still mean "#isLoaded" for nullable fks.
-  #isLoaded: "ref" | "full" | false | undefined = undefined;
+  // In ref-mode, we use our materialized FK value (which might be undefined)
+  // If full-mode, we calculate the FK value from the subgraph
+  #loadedMode: "ref" | "full" | undefined = undefined;
+  #isLoaded: boolean | undefined = undefined;
   #isCached: boolean = false;
   #loadPromise: any;
 
@@ -134,7 +136,7 @@ export class ReactiveReferenceImpl<
     // We can be initialized with [entity | id | undefined], and if it's entity or id, then setImpl
     // will set loaded appropriately; but if we're initialized undefined, then mark loaded here
     if (entity.isNewEntity) {
-      this.#isLoaded = isEntity(this.current()) ? "ref" : undefined;
+      const isLoaded = isEntity(this.current()) ? true : undefined;
     }
   }
 
@@ -143,31 +145,35 @@ export class ReactiveReferenceImpl<
     const { loadHint } = this;
     if (!this.isLoaded || opts?.forceReload) {
       const { em } = this.entity;
-      // Just because we're not loaded, doesn't mean we necessarily need to load our full
-      // hint. Ideally we only need to load our previously-calculated/persisted value, and
-      // only load the full load hint if we need recalculated.
-      const recalc = opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
-      if (recalc) {
-        if (opts?.forceReload) this.#isCached = false;
+      // Just because we're not loaded, doesn't mean we necessarily need to load our full hint.
+      // We prefer to load only our previously-calculated/materialized value, and only load the
+      // full load hint if we need recalculated.
+      const maybeDirty = opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
+      if (maybeDirty) {
+        this.#isCached = false;
         return (this.#loadPromise ??= em.populate(this.entity, { hint: loadHint, ...opts }).then(() => {
           this.#loadPromise = undefined;
-          this.#isLoaded = "full";
+          this.#loadedMode = "full";
+          this.#isLoaded = true;
           getEmInternalApi(this.entity.em).isLoadedCache.add(this);
           // Go through `this.get` so that `setField` is called to set our latest value
           return this.doGet(opts);
         }));
       } else {
         // If we don't need a full recalc, just make sure we have the entity in memory
+        // ...ideally we would check `isSet` and whether the key was in the `instanceData`
         const current = this.current();
         if (isEntity(current) || current === undefined) {
-          this.#isLoaded = "ref";
+          this.#loadedMode = "ref";
+          this.#isLoaded = true;
           this.#loaded = current;
           getEmInternalApi(this.entity.em).isLoadedCache.add(this);
           return current;
         } else {
           return (this.#loadPromise ??= em.load(this.#otherMeta.cstr, current).then((loaded) => {
             this.#loadPromise = undefined;
-            this.#isLoaded = "ref";
+            this.#loadedMode = "ref";
+            this.#isLoaded = true;
             this.#loaded = loaded;
             getEmInternalApi(this.entity.em).isLoadedCache.add(this);
             return loaded;
@@ -180,20 +186,18 @@ export class ReactiveReferenceImpl<
 
   get isLoaded(): boolean {
     // If we've cached an isLoaded value, just use that, see https://github.com/joist-orm/joist-orm/issues/1166
-    if (this.#isLoaded !== undefined) return !!this.#isLoaded;
+    if (this.#isLoaded !== undefined) return this.#isLoaded;
     getEmInternalApi(this.entity.em).isLoadedCache.add(this);
     // If a WIP mutation has marked our field as potentially dirty, we need to be "full" loaded
     const maybeDirty = getEmInternalApi(this.entity.em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
     if (maybeDirty) {
-      // If we're dirty, only being "full" loaded is good enough to recalc, otherwise set
-      // `isLoaded=false` so that `.load` can em.populate our load hint.
-      const hintLoaded = isLoaded(this.entity, this.loadHint);
-      this.#isLoaded = hintLoaded ? "full" : false;
+      // If we're dirty, only being "full" loaded is good enough to recalc
+      this.#loadedMode = "full";
+      this.#isLoaded = isLoaded(this.entity, this.loadHint);
       this.#isCached = false;
-      return hintLoaded;
-    } else if (this.#isLoaded === undefined) {
-      // We had been ambiguously loaded, but now we're definitely not loaded
-      this.#isLoaded = false;
+    } else {
+      // If we've had `.load` called before, assume we're still loaded
+      this.#isLoaded = !!this.#loadedMode;
     }
     return this.#isLoaded;
   }
@@ -215,7 +219,7 @@ export class ReactiveReferenceImpl<
     // Call isLoaded to probe the load hint, and get `#isLoaded` set, but still have
     // our `if` check the raw `#isLoaded` to know if we should eval-latest or return `loaded`.
     this.isLoaded;
-    if (this.#isLoaded === "full") {
+    if (this.#loadedMode === "full") {
       const newValue = this.filterDeleted(fn(this.entity as any) as any, opts);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update (...unless we're accessing it
@@ -227,7 +231,7 @@ export class ReactiveReferenceImpl<
       this.#loaded = newValue;
       this.#isCached = true;
       getEmInternalApi(this.entity.em).isLoadedCache.add(this);
-    } else if (this.#isLoaded === "ref") {
+    } else if (this.#loadedMode === "ref") {
       // #loaded was already set by whoever set ref; mark it as cached as well
       this.#isCached = true;
       getEmInternalApi(this.entity.em).isLoadedCache.add(this);
@@ -274,7 +278,8 @@ export class ReactiveReferenceImpl<
 
   preload(): void {
     this.#loaded = this.maybeFindEntity();
-    this.#isLoaded = "ref";
+    this.#loadedMode = "ref";
+    this.#isLoaded = true;
     this.#isCached = true;
   }
 

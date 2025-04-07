@@ -157,8 +157,8 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   }
 
   resetIsLoaded(): void {
-    // Even though we reset this on every mutation, `isLoaded` will still realize when
-    // the subgraph is still loaded, so users won't see false positive.
+    // Even though we reset this on every mutation, `isLoaded` will still realize when the subgraph
+    // is still loaded (as it did before we added caching), so users won't see false positive.
     this.#isLoaded = undefined;
     // If factories asked for a hard-coded value, don't reset the cached flag
     if (this.#isCached !== "factory-value") this.#isCached = false;

@@ -6,6 +6,7 @@ import {
   Entity,
   EntityMetadata,
   fail,
+  getEmInternalApi,
   getMetadata,
   isCollection,
   isLoadedCollection,
@@ -16,6 +17,7 @@ import {
   Reference,
   Relation,
 } from "../index";
+import { IsLoadedCachable } from "../IsLoadedCache";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReadOnlyCollection } from "./ReadOnlyCollection";
 import { RelationT, RelationU } from "./Relation";
@@ -108,7 +110,7 @@ abstract class AbstractRecursiveCollectionImpl<T extends Entity, U extends Entit
 
 export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
   extends AbstractRecursiveCollectionImpl<T, U>
-  implements ReadOnlyCollection<T, U>
+  implements ReadOnlyCollection<T, U>, IsLoadedCachable
 {
   readonly #fieldName: keyof T & string;
   readonly #m2oName: keyof T & string;
@@ -149,14 +151,20 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
             });
         }
       }
+      this.#loaded = true;
     }
     return this.filterDeleted(this.doGet(), opts);
   }
 
   get isLoaded(): boolean {
-    // This probably needs stale tracking...
     if (this.#loaded !== undefined) return this.#loaded;
-    return (this.#loaded = this.findUnloadedReference() === undefined);
+    this.#loaded = this.findUnloadedReference() === undefined;
+    getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+    return this.#loaded;
+  }
+
+  resetIsLoaded(): void {
+    this.#loaded = undefined;
   }
 
   get fieldName(): string {
@@ -213,15 +221,12 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
 
 export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
   extends AbstractRecursiveCollectionImpl<T, U>
-  implements ReadOnlyCollection<T, U>
+  implements ReadOnlyCollection<T, U>, IsLoadedCachable
 {
   readonly #fieldName: keyof T & string;
   readonly #o2mName: keyof T & string;
   readonly #otherFieldName: keyof T & string;
-  // Even if we're a new entity, our immediate `author.mentees` will be loaded, but we might have
-  // a WIP change that adds a non-new entity to the collection, which we then need to load, so
-  // we always initialize `#loaded = false`.
-  #loaded = false;
+  #loaded: boolean | undefined = undefined;
 
   constructor(entity: T, fieldName: keyof T & string, o2mName: keyof T & string, otherFieldName: keyof T & string) {
     super(entity);
@@ -248,13 +253,20 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
         // changes, then their own `RecursiveChildrenCollectionImpl.load` will load them.
         await Promise.all(unloaded.map((r) => (r.entity as any)[this.fieldName].load(opts)));
       }
+      this.#loaded = true;
     }
     return this.filterDeleted(this.doGet(), opts);
   }
 
   get isLoaded(): boolean {
-    // We could cache this, and add staleness tracking
-    return this.findUnloadedCollections().length === 0;
+    if (this.#loaded !== undefined) return this.#loaded;
+    this.#loaded = this.findUnloadedCollections().length === 0;
+    getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+    return this.#loaded;
+  }
+
+  resetIsLoaded(): void {
+    this.#loaded = undefined;
   }
 
   get fieldName(): string {

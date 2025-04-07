@@ -1615,7 +1615,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // And then only refresh the data keys that have already been serde-d from rows
         // (this keeps us from deserializing data out of rows that we don't need).
         const { data, originalData } = getInstanceData(entity);
-        const changedFields = (entity as any).changes.fields;
+        const changedFields = (entity as any).changes.fieldsWithoutRelations;
         for (const fieldName of Object.keys(data)) {
           const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
           serde.setOnEntity(data, row);

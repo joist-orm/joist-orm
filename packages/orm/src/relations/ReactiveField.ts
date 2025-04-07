@@ -165,8 +165,8 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   }
 
   setFactoryValue(newValue: any): void {
-    this.#isCached = true;
     setField(this.entity, this.fieldName, newValue);
+    this.#isCached = "factory-value";
   }
 
   [AsyncPropertyT] = undefined as any as T;

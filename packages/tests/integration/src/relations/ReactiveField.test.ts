@@ -76,6 +76,10 @@ describe("ReactiveField", () => {
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
     expect(a1.numberOfBooks.get).toBe(0);
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
+    // Any mutation resets the cache
+    a1.lastName = "l1";
+    expect(a1.numberOfBooks.get).toBe(0);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
   });
 
   it("can access reactive fields immediately without loading", async () => {

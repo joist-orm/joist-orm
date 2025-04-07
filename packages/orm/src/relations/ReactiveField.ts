@@ -119,10 +119,12 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     // drifted to not-loaded, it's better to fail and tell the user.
     if (this.isLoaded) {
       const newValue = fn(this.entity as Reacted<T, H>);
-      // setField will immediately invalidate
-      setField(this.entity, this.fieldName, newValue);
-      this.#isCached = true;
-      getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+      if (!getEmInternalApi(this.entity.em).isValidating) {
+        // setField will immediately invalidate
+        setField(this.entity, this.fieldName, newValue);
+        this.#isCached = true;
+        getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+      }
       return newValue;
     } else if (this.isSet) {
       this.#isCached = true;

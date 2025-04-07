@@ -226,9 +226,11 @@ export class ReactiveReferenceImpl<
       }
       this.#loaded = newValue;
       this.#isCached = true;
+      getEmInternalApi(this.entity.em).isLoadedCache.add(this);
     } else if (this.#isLoaded === "ref") {
       // #loaded was already set by whoever set ref; mark it as cached as well
       this.#isCached = true;
+      getEmInternalApi(this.entity.em).isLoadedCache.add(this);
     } else {
       const noun = this.entity.isNewEntity ? "derived" : "loaded";
       throw new Error(`${this.entity}.${this.fieldName} has not been ${noun} yet`);

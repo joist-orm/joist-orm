@@ -1,3 +1,6 @@
+import { Entity } from "./Entity";
+import { getMetadata } from "./EntityMetadata";
+
 /**
  * Interface for our relations that have dynamic & expensive `isLoaded` checks.
  *
@@ -13,6 +16,8 @@
  * mutated.
  */
 export interface IsLoadedCachable {
+  entity: Entity;
+  fieldName: string;
   isLoaded: boolean;
   resetIsLoaded(): void;
 }
@@ -21,6 +26,9 @@ export class IsLoadedCache {
   private cache = new Set<IsLoadedCachable>();
 
   add(target: IsLoadedCachable): void {
+    const meta = getMetadata(target.entity);
+    const field = meta.allFields[target.fieldName];
+    // console.log(field.kind);
     this.cache.add(target);
   }
 

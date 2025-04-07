@@ -1,3 +1,10 @@
+## [1.234.2](https://github.com/joist-orm/joist-orm/compare/v1.234.1...v1.234.2) (2025-04-07)
+
+
+### Bug Fixes
+
+* Add isLoaded caching ([#1419](https://github.com/joist-orm/joist-orm/issues/1419)) ([24451ce](https://github.com/joist-orm/joist-orm/commit/24451ce079bcbcfaff36cf5686ea113656ffc3e2))
+
 ## [1.234.1](https://github.com/joist-orm/joist-orm/compare/v1.234.0...v1.234.1) (2025-04-02)
 
 

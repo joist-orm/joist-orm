@@ -640,13 +640,24 @@ describe("OneToManyCollection", () => {
     expect(p).toMatchEntity({ authors: [{ firstName: "a2" }, { firstName: "a1" }] });
   });
 
-  it("can sort sort by unloaded reactive field", async () => {
+  it("can sort by unloaded reactive field", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1, number_of_books: 2 });
     await insertAuthor({ first_name: "a2", publisher_id: 1, number_of_books: 1 });
     const em = newEntityManager();
     const p = await em.load(Publisher, "1", "authors");
     newAuthor(em, { firstName: "a3", books: [{}] });
-    expect(p).toMatchEntity({ authors: [{ firstName: "a3" }, { firstName: "a2" }, { firstName: "a1" }] });
+    const authors = await p.authors.load();
+    expect(authors).toMatchEntity([{ firstName: "a3" }, { firstName: "a2" }, { firstName: "a1" }]);
+  });
+
+  it("caches get access", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1, number_of_books: 2 });
+    const em = newEntityManager();
+    const p = await em.load(Publisher, "1", "authors");
+    const authors1 = p.authors.get;
+    const authors2 = p.authors.get;
+    expect(authors1 === authors2).toEqual(true);
   });
 });

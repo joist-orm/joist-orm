@@ -1,4 +1,4 @@
-import { EntityManager } from "./EntityManager";
+import { EntityManager, getEmInternalApi } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 
 /** The `#orm` metadata field we track on each instance. */
@@ -114,6 +114,8 @@ export class InstanceData {
   /** Called by `em.delete`, returns true if this is new information. */
   markDeleted(): boolean {
     if (this.#deleted === undefined) {
+      // Let any OneToManyCollection.get caches that they should recalc
+      getEmInternalApi(this.em).isLoadedCache.resetIsLoaded();
       this.#deleted = Operation.Pending;
       return true;
     }

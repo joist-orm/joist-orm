@@ -60,10 +60,8 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   }
 
   get isLoaded(): boolean {
-    // For some reason this locks up graphql-service, but like weirdly
-    // return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
+    // We could cache this...
     return this.opts.isLoaded(this.entity);
-    // });
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {

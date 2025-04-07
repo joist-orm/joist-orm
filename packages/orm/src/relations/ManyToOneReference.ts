@@ -117,10 +117,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   get isLoaded(): boolean {
-    // return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
     // Even if `.load()` has not been called, `.get` will detect
     return this._isLoaded || this.current() === undefined || !!this.maybeFindEntity();
-    // });
   }
 
   get isPreloaded(): boolean {

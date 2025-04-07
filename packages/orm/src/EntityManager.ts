@@ -222,7 +222,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   readonly #hooks: Record<EntityManagerHook, HookFn<any>[]> = { beforeTransaction: [], afterTransaction: [] };
   readonly #preloader: PreloadPlugin | undefined;
   #fieldLogger: FieldLogger | undefined;
-  #isLoadedStats: Map<string, { count: number; duration: number }> = new Map();
   #isLoadedCache = new IsLoadedCache();
   private __api: EntityManagerInternalApi;
   mode: EntityManagerMode = "writes";
@@ -294,25 +293,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       get fieldLogger() {
         return em.#fieldLogger;
-      },
-
-      trackIsLoaded(relation: { entity: any; fieldName: string }, fn: () => boolean): boolean {
-        const key = `${relation.entity.constructor.name}:${relation.fieldName}(${relation.constructor.name})`;
-        let stats = em.#isLoadedStats.get(key);
-        if (!stats) {
-          stats = { count: 0, duration: 0 };
-          em.#isLoadedStats.set(key, stats);
-        }
-        stats.count += 1;
-        return fn();
-      },
-
-      outputIsLoadedStats() {
-        const entries = [...em.#isLoadedStats.entries()];
-        entries.sort((a, b) => b[1].count - a[1].count);
-        // for (const [key, stats] of entries) {
-        //   console.log(`${key}.isLoaded = ${stats.count}`);
-        // }
       },
     };
   }
@@ -1386,7 +1366,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // the full set of entities that will be INSERT/UPDATE/DELETE-d in the database.
       let entityTodos = createTodos(entitiesToFlush);
       let joinRowTodos = combineJoinRows(this.#joinRows);
-      getEmInternalApi(this).outputIsLoadedStats();
 
       if (!skipValidation) {
         await runValidation(entityTodos, joinRowTodos);
@@ -1819,8 +1798,6 @@ export interface EntityManagerInternalApi {
   isValidating: boolean;
   checkWritesAllowed: () => void;
   get fieldLogger(): FieldLogger | undefined;
-  trackIsLoaded(relation: { fieldName: string }, fn: () => boolean): boolean;
-  outputIsLoadedStats(): void;
   get isLoadedCache(): IsLoadedCache;
 }
 

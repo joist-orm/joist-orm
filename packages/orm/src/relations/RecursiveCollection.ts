@@ -6,7 +6,6 @@ import {
   Entity,
   EntityMetadata,
   fail,
-  getEmInternalApi,
   getMetadata,
   isCollection,
   isLoadedCollection,
@@ -155,10 +154,9 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
   }
 
   get isLoaded(): boolean {
+    // This probably needs stale tracking...
     if (this.#loaded !== undefined) return this.#loaded;
-    return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
-      return (this.#loaded = this.findUnloadedReference() === undefined);
-    });
+    return (this.#loaded = this.findUnloadedReference() === undefined);
   }
 
   get fieldName(): string {
@@ -255,9 +253,8 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
   }
 
   get isLoaded(): boolean {
-    return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
-      return this.findUnloadedCollections().length === 0;
-    });
+    // We could cache this, and add staleness tracking
+    return this.findUnloadedCollections().length === 0;
   }
 
   get fieldName(): string {

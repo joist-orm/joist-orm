@@ -116,9 +116,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   get isLoaded(): boolean {
-    // return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
     return this._isLoaded;
-    // });
   }
 
   get isPreloaded(): boolean {

@@ -53,9 +53,8 @@ export class CustomCollection<T extends Entity, U extends Entity>
   }
 
   get isLoaded(): boolean {
-    // return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
+    // We could cache this...
     return this.opts.isLoaded();
-    // });
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {

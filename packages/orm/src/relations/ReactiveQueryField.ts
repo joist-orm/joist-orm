@@ -2,7 +2,7 @@ import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { getMetadata } from "../EntityMetadata";
 import { getField, isFieldSet, setField } from "../fields";
-import { ReactiveField, deepNormalizeHint, getEmInternalApi, isLoaded } from "../index";
+import { ReactiveField, deepNormalizeHint, isLoaded } from "../index";
 import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { mergeNormalizedHints } from "../utils";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
@@ -109,13 +109,11 @@ export class ReactiveQueryFieldImpl<T extends Entity, H1 extends ReactiveHint<T>
   }
 
   get isLoaded() {
-    return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
-      const hintLoaded = isLoaded(this.entity, this.loadHint);
-      if (hintLoaded) {
-        this.#loaded = true;
-      }
-      return hintLoaded;
-    });
+    const hintLoaded = isLoaded(this.entity, this.loadHint);
+    if (hintLoaded) {
+      this.#loaded = true;
+    }
+    return hintLoaded;
   }
 
   get loadHint(): any {

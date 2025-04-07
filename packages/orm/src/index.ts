@@ -98,7 +98,7 @@ export * from "./serde";
 export * from "./temporalMappers";
 export * from "./typeMap";
 export { asNew, assertNever, cleanStringValue, fail, indexBy } from "./utils";
-export { ensureWithLoaded, WithLoaded, withLoaded } from "./withLoaded";
+export { ensureWithLoaded, StubbedRelation, WithLoaded, withLoaded } from "./withLoaded";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {

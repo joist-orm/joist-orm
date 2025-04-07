@@ -82,8 +82,9 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
 {
   readonly #reactiveHint: H;
   #loadPromise: any;
-  #loaded: boolean | undefined;
-  #useFactoryValue = false;
+  // Initially undefined, then cached as true/false
+  #isLoaded: boolean | undefined;
+  #isCached: boolean | "factory-value" = false;
   constructor(
     entity: T,
     public fieldName: keyof T & string,
@@ -96,9 +97,11 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
 
   load(opts?: { forceReload?: boolean }): Promise<V> {
     if (!this.isLoaded || opts?.forceReload) {
+      if (opts?.forceReload) this.#isCached = false;
       return (this.#loadPromise ??= this.entity.em.populate(this.entity, { hint: this.loadHint } as any).then(() => {
         this.#loadPromise = undefined;
-        this.#loaded = true;
+        this.#isLoaded = true;
+        getEmInternalApi(this.entity.em).isLoadedCache.add(this);
         // Go through `this.get` so that `setField` is called to set our latest value
         return this.get;
       }));
@@ -109,19 +112,19 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   /** Returns either the latest calculated value (if loaded) or the previously-calculated value (if not loaded). */
   get get(): V {
     const { fn } = this;
-    // Check #loaded to make sure we don't revert to stale values if our subgraph has been changed since
-    // the last `.load()`. It's better to fail and tell the user.
-    if (!this.#useFactoryValue && (this.#loaded || this.isLoaded)) {
+    // Some ReactiveFields can have surprisingly expensive calculations, especially in loops
+    // or those that invoke loops, so cache the value.
+    if (this.#isCached) return this.fieldValue;
+    getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+    // isLoaded will watch for our previously-loaded subgraph being mutated, and if we've
+    // drifted to not-loaded, it's better to fail and tell the user.
+    if (this.isLoaded) {
       const newValue = fn(this.entity as Reacted<T, H>);
-      // It's cheap to set this every time we're called, i.e. even if it's not the
-      // official "being called during em.flush" update (...unless we're accessing it
-      // during the validate phase of `em.flush`, then skip it to avoid tripping up
-      // the "cannot change entities during flush" logic.)
-      if (!getEmInternalApi(this.entity.em).isValidating) {
-        setField(this.entity, this.fieldName, newValue);
-      }
+      setField(this.entity, this.fieldName, newValue);
+      this.#isCached = true;
       return newValue;
     } else if (this.isSet) {
+      this.#isCached = true;
       return this.fieldValue;
     } else {
       throw new Error(`${this.fieldName} has not been derived yet`);
@@ -137,19 +140,19 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   }
 
   get isLoaded() {
-    if (this.#loaded !== undefined) return this.#loaded;
-    // return getEmInternalApi(this.entity.em).trackIsLoaded(this, () => {
-    // Constantly evaluating this is a performance issue, so cache it
-    this.#loaded = isLoaded(this.entity, this.loadHint);
+    // Skip an expensive isLoaded(subgraph) call if no mutations have happened
+    if (this.#isLoaded !== undefined) return this.#isLoaded;
+    this.#isLoaded = isLoaded(this.entity, this.loadHint);
     getEmInternalApi(this.entity.em).isLoadedCache.add(this);
-    return this.#loaded;
-    // });
+    return this.#isLoaded;
   }
 
   resetIsLoaded(): void {
-    // ...if we reset this on every mutation, we'll have tons of false positives, from
-    // loaded collections that are not longer loaded...
-    this.#loaded = undefined;
+    // Even though we reset this on every mutation, `isLoaded` will still realize when
+    // the subgraph is still loaded, so users won't see false positive.
+    this.#isLoaded = undefined;
+    // If factories asked for a hard-coded value, don't reset the cached flag
+    if (this.#isCached !== "factory-value") this.#isCached = false;
   }
 
   get loadHint(): any {
@@ -158,7 +161,7 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   }
 
   setFactoryValue(newValue: any): void {
-    this.#useFactoryValue = true;
+    this.#isCached = true;
     setField(this.entity, this.fieldName, newValue);
   }
 

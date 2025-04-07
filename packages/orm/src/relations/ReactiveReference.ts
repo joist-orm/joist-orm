@@ -148,6 +148,7 @@ export class ReactiveReferenceImpl<
       // only load the full load hint if we need recalculated.
       const recalc = opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
       if (recalc) {
+        if (opts?.forceReload) this.#isCached = false;
         return (this.#loadPromise ??= em.populate(this.entity, { hint: loadHint, ...opts }).then(() => {
           this.#loadPromise = undefined;
           this.#isLoaded = "full";

@@ -260,8 +260,8 @@ describe("ReactiveField", () => {
     expect(a1.numberOfBooks.get).toEqual(1);
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
     // And when we create a new book
-    const b2 = em.create(Book, { title: "b2", author: a1 });
-    // Then numberOfBooks is initially still stale
+    em.create(Book, { title: "b2", author: a1 });
+    // Then numberOfBooks is initially still stale (Because `a1.books` is not loaded so we cannot recalc it)
     expect(a1.numberOfBooks.get).toEqual(1);
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
     // But if we load it via a load call, then we'll get the live value

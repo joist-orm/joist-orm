@@ -6,7 +6,6 @@ import { getField, isFieldSet, setField } from "../fields";
 import { isLoaded } from "../index";
 import { IsLoadedCachable } from "../IsLoadedCache";
 import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
-import { tryResolve } from "../utils";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
 import { AsyncPropertyT } from "./hasAsyncProperty";
 
@@ -95,9 +94,11 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     this.#reactiveHint = reactiveHint;
   }
 
-  load(opts?: { forceReload?: boolean }): Promise<V> {
+  async load(opts?: { forceReload?: boolean }): Promise<V> {
     if (!this.isLoaded || opts?.forceReload) {
-      if (opts?.forceReload) this.#isCached = false;
+      // Even without `forceReload=true`, any explicit calls to `.load()` ==> ensure a fresh value,
+      // because `.get` may have cached the stale/previously-calculated value.
+      this.#isCached = false;
       return (this.#loadPromise ??= this.entity.em.populate(this.entity, { hint: this.loadHint } as any).then(() => {
         this.#loadPromise = undefined;
         this.#isLoaded = true;
@@ -106,7 +107,7 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
         return this.get;
       }));
     }
-    return tryResolve(() => this.get);
+    return this.get;
   }
 
   /** Returns either the latest calculated value (if loaded) or the previously-calculated value (if not loaded). */

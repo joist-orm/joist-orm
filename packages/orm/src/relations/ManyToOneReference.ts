@@ -82,7 +82,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   constructor(
     entity: T,
     otherMeta: EntityMetadata,
-    private fieldName: keyof T & string,
+    fieldName: keyof T & string,
     public otherFieldName: keyof U & string,
   ) {
     super(entity);
@@ -203,6 +203,10 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   get idTaggedMaybe(): TaggedId | undefined {
     ensureNotDeleted(this.entity, "pending");
     return maybeResolveReferenceToId(this.current());
+  }
+
+  get fieldName(): string {
+    return this.#fieldName;
   }
 
   private get idUntaggedMaybe(): string | undefined {

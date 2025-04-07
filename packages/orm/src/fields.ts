@@ -58,6 +58,9 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
   getEmInternalApi(em).checkWritesAllowed();
 
+  // Tell any `#isLoaded` or `#value` caches that they might be stale
+  getEmInternalApi(em).isLoadedCache.resetIsLoaded();
+
   const { fieldLogger } = getEmInternalApi(em);
   const { data, originalData, flushedData } = getInstanceData(entity);
 

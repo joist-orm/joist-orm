@@ -85,6 +85,8 @@ export function withLoaded<T extends Entity, H extends LoadHint<T>, L extends Lo
               isReactiveGetter(value)
               ? value.get
               : fail(`${target}.${String(prop)} is not loaded`);
+          } else if (value instanceof StubbedRelation) {
+            return value.get;
           } else {
             return value;
           }
@@ -99,4 +101,39 @@ export function ensureWithLoaded<T extends Entity, H extends LoadHint<T>, L exte
 ): WithLoaded<T, H, L> {
   assertLoaded<T, H, L>(entity, hint);
   return withLoaded<T, H, L>(entity);
+}
+
+/**
+ * Allow stubbing of relations with dummy values.
+ *
+ * In very advanced use cases (ideally only useful in tests, similar to mocking), it can be helpful
+ * to have a relation returned a hard-coded value that doesn't go through the normal o2m/m2m
+ * .load/.isLoaded/.get code paths.
+ *
+ * We'd originally done some of this by poking relation internal implementation details, but
+ * using private fields like `#loaded` breaks that, and it was brittle anyway.
+ *
+ * So StubbedRelation provides a semi-blessed way of doing this, i.e. with code like:
+ *
+ * ```
+ * // Force `author.books` to always be `[]` and never load.
+ * Object.defineProperty(author, "books", {
+ *   get: () => new StubbedRelation([]),
+ *  });
+ * ```
+ */
+export class StubbedRelation {
+  constructor(private value: any) {}
+
+  get get() {
+    return this.value;
+  }
+
+  get isLoaded() {
+    return true;
+  }
+
+  load() {
+    return this.get;
+  }
 }

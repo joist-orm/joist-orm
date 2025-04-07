@@ -4,7 +4,6 @@ import {
   TaggedId,
   deTagId,
   ensureNotDeleted,
-  ensureTagged,
   fail,
   getEmInternalApi,
   getMetadata,
@@ -18,6 +17,7 @@ import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { IdOf } from "../EntityManager";
 import { getField, setField } from "../fields";
+import { IsLoadedCachable } from "../IsLoadedCache";
 import { MaybeReactedEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";
@@ -79,6 +79,28 @@ export function hasReactiveReference<
   return new ReactiveReferenceImpl<T, U, H, N>(entity, fieldName, otherMeta, hint, fn);
 }
 
+/**
+ * Implements ReactiveReferences.
+ *
+ * This is a bit trickier than ReactiveFields, because we have to differentiate our loaded
+ * between:
+ *
+ * - our load hint is loaded, and we can directly calculate the referenced entity, or
+ * - we've fetched the calculated/stored entity from the database, but not purposefully
+ *   not re-calculating it (which would require fetching the load hint, which might be
+ *   expensive, and defeat the point of having our field materialized in the database)
+ *
+ * Further, want to support all of:
+ *
+ * - When loaded & `.get` has been called, we cache the value
+ *
+ * - If a WIP mutation happens, we invalidate `.get` *but* if we check `.isLoaded`,
+ *   we can return the live/updated value, without an `await`.
+ *
+ * - If a WIP mutation happens, we invalidate `.isLoaded`, and if we're *no longer loaded*,
+ *   we want to keep returning the stale value (as asserted by the tests), but the next
+ *   `load` / `populate` should load the graph & recalculate the value.
+ */
 export class ReactiveReferenceImpl<
     T extends Entity,
     U extends Entity,
@@ -86,19 +108,23 @@ export class ReactiveReferenceImpl<
     N extends never | undefined,
   >
   extends AbstractRelationImpl<T, U>
-  implements ReactiveReference<T, U, N>
+  implements ReactiveReference<T, U, N>, IsLoadedCachable
 {
   readonly #fieldName: keyof T & string;
   readonly #otherMeta: EntityMetadata;
   readonly #reactiveHint: H;
   // Either the loaded entity, or N/undefined if we're allowed to be null
-  private loaded!: U | N | undefined;
-  // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
-  private _isLoaded: "ref" | "full" | false = false;
-  private loadPromise: any;
+  #loaded!: U | N | undefined;
+  // In ref-mode, we use our materialized FK value (which might be undefined)
+  // If full-mode, we calculate the FK value from the subgraph
+  #loadedMode: "ref" | "full" | undefined = undefined;
+  #isLoaded: boolean | undefined = undefined;
+  #isCached: boolean = false;
+  #loadPromise: any;
+
   constructor(
     entity: T,
-    private fieldName: keyof T & string,
+    public fieldName: keyof T & string,
     otherMeta: EntityMetadata,
     public reactiveHint: H,
     private fn: (entity: Reacted<T, H>) => MaybeReactedEntity<U> | N,
@@ -110,7 +136,7 @@ export class ReactiveReferenceImpl<
     // We can be initialized with [entity | id | undefined], and if it's entity or id, then setImpl
     // will set loaded appropriately; but if we're initialized undefined, then mark loaded here
     if (entity.isNewEntity) {
-      this._isLoaded = isEntity(this.current()) ? "ref" : false;
+      const isLoaded = isEntity(this.current()) ? true : undefined;
     }
   }
 
@@ -119,29 +145,37 @@ export class ReactiveReferenceImpl<
     const { loadHint } = this;
     if (!this.isLoaded || opts?.forceReload) {
       const { em } = this.entity;
-      // Just because we're not loaded, doesn't mean we necessarily need to load our full
-      // hint. Ideally we only need to load our previously-calculated/persisted value, and
-      // only load the full load hint if we need recalculated.
-      const recalc = opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
-      if (recalc) {
-        return (this.loadPromise ??= em.populate(this.entity, { hint: loadHint, ...opts }).then(() => {
-          this.loadPromise = undefined;
-          this._isLoaded = "full";
+      // Just because we're not loaded, doesn't mean we necessarily need to load our full hint.
+      // We prefer to load only our previously-calculated/materialized value, and only load the
+      // full load hint if we need recalculated.
+      const maybeDirty = opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
+      if (maybeDirty) {
+        this.#isCached = false;
+        return (this.#loadPromise ??= em.populate(this.entity, { hint: loadHint, ...opts }).then(() => {
+          this.#loadPromise = undefined;
+          this.#loadedMode = "full";
+          this.#isLoaded = true;
+          getEmInternalApi(this.entity.em).isLoadedCache.add(this);
           // Go through `this.get` so that `setField` is called to set our latest value
           return this.doGet(opts);
         }));
       } else {
         // If we don't need a full recalc, just make sure we have the entity in memory
+        // ...ideally we would check `isSet` and whether the key was in the `instanceData`
         const current = this.current();
         if (isEntity(current) || current === undefined) {
-          this._isLoaded = "ref";
-          this.loaded = current;
+          this.#loadedMode = "ref";
+          this.#isLoaded = true;
+          this.#loaded = current;
+          getEmInternalApi(this.entity.em).isLoadedCache.add(this);
           return current;
         } else {
-          return (this.loadPromise ??= em.load(this.#otherMeta.cstr, current).then((loaded) => {
-            this.loadPromise = undefined;
-            this._isLoaded = "ref";
-            this.loaded = loaded;
+          return (this.#loadPromise ??= em.load(this.#otherMeta.cstr, current).then((loaded) => {
+            this.#loadPromise = undefined;
+            this.#loadedMode = "ref";
+            this.#isLoaded = true;
+            this.#loaded = loaded;
+            getEmInternalApi(this.entity.em).isLoadedCache.add(this);
             return loaded;
           }));
         }
@@ -150,14 +184,42 @@ export class ReactiveReferenceImpl<
     return this.doGet(opts);
   }
 
+  get isLoaded(): boolean {
+    // If we've cached an isLoaded value, just use that, see https://github.com/joist-orm/joist-orm/issues/1166
+    if (this.#isLoaded !== undefined) return this.#isLoaded;
+    getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+    // If a WIP mutation has marked our field as potentially dirty, we need to be "full" loaded
+    const maybeDirty = getEmInternalApi(this.entity.em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
+    if (maybeDirty) {
+      // If we're dirty, only being "full" loaded is good enough to recalc
+      this.#loadedMode = "full";
+      this.#isLoaded = isLoaded(this.entity, this.loadHint);
+      this.#isCached = false;
+    } else {
+      // If we've had `.load` called before, assume we're still loaded
+      this.#isLoaded = !!this.#loadedMode;
+    }
+    return this.#isLoaded;
+  }
+
+  resetIsLoaded(): void {
+    // We only reset #isLoaded so that callers can keep calling `.get` and technically
+    // see the stale value, but once they call `.load` again, we'll recalc it.
+    this.#isLoaded = undefined;
+  }
+
   private doGet(opts?: { withDeleted?: boolean }): U | N {
     const { fn } = this;
     ensureNotDeleted(this.entity, "pending");
-    // Call isLoaded to probe the load hint, and get `_isLoaded` set, but still have
-    // our `if` check the raw `_isLoaded` to know if we should eval-latest or return `loaded`.
+    // Fast pass if we've already calculated this (cache invalidation will happen on
+    // any mutation via #resetIsLoaded)..
+    if (this.#isCached) {
+      return this.#loaded ? this.filterDeleted(this.#loaded, opts) : (undefined as N);
+    }
+    // Call isLoaded to probe the load hint, and get `#isLoaded` set, but still have
+    // our `if` check the raw `#isLoaded` to know if we should eval-latest or return `loaded`.
     this.isLoaded;
-    // We assume `isLoaded` has been called coming into this to manage
-    if (this._isLoaded === "full") {
+    if (this.#loadedMode === "full") {
       const newValue = this.filterDeleted(fn(this.entity as any) as any, opts);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update (...unless we're accessing it
@@ -166,17 +228,18 @@ export class ReactiveReferenceImpl<
       if (!getEmInternalApi(this.entity.em).isValidating) {
         this.setImpl(newValue);
       }
-      // ...should we store the `newValue` as `loaded`? It seems like a good idea, just in
-      // case our graph mutates & we become "not fully loaded" some time later, but going
-      // to leave this out for now, until we have a need/test case covering the behavior.
-      // this.loaded = newValue;
-      return this.maybeFindEntity();
-    } else if (this._isLoaded) {
-      return this.loaded as U | N;
+      this.#loaded = newValue;
+      this.#isCached = true;
+      getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+    } else if (this.#loadedMode === "ref") {
+      // #loaded was already set by whoever set ref; mark it as cached as well
+      this.#isCached = true;
+      getEmInternalApi(this.entity.em).isLoadedCache.add(this);
     } else {
       const noun = this.entity.isNewEntity ? "derived" : "loaded";
       throw new Error(`${this.entity}.${this.fieldName} has not been ${noun} yet`);
     }
+    return this.#loaded ? this.filterDeleted(this.#loaded, opts) : (undefined as N);
   }
 
   get fieldValue(): U {
@@ -191,23 +254,7 @@ export class ReactiveReferenceImpl<
     return this.doGet({ withDeleted: false });
   }
 
-  get isLoaded(): boolean {
-    const maybeDirty = getEmInternalApi(this.entity.em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
-    // If we might be dirty, it doesn't matter what our last _isLoaded value was, we need to
-    // check if our tree is loaded, b/c it might have recently been mutated.
-    if (maybeDirty) {
-      const hintLoaded = isLoaded(this.entity, this.loadHint);
-      if (hintLoaded) {
-        this._isLoaded = "full";
-      }
-      return hintLoaded;
-    } else {
-      // If we're not dirty, then either being "full" or "ref" loaded is fine
-      return !!this._isLoaded;
-    }
-  }
-
-  set(other: U | N): void {
+  set(_: U | N): void {
     fail(`Cannot set ${this.entity}.${this.fieldName} ReactiveReference directly.`);
   }
 
@@ -216,24 +263,13 @@ export class ReactiveReferenceImpl<
   }
 
   // Internal method used by OneToManyCollection
-  setImpl(other: U | IdOf<U> | N): void {
+  setImpl(entity: U | N): void {
     ensureNotDeleted(this.entity, "pending");
-
-    // If the project is not using tagged ids, we still want it tagged internally
-    const _other = ensureTagged(this.otherMeta, other) as U | TaggedId | N;
-
-    if (sameEntity(_other, this.current({ withDeleted: true }))) {
+    if (sameEntity(entity, this.current({ withDeleted: true }))) {
       return;
     }
-
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    setField(this.entity, this.fieldName, isEntity(_other) ? (_other.idTaggedMaybe ?? _other) : _other);
-
-    if (typeof _other === "string") {
-      this.loaded = undefined;
-    } else {
-      this.loaded = _other;
-    }
+    setField(this.entity, this.fieldName, isEntity(entity) ? (entity.idTaggedMaybe ?? entity) : entity);
   }
 
   get isPreloaded(): boolean {
@@ -241,8 +277,10 @@ export class ReactiveReferenceImpl<
   }
 
   preload(): void {
-    this.loaded = this.maybeFindEntity();
-    this._isLoaded = "ref";
+    this.#loaded = this.maybeFindEntity();
+    this.#loadedMode = "ref";
+    this.#isLoaded = true;
+    this.#isCached = true;
   }
 
   /** Returns the tagged id of the current value. */
@@ -284,8 +322,8 @@ export class ReactiveReferenceImpl<
     return deTagId(this.otherMeta, this.idMaybe);
   }
 
-  setFromOpts(other: U | IdOf<U> | N): void {
-    this.setImpl(other);
+  setFromOpts(_: U | IdOf<U> | N): void {
+    throw new Error("ReactiveReferences cannot be set via opts");
   }
 
   maybeCascadeDelete(): void {
@@ -301,8 +339,8 @@ export class ReactiveReferenceImpl<
     // if we are going to delete this relation as well, then we don't need to clean it up
     if (this.isCascadeDelete) return;
     setField(this.entity, this.fieldName, undefined);
-    this.loaded = undefined as any;
-    this._isLoaded = false;
+    this.#loaded = undefined as any;
+    this.#isLoaded = false;
   }
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
@@ -356,7 +394,7 @@ export class ReactiveReferenceImpl<
     // Check this.loaded first b/c a new entity won't have an id yet
     const { idTaggedMaybe } = this;
     return (
-      this.loaded ??
+      this.#loaded ??
       (idTaggedMaybe !== undefined ? (this.entity.em.getEntity(idTaggedMaybe) as U | N) : (undefined as N))
     );
   }

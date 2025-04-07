@@ -85,6 +85,7 @@ describe("ReactiveReference", () => {
     const a1 = await em.load(Author, "a:1", "favoriteBook");
     // And we've already loaded its favoriteBook
     expect(a1.favoriteBook.isLoaded).toBe(true);
+    // ...call this multiple times and watch it not tick...
     expect(a1.favoriteBook.get!.title).toBe("b1");
     // When we mutate the graph by moving b2 (which has reviews unloaded) into a1
     const b2 = await em.load(Book, "b:2");
@@ -110,6 +111,16 @@ describe("ReactiveReference", () => {
     expect(queries).toEqual([]);
     expect(a.favoriteBook.isLoaded).toBe(true);
     expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("doesn't lose loaded-ness after mutation", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    // Given a new author, with at least 1 book
+    const a = await em.load(Author, "a:1", "favoriteBook");
+    expect(a.favoriteBook.isLoaded).toBe(true);
+    a.lastName = "l1";
+    expect(a.favoriteBook.isLoaded).toBe(true);
   });
 
   it("em.delete with o2o reference does not fail", async () => {

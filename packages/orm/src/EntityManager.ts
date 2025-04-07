@@ -5,6 +5,7 @@ import { getField, setField } from "./fields";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
 import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
+import { IsLoadedCache } from "./IsLoadedCache";
 import { JoinRows } from "./JoinRows";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo, Todo, combineJoinRows, createTodos } from "./Todo";
@@ -221,6 +222,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   readonly #hooks: Record<EntityManagerHook, HookFn<any>[]> = { beforeTransaction: [], afterTransaction: [] };
   readonly #preloader: PreloadPlugin | undefined;
   #fieldLogger: FieldLogger | undefined;
+  #isLoadedCache = new IsLoadedCache();
   private __api: EntityManagerInternalApi;
   mode: EntityManagerMode = "writes";
 
@@ -252,16 +254,25 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     // Expose some of our private fields as the EntityManagerInternalApi
     const em = this;
+
     this.__api = {
       preloader: this.#preloader,
+      pendingChildren: this.#pendingChildren,
+      mutatedCollections: new Set(),
+      hooks: this.#hooks,
+      rm: this.#rm,
+      isLoadedCache: this.#isLoadedCache,
+
       joinRows(m2m: ManyToManyCollection<any, any>): JoinRows {
         return getOrSet(em.#joinRows, m2m.joinTableName, () => new JoinRows(m2m, em.#rm));
       },
-      pendingChildren: this.#pendingChildren,
-      mutatedCollections: new Set(),
+
+      /** Returns `a:1.books` if it's in our preload cache. */
       getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined {
         return em.#preloadedRelations.get(taggedId)?.get(fieldName) as U[] | undefined;
       },
+
+      /** Stores `a:1.books` in our preload cache. */
       setPreloadedRelation<U>(taggedId: string, fieldName: string, children: U[]): void {
         let map = em.#preloadedRelations.get(taggedId);
         if (!map) {
@@ -270,15 +281,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         }
         map.set(fieldName, children as any);
       },
-      hooks: this.#hooks,
-      rm: this.#rm,
+
       get isValidating() {
         return em.#isValidating;
       },
+
       checkWritesAllowed(): void {
         if (em.mode === "read-only") throw new ReadOnlyError();
         return em.#fl.checkWritesAllowed();
       },
+
       get fieldLogger() {
         return em.#fieldLogger;
       },
@@ -1354,6 +1366,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // the full set of entities that will be INSERT/UPDATE/DELETE-d in the database.
       let entityTodos = createTodos(entitiesToFlush);
       let joinRowTodos = combineJoinRows(this.#joinRows);
+
       if (!skipValidation) {
         await runValidation(entityTodos, joinRowTodos);
       }
@@ -1602,7 +1615,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // And then only refresh the data keys that have already been serde-d from rows
         // (this keeps us from deserializing data out of rows that we don't need).
         const { data, originalData } = getInstanceData(entity);
-        const changedFields = (entity as any).changes.fields;
+        const changedFields = (entity as any).changes.fieldsWithoutRelations;
         for (const fieldName of Object.keys(data)) {
           const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
           serde.setOnEntity(data, row);
@@ -1785,6 +1798,7 @@ export interface EntityManagerInternalApi {
   isValidating: boolean;
   checkWritesAllowed: () => void;
   get fieldLogger(): FieldLogger | undefined;
+  get isLoadedCache(): IsLoadedCache;
 }
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {
@@ -1884,7 +1898,7 @@ async function validateReactiveRules(
           e instanceof rule.source &&
           (e.isNewEntity ||
             e.isDeletedEntity ||
-            ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f))),
+            ((e as any).changes as Changes<any>).fieldsWithoutRelations.some((f) => rule.fields.includes(f))),
       );
       // From these "triggered" entities, queue the "found"/owner entity to rerun this rule
       return followAndQueue(triggered, rule);

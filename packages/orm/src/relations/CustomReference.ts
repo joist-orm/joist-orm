@@ -1,7 +1,7 @@
 import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { IdOf, TaggedId } from "../EntityManager";
-import { Reference, ensureNotDeleted, fail, getMetadata, getProperties } from "../index";
+import { ensureNotDeleted, fail, getMetadata, getProperties, Reference } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
@@ -60,6 +60,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   }
 
   get isLoaded(): boolean {
+    // We could cache this...
     return this.opts.isLoaded(this.entity);
   }
 

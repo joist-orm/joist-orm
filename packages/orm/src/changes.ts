@@ -117,7 +117,9 @@ export class OneToManyFieldStatus<T extends Entity, U extends Entity> {
   }
 
   get hasChanged(): boolean {
-    return this.changed.length > 0;
+    // Calculating `changed: U[]` can be expensive if we sort, so just look at added/removed
+    // ...except that these both sort as well
+    return this.added.length > 0 || this.removed.length > 0;
   }
 
   get hasUpdated(): boolean {
@@ -148,6 +150,8 @@ export class OneToManyFieldStatus<T extends Entity, U extends Entity> {
 export type Changes<T extends Entity, K = keyof (FieldsOf<T> & RelationsOf<T>), R = K> = {
   /** Array of changed field names. */
   fields: NonNullable<K>[];
+  /** Array of changed field names w/o o2m & m2m relations (which can be expensive). */
+  fieldsWithoutRelations: NonNullable<K>[];
 } & {
   [P in keyof FieldsOf<T> & R]: FieldsOf<T>[P] extends { kind: "m2m"; type: infer U extends Entity }
     ? ManyToManyFieldStatus<T, U>
@@ -187,7 +191,9 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
       | OneToManyFieldStatus<any, any>
       | (keyof OptsOf<T>)[] {
       if (p === "fields") {
-        return getChangedFieldNames(entity);
+        return getChangedFieldNames(entity, true);
+      } else if (p === "fieldsWithoutRelations") {
+        return getChangedFieldNames(entity, false);
       } else if (typeof p === "symbol") {
         throw new Error(`Unsupported call to ${String(p)}`);
       } else if (getMetadata(entity).allFields[p]?.kind === "m2m") {
@@ -251,7 +257,7 @@ const addOriginalEntity: Record<Field["kind"], boolean> = {
 };
 
 /** Scans `entity` for changes primitive + m2m/o2m fields. */
-function getChangedFieldNames<T extends Entity>(entity: T): (keyof OptsOf<T>)[] {
+function getChangedFieldNames<T extends Entity>(entity: T, includeRelations: boolean): (keyof OptsOf<T>)[] {
   const fieldsChanged = entity.isNewEntity
     ? // Cloning sometimes leaves unset keys in data as undefined, so drop them
       Object.entries(getInstanceData(entity).data)
@@ -259,16 +265,19 @@ function getChangedFieldNames<T extends Entity>(entity: T): (keyof OptsOf<T>)[] 
         .map(([key]) => key)
     : Object.keys(getInstanceData(entity).originalData);
 
-  for (const field of Object.values(getMetadata(entity).allFields)) {
-    if (field.kind === "m2m") {
-      const status = new ManyToManyFieldStatus(entity, field.fieldName as keyof T);
-      if (status.hasChanged) {
-        fieldsChanged.push(field.fieldName);
-      }
-    } else if (field.kind === "o2m") {
-      const status = new OneToManyFieldStatus(entity, field.fieldName as keyof T);
-      if (status.hasChanged) {
-        fieldsChanged.push(field.fieldName);
+  // Calling `hasChanged` on these can be expensive, and we call this in a loop during em.flush
+  if (includeRelations) {
+    for (const field of Object.values(getMetadata(entity).allFields)) {
+      if (field.kind === "m2m") {
+        const status = new ManyToManyFieldStatus(entity, field.fieldName as keyof T);
+        if (status.hasChanged) {
+          fieldsChanged.push(field.fieldName);
+        }
+      } else if (field.kind === "o2m") {
+        const status = new OneToManyFieldStatus(entity, field.fieldName as keyof T);
+        if (status.hasChanged) {
+          fieldsChanged.push(field.fieldName);
+        }
       }
     }
   }

@@ -1921,7 +1921,7 @@ async function validateReactiveRules(
           e instanceof rule.source &&
           (e.isNewEntity ||
             e.isDeletedEntity ||
-            ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f))),
+            ((e as any).changes as Changes<any>).fieldsWithoutRelations.some((f) => rule.fields.includes(f))),
       );
       // From these "triggered" entities, queue the "found"/owner entity to rerun this rule
       return followAndQueue(triggered, rule);

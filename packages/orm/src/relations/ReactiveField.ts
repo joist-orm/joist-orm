@@ -115,16 +115,18 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     // Some ReactiveFields can have surprisingly expensive calculations, especially in loops
     // or those that invoke loops, so cache the value.
     if (this.#isCached) return this.fieldValue;
-    getEmInternalApi(this.entity.em).isLoadedCache.add(this);
     // isLoaded will watch for our previously-loaded subgraph being mutated, and if we've
     // drifted to not-loaded, it's better to fail and tell the user.
     if (this.isLoaded) {
       const newValue = fn(this.entity as Reacted<T, H>);
+      // setField will immediately invalidate
       setField(this.entity, this.fieldName, newValue);
       this.#isCached = true;
+      getEmInternalApi(this.entity.em).isLoadedCache.add(this);
       return newValue;
     } else if (this.isSet) {
       this.#isCached = true;
+      getEmInternalApi(this.entity.em).isLoadedCache.add(this);
       return this.fieldValue;
     } else {
       throw new Error(`${this.fieldName} has not been derived yet`);

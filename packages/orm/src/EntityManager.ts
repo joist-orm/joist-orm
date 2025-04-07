@@ -310,9 +310,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       outputIsLoadedStats() {
         const entries = [...em.#isLoadedStats.entries()];
         entries.sort((a, b) => b[1].count - a[1].count);
-        for (const [key, stats] of entries) {
-          console.log(`${key}.isLoaded = ${stats.count}`);
-        }
+        // for (const [key, stats] of entries) {
+        //   console.log(`${key}.isLoaded = ${stats.count}`);
+        // }
       },
     };
   }

@@ -85,6 +85,7 @@ describe("ReactiveReference", () => {
     const a1 = await em.load(Author, "a:1", "favoriteBook");
     // And we've already loaded its favoriteBook
     expect(a1.favoriteBook.isLoaded).toBe(true);
+    // ...calc this multiple times and watch it not tick...
     expect(a1.favoriteBook.get!.title).toBe("b1");
     // When we mutate the graph by moving b2 (which has reviews unloaded) into a1
     const b2 = await em.load(Book, "b:2");

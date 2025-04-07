@@ -92,6 +92,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
         (await dl.load(this.entity.idTagged!).catch(function load(err) {
           throw appendStack(err, new Error());
         }));
+      // If we're reloading (i.e. `forceReload: true`), then we need to clear our caches
+      this.#getSorted = undefined;
+      this.#allSorted = undefined;
       this.maybeAppendAddedBeforeLoaded();
     }
     return opts?.withDeleted ? this.getWithDeleted : this.get;

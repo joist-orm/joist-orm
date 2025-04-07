@@ -41,8 +41,8 @@ describe("ReactiveField", () => {
     // When we move Book b2 into a1 (instead of creating a new one, to ensure its review collection is not loaded)
     const b2 = await em.load(Book, "b:2");
     b2.author.set(a);
-    // Then calc it again, it will blow up (b/c the new b2 hasn't had its reviews loaded)
-    expect(() => a.numberOfPublicReviews.get).toThrow("get was called when not loaded");
+    // Then calc it again, it will return the cached value
+    expect(a.numberOfPublicReviews.get).toBe(1);
     // But if we try to .load it again, it will know it needs to reload its subgraph
     expect(await a.numberOfPublicReviews.load()).toBe(1);
     // And also if we call force the load

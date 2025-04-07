@@ -139,7 +139,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
 
   /** Finds this CustomCollections field name by looking in the entity for the key that we're assigned to. */
   get fieldName(): string {
-    // Something about running transformed breaks this...
+    // Something about running with the transformations breaks the `[0][0]` and it can NPE
     return Object.entries(this.entity).filter((e) => e[1] === this)[0]?.[0];
   }
 

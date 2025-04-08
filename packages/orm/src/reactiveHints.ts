@@ -179,7 +179,7 @@ export function reverseReactiveHint<T extends Entity>(
   const subHints = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
     const key = keyMaybeSuffix.replace(suffixRe, "");
     const field = meta.allFields[key];
-    const isReadOnly = !!keyMaybeSuffix.match(suffixRe) || (field && field.immutable);
+    const isReadOnly = false; // !!keyMaybeSuffix.match(suffixRe) || (field && field.immutable);
     if (field) {
       switch (field.kind) {
         case "m2o": {
@@ -373,11 +373,13 @@ export async function followReverseHint(
     const promises = new Array(current.size);
     // The path might touch either a reference or a collection
     for (const c of current as Set<any>) {
-      const relation =
-        c[fieldName] ??
-        fail(
-          `Attempting to react for ${reactionName}, but there is no "reverse walkable" field ${c.constructor.name}.${fieldName}`,
-        );
+      // const relation =
+      //   c[fieldName] ??
+      //   fail(
+      //     `Attempting to react for ${c.toString()}.${reactionName}, but there is no "reverse walkable" field ${c.constructor.name}.${fieldName}`,
+      //   );
+      const relation = c[fieldName];
+      if (!relation) continue;
       const currentValuePromise = maybeApplyTypeFilter(relation.load(), viaType);
       // Always wait for the relation itself
       promises.push(currentValuePromise);

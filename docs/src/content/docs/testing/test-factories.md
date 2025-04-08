@@ -215,6 +215,28 @@ const b = newBook(em);
 expect(b.author.get.books.get.length).toBe(1);
 ```
 
+### Overrides for Reactive Fields
+
+If a test's "Given" setup wants [Reactive Fields](/modeling/reactive-fields/) to be set to a specific value, you can use `with...` opts to set them:
+
+```typescript
+const a = newAuthor(em, {
+  // numberOfBooks is a reactive field, which in production code can never be set,
+  // but just for this test case, force it to be 1
+  withNumberOfBooks: 1,     
+})
+````
+
+With a few disclaimers:
+
+* The test's hard-coded value of `numberOfBooks=1` will be used for the initial test data insertions, but any updates/recalcs in separate `EntityManager`s will derive the real value.
+
+* Our recommendation is for tests to be "as real as possible", so if a test wants "the number of books to be 1", ideally it should just create a book.
+
+  But, for sufficiently complicated domain models & scenarios, this can be hard to do, in which case with `with...` overrides can be appropriate.
+
+
+
 ### Custom Opts
 
 Besides just setting existing entity fields, like `Author.firstName` and `Books.author`, Joist's factories allow you to declare custom, factory-specific opts so that multiple tests can request the similar "pre-baked" test data from a factory.

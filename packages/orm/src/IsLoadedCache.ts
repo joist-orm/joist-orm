@@ -49,15 +49,26 @@ export class IsLoadedCache {
   resetIsLoaded(entity: Entity, fieldName: string): void {
     // This is the index of RFs that will be dirty
     const meta = getMetadata(entity);
-    for (const rf of getReactiveFields(meta)) {
-      // I.e. we've written to Author.firstName, and this RF depends on it
-      if (rf.fields.includes(fieldName)) {
-        const otherMeta = getMetadata(rf.cstr);
-        // Find any cache entries for this rf.cstr + rf.fieldName
-        const set = this.smartCache[otherMeta.tagName]?.[rf.name];
-        if (set) {
-          for (const target of set) target.resetIsLoaded();
-          set.clear();
+    const todo = [{ fieldName, rfs: getReactiveFields(meta) }];
+    while (todo.length !== 0) {
+      const { fieldName, rfs } = todo.pop()!;
+      for (const rf of rfs) {
+        // I.e. we've written to Author.firstName, and this RF depends on it
+        if (rf.fields.includes(fieldName)) {
+          const otherMeta = getMetadata(rf.cstr);
+          // Find any cache entries for this rf.cstr + rf.fieldName
+          const set = this.smartCache[otherMeta.tagName]?.[rf.name];
+          if (set) {
+            for (const target of set) {
+              target.resetIsLoaded();
+              // Is this target itself a RF/RR?
+              const field = getMetadata(target.entity).allFields[target.fieldName];
+              if ("derived" in field && field.derived) {
+                todo.push({ fieldName: field.fieldName, rfs: getReactiveFields(otherMeta) });
+              }
+            }
+            set.clear();
+          }
         }
       }
     }

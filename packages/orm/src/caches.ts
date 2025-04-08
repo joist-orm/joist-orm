@@ -1,5 +1,5 @@
 import { ReactiveField, ReactiveRule } from "./config";
-import { EntityMetadata, getBaseAndSelfMetas } from "./EntityMetadata";
+import { EntityMetadata, getBaseAndSelfMetas, getBaseSelfAndSubMetas } from "./EntityMetadata";
 
 const reactiveFieldCache: WeakMap<EntityMetadata, ReactiveField[]> = new WeakMap();
 const reactiveRuleCache: WeakMap<EntityMetadata, ReactiveRule[]> = new WeakMap();
@@ -16,7 +16,9 @@ export function getReactiveFields(meta: EntityMetadata): ReactiveField[] {
 export function getReactiveRules(meta: EntityMetadata): ReactiveRule[] {
   let rules = reactiveRuleCache.get(meta);
   if (rules === undefined) {
-    rules = getBaseAndSelfMetas(meta).flatMap((m) => m.config.__data.reactiveRules);
+    // We use "AndSub" because `getReactiveRules` is called with `todo.metadata`, which is always
+    // the root type, but ofc we don't want to skip subtype rules.
+    rules = getBaseSelfAndSubMetas(meta).flatMap((m) => m.config.__data.reactiveRules);
     reactiveRuleCache.set(meta, rules);
   }
   return rules;

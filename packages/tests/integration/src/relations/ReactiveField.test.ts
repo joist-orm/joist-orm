@@ -22,6 +22,7 @@ import {
   newBook,
   newBookReview,
   newComment,
+  newPublisher,
   Publisher,
   Tag,
 } from "../entities";
@@ -405,5 +406,21 @@ describe("ReactiveField", () => {
     const b1 = newBook(em);
     b1.transientFields.throwNpeInSearch = true;
     await expect(em.flush()).rejects.toThrow("Cannot read properties of undefined (reading 'willFail')");
+  });
+
+  it("cache invalidates transitive RFs", async () => {
+    const em = newEntityManager();
+    const p = newPublisher(em);
+    const a = newAuthor(em);
+    const b1 = newBook(em, { title: "b1", reviews: [{ rating: 2 }] });
+    const b2 = newBook(em, { title: "b2", reviews: [{ rating: 1 }] });
+    // Given we've accessed (and cached) two RFs, where one depends on the other
+    expect(a.favoriteBook.get).toMatchEntity(b1);
+    expect(p.titlesOfFavoriteBooks.get).toBe("b1");
+    // When we change the dependent RF
+    b2.reviews.get[0].rating = 3;
+    // Then the downstream RF changes
+    expect(a.favoriteBook.get).toMatchEntity(b2);
+    expect(p.titlesOfFavoriteBooks.get).toBe("b2");
   });
 });

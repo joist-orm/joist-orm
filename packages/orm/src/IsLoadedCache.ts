@@ -59,10 +59,10 @@ export class IsLoadedCache {
             for (const target of set) {
               target.resetIsLoaded();
               // Is this target itself a RF/RR?
-              const field = getMetadata(target.entity).allFields[target.fieldName];
-              if ("derived" in field && field.derived) {
-                todo.push({ fieldName: field.fieldName, rfs: getReactiveFields(otherMeta) });
-              }
+              // const field = getMetadata(target.entity).allFields[target.fieldName];
+              // if ("derived" in field && field.derived) {
+              //   todo.push({ fieldName: field.fieldName, rfs: getReactiveFields(otherMeta) });
+              // }
             }
             set.clear();
           }

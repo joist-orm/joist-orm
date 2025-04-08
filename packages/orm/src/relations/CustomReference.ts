@@ -1,6 +1,6 @@
 import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
-import { IdOf, TaggedId } from "../EntityManager";
+import { getEmInternalApi, IdOf, TaggedId } from "../EntityManager";
 import { ensureNotDeleted, fail, getMetadata, getProperties, Reference } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReferenceN } from "./Reference";
@@ -43,6 +43,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   // the value can become stale; we want to each `.get` call to repeatedly evaluate the latest value.
   private loadPromise: Promise<unknown> | undefined;
   #hasBeenSet = false;
+  #isLoaded: boolean | undefined;
 
   constructor(
     entity: T,
@@ -60,8 +61,14 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   }
 
   get isLoaded(): boolean {
-    // We could cache this...
-    return this.opts.isLoaded(this.entity);
+    if (this.#isLoaded !== undefined) return this.#isLoaded;
+    getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
+    this.#isLoaded = this.opts.isLoaded(this.entity);
+    return this.#isLoaded;
+  }
+
+  resetIsLoaded(): void {
+    this.#isLoaded = undefined;
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {

@@ -5,21 +5,18 @@ import { getReactiveFields } from "./caches";
 /**
  * Interface for our relations that have dynamic & expensive `isLoaded` checks.
  *
- * ...and also `OneToManyCollection.get`.
+ * ...and also `OneToManyCollection.get` calls.
  *
  * The primary m2o/o2m/m2m relations all have trivial `isLoaded` checks--are they
  * loaded or not.
  *
  * But for "composite relations", i.e. a ReactiveField or ReactiveRelation whose
  * "load-ness" is calculated by evaluating its load hint across a subgraph of entities
- * & relations, load-ness can be true-then-false, as its subgraph changes.
+ * & relations, load-ness can be more dynamic true-then-false, as its subgraph changes.
  *
  * To avoid performance issues (see https://github.com/joist-orm/joist-orm/issues/1166),
- * we cache this dynamic/expensive `isLoaded` checks, and then do an extremely simplistic
- * cache invalidation whenever any relation is mutated.
- *
- * (It should be doable to leverage the reversed reactive hints to more targeted cache
- * invalidation, but this naive approach gets us the performance we need for now.)
+ * we cache this dynamic/expensive `isLoaded` checks, and then do targeted, reactivity-driven
+ * cache invalidation whenever relations are mutated (via a hook in `setField`).
  */
 export interface IsLoadedCachable {
   entity: Entity;
@@ -33,7 +30,7 @@ export class IsLoadedCache {
   // can intelligently/selectively invalidate.
   private smartCache: Record<string, Record<string, Set<IsLoadedCachable>>> = {};
   // A dumber cache for things that are harder to invalidate/not yet selective,
-  // like o2m.get and the recursive collection fields.
+  // like o2m.get, recursive collections, and custom references/collections.
   private naiveCache = new Set<IsLoadedCachable>();
 
   add(target: IsLoadedCachable): void {

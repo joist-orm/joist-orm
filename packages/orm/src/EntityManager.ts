@@ -9,6 +9,7 @@ import { IsLoadedCache } from "./IsLoadedCache";
 import { JoinRows } from "./JoinRows";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo, Todo, combineJoinRows, createTodos } from "./Todo";
+import { getReactiveRules } from "./caches";
 import { ReactiveRule, constraintNameToValidationError } from "./config";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
@@ -51,7 +52,6 @@ import {
   assertIdIsTagged,
   getBaseAndSelfMetas,
   getBaseMeta,
-  getBaseSelfAndSubMetas,
   getConstructorFromTaggedId,
   getMetadata,
   getRelationEntries,
@@ -1889,7 +1889,7 @@ async function validateReactiveRules(
   const p1 = Object.values(todos).flatMap((todo) => {
     const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
-    const rules = getBaseSelfAndSubMetas(todo.metadata).flatMap((m) => m.config.__data.reactiveRules);
+    const rules = getReactiveRules(todo.metadata);
     return rules.map((rule) => {
       // Of all changed entities of this type, how many specifically trigger this rule?
       const triggered = entities.filter(
@@ -1911,16 +1911,14 @@ async function validateReactiveRules(
       .flatMap((jr) => Object.values(jr))
       .filter((e) => e instanceof BaseEntity) as any;
     // Do the first side
-    const p1 = getBaseAndSelfMetas(todo.m2m.meta)
-      .flatMap((m) => m.config.__data.reactiveRules)
+    const p1 = getReactiveRules(todo.m2m.meta)
       .filter((rule) => rule.fields.includes(todo.m2m.fieldName))
       .map((rule) => {
         const triggered = entities.filter((e) => e instanceof todo.m2m.meta.cstr);
         return followAndQueue(triggered, rule);
       });
     // And the second side
-    const p2 = getBaseAndSelfMetas(todo.m2m.otherMeta)
-      .flatMap((m) => m.config.__data.reactiveRules)
+    const p2 = getReactiveRules(todo.m2m.otherMeta)
       .filter((rule) => rule.fields.includes(todo.m2m.otherFieldName))
       .map((rule) => {
         const triggered = entities.filter((e) => e instanceof todo.m2m.otherMeta.cstr);

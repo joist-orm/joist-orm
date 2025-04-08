@@ -159,7 +159,7 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
   get isLoaded(): boolean {
     if (this.#loaded !== undefined) return this.#loaded;
     this.#loaded = this.findUnloadedReference() === undefined;
-    getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+    getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
     return this.#loaded;
   }
 
@@ -261,7 +261,7 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
   get isLoaded(): boolean {
     if (this.#loaded !== undefined) return this.#loaded;
     this.#loaded = this.findUnloadedCollections().length === 0;
-    getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+    getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
     return this.#loaded;
   }
 

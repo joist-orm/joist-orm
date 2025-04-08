@@ -147,7 +147,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     ensureNotDeleted(this.entity, "pending");
     if (this.#getSorted !== undefined) return this.#getSorted;
     this.#getSorted = Object.freeze(this.filterDeleted(this.doGet(), { withDeleted: false })) as U[];
-    getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+    getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
     return this.#getSorted;
   }
 
@@ -155,7 +155,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     ensureNotDeleted(this.entity, "pending");
     if (this.#allSorted !== undefined) return this.#allSorted;
     this.#allSorted = Object.freeze(this.filterDeleted(this.doGet(), { withDeleted: true })) as U[];
-    getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+    getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
     return this.#allSorted;
   }
 

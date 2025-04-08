@@ -1,5 +1,6 @@
 import { Entity } from "./Entity";
-import { getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
+import { getMetadata } from "./EntityMetadata";
+import { getReactiveFields } from "./caches";
 
 /**
  * Interface for our relations that have dynamic & expensive `isLoaded` checks.
@@ -28,30 +29,32 @@ export interface IsLoadedCachable {
 }
 
 export class IsLoadedCache {
-  // Cache of `{ tag -> { fieldName -> Set<IsLoadedCachable> } }`
-  private cache: Record<string, Record<string, Set<IsLoadedCachable>>> = {};
-  // private cache = new Set<IsLoadedCachable>();
+  // Cache of `{ tag -> { fieldName -> Set<IsLoadedCachable> } }` for relations we
+  // can intelligently/selectively invalidate.
+  private smartCache: Record<string, Record<string, Set<IsLoadedCachable>>> = {};
+  // A dumber cache for things that are harder to invalidate/not yet selective,
+  // like o2m.get and the recursive collection fields.
+  private naiveCache = new Set<IsLoadedCachable>();
 
   add(target: IsLoadedCachable): void {
     const meta = getMetadata(target.entity);
-    const set = ((this.cache[meta.tagName] ??= {})[target.fieldName] ??= new Set());
+    const set = ((this.smartCache[meta.tagName] ??= {})[target.fieldName] ??= new Set());
     set.add(target);
-    // this.cache.add(target);
+  }
+
+  addNaive(target: IsLoadedCachable): void {
+    this.naiveCache.add(target);
   }
 
   resetIsLoaded(entity: Entity, fieldName: string): void {
-    // for (const target of this.cache.values()) target.resetIsLoaded();
-    // this.cache.clear();
-
     // This is the index of RFs that will be dirty
     const meta = getMetadata(entity);
-    const rfs = getBaseAndSelfMetas(meta).flatMap((m) => m.config.__data.reactiveDerivedValues);
-    for (const rf of rfs) {
+    for (const rf of getReactiveFields(meta)) {
       // I.e. we've written to Author.firstName, and this RF depends on it
       if (rf.fields.includes(fieldName)) {
         const otherMeta = getMetadata(rf.cstr);
         // Find any cache entries for this rf.cstr + rf.fieldName
-        const set = this.cache[otherMeta.tagName]?.[rf.name];
+        const set = this.smartCache[otherMeta.tagName]?.[rf.name];
         if (set) {
           for (const target of set) target.resetIsLoaded();
           set.clear();
@@ -59,17 +62,19 @@ export class IsLoadedCache {
       }
     }
 
-    // Invalid o2ms
-    const field = meta.allFields[fieldName];
-    if (field.kind === "m2o") {
-      const otherMeta = field.otherMetadata();
-      const set = this.cache[otherMeta.tagName]?.[field.otherFieldName];
-      if (set) {
-        for (const target of set) target.resetIsLoaded();
-        set.clear();
-      }
-    }
+    // We could use this to invalidate m2o.get, but it doesn't work for collections
+    // with an orderBy, when the orderBy changes, so for now we use the blunt naiveCache.
+    // const field = meta.allFields[fieldName];
+    // if (field.kind === "m2o") {
+    //   const otherMeta = field.otherMetadata();
+    //   const set = this.smartCache[otherMeta.tagName]?.[field.otherFieldName];
+    //   if (set) {
+    //     for (const target of set) target.resetIsLoaded();
+    //     set.clear();
+    //   }
+    // }
 
-    // How do we invalidate recursive parent & children?
+    for (const target of this.naiveCache.values()) target.resetIsLoaded();
+    this.naiveCache.clear();
   }
 }

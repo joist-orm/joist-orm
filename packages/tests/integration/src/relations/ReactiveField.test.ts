@@ -76,8 +76,12 @@ describe("ReactiveField", () => {
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
     expect(a1.numberOfBooks.get).toBe(0);
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
-    // Any mutation resets the cache
+    // An unrelated mutation does not reset the cache
     a1.lastName = "l1";
+    expect(a1.numberOfBooks.get).toBe(0);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
+    // But changing a dependency does
+    a1.firstName = "a2";
     expect(a1.numberOfBooks.get).toBe(0);
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
   });
@@ -94,13 +98,13 @@ describe("ReactiveField", () => {
     const a1 = new Author(em, { firstName: "a1" });
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(0);
-    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
     // When we add a book
     new Book(em, { title: "b1", author: a1 });
     // Then the author ReactiveField is recaled
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(1);
-    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(4);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
     const rows = await select("authors");
     expect(rows[0].number_of_books).toEqual(1);
   });
@@ -189,13 +193,14 @@ describe("ReactiveField", () => {
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(1);
     // And we calc'd it once during flush, and again in the ^ `.get`
-    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
     // When we change the book
     b1.title = "b12";
     await em.flush();
     // Then the author derived value didn't change
     expect(a1.numberOfBooks.get).toEqual(1);
-    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(3);
+    // And the cache wasn't invalidated
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
   });
 
   it("can recalc RFs with em.recalc", async () => {
@@ -204,11 +209,11 @@ describe("ReactiveField", () => {
     const a1 = newAuthor(em, { firstName: "a1" });
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(0);
-    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
     // When we touch the author
     await em.recalc(a1);
     // Then the derived value was recalculated
-    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(3);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
     // Even though it didn't technically change
     expect(a1.numberOfBooks.get).toEqual(0);
   });

@@ -1191,7 +1191,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   delete(entity: Entity): void {
     // Early return if already deleted.
-    const alreadyMarked = getInstanceData(entity).markDeleted();
+    const alreadyMarked = getInstanceData(entity).markDeleted(entity);
     if (!alreadyMarked) return;
     // Any derived fields that read this entity will need recalc-d
     this.#rm.queueAllDownstreamFields(entity, "deleted");

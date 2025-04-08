@@ -1,5 +1,5 @@
 import { Entity } from "./Entity";
-import { getMetadata } from "./EntityMetadata";
+import { getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
 
 /**
  * Interface for our relations that have dynamic & expensive `isLoaded` checks.
@@ -28,19 +28,46 @@ export interface IsLoadedCachable {
 }
 
 export class IsLoadedCache {
-  private cache = new Set<IsLoadedCachable>();
+  // Cache of `{ tag -> { fieldName -> Set<IsLoadedCachable> } }`
+  private cache: Record<string, Record<string, Set<IsLoadedCachable>>> = {};
+  // private cache = new Set<IsLoadedCachable>();
 
   add(target: IsLoadedCachable): void {
     const meta = getMetadata(target.entity);
-    const field = meta.allFields[target.fieldName];
-    // console.log(field.kind);
-    this.cache.add(target);
+    const set = ((this.cache[meta.tagName] ??= {})[target.fieldName] ??= new Set());
+    set.add(target);
+    // this.cache.add(target);
   }
 
-  resetIsLoaded(): void {
-    for (const target of this.cache.values()) {
-      target.resetIsLoaded();
+  resetIsLoaded(entity: Entity, fieldName: string): void {
+    // for (const target of this.cache.values()) target.resetIsLoaded();
+    // this.cache.clear();
+
+    // This is the index of RFs that will be dirty
+    const meta = getMetadata(entity);
+    const rfs = getBaseAndSelfMetas(meta).flatMap((m) => m.config.__data.reactiveDerivedValues);
+    for (const rf of rfs) {
+      // I.e. we've written to Author.firstName, and this RF depends on it
+      if (rf.fields.includes(fieldName)) {
+        const otherMeta = getMetadata(rf.cstr);
+        // Find any cache entries for this rf.cstr + rf.fieldName
+        const set = this.cache[otherMeta.tagName]?.[rf.name];
+        if (set) {
+          for (const target of set) target.resetIsLoaded();
+          set.clear();
+        }
+      }
     }
-    this.cache.clear();
+
+    // Invalid o2ms
+    const field = meta.allFields[fieldName];
+    if (field.kind === "m2o") {
+      const otherMeta = field.otherMetadata();
+      const set = this.cache[otherMeta.tagName]?.[field.otherFieldName];
+      if (set) {
+        for (const target of set) target.resetIsLoaded();
+        set.clear();
+      }
+    }
   }
 }

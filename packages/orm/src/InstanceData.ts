@@ -1,3 +1,4 @@
+import { Entity } from "./Entity";
 import { EntityManager, getEmInternalApi } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 
@@ -112,10 +113,14 @@ export class InstanceData {
   }
 
   /** Called by `em.delete`, returns true if this is new information. */
-  markDeleted(): boolean {
+  markDeleted(entity: Entity): boolean {
     if (this.#deleted === undefined) {
       // Let any OneToManyCollection.get caches know that they should recalc (i.e. filterDeleted)
-      getEmInternalApi(this.em).isLoadedCache.resetIsLoaded();
+      for (const field of Object.values(this.metadata.allFields)) {
+        if (field.kind === "m2o") {
+          getEmInternalApi(this.em).isLoadedCache.resetIsLoaded(entity, field.fieldName);
+        }
+      }
       this.#deleted = Operation.Pending;
       return true;
     }

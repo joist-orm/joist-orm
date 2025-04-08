@@ -220,7 +220,7 @@ export class ReactiveReferenceImpl<
     // our `if` check the raw `#isLoaded` to know if we should eval-latest or return `loaded`.
     this.isLoaded;
     if (this.#loadedMode === "full") {
-      console.log(`Evaling ${this.entity.toString()}.${this.fieldName}...)`);
+      // console.log(`Evaling ${this.entity.toString()}.${this.fieldName}...)`);
       const newValue = this.filterDeleted(fn(this.entity as any) as any, opts);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update (...unless we're accessing it

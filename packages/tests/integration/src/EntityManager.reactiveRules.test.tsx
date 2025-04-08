@@ -589,7 +589,7 @@ describe("EntityManager.reactiveRules", () => {
       });
       await em.flush();
       // When we remove the 3rd author with a single book
-      p.authors.get[0].publisher.set(undefined);
+      p.authors.get[2].publisher.set(undefined);
       // Then it fails
       await expect(em.flush()).rejects.toThrow("A publisher cannot have 13 books");
     });
@@ -692,7 +692,7 @@ describe("EntityManager.reactiveRules", () => {
       });
       await em.flush();
       // When we remove the 3rd author with a single book
-      p.authors.get[0].publisher.set(undefined);
+      p.authors.get[2].publisher.set(undefined);
       // Then it fails
       await expect(em.flush()).rejects.toThrow("A publisher cannot have 15 books");
     });

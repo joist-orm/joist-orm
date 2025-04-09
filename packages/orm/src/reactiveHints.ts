@@ -185,6 +185,7 @@ export function reverseReactiveHint<T extends Entity>(
     if (field) {
       switch (field.kind) {
         case "m2o": {
+          // If this is a ReactiveReference, maybe we do something different?
           _fields.push(field.fieldName);
           const otherFieldName = maybeAddTypeFilterSuffix(meta, field);
           return reverseReactiveHint(rootType, field.otherMetadata().cstr, subHint, undefined, false).map(
@@ -366,7 +367,7 @@ export async function followReverseHint(
       const relation =
         c[fieldName] ??
         fail(
-          `Attempting to react for ${c.toString()}.${reactionName}, but there is no "reverse walkable" field ${c.constructor.name}.${fieldName}`,
+          `Attempting to react for ${reactionName} for ${c.toString()}, but there is no "reverse walkable" field ${c.constructor.name}.${fieldName}`,
         );
       const currentValuePromise = maybeApplyTypeFilter(relation.load(), viaType);
       // Always wait for the relation itself

@@ -245,6 +245,8 @@ export class Author extends AuthorCodegen {
     },
   );
 
+  // should add two RFs for favoriteBookTagNames & rootMentorNumberOfBooks to show reactivity across RRs
+
   // For testing ReactiveReferences in entities with recursive relations
   readonly rootMentor: ReactiveReference<Author, Author, undefined> = hasReactiveReference(
     authorMeta,

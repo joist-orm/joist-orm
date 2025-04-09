@@ -363,13 +363,11 @@ export async function followReverseHint(
     const promises = new Array(current.size);
     // The path might touch either a reference or a collection
     for (const c of current as Set<any>) {
-      // const relation =
-      //   c[fieldName] ??
-      //   fail(
-      //     `Attempting to react for ${c.toString()}.${reactionName}, but there is no "reverse walkable" field ${c.constructor.name}.${fieldName}`,
-      //   );
-      const relation = c[fieldName];
-      if (!relation) continue;
+      const relation =
+        c[fieldName] ??
+        fail(
+          `Attempting to react for ${c.toString()}.${reactionName}, but there is no "reverse walkable" field ${c.constructor.name}.${fieldName}`,
+        );
       const currentValuePromise = maybeApplyTypeFilter(relation.load(), viaType);
       // Always wait for the relation itself
       promises.push(currentValuePromise);

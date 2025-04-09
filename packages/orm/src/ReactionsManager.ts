@@ -99,15 +99,10 @@ export class ReactionsManager {
   /** Queue all downstream reactive fields that depend on this entity being created or deleted. */
   queueAllDownstreamFields(entity: Entity, reason: "created" | "deleted"): void {
     for (const rf of getReactiveFields(getMetadata(entity))) {
-      const isReadOnly = rf.path.length > 0 && rf.fields.length === 0;
-      if (!isReadOnly) {
-        this.getPending(rf).todo.add(entity);
-        this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
-        this.needsRecalc[rf.kind] = true;
-        this.logger?.logQueuedAll(entity, reason, rf);
-        // } else {
-        //   console.log("Skipping", rf);
-      }
+      this.getPending(rf).todo.add(entity);
+      this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
+      this.needsRecalc[rf.kind] = true;
+      this.logger?.logQueuedAll(entity, reason, rf);
     }
   }
 
@@ -162,6 +157,7 @@ export class ReactionsManager {
           const todo = [...pending.todo];
           if (todo.length === 0) return [];
           pending.todo.clear();
+
           for (const doing of todo) pending.done.add(doing);
           // Walk back from the source to any downstream fields
           const relations = (await followReverseHint(rf.name, todo, rf.path))

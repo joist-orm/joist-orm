@@ -370,11 +370,19 @@ export async function followReverseHint(
     const promises = new Array(current.size);
     // The path might touch either a reference or a collection
     for (const c of current as Set<any>) {
-      const relation =
-        c[fieldName] ??
-        fail(
-          `Attempting to react for ${reactionName} for ${c.toString()}, but there is no "reverse walkable" field ${c.constructor.name}.${fieldName}`,
-        );
+      const relation = c[fieldName];
+      // If `!relation`, I'd really like to `fail`, but atm we're knowingly creating invalid reversals for when
+      // a ReactiveField depends on a ReactiveReference; b/c RRs lack an "other side", we cannot walk them in
+      // reverse, and so for awhile we "supported" the RF -> RR pattern by relying on a totally-read-only reactive
+      // hint -> dropped during reversal.
+      //
+      // However, now IsLoadedCache means that even these "totally read only" RFs need to be reactive at least
+      // during their initial EM creation, to avoid stale values being observed during first-flush mutations,
+      // and so we're now stuck with these "invalid RR reversals" until we can figure out a better way to handle them.
+      // (Now that IsLoadedCache doesn't technically walk paths, it just invalidates given entity+field pairs, so
+      // it is not bothered by an invalid/missing RR reversal.)
+      if (!relation) continue;
+      // fail(`Attempting to react for ${reactionName} for ${c.toString()}, but there is no "reverse walkable" field ${c.constructor.name}.${fieldName}`,);
       const currentValuePromise = maybeApplyTypeFilter(relation.load(), viaType);
       // Always wait for the relation itself
       promises.push(currentValuePromise);

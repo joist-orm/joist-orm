@@ -182,9 +182,10 @@ config.addRule(["name", "numberOfBookReviews"], (p) => {
   }
 });
 
-// Example of reactive rule being fired on ReactiveReference change
-// Currently this must be a `_ro` because there is not a `author.favoriteOfPublishers` field to reverse walk
-config.addRule({ favoriteAuthor: "firstName_ro", name: {} }, (p) => {
+// Example of reactive rule being fired on ReactiveReference change.
+// Currently, these must be a `_ro` because there is not a `author.favoriteOfPublishers` field to reverse walk.
+// `reverseReactiveHint` should enforce the read-only-ness
+config.addRule({ favoriteAuthor: "firstName:ro", name: {} }, (p) => {
   if (p.favoriteAuthor.get?.firstName === p.name) {
     return "Favorite Author firstName cannot be the publisher's name";
   }

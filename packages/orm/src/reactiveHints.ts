@@ -188,7 +188,7 @@ export function reverseReactiveHint<T extends Entity>(
           // If this is a ReactiveReference, maybe we do something different?
           _fields.push(field.fieldName);
           const otherMeta = field.otherMetadata();
-          // If this is a ReactiveReference, it won't have an "other" side
+          // If this is a ReactiveReference, it won't have an "other" side, which is only fine for totally read-only hints
           const otherField = otherMeta.allFields[field.otherFieldName];
           const nextHop = reverseReactiveHint(rootType, otherMeta.cstr, subHint, undefined, false);
           if (!otherField && nextHop.some((rf) => rf.fields.length > 0)) {

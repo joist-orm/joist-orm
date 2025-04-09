@@ -28,22 +28,28 @@ export interface IsLoadedCachable {
 export class IsLoadedCache {
   // Cache of `{ tag -> { fieldName -> Set<IsLoadedCachable> } }` for relations we
   // can intelligently/selectively invalidate.
-  private smartCache: Record<string, Record<string, Set<IsLoadedCachable>>> = {};
+  #smartCache: Record<string, Record<string, Set<IsLoadedCachable>>> = {};
   // A dumber cache for things that are harder to invalidate/not yet selective,
   // like o2m.get, recursive collections, and custom references/collections.
-  private naiveCache = new Set<IsLoadedCachable>();
+  #naiveCache = new Set<IsLoadedCachable>();
+  // Counter to try and fast-path resetIsLoaded
+  #dirtySets = 0;
 
   add(target: IsLoadedCachable): void {
     const meta = getMetadata(target.entity);
-    const set = ((this.smartCache[meta.tagName] ??= {})[target.fieldName] ??= new Set());
+    const set = ((this.#smartCache[meta.tagName] ??= {})[target.fieldName] ??= new Set());
+    if (set.size === 0) this.#dirtySets++;
     set.add(target);
   }
 
   addNaive(target: IsLoadedCachable): void {
-    this.naiveCache.add(target);
+    if (this.#naiveCache.size === 0) this.#dirtySets++;
+    this.#naiveCache.add(target);
   }
 
   resetIsLoaded(entity: Entity, fieldName: string): void {
+    if (this.#dirtySets === 0) return;
+
     // Reset caches that we can deterministically "smart" invalidate via reactivity hints
     this.resetSmartCache(getMetadata(entity), fieldName);
 
@@ -59,8 +65,11 @@ export class IsLoadedCache {
     //   }
     // }
 
-    for (const target of this.naiveCache.values()) target.resetIsLoaded();
-    this.naiveCache.clear();
+    if (this.#naiveCache.size > 0) {
+      for (const target of this.#naiveCache.values()) target.resetIsLoaded();
+      this.#naiveCache.clear();
+      this.#dirtySets--;
+    }
   }
 
   resetSmartCache(meta: EntityMetadata, fieldName: string): void {
@@ -70,8 +79,8 @@ export class IsLoadedCache {
       if (rf.fields.includes(fieldName) || rf.readOnlyFields.includes(fieldName)) {
         const otherMeta = getMetadata(rf.cstr);
         // Find any cache entries for this rf.cstr + rf.fieldName
-        const set = this.smartCache[otherMeta.tagName]?.[rf.name];
-        if (set) {
+        const set = this.#smartCache[otherMeta.tagName]?.[rf.name];
+        if (set?.size > 0) {
           for (const target of set) {
             target.resetIsLoaded();
             // Is this target itself a RF/RR? If so, transitively reset its cache as well.
@@ -82,6 +91,7 @@ export class IsLoadedCache {
             }
           }
           set.clear();
+          this.#dirtySets--;
         }
       }
     }

@@ -225,6 +225,10 @@ export class Author extends AuthorCodegen {
   readonly favoriteBook: ReactiveReference<Author, Book, undefined> = hasReactiveReference(
     bookMeta,
     "favoriteBook",
+    // The 'cache invalidates transitive RFs' test in ReactiveField.test.ts relies on BookReview.rating
+    // changes triggering a `favoriteBook` to recalc, to exercise transitive RF recalcs. This is fine,
+    // but we've thought about `reviews_ro` short-circuiting the reactivity, so we might have to update
+    // this test, if we do end up having this short-circuit.
     { books: { reviews_ro: "rating" } },
     (a) => {
       a.transientFields.favoriteBookCalcInvoked++;

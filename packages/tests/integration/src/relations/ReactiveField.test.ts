@@ -419,8 +419,11 @@ describe("ReactiveField", () => {
     expect(p.titlesOfFavoriteBooks.get).toBe("b1");
     // When we change the dependent RF
     b2.reviews.get[0].rating = 3;
-    // Then the downstream RF changes
-    expect(a.favoriteBook.get).toMatchEntity(b2);
+    // Then the downstream RF changes *without* first accessing `favoriteBook` (accessing `favoriteBook`
+    // would, as a side effect, realize it's dirty and invalidate `titlesOfFavoriteBooks`, but we want to
+    // test the scenario where the "middle" RF is not accessed)
     expect(p.titlesOfFavoriteBooks.get).toBe("b2");
+    // And, yes, favoriteBook was re-calced as well
+    expect(a.favoriteBook.get).toMatchEntity(b2);
   });
 });

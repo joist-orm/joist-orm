@@ -203,9 +203,8 @@ export class ReactiveReferenceImpl<
   }
 
   resetIsLoaded(): void {
-    // We only reset #isLoaded so that callers can keep calling `.get` and technically
-    // see the stale value, but once they call `.load` again, we'll recalc it.
     this.#isLoaded = undefined;
+    this.#isCached = false;
   }
 
   private doGet(opts?: { withDeleted?: boolean }): U | N {

@@ -188,9 +188,7 @@ export function reverseReactiveHint<T extends Entity>(
           _fields.push(field.fieldName);
           const otherFieldName = maybeAddTypeFilterSuffix(meta, field);
           return reverseReactiveHint(rootType, field.otherMetadata().cstr, subHint, undefined, false).map(
-            ({ entity, fields, readOnlyFields, path }) => {
-              return { entity, fields, readOnlyFields, path: [...path, otherFieldName] };
-            },
+            appendPath(otherFieldName),
           );
         }
         case "poly": {
@@ -199,10 +197,7 @@ export function reverseReactiveHint<T extends Entity>(
           // above but do it for each component FK, and glue them together.
           return field.components.flatMap((comp) => {
             return reverseReactiveHint(rootType, comp.otherMetadata().cstr, subHint, undefined, false).map(
-              ({ entity, fields, readOnlyFields, path }) => {
-                const otherFieldName = maybeAddTypeFilterSuffix(meta, comp);
-                return { entity, fields, readOnlyFields, path: [...path, otherFieldName] };
-              },
+              appendPath(maybeAddTypeFilterSuffix(meta, comp)),
             );
           });
         }
@@ -220,9 +215,7 @@ export function reverseReactiveHint<T extends Entity>(
             // recalc all of its children will cause over-reactivity
             undefined,
             false,
-          ).map(({ entity, fields, readOnlyFields, path }) => {
-            return { entity, fields, readOnlyFields, path: [...path, otherFieldName] };
-          });
+          ).map(appendPath(otherFieldName));
         }
         case "o2m":
         case "o2o": {
@@ -239,9 +232,7 @@ export function reverseReactiveHint<T extends Entity>(
             // we do need to react to children being created/deleted.
             isReadOnly ? undefined : isOtherReadOnly ? true : field.otherFieldName,
             false,
-          ).map(({ entity, fields, readOnlyFields, path }) => {
-            return { entity, fields, readOnlyFields, path: [...path, otherFieldName] };
-          });
+          ).map(appendPath(otherFieldName));
         }
         case "primaryKey":
         case "primitive":
@@ -292,11 +283,7 @@ export function reverseReactiveHint<T extends Entity>(
           readOnlyFields: isReadOnly ? [m2oFieldName] : [],
           path: [otherFieldName],
         });
-        return reverseReactiveHint(rootType, entityType, subHint, undefined, false).map(
-          ({ entity, fields, readOnlyFields, path }) => {
-            return { entity, fields, readOnlyFields, path: [...path, otherFieldName] };
-          },
-        );
+        return reverseReactiveHint(rootType, entityType, subHint, undefined, false).map(appendPath(otherFieldName));
       } else {
         throw new Error(`Invalid hint in ${rootType.name}.ts ${JSON.stringify(hint)}`);
       }
@@ -540,4 +527,11 @@ export function getRelationFromMaybePolyKey(entity: Entity, key: string): any {
   } else {
     return (entity as any)[key];
   }
+}
+
+function appendPath(segment: string): (rt: ReactiveTarget) => ReactiveTarget {
+  return (rt) => {
+    rt.path = [...rt.path, segment];
+    return rt;
+  };
 }

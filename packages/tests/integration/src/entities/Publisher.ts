@@ -156,7 +156,7 @@ config.addRule({ authors: "numberOfBooks2" }, (p) => {
   }
 });
 
-// Example of reactive rule being fired by a persisted async property
+// Example of reactive rule being fired by a ReactiveField
 config.addRule({ authors: "numberOfBooks" }, (p) => {
   const sum = p.authors.get.map((a) => a.numberOfBooks.get).reduce((a, b) => a + b, 0);
   if (sum === 15) {
@@ -169,6 +169,13 @@ config.addRule(["name", "numberOfBookReviews"], (p) => {
   p.transientFields.numberOfBookReviewEvals++;
   if (p.name === "four" && p.numberOfBookReviews.get === 4) {
     return "Publisher 'four' cannot have 4 books";
+  }
+});
+
+// Example of reactive rule being fired on ReactiveReference change
+config.addRule({ favoriteAuthor: "firstName", name: {} }, (p) => {
+  if (p.favoriteAuthor.get?.firstName === p.name) {
+    return "Favorite Author firstName cannot be the publisher's name";
   }
 });
 

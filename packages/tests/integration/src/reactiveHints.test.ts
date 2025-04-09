@@ -27,7 +27,7 @@ describe("reactiveHints", () => {
 
   it("can do grand-parent primitive field names", () => {
     expect(reverse(BookReview, BookReview, { book: { author: ["firstName", "lastName"] } })).toEqual([
-      { entity: "BookReview", fields: [], path: [] },
+      { entity: "BookReview", fields: [], readOnlyFields: ["book"], path: [] },
       { entity: "Book", fields: ["author"], path: ["reviews"] },
       { entity: "Author", fields: ["firstName", "lastName"], path: ["books", "reviews"] },
     ]);
@@ -35,7 +35,7 @@ describe("reactiveHints", () => {
 
   it("can do parent and grand-parent primitive field names", () => {
     expect(reverse(BookReview, BookReview, { book: { title: {}, author: ["firstName", "lastName"] } })).toEqual([
-      { entity: "BookReview", fields: [], path: [] },
+      { entity: "BookReview", fields: [], readOnlyFields: ["book"], path: [] },
       { entity: "Book", fields: ["title", "author"], path: ["reviews"] },
       { entity: "Author", fields: ["firstName", "lastName"], path: ["books", "reviews"] },
     ]);
@@ -157,23 +157,28 @@ describe("reactiveHints", () => {
   });
 
   it("skips read-only m2o parents", () => {
-    expect(reverse(Book, Book, { author_ro: "firstName:ro" })).toEqual([{ entity: "Book", fields: [], path: [] }]);
+    expect(reverse(Book, Book, { author_ro: "firstName:ro" })).toEqual([
+      { entity: "Book", fields: [], readOnlyFields: ["author"], path: [] },
+      { entity: "Author", fields: [], readOnlyFields: ["firstName"], path: ["books"] },
+    ]);
   });
 
   it("skips read-only o2m children and grand-children", () => {
     expect(reverse(Author, Author, { books_ro: "reviews:ro", firstName_ro: {} })).toEqual([
-      { entity: "Author", fields: [], path: [] },
+      { entity: "Author", fields: [], readOnlyFields: ["firstName"], path: [] },
     ]);
   });
 
   it("can do read-only string hint", () => {
     // expect(reverseHint(Author, "books:ro")).toEqual([{ entity: Book, fields: ["author"], path: ["author"] }]);
-    expect(reverse(Author, Author, "publisher:ro")).toEqual([{ entity: "Author", fields: [], path: [] }]);
+    expect(reverse(Author, Author, "publisher:ro")).toEqual([
+      { entity: "Author", fields: [], readOnlyFields: ["publisher"], path: [] },
+    ]);
   });
 
   it("can do array of read-only string hints", () => {
     expect(reverse(Author, Author, ["firstName:ro", "publisher:ro"])).toEqual([
-      { entity: "Author", fields: [], path: [] },
+      { entity: "Author", fields: [], readOnlyFields: ["firstName", "publisher"], path: [] },
     ]);
   });
 
@@ -191,9 +196,13 @@ describe("reactiveHints", () => {
 
   it("can do hash of read-only hints", () => {
     // TODO Enforce that `name` must be `name:ro`
-    expect(reverse(Author, Author, { publisher_ro: "name:ro" })).toEqual([{ entity: "Author", fields: [], path: [] }]);
+    expect(reverse(Author, Author, { publisher_ro: "name:ro" })).toEqual([
+      { entity: "Author", fields: [], readOnlyFields: ["publisher"], path: [] },
+      { entity: "Publisher", fields: [], readOnlyFields: ["name"], path: ["authors"] },
+    ]);
     expect(reverse(BookReview, BookReview, { book: "author:ro" })).toEqual([
-      { entity: "BookReview", fields: [], path: [] },
+      { entity: "BookReview", fields: [], readOnlyFields: ["book"], path: [] },
+      { entity: "Book", fields: [], readOnlyFields: ["author"], path: ["reviews"] },
     ]);
   });
 
@@ -356,6 +365,9 @@ function reverse<T extends Entity>(
 ): ReactiveTarget[] {
   return reverseReactiveHint(rootType, entityType, hint, reactForOtherSide, isFirst).map((target) => {
     (target as any).entity = target.entity.name;
+    if (target.readOnlyFields.length === 0) {
+      delete (target as any)["readOnlyFields"];
+    }
     return target;
   });
 }

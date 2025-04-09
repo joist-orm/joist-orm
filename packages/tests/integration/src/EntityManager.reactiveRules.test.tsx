@@ -485,7 +485,7 @@ describe("EntityManager.reactiveRules", () => {
         path: ["book", "author"],
       },
       { kind: "populate", cstr: "Author", name: "favoriteBook", fields: ["rating"], path: ["book", "author"] },
-      { kind: "populate", cstr: "BookReview", name: "isPublic", fields: [], path: [] },
+      { kind: "populate", cstr: "BookReview", name: "isPublic", fields: [], readOnlyFields: ["book"], path: [] },
       { kind: "populate", cstr: "BookReview", name: "isTest", fields: [], path: [] },
       { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["isPublic"], path: ["book", "comments"] },
       { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["tags"], path: ["comment"] },
@@ -791,6 +791,9 @@ function getReactiveRules(cstr: MaybeAbstractEntityConstructor<any>): any[] {
 function getReactiveFields(cstr: MaybeAbstractEntityConstructor<any>): any[] {
   return getMetadata(cstr).config.__data.reactiveDerivedValues.map((rule) => {
     const { cstr, ...rest } = rule;
+    if (rest.readOnlyFields.length === 0) {
+      delete (rest as any)["readOnlyFields"];
+    }
     return { cstr: cstr.name, ...rest };
   });
 }

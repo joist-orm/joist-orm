@@ -90,12 +90,14 @@ export class Author extends AuthorCodegen {
 
   readonly tagsOfAllBooks: ReactiveField<Author, string> = hasReactiveField(
     "tagsOfAllBooks",
-    { books: { tags: "name" } },
+    // Including age (as a "tag" :shrug:) to test IsLoadedCache invalidation of an immutable field, during the 1st em
+    { books: { tags: "name" }, age: {} },
     (a) =>
-      a.books.get
-        .flatMap((b) => b.tags.get)
-        .map((t) => t.name)
-        .join(", "),
+      [
+        // Include a dummy "age" tag just to make a test case possible
+        ...(a.age ? [`age-${a.age}`] : []),
+        ...a.books.get.flatMap((b) => b.tags.get).map((t) => t.name),
+      ].join(", "),
   );
 
   readonly search: ReactiveField<Author, string> = hasReactiveField(

@@ -179,7 +179,8 @@ export function reverseReactiveHint<T extends Entity>(
   const subHints = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
     const key = keyMaybeSuffix.replace(suffixRe, "");
     const field = meta.allFields[key];
-    const isReadOnly = false; // !!keyMaybeSuffix.match(suffixRe) || (field && field.immutable);
+    // const isReadOnly = false;
+    const isReadOnly = !!keyMaybeSuffix.match(suffixRe) || (field && field.immutable);
     if (field) {
       switch (field.kind) {
         case "m2o": {

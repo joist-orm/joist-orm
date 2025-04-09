@@ -426,4 +426,15 @@ describe("ReactiveField", () => {
     // And, yes, favoriteBook was re-calced as well
     expect(a.favoriteBook.get).toMatchEntity(b2);
   });
+
+  it("cache invalidates on 'immutable' fields", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em, { age: 10 });
+    // Given we've accessed (and cached) an RF that depends on an immutable field (Tag.name)
+    expect(a.tagsOfAllBooks.get).toBe("age-10");
+    // When we later change the age (which is allowed during the initial EM)
+    a.age = 20;
+    // Then the RF recalcs
+    expect(a.tagsOfAllBooks.get).toBe("age-20");
+  });
 });

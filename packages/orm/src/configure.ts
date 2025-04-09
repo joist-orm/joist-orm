@@ -207,13 +207,14 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
         // if we don't actually have a property/loadHint available.
         if (ap?.reactiveHint) {
           const reversals = reverseReactiveHint(meta.cstr, meta.cstr, ap.reactiveHint);
-          reversals.forEach(({ entity, path, fields }) => {
+          reversals.forEach(({ entity, path, fields, readOnlyFields }) => {
             getMetadata(entity).config.__data.reactiveDerivedValues.push({
               kind: ap instanceof ReactiveQueryFieldImpl ? "query" : "populate",
               cstr: meta.cstr,
               name: field.fieldName,
               path,
               fields,
+              readOnlyFields,
             });
           });
         }

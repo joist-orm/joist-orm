@@ -67,7 +67,7 @@ export class IsLoadedCache {
     const rfs = getReactiveFields(meta);
     for (const rf of rfs) {
       // I.e. we've written to Author.firstName, and this RF depends on it
-      if (rf.fields.includes(fieldName)) {
+      if (rf.fields.includes(fieldName) || rf.readOnlyFields.includes(fieldName)) {
         const otherMeta = getMetadata(rf.cstr);
         // Find any cache entries for this rf.cstr + rf.fieldName
         const set = this.smartCache[otherMeta.tagName]?.[rf.name];

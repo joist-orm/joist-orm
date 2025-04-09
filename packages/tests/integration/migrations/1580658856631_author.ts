@@ -220,6 +220,8 @@ export function up(b: MigrationBuilder): void {
   addColumns(b, "publishers", {
     // For testing derived fks on subtypes
     favorite_author_id: foreignKey("authors", { notNull: false }),
+    // For testing reacting to ReactiveReferences
+    favorite_author_name: { type: "text", notNull: false },
     // For testing optional defaults that are set null and for testing notNull subtype overrides
     spotlight_author_id: foreignKey("authors", { notNull: false }),
     // For testing primitive notNull subtype overrides

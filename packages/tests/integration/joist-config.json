@@ -64,7 +64,11 @@
     "ParentItem": { "tag": "pi" },
     "Publisher": {
       "abstract": true,
-      "fields": { "numberOfBookReviews": { "derived": "async" }, "titlesOfFavoriteBooks": { "derived": "async" } },
+      "fields": {
+        "favoriteAuthorName": { "derived": "async" },
+        "numberOfBookReviews": { "derived": "async" },
+        "titlesOfFavoriteBooks": { "derived": "async" }
+      },
       "relations": { "authors": { "orderBy": "numberOfBooks" }, "favoriteAuthor": { "derived": "async" } },
       "tag": "p"
     },

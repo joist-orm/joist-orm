@@ -19,7 +19,11 @@ export function getReactiveRules(meta: EntityMetadata): ReactiveRule[] {
   if (rules === undefined) {
     // We use "AndSub" because `getReactiveRules` is called with `todo.metadata`, which is always
     // the root type, but ofc we don't want to skip subtype rules.
-    rules = getBaseSelfAndSubMetas(meta).flatMap((m) => m.config.__data.reactiveRules);
+    rules = getBaseSelfAndSubMetas(meta).flatMap((m) =>
+      // Only pay attention to non-read-only ReactiveRules, because atm we hook up reactivity for
+      // ReactiveReferences for cache invalidation, enough that we can't reverse-walk the path.
+      m.config.__data.reactiveRules.filter((rr) => rr.fields.length > 0),
+    );
     reactiveRuleCache.set(meta, rules);
   }
   return rules;

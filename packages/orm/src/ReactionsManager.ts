@@ -99,10 +99,15 @@ export class ReactionsManager {
   /** Queue all downstream reactive fields that depend on this entity being created or deleted. */
   queueAllDownstreamFields(entity: Entity, reason: "created" | "deleted"): void {
     for (const rf of getReactiveFields(getMetadata(entity))) {
-      this.getPending(rf).todo.add(entity);
-      this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
-      this.needsRecalc[rf.kind] = true;
-      this.logger?.logQueuedAll(entity, reason, rf);
+      const isReadOnly = rf.path.length > 0 && rf.fields.length === 0;
+      if (!isReadOnly) {
+        this.getPending(rf).todo.add(entity);
+        this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
+        this.needsRecalc[rf.kind] = true;
+        this.logger?.logQueuedAll(entity, reason, rf);
+        // } else {
+        //   console.log("Skipping", rf);
+      }
     }
   }
 

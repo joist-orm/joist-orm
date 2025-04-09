@@ -99,6 +99,7 @@ export interface PublisherFields {
   baseAsyncDefault: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  favoriteAuthorName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   rating: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
   size: { kind: "enum"; type: PublisherSize; nullable: undefined };
   type: { kind: "enum"; type: PublisherType; nullable: never };
@@ -158,6 +159,7 @@ export interface PublisherFilter {
   baseAsyncDefault?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  favoriteAuthorName?: ValueFilter<string, null>;
   rating?: ValueFilter<number, null>;
   size?: ValueFilter<PublisherSize, null>;
   type?: ValueFilter<PublisherType, never>;
@@ -191,6 +193,7 @@ export interface PublisherGraphQLFilter {
   baseAsyncDefault?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  favoriteAuthorName?: ValueGraphQLFilter<string>;
   rating?: ValueGraphQLFilter<number>;
   size?: ValueGraphQLFilter<PublisherSize>;
   type?: ValueGraphQLFilter<PublisherType>;
@@ -224,6 +227,7 @@ export interface PublisherOrder {
   baseAsyncDefault?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  favoriteAuthorName?: OrderBy;
   rating?: OrderBy;
   size?: OrderBy;
   type?: OrderBy;
@@ -235,6 +239,7 @@ export interface PublisherOrder {
 export interface PublisherFactoryExtras {
   withNumberOfBookReviews?: number;
   withTitlesOfFavoriteBooks?: string | null;
+  withFavoriteAuthorName?: string | null;
 }
 
 export const publisherConfig = new ConfigApi<Publisher, Context>();
@@ -365,6 +370,8 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   get updatedAt(): Date {
     return getField(this, "updatedAt");
   }
+
+  abstract readonly favoriteAuthorName: ReactiveField<Publisher, string | undefined>;
 
   get rating(): number | undefined {
     return getField(this, "rating");

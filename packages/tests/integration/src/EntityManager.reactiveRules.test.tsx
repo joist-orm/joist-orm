@@ -261,6 +261,8 @@ describe("EntityManager.reactiveRules", () => {
         path: ["publisher"],
         fn,
       },
+      // Publisher's "favorite author name cannot be publisher name" rule
+      { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: [], path: ["favoriteAuthorPublishers"], fn },
       // SmallPublisher's "cannot have >5 authors" rule
       {
         cstr: "SmallPublisher",

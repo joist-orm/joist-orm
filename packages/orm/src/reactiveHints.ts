@@ -187,10 +187,16 @@ export function reverseReactiveHint<T extends Entity>(
         case "m2o": {
           // If this is a ReactiveReference, maybe we do something different?
           _fields.push(field.fieldName);
-          const otherFieldName = maybeAddTypeFilterSuffix(meta, field);
-          return reverseReactiveHint(rootType, field.otherMetadata().cstr, subHint, undefined, false).map(
-            appendPath(otherFieldName),
-          );
+          const otherMeta = field.otherMetadata();
+          // If this is a ReactiveReference, it won't have an "other" side
+          const otherField = otherMeta.allFields[field.otherFieldName];
+          const nextHop = reverseReactiveHint(rootType, otherMeta.cstr, subHint, undefined, false);
+          if (!otherField && nextHop.some((rf) => rf.fields.length > 0)) {
+            throw new Error(
+              `Invalid hint in ${rootType.name}.ts, we don't currently support reacting through ReactiveReferences, ${JSON.stringify(hint)}`,
+            );
+          }
+          return nextHop.map(appendPath(maybeAddTypeFilterSuffix(meta, field)));
         }
         case "poly": {
           _fields.push(field.fieldName);

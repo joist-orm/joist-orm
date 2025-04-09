@@ -50,7 +50,7 @@ export abstract class Publisher extends PublisherCodegen {
     },
   );
 
-  /** Example of a ReactiveField reacting to ReactiveReferences. */
+  /** Example of a ReactiveField reacting to ReactiveReferences (where a.favoriteBook is a unique). */
   readonly titlesOfFavoriteBooks: ReactiveField<Publisher, string | undefined> = hasReactiveField(
     "titlesOfFavoriteBooks",
     // We don't actually read the title, but
@@ -74,6 +74,16 @@ export abstract class Publisher extends PublisherCodegen {
     (p) => {
       // Prefer authors with the most books
       return [...p.authors.get].sort((a, b) => b.books.get.length - a.books.get.length)[0];
+    },
+  );
+
+  /** Example of a ReactiveField reacting to ReactiveReferences (where p.favoriteAuthor is not unique) . */
+  readonly favoriteAuthorName: ReactiveField<Publisher, string> = hasReactiveField(
+    "favoriteAuthorName",
+    // _ro suffixes work around this for now
+    { favoriteAuthor_ro: "firstName:ro" },
+    (p) => {
+      return p.favoriteAuthor.get?.firstName || "";
     },
   );
 
@@ -173,7 +183,8 @@ config.addRule(["name", "numberOfBookReviews"], (p) => {
 });
 
 // Example of reactive rule being fired on ReactiveReference change
-config.addRule({ favoriteAuthor: "firstName", name: {} }, (p) => {
+// Currently this must be a `_ro` because there is not a `author.favoriteOfPublishers` field to reverse walk
+config.addRule({ favoriteAuthor: "firstName_ro", name: {} }, (p) => {
   if (p.favoriteAuthor.get?.firstName === p.name) {
     return "Favorite Author firstName cannot be the publisher's name";
   }

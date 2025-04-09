@@ -118,7 +118,7 @@ export class InstanceData {
       // Let any OneToManyCollection.get caches know that they should recalc (i.e. their filterDeleted logic)
       // by asserting the `deleteBook.author` field is changing.
       //
-      // Technically. the o2m caches use the "naive" cache, so we don't really need to pass along the field.
+      // Technically, the o2m caches use the "naive" cache, so we don't really need to pass along the field.
       for (const field of Object.values(this.metadata.allFields)) {
         if (field.kind === "m2o") {
           getEmInternalApi(this.em).isLoadedCache.resetIsLoaded(entity, field.fieldName);

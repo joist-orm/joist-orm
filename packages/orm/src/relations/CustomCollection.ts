@@ -71,6 +71,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
         this.loadPromise = this.opts.load(this.entity, opts);
         await this.loadPromise;
         this.loadPromise = undefined;
+        this.#isLoaded = true;
       } else {
         await this.loadPromise;
       }

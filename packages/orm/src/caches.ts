@@ -1,6 +1,7 @@
 import { ReactiveField, ReactiveRule } from "./config";
 import { EntityMetadata, getBaseAndSelfMetas, getBaseSelfAndSubMetas } from "./EntityMetadata";
 
+// We calculate these all the time, so cache them for good measure.
 const reactiveFieldCache: WeakMap<EntityMetadata, ReactiveField[]> = new WeakMap();
 const reactiveRuleCache: WeakMap<EntityMetadata, ReactiveRule[]> = new WeakMap();
 

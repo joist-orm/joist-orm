@@ -78,6 +78,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
         this.loadPromise = this.opts.load(this.entity, opts);
         await this.loadPromise;
         this.loadPromise = undefined;
+        this.#isLoaded = true;
       } else {
         await this.loadPromise;
       }

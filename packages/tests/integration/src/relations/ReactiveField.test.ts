@@ -14,8 +14,10 @@ import {
 import { knex, newEntityManager } from "@src/testEm";
 import { noValue } from "joist-orm";
 import {
+  AdvanceStatus,
   Author,
   Book,
+  BookAdvance,
   BookRange,
   BookReview,
   newAuthor,
@@ -295,6 +297,20 @@ describe("ReactiveField", () => {
     // Then we still get the existing/correct value and did not recalc it
     expect(a1.numberOfBooks.get).toEqual(1);
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
+  });
+
+  it("is not loaded by read-only hints", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    // em.setReactionLogging(true);
+    em.create(BookAdvance, { status: AdvanceStatus.Pending, book: "b:1", publisher: "p:1" });
+    await em.flush();
+    // Then we did not load the publisher into memory
+    expect(em.entities).toMatchEntity(["ba:1"]);
+    // const p1 = em.getEntity("p:1") as Publisher;
+    // expect(p1.namesSnapshot.get).toEqual("p1");
   });
 
   describe("dirty tracking", () => {

@@ -27,6 +27,7 @@ type LargePublisher {
   baseSyncDefault: String
   baseAsyncDefault: String!
   rating: Int!
+  namesSnapshot: String
 }
 
 input SaveLargePublisherInput {

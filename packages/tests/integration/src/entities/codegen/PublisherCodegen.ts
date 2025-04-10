@@ -95,6 +95,7 @@ export interface PublisherFields {
   numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
   titlesOfFavoriteBooks: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  namesSnapshot: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   baseSyncDefault: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   baseAsyncDefault: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -155,6 +156,7 @@ export interface PublisherFilter {
   numberOfBookReviews?: ValueFilter<number, never>;
   deletedAt?: ValueFilter<Date, null>;
   titlesOfFavoriteBooks?: ValueFilter<string, null>;
+  namesSnapshot?: ValueFilter<string, null>;
   baseSyncDefault?: ValueFilter<string, never>;
   baseAsyncDefault?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
@@ -189,6 +191,7 @@ export interface PublisherGraphQLFilter {
   numberOfBookReviews?: ValueGraphQLFilter<number>;
   deletedAt?: ValueGraphQLFilter<Date>;
   titlesOfFavoriteBooks?: ValueGraphQLFilter<string>;
+  namesSnapshot?: ValueGraphQLFilter<string>;
   baseSyncDefault?: ValueGraphQLFilter<string>;
   baseAsyncDefault?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
@@ -223,6 +226,7 @@ export interface PublisherOrder {
   numberOfBookReviews?: OrderBy;
   deletedAt?: OrderBy;
   titlesOfFavoriteBooks?: OrderBy;
+  namesSnapshot?: OrderBy;
   baseSyncDefault?: OrderBy;
   baseAsyncDefault?: OrderBy;
   createdAt?: OrderBy;
@@ -239,6 +243,7 @@ export interface PublisherOrder {
 export interface PublisherFactoryExtras {
   withNumberOfBookReviews?: number;
   withTitlesOfFavoriteBooks?: string | null;
+  withNamesSnapshot?: string | null;
   withFavoriteAuthorName?: string | null;
 }
 
@@ -346,6 +351,8 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   abstract readonly titlesOfFavoriteBooks: ReactiveField<Publisher, string | undefined>;
+
+  abstract readonly namesSnapshot: ReactiveField<Publisher, string | undefined>;
 
   get baseSyncDefault(): string {
     return getField(this, "baseSyncDefault");

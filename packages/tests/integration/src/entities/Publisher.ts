@@ -53,7 +53,6 @@ export abstract class Publisher extends PublisherCodegen {
   /** Example of a ReactiveField reacting to ReactiveReferences (where a.favoriteBook is a unique). */
   readonly titlesOfFavoriteBooks: ReactiveField<Publisher, string | undefined> = hasReactiveField(
     "titlesOfFavoriteBooks",
-    // We don't actually read the title, but
     { authors: { favoriteBook: "title" } },
     (p) => {
       return (
@@ -84,6 +83,15 @@ export abstract class Publisher extends PublisherCodegen {
     { favoriteAuthor_ro: "firstName:ro" },
     (p) => {
       return p.favoriteAuthor.get?.firstName || "";
+    },
+  );
+
+  /** Example of a RF that uses a lot of read-only hints, it should recalc only when p.name itself changes. */
+  readonly namesSnapshot: ReactiveField<Publisher, string> = hasReactiveField(
+    "namesSnapshot",
+    { name: {}, bookAdvances_ro: "status_ro" },
+    (p) => {
+      return [p.name, ...p.bookAdvances.get.map((ba) => ba.status)].join(",");
     },
   );
 

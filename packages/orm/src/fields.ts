@@ -20,7 +20,7 @@ export function getField(entity: Entity, fieldName: string): any {
     return data[fieldName];
   } else {
     if (!entity.isNewEntity) {
-      const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
+      const serde = getMetadata(entity).allFields[fieldName]?.serde ?? fail(`Missing serde for ${fieldName}`);
       serde.setOnEntity(data, row);
     }
     return data[fieldName];

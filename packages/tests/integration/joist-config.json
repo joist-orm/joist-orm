@@ -66,6 +66,7 @@
       "abstract": true,
       "fields": {
         "favoriteAuthorName": { "derived": "async" },
+        "namesSnapshot": { "derived": "async" },
         "numberOfBookReviews": { "derived": "async" },
         "titlesOfFavoriteBooks": { "derived": "async" }
       },

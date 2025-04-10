@@ -1,3 +1,10 @@
+## [1.234.4](https://github.com/joist-orm/joist-orm/compare/v1.234.3...v1.234.4) (2025-04-10)
+
+
+### Bug Fixes
+
+* Use reverse indexes to invalidate isLoaded. ([#1421](https://github.com/joist-orm/joist-orm/issues/1421)) ([7724b64](https://github.com/joist-orm/joist-orm/commit/7724b646abc825ace7f9be16a58b06958ec29445))
+
 ## [1.234.3](https://github.com/joist-orm/joist-orm/compare/v1.234.2...v1.234.3) (2025-04-10)
 
 

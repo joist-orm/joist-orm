@@ -302,7 +302,7 @@ export class EntityDbMetadata {
       .filter((r) => !isMultiColumnForeignKey(r))
       .filter((r) => !isOneToOneRelation(r))
       .map((r) => newOneToMany(config, this.entity, r))
-      // Do not generate o2m for persisted async derived fields
+      // Do not generate o2m for ReactiveReferences
       .filter((f) => !isReactiveReference(config, f.otherEntity, f.otherFieldName))
       .filter((f) => !f.ignore);
     this.oneToManys = allOneToManys.filter((f) => !f.isLargeCollection);

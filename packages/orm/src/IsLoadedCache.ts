@@ -1,24 +1,22 @@
 import { Entity } from "./Entity";
-import { getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { getReactiveFields } from "./caches";
 
 /**
  * Interface for our relations that have dynamic & expensive `isLoaded` checks.
  *
- * ...and also `OneToManyCollection.get`.
+ * ...and also `OneToManyCollection.get` calls.
  *
  * The primary m2o/o2m/m2m relations all have trivial `isLoaded` checks--are they
  * loaded or not.
  *
  * But for "composite relations", i.e. a ReactiveField or ReactiveRelation whose
  * "load-ness" is calculated by evaluating its load hint across a subgraph of entities
- * & relations, load-ness can be true-then-false, as its subgraph changes.
+ * & relations, load-ness can be more dynamic true-then-false, as its subgraph changes.
  *
  * To avoid performance issues (see https://github.com/joist-orm/joist-orm/issues/1166),
- * we cache this dynamic/expensive `isLoaded` checks, and then do an extremely simplistic
- * cache invalidation whenever any relation is mutated.
- *
- * (It should be doable to leverage the reversed reactive hints to more targeted cache
- * invalidation, but this naive approach gets us the performance we need for now.)
+ * we cache this dynamic/expensive `isLoaded` checks, and then do targeted, reactivity-driven
+ * cache invalidation whenever relations are mutated (via a hook in `setField`).
  */
 export interface IsLoadedCachable {
   entity: Entity;
@@ -28,19 +26,74 @@ export interface IsLoadedCachable {
 }
 
 export class IsLoadedCache {
-  private cache = new Set<IsLoadedCachable>();
+  // Cache of `{ tag -> { fieldName -> Set<IsLoadedCachable> } }` for relations we
+  // can intelligently/selectively invalidate.
+  #smartCache: Record<string, Record<string, Set<IsLoadedCachable>>> = {};
+  // A dumber cache for things that are harder to invalidate/not yet selective,
+  // like o2m.get, recursive collections, and custom references/collections.
+  #naiveCache = new Set<IsLoadedCachable>();
+  // Counter to try and fast-path resetIsLoaded
+  #dirtySets = 0;
 
   add(target: IsLoadedCachable): void {
     const meta = getMetadata(target.entity);
-    const field = meta.allFields[target.fieldName];
-    // console.log(field.kind);
-    this.cache.add(target);
+    const set = ((this.#smartCache[meta.tagName] ??= {})[target.fieldName] ??= new Set());
+    if (set.size === 0) this.#dirtySets++;
+    set.add(target);
   }
 
-  resetIsLoaded(): void {
-    for (const target of this.cache.values()) {
-      target.resetIsLoaded();
+  addNaive(target: IsLoadedCachable): void {
+    if (this.#naiveCache.size === 0) this.#dirtySets++;
+    this.#naiveCache.add(target);
+  }
+
+  resetIsLoaded(entity: Entity, fieldName: string): void {
+    if (this.#dirtySets === 0) return;
+
+    // Reset caches that we can deterministically "smart" invalidate via reactivity hints
+    this.resetSmartCache(getMetadata(entity), fieldName);
+
+    // We could use this to invalidate m2o.get, but it doesn't work for collections
+    // with an orderBy, when the orderBy changes, so for now we use the blunt naiveCache.
+    // const field = meta.allFields[fieldName];
+    // if (field.kind === "m2o") {
+    //   const otherMeta = field.otherMetadata();
+    //   const set = this.smartCache[otherMeta.tagName]?.[field.otherFieldName];
+    //   if (set) {
+    //     for (const target of set) target.resetIsLoaded();
+    //     set.clear();
+    //   }
+    // }
+
+    if (this.#naiveCache.size > 0) {
+      for (const target of this.#naiveCache.values()) target.resetIsLoaded();
+      this.#naiveCache.clear();
+      this.#dirtySets--;
     }
-    this.cache.clear();
+  }
+
+  resetSmartCache(meta: EntityMetadata, fieldName: string): void {
+    const rfs = getReactiveFields(meta);
+    for (const rf of rfs) {
+      // I.e. we've written to Author.firstName, and this RF depends on it
+      if (rf.fields.includes(fieldName) || rf.readOnlyFields.includes(fieldName)) {
+        const otherMeta = getMetadata(rf.cstr);
+        // Find any cache entries for this rf.cstr + rf.fieldName
+        const set = this.#smartCache[otherMeta.tagName]?.[rf.name];
+        if (set?.size > 0) {
+          for (const target of set) {
+            target.resetIsLoaded();
+            // Is this target itself a RF/RR? If so, transitively reset its cache as well.
+            const otherMeta = getMetadata(target.entity);
+            const otherField = otherMeta.allFields[target.fieldName];
+            if ("derived" in otherField && otherField.derived) {
+              this.resetSmartCache(otherMeta, otherField.fieldName);
+            }
+          }
+          set.clear();
+          this.#dirtySets--;
+        }
+      }
+    }
   }
 }

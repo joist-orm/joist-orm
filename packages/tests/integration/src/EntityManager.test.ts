@@ -390,7 +390,7 @@ describe("EntityManager", () => {
 
   it("can save enums", async () => {
     const em = newEntityManager();
-    newPublisher(em, { name: "a1", size: PublisherSize.Large, authors: [{}] });
+    newPublisher(em, { name: "p1", size: PublisherSize.Large, authors: [{}] });
     await em.flush();
     const rows = await select("publishers");
     expect(rows[0].size_id).toEqual(2);

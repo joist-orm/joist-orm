@@ -14,14 +14,17 @@ import {
 import { knex, newEntityManager } from "@src/testEm";
 import { noValue } from "joist-orm";
 import {
+  AdvanceStatus,
   Author,
   Book,
+  BookAdvance,
   BookRange,
   BookReview,
   newAuthor,
   newBook,
   newBookReview,
   newComment,
+  newPublisher,
   Publisher,
   Tag,
 } from "../entities";
@@ -76,8 +79,12 @@ describe("ReactiveField", () => {
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
     expect(a1.numberOfBooks.get).toBe(0);
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
-    // Any mutation resets the cache
+    // An unrelated mutation does not reset the cache
     a1.lastName = "l1";
+    expect(a1.numberOfBooks.get).toBe(0);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
+    // But changing a dependency does
+    a1.firstName = "a2";
     expect(a1.numberOfBooks.get).toBe(0);
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
   });
@@ -94,13 +101,13 @@ describe("ReactiveField", () => {
     const a1 = new Author(em, { firstName: "a1" });
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(0);
-    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
     // When we add a book
     new Book(em, { title: "b1", author: a1 });
     // Then the author ReactiveField is recaled
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(1);
-    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(4);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
     const rows = await select("authors");
     expect(rows[0].number_of_books).toEqual(1);
   });
@@ -189,13 +196,14 @@ describe("ReactiveField", () => {
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(1);
     // And we calc'd it once during flush, and again in the ^ `.get`
-    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
     // When we change the book
     b1.title = "b12";
     await em.flush();
     // Then the author derived value didn't change
     expect(a1.numberOfBooks.get).toEqual(1);
-    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(3);
+    // And the cache wasn't invalidated
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
   });
 
   it("can recalc RFs with em.recalc", async () => {
@@ -204,11 +212,11 @@ describe("ReactiveField", () => {
     const a1 = newAuthor(em, { firstName: "a1" });
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(0);
-    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
     // When we touch the author
     await em.recalc(a1);
     // Then the derived value was recalculated
-    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(3);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
     // Even though it didn't technically change
     expect(a1.numberOfBooks.get).toEqual(0);
   });
@@ -289,6 +297,19 @@ describe("ReactiveField", () => {
     // Then we still get the existing/correct value and did not recalc it
     expect(a1.numberOfBooks.get).toEqual(1);
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
+  });
+
+  it("is not loaded by read-only hints", async () => {
+    // Given Publisher.namesSnapshot has a read-only on bookAdvances
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    // When we create a new BookAdvance
+    em.create(BookAdvance, { status: AdvanceStatus.Pending, book: "b:1", publisher: "p:1" });
+    await em.flush();
+    // Then we did not load the Publisher into memory
+    expect(em.entities).toMatchEntity(["ba:1"]);
   });
 
   describe("dirty tracking", () => {
@@ -400,5 +421,35 @@ describe("ReactiveField", () => {
     const b1 = newBook(em);
     b1.transientFields.throwNpeInSearch = true;
     await expect(em.flush()).rejects.toThrow("Cannot read properties of undefined (reading 'willFail')");
+  });
+
+  it("cache invalidates transitive RFs", async () => {
+    const em = newEntityManager();
+    const p = newPublisher(em);
+    const a = newAuthor(em);
+    const b1 = newBook(em, { title: "b1", reviews: [{ rating: 2 }] });
+    const b2 = newBook(em, { title: "b2", reviews: [{ rating: 1 }] });
+    // Given we've accessed (and cached) two RFs, where one depends on the other
+    expect(a.favoriteBook.get).toMatchEntity(b1);
+    expect(p.titlesOfFavoriteBooks.get).toBe("b1");
+    // When we change the dependent RF
+    b2.reviews.get[0].rating = 3;
+    // Then the downstream RF changes *without* first accessing `favoriteBook` (accessing `favoriteBook`
+    // would, as a side effect, realize it's dirty and invalidate `titlesOfFavoriteBooks`, but we want to
+    // test the scenario where the "middle" RF is not accessed)
+    expect(p.titlesOfFavoriteBooks.get).toBe("b2");
+    // And, yes, favoriteBook was re-calced as well
+    expect(a.favoriteBook.get).toMatchEntity(b2);
+  });
+
+  it("cache invalidates on immutable fields during creation", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em, { age: 10 });
+    // Given we've accessed (and cached) an RF that depends on an immutable field (Tag.name)
+    expect(a.tagsOfAllBooks.get).toBe("age-10");
+    // When we later change the age (which is allowed during the initial EM)
+    a.age = 20;
+    // Then the RF was invalidated (by IsLoadedCache, not a true ReactionsManager-driven async recalc)
+    expect(a.tagsOfAllBooks.get).toBe("age-20");
   });
 });

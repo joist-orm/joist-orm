@@ -203,9 +203,8 @@ export class ReactiveReferenceImpl<
   }
 
   resetIsLoaded(): void {
-    // We only reset #isLoaded so that callers can keep calling `.get` and technically
-    // see the stale value, but once they call `.load` again, we'll recalc it.
     this.#isLoaded = undefined;
+    this.#isCached = false;
   }
 
   private doGet(opts?: { withDeleted?: boolean }): U | N {
@@ -218,8 +217,8 @@ export class ReactiveReferenceImpl<
     }
     // Call isLoaded to probe the load hint, and get `#isLoaded` set, but still have
     // our `if` check the raw `#isLoaded` to know if we should eval-latest or return `loaded`.
-    this.isLoaded;
-    if (this.#loadedMode === "full") {
+    if (this.isLoaded && this.#loadedMode === "full") {
+      // console.log(`Evaling ${this.entity.toString()}.${this.fieldName}...)`);
       const newValue = this.filterDeleted(fn(this.entity as any) as any, opts);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update (...unless we're accessing it
@@ -231,8 +230,9 @@ export class ReactiveReferenceImpl<
       this.#loaded = newValue;
       this.#isCached = true;
       getEmInternalApi(this.entity.em).isLoadedCache.add(this);
-    } else if (this.#loadedMode === "ref") {
-      // #loaded was already set by whoever set ref; mark it as cached as well
+    } else if (!!this.#loadedMode) {
+      // We're either full-not-loaded, or ref-loaded, which either way we should have
+      // a cached #loaded value to use.
       this.#isCached = true;
       getEmInternalApi(this.entity.em).isLoadedCache.add(this);
     } else {

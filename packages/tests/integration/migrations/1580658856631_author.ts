@@ -64,6 +64,8 @@ export function up(b: MigrationBuilder): void {
     deleted_at: { type: "timestamptz", notNull: false },
     // for testing reactivity to ReactiveReferences that are o2os
     titles_of_favorite_books: { type: "text", notNull: false },
+    // for testing read-only ReactiveFields
+    names_snapshot: { type: "text", notNull: false },
     // for testing a setDefault on the base class
     base_sync_default: { type: "text", notNull: true },
     base_async_default: { type: "text", notNull: true },
@@ -220,6 +222,8 @@ export function up(b: MigrationBuilder): void {
   addColumns(b, "publishers", {
     // For testing derived fks on subtypes
     favorite_author_id: foreignKey("authors", { notNull: false }),
+    // For testing reacting to ReactiveReferences
+    favorite_author_name: { type: "text", notNull: false },
     // For testing optional defaults that are set null and for testing notNull subtype overrides
     spotlight_author_id: foreignKey("authors", { notNull: false }),
     // For testing primitive notNull subtype overrides

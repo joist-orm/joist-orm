@@ -1,5 +1,5 @@
 import { Entity } from "../Entity";
-import { IdOf } from "../EntityManager";
+import { getEmInternalApi, IdOf } from "../EntityManager";
 import { Collection, ensureNotDeleted, fail } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
@@ -36,6 +36,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
   // the values can become stale; we want to each `.get` call to repeatedly evaluate the latest values.
   private loadPromise: Promise<any> | undefined;
   #hasBeenSet = false;
+  #isLoaded: boolean | undefined = undefined;
 
   constructor(
     entity: T,
@@ -53,8 +54,14 @@ export class CustomCollection<T extends Entity, U extends Entity>
   }
 
   get isLoaded(): boolean {
-    // We could cache this...
-    return this.opts.isLoaded();
+    if (this.#isLoaded !== undefined) return this.#isLoaded;
+    getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
+    this.#isLoaded = this.opts.isLoaded();
+    return this.#isLoaded;
+  }
+
+  resetIsLoaded(): void {
+    this.#isLoaded = undefined;
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
@@ -64,6 +71,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
         this.loadPromise = this.opts.load(this.entity, opts);
         await this.loadPromise;
         this.loadPromise = undefined;
+        this.#isLoaded = true;
       } else {
         await this.loadPromise;
       }

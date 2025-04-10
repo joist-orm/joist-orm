@@ -19,6 +19,7 @@ type Publisher {
   baseSyncDefault: String
   baseAsyncDefault: String!
   rating: Int
+  namesSnapshot: String
 }
 
 input SavePublisherInput {

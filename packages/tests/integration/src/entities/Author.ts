@@ -90,12 +90,14 @@ export class Author extends AuthorCodegen {
 
   readonly tagsOfAllBooks: ReactiveField<Author, string> = hasReactiveField(
     "tagsOfAllBooks",
-    { books: { tags: "name" } },
+    // Including age (as a "tag" :shrug:) to test IsLoadedCache invalidation of an immutable field, during the 1st em
+    { books: { tags: "name" }, age: {} },
     (a) =>
-      a.books.get
-        .flatMap((b) => b.tags.get)
-        .map((t) => t.name)
-        .join(", "),
+      [
+        // Include a dummy "age" tag just to make a test case possible
+        ...(a.age ? [`age-${a.age}`] : []),
+        ...a.books.get.flatMap((b) => b.tags.get).map((t) => t.name),
+      ].join(", "),
   );
 
   readonly search: ReactiveField<Author, string> = hasReactiveField(
@@ -225,6 +227,10 @@ export class Author extends AuthorCodegen {
   readonly favoriteBook: ReactiveReference<Author, Book, undefined> = hasReactiveReference(
     bookMeta,
     "favoriteBook",
+    // The 'cache invalidates transitive RFs' test in ReactiveField.test.ts relies on BookReview.rating
+    // changes triggering a `favoriteBook` to recalc, to exercise transitive RF recalcs. This is fine,
+    // but we've thought about `reviews_ro` short-circuiting the reactivity, so we might have to update
+    // this test, if we do end up having this short-circuit.
     { books: { reviews_ro: "rating" } },
     (a) => {
       a.transientFields.favoriteBookCalcInvoked++;
@@ -238,6 +244,8 @@ export class Author extends AuthorCodegen {
       return books.find((b) => b.reviews.get.some((r) => r.rating === bestRating));
     },
   );
+
+  // should add two RFs for favoriteBookTagNames & rootMentorNumberOfBooks to show reactivity across RRs
 
   // For testing ReactiveReferences in entities with recursive relations
   readonly rootMentor: ReactiveReference<Author, Author, undefined> = hasReactiveReference(
@@ -340,7 +348,7 @@ config.addRule((a) => {
 });
 
 // Example of reactive rule being fired on Book change
-config.addRule({ books: ["title"], firstName: {} }, async (a) => {
+config.addRule({ books: ["title"], firstName: {} }, (a) => {
   if (a.books.get.length > 0 && a.books.get.find((b) => b.title === a.firstName)) {
     return "A book title cannot be the author's firstName";
   }

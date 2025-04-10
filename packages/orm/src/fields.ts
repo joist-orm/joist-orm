@@ -20,7 +20,7 @@ export function getField(entity: Entity, fieldName: string): any {
     return data[fieldName];
   } else {
     if (!entity.isNewEntity) {
-      const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
+      const serde = getMetadata(entity).allFields[fieldName]?.serde ?? fail(`Missing serde for ${fieldName}`);
       serde.setOnEntity(data, row);
     }
     return data[fieldName];
@@ -59,7 +59,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   getEmInternalApi(em).checkWritesAllowed();
 
   // Tell any `#isLoaded` or `#value` caches that they might be stale
-  getEmInternalApi(em).isLoadedCache.resetIsLoaded();
+  getEmInternalApi(em).isLoadedCache.resetIsLoaded(entity, fieldName);
 
   const { fieldLogger } = getEmInternalApi(em);
   const { data, originalData, flushedData } = getInstanceData(entity);

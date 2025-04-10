@@ -1,5 +1,6 @@
 import { Entity } from "./Entity";
-import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { getReactiveFields } from "./caches";
 import { ReactiveField } from "./config";
 import { EntityManager, NoIdError } from "./index";
 import { globalLogger, ReactionLogger } from "./logging/ReactionLogger";
@@ -51,8 +52,7 @@ export class ReactionsManager {
    */
   queueDownstreamReactiveFields(entity: Entity, fieldName: string): void {
     // Use the reverse index of ReactiveFields that configureMetadata sets up
-    const rfs = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
-    for (const rf of rfs) {
+    for (const rf of getReactiveFields(getMetadata(entity))) {
       if (rf.fields.includes(fieldName)) {
         // We always queue the RF/entity, even if we're mid-flush or even mid-recalc, to avoid:
         // - firstName is changed from a1 to a2
@@ -73,8 +73,7 @@ export class ReactionsManager {
   /** Dequeues reactivity on `fieldName`, i.e. if it's no longer dirty. */
   dequeueDownstreamReactiveFields(entity: Entity, fieldName: string): void {
     // Use the reverse index of ReactiveFields that configureMetadata sets up
-    const rfs = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
-    for (const rf of rfs) {
+    for (const rf of getReactiveFields(getMetadata(entity))) {
       if (rf.fields.includes(fieldName)) {
         const pending = this.getPending(rf);
         if (pending.done.has(entity)) {
@@ -99,8 +98,25 @@ export class ReactionsManager {
 
   /** Queue all downstream reactive fields that depend on this entity being created or deleted. */
   queueAllDownstreamFields(entity: Entity, reason: "created" | "deleted"): void {
-    const rfs = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
+    const rfs = getReactiveFields(getMetadata(entity));
     for (const rf of rfs) {
+      // Reversals that are readOnly (fields=[]) are only allowed to trigger their immediate
+      // entity (path=[]) to drive initial calcs on initial entity creation.
+      //
+      // Otherwise, readOnlyFields RFs are only used for IsLoadedCachable invalidation, so we
+      // ignore them here.
+      //
+      // Note that we do rely on "field=[]" RFs to watch entity creation at a distance, i.e. this one:
+      //
+      // numberOfBookReviews (in Publisher) fields=[] readOnlyFields=[] path=[book,author,publisher@LP]
+      //
+      // But the difference is that its `readOnlyFields=[]` as well, so that's how we can know it's
+      // necessary to fire.
+      const isReadOnly = rf.fields.length === 0 && rf.readOnlyFields.length > 0 && rf.path.length > 0;
+      if (isReadOnly) {
+        // console.log("SKIPPING", rf.name, "on", entity.constructor.name, reason);
+        continue;
+      }
       this.getPending(rf).todo.add(entity);
       this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
       this.needsRecalc[rf.kind] = true;
@@ -159,6 +175,7 @@ export class ReactionsManager {
           const todo = [...pending.todo];
           if (todo.length === 0) return [];
           pending.todo.clear();
+
           for (const doing of todo) pending.done.add(doing);
           // Walk back from the source to any downstream fields
           const relations = (await followReverseHint(rf.name, todo, rf.path))

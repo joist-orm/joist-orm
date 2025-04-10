@@ -166,6 +166,7 @@ export function reverseReactiveHint<T extends Entity>(
   const meta = getMetadata(entityType);
   // This is the list of fields for this `entityType` that we will react to their changing values
   const fields: string[] = [];
+  const readOnlyFields: string[] = [];
   // If the hint before us was a collection, i.e. { books: ["title"] }, besides just reacting
   // to our `title` changing, `reactForOtherSide` tells us to react to our `author` field as well.
   if (typeof reactForOtherSide === "string") {
@@ -176,35 +177,34 @@ export function reverseReactiveHint<T extends Entity>(
   }
   const maybeRecursive: ReactiveTarget[] = [];
   // Look through the hint for our own fields, i.e. `["title"]`, and nested hints like `{ author: "firstName" }`.
-  const subHints = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
+  const subHints: ReactiveTarget[] = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
     const key = keyMaybeSuffix.replace(suffixRe, "");
     const field = meta.allFields[key];
     const isReadOnly = !!keyMaybeSuffix.match(suffixRe) || (field && field.immutable);
+    const _fields = isReadOnly ? readOnlyFields : fields;
     if (field) {
       switch (field.kind) {
         case "m2o": {
-          if (!isReadOnly) {
-            fields.push(field.fieldName);
+          // If this is a ReactiveReference, maybe we do something different?
+          _fields.push(field.fieldName);
+          const otherMeta = field.otherMetadata();
+          // If this is a ReactiveReference, it won't have an "other" side, which is only fine for totally read-only hints
+          const otherField = otherMeta.allFields[field.otherFieldName];
+          const nextHop = reverseReactiveHint(rootType, otherMeta.cstr, subHint, undefined, false);
+          if (!otherField && nextHop.some((rf) => rf.fields.length > 0)) {
+            throw new Error(
+              `Invalid hint in ${rootType.name}.ts, we don't currently support reacting through ReactiveReferences, ${JSON.stringify(hint)}`,
+            );
           }
-          const otherFieldName = maybeAddTypeFilterSuffix(meta, field);
-          return reverseReactiveHint(rootType, field.otherMetadata().cstr, subHint, undefined, false).map(
-            ({ entity, fields, path }) => {
-              return { entity, fields, path: [...path, otherFieldName] };
-            },
-          );
+          return nextHop.map(appendPath(maybeAddTypeFilterSuffix(meta, field)));
         }
         case "poly": {
-          if (!isReadOnly) {
-            fields.push(field.fieldName);
-          }
+          _fields.push(field.fieldName);
           // A poly is basically multiple m2os glued together, so copy/paste the `case m2o` code
           // above but do it for each component FK, and glue them together.
           return field.components.flatMap((comp) => {
             return reverseReactiveHint(rootType, comp.otherMetadata().cstr, subHint, undefined, false).map(
-              ({ entity, fields, path }) => {
-                const otherFieldName = maybeAddTypeFilterSuffix(meta, comp);
-                return { entity, fields, path: [...path, otherFieldName] };
-              },
+              appendPath(maybeAddTypeFilterSuffix(meta, comp)),
             );
           });
         }
@@ -222,9 +222,7 @@ export function reverseReactiveHint<T extends Entity>(
             // recalc all of its children will cause over-reactivity
             undefined,
             false,
-          ).map(({ entity, fields, path }) => {
-            return { entity, fields, path: [...path, otherFieldName] };
-          });
+          ).map(appendPath(otherFieldName));
         }
         case "o2m":
         case "o2o": {
@@ -241,16 +239,12 @@ export function reverseReactiveHint<T extends Entity>(
             // we do need to react to children being created/deleted.
             isReadOnly ? undefined : isOtherReadOnly ? true : field.otherFieldName,
             false,
-          ).map(({ entity, fields, path }) => {
-            return { entity, fields, path: [...path, otherFieldName] };
-          });
+          ).map(appendPath(otherFieldName));
         }
         case "primaryKey":
         case "primitive":
         case "enum":
-          if (!isReadOnly) {
-            fields.push(key);
-          }
+          _fields.push(key);
           return [];
         default:
           throw new Error(`Invalid hint in ${rootType.name}.ts hint ${JSON.stringify(hint)}`);
@@ -289,13 +283,14 @@ export function reverseReactiveHint<T extends Entity>(
         // We could technically do "when our mentor changes, it means his list of mentees has changed,
         // so go up to him, and then back down to his mentees", but this would load more mentees than
         // just "us + our children".
-        if (!isReadOnly) {
-          fields.push(m2oFieldName);
-          maybeRecursive.push({ entity: entityType, fields: [m2oFieldName], path: [otherFieldName] });
-        }
-        return reverseReactiveHint(rootType, entityType, subHint, undefined, false).map(({ entity, fields, path }) => {
-          return { entity, fields, path: [...path, otherFieldName] };
+        _fields.push(m2oFieldName);
+        maybeRecursive.push({
+          entity: entityType,
+          fields: isReadOnly ? [] : [m2oFieldName],
+          readOnlyFields: isReadOnly ? [m2oFieldName] : [],
+          path: [otherFieldName],
         });
+        return reverseReactiveHint(rootType, entityType, subHint, undefined, false).map(appendPath(otherFieldName));
       } else {
         throw new Error(`Invalid hint in ${rootType.name}.ts ${JSON.stringify(hint)}`);
       }
@@ -305,7 +300,9 @@ export function reverseReactiveHint<T extends Entity>(
     // If any of our primitives (or m2o fields) change, establish a reactive path
     // from "here" (entityType) that is initially empty (path: []) but will have
     // paths layered on by the previous callers
-    ...(fields.length > 0 || isFirst || reactForOtherSide === true ? [{ entity: entityType, fields, path: [] }] : []),
+    ...(fields.length > 0 || readOnlyFields.length > 0 || isFirst || reactForOtherSide === true
+      ? [{ entity: entityType, fields, readOnlyFields, path: [] }]
+      : []),
     ...maybeRecursive,
     ...subHints,
   ];
@@ -373,11 +370,19 @@ export async function followReverseHint(
     const promises = new Array(current.size);
     // The path might touch either a reference or a collection
     for (const c of current as Set<any>) {
-      const relation =
-        c[fieldName] ??
-        fail(
-          `Attempting to react for ${reactionName}, but there is no "reverse walkable" field ${c.constructor.name}.${fieldName}`,
-        );
+      const relation = c[fieldName];
+      // If `!relation`, I'd really like to `fail`, but atm we're knowingly creating invalid reversals for when
+      // a ReactiveField depends on a ReactiveReference; b/c RRs lack an "other side", we cannot walk them in
+      // reverse, and so for awhile we "supported" the RF -> RR pattern by relying on a totally-read-only reactive
+      // hint -> dropped during reversal.
+      //
+      // However, now IsLoadedCache means that even these "totally read only" RFs need to be reactive at least
+      // during their initial EM creation, to avoid stale values being observed during first-flush mutations,
+      // and so we're now stuck with these "invalid RR reversals" until we can figure out a better way to handle them.
+      // (Now that IsLoadedCache doesn't technically walk paths, it just invalidates given entity+field pairs, so
+      // it is not bothered by an invalid/missing RR reversal.)
+      if (!relation) continue;
+      // fail(`Attempting to react for ${reactionName} for ${c.toString()}, but there is no "reverse walkable" field ${c.constructor.name}.${fieldName}`,);
       const currentValuePromise = maybeApplyTypeFilter(relation.load(), viaType);
       // Always wait for the relation itself
       promises.push(currentValuePromise);
@@ -481,6 +486,8 @@ export interface ReactiveTarget {
   entity: MaybeAbstractEntityConstructor<any>;
   /** The field(s) that our reactive rule/field accesses, plus any implicit fields like FKs. */
   fields: string[];
+  /** Any read-only fields, that don't trigger async `ReactionsManager` reactivity, but should trigger `IsLoadedCache` invalidation. */
+  readOnlyFields: string[];
   /** The path from this `entity` back to the source reactive rule/field. */
   path: string[];
 }
@@ -533,4 +540,11 @@ export function getRelationFromMaybePolyKey(entity: Entity, key: string): any {
   } else {
     return (entity as any)[key];
   }
+}
+
+function appendPath(segment: string): (rt: ReactiveTarget) => ReactiveTarget {
+  return (rt) => {
+    rt.path = [...rt.path, segment];
+    return rt;
+  };
 }

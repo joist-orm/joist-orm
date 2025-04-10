@@ -50,10 +50,9 @@ export abstract class Publisher extends PublisherCodegen {
     },
   );
 
-  /** Example of a ReactiveField reacting to ReactiveReferences. */
+  /** Example of a ReactiveField reacting to ReactiveReferences (where a.favoriteBook is a unique). */
   readonly titlesOfFavoriteBooks: ReactiveField<Publisher, string | undefined> = hasReactiveField(
     "titlesOfFavoriteBooks",
-    // We don't actually read the title, but
     { authors: { favoriteBook: "title" } },
     (p) => {
       return (
@@ -74,6 +73,25 @@ export abstract class Publisher extends PublisherCodegen {
     (p) => {
       // Prefer authors with the most books
       return [...p.authors.get].sort((a, b) => b.books.get.length - a.books.get.length)[0];
+    },
+  );
+
+  /** Example of a ReactiveField reacting to ReactiveReferences (where p.favoriteAuthor is not unique) . */
+  readonly favoriteAuthorName: ReactiveField<Publisher, string> = hasReactiveField(
+    "favoriteAuthorName",
+    // _ro suffixes work around this for now
+    { favoriteAuthor_ro: "firstName:ro" },
+    (p) => {
+      return p.favoriteAuthor.get?.firstName || "";
+    },
+  );
+
+  /** Example of a RF that uses a lot of read-only hints, it should recalc only when p.name itself changes. */
+  readonly namesSnapshot: ReactiveField<Publisher, string> = hasReactiveField(
+    "namesSnapshot",
+    { name: {}, bookAdvances_ro: "status_ro" },
+    (p) => {
+      return [p.name, ...p.bookAdvances.get.map((ba) => ba.status)].join(",");
     },
   );
 
@@ -156,7 +174,7 @@ config.addRule({ authors: "numberOfBooks2" }, (p) => {
   }
 });
 
-// Example of reactive rule being fired by a persisted async property
+// Example of reactive rule being fired by a ReactiveField
 config.addRule({ authors: "numberOfBooks" }, (p) => {
   const sum = p.authors.get.map((a) => a.numberOfBooks.get).reduce((a, b) => a + b, 0);
   if (sum === 15) {
@@ -169,6 +187,15 @@ config.addRule(["name", "numberOfBookReviews"], (p) => {
   p.transientFields.numberOfBookReviewEvals++;
   if (p.name === "four" && p.numberOfBookReviews.get === 4) {
     return "Publisher 'four' cannot have 4 books";
+  }
+});
+
+// Example of reactive rule being fired on ReactiveReference change.
+// Currently, these must be a `_ro` because there is not a `author.favoriteOfPublishers` field to reverse walk.
+// `reverseReactiveHint` should enforce the read-only-ness
+config.addRule({ favoriteAuthor: "firstName:ro", name: {} }, (p) => {
+  if (p.favoriteAuthor.get?.firstName === p.name) {
+    return "Favorite Author firstName cannot be the publisher's name";
   }
 });
 

@@ -1,4 +1,5 @@
 import { Entity } from "./Entity";
+import { getEmInternalApi } from "./EntityManager";
 import { getBaseAndSelfMetas } from "./EntityMetadata";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo } from "./Todo";
@@ -37,6 +38,8 @@ export class JoinRows {
       };
       this.rows.push(joinRow);
     }
+    getEmInternalApi(e1.em).isLoadedCache.resetIsLoaded(e1, m2m.fieldName);
+    getEmInternalApi(e1.em).isLoadedCache.resetIsLoaded(e2, m2m.otherFieldName);
     this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
     this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
     if (getBaseAndSelfMetas(e1).some((meta) => meta.config.__data.touchOnChange.has(m2m.fieldName))) {
@@ -63,6 +66,8 @@ export class JoinRows {
       // Use -1 to force the sortJoinRows to notice us as dirty ("delete: true but id is set")
       this.rows.push({ id: -1, [columnName]: e1, [otherColumnName]: e2, deleted: true, op: JoinRowOperation.Pending });
     }
+    getEmInternalApi(e1.em).isLoadedCache.resetIsLoaded(e1, m2m.fieldName);
+    getEmInternalApi(e1.em).isLoadedCache.resetIsLoaded(e2, m2m.otherFieldName);
     this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
     this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
     if (getBaseAndSelfMetas(e1).some((meta) => meta.config.__data.touchOnChange.has(m2m.fieldName))) {

@@ -257,7 +257,10 @@ export function parseFindQuery(
               // Or together `parent_book_id in (1,2,3) OR parent_author_id IN (4,5,6)`
               // ...if there is a `parent IN [b:1, b:2, a:1, null]` we'd need to pull the `null` out and do an `OR (all columns are null)`...
               const conditions = Object.entries(idsByConstructor).map(([cstrName, ids]) => {
-                const column = field.serde.columns.find((c) => c.otherMetadata().cstr.name === cstrName)!;
+                const column = field.serde.columns.find(
+                  // tagged ids from subclasses always map to the base class, so we should compare to the base class if we don't directly match
+                  (c) => c.otherMetadata().cstr.name === cstrName || c.otherMetadata().baseType === cstrName,
+                )!;
                 return {
                   kind: "column",
                   alias: fa,

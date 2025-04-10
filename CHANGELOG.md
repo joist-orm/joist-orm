@@ -1,3 +1,10 @@
+## [1.234.3](https://github.com/joist-orm/joist-orm/compare/v1.234.2...v1.234.3) (2025-04-10)
+
+
+### Bug Fixes
+
+* support poly relations to a subclass in query parser ([#1425](https://github.com/joist-orm/joist-orm/issues/1425)) ([7a073bb](https://github.com/joist-orm/joist-orm/commit/7a073bb710cea9e65733c2a0b24d025b20fd691a))
+
 ## [1.234.2](https://github.com/joist-orm/joist-orm/compare/v1.234.1...v1.234.2) (2025-04-07)
 
 

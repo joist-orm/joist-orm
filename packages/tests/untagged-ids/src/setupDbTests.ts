@@ -3,20 +3,19 @@ import { EntityManager } from "@src/entities";
 import { PostgresDriver, PostgresDriverOpts, TestUuidAssigner } from "joist-orm";
 import { toMatchEntity } from "joist-test-utils";
 import { newPgConnectionConfig } from "joist-utils";
-import { Knex, knex as createKnex } from "knex";
+import postgres from "postgres";
 
-// Create a shared test context that tests can use and also we'll use to auto-flush the db between tests.
-export let knex: Knex;
+export const sql = postgres(newPgConnectionConfig());
 
 const testUuidAssigner = new TestUuidAssigner();
 
 beforeEach(() => testUuidAssigner.reset());
 
 export function newEntityManager(opts?: PostgresDriverOpts) {
-  const ctx = { knex };
+  const ctx = { sql };
   const em = new EntityManager(
     ctx as any,
-    new PostgresDriver(knex, {
+    new PostgresDriver(sql, {
       idAssigner: testUuidAssigner,
       ...opts,
     }),
@@ -25,39 +24,18 @@ export function newEntityManager(opts?: PostgresDriverOpts) {
   return em;
 }
 
-export let numberOfQueries = 0;
-export let queries: string[] = [];
-
 expect.extend({ toMatchEntity });
 
-beforeAll(async () => {
-  knex = createKnex({
-    client: "pg",
-    connection: newPgConnectionConfig(),
-    debug: false,
-    asyncStackTraces: true,
-  }).on("query", (e: any) => {
-    numberOfQueries++;
-    queries.push(e.sql);
-  });
-});
-
 beforeEach(async () => {
-  await knex.select(knex.raw("flush_database()"));
-  resetQueryCount();
+  await sql`select flush_database()`;
 });
 
 afterAll(async () => {
-  await knex.destroy();
+  await sql.end();
 });
-
-export function resetQueryCount() {
-  numberOfQueries = 0;
-  queries = [];
-}
 
 type itWithCtxFn = (ctx: Context) => Promise<void>;
 it.withCtx = (name: string, fnOrOpts: itWithCtxFn | ContextOpts, maybeFn?: itWithCtxFn) => {
   const fn: itWithCtxFn = typeof fnOrOpts === "function" ? fnOrOpts : maybeFn!;
-  it(name, async () => fn({ em: newEntityManager(), knex }));
+  it(name, async () => fn({ em: newEntityManager(), sql }));
 };

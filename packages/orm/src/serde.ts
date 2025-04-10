@@ -133,6 +133,7 @@ export class PrimitiveSerde implements FieldSerde {
     public columnName: string,
     public dbType: string,
     public isArray = false,
+    public isNullableArray = false, // only set for nullable arrays
   ) {}
 
   setOnEntity(data: any, row: any): void {
@@ -353,7 +354,7 @@ export class PolymorphicKeySerde implements FieldSerde {
 
     return this.field.components.map((comp) => ({
       columnName: comp.columnName,
-      dbType: "int",
+      dbType: comp.otherMetadata().idDbType,
       isArray: false,
       otherMetadata: comp.otherMetadata,
       dbValue(data: any): any {
@@ -422,6 +423,7 @@ export class EnumArrayFieldSerde implements FieldSerde {
     private fieldName: string,
     public columnName: string,
     public dbType: "int[]" | "uuid[]",
+    public isNullableArray: boolean,
     private enumObject: any,
   ) {}
 
@@ -471,11 +473,11 @@ export class SuperstructSerde implements FieldSerde {
   }
 
   dbValue(data: any) {
-    return JSON.stringify(data[this.fieldName]);
+    return data[this.fieldName]; // postgres.js will JSON.stringify
   }
 
   mapToDb(value: any) {
-    return JSON.stringify(value);
+    return value; // postgres.js will JSON.stringify
   }
 
   mapFromJsonAgg(value: any): any {
@@ -532,12 +534,11 @@ export class ZodSerde implements FieldSerde {
   }
 
   dbValue(data: any) {
-    // assume the data is already valid b/c it came from the entity
-    return JSON.stringify(data[this.fieldName]);
+    return data[this.fieldName]; // postgres.js will JSON.stringify
   }
 
   mapToDb(value: any) {
-    return JSON.stringify(value);
+    return value; // postgres.js will JSON.stringify
   }
 
   mapFromJsonAgg(value: any): any {

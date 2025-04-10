@@ -22,7 +22,5 @@ export interface Driver<TX = unknown> {
 
   assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void>;
 
-  flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void>;
-
-  flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void>;
+  flush(em: EntityManager, todos: Record<string, Todo>, joinRows: Record<string, JoinRowTodo>): Promise<void>;
 }

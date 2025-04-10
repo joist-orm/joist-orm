@@ -1895,7 +1895,16 @@ async function validateReactiveRules(
         // If the rule is for a different subtype, skip it
         if (!(e instanceof rule.source)) return false;
         // new/created entities run all of their immediate / path=[] rules (even if read only)
-        if (rule.path.length === 0 && (e.isNewEntity || e.isDeletedEntity)) return true;
+        if (e.isNewEntity || e.isDeletedEntity) {
+          // A rule like `fields=[] path=[author]` is that we need to tell Author about our new book
+          // A rule like `fields=[mentor] path=[]` is that mentor won't be changed, but run the rule anyway
+          const isInitialRule = rule.path.length === 0 || rule.fields.length === 0;
+          if (isInitialRule) {
+            console.log(`New entity ${e} rule ${JSON.stringify(rule)}`);
+            return true;
+          }
+          // && rule.fields.length === 0 && rule.path.length > 0) return true;
+        }
         // Otherwise see if the changed fields overlaps with the rule's fields
         const changedFields = (e as any).changes.fieldsWithoutRelations as string[];
         for (const field of changedFields) {

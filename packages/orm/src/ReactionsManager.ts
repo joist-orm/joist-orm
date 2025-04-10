@@ -115,7 +115,7 @@ export class ReactionsManager {
       const isReadOnly = rf.fields.length === 0 && rf.readOnlyFields.length > 0 && rf.path.length > 0;
       if (isReadOnly) {
         // console.log("SKIPPING", rf.name, "on", entity.constructor.name, reason);
-        return;
+        continue;
       }
       this.getPending(rf).todo.add(entity);
       this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);

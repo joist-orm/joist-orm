@@ -300,17 +300,16 @@ describe("ReactiveField", () => {
   });
 
   it("is not loaded by read-only hints", async () => {
+    // Given Publisher.namesSnapshot has a read-only on bookAdvances
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    // em.setReactionLogging(true);
+    // When we create a new BookAdvance
     em.create(BookAdvance, { status: AdvanceStatus.Pending, book: "b:1", publisher: "p:1" });
     await em.flush();
-    // Then we did not load the publisher into memory
+    // Then we did not load the Publisher into memory
     expect(em.entities).toMatchEntity(["ba:1"]);
-    // const p1 = em.getEntity("p:1") as Publisher;
-    // expect(p1.namesSnapshot.get).toEqual("p1");
   });
 
   describe("dirty tracking", () => {
@@ -443,14 +442,14 @@ describe("ReactiveField", () => {
     expect(a.favoriteBook.get).toMatchEntity(b2);
   });
 
-  it("cache invalidates on 'immutable' fields", async () => {
+  it("cache invalidates on immutable fields during creation", async () => {
     const em = newEntityManager();
     const a = newAuthor(em, { age: 10 });
     // Given we've accessed (and cached) an RF that depends on an immutable field (Tag.name)
     expect(a.tagsOfAllBooks.get).toBe("age-10");
     // When we later change the age (which is allowed during the initial EM)
     a.age = 20;
-    // Then the RF recalcs
+    // Then the RF was invalidated (by IsLoadedCache, not a true ReactionsManager-driven async recalc)
     expect(a.tagsOfAllBooks.get).toBe("age-20");
   });
 });

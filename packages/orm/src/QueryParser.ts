@@ -221,10 +221,13 @@ export function parseFindQuery(
             // For now only support eq/ne/in/is-null
             if (f.kind === "eq" || f.kind === "ne") {
               if (isNilIdValue(f.value)) return;
-              const comp =
-                field.components.find(
-                  (p) => p.otherMetadata().cstr === getConstructorFromTaggedId(f.value as string),
-                ) || fail(`Could not find component for ${f.value}`);
+              const comp = field.components.find((p) => {
+                const otherMeta = p.otherMetadata();
+                const cstr = getConstructorFromTaggedId(f.value as string);
+                // tagged ids from subclasses always map to the base class, so we should compare to the base class if we don't directly match
+                return otherMeta.cstr === cstr || otherMeta.baseType === cstr.name;
+              });
+              if (!comp) fail(`Could not find component for ${f.value}`);
               const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
               cb.addValueFilter(fa, column, f);
             } else if (f.kind === "is-null") {

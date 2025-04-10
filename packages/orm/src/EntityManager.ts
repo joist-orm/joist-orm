@@ -21,7 +21,6 @@ import { populateDataLoader } from "./dataloaders/populateDataLoader";
 import { Driver } from "./drivers";
 import {
   BaseEntity,
-  Changes,
   CustomCollection,
   CustomReference,
   DeepPartialOrNull,
@@ -1892,14 +1891,18 @@ async function validateReactiveRules(
     const rules = getReactiveRules(todo.metadata);
     return rules.map((rule) => {
       // Of all changed entities of this type, how many specifically trigger this rule?
-      const triggered = entities.filter(
-        (e) =>
-          // If the rule is for a different subtype, skip it
-          e instanceof rule.source &&
-          (e.isNewEntity ||
-            e.isDeletedEntity ||
-            ((e as any).changes as Changes<any>).fieldsWithoutRelations.some((f) => rule.fields.includes(f))),
-      );
+      const triggered = entities.filter((e) => {
+        // If the rule is for a different subtype, skip it
+        if (!(e instanceof rule.source)) return false;
+        // new/created entities run all of their immediate / path=[] rules (even if read only)
+        if (rule.path.length === 0 && (e.isNewEntity || e.isDeletedEntity)) return true;
+        // Otherwise see if the changed fields overlaps with the rule's fields
+        const changedFields = (e as any).changes.fieldsWithoutRelations as string[];
+        for (const field of changedFields) {
+          if (rule.fields.includes(field)) return true;
+        }
+        return false;
+      });
       // From these "triggered" entities, queue the "found"/owner entity to rerun this rule
       return followAndQueue(triggered, rule);
     });

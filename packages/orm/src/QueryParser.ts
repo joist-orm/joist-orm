@@ -221,10 +221,13 @@ export function parseFindQuery(
             // For now only support eq/ne/in/is-null
             if (f.kind === "eq" || f.kind === "ne") {
               if (isNilIdValue(f.value)) return;
-              const comp =
-                field.components.find(
-                  (p) => p.otherMetadata().cstr === getConstructorFromTaggedId(f.value as string),
-                ) || fail(`Could not find component for ${f.value}`);
+              const comp = field.components.find((p) => {
+                const otherMeta = p.otherMetadata();
+                const cstr = getConstructorFromTaggedId(f.value as string);
+                // tagged ids from subclasses always map to the base class, so we should compare to the base class if we don't directly match
+                return otherMeta.cstr === cstr || otherMeta.baseType === cstr.name;
+              });
+              if (!comp) fail(`Could not find component for ${f.value}`);
               const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
               cb.addValueFilter(fa, column, f);
             } else if (f.kind === "is-null") {
@@ -257,7 +260,10 @@ export function parseFindQuery(
               // Or together `parent_book_id in (1,2,3) OR parent_author_id IN (4,5,6)`
               // ...if there is a `parent IN [b:1, b:2, a:1, null]` we'd need to pull the `null` out and do an `OR (all columns are null)`...
               const conditions = Object.entries(idsByConstructor).map(([cstrName, ids]) => {
-                const column = field.serde.columns.find((c) => c.otherMetadata().cstr.name === cstrName)!;
+                const column = field.serde.columns.find(
+                  // tagged ids from subclasses always map to the base class, so we should compare to the base class if we don't directly match
+                  (c) => c.otherMetadata().cstr.name === cstrName || c.otherMetadata().baseType === cstrName,
+                )!;
                 return {
                   kind: "column",
                   alias: fa,

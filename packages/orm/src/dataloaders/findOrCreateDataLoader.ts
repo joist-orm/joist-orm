@@ -174,7 +174,8 @@ function maybeLower(meta: EntityMetadata, opts: object | undefined) {
   return Object.fromEntries(
     Object.entries(opts).map(([k, v]) => {
       const field = meta.allFields[k];
-      return [k, field.kind === "primitive" && field.citext ? v?.toLowerCase() : v];
+      // Use `?.kind` b/c if the user is typo-ing a findOrCreate field, we don't want to throw an error here
+      return [k, field?.kind === "primitive" && field.citext ? v?.toLowerCase() : v];
     }),
   );
 }

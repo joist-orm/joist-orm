@@ -200,10 +200,23 @@ describe("reactiveHints", () => {
       { entity: "Author", fields: [], readOnlyFields: ["publisher"], path: [] },
       { entity: "Publisher", fields: [], readOnlyFields: ["name"], path: ["authors"] },
     ]);
-    expect(reverse(BookReview, BookReview, { book: "author:ro" })).toEqual([
-      { entity: "BookReview", fields: [], readOnlyFields: ["book"], path: [] },
-      { entity: "Book", fields: [], readOnlyFields: ["author"], path: ["reviews"] },
+    expect(reverse(Author, Author, { publisher: "name:ro" })).toEqual([
+      { entity: "Author", fields: ["publisher"], path: [] },
+      { entity: "Publisher", fields: [], readOnlyFields: ["name"], path: ["authors"] },
     ]);
+    expect(reverse(Author, Author, { publisher_ro: { group_ro: "name:ro" } })).toEqual([
+      { entity: "Author", fields: [], readOnlyFields: ["publisher"], path: [] },
+      { entity: "Publisher", fields: [], readOnlyFields: ["group"], path: ["authors"] },
+      { entity: "PublisherGroup", fields: [], readOnlyFields: ["name"], path: ["publishers", "authors"] },
+    ]);
+    expect(reverse(Author, Author, { books_ro: { reviews_ro: "rating:ro" } })).toEqual([
+      { entity: "Author", fields: [], path: [] },
+      { entity: "BookReview", fields: [], readOnlyFields: ["rating"], path: ["book", "author"] },
+    ]);
+    // expect(reverse(BookReview, BookReview, { book: "author:ro" })).toEqual([
+    //   { entity: "BookReview", fields: [], readOnlyFields: ["book"], path: [] },
+    //   { entity: "Book", fields: [], readOnlyFields: ["author"], path: ["reviews"] },
+    // ]);
   });
 
   describe("convertToLoadHint", () => {

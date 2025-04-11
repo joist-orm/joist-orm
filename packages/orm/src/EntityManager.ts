@@ -1897,6 +1897,7 @@ async function validateReactiveRules(
         // new/created entities run all of their immediate / path=[] rules (even if read only)
         if (e.isNewEntity || e.isDeletedEntity) {
           // A rule like `fields=[] path=[author]` is that we need to tell Author about our new book
+          // - when I'm new, who do I trigger?
           // A rule like `fields=[mentor] path=[]` is that mentor won't be changed, but run the rule anyway
           const isInitialRule = rule.path.length === 0 || rule.fields.length === 0;
           if (isInitialRule) {

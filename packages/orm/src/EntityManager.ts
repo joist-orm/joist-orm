@@ -11,6 +11,7 @@ import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo, Todo, combineJoinRows, createTodos } from "./Todo";
 import { getReactiveRules } from "./caches";
 import { ReactiveRule, constraintNameToValidationError } from "./config";
+import { getMetadataForType } from "./configure";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
@@ -1765,7 +1766,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const watching: FieldLoggerWatch[] = specs.map((spec) => {
         const breakpoint = spec.endsWith("!");
         const [entity, fields] = spec.replace(/!$/, "").split(".");
-        return { entity, fieldNames: fields.split(","), breakpoint };
+        const fieldNames = fields.split(",");
+        // Ensure entity is invalid, to avoid failing silently
+        const meta = getMetadataForType(entity);
+        // Ensure the field names are valid, to avoid failing silently
+        fieldNames.forEach((field) => {
+          // We could probably check the `kind`, b/c things like o2o/o2m are not supported atm
+          if (!meta.allFields[field]) {
+            throw new Error(`Field ${field} not found on ${entity}`);
+          }
+        });
+        return { entity, fieldNames, breakpoint };
       });
       this.#fieldLogger = new FieldLogger(watching);
     } else {

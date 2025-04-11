@@ -97,6 +97,26 @@ describe("FieldLogging", () => {
     newBook(em);
     // Manually verify in the debugger that it hits the breakpoint
   });
+
+  it("fails on invalid string config", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    expect(() => em.setFieldLogging("InvalidEntity.name")).toThrow("Unknown type InvalidEntity");
+  });
+
+  it("fails on invalid string[] config", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    expect(() => em.setFieldLogging(["Author.firstName", "InvalidEntity.name"])).toThrow("Unknown type InvalidEntity");
+  });
+
+  it("fails on invalid string config with array typo", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    expect(() => em.setFieldLogging("Author.firstName,InvalidEntity.name")).toThrow(
+      "Field InvalidEntity not found on Author",
+    );
+  });
 });
 
 beforeEach(() => {

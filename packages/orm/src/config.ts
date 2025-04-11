@@ -281,7 +281,7 @@ export interface ReactiveField {
   /** The fields on this source entity that would trigger the downstream field's recalc. */
   fields: string[];
   /** Read-only/immutable fields that are used in the derived field. */
-  readOnlyFields: string[];
+  isReadOnly: boolean;
   /** The constructor of downstream entity that owns the derived field. */
   cstr: MaybeAbstractEntityConstructor<any>;
   /** The path from this source entity to the downstream entity that needs recalced. */

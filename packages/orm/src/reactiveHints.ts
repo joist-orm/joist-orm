@@ -177,13 +177,14 @@ export function reverseReactiveHint<T extends Entity>(
   }
 
   const maybeRecursive: ReactiveTarget[] = [];
-  // Look through the hint for our own fields, i.e. `["title"]`, and nested hints like `{ author: "firstName" }`.
-  const subHints: ReactiveTarget[] = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
+  // Look through the hint for our own fields, i.e. `["firstName", "lastName]`, and nested hints like `{ books: "title" }`.
+  const subHintTargets: ReactiveTarget[] = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
     return reverseSubHint(
       rootType,
       entityType,
       hint,
       meta,
+      // Pass fields & readOnlyFields, so `reverseSubHint` can append any of our primitive fields it finds
       fields,
       readOnlyFields,
       maybeRecursive,
@@ -192,16 +193,19 @@ export function reverseReactiveHint<T extends Entity>(
     );
   });
 
-  return [
-    // If any of our primitives (or m2o fields) change, establish a reactive path
-    // from "here" (entityType) that is initially empty (path: []) but will have
-    // paths layered on by the previous callers
-    ...(fields.length > 0 || readOnlyFields.length > 0 || isFirst || reactForOtherSide === true
-      ? [{ entity: entityType, fields, readOnlyFields, path: [] }]
-      : []),
-    ...maybeRecursive,
-    ...subHints,
-  ];
+  const myTargets: ReactiveTarget[] = [];
+  // If any of our primitives (or m2o fields) change, establish a reactive path from "here" (entityType)
+  // that is initially empty (path: []) but will have paths layered on by upstream callers
+  if (fields.length > 0 || isFirst || reactForOtherSide === true) {
+    myTargets.push({ kind: "update", entity: entityType, fields, path: [] });
+  }
+  // Normally read-only fields don't trigger true async reactivity, but IsLoadedCache
+  // needs them for same-EM cache invalidation.
+  if (readOnlyFields.length > 0) {
+    myTargets.push({ kind: "read-only", entity: entityType, fields: readOnlyFields, path: [] });
+  }
+
+  return [...myTargets, ...maybeRecursive, ...subHintTargets];
 }
 
 function reverseSubHint(
@@ -322,9 +326,9 @@ function reverseSubHint(
       // just "us + our children".
       _fields.push(m2oFieldName);
       maybeRecursive.push({
+        kind: isReadOnly ? "read-only" : "update",
         entity: entityType,
-        fields: isReadOnly ? [] : [m2oFieldName],
-        readOnlyFields: isReadOnly ? [m2oFieldName] : [],
+        fields: [m2oFieldName],
         path: [otherFieldName],
       });
       return reverseReactiveHint(rootType, entityType, subHint, undefined, false).map(appendPath(otherFieldName));
@@ -508,12 +512,11 @@ export function convertToLoadHint<T extends Entity>(
 
 /** An entity that, when `fields` change, should trigger the reactive rule/field pointed to by `path`. */
 export interface ReactiveTarget {
+  kind: "read-only" | "update";
   /** The entity that contains a field our reactive rule/field accesses. */
   entity: MaybeAbstractEntityConstructor<any>;
   /** The field(s) that our reactive rule/field accesses, plus any implicit fields like FKs. */
   fields: string[];
-  /** Any read-only fields, that don't trigger async `ReactionsManager` reactivity, but should trigger `IsLoadedCache` invalidation. */
-  readOnlyFields: string[];
   /** The path from this `entity` back to the source reactive rule/field. */
   path: string[];
 }

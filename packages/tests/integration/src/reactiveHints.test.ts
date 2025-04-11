@@ -378,9 +378,6 @@ function reverse<T extends Entity>(
 ): ReactiveTarget[] {
   return reverseReactiveHint(rootType, entityType, hint, reactForOtherSide, isFirst).map((target) => {
     (target as any).entity = target.entity.name;
-    if (target.readOnlyFields.length === 0) {
-      delete (target as any)["readOnlyFields"];
-    }
     return target;
   });
 }

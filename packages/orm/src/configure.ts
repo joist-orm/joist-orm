@@ -175,15 +175,17 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
         const reversals = reverseReactiveHint(meta.cstr, meta.cstr, hint);
         // For each reversal, tell its config about the reverse hint to force-re-validate
         // the original rule's instance any time it changes.
-        reversals.forEach(({ entity, path, fields }) => {
-          getMetadata(entity).config.__data.reactiveRules.push({
-            source: entity,
-            cstr: meta.cstr,
-            name,
-            fields,
-            path,
-            fn,
-          });
+        reversals.forEach(({ kind, entity, path, fields }) => {
+          if (kind === "update") {
+            getMetadata(entity).config.__data.reactiveRules.push({
+              source: entity,
+              cstr: meta.cstr,
+              name,
+              fields,
+              path,
+              fn,
+            });
+          }
         });
       }
     });
@@ -207,14 +209,14 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
         // if we don't actually have a property/loadHint available.
         if (ap?.reactiveHint) {
           const reversals = reverseReactiveHint(meta.cstr, meta.cstr, ap.reactiveHint);
-          reversals.forEach(({ entity, path, fields, readOnlyFields }) => {
+          reversals.forEach(({ kind, entity, path, fields }) => {
             getMetadata(entity).config.__data.reactiveDerivedValues.push({
               kind: ap instanceof ReactiveQueryFieldImpl ? "query" : "populate",
               cstr: meta.cstr,
+              isReadOnly: kind === "read-only",
               name: field.fieldName,
               path,
               fields,
-              readOnlyFields,
             });
           });
         }

@@ -1,3 +1,10 @@
+## [1.234.5](https://github.com/joist-orm/joist-orm/compare/v1.234.4...v1.234.5) (2025-04-11)
+
+
+### Bug Fixes
+
+* Check setFieldLogging arguments. ([#1433](https://github.com/joist-orm/joist-orm/issues/1433)) ([a7469b6](https://github.com/joist-orm/joist-orm/commit/a7469b6cf8fcc32230ad580de06bafe19d31474d))
+
 ## [1.234.4](https://github.com/joist-orm/joist-orm/compare/v1.234.3...v1.234.4) (2025-04-10)
 
 

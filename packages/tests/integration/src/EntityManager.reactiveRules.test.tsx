@@ -228,6 +228,14 @@ describe("EntityManager.reactiveRules", () => {
     await em.flush();
   });
 
+  it.withCtx("is not triggered by readonly o2m hints", async ({ em }) => {
+    // Given we trigger an Image -> publishers -> critics (only exists on LargePublishers)
+    newSmallPublisher(em, { images: [{}] });
+    // Then it does not blow up (and we can't assert against the Critic rule having executed
+    // b/c the scenario is that SmallPublishers don't have the `critics` relation)
+    await em.flush();
+  });
+
   it.withCtx("creates the right reactive rules", async () => {
     const fn = expect.any(Function);
     expect(getReactiveRules(Author)).toMatchObject([
@@ -249,10 +257,14 @@ describe("EntityManager.reactiveRules", () => {
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["firstName"], path: ["books"], fn },
       // Book's "too many colors" rule, only depends on favoriteColors, not firstName:ro
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["favoriteColors"], path: ["books"], fn },
+      // Book's "numberOfBooks2" noop
+      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: [], path: ["books"], fn },
       // Publisher's "cannot have 13 authors" rule
       { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher", "deletedAt"], path: ["publisher"], fn },
       // Publisher's numberOfBooks2 "cannot have 13 books" rule
       { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher", "deletedAt"], path: ["publisher"], fn },
+      // what is this one?
+      { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: [], path: ["publisher"], fn },
       // Publisher's numberOfBooks "cannot have 15 books" rule
       {
         cstr: "Publisher",
@@ -404,6 +416,7 @@ describe("EntityManager.reactiveRules", () => {
       { kind: "populate", cstr: "Book", name: "search", fields: ["author", "title"], path: [] },
       { kind: "populate", cstr: "BookReview", name: "isPublic", fields: ["author"], path: ["reviews"] },
       { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["tags"], path: ["comments"] },
+      { kind: "populate", cstr: "Comment", name: "parentTags", fields: [], path: ["comments"] },
       {
         kind: "query",
         cstr: "LargePublisher",
@@ -486,7 +499,6 @@ describe("EntityManager.reactiveRules", () => {
       },
       { kind: "populate", cstr: "Author", name: "favoriteBook", fields: ["rating"], path: ["book", "author"] },
       { kind: "populate", cstr: "BookReview", name: "isPublic", fields: [], path: [] },
-      { kind: "populate", cstr: "BookReview", name: "isPublic", fields: ["book"], path: [], isReadOnly: true },
       { kind: "populate", cstr: "BookReview", name: "isTest", fields: [], path: [] },
       { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["isPublic"], path: ["book", "comments"] },
       { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["tags"], path: ["comment"] },
@@ -790,9 +802,11 @@ function getReactiveRules(cstr: MaybeAbstractEntityConstructor<any>): any[] {
 }
 
 function getReactiveFields(cstr: MaybeAbstractEntityConstructor<any>): any[] {
-  return getMetadata(cstr).config.__data.reactiveDerivedValues.map((rule) => {
-    const { cstr, ...rest } = rule;
-    if (!rest.isReadOnly) delete (rest as any)["isReadOnly"];
-    return { cstr: cstr.name, ...rest };
-  });
+  return getMetadata(cstr)
+    .config.__data.reactiveDerivedValues.filter((rule) => !rule.isReadOnly)
+    .map((rule) => {
+      const { cstr, ...rest } = rule;
+      delete (rest as any)["isReadOnly"];
+      return { cstr: cstr.name, ...rest };
+    });
 }

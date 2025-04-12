@@ -65,8 +65,9 @@
     "Publisher": {
       "abstract": true,
       "fields": {
+        "bookAdvanceTitlesSnapshot": { "derived": "async" },
         "favoriteAuthorName": { "derived": "async" },
-        "namesSnapshot": { "derived": "async" },
+        "numberOfBookAdvancesSnapshot": { "derived": "async" },
         "numberOfBookReviews": { "derived": "async" },
         "titlesOfFavoriteBooks": { "derived": "async" }
       },

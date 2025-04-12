@@ -32,6 +32,8 @@ export abstract class Publisher extends PublisherCodegen {
     numberOfBookReviewCalcs: 0,
     wasNewInBeforeCommit: undefined as boolean | undefined,
     changedInBeforeCommit: [] as string[],
+    bookAdvanceTitlesSnapshotCalcs: 0,
+    numberOfBookAdvancesSnapshotCalcs: 0,
   };
 
   static afterMetadataHasSubTypes = false;
@@ -87,11 +89,22 @@ export abstract class Publisher extends PublisherCodegen {
   );
 
   /** Example of a RF that uses a lot of read-only hints, it should recalc only when p.name itself changes. */
-  readonly namesSnapshot: ReactiveField<Publisher, string> = hasReactiveField(
-    "namesSnapshot",
+  readonly bookAdvanceTitlesSnapshot: ReactiveField<Publisher, string> = hasReactiveField(
+    "bookAdvanceTitlesSnapshot",
     { name: {}, bookAdvances_ro: "status_ro" },
     (p) => {
+      p.transientFields.bookAdvanceTitlesSnapshotCalcs++;
       return [p.name, ...p.bookAdvances.get.map((ba) => ba.status)].join(",");
+    },
+  );
+
+  /** Example of a RF that uses solely a o2m read-only hints, it should recalc only when p.name itself changes. */
+  readonly numberOfBookAdvancesSnapshot: ReactiveField<Publisher, string> = hasReactiveField(
+    "numberOfBookAdvancesSnapshot",
+    { bookAdvances_ro: {} },
+    (p) => {
+      p.transientFields.numberOfBookAdvancesSnapshotCalcs++;
+      return String(p.bookAdvances.get.length);
     },
   );
 
@@ -196,6 +209,16 @@ config.addRule(["name", "numberOfBookReviews"], (p) => {
 config.addRule({ favoriteAuthor_ro: "firstName:ro", name: {} }, (p) => {
   if (p.favoriteAuthor.get?.firstName === p.name) {
     return "Favorite Author firstName cannot be the publisher's name";
+  }
+});
+
+// Example of a read-only rule only being fired on create
+// ...we have to go all the way to `randomComment` to find an entity that will not
+// already kick off a bunch of reactivity & require loading the publisher
+config.addRule({ authors_ro: { books_ro: { randomComment_ro: "text_ro" } }, name: {} }, (p) => {
+  const comments = p.authors.get.flatMap((a) => a.books.get.flatMap((b) => b.randomComment.get));
+  if (comments.some((c) => c?.text === p.name)) {
+    return "Publisher name cannot equal the comment text";
   }
 });
 

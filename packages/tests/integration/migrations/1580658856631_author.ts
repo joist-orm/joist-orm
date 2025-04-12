@@ -64,8 +64,10 @@ export function up(b: MigrationBuilder): void {
     deleted_at: { type: "timestamptz", notNull: false },
     // for testing reactivity to ReactiveReferences that are o2os
     titles_of_favorite_books: { type: "text", notNull: false },
-    // for testing read-only ReactiveFields
-    names_snapshot: { type: "text", notNull: false },
+    // for testing read-only ReactiveFields (read-only o2m and read-only field)
+    book_advance_titles_snapshot: { type: "text", notNull: false },
+    // for testing read-only ReactiveFields (read-only o2m only)
+    number_of_book_advances_snapshot: { type: "text", notNull: false },
     // for testing a setDefault on the base class
     base_sync_default: { type: "text", notNull: true },
     base_async_default: { type: "text", notNull: true },

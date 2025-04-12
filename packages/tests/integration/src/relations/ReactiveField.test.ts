@@ -14,14 +14,13 @@ import {
 import { knex, newEntityManager } from "@src/testEm";
 import { noValue } from "joist-orm";
 import {
-  AdvanceStatus,
   Author,
   Book,
-  BookAdvance,
   BookRange,
   BookReview,
   newAuthor,
   newBook,
+  newBookAdvance,
   newBookReview,
   newComment,
   newPublisher,
@@ -300,16 +299,24 @@ describe("ReactiveField", () => {
   });
 
   it("is not loaded by read-only hints", async () => {
-    // Given Publisher.namesSnapshot has a read-only on bookAdvances
+    // Given an existing publisher with title p1
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    // When we create a new BookAdvance
-    em.create(BookAdvance, { status: AdvanceStatus.Pending, book: "b:1", publisher: "p:1" });
+    // When we make a comment associated to the book
+    const b = await em.load(Book, "b:1");
+    const c = newComment(em, { text: "p1", books: [b] });
+    // Then the rule does not run
     await em.flush();
-    // Then we did not load the Publisher into memory
-    expect(em.entities).toMatchEntity(["ba:1"]);
+    // And we did not load the Publisher into memory (i.e. the rule was not invoked)
+    expect(em.entities).toMatchEntity(["b:1", "comment:1", "a:1"]);
+    // But if we create a new publisher, and steal the author
+    const a = await em.load(Author, "a:1");
+    newPublisher(em, { name: "p2", authors: [a] });
+    c.text = "p2";
+    // Then it does fail
+    await expect(em.flush()).rejects.toThrow("Publisher name cannot equal the comment text");
   });
 
   describe("dirty tracking", () => {
@@ -440,6 +447,43 @@ describe("ReactiveField", () => {
     expect(p.titlesOfFavoriteBooks.get).toBe("b2");
     // And, yes, favoriteBook was re-calced as well
     expect(a.favoriteBook.get).toMatchEntity(b2);
+  });
+
+  it("cache invalidates on o2m paths in RFs", async () => {
+    const em = newEntityManager();
+    const p = newPublisher(em);
+    const b1 = newBook(em);
+    newBookAdvance(em, { publisher: p, book: b1 });
+    // Given we'd called (and cached) a RF that depends on an o2m path
+    expect(p.bookAdvanceTitlesSnapshot.get).toBe("LargePublisher 1,PENDING");
+    expect(p.transientFields.bookAdvanceTitlesSnapshotCalcs).toBe(1);
+    // When we add a new BA in the same/initial EM
+    newBookAdvance(em, { publisher: p, book: b1 });
+    // Then it's recalced
+    expect(p.bookAdvanceTitlesSnapshot.get).toBe("LargePublisher 1,PENDING,PENDING");
+    expect(p.transientFields.bookAdvanceTitlesSnapshotCalcs).toBe(2);
+    // But if we don't change anything, it's not recalced
+    expect(p.bookAdvanceTitlesSnapshot.get).toBe("LargePublisher 1,PENDING,PENDING");
+    expect(p.transientFields.bookAdvanceTitlesSnapshotCalcs).toBe(2);
+    // And if we change the name, it's recalced again
+    p.name = "p1";
+    expect(p.bookAdvanceTitlesSnapshot.get).toBe("p1,PENDING,PENDING");
+    expect(p.transientFields.bookAdvanceTitlesSnapshotCalcs).toBe(3);
+  });
+
+  it("cache invalidates on solely o2m paths in RFs", async () => {
+    const em = newEntityManager();
+    const p = newPublisher(em);
+    const b1 = newBook(em);
+    newBookAdvance(em, { publisher: p, book: b1 });
+    // Given we'd called (and cached) a RF that depends on an o2m path
+    expect(p.numberOfBookAdvancesSnapshot.get).toBe("1");
+    expect(p.transientFields.numberOfBookAdvancesSnapshotCalcs).toBe(1);
+    // When we add a new BA in the same/initial EM
+    newBookAdvance(em, { publisher: p, book: b1 });
+    // Then it's recalced
+    expect(p.numberOfBookAdvancesSnapshot.get).toBe("2");
+    expect(p.transientFields.numberOfBookAdvancesSnapshotCalcs).toBe(2);
   });
 
   it("cache invalidates on immutable fields during creation", async () => {

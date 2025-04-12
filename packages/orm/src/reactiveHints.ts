@@ -1,22 +1,22 @@
 import { Entity } from "./Entity";
-import { MaybeAbstractEntityConstructor, getEmInternalApi } from "./EntityManager";
+import { getEmInternalApi, MaybeAbstractEntityConstructor } from "./EntityManager";
 import {
   EntityMetadata,
+  getBaseAndSelfMetas,
+  getMetadata,
+  getSubMetas,
   ManyToManyField,
   ManyToOneField,
   OneToManyField,
   OneToOneField,
   PolymorphicFieldComponent,
-  getBaseAndSelfMetas,
-  getMetadata,
-  getSubMetas,
 } from "./EntityMetadata";
 import { Changes, FieldStatus, ManyToOneFieldStatus } from "./changes";
 import { getMetadataForType } from "./configure";
 import { isChangeableField } from "./fields";
 import { getProperties } from "./getProperties";
-import { LoadHint, Loadable, Loaded } from "./loadHints";
-import { NormalizeHint, SuffixSeperator, normalizeHint, suffixRe } from "./normalizeHints";
+import { Loadable, Loaded, LoadHint } from "./loadHints";
+import { NormalizeHint, normalizeHint, suffixRe, SuffixSeperator } from "./normalizeHints";
 import {
   AsyncProperty,
   AsyncPropertyImpl,
@@ -152,31 +152,33 @@ export type MaybeTransientFields<T> = "transientFields" extends keyof T
  * @param rootType The original type that contained the reactive rule/field, used for helpful error messages
  * @param entityType The current entity of the step we're walking
  * @param hint The current hint we're walking
- * @param reactForOtherSide the name of our FK column, if the previous collection needs to react to our FK changing,
- *   or true to react simplify to new/deleted entities
+ * @param reactForOtherSide the name of our FK column, if the previous collection needs to react to our FK changing
  * @param isFirst
  */
 export function reverseReactiveHint<T extends Entity>(
   rootType: MaybeAbstractEntityConstructor<T>,
   entityType: MaybeAbstractEntityConstructor<T>,
   hint: ReactiveHint<T>,
-  reactForOtherSide?: string | boolean,
+  reactForOtherSide?: string,
+  reactForOtherSideIsReadOnly?: "field-read-only" | "hint-read-only" | false,
   isFirst: boolean = true,
 ): ReactiveTarget[] {
   const meta = getMetadata(entityType);
   // This is the list of fields for this `entityType` that we will react to their changing values
   const fields: string[] = [];
   const readOnlyFields: string[] = [];
+  const maybeRecursive: ReactiveTarget[] = [];
+
   // If the hint before us was a collection, i.e. { books: ["title"] }, besides just reacting
   // to our `title` changing, `reactForOtherSide` tells us to react to our `author` field as well.
-  if (typeof reactForOtherSide === "string") {
-    fields.push(reactForOtherSide);
+  if (reactForOtherSide) {
+    const _fields = reactForOtherSideIsReadOnly ? readOnlyFields : fields;
+    _fields.push(reactForOtherSide);
     if (meta.timestampFields?.deletedAt) {
-      fields.push(meta.timestampFields.deletedAt);
+      _fields.push(meta.timestampFields.deletedAt);
     }
   }
 
-  const maybeRecursive: ReactiveTarget[] = [];
   // Look through the hint for our own fields, i.e. `["firstName", "lastName]`, and nested hints like `{ books: "title" }`.
   const subHintTargets: ReactiveTarget[] = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
     return reverseSubHint(
@@ -196,7 +198,7 @@ export function reverseReactiveHint<T extends Entity>(
   const myTargets: ReactiveTarget[] = [];
   // If any of our primitives (or m2o fields) change, establish a reactive path from "here" (entityType)
   // that is initially empty (path: []) but will have paths layered on by upstream callers
-  if (fields.length > 0 || isFirst || reactForOtherSide === true) {
+  if (fields.length > 0 || isFirst || reactForOtherSideIsReadOnly === "field-read-only") {
     myTargets.push({ kind: "update", entity: entityType, fields, path: [] });
   }
   // Normally read-only fields don't trigger true async reactivity, but IsLoadedCache
@@ -231,20 +233,21 @@ function reverseSubHint(
         const otherMeta = field.otherMetadata();
         // If this is a ReactiveReference, it won't have an "other" side, which is only fine for totally read-only hints
         const otherField = otherMeta.allFields[field.otherFieldName];
-        const nextHop = reverseReactiveHint(rootType, otherMeta.cstr, subHint, undefined, false);
         if (!otherField && !isReadOnly) {
           throw new Error(
             `Invalid hint in ${rootType.name}.ts, we don't currently support reacting through ReactiveReferences, ${JSON.stringify(hint)}`,
           );
         }
-        return nextHop.map(appendPath(maybeAddTypeFilterSuffix(meta, field)));
+        return reverseReactiveHint(rootType, otherMeta.cstr, subHint, undefined, false, false).map(
+          appendPath(maybeAddTypeFilterSuffix(meta, field)),
+        );
       }
       case "poly": {
         _fields.push(field.fieldName);
         // A poly is basically multiple m2os glued together, so copy/paste the `case m2o` code
         // above but do it for each component FK, and glue them together.
         return field.components.flatMap((comp) => {
-          return reverseReactiveHint(rootType, comp.otherMetadata().cstr, subHint, undefined, false).map(
+          return reverseReactiveHint(rootType, comp.otherMetadata().cstr, subHint, undefined, false, false).map(
             appendPath(maybeAddTypeFilterSuffix(meta, comp)),
           );
         });
@@ -263,6 +266,7 @@ function reverseSubHint(
           // recalc all of its children will cause over-reactivity
           undefined,
           false,
+          false,
         ).map(appendPath(otherFieldName));
       }
       case "o2m":
@@ -274,11 +278,14 @@ function reverseSubHint(
           rootType,
           field.otherMetadata().cstr,
           subHint,
-          // For o2m/o2o, isReadOnly will only be true if the hint is using a `:ro` / `_ro` suffix,
-          // in which case we really do want to be read-only. But if isOtherReadOnly is true, then we
-          // don't need to "react to the field changing" (which can't happen for immutable fields), but
-          // we do need to react to children being created/deleted.
-          isReadOnly ? undefined : isOtherReadOnly ? true : field.otherFieldName,
+          // IsLoadedCache invalidation always needs to know the otherField name, so we must
+          // end up with either a kind=update or kind=read-only target with `otherFieldName` in it.
+          field.otherFieldName,
+          // We can have three outcomes:
+          // - kind=update fields=[otherFieldName] (normal behavior)
+          // - kind=update fields=[] + kind=read-only fields=[otherFieldName] (isOtherReadOnly)
+          // - kind=read-only fields=[otherFieldName] (hint isReadOnly)
+          isReadOnly ? "hint-read-only" : isOtherReadOnly ? "field-read-only" : false,
           false,
         ).map(appendPath(otherFieldName));
       }

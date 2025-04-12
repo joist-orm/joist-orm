@@ -232,7 +232,7 @@ function reverseSubHint(
         // If this is a ReactiveReference, it won't have an "other" side, which is only fine for totally read-only hints
         const otherField = otherMeta.allFields[field.otherFieldName];
         const nextHop = reverseReactiveHint(rootType, otherMeta.cstr, subHint, undefined, false);
-        if (!otherField && nextHop.some((rf) => rf.fields.length > 0)) {
+        if (!otherField && !isReadOnly) {
           throw new Error(
             `Invalid hint in ${rootType.name}.ts, we don't currently support reacting through ReactiveReferences, ${JSON.stringify(hint)}`,
           );

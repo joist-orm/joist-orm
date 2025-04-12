@@ -3,13 +3,25 @@ import { EntityMetadata, getBaseAndSelfMetas, getBaseSelfAndSubMetas } from "./E
 
 // We calculate these all the time, so cache them for good measure.
 const reactiveFieldCache: WeakMap<EntityMetadata, ReactiveField[]> = new WeakMap();
+const reactiveFieldWithReadOnlyCache: WeakMap<EntityMetadata, ReactiveField[]> = new WeakMap();
 const reactiveRuleCache: WeakMap<EntityMetadata, ReactiveRule[]> = new WeakMap();
 
 export function getReactiveFields(meta: EntityMetadata): ReactiveField[] {
   let fields = reactiveFieldCache.get(meta);
   if (fields === undefined) {
-    fields = getBaseAndSelfMetas(meta).flatMap((m) => m.config.__data.reactiveDerivedValues);
+    fields = getBaseAndSelfMetas(meta)
+      .flatMap((m) => m.config.__data.reactiveDerivedValues)
+      .filter((r) => !r.isReadOnly);
     reactiveFieldCache.set(meta, fields);
+  }
+  return fields;
+}
+
+export function getReactiveFieldsIncludingReadOnly(meta: EntityMetadata): ReactiveField[] {
+  let fields = reactiveFieldWithReadOnlyCache.get(meta);
+  if (fields === undefined) {
+    fields = getBaseAndSelfMetas(meta).flatMap((m) => m.config.__data.reactiveDerivedValues);
+    reactiveFieldWithReadOnlyCache.set(meta, fields);
   }
   return fields;
 }

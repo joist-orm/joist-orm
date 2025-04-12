@@ -100,10 +100,6 @@ export class ReactionsManager {
   queueAllDownstreamFields(entity: Entity, reason: "created" | "deleted"): void {
     const rfs = getReactiveFields(getMetadata(entity));
     for (const rf of rfs) {
-      if (rf.isReadOnly) {
-        // console.log("SKIPPING", rf.name, "on", entity.constructor.name, reason);
-        continue;
-      }
       this.getPending(rf).todo.add(entity);
       this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
       this.needsRecalc[rf.kind] = true;

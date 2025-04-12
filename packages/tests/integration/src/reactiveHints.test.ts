@@ -97,6 +97,28 @@ describe("reactiveHints", () => {
     ]);
   });
 
+  it("can reactive directly to a ReactiveReference", () => {
+    // We're allowed to react directly to favoriteAuthor changing...
+    expect(reverse(Publisher, Publisher, { favoriteAuthor: {} })).toEqual([
+      { entity: "Publisher", fields: ["favoriteAuthor"], path: [] },
+    ]);
+    // And read-only fields within it
+    expect(reverse(Publisher, Publisher, { favoriteAuthor: "firstName_ro" })).toEqual([
+      { entity: "Publisher", fields: ["favoriteAuthor"], path: [] },
+      { entity: "Author", kind: "read-only", fields: ["firstName"], path: ["favoriteAuthorPublishers"] },
+    ]);
+    // As well as both fields being read-only
+    expect(reverse(Publisher, Publisher, { favoriteAuthor_ro: "firstName:ro" })).toEqual([
+      { entity: "Publisher", fields: [], path: [] },
+      { entity: "Publisher", kind: "read-only", fields: ["favoriteAuthor"], path: [] },
+      { entity: "Author", kind: "read-only", fields: ["firstName"], path: ["favoriteAuthorPublishers"] },
+    ]);
+    // But we cannot have non-read-only submit
+    expect(() => reverse(Publisher, Publisher, { favoriteAuthor_ro: "firstName" })).toThrow(
+      "Invalid hint in Publisher.ts",
+    );
+  });
+
   it("can do ReactiveReferences through a o2o", () => {
     expect(reverse(Publisher, Publisher, { authors: { favoriteBook: "title" } })).toEqual([
       { entity: "Publisher", fields: [], path: [] },

@@ -231,9 +231,11 @@ function reverseSubHint(
         // If this is a ReactiveReference, maybe we do something different?
         _fields.push(field.fieldName);
         const otherMeta = field.otherMetadata();
-        // If this is a ReactiveReference, it won't have an "other" side, which is only fine for totally read-only hints
+        // If this is a ReactiveReference, it won't have an "other" side, which is fine if:
+        // - we're only reacting to the RR value itself (and have no sub-hints), or
+        // - all of our sub-hints are read-only
         const otherField = otherMeta.allFields[field.otherFieldName];
-        if (!otherField && !isReadOnly) {
+        if (!otherField && !isAllReadOnly(subHint)) {
           throw new Error(
             `Invalid hint in ${rootType.name}.ts, we don't currently support reacting through ReactiveReferences, ${JSON.stringify(hint)}`,
           );
@@ -589,4 +591,12 @@ function appendPath(reverseField: string): (rt: ReactiveTarget) => ReactiveTarge
     rt.path = [...rt.path, reverseField];
     return rt;
   };
+}
+
+function isAllReadOnly(hint: any): boolean {
+  for (const [key, subHint] of Object.entries(normalizeHint(hint))) {
+    const okay = (key.endsWith("_ro") || key.endsWith(":ro")) && isAllReadOnly(subHint);
+    if (!okay) return false;
+  }
+  return true;
 }

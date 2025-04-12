@@ -211,21 +211,23 @@ describe("reactiveHints", () => {
   it("can do hash of read-only hints", () => {
     // TODO Enforce that `name` must be `name:ro`
     expect(reverse(Author, Author, { publisher_ro: "name:ro" })).toEqual([
-      { entity: "Author", fields: [], readOnlyFields: ["publisher"], path: [] },
-      { entity: "Publisher", fields: [], readOnlyFields: ["name"], path: ["authors"] },
+      { entity: "Author", fields: [], path: [] },
+      { entity: "Author", kind: "read-only", fields: ["publisher"], path: [] },
+      { entity: "Publisher", kind: "read-only", fields: ["name"], path: ["authors"] },
     ]);
     expect(reverse(Author, Author, { publisher: "name:ro" })).toEqual([
       { entity: "Author", fields: ["publisher"], path: [] },
-      { entity: "Publisher", fields: [], readOnlyFields: ["name"], path: ["authors"] },
+      { entity: "Publisher", kind: "read-only", fields: ["name"], path: ["authors"] },
     ]);
     expect(reverse(Author, Author, { publisher_ro: { group_ro: "name:ro" } })).toEqual([
-      { entity: "Author", fields: [], readOnlyFields: ["publisher"], path: [] },
-      { entity: "Publisher", fields: [], readOnlyFields: ["group"], path: ["authors"] },
-      { entity: "PublisherGroup", fields: [], readOnlyFields: ["name"], path: ["publishers", "authors"] },
+      { entity: "Author", fields: [], path: [] },
+      { entity: "Author", kind: "read-only", fields: ["publisher"], path: [] },
+      { entity: "Publisher", kind: "read-only", fields: ["group"], path: ["authors"] },
+      { entity: "PublisherGroup", kind: "read-only", fields: ["name"], path: ["publishers", "authors"] },
     ]);
     expect(reverse(Author, Author, { books_ro: { reviews_ro: "rating:ro" } })).toEqual([
       { entity: "Author", fields: [], path: [] },
-      { entity: "BookReview", fields: [], readOnlyFields: ["rating"], path: ["book", "author"] },
+      { entity: "BookReview", kind: "read-only", fields: ["rating"], path: ["book", "author"] },
     ]);
     // expect(reverse(BookReview, BookReview, { book: "author:ro" })).toEqual([
     //   { entity: "BookReview", fields: [], readOnlyFields: ["book"], path: [] },

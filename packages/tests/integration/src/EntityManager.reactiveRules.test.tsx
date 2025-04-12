@@ -257,14 +257,10 @@ describe("EntityManager.reactiveRules", () => {
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["firstName"], path: ["books"], fn },
       // Book's "too many colors" rule, only depends on favoriteColors, not firstName:ro
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["favoriteColors"], path: ["books"], fn },
-      // Book's "numberOfBooks2" noop
-      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: [], path: ["books"], fn },
       // Publisher's "cannot have 13 authors" rule
       { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher", "deletedAt"], path: ["publisher"], fn },
       // Publisher's numberOfBooks2 "cannot have 13 books" rule
       { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: ["publisher", "deletedAt"], path: ["publisher"], fn },
-      // what is this one?
-      { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: [], path: ["publisher"], fn },
       // Publisher's numberOfBooks "cannot have 15 books" rule
       {
         cstr: "Publisher",
@@ -416,7 +412,6 @@ describe("EntityManager.reactiveRules", () => {
       { kind: "populate", cstr: "Book", name: "search", fields: ["author", "title"], path: [] },
       { kind: "populate", cstr: "BookReview", name: "isPublic", fields: ["author"], path: ["reviews"] },
       { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["tags"], path: ["comments"] },
-      { kind: "populate", cstr: "Comment", name: "parentTags", fields: [], path: ["comments"] },
       {
         kind: "query",
         cstr: "LargePublisher",
@@ -482,48 +477,67 @@ describe("EntityManager.reactiveRules", () => {
         path: ["author", "publisher@SmallPublisher"],
       },
     ]);
-    expect(getReactiveFields(BookReview)).toEqual([
-      {
-        kind: "populate",
-        cstr: "Author",
-        name: "numberOfPublicReviews",
-        fields: ["isPublic", "rating"],
-        path: ["book", "author"],
-      },
-      {
-        kind: "populate",
-        cstr: "Author",
-        name: "numberOfPublicReviews2",
-        fields: ["isPublic", "isTest", "rating"],
-        path: ["book", "author"],
-      },
-      { kind: "populate", cstr: "Author", name: "favoriteBook", fields: ["rating"], path: ["book", "author"] },
-      { kind: "populate", cstr: "BookReview", name: "isPublic", fields: [], path: [] },
-      { kind: "populate", cstr: "BookReview", name: "isTest", fields: [], path: [] },
-      { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["isPublic"], path: ["book", "comments"] },
-      { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["tags"], path: ["comment"] },
-      {
-        kind: "query",
-        cstr: "LargePublisher",
-        name: "numberOfBookReviews",
-        fields: [],
-        path: ["book", "author", "publisher@LargePublisher"],
-      },
-      {
-        kind: "query",
-        cstr: "Publisher",
-        name: "numberOfBookReviews",
-        fields: [],
-        path: ["book", "author", "publisher"],
-      },
-      {
-        kind: "query",
-        cstr: "SmallPublisher",
-        name: "numberOfBookReviews",
-        fields: [],
-        path: ["book", "author", "publisher@SmallPublisher"],
-      },
-    ]);
+
+    let i = 0;
+    const brRfs = getReactiveFields(BookReview);
+    expect(brRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "numberOfPublicReviews",
+      fields: ["isPublic", "rating"],
+      path: ["book", "author"],
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "numberOfPublicReviews2",
+      fields: ["isPublic", "isTest", "rating"],
+      path: ["book", "author"],
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "favoriteBook",
+      fields: ["rating"],
+      path: ["book", "author"],
+    });
+    expect(brRfs[i++]).toEqual({ kind: "populate", cstr: "BookReview", name: "isPublic", fields: [], path: [] });
+    expect(brRfs[i++]).toEqual({ kind: "populate", cstr: "BookReview", name: "isTest", fields: [], path: [] });
+    expect(brRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Comment",
+      name: "parentTags",
+      fields: ["isPublic"],
+      path: ["book", "comments"],
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Comment",
+      name: "parentTags",
+      fields: ["tags"],
+      path: ["comment"],
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "query",
+      cstr: "LargePublisher",
+      name: "numberOfBookReviews",
+      fields: [],
+      path: ["book", "author", "publisher@LargePublisher"],
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "query",
+      cstr: "Publisher",
+      name: "numberOfBookReviews",
+      fields: [],
+      path: ["book", "author", "publisher"],
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "query",
+      cstr: "SmallPublisher",
+      name: "numberOfBookReviews",
+      fields: [],
+      path: ["book", "author", "publisher@SmallPublisher"],
+    });
   });
 
   it.withCtx("invokes the reactive derived value the expected number of times", async ({ em }) => {

@@ -316,12 +316,12 @@ function reverseSubHint(
           )}, please use hasReactiveAsyncProperty instead`,
         );
       }
-      return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false);
+      return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false, false);
     } else if (p instanceof ReactiveGetterImpl) {
       // If the field is marked as readonly, then we can assume that applies to its entire hint as well and can
       // simply omit it.
       if (isReadOnly) return [];
-      return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false);
+      return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false, false);
     } else if (p instanceof RecursiveParentsCollectionImpl) {
       const { otherFieldName, m2oFieldName } = p;
       // I.e. this is `Author.mentorsRecursive`

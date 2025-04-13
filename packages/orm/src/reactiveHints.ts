@@ -1,22 +1,22 @@
 import { Entity } from "./Entity";
-import { MaybeAbstractEntityConstructor, getEmInternalApi } from "./EntityManager";
+import { getEmInternalApi, MaybeAbstractEntityConstructor } from "./EntityManager";
 import {
   EntityMetadata,
+  getBaseAndSelfMetas,
+  getMetadata,
+  getSubMetas,
   ManyToManyField,
   ManyToOneField,
   OneToManyField,
   OneToOneField,
   PolymorphicFieldComponent,
-  getBaseAndSelfMetas,
-  getMetadata,
-  getSubMetas,
 } from "./EntityMetadata";
 import { Changes, FieldStatus, ManyToOneFieldStatus } from "./changes";
 import { getMetadataForType } from "./configure";
 import { isChangeableField } from "./fields";
 import { getProperties } from "./getProperties";
-import { LoadHint, Loadable, Loaded } from "./loadHints";
-import { NormalizeHint, SuffixSeperator, normalizeHint, suffixRe } from "./normalizeHints";
+import { Loadable, Loaded, LoadHint } from "./loadHints";
+import { NormalizeHint, normalizeHint, suffixRe, SuffixSeperator } from "./normalizeHints";
 import {
   AsyncProperty,
   AsyncPropertyImpl,
@@ -152,160 +152,199 @@ export type MaybeTransientFields<T> = "transientFields" extends keyof T
  * @param rootType The original type that contained the reactive rule/field, used for helpful error messages
  * @param entityType The current entity of the step we're walking
  * @param hint The current hint we're walking
- * @param reactForOtherSide the name of our FK column, if the previous collection needs to react to our FK changing,
- *   or true to react simplify to new/deleted entities
+ * @param reactForOtherSide the name of our FK column, if the previous collection needs to react to our FK changing
  * @param isFirst
  */
 export function reverseReactiveHint<T extends Entity>(
   rootType: MaybeAbstractEntityConstructor<T>,
   entityType: MaybeAbstractEntityConstructor<T>,
   hint: ReactiveHint<T>,
-  reactForOtherSide?: string | boolean,
+  reactForOtherSide?: string,
+  reactForOtherSideIsReadOnly?: "field-read-only" | "hint-read-only" | false,
   isFirst: boolean = true,
 ): ReactiveTarget[] {
   const meta = getMetadata(entityType);
   // This is the list of fields for this `entityType` that we will react to their changing values
   const fields: string[] = [];
   const readOnlyFields: string[] = [];
+  const maybeRecursive: ReactiveTarget[] = [];
+
   // If the hint before us was a collection, i.e. { books: ["title"] }, besides just reacting
   // to our `title` changing, `reactForOtherSide` tells us to react to our `author` field as well.
-  if (typeof reactForOtherSide === "string") {
-    fields.push(reactForOtherSide);
+  if (reactForOtherSide) {
+    const _fields = reactForOtherSideIsReadOnly ? readOnlyFields : fields;
+    _fields.push(reactForOtherSide);
     if (meta.timestampFields?.deletedAt) {
-      fields.push(meta.timestampFields.deletedAt);
+      _fields.push(meta.timestampFields.deletedAt);
     }
   }
-  const maybeRecursive: ReactiveTarget[] = [];
-  // Look through the hint for our own fields, i.e. `["title"]`, and nested hints like `{ author: "firstName" }`.
-  const subHints: ReactiveTarget[] = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
-    const key = keyMaybeSuffix.replace(suffixRe, "");
-    const field = meta.allFields[key];
-    const isReadOnly = !!keyMaybeSuffix.match(suffixRe) || (field && field.immutable);
-    const _fields = isReadOnly ? readOnlyFields : fields;
-    if (field) {
-      switch (field.kind) {
-        case "m2o": {
-          // If this is a ReactiveReference, maybe we do something different?
-          _fields.push(field.fieldName);
-          const otherMeta = field.otherMetadata();
-          // If this is a ReactiveReference, it won't have an "other" side, which is only fine for totally read-only hints
-          const otherField = otherMeta.allFields[field.otherFieldName];
-          const nextHop = reverseReactiveHint(rootType, otherMeta.cstr, subHint, undefined, false);
-          if (!otherField && nextHop.some((rf) => rf.fields.length > 0)) {
-            throw new Error(
-              `Invalid hint in ${rootType.name}.ts, we don't currently support reacting through ReactiveReferences, ${JSON.stringify(hint)}`,
-            );
-          }
-          return nextHop.map(appendPath(maybeAddTypeFilterSuffix(meta, field)));
-        }
-        case "poly": {
-          _fields.push(field.fieldName);
-          // A poly is basically multiple m2os glued together, so copy/paste the `case m2o` code
-          // above but do it for each component FK, and glue them together.
-          return field.components.flatMap((comp) => {
-            return reverseReactiveHint(rootType, comp.otherMetadata().cstr, subHint, undefined, false).map(
-              appendPath(maybeAddTypeFilterSuffix(meta, comp)),
-            );
-          });
-        }
-        case "m2m": {
-          // While o2m and o2o can watch for just FK changes by passing `reactForOtherSide` (the FK lives in the other
-          // table), for m2m reactivity we push the collection name into the reactive hint, because it's effectively
-          // "the other/reverse side", and JoinRows will trigger it explicitly instead of `setField` for non-m2m keys.
-          fields.push(field.fieldName);
-          const otherFieldName = maybeAddTypeFilterSuffix(meta, field);
-          return reverseReactiveHint(
-            rootType,
-            field.otherMetadata().cstr,
-            subHint,
-            // For m2m, we can always pass undefined here, as otherwise having the opposite m2m collection
-            // recalc all of its children will cause over-reactivity
-            undefined,
-            false,
-          ).map(appendPath(otherFieldName));
-        }
-        case "o2m":
-        case "o2o": {
-          const isOtherReadOnly = field.otherMetadata().allFields[field.otherFieldName].immutable;
-          const otherFieldName = maybeAddTypeFilterSuffix(meta, field);
-          // This is not a field, but we want our reverse side to be reactive, so pass reactForOtherSide
-          return reverseReactiveHint(
-            rootType,
-            field.otherMetadata().cstr,
-            subHint,
-            // For o2m/o2o, isReadOnly will only be true if the hint is using a `:ro` / `_ro` suffix,
-            // in which case we really do want to be read-only. But if isOtherReadOnly is true, then we
-            // don't need to "react to the field changing" (which can't happen for immutable fields), but
-            // we do need to react to children being created/deleted.
-            isReadOnly ? undefined : isOtherReadOnly ? true : field.otherFieldName,
-            false,
-          ).map(appendPath(otherFieldName));
-        }
-        case "primaryKey":
-        case "primitive":
-        case "enum":
-          _fields.push(key);
-          return [];
-        default:
-          throw new Error(`Invalid hint in ${rootType.name}.ts hint ${JSON.stringify(hint)}`);
-      }
-    } else {
-      // We only need to look for ReactiveAsyncProperties here, because ReactiveFields & ReactiveReferences
-      // have underlying primitive fields that, when/if they change, will be handled in the ^ code.
-      //
-      // I.e. we specifically don't need to handle RFs & RRs ^, because the EntityManager.flush loop will
-      // notice their primitive values changing, and kicking off any downstream reactive fields as necessary.
-      const p = getProperties(meta)[key];
-      if (p instanceof AsyncPropertyImpl) {
-        // If the field is marked as readonly (i.e. using the `_ro` suffix), then we can assume that applies to its
-        // entire hint as well and can simply omit it. This also allows us to use non-reactive async props as long as
-        // they are readonly.
-        if (isReadOnly) return [];
-        if (!p.reactiveHint) {
+
+  // Look through the hint for our own fields, i.e. `["firstName", "lastName]`, and nested hints like `{ books: "title" }`.
+  const subHintTargets: ReactiveTarget[] = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
+    return reverseSubHint(
+      rootType,
+      entityType,
+      hint,
+      meta,
+      // Pass fields & readOnlyFields, so `reverseSubHint` can append any of our primitive fields it finds
+      fields,
+      readOnlyFields,
+      maybeRecursive,
+      keyMaybeSuffix,
+      subHint,
+    );
+  });
+
+  const myTargets: ReactiveTarget[] = [];
+  // If any of our primitives (or m2o fields) change, establish a reactive path from "here" (entityType)
+  // that is initially empty (path: []) but will have paths layered on by upstream callers
+  if (fields.length > 0 || isFirst || reactForOtherSideIsReadOnly === "field-read-only") {
+    myTargets.push({ kind: "update", entity: entityType, fields, path: [] });
+  }
+  // Normally read-only fields don't trigger true async reactivity, but IsLoadedCache
+  // needs them for same-EM cache invalidation.
+  if (readOnlyFields.length > 0) {
+    myTargets.push({ kind: "read-only", entity: entityType, fields: readOnlyFields, path: [] });
+  }
+
+  return [...myTargets, ...maybeRecursive, ...subHintTargets];
+}
+
+function reverseSubHint(
+  rootType: MaybeAbstractEntityConstructor<any>,
+  entityType: MaybeAbstractEntityConstructor<any>,
+  hint: any,
+  meta: EntityMetadata,
+  fields: string[],
+  readOnlyFields: string[],
+  maybeRecursive: ReactiveTarget[],
+  keyMaybeSuffix: string,
+  subHint: any,
+): ReactiveTarget[] {
+  const key = keyMaybeSuffix.replace(suffixRe, "");
+  const field = meta.allFields[key];
+  const isReadOnly = !!keyMaybeSuffix.match(suffixRe) || (field && field.immutable);
+  const _fields = isReadOnly ? readOnlyFields : fields;
+  if (field) {
+    switch (field.kind) {
+      case "m2o": {
+        // If this is a ReactiveReference, maybe we do something different?
+        _fields.push(field.fieldName);
+        const otherMeta = field.otherMetadata();
+        // If this is a ReactiveReference, it won't have an "other" side, which is fine if:
+        // - we're only reacting to the RR value itself (and have no sub-hints), or
+        // - all of our sub-hints are read-only
+        const otherField = otherMeta.allFields[field.otherFieldName];
+        if (!otherField && !isAllReadOnly(subHint)) {
           throw new Error(
-            `AsyncProperty ${key} cannot be used in reactive hints in ${rootType.name}.ts hint ${JSON.stringify(
-              hint,
-            )}, please use hasReactiveAsyncProperty instead`,
+            `Invalid hint in ${rootType.name}.ts, we don't currently support reacting through ReactiveReferences, ${JSON.stringify(hint)}`,
           );
         }
-        return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false);
-      } else if (p instanceof ReactiveGetterImpl) {
-        // If the field is marked as readonly, then we can assume that applies to its entire hint as well and can
-        // simply omit it.
-        if (isReadOnly) return [];
-        return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false);
-      } else if (p instanceof RecursiveParentsCollectionImpl) {
-        const { otherFieldName, m2oFieldName } = p;
-        // I.e. this is `Author.mentorsRecursive`
-        // When our mentor changes, tell our immediate; but we ourselves are also "a new mentee"
-        // of the mentor, so do `fields.push(m2oFieldName)` to notify our immediate books.
-        //
-        // We could technically do "when our mentor changes, it means his list of mentees has changed,
-        // so go up to him, and then back down to his mentees", but this would load more mentees than
-        // just "us + our children".
-        _fields.push(m2oFieldName);
-        maybeRecursive.push({
-          entity: entityType,
-          fields: isReadOnly ? [] : [m2oFieldName],
-          readOnlyFields: isReadOnly ? [m2oFieldName] : [],
-          path: [otherFieldName],
-        });
-        return reverseReactiveHint(rootType, entityType, subHint, undefined, false).map(appendPath(otherFieldName));
-      } else {
-        throw new Error(`Invalid hint in ${rootType.name}.ts ${JSON.stringify(hint)}`);
+        return reverseReactiveHint(rootType, otherMeta.cstr, subHint, undefined, false, false).map(
+          appendPath(maybeAddTypeFilterSuffix(meta, field)),
+        );
       }
+      case "poly": {
+        _fields.push(field.fieldName);
+        // A poly is basically multiple m2os glued together, so copy/paste the `case m2o` code
+        // above but do it for each component FK, and glue them together.
+        return field.components.flatMap((comp) => {
+          return reverseReactiveHint(rootType, comp.otherMetadata().cstr, subHint, undefined, false, false).map(
+            appendPath(maybeAddTypeFilterSuffix(meta, comp)),
+          );
+        });
+      }
+      case "m2m": {
+        // While o2m and o2o can watch for just FK changes by passing `reactForOtherSide` (the FK lives in the other
+        // table), for m2m reactivity we push the collection name into the reactive hint, because it's effectively
+        // "the other/reverse side", and JoinRows will trigger it explicitly instead of `setField` for non-m2m keys.
+        fields.push(field.fieldName);
+        const otherFieldName = maybeAddTypeFilterSuffix(meta, field);
+        return reverseReactiveHint(
+          rootType,
+          field.otherMetadata().cstr,
+          subHint,
+          // For m2m, we can always pass undefined here, as otherwise having the opposite m2m collection
+          // recalc all of its children will cause over-reactivity
+          undefined,
+          false,
+          false,
+        ).map(appendPath(otherFieldName));
+      }
+      case "o2m":
+      case "o2o": {
+        const isOtherReadOnly = field.otherMetadata().allFields[field.otherFieldName].immutable;
+        const otherFieldName = maybeAddTypeFilterSuffix(meta, field);
+        // This is not a field, but we want our reverse side to be reactive, so pass reactForOtherSide
+        return reverseReactiveHint(
+          rootType,
+          field.otherMetadata().cstr,
+          subHint,
+          // IsLoadedCache invalidation always needs to know the otherField name, so we must
+          // end up with either a kind=update or kind=read-only target with `otherFieldName` in it.
+          field.otherFieldName,
+          // We can have three outcomes:
+          // - kind=update fields=[otherFieldName] (normal behavior)
+          // - kind=update fields=[] + kind=read-only fields=[otherFieldName] (isOtherReadOnly)
+          // - kind=read-only fields=[otherFieldName] (hint isReadOnly)
+          isReadOnly ? "hint-read-only" : isOtherReadOnly ? "field-read-only" : false,
+          false,
+        ).map(appendPath(otherFieldName));
+      }
+      case "primaryKey":
+      case "primitive":
+      case "enum":
+        _fields.push(key);
+        return [];
+      default:
+        throw new Error(`Invalid hint in ${rootType.name}.ts hint ${JSON.stringify(hint)}`);
     }
-  });
-  return [
-    // If any of our primitives (or m2o fields) change, establish a reactive path
-    // from "here" (entityType) that is initially empty (path: []) but will have
-    // paths layered on by the previous callers
-    ...(fields.length > 0 || readOnlyFields.length > 0 || isFirst || reactForOtherSide === true
-      ? [{ entity: entityType, fields, readOnlyFields, path: [] }]
-      : []),
-    ...maybeRecursive,
-    ...subHints,
-  ];
+  } else {
+    // We only need to look for ReactiveAsyncProperties here, because ReactiveFields & ReactiveReferences
+    // have underlying primitive fields that, when/if they change, will be handled in the ^ code.
+    //
+    // I.e. we specifically don't need to handle RFs & RRs ^, because the EntityManager.flush loop will
+    // notice their primitive values changing, and kicking off any downstream reactive fields as necessary.
+    const p = getProperties(meta)[key];
+    if (p instanceof AsyncPropertyImpl) {
+      // If the field is marked as readonly (i.e. using the `_ro` suffix), then we can assume that applies to its
+      // entire hint as well and can simply omit it. This also allows us to use non-reactive async props as long as
+      // they are readonly.
+      if (isReadOnly) return [];
+      if (!p.reactiveHint) {
+        throw new Error(
+          `AsyncProperty ${key} cannot be used in reactive hints in ${rootType.name}.ts hint ${JSON.stringify(
+            hint,
+          )}, please use hasReactiveAsyncProperty instead`,
+        );
+      }
+      return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false, false);
+    } else if (p instanceof ReactiveGetterImpl) {
+      // If the field is marked as readonly, then we can assume that applies to its entire hint as well and can
+      // simply omit it.
+      if (isReadOnly) return [];
+      return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false, false);
+    } else if (p instanceof RecursiveParentsCollectionImpl) {
+      const { otherFieldName, m2oFieldName } = p;
+      // I.e. this is `Author.mentorsRecursive`
+      // When our mentor changes, tell our immediate; but we ourselves are also "a new mentee"
+      // of the mentor, so do `fields.push(m2oFieldName)` to notify our immediate books.
+      //
+      // We could technically do "when our mentor changes, it means his list of mentees has changed,
+      // so go up to him, and then back down to his mentees", but this would load more mentees than
+      // just "us + our children".
+      _fields.push(m2oFieldName);
+      maybeRecursive.push({
+        kind: isReadOnly ? "read-only" : "update",
+        entity: entityType,
+        fields: [m2oFieldName],
+        path: [otherFieldName],
+      });
+      return reverseReactiveHint(rootType, entityType, subHint, undefined, false).map(appendPath(otherFieldName));
+    } else {
+      throw new Error(`Invalid hint in ${rootType.name}.ts ${JSON.stringify(hint)}`);
+    }
+  }
 }
 
 function maybeAddTypeFilterSuffix(
@@ -482,12 +521,11 @@ export function convertToLoadHint<T extends Entity>(
 
 /** An entity that, when `fields` change, should trigger the reactive rule/field pointed to by `path`. */
 export interface ReactiveTarget {
+  kind: "read-only" | "update";
   /** The entity that contains a field our reactive rule/field accesses. */
   entity: MaybeAbstractEntityConstructor<any>;
   /** The field(s) that our reactive rule/field accesses, plus any implicit fields like FKs. */
   fields: string[];
-  /** Any read-only fields, that don't trigger async `ReactionsManager` reactivity, but should trigger `IsLoadedCache` invalidation. */
-  readOnlyFields: string[];
   /** The path from this `entity` back to the source reactive rule/field. */
   path: string[];
 }
@@ -542,9 +580,23 @@ export function getRelationFromMaybePolyKey(entity: Entity, key: string): any {
   }
 }
 
-function appendPath(segment: string): (rt: ReactiveTarget) => ReactiveTarget {
+/**
+ * For an `author -> books -> bookReviews` hint, appends `BookReview.book`, `Book.author`,
+ * i.e. the "other side" relation, to the reversed path on the way "out" from a mutated BookReview
+ * to the target `Author` RF/RR/rule.
+ */
+function appendPath(reverseField: string): (rt: ReactiveTarget) => ReactiveTarget {
   return (rt) => {
-    rt.path = [...rt.path, segment];
+    // We can mutate this array b/c it's only owned by a single/continually-updated `ReactiveTarget`
+    rt.path = [...rt.path, reverseField];
     return rt;
   };
+}
+
+function isAllReadOnly(hint: any): boolean {
+  for (const [key, subHint] of Object.entries(normalizeHint(hint))) {
+    const okay = (key.endsWith("_ro") || key.endsWith(":ro")) && isAllReadOnly(subHint);
+    if (!okay) return false;
+  }
+  return true;
 }

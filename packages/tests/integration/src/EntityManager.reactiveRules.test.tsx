@@ -228,6 +228,14 @@ describe("EntityManager.reactiveRules", () => {
     await em.flush();
   });
 
+  it.withCtx("is not triggered by readonly o2m hints", async ({ em }) => {
+    // Given we trigger an Image -> publishers -> critics (only exists on LargePublishers)
+    newSmallPublisher(em, { images: [{}] });
+    // Then it does not blow up (and we can't assert against the Critic rule having executed
+    // b/c the scenario is that SmallPublishers don't have the `critics` relation)
+    await em.flush();
+  });
+
   it.withCtx("creates the right reactive rules", async () => {
     const fn = expect.any(Function);
     expect(getReactiveRules(Author)).toMatchObject([
@@ -261,8 +269,6 @@ describe("EntityManager.reactiveRules", () => {
         path: ["publisher"],
         fn,
       },
-      // Publisher's "favorite author name cannot be publisher name" rule
-      { cstr: "Publisher", name: sm(/Publisher.ts:\d+/), fields: [], path: ["favoriteAuthorPublishers"], fn },
       // SmallPublisher's "cannot have >5 authors" rule
       {
         cstr: "SmallPublisher",
@@ -471,48 +477,67 @@ describe("EntityManager.reactiveRules", () => {
         path: ["author", "publisher@SmallPublisher"],
       },
     ]);
-    expect(getReactiveFields(BookReview)).toEqual([
-      {
-        kind: "populate",
-        cstr: "Author",
-        name: "numberOfPublicReviews",
-        fields: ["isPublic", "rating"],
-        path: ["book", "author"],
-      },
-      {
-        kind: "populate",
-        cstr: "Author",
-        name: "numberOfPublicReviews2",
-        fields: ["isPublic", "isTest", "rating"],
-        path: ["book", "author"],
-      },
-      { kind: "populate", cstr: "Author", name: "favoriteBook", fields: ["rating"], path: ["book", "author"] },
-      { kind: "populate", cstr: "BookReview", name: "isPublic", fields: [], readOnlyFields: ["book"], path: [] },
-      { kind: "populate", cstr: "BookReview", name: "isTest", fields: [], path: [] },
-      { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["isPublic"], path: ["book", "comments"] },
-      { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["tags"], path: ["comment"] },
-      {
-        kind: "query",
-        cstr: "LargePublisher",
-        name: "numberOfBookReviews",
-        fields: [],
-        path: ["book", "author", "publisher@LargePublisher"],
-      },
-      {
-        kind: "query",
-        cstr: "Publisher",
-        name: "numberOfBookReviews",
-        fields: [],
-        path: ["book", "author", "publisher"],
-      },
-      {
-        kind: "query",
-        cstr: "SmallPublisher",
-        name: "numberOfBookReviews",
-        fields: [],
-        path: ["book", "author", "publisher@SmallPublisher"],
-      },
-    ]);
+
+    let i = 0;
+    const brRfs = getReactiveFields(BookReview);
+    expect(brRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "numberOfPublicReviews",
+      fields: ["isPublic", "rating"],
+      path: ["book", "author"],
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "numberOfPublicReviews2",
+      fields: ["isPublic", "isTest", "rating"],
+      path: ["book", "author"],
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "favoriteBook",
+      fields: ["rating"],
+      path: ["book", "author"],
+    });
+    expect(brRfs[i++]).toEqual({ kind: "populate", cstr: "BookReview", name: "isPublic", fields: [], path: [] });
+    expect(brRfs[i++]).toEqual({ kind: "populate", cstr: "BookReview", name: "isTest", fields: [], path: [] });
+    expect(brRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Comment",
+      name: "parentTags",
+      fields: ["isPublic"],
+      path: ["book", "comments"],
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Comment",
+      name: "parentTags",
+      fields: ["tags"],
+      path: ["comment"],
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "query",
+      cstr: "LargePublisher",
+      name: "numberOfBookReviews",
+      fields: [],
+      path: ["book", "author", "publisher@LargePublisher"],
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "query",
+      cstr: "Publisher",
+      name: "numberOfBookReviews",
+      fields: [],
+      path: ["book", "author", "publisher"],
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "query",
+      cstr: "SmallPublisher",
+      name: "numberOfBookReviews",
+      fields: [],
+      path: ["book", "author", "publisher@SmallPublisher"],
+    });
   });
 
   it.withCtx("invokes the reactive derived value the expected number of times", async ({ em }) => {
@@ -791,11 +816,11 @@ function getReactiveRules(cstr: MaybeAbstractEntityConstructor<any>): any[] {
 }
 
 function getReactiveFields(cstr: MaybeAbstractEntityConstructor<any>): any[] {
-  return getMetadata(cstr).config.__data.reactiveDerivedValues.map((rule) => {
-    const { cstr, ...rest } = rule;
-    if (rest.readOnlyFields.length === 0) {
-      delete (rest as any)["readOnlyFields"];
-    }
-    return { cstr: cstr.name, ...rest };
-  });
+  return getMetadata(cstr)
+    .config.__data.reactiveDerivedValues.filter((rule) => !rule.isReadOnly)
+    .map((rule) => {
+      const { cstr, ...rest } = rule;
+      delete (rest as any)["isReadOnly"];
+      return { cstr: cstr.name, ...rest };
+    });
 }

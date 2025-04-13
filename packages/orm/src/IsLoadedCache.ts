@@ -1,6 +1,6 @@
 import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { getReactiveFields } from "./caches";
+import { getReactiveFieldsIncludingReadOnly } from "./caches";
 
 /**
  * Interface for our relations that have dynamic & expensive `isLoaded` checks.
@@ -73,10 +73,10 @@ export class IsLoadedCache {
   }
 
   resetSmartCache(meta: EntityMetadata, fieldName: string): void {
-    const rfs = getReactiveFields(meta);
+    const rfs = getReactiveFieldsIncludingReadOnly(meta);
     for (const rf of rfs) {
       // I.e. we've written to Author.firstName, and this RF depends on it
-      if (rf.fields.includes(fieldName) || rf.readOnlyFields.includes(fieldName)) {
+      if (rf.fields.includes(fieldName)) {
         const otherMeta = getMetadata(rf.cstr);
         // Find any cache entries for this rf.cstr + rf.fieldName
         const set = this.#smartCache[otherMeta.tagName]?.[rf.name];

@@ -100,23 +100,6 @@ export class ReactionsManager {
   queueAllDownstreamFields(entity: Entity, reason: "created" | "deleted"): void {
     const rfs = getReactiveFields(getMetadata(entity));
     for (const rf of rfs) {
-      // Reversals that are readOnly (fields=[]) are only allowed to trigger their immediate
-      // entity (path=[]) to drive initial calcs on initial entity creation.
-      //
-      // Otherwise, readOnlyFields RFs are only used for IsLoadedCachable invalidation, so we
-      // ignore them here.
-      //
-      // Note that we do rely on "field=[]" RFs to watch entity creation at a distance, i.e. this one:
-      //
-      // numberOfBookReviews (in Publisher) fields=[] readOnlyFields=[] path=[book,author,publisher@LP]
-      //
-      // But the difference is that its `readOnlyFields=[]` as well, so that's how we can know it's
-      // necessary to fire.
-      const isReadOnly = rf.fields.length === 0 && rf.readOnlyFields.length > 0 && rf.path.length > 0;
-      if (isReadOnly) {
-        // console.log("SKIPPING", rf.name, "on", entity.constructor.name, reason);
-        continue;
-      }
       this.getPending(rf).todo.add(entity);
       this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
       this.needsRecalc[rf.kind] = true;

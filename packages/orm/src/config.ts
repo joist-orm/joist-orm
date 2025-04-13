@@ -324,7 +324,7 @@ export class ConfigData<T extends Entity, C> {
 }
 
 export function getCallerName(extraFrames: number = 0): string {
-  const err = getErrorObject();
+  const err = getStack();
   // E.g. at Object.<anonymous> (/home/stephen/homebound/graphql-service/src/entities/Activity.ts:86:8)
   // (Make sure to drop lines that don't start with 'at' b/c the stack format can differ
   // slightly i.e. if running via tsx/using a node loader (probably?)
@@ -335,36 +335,37 @@ export function getCallerName(extraFrames: number = 0): string {
 }
 
 export function getFuzzyCallerName(): string {
-  const err = getErrorObject();
-  // E.g. at Object.<anonymous> (/home/stephen/homebound/graphql-service/src/entities/Activity.ts:86:8)
+  const err = getStack();
+  const lines = err
+    .stack!.split("\n")
+    // E.g. at Object.<anonymous> (/home/stephen/homebound/graphql-service/src/entities/Activity.ts:86:8)
+    .filter((line) => line.includes(" at "));
   const line =
-    err
-      .stack!.split("\n")
-      .filter((line) => line.includes(" at "))
-      .find((line) => {
-        // When running Joist's own integration tests, if we ignore `/joist-orm/`, we'll end up ignoring
-        // everything because `joist-orm` is the name of the repository/working copy itself.
-        const withinWorkingCopyJoist = line.includes("/packages/orm/");
-        // But once we're not in a working copy, assume any `/joist-orm/` in the path === internal orm stack frames
-        const withinProductionJoist = !withinWorkingCopyJoist && line.includes("/joist-orm/src/");
-        const isUserCode = !(withinWorkingCopyJoist || withinProductionJoist);
-        const isRecalc = line.includes("recalc");
-        const isDefault = line.includes("/defaults.ts");
-        // Batched calls like findOrCreate won't have a stack trace back to the true caller, so just stop there
-        const isDataloader = line.includes("/dataloaders/");
-        // What about:
-        // recalcSynchronousDerivedFields
-        return (
-          (isRecalc || isDefault || isDataloader || isUserCode) &&
-          !line.includes("Codegen.ts") &&
-          // I wanted to exclude this, but it was actually our utils/entities.ts maybeSetDefault helper method
-          // !line.includes("entities.ts") &&
-          // Ignore loops in joist code like setOpts
-          !line.includes("at Array") &&
-          // Ignore the Author.ts constructor calling setOpts
-          !line.includes("at new ")
-        );
-      }) ?? fail("Could not find caller name");
+    lines.find((line) => {
+      // When running Joist's own integration tests, if we ignore `/joist-orm/`, we'll end up ignoring
+      // everything because `joist-orm` is the name of the repository/working copy itself.
+      const withinWorkingCopyJoist = line.includes("/packages/orm/");
+      // But once we're not in a working copy, assume any `/joist-orm/` in the path === internal orm stack frames
+      const withinProductionJoist = !withinWorkingCopyJoist && line.includes("/joist-orm/src/");
+      const isUserCode = !(withinWorkingCopyJoist || withinProductionJoist);
+      const isRecalc = line.includes("recalc");
+      const isDefault = line.includes("/defaults.ts");
+      // Batched calls like findOrCreate won't have a stack trace back to the true caller, so just stop there
+      const isDataloader = line.includes("/dataloaders/");
+      // If this is the `newTestInstance` call
+      // What about:
+      // recalcSynchronousDerivedFields
+      return (
+        (isRecalc || isDefault || isDataloader || isUserCode) &&
+        !line.includes("Codegen.ts") &&
+        // I wanted to exclude this, but it was actually our utils/entities.ts maybeSetDefault helper method
+        // !line.includes("entities.ts") &&
+        // Ignore loops in joist code like setOpts
+        !line.includes("at Array") &&
+        // Ignore the Author.ts constructor calling setOpts
+        !line.includes("at new ")
+      );
+    }) ?? fail("Could not find caller name");
   if (line.includes("task_queues")) {
     console.log(err.stack!.split("\n").join(" ---> "));
   }
@@ -372,7 +373,15 @@ export function getFuzzyCallerName(): string {
   return parts[parts.length - 1].replace(/:\d+\)?$/, "");
 }
 
-function getErrorObject(): Error {
+const getStack: () => { stack?: string } = "captureStackTrace" in Error ? getStackFromCapture : getStackFromObject;
+
+function getStackFromCapture(): { stack?: string } {
+  const obj = {};
+  Error.captureStackTrace(obj);
+  return obj as any;
+}
+
+function getStackFromObject(): { stack?: string } {
   try {
     throw Error("");
   } catch (err) {

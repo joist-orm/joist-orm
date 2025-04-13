@@ -17,6 +17,7 @@ em.setFieldLogging(true);
 This will produce console output like:
 
 ```
+a#1 created at newAuthor.ts:13
 a#1.firstName = a1 at newAuthor.ts:13
 a#1.age = 40 at newAuthor.ts:13
 b#1.title = title at newBook.ts:9
@@ -56,6 +57,8 @@ em.setFieldLogging(new FieldLogger([
   { entity: "Author" },
   // Log only title changes to Books
   { entity: "Book", fieldNames: ["title"] },
+  // Log only instantiation of BookReview
+  { entity: "BookReview", fieldNames: ["constructor"] },
 ]));
 ```
 

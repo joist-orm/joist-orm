@@ -1,5 +1,14 @@
 import { IdType } from "./Entity";
-import { Entity, EntityManager, InstanceData, TaggedId, deTagId, getMetadata, keyToNumber } from "./index";
+import {
+  Entity,
+  EntityManager,
+  InstanceData,
+  TaggedId,
+  deTagId,
+  getEmInternalApi,
+  getMetadata,
+  keyToNumber,
+} from "./index";
 
 export let currentlyInstantiatingEntity: Entity | undefined;
 
@@ -36,7 +45,12 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
     // This makes it non-enumerable to avoid Jest/recursive things tripping over it
     Object.defineProperty(this, "__data", { value: data, enumerable: false, writable: false, configurable: false });
     // Only do em.register for em.create-d entities, otherwise defer to hydrate to em.register
-    if (isNew) em.register(this, optsOrId?.id);
+    if (isNew) {
+      em.register(this, optsOrId?.id);
+      // api will be undefined during getFakeInstance
+      const api = getEmInternalApi(em);
+      api?.fieldLogger?.logCreate(this);
+    }
     currentlyInstantiatingEntity = this;
   }
 

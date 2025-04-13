@@ -1,3 +1,10 @@
+## [1.234.6](https://github.com/joist-orm/joist-orm/compare/v1.234.5...v1.234.6) (2025-04-13)
+
+
+### Bug Fixes
+
+* Fix read-only reactive rules accidentally firing. ([#1427](https://github.com/joist-orm/joist-orm/issues/1427)) ([444796d](https://github.com/joist-orm/joist-orm/commit/444796d115ad6cb6b2577610a8b469dd8287cc52))
+
 ## [1.234.5](https://github.com/joist-orm/joist-orm/compare/v1.234.4...v1.234.5) (2025-04-11)
 
 

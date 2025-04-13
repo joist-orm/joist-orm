@@ -79,7 +79,7 @@ function populateConstructorMaps(metas: EntityMetadata[]): void {
 function setImmutableFields(metas: EntityMetadata[]): void {
   for (const meta of metas) {
     // Scan rules for cannotBeUpdated so that we can set `field.immutable`
-    meta.config.__data.rules.forEach((rule) => {
+    for (const rule of meta.config.__data.rules) {
       if (isCannotBeUpdatedRule(rule.fn) && rule.fn.immutable) {
         // Usually the field will exist directly in meta.fields
         const selfField = meta.fields[rule.fn.field];
@@ -92,7 +92,7 @@ function setImmutableFields(metas: EntityMetadata[]): void {
         if (selfField) selfField.immutable = true;
         if (baseField) baseField.immutable = true;
       }
-    });
+    }
   }
 }
 
@@ -170,12 +170,12 @@ function copyAsyncDefaults(metas: EntityMetadata[]): void {
 function reverseIndexReactivity(metas: EntityMetadata[]): void {
   for (const meta of metas) {
     // Look for reactive validation rules to reverse
-    meta.config.__data.rules.forEach(({ name, hint, fn }) => {
+    for (const { name, hint, fn } of meta.config.__data.rules) {
       if (hint) {
         const reversals = reverseReactiveHint(meta.cstr, meta.cstr, hint);
         // For each reversal, tell its config about the reverse hint to force-re-validate
         // the original rule's instance any time it changes.
-        reversals.forEach(({ kind, entity, path, fields }) => {
+        for (const { kind, entity, path, fields } of reversals) {
           if (kind === "update") {
             getMetadata(entity).config.__data.reactiveRules.push({
               source: entity,
@@ -186,41 +186,40 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
               fn,
             });
           }
-        });
+        }
       }
-    });
+    }
 
     // Look for ReactiveFields to reverse
-    Object.values(meta.allFields)
-      .filter(
-        (f) =>
-          f.kind === "primitive" ||
-          (f.kind === "m2o" && f.derived === "async") ||
-          (f.kind === "enum" && f.derived === "async"),
-      )
-      .forEach((field) => {
-        const ap = (getFakeInstance(meta) as any)[field.fieldName] as
-          | ReactiveFieldImpl<any, any, any>
-          | ReactiveQueryFieldImpl<any, any, any, any>
-          | ReactiveReferenceImpl<any, any, any, any>
-          | undefined;
-        // We might have an async property configured in joist-config.json that has not yet
-        // been made a `hasReactiveField` in the entity file, so avoid continuing
-        // if we don't actually have a property/loadHint available.
-        if (ap?.reactiveHint) {
-          const reversals = reverseReactiveHint(meta.cstr, meta.cstr, ap.reactiveHint);
-          reversals.forEach(({ kind, entity, path, fields }) => {
-            getMetadata(entity).config.__data.reactiveDerivedValues.push({
-              kind: ap instanceof ReactiveQueryFieldImpl ? "query" : "populate",
-              cstr: meta.cstr,
-              isReadOnly: kind === "read-only",
-              name: field.fieldName,
-              path,
-              fields,
-            });
+    const reactiveFields = Object.values(meta.allFields).filter(
+      (f) =>
+        f.kind === "primitive" ||
+        (f.kind === "m2o" && f.derived === "async") ||
+        (f.kind === "enum" && f.derived === "async"),
+    );
+    for (const field of reactiveFields) {
+      const ap = (getFakeInstance(meta) as any)[field.fieldName] as
+        | ReactiveFieldImpl<any, any, any>
+        | ReactiveQueryFieldImpl<any, any, any, any>
+        | ReactiveReferenceImpl<any, any, any, any>
+        | undefined;
+      // We might have an async property configured in joist-config.json that has not yet
+      // been made a `hasReactiveField` in the entity file, so avoid continuing
+      // if we don't actually have a property/loadHint available.
+      if (ap?.reactiveHint) {
+        const reversals = reverseReactiveHint(meta.cstr, meta.cstr, ap.reactiveHint);
+        for (const { kind, entity, path, fields } of reversals) {
+          getMetadata(entity).config.__data.reactiveDerivedValues.push({
+            kind: ap instanceof ReactiveQueryFieldImpl ? "query" : "populate",
+            cstr: meta.cstr,
+            isReadOnly: kind === "read-only",
+            name: field.fieldName,
+            path,
+            fields,
           });
         }
-      });
+      }
+    }
   }
 }
 

@@ -1894,6 +1894,7 @@ async function validateReactiveRules(
       const triggered = entities.filter((e) => {
         // If the rule is for a different subtype, skip it
         if (!(e instanceof rule.source)) return false;
+        // Any new-or-deleted entity fires every rule (getReactiveRules has already filtered out read-only)
         if (e.isNewEntity || e.isDeletedEntity) return true;
         // Otherwise see if the changed fields overlaps with the rule's fields
         const changedFields = (e as any).changes.fieldsWithoutRelations as string[];

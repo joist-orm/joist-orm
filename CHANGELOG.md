@@ -1,3 +1,10 @@
+# [1.235.0](https://github.com/joist-orm/joist-orm/compare/v1.234.6...v1.235.0) (2025-04-13)
+
+
+### Features
+
+* Add support for logging instantiation. ([#1436](https://github.com/joist-orm/joist-orm/issues/1436)) ([e54bec6](https://github.com/joist-orm/joist-orm/commit/e54bec64152fe691fb8d8d72f48fc9e62e9bcef8))
+
 ## [1.234.6](https://github.com/joist-orm/joist-orm/compare/v1.234.5...v1.234.6) (2025-04-13)
 
 

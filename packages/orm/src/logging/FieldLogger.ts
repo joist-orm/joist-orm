@@ -3,7 +3,6 @@ import { Entity, isEntity } from "../Entity";
 import { getFuzzyCallerName } from "../config";
 
 const { gray, green, yellow, blue, red } = ansis;
-let globalLogger: FieldLogger | undefined = undefined;
 type WriteFn = (line: string) => void;
 
 export type FieldLoggerWatch = {
@@ -31,6 +30,13 @@ export class FieldLogger {
     // We default to process.stdout.write to side-step around Jest's console.log instrumentation
     this.#writeFn = writeFn ?? process.stdout.write.bind(process.stdout);
     this.#watching = watching ?? [];
+  }
+
+  logCreate(entity: Entity): void {
+    const log = this.shouldLog(entity, "constructor");
+    if (!log) return;
+    this.log(green.bold(`${entity.toTaggedString()}`) + " " + yellow(`created`), gray(`at ${getFuzzyCallerName()}`));
+    if (log === "breakpoint") debugger;
   }
 
   logSet(entity: Entity, fieldName: string, value: unknown): void {

@@ -1,6 +1,6 @@
 import ansiRegex = require("ansi-regex");
 import { FieldLogger, FieldLoggerWatch } from "joist-orm";
-import { Author, Publisher, newBook } from "src/entities";
+import { Author, Publisher, newAuthor, newBook } from "src/entities";
 import { insertAuthor, insertPublisher } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
@@ -44,10 +44,12 @@ describe("FieldLogging", () => {
     newBook(em);
     expect(fieldOutput).toMatchInlineSnapshot(`
      [
+       "a#1 created at newAuthor.ts:13↩",
        "a#1.firstName = a1 at newAuthor.ts:13↩",
        "a#1.age = 40 at newAuthor.ts:13↩",
        "a#1.isFunny = false at defaults.ts:45↩",
        "a#1.nickNames = a1 at defaults.ts:191↩",
+       "b#1 created at newBook.ts:9↩",
        "b#1.title = title at newBook.ts:9↩",
        "b#1.order = 1 at newBook.ts:9↩",
        "b#1.author = Author#1 at newBook.ts:9↩",
@@ -57,12 +59,20 @@ describe("FieldLogging", () => {
     `);
   });
 
+  it("sees instantiations", async () => {
+    const em = newEntityManager();
+    em.setFieldLogging(new StubFieldLogger());
+    const a1 = newAuthor(em);
+    expect(fieldOutput[0]).toMatch(/a#1 created at newAuthor.ts:(\d+)↩/);
+  });
+
   it("can filter fields by entity", async () => {
     const em = newEntityManager();
     em.setFieldLogging(new StubFieldLogger([{ entity: "Author" }]));
     newBook(em);
     expect(fieldOutput).toMatchInlineSnapshot(`
      [
+       "a#1 created at newAuthor.ts:13↩",
        "a#1.firstName = a1 at newAuthor.ts:13↩",
        "a#1.age = 40 at newAuthor.ts:13↩",
        "a#1.isFunny = false at defaults.ts:45↩",
@@ -78,6 +88,17 @@ describe("FieldLogging", () => {
     expect(fieldOutput).toMatchInlineSnapshot(`
      [
        "a#1.age = 40 at newAuthor.ts:13↩",
+     ]
+    `);
+  });
+
+  it("can filter by constructor", async () => {
+    const em = newEntityManager();
+    em.setFieldLogging(new StubFieldLogger([{ entity: "Author", fieldNames: ["constructor"] }]));
+    newBook(em);
+    expect(fieldOutput).toMatchInlineSnapshot(`
+     [
+       "a#1 created at newAuthor.ts:13↩",
      ]
     `);
   });

@@ -158,8 +158,8 @@ export function parseFindQuery(
       tables.push({ alias, table: meta.tableName, join });
       // Maybe only do this if we're the primary, or have a field that needs it?
       addTablePerClassJoinsAndClassTag(query, meta, alias, true);
-    } else if (!fieldName || fieldName in meta.fields) {
-      // if we get passed a field name, then to directly join that field must be in our meta
+    } else if (!fieldName || meta.inheritanceType !== "cti" || fieldName in meta.fields) {
+      // if we get passed a field name, then to directly join to a cti subtype then the field must be in our meta
       tables.push({ alias, table: meta.tableName, join, col1, col2 });
       // Maybe only do this if we're the primary, or have a field that needs it?
       addTablePerClassJoinsAndClassTag(query, meta, alias, false);

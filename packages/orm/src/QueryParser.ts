@@ -146,6 +146,7 @@ export function parseFindQuery(
     col1: string,
     col2: string,
     filter: any,
+    fieldName?: string,
   ): void {
     // look at filter, is it `{ book: "b2" }` or `{ book: { ... } }`
     const ef = parseEntityFilter(meta, filter);
@@ -155,12 +156,36 @@ export function parseFindQuery(
 
     if (join === "primary") {
       tables.push({ alias, table: meta.tableName, join });
-    } else {
+      // Maybe only do this if we're the primary, or have a field that needs it?
+      addTablePerClassJoinsAndClassTag(query, meta, alias, true);
+    } else if (!fieldName || fieldName in meta.fields) {
+      // if we get passed a field name, then to directly join that field must be in our meta
       tables.push({ alias, table: meta.tableName, join, col1, col2 });
+      // Maybe only do this if we're the primary, or have a field that needs it?
+      addTablePerClassJoinsAndClassTag(query, meta, alias, false);
+    } else {
+      // otherwise we need to pull in our base meta and join to that first since that's where the field lives
+      meta.baseTypes.forEach((bt, i) => {
+        tables.push({
+          alias: `${alias}_b${i}`,
+          table: bt.tableName,
+          join: "outer",
+          col1,
+          col2: `${kq(`${alias}_b${i}`)}.${col2.split(".")[1]}`,
+          distinct: false,
+        });
+        // and we still need to join in our subtype as well in case its own fields are queried against
+        tables.push({
+          alias: `${alias}`,
+          table: meta.tableName,
+          join: "outer",
+          col1: kqDot(alias, "id"),
+          col2: kqDot(`${alias}_b${i}`, "id"),
+          distinct: false,
+        });
+      });
     }
 
-    // Maybe only do this if we're the primary, or have a field that needs it?
-    addTablePerClassJoinsAndClassTag(query, meta, alias, join === "primary");
     if (needsStiDiscriminator(meta)) {
       addStiSubtypeFilter(cb, meta, alias);
     }
@@ -310,6 +335,7 @@ export function parseFindQuery(
             kqDot(alias, "id"),
             kqDot(a, otherColumn),
             (ef.subFilter as any)[key],
+            field.otherFieldName,
           );
         } else if (field.kind === "m2m") {
           // Always join into the m2m table

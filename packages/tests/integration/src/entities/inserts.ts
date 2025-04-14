@@ -202,6 +202,36 @@ export async function insertLargePublisher(row: {
   await testDriver.insert("large_publishers", { id: row.id ?? 1, country, shared_column }, true);
 }
 
+/** Inserts a small publisher, into `publishers` and `small_publishers`. */
+export async function insertSmallPublisher(row: {
+  id?: number;
+  name: string;
+  longitude?: string | number;
+  latitude?: string | number;
+  huge_number?: string | number;
+  size_id?: number;
+  group_id?: number;
+  shared_column?: string;
+  updated_at?: Date;
+  base_sync_default?: string;
+  base_async_default?: string;
+  spotlight_author_id?: number;
+  rating?: number;
+  city?: string;
+
+  // Used to test reactive fields that only exist on a subtype
+  all_author_names?: string;
+}) {
+  const { city = "city", shared_column, ...others } = row;
+  await testDriver.insert("publishers", {
+    base_sync_default: "FactorySyncDefault",
+    base_async_default: "FactoryAsyncDefault",
+    rating: 5,
+    ...others,
+  });
+  await testDriver.insert("small_publishers", { id: row.id ?? 1, city, shared_column }, true);
+}
+
 export function insertTag(row: { id?: number; name: string }) {
   return testDriver.insert("tags", row);
 }

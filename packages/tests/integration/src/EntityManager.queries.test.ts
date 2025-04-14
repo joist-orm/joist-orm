@@ -8,6 +8,8 @@ import {
   insertImage,
   insertLargePublisher,
   insertPublisher,
+  insertSmallPublisher,
+  insertSmallPublisherGroup,
   insertTag,
   insertUser,
   update,
@@ -47,6 +49,7 @@ import {
   PublisherId,
   PublisherSize,
   SmallPublisher,
+  SmallPublisherGroup,
   Tag,
   TaskItem,
   TaskItemFilter,
@@ -3410,6 +3413,22 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const result = await em.find(User, { favoritePublisher: ["p:1"] });
     expect(result).toMatchEntity([{ name: "User 1" }]);
+  });
+
+  it("can find across subtype restricted o2ms", async () => {
+    await insertSmallPublisherGroup({ id: 1, name: "spg1" });
+    await insertSmallPublisher({ id: 1, name: "sp1", group_id: 1, city: "sp city" });
+    const em = newEntityManager();
+    const result = await em.find(SmallPublisherGroup, { publishers: { id: "p:1", name: "sp1", city: "sp city" } });
+    expect(result).toMatchEntity([{ name: "spg1" }]);
+  });
+
+  it("can find across subtype restricted m2os", async () => {
+    await insertSmallPublisherGroup({ id: 1, name: "spg1" });
+    await insertSmallPublisher({ id: 1, name: "sp1", group_id: 1 });
+    const em = newEntityManager();
+    const result = await em.find(SmallPublisher, { group: { id: "pg:1", name: "spg1" } });
+    expect(result).toMatchEntity([{ name: "sp1" }]);
   });
 });
 

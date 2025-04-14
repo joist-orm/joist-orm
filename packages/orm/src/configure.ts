@@ -260,6 +260,8 @@ function populatePolyComponentFields(metas: EntityMetadata[]): void {
           meta.polyComponentFields ??= {};
           meta.polyComponentFields[fieldName] = {
             ...field,
+            // a subtype specific sub-field cannot be required, even if its parent is, since it won't always be present
+            required: false,
             fieldName,
             fieldIdName: `${fieldName}Id`,
             otherMetadata: () => st,

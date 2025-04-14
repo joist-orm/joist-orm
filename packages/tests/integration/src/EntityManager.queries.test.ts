@@ -2220,6 +2220,10 @@ describe("EntityManager.queries", () => {
     await insertBook({ title: "b10", author_id: 1 });
     await insertBook({ title: "b11", author_id: 1 });
     await insertBook({ title: "b2", author_id: 2 });
+    await insertTag({ name: "t1" });
+    await insertTag({ name: "t1" });
+    await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+    await insertAuthorToTag({ author_id: 1, tag_id: 2 });
 
     const em = newEntityManager();
     const where = { books: { title: { like: "b1%" } } } satisfies AuthorFilter;

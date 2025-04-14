@@ -25,11 +25,11 @@
     "joist-codegen": "workspace:*",
     "joist-utils": "workspace:*",
     "pluralize": "^8.0.0",
-    "prettier": "^3.5.1",
+    "prettier": "^3.5.3",
     "ts-poet": "^6.11.0"
   },
   "devDependencies": {
-    "@swc/core": "^1.11.9",
+    "@swc/core": "^1.11.16",
     "@swc/jest": "^0.2.37",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.13.10",

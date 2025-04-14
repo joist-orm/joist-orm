@@ -17,11 +17,11 @@ export default defineConfig({
         replacesTitle: true,
       },
       customCss: ["./src/tailwind.css"],
-      social: {
-        github: "https://github.com/joist-orm/joist-orm",
-        ["x.com"]: "https://x.com/Joist_Orm",
-        discord: "https://discord.gg/ky9VTQugqu",
-      },
+      social: [
+        { icon: "github", label: "GitHub", href: "https://github.com/joist-orm/joist-orm" },
+        { icon: "x.com", label: "X", href: "https://x.com/Joist_Orm" },
+        { icon: "discord", label: "Discord", href: "https://discord.gg/ky9VTQugqu" },
+      ],
       sidebar: [
         { label: "Getting Started", autogenerate: { directory: "getting-started" } },
         { label: "Goals", autogenerate: { directory: "goals" } },

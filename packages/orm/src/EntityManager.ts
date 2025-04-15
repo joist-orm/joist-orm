@@ -661,8 +661,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
   public create<T extends EntityW, O extends OptsOf<T>>(type: EntityConstructor<T>, opts: O): New<T, O> {
+    // Specifically do *not* call `setOpts` until the instance is fully created/the constructor has completed
+    // See https://github.com/joist-orm/joist-orm/issues/1442
     // The constructor will run setOpts which handles defaulting collections to the right state.
-    return new type(this, opts) as New<T, O>;
+    const entity = new type(this, undefined!);
+    setOpts(entity, opts as OptsOf<T>, { partial: true, calledFromConstructor: true });
+    return entity as New<T, O>;
   }
 
   /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */

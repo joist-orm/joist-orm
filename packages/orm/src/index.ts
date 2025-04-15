@@ -229,6 +229,7 @@ export function setOpts<T extends Entity>(
       } else if (isAsyncProperty(current) || isReactiveGetter(current)) {
         throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
       } else if (isReactiveField(current) || isReactiveQueryField(current)) {
+        // Note that `ReactiveReference`s are AbstractRelationImpls, so go through the ^ flow
         if (value instanceof FactoryInitialValue) {
           if (current instanceof ReactiveFieldImpl) {
             current.setFactoryValue(value.value);

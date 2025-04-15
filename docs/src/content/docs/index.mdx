@@ -28,6 +28,8 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
   </Card>
   <Card title="N+1 Safe by Default" icon="rocket">
     [Bulletproof N+1 Preventation](/goals/avoiding-n-plus-1s/) avoids N+1 query performance problems through batched loading and pre-loading.
+
+    Any loops written using `Promise.all` will never N+1, regardless of complexity.
   </Card>
   <Card title="Backend Reactivity" icon="laptop">
     [Reactive Fields](/modeling/reactive-fields) and [validation rules](/modeling/validation-rules) bring the ergonomics of declarative business logic to the backend.

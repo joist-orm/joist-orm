@@ -5,27 +5,46 @@ sidebar:
   order: 5
 ---
 
-In Joist, Reactive Fields are values that can be calculated/derived from other data within your domain model, for example:
+Reactive Fields are values that can be calculated/derived from other data within your domain model, for example:
 
 * Deriving an Author's `fullName` from their `firstName` and `lastName`
 * Deriving an Author's `numberOfBooks` from their `books` collection
+* Deriving any calculated value, as simple or complicated as you like
 
-Reactive Fields **are stored in the database** (as regular primitive columns), and so not calculated on-the-fly when accessed. This makes them very quick to access, and amenable to filtering & sorting.
+Reactive Fields **are stored in the database** as regular primitive columns, so they are not calculated on-the-fly when you access them--this makes them very cheap to access, and means they are basically **instantly-updated materialized views**.
 
-Joist also supports [Derived Fields](./derived-properties), which are similar to Reactive Fields but **are not stored in the database**.
+(Note Joist also has [Derived Fields](./derived-properties), which are similar to Reactive Fields but **are not stored in the database**.)
 
 ## Always Up-to-Date
 
-A key feature of Joist's Reactive Fields is that Joist will **automatically keep them up-to-date** as the data they depend on changes.
+The killer feature of Joist's Reactive Fields is that Joist will **automatically keep them up-to-date** as their data changes.
 
-Joist accomplishes this by using each reactive field's declared dependencies (fields, relations, and nested relations--called its **reactive hint**) to watch for writes in other entities that affect the reactive field's value.
+Joist uses each Reactive Field's "reactive hint" to watch for __any write__ that affects calculated values during `em.flush`, and then, when this happens, loads the RF into memory and recalculates it, in __the same `em.flush` transaction as the original write__--which means the RF values are **always atomically updated**.
 
-For example, given a Reactive Field `numberOfReviews` on `Author` with a dependency graph of `{ books: { reviews: { "title" }`, when an update occurs, Joist will automatically recalculate the reactive field's value and update the database, i.e.:
+For example, given a Reactive Field `totalReviewRatings` on `Author`:
 
-* If a `review.title` changes, Joist will walk from the BookReview to `Book` to `Author` and recalc `numberOfReviews`
-* If a `BookReview` is created or deleted, Joist will walk from the Review to Book to `Author` and recalc `numberOfReviews`
-* If a `Book` changes authors, Joist will walk from the Book to the old Author and new Author and recalc each `numberOfReviews`
-* Etc.
+```ts
+class Author extends AuthorCodegen {
+  readonly totalReviewRatings: ReactiveField<Author, number> = hasReactiveField(
+    "totalReviewRatings",
+    // Our "reactive hint", which both:
+    // - populates the `a` instance passed to our lambda, and
+    // - declaratively tells Joist what data we need to react to
+    { books: { reviews: "rating" } },
+    a => a.books.get.reduce((sum, b) => sum + b.reviews.get.reduce((sum, r) => sum + r.rating, 0), 0),
+  );
+}
+```
+
+The reactive hint of `{ books: { reviews: "rating" } }` allows Joist to automatically call the lambda whenever:
+
+* A `BookReview.rating` changes, on the `review.book.author` entity
+* A `BookReview.book` changes, on the `book.author` entities (old and new)
+* A `BookReview` is created/deleted, on the `review.book.author` entity
+* A `Book` is created/deleted, on the `book.author` entity
+* A `Book.author` changes, on the new `book.author` entities (old and new)
+
+Basically, if you reason about "when should an Author need to recalculate its `totalReviewRatings`?", this list is the exhaustive set of writes that could affect the value.
 
 Joist exhaustively handles any mutation in the graph by "walking backwards" from the write to any downstream values.
 
@@ -34,6 +53,8 @@ Joist exhaustively handles any mutation in the graph by "walking backwards" from
 Joist's reactivity depends on all writes going through the domain model, i.e. not raw SQL updates to the database.
 
 That said, if the underlying data does drift, or you've updated your reactive field's business logic and need it to be recalculated, you can call `em.recalc` on any entity, and all of its reactive fields will be recalculated and updated in the database.
+
+At [Homebound](https://www.homebound.com/), we use a `recalcEntities` background job, using [graphile-worker](https://worker.graphile.org/), to recalculate fields across all rows in a table, whenever we've added new RFs and changed the business logic of existing ones--much like applying data migrations via SQL, except that RF logic is written TypeScript, so for us more idiomatic and enjoyable to write.  
 
 :::
 

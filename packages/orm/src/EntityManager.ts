@@ -664,7 +664,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // Specifically do *not* call `setOpts` until the instance is fully created/the constructor has completed
     // See https://github.com/joist-orm/joist-orm/issues/1442
     // The constructor will run setOpts which handles defaulting collections to the right state.
-    const entity = new type(this, undefined!);
+    const entity = new type(this, maybeIdOrUndefined(opts)!);
+    // The order needs to be:
+    // 1) em.register, potentially with the id set
+    // 2) setOpts to get required fields like `firstName: ...` set
+    // 3) then invoke syncDefaults so that they can observe anything from 2
     setOpts(entity, opts as OptsOf<T>, { partial: true, calledFromConstructor: true });
     return entity as New<T, O>;
   }
@@ -674,7 +678,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // We force some manual calls to setOpts to mimic `setUnsafe`'s behavior that `undefined` should
     // mean "ignore" (and we assume validation rules will catch it later) but still set
     // `calledFromConstructor` because this is _basically_ like calling `new`.
-    const entity = new type(this, undefined!);
+    const entity = new type(this, maybeIdOrUndefined(opts)!);
     // Could remove the `as OptsOf<T>` by adding a method overload on `partial: true`
     setOpts(entity, opts as OptsOf<T>, { partial: true, calledFromConstructor: true });
     return entity;
@@ -2273,4 +2277,12 @@ export function appendStack(err: unknown, dummy: Error): unknown {
     err.stack += dummy.stack!.replace(/.*\n/, "\n");
   }
   return err;
+}
+
+/** Picks out `id` merely so that it's in place when `em.register` is called. */
+function maybeIdOrUndefined(opts: object) {
+  if ("id" in opts) {
+    return { id: opts.id };
+  }
+  return undefined;
 }

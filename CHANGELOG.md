@@ -1,3 +1,10 @@
+# [1.236.0](https://github.com/joist-orm/joist-orm/compare/v1.235.0...v1.236.0) (2025-04-15)
+
+
+### Features
+
+* add support for subtypes to maybeNewPoly ([#1437](https://github.com/joist-orm/joist-orm/issues/1437)) ([5bb4499](https://github.com/joist-orm/joist-orm/commit/5bb4499c145e8378c9eb09219c757af31db82cc6))
+
 # [1.235.0](https://github.com/joist-orm/joist-orm/compare/v1.234.6...v1.235.0) (2025-04-13)
 
 

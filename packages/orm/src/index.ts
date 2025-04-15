@@ -69,7 +69,6 @@ export {
   getTestIndex,
   maybeBranchValue,
   maybeNew,
-  maybeNewPoly,
   newTestInstance,
   noValue,
   setFactoryLogging,

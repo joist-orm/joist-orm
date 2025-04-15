@@ -543,43 +543,29 @@ export function maybeBranchValue<T>(opts?: ActualFactoryOpts<T>): T {
  *   });
  * }
  * ```
- */
-export function maybeNew<T extends Entity>(opts?: ActualFactoryOpts<T>): FactoryEntityOpt<T> {
-  // Return a marker that resolveFactoryOpt will look for
-  return new MaybeNew<T>((opts || {}) as any) as any;
-}
-
-/**
- * Similar to `maybeNew` in behaviour/use but with enhancements to support polymorphic fields:
- * 1) Allows you to specify which entity type to create, if it is found a new one is needed
- * 2) Allows you to prioritize which existing entities to select
  *
- * For example below, we are specifying that an Author should be created if needed (and optionally it's default opts
- * in the `ifNewOpts` field), and also that the priority order for choosing existing entities is Author, Book, and then Publisher.
- * Note since BookReview is excluded from `existingSearchOrder`, an existing BookReview will never be chosen.
- *
- * ```typescript
- * export function newComment(em: EntityManager, opts: FactoryOpts<Comment> = {}): New<Comment> {
- *   return newTestInstance(em, Comment, {
- *     parent: maybeNewPoly<CommentParent, Author>(
- *       Author, {
- *         ifNewOpts: { firstName: "optional"},
- *         existingSearchOrder: [Author, Book, Publisher]
- *       }),
- *     ...opts,
- *   });
- * }
- * ```
+ * @param cstr the constructor to create, if no obvious/existing-only-1 entity is found
+ * @param opts the opts to use to create the new entity, if one is not found
+ * @param opts.searchOrder allows specifying the order to search for existing entities,
+ *   i.e. for poly fields & subtype fields to say "if I'm a poly that can be `Book | Author`,
+ *   and both a Book and an Author exist, prefer hooking up to the `Author`".
  */
-export function maybeNewPoly<T extends Entity, NewT extends T = T>(
-  ifNewCstr: EntityConstructor<NewT>,
-  opts?: {
-    ifNewOpts?: ActualFactoryOpts<NewT>;
-    existingSearchOrder?: MaybeAbstractEntityConstructor<T>[];
-  },
-): FactoryEntityOpt<NewT> {
+export function maybeNew<T extends Entity>(
+  cstr: MaybeAbstractEntityConstructor<T>,
+  opts?: ActualFactoryOpts<T>,
+): FactoryEntityOpt<T>;
+export function maybeNew<BaseT extends Entity, NewT extends BaseT>(
+  cstr: MaybeAbstractEntityConstructor<NewT>,
+  opts: ActualFactoryOpts<NewT>,
+  searchOrder: MaybeAbstractEntityConstructor<BaseT>[],
+): FactoryEntityOpt<BaseT>;
+export function maybeNew<T extends Entity & BaseT, BaseT = T>(
+  cstr: MaybeAbstractEntityConstructor<T>,
+  opts?: ActualFactoryOpts<T>,
+  searchOrder?: MaybeAbstractEntityConstructor<BaseT>[],
+): FactoryEntityOpt<T> {
   // Return a marker that resolveFactoryOpt will look for
-  return new MaybeNew<T>((opts?.ifNewOpts || {}) as any, opts?.existingSearchOrder ?? [ifNewCstr]) as any;
+  return new MaybeNew<T>((opts || {}) as any, (searchOrder as any) ?? [cstr]) as any;
 }
 
 class MaybeNew<T extends Entity> {

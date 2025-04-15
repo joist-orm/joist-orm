@@ -8,7 +8,7 @@ export function newBook(em: EntityManager, opts: FactoryOpts<Book> = {}): DeepNe
   lastBookFactoryOpts = opts;
   return newTestInstance(em, Book, opts, {
     // Pass a default age so that we can test deep-merging author.age and opts.firstName
-    author: maybeNew<Author>({ age: 40 }),
+    author: maybeNew(Author, { age: 40 }),
     sequel: undefined,
     prequel: undefined,
     reviewer: undefined,

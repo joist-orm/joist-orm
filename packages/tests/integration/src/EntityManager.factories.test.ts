@@ -29,7 +29,7 @@ import {
   SmallPublisher,
 } from "@src/entities";
 import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
-import { maybeNew, maybeNewPoly, newTestInstance, noValue, setFactoryWriter, testIndex } from "joist-orm";
+import { maybeNew, newTestInstance, noValue, setFactoryWriter, testIndex } from "joist-orm";
 import ansiRegex = require("ansi-regex");
 
 let factoryOutput: string[] = [];
@@ -97,7 +97,7 @@ describe("EntityManager.factories", () => {
     // And a publisher with a1 where Book.setDefault("author", ...) will find it
     const p = newPublisher(em, { authors: [a1] });
     // When we create the book
-    const b = newBook(em, { author: maybeNew<Author>({}), tags: [{ publishers: [p] }] });
+    newBook(em, { author: maybeNew(Author), tags: [{ publishers: [p] }] });
     // Then we made a new entity
     expect(em.entities.filter((e) => e instanceof Author)).toMatchEntity([{}, {}, {}]);
   });
@@ -581,7 +581,7 @@ describe("EntityManager.factories", () => {
     it("creates a new entity if needed", async () => {
       const em = newEntityManager();
       const a = newTestInstance(em, Author, {
-        publisher: maybeNew<Publisher>({}),
+        publisher: maybeNew(Publisher),
       });
       expect(a.publisher.get).toBeInstanceOf(Publisher);
     });
@@ -590,7 +590,7 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       const p = newPublisher(em);
       const a = newTestInstance(em, Author, {
-        publisher: maybeNew<Publisher>({}),
+        publisher: maybeNew(Publisher),
       });
       expect(a.publisher.get).toEqual(p);
     });
@@ -600,7 +600,7 @@ describe("EntityManager.factories", () => {
       const p1 = newPublisher(em);
       const p2 = newPublisher(em);
       const a = newTestInstance(em, Author, {
-        publisher: maybeNew<Publisher>({}),
+        publisher: maybeNew(Publisher),
       });
       expect(a.publisher.get).not.toEqual(p1);
       expect(a.publisher.get).not.toEqual(p2);
@@ -611,7 +611,7 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       const [, p2] = [newPublisher(em), newPublisher(em)];
       const a = newTestInstance(em, Author, {
-        publisher: maybeNew<Publisher>({}),
+        publisher: maybeNew(Publisher),
         use: p2,
       });
       expect(a.publisher.get).toEqual(p2);
@@ -620,7 +620,7 @@ describe("EntityManager.factories", () => {
     it("can provide defaults", async () => {
       const em = newEntityManager();
       const a = newTestInstance(em, Author, {
-        publisher: maybeNew<Publisher>({ name: "p2" }),
+        publisher: maybeNew(Publisher, { name: "p2" }),
       });
       expect(a.publisher.get!.name).toEqual("p2");
     });
@@ -631,9 +631,7 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       const b1 = newBook(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent, Author>(Author, {
-          existingSearchOrder: [Author, Book, Publisher],
-        }),
+        parent: maybeNew<CommentParent, Author>(Author, {}, [Author, Book, Publisher]),
         useLogging: true,
       });
       expect(ft1.parent.get).toEqual(b1.author.get);
@@ -650,7 +648,7 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       const p1 = newPublisher(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent, Author>(Author, { existingSearchOrder: [Author, Book, Publisher] }),
+        parent: maybeNew<CommentParent, Author>(Author, {}, [Author, Book, Publisher]),
         useLogging: true,
       });
       expect(ft1.parent.get).toEqual(p1);
@@ -668,7 +666,7 @@ describe("EntityManager.factories", () => {
       const p1 = newLargePublisher(em);
       newBook(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent>(SmallPublisher, { existingSearchOrder: [Publisher, Author, Book] }),
+        parent: maybeNew<CommentParent, SmallPublisher>(SmallPublisher, {}, [Publisher, Author, Book]),
         useLogging: true,
       });
       expect(ft1.parent.get).toEqual(p1);
@@ -684,10 +682,7 @@ describe("EntityManager.factories", () => {
     it("creates a new entity if needed", async () => {
       const em = newEntityManager();
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent, Author>(Author, {
-          ifNewOpts: { firstName: "test" },
-          existingSearchOrder: [Author, Book, SmallPublisher],
-        }),
+        parent: maybeNew<CommentParent, Author>(Author, { firstName: "test" }, [Author, Book, SmallPublisher]),
       });
       expect(ft1.parent.isSet).toBe(true);
       const a1 = await ft1.parent.load();
@@ -723,9 +718,7 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       newBook(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent>(Author, {
-          existingSearchOrder: [Author, Publisher],
-        }),
+        parent: maybeNew<CommentParent, Author>(Author, {}, [Author, Publisher]),
       });
       expect(ft1.parent.isSet).toBe(true);
       expect(ft1.parent.get).toBeInstanceOf(Author);
@@ -735,7 +728,7 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       const p = newPublisher(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent>(Author, { existingSearchOrder: [Publisher] }),
+        parent: maybeNew<CommentParent, Author>(Author, {}, [Publisher]),
       });
       expect(ft1.parent.get).toEqual(p);
     });
@@ -745,7 +738,7 @@ describe("EntityManager.factories", () => {
       const p1 = newPublisher(em);
       const p2 = newPublisher(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly(SmallPublisher),
+        parent: maybeNew(SmallPublisher),
       });
       expect(ft1.parent.get).not.toEqual(p1);
       expect(ft1.parent.get).not.toEqual(p2);
@@ -756,7 +749,7 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       const [, p2] = [newPublisher(em), newPublisher(em)];
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly(LargePublisher),
+        parent: maybeNew(LargePublisher),
         use: p2,
       });
       expect(ft1.parent.get).toEqual(p2);
@@ -765,7 +758,7 @@ describe("EntityManager.factories", () => {
     it("can provide defaults", async () => {
       const em = newEntityManager();
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly(LargePublisher, { ifNewOpts: { name: "p2" } }),
+        parent: maybeNew(LargePublisher, { name: "p2" }),
       });
       expect(ft1.parent.get).toBeInstanceOf(LargePublisher);
       expect((ft1.parent.get as Publisher).name).toEqual("p2");
@@ -893,7 +886,7 @@ describe("EntityManager.factories", () => {
       await em.flush();
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new ChildGroup at EntityManager.factories.test.ts:884↩",
+         "Creating new ChildGroup at EntityManager.factories.test.ts:877↩",
          "  childGroupId = creating new Child↩",
          "    created Child#1 added to scope↩",
          "  parentGroup = creating new ParentGroup↩",

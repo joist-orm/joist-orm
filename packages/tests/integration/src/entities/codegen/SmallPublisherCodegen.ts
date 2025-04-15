@@ -86,7 +86,6 @@ export interface SmallPublisherOpts extends PublisherOpts {
   city?: string;
   sharedColumn?: string | null;
   selfReferential?: SmallPublisher | SmallPublisherId | null;
-  group?: SmallPublisherGroup | SmallPublisherGroupId | null;
   smallPublishers?: SmallPublisher[];
   users?: User[];
 }

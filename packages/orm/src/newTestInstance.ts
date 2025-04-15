@@ -311,21 +311,26 @@ function resolveFactoryOpt<T extends Entity>(
   } else {
     // Look for an obvious default
     if (opt === undefined || opt instanceof MaybeNew) {
-      if (field.kind !== "poly") {
-        const [existing, loggerKey] = getObviousDefault(em, meta, use);
+      if (
+        field.kind === "poly" ||
+        (field.otherMetadata().subTypes.length > 0 && opt instanceof MaybeNew && opt.polyRefPreferredOrder.length > 0)
+      ) {
+        // We have a polymorphic maybeNew to sort through
+        const [existing, loggerKey] = (opt instanceof MaybeNew
+          ? opt.polyRefPreferredOrder.map((cstr) => getMetadata(cstr))
+          : field.kind === "poly"
+            ? field.components.map((c) => c.otherMetadata())
+            : [meta]
+        )
+          .map((meta) => getObviousDefault(em, meta, use))
+          .find((existing) => !!existing[0]) || [undefined, undefined];
         if (existing) {
           logger?.[loggerKey](field.fieldName, existing);
           return existing as T;
         }
-        // Otherwise fall though to making a new entity via the factory
       } else {
-        // We have a polymorphic maybeNew to sort through
-        const [existing, loggerKey] = (opt instanceof MaybeNew
-          ? opt.polyRefPreferredOrder
-          : field.components.map((c) => c.otherMetadata().cstr)
-        )
-          .map((cstr) => getObviousDefault(em, getMetadata(cstr), use))
-          .find((existing) => !!existing[0]) || [undefined, undefined];
+        // Otherwise fall though to making a new entity via the factory
+        const [existing, loggerKey] = getObviousDefault(em, meta, use);
         if (existing) {
           logger?.[loggerKey](field.fieldName, existing);
           return existing as T;
@@ -349,20 +354,30 @@ function metaFromFieldAndOpt<T extends Entity>(
   field: OneToManyField | ManyToOneField | OneToOneField | ManyToManyField | PolymorphicField,
   opt: FactoryEntityOpt<T> | undefined,
 ): { meta: EntityMetadata; otherFieldName: string } {
-  if (field.kind !== "poly") {
+  if (field.kind === "poly") {
+    let componentToUse =
+      // Otherwise, we check if the `opt` specifies a particular component to use, and if not fall back to the first one
+      field.components.find(
+        (component) =>
+          opt instanceof MaybeNew &&
+          getBaseSelfAndSubMetas(component.otherMetadata())
+            .map((m) => m.cstr)
+            .includes(opt.polyRefPreferredOrder[0]),
+      ) ?? field.components[0];
+    return { meta: componentToUse.otherMetadata(), otherFieldName: componentToUse.otherFieldName };
+  } else if (
+    field.otherMetadata().subTypes.length > 0 &&
+    opt instanceof MaybeNew &&
+    opt.polyRefPreferredOrder.length > 0
+  ) {
+    const otherMeta = field.otherMetadata();
+    const types = getBaseSelfAndSubMetas(otherMeta);
+    const typeToUse = types.find((subType) => subType.cstr === opt.polyRefPreferredOrder[0]) ?? otherMeta;
+    return { meta: typeToUse, otherFieldName: field.otherFieldName };
+  } else {
     // If it isn't a poly field, then the field itself can tell us everything we need to know
     return { meta: field.otherMetadata(), otherFieldName: field.otherFieldName };
   }
-  const componentToUse =
-    // Otherwise, we check if the `opt` specifies a particular component to use, and if not fall back to the first one
-    field.components.find(
-      (component) =>
-        opt instanceof MaybeNew &&
-        getBaseSelfAndSubMetas(component.otherMetadata())
-          .map((m) => m.cstr)
-          .includes(opt.polyRefPreferredOrder[0]),
-    ) ?? field.components[0];
-  return { meta: componentToUse.otherMetadata(), otherFieldName: componentToUse.otherFieldName };
 }
 
 /** We look for `use`-cached entities, which are either those we created, or had "if-only-one" defaults. */

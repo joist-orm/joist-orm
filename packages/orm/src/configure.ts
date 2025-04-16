@@ -260,8 +260,10 @@ function populatePolyComponentFields(metas: EntityMetadata[]): void {
           meta.polyComponentFields ??= {};
           meta.polyComponentFields[fieldName] = {
             ...field,
-            // a subtype specific sub-field cannot be required, even if its parent is, since it won't always be present
-            // required: false,
+            // a subtype specific sub-field (i.e. `publisherLargePublishers`) cannot be required (which turns into
+            // an `inner join`), even if its parent is, since it won't always be present (i.e. the pointed-at publisher
+            // might be a small publisher).
+            required: false,
             fieldName,
             fieldIdName: `${fieldName}Id`,
             otherMetadata: () => st,

@@ -79,7 +79,6 @@ export interface TaskNewOpts extends TaskOpts {
   specialNewField?: number | null;
   selfReferential?: TaskNew | TaskNewId | null;
   specialNewAuthor?: Author | AuthorId | null;
-  copiedFrom?: TaskNew | TaskNewId | null;
   newTaskTaskItems?: TaskItem[];
   selfReferentialTasks?: TaskNew[];
   copiedTo?: TaskNew[];

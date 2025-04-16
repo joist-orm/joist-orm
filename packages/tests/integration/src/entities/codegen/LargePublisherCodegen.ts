@@ -86,7 +86,6 @@ export interface LargePublisherOpts extends PublisherOpts {
   sharedColumn?: string | null;
   country?: string | null;
   rating: number;
-  spotlightAuthor: Author | AuthorId;
   critics?: Critic[];
   users?: User[];
 }

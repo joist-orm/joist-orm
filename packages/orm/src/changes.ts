@@ -31,7 +31,16 @@ export interface ManyToOneFieldStatus<T extends Entity> extends FieldStatus<IdOf
 }
 
 /** Provides access to a m2m relation's added/removed/changed/original values. */
-export class ManyToManyFieldStatus<T extends Entity, U extends Entity> {
+export interface ManyToManyFieldStatus<U extends Entity> {
+  added: U[];
+  removed: U[];
+  changed: U[];
+  hasChanged: boolean;
+  hasUpdated: boolean;
+  originalEntities: Promise<readonly U[]>;
+}
+
+class ManyToManyFieldStatusImpl<T extends Entity, U extends Entity> implements ManyToManyFieldStatus<U> {
   readonly #entity: T;
   readonly #m2m: ManyToManyCollection<T, any>;
   readonly #joinRows: JoinRows;
@@ -79,8 +88,17 @@ export class ManyToManyFieldStatus<T extends Entity, U extends Entity> {
   }
 }
 
+export interface OneToManyFieldStatus<U extends Entity> {
+  added: U[];
+  removed: U[];
+  changed: U[];
+  hasChanged: boolean;
+  hasUpdated: boolean;
+  originalEntities: Promise<readonly U[]>;
+}
+
 /** Provides access to an o2m relation's added/removed/changed entities. */
-export class OneToManyFieldStatus<T extends Entity, U extends Entity> {
+class OneToManyFieldStatusImpl<T extends Entity, U extends Entity> implements OneToManyFieldStatus<U> {
   readonly #entity: T;
   readonly #o2m: OneToManyCollection<T, U>;
 
@@ -154,9 +172,9 @@ export type Changes<T extends Entity, K = keyof (FieldsOf<T> & RelationsOf<T>), 
   fieldsWithoutRelations: NonNullable<K>[];
 } & {
   [P in keyof FieldsOf<T> & R]: FieldsOf<T>[P] extends { kind: "m2m"; type: infer U extends Entity }
-    ? ManyToManyFieldStatus<T, U>
+    ? ManyToManyFieldStatus<U>
     : FieldsOf<T>[P] extends { kind: "o2m"; type: infer U extends Entity }
-      ? OneToManyFieldStatus<T, U>
+      ? OneToManyFieldStatus<U>
       : FieldsOf<T>[P] extends { type: infer U | undefined }
         ? U extends Entity
           ? ManyToOneFieldStatus<U>
@@ -187,8 +205,8 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
     ):
       | FieldStatus<any>
       | ManyToOneFieldStatus<any>
-      | ManyToManyFieldStatus<any, any>
-      | OneToManyFieldStatus<any, any>
+      | ManyToManyFieldStatus<any>
+      | OneToManyFieldStatus<any>
       | (keyof OptsOf<T>)[] {
       if (p === "fields") {
         return getChangedFieldNames(entity, true);
@@ -197,9 +215,9 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
       } else if (typeof p === "symbol") {
         throw new Error(`Unsupported call to ${String(p)}`);
       } else if (getMetadata(entity).allFields[p]?.kind === "m2m") {
-        return new ManyToManyFieldStatus(entity, p as keyof T);
+        return new ManyToManyFieldStatusImpl(entity, p as keyof T);
       } else if (getMetadata(entity).allFields[p]?.kind === "o2m") {
-        return new OneToManyFieldStatus(entity, p as keyof T);
+        return new OneToManyFieldStatusImpl(entity, p as keyof T);
       } else if (!isChangeableField(entity, p as any)) {
         throw new Error(`Invalid changes field ${p}`);
       }
@@ -269,12 +287,12 @@ function getChangedFieldNames<T extends Entity>(entity: T, includeRelations: boo
   if (includeRelations) {
     for (const field of Object.values(getMetadata(entity).allFields)) {
       if (field.kind === "m2m") {
-        const status = new ManyToManyFieldStatus(entity, field.fieldName as keyof T);
+        const status = new ManyToManyFieldStatusImpl(entity, field.fieldName as keyof T);
         if (status.hasChanged) {
           fieldsChanged.push(field.fieldName);
         }
       } else if (field.kind === "o2m") {
-        const status = new OneToManyFieldStatus(entity, field.fieldName as keyof T);
+        const status = new OneToManyFieldStatusImpl(entity, field.fieldName as keyof T);
         if (status.hasChanged) {
           fieldsChanged.push(field.fieldName);
         }

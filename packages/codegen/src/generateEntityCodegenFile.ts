@@ -478,6 +478,10 @@ function generateOptsFields(meta: EntityDbMetadata): Code[] {
   });
   const m2o = meta.manyToOnes
     .filter(({ derived }) => !derived)
+    // If a `group: { subType: SmallPublisherGroup }` is specializing this relation, that's
+    // fine for most things, but not the `SmallPublisherOpts`, b/c it will break the contravariance
+    // of `Publisher.setOpts` and `SmallPublisher.setOpts`
+    .filter(({ fieldName }) => !meta.baseType?.manyToOnes.find((o) => o.fieldName === fieldName))
     .map((field) => {
       const { fieldName, otherEntity, notNull } = field;
       const maybeNull = maybeUnionNull(notNull);

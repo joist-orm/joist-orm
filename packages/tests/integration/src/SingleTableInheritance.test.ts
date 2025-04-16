@@ -118,10 +118,16 @@ describe("SingleTableInheritance", () => {
     const em = newEntityManager();
     const nt = newTaskNew(em);
     const ot = newTaskOld(em);
-    const ot2 = newTaskOld(em, { copiedFrom: ot });
+    // We can refer to our own type and flush cleanly
+    newTaskOld(em, { copiedFrom: ot });
+    await em.flush();
+    // Opts cannot enforce the constraint
+    const ot2 = newTaskOld(em, { copiedFrom: nt });
+    // But ManyToOneReference.set can
     // @ts-expect-error
-    newTaskOld(em, { copiedFrom: nt });
-    await expect(em.flush()).rejects.toThrow("TaskOld#3 copiedFrom must be a TaskOld not TaskNew#1");
+    ot2.copiedFrom.set(nt);
+    // And either way it fails at runtime
+    await expect(em.flush()).rejects.toThrow("TaskOld#1 copiedFrom must be a TaskOld not TaskNew:1");
   });
 
   it("only adds subtype fields to correct subtype", async () => {

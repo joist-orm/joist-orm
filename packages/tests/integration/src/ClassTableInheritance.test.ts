@@ -380,7 +380,7 @@ describe("ClassTableInheritance", () => {
   it("can initialize persisted fields on a subtype", async () => {
     const em = newEntityManager();
     // Given a small publisher
-    const sp = newSmallPublisher(em, { name: "sp1" });
+    newSmallPublisher(em, { name: "sp1" });
     await em.flush();
     // Then the field was initialized
     expect(await select("small_publishers")).toMatchObject([{ all_author_names: "" }]);
@@ -548,13 +548,12 @@ describe("ClassTableInheritance", () => {
     const em = newEntityManager();
     // And try to give a non-small group
     const pg = newPublisherGroup(em);
-    const sp = newSmallPublisher(
+    newSmallPublisher(
       em,
-      // Then we get a compile error
-      // @ts-expect-error
+      // Then we cannot get a type error due to Liskov subtyping restrictions
       { group: pg },
     );
-    // And em.flush fails
+    // But em.flush fails at runtime
     await expect(em.flush()).rejects.toThrow("group must be a SmallPublisherGroup not PublisherGroup#1");
   });
 

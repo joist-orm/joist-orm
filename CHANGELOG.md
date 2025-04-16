@@ -1,3 +1,10 @@
+## [1.236.2](https://github.com/joist-orm/joist-orm/compare/v1.236.1...v1.236.2) (2025-04-16)
+
+
+### Bug Fixes
+
+* left outer join subtype restricted relations instead of inner join ([#1438](https://github.com/joist-orm/joist-orm/issues/1438)) ([2495f23](https://github.com/joist-orm/joist-orm/commit/2495f23ff523bb5c65311ed67688f597634f3948))
+
 ## [1.236.1](https://github.com/joist-orm/joist-orm/compare/v1.236.0...v1.236.1) (2025-04-16)
 
 

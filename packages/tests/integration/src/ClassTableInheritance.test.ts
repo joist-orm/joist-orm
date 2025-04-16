@@ -596,7 +596,7 @@ describe("ClassTableInheritance", () => {
     });
 
     it("set(opts) does not break contravariance", () => {
-      // Given a base type with a set(ops) method
+      // Given a base type with a set(opts) method
       type PublisherSetter = (opts: PublisherOpts) => void;
       // And the subtype overrides it with its own set(opts)
       type SmallPublisherSetter = (opts: SmallPublisherOpts) => void;

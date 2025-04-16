@@ -83,7 +83,6 @@ export interface TaskOldFields extends TaskFields {
 export interface TaskOldOpts extends TaskOpts {
   specialOldField: number;
   parentOldTask?: TaskOld | TaskOldId | null;
-  copiedFrom?: TaskOld | TaskOldId | null;
   comments?: Comment[];
   oldTaskTaskItems?: TaskItem[];
   tasks?: TaskOld[];

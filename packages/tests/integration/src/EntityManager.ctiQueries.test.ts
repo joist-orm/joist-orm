@@ -1,9 +1,25 @@
-import { Author, AuthorFilter, LargePublisher, newSmallPublisher, Publisher, SmallPublisher } from "@src/entities";
+import {
+  AdvanceStatus,
+  Author,
+  AuthorFilter,
+  BookAdvance,
+  LargePublisher,
+  newSmallPublisher,
+  Publisher,
+  SmallPublisher,
+} from "@src/entities";
 import { newEntityManager } from "@src/testEm";
-import { alias, getMetadata, parseFindQuery } from "joist-orm";
-import { insertAuthor, insertLargePublisher, insertPublisher } from "src/entities/inserts";
+import { alias, aliases, getMetadata, parseFindQuery } from "joist-orm";
+import {
+  insertAuthor,
+  insertBook,
+  insertBookAdvance,
+  insertLargePublisher,
+  insertPublisher,
+} from "src/entities/inserts";
 
 const am = getMetadata(Author);
+const bam = getMetadata(BookAdvance);
 const opts = { softDeletes: "include" } as const;
 
 describe("EntityManager.ctiQueries", () => {
@@ -97,6 +113,43 @@ describe("EntityManager.ctiQueries", () => {
       condition: {
         op: "and",
         conditions: [{ alias: "lp", column: "country", dbType: "text", cond: { kind: "eq", value: "US" } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("finds against required subtype becomes left join", async () => {
+    // Given we have two publishers, small & large
+    await insertPublisher({ id: 1, name: "sp1" });
+    await insertLargePublisher({ id: 2, name: "lp1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 2 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+    // And two BookAdvances, for each LP / SP
+    await insertBookAdvance({ book_id: 1, publisher_id: 1 });
+    await insertBookAdvance({ book_id: 2, publisher_id: 2 });
+    const em = newEntityManager();
+    // And we bind an alias to a subtype that we'll later use as an optional filter
+    const [ba, lp] = aliases(BookAdvance, LargePublisher);
+    const where = { as: ba, publisherLargePublisher: lp };
+    const conditions = { or: [lp.name.eq("won't match"), ba.status.eq(AdvanceStatus.Pending)] };
+    const bas = await em.find(BookAdvance, where, { conditions });
+    // Then we should find both BookAdvances, b/c they're both pending
+    expect(bas.length).toBe(2);
+    expect(parseFindQuery(bam, where, { conditions, softDeletes: "include" })).toMatchObject({
+      selects: [`ba.*`],
+      tables: [
+        { alias: "ba", table: "book_advances", join: "primary" },
+        { alias: "lp", table: "large_publishers", join: "outer", col1: "ba.publisher_id", col2: "lp.id" },
+        { alias: "lp_b0", table: "publishers", join: "outer", col1: "lp.id", col2: "lp_b0.id" },
+      ],
+      condition: {
+        op: "or",
+        conditions: [
+          { alias: "lp_b0", column: "name", dbType: "character varying", cond: { kind: "eq", value: "won't match" } },
+          { alias: "ba", column: "status_id", dbType: "int", cond: { kind: "eq", value: 1 } },
+        ],
       },
       orderBys: [expect.anything()],
     });

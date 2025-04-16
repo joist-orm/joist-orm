@@ -1,3 +1,10 @@
+## [1.236.1](https://github.com/joist-orm/joist-orm/compare/v1.236.0...v1.236.1) (2025-04-16)
+
+
+### Bug Fixes
+
+* Fix subtype specialization type errors ([#1444](https://github.com/joist-orm/joist-orm/issues/1444)) ([5b6fd0e](https://github.com/joist-orm/joist-orm/commit/5b6fd0ec3f76e9006ec737c3a1a60fe3e1e4581f))
+
 # [1.236.0](https://github.com/joist-orm/joist-orm/compare/v1.235.0...v1.236.0) (2025-04-15)
 
 

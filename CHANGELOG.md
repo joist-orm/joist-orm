@@ -1,3 +1,10 @@
+## [1.236.3](https://github.com/joist-orm/joist-orm/compare/v1.236.2...v1.236.3) (2025-04-16)
+
+
+### Bug Fixes
+
+* updated join order for filters going through a subtype restricted o2m ([#1440](https://github.com/joist-orm/joist-orm/issues/1440)) ([945b233](https://github.com/joist-orm/joist-orm/commit/945b233e280d4f4635b4840acfd11ab3560eaecc))
+
 ## [1.236.2](https://github.com/joist-orm/joist-orm/compare/v1.236.1...v1.236.2) (2025-04-16)
 
 

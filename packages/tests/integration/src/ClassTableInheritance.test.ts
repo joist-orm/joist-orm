@@ -1,4 +1,4 @@
-import { getProperties } from "joist-orm";
+import { Changes, type FieldsOf, getProperties, type RelationsOf } from "joist-orm";
 import {
   AdminUser,
   Author,
@@ -14,7 +14,9 @@ import {
   newUser,
   Publisher,
   PublisherGroup,
+  PublisherOpts,
   SmallPublisher,
+  SmallPublisherOpts,
   Tag,
   User,
 } from "src/entities";
@@ -574,5 +576,36 @@ describe("ClassTableInheritance", () => {
     await insertPublisher({ name: "sp1" });
     const em = newEntityManager();
     await expect(em.loadAll(LargePublisher, ["p:1"])).rejects.toThrow("p:1 were not found");
+  });
+
+  describe("types", () => {
+    it("changes does not break covariance", () => {
+      // Given a base type with a changes type
+      type PublisherChanges = Changes<
+        Publisher,
+        | keyof (FieldsOf<Publisher> & RelationsOf<Publisher>)
+        | keyof (FieldsOf<LargePublisher> & RelationsOf<LargePublisher>)
+        | keyof (FieldsOf<SmallPublisher> & RelationsOf<SmallPublisher>)
+      >;
+      // And the subtype has its own as well
+      type SmallPublisherChanges = Changes<SmallPublisher>;
+      // When we return the changes covariantly
+      type ReturnChange = () => PublisherChanges;
+      const spChanges: SmallPublisherChanges = null!;
+      // Then the subtype substitutes w/o errors
+      const _: ReturnChange = () => spChanges;
+    });
+
+    it("set(opts) does not break contravariance", () => {
+      // Given a base type with a set(ops) method
+      type PublisherSetter = (opts: PublisherOpts) => void;
+      // And the subtype overrides it with its own set(opts)
+      type SmallPublisherSetter = (opts: SmallPublisherOpts) => void;
+      // When we want to accept the setter contravariantly
+      function setPublisher(_: PublisherSetter): void {}
+      const spSetter: SmallPublisherSetter = null!;
+      // Then the subtype substitutes w/o errors
+      setPublisher(spSetter);
+    });
   });
 });

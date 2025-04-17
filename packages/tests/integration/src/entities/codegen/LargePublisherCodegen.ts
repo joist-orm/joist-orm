@@ -11,6 +11,8 @@ import {
   type FilterOf,
   type Flavor,
   getField,
+  type GetLens,
+  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -284,6 +286,10 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
    */
   load<U, V>(fn: (lens: Lens<LargePublisher>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as LargePublisher, fn, opts);
+  }
+
+  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
+    return getLens(largePublisherMeta, this, fn as never);
   }
 
   /**

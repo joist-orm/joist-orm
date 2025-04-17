@@ -12,6 +12,8 @@ import {
   type FilterOf,
   type Flavor,
   getField,
+  type GetLens,
+  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -313,6 +315,10 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
    */
   load<U, V>(fn: (lens: Lens<Comment>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as Comment, fn, opts);
+  }
+
+  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
+    return getLens(commentMeta, this, fn as never);
   }
 
   /**

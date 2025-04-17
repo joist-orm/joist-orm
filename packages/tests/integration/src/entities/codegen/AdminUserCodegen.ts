@@ -8,6 +8,8 @@ import {
   failNoIdYet,
   type Flavor,
   getField,
+  type GetLens,
+  getLens,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -218,6 +220,10 @@ export abstract class AdminUserCodegen extends User implements Entity {
    */
   load<U, V>(fn: (lens: Lens<AdminUser>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as AdminUser, fn, opts);
+  }
+
+  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
+    return getLens(adminUserMeta, this, fn as never);
   }
 
   /**

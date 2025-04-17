@@ -12,6 +12,8 @@ import {
   type FilterOf,
   type Flavor,
   getField,
+  type GetLens,
+  getLens,
   type GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -235,6 +237,10 @@ export abstract class T3BookCodegen extends BaseEntity<EntityManager, number> im
    */
   load<U, V>(fn: (lens: Lens<T3Book>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as T3Book, fn, opts);
+  }
+
+  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
+    return getLens(t3BookMeta, this, fn as never);
   }
 
   /**

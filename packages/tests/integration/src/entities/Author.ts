@@ -116,6 +116,7 @@ export class Author extends AuthorCodegen {
   public transientFields = {
     beforeFlushRan: false,
     beforeCreateRan: false,
+    beforeCreateAsyncRan: false,
     beforeUpdateRan: false,
     beforeDeleteRan: false,
     afterValidationRan: false,
@@ -409,7 +410,12 @@ config.beforeFlush(async (author, { em }) => {
 });
 
 config.beforeCreate((author) => {
-  author.transientFields.beforeCreateRan = true;
+  author.transientFields.beforeCreateRan = true
+});
+
+config.beforeCreate((author) => {
+  author.transientFields.beforeCreateAsyncRan = true;
+  return Promise.resolve("testing not void");
 });
 
 config.beforeUpdate((author) => {

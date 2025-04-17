@@ -28,7 +28,7 @@ export type EntityHook =
   | "afterValidation"
   | "beforeCommit"
   | "afterCommit";
-type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<void>;
+type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<unknown>;
 
 export const constraintNameToValidationError: Record<string, string> = {};
 

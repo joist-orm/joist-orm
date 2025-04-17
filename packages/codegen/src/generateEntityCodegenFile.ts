@@ -306,7 +306,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         return ${loadLens}(this as any as ${entityName}, fn, opts);
       }
 
-      get<U, V>(fn: (lens: ${GetLens}<Omit<this, 'fullNonReactiveAccess'>>) => ${GetLens}<U, V>): V {
+      get<U, V>(fn: (lens: ${GetLens}<Omit<this, "fullNonReactiveAccess">>) => ${GetLens}<U, V>): V {
         return ${getLens}(${entity.metaType}, this, fn as never);
       }
 

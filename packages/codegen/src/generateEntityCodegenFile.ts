@@ -30,6 +30,7 @@ import {
   FieldsOf,
   FilterOf,
   Flavor,
+  GetLens,
   GraphQLFilterOf,
   IdOf,
   JsonPayload,
@@ -59,6 +60,7 @@ import {
   cleanStringValue,
   failNoIdYet,
   getField,
+  getLens,
   hasLargeMany,
   hasLargeManyToMany,
   hasMany,
@@ -302,6 +304,10 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       ${tsdocComments.entity.load}
       load<U, V>(fn: (lens: ${Lens}<${entity.type}>) => ${Lens}<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
         return ${loadLens}(this as any as ${entityName}, fn, opts);
+      }
+
+      get<U, V>(fn: (lens: ${GetLens}<Omit<this, 'fullNonReactiveAccess'>>) => ${GetLens}<U, V>): V {
+        return ${getLens}(${entity.metaType}, this, fn as never);
       }
 
       ${tsdocComments.entity.populate}

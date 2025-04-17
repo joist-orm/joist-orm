@@ -1,3 +1,15 @@
+# [1.237.0](https://github.com/joist-orm/joist-orm/compare/v1.236.3...v1.237.0) (2025-04-17)
+
+
+### Bug Fixes
+
+* allow HookFn return value ([#1446](https://github.com/joist-orm/joist-orm/issues/1446)) ([90791de](https://github.com/joist-orm/joist-orm/commit/90791de34eeea45e3200e63aab00cb14ad3ccde2))
+
+
+### Features
+
+* Redo Entity.get(lens) ([#1445](https://github.com/joist-orm/joist-orm/issues/1445)) ([6a6a970](https://github.com/joist-orm/joist-orm/commit/6a6a97011d176d60869571f48e6ff227054098cc)), closes [#1227](https://github.com/joist-orm/joist-orm/issues/1227)
+
 ## [1.236.3](https://github.com/joist-orm/joist-orm/compare/v1.236.2...v1.236.3) (2025-04-16)
 
 

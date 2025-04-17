@@ -414,7 +414,8 @@ config.beforeCreate((author) => {
 });
 
 config.beforeCreate((author) => {
-  return Promise.resolve(author.transientFields.beforeCreateAsyncRan = true);
+  author.transientFields.beforeCreateAsyncRan = true;
+  return Promise.resolve("testing not void");
 });
 
 config.beforeUpdate((author) => {

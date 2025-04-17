@@ -15,6 +15,48 @@ import { Author, Book, Image, newAuthor, newBook, Publisher, Tag } from "./entit
 const { isAllSqlPaths } = testing;
 
 describe("EntityManager.lens", () => {
+  describe("sync lens", () => {
+    it("can handle own properties", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const b1 = await em.load(Book, "1");
+      const p1 = b1.get((b) => b.title);
+      expect(p1).toEqual("b1");
+    });
+
+    it("can handle loaded first relations", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const b1 = await em.load(Book, "1", "author");
+      const a1: Author = b1.get((b) => b.author);
+      expect(a1?.firstName).toEqual("a1");
+
+      // with no load hint
+      const b2 = await em.load(Book, "1");
+      // @ts-expect-error
+      b2.get((b) => b.author);
+    });
+
+    it("can handle loaded deep relations", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const b1 = await em.load(Book, "1", { author: "publisher" });
+      const p1 = b1.get((b) => b.author.publisher);
+      expect(p1?.name).toEqual("p1");
+
+      // with no load hint
+      const b2 = await em.load(Book, "1");
+      // @ts-expect-error
+      b2.get((b) => b.author.publisher);
+    });
+  });
+
   it("can navigate references", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });

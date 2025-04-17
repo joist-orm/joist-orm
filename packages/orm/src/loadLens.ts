@@ -17,6 +17,9 @@ import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 /** Generically matches on a Reference/Collection's load method. */
 type LoadLike<U> = { load(): Promise<U> };
 
+/** Generically matches on a Reference/Collection's load method. */
+type GetLike<U> = { get: U };
+
 /** Generically matches a property or zero-arg method that returns a promise. */
 type PromiseFnLike<U> = () => PromiseLike<U>;
 
@@ -68,6 +71,23 @@ export type Lens<T, R = T> = {
     : T[P] extends PromiseFnLike<infer U>
       ? Lens<MaybeDropArray<DropUndefined<U>>, MaybeArray<R, U>>
       : Lens<MaybeDropArray<DropUndefined<T[P]>>, MaybeArray<R, T[P]>>;
+};
+
+/**
+ * A type for declaratively walking the object graph.
+ *
+ * This is not technically a Lens that can `get/set`, but the idea is generally the same.
+ *
+ * `T` is the type we're on, i.e. when `T = Author` we can do `.firstName` or `.lastName.
+ * `R` is either a `T` or `T[]` or `T | undefined` and just captures whether we've hit a
+ * list at any point in the lens navigation path.
+ */
+export type GetLens<T, R = T> = {
+  [P in keyof T as T[P] extends GetLike<any> ? P : T[P] extends LoadLike<any> ? never : P]: T[P] extends GetLike<
+    infer U
+  >
+    ? GetLens<MaybeDropArray<DropUndefined<U>>, MaybeArray<R, U>>
+    : GetLens<MaybeDropArray<DropUndefined<T[P]>>, MaybeArray<R, T[P]>>;
 };
 
 /**

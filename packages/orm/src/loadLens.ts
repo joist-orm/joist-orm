@@ -11,7 +11,7 @@ import {
   PrimitiveField,
 } from "./EntityMetadata";
 import { lensDataLoader } from "./dataloaders/lensDataLoader";
-import {AsyncProperty, isAsyncProperty, Reference} from "./relations";
+import { isAsyncProperty } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 
 /** Generically matches on a Reference/Collection's load method. */
@@ -83,9 +83,11 @@ export type Lens<T, R = T> = {
  * list at any point in the lens navigation path.
  */
 export type GetLens<T, R = T> = {
-  [P in keyof T as T[P] extends GetLike<any> ? P : T[P] extends LoadLike<any> ? never : P]: T[P] extends GetLike<infer U>
+  [P in keyof T as T[P] extends GetLike<any> ? P : T[P] extends LoadLike<any> ? never : P]: T[P] extends GetLike<
+    infer U
+  >
     ? GetLens<MaybeDropArray<DropUndefined<U>>, MaybeArray<R, U>>
-      : GetLens<MaybeDropArray<DropUndefined<T[P]>>, MaybeArray<R, T[P]>>;
+    : GetLens<MaybeDropArray<DropUndefined<T[P]>>, MaybeArray<R, T[P]>>;
 };
 
 /**

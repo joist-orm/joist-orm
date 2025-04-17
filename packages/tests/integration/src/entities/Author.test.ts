@@ -227,6 +227,7 @@ describe("Author", () => {
     const a1 = new Author(em, { firstName: "a1" });
     expect(a1.transientFields.beforeFlushRan).toBe(false);
     expect(a1.transientFields.beforeCreateRan).toBe(false);
+    expect(a1.transientFields.beforeCreateAsyncRan).toBe(false);
     expect(a1.transientFields.beforeUpdateRan).toBe(false);
     expect(a1.transientFields.afterCommitRan).toBe(false);
     expect(a1.transientFields.afterCommitIdIsSet).toBe(false);
@@ -237,6 +238,7 @@ describe("Author", () => {
     await em.flush();
     expect(a1.transientFields.beforeFlushRan).toBe(true);
     expect(a1.transientFields.beforeCreateRan).toBe(true);
+    expect(a1.transientFields.beforeCreateAsyncRan).toBe(true);
     expect(a1.transientFields.beforeUpdateRan).toBe(false);
     expect(a1.transientFields.beforeDeleteRan).toBe(false);
     expect(a1.transientFields.afterValidationRan).toBe(true);
@@ -246,8 +248,10 @@ describe("Author", () => {
     expect(a1.transientFields.afterCommitIsNewEntity).toBe(true);
     a1.firstName = "new name";
     a1.transientFields.beforeCreateRan = false;
+    a1.transientFields.beforeCreateAsyncRan = false;
     await em.flush();
     expect(a1.transientFields.beforeCreateRan).toBe(false);
+    expect(a1.transientFields.beforeCreateAsyncRan).toBe(false);
     expect(a1.transientFields.beforeUpdateRan).toBe(true);
     em.delete(a1);
     await em.flush();

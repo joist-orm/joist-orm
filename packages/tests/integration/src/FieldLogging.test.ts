@@ -135,7 +135,7 @@ describe("FieldLogging", () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     expect(() => em.setFieldLogging("Author.firstName,InvalidEntity.name")).toThrow(
-      "Field InvalidEntity not found on Author",
+      "Field InvalidEntity.name not found on Author",
     );
   });
 });

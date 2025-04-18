@@ -1,3 +1,10 @@
+# [1.238.0](https://github.com/joist-orm/joist-orm/compare/v1.237.0...v1.238.0) (2025-04-18)
+
+
+### Features
+
+* Support setFieldLogging("Author"). ([#1447](https://github.com/joist-orm/joist-orm/issues/1447)) ([f86b151](https://github.com/joist-orm/joist-orm/commit/f86b15133a2497dc2e22177a51b82a935b966ffa))
+
 # [1.237.0](https://github.com/joist-orm/joist-orm/compare/v1.236.3...v1.237.0) (2025-04-17)
 
 

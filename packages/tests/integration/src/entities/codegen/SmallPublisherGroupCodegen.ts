@@ -11,8 +11,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -227,10 +225,6 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
    */
   load<U, V>(fn: (lens: Lens<SmallPublisherGroup>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as SmallPublisherGroup, fn, opts);
-  }
-
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(smallPublisherGroupMeta, this, fn as never);
   }
 
   /**

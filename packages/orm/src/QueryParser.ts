@@ -306,8 +306,16 @@ export function parseFindQuery(
           }
         } else if (field.kind === "o2o") {
           // We have to always join into o2os, i.e. we can't probe the filter like we do for m2os
-          const a = getAlias(field.otherMetadata().tableName);
-          const otherColumn = field.otherMetadata().allFields[field.otherFieldName].serde!.columns[0].columnName;
+          const otherMeta = field.otherMetadata();
+          const a = getAlias(otherMeta.tableName);
+          const otherField = otherMeta.allFields[field.otherFieldName];
+          const otherColumn =
+            // if our other is a poly, we need to find a matching column rather than just picking the first
+            otherField.kind === "poly"
+              ? otherField.components.find(
+                  (c) => c.otherMetadata() === meta || c.otherMetadata() === getBaseMeta(meta),
+                )!.columnName
+              : otherField.serde!.columns[0].columnName;
           addTable(
             field.otherMetadata(),
             a,

@@ -11,8 +11,6 @@ import {
   type FilterOf,
   type Flavor,
   getField,
-  type GetLens,
-  getLens,
   type GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -258,10 +256,6 @@ export abstract class ChildItemCodegen extends BaseEntity<EntityManager, string>
    */
   load<U, V>(fn: (lens: Lens<ChildItem>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as ChildItem, fn, opts);
-  }
-
-  get<U, V>(fn: (lens: GetLens<Omit<this, "fullNonReactiveAccess">>) => GetLens<U, V>): V {
-    return getLens(childItemMeta, this, fn as never);
   }
 
   /**

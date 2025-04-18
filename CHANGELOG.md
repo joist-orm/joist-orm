@@ -1,3 +1,10 @@
+# [1.239.0](https://github.com/joist-orm/joist-orm/compare/v1.238.1...v1.239.0) (2025-04-18)
+
+
+### Features
+
+* Revert Entity.get(lens) again ([#1449](https://github.com/joist-orm/joist-orm/issues/1449)) ([11b3701](https://github.com/joist-orm/joist-orm/commit/11b37017da206fce98ff03394f7c0f7054919165))
+
 ## [1.238.1](https://github.com/joist-orm/joist-orm/compare/v1.238.0...v1.238.1) (2025-04-18)
 
 

@@ -1749,7 +1749,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     this.#rm.setLogger(typeof arg === "boolean" ? (arg ? new ReactionLogger() : undefined) : arg);
   }
 
-  /** Accepts `Author.firstName,lastName`. */
+  /** Accepts `Author` or `Author.firstName,lastName` or `Author.lastName!`. */
   setFieldLogging(spec: string): void;
   /** Accepts `["Author.firstName,lastName", "Book.title"]`. */
   setFieldLogging(spec: string[]): void;
@@ -1763,19 +1763,20 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     } else if (typeof arg === "string" || Array.isArray(arg)) {
       const specs = Array.isArray(arg) ? arg : [arg];
       const watching: FieldLoggerWatch[] = specs.map((spec) => {
-        const breakpoint = spec.endsWith("!");
-        const [entity, fields] = spec.replace(/!$/, "").split(".");
-        const fieldNames = fields.split(",");
-        // Ensure entity is invalid, to avoid failing silently
+        // Regex to match Author.firstName,lastName! pattern
+        const regex = /^([^.!]+)(?:\.([^!]*))?(!)?$/;
+        const [_, entity, fields, breakpoint] = spec.match(regex) ?? fail(`Unsupported spec ${spec}`);
+        const fieldNames = fields?.split(",");
+        // Ensure entity is valid, to avoid failing silently
         const meta = getMetadataForType(entity);
         // Ensure the field names are valid, to avoid failing silently
-        fieldNames.forEach((field) => {
+        fieldNames?.forEach((field) => {
           // We could probably check the `kind`, b/c things like o2o/o2m are not supported atm
           if (!meta.allFields[field]) {
             throw new Error(`Field ${field} not found on ${entity}`);
           }
         });
-        return { entity, fieldNames, breakpoint };
+        return { entity, fieldNames, breakpoint: !!breakpoint };
       });
       this.#fieldLogger = new FieldLogger(watching);
     } else {

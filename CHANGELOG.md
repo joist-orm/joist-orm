@@ -1,3 +1,10 @@
+## [1.238.1](https://github.com/joist-orm/joist-orm/compare/v1.238.0...v1.238.1) (2025-04-18)
+
+
+### Bug Fixes
+
+* allow finding through o2o relations whose other side is polymorphic ([#1448](https://github.com/joist-orm/joist-orm/issues/1448)) ([d657931](https://github.com/joist-orm/joist-orm/commit/d657931095154efe7c465436859e5a8b207340d2))
+
 # [1.238.0](https://github.com/joist-orm/joist-orm/compare/v1.237.0...v1.238.0) (2025-04-18)
 
 

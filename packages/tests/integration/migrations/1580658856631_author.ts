@@ -5,6 +5,7 @@ import {
   createEnumTable,
   createManyToManyTable,
   createSubTable,
+  createUnnest2d1dFunction,
   createUpdatedAtFunction,
   enumArrayColumn,
   foreignKey,
@@ -16,6 +17,7 @@ export function up(b: MigrationBuilder): void {
 
   createUpdatedAtFunction(b);
   createCreatedAtFunction(b);
+  createUnnest2d1dFunction(b);
 
   createEnumTable(b, "publisher_size", [
     ["SMALL", "Small"],

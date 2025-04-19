@@ -241,7 +241,7 @@ describe("ClassTableInheritance", () => {
     await insertPublisher({ name: "sp1" });
     // spotlight_author_id is enforced in the runtime, not in the db, so it is safe to be invalid here since
     // we aren't asserting against spotlight author
-    await insertLargePublisher({ id: 2, name: "lp1", spotlight_author_id: undefined as any });
+    await insertLargePublisher({ id: 2, name: "lp1", spotlight_author_id: null as any });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertAuthor({ first_name: "a2", publisher_id: 2 });
 

@@ -11,7 +11,7 @@ import {
   select,
   update,
 } from "@src/entities/inserts";
-import { knex, newEntityManager } from "@src/testEm";
+import { newEntityManager, sql } from "@src/testEm";
 import { noValue } from "joist-orm";
 import {
   Author,
@@ -137,7 +137,7 @@ describe("ReactiveField", () => {
     expect(br.isTest.get).toEqual(false);
 
     // And the comment is set to be Test, but not calculated
-    await knex.raw(`UPDATE comments SET text = 'Test' WHERE id = ${comment.idUntagged}`);
+    await sql`UPDATE comments SET text = 'Test' WHERE id = ${comment.idUntagged}`;
 
     // When the objects are loaded into a new Entity Manager
     const em2 = newEntityManager();

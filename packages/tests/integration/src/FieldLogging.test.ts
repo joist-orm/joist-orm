@@ -45,15 +45,15 @@ describe("FieldLogging", () => {
     expect(fieldOutput).toMatchInlineSnapshot(`
      [
        "a#1 created at newAuthor.ts:13↩",
+       "a#1.isFunny = false at defaults.ts:45↩",
        "a#1.firstName = a1 at newAuthor.ts:13↩",
        "a#1.age = 40 at newAuthor.ts:13↩",
-       "a#1.isFunny = false at defaults.ts:45↩",
        "a#1.nickNames = a1 at defaults.ts:191↩",
        "b#1 created at newBook.ts:9↩",
+       "b#1.notes = Notes for undefined at defaults.ts:45↩",
        "b#1.title = title at newBook.ts:9↩",
        "b#1.order = 1 at newBook.ts:9↩",
        "b#1.author = Author#1 at newBook.ts:9↩",
-       "b#1.notes = Notes for title at defaults.ts:45↩",
        "b#1.authorsNickNames = a1 at defaults.ts:191↩",
      ]
     `);

@@ -1,7 +1,14 @@
 const postgres = require("postgres");
 
 async function testPipelining() {
-  const sql = postgres("postgres://joist:local@localhost:5435/joist");
+  const sql = postgres("postgres://joist:local@localhost:5435/joist", {
+    onnotice(n) {
+      if (n.severity !== "NOTICE") {
+        console.error(n);
+      }
+    },
+  });
+
   await sql`TRUNCATE tags CASCADE`;
 
   // Number of statements (i.e. INSERT author, UPDATE book, etc)

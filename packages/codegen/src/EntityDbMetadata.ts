@@ -716,7 +716,7 @@ export function oneToOneName(
   } else {
     // If there is a m2o, assume we might conflict, and use the column name to at least be unique
     // Start with `book` from `images.book_id` or `current_draft_book` from `authors.current_draft_book_id`
-    let fieldName = r.foreignKey.columns[0].name.replace(/_id|Id$/, "");
+    let fieldName = r.foreignKey.columns[0].name.replace(idSuffix, "");
     // Suffix the new type that we're pointing to, to `current_draft_book_author`
     fieldName = `${fieldName}_${keyEntity.name}`;
     // And drop the `book`, to `current_draft__author`
@@ -726,6 +726,8 @@ export function oneToOneName(
   }
 }
 
+const idSuffix = /_id$|Id$/;
+
 export function referenceName(config: Config, entity: Entity, r: M2ORelation | O2MRelation): string {
   const [column] = r.foreignKey.columns;
   const overrides = column.commentData;
@@ -733,12 +735,12 @@ export function referenceName(config: Config, entity: Entity, r: M2ORelation | O
     polymorphicFieldName(config, r) ??
     // If the name is overridden then use that
     (isFieldNameOverrides(overrides) ? overrides.fieldName : undefined) ??
-    camelCase(column.name.replace(/_id|Id$/, ""))
+    camelCase(column.name.replace(idSuffix, ""))
   );
 }
 
 function enumFieldName(columnName: string) {
-  return camelCase(columnName.replace(/_id|Id$/, ""));
+  return camelCase(columnName.replace(idSuffix, ""));
 }
 
 function primitiveFieldName(columnName: string) {
@@ -751,7 +753,7 @@ export function manyToManyName(column: Column) {
   if (isFieldNameOverrides(overrides) && overrides.otherFieldName) {
     return overrides.otherFieldName;
   }
-  return camelCase(plural(column.name.replace(/_id|Id$/, "")));
+  return camelCase(plural(column.name.replace(idSuffix, "")));
 }
 
 /** Returns the collection name to use on `entity` when referring to `otherEntity`s. */
@@ -778,7 +780,7 @@ export function collectionName(
   // If `books.foo_author_id` and `books.bar_author_id` both exist
   if (r.type !== "m2m" && sourceTable.m2oRelations.filter((r) => r.targetTable === targetTable).length > 1) {
     // Use `fooAuthorBooks`, `barAuthorBooks`
-    singularName = `${column.name.replace(/_id|Id$/, "")}_${singularName}`;
+    singularName = `${column.name.replace(idSuffix, "")}_${singularName}`;
   }
   // If we've guessed `Book.bookReviews` based on `book_reviews.book_id` --> `bookReviews`, strip the `Book` prefix
   if (singularName.length > singleEntity.name.length && singularName.startsWith(singleEntity.name)) {

@@ -129,7 +129,7 @@
     "updatedAt"
   ],
   "Child": ["createdAt", "groups", "id", "name", "updatedAt"],
-  "ChildGroup": ["childGroupId", "childItems", "createdAt", "id", "name", "parentGroup", "updatedAt"],
+  "ChildGroup": ["childGroup", "childGroupId", "childItems", "createdAt", "id", "name", "parentGroup", "updatedAt"],
   "ChildItem": ["childGroup", "createdAt", "id", "name", "parentItem", "updatedAt"],
   "Comment": [
     "books",
@@ -357,7 +357,7 @@
     "updatedAt"
   ],
   "SaveBookReviewResult": ["bookReview"],
-  "SaveChildGroupInput": ["childGroupIdId", "id", "name", "parentGroupId"],
+  "SaveChildGroupInput": ["childGroupId", "childGroupIdId", "id", "name", "parentGroupId"],
   "SaveChildGroupResult": ["childGroup"],
   "SaveChildInput": ["id", "name"],
   "SaveChildItemInput": ["childGroupId", "id", "name", "parentItemId"],

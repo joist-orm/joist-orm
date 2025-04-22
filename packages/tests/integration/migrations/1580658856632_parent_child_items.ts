@@ -17,7 +17,7 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "child_groups", {
     name: "text",
     parent_group_id: foreignKey("parent_groups", { notNull: true }),
-    child_id_group_id: foreignKey("children", { notNull: true }),
+    child_group_id: foreignKey("children", { notNull: true }),
   });
   createEntityTable(b, "child_items", {
     name: "text",

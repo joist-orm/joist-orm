@@ -1,3 +1,10 @@
+## [1.239.1](https://github.com/joist-orm/joist-orm/compare/v1.239.0...v1.239.1) (2025-04-22)
+
+
+### Bug Fixes
+
+* Fix id suffix regex. ([#1450](https://github.com/joist-orm/joist-orm/issues/1450)) ([e92a57f](https://github.com/joist-orm/joist-orm/commit/e92a57f8812e4b0bfad13185825230f41932d4f3))
+
 # [1.239.0](https://github.com/joist-orm/joist-orm/compare/v1.238.1...v1.239.0) (2025-04-18)
 
 

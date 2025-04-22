@@ -139,7 +139,7 @@ export function up(b: MigrationBuilder): void {
     ignore_used_to_be_useful: { type: "boolean", notNull: false, default: true },
     ignore_used_to_be_useful_required_with_default: { type: "boolean", notNull: true, default: true },
     ignore_enum_fk_id: foreignKey("publisher_size", { notNull: false }),
-    ignore_enum_fk_id_required_with_default: foreignKey("publisher_size", { notNull: true, default: 1 }),
+    ignore_enum_fk_required_with_default_id: foreignKey("publisher_size", { notNull: true, default: 1 }),
     // for foreign key tests
     publisher_id: foreignKey("publishers", { notNull: false }),
     mentor_id: foreignKey("authors", { notNull: false, otherFieldName: "mentees" }),

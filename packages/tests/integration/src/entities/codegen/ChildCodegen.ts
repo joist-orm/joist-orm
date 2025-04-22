@@ -297,8 +297,8 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
       this,
       childGroupMeta,
       "groups",
-      "childGroupId",
-      "child_id_group_id",
+      "childGroup",
+      "child_group_id",
       undefined,
     );
   }

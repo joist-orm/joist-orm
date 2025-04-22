@@ -64,20 +64,20 @@ export interface ChildGroupFields {
   name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  childGroupId: { kind: "m2o"; type: Child; nullable: never; derived: false };
+  childGroup: { kind: "m2o"; type: Child; nullable: never; derived: false };
   parentGroup: { kind: "m2o"; type: ParentGroup; nullable: never; derived: false };
   childItems: { kind: "o2m"; type: ChildItem };
 }
 
 export interface ChildGroupOpts {
   name?: string | null;
-  childGroupId: Child | ChildId;
+  childGroup: Child | ChildId;
   parentGroup: ParentGroup | ParentGroupId;
   childItems?: ChildItem[];
 }
 
 export interface ChildGroupIdsOpts {
-  childGroupIdId?: ChildId | null;
+  childGroupId?: ChildId | null;
   parentGroupId?: ParentGroupId | null;
   childItemIds?: ChildItemId[] | null;
 }
@@ -87,7 +87,7 @@ export interface ChildGroupFilter {
   name?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
-  childGroupId?: EntityFilter<Child, ChildId, FilterOf<Child>, never>;
+  childGroup?: EntityFilter<Child, ChildId, FilterOf<Child>, never>;
   parentGroup?: EntityFilter<ParentGroup, ParentGroupId, FilterOf<ParentGroup>, never>;
   childItems?: EntityFilter<ChildItem, ChildItemId, FilterOf<ChildItem>, null | undefined>;
 }
@@ -97,7 +97,7 @@ export interface ChildGroupGraphQLFilter {
   name?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  childGroupId?: EntityGraphQLFilter<Child, ChildId, GraphQLFilterOf<Child>, never>;
+  childGroup?: EntityGraphQLFilter<Child, ChildId, GraphQLFilterOf<Child>, never>;
   parentGroup?: EntityGraphQLFilter<ParentGroup, ParentGroupId, GraphQLFilterOf<ParentGroup>, never>;
   childItems?: EntityGraphQLFilter<ChildItem, ChildItemId, GraphQLFilterOf<ChildItem>, null | undefined>;
 }
@@ -107,7 +107,7 @@ export interface ChildGroupOrder {
   name?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
-  childGroupId?: ChildOrder;
+  childGroup?: ChildOrder;
   parentGroup?: ParentGroupOrder;
 }
 
@@ -118,7 +118,7 @@ export const childGroupConfig = new ConfigApi<ChildGroup, Context>();
 
 childGroupConfig.addRule(newRequiredRule("createdAt"));
 childGroupConfig.addRule(newRequiredRule("updatedAt"));
-childGroupConfig.addRule(newRequiredRule("childGroupId"));
+childGroupConfig.addRule(newRequiredRule("childGroup"));
 childGroupConfig.addRule(newRequiredRule("parentGroup"));
 
 declare module "joist-orm" {
@@ -329,8 +329,8 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
     );
   }
 
-  get childGroupId(): ManyToOneReference<ChildGroup, Child, never> {
-    return this.__data.relations.childGroupId ??= hasOne(this, childMeta, "childGroupId", "groups");
+  get childGroup(): ManyToOneReference<ChildGroup, Child, never> {
+    return this.__data.relations.childGroup ??= hasOne(this, childMeta, "childGroup", "groups");
   }
 
   get parentGroup(): ManyToOneReference<ChildGroup, ParentGroup, never> {

@@ -1,3 +1,10 @@
+## [1.239.2](https://github.com/joist-orm/joist-orm/compare/v1.239.1...v1.239.2) (2025-04-22)
+
+
+### Bug Fixes
+
+* Fix using withLoaded with recursive collections. ([#1451](https://github.com/joist-orm/joist-orm/issues/1451)) ([defa326](https://github.com/joist-orm/joist-orm/commit/defa326ed6ac21d5091354bccec1625963500249))
+
 ## [1.239.1](https://github.com/joist-orm/joist-orm/compare/v1.239.0...v1.239.1) (2025-04-22)
 
 

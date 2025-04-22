@@ -73,7 +73,8 @@ export function generateExplicitFlushFunction(db: DbMetadata): string {
  * A cuter/shorter flush that only DELETEs from tables that were inserted into.
  *
  * The difference between this and the explicit-order function should only be
- * noticeable on 100+ table schemas.
+ * noticeable on 100+ table schemas (specifically, on our production app with ~200 tables
+ * and ~5,000 tests, it gave an 8% speed-up vs. the "DELETE every table" approach).
  */
 export function generateSequenceFlushFunction(db: DbMetadata): string {
   const enumTables = Object.values(db.enums).map((e) => e.table);

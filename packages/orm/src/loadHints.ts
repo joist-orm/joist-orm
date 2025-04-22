@@ -61,16 +61,18 @@ type MarkDeepLoaded<T extends Entity, P> =
       ? LoadedReference<T, Loaded<U, DeepLoadHint<U>>, N>
       : P extends Collection<MaybeBaseType, infer U>
         ? LoadedCollection<T, Loaded<U, DeepLoadHint<U>>>
-        : P extends AsyncProperty<MaybeBaseType, infer V>
-          ? // prettier-ignore
-            [V] extends [(infer U extends Entity) | undefined]
+        : P extends ReadOnlyCollection<MaybeBaseType, infer U>
+          ? LoadedReadOnlyCollection<T, Loaded<U, DeepLoadHint<U>>>
+          : P extends AsyncProperty<MaybeBaseType, infer V>
+            ? // prettier-ignore
+              [V] extends [(infer U extends Entity) | undefined]
     ? LoadedProperty<T, Loaded<U, DeepLoadHint<U>> | Exclude<V, U>>
     : V extends readonly (infer U extends Entity)[]
     ? LoadedProperty<T, Loaded<U, DeepLoadHint<U>>[]>
     : LoadedProperty<T, V>
-          : P extends AsyncMethod<T, infer A, infer V>
-            ? LoadedMethod<T, A, V>
-            : unknown;
+            : P extends AsyncMethod<T, infer A, infer V>
+              ? LoadedMethod<T, A, V>
+              : unknown;
 
 /**
  * A helper type for `New` that marks every `Reference` and `LoadedCollection` in `T` as loaded.

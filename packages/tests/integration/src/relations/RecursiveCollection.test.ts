@@ -1,6 +1,6 @@
 import { insertAuthor, insertBook, select, update } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
-import { RecursiveCycleError } from "joist-orm";
+import { RecursiveCycleError, withLoaded } from "joist-orm";
 import { Author, Book, newAuthor, newBook } from "../entities";
 
 describe("RecursiveCollection", () => {
@@ -101,6 +101,13 @@ describe("RecursiveCollection", () => {
       const a1 = em.create(Author, { firstName: "a1" });
       expect(a1.mentorsRecursive.isLoaded).toBe(true);
       expect(a1.mentorsRecursive.get).toMatchEntity([]);
+    });
+
+    it("can use withLoaded", async () => {
+      const em = newEntityManager();
+      const a = newAuthor(em);
+      const { mentorsRecursive } = withLoaded(a);
+      expect(mentorsRecursive).toMatchEntity([]);
     });
   });
 
@@ -306,6 +313,13 @@ describe("RecursiveCollection", () => {
       const em = newEntityManager();
       const b1 = em.create(Book, { title: "b1", author: newAuthor(em) });
       expect(b1.sequelsRecursive.get).toMatchEntity([]);
+    });
+
+    it("can use withLoaded", async () => {
+      const em = newEntityManager();
+      const b = newBook(em);
+      const { sequelsRecursive } = withLoaded(b);
+      expect(sequelsRecursive).toMatchEntity([]);
     });
   });
 });

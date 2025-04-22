@@ -894,7 +894,7 @@ describe("EntityManager.factories", () => {
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
          "Creating new ChildGroup at EntityManager.factories.test.ts:884↩",
-         "  childGroupId = creating new Child↩",
+         "  childGroup = creating new Child↩",
          "    created Child#1 added to scope↩",
          "  parentGroup = creating new ParentGroup↩",
          "    created ParentGroup#2 added to scope↩",

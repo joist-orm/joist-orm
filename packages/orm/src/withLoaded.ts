@@ -11,6 +11,7 @@ import {
   isRelation,
   LoadedCollection,
   LoadedProperty,
+  LoadedReadOnlyCollection,
   LoadedReference,
   PolymorphicReference,
 } from "./relations";
@@ -28,11 +29,13 @@ export type WithLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded
       ? U
       : L[K] extends LoadedReference<T, infer U, undefined>
         ? U | undefined
-        : L[K] extends LoadedCollection<T, infer U>
-          ? U[]
-          : L[K] extends LoadedProperty<T, infer V>
-            ? V
-            : L[K];
+        : L[K] extends LoadedReadOnlyCollection<T, infer U>
+          ? readonly U[]
+          : L[K] extends LoadedCollection<T, infer U>
+            ? U[]
+            : L[K] extends LoadedProperty<T, infer V>
+              ? V
+              : L[K];
 };
 
 /**

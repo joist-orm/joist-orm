@@ -1,3 +1,10 @@
+## [1.239.3](https://github.com/joist-orm/joist-orm/compare/v1.239.2...v1.239.3) (2025-04-22)
+
+
+### Bug Fixes
+
+* Leave withLoaded arrays as mutable. ([#1452](https://github.com/joist-orm/joist-orm/issues/1452)) ([006a750](https://github.com/joist-orm/joist-orm/commit/006a750727dc46161e5629e82850ec7ad4c58e05))
+
 ## [1.239.2](https://github.com/joist-orm/joist-orm/compare/v1.239.1...v1.239.2) (2025-04-22)
 
 

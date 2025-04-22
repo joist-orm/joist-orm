@@ -48,7 +48,7 @@ As we'll see later, this 2nd one has the biggest impact on pipelining's performa
 
 ## Transactions Required
 
-One wrinkle with pipelining is that, if 1 SQL statement fails, all requests that are "after it" in the pipeline are also aborted.
+One wrinkle with pipelining is that if 1 SQL statement fails, all requests that follow it in the pipeline are also aborted.
 
 This generally means pipelining is only useful when executing multi-statement database transactions, where you're executing a `BEGIN` + some number of `INSERT`, `UPDATE`, and `DELETE` statements + `COMMIT`, and already expect them to all atomically commit.
 
@@ -60,7 +60,7 @@ Per above, network latency between your machine & the database is the biggest fa
 
 This can make benchmarking difficult and potentially misleading, because benchmarks often have the "web backend" and "the database" on the same physical machine, which means there is effectively zero network latency.
 
-Thankfully, we can use solutions like Shopify's [toxiproxy](https://github.com/Shopify/toxiproxy) to introduce an artificial amount of latency to the network requests between our Node process and the Postgres database.
+Thankfully, we can use solutions like Shopify's [toxiproxy](https://github.com/Shopify/toxiproxy) to introduce an artificial, deterministic amount of latency to the network requests between our Node process and the Postgres database.
 
 toxiproxy is particularly neat in that it's easy to run as a docker container, and control the latency via `POST` commands to a minimal REST API it exposes.
 
@@ -108,24 +108,34 @@ curl -X POST http://localhost:8474/proxies/postgres/toxics -d '{
 
 Is all we need to control exactly how much latency toxiproxy injects between every Node.js database call & our docker-hosted postgres instance.
 
-## postgres.js Pipelining Results
+## Leveraging postgres.js
 
-We'll delve into Joist pipeline perf in a future post, but for now we'll stay closer to the metal and use [postgres.js](https://github.com/porsager/postgres) to directly execute SQL statements in a few different setups.
+We'll delve into Joist's pipeline performance in a future post, but for now we'll stay closer to the metal and use [postgres.js](https://github.com/porsager/postgres) to directly execute SQL statements in a few different setups/benchmarks.
 
-Note that were using postgres.js, instead of the venerable node-pg, because postgres.js implements pipelining, while node-pg does not yet. postgres.js also has an extremely seamless way to use pipelining--any statements issued within a `sql.begin` are automatically pipelined for us. Very neat!
+We're using postgres.js, instead of the venerable node-pg, because postgres.js implements pipelining, while node-pg does not yet.
 
-### 0. Benchmark Setup
+postgres.js also has an extremely seamless way to use pipelining--any statements issued in parallel (i.e. a `Promise.all`) within a `sql.begin` are automatically pipelined for us.
 
-We'll be using mitata for these benchmarks, and test inserting `tag` rows into a single-column table.
+Very neat!
 
-Our configuration parameters are:
+## Benchmarks
+
+### 0. Setup
+
+We'll be using [mitata](https://www.npmjs.com/package/mitata) for these benchmarks--it is technically focused on CPU micro-benchmarks, but it's warmup & other infra make it suitable to our async, I/O oriented benchmark as well.
+
+For test statements, we'll test inserting `tag` rows into a single-column table.
+
+We have a few configuration parameters, that can be tweaked across runs:
 
 * `numStatements` the number of tags to insert
 * `toxiLatencyInMillis` the latency in millis that toxiproxy should delay each statement
 
+As we'll see, both of these affect the results--the higher each becomes (the more statements, or the more latency), the more performance benefits we get from pipelining.
+
 ### 1. Sequential Inserts
 
-In this benchmark, we insert tags with individual `await`s:
+As a baseline benchmark, we execute `numStatements` statements sequentially, with individual `await`s on each `INSERT`:
 
 ```ts
 bench("sequential", async () => {
@@ -139,28 +149,20 @@ bench("sequential", async () => {
 
 We expect this to be the slowest, because it is purposefully "defeating" pipelining by waiting for each `INSERT` to finish before executing the next one.
 
-### 2. Concurrent w/o Transaction
+:::tip[info]
+
+Ideally your code, or ORM, would be inserting 10 tags as a single batch `INSERT`, as Joist does automatically.
+
+But here we're less concerned about what each specific SQL statement does, and more just how many statements we're executing & waiting for return values--so a non-batch `INSERT` into tags will suffice.
+
+:::
+
+### 2. Pipelining with return value
+
+This is postgres.js's canonical way of invoking pipelining, returning a `string[]` of SQL statements from the `sql.begin` lambda:
 
 ```ts
-bench("concurrent", async () => {
-  const promises = [];
-  for (let i = 0; i < numStatements; i++) {
-    promises.push(sql`INSERT INTO tag (name)VALUES (${`value-${nextTag++}`})`);
-  }
-  await Promise.all(promises);
-});
-```
-
-Here we're executing the requests in parallel (a `Promise.all`) but __not__ using a transaction, which seems postgres.js can still execute them in parallel, but only by using all the connections in our connection pool.
-
-We expect this to be fast, but is also not an approach we could use to "commit" our endpoint's results to the database, b/c we risk some of the `INSERT`s committing and others aborting. But we include it for curiosity, to see how postgres.js handles it.
-
-### 3. Pipelining with return value
-
-This is postgres.js's canonical way of invoking pipelining, return a `string[]` of SQL statements from the `sql.begin` lambda:
-
-```ts
-bench("pipeline (return string[])", async () => {
+bench("pipeline string[]", async () => {
   await sql.begin((sql) => {
     const statements = [];
     for (let i = 0; i < numStatements; i++) {
@@ -171,28 +173,143 @@ bench("pipeline (return string[])", async () => {
 });
 ```
 
-We expect this to be fast, "because pipelining!"
+We expect this to be fast, because of pipelining.
 
-### 4. Pipelining with Promise.all
+### 3. Pipelining with Promise.all
 
-This final example also uses postgres.js's pipelining, but by invoking the statements from within a `Promise.all`:
+This last example also uses postgres.js's pipelining, but by invoking the statements from within a `Promise.all`:
 
 ```ts
-await sql.begin(async (sql) => {
-  const statements = [];
-  for (let i = 0; i < numStatements; i++) {
-    statements.push(sql`INSERT INTO tag (name) VALUES (${`value-${nextTag++}`})`);
-  }
-  await Promise.all(statements);
+bench("pipeline Promise.all", async () => {
+  await sql.begin(async (sql) => {
+    const statements = [];
+    for (let i = 0; i < numStatements; i++) {
+      statements.push(sql`INSERT INTO tag (name) VALUES (${`value-${nextTag++}`})`);
+    }
+    await Promise.all(statements);
+  });
 });
 ```
 
-This is particularly important for Joist, because even within a single `em.flush()` call, and a single `BEGIN`/`COMMIT` database transaction, we potentially have to make several "waves" of SQL updates (when `ReactiveQueryField`s are involved), and so can't always return a single `string[]` of SQL statements to execute.
+This is particularly important for Joist, because even within a single `em.flush()` call, we'll execute a single `BEGIN`/`COMMIT` database transaction, but potentially might have to make several "waves" of SQL updates (technically only when `ReactiveQueryField`s are involved), and so can't always return a single `string[]` of SQL statements to execute.
 
 We expect this to be fast as well.
 
 ## Results
 
-```shell
+I've ran the benchmark with a series of latencies & statements.
+
+1ms latency, 10 statements:
 
 ```
+toxiproxy configured with 1ms latency
+numStatements 10
+clk: ~4.37 GHz
+cpu: Intel(R) Core(TM) i9-10885H CPU @ 2.40GHz
+runtime: node 23.10.0 (x64-linux)
+
+benchmark                   avg (min … max)
+-------------------------------------------
+sequential                    15.80 ms/iter
+pipeline string[]              4.16 ms/iter
+pipeline Promise.all           4.21 ms/iter
+
+summary
+  pipeline string[]
+   1.01x faster than pipeline Promise.all
+   3.8x faster than sequential
+```
+
+1ms latency, 20 statements:
+
+```
+toxiproxy configured with 1ms latency
+numStatements 20
+clk: ~4.52 GHz
+cpu: Intel(R) Core(TM) i9-10885H CPU @ 2.40GHz
+runtime: node 23.10.0 (x64-linux)
+
+benchmark                   avg (min … max)
+-------------------------------------------
+sequential                    30.43 ms/iter
+pipeline string[]              4.55 ms/iter
+pipeline Promise.all           4.51 ms/iter
+
+summary
+  pipeline Promise.all
+   1.01x faster than pipeline string[]
+   6.74x faster than sequential
+```
+
+2ms latency, 10 statements:
+
+```
+toxiproxy configured with 2ms latency
+numStatements 10
+clk: ~4.53 GHz
+cpu: Intel(R) Core(TM) i9-10885H CPU @ 2.40GHz
+runtime: node 23.10.0 (x64-linux)
+
+benchmark                   avg (min … max)
+-------------------------------------------
+sequential                    28.85 ms/iter
+pipeline string[]              7.27 ms/iter
+pipeline Promise.all           7.54 ms/iter
+
+summary
+  pipeline string[]
+   1.04x faster than pipeline Promise.all
+   3.97x faster than sequential
+```
+
+2ms latency, 20 statements:
+
+```
+toxiproxy configured with 2ms latency
+numStatements 20
+clk: ~4.48 GHz
+cpu: Intel(R) Core(TM) i9-10885H CPU @ 2.40GHz
+runtime: node 23.10.0 (x64-linux)
+
+benchmark                   avg (min … max)
+-------------------------------------------
+sequential                    55.05 ms/iter
+pipeline string[]              9.17 ms/iter
+pipeline Promise.all          10.13 ms/iter
+
+summary
+  pipeline string[]
+   1.1x faster than pipeline Promise.all
+   6x faster than sequential
+```
+
+So, in these admittedly synthetic benchmarks, pipelining makes our statements (and ideally future Joist `em.flush` calls) 3.8x to 6x faster.
+
+A few notes on these numbers:
+
+* 1-2ms latency I think is a generally correct/generous latency, for what our production app sees between an Amazon ECS container and RDS Aurora instance.
+
+  (Although if you're using [edge-based compute](https://gist.github.com/rxliuli/be31cbded41ef7eac6ae0da9070c8ef8#using-batch-requests) this can be as high as 200ms :-O)
+
+* 10 statements per `em.flush` seems like a lot, but if you think about "each table that is touched", whether due to an `INSERT` or `UPDATE` or `DELETE`, and include many-to-many tables, I think it's reasonable for 10-tables to be a not-uncommon number.
+
+  Note that we assume your SQL statements are already batched-per-table, i.e. if you have 10 author rows to `UPDATE`, you should be issuing a single `UPDATE authors` that batch-updates all 10 rows. If you're using Joist, it already does this for you.
+
+## Pipelining FTW
+
+I wanted to focus on this raw SQL benchmark, just to better understand pipelining's performance impact, and I think it's an obvious win.
+
+In the Postgres [pipelining docs](https://www.postgresql.org/docs/current/libpq-pipeline-mode.html), they a make valid point that pipelining requires async behavior, which is an increased complexity for traditional blocking languages like Java & C, and so may not be worth the trade-off.
+
+But for JavaScript, we're already non-blocking, so it seems like pipelining is a defacto win with basically no downsides.
+
+In a future/next post, we'll swap these raw SQL benchmarks out for higher-level ORM benchmarks, to see pipelining's impact in hopefully more realistic scenarios.
+
+:::tip[info]
+
+The code for this post is in the [pipeline.ts](https://github.com/joist-orm/joist-benchmarks/blob/main/packages/benchmark/src/pipeline.ts) file in the [joist-benchmarks](https://github.com/joist-orm/joist-benchmarks/) has the code.
+
+After running `docker compose up -d`, invoking `yarn pipeline` should run the benchmark.
+
+:::
+

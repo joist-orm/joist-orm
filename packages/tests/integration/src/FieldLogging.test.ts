@@ -1,6 +1,6 @@
 import ansiRegex = require("ansi-regex");
 import { FieldLogger, FieldLoggerWatch } from "joist-orm";
-import { Author, Publisher, newAuthor, newBook } from "src/entities";
+import { Author, Publisher, newAuthor, newBook, newComment } from "src/entities";
 import { insertAuthor, insertPublisher } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
@@ -36,6 +36,25 @@ describe("FieldLogging", () => {
     const a1 = await em.load(Author, "a:1");
     a1.publisher.set(p1);
     expect(fieldOutput[0]).toMatch(/a:1.publisher = p:1 at FieldLogging.test.ts:(\d+)↩/);
+  });
+
+  it("sees o2o sets", async () => {
+    const em = newEntityManager();
+    const b1 = newBook(em);
+    const b2 = newBook(em);
+    em.setFieldLogging(new StubFieldLogger());
+    b2.sequel.set(b1);
+    expect(fieldOutput[0]).toMatch(/b#2.sequel = Book#1 at FieldLogging.test.ts:(\d+)↩/);
+    expect(fieldOutput[1]).toMatch(/b#1.prequel = Book#2 at FieldLogging.test.ts:(\d+)↩/);
+  });
+
+  it("sees poly sets", async () => {
+    const em = newEntityManager();
+    const c1 = newComment(em, { parent: undefined });
+    const a1 = newAuthor(em);
+    em.setFieldLogging(new StubFieldLogger());
+    c1.parent.set(a1);
+    expect(fieldOutput[0]).toMatch(/comment#1.parent = Author#2 at FieldLogging.test.ts:(\d+)↩/);
   });
 
   it("sees all fields by default", async () => {

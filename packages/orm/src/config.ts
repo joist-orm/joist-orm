@@ -340,15 +340,32 @@ export function getFuzzyCallerName(): string {
     .stack!.split("\n")
     // E.g. at Object.<anonymous> (/home/stephen/homebound/graphql-service/src/entities/Activity.ts:86:8)
     .filter((line) => line.includes(" at "));
-  const line =
+  const line = findUserCodeLine(lines);
+  return getFilePath(line);
+}
+
+/**
+ * Given a callstack line return the file name.
+ *
+ * I.e. `at Object.<anonymous> (/home/stephen/homebound/graphql-service/src/entities/Activity.ts:86:8)`
+ */
+export function getFilePath(line: string): string {
+  const parts = line.split("/");
+  return parts[parts.length - 1].replace(/:\d+\)?$/, ""); // Drop the `:8)`at the end
+}
+
+/** Given a callstack, uses heuristics to find the first line that looks like user code. */
+export function findUserCodeLine(lines: string[]): string {
+  return (
     lines.find((line) => {
       // When running Joist's own integration tests, if we ignore `/joist-orm/`, we'll end up ignoring
       // everything because `joist-orm` is the name of the repository/working copy itself.
       const withinWorkingCopyJoist = line.includes("/packages/orm/");
       // But once we're not in a working copy, assume any `/joist-orm/` in the path === internal orm stack frames
       const withinProductionJoist = !withinWorkingCopyJoist && line.includes("/joist-orm/src/");
-      const isUserCode = !(withinWorkingCopyJoist || withinProductionJoist);
-      const isRecalc = line.includes("recalc");
+      const nodeInternals = line.includes("node:internal/") || line.includes("Promise.allSettled");
+      const isUserCode = !withinWorkingCopyJoist && !withinProductionJoist && !nodeInternals;
+      // const isRecalc = line.includes(".recalcPending");
       const isDefault = line.includes("/defaults.ts");
       // Batched calls like findOrCreate won't have a stack trace back to the true caller, so just stop there
       const isDataloader = line.includes("/dataloaders/");
@@ -356,7 +373,7 @@ export function getFuzzyCallerName(): string {
       // What about:
       // recalcSynchronousDerivedFields
       return (
-        (isRecalc || isDefault || isDataloader || isUserCode) &&
+        (isDefault || isDataloader || isUserCode) &&
         !line.includes("Codegen.ts") &&
         // I wanted to exclude this, but it was actually our utils/entities.ts maybeSetDefault helper method
         // !line.includes("entities.ts") &&
@@ -365,12 +382,8 @@ export function getFuzzyCallerName(): string {
         // Ignore the Author.ts constructor calling setOpts
         !line.includes("at new ")
       );
-    }) ?? fail("Could not find caller name");
-  if (line.includes("task_queues")) {
-    console.log(err.stack!.split("\n").join(" ---> "));
-  }
-  const parts = line.split("/");
-  return parts[parts.length - 1].replace(/:\d+\)?$/, "");
+    }) ?? fail("Could not find caller name")
+  );
 }
 
 const getStack: () => { stack?: string } = "captureStackTrace" in Error ? getStackFromCapture : getStackFromObject;

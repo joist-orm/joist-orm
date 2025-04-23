@@ -1,6 +1,5 @@
 import { Entity } from "../Entity";
-import { isCollection } from "./Collection";
-import { isReference } from "./Reference";
+import { isCollection, isReference } from "./index";
 
 export const RelationT = Symbol();
 export const RelationU = Symbol();

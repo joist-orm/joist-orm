@@ -13,6 +13,7 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
+    "test": "jest",
     "format": "prettier --ignore-path ../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
   },
   "files": [

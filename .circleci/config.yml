@@ -73,7 +73,7 @@ jobs:
           steps:
             - run:
                 name: Run tests
-                command: yarn workspaces foreach --worktree --parallel --include 'packages/tests/*' --exclude packages/tests/bun --exclude packages/tests/esm-misc run test
+                command: yarn workspaces foreach --worktree --parallel --include 'packages/tests/*' --include packages/orm --exclude packages/tests/bun --exclude packages/tests/esm-misc run test
       # For Node 23, run esm-misc
       - when:
           condition:

@@ -1,3 +1,10 @@
+## [1.239.5](https://github.com/joist-orm/joist-orm/compare/v1.239.4...v1.239.5) (2025-04-23)
+
+
+### Bug Fixes
+
+* Update toTaggedString offset to match toString. ([#1455](https://github.com/joist-orm/joist-orm/issues/1455)) ([6848e3b](https://github.com/joist-orm/joist-orm/commit/6848e3bbd2c4a4f5d137efefcc3b1b5581f73e5b))
+
 ## [1.239.4](https://github.com/joist-orm/joist-orm/compare/v1.239.3...v1.239.4) (2025-04-23)
 
 

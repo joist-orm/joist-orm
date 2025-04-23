@@ -41,6 +41,7 @@ import {
   PartialOrNull,
   PolymorphicReferenceImpl,
   ReactionLogger,
+  ReactiveHint,
   Reference,
   TimestampSerde,
   UniqueFilter,
@@ -50,6 +51,7 @@ import {
   ValidationRuleResult,
   asConcreteCstr,
   assertIdIsTagged,
+  deepNormalizeHint,
   getBaseAndSelfMetas,
   getBaseMeta,
   getConstructorFromTaggedId,
@@ -712,11 +714,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * // This will duplicate the author, but skip any book where the title includes `sea`
    * const duplicatedAuthor = await em.clone(author, { skipIf: (original) => original.title?.includes("sea") })
    */
-  public async clone<T extends Entity, H extends LoadHint<T>, const K = keyof RelationsIn<T>>(
+  public async clone<T extends Entity, H extends LoadHint<T>, const K = ReactiveHint<T>>(
     entity: T,
     opts?: {
       deep?: H;
-      skip?: K[];
+      skip?: K;
       skipIf?: (entity: Entity) => boolean;
       postClone?: (original: Entity, clone: Entity) => void;
     },
@@ -749,11 +751,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * // This will duplicate the author's books, but skip any book where the title includes `sea`
    * const duplicatedBooks = await em.clone(author.books.get, { skipIf: (original) => original.title.includes("sea") })
    */
-  public async clone<T extends Entity, H extends LoadHint<T>, const K = keyof RelationsIn<T>>(
+  public async clone<T extends Entity, H extends LoadHint<T>, const K = ReactiveHint<T>>(
     entities: readonly T[],
     opts?: {
       deep?: H;
-      skip?: K[];
+      skip?: K;
       skipIf?: (entity: Entity) => boolean;
       postClone?: (original: Entity, clone: Entity) => void;
     },
@@ -763,22 +765,23 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     entityOrArray: T | readonly T[],
     opts?: {
       deep?: H;
-      skip?: string[];
+      skip?: object;
       skipIf?: (entity: Entity) => boolean;
       postClone?: (original: Entity, clone: Entity) => void;
     },
   ): Promise<Loaded<T, H> | Loaded<T, H>[]> {
-    const { deep = {}, skipIf, skip = [], postClone } = opts ?? {};
+    const { deep = {}, skipIf, skip = {}, postClone } = opts ?? {};
     // Keep a list that we can work against synchronously after doing the async find/crawl
-    const todo: Entity[] = [];
+    const todo: { entity: Entity; skip: string[] }[] = [];
 
     // 1. Find all entities w/o mutating them yet
     await crawl(todo, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, {
       skipIf: skipIf as any,
+      skip,
     });
 
     // 2. Clone each found entity
-    const clones = todo.map((entity) => {
+    const clones = todo.map(({ entity, skip }) => {
       // Use meta.fields to see which fields are derived (i.e. createdAt, updatedAt, initials)
       // that only have getters, and so we shouldn't set (createdAt/updatedAt will be initialized
       // by `em.register`).
@@ -2102,35 +2105,46 @@ function recalcSynchronousDerivedFields(todos: Record<string, Todo>) {
 
 /** Recursively crawls through `entity`, with the given populate `deep` hint, and adds anything found to `found`. */
 async function crawl<T extends Entity>(
-  found: Entity[],
+  found: { entity: Entity; skip: string[] }[],
   entities: readonly T[],
   deep: LoadHint<T>,
-  opts?: { skipIf?: (entity: Entity) => boolean },
+  opts: { skipIf?: (entity: Entity) => boolean; skip?: object } = {},
 ): Promise<void> {
   const { skipIf = () => false } = opts ?? {};
+
+  const skip = deepNormalizeHint(opts.skip ?? {});
+  // If we're passed `skip = { author: "publisher" }`, which is asking to "don't set `author.publisher`", then
+  // `author` will technically be a key in the "skip hint", but it's only there for us to hop down into.
+  // So we actually _don't_ skip any fields that have sub-hints, b/c it's the sub-hints themselves we want to skip.
+  const skipFields = Object.keys(skip).filter((key) => Object.keys((skip as any)[key]).length === 0);
+
   const entitiesToClone = entities.filter((e) => !skipIf(e));
-  found.push(...entitiesToClone);
+  for (const entity of entitiesToClone) {
+    found.push({ entity, skip: skipFields });
+  }
   await Promise.all(
     entitiesToClone.flatMap((entity) =>
       (Object.entries(adaptHint(deep)) as [keyof RelationsIn<T> & string, LoadHint<any>][]).map(
         async ([relationName, nested]) => {
           const relation = entity[relationName];
+          // If we're using a deep `skip` hint, drill in to it
+          const _opts = { ...opts, skip: (skip as any)[relationName] };
           if (relation instanceof OneToManyCollection) {
             const relatedEntities: readonly Entity[] = await relation.load();
-            await crawl(found, relatedEntities, nested, opts);
+            await crawl(found, relatedEntities, nested, _opts);
           } else if (relation instanceof OneToOneReferenceImpl) {
             const related: Entity | undefined = await relation.load();
             if (related) {
-              await crawl(found, [related], nested, opts);
+              await crawl(found, [related], nested, _opts);
             }
           } else if (relation instanceof ManyToOneReferenceImpl) {
             const related: Entity | undefined = await relation.load();
             if (related) {
-              await crawl(found, [related], nested, opts);
+              await crawl(found, [related], nested, _opts);
             }
           } else if (relation instanceof ReactiveReferenceImpl) {
             const relatedEntities: readonly Entity[] = await relation.load();
-            await crawl(found, relatedEntities, nested, opts);
+            await crawl(found, relatedEntities, nested, _opts);
           } else {
             fail(`Uncloneable relation: ${relationName}`);
           }

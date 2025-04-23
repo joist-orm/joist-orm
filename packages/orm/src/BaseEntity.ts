@@ -129,7 +129,7 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
       return this.idTagged;
     }
     const meta = getMetadata(this);
-    const sameType = this.em.entities.filter((e) => e instanceof meta.cstr);
+    const sameType = this.em.entities.filter((e) => e instanceof meta.cstr && e.isNewEntity);
     return `${meta.tagName}#${sameType.indexOf(this) + 1}`;
   }
 

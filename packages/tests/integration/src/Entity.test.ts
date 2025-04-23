@@ -31,6 +31,8 @@ describe("Entity", () => {
     const a2 = newAuthor(em);
     expect(a1.toString()).toBe("Author:1");
     expect(a2.toString()).toBe("Author#1");
+    expect(a1.toTaggedString()).toBe("a:1");
+    expect(a2.toTaggedString()).toBe("a#1");
   });
 
   it("can toJSON a new entity", () => {

@@ -1,3 +1,10 @@
+# [1.241.0](https://github.com/joist-orm/joist-orm/compare/v1.240.0...v1.241.0) (2025-04-23)
+
+
+### Features
+
+* Allow clone to skip setting fields. ([#1457](https://github.com/joist-orm/joist-orm/issues/1457)) ([eb96482](https://github.com/joist-orm/joist-orm/commit/eb96482a61973ebe625497f1df9c8da5ca2c0bed))
+
 # [1.240.0](https://github.com/joist-orm/joist-orm/compare/v1.239.5...v1.240.0) (2025-04-23)
 
 

@@ -1,6 +1,6 @@
 ---
-title: Pipelining Alpha Benchmark
-slug: blog/pipelining-alpha-benchmark
+title: Initial Pipelining Benchmark
+slug: blog/initial-pipelining-benchmark
 date: 2025-04-20
 authors: shaberman
 tags: []
@@ -195,7 +195,7 @@ This is particularly important for Joist, because even within a single `em.flush
 
 We expect this to be fast as well.
 
-## Results
+## Performance Results
 
 I've ran the benchmark with a series of latencies & statements.
 
@@ -283,11 +283,11 @@ summary
    6x faster than sequential
 ```
 
-So, in these admittedly synthetic benchmarks, pipelining makes our statements (and ideally future Joist `em.flush` calls) 3.8x to 6x faster.
+So, in these admittedly synthetic benchmarks, pipelining makes our statements (and ideally future Joist `em.flush` calls) 3x to 6x faster.
 
 A few notes on these numbers:
 
-* 1-2ms latency I think is a generally correct/generous latency, for what our production app sees between an Amazon ECS container and RDS Aurora instance.
+* 1-2ms latency I think is a generally correct/generous latency, based on what our production app sees between an Amazon ECS container and RDS Aurora instance.
 
   (Although if you're using [edge-based compute](https://gist.github.com/rxliuli/be31cbded41ef7eac6ae0da9070c8ef8#using-batch-requests) this can be as high as 200ms :-O)
 
@@ -297,11 +297,11 @@ A few notes on these numbers:
 
 ## Pipelining FTW
 
-I wanted to focus on this raw SQL benchmark, just to better understand pipelining's performance impact, and I think it's an obvious win.
+I wanted to focus on this raw SQL benchmark, just to better understand pipelining's performance impact, and I think it's an obvious win: **3-6x speedups** in multi-statement transactions merely from making sure our driver supports pipelining.
 
-In the Postgres [pipelining docs](https://www.postgresql.org/docs/current/libpq-pipeline-mode.html), they a make valid point that pipelining requires async behavior, which is an increased complexity for traditional blocking languages like Java & C, and so may not be worth the trade-off.
+In the Postgres [pipelining docs](https://www.postgresql.org/docs/current/libpq-pipeline-mode.html), they make a valid point that pipelining requires async behavior, which in traditional blocking languages like Java & C, is a significant complexity increase, that pipelining may not be worth the trade-off.
 
-But for JavaScript, we're already non-blocking, so it seems like pipelining is a defacto win with basically no downsides.
+But JavaScript is already async & non-blocking, so pipelining is a mere `Promise.all` away.
 
 In a future/next post, we'll swap these raw SQL benchmarks out for higher-level ORM benchmarks, to see pipelining's impact in hopefully more realistic scenarios.
 

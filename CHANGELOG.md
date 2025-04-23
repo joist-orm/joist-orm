@@ -1,3 +1,10 @@
+## [1.239.4](https://github.com/joist-orm/joist-orm/compare/v1.239.3...v1.239.4) (2025-04-23)
+
+
+### Bug Fixes
+
+* Skip node:internals in caller detection. ([#1454](https://github.com/joist-orm/joist-orm/issues/1454)) ([858a5e6](https://github.com/joist-orm/joist-orm/commit/858a5e6a3856aad26c21db1b7bf1c754ae82b6a8))
+
 ## [1.239.3](https://github.com/joist-orm/joist-orm/compare/v1.239.2...v1.239.3) (2025-04-22)
 
 

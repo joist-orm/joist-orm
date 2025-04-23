@@ -687,6 +687,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * @param entity - Any entity
    * @param opts - Options to control the clone behaviour
    *   @param deep - Populate hint of the nested tree of objects to clone
+   *   @param skip - Keys that will be skipped in the clone
    *   @param skipIf - Predicate for determining if a specific entity should be skipped (and any entities beneath it
    *   @param postClone - Function to be called for each original/clone entity for any post-processing needed
    * @returns The `Loaded` cloned entity or fails if the clone could not be made
@@ -711,9 +712,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * // This will duplicate the author, but skip any book where the title includes `sea`
    * const duplicatedAuthor = await em.clone(author, { skipIf: (original) => original.title?.includes("sea") })
    */
-  public async clone<T extends EntityW, H extends LoadHint<T>>(
+  public async clone<T extends Entity, H extends LoadHint<T>, const K = keyof RelationsIn<T>>(
     entity: T,
-    opts?: { deep?: H; skipIf?: (entity: Entity) => boolean; postClone?: (original: Entity, clone: Entity) => void },
+    opts?: {
+      deep?: H;
+      skip?: K[];
+      skipIf?: (entity: Entity) => boolean;
+      postClone?: (original: Entity, clone: Entity) => void;
+    },
   ): Promise<Loaded<T, H>>;
 
   /**
@@ -722,6 +728,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * @param entities - Any homogeneous list of entities
    * @param opts - Options to control the clone behaviour
    *   @param deep - Populate hint of the nested tree of objects to clone
+   *   @param skip - Keys that will be skipped in the clone
    *   @param skipIf - Predicate for determining if a specific entity should be skipped (and any entities beneath it
    *   @param postClone - Function to be called for each original/clone entity for any post-processing needed
    * @returns Array of `Loaded` cloned entities from the provided list or empty array if all are skipped
@@ -742,20 +749,33 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * // This will duplicate the author's books, but skip any book where the title includes `sea`
    * const duplicatedBooks = await em.clone(author.books.get, { skipIf: (original) => original.title.includes("sea") })
    */
-  public async clone<T extends EntityW, H extends LoadHint<T>>(
+  public async clone<T extends Entity, H extends LoadHint<T>, const K = keyof RelationsIn<T>>(
     entities: readonly T[],
-    opts?: { deep?: H; skipIf?: (entity: Entity) => boolean; postClone?: (original: Entity, clone: Entity) => void },
+    opts?: {
+      deep?: H;
+      skip?: K[];
+      skipIf?: (entity: Entity) => boolean;
+      postClone?: (original: Entity, clone: Entity) => void;
+    },
   ): Promise<Loaded<T, H>[]>;
-  public async clone<T extends EntityW, H extends LoadHint<T>>(
+
+  public async clone<T extends Entity, H extends LoadHint<T>>(
     entityOrArray: T | readonly T[],
-    opts?: { deep?: H; skipIf?: (entity: Entity) => boolean; postClone?: (original: Entity, clone: Entity) => void },
+    opts?: {
+      deep?: H;
+      skip?: string[];
+      skipIf?: (entity: Entity) => boolean;
+      postClone?: (original: Entity, clone: Entity) => void;
+    },
   ): Promise<Loaded<T, H> | Loaded<T, H>[]> {
-    const { deep = {}, skipIf, postClone } = opts ?? {};
+    const { deep = {}, skipIf, skip = [], postClone } = opts ?? {};
     // Keep a list that we can work against synchronously after doing the async find/crawl
     const todo: Entity[] = [];
 
-    // 1. Find all entities w/o mutating them yets
-    await crawl(todo, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, { skipIf: skipIf as any });
+    // 1. Find all entities w/o mutating them yet
+    await crawl(todo, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, {
+      skipIf: skipIf as any,
+    });
 
     // 2. Clone each found entity
     const clones = todo.map((entity) => {
@@ -766,6 +786,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const copy = Object.fromEntries(
         Object.values(meta.allFields)
           .map((f) => {
+            if (skip.includes(f.fieldName)) return undefined;
             switch (f.kind) {
               case "primitive":
                 if (!f.derived && !f.protected) {

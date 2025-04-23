@@ -1,3 +1,10 @@
+# [1.240.0](https://github.com/joist-orm/joist-orm/compare/v1.239.5...v1.240.0) (2025-04-23)
+
+
+### Features
+
+* Teach FieldLogging to output o2o sets ([#1456](https://github.com/joist-orm/joist-orm/issues/1456)) ([746f7f4](https://github.com/joist-orm/joist-orm/commit/746f7f4c867381356a5c07c5f4a388f63fd9690d))
+
 ## [1.239.5](https://github.com/joist-orm/joist-orm/compare/v1.239.4...v1.239.5) (2025-04-23)
 
 

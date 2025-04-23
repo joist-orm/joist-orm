@@ -1,3 +1,10 @@
+## [1.241.1](https://github.com/joist-orm/joist-orm/compare/v1.241.0...v1.241.1) (2025-04-23)
+
+
+### Bug Fixes
+
+* Fix NPE on removed tag/entity. ([#1458](https://github.com/joist-orm/joist-orm/issues/1458)) ([f181e18](https://github.com/joist-orm/joist-orm/commit/f181e183f34d32b08e885bbe44aa33cb04477129))
+
 # [1.241.0](https://github.com/joist-orm/joist-orm/compare/v1.240.0...v1.241.0) (2025-04-23)
 
 

@@ -38,6 +38,16 @@ describe("FieldLogging", () => {
     expect(fieldOutput[0]).toMatch(/a:1.publisher = p:1 at FieldLogging.test.ts:(\d+)↩/);
   });
 
+  it("sees o2o sets", async () => {
+    const em = newEntityManager();
+    const b1 = newBook(em);
+    const b2 = newBook(em);
+    em.setFieldLogging(new StubFieldLogger());
+    b2.sequel.set(b1);
+    expect(fieldOutput[1]).toMatch(/b#1.prequel = Book#2 at FieldLogging.test.ts:(\d+)↩/);
+    expect(fieldOutput[0]).toMatch(/b#2.sequel = Book#1 at FieldLogging.test.ts:(\d+)↩/);
+  });
+
   it("sees all fields by default", async () => {
     const em = newEntityManager();
     em.setFieldLogging(new StubFieldLogger());

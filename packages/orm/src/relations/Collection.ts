@@ -1,9 +1,6 @@
 import { Entity } from "../Entity";
 import { IdOf } from "../EntityManager";
-import { CustomCollection } from "./CustomCollection";
-import { ManyToManyCollection } from "./ManyToManyCollection";
-import { OneToManyCollection } from "./OneToManyCollection";
-import { Relation } from "./Relation";
+import { CustomCollection, ManyToManyCollection, OneToManyCollection, Relation } from "./index";
 
 /** A collection of `U` within `T`, either one-to-many or many-to-many. */
 export interface Collection<T extends Entity, U extends Entity> extends Relation<T, U> {

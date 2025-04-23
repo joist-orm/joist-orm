@@ -1,11 +1,13 @@
 import { Entity } from "../Entity";
 import { IdOf, TaggedId } from "../EntityManager";
-import { CustomReference } from "./CustomReference";
-import { ManyToOneReferenceImpl } from "./ManyToOneReference";
-import { OneToOneReferenceImpl } from "./OneToOneReference";
-import { PolymorphicReferenceImpl } from "./PolymorphicReference";
-import { ReactiveReferenceImpl } from "./ReactiveReference";
-import { Relation } from "./Relation";
+import {
+  CustomReference,
+  ManyToOneReferenceImpl,
+  OneToOneReferenceImpl,
+  PolymorphicReferenceImpl,
+  ReactiveReferenceImpl,
+  Relation,
+} from "./index";
 
 // Exported and used in sub-interfaces/types per https://stackoverflow.com/a/70437874/355031
 export const ReferenceN = Symbol();

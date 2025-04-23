@@ -244,6 +244,31 @@ describe("EntityManager.clone", () => {
     expect(a2.changes.publisher.originalValue).toBe(undefined);
   });
 
+  it("can skip primitives", async () => {
+    const em = newEntityManager();
+    const p1 = newPublisher(em, { name: "p1" });
+    const a1 = new Author(em, { firstName: "a1", publisher: p1 });
+    const a2 = await em.clone(a1, { skip: ["firstName"] });
+    expect(a2.firstName).toBe(undefined);
+  });
+
+  it("can skip m2os", async () => {
+    const em = newEntityManager();
+    const p1 = newPublisher(em, { name: "p1" });
+    const a1 = new Author(em, { firstName: "a1", publisher: p1 });
+    const a2 = await em.clone(a1, { skip: ["publisher"] });
+    expect(a2.publisher.isSet).toBe(false);
+  });
+
+  it("can skip deep m2os", async () => {
+    const em = newEntityManager();
+    const p1 = newPublisher(em, { name: "p1" });
+    const a1 = newAuthor(em, { firstName: "a1", publisher: p1 });
+    const b1 = newBook(em, { author: a1 });
+    const b2 = await em.clone(b1, { deep: "author", skip: { author: "publisher" } });
+    expect(b2.author.get.publisher.isSet).toBe(false);
+  });
+
   it("can clone polymorphic references", async () => {
     const em = newEntityManager();
     // Given an entity that is a polymorphic parent of two children

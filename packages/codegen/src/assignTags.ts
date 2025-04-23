@@ -18,7 +18,7 @@ export function assignTags(config: Config, dbMetadata: DbMetadata): void {
 
   // Group by tag to get existing tag names + check for duplicates
   const existingByTag = groupBy(
-    Object.entries(config.entities).filter(([name]) => !dbMetadata.entitiesByName[name].baseType),
+    Object.entries(config.entities).filter(([name]) => !dbMetadata.entitiesByName[name]?.baseType),
     ([, ec]) => ec.tag,
     ([name]) => name,
   );

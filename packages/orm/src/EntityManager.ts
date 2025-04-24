@@ -2123,6 +2123,13 @@ async function crawl<T extends Entity>(
   // So we actually _don't_ skip any fields that have sub-hints, b/c it's the sub-hints themselves we want to skip.
   const skipFields = Object.keys(skip).filter((key) => Object.keys((skip as any)[key]).length === 0);
 
+  // It's tempting to check `!found.has(entity)` here, but that would short-circuit has crawling the
+  // entity at a potentially different point in the graph, i.e. a deep hint like
+  //
+  // `{ comment: parent, books: { author: "publisher" } }`
+  //
+  // If the `comment.parent` was the same `Author` as `books.author`, but we "crawled it first", we'd miss
+  // crawling through the author a 2nd time and cloning the publisher.
   const entitiesToClone = entities.filter((e) => !skipIf(e));
   for (const entity of entitiesToClone) {
     found.add(entity);

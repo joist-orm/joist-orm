@@ -1,3 +1,10 @@
+## [1.241.2](https://github.com/joist-orm/joist-orm/compare/v1.241.1...v1.241.2) (2025-04-24)
+
+
+### Bug Fixes
+
+* Fix em.clone creating duplicates ([#1460](https://github.com/joist-orm/joist-orm/issues/1460)) ([17a1828](https://github.com/joist-orm/joist-orm/commit/17a1828fb4e61cbd7fcc931056f4af807b9b4c68)), closes [#1459](https://github.com/joist-orm/joist-orm/issues/1459)
+
 ## [1.241.1](https://github.com/joist-orm/joist-orm/compare/v1.241.0...v1.241.1) (2025-04-23)
 
 

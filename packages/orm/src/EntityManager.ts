@@ -772,16 +772,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ): Promise<Loaded<T, H> | Loaded<T, H>[]> {
     const { deep = {}, skipIf, skip = {}, postClone } = opts ?? {};
     // Keep a list that we can work against synchronously after doing the async find/crawl
-    const todo: { entity: Entity; skip: string[] }[] = [];
+    const todo = new Set<Entity>();
+    const skipMap = new WeakMap<Entity, string[]>();
 
     // 1. Find all entities w/o mutating them yet
-    await crawl(todo, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, {
+    await crawl(todo, skipMap, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, {
       skipIf: skipIf as any,
       skip,
     });
 
     // 2. Clone each found entity
-    const clones = todo.map(({ entity, skip }) => {
+    const clones = [...todo].map((entity) => {
+      const skip = skipMap.get(entity) ?? [];
       // Use meta.fields to see which fields are derived (i.e. createdAt, updatedAt, initials)
       // that only have getters, and so we shouldn't set (createdAt/updatedAt will be initialized
       // by `em.register`).
@@ -2105,7 +2107,10 @@ function recalcSynchronousDerivedFields(todos: Record<string, Todo>) {
 
 /** Recursively crawls through `entity`, with the given populate `deep` hint, and adds anything found to `found`. */
 async function crawl<T extends Entity>(
-  found: { entity: Entity; skip: string[] }[],
+  found: Set<Entity>,
+  // We keep skipMap separated out, instead of tuple-izing `found`, so that `found`
+  // can be a set that is cheap to insert & check for duplicates.
+  skipMap: WeakMap<Entity, string[]>,
   entities: readonly T[],
   deep: LoadHint<T>,
   opts: { skipIf?: (entity: Entity) => boolean; skip?: object } = {},
@@ -2120,7 +2125,8 @@ async function crawl<T extends Entity>(
 
   const entitiesToClone = entities.filter((e) => !skipIf(e));
   for (const entity of entitiesToClone) {
-    found.push({ entity, skip: skipFields });
+    found.add(entity);
+    skipMap.set(entity, skipFields);
   }
   await Promise.all(
     entitiesToClone.flatMap((entity) =>
@@ -2131,20 +2137,20 @@ async function crawl<T extends Entity>(
           const _opts = { ...opts, skip: (skip as any)[relationName] };
           if (relation instanceof OneToManyCollection) {
             const relatedEntities: readonly Entity[] = await relation.load();
-            await crawl(found, relatedEntities, nested, _opts);
+            await crawl(found, skipMap, relatedEntities, nested, _opts);
           } else if (relation instanceof OneToOneReferenceImpl) {
             const related: Entity | undefined = await relation.load();
             if (related) {
-              await crawl(found, [related], nested, _opts);
+              await crawl(found, skipMap, [related], nested, _opts);
             }
           } else if (relation instanceof ManyToOneReferenceImpl) {
             const related: Entity | undefined = await relation.load();
             if (related) {
-              await crawl(found, [related], nested, _opts);
+              await crawl(found, skipMap, [related], nested, _opts);
             }
           } else if (relation instanceof ReactiveReferenceImpl) {
             const relatedEntities: readonly Entity[] = await relation.load();
-            await crawl(found, relatedEntities, nested, _opts);
+            await crawl(found, skipMap, relatedEntities, nested, _opts);
           } else {
             fail(`Uncloneable relation: ${relationName}`);
           }

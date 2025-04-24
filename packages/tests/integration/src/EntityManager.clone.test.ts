@@ -72,6 +72,18 @@ describe("EntityManager.clone", () => {
     expect(a3.publisher.isLoaded).toBe(false);
   });
 
+  it("can clone m2os and not create duplicates", async () => {
+    const em = newEntityManager();
+    // Given 1 author w/2 books
+    const a1 = newAuthor(em, { books: [{}, {}] });
+    // And we clone the books, but ask the singular author to be cloned
+    const [b1_clone, b2_clone] = await em.clone(a1.books.get, { deep: "author" });
+    // Then the cloned books end up with the same author
+    expect(b1_clone).toMatchEntity({ author: b2_clone.author.get });
+    // And we only created 1 new author
+    expect(em.entities.filter((e) => e instanceof Author)).toMatchEntity([a1, {}]);
+  });
+
   it("can clone entities and referenced entities", async () => {
     // Given an entity with a reference to another entity
     {

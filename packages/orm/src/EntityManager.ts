@@ -67,6 +67,7 @@ import {
   toTaggedId,
 } from "./index";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
+import { WriteFn } from "./logging/FactoryLogger";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations";
@@ -1784,8 +1785,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   /** Enables/disables field logging for all fields. */
   setFieldLogging(enabled: boolean): void;
   setFieldLogging(arg: FieldLogger | string | string[] | boolean): void {
+    if (arg instanceof FieldLogger) {
+      this.#fieldLogger = arg;
+      return;
+    }
+    const writeFn = getDefaultWriteFn(this.ctx);
     if (typeof arg === "boolean") {
-      this.#fieldLogger = arg ? new FieldLogger([]) : undefined;
+      this.#fieldLogger = arg ? new FieldLogger([], writeFn) : undefined;
     } else if (typeof arg === "string" || Array.isArray(arg)) {
       const specs = Array.isArray(arg) ? arg : [arg];
       const watching: FieldLoggerWatch[] = specs.map((spec) => {
@@ -1804,9 +1810,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         });
         return { entity, fieldNames, breakpoint: !!breakpoint };
       });
-      this.#fieldLogger = new FieldLogger(watching);
+      this.#fieldLogger = new FieldLogger(watching, writeFn);
     } else {
-      this.#fieldLogger = arg;
+      throw new Error("Unsupported override for setFieldLogging");
     }
   }
 
@@ -2318,4 +2324,17 @@ export function appendStack(err: unknown, dummy: Error): unknown {
     err.stack += dummy.stack!.replace(/.*\n/, "\n");
   }
   return err;
+}
+
+/** Probe for `ctx.logger.debug` if it exists, otherwise fallback on `console.log`. */
+function getDefaultWriteFn(ctx: unknown): WriteFn {
+  return ctx &&
+    typeof ctx === "object" &&
+    "logger" in ctx &&
+    ctx.logger &&
+    typeof ctx.logger === "object" &&
+    "debug" in ctx.logger &&
+    ctx.logger.debug instanceof Function
+    ? ctx.logger.debug.bind(ctx.logger)
+    : console.log;
 }

@@ -363,7 +363,7 @@ export function findUserCodeLine(lines: string[]): string {
       const withinWorkingCopyJoist = line.includes("/packages/orm/");
       // But once we're not in a working copy, assume any `/joist-orm/` in the path === internal orm stack frames
       const withinProductionJoist = !withinWorkingCopyJoist && line.includes("/joist-orm/src/");
-      const nodeInternals = line.includes("node:internal/") || line.includes("Promise.allSettled");
+      const nodeInternals = line.includes("node:internal/") || line.includes("Promise.all");
       const isUserCode = !withinWorkingCopyJoist && !withinProductionJoist && !nodeInternals;
       // const isRecalc = line.includes(".recalcPending");
       const isDefault = line.includes("/defaults.ts");

@@ -3,7 +3,7 @@ import { Entity, isEntity } from "../Entity";
 import { getFuzzyCallerName } from "../config";
 
 const { gray, green, yellow, blue, red } = ansis;
-type WriteFn = (line: string) => void;
+export type WriteFn = (line: string) => void;
 
 export type FieldLoggerWatch = {
   /** The entity name, i.e. `Author` */
@@ -28,7 +28,7 @@ export class FieldLogger {
     writeFn?: WriteFn,
   ) {
     // We default to process.stdout.write to side-step around Jest's console.log instrumentation
-    this.#writeFn = writeFn ?? process.stdout.write.bind(process.stdout);
+    this.#writeFn = writeFn ?? ((line) => process.stdout.write(`${line}\n`));
     this.#watching = watching ?? [];
   }
 
@@ -55,7 +55,7 @@ export class FieldLogger {
   }
 
   private log(...line: string[]): void {
-    this.#writeFn(`${line.join(" ")}\n`);
+    this.#writeFn(`${line.join(" ")}`);
   }
 
   private shouldLog(entity: Entity, fieldName: string): boolean | "breakpoint" {

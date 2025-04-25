@@ -15,44 +15,51 @@ This post is an intro to pipelining and covers my experiments so far.
 
 Pipelining, as a term in networking, allows clients to send multiple requests, immediately one after each other, without first waiting for the server to respond.
 
-Specifically for Postgres, this would let a client do something like:
+### Without Pipelining
 
-- Send an `INSERT` for authors,
-- Immediately send an `INSERT` for books
-- Immediately Send an `UPDATE` for book reviews
-- ...Wait several millis for the database to respond...
-- Receive the `INSERT` authors response
-- Receive the `INSERT` books response
-- Receive the `UPDATE` book reviews response
+Using NodeJS talking to Postgres for illustration, the default flow of SQL statements, without pipelining, involves a full round-trip network request for each SQL statement:
 
-This is much better than the alternative, which is:
+![Without Pipelining](/pipelining-regular.jpg)
 
-- Send an `INSERT` for authors
-- ...Wait several millis...
-- Receive the `INSERT` authors response
-- Send an `INSERT` for books
-- ...Wait several millis...
-- Receive the `INSERT` books response
-- Send an `UPDATE` for book reviews
-- ...Wait several millis...
-- Receive the `UPDATE` book reviews response
+- Send an `INSERT authors`
+- ...wait several millis for work & response...
+- Send an `INSERT books`
+- ...wait several millis for work & response...
+- Send an `INSERT reviews`
+- ...wait several millis for work & response...
 
-In this 2nd example, we have 3x as many "waits".
+Note that we have to wait for _both_:
 
-This "wait for several millis" is a combination of:
+1. The server to "complete the work" (maybe 1ms), and
+2. The network to deliver the responses back to us (maybe 2ms)
 
-1. How long it takes the database to process each request, and
-2. How long it takes the network to send the request and response over the wire.
+Before we can continue sending the next request.
 
-As we'll see later, this 2nd one has the biggest impact on pipelining's performance benefit--the larger the network latency, the more benefit pipelining has.
+### With Pipelining
+
+Pipelining allows us to remove several of these "extra waits" by sending all the requests at once, and then waiting for all responses:
+
+
+![With Pipelining](/pipelining-pipelined.jpg)
+
+- Send `INSERT authors`
+- Send `INSERT books`
+- Send `INSERT reviews`
+- ...wait several millis for all 3 requests to complete...
+
+The upshot is that **we're not waiting on the network** before sending the server more work to do.
+
+Not only does this let our client "send work" sooner, but it lets the server have "work to do" sooner as well--i.e. as soon as the server finishes `INSERT authors`, it can immediately start working on `INSERT books`.
 
 ## Transactions Required
 
-One wrinkle with pipelining is that if 1 SQL statement fails, all requests that follow it in the pipeline are also aborted.
+One wrinkle with pipelining is that if 1 SQL statement fails (i.e. the `INSERT authors` statement), all requests that follow it in the pipeline are also aborted.
 
-This generally means pipelining is only useful when executing multi-statement database transactions, where you're executing a `BEGIN` + some number of `INSERT`, `UPDATE`, and `DELETE` statements + `COMMIT`, and already expect them to all atomically commit.
+This is because Postgres assumes the later statements in the pipeline relied on the earlier statements succeeding, so once earlier statements fail, the later statements are considered no longer valid.
 
-Fortunately for us, this is typically what happens when a single backend request is committing multiple statements all at once, while atomically saving the endpoint's work to the database--and is exactly what Joist's `em.flush` does. :-)
+This generally means pipelining is only useful when executing multi-statement database transactions, where you're executing a `BEGIN` + some number of `INSERT`, `UPDATE`, and `DELETE` statements + `COMMIT`, and we already expect them to all atomically commit.
+
+Serendipitously, this model of "this group of statements all need to work or abort" is exactly what we want anyway for a single backend request that is committing its work, by atomically saving its work to the database in a transaction--and is exactly what Joist's `em.flush` does. :-)
 
 ## Benchmarking Wire Latency
 

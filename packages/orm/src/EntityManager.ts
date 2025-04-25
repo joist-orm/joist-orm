@@ -1795,8 +1795,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       "logger" in this.ctx &&
       this.ctx.logger &&
       typeof this.ctx.logger === "object" &&
-      "debug" in this.ctx.logger
-        ? (this.ctx.logger.debug as Function).bind(this.ctx.logger)
+      "debug" in this.ctx.logger &&
+      this.ctx.logger.debug instanceof Function
+        ? this.ctx.logger.debug.bind(this.ctx.logger)
         : console.log;
     if (typeof arg === "boolean") {
       this.#fieldLogger = arg ? new FieldLogger([], writeFn) : undefined;

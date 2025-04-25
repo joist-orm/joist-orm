@@ -13,9 +13,9 @@ describe("FieldLogging", () => {
     em.setFieldLogging(new StubFieldLogger());
     const a1 = await em.load(Author, "1");
     a1.firstName = "a2";
-    expect(fieldOutput[0]).toMatch(/a:1.firstName = a2 at FieldLogging.test.ts:(\d+)↩/);
+    expect(fieldOutput[0]).toMatch(/a:1.firstName = a2 at FieldLogging.test.ts:(\d+)/);
     a1.firstName = "a1";
-    expect(fieldOutput[1]).toMatch(/a:1.firstName = a1 at FieldLogging.test.ts:(\d+)↩/);
+    expect(fieldOutput[1]).toMatch(/a:1.firstName = a1 at FieldLogging.test.ts:(\d+)/);
   });
 
   it("sees primitive unsets", async () => {
@@ -24,7 +24,7 @@ describe("FieldLogging", () => {
     em.setFieldLogging(new StubFieldLogger());
     const a1 = await em.load(Author, "1");
     a1.lastName = undefined;
-    expect(fieldOutput[0]).toMatch(/a:1.lastName = undefined at FieldLogging.test.ts:(\d+)↩/);
+    expect(fieldOutput[0]).toMatch(/a:1.lastName = undefined at FieldLogging.test.ts:(\d+)/);
   });
 
   it("sees m2o sets", async () => {
@@ -35,7 +35,7 @@ describe("FieldLogging", () => {
     const p1 = await em.load(Publisher, "p:1");
     const a1 = await em.load(Author, "a:1");
     a1.publisher.set(p1);
-    expect(fieldOutput[0]).toMatch(/a:1.publisher = p:1 at FieldLogging.test.ts:(\d+)↩/);
+    expect(fieldOutput[0]).toMatch(/a:1.publisher = p:1 at FieldLogging.test.ts:(\d+)/);
   });
 
   it("sees o2o sets", async () => {
@@ -44,8 +44,8 @@ describe("FieldLogging", () => {
     const b2 = newBook(em);
     em.setFieldLogging(new StubFieldLogger());
     b2.sequel.set(b1);
-    expect(fieldOutput[0]).toMatch(/b#2.sequel = Book#1 at FieldLogging.test.ts:(\d+)↩/);
-    expect(fieldOutput[1]).toMatch(/b#1.prequel = Book#2 at FieldLogging.test.ts:(\d+)↩/);
+    expect(fieldOutput[0]).toMatch(/b#2.sequel = Book#1 at FieldLogging.test.ts:(\d+)/);
+    expect(fieldOutput[1]).toMatch(/b#1.prequel = Book#2 at FieldLogging.test.ts:(\d+)/);
   });
 
   it("sees poly sets", async () => {
@@ -54,7 +54,7 @@ describe("FieldLogging", () => {
     const a1 = newAuthor(em);
     em.setFieldLogging(new StubFieldLogger());
     c1.parent.set(a1);
-    expect(fieldOutput[0]).toMatch(/comment#1.parent = Author#2 at FieldLogging.test.ts:(\d+)↩/);
+    expect(fieldOutput[0]).toMatch(/comment#1.parent = Author#2 at FieldLogging.test.ts:(\d+)/);
   });
 
   it("sees all fields by default", async () => {
@@ -63,17 +63,17 @@ describe("FieldLogging", () => {
     newBook(em);
     expect(fieldOutput).toMatchInlineSnapshot(`
      [
-       "a#1 created at newAuthor.ts:13↩",
-       "a#1.firstName = a1 at newAuthor.ts:13↩",
-       "a#1.age = 40 at newAuthor.ts:13↩",
-       "a#1.isFunny = false at defaults.ts:45↩",
-       "a#1.nickNames = a1 at defaults.ts:191↩",
-       "b#1 created at newBook.ts:9↩",
-       "b#1.title = title at newBook.ts:9↩",
-       "b#1.order = 1 at newBook.ts:9↩",
-       "b#1.author = Author#1 at newBook.ts:9↩",
-       "b#1.notes = Notes for title at defaults.ts:45↩",
-       "b#1.authorsNickNames = a1 at defaults.ts:191↩",
+       "a#1 created at newAuthor.ts:13",
+       "a#1.firstName = a1 at newAuthor.ts:13",
+       "a#1.age = 40 at newAuthor.ts:13",
+       "a#1.isFunny = false at defaults.ts:45",
+       "a#1.nickNames = a1 at defaults.ts:191",
+       "b#1 created at newBook.ts:9",
+       "b#1.title = title at newBook.ts:9",
+       "b#1.order = 1 at newBook.ts:9",
+       "b#1.author = Author#1 at newBook.ts:9",
+       "b#1.notes = Notes for title at defaults.ts:45",
+       "b#1.authorsNickNames = a1 at defaults.ts:191",
      ]
     `);
   });
@@ -82,7 +82,7 @@ describe("FieldLogging", () => {
     const em = newEntityManager();
     em.setFieldLogging(new StubFieldLogger());
     const a1 = newAuthor(em);
-    expect(fieldOutput[0]).toMatch(/a#1 created at newAuthor.ts:(\d+)↩/);
+    expect(fieldOutput[0]).toMatch(/a#1 created at newAuthor.ts:(\d+)/);
   });
 
   it("can filter fields by entity", async () => {
@@ -91,11 +91,11 @@ describe("FieldLogging", () => {
     newBook(em);
     expect(fieldOutput).toMatchInlineSnapshot(`
      [
-       "a#1 created at newAuthor.ts:13↩",
-       "a#1.firstName = a1 at newAuthor.ts:13↩",
-       "a#1.age = 40 at newAuthor.ts:13↩",
-       "a#1.isFunny = false at defaults.ts:45↩",
-       "a#1.nickNames = a1 at defaults.ts:191↩",
+       "a#1 created at newAuthor.ts:13",
+       "a#1.firstName = a1 at newAuthor.ts:13",
+       "a#1.age = 40 at newAuthor.ts:13",
+       "a#1.isFunny = false at defaults.ts:45",
+       "a#1.nickNames = a1 at defaults.ts:191",
      ]
     `);
   });
@@ -106,7 +106,7 @@ describe("FieldLogging", () => {
     newBook(em);
     expect(fieldOutput).toMatchInlineSnapshot(`
      [
-       "a#1.age = 40 at newAuthor.ts:13↩",
+       "a#1.age = 40 at newAuthor.ts:13",
      ]
     `);
   });
@@ -117,7 +117,7 @@ describe("FieldLogging", () => {
     newBook(em);
     expect(fieldOutput).toMatchInlineSnapshot(`
      [
-       "a#1 created at newAuthor.ts:13↩",
+       "a#1 created at newAuthor.ts:13",
      ]
     `);
   });
@@ -129,13 +129,13 @@ describe("FieldLogging", () => {
     newSmallPublisher(em, { name: "pp1" });
     expect(fieldOutput).toMatchInlineSnapshot(`
      [
-       "p#1 created at newLargePublisher.ts:6↩",
-       "p#1.rating = 0 at newLargePublisher.ts:6↩",
-       "p#1.name = lp1 at newLargePublisher.ts:6↩",
-       "p#1.numberOfBookReviews = 0 at defaults.ts:36↩",
-       "p#1.type = BIG at defaults.ts:45↩",
-       "p#1.baseSyncDefault = LPSyncDefault at defaults.ts:45↩",
-       "p#1.baseAsyncDefault = LPAsyncDefault at defaults.ts:191↩",
+       "p#1 created at newLargePublisher.ts:6",
+       "p#1.rating = 0 at newLargePublisher.ts:6",
+       "p#1.name = lp1 at newLargePublisher.ts:6",
+       "p#1.numberOfBookReviews = 0 at defaults.ts:36",
+       "p#1.type = BIG at defaults.ts:45",
+       "p#1.baseSyncDefault = LPSyncDefault at defaults.ts:45",
+       "p#1.baseAsyncDefault = LPAsyncDefault at defaults.ts:191",
      ]
     `);
   });
@@ -147,7 +147,7 @@ describe("FieldLogging", () => {
     newSmallPublisher(em, { name: "pp1" });
     expect(fieldOutput).toMatchInlineSnapshot(`
      [
-       "p#1.name = lp1 at newLargePublisher.ts:6↩",
+       "p#1.name = lp1 at newLargePublisher.ts:6",
      ]
     `);
   });
@@ -198,7 +198,7 @@ class StubFieldLogger extends FieldLogger {
     // uncomment to see colorized output
     // super();
     super(watching, (line: string) => {
-      fieldOutput.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
+      fieldOutput.push(line.replace(ansiRegex(), ""));
     });
   }
 }

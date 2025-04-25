@@ -1784,8 +1784,22 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   /** Enables/disables field logging for all fields. */
   setFieldLogging(enabled: boolean): void;
   setFieldLogging(arg: FieldLogger | string | string[] | boolean): void {
+    if (arg instanceof FieldLogger) {
+      this.#fieldLogger = arg;
+      return;
+    }
+    // Probe for `ctx.logger.debug` if it exists, otherwise fallback on `console.log`
+    const writeFn =
+      this.ctx &&
+      typeof this.ctx === "object" &&
+      "logger" in this.ctx &&
+      this.ctx.logger &&
+      typeof this.ctx.logger === "object" &&
+      "debug" in this.ctx.logger
+        ? (this.ctx.logger.debug as Function).bind(this.ctx.logger)
+        : console.log;
     if (typeof arg === "boolean") {
-      this.#fieldLogger = arg ? new FieldLogger([]) : undefined;
+      this.#fieldLogger = arg ? new FieldLogger([], writeFn) : undefined;
     } else if (typeof arg === "string" || Array.isArray(arg)) {
       const specs = Array.isArray(arg) ? arg : [arg];
       const watching: FieldLoggerWatch[] = specs.map((spec) => {
@@ -1804,9 +1818,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         });
         return { entity, fieldNames, breakpoint: !!breakpoint };
       });
-      this.#fieldLogger = new FieldLogger(watching);
+      this.#fieldLogger = new FieldLogger(watching, writeFn);
     } else {
-      this.#fieldLogger = arg;
+      throw new Error("Unsupported override for setFieldLogging");
     }
   }
 

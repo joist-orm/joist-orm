@@ -1,12 +1,12 @@
 import * as ts from "typescript";
-import { ModuleKind, SourceFile } from "typescript";
+import { SourceFile } from "typescript";
 
 export const transformer: ts.TransformerFactory<ts.SourceFile> = (ctx) => {
   const { factory: f } = ctx;
 
-  const isCommonJs = ctx.getCompilerOptions().module === ModuleKind.CommonJS;
-
   return (sourceFile) => {
+    let isCommonJs: boolean | undefined;
+
     // Create the import declaration for `setCurrentlyInstantiatingEntity` so
     // that our lazy initialized property is hooked up to the right entity.
     // const [importFn, importDecl] = createImportDeclaration(f, "joist-orm", "setCurrentlyInstantiatingEntity");
@@ -16,6 +16,8 @@ export const transformer: ts.TransformerFactory<ts.SourceFile> = (ctx) => {
     const visit: ts.Visitor = (node) => {
       if (ts.isPropertyDeclaration(node) && node.initializer && shouldRewrite(node.type?.getText())) {
         didRewrite = true;
+        isCommonJs ??= detectModuleFormat(sourceFile) === "cjs";
+
         const getterName = node.name;
         const getter = f.createGetAccessorDeclaration(
           undefined,
@@ -67,6 +69,7 @@ export const transformer: ts.TransformerFactory<ts.SourceFile> = (ctx) => {
   };
 };
 
+/** `const { setCurrentlyInstantiatingEntity } = joist_orm_1;` */
 function createCjsConst(f: ts.NodeFactory) {
   return f.createVariableStatement(
     undefined,
@@ -91,6 +94,7 @@ function createCjsConst(f: ts.NodeFactory) {
   );
 }
 
+/** `import { setCurrentlyInstantiatingEntity } from "joist-orm"` */
 function createEsmImport(f: ts.NodeFactory) {
   return f.createImportDeclaration(
     undefined,
@@ -123,4 +127,35 @@ function shouldRewrite(typeName: string | undefined): boolean {
       typeName.startsWith("Collection<") ||
       typeName.startsWith("Reference<"))
   );
+}
+
+// We used to look at `ctx.getCompilerOptions().module`, which will be NodeNext, Node20, CommonJS, etc.,
+// but that still requires looking at `package.json`'s `type=module`, so its easier to just look directly
+// at the transformed-so-far source.
+function detectModuleFormat(sourceFile: ts.SourceFile): "esm" | "cjs" {
+  ts.forEachChild(sourceFile, (node) => {
+    if (ts.isImportDeclaration(node)) return "esm";
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.kind === ts.SyntaxKind.Identifier &&
+      (node.expression as ts.Identifier).text === "require" &&
+      isTopLevelRequire(node)
+    )
+      return "cjs";
+  });
+  return "cjs";
+}
+
+// Check if this node is at the module scope
+function isTopLevelRequire(node: ts.Node): boolean {
+  let current = node;
+  while (current.parent) {
+    // If we hit a function declaration or expression before reaching the source file,
+    // then this is not a top-level require
+    if (ts.isFunctionDeclaration(current) || ts.isFunctionExpression(current) || ts.isArrowFunction(current)) {
+      return false;
+    }
+    current = current.parent;
+  }
+  return true;
 }

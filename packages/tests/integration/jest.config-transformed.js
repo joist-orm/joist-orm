@@ -6,7 +6,7 @@ module.exports = {
       {
         isolatedModules: true,
         astTransformers: { before: [{ path: "joist-transform-properties", options: { type: "raw" } }] },
-        tsconfig: { moduleResolution: "classic" },
+        tsconfig: { moduleResolution: "nodenext" },
       },
     ],
   },

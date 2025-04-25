@@ -7,9 +7,9 @@ tags: []
 _excerpt: ...
 ---
 
-I've known about Postgres's [pipeline mode](https://www.postgresql.org/docs/current/libpq-pipeline-mode.html) for a while, and finally have some alpha prototyping of pipelining in general, and alpha builds of Joist running with pipeline mode.
+I've known about Postgres's [pipeline mode](https://www.postgresql.org/docs/current/libpq-pipeline-mode.html) for a while, and finally have some prototyping of pipelining in general, and alpha builds of Joist running with pipeline mode (coming soon!).
 
-This post is an intro to pipelining and covers my experiments so far.
+This post is an intro to pipelining, using [postgres.js](https://github.com/porsager/postgres) and [mitata](https://www.npmjs.com/package/mitata) to benchmark some examples.
 
 ## What is Pipelining?
 
@@ -35,10 +35,11 @@ Note that we have to wait for _both_:
 
 Before we can continue sending the next request.
 
+This results in a lot of "wait time", for both the client & server, while each is waiting for the network call of the other to transfer over the wire.
+
 ### With Pipelining
 
-Pipelining allows us to remove several of these "extra waits" by sending all the requests at once, and then waiting for all responses:
-
+Pipelining allows us to remove this "extra wait time" by sending all the requests at once, and then waiting for all responses:
 
 ![With Pipelining](/pipelining-pipelined.jpg)
 
@@ -69,11 +70,9 @@ This can make benchmarking difficult and potentially misleading, because benchma
 
 Thankfully, we can use solutions like Shopify's [toxiproxy](https://github.com/Shopify/toxiproxy) to introduce an artificial, deterministic amount of latency to the network requests between our Node process and the Postgres database.
 
-toxiproxy is particularly neat in that it's easy to run as a docker container, and control the latency via `POST` commands to a minimal REST API it exposes.
+toxiproxy is particularly neat in that it's easy to run as a docker container, and control the latency via `POST` commands to a minimal REST API it exposes:
 
-A docker-compose entry like:
-
-```yaml
+```yaml title="docker-compose.yml"
 services:
   toxiproxy:
     image: ghcr.io/shopify/toxiproxy:2.12.0
@@ -88,9 +87,7 @@ services:
     command: "-host=0.0.0.0 -config=/config/toxiproxy.json"
 ```
 
-A `toxyproxy.json` like:
-
-```json
+```json title="toxiproxy.json"
 [
   {
     "name": "postgres",
@@ -101,9 +98,7 @@ A `toxyproxy.json` like:
 ]
 ```
 
-And a few curl requests:
-
-```shell
+```shell title="toxi-init.sh"
 curl -X POST http://localhost:8474/reset
 curl -X POST http://localhost:8474/proxies/postgres/toxics -d '{
   "name": "latency_downstream",
@@ -117,7 +112,7 @@ Is all we need to control exactly how much latency toxiproxy injects between eve
 
 ## Leveraging postgres.js
 
-We'll delve into Joist's pipeline performance in a future post, but for now we'll stay closer to the metal and use [postgres.js](https://github.com/porsager/postgres) to directly execute SQL statements in a few different setups/benchmarks.
+We'll look at Joist's pipeline performance in a future post, but for now we'll stay closer to the metal and use [postgres.js](https://github.com/porsager/postgres) to directly execute SQL statements in a few benchmarks.
 
 We're using postgres.js, instead of the venerable node-pg, because postgres.js implements pipelining, while node-pg does not yet.
 
@@ -129,9 +124,9 @@ Very neat!
 
 ### 0. Setup
 
-We'll be using [mitata](https://www.npmjs.com/package/mitata) for these benchmarks--it is technically focused on CPU micro-benchmarks, but it's warmup & other infra make it suitable to our async, I/O oriented benchmark as well.
+We'll use [mitata](https://www.npmjs.com/package/mitata) for timing info--it is technically focused on CPU micro-benchmarks, but its warmup & other infra make it suitable to our async, I/O oriented benchmark as well.
 
-For test statements, we'll test inserting `tag` rows into a single-column table.
+For SQL statements, we'll test inserting `tag` rows into a single-column table--for these tests, the complexity/cost of the statement itself is not that important, and a simple insert will do.
 
 We have a few configuration parameters, that can be tweaked across runs:
 
@@ -142,7 +137,7 @@ As we'll see, both of these affect the results--the higher each becomes (the mor
 
 ### 1. Sequential Inserts
 
-As a baseline benchmark, we execute `numStatements` statements sequentially, with individual `await`s on each `INSERT`:
+As a baseline benchmark, we execute `numStatements` inserts sequentially, with individual `await`s on each `INSERT`:
 
 ```ts
 bench("sequential", async () => {
@@ -154,7 +149,7 @@ bench("sequential", async () => {
 });
 ```
 
-We expect this to be the slowest, because it is purposefully "defeating" pipelining by waiting for each `INSERT` to finish before executing the next one.
+We expect this to be the slowest, because it is purposefully defeating pipelining by waiting for each `INSERT` to finish before executing the next one.
 
 :::tip[info]
 
@@ -290,7 +285,7 @@ summary
    6x faster than sequential
 ```
 
-So, in these admittedly synthetic benchmarks, pipelining makes our statements (and ideally future Joist `em.flush` calls) 3x to 6x faster.
+So, in these benchmarks, pipelining makes our inserts (and ideally future Joist `em.flush` calls!) 3x to 6x faster.
 
 A few notes on these numbers:
 

@@ -26,10 +26,12 @@ This post gives a short overview; if you'd like to watch a video, we also have a
 
 While building the sample app, we found two fundamental ways of structuring a NextJS app's render tree:
 
-1. Fewer React Server Components, that prop drill data to the Client Components
-   - Shown on the left, see `author-rcc-card.tsx` and `book-rcc-preview.tsx`
-2. Mostly React Server Components, with Client Components only at the bottom
-   - Shown on the right, see `author-rsc-card.tsx` and `book-rsc-preview.tsx`
+1. Fewer RSCs (left side), that prop drill data to the Client Components
+   - `table.tsx` is a server component that loads all data for the tree
+   - `author-rcc-card.tsx` and `book-rcc-preview.tsx` are client components that accept prop-drilled data
+2. Mostly RSCs (right side), with Client Components only at the bottom
+   - `table.tsx` is a server component but only loads what it needs
+   - `author-rsc-card.tsx` and `book-rsc-preview.tsx` are RSC and do their own data loading
 
 <div style={{ padding: '24px' }}>
   <img src="/images/nextjs-sample-single-multiple-rscs.png" />
@@ -79,7 +81,9 @@ The top-level `Table` / `table.tsx` component renders each of these side-by-side
 
 ## Automatic N+1 Prevention
 
-In either approach, Joist's N+1 prevention auto-batches database calls, even if they are made across separate component renders. I.e. in the RSC components:
+In either approach, Joist's N+1 prevention auto-batches database calls, even if they are made across separate component renders.
+
+I.e. in the RSC components:
 
 - The top-level `Table` component makes 1 SQL call for all `Author` entities.
 - All 2nd-level `AuthorRscCard` cards each make their own `author.books.load()` (or `author.populate(...)`) call, but because they're all rendered in the same event loop, Joist batches all the `load` calls into 1 SQL call

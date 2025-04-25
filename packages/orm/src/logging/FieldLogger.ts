@@ -3,7 +3,7 @@ import { Entity, isEntity } from "../Entity";
 import { getFuzzyCallerName } from "../config";
 
 const { gray, green, yellow, blue, red } = ansis;
-type WriteFn = (line: string) => void;
+export type WriteFn = (line: string) => void;
 
 export type FieldLoggerWatch = {
   /** The entity name, i.e. `Author` */

@@ -67,6 +67,7 @@ import {
   toTaggedId,
 } from "./index";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
+import { WriteFn } from "./logging/FactoryLogger";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations";
@@ -1788,17 +1789,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       this.#fieldLogger = arg;
       return;
     }
-    // Probe for `ctx.logger.debug` if it exists, otherwise fallback on `console.log`
-    const writeFn =
-      this.ctx &&
-      typeof this.ctx === "object" &&
-      "logger" in this.ctx &&
-      this.ctx.logger &&
-      typeof this.ctx.logger === "object" &&
-      "debug" in this.ctx.logger &&
-      this.ctx.logger.debug instanceof Function
-        ? this.ctx.logger.debug.bind(this.ctx.logger)
-        : console.log;
+    const writeFn = getDefaultWriteFn(this.ctx);
     if (typeof arg === "boolean") {
       this.#fieldLogger = arg ? new FieldLogger([], writeFn) : undefined;
     } else if (typeof arg === "string" || Array.isArray(arg)) {
@@ -2333,4 +2324,17 @@ export function appendStack(err: unknown, dummy: Error): unknown {
     err.stack += dummy.stack!.replace(/.*\n/, "\n");
   }
   return err;
+}
+
+/** Probe for `ctx.logger.debug` if it exists, otherwise fallback on `console.log`. */
+function getDefaultWriteFn(ctx: unknown): WriteFn {
+  return ctx &&
+    typeof ctx === "object" &&
+    "logger" in ctx &&
+    ctx.logger &&
+    typeof ctx.logger === "object" &&
+    "debug" in ctx.logger &&
+    ctx.logger.debug instanceof Function
+    ? ctx.logger.debug.bind(ctx.logger)
+    : console.log;
 }

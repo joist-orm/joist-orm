@@ -1,3 +1,10 @@
+# [1.242.0](https://github.com/joist-orm/joist-orm/compare/v1.241.3...v1.242.0) (2025-04-25)
+
+
+### Features
+
+* Log to ctx.logger.debug if available ([#1463](https://github.com/joist-orm/joist-orm/issues/1463)) ([7668bcd](https://github.com/joist-orm/joist-orm/commit/7668bcd5627164adef08231cf40a3a0f28635cf8))
+
 ## [1.241.3](https://github.com/joist-orm/joist-orm/compare/v1.241.2...v1.241.3) (2025-04-25)
 
 

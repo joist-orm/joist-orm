@@ -1,6 +1,6 @@
 import ansiRegex = require("ansi-regex");
 import { FieldLogger, FieldLoggerWatch } from "joist-orm";
-import { Author, Publisher, newAuthor, newBook, newComment } from "src/entities";
+import { Author, Publisher, newAuthor, newBook, newComment, newLargePublisher, newSmallPublisher } from "src/entities";
 import { insertAuthor, insertPublisher } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
@@ -118,6 +118,36 @@ describe("FieldLogging", () => {
     expect(fieldOutput).toMatchInlineSnapshot(`
      [
        "a#1 created at newAuthor.ts:13↩",
+     ]
+    `);
+  });
+
+  it("can filter fields by subtype", async () => {
+    const em = newEntityManager();
+    em.setFieldLogging(new StubFieldLogger([{ entity: "LargePublisher" }]));
+    newLargePublisher(em, { name: "lp1" });
+    newSmallPublisher(em, { name: "pp1" });
+    expect(fieldOutput).toMatchInlineSnapshot(`
+     [
+       "p#1 created at newLargePublisher.ts:6↩",
+       "p#1.rating = 0 at newLargePublisher.ts:6↩",
+       "p#1.name = lp1 at newLargePublisher.ts:6↩",
+       "p#1.numberOfBookReviews = 0 at defaults.ts:36↩",
+       "p#1.type = BIG at defaults.ts:45↩",
+       "p#1.baseSyncDefault = LPSyncDefault at defaults.ts:45↩",
+       "p#1.baseAsyncDefault = LPAsyncDefault at defaults.ts:191↩",
+     ]
+    `);
+  });
+
+  it("can filter fields by subtype and fieldName", async () => {
+    const em = newEntityManager();
+    em.setFieldLogging(new StubFieldLogger([{ entity: "LargePublisher", fieldNames: ["name"] }]));
+    newLargePublisher(em, { name: "lp1" });
+    newSmallPublisher(em, { name: "pp1" });
+    expect(fieldOutput).toMatchInlineSnapshot(`
+     [
+       "p#1.name = lp1 at newLargePublisher.ts:6↩",
      ]
     `);
   });

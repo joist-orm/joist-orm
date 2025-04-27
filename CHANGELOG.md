@@ -1,3 +1,10 @@
+## [1.242.1](https://github.com/joist-orm/joist-orm/compare/v1.242.0...v1.242.1) (2025-04-27)
+
+
+### Bug Fixes
+
+* Fix subtype pruning for STI m2os. ([#1465](https://github.com/joist-orm/joist-orm/issues/1465)) ([dd1dca7](https://github.com/joist-orm/joist-orm/commit/dd1dca7f0ea0faa0e3d48895ddc72ba6d0afeda7)), closes [#1246](https://github.com/joist-orm/joist-orm/issues/1246)
+
 # [1.242.0](https://github.com/joist-orm/joist-orm/compare/v1.241.3...v1.242.0) (2025-04-25)
 
 

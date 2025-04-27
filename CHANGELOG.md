@@ -1,3 +1,10 @@
+# [1.243.0](https://github.com/joist-orm/joist-orm/compare/v1.242.1...v1.243.0) (2025-04-27)
+
+
+### Features
+
+* Allow setting preloadPlugin at the driver level. ([#1467](https://github.com/joist-orm/joist-orm/issues/1467)) ([90c814b](https://github.com/joist-orm/joist-orm/commit/90c814bcd21123cfd6682b89c5f5fa504c2efa73))
+
 ## [1.242.1](https://github.com/joist-orm/joist-orm/compare/v1.242.0...v1.242.1) (2025-04-27)
 
 

@@ -51,6 +51,8 @@ import {
   SmallPublisher,
   SmallPublisherGroup,
   Tag,
+  Task,
+  TaskFilter,
   TaskItem,
   TaskItemFilter,
   User,
@@ -65,6 +67,7 @@ const bm = getMetadata(Book);
 const pm = getMetadata(Publisher);
 const cm = getMetadata(Comment);
 const um = getMetadata(User);
+const tm = getMetadata(Task);
 const criticMeta = getMetadata(Critic);
 const taskItemMeta = getMetadata(TaskItem);
 const opts = { softDeletes: "include" } as const;
@@ -2414,7 +2417,16 @@ describe("EntityManager.queries", () => {
     });
   });
 
-  it("can prune m2o subtype only fields", async () => {
+  it("can prune m2o STI subtype only fields", async () => {
+    const where = { copiedToTaskNew: { specialNewField: undefined } } satisfies TaskFilter;
+    expect(parseFindQuery(tm, where, opts)).toMatchObject({
+      selects: [`t.*`],
+      tables: [{ alias: "t", table: "tasks", join: "primary" }],
+      condition: { kind: "exp", op: "and", conditions: [] },
+    });
+  });
+
+  it("can prune m2o CTI subtype only fields", async () => {
     const where = { publisherLargePublisher: { country: undefined } } satisfies AuthorFilter;
     expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],

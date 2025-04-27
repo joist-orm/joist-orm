@@ -15,8 +15,13 @@ export function buildRawQuery(
 ): { sql: string; bindings: readonly any[] } {
   const { limit, offset } = settings;
 
+  const primary = parsed.tables.find((t) => t.join === "primary")!;
+
   // If we're doing o2m joins, add a `DISTINCT` clause to avoid duplicates
-  const needsDistinct = parsed.tables.some((t) => t.join === "outer" && t.distinct !== false);
+  const needsDistinct =
+    parsed.tables.some((t) => t.join === "outer" && t.distinct !== false) &&
+    // If this is a `findCount`, it will rewrite the `select` to have its own distinct
+    !parsed.selects.find((s) => s.startsWith("count("));
 
   let sql = "";
   const bindings: any[] = [];
@@ -28,7 +33,7 @@ export function buildRawQuery(
 
   sql += "SELECT ";
   parsed.selects.forEach((s, i) => {
-    const maybeDistinct = i === 0 && needsDistinct ? "DISTINCT " : "";
+    const maybeDistinct = i === 0 && needsDistinct ? buildDistinctOn(parsed, primary) : "";
     const maybeComma = i === parsed.selects.length - 1 ? "" : ", ";
     sql += maybeDistinct + s + maybeComma;
   });
@@ -41,7 +46,6 @@ export function buildRawQuery(
   }
 
   // Make sure the primary is first
-  const primary = parsed.tables.find((t) => t.join === "primary")!;
   sql += ` FROM ${as(primary)}`;
 
   // Then the joins
@@ -84,6 +88,15 @@ export function buildRawQuery(
   }
 
   return { sql, bindings };
+}
+
+function buildDistinctOn(parsed: ParsedFindQuery, primary: ParsedTable): string {
+  const columns = [
+    // If we have an order by, it needs to be included in the DISTINCT ON
+    ...parsed.orderBys.map((ob) => kqDot(ob.alias, ob.column)),
+    kqDot(primary.alias, "id"),
+  ];
+  return `DISTINCT ON (${columns.join(", ")}) `;
 }
 
 const as = (t: ParsedTable) => `${kq(t.table)} AS ${kq(t.alias)}`;

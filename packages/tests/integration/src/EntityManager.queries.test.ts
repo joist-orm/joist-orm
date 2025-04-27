@@ -2398,6 +2398,19 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can find through o2m with preloading", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    const em = newEntityManager();
+    // When we query for books with a null book.id column
+    const where = { books: { title: { like: "b%" } } } satisfies AuthorFilter;
+    // And the books are populated/preloaded (currently via LEFT JOIN)
+    const authors = await em.find(Author, where, { populate: "books" });
+    // Then the query didn't fail
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+  });
+
   it("can find through m2o with subtype only fields", async () => {
     const where = { taskTaskNew: { specialNewField: 1 } } satisfies TaskItemFilter;
     expect(parseFindQuery(taskItemMeta, where, opts)).toMatchObject({

@@ -2417,28 +2417,21 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can prune m2o STI subtype only fields", async () => {
+    const where = { copiedToTaskNew: { specialNewField: undefined } } satisfies TaskFilter;
+    expect(parseFindQuery(tm, where, opts)).toMatchObject({
+      selects: [`t.*`],
+      tables: [{ alias: "t", table: "tasks", join: "primary" }],
+      condition: { kind: "exp", op: "and", conditions: [] },
+    });
+  });
+
   it("can prune m2o CTI subtype only fields", async () => {
     const where = { publisherLargePublisher: { country: undefined } } satisfies AuthorFilter;
     expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: undefined,
-    });
-  });
-
-  it("can prune m2o STI subtype only fields", async () => {
-    const where = { copiedToTaskNew: { specialNewField: undefined } } satisfies TaskFilter;
-    expect(parseFindQuery(tm, where, opts)).toMatchObject({
-      selects: [`t.*`],
-      tables: [
-        { alias: "t", table: "tasks", join: "primary" },
-        { alias: "t1", table: "tasks", join: "outer", col1: "t.id", col2: "t1.copied_from_id" },
-      ],
-      condition: {
-        kind: "exp",
-        op: "and",
-        conditions: [{ alias: "t1", column: "type_id", dbType: "int", cond: { kind: "eq", value: 2 } }],
-      },
     });
   });
 

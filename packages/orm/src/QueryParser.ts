@@ -1133,6 +1133,7 @@ function addStiSubtypeFilter(cb: ConditionBuilder, subtypeMeta: EntityMetadata, 
     column: column.columnName,
     dbType: column.dbType,
     cond: { kind: "eq", value: subtypeMeta.stiDiscriminatorValue },
+    pruneable: true,
   });
 }
 

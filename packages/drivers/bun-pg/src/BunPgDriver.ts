@@ -98,6 +98,10 @@ export class BunPgDriver implements Driver<TransactionSQL> {
   flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void> {
     throw new Error("Method not implemented.");
   }
+
+  get defaultPlugins() {
+    return {};
+  }
 }
 
 // Issue 1 INSERT statement with N `VALUES (..., ...), (..., ...), ...`

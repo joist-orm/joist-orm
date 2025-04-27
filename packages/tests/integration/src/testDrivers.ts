@@ -1,5 +1,6 @@
 import { recordQuery } from "@src/testEm";
 import { Driver, PostgresDriver } from "joist-orm";
+import { JsonAggregatePreloader } from "joist-plugin-join-preloading";
 import { newPgConnectionConfig } from "joist-utils";
 import { Knex, knex as createKnex } from "knex";
 
@@ -30,7 +31,7 @@ export class PostgresTestDriver implements TestDriver {
   public knex: Knex;
   public isInMemory = false;
 
-  constructor() {
+  constructor(isPreloadingEnabled: boolean) {
     this.knex = createKnex({
       client: "pg",
       connection: newPgConnectionConfig() as any,
@@ -39,7 +40,8 @@ export class PostgresTestDriver implements TestDriver {
     }).on("query", (e: any) => {
       recordQuery(e.sql);
     });
-    this.driver = new PostgresDriver(this.knex);
+    const preloadPlugin = isPreloadingEnabled ? new JsonAggregatePreloader() : undefined;
+    this.driver = new PostgresDriver(this.knex, { preloadPlugin });
   }
 
   async beforeEach() {

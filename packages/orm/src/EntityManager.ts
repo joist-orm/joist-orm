@@ -234,6 +234,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   constructor(ctx: C, driver: Driver<TX>);
   constructor(emOrCtx: EntityManager<C, Entity, TX> | C, driverOrOpts?: EntityManagerOpts<TX> | Driver<TX>) {
     if (emOrCtx instanceof EntityManager) {
+      // Setup from the existing EntityManager
       const em = emOrCtx;
       this.driver = em.driver;
       this.#preloader = em.#preloader;
@@ -246,13 +247,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         this.ctx = Object.assign(this.ctx, { em: this });
       }
     } else if (driverOrOpts && "executeFind" in driverOrOpts) {
+      // Passed a driver directly
       this.ctx = emOrCtx;
       this.driver = driverOrOpts;
-      this.#preloader = undefined;
+      this.#preloader = this.driver.defaultPlugins.preloadPlugin;
     } else {
+      // Passed an opts hash
       this.ctx = emOrCtx;
       this.driver = driverOrOpts!.driver;
-      this.#preloader = driverOrOpts!.preloadPlugin;
+      this.#preloader = driverOrOpts!.preloadPlugin ?? this.driver.defaultPlugins.preloadPlugin;
     }
 
     // Expose some of our private fields as the EntityManagerInternalApi

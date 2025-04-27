@@ -13,6 +13,7 @@ import {
   keyToNumber,
   maybeResolveReferenceToId,
   ParsedFindQuery,
+  PreloadPlugin,
   RuntimeConfig,
 } from "../index";
 import { JoinRowOperation } from "../JoinRows";
@@ -27,6 +28,8 @@ import { IdAssigner, SequenceIdAssigner } from "./IdAssigner";
 
 export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;
+  /** Sets a default `PreloadPlugin` for any `EntityManager` that uses this driver. */
+  preloadPlugin?: PreloadPlugin;
 }
 
 /**
@@ -44,13 +47,15 @@ export interface PostgresDriverOpts {
  * - We use a pg-specific bulk update syntax.
  */
 export class PostgresDriver implements Driver<Knex.Transaction> {
-  private readonly idAssigner: IdAssigner;
+  readonly #idAssigner: IdAssigner;
+  readonly #preloadPlugin: PreloadPlugin | undefined;
 
   constructor(
     private readonly knex: Knex,
     opts?: PostgresDriverOpts,
   ) {
-    this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner(knex);
+    this.#idAssigner = opts?.idAssigner ?? new SequenceIdAssigner(knex);
+    this.#preloadPlugin = opts?.preloadPlugin;
     setupLatestPgTypes(getRuntimeConfig().temporal);
   }
 
@@ -89,12 +94,12 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
   }
 
   async assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
-    return this.idAssigner.assignNewIds(todos);
+    return this.#idAssigner.assignNewIds(todos);
   }
 
   async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
     const knex = (em.txn ?? fail("Expected EntityManager.txn to be set")) as Knex.Transaction;
-    await this.idAssigner.assignNewIds(todos);
+    await this.#idAssigner.assignNewIds(todos);
 
     const ops = generateOps(todos);
 
@@ -193,6 +198,10 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
         });
       }
     }
+  }
+
+  get defaultPlugins() {
+    return { preloadPlugin: this.#preloadPlugin };
   }
 
   private getMaybeInTxnKnex(em: EntityManager): Knex {

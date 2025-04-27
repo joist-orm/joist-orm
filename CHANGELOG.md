@@ -1,3 +1,10 @@
+## [1.243.1](https://github.com/joist-orm/joist-orm/compare/v1.243.0...v1.243.1) (2025-04-27)
+
+
+### Bug Fixes
+
+* Fix preloading when filtering by o2m joins. ([#1469](https://github.com/joist-orm/joist-orm/issues/1469)) ([ad27c0e](https://github.com/joist-orm/joist-orm/commit/ad27c0eca42c6e443bf97da280f66f48e95981aa)), closes [#1468](https://github.com/joist-orm/joist-orm/issues/1468)
+
 # [1.243.0](https://github.com/joist-orm/joist-orm/compare/v1.242.1...v1.243.0) (2025-04-27)
 
 

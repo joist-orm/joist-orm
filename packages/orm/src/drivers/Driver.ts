@@ -1,6 +1,7 @@
 import { EntityManager } from "../EntityManager";
 import { ParsedFindQuery } from "../QueryParser";
 import { JoinRowTodo, Todo } from "../Todo";
+import { PreloadPlugin } from "../plugins/PreloadPlugin";
 
 /**
  * Isolates all SQL calls that Joist needs to make to fetch/save data.
@@ -25,4 +26,7 @@ export interface Driver<TX = unknown> {
   flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void>;
 
   flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void>;
+
+  /** Allows the driver to opt `EntityManager`s into plugins it has enabled/supported by default. */
+  defaultPlugins: { preloadPlugin?: PreloadPlugin };
 }

@@ -1,8 +1,8 @@
 import { isPlainObject } from "joist-utils";
 import { Entity, isEntity } from "./Entity";
 import { EntityManager, IdOf, MaybeAbstractEntityConstructor, isKey } from "./EntityManager";
-import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { PartialOrNull, asConcreteCstr, getConstructorFromTaggedId, getProperties } from "./index";
+import { EntityMetadata, ManyToManyField, OneToManyField, getMetadata } from "./EntityMetadata";
+import { PartialOrNull, TimestampSerde, asConcreteCstr, getConstructorFromTaggedId, getProperties } from "./index";
 import { OptIdsOf, OptsOf } from "./typeMap";
 import { NullOrDefinedOr, toArray } from "./utils";
 
@@ -19,22 +19,21 @@ export type DeepPartialOrNull<T extends Entity> = { id?: IdOf<T> | null } & Allo
 > &
   OptIdsOf<T>;
 
+/** Flags that allow `createOrUpdatePartial` to delete or remove entities. */
+type ManagementFlags = {
+  delete?: boolean | null;
+  remove?: boolean | null;
+  op?: "remove" | "delete" | "include" | "incremental";
+};
+
 type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
   [P in keyof T]: T[P] extends NullOrDefinedOr<infer U>
     ? U extends Array<infer V>
       ? V extends Entity
-        ? Array<
-            | V
-            | (DeepPartialOrNull<V> & {
-                delete?: boolean | null;
-                remove?: boolean | null;
-                op?: "remove" | "delete" | "include" | "incremental";
-              })
-            | IdOf<V>
-          > | null
+        ? Array<V | (DeepPartialOrNull<V> & ManagementFlags) | IdOf<V>> | null
         : T[P]
       : U extends Entity
-        ? U | DeepPartialOrNull<U> | IdOf<U> | null
+        ? U | (DeepPartialOrNull<U> & ManagementFlags) | IdOf<U> | null
         : T[P]
     : T[P];
 };
@@ -58,11 +57,11 @@ export async function updatePartial<T extends Entity>(entity: T, opts: DeepParti
 export async function createOrUpdatePartial<T extends Entity>(
   em: EntityManager<any, any, any>,
   constructor: MaybeAbstractEntityConstructor<T>,
-  opts: DeepPartialOrNull<T>,
+  input: DeepPartialOrNull<T>,
 ): Promise<T> {
   const meta = getMetadata(constructor);
-  const [_opts, relationsToLoad] = await convertToOpts(em, meta, opts);
-  const { id } = opts;
+  const [_opts, relationsToLoad] = await convertToOpts(em, meta, input);
+  const { id } = input;
   const isNew = id === null || id === undefined;
   if (isNew) {
     // asConcreteCstr is not actually safe but for now we rely on our cstr runtime check to catch this
@@ -158,6 +157,8 @@ async function convertToOpts<T extends Entity>(
       } else if (isKey(value)) {
         entity = await em.load(field.otherMetadata().cstr, value);
       } else {
+        // const [allowDelete, allowRemove, allowOp] = allowFlags(field);
+
         entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
       }
       return [name, entity];
@@ -171,10 +172,11 @@ async function convertToOpts<T extends Entity>(
 
       // We allow `delete` and `remove` commands but only if they don't collide with existing fields
       // Also we trust the API layer, i.e. GraphQL, to not let these fields leak unless explicitly allowed.
-      const allowDelete = !field.otherMetadata().fields["delete"];
-      const allowRemove = !field.otherMetadata().fields["remove"];
-      const allowOp = !field.otherMetadata().fields["op"];
       relationsToLoad.push(field.fieldName);
+
+      let anyValueHasOp = false;
+      let anyValueMissingOp = false;
+      const maybeSoftDelete = meta.timestampFields.deletedAt;
 
       const entities = await Promise.all(
         toArray(value).map(async (value: any) => {
@@ -188,26 +190,60 @@ async function convertToOpts<T extends Entity>(
             throw new Error(`Invalid value ${value}`);
           } else {
             // Look for `delete: true/false` and `remove: true/false` markers
-            const deleteMarker: any = allowDelete && value["delete"];
-            const removeMarker: any = allowRemove && value["remove"];
-            const opMarker: any = allowOp && value["op"];
-            // If this is the incremental marker, just leave it in as-is so that setOpts can see it
-            if (opMarker === "incremental") {
-              return value;
-            }
-            // Remove the markers, regardless of true/false, before recursing into createOrUpdatePartial to avoid unknown fields
-            if (deleteMarker !== undefined) delete value.delete;
-            if (removeMarker !== undefined) delete value.remove;
-            if (opMarker !== undefined) delete value.op;
+
+            // The `op` behavior means incremental and wants to do this:
+            // which we "can't do" without having the entity to get at the current value.
+            // This is why historically we had the op-handling in embedded in setOpts, is that only it
+            // had access to the entity, and create partial "couldn't". But, really, why is createOrUpdatePartial
+            // going through setOpts anyway? If we had the entity at hand, we could directly iterate and call sets.
+            // Granted, setOpts has some field-specific handling, but we could extract a setOpt singular and have
+            // both us & them call it.
+            // values.forEach((v) => {
+            //   if (v.op === "delete") {
+            //     // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
+            //     if (maybeSoftDelete) {
+            //       const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
+            //       const now = new Date();
+            //       v.set({ [maybeSoftDelete]: serde.mapFromNow(now) });
+            //     } else {
+            //       entity.em.delete(v);
+            //     }
+            //   } else if (v.op === "remove") {
+            //     (current as any).remove(v);
+            //   } else if (v.op === "include") {
+            //     (current as any).add(v);
+            //   } else if (v.op === "incremental") {
+            //     // This is a marker entry to opt-in to incremental behavior, just drop it
+            //   }
+            // });
+            // return; // return from the op-based incremental behavior
+
+            const [deleteMarker, removeMarker, opMarker] = getManagementMarkers(field, value);
+            if (opMarker) anyValueHasOp ??= true;
+            if (!opMarker) anyValueHasOp ??= true;
             const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
-            // Put the markers back for setOpts to find
-            if (deleteMarker === true) entity.delete = true;
-            if (removeMarker === true) entity.remove = true;
-            if (opMarker) entity.op = opMarker;
-            return entity;
+            if (deleteMarker || opMarker === "delete") {
+              if (maybeSoftDelete) {
+                const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
+                const now = new Date();
+                entity.set({ [maybeSoftDelete]: serde.mapFromNow(now) });
+              } else {
+                em.delete(entity);
+              }
+              return entity;
+            } else if (removeMarker || opMarker === "remove") {
+              return undefined;
+            } else {
+              return entity;
+            }
           }
         }),
       );
+
+      if (anyValueHasOp && anyValueMissingOp) {
+        throw new Error("If any child sets the `op` key, then all children must have the `op` key.");
+      }
+
       return [name, entities];
     } else {
       return [name, value];
@@ -215,4 +251,22 @@ async function convertToOpts<T extends Entity>(
   });
   const _opts = Object.fromEntries(await Promise.all(p)) as OptsOf<T>;
   return [_opts, relationsToLoad];
+}
+
+function getManagementMarkers(field: OneToManyField | ManyToManyField, value: any): [any, any, any] {
+  const allowDelete = !field.otherMetadata().fields["delete"];
+  const allowRemove = !field.otherMetadata().fields["remove"];
+  const allowOp = !field.otherMetadata().fields["op"];
+
+  // Look for `delete: true/false` and `remove: true/false` markers
+  const deleteMarker: any = allowDelete && value["delete"];
+  const removeMarker: any = allowRemove && value["remove"];
+  const opMarker: any = allowOp && value["op"];
+
+  // Remove the markers, regardless of true/false, before recursing into createOrUpdatePartial to avoid unknown fields
+  if (deleteMarker !== undefined) delete value.delete;
+  if (removeMarker !== undefined) delete value.remove;
+  if (opMarker !== undefined) delete value.op;
+
+  return [deleteMarker, removeMarker, opMarker];
 }

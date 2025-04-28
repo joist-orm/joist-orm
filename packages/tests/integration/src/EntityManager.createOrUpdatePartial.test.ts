@@ -200,6 +200,43 @@ describe("EntityManager.createOrUpdatePartial", () => {
       });
       expect(await a1.image.load()).toBeUndefined();
     });
+
+    it("can delete with delete flag", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1, prequel_id: 1 });
+      const em = newEntityManager();
+      await em.createOrUpdatePartial(Book, { id: "b:2", sequel: { delete: true } });
+
+      // const loaded = await em.populate(a1, "books");
+      // // get shows only b1
+      // expect(loaded.books.get.length).toBe(1);
+      // // getWithDeleted still shows both b1 and b2
+      // expect(loaded.books.getWithDeleted.length).toBe(2);
+      // await em.flush();
+      // const rows = await select("books");
+      // expect(rows.length).toEqual(1);
+    });
+
+    it("can delete w/o delete flag if are owned", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBookReview({ book_id: 1, rating: 5 });
+      await insertBookReview({ book_id: 1, rating: 5 });
+      const em = newEntityManager();
+      const b1 = await em.createOrUpdatePartial(Book, {
+        id: "b:1",
+        reviews: [{ id: "br:2" }],
+      });
+      const loaded = await em.populate(b1, "reviews");
+      // get shows only br1
+      expect(loaded.reviews.get.length).toBe(1);
+      // getWithDeleted still shows both b1 and b2
+      expect(loaded.reviews.getWithDeleted.length).toBe(2);
+      await em.flush();
+      const rows = await select("book_reviews");
+      expect(rows.length).toEqual(1);
+    });
   });
 
   describe("o2m", () => {

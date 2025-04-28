@@ -671,7 +671,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     return new type(this, opts) as New<T, O>;
   }
 
-  /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
+  /**
+   * Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input.
+   *
+   * Note that `createPartial` doesn't support the full upsert behavior, i.e. this method:
+   *
+   * - always creates,
+   * - does not support relation markers like `op`, `delete`, and `remove`, but
+   * - fields set ot `undefined` will be skipped
+   * - does not accept deep input
+   *
+   * See `createOrUpdatePartial` for the upsert/deep upsert behavior.
+   */
   public createPartial<T extends EntityW>(type: EntityConstructor<T>, opts: PartialOrNull<OptsOf<T>>): T {
     // We force some manual calls to setOpts to mimic `setUnsafe`'s behavior that `undefined` should
     // mean "ignore" (and we assume validation rules will catch it later) but still set
@@ -682,9 +693,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     return entity;
   }
 
-  /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
-  public createOrUpdatePartial<T extends EntityW>(type: EntityConstructor<T>, opts: DeepPartialOrNull<T>): Promise<T> {
-    return createOrUpdatePartial(this, type, opts);
+  /**
+   * Create or updates `type` based on partial-update-style `input`.
+   *
+   * This supports upsert behavior, i.e.:
+   *
+   * - findOrCreate the primary entity being updated (based on the `id` key being provided),
+   * - fields set to `undefined` mean "skip" instead of "unset", and
+   * - upsert relation markers like `op`, `delete`, and `remove` are supported.
+   * - deep input is supported, i.e. `{ firstName: "Bob", books: [{ title: "b1" } ] }`
+   */
+  public createOrUpdatePartial<T extends EntityW>(type: EntityConstructor<T>, input: DeepPartialOrNull<T>): Promise<T> {
+    return createOrUpdatePartial(this, type, input);
   }
 
   /**

@@ -57,6 +57,9 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
   // Do a Promise.all so we .load() relations in parallel
   await Promise.all(
     Object.entries(input).map(async ([key, value]) => {
+      // setPartial ==> `undefined` is a noop
+      if (value === undefined) return;
+
       // Watch for the `bookId` / `bookIds` aliases
       const field = meta.allFields[key] || Object.values(meta.allFields).find((f) => f.fieldIdName === key);
 
@@ -111,7 +114,7 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
           setOpt(meta, entity, name, other);
         }
       } else if (field.kind === "o2o") {
-        if (!value || isEntity(value)) {
+        if (value === null || isEntity(value)) {
           await (entity as any)[name].load();
           setOpt(meta, entity, name, value);
         } else if (isKey(value)) {
@@ -130,16 +133,49 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
         }
       } else if (field.kind === "o2m" || field.kind === "m2m") {
         await (entity as any)[name].load();
-
         // Look for one-to-many/many-to-many partials
         // `null` is handled later, and treated as `[]`, which needs the collection loaded
 
-        let anyValueHasOp = false;
-        let anyValueMissingOp = false;
-        const maybeSoftDelete = meta.timestampFields.deletedAt;
+        const values = toArray(value);
+        const maybeSoftDelete = field.otherMetadata().timestampFields.deletedAt;
 
+        // Incremental handling
+        const anyValueHasOp = values.some((v) => v && typeof v === "object" && !isEntity(v) && "op" in v);
+        if (anyValueHasOp) {
+          let anyValueMissingOp = false;
+          const current = (entity as any)[name];
+          // The `op` behavior means incremental and wants to do this:
+          await Promise.all(
+            values.map(async (value: any) => {
+              const [, , op] = getManagementMarkers(field, value);
+              const other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+              if (op === "delete") {
+                // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
+                if (maybeSoftDelete) {
+                  const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
+                  const now = new Date();
+                  other.set({ [maybeSoftDelete]: serde.mapFromNow(now) });
+                } else {
+                  entity.em.delete(other);
+                }
+              } else if (op === "remove") {
+                current.remove(other);
+              } else if (op === "include") {
+                current.add(other);
+              } else if (op === "incremental") {
+                // This is a marker entry, just ignore it
+              }
+            }),
+          );
+          if (anyValueMissingOp) {
+            throw new Error("If any child sets the `op` key, then all children must have the `op` key.");
+          }
+          return; // return from the op-based incremental behavior
+        }
+
+        // Otherwise we do exhaustive sets, will still looking for `delete`/`remove` markers
         const others = await Promise.all(
-          toArray(value).map(async (value: any) => {
+          values.map(async (value: any) => {
             if (isEntity(value)) {
               return value;
             } else if (isKey(value)) {
@@ -150,60 +186,27 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
               throw new Error(`Invalid value ${value}`);
             } else {
               // Look for `delete: true/false` and `remove: true/false` markers
-
-              // The `op` behavior means incremental and wants to do this:
-              // which we "can't do" without having the entity to get at the current value.
-              // This is why historically we had the op-handling in embedded in setOpts, is that only it
-              // had access to the entity, and create partial "couldn't". But, really, why is createOrUpdatePartial
-              // going through setOpts anyway? If we had the entity at hand, we could directly iterate and call sets.
-              // Granted, setOpts has some field-specific handling, but we could extract a setOpt singular and have
-              // both us & them call it.
-              // values.forEach((v) => {
-              //   if (v.op === "delete") {
-              //     // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
-              //     if (maybeSoftDelete) {
-              //       const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
-              //       const now = new Date();
-              //       v.set({ [maybeSoftDelete]: serde.mapFromNow(now) });
-              //     } else {
-              //       entity.em.delete(v);
-              //     }
-              //   } else if (v.op === "remove") {
-              //     (current as any).remove(v);
-              //   } else if (v.op === "include") {
-              //     (current as any).add(v);
-              //   } else if (v.op === "incremental") {
-              //     // This is a marker entry to opt-in to incremental behavior, just drop it
-              //   }
-              // });
-              // return; // return from the op-based incremental behavior
-
-              const [deleteMarker, removeMarker, opMarker] = getManagementMarkers(field, value);
-              if (opMarker) anyValueHasOp ??= true;
-              if (!opMarker) anyValueHasOp ??= true;
-              const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
-              if (deleteMarker || opMarker === "delete") {
-                if (maybeSoftDelete) {
-                  const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
-                  const now = new Date();
-                  entity.set({ [maybeSoftDelete]: serde.mapFromNow(now) });
-                } else {
-                  em.delete(entity);
-                }
-                return entity;
-              } else if (removeMarker || opMarker === "remove") {
+              const [deleteMarker, removeMarker] = getManagementMarkers(field, value);
+              const other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
+              if (deleteMarker) {
+                // if (maybeSoftDelete) {
+                //   const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
+                //   const now = new Date();
+                //   other.set({ [maybeSoftDelete]: serde.mapFromNow(now) });
+                // } else {
+                em.delete(other);
+                // }
+                return other;
+              } else if (removeMarker) {
                 return undefined;
               } else {
-                return entity;
+                return other;
               }
             }
           }),
         );
 
-        if (anyValueHasOp && anyValueMissingOp) {
-          throw new Error("If any child sets the `op` key, then all children must have the `op` key.");
-        }
-
+        await (entity as any)[name].load();
         setOpt(
           meta,
           entity,

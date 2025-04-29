@@ -1,3 +1,10 @@
+# [1.244.0](https://github.com/joist-orm/joist-orm/compare/v1.243.1...v1.244.0) (2025-04-29)
+
+
+### Features
+
+* Support o2o upsert deletes ([#1473](https://github.com/joist-orm/joist-orm/issues/1473)) ([c6c1659](https://github.com/joist-orm/joist-orm/commit/c6c16598fed8f1e4ad16fbf69188126c90e515a5))
+
 ## [1.243.1](https://github.com/joist-orm/joist-orm/compare/v1.243.0...v1.243.1) (2025-04-27)
 
 

@@ -125,7 +125,7 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
             em.load(field.otherMetadata().cstr, value),
           ]);
           setOpt(meta, entity, name, other);
-        } else if (isPlainObject(value)) {
+        } else if (typeof value === "object" && isPlainObject(value)) {
           const [deleteMarker, removeMarker, op] = getManagementMarkers(field, value);
           // Always load the o2o so we can set it
           const current = await (entity as any)[name].load();

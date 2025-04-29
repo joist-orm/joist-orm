@@ -677,9 +677,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * Note that `createPartial` doesn't support the full upsert behavior, i.e. this method:
    *
    * - always creates,
-   * - does not support relation markers like `op`, `delete`, and `remove`, but
-   * - fields set ot `undefined` will be skipped
-   * - does not accept deep input
+   * - does not support relation markers like `op`, `delete`, and `remove`,
+   * - does not accept deep input, but
+   * - fields set to `undefined` will be skipped instead of unset
    *
    * See `createOrUpdatePartial` for the upsert/deep upsert behavior.
    */
@@ -699,9 +699,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * This supports upsert behavior, i.e.:
    *
    * - findOrCreate the primary entity being updated (based on the `id` key being provided),
-   * - fields set to `undefined` mean "skip" instead of "unset", and
-   * - upsert relation markers like `op`, `delete`, and `remove` are supported.
-   * - deep input is supported, i.e. `{ firstName: "Bob", books: [{ title: "b1" } ] }`
+   * - upsert relation markers like `op`, `delete`, and `remove` are supported,
+   * - deep input is supported, i.e. `{ firstName: "Bob", books: [{ title: "b1" } ] }`, and
+   * - fields set to `undefined` will be skipped instead of unset
    */
   public createOrUpdatePartial<T extends EntityW>(type: EntityConstructor<T>, input: DeepPartialOrNull<T>): Promise<T> {
     return createOrUpdatePartial(this, type, input);

@@ -73,7 +73,7 @@ export function lensDataLoader<T extends Entity>(
     maybeAddOrderBy(query, target, alias);
 
     function maybeAddNotSoftDeleted(other: EntityMetadata, alias: string): void {
-      const { deletedAt } = getBaseMeta(other).timestampFields;
+      const { deletedAt } = getBaseMeta(other).timestampFields ?? {};
       if (deletedAt) {
         const column = other.allFields[deletedAt].serde?.columns[0]!;
         conditions.push({

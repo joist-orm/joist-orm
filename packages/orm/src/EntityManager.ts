@@ -1209,7 +1209,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
     if (entity.isNewEntity) {
       const baseMeta = getBaseMeta(getMetadata(entity));
-      const { createdAt, updatedAt } = baseMeta.timestampFields;
+      const { createdAt, updatedAt } = baseMeta.timestampFields ?? {};
       const { data } = getInstanceData(entity);
       const now = new Date();
       if (createdAt) {
@@ -2225,7 +2225,7 @@ function isCustomRelation(r: AbstractRelationImpl<any, any>): boolean {
 
 function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Date): void {
   for (const todo of Object.values(todos)) {
-    const { updatedAt } = todo.metadata.timestampFields;
+    const { updatedAt } = todo.metadata.timestampFields ?? {};
     if (updatedAt) {
       for (const e of todo.updates) {
         // We avoid going through `setField` because in unit tests, it might detect that our

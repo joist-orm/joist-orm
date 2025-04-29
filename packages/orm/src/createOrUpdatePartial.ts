@@ -167,7 +167,8 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
         // `null` is handled later, and treated as `[]`, which needs the collection loaded
 
         const values = toArray(value);
-        const maybeSoftDelete = field.otherMetadata().timestampFields.deletedAt;
+        const otherMeta = field.otherMetadata();
+        const maybeSoftDelete = otherMeta.timestampFields?.deletedAt;
 
         // Incremental handling
         const anyValueHasOp = values.some((v) => v && typeof v === "object" && !isEntity(v) && "op" in v);
@@ -179,20 +180,20 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
             values.map(async (value: any) => {
               const [, , op] = getCollectionMarkers(field, value);
               if (op === "delete") {
-                const other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+                const other = await createOrUpdatePartial(em, otherMeta.cstr, value);
                 // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
                 if (maybeSoftDelete) {
-                  const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
+                  const serde = otherMeta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
                   const now = new Date();
                   other.set({ [maybeSoftDelete]: serde.mapFromNow(now) });
                 } else {
                   entity.em.delete(other);
                 }
               } else if (op === "remove") {
-                const other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+                const other = await createOrUpdatePartial(em, otherMeta.cstr, value);
                 current.remove(other);
               } else if (op === "include") {
-                const other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+                const other = await createOrUpdatePartial(em, otherMeta.cstr, value);
                 current.add(other);
               } else if (op === "incremental") {
                 // This is a marker entry, just ignore it

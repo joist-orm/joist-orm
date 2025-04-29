@@ -23,6 +23,7 @@ import {
   UniqueFilter,
   alias,
   aliases,
+  getAliasMetadata,
   getMetadata,
   parseFindQuery,
 } from "joist-orm";
@@ -3140,6 +3141,17 @@ describe("EntityManager.queries", () => {
         dbType: "int",
         cond: { kind: "in", value: [1, 2] },
       });
+    });
+
+    it("can in keys", async () => {
+      const a = alias(Author);
+      expect("firstName" in a).toBe(true);
+      expect("invalidName" in a).toBe(false);
+    });
+
+    it("can retrieve metadata", async () => {
+      const a = alias(Author);
+      expect(getAliasMetadata(a)).toBe(getMetadata(Author));
     });
   });
 

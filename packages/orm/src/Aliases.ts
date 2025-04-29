@@ -10,6 +10,7 @@ import {
   getMetadata,
 } from "./EntityMetadata";
 import { ColumnCondition, ParsedValueFilter, RawCondition, makeLike, mapToDb, skipCondition } from "./QueryParser";
+import { getMetadataForTable } from "./configure";
 import { ExpressionCondition, ExpressionFilter, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
 import { Column } from "./serde";
 import { FieldsOf } from "./typeMap";
@@ -82,6 +83,11 @@ type ConditionAndAlias = { cond: ColumnCondition; field: Field & { aliasSuffix: 
 /** Called when `em.find` binds a pre-created `alias(...)` to a concrete join-tree location. */
 type BindCallback = (newMeta: EntityMetadata, newAlias: string) => void;
 
+export function getAliasMetadata<T extends Entity>(alias: Alias<T>): EntityMetadata<T> {
+  const mgmt = (alias as any)[aliasMgmt];
+  return getMetadataForTable(mgmt.tableName);
+}
+
 export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {
   const meta = getMetadata(cstr);
   // Keeps a list of callbacks we've created for this specific proxy, so that parseFindQuery
@@ -96,8 +102,12 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
     },
   };
   return new Proxy(cstr, {
+    has(_, key) {
+      return key === aliasMgmt || key in meta.allFields;
+    },
+
     /** Create a column alias for the given field. */
-    get(target, key: PropertyKey): any {
+    get(_, key: PropertyKey): any {
       if (key === aliasMgmt) {
         return mgmt;
       }

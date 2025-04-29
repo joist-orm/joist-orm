@@ -1,3 +1,10 @@
+## [1.244.1](https://github.com/joist-orm/joist-orm/compare/v1.244.0...v1.244.1) (2025-04-29)
+
+
+### Bug Fixes
+
+* Support 'in' on aliases, add getAliasMetadata. ([#1474](https://github.com/joist-orm/joist-orm/issues/1474)) ([f9edab5](https://github.com/joist-orm/joist-orm/commit/f9edab5f4a9e3dcf502d3cb804560f721b9f2b2d))
+
 # [1.244.0](https://github.com/joist-orm/joist-orm/compare/v1.243.1...v1.244.0) (2025-04-29)
 
 

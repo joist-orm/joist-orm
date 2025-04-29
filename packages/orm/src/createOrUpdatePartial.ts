@@ -114,14 +114,10 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
               }
             }
           }
-          const [deleteMarker, removeMarker, op] = getManagementMarkers(field, value);
+          const deleteMarker = getDeleteMarker(field, value);
           if (deleteMarker) {
             em.delete(other);
             other = undefined;
-          } else if (removeMarker) {
-            throw new Error("Cannot set remove marker on m2o");
-          } else if (op) {
-            throw new Error("Cannot set remove marker on m2o");
           }
           setOpt(meta, entity, name, other);
         }
@@ -137,7 +133,7 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
           ]);
           setOpt(meta, entity, name, other);
         } else if (typeof value === "object" && isPlainObject(value)) {
-          const [deleteMarker, removeMarker, op] = getManagementMarkers(field, value);
+          const deleteMarker = getDeleteMarker(field, value);
           // Always load the o2o so we can set it
           const current = await (entity as any)[name].load();
           let other: any;
@@ -155,10 +151,6 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
           }
           if (deleteMarker) {
             em.delete(other);
-          } else if (removeMarker) {
-            throw new Error("Cannot set remove marker on o2o");
-          } else if (op) {
-            throw new Error("Cannot set remove marker on o2o");
           } else {
             setOpt(meta, entity, name, other);
           }
@@ -181,7 +173,7 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
           // The `op` behavior means incremental and wants to do this:
           await Promise.all(
             values.map(async (value: any) => {
-              const [, , op] = getManagementMarkers(field, value);
+              const [, , op] = getCollectionMarkers(field, value);
               if (op === "delete") {
                 const other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
                 // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
@@ -222,7 +214,7 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
               throw new Error(`Invalid value ${value}`);
             } else {
               // Look for `delete: true/false` and `remove: true/false` markers
-              const [deleteMarker, removeMarker] = getManagementMarkers(field, value);
+              const [deleteMarker, removeMarker] = getCollectionMarkers(field, value);
               const other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
               if (deleteMarker) {
                 // if (maybeSoftDelete) {
@@ -230,8 +222,8 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
                 //   const now = new Date();
                 //   other.set({ [maybeSoftDelete]: serde.mapFromNow(now) });
                 // } else {
-                em.delete(other);
                 // }
+                em.delete(other);
                 return other;
               } else if (removeMarker) {
                 return undefined;
@@ -279,10 +271,7 @@ export async function createOrUpdatePartial<T extends Entity>(
   return entity;
 }
 
-function getManagementMarkers(
-  field: OneToManyField | ManyToManyField | OneToOneField | ManyToOneField,
-  value: any,
-): [any, any, any] {
+function getCollectionMarkers(field: OneToManyField | ManyToManyField, value: any): [any, any, any] {
   const allowDelete = !field.otherMetadata().fields["delete"];
   const allowRemove = !field.otherMetadata().fields["remove"];
   const allowOp = !field.otherMetadata().fields["op"];
@@ -298,4 +287,10 @@ function getManagementMarkers(
   if (opMarker !== undefined) delete value.op;
 
   return [deleteMarker, removeMarker, opMarker];
+}
+function getDeleteMarker(field: OneToOneField | ManyToOneField, value: any): boolean {
+  const allowDelete = !field.otherMetadata().fields["delete"];
+  const deleteMarker: any = allowDelete && value["delete"];
+  if (deleteMarker !== undefined) delete value.delete;
+  return deleteMarker;
 }

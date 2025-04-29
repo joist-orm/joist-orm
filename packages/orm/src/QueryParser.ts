@@ -960,7 +960,7 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
   }
 }
 
-/** Adds any user-configured default order, plus a "always order by id" for determinism. */
+/** Adds any user-configured default order, plus an "always order by id" for determinism. */
 export function maybeAddOrderBy(query: ParsedFindQuery, meta: EntityMetadata, alias: string): void {
   const { orderBys } = query;
   if (meta.orderBy) {

@@ -287,6 +287,7 @@ export function insertCritic(row: {
 }) {
   return testDriver.insert("critics", row);
 }
+
 export function countOfBooks() {
   return testDriver.count("books");
 }

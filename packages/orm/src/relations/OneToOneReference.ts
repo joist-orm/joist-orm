@@ -181,6 +181,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     ensureNotDeleted(this.entity, "pending");
     this.#hasBeenSet = true;
     if (other === this.loaded) {
+      this._isLoaded = true;
       return;
     }
     if (this._isLoaded) {

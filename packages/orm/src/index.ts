@@ -1,7 +1,7 @@
 import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityConstructor, MaybeAbstractEntityConstructor } from "./EntityManager";
-import { getBaseMeta, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getBaseMeta, getMetadata } from "./EntityMetadata";
 import { getDefaultDependencies, setSyncDefaults } from "./defaults";
 import { buildWhereClause } from "./drivers/buildUtils";
 import { getField, setField } from "./fields";
@@ -13,7 +13,6 @@ import { isAsyncProperty, isReactiveField, isReactiveGetter, isReactiveQueryFiel
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
-import { TimestampSerde } from "./serde";
 import { OptsOf } from "./typeMap";
 import { fail } from "./utils";
 
@@ -136,120 +135,9 @@ export function setOpts<T extends Entity>(
   // own opt handling, but we still want the sync defaults applied after this opts handling.
   if (values !== undefined) {
     const meta = getMetadata(entity);
-    Object.entries(values as {}).forEach(([key, _value]) => {
-      const field = meta.allFields[key];
-      if (!field) {
-        // Allow setting non-field properties like fullName setters
-        const prop = getProperties(meta)[key];
-        if (!prop) {
-          throw new Error(`Unknown field ${key}`);
-        }
-      }
-
-      // If ignoreUndefined is set, we treat undefined as a noop
-      if (partial && _value === undefined) {
-        return;
-      }
-      // Ignore the STI discriminator, em.register will set this accordingly
-      if (meta.inheritanceType === "sti" && getBaseMeta(meta).stiDiscriminatorField === key) {
-        return;
-      }
-      // We let optional opts fields be `| null` for convenience, and convert to undefined.
-      const value = _value === null ? undefined : _value;
-      // Use `getField` to side-step `id` blowing up on new entities that are setting an
-      // explicit id; otherwise use `entity[key]` to get back the relation.
-      const current = key === "id" ? getField(entity, key) : (entity as any)[key];
-      // const current = (entity as any)[key];
-      if (current instanceof AbstractRelationImpl) {
-        if (calledFromConstructor) {
-          current.setFromOpts(value);
-        } else if (partial && (field.kind === "o2m" || field.kind === "m2m")) {
-          const values = value as any[];
-
-          // For setPartial collections, we used to individually add/remove instead of set, but this
-          // incremental behavior was unintuitive for mutations, i.e. `parent.children = [b, c]` and
-          // you'd still have `[a]` around. Note that we still support `delete: true` command to go
-          // further than "remove from collection" to "actually delete the entity".
-          const allowDelete = !field.otherMetadata().fields["delete"];
-          const allowRemove = !field.otherMetadata().fields["remove"];
-
-          const meta = getBaseMeta(field.otherMetadata());
-          const maybeSoftDelete = meta.timestampFields.deletedAt;
-
-          // We're replacing the old `delete: true` / `remove: true` behavior with `op` (i.e. operation).
-          // When passed in, all values must have it, and we kick into incremental mode, i.e. we
-          // individually add/remove/delete entities.
-          //
-          // The old `delete: true / remove: true` behavior is deprecated, and should eventually blow up.
-          const allowOp = !field.otherMetadata().fields["op"];
-          const anyValueHasOp = allowOp && values.some((v) => !!v.op);
-          if (anyValueHasOp) {
-            const anyValueMissingOp = values.some((v) => !v.op);
-            if (anyValueMissingOp) {
-              throw new Error("If any child sets the `op` key, then all children must have the `op` key.");
-            }
-            values.forEach((v) => {
-              if (v.op === "delete") {
-                // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
-                if (maybeSoftDelete) {
-                  const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
-                  const now = new Date();
-                  v.set({ [maybeSoftDelete]: serde.mapFromNow(now) });
-                } else {
-                  entity.em.delete(v);
-                }
-              } else if (v.op === "remove") {
-                (current as any).remove(v);
-              } else if (v.op === "include") {
-                (current as any).add(v);
-              } else if (v.op === "incremental") {
-                // This is a marker entry to opt-in to incremental behavior, just drop it
-              }
-            });
-            return; // return from the op-based incremental behavior
-          }
-
-          const toSet: any[] = [];
-          values.forEach((e) => {
-            if (allowDelete && e.delete === true) {
-              // Delete the entity, but still include it in `toSet` so that `a1.books.getWithDeleted` will still see it.
-              entity.em.delete(e);
-              toSet.push(e);
-            } else if (allowRemove && e.remove === true) {
-              // Just leave out of `toSet`
-            } else {
-              toSet.push(e);
-            }
-          });
-
-          current.set(toSet);
-        } else {
-          current.set(value);
-        }
-      } else if (isAsyncProperty(current) || isReactiveGetter(current)) {
-        throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
-      } else if (isReactiveField(current) || isReactiveQueryField(current)) {
-        if (value instanceof FactoryInitialValue) {
-          if (current instanceof ReactiveFieldImpl) {
-            current.setFactoryValue(value.value);
-          } else if (current instanceof ReactiveQueryFieldImpl) {
-            current.setFactoryValue(value.value);
-          } else {
-            throw new Error(`Unhandled case ${current.constructor.name}`);
-          }
-        } else {
-          throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
-        }
-      } else {
-        // If setting an explicit id, go through setField, otherwise use
-        // `entity[key]` to set the value directly to that we go through setters.
-        if (key === "id" && entity.isNewEntity) {
-          setField(entity, key, value);
-        } else {
-          (entity as any)[key] = value;
-        }
-      }
-    });
+    for (const [key, _value] of Object.entries(values as {})) {
+      setOpt(meta, entity, key, _value, partial, calledFromConstructor);
+    }
   }
 
   // Apply any synchronous defaults, after the opts have been applied
@@ -257,6 +145,73 @@ export function setOpts<T extends Entity>(
     // If calledFromConstructor=true, this must be a new entity because we've got
     // an early-return up above that checks for `em.hydrate` passing in ids
     setSyncDefaults(entity);
+  }
+}
+
+/**
+ * Applies some standard behavior & protections to `entity[key] = value`. I.e.
+ *
+ * - We don't set over AsyncProperties/relations/etc., and instead call current.set(value)
+ * - We catch missing/invalid field names
+ * - We handle FactoryInitialValues
+ */
+export function setOpt<T extends Entity>(
+  meta: EntityMetadata<T>,
+  entity: T,
+  key: string,
+  _value: any,
+  partial = false,
+  calledFromConstructor = false,
+): void {
+  const field = meta.allFields[key];
+  if (!field) {
+    // Allow setting non-field properties like fullName setters
+    const prop = getProperties(meta)[key];
+    if (!prop) {
+      throw new Error(`Unknown field ${key}`);
+    }
+  }
+
+  // If partial is set, we treat undefined as a noop
+  if (partial && _value === undefined) return;
+  // Ignore the STI discriminator, em.register will set this accordingly
+  if (meta.inheritanceType === "sti" && getBaseMeta(meta).stiDiscriminatorField === key) return;
+
+  // We let optional opts fields be `| null` for convenience, and convert to undefined.
+  const value = _value === null ? undefined : _value;
+
+  // Use `getField` to side-step `id` blowing up on new entities that are setting an
+  // explicit id; otherwise use `entity[key]` to get back the relation.
+  const current = key === "id" ? getField(entity, key) : (entity as any)[key];
+
+  if (current instanceof AbstractRelationImpl) {
+    if (calledFromConstructor) {
+      current.setFromOpts(value);
+    } else {
+      current.set(value);
+    }
+  } else if (isAsyncProperty(current) || isReactiveGetter(current)) {
+    throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
+  } else if (isReactiveField(current) || isReactiveQueryField(current)) {
+    if (value instanceof FactoryInitialValue) {
+      if (current instanceof ReactiveFieldImpl) {
+        current.setFactoryValue(value.value);
+      } else if (current instanceof ReactiveQueryFieldImpl) {
+        current.setFactoryValue(value.value);
+      } else {
+        throw new Error(`Unhandled case ${current.constructor.name}`);
+      }
+    } else {
+      throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
+    }
+  } else {
+    // If setting an explicit id, go through setField, otherwise use
+    // `entity[key]` to set the value directly to that we go through setters.
+    if (key === "id" && entity.isNewEntity) {
+      setField(entity, key, value);
+    } else {
+      (entity as any)[key] = value;
+    }
   }
 }
 

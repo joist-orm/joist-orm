@@ -7,12 +7,13 @@ import {
   insertBook,
   insertBookReview,
   insertBookToTag,
+  insertComment,
   insertImage,
   insertTag,
   select,
 } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
-import { Author, Book, ImageType, LargePublisher, newAuthor } from "./entities";
+import { Author, Book, Comment, ImageType, LargePublisher, newAuthor } from "./entities";
 
 describe("EntityManager.createOrUpdatePartial", () => {
   it("can create new entity with valid data", async () => {
@@ -119,6 +120,17 @@ describe("EntityManager.createOrUpdatePartial", () => {
       expect(await countOfAuthors()).toEqual(2);
     });
 
+    it("can delete with delete flag", async () => {
+      await insertAuthor({ first_name: "m1" });
+      await insertAuthor({ first_name: "a1", mentor_id: 1 });
+      const em = newEntityManager();
+      const a2 = await em.createOrUpdatePartial(Author, { id: "a:2", mentor: { delete: true } });
+      expect(await a2.mentor.load()).toBeUndefined();
+      await em.flush();
+      const rows = await select("authors");
+      expect(rows.length).toEqual(1);
+    });
+
     it("references can refer to entities by id", async () => {
       await insertAuthor({ first_name: "m1" });
       const em = newEntityManager();
@@ -199,6 +211,18 @@ describe("EntityManager.createOrUpdatePartial", () => {
         image: null,
       });
       expect(await a1.image.load()).toBeUndefined();
+    });
+
+    it("can delete with delete flag", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1, prequel_id: 1 });
+      const em = newEntityManager();
+      const b1 = await em.createOrUpdatePartial(Book, { id: "b:1", sequel: { delete: true } });
+      expect(await b1.sequel.load()).toBe(undefined);
+      await em.flush();
+      const rows = await select("books");
+      expect(rows.length).toEqual(1);
     });
   });
 
@@ -368,6 +392,19 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await em.flush();
       // Then we have both m2m rows
       expect(await countOfBookToTags()).toEqual(2);
+    });
+
+    it("collections can incrementally add children without loading the collection", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1 });
+      await insertComment({ text: "c1", parent_author_id: 1 });
+      const em = newEntityManager();
+      // When we use `op:include` to link an existing entity
+      await em.createOrUpdatePartial(Comment, { id: "comment:1", books: [{ id: "b:2", op: "include" }] });
+      await em.flush();
+      // Then we only loaded the parent & new child, and did not fully load the collection
+      expect(em.entities).toMatchEntity(["comment:1", "b:2"]);
     });
 
     it("collections can incrementally not clear collections by seeing a marker", async () => {

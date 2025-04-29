@@ -1,4 +1,5 @@
 import { isPlainObject } from "joist-utils";
+import { setSyncDefaults } from "./defaults";
 import { Entity, isEntity } from "./Entity";
 import { EntityManager, IdOf, MaybeAbstractEntityConstructor, isKey } from "./EntityManager";
 import { ManyToManyField, OneToManyField, OneToOneField, getMetadata } from "./EntityMetadata";
@@ -261,6 +262,10 @@ export async function createOrUpdatePartial<T extends Entity>(
       em.createPartial(asConcreteCstr(constructor), {})
     : await em.load(constructor, id);
   await updatePartial(entity, rest as any);
+  // Do this manually since we're not going through setOpts anymore
+  if (isNew) {
+    setSyncDefaults(entity);
+  }
   return entity;
 }
 

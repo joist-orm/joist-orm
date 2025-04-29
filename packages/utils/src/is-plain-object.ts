@@ -11,7 +11,7 @@ function isObject(o: any): o is object {
   return Object.prototype.toString.call(o) === "[object Object]";
 }
 
-export function isPlainObject(o: any): boolean {
+export function isPlainObject(o: any): o is object {
   if (isObject(o) === false) return false;
 
   // If has modified constructor

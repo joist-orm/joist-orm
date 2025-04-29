@@ -1,7 +1,7 @@
 import { isPlainObject } from "joist-utils";
 import { Entity, isEntity } from "./Entity";
 import { EntityManager, IdOf, MaybeAbstractEntityConstructor, isKey } from "./EntityManager";
-import { ManyToManyField, OneToManyField, getMetadata } from "./EntityMetadata";
+import { ManyToManyField, OneToManyField, OneToOneField, getMetadata } from "./EntityMetadata";
 import {
   PartialOrNull,
   TimestampSerde,
@@ -52,6 +52,7 @@ type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
  * updates, similar to `createOrUpdateUnsafe`, instead of just a flat/shallow list of opts.
  */
 export async function updatePartial<T extends Entity>(entity: T, input: DeepPartialOrNull<T>): Promise<void> {
+  if (Object.keys(input).length === 0) return;
   const meta = getMetadata(entity);
   const { em } = entity;
   // Do a Promise.all so we .load() relations in parallel
@@ -72,6 +73,7 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
         const prop = getProperties(meta)[key];
         if (prop) {
           setOpt(meta, entity, key, value);
+          return;
         } else {
           throw new Error(`Unknown field ${key}`);
         }
@@ -102,18 +104,18 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
             // If we're brand new, our child/other has to be brand new as well
             other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
           } else {
-            // If we already exist, see what our current value is
+            // the o2o upsert hash didn't have an id, so find-or-create it
             other = await (entity as any)[name].load();
             if (other) {
-              await createOrUpdatePartial(em, field.otherMetadata().cstr, { id: other.id, ...(value as any) });
+              await updatePartial(other, value);
             } else {
-              // If it doesn't, go ahead and create a new one
               other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
             }
           }
           setOpt(meta, entity, name, other);
         }
       } else if (field.kind === "o2o") {
+        // ^-- o2o always need loaded to be set, so don't fall through
         if (value === null || isEntity(value)) {
           await (entity as any)[name].load();
           setOpt(meta, entity, name, value);
@@ -123,13 +125,34 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
             em.load(field.otherMetadata().cstr, value),
           ]);
           setOpt(meta, entity, name, other);
+        } else if (isPlainObject(value)) {
+          const [deleteMarker, removeMarker, op] = getManagementMarkers(field, value);
+          // Always load the o2o so we can set it
+          const current = await (entity as any)[name].load();
+          let other: any;
+          if ("id" in value) {
+            // The o2o upsert hash was passed an id, so load it
+            other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
+          } else {
+            // the o2o upsert hash didn't have an id, so find-or-create it
+            other = current;
+            if (other) {
+              await updatePartial(other, value);
+            } else {
+              other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+            }
+          }
+          if (deleteMarker) {
+            em.delete(other);
+          } else if (removeMarker) {
+            throw new Error("Cannot set remove marker on o2o");
+          } else if (op) {
+            throw new Error("Cannot set remove marker on o2o");
+          } else {
+            setOpt(meta, entity, name, other);
+          }
         } else {
-          // const [allowDelete, allowRemove, allowOp] = allowFlags(field);
-          const [, other] = await Promise.all([
-            (entity as any)[name].load(),
-            createOrUpdatePartial(em, field.otherMetadata().cstr, value as any),
-          ]);
-          setOpt(meta, entity, name, other);
+          throw new Error(`Invalid value ${value}`);
         }
       } else if (field.kind === "o2m" || field.kind === "m2m") {
         await (entity as any)[name].load();
@@ -148,8 +171,8 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
           await Promise.all(
             values.map(async (value: any) => {
               const [, , op] = getManagementMarkers(field, value);
-              const other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
               if (op === "delete") {
+                const other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
                 // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
                 if (maybeSoftDelete) {
                   const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
@@ -159,8 +182,10 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
                   entity.em.delete(other);
                 }
               } else if (op === "remove") {
+                const other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
                 current.remove(other);
               } else if (op === "include") {
+                const other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
                 current.add(other);
               } else if (op === "incremental") {
                 // This is a marker entry, just ignore it
@@ -239,7 +264,7 @@ export async function createOrUpdatePartial<T extends Entity>(
   return entity;
 }
 
-function getManagementMarkers(field: OneToManyField | ManyToManyField, value: any): [any, any, any] {
+function getManagementMarkers(field: OneToManyField | ManyToManyField | OneToOneField, value: any): [any, any, any] {
   const allowDelete = !field.otherMetadata().fields["delete"];
   const allowRemove = !field.otherMetadata().fields["remove"];
   const allowOp = !field.otherMetadata().fields["op"];

@@ -28,20 +28,25 @@ export type DeepPartialOrNull<T extends Entity> = { id?: IdOf<T> | null } & Allo
   OptIdsOf<T>;
 
 /** Flags that allow `createOrUpdatePartial` to delete or remove entities. */
-type ManagementFlags = {
+type CollectionFlags = {
   delete?: boolean | null;
   remove?: boolean | null;
   op?: "remove" | "delete" | "include" | "incremental";
+};
+
+/** Flag that allows `createOrUpdatePartial` to delete. */
+type DeleteFlag = {
+  delete?: boolean | null;
 };
 
 type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
   [P in keyof T]: T[P] extends NullOrDefinedOr<infer U>
     ? U extends Array<infer V>
       ? V extends Entity
-        ? Array<V | (DeepPartialOrNull<V> & ManagementFlags) | IdOf<V>> | null
+        ? Array<V | (DeepPartialOrNull<V> & CollectionFlags) | IdOf<V>> | null
         : T[P]
       : U extends Entity
-        ? U | (DeepPartialOrNull<U> & ManagementFlags) | IdOf<U> | null
+        ? U | (DeepPartialOrNull<U> & DeleteFlag) | IdOf<U> | null
         : T[P]
     : T[P];
 };

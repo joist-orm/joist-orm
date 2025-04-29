@@ -1,8 +1,15 @@
 import { isPlainObject } from "joist-utils";
 import { Entity, isEntity } from "./Entity";
 import { EntityManager, IdOf, MaybeAbstractEntityConstructor, isKey } from "./EntityManager";
-import { EntityMetadata, ManyToManyField, OneToManyField, getMetadata } from "./EntityMetadata";
-import { PartialOrNull, TimestampSerde, asConcreteCstr, getConstructorFromTaggedId, getProperties } from "./index";
+import { ManyToManyField, OneToManyField, getMetadata } from "./EntityMetadata";
+import {
+  PartialOrNull,
+  TimestampSerde,
+  asConcreteCstr,
+  getConstructorFromTaggedId,
+  getProperties,
+  setOpt,
+} from "./index";
 import { OptIdsOf, OptsOf } from "./typeMap";
 import { NullOrDefinedOr, toArray } from "./utils";
 
@@ -44,213 +51,189 @@ type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
  * The difference between this and `Entity.setPartial` is that we accept `DeepPartialOrNull`
  * updates, similar to `createOrUpdateUnsafe`, instead of just a flat/shallow list of opts.
  */
-export async function updatePartial<T extends Entity>(entity: T, opts: DeepPartialOrNull<T>): Promise<void> {
+export async function updatePartial<T extends Entity>(entity: T, input: DeepPartialOrNull<T>): Promise<void> {
   const meta = getMetadata(entity);
-  const [_opts, relationsToLoad] = await convertToOpts(entity.em, meta, opts);
-  await Promise.all(relationsToLoad.map((fieldName) => (entity as any)[fieldName].load()));
-  entity.setPartial(_opts);
+  const { em } = entity;
+  // Do a Promise.all so we .load() relations in parallel
+  await Promise.all(
+    Object.entries(input).map(async ([key, value]) => {
+      // Watch for the `bookId` / `bookIds` aliases
+      const field = meta.allFields[key] || Object.values(meta.allFields).find((f) => f.fieldIdName === key);
+
+      if (!field) {
+        // Allow (ignore here) delete/remove flags that we assume the API layer (i.e. GraphQL) will have specifically
+        // allowed, i.e. this isn't the Rails form bug where users can POST in any random field they want.
+        const flagField = key === "delete" || key === "remove" || key === "op";
+        if (flagField) return;
+        // Look for non-field properties like a fullName setter
+        const prop = getProperties(meta)[key];
+        if (prop) {
+          setOpt(meta, entity, key, value);
+        } else {
+          throw new Error(`Unknown field ${key}`);
+        }
+      }
+
+      // Don't use key b/c it might be the bookId alias
+      const name = field.fieldName;
+
+      if (field.kind === "poly" && value && !isEntity(value)) {
+        // Resolve non-entity poly values
+        if (isKey(value)) {
+          setOpt(meta, entity, name, await em.load(getConstructorFromTaggedId(value), value));
+        } else {
+          throw new Error(`Cannot use partial value for polymorphic field `);
+        }
+      } else if (field.kind === "m2o" && value && !isEntity(value)) {
+        // This is a many-to-one reference
+        if (isKey(value)) {
+          setOpt(meta, entity, name, await em.load(field.otherMetadata().cstr, value));
+        } else if (typeof value === "object" && value && "id" in value) {
+          // This is a many-to-one partial update to an existing entity (they passed an id)
+          const other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
+          setOpt(meta, entity, name, other);
+        } else {
+          // This is a many-to-one partial w/o passing an id, i.e. `upsert(Author, { id: "a:1", publisher: { name: "p1" } })`
+          let other: any;
+          if (entity.isNewEntity) {
+            // If we're brand new, our child/other has to be brand new as well
+            other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+          } else {
+            // If we already exist, see what our current value is
+            other = await (entity as any)[name].load();
+            if (other) {
+              await createOrUpdatePartial(em, field.otherMetadata().cstr, { id: other.id, ...(value as any) });
+            } else {
+              // If it doesn't, go ahead and create a new one
+              other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+            }
+          }
+          setOpt(meta, entity, name, other);
+        }
+      } else if (field.kind === "o2o") {
+        if (!value || isEntity(value)) {
+          await (entity as any)[name].load();
+          setOpt(meta, entity, name, value);
+        } else if (isKey(value)) {
+          const [, other] = await Promise.all([
+            (entity as any)[name].load(),
+            em.load(field.otherMetadata().cstr, value),
+          ]);
+          setOpt(meta, entity, name, other);
+        } else {
+          // const [allowDelete, allowRemove, allowOp] = allowFlags(field);
+          const [, other] = await Promise.all([
+            (entity as any)[name].load(),
+            createOrUpdatePartial(em, field.otherMetadata().cstr, value as any),
+          ]);
+          setOpt(meta, entity, name, other);
+        }
+      } else if (field.kind === "o2m" || field.kind === "m2m") {
+        await (entity as any)[name].load();
+
+        // Look for one-to-many/many-to-many partials
+        // `null` is handled later, and treated as `[]`, which needs the collection loaded
+
+        let anyValueHasOp = false;
+        let anyValueMissingOp = false;
+        const maybeSoftDelete = meta.timestampFields.deletedAt;
+
+        const others = await Promise.all(
+          toArray(value).map(async (value: any) => {
+            if (isEntity(value)) {
+              return value;
+            } else if (isKey(value)) {
+              return em.load(field.otherMetadata().cstr, value);
+            } else if (value === null || value === undefined) {
+              return undefined;
+            } else if (!isPlainObject(value)) {
+              throw new Error(`Invalid value ${value}`);
+            } else {
+              // Look for `delete: true/false` and `remove: true/false` markers
+
+              // The `op` behavior means incremental and wants to do this:
+              // which we "can't do" without having the entity to get at the current value.
+              // This is why historically we had the op-handling in embedded in setOpts, is that only it
+              // had access to the entity, and create partial "couldn't". But, really, why is createOrUpdatePartial
+              // going through setOpts anyway? If we had the entity at hand, we could directly iterate and call sets.
+              // Granted, setOpts has some field-specific handling, but we could extract a setOpt singular and have
+              // both us & them call it.
+              // values.forEach((v) => {
+              //   if (v.op === "delete") {
+              //     // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
+              //     if (maybeSoftDelete) {
+              //       const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
+              //       const now = new Date();
+              //       v.set({ [maybeSoftDelete]: serde.mapFromNow(now) });
+              //     } else {
+              //       entity.em.delete(v);
+              //     }
+              //   } else if (v.op === "remove") {
+              //     (current as any).remove(v);
+              //   } else if (v.op === "include") {
+              //     (current as any).add(v);
+              //   } else if (v.op === "incremental") {
+              //     // This is a marker entry to opt-in to incremental behavior, just drop it
+              //   }
+              // });
+              // return; // return from the op-based incremental behavior
+
+              const [deleteMarker, removeMarker, opMarker] = getManagementMarkers(field, value);
+              if (opMarker) anyValueHasOp ??= true;
+              if (!opMarker) anyValueHasOp ??= true;
+              const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
+              if (deleteMarker || opMarker === "delete") {
+                if (maybeSoftDelete) {
+                  const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
+                  const now = new Date();
+                  entity.set({ [maybeSoftDelete]: serde.mapFromNow(now) });
+                } else {
+                  em.delete(entity);
+                }
+                return entity;
+              } else if (removeMarker || opMarker === "remove") {
+                return undefined;
+              } else {
+                return entity;
+              }
+            }
+          }),
+        );
+
+        if (anyValueHasOp && anyValueMissingOp) {
+          throw new Error("If any child sets the `op` key, then all children must have the `op` key.");
+        }
+
+        setOpt(
+          meta,
+          entity,
+          name,
+          others.filter((v) => v !== undefined),
+        );
+      } else {
+        // If we get here, value should be a vanilla value that `setOpt` can handle/pass through as-is
+        setOpt(meta, entity, name, value);
+      }
+    }),
+  );
 }
 
 /**
- * A utility function to create-or-update entities coming from a partial-update style API.
+ * A utility function to create-or-update/upsert entities coming from a partial-update style API.
  */
 export async function createOrUpdatePartial<T extends Entity>(
   em: EntityManager<any, any, any>,
   constructor: MaybeAbstractEntityConstructor<T>,
   input: DeepPartialOrNull<T>,
 ): Promise<T> {
-  const meta = getMetadata(constructor);
-  const [_opts, relationsToLoad] = await convertToOpts(em, meta, input);
-  const { id } = input;
+  const { id, ...rest } = input;
   const isNew = id === null || id === undefined;
-  if (isNew) {
-    // asConcreteCstr is not actually safe but for now we rely on our cstr runtime check to catch this
-    return em.createPartial(asConcreteCstr(constructor), _opts);
-  } else {
-    const entity = await em.load(constructor, id);
-    // For o2m and m2m .set to work, they need to be loaded so that they know what to remove.
-    // Note that we also have the `delete: true` pattern for flagging not only "remove" but "delete",
-    // for a parent's mutation to control the lifecycle of a child entity (i.e. line items).
-    // Musing: Maybe this should happen implicitly, like if a LineItem.parent is set to null, that
-    // LineItem knows to just `em.delete` itself? Instead of relying on hints from GraphQL mutations.
-    await Promise.all(relationsToLoad.map((fieldName) => (entity as any)[fieldName].load()));
-    entity.setPartial(_opts);
-    return entity;
-  }
-}
-
-async function convertToOpts<T extends Entity>(
-  em: EntityManager,
-  meta: EntityMetadata,
-  opts: DeepPartialOrNull<T>,
-): Promise<[OptsOf<T>, string[]]> {
-  const { id, ...others } = opts as any;
-  const isNew = id === null || id === undefined;
-  const relationsToLoad: string[] = [];
-  // The values in others might be themselves partials, so walk through and resolve them to entities.
-  const p = Object.entries(others).map(async ([key, value]) => {
-    // Watch for the `bookId` / `bookIds` aliases
-    const field = meta.allFields[key] || Object.values(meta.allFields).find((f) => f.fieldIdName === key);
-
-    if (!field) {
-      // Allow delete/remove flags that we assume the API layer (i.e. GraphQL) will have specifically
-      // allowed, i.e. this isn't the Rails form bug where users can POST in any random field they want.
-      const flagField = key === "delete" || key === "remove" || key === "op";
-      if (flagField) return [key, value];
-      // Look for non-field properties like a fullName setter
-      const prop = getProperties(meta)[key];
-      if (prop) return [key, value];
-      throw new Error(`Unknown field ${key}`);
-    }
-
-    // Don't use key b/c it might be the bookId alias
-    const name = field.fieldName;
-
-    if (field.kind === "poly" && !isEntity(value)) {
-      if (!value) {
-        return [name, value];
-      } else if (isKey(value)) {
-        // This is a polymorphic reference
-        const entity = await em.load(getConstructorFromTaggedId(value), value);
-        return [name, entity];
-      } else {
-        throw new Error(`Cannot use partial value for polymorphic field `);
-      }
-    } else if (field.kind === "m2o" && !isEntity(value)) {
-      if (!value || isEntity(value)) {
-        return [name, value];
-      } else if (isKey(value)) {
-        // This is a many-to-one reference
-        const entity = await em.load(field.otherMetadata().cstr, value);
-        return [name, entity];
-      } else if (typeof value === "object" && value && !("id" in value)) {
-        // This is a many-to-one partial into an existing reference that we need to resolve
-        let currentValue: any;
-        if (isNew) {
-          // The parent is brand new so the child is defacto brand new as well
-          currentValue = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
-        } else {
-          // The parent exists, see if it has an existing child we can update
-          const parentEntity = await em.load(meta.cstr, id, [name] as any);
-          currentValue = (parentEntity as any)[name].get;
-          if (currentValue) {
-            await createOrUpdatePartial(em, field.otherMetadata().cstr, { id: currentValue.id, ...value });
-          } else {
-            // If it doesn't, go ahead and create a new one
-            currentValue = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
-          }
-        }
-        return [name, currentValue];
-      } else {
-        // This is a many-to-one partial update to an existing entity (they passed an id)
-        const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
-        return [name, entity];
-      }
-    } else if (field.kind === "o2o") {
-      if (value === undefined) {
-        return [name, undefined];
-      }
-      relationsToLoad.push(field.fieldName);
-      let entity: any;
-      if (!value || isEntity(value)) {
-        entity = value;
-      } else if (isKey(value)) {
-        entity = await em.load(field.otherMetadata().cstr, value);
-      } else {
-        // const [allowDelete, allowRemove, allowOp] = allowFlags(field);
-
-        entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
-      }
-      return [name, entity];
-    } else if (field.kind === "o2m" || field.kind === "m2m") {
-      // Look for one-to-many/many-to-many partials
-
-      // `null` is handled later, and treated as `[]`, which needs the collection loaded
-      if (value === undefined) {
-        return [name, undefined];
-      }
-
-      // We allow `delete` and `remove` commands but only if they don't collide with existing fields
-      // Also we trust the API layer, i.e. GraphQL, to not let these fields leak unless explicitly allowed.
-      relationsToLoad.push(field.fieldName);
-
-      let anyValueHasOp = false;
-      let anyValueMissingOp = false;
-      const maybeSoftDelete = meta.timestampFields.deletedAt;
-
-      const entities = await Promise.all(
-        toArray(value).map(async (value: any) => {
-          if (isEntity(value)) {
-            return value;
-          } else if (isKey(value)) {
-            return em.load(field.otherMetadata().cstr, value);
-          } else if (value === null || value === undefined) {
-            return undefined;
-          } else if (!isPlainObject(value)) {
-            throw new Error(`Invalid value ${value}`);
-          } else {
-            // Look for `delete: true/false` and `remove: true/false` markers
-
-            // The `op` behavior means incremental and wants to do this:
-            // which we "can't do" without having the entity to get at the current value.
-            // This is why historically we had the op-handling in embedded in setOpts, is that only it
-            // had access to the entity, and create partial "couldn't". But, really, why is createOrUpdatePartial
-            // going through setOpts anyway? If we had the entity at hand, we could directly iterate and call sets.
-            // Granted, setOpts has some field-specific handling, but we could extract a setOpt singular and have
-            // both us & them call it.
-            // values.forEach((v) => {
-            //   if (v.op === "delete") {
-            //     // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
-            //     if (maybeSoftDelete) {
-            //       const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
-            //       const now = new Date();
-            //       v.set({ [maybeSoftDelete]: serde.mapFromNow(now) });
-            //     } else {
-            //       entity.em.delete(v);
-            //     }
-            //   } else if (v.op === "remove") {
-            //     (current as any).remove(v);
-            //   } else if (v.op === "include") {
-            //     (current as any).add(v);
-            //   } else if (v.op === "incremental") {
-            //     // This is a marker entry to opt-in to incremental behavior, just drop it
-            //   }
-            // });
-            // return; // return from the op-based incremental behavior
-
-            const [deleteMarker, removeMarker, opMarker] = getManagementMarkers(field, value);
-            if (opMarker) anyValueHasOp ??= true;
-            if (!opMarker) anyValueHasOp ??= true;
-            const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
-            if (deleteMarker || opMarker === "delete") {
-              if (maybeSoftDelete) {
-                const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
-                const now = new Date();
-                entity.set({ [maybeSoftDelete]: serde.mapFromNow(now) });
-              } else {
-                em.delete(entity);
-              }
-              return entity;
-            } else if (removeMarker || opMarker === "remove") {
-              return undefined;
-            } else {
-              return entity;
-            }
-          }
-        }),
-      );
-
-      if (anyValueHasOp && anyValueMissingOp) {
-        throw new Error("If any child sets the `op` key, then all children must have the `op` key.");
-      }
-
-      return [name, entities];
-    } else {
-      return [name, value];
-    }
-  });
-  const _opts = Object.fromEntries(await Promise.all(p)) as OptsOf<T>;
-  return [_opts, relationsToLoad];
+  const entity = isNew
+    ? // asConcreteCstr is not actually safe but for now we rely on our cstr runtime check to catch this
+      em.createPartial(asConcreteCstr(constructor), {})
+    : await em.load(constructor, id);
+  await updatePartial(entity, rest as any);
+  return entity;
 }
 
 function getManagementMarkers(field: OneToManyField | ManyToManyField, value: any): [any, any, any] {

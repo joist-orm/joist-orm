@@ -180,7 +180,11 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   set(other: U, opts: { percolating?: boolean } = {}): void {
     ensureNotDeleted(this.entity, "pending");
     this.#hasBeenSet = true;
+    if (!this._isLoaded && !this.entity.isNewEntity) {
+      throw new Error("set was called when not loaded");
+    }
     if (other === this.loaded) {
+      this._isLoaded = true;
       return;
     }
     if (this._isLoaded) {

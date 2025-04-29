@@ -1,7 +1,7 @@
 import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityConstructor, MaybeAbstractEntityConstructor } from "./EntityManager";
-import { getBaseMeta, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getBaseMeta, getMetadata } from "./EntityMetadata";
 import { getDefaultDependencies, setSyncDefaults } from "./defaults";
 import { buildWhereClause } from "./drivers/buildUtils";
 import { getField, setField } from "./fields";
@@ -135,59 +135,9 @@ export function setOpts<T extends Entity>(
   // own opt handling, but we still want the sync defaults applied after this opts handling.
   if (values !== undefined) {
     const meta = getMetadata(entity);
-    Object.entries(values as {}).forEach(([key, _value]) => {
-      const field = meta.allFields[key];
-      if (!field) {
-        // Allow setting non-field properties like fullName setters
-        const prop = getProperties(meta)[key];
-        if (!prop) {
-          throw new Error(`Unknown field ${key}`);
-        }
-      }
-
-      // If ignoreUndefined is set, we treat undefined as a noop
-      if (partial && _value === undefined) {
-        return;
-      }
-      // Ignore the STI discriminator, em.register will set this accordingly
-      if (meta.inheritanceType === "sti" && getBaseMeta(meta).stiDiscriminatorField === key) {
-        return;
-      }
-      // We let optional opts fields be `| null` for convenience, and convert to undefined.
-      const value = _value === null ? undefined : _value;
-      // Use `getField` to side-step `id` blowing up on new entities that are setting an
-      // explicit id; otherwise use `entity[key]` to get back the relation.
-      const current = key === "id" ? getField(entity, key) : (entity as any)[key];
-      if (current instanceof AbstractRelationImpl) {
-        if (calledFromConstructor) {
-          current.setFromOpts(value);
-        } else {
-          current.set(value);
-        }
-      } else if (isAsyncProperty(current) || isReactiveGetter(current)) {
-        throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
-      } else if (isReactiveField(current) || isReactiveQueryField(current)) {
-        if (value instanceof FactoryInitialValue) {
-          if (current instanceof ReactiveFieldImpl) {
-            current.setFactoryValue(value.value);
-          } else if (current instanceof ReactiveQueryFieldImpl) {
-            current.setFactoryValue(value.value);
-          } else {
-            throw new Error(`Unhandled case ${current.constructor.name}`);
-          }
-        } else {
-          throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
-        }
-      } else {
-        // If setting an explicit id, go through setField, otherwise use
-        // `entity[key]` to set the value directly to that we go through setters.
-        if (key === "id" && entity.isNewEntity) {
-          setField(entity, key, value);
-        } else {
-          (entity as any)[key] = value;
-        }
-      }
-    });
+    for (const [key, _value] of Object.entries(values as {})) {
+      setOpt(meta, entity, key, _value, partial, calledFromConstructor);
+    }
   }
 
   // Apply any synchronous defaults, after the opts have been applied
@@ -195,6 +145,73 @@ export function setOpts<T extends Entity>(
     // If calledFromConstructor=true, this must be a new entity because we've got
     // an early-return up above that checks for `em.hydrate` passing in ids
     setSyncDefaults(entity);
+  }
+}
+
+/**
+ * Applies some standard behavior & protections to `entity[key] = value`. I.e.
+ *
+ * - We don't set over AsyncProperties/relations/etc., and instead call current.set(value)
+ * - We catch missing/invalid field names
+ * - We handle FactoryInitialValues
+ */
+export function setOpt<T extends Entity>(
+  meta: EntityMetadata<T>,
+  entity: T,
+  key: string,
+  _value: any,
+  partial = false,
+  calledFromConstructor = false,
+): void {
+  const field = meta.allFields[key];
+  if (!field) {
+    // Allow setting non-field properties like fullName setters
+    const prop = getProperties(meta)[key];
+    if (!prop) {
+      throw new Error(`Unknown field ${key}`);
+    }
+  }
+
+  // If partial is set, we treat undefined as a noop
+  if (partial && _value === undefined) return;
+  // Ignore the STI discriminator, em.register will set this accordingly
+  if (meta.inheritanceType === "sti" && getBaseMeta(meta).stiDiscriminatorField === key) return;
+
+  // We let optional opts fields be `| null` for convenience, and convert to undefined.
+  const value = _value === null ? undefined : _value;
+
+  // Use `getField` to side-step `id` blowing up on new entities that are setting an
+  // explicit id; otherwise use `entity[key]` to get back the relation.
+  const current = key === "id" ? getField(entity, key) : (entity as any)[key];
+
+  if (current instanceof AbstractRelationImpl) {
+    if (calledFromConstructor) {
+      current.setFromOpts(value);
+    } else {
+      current.set(value);
+    }
+  } else if (isAsyncProperty(current) || isReactiveGetter(current)) {
+    throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
+  } else if (isReactiveField(current) || isReactiveQueryField(current)) {
+    if (value instanceof FactoryInitialValue) {
+      if (current instanceof ReactiveFieldImpl) {
+        current.setFactoryValue(value.value);
+      } else if (current instanceof ReactiveQueryFieldImpl) {
+        current.setFactoryValue(value.value);
+      } else {
+        throw new Error(`Unhandled case ${current.constructor.name}`);
+      }
+    } else {
+      throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
+    }
+  } else {
+    // If setting an explicit id, go through setField, otherwise use
+    // `entity[key]` to set the value directly to that we go through setters.
+    if (key === "id" && entity.isNewEntity) {
+      setField(entity, key, value);
+    } else {
+      (entity as any)[key] = value;
+    }
   }
 }
 

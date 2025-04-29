@@ -1,3 +1,10 @@
+## [1.244.2](https://github.com/joist-orm/joist-orm/compare/v1.244.1...v1.244.2) (2025-04-29)
+
+
+### Bug Fixes
+
+* Fix NPE in updatePartial on timestampFields. ([#1475](https://github.com/joist-orm/joist-orm/issues/1475)) ([b675cf1](https://github.com/joist-orm/joist-orm/commit/b675cf1800700654f1ef0385373b008742c9b453))
+
 ## [1.244.1](https://github.com/joist-orm/joist-orm/compare/v1.244.0...v1.244.1) (2025-04-29)
 
 

@@ -100,8 +100,13 @@ describe("EntityManager.createOrUpdatePartial", () => {
         firstName: "a2",
         mentor: { firstName: "m2" },
       });
-      expect(a1.firstName).toEqual("a2");
-      expect((await a1.mentor.load())!.firstName).toEqual("m2");
+      expect(a1).toMatchEntity({
+        firstName: "a2",
+        mentor: {
+          id: "a:1",
+          firstName: "m2",
+        },
+      });
       await em.flush();
       expect(await countOfAuthors()).toEqual(2);
     });
@@ -114,10 +119,35 @@ describe("EntityManager.createOrUpdatePartial", () => {
         firstName: "a2",
         mentor: { firstName: "m2" },
       });
-      expect(a1.firstName).toEqual("a2");
-      expect((await a1.mentor.load())!.firstName).toEqual("m2");
+      expect(a1).toMatchEntity({
+        firstName: "a2",
+        mentor: {
+          idMaybe: undefined,
+          firstName: "m2",
+        },
+      });
       await em.flush();
       expect(await countOfAuthors()).toEqual(2);
+    });
+
+    it("can create new references with id null", async () => {
+      await insertAuthor({ first_name: "m1" });
+      await insertAuthor({ first_name: "a1", mentor_id: 1 });
+      const em = newEntityManager();
+      const a1 = await em.createOrUpdatePartial(Author, {
+        id: "a:2",
+        firstName: "a2",
+        mentor: { id: null, firstName: "m2" },
+      });
+      expect(a1).toMatchEntity({
+        firstName: "a2",
+        mentor: {
+          idMaybe: undefined,
+          firstName: "m2",
+        },
+      });
+      await em.flush();
+      expect(await countOfAuthors()).toEqual(3);
     });
 
     it("can delete with delete flag", async () => {
@@ -223,6 +253,36 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await em.flush();
       const rows = await select("books");
       expect(rows.length).toEqual(1);
+    });
+
+    it("can update other without an id", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertImage({ id: 1, type_id: 2, file_name: "author.png", author_id: 1 });
+      const em = newEntityManager();
+      const a1 = await em.createOrUpdatePartial(Author, {
+        id: "a:1",
+        image: { fileName: "author2.png" },
+      });
+      expect(await a1.image.load()).toMatchEntity({
+        id: "i:1",
+        fileName: "author2.png",
+        isNewEntity: false,
+      });
+    });
+
+    it("can create new other with explicit id null", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertImage({ id: 1, type_id: 2, file_name: "author.png", author_id: 1 });
+      const em = newEntityManager();
+      const a1 = await em.createOrUpdatePartial(Author, {
+        id: "a:1",
+        image: { id: null, fileName: "author2.png" },
+      });
+      expect(await a1.image.load()).toMatchEntity({
+        idMaybe: undefined,
+        fileName: "author2.png",
+        isNewEntity: true,
+      });
     });
   });
 

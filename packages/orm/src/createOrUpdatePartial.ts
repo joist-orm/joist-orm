@@ -2,7 +2,7 @@ import { isPlainObject } from "joist-utils";
 import { setSyncDefaults } from "./defaults";
 import { Entity, isEntity } from "./Entity";
 import { EntityManager, IdOf, MaybeAbstractEntityConstructor, isKey } from "./EntityManager";
-import { ManyToManyField, OneToManyField, OneToOneField, getMetadata } from "./EntityMetadata";
+import { ManyToManyField, ManyToOneField, OneToManyField, OneToOneField, getMetadata } from "./EntityMetadata";
 import {
   PartialOrNull,
   TimestampSerde,
@@ -94,24 +94,34 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
         // This is a many-to-one reference
         if (isKey(value)) {
           setOpt(meta, entity, name, await em.load(field.otherMetadata().cstr, value));
-        } else if (typeof value === "object" && value && "id" in value) {
-          // This is a many-to-one partial update to an existing entity (they passed an id)
-          const other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
-          setOpt(meta, entity, name, other);
-        } else {
-          // This is a many-to-one partial w/o passing an id, i.e. `upsert(Author, { id: "a:1", publisher: { name: "p1" } })`
+        } else if (typeof value === "object" && value) {
           let other: any;
-          if (entity.isNewEntity) {
-            // If we're brand new, our child/other has to be brand new as well
-            other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+          if ("id" in value) {
+            // This is a many-to-one partial update to an existing entity (they passed an id)
+            other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
           } else {
-            // the o2o upsert hash didn't have an id, so find-or-create it
-            other = await (entity as any)[name].load();
-            if (other) {
-              await updatePartial(other, value);
-            } else {
+            // This is a many-to-one partial w/o passing an id, i.e. `upsert(Author, { id: "a:1", publisher: { name: "p1" } })`
+            if (entity.isNewEntity) {
+              // If we're brand new, our child/other has to be brand new as well
               other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+            } else {
+              // the o2o upsert hash didn't have an id, so find-or-create it
+              other = await (entity as any)[name].load();
+              if (other) {
+                await updatePartial(other, value);
+              } else {
+                other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+              }
             }
+          }
+          const [deleteMarker, removeMarker, op] = getManagementMarkers(field, value);
+          if (deleteMarker) {
+            em.delete(other);
+            other = undefined;
+          } else if (removeMarker) {
+            throw new Error("Cannot set remove marker on m2o");
+          } else if (op) {
+            throw new Error("Cannot set remove marker on m2o");
           }
           setOpt(meta, entity, name, other);
         }
@@ -269,7 +279,10 @@ export async function createOrUpdatePartial<T extends Entity>(
   return entity;
 }
 
-function getManagementMarkers(field: OneToManyField | ManyToManyField | OneToOneField, value: any): [any, any, any] {
+function getManagementMarkers(
+  field: OneToManyField | ManyToManyField | OneToOneField | ManyToOneField,
+  value: any,
+): [any, any, any] {
   const allowDelete = !field.otherMetadata().fields["delete"];
   const allowRemove = !field.otherMetadata().fields["remove"];
   const allowOp = !field.otherMetadata().fields["op"];

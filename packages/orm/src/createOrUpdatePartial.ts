@@ -158,7 +158,6 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
           throw new Error(`Invalid value ${value}`);
         }
       } else if (field.kind === "o2m" || field.kind === "m2m") {
-        await (entity as any)[name].load();
         // Look for one-to-many/many-to-many partials
         // `null` is handled later, and treated as `[]`, which needs the collection loaded
 

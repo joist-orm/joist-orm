@@ -50,7 +50,7 @@ export interface EntityMetadata<T extends Entity = any> {
   // Using `any` to avoid type errors between BaseType.metadata & SubType.metadata static fields
   config: ConfigApi<any, any>;
   orderBy: string | undefined;
-  timestampFields: TimestampFields;
+  timestampFields: TimestampFields | undefined;
   // Ideally this would be the application-specific EntityManager (to avoid anys), but it doesn't really matter
   factory: (em: EntityManager<any, any, any>, opts?: any) => DeepNew<T>;
   /** The list of base types for this subtype, e.g. for Dog it'd be [Animal, Mammal]. */

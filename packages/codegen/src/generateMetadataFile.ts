@@ -37,7 +37,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
   const maybeStiValue = meta.stiDiscriminatorValue ? `stiDiscriminatorValue: ${meta.stiDiscriminatorValue},` : "";
   // Force subtype `timestampFields` to be `undefined` to ensure all runtime code is reading from the baseMeta values.
   const maybeTimestampConfig = meta.baseClassName
-    ? code`undefined!`
+    ? code`undefined`
     : code`
     {
       createdAt: ${q(createdAt?.fieldName)},

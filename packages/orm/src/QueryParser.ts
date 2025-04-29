@@ -127,7 +127,7 @@ export function parseFindQuery(
 
   function maybeAddNotSoftDeleted(meta: EntityMetadata, alias: string): void {
     if (filterSoftDeletes(meta, softDeletes)) {
-      const column = meta.allFields[getBaseMeta(meta).timestampFields.deletedAt!].serde?.columns[0]!;
+      const column = meta.allFields[getBaseMeta(meta).timestampFields!.deletedAt!].serde?.columns[0]!;
       cb.addSimpleCondition({
         kind: "column",
         alias,
@@ -1056,7 +1056,7 @@ export function maybeAddNotSoftDeleted(
   softDeletes: "include" | "exclude",
 ): void {
   if (filterSoftDeletes(meta, softDeletes)) {
-    const column = meta.allFields[getBaseMeta(meta).timestampFields.deletedAt!].serde?.columns[0]!;
+    const column = meta.allFields[getBaseMeta(meta).timestampFields!.deletedAt!].serde?.columns[0]!;
     conditions.push({
       kind: "column",
       alias,
@@ -1070,7 +1070,7 @@ export function maybeAddNotSoftDeleted(
 function filterSoftDeletes(meta: EntityMetadata, softDeletes: "include" | "exclude"): boolean {
   return (
     softDeletes === "exclude" &&
-    !!getBaseMeta(meta).timestampFields.deletedAt &&
+    !!getBaseMeta(meta).timestampFields?.deletedAt &&
     // We don't support CTI subtype soft-delete filtering yet
     (meta.inheritanceType !== "cti" || meta.baseTypes.length === 0)
   );

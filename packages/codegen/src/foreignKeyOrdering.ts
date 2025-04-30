@@ -31,7 +31,7 @@ export async function maybeSetForeignKeyOrdering(config: Config, entities: Entit
     console.log(" - Set 'nonDeferredFks: ignore' in joist-config.json");
     console.log("");
 
-    console.log("See https://joist-orm.io/docs/getting-started/schema-assumptions#deferred-constraints");
+    console.log("See https://joist-orm.io/getting-started/schema-assumptions#deferred-constraints");
     console.log("");
 
     await writeAlterTables(nonDeferredFks);

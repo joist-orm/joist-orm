@@ -99,7 +99,7 @@ console.log(author.firstName);
 
 Note that, when using `setPartial` we have caused our `Author.firstName: string` getter to now be incorrect, i.e. for a currently invalid `Author`, clients might observe `firstName` as `undefined`.
 
-See [Partial Update APIs](/docs/features/partial-update-apis) for more details.
+See [Partial Update APIs](/features/partial-update-apis) for more details.
 
 ## Protected Fields
 

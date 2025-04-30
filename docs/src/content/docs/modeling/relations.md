@@ -115,7 +115,7 @@ The rationale is that this makes calls like `parent.lineItems.set(...)`, that pu
 
 Currently, this behavior is not configurable (it relies on the convention of both the cascade delete + `cannotBeUpdated` rule), and also is only invoked by the `a1.books.set` side of the relation; i.e. if `b1.author.set(undefined)` is called, then `b1` won't be implicitly deleted, and instead a regular "`author` is required" validation error will be thrown.
 
-Also note that Joist's `em.createOrUpdatePartial` API supports an `op` parameter to more explicitly control child collection behavior, see [Saving Parents with Children](https://joist-orm.io/docs/features/partial-update-apis#saving-parents-with-children).
+Also note that Joist's `em.createOrUpdatePartial` API supports an `op` parameter to more explicitly control child collection behavior, see [Saving Parents with Children](/features/partial-update-apis#saving-parents-with-children).
 
 :::
 
@@ -319,4 +319,4 @@ class BookReview extends PublisherCodegen {
 
 ## Recursive Relations
 
-We also support recursive relations, see [Recursive Relations](/docs/advanced/recursive-relations.md) for more.
+We also support recursive relations, see [Recursive Relations](/advanced/recursive-relations.md) for more.

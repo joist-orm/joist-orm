@@ -10,14 +10,14 @@ tags: []
 _excerpt: A thought experiment on whether Joist is the best ORM ever.
 ---
 
-I've been working on the Joist docs lately, specifically a [Why Joist?](/docs/why-joist) page, which ended up focusing more on "why Domain Models?" than a feature-by-feature description of Joist.
+I've been working on the Joist docs lately, specifically a [Why Joist?](/why-joist) page, which ended up focusing more on "why Domain Models?" than a feature-by-feature description of Joist.
 
 Which is fine, but a good friend (and early Joist user) proofread it, and afterward challenged me that I was being too humble, and I should be more assertive about Joist being "THE BEST ORM FOR TYPESCRIPT AND POSTGRES" (his words), as he listed off his own personal highlights:
 
 1. If it compiles, it works. "If you love TypeScript, you'll love Joist."
-2. It's "really effing fast" ([no N+1s](/docs/goals/avoiding-n-plus-1s), ever).
-3. We solve many common problems for you ([auto-batching updates](/docs/features/entity-manager#auto-batch-updates), handling the insertion order of related entities, and have many patterns for [enums](/docs/modeling/enum-tables), [polymorphic relations](/docs/modeling/relations#polymorphic-references), etc.)
-4. [Factories](/docs/testing/test-factories) make testing amazing.
+2. It's "really effing fast" ([no N+1s](/goals/avoiding-n-plus-1s), ever).
+3. We solve many common problems for you ([auto-batching updates](/features/entity-manager#auto-batch-updates), handling the insertion order of related entities, and have many patterns for [enums](/modeling/enum-tables), [polymorphic relations](/modeling/relations#polymorphic-references), etc.)
+4. [Factories](/testing/test-factories) make testing amazing.
 
 All of these are true.
 
@@ -37,7 +37,7 @@ I've used many ORMs over the years, going back to Java's Hibernate, Ruby's Activ
 
 Invariably, they all suffer from N+1s.
 
-I don't want to repeat Joist's existing [Avoiding N+1s](/docs/goals/avoiding-n-plus-1s) docs, but basically "entities are objects with fields/methods that incrementally lazy-load their relations from the database" is almost "too ergonomic", and tempts programmers into using the abstraction when they shouldn't (i.e. in a loop), at which point N+1s are inevitable.
+I don't want to repeat Joist's existing [Avoiding N+1s](/goals/avoiding-n-plus-1s) docs, but basically "entities are objects with fields/methods that incrementally lazy-load their relations from the database" is almost "too ergonomic", and tempts programmers into using the abstraction when they shouldn't (i.e. in a loop), at which point N+1s are inevitable.
 
 Again as described in "Avoiding N+1s", JavaScript's event loop forcing all I/O calls to "wait just a sec", until the end of the event loop tick, gives Joist an amazing opportunity, of course via [dataloader](https://github.com/graphql/dataloader), to de-dupe all the N+1s into a single SQL call.
 
@@ -69,7 +69,7 @@ Because you can't have your entire relational database in memory, domain models 
 
 This was another downfall of the Hibernate/ActiveRecord ORMs: there was no notion of "is this relation loaded yet?", and so any random relation access could trigger the surprise of an expensive database I/O call, as that relation was lazy-loaded from the database.
 
-Joist solves this by [statically typing all relations](/docs/goals/load-safe-relations) as "unloaded" by default, i.e. accessing an Author's books requires calling `a1.books.load()`, which returns a `Promise` (which is also key to the N+1 prevention above).
+Joist solves this by [statically typing all relations](/goals/load-safe-relations) as "unloaded" by default, i.e. accessing an Author's books requires calling `a1.books.load()`, which returns a `Promise` (which is also key to the N+1 prevention above).
 
 Which is great, I/O calls are now obvious, but "do an `await` for every relation access" would really suck (we tried that), so Joist goes further and uses TypeScript's type system to not only track individual relation loaded-ness (like `author1.books` or `book2.authors`), but mark **entire subgraphs** of entities as populated/loaded relations and hence synchronously accessible:
 
@@ -105,7 +105,7 @@ I'm happy to be corrected on this, but I think TypeScript is the only mainstream
 
 Other TypeScript ORMs (Prisma, Drizzle, Kysley, etc.) also leverage TypeScript's mapped types to create dynamic shapes of data, which is legitimately great.
 
-However, they all have the fundamental approach of issuing "one-shot" queries that return immutable trees of POJOs, directly mapped from your SQL tables, and not subgraphs of entities that can have non-SQL abstractions & be further incrementally loaded as/if needed (see [Why Joist](/docs/why-joist) for more on this).
+However, they all have the fundamental approach of issuing "one-shot" queries that return immutable trees of POJOs, directly mapped from your SQL tables, and not subgraphs of entities that can have non-SQL abstractions & be further incrementally loaded as/if needed (see [Why Joist](/why-joist) for more on this).
 
 You can generally see, for both issues covered so far (N+1s and statically-typed loaded-ness), most TypeScript ORMs have "solved" these issues by just removing the features all together, and restricting themselves to be "sophisticated query builders".
 
@@ -117,7 +117,7 @@ Joist's innovation is keeping the entity-based, incremental-loading mental model
 
 This 3rd section is the first feature that is unique to Joist itself: Joist's "backend reactivity".
 
-Many ORMs have lifecycle hooks (this entity was created, updated, or deleted--which Joist [does as well](/docs/modeling/lifecycle-hooks)), to organize side effects/business logic of "when X changes, do Y".
+Many ORMs have lifecycle hooks (this entity was created, updated, or deleted--which Joist [does as well](/modeling/lifecycle-hooks)), to organize side effects/business logic of "when X changes, do Y".
 
 But just lifecycle hooks by themselves can become tangled, complicated, and a well-known morass of complexity and "spooky action at a distance".
 
@@ -125,7 +125,7 @@ This is because they're basically "Web 1.0" imperative spaghetti code, where you
 
 (Concretely, lets say you have a rule that needs to look at both an author and its books. With raw lifecycle hooks, you must separately instrument both the "author update" and "book update" hooks to call your "make sure this author + books combination is still valid" logic. This can become tedious and error-prone, to get all the right hooks instrumented.)
 
-Instead, Joist's [reactive fields](/docs/modeling/reactive-fields) and [reactive validation rules](/docs/modeling/validation-rules)  take the lessons of "declarative reactivity" from the Mobx/Solid/reactivity-aware frontend world, and bring it to the backend: reactive rules & fields declare in one place what their "upstream dependencies" are, and Joist just handles wiring up the necessary cross-entity reactivity.
+Instead, Joist's [reactive fields](/modeling/reactive-fields) and [reactive validation rules](/modeling/validation-rules)  take the lessons of "declarative reactivity" from the Mobx/Solid/reactivity-aware frontend world, and bring it to the backend: reactive rules & fields declare in one place what their "upstream dependencies" are, and Joist just handles wiring up the necessary cross-entity reactivity.
 
 This brings a level of ease, specificity, and rigor to what are still effectively lifecycle hooks under the hood, that really makes them pleasant to work with.
 
@@ -156,7 +156,7 @@ I did enough of that early in my career, and at this point I'm more interested i
 So, I hold two somewhat incongruent thoughts in my head, as I am both:
 
 - Very confident that Joist is "the best" way to build application backends on top of a relational database, for a large majority of use cases/teams/codebases, but I also
-- Recognize it's "framework" / entity approach (see [Why Joist](/docs/why-joist)) might be either too opinionated or too much abstraction for some people's tastes, and just in general choices & alternatives are always great to have.
+- Recognize it's "framework" / entity approach (see [Why Joist](/why-joist)) might be either too opinionated or too much abstraction for some people's tastes, and just in general choices & alternatives are always great to have.
 
 My guess is if you tried Joist, you would quickly come to like it, but it's also perfectly fine if not!
 

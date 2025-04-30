@@ -198,7 +198,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
    * is left as untouched.
    *
    * Collections are exhaustively set to the new values, however,
-   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   * {@link https://joist-orm.io/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
    *
    * @example
    * ```
@@ -208,7 +208,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
    *   age: null // unset, (i.e. set it as undefined)
    * });
    * ```
-   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<PublisherGroupOpts>): void {
     setOpts(this as any as PublisherGroup, opts);
@@ -221,7 +221,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
    * is left as untouched.
    *
    * Collections are exhaustively set to the new values, however,
-   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   * {@link https://joist-orm.io/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
    *
    * @example
    * ```
@@ -231,7 +231,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
    *   age: null // unset, (i.e. set it as undefined)
    * });
    * ```
-   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<PublisherGroupOpts>): void {
     setOpts(this as any as PublisherGroup, opts as OptsOf<PublisherGroup>, { partial: true });
@@ -244,7 +244,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
    * is left as untouched.
    *
    * Collections are exhaustively set to the new values, however,
-   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   * {@link https://joist-orm.io/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
    *
    * @example
    * ```
@@ -255,7 +255,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
    *   books: [{ title: "b1" }], // create a child book
    * });
    * ```
-   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setDeepPartial(opts: DeepPartialOrNull<PublisherGroup>): Promise<void> {
     return updatePartial(this as any as PublisherGroup, opts);
@@ -264,7 +264,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   /**
    * Details the field changes of the entity within the current unit of work.
    *
-   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<
     PublisherGroup,
@@ -277,7 +277,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   /**
    * Traverse from this entity using a lens, and load the result.
    *
-   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/advanced/lenses | Lens Traversal} on the Joist docs
    */
   load<U, V>(fn: (lens: Lens<PublisherGroup>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as PublisherGroup, fn, opts);
@@ -286,7 +286,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   /**
    * Hydrate this entity using a load hint
    *
-   * @see {@link https://joist-orm.io/docs/features/loading-entities#1-object-graph-navigation | Loading entities} on the Joist docs
+   * @see {@link https://joist-orm.io/features/loading-entities#1-object-graph-navigation | Loading entities} on the Joist docs
    */
   populate<const H extends LoadHint<PublisherGroup>>(hint: H): Promise<Loaded<PublisherGroup, H>>;
   populate<const H extends LoadHint<PublisherGroup>>(
@@ -325,7 +325,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<PublisherGroup>>(hint: H): Promise<JsonPayload<PublisherGroup, H>>;

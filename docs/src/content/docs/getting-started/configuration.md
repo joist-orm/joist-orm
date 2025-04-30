@@ -328,7 +328,7 @@ export interface RelationConfig {
 
 The supported values are:
 
-- `polymorphic` creates this relation as a [polymorphic relation](/docs/modeling/relations#polymorphic-references), which logical combines several physical foreign keys into a single field
+- `polymorphic` creates this relation as a [polymorphic relation](/modeling/relations#polymorphic-references), which logical combines several physical foreign keys into a single field
 - `large` indicates that a collection is too big to be fully loaded into memory and changes the generated type to `LargeCollection`
 - `orderBy` allows setting an order specific to this collection, the value must be a primitive, synchronous field on the entities within the collection
 

@@ -91,7 +91,7 @@ I.e. in the RSC components:
 
 In the React Client Component approach, this auto-batching is admittedly not as necessary, assuming a singular top-level component, like `Table`, loads all the data at once anyway (although, as mentioned later, Joist can optimize that as well).
 
-See the [Avoiding N+1s](/docs/goals/avoiding-n-plus-1s) section of our docs for more information.
+See the [Avoiding N+1s](/goals/avoiding-n-plus-1s) section of our docs for more information.
 
 ## JSON Payload/Props Creation
 
@@ -127,7 +127,7 @@ The `toJSON` implementation will:
 
 As with previous examples, all data loading is N+1 safe, and also potentially join-based preloaded.
 
-See the [toJSON](/docs/advanced/json-payloads) docs for more information.
+See the [toJSON](/advanced/json-payloads) docs for more information.
 
 :::info
 
@@ -195,7 +195,7 @@ Joist's join-based preloading is still a beta feature, so if you run into any is
 
 So far, our queries have focused on loading "just entities", and then putting those on the wire (or rendering them to HTML).
 
-This is because Joist's focus is on building robust domain models, and specifically helping solve the "write-side" of your application's business logic (running the correct [validation rules](/docs/modeling/validation-rules), [lifecycle hooks](/docs/modeling/lifecycle-hooks), [reactive updates](/docs/modeling/reactive-fields)), and less so on the "read-side" of complex queries (i.e. that using aggregates using `GROUP BY`, multiple nested subqueries/projections/etc.).
+This is because Joist's focus is on building robust domain models, and specifically helping solve the "write-side" of your application's business logic (running the correct [validation rules](/modeling/validation-rules), [lifecycle hooks](/modeling/lifecycle-hooks), [reactive updates](/modeling/reactive-fields)), and less so on the "read-side" of complex queries (i.e. that using aggregates using `GROUP BY`, multiple nested subqueries/projections/etc.).
 
 As such, Joist does not yet have a sophisticated query builder that can create arbitrary SQL queries, like Kysley or Drizzle.
 

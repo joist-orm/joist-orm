@@ -73,7 +73,7 @@ class Author extends AuthorCodegen {
 }
 ```
 
-Both of these are "utility methods" that can be reused across endpoints/logic in your app--Joist's domain model gives you a known/obvious place to put them, and also guarantees they can be calculated relatively cheaply (i.e. [without N+1s](/docs/goals/avoiding-n-plus-1s)) or easily materialized (i.e. [reactive fields](/docs/modeling/reactive-fields)).
+Both of these are "utility methods" that can be reused across endpoints/logic in your app--Joist's domain model gives you a known/obvious place to put them, and also guarantees they can be calculated relatively cheaply (i.e. [without N+1s](/goals/avoiding-n-plus-1s)) or easily materialized (i.e. [reactive fields](/modeling/reactive-fields)).
 
 The biggest win is that our business logic within these methods is written in **regular, ergonomic** TypeScript.
 
@@ -88,7 +88,7 @@ When looking at the `totalRatings` example above, it can initially look weird to
 
    This is much easier than manually opening a transaction, flushing the WIP changes without commiting, then issuing queries to read the latest aggregates, do validation checks against those SQL-calculated aggregates, and then finally commit.
 
-   (Although if you really do need this functionality, Joist's [Reactive Query Fields](/docs/modeling/reactive-fields#reactive-query-fields) will orchestrate exactly this `begin` + `flush` + `query` + `flush` + `commit` sequence for you, automatically, within an `em.flush()` call).
+   (Although if you really do need this functionality, Joist's [Reactive Query Fields](/modeling/reactive-fields#reactive-query-fields) will orchestrate exactly this `begin` + `flush` + `query` + `flush` + `commit` sequence for you, automatically, within an `em.flush()` call).
 
 That said, you can still do SQL-side `SUM`s and aggregates via custom SQL queries; that logic will just not be accessible to the rest of the Joist domain model.
 
@@ -117,7 +117,7 @@ config.addRule({ firstName: {}, books: "title" }, (a) => {
 
 Assuming writes go through Joist's domain model, **any update** to `Author.firstName` or **any update** to a `Book.title` or **any `Book` switching authors** will fire this validation rule.
 
-This "[backend reactivity](/docs/modeling/validation-rules#reactive-validation-rules)" provides **extreme confidence** that your business rules will be enforced.
+This "[backend reactivity](/modeling/validation-rules#reactive-validation-rules)" provides **extreme confidence** that your business rules will be enforced.
 
 This again contrasts with query builder ORMs, where it's your job to manually remember which validation rules, both on the current entity and other entities that might be affected, need to be checked, before issuing an `INSERT` or `UPDATE`.
 

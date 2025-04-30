@@ -166,7 +166,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
    * is left as untouched.
    *
    * Collections are exhaustively set to the new values, however,
-   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   * {@link https://joist-orm.io/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
    *
    * @example
    * ```
@@ -176,7 +176,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
    *   age: null // unset, (i.e. set it as undefined)
    * });
    * ```
-   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<AuthorScheduleOpts>): void {
     setOpts(this as any as AuthorSchedule, opts);
@@ -189,7 +189,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
    * is left as untouched.
    *
    * Collections are exhaustively set to the new values, however,
-   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   * {@link https://joist-orm.io/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
    *
    * @example
    * ```
@@ -199,7 +199,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
    *   age: null // unset, (i.e. set it as undefined)
    * });
    * ```
-   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<AuthorScheduleOpts>): void {
     setOpts(this as any as AuthorSchedule, opts as OptsOf<AuthorSchedule>, { partial: true });
@@ -212,7 +212,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
    * is left as untouched.
    *
    * Collections are exhaustively set to the new values, however,
-   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   * {@link https://joist-orm.io/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
    *
    * @example
    * ```
@@ -223,7 +223,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
    *   books: [{ title: "b1" }], // create a child book
    * });
    * ```
-   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setDeepPartial(opts: DeepPartialOrNull<AuthorSchedule>): Promise<void> {
     return updatePartial(this as any as AuthorSchedule, opts);
@@ -232,7 +232,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   /**
    * Details the field changes of the entity within the current unit of work.
    *
-   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<AuthorSchedule> {
     return newChangesProxy(this) as any;
@@ -241,7 +241,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   /**
    * Traverse from this entity using a lens, and load the result.
    *
-   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/advanced/lenses | Lens Traversal} on the Joist docs
    */
   load<U, V>(fn: (lens: Lens<AuthorSchedule>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as AuthorSchedule, fn, opts);
@@ -250,7 +250,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   /**
    * Hydrate this entity using a load hint
    *
-   * @see {@link https://joist-orm.io/docs/features/loading-entities#1-object-graph-navigation | Loading entities} on the Joist docs
+   * @see {@link https://joist-orm.io/features/loading-entities#1-object-graph-navigation | Loading entities} on the Joist docs
    */
   populate<const H extends LoadHint<AuthorSchedule>>(hint: H): Promise<Loaded<AuthorSchedule, H>>;
   populate<const H extends LoadHint<AuthorSchedule>>(
@@ -292,7 +292,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<AuthorSchedule>>(hint: H): Promise<JsonPayload<AuthorSchedule, H>>;

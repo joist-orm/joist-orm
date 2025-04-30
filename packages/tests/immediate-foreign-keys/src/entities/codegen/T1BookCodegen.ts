@@ -149,7 +149,7 @@ export abstract class T1BookCodegen extends BaseEntity<EntityManager, number> im
    * is left as untouched.
    *
    * Collections are exhaustively set to the new values, however,
-   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   * {@link https://joist-orm.io/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
    *
    * @example
    * ```
@@ -159,7 +159,7 @@ export abstract class T1BookCodegen extends BaseEntity<EntityManager, number> im
    *   age: null // unset, (i.e. set it as undefined)
    * });
    * ```
-   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   set(opts: Partial<T1BookOpts>): void {
     setOpts(this as any as T1Book, opts);
@@ -172,7 +172,7 @@ export abstract class T1BookCodegen extends BaseEntity<EntityManager, number> im
    * is left as untouched.
    *
    * Collections are exhaustively set to the new values, however,
-   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   * {@link https://joist-orm.io/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
    *
    * @example
    * ```
@@ -182,7 +182,7 @@ export abstract class T1BookCodegen extends BaseEntity<EntityManager, number> im
    *   age: null // unset, (i.e. set it as undefined)
    * });
    * ```
-   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setPartial(opts: PartialOrNull<T1BookOpts>): void {
     setOpts(this as any as T1Book, opts as OptsOf<T1Book>, { partial: true });
@@ -195,7 +195,7 @@ export abstract class T1BookCodegen extends BaseEntity<EntityManager, number> im
    * is left as untouched.
    *
    * Collections are exhaustively set to the new values, however,
-   * {@link https://joist-orm.io/docs/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   * {@link https://joist-orm.io/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
    *
    * @example
    * ```
@@ -206,7 +206,7 @@ export abstract class T1BookCodegen extends BaseEntity<EntityManager, number> im
    *   books: [{ title: "b1" }], // create a child book
    * });
    * ```
-   * @see {@link https://joist-orm.io/docs/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   * @see {@link https://joist-orm.io/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
   setDeepPartial(opts: DeepPartialOrNull<T1Book>): Promise<void> {
     return updatePartial(this as any as T1Book, opts);
@@ -215,7 +215,7 @@ export abstract class T1BookCodegen extends BaseEntity<EntityManager, number> im
   /**
    * Details the field changes of the entity within the current unit of work.
    *
-   * @see {@link https://joist-orm.io/docs/features/changed-fields | Changed Fields} on the Joist docs
+   * @see {@link https://joist-orm.io/features/changed-fields | Changed Fields} on the Joist docs
    */
   get changes(): Changes<T1Book> {
     return newChangesProxy(this) as any;
@@ -224,7 +224,7 @@ export abstract class T1BookCodegen extends BaseEntity<EntityManager, number> im
   /**
    * Traverse from this entity using a lens, and load the result.
    *
-   * @see {@link https://joist-orm.io/docs/advanced/lenses | Lens Traversal} on the Joist docs
+   * @see {@link https://joist-orm.io/advanced/lenses | Lens Traversal} on the Joist docs
    */
   load<U, V>(fn: (lens: Lens<T1Book>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
     return loadLens(this as any as T1Book, fn, opts);
@@ -233,7 +233,7 @@ export abstract class T1BookCodegen extends BaseEntity<EntityManager, number> im
   /**
    * Hydrate this entity using a load hint
    *
-   * @see {@link https://joist-orm.io/docs/features/loading-entities#1-object-graph-navigation | Loading entities} on the Joist docs
+   * @see {@link https://joist-orm.io/features/loading-entities#1-object-graph-navigation | Loading entities} on the Joist docs
    */
   populate<const H extends LoadHint<T1Book>>(hint: H): Promise<Loaded<T1Book, H>>;
   populate<const H extends LoadHint<T1Book>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<T1Book, H>>;
@@ -270,7 +270,7 @@ export abstract class T1BookCodegen extends BaseEntity<EntityManager, number> im
    *   books: { id: true, reviews: { rating: true } }
    * });
    * ```
-   * @see {@link https://joist-orm.io/docs/advanced/json-payloads | Json Payloads} on the Joist docs
+   * @see {@link https://joist-orm.io/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
   toJSON<const H extends ToJsonHint<T1Book>>(hint: H): Promise<JsonPayload<T1Book, H>>;

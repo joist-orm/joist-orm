@@ -5,7 +5,7 @@ description: Documentation for FAQ
 
 ## Why use Entities & Mutable Classes?
 
-See [Why Entities](/docs/modeling/why-entities), and the "Why Classes" and "Why Mutability" sections.
+See [Why Entities](/modeling/why-entities), and the "Why Classes" and "Why Mutability" sections.
 
 A tldr is that we think mutable entities is the most ergonomic way to indicate "this how you would like the world to look" (i.e. "I want two new books, this old book archived, and the author's name changed"), by making potentially multiple mutations to the entity graph.
 
@@ -54,7 +54,7 @@ This can initially feel awkward, but it provides a truly type-safe API, given th
 
 This is often how business logic wants to interact with the domain model--a continual incremental loading of data as needed, as conditional codepaths are executed, instead of an endpoint/program exhaustively knowing up-front exactly what data will be necessary.
 
-If performance is a concern (loading thousands of entities with many custom properties), Joist provides a [ts-patch transform](/docs/advanced/transform-properties) to rewrite the properties as lazy getters in production builds. 
+If performance is a concern (loading thousands of entities with many custom properties), Joist provides a [ts-patch transform](/advanced/transform-properties) to rewrite the properties as lazy getters in production builds. 
 
 ## Can't I just use Zod for validations in my controller?
 
@@ -82,7 +82,7 @@ When Joist loads an entity, it does loads of the columns; we've found in practic
 
 That said, all of Joist's "backend reactivity" features, like reactive validation rules & reactive fields, use field-level precision in whether they fire or not. For example, an `Author` rule that watches `{ books: title }` will not trigger when one of it's book changes its `book.status` value.
 
-Also, if you have endpoints that require summarizing a lot of children data, Joist's [reactive fields](https://joist-orm.io/docs/modeling/reactive-fields#async-reactive-fields) are an extremely robust way for keeping materialized columns up-to-date (i.e. tracking `Bill.totalPaid` and `Bill.totalUnpaid` columns that sum child `BillLineItem` rows, for fast, easy sorting & filtering.
+Also, if you have endpoints that require summarizing a lot of children data, Joist's [reactive fields](/modeling/reactive-fields#async-reactive-fields) are an extremely robust way for keeping materialized columns up-to-date (i.e. tracking `Bill.totalPaid` and `Bill.totalUnpaid` columns that sum child `BillLineItem` rows, for fast, easy sorting & filtering.
 
 Finally, Joist does not have a dogmatic "all queries *must* be done via the ORM" stance. It's perfectly fine to use Joist's "object graph navigation" and `em.find` for 90-95% of your queries (that would be very boilerplate SQL queries), and then use a lower-level query builder for the remaining 10%.
 

@@ -1,3 +1,10 @@
+## [1.244.3](https://github.com/joist-orm/joist-orm/compare/v1.244.2...v1.244.3) (2025-05-02)
+
+
+### Bug Fixes
+
+* Allow passing null to EntityAlias.in. ([#1480](https://github.com/joist-orm/joist-orm/issues/1480)) ([fe9e83b](https://github.com/joist-orm/joist-orm/commit/fe9e83b6635c65e2757440145e50dc589bb3d6cc))
+
 ## [1.244.2](https://github.com/joist-orm/joist-orm/compare/v1.244.1...v1.244.2) (2025-04-29)
 
 

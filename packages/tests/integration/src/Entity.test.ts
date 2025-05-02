@@ -76,13 +76,6 @@ describe("Entity", () => {
       expect(author.lastName).toBeUndefined();
     });
 
-    it("set can treat undefined as leave", () => {
-      const em = newEntityManager();
-      const author = new Author(em, { firstName: "a1" });
-      author.setPartial({ firstName: undefined });
-      expect(author.firstName).toEqual("a1");
-    });
-
     it("cannot set with a null required field", async () => {
       const em = newEntityManager();
       const a1 = em.create(Author, { firstName: "a1" });
@@ -97,15 +90,6 @@ describe("Entity", () => {
       expect(() => {
         // @ts-expect-error
         a1.set({ fooBar: null });
-      }).toThrow("Unknown field fooBar");
-    });
-
-    it("cannot setPartial an invalid field", async () => {
-      const em = newEntityManager();
-      const a1 = em.create(Author, { firstName: "a1" });
-      expect(() => {
-        // @ts-expect-error
-        a1.setPartial({ fooBar: null });
       }).toThrow("Unknown field fooBar");
     });
 
@@ -133,21 +117,6 @@ describe("Entity", () => {
       }).toThrow("Invalid argument, cannot set over numberOfPublicReviews ReactiveFieldImpl");
     });
 
-    it("can setPartial with a null required field", async () => {
-      const em = newEntityManager();
-      const a1 = em.create(Author, { firstName: "a1" });
-      // Accepting partial-update style inputs is allowed at compile-time, but throws at runtime
-      a1.setPartial({ firstName: null });
-      await expect(em.flush()).rejects.toThrow("firstName is required");
-    });
-
-    it("setPartial defaults to ignoredUndefined", async () => {
-      const em = newEntityManager();
-      const a1 = em.create(Author, { firstName: "a1" });
-      a1.setPartial({ firstName: undefined });
-      expect(a1.firstName).toEqual("a1");
-    });
-
     it("ignores sets of the same value", async () => {
       await insertAuthor({ first_name: "a1" });
       const em = newEntityManager();
@@ -162,6 +131,39 @@ describe("Entity", () => {
       const a1 = await em.load(Author, "1");
       a1.graduated = jan1;
       expect(getInstanceData(a1).originalData).toEqual({});
+    });
+  });
+
+  describe("setPartial", () => {
+    it("treats undefined as leave", () => {
+      const em = newEntityManager();
+      const author = new Author(em, { firstName: "a1" });
+      author.setPartial({ firstName: undefined });
+      expect(author.firstName).toEqual("a1");
+    });
+
+    it("cannot set an invalid field", async () => {
+      const em = newEntityManager();
+      const a1 = em.create(Author, { firstName: "a1" });
+      expect(() => {
+        // @ts-expect-error
+        a1.setPartial({ fooBar: null });
+      }).toThrow("Unknown field fooBar");
+    });
+
+    it("can setPartial with a null required field", async () => {
+      const em = newEntityManager();
+      const a1 = em.create(Author, { firstName: "a1" });
+      // Accepting partial-update style inputs is allowed at compile-time, but throws at runtime
+      a1.setPartial({ firstName: null });
+      await expect(em.flush()).rejects.toThrow("firstName is required");
+    });
+
+    it("setPartial defaults to ignoredUndefined", async () => {
+      const em = newEntityManager();
+      const a1 = em.create(Author, { firstName: "a1" });
+      a1.setPartial({ firstName: undefined });
+      expect(a1.firstName).toEqual("a1");
     });
   });
 });

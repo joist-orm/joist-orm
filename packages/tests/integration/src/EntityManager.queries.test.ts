@@ -3167,13 +3167,8 @@ describe("EntityManager.queries", () => {
     it("can in a foreign key with gql string[] | null", async () => {
       const b = alias(Book);
       const maybeIds: string[] | null | undefined = null as any;
-      expect(b.author.in(maybeIds)).toEqual({
-        kind: "column",
-        alias: "unset",
-        column: "author_id",
-        dbType: "int",
-        cond: { kind: "in", value: [1, 2] },
-      });
+      // We want this to type-check (because of GraphQL) but not actually work
+      expect(() => b.author.in(maybeIds)).toThrow("Unsupported");
     });
 
     it("can in keys", async () => {

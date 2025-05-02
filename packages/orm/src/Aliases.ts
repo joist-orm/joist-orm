@@ -326,9 +326,14 @@ class EntityAliasImpl<T> extends AbstractAliasColumn<IdType> implements EntityAl
     }
   }
 
-  in(values: Array<T | IdOf<T>> | undefined): ExpressionCondition {
-    if (values === undefined) return skipCondition;
-    return this.addCondition({ kind: "in", value: values as any });
+  in(values: Array<T | IdOf<T>> | undefined | null): ExpressionCondition {
+    if (values === undefined) {
+      return skipCondition;
+    } else if (values === null) {
+      throw new Error("Unsupported");
+    } else {
+      return this.addCondition({ kind: "in", value: values as any });
+    }
   }
 
   gt(value: IdOf<T> | null | undefined): ColumnCondition | RawCondition {

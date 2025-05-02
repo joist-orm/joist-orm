@@ -13,7 +13,7 @@ Partial update APIs, whether they are implemented over REST or GraphQL or GRPC, 
 * An update can use `null` as a marker to mean "unset this field"
 * Updating a parent's collection of children can be done incrementally, i.e. w/o knowing the full set of children
 
-Joist has dedicated `EntityManager.createOrUpdatePartial` and `Entity.setPartial` APIs to help implement APIs that follow these conventions with as little boilerplate as possible.
+Joist has dedicated `EntityManager.upsert` and `Entity.setPartial` APIs to help implement APIs that follow these conventions with as little boilerplate as possible.
 
 :::tip[Info]
 
@@ -66,7 +66,7 @@ Specifically, the semantics of `Entity.setPartial` is that:
   - `{ books: null }` will set the collection to `[]`
   - `{ books: undefined }` will do nothing
 
-The `EntityManager.createPartial` and `EntityManager.createOrUpdatePartial` methods both have these semantics as well.
+The `EntityManager.createPartial` and `EntityManager.upsert` methods both have these semantics as well.
 
 :::tip[Info]
 
@@ -85,7 +85,7 @@ But sometimes it's a challenge to get the RPC framework, e.g. GraphQL in this in
 
 ## Saving Parents with Children
 
-To save both a parent and multiple potentially-new-or-existing children, Joist provides `EntityManager.createOrUpdatePartial`.
+To save both a parent and multiple potentially-new-or-existing children, Joist provides `EntityManager.upsert`.
 
 An example usage is:
 
@@ -119,26 +119,26 @@ const input: SaveAuthorInput = {
 
 // Then we can apply all of those changes via
 // a single call
-await em.createOrUpdatePartial(Author, input);
+await em.upsert(Author, input);
 ```
 
-Admittedly, your RPC/GraphQL API convention for parent/children inputs has to fairly closely follow what Joist's own partial update / `createOrUpdatePartial` convention, but assuming you do so, Joist can reduce a very large amount of CRUD boilerplate in an RPC/GraphQL API.
+Admittedly, your RPC/GraphQL API convention for parent/children inputs has to fairly closely follow what Joist's own partial update / `upsert` convention, but assuming you do so, Joist can reduce a very large amount of CRUD boilerplate in an RPC/GraphQL API.
 
 :::note
 
-Unlike `EntityManager.create`, which is synchronous, `EntityManager.createOrUpdatePartial` is async and needs to be `await`-d because it may require SQL calls to look up existing entities, e.g. the `b:1` and `b:2` IDs in the above example.
+Unlike `EntityManager.create`, which is synchronous, `EntityManager.upsert` is async and needs to be `await`-d because it may require SQL calls to look up existing entities, e.g. the `b:1` and `b:2` IDs in the above example.
 
 :::
 
 :::tip[Info]
 
-Joist's `createOrUpdatePartial` behavior, while developed independently, is effectively similar Objection.js's [`upsertGraph`](https://vincit.github.io/objection.js/guide/query-examples.html#graph-upserts) operation.
+Joist's `upsert` behavior, while developed independently, is effectively similar Objection.js's [`upsertGraph`](https://vincit.github.io/objection.js/guide/query-examples.html#graph-upserts) operation.
 
 :::
 
 ## Incremental Collection Updates
 
-Joist's default behavior for any collection set (e.g. `Entity.set`, `Entity.setPartial`, `EntityManger.createOrUpdatePartial`, etc.) is for the collection to be exhaustively set to the new value, for example:
+Joist's default behavior for any collection set (e.g. `Entity.set`, `Entity.setPartial`, `EntityManger.upsert`, etc.) is for the collection to be exhaustively set to the new value, for example:
 
 ```typescript
 const author = newAuthor(em);
@@ -152,7 +152,7 @@ expect(author.books.get.length).toEqual(1);
 
 However, when partially updating entities via an RPC call, it's often convenient to change only a single child of the collection, especially for APIs where the child itself doesn't have a dedicated operation (i.e. saving an invoice line item can only be done via the invoice API).
 
-To support these APIs, `setPartial` and `createOrUpdatePartial` will both opt-in to incremental collection semantics if they detect an extra `op` hint key on the children. For example:
+To support these APIs, `setPartial` and `upsert` will both opt-in to incremental collection semantics if they detect an extra `op` hint key on the children. For example:
 
 ```typescript
 const author = newAuthor(em);

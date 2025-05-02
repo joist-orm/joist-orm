@@ -70,7 +70,7 @@ Joist's domain model makes it easy to declaratively setup these "cross-field", "
 
 Joist works particularly well with GraphQL, because GraphQL servers handle the basic "untyped blob -> typed mutation" conversion & checks, similar to what Zod can provide, but they do it "for free" using the GraphQL schema.
 
-Then each mutation can use the already-typed input POJO to update the domain model (typically through upsert-capable methods like `em.createOrUpdatePartial`), and then defer all "business variant" validations to the domain model itself.
+Then each mutation can use the already-typed input POJO to update the domain model (typically through upsert-capable methods like `em.upsert`), and then defer all "business variant" validations to the domain model itself.
 
 In our experience, this split of responsibilities is very robust, and leads to small, idiomatic mutation resolvers, much inline with the Rails "fat model, skinny controller" pattern.
 

@@ -466,7 +466,7 @@ describe("ManyToManyCollection", () => {
     const em = newEntityManager();
     const book = await em.load(Book, "b:2");
     const [t4, t5] = await em.loadAll(Tag, ["t:4", "t:5"]);
-    await em.createOrUpdatePartial(Book, { id: book.id, tags: [t4, t5] });
+    await em.upsert(Book, { id: book.id, tags: [t4, t5] });
     await em.flush();
 
     // We could recognize when M2M.set is called w/o a load, and issue a DELETE + INSERTs.

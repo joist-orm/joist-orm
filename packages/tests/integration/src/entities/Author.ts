@@ -152,14 +152,14 @@ export class Author extends AuthorCodegen {
     return this.firstName + (this.lastName ? ` ${this.lastName}` : "");
   }
 
-  /** For testing `createOrUpdatePartial` with non-field properties. */
+  /** For testing `upsert` with non-field properties. */
   set fullName(fullName: string) {
     const [firstName, lastName] = fullName.split(" ");
     this.firstName = firstName;
     this.lastName = lastName;
   }
 
-  /** For testing `createOrUpdatePartial` with setter-only properties. */
+  /** For testing `upsert` with setter-only properties. */
   set fullName2(fullName: string) {
     const [firstName, lastName] = fullName.split(" ");
     this.firstName = firstName;
@@ -410,7 +410,7 @@ config.beforeFlush(async (author, { em }) => {
 });
 
 config.beforeCreate((author) => {
-  author.transientFields.beforeCreateRan = true
+  author.transientFields.beforeCreateRan = true;
 });
 
 config.beforeCreate((author) => {

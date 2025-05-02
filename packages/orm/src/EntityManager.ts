@@ -12,7 +12,6 @@ import { JoinRowTodo, Todo, combineJoinRows, createTodos } from "./Todo";
 import { getReactiveRules } from "./caches";
 import { ReactiveRule, constraintNameToValidationError } from "./config";
 import { getMetadataForType } from "./configure";
-import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
 import { findDataLoader } from "./dataloaders/findDataLoader";
@@ -74,6 +73,7 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } 
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { OptsOf, OrderOf } from "./typeMap";
+import { upsert } from "./upsert";
 import { MaybePromise, assertNever, fail, failIfAnyRejected, getOrSet, groupBy, partition, toArray } from "./utils";
 
 // polyfill
@@ -681,7 +681,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * - does not accept deep input, but
    * - fields set to `undefined` will be skipped instead of unset
    *
-   * See `createOrUpdatePartial` for the upsert/deep upsert behavior.
+   * See `upsert` for the upsert/deep upsert behavior.
    */
   public createPartial<T extends EntityW>(type: EntityConstructor<T>, opts: PartialOrNull<OptsOf<T>>): T {
     // We force some manual calls to setOpts to mimic `setUnsafe`'s behavior that `undefined` should
@@ -703,8 +703,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * - deep input is supported, i.e. `{ firstName: "Bob", books: [{ title: "b1" } ] }`, and
    * - fields set to `undefined` will be skipped instead of unset
    */
-  public createOrUpdatePartial<T extends EntityW>(type: EntityConstructor<T>, input: DeepPartialOrNull<T>): Promise<T> {
-    return createOrUpdatePartial(this, type, input);
+  public upsert<T extends EntityW>(type: EntityConstructor<T>, input: DeepPartialOrNull<T>): Promise<T> {
+    return upsert(this, type, input);
   }
 
   /**

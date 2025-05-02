@@ -1,3 +1,10 @@
+# [1.245.0](https://github.com/joist-orm/joist-orm/compare/v1.244.3...v1.245.0) (2025-05-02)
+
+
+### Features
+
+* Rename createOrUpdatePartial to upsert ([#1482](https://github.com/joist-orm/joist-orm/issues/1482)) ([4217b38](https://github.com/joist-orm/joist-orm/commit/4217b38958ab15df55668944231bd67c41384708))
+
 ## [1.244.3](https://github.com/joist-orm/joist-orm/compare/v1.244.2...v1.244.3) (2025-05-02)
 
 

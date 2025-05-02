@@ -27,14 +27,14 @@ export type DeepPartialOrNull<T extends Entity> = { id?: IdOf<T> | null } & Allo
 > &
   OptIdsOf<T>;
 
-/** Flags that allow `createOrUpdatePartial` to delete or remove entities. */
+/** Flags that allow `upsert` to delete or remove entities. */
 type CollectionFlags = {
   delete?: boolean | null;
   remove?: boolean | null;
   op?: "remove" | "delete" | "include" | "incremental";
 };
 
-/** Flag that allows `createOrUpdatePartial` to delete. */
+/** Flag that allows `upsert` to delete. */
 type DeleteFlag = {
   delete?: boolean | null;
 };
@@ -103,19 +103,19 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
           let other: any;
           if ("id" in value) {
             // This is a many-to-one partial update to an existing entity (they passed an id)
-            other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
+            other = await upsert(em, field.otherMetadata().cstr, value as any);
           } else {
             // This is a many-to-one partial w/o passing an id, i.e. `upsert(Author, { id: "a:1", publisher: { name: "p1" } })`
             if (entity.isNewEntity) {
               // If we're brand new, our child/other has to be brand new as well
-              other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+              other = await upsert(em, field.otherMetadata().cstr, value);
             } else {
               // the o2o upsert hash didn't have an id, so find-or-create it
               other = await (entity as any)[name].load();
               if (other) {
                 await updatePartial(other, value);
               } else {
-                other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+                other = await upsert(em, field.otherMetadata().cstr, value);
               }
             }
           }
@@ -144,14 +144,14 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
           let other: any;
           if ("id" in value) {
             // The o2o upsert hash was passed an id, so load it
-            other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
+            other = await upsert(em, field.otherMetadata().cstr, value as any);
           } else {
             // the o2o upsert hash didn't have an id, so find-or-create it
             other = current;
             if (other) {
               await updatePartial(other, value);
             } else {
-              other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+              other = await upsert(em, field.otherMetadata().cstr, value);
             }
           }
           if (deleteMarker) {
@@ -180,7 +180,7 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
             values.map(async (value: any) => {
               const [, , op] = getCollectionMarkers(field, value);
               if (op === "delete") {
-                const other = await createOrUpdatePartial(em, otherMeta.cstr, value);
+                const other = await upsert(em, otherMeta.cstr, value);
                 // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
                 if (maybeSoftDelete) {
                   const serde = otherMeta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
@@ -190,10 +190,10 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
                   entity.em.delete(other);
                 }
               } else if (op === "remove") {
-                const other = await createOrUpdatePartial(em, otherMeta.cstr, value);
+                const other = await upsert(em, otherMeta.cstr, value);
                 current.remove(other);
               } else if (op === "include") {
-                const other = await createOrUpdatePartial(em, otherMeta.cstr, value);
+                const other = await upsert(em, otherMeta.cstr, value);
                 current.add(other);
               } else if (op === "incremental") {
                 // This is a marker entry, just ignore it
@@ -220,7 +220,7 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
             } else {
               // Look for `delete: true/false` and `remove: true/false` markers
               const [deleteMarker, removeMarker] = getCollectionMarkers(field, value);
-              const other = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
+              const other = await upsert(em, field.otherMetadata().cstr, value as any);
               if (deleteMarker) {
                 // if (maybeSoftDelete) {
                 //   const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
@@ -257,7 +257,7 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
 /**
  * A utility function to create-or-update/upsert entities coming from a partial-update style API.
  */
-export async function createOrUpdatePartial<T extends Entity>(
+export async function upsert<T extends Entity>(
   em: EntityManager<any, any, any>,
   constructor: MaybeAbstractEntityConstructor<T>,
   input: DeepPartialOrNull<T>,
@@ -286,7 +286,7 @@ function getCollectionMarkers(field: OneToManyField | ManyToManyField, value: an
   const removeMarker: any = allowRemove && value["remove"];
   const opMarker: any = allowOp && value["op"];
 
-  // Remove the markers, regardless of true/false, before recursing into createOrUpdatePartial to avoid unknown fields
+  // Remove the markers, regardless of true/false, before recursing into upsert to avoid unknown fields
   if (deleteMarker !== undefined) delete value.delete;
   if (removeMarker !== undefined) delete value.remove;
   if (opMarker !== undefined) delete value.op;

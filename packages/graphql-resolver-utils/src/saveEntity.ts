@@ -21,9 +21,7 @@ export async function saveEntities<T extends Entity>(
 ): Promise<T[]> {
   const { em } = ctx;
   const { opts: entityOpts = {}, flush = true } = opts;
-  const results = await Promise.allSettled(
-    input.map((input) => em.createOrUpdatePartial(type, { ...entityOpts, ...input })),
-  );
+  const results = await Promise.allSettled(input.map((input) => em.upsert(type, { ...entityOpts, ...input })));
   if (flush) {
     await ctx.em.flush();
   }

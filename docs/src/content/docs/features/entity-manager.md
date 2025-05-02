@@ -60,11 +60,11 @@ const a = new Author(em, { firstName: "a1", address: { street: "123 Main" } });
 ```
 
 
-### `#createOrUpdatePartial`
+### `#upsert`
 
 ```ts
 const em = newEntityManager();
-const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1" });
+const a1 = await em.upsert(Author, { firstName: "a1" });
 ```
 
 

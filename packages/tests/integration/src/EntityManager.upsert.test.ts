@@ -15,42 +15,42 @@ import {
 import { newEntityManager } from "@src/testEm";
 import { Author, Book, Comment, ImageType, LargePublisher, newAuthor } from "./entities";
 
-describe("EntityManager.createOrUpdatePartial", () => {
+describe("EntityManager.upsert", () => {
   it("can create new entity with valid data", async () => {
     const em = newEntityManager();
-    const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1" });
+    const a1 = await em.upsert(Author, { firstName: "a1" });
     expect(a1.firstName).toEqual("a1");
   });
 
   it("fails to create new entity with invalid data", async () => {
     const em = newEntityManager();
-    await em.createOrUpdatePartial(Author, { id: null, firstName: null });
+    await em.upsert(Author, { id: null, firstName: null });
     await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
   it("can update an entity with valid data", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    const a1 = await em.createOrUpdatePartial(Author, { id: "1", firstName: "a2" });
+    const a1 = await em.upsert(Author, { id: "1", firstName: "a2" });
     expect(a1.firstName).toEqual("a2");
   });
 
   it("fails to update an entity with valid data", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    await em.createOrUpdatePartial(Author, { id: "1", firstName: null });
+    await em.upsert(Author, { id: "1", firstName: null });
     await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
   it("undefined doesn't prevent defaults from being set", async () => {
     const em = newEntityManager();
-    const p1 = await em.createOrUpdatePartial(LargePublisher, {
+    const p1 = await em.upsert(LargePublisher, {
       name: "p1",
       baseSyncDefault: undefined,
       baseAsyncDefault: undefined,
       rating: 5,
     });
-    const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", nickNames: undefined, publisher: p1 });
+    const a1 = await em.upsert(Author, { firstName: "a1", nickNames: undefined, publisher: p1 });
     await em.flush();
     expect(a1.nickNames).toEqual(["a1"]);
     expect(p1.baseSyncDefault).toEqual("LPSyncDefault");
@@ -59,7 +59,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
 
   it("null does prevent defaults from being set", async () => {
     const em = newEntityManager();
-    const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", nickNames: null });
+    const a1 = await em.upsert(Author, { firstName: "a1", nickNames: null });
     await em.flush();
     expect(a1.nickNames).toBeUndefined();
   });
@@ -67,7 +67,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
   describe("m2o", () => {
     it("can create new reference with valid data", async () => {
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, {
+      const a1 = await em.upsert(Author, {
         firstName: "a1",
         mentor: { firstName: "m1" },
         // technically testing o2m while we're at it
@@ -81,7 +81,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
     it("can update existing references with valid data", async () => {
       await insertAuthor({ first_name: "m1" });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, {
+      const a1 = await em.upsert(Author, {
         firstName: "a1",
         mentor: { id: "1", firstName: "m2" },
       });
@@ -95,7 +95,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertAuthor({ first_name: "m1" });
       await insertAuthor({ first_name: "a1", mentor_id: 1 });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, {
+      const a1 = await em.upsert(Author, {
         id: "a:2",
         firstName: "a2",
         mentor: { firstName: "m2" },
@@ -114,7 +114,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
     it("can update existing references without an id that is not set", async () => {
       await insertAuthor({ first_name: "a1" });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, {
+      const a1 = await em.upsert(Author, {
         id: "a:1",
         firstName: "a2",
         mentor: { firstName: "m2" },
@@ -134,7 +134,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertAuthor({ first_name: "m1" });
       await insertAuthor({ first_name: "a1", mentor_id: 1 });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, {
+      const a1 = await em.upsert(Author, {
         id: "a:2",
         firstName: "a2",
         mentor: { id: null, firstName: "m2" },
@@ -154,7 +154,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertAuthor({ first_name: "m1" });
       await insertAuthor({ first_name: "a1", mentor_id: 1 });
       const em = newEntityManager();
-      const a2 = await em.createOrUpdatePartial(Author, { id: "a:2", mentor: { delete: true } });
+      const a2 = await em.upsert(Author, { id: "a:2", mentor: { delete: true } });
       expect(await a2.mentor.load()).toBeUndefined();
       await em.flush();
       const rows = await select("authors");
@@ -164,35 +164,35 @@ describe("EntityManager.createOrUpdatePartial", () => {
     it("references can refer to entities by id", async () => {
       await insertAuthor({ first_name: "m1" });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", mentor: "1" });
+      const a1 = await em.upsert(Author, { firstName: "a1", mentor: "1" });
       expect((await a1.mentor.load())!.firstName).toEqual("m1");
     });
 
     it("references can refer to entities by id opt", async () => {
       await insertAuthor({ first_name: "m1" });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", mentorId: "1" });
+      const a1 = await em.upsert(Author, { firstName: "a1", mentorId: "1" });
       expect((await a1.mentor.load())!.firstName).toEqual("m1");
     });
 
     it("references can refer to null", async () => {
       await insertAuthor({ first_name: "m1" });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", mentor: null });
+      const a1 = await em.upsert(Author, { firstName: "a1", mentor: null });
       expect(a1.mentor.isSet).toBe(false);
     });
 
     it("references can refer to undefined", async () => {
       await insertAuthor({ first_name: "m1" });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", mentor: undefined });
+      const a1 = await em.upsert(Author, { firstName: "a1", mentor: undefined });
       expect(a1.mentor.isSet).toBe(false);
     });
 
     it("references can refer to entity", async () => {
       await insertAuthor({ first_name: "m1" });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", mentor: await em.load(Author, "1") });
+      const a1 = await em.upsert(Author, { firstName: "a1", mentor: await em.load(Author, "1") });
       expect(a1.mentor.id).toEqual("a:1");
     });
   });
@@ -200,7 +200,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
   describe("o2o", () => {
     it("can create new child when creating new parent", async () => {
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, {
+      const a1 = await em.upsert(Author, {
         firstName: "a1",
         image: { type: ImageType.AuthorImage },
       });
@@ -211,7 +211,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
     it("can find existing child when creating new parent", async () => {
       await insertImage({ type_id: 2, file_name: "author.png" });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, {
+      const a1 = await em.upsert(Author, {
         firstName: "a1",
         image: { id: "i:1" },
       });
@@ -224,7 +224,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertImage({ id: 1, type_id: 2, file_name: "author.png", author_id: 1 });
       await insertImage({ id: 2, type_id: 2, file_name: "author.png" });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, {
+      const a1 = await em.upsert(Author, {
         id: "a:1",
         image: { id: "i:2" },
       });
@@ -236,7 +236,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertImage({ id: 1, type_id: 2, file_name: "author.png", author_id: 1 });
       await insertImage({ id: 2, type_id: 2, file_name: "author.png" });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, {
+      const a1 = await em.upsert(Author, {
         id: "a:1",
         image: null,
       });
@@ -248,7 +248,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertBook({ title: "b1", author_id: 1 });
       await insertBook({ title: "b2", author_id: 1, prequel_id: 1 });
       const em = newEntityManager();
-      const b1 = await em.createOrUpdatePartial(Book, { id: "b:1", sequel: { delete: true } });
+      const b1 = await em.upsert(Book, { id: "b:1", sequel: { delete: true } });
       expect(await b1.sequel.load()).toBe(undefined);
       await em.flush();
       const rows = await select("books");
@@ -259,7 +259,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertAuthor({ first_name: "a1" });
       await insertImage({ id: 1, type_id: 2, file_name: "author.png", author_id: 1 });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, {
+      const a1 = await em.upsert(Author, {
         id: "a:1",
         image: { fileName: "author2.png" },
       });
@@ -274,7 +274,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertAuthor({ first_name: "a1" });
       await insertImage({ id: 1, type_id: 2, file_name: "author.png", author_id: 1 });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, {
+      const a1 = await em.upsert(Author, {
         id: "a:1",
         image: { id: null, fileName: "author2.png" },
       });
@@ -291,7 +291,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, { id: "a:1", firstName: "a2", books: ["1"] });
+      const a1 = await em.upsert(Author, { id: "a:1", firstName: "a2", books: ["1"] });
       expect((await a1.books.load())[0].title).toEqual("b1");
     });
 
@@ -299,7 +299,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, { id: "a:1", firstName: "a2", bookIds: ["1"] });
+      const a1 = await em.upsert(Author, { id: "a:1", firstName: "a2", bookIds: ["1"] });
       expect((await a1.books.load())[0].title).toEqual("b1");
     });
 
@@ -307,7 +307,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, { id: "a:1", firstName: "a2", books: null });
+      const a1 = await em.upsert(Author, { id: "a:1", firstName: "a2", books: null });
       expect(await a1.books.load()).toEqual([]);
     });
 
@@ -315,7 +315,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, { id: "a:1", firstName: "a2", books: undefined });
+      const a1 = await em.upsert(Author, { id: "a:1", firstName: "a2", books: undefined });
       expect(await a1.books.load()).toHaveLength(1);
     });
 
@@ -323,7 +323,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, {
+      const a1 = await em.upsert(Author, {
         id: "a:1",
         // b2 will be added as a new book, and b1 will be orphaned from the author
         books: [{ id: "b:1", delete: true }, { title: "b2" }],
@@ -340,7 +340,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertBook({ title: "b1", author_id: 1 });
       await insertBook({ title: "b2", author_id: 1 });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, {
+      const a1 = await em.upsert(Author, {
         id: "a:1",
         books: [{ id: "b:1", delete: true }, { id: "b:2" }],
       });
@@ -360,7 +360,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertBookReview({ book_id: 1, rating: 5 });
       await insertBookReview({ book_id: 1, rating: 5 });
       const em = newEntityManager();
-      const b1 = await em.createOrUpdatePartial(Book, {
+      const b1 = await em.upsert(Book, {
         id: "b:1",
         reviews: [{ id: "br:2" }],
       });
@@ -379,7 +379,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertBook({ title: "b1", author_id: 1 });
       await insertBook({ title: "b2", author_id: 1 });
       const em = newEntityManager();
-      await em.createOrUpdatePartial(Author, {
+      await em.upsert(Author, {
         id: "a:1",
         books: [{ id: "b:1", title: "b1changed", delete: false }, { id: "b:2" }],
       });
@@ -397,7 +397,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertBookToTag({ tag_id: 1, book_id: 1 });
       await insertBookToTag({ tag_id: 2, book_id: 1 });
       const em = newEntityManager();
-      await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ id: "t:2", remove: true }] });
+      await em.upsert(Book, { id: "b:1", tags: [{ id: "t:2", remove: true }] });
       await em.flush();
       expect(await countOfTags()).toEqual(2);
       expect(await countOfBookToTags()).toEqual(0);
@@ -413,7 +413,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertBookToTag({ tag_id: 2, book_id: 1 });
       const em = newEntityManager();
       // When we incrementally remove a single tag
-      const b = await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ id: "t:2", op: "remove" }] });
+      const b = await em.upsert(Book, { id: "b:1", tags: [{ id: "t:2", op: "remove" }] });
       await em.flush();
       // Then we removed only that one m2m row
       expect((await b.tags.load()).map((t) => t.id)).toEqual(["t:1"]);
@@ -431,7 +431,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertBookToTag({ tag_id: 2, book_id: 1 });
       const em = newEntityManager();
       // When we incrementally delete a single tag
-      const b = await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ id: "t:2", op: "delete" }] });
+      const b = await em.upsert(Book, { id: "b:1", tags: [{ id: "t:2", op: "delete" }] });
       await em.flush();
       // Then we removed only that one m2m row
       expect((await b.tags.load()).map((t) => t.id)).toEqual(["t:1"]);
@@ -448,7 +448,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertBookToTag({ tag_id: 1, book_id: 1 });
       const em = newEntityManager();
       // When we incrementally add a single tag
-      await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ id: "t:2", op: "include" }] });
+      await em.upsert(Book, { id: "b:1", tags: [{ id: "t:2", op: "include" }] });
       await em.flush();
       // Then we have both m2m rows
       expect(await countOfBookToTags()).toEqual(2);
@@ -461,7 +461,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertComment({ text: "c1", parent_author_id: 1 });
       const em = newEntityManager();
       // When we use `op:include` to link an existing entity
-      await em.createOrUpdatePartial(Comment, { id: "comment:1", books: [{ id: "b:2", op: "include" }] });
+      await em.upsert(Comment, { id: "comment:1", books: [{ id: "b:2", op: "include" }] });
       await em.flush();
       // Then we only loaded the parent & new child, and did not fully load the collection
       expect(em.entities).toMatchEntity(["comment:1", "b:2"]);
@@ -475,7 +475,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertBookToTag({ tag_id: 1, book_id: 1 });
       const em = newEntityManager();
       // When we incrementally "set" tags to empty
-      await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ op: "incremental" }] });
+      await em.upsert(Book, { id: "b:1", tags: [{ op: "incremental" }] });
       await em.flush();
       // Then we have the m2m row
       expect(await countOfBookToTags()).toEqual(1);
@@ -485,7 +485,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
       const em = newEntityManager();
-      const a1 = await em.createOrUpdatePartial(Author, { firstName: "a2", books: [await em.load(Book, "1")] });
+      const a1 = await em.upsert(Author, { firstName: "a2", books: [await em.load(Book, "1")] });
       expect((await a1.books.load())[0].title).toEqual("b1");
     });
   });
@@ -493,20 +493,20 @@ describe("EntityManager.createOrUpdatePartial", () => {
   describe("m2m", () => {
     it("rejects invalid ids", async () => {
       const em = newEntityManager();
-      const result = em.createOrUpdatePartial(Author, {
+      const result = em.upsert(Author, {
         tags: ["", ""],
       });
       await expect(result).rejects.toThrow("Invalid Tag id: ");
     });
   });
 
-  it("createOrUpdatePartial doesnt allow unknown fields to be passed", async () => {
+  it("upsert doesnt allow unknown fields to be passed", async () => {
     const em = newEntityManager();
     // Given an opt `publisherTypo` (instead of `publisher`) that don't match exactly what Author supports
     await expect(async () => {
       // Then we get a compile error
       // @ts-expect-error
-      await em.createOrUpdatePartial(Author, { firstName: "a2", publisherTypo: "1" });
+      await em.upsert(Author, { firstName: "a2", publisherTypo: "1" });
     }).rejects.toThrow("Unknown field publisherTypo");
   });
 
@@ -522,20 +522,20 @@ describe("EntityManager.createOrUpdatePartial", () => {
 
   it("can create new entity with non-field properties", async () => {
     const em = newEntityManager();
-    const a1 = await em.createOrUpdatePartial(Author, { fullName: "a1 l1" } as any);
+    const a1 = await em.upsert(Author, { fullName: "a1 l1" } as any);
     expect(a1.firstName).toEqual("a1");
     expect(a1.lastName).toEqual("l1");
   });
 
   it("can create new entity with non-field setter-only properties", async () => {
     const em = newEntityManager();
-    const a1 = await em.createOrUpdatePartial(Author, { fullName2: "a1 l1" } as any);
+    const a1 = await em.upsert(Author, { fullName2: "a1 l1" } as any);
     expect(a1.firstName).toEqual("a1");
     expect(a1.lastName).toEqual("l1");
   });
 
   describe("updatePartial", () => {
-    // Copy/pasting just a few of the createOrUpdatePartial tests for the updatePartial
+    // Copy/pasting just a few of the upsert tests for the updatePartial
     it("can create new reference with valid data", async () => {
       const em = newEntityManager();
       const a1 = newAuthor(em);

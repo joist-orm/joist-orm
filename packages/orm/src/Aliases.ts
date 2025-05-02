@@ -62,8 +62,8 @@ export interface PrimitiveAlias<V, N extends null | never> {
 export interface EntityAlias<T> {
   eq(value: T | IdOf<T> | null | undefined): ExpressionCondition;
   ne(value: T | IdOf<T> | null | undefined): ExpressionCondition;
-  in(value: Array<T | IdOf<T>> | undefined): ExpressionCondition;
   // Adding `| null` for GraphQL support
+  in(value: Array<T | IdOf<T>> | null | undefined): ExpressionCondition;
   gt(value: IdOf<T> | null | undefined): ExpressionCondition;
   gte(value: IdOf<T> | null | undefined): ExpressionCondition;
   lt(value: IdOf<T> | null | undefined): ExpressionCondition;

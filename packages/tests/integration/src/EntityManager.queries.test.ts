@@ -521,6 +521,27 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can find by foreign key id in empty list", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const where = { publisher: { id: { in: [] } } } satisfies AuthorFilter;
+    const authors = await em.findGql(Author, where);
+    expect(authors.length).toEqual(0);
+
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "in", value: [] } }],
+      },
+    });
+  });
+
   it("can find by foreign key id nin list", async () => {
     await insertPublisher({ id: 1, name: "p1" });
     await insertPublisher({ id: 2, name: "p2" });
@@ -3141,6 +3162,13 @@ describe("EntityManager.queries", () => {
         dbType: "int",
         cond: { kind: "in", value: [1, 2] },
       });
+    });
+
+    it("can in a foreign key with gql string[] | null", async () => {
+      const b = alias(Book);
+      const maybeIds: string[] | null | undefined = null as any;
+      // We want this to type-check (because of GraphQL) but not actually work
+      expect(() => b.author.in(maybeIds)).toThrow("Unsupported");
     });
 
     it("can in keys", async () => {

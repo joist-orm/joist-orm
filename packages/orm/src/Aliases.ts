@@ -62,8 +62,8 @@ export interface PrimitiveAlias<V, N extends null | never> {
 export interface EntityAlias<T> {
   eq(value: T | IdOf<T> | null | undefined): ExpressionCondition;
   ne(value: T | IdOf<T> | null | undefined): ExpressionCondition;
-  in(value: Array<T | IdOf<T>> | undefined): ExpressionCondition;
   // Adding `| null` for GraphQL support
+  in(value: Array<T | IdOf<T>> | null | undefined): ExpressionCondition;
   gt(value: IdOf<T> | null | undefined): ExpressionCondition;
   gte(value: IdOf<T> | null | undefined): ExpressionCondition;
   lt(value: IdOf<T> | null | undefined): ExpressionCondition;
@@ -326,9 +326,14 @@ class EntityAliasImpl<T> extends AbstractAliasColumn<IdType> implements EntityAl
     }
   }
 
-  in(values: Array<T | IdOf<T>> | undefined): ExpressionCondition {
-    if (values === undefined) return skipCondition;
-    return this.addCondition({ kind: "in", value: values as any });
+  in(values: Array<T | IdOf<T>> | undefined | null): ExpressionCondition {
+    if (values === undefined) {
+      return skipCondition;
+    } else if (values === null) {
+      throw new Error("Unsupported");
+    } else {
+      return this.addCondition({ kind: "in", value: values as any });
+    }
   }
 
   gt(value: IdOf<T> | null | undefined): ColumnCondition | RawCondition {

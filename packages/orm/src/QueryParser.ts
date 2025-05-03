@@ -1,15 +1,17 @@
 import { groupBy, isPlainObject } from "joist-utils";
 import { aliasMgmt, isAlias } from "./Aliases";
+import { ConditionBuilder } from "./ConditionBuilder";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
 import { deepFindConditions, pruneUnusedJoins } from "./QueryParser.pruning";
-import { visitConditions, visitFilter } from "./QueryVisitor";
+import { rewriteTopLevelCondition } from "./QueryParser.rewriting";
+import { visitConditions } from "./QueryVisitor";
 import { getMetadataForTable } from "./configure";
 import { buildCondition } from "./drivers/buildUtils";
 import { AliasAssigner, Column, getConstructorFromTaggedId, isDefined } from "./index";
 import { kq, kqDot } from "./keywords";
-import { assertNever, fail, partition } from "./utils";
+import { assertNever, fail } from "./utils";
 
 /** A tree of ANDs/ORs with conditions or nested conditions. */
 export interface ParsedExpressionFilter {
@@ -657,156 +659,6 @@ function maybeAddIdNotNulls(query: ParsedFindQuery): void {
   });
 }
 
-function rewriteTopLevelCondition(aliases: AliasAssigner, condition: ParsedExpressionFilter): void {
-  type Todo = { condition: ParsedExpressionFilter; isTopLevelAnd: boolean };
-  const todo: Todo[] = [{ condition, isTopLevelAnd: condition.kind === "exp" && condition.op === "and" }];
-  while (todo.length > 0) {
-    const { condition, isTopLevelAnd } = todo.pop()!;
-
-    // Only top-level ands can completely push down their conditions
-    if (isTopLevelAnd && condition.kind === "exp" && condition.op === "and") {
-      const { conditions: cc } = condition;
-      for (let i = cc.length - 1; i >= 0; i--) {
-        const c = cc[i];
-
-        // Collect all the aliases used in this condition (which might be just one, if it's a simple column condition)
-        const used = findUsedAliases(c);
-        // How many child CTEs does it touch, if any?
-        const touchedCtes: Array<CteJoinTable | "root"> = used
-          .map((a) => aliases.getCtes(a)[0])
-          .map((c) => c ?? "root");
-
-        if (touchedCtes.length === 0) {
-          // Nothing to do, leave this condition in-place
-        } else if (touchedCtes.length === 1 && touchedCtes[0] === "root") {
-          // Nothing to do, leave this condition in-place
-        } else if (touchedCtes.length === 1) {
-          // If it only touches one, we can push it down directly to that CTE
-          const [cte] = touchedCtes;
-          if (c.kind === "column" && c.column === "$count") {
-            const maybeIsNull = handleCount(cte as any, c.cond as ParsedValueFilter<number>);
-            if (maybeIsNull) {
-              cc[i] = maybeIsNull;
-            } else {
-              cc.splice(i, 1);
-            }
-          } else {
-            // cte.query.condition!.conditions.push(c);
-            cc.splice(i, 1);
-            // ...need to ensure this CTE, and it's parent CTEs, have "at least one" enabled
-            // cte.outer = false;
-          }
-        } else {
-          // Find the common parent CTE, if any
-          const ctePaths = used.map((a) => aliases.getCtePath(a));
-          const target = deepestCommonCte(ctePaths);
-          if (!target) {
-            // This condition is using multiple CTEs, so we have to leave it here leave it here and rewrite
-            // (should be similar to our OR handling?)
-            // ...probably just push it onto the queue
-            // todo.push({ condition: c, isTopLevelAnd: false });
-          } else {
-            // Push it into the target (which may not be a 1st-level CTE), but [0] currently gets back to that...
-            const cte = aliases.getCtes(target)[0];
-            // Rewrite it within its target...
-            cte.query.condition!.conditions.push(c);
-            cc.splice(i, 1);
-            rewriteIfNeeded(cte, aliases, cte.query.condition!.conditions, i);
-            cte.outer = false;
-          }
-        }
-      }
-      return;
-    }
-
-    // We're not a top-level AND, so we can't push down, we can only group & rewrite/replace
-    const cc = condition.conditions.map((c) => {
-      const used = findUsedAliases(c);
-      const touchedCtes = used.map((a) => aliases.getCtes(a)[0]).filter((c) => !!c);
-      return { condition: c, used, touchedCtes };
-    });
-
-    // group by top-level CTE(s), like `[]` or `[a]` or `[a,b]`
-    const grouped = groupBy(cc, (c) => {
-      return c.touchedCtes.map((c) => c.alias).join(",");
-    });
-
-    // Transform the conditions, which might be condensing ones that go into the same CTE
-    condition.conditions = Object.values(grouped).flatMap((group) => {
-      // This group will all have the same touchedCtes, which might be [] or [a] or [a,b]
-      const touchedCtes = group[0].touchedCtes;
-      if (touchedCtes.length === 0) {
-        // Nothing to do, leave these conditions as-is
-        return group.map((g) => g.condition);
-      } else if (touchedCtes.length === 1) {
-        // We can push it down directly to that CTE, but need to keep the condition here
-        throw new Error("todo0");
-      } else {
-        throw new Error("todo");
-      }
-    });
-  }
-}
-
-/** ...we've decided that `conditions[i]` must "stay put", but get its components rewritten into o2ms? */
-function rewriteIfNeeded(
-  targetCte: CteJoinTable | undefined,
-  aliases: AliasAssigner,
-  conditions: ParsedExpressionCondition[],
-  i: number,
-): void {
-  let j = 0;
-  type Todo = { conditions: ParsedExpressionCondition[]; i: number };
-  const todo: Todo[] = [{ conditions, i }];
-  while (todo.length) {
-    const { conditions, i } = todo.pop()!;
-    const c = conditions[i];
-    if (c.kind === "exp" && c.op === "or") {
-      // Dumb recursion...
-      for (let j = 0; j < c.conditions.length; j++) {
-        todo.push({ conditions: c.conditions, i: j });
-      }
-    } else if (c.kind === "column") {
-      // Which CTE if any does this column belong to?
-      const ctes = aliases.getCtes(c.alias);
-      const leafCte = ctes[ctes.length - 1];
-      if (leafCte === targetCte) {
-        // we're fine
-      } else if (leafCte) {
-        const as = `_${c.alias}_${c.column}_${j++}`;
-        // Replace this condition with a reference
-        conditions[i] = {
-          kind: "raw",
-          aliases: [leafCte.alias],
-          condition: `${leafCte.alias}.${as}`,
-          bindings: [],
-          pruneable: false,
-        } satisfies RawCondition;
-        // add to select...
-        const [sql, bindings] = buildCondition(c);
-        leafCte.query.selects.push({ sql: `BOOL_OR(${sql}) as ${as}`, aliases: [c.alias], bindings });
-      } else {
-        throw new Error("todo2");
-      }
-    } else {
-      throw new Error("todo2");
-    }
-  }
-  const c = conditions[i];
-
-  // Do any of the conditions within it nested inside of CTEs?
-
-  //   const as = `_${alias}_${cond.column}_${j++}`;
-  //   conditions[i] = {
-  //     kind: "raw",
-  //     aliases: [topLevelLateralJoin],
-  //     condition: `${topLevelLateralJoin}.${as}`,
-  //     bindings: [],
-  //     pruneable: false,
-  //     ...{ rewritten: true },
-  //   } satisfies RawCondition;
-}
-
 /** Returns the `a` from `"a".*`. */
 export function parseAlias(alias: string): string {
   return alias.split(".")[0].replaceAll(`"`, "");
@@ -1043,158 +895,6 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
 }
 
 /** Converts domain-level values like string ids/enums into their db equivalent. */
-export class ConditionBuilder {
-  /** Simple, single-column conditions, which will be AND-d together. */
-  private conditions: (ColumnCondition | RawCondition)[] = [];
-  /** Complex expressions, which will also be AND-d together with `conditions`. */
-  private expressions: ParsedExpressionFilter[] = [];
-
-  /** Accepts a raw user-facing DSL filter, and parses it into a `ParsedExpressionFilter`. */
-  maybeAddExpression(expression: ExpressionFilter): void {
-    const parsed = parseExpression(expression);
-    if (parsed) this.expressions.push(parsed);
-  }
-
-  /** Adds an already-db-level condition to the simple conditions list. */
-  addSimpleCondition(condition: ColumnCondition): void {
-    this.conditions.push(condition);
-  }
-
-  /** Adds an already-db-level condition to the simple conditions list. */
-  addRawCondition(condition: PartialSome<RawCondition, "kind" | "bindings">): void {
-    this.conditions.push({
-      kind: "raw",
-      bindings: [],
-      ...condition,
-    });
-  }
-
-  /** Adds an already-db-level expression to the expressions list. */
-  addParsedExpression(parsed: ParsedExpressionFilter): void {
-    this.expressions.push(parsed);
-  }
-
-  /**
-   * Adds a user-facing `ParsedValueFilter` to the inline conditions.
-   *
-   * Unless it's something like `in: [a1, null]`, in which case we split it into two `is-null` and `in` conditions.
-   */
-  addValueFilter(alias: string, column: Column, filter: ParsedValueFilter<any>): void {
-    if (filter.kind === "in" && filter.value.includes(null)) {
-      // If the filter contains a null, we need to split it into an `is-null` and `in` condition
-      const isNull = {
-        kind: "column",
-        alias,
-        column: column.columnName,
-        dbType: column.dbType,
-        cond: { kind: "is-null" },
-      } satisfies ColumnCondition;
-      const inValues = {
-        kind: "column",
-        alias,
-        column: column.columnName,
-        dbType: column.dbType,
-        cond: {
-          kind: "in",
-          // Filter out the nulls from the in condition
-          value: filter.value.filter((v) => v !== null).map((v) => column.mapToDb(v)),
-        },
-      } satisfies ColumnCondition;
-      // Now OR them back together
-      this.expressions.push({ kind: "exp", op: "or", conditions: [isNull, inValues] });
-    } else {
-      const cond = {
-        kind: "column",
-        alias,
-        column: column.columnName,
-        dbType: column.dbType,
-        // Rewrite the user-facing domain values to db values
-        cond: mapToDb(column, filter),
-      } satisfies ColumnCondition;
-      this.conditions.push(cond);
-    }
-  }
-
-  /** Combines our collected `conditions` & `expressions` into a single `ParsedExpressionFilter`. */
-  toExpressionFilter(): ParsedExpressionFilter | undefined {
-    const { expressions, conditions } = this;
-    if (conditions.length === 0 && expressions.length === 1) {
-      // If no inline conditions, and just 1 opt expression, just use that
-      return expressions[0];
-    } else if (expressions.length === 1 && expressions[0].op === "and") {
-      // Merge the 1 `AND` expression with the other simple conditions
-      return { kind: "exp", op: "and", conditions: [...conditions, ...expressions[0].conditions] };
-    } else if (conditions.length > 0 || expressions.length > 0) {
-      // Combine the conditions within the `em.find` join literal & the `conditions` as ANDs
-      return { kind: "exp", op: "and", conditions: [...conditions, ...expressions] };
-    }
-    return undefined;
-  }
-
-  /**
-   * Finds `child.column.eq(...)` complex conditions that need pushed down into each lateral join.
-   *
-   * Once we find something like `{ column: "first_name", cond: { eq: "a1" } }`, we return it to the
-   * caller (for injection into the lateral join's `SELECT` clause), and replace it with a boolean
-   * expression that is basically "did any of my children match this condition?".
-   *
-   * We also assume that `findAndRewrite` is only called on the top-level/user-facing `ParsedFindQuery`,
-   * and not any intermediate `CteJoinTable` queries (which are allowed to have their own
-   * `ConditionBuilder`s for building their internal query, but it's not exposed to the user,
-   * so won't have any truly-complex conditions that should need rewritten).
-   *
-   * @param topLevelLateralJoin the outermost lateral join alias, as that will be the only alias
-   *   that is visible to the rewritten condition, i.e. `_alias._whatever_condition_`.
-   * @param alias the alias being "hidden" in a lateral join, and so its columns/data won't be
-   *   available for the top-level condition to directly AND/OR against.
-   */
-  findAndRewrite(topLevelLateralJoin: string, alias: string): { cond: ColumnCondition; as: string }[] {
-    let j = 0;
-    const found: { cond: ColumnCondition; as: string }[] = [];
-    const todo: ParsedExpressionCondition[][] = [this.conditions];
-    for (const exp of this.expressions) todo.push(exp.conditions);
-    while (todo.length > 0) {
-      const array = todo.pop()!;
-      array.forEach((cond, i) => {
-        if (cond.kind === "column") {
-          // Use startsWith to look for `_b0` / `_s0` base/subtype conditions
-          if (cond.alias === alias || cond.alias.startsWith(`${alias}_`)) {
-            if (cond.column === "_") return; // Hack to skip rewriting `alias._ > 0`
-            const as = `_${alias}_${cond.column}_${j++}`;
-            array[i] = {
-              kind: "raw",
-              aliases: [topLevelLateralJoin],
-              condition: `${topLevelLateralJoin}.${as}`,
-              bindings: [],
-              pruneable: false,
-              ...{ rewritten: true },
-            } satisfies RawCondition;
-            found.push({ cond, as });
-          }
-        } else if (cond.kind === "exp") {
-          todo.push(cond.conditions);
-        } else if (cond.kind === "raw") {
-          // what would we do here?
-          if (cond.aliases.includes(alias)) {
-            // Look for a hacky hint that this is our own already-rewritten query; this is likely
-            // because `findAndRewrite` is mutating condition expressions that get passed into
-            // `parseFindQuery` multiple times, i.e. while batching/dataloading.
-            //
-            // ...although in theory parseExpression should already be making a copy of any user-facing
-            // `em.find` conditions. :thinking:
-            if ("rewritten" in cond) return;
-            throw new Error("Joist doesn't support raw conditions in lateral joins yet");
-          }
-        } else {
-          assertNever(cond);
-        }
-      });
-    }
-    return found;
-  }
-}
-
-/** Converts domain-level values like string ids/enums into their db equivalent. */
 export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedValueFilter<any> {
   // ...to teach this `mapToDb` function to handle/rewrite `in: [1, null]` handling, we'd need to:
   // 1. return a maybe-simple/maybe-nested condition, so basically a `ParsedExpressionCondition`, because
@@ -1376,24 +1076,6 @@ function filterSoftDeletes(meta: EntityMetadata, softDeletes: "include" | "exclu
   );
 }
 
-/** Parses user-facing `{ and: ... }` or `{ or: ... }` into a `ParsedExpressionFilter`. */
-function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter | undefined {
-  // Look for `{ and: [...] }` or `{ or: [...] }`
-  const [op, expressions] =
-    "and" in expression && expression.and
-      ? ["and" as const, expression.and]
-      : "or" in expression && expression.or
-        ? ["or" as const, expression.or]
-        : fail(`Invalid expression ${expression}`);
-  // Potentially recurse into nested expressions
-  const conditions = expressions.map((exp) => (exp && ("and" in exp || "or" in exp) ? parseExpression(exp) : exp));
-  const [skip, valid] = partition(conditions, (cond) => cond === undefined || cond === skipCondition);
-  if ((skip.length > 0 && expression.pruneIfUndefined === "any") || valid.length === 0) {
-    return undefined;
-  }
-  return { kind: "exp", op, conditions: valid.filter(isDefined) };
-}
-
 export function getTables(
   query: ParsedFindQuery,
 ): [PrimaryTable, JoinTable[], LateralJoinTable[], CrossJoinTable[], CteJoinTable[]] {
@@ -1502,8 +1184,6 @@ function unparseFilter(
   }
 }
 
-type PartialSome<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
-
 // // If there are complex conditions looking at our data, we don't want a "make sure at least one matched"
 // const usedByComplexCondition =
 //     selects.some((s) => typeof s === "object" && "aliases" in s && s.aliases.includes(alias)) ||
@@ -1594,7 +1274,7 @@ type PartialSome<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
  * - massages the join to `required` for "any N >= 0" conditions, or
  * - returns a `_ is NULL` for our parent to enforce "no matches".
  */
-function handleCount(join: CteJoinTable, count: ParsedValueFilter<number>): ColumnCondition | undefined {
+export function handleCount(join: CteJoinTable, count: ParsedValueFilter<number>): ColumnCondition | undefined {
   const { alias } = join;
   const isZeroOrNull = count && ((count.kind === "eq" && count.value === 0) || count.kind === "is-null");
   if (isZeroOrNull) {
@@ -1635,46 +1315,4 @@ function handleCount(join: CteJoinTable, count: ParsedValueFilter<number>): Colu
     };
     join.outer = false;
   }
-}
-
-function deepestCommonCte(ctePaths: string[][]): string | undefined {
-  // First turn them all into `books`, `books/reviews/ratings`, etc.
-  const paths = ctePaths.map((path) => path.join("/"));
-  // Then find the longest common prefix
-  const prefix = longestCommonPrefix(paths);
-  if (!prefix) return undefined;
-  const aliases = prefix.split("/");
-  return aliases[aliases.length - 1];
-}
-
-function longestCommonPrefix(paths: string[]): string | undefined {
-  if (paths.length === 0) return undefined;
-  // Function to find the common prefix between two strings
-  const commonPrefix = (str1: string, str2: string): string => {
-    let i = 0;
-    while (i < str1.length && i < str2.length && str1[i] === str2[i]) i++;
-    return str1.substring(0, i);
-  };
-  // Initialize the prefix with the first string
-  let prefix = paths[0];
-  // Iterate through the paths to find the common prefix
-  for (let i = 1; i < paths.length; i++) {
-    prefix = commonPrefix(prefix, paths[i]);
-    if (prefix === "") return undefined;
-  }
-  return prefix;
-}
-
-// Collect all the aliases used in this condition
-function findUsedAliases(c: ParsedExpressionCondition): string[] {
-  const used: Set<string> = new Set();
-  visitFilter(c, {
-    visitCond(c: ColumnCondition) {
-      used.add(c.alias);
-    },
-    visitRaw(c: RawCondition) {
-      for (const a of c.aliases) used.add(a);
-    },
-  });
-  return [...used];
 }

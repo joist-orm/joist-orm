@@ -22,6 +22,7 @@ export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner";
 export * from "./Aliases";
 export { BaseEntity, getInstanceData, setCurrentlyInstantiatingEntity } from "./BaseEntity";
+export { ConditionBuilder } from "./ConditionBuilder";
 export { Entity, IdType, isEntity } from "./Entity";
 export * from "./EntityFields";
 export * from "./EntityFilter";

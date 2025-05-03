@@ -4,8 +4,7 @@ import { FilterAndSettings } from "../EntityFilter";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
-import { buildRawQuery } from "../drivers/buildRawQuery";
-import { cleanSql, fail } from "../utils";
+import { fail } from "../utils";
 import {
   buildValuesCte,
   collectAndReplaceArgs,
@@ -82,8 +81,7 @@ export function findCountDataLoader<T extends Entity>(
         orderBys: [],
       };
 
-      const { sql, bindings } = buildRawQuery(query2, {});
-      const rows = await em.driver.executeQuery(em, cleanSql(sql), bindings);
+      const rows = await em.driver.executeFind(em, query2, {});
 
       // Make an empty array for each batched query, per the dataloader contract
       const results = queries.map(() => 0);

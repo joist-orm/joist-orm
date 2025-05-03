@@ -31,7 +31,7 @@ export function loadDataLoader<T extends Entity>(
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
     // Inject preloading joins into the query if enabled
     const { preloader } = getEmInternalApi(em);
-    const preloadHydrator = preloader && preloader.addPreloading(em, meta, buildHintTree(loads), query);
+    const preloadHydrator = preloader && preloader.addPreloading(meta, buildHintTree(loads), query);
     // Skip maybeAddOrderBy?
     // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
     const rows = await em.driver.executeFind(em, query, {});

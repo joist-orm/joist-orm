@@ -1,7 +1,6 @@
 import {
   AliasAssigner,
   Entity,
-  EntityManager,
   EntityMetadata,
   EntityOrId,
   HintNode,
@@ -34,7 +33,6 @@ export class JsonAggregatePreloader implements PreloadPlugin {
   }
 
   addPreloading<T extends Entity>(
-    em: EntityManager,
     meta: EntityMetadata,
     root: HintNode<T>,
     query: ParsedFindQuery,
@@ -43,7 +41,7 @@ export class JsonAggregatePreloader implements PreloadPlugin {
 
     // Get the existing primary alias
     const alias = getTables(query)[0].alias;
-    const joins = addJoins(em, getAlias, { tree: root, alias, meta }, root, alias, meta);
+    const joins = calcLateralJoins(getAlias, { tree: root, alias, meta }, root, alias, meta);
     // If there are no sql-based preload in the hints, just return
     if (joins.length === 0) {
       return undefined;
@@ -64,17 +62,12 @@ export class JsonAggregatePreloader implements PreloadPlugin {
     };
   }
 
-  getPreloadJoins<T extends Entity>(
-    em: EntityManager,
-    meta: EntityMetadata,
-    root: HintNode<T>,
-    query: ParsedFindQuery,
-  ): JoinResult[] {
+  getPreloadJoins<T extends Entity>(meta: EntityMetadata, root: HintNode<T>, query: ParsedFindQuery): JoinResult[] {
     const { getAlias } = new AliasAssigner(query);
 
     // Get the existing primary alias
     const alias = getTables(query)[0].alias;
-    const joins = addJoins(em, getAlias, { tree: root, alias, meta }, root, alias, meta);
+    const joins = calcLateralJoins(getAlias, { tree: root, alias, meta }, root, alias, meta);
     // If there are no sql-based preload in the hints, just return
 
     // Adapt our json aggregate joins to the higher-level JoinResult
@@ -108,9 +101,11 @@ type AggregateJsonHydrator = (root: Entity, parent: Entity, arrays: unknown[][])
  * https://sqlfum.pt/?n=60&indent=2&spaces=1&simplify=1&align=0&case=lower&sql=c2VsZWN0IGEuaWQsIGIuXyBhcyBiLCBjMS5fIGFzIGMxLCBhMS5fIGFzIGExIGZyb20gYXV0aG9ycyBhIGNyb3NzIGpvaW4gbGF0ZXJhbCAoIHNlbGVjdCBqc29uX2FnZyhqc29uX2J1aWxkX2FycmF5KGIuaWQsIGIudGl0bGUsIGIuIm9yZGVyIiwgYi5kZWxldGVkX2F0LCBiLmNyZWF0ZWRfYXQsIGIudXBkYXRlZF9hdCwgYi5hdXRob3JfaWQsIGJyLl8pKSBhcyBfIGZyb20gYm9va3MgYiBjcm9zcyBqb2luIGxhdGVyYWwgKCBzZWxlY3QganNvbl9hZ2coanNvbl9idWlsZF9hcnJheShici5pZCwgYnIucmF0aW5nLCBici5pc19wdWJsaWMsIGJyLmlzX3Rlc3QsIGJyLmNyZWF0ZWRfYXQsIGJyLnVwZGF0ZWRfYXQsIGJyLmJvb2tfaWQsIGMuXykpIGFzIF8gZnJvbSBib29rX3Jldmlld3MgYnIgY3Jvc3Mgam9pbiBsYXRlcmFsICggc2VsZWN0IGpzb25fYWdnKGpzb25fYnVpbGRfYXJyYXkoYy5pZCwgYy50ZXh0LCBjLmNyZWF0ZWRfYXQsIGMudXBkYXRlZF9hdCwgYy51c2VyX2lkLCBjLnBhcmVudF9hdXRob3JfaWQsIGMucGFyZW50X2Jvb2tfaWQsIGMucGFyZW50X2Jvb2tfcmV2aWV3X2lkLCBjLnBhcmVudF9wdWJsaXNoZXJfaWQpKSBhcyBfIGZyb20gY29tbWVudHMgYyB3aGVyZSBjLnBhcmVudF9ib29rX3Jldmlld19pZCA9IGJyLmlkICkgYyB3aGVyZSBici5ib29rX2lkID0gYi5pZCApIGJyIHdoZXJlIGIuYXV0aG9yX2lkID0gYS5pZCApIGIgY3Jvc3Mgam9pbiBsYXRlcmFsICggc2VsZWN0IGpzb25fYWdnKGpzb25fYnVpbGRfYXJyYXkoYzEuaWQsIGMxLnRleHQsIGMxLmNyZWF0ZWRfYXQsIGMxLnVwZGF0ZWRfYXQsIGMxLnVzZXJfaWQsIGMxLnBhcmVudF9hdXRob3JfaWQsIGMxLnBhcmVudF9ib29rX2lkLCBjMS5wYXJlbnRfYm9va19yZXZpZXdfaWQsIGMxLnBhcmVudF9wdWJsaXNoZXJfaWQpKSBhcyBfIGZyb20gY29tbWVudHMgYzEgd2hlcmUgYzEucGFyZW50X2F1dGhvcl9pZCA9IGEuaWQgKSBjMSBjcm9zcyBqb2luIGxhdGVyYWwgKCBzZWxlY3QganNvbl9hZ2coanNvbl9idWlsZF9hcnJheShhMS5pZCwgYTEuZmlyc3RfbmFtZSwgYTEubGFzdF9uYW1lLCBhMS5zc24sIGExLmluaXRpYWxzLCBhMS5udW1iZXJfb2ZfYm9va3MsIGExLmJvb2tfY29tbWVudHMsIGExLmlzX3BvcHVsYXIsIGExLmFnZSwgYTEuZ3JhZHVhdGVkLCBhMS5uaWNrX25hbWVzLCBhMS53YXNfZXZlcl9wb3B1bGFyLCBhMS5hZGRyZXNzLCBhMS5idXNpbmVzc19hZGRyZXNzLCBhMS5xdW90ZXMsIGExLm51bWJlcl9vZl9hdG9tcywgYTEuZGVsZXRlZF9hdCwgYTEubnVtYmVyX29mX3B1YmxpY19yZXZpZXdzLCBhMS4ibnVtYmVyT2ZQdWJsaWNSZXZpZXdzMiIsIGExLnRhZ3Nfb2ZfYWxsX2Jvb2tzLCBhMS5jcmVhdGVkX2F0LCBhMS51cGRhdGVkX2F0LCBhMS5mYXZvcml0ZV9zaGFwZSwgYTEuZmF2b3JpdGVfY29sb3JzLCBhMS5tZW50b3JfaWQsIGExLmN1cnJlbnRfZHJhZnRfYm9va19pZCwgYTEuZmF2b3JpdGVfYm9va19pZCwgYTEucHVibGlzaGVyX2lkKSkgYXMgXyBmcm9tIGF1dGhvcnMgYTEgd2hlcmUgYTEuaWQgPSBhLm1lbnRvcl9pZCApIGExIHdoZXJlIGEuaWQgPSAxOw%3D%3D
  */
 
-/** Given a `parent` like Author, and a hint of `{ books: ..., comments: ... }`, create joins. */
-function addJoins<I extends EntityOrId>(
-  em: EntityManager,
+/**
+ * Given a `parent` like Author, and a hint of `{ books: ..., comments: ... }`, create `CROSS JOIN LATERAL`s
+ * that will pull in the `books` & `comments` children.
+ */
+function calcLateralJoins<I extends EntityOrId>(
   getAlias: (tableName: string) => string,
   root: { tree: HintNode<I>; alias: string; meta: EntityMetadata },
   tree: HintNode<I>,
@@ -131,7 +126,7 @@ function addJoins<I extends EntityOrId>(
       const otherAlias = `_${getAlias(otherMeta.tableName)}`;
 
       // Do the recursion up-front, so we can work it into our own join/hydrator
-      const subJoins = addJoins(em, getAlias, root, subTree, otherAlias, otherMeta);
+      const subJoins = calcLateralJoins(getAlias, root, subTree, otherAlias, otherMeta);
 
       // Get all fields with serdes and flatten out the columns
       const columns = Object.values(otherMeta.allFields)
@@ -195,6 +190,8 @@ function addJoins<I extends EntityOrId>(
       `;
 
       const hydrator: AggregateJsonHydrator = (root, parent, arrays) => {
+        const { em } = root;
+
         // If we had overlapping load hints, i.e. `author.books` for [a1, a2] and `author.comments` for [a1], and
         // we're processing the arrays of comments, but for a root author like `a2` that didn't ask for our load
         // hint, then skip it to keep the relation unloaded.

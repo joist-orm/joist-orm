@@ -76,7 +76,7 @@ export function populateDataLoader(
               },
               orderBys: [],
             };
-            const hydrator = preloader.addPreloading(em, meta, layerNode, query);
+            const hydrator = preloader.addPreloading(meta, layerNode, query);
             // If we're selecting from small_publishers, join in our base class in case
             // the preloader wants to join on a column like `publishers.group_id`
             addTablePerClassJoinsAndClassTag(query, meta, alias, false);

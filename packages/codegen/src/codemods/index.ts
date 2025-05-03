@@ -6,6 +6,7 @@ import { v1_143_0_rename_derived_async_property } from "./v1_143_0_rename_derive
 import { v1_148_0_move_codegen_files } from "./v1_148_0_move_codegen_files";
 import { v1_151_0_rename_derived_reference } from "./v1_151_0_rename_derived_async_reference";
 import { v1_226_0_rename_current_txn_knex } from "./v1_226_0_rename_current_txn_knex";
+import { v1_245_0_upsert_rename } from "./v1_245_0_upsert_rename";
 
 export async function maybeRunTransforms(config: Config): Promise<void> {
   const { default: inquirer } = await import("inquirer");
@@ -74,5 +75,6 @@ function findApplyableCodemods(prevVersion: string): Codemod[] {
     v1_148_0_move_codegen_files,
     v1_151_0_rename_derived_reference,
     v1_226_0_rename_current_txn_knex,
+    v1_245_0_upsert_rename,
   ].filter((t) => semver.lt(prevVersion, t.version));
 }

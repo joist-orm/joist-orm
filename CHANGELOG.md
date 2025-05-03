@@ -1,3 +1,10 @@
+## [1.245.1](https://github.com/joist-orm/joist-orm/compare/v1.245.0...v1.245.1) (2025-05-03)
+
+
+### Bug Fixes
+
+* Register upsert codemod. ([#1485](https://github.com/joist-orm/joist-orm/issues/1485)) ([2dc9e0e](https://github.com/joist-orm/joist-orm/commit/2dc9e0ed0ae705a180bb011088c27fb272182485))
+
 # [1.245.0](https://github.com/joist-orm/joist-orm/compare/v1.244.3...v1.245.0) (2025-05-02)
 
 

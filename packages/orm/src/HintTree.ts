@@ -14,7 +14,8 @@ export type HintNode<E extends EntityOrId> = {
   entities: Set<E>;
   /** A runtime indication of the type of `E`. */
   entitiesKind: "instances" | "ids" | "none";
-  subHints: { [key: string]: HintNode<E> };
+  /** The hints to preload at this node, i.e. if `E` is `Author`, the `books: "reviews` or just `comments: {}`. */
+  hints: { [key: string]: HintNode<E> };
 };
 
 /**
@@ -29,9 +30,9 @@ export type HintNode<E extends EntityOrId> = {
  *  {
  *    authors: {
  *      entities: [p1, p2, p3],
- *      subHints: {
- *        books: { entities: [p1, p2], subHints: {} },
- *        reviews: { entities: [p3], subHints: {} },
+ *      hints: {
+ *        books: { entities: [p1, p2], hints: {} },
+ *        reviews: { entities: [p3], hints: {} },
  *      }
  *    }
  *  }
@@ -47,19 +48,19 @@ export function buildHintTree<E extends EntityOrId>(
     // This might be a top-level LoadHint string[] like ["books"]
     const isLoadHint = hints.length > 0 && typeof hints[0] === "string";
     if (isLoadHint) {
-      const root: HintNode<E> = { entitiesKind: "none", entities: new Set(), subHints: {} };
+      const root: HintNode<E> = { entitiesKind: "none", entities: new Set(), hints: {} };
       addHintNode(root, undefined, hints as LoadHint<any>);
       return root;
     } else {
       const entitiesKind = typeof hints[0].entity === "string" ? ("ids" as const) : ("instances" as const);
-      const root: HintNode<E> = { entitiesKind, entities: new Set(), subHints: {} };
+      const root: HintNode<E> = { entitiesKind, entities: new Set(), hints: {} };
       for (const { entity, hint } of hints) {
         addHintNode(root, entity, hint);
       }
       return root;
     }
   } else {
-    const root: HintNode<E> = { entitiesKind: "none", entities: new Set(), subHints: {} };
+    const root: HintNode<E> = { entitiesKind: "none", entities: new Set(), hints: {} };
     addHintNode(root, undefined, hints as LoadHint<any>);
     return root;
   }
@@ -71,7 +72,7 @@ function addHintNode<E extends EntityOrId>(node: HintNode<E>, entity: E | undefi
   if (entity) node.entities.add(entity);
   if (hint) {
     for (const [key, nestedHint] of Object.entries(normalizeHint(hint))) {
-      const child = (node.subHints[key] ??= { entitiesKind: node.entitiesKind, entities: new Set(), subHints: {} });
+      const child = (node.hints[key] ??= { entitiesKind: node.entitiesKind, entities: new Set(), hints: {} });
       addHintNode(child, entity, nestedHint);
     }
   }

@@ -115,7 +115,7 @@ function calcLateralJoins<I extends EntityOrId>(
   const results: AggregateJoinResult[] = [];
 
   // Join in SQL-able hints from parent
-  Object.entries(tree.subHints).forEach(([key, subTree]) => {
+  Object.entries(tree.hints).forEach(([key, subTree]) => {
     const field = parentMeta.allFields[key];
     // AsyncProperties don't have fields, which is fine, skip for now...
     if (field && canPreload(parentMeta, field)) {

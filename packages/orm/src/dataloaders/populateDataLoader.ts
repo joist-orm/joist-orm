@@ -50,7 +50,7 @@ export function populateDataLoader(
         const { preloader } = getEmInternalApi(em);
         // We may not have a layerMeta if we're going through non-field properties
         if (preloader && layerMeta) {
-          const preloadThisLayer = Object.entries(layerNode.subHints).some(([key, hint]) => {
+          const preloadThisLayer = Object.entries(layerNode.hints).some(([key, hint]) => {
             return [...hint.entities].some(
               (entity: any) => !!entity[key] && !entity[key].isLoaded && !entity[key].isPreloaded,
             );
@@ -90,7 +90,7 @@ export function populateDataLoader(
         }
 
         // One breadth-width pass (only 1 level deep, our 2nd pass recurses) to ensure each relation is loaded
-        const loadPromises = Object.entries(layerNode.subHints).flatMap(([key, tree]) => {
+        const loadPromises = Object.entries(layerNode.hints).flatMap(([key, tree]) => {
           return [...tree.entities].map((entity) => {
             const relation = getRelationFromMaybePolyKey(entity, key);
 
@@ -125,8 +125,8 @@ export function populateDataLoader(
         // i.e. populateLayer(...reviews...) & populateLayer(...comments...)
         return Promise.all(loadPromises).then(() => {
           // Each of these keys will be fanning out to a new entity, like book -> reviews or book -> comments
-          const nestedLoadPromises = Object.entries(layerNode.subHints).map(([key, tree]) => {
-            if (Object.keys(tree.subHints).length === 0) return;
+          const nestedLoadPromises = Object.entries(layerNode.hints).map(([key, tree]) => {
+            if (Object.keys(tree.hints).length === 0) return;
 
             // Get the children we found, i.e. [a1, a2, a3] -> all of their books
             const childrenByParent = new Map(
@@ -146,7 +146,7 @@ export function populateDataLoader(
               node.entities = new Set(
                 Array.from(node.entities).flatMap((entity) => childrenByParent.get(entity) ?? []),
               );
-              Object.values(node.subHints).forEach((node) => rewrite(node));
+              Object.values(node.hints).forEach((node) => rewrite(node));
             }
 
             rewrite(tree);

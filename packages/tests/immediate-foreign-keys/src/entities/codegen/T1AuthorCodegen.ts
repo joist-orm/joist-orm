@@ -45,6 +45,7 @@ import {
   T1Book,
   type T1BookId,
   t1BookMeta,
+  type T1BookOrder,
 } from "../entities";
 
 export type T1AuthorId = Flavor<number, "T1Author">;
@@ -79,6 +80,7 @@ export interface T1AuthorGraphQLFilter {
 export interface T1AuthorOrder {
   id?: OrderBy;
   firstName?: OrderBy;
+  t1Books?: T1BookOrder;
 }
 
 export interface T1AuthorFactoryExtras {

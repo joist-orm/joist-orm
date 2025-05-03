@@ -49,6 +49,7 @@ import {
   Critic,
   type CriticId,
   criticMeta,
+  type CriticOrder,
   type Entity,
   EntityManager,
   Image,
@@ -68,6 +69,7 @@ import {
   User,
   type UserId,
   userMeta,
+  type UserOrder,
 } from "../entities";
 
 export type LargePublisherId = Flavor<string, "Publisher">;
@@ -121,6 +123,8 @@ export interface LargePublisherOrder extends PublisherOrder {
   country?: OrderBy;
   rating?: OrderBy;
   spotlightAuthor?: AuthorOrder;
+  critics?: CriticOrder;
+  users?: UserOrder;
 }
 
 export interface LargePublisherFactoryExtras {

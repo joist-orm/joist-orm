@@ -57,6 +57,7 @@ import {
   TaskItem,
   type TaskItemId,
   taskItemMeta,
+  type TaskItemOrder,
   taskMeta,
   TaskNew,
   type TaskNewId,
@@ -163,6 +164,8 @@ export interface TaskOrder {
   updatedAt?: OrderBy;
   type?: OrderBy;
   copiedFrom?: TaskOrder;
+  copiedTo?: TaskOrder;
+  taskTaskItems?: TaskItemOrder;
 }
 
 export interface TaskFactoryExtras {

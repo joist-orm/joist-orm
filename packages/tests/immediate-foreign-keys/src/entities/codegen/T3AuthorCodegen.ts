@@ -88,6 +88,7 @@ export interface T3AuthorOrder {
   id?: OrderBy;
   firstName?: OrderBy;
   favoriteBook?: T3BookOrder;
+  t3Books?: T3BookOrder;
 }
 
 export interface T3AuthorFactoryExtras {

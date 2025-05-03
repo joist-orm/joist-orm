@@ -88,6 +88,7 @@ export interface T4AuthorOrder {
   id?: OrderBy;
   firstName?: OrderBy;
   favoriteBook?: T4BookOrder;
+  t4Books?: T4BookOrder;
 }
 
 export interface T4AuthorFactoryExtras {

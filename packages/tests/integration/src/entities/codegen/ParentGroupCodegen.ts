@@ -40,6 +40,7 @@ import {
   ChildGroup,
   type ChildGroupId,
   childGroupMeta,
+  type ChildGroupOrder,
   type Entity,
   EntityManager,
   newParentGroup,
@@ -48,6 +49,7 @@ import {
   ParentItem,
   type ParentItemId,
   parentItemMeta,
+  type ParentItemOrder,
 } from "../entities";
 
 export type ParentGroupId = Flavor<string, "ParentGroup">;
@@ -95,6 +97,8 @@ export interface ParentGroupOrder {
   name?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  childGroups?: ChildGroupOrder;
+  parentItems?: ParentItemOrder;
 }
 
 export interface ParentGroupFactoryExtras {

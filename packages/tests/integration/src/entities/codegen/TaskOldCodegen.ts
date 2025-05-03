@@ -45,6 +45,7 @@ import {
   Comment,
   type CommentId,
   commentMeta,
+  type CommentOrder,
   type Entity,
   EntityManager,
   newTaskOld,
@@ -60,6 +61,7 @@ import {
   TaskItem,
   type TaskItemId,
   taskItemMeta,
+  type TaskItemOrder,
   TaskOld,
   taskOldMeta,
   type TaskOpts,
@@ -126,6 +128,10 @@ export interface TaskOldOrder extends TaskOrder {
   specialOldField?: OrderBy;
   parentOldTask?: TaskOldOrder;
   copiedFrom?: TaskOldOrder;
+  comments?: CommentOrder;
+  oldTaskTaskItems?: TaskItemOrder;
+  tasks?: TaskOldOrder;
+  copiedTo?: TaskOldOrder;
 }
 
 export interface TaskOldFactoryExtras {

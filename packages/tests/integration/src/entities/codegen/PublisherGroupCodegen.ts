@@ -54,6 +54,7 @@ import {
   publisherGroupMeta,
   type PublisherId,
   publisherMeta,
+  type PublisherOrder,
   SmallPublisher,
   SmallPublisherGroup,
   type SmallPublisherId,
@@ -118,6 +119,7 @@ export interface PublisherGroupOrder {
   numberOfBookReviews?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  publishers?: PublisherOrder;
 }
 
 export interface PublisherGroupFactoryExtras {

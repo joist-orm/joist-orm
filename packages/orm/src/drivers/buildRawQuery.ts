@@ -1,7 +1,7 @@
-import { ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
+import { getTables, ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { assertNever } from "../utils";
-import { buildWhereClause } from "./buildUtils";
+import { buildWhereClause, deepFindCtes } from "./buildUtils";
 
 /**
  * Transforms `ParsedFindQuery` into a raw SQL string.
@@ -11,65 +11,84 @@ import { buildWhereClause } from "./buildUtils";
  */
 export function buildRawQuery(
   parsed: ParsedFindQuery,
-  settings: { limit?: number; offset?: number },
+  settings: { limit?: number; offset?: number; isTopLevel?: boolean },
 ): { sql: string; bindings: readonly any[] } {
   const { limit, offset } = settings;
 
-  const primary = parsed.tables.find((t) => t.join === "primary")!;
-
-  // If we're doing o2m joins, add a `DISTINCT` clause to avoid duplicates
-  const needsDistinct =
-    parsed.tables.some((t) => t.join === "outer" && t.distinct !== false) &&
-    // If this is a `findCount`, it will rewrite the `select` to have its own distinct
-    !parsed.selects.find((s) => s.startsWith("count("));
-
   let sql = "";
   const bindings: any[] = [];
+
+  const isTopLevel = settings.isTopLevel ?? true;
 
   if (parsed.cte) {
     sql += parsed.cte.sql + " ";
     bindings.push(...parsed.cte.bindings);
   }
 
-  sql += "SELECT ";
-  parsed.selects.forEach((s, i) => {
-    const maybeDistinct = i === 0 && needsDistinct ? buildDistinctOn(parsed, primary) : "";
-    const maybeComma = i === parsed.selects.length - 1 ? "" : ", ";
-    sql += maybeDistinct + s + maybeComma;
-  });
-
-  // If we're doing "select distinct" for o2m joins, then all order bys must be selects
-  if (needsDistinct && parsed.orderBys.length > 0) {
-    for (const { alias, column } of parsed.orderBys) {
-      sql += `, ${kqDot(alias, column)}`;
+  // Pull all CTEs up to the top
+  if (isTopLevel) {
+    let i = 0;
+    for (const cte of deepFindCtes(parsed)) {
+      const commaOrWith = i === 0 ? "WITH" : ",";
+      const { sql: subQ, bindings: subB } = buildRawQuery(cte.query, { isTopLevel: false });
+      sql += `${commaOrWith} ${kq(cte.alias)} AS (${subQ}) `;
+      bindings.push(...subB);
+      i++;
     }
   }
 
+  sql += "SELECT ";
+  parsed.selects.forEach((s, i) => {
+    const maybeComma = i === parsed.selects.length - 1 ? "" : ", ";
+    if (typeof s === "string") {
+      sql += s + maybeComma;
+    } else {
+      sql += s.sql + maybeComma;
+      bindings.push(...s.bindings);
+    }
+  });
+
   // Make sure the primary is first
+  const [primary] = getTables(parsed);
   sql += ` FROM ${as(primary)}`;
 
   // Then the joins
   for (const t of parsed.tables) {
-    if (t.join === "inner") {
+    if (t.join === "primary") {
+      // handled above
+    } else if (t.join === "inner") {
       sql += ` JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
     } else if (t.join === "outer") {
       sql += ` LEFT OUTER JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
-    } else if (t.join === "primary") {
-      // handled above
+    } else if (t.join === "cte") {
+      sql += `${t.outer ? " LEFT OUTER" : ""} JOIN ${t.alias} ON ${t.col1} = ${t.col2}`;
+    } else if (t.join === "lateral") {
+      const { sql: subQ, bindings: subB } = buildRawQuery(t.query, {});
+      sql += ` CROSS JOIN LATERAL (${subQ}) AS ${kq(t.alias)}`;
+      bindings.push(...subB);
+    } else if (t.join === "cross") {
+      sql += ` CROSS JOIN ${as(t)}`;
     } else {
       assertNever(t.join);
     }
-  }
-
-  if (parsed.lateralJoins) {
-    sql += " " + parsed.lateralJoins.joins.join("\n");
-    bindings.push(...parsed.lateralJoins.bindings);
   }
 
   if (parsed.condition) {
     const where = buildWhereClause(parsed.condition, true);
     if (where) {
       sql += " WHERE " + where[0];
+      bindings.push(...where[1]);
+    }
+  }
+
+  if (parsed.groupBys && parsed.groupBys.length > 0) {
+    sql += " GROUP BY " + parsed.groupBys.map((ob) => kqDot(ob.alias, ob.column)).join(", ");
+  }
+
+  if (parsed.having) {
+    const where = buildWhereClause(parsed.having, true);
+    if (where) {
+      sql += " HAVING " + where[0];
       bindings.push(...where[1]);
     }
   }
@@ -88,15 +107,6 @@ export function buildRawQuery(
   }
 
   return { sql, bindings };
-}
-
-function buildDistinctOn(parsed: ParsedFindQuery, primary: ParsedTable): string {
-  const columns = [
-    // If we have an order by, it needs to be included in the DISTINCT ON
-    ...parsed.orderBys.map((ob) => kqDot(ob.alias, ob.column)),
-    kqDot(primary.alias, "id"),
-  ];
-  return `DISTINCT ON (${columns.join(", ")}) `;
 }
 
 const as = (t: ParsedTable) => `${kq(t.table)} AS ${kq(t.alias)}`;

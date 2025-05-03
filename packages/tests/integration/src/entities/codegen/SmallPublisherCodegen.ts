@@ -67,6 +67,7 @@ import {
   User,
   type UserId,
   userMeta,
+  type UserOrder,
 } from "../entities";
 
 export type SmallPublisherId = Flavor<string, "Publisher">;
@@ -130,6 +131,8 @@ export interface SmallPublisherOrder extends PublisherOrder {
   allAuthorNames?: OrderBy;
   selfReferential?: SmallPublisherOrder;
   group?: SmallPublisherGroupOrder;
+  smallPublishers?: SmallPublisherOrder;
+  users?: UserOrder;
 }
 
 export interface SmallPublisherFactoryExtras {

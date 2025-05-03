@@ -46,6 +46,7 @@ import {
   ChildItem,
   type ChildItemId,
   childItemMeta,
+  type ChildItemOrder,
   childMeta,
   type ChildOrder,
   type Entity,
@@ -109,6 +110,7 @@ export interface ChildGroupOrder {
   updatedAt?: OrderBy;
   childGroup?: ChildOrder;
   parentGroup?: ParentGroupOrder;
+  childItems?: ChildItemOrder;
 }
 
 export interface ChildGroupFactoryExtras {

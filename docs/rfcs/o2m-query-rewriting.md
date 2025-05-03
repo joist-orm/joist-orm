@@ -91,3 +91,22 @@ There is an `OR` but the conditions across b1/c1
 * For a given condition, be able to ask it the aliases it uses
   * Visit conditions, collect aliases 
 
+
+
+---
+
+* each node will have a set of aliases that it uses
+  - simple nodes are just the immediately alias 
+  - `br.rating.eq` -> `br`
+  - `b.title.eq` -> `b`
+  - complex nodes are the union of their children
+  - `{ and: [b.title, b.title] }` -> `b`
+  - `{ or: [b.title, br.title] }` -> [`b`, `br`]
+* each node might be within nested CTE joins
+  * `br` -> within `[reviews, books]`
+  * `publisher` -> within `[]`
+* a node like `{ and: [comment, book, book review] }` needs into two condition groups, `br` (takes `b`) and `c`
+  * keep a list of existing condition groups, when find `book`, does any CG claim it?
+  * keep a list of existing condition groups, when find `book review`, any need takeover `book`? 
+  * if this is an `AND`, then yes
+* if a node touches `N` CTEs, it has to stay top-level, `{ or: [book, comment] }`

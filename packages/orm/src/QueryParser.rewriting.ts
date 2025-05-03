@@ -18,7 +18,7 @@ export function rewriteTopLevelCondition(aliases: AliasAssigner, condition: Pars
   while (todo.length > 0) {
     const { condition, isTopLevelAnd } = todo.pop()!;
 
-    // Only top-level ands can completely push down their conditions
+    // Only top-level ANDs can completely push down their conditions
     if (isTopLevelAnd && condition.kind === "exp" && condition.op === "and") {
       const { conditions: cc } = condition;
       for (let i = cc.length - 1; i >= 0; i--) {

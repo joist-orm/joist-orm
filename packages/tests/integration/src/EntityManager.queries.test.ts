@@ -2876,18 +2876,30 @@ describe("EntityManager.queries", () => {
       // Given one author that matches the 1st OR
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
+      await insertBookReview({ rating: 3, book_id: 1 });
       // And another author that matches the 2nd OR
       await insertAuthor({ first_name: "a2" });
       await insertBook({ title: "b2", order: 2, author_id: 2 });
       await insertBookReview({ rating: 3, book_id: 2 });
-      // And one author that matches either
+      // And one author that matches neither
       await insertAuthor({ first_name: "a3" });
+      await insertBook({ title: "b3", order: 3, author_id: 3 });
+      await insertBookReview({ rating: 3, book_id: 3 });
       const em = newEntityManager();
       const [b, br] = aliases(Book, BookReview);
       const authors = await em.find(
         Author,
         { books: { as: b, reviews: br } },
-        { conditions: { or: [b.title.eq("b1"), br.rating.eq(3)] } },
+        {
+          conditions: {
+            or: [
+              // A condition that needs br and b eval'd together
+              { and: [b.title.eq("b1"), br.rating.eq(3)] },
+              // A condition that needs br and b eval'd together
+              { and: [b.title.eq("b2"), br.rating.eq(3)] },
+            ],
+          },
+        },
       );
       // Then we return the two authors
       expect(authors.length).toEqual(2);

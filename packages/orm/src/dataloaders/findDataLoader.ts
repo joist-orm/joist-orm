@@ -17,12 +17,11 @@ import {
   parseFindQuery,
 } from "../QueryParser";
 import { visitConditions } from "../QueryVisitor";
-import { buildRawQuery } from "../drivers/buildRawQuery";
 import { kq, kqDot } from "../keywords";
 import { LoadHint } from "../loadHints";
 import { maybeRequireTemporal } from "../temporal";
 import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "../temporalMappers";
-import { assertNever, cleanSql } from "../utils";
+import { assertNever } from "../utils";
 
 export function findDataLoader<T extends Entity>(
   em: EntityManager,
@@ -121,8 +120,7 @@ export function findDataLoader<T extends Entity>(
         query.tables.push(...preloadJoins.map((j) => j.join));
       }
 
-      const { sql, bindings } = buildRawQuery(query, { limit: em.entityLimit });
-      const rows = await em.driver.executeQuery(em, cleanSql(sql), bindings);
+      const rows = await em.driver.executeFind(em, query, { limit: em.entityLimit });
       ensureUnderLimit(em, rows);
 
       const entities = em.hydrate(type, rows);

@@ -57,7 +57,7 @@ export function findDataLoader<T extends Entity>(
         const query = parseFindQuery(meta, where, opts);
         // Maybe add preload joins
         const { preloader } = getEmInternalApi(em);
-        const preloadHydrator = preloader && hint && preloader.addPreloading(em, meta, buildHintTree(hint), query);
+        const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
         const rows = await em.driver.executeFind(em, query, opts);
         ensureUnderLimit(em, rows);
         const entities = em.hydrate(type, rows);
@@ -100,7 +100,7 @@ export function findDataLoader<T extends Entity>(
       }
 
       const { preloader } = getEmInternalApi(em);
-      const preloadJoins = preloader && hint && preloader.getPreloadJoins(em, meta, buildHintTree(hint), query);
+      const preloadJoins = preloader && hint && preloader.getPreloadJoins(meta, buildHintTree(hint), query);
       if (preloadJoins) {
         selects.push(
           ...preloadJoins.flatMap((j) =>

@@ -1,5 +1,4 @@
 import { Entity } from "../Entity";
-import { EntityManager } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { EntityOrId, HintNode } from "../HintTree";
 import { LoadHint, NestedLoadHint } from "../loadHints";
@@ -41,7 +40,6 @@ export interface PreloadPlugin {
    * cache populated to make the relation `.preload()` / `.load()` fast.
    */
   addPreloading<T extends Entity>(
-    em: EntityManager,
     meta: EntityMetadata,
     tree: HintNode<EntityOrId>,
     query: ParsedFindQuery,
@@ -57,7 +55,6 @@ export interface PreloadPlugin {
    * because it uses a complicated CTE + join strategy to do batching).
    */
   getPreloadJoins<T extends Entity>(
-    em: EntityManager,
     meta: EntityMetadata,
     tree: HintNode<EntityOrId>,
     query: ParsedFindQuery,

@@ -50,7 +50,7 @@ export function buildKnexQuery(
         query.crossJoin(asRaw(t));
         break;
       case "cte":
-        // Handled above
+        query.join(asRaw(t), knex.raw(t.col1) as any, knex.raw(t.col2));
         break;
       default:
         assertNever(t);

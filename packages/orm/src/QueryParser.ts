@@ -172,9 +172,9 @@ export function parseFindQuery(
     pruneJoins?: boolean;
     keepAliases?: string[];
     softDeletes?: "include" | "exclude";
-    // Let `addLateralJoin` pass in a shared `aliases` instance
+    // Let `addCteJoin` pass in a shared `aliases` instance
     aliases?: AliasAssigner;
-    // Let `addLateralJoin` pass in its existing alias for the subquery's primary table
+    // Let `addCteJoin` pass in its existing alias for the subquery's primary table
     alias?: string;
     ctes?: CteJoinTable[];
   } = {},
@@ -191,6 +191,7 @@ export function parseFindQuery(
   const getAlias = aliases.getAlias.bind(aliases);
   const isTopLevelQuery = opts.aliases === undefined;
 
+  // Similar to addTable, but for o2m and m2m that need to do GROUP BYs to avoid duplicates
   function addCteJoin(
     meta: EntityMetadata,
     alias: string,
@@ -217,6 +218,7 @@ export function parseFindQuery(
         : undefined,
     } = unparseFilter(filter, ef);
 
+    // I.e. join into `books` where `b.author_id = a.id`
     const join: CteJoinTable = { join: "cte", table: meta.tableName, query: undefined!, alias, col1, col2 };
     // We start out as optional/outer, and then are flipped to required/inner if we find a filter
     // Note it's important to set `outer: true` *before* we recurse into `parseFindQuery`, so that any
@@ -248,11 +250,9 @@ export function parseFindQuery(
     // If our join column is in a base table, col2 will be `sp_b0.foo_id`, but our alias will be just `sp`
     join.col2 = `${kq(parseAlias(col2).split("_")[0])}.${kq(parseColumn(col2))}`;
 
+    // Mark both our CTE join & any parent CTE joins as required
     const hasInlineConditions = deepFindConditions(subQuery.condition, true).length > 0;
-    if (hasInlineConditions) {
-      // Mark both our CTE join & any parent CTE joins
-      ctes.forEach((cte) => (cte.outer = false));
-    }
+    if (hasInlineConditions) ctes.forEach((cte) => (cte.outer = false));
 
     // If $count=0, this might mark the join as required...
     if (count) {
@@ -554,7 +554,7 @@ export function parseFindQuery(
             otherColumn = otherComponent.columnName;
           }
           // const condition = `${kqDot(alias, "id")} = ${kqDot(a + otherField.aliasSuffix, otherColumn)}`;
-          // table = addLateralJoin(
+          // table = addCteJoin(
           //   field.otherMetadata(),
           //   alias,
           //   a,
@@ -1187,7 +1187,7 @@ function unparseFilter(
 // // If there are complex conditions looking at our data, we don't want a "make sure at least one matched"
 // const usedByComplexCondition =
 //     selects.some((s) => typeof s === "object" && "aliases" in s && s.aliases.includes(alias)) ||
-//     // If we're the very 1st addLateralJoin, we don't push our selects into the next-up
+//     // If we're the very 1st addCteJoin, we don't push our selects into the next-up
 //     // lateral join, so instead look through the top-level condition
 //     (!opts.topLevelCondition &&
 //         deepFindConditions(cb.expressions[0], true).some((c) => {

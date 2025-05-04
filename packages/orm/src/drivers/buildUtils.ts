@@ -33,7 +33,7 @@ function buildRawCondition(raw: RawCondition): [string, any[]] {
 }
 
 /** Returns a tuple of ["EXISTS (subquery)", bindings]. */
-function buildExistsCondition(exists: ExistsCondition): [string, any[]] {
+function buildExistsCondition(exists: ExistsCondition): [string, readonly any[]] {
   const { sql, bindings } = buildRawQuery(exists.query, {});
   const operator = exists.not ? "NOT EXISTS" : "EXISTS";
   return [`${operator} (${sql})`, bindings];

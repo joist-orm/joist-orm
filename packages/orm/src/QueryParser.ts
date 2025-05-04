@@ -374,7 +374,6 @@ export function parseFindQuery(
             field.otherFieldName,
           );
         } else if (field.kind === "o2m") {
-          const a = getAlias(field.otherMetadata().tableName);
           const otherField = field.otherMetadata().allFields[field.otherFieldName];
           let otherColumn = otherField.serde!.columns[0].columnName;
           // If the other field is a poly, we need to find the right column
@@ -385,15 +384,26 @@ export function parseFindQuery(
               fail(`No poly component found for ${otherField.fieldName}`);
             otherColumn = otherComponent.columnName;
           }
-          addTable(
-            field.otherMetadata(),
-            a,
-            "outer",
-            kqDot(alias, "id"),
-            kqDot(a, otherColumn),
-            (ef.subFilter as any)[key],
-            field.otherFieldName,
-          );
+
+          // Create a subquery for the EXISTS condition
+          const subAlias = getAlias(field.otherMetadata().tableName);
+          const subQuery: ParsedFindQuery = {
+            selects: [kqDot(subAlias, "id")],
+            tables: [{ join: "primary", alias: subAlias, table: field.otherMetadata().tableName }],
+            orderBys: [],
+          };
+          // Add condition that links this table to the parent
+          const subCb = new ConditionBuilder();
+          subCb.addRawCondition({
+            aliases: [subAlias, alias],
+            condition: `${kqDot(subAlias, otherColumn)} = ${kqDot(alias, "id")}`,
+            pruneable: true,
+          });
+          // If there are nested conditions in the o2m hash, add them to the subquery
+          const subFilter = (ef.subFilter as any)[key];
+          subQuery.condition = subCb.toExpressionFilter();
+          // Add EXISTS condition to the main query
+          cb.addSimpleCondition({ kind: "exists", query: subQuery, not: false });
         } else if (field.kind === "m2m") {
           // Always join into the m2m table
           const ja = getAlias(field.joinTableName);

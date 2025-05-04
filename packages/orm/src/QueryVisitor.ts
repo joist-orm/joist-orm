@@ -50,6 +50,9 @@ export function visitFilter(pc: ParsedExpressionCondition, visitor: Visitor) {
         if (result) {
           pc.conditions[i] = result;
         }
+      } else if (c.kind === "exists") {
+        // Skip?
+        // Should push c.query onto todo?
       } else {
         assertNever(c);
       }
@@ -64,6 +67,9 @@ export function visitFilter(pc: ParsedExpressionCondition, visitor: Visitor) {
     if (result) {
       throw new Error("ParsedExpressionCondition overload not support mutating the condition");
     }
+  } else if (pc.kind === "exists") {
+    // Skip?
+    // Should push c.query onto todo?
   } else {
     assertNever(pc);
   }

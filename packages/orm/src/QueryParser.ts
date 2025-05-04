@@ -25,7 +25,7 @@ export interface ParsedExpressionFilter {
 }
 
 /** A condition or nested condition in a `ParsedExpressionFilter`. */
-export type ParsedExpressionCondition = ParsedExpressionFilter | ColumnCondition | RawCondition;
+export type ParsedExpressionCondition = ParsedExpressionFilter | ColumnCondition | RawCondition | ExistsCondition;
 
 export interface ColumnCondition {
   kind: "column";
@@ -51,6 +51,17 @@ export interface RawCondition {
   bindings: any[];
   /** Used to mark system-added conditions (like `LATERAL JOIN` conditions), which can be ignored when pruning unused joins. */
   pruneable: boolean;
+}
+
+/** An EXISTS condition that uses a subquery. */
+export interface ExistsCondition {
+  kind: "exists";
+  /** The subquery to use in the EXISTS clause. */
+  query: ParsedFindQuery;
+  /** Whether to negate the EXISTS condition (NOT EXISTS). */
+  not?: boolean;
+  /** Used to mark system-added conditions which can be ignored when pruning unused joins. */
+  pruneable?: boolean;
 }
 
 /** A marker condition for alias methods to indicate they should be skipped/pruned. */

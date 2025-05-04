@@ -1,8 +1,9 @@
 import { opToFn } from "../EntityGraphQLFilter";
 import { isDefined } from "../EntityManager";
-import { ColumnCondition, ParsedExpressionFilter, RawCondition } from "../QueryParser";
+import { ColumnCondition, ExistsCondition, ParsedExpressionFilter, RawCondition } from "../QueryParser";
 import { kqDot } from "../keywords";
-import { assertNever } from "../utils";
+import { assertNever, fail } from "../utils";
+import { buildRawQuery } from "./buildRawQuery";
 
 /** Returns a tuple of `["cond AND (cond OR cond)", bindings]`. */
 export function buildWhereClause(exp: ParsedExpressionFilter, topLevel = false): [string, any[]] | undefined {
@@ -14,7 +15,9 @@ export function buildWhereClause(exp: ParsedExpressionFilter, topLevel = false):
           ? buildCondition(c)
           : c.kind === "raw"
             ? buildRawCondition(c)
-            : fail(`Invalid condition ${c}`);
+            : c.kind === "exists"
+              ? buildExistsCondition(c)
+              : fail(`Invalid condition ${c}`);
     })
     .filter(isDefined);
   // If we don't have any conditions to combine, just return undefined;
@@ -27,6 +30,13 @@ export function buildWhereClause(exp: ParsedExpressionFilter, topLevel = false):
 
 function buildRawCondition(raw: RawCondition): [string, any[]] {
   return [raw.condition, raw.bindings];
+}
+
+/** Returns a tuple of ["EXISTS (subquery)", bindings]. */
+function buildExistsCondition(exists: ExistsCondition): [string, any[]] {
+  const { sql, bindings } = buildRawQuery(exists.query, {});
+  const operator = exists.not ? "NOT EXISTS" : "EXISTS";
+  return [`${operator} (${sql})`, bindings];
 }
 
 /** Returns a tuple of `["column op ?"`, bindings]`. */

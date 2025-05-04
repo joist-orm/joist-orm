@@ -25,11 +25,11 @@ export function visitConditions(query: ParsedFindQuery, visitor: Visitor): void 
   while (todo.length > 0) {
     const query = todo.pop()!;
     if (query.condition) visitFilter(query.condition, visitor);
-    // for (const table of query.tables) {
-    //   if (table.join === "lateral" || table.join === "cte") {
-    //     todo.push(table.query);
-    //   }
-    // }
+    for (const table of query.tables) {
+      if (table.join === "lateral") {
+        todo.push(table.query);
+      }
+    }
   }
 }
 

@@ -26,10 +26,7 @@ export function buildWhereClause(exp: ParsedExpressionFilter, topLevel = false):
 }
 
 function buildRawCondition(raw: RawCondition): [string, any[]] {
-  if (raw.bindings.length > 0) {
-    throw new Error("Not implemented");
-  }
-  return [raw.condition, []];
+  return [raw.condition, raw.bindings];
 }
 
 /** Returns a tuple of `["column op ?"`, bindings]`. */

@@ -1,3 +1,10 @@
+# [1.246.0](https://github.com/joist-orm/joist-orm/compare/v1.245.1...v1.246.0) (2025-05-04)
+
+
+### Features
+
+* Use cross join for em.find batching. ([#1486](https://github.com/joist-orm/joist-orm/issues/1486)) ([d8aefe0](https://github.com/joist-orm/joist-orm/commit/d8aefe0a166c24958a5c8021ac9cdb24c93f9e24))
+
 ## [1.245.1](https://github.com/joist-orm/joist-orm/compare/v1.245.0...v1.245.1) (2025-05-03)
 
 

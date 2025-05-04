@@ -3,11 +3,19 @@ import { aliasMgmt, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
+import { pruneUnusedJoins } from "./QueryParser.pruning";
 import { visitConditions } from "./QueryVisitor";
 import { getMetadataForTable } from "./configure";
-import { Column, getConstructorFromTaggedId, isDefined, keyToNumber, maybeResolveReferenceToId } from "./index";
+import {
+  Column,
+  ConditionBuilder,
+  getConstructorFromTaggedId,
+  isDefined,
+  keyToNumber,
+  maybeResolveReferenceToId,
+} from "./index";
 import { kq, kqDot } from "./keywords";
-import { abbreviation, assertNever, fail, partition } from "./utils";
+import { abbreviation, assertNever, fail } from "./utils";
 
 /** A tree of ANDs/ORs with conditions or nested conditions. */
 export interface ParsedExpressionFilter {
@@ -41,8 +49,8 @@ export interface RawCondition {
   condition: string;
   /** The bindings within `condition`, i.e. `SUM(${alias}.amount) > ?`. */
   bindings: any[];
-  /** We assume raw conditions are never system-added, so can't be pruned. */
-  pruneable: false;
+  /** Used to mark system-added conditions (like `LATERAL JOIN` conditions), which can be ignored when pruning unused joins. */
+  pruneable: boolean;
 }
 
 /** A marker condition for alias methods to indicate they should be skipped/pruned. */
@@ -69,7 +77,24 @@ export interface JoinTable {
   distinct?: boolean;
 }
 
-export type ParsedTable = PrimaryTable | JoinTable;
+export interface CrossJoinTable {
+  join: "cross";
+  alias: string;
+  table: string;
+}
+
+export interface LateralJoinTable {
+  join: "lateral";
+  alias: string;
+  /** Used for join dependency tracking. */
+  fromAlias: string;
+  /** Used more for bookkeeping/consistency with other join tables than the query itself. */
+  table: string;
+  /** The subquery that will look for/roll-up N children. */
+  query: ParsedFindQuery;
+}
+
+export type ParsedTable = PrimaryTable | JoinTable | CrossJoinTable | LateralJoinTable;
 
 export interface ParsedOrderBy {
   alias: string;
@@ -77,22 +102,32 @@ export interface ParsedOrderBy {
   order: OrderBy;
 }
 
+export interface ParsedGroupBy {
+  alias: string;
+  column: string;
+}
+
+type ParsedSelect = string | ParsedSelectWithBindings;
+type ParsedSelectWithBindings = { sql: string; bindings: any[]; aliases: string[] };
+
 /** The result of parsing an `em.find` filter. */
 export interface ParsedFindQuery {
-  selects: string[];
+  selects: ParsedSelect[];
   /** The primary table plus any joins. */
   tables: ParsedTable[];
   /** Any cross lateral joins, where the `joins: string[]` has the full join as raw SQL; currently only for preloading. */
   lateralJoins?: { joins: string[]; bindings: any[] };
   /** The query's conditions. */
   condition?: ParsedExpressionFilter;
+  /** Extremely optional group bys; we generally don't support adhoc/aggregate queries, but the auto-batching infra uses these. */
+  groupBys?: ParsedGroupBy[];
   /** Any optional orders to add before the default 'order by id'. */
   orderBys: ParsedOrderBy[];
   /** Optional CTE to prefix to the query, i.e. for recursive relations. */
   cte?: { sql: string; bindings: readonly any[] };
 }
 
-/** Parses an `em.find` filter into a `ParsedFindQuery` for simpler execution. */
+/** Parses an `em.find` filter into a `ParsedFindQuery` AST for simpler execution. */
 export function parseFindQuery(
   meta: EntityMetadata,
   filter: any,
@@ -180,6 +215,8 @@ export function parseFindQuery(
           distinct: false,
         });
       });
+    } else if (join === "lateral" || join === "cross") {
+      fail("Unexpected lateral join");
     } else {
       tables.push({ alias, table: meta.tableName, join, col1, col2 });
       // Maybe only do this if we're the primary, or have a field that needs it?
@@ -522,77 +559,8 @@ function maybeAddIdNotNulls(query: ParsedFindQuery): void {
   });
 }
 
-// Remove any joins that are not used in the select or conditions
-function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void {
-  // Mark all terminal usages
-  const used = new Set<string>();
-  parsed.selects.forEach((s) => used.add(parseAlias(s)));
-  parsed.orderBys.forEach((o) => used.add(o.alias));
-  keepAliases.forEach((a) => used.add(a));
-  deepFindConditions(parsed.condition)
-    .filter((c) => !c.pruneable)
-    .forEach((c) => {
-      switch (c.kind) {
-        case "column":
-          used.add(c.alias);
-          break;
-        case "raw":
-          for (const alias of c.aliases) {
-            used.add(alias);
-          }
-          break;
-        default:
-          assertNever(c);
-      }
-    });
-  // Mark all usages via joins
-  for (let i = 0; i < parsed.tables.length; i++) {
-    const t = parsed.tables[i];
-    if (t.join !== "primary") {
-      // If alias (col2) is required, ensure the col1 alias is also required
-      const a2 = t.alias;
-      const a1 = parseAlias(t.col1);
-      if (used.has(a2) && !used.has(a1)) {
-        used.add(a1);
-        // Restart at zero to find dependencies before us
-        i = 0;
-      }
-    }
-  }
-  // Now remove any unused joins
-  parsed.tables = parsed.tables.filter((t) => used.has(t.alias));
-  // And then remove any inline soft-delete conditions we don't need anymore
-  if (parsed.condition && parsed.condition.op === "and") {
-    parsed.condition.conditions = parsed.condition.conditions.filter((c) => {
-      if (c.kind === "column") {
-        const prune = c.pruneable && !parsed.tables.some((t) => t.alias === c.alias);
-        return !prune;
-      } else {
-        return c;
-      }
-    });
-  }
-}
-
-/** Pulls out a flat list of all `ColumnCondition`s from a `ParsedExpressionFilter` tree. */
-function deepFindConditions(condition: ParsedExpressionFilter | undefined): (ColumnCondition | RawCondition)[] {
-  const todo = condition ? [condition] : [];
-  const result: (ColumnCondition | RawCondition)[] = [];
-  while (todo.length !== 0) {
-    const cc = todo.pop()!;
-    for (const c of cc.conditions) {
-      if (c.kind === "exp") {
-        todo.push(c);
-      } else {
-        result.push(c);
-      }
-    }
-  }
-  return result;
-}
-
 /** Returns the `a` from `"a".*`. */
-function parseAlias(alias: string): string {
+export function parseAlias(alias: string): string {
   return alias.split(".")[0].replaceAll(`"`, "");
 }
 
@@ -822,84 +790,6 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
 }
 
 /** Converts domain-level values like string ids/enums into their db equivalent. */
-export class ConditionBuilder {
-  /** Simple, single-column conditions, which will be AND-d together. */
-  private conditions: ColumnCondition[] = [];
-  /** Complex expressions, which will also be AND-d together with `conditions`. */
-  private expressions: ParsedExpressionFilter[] = [];
-
-  /** Accepts a raw user-facing DSL filter, and parses it into a `ParsedExpressionFilter`. */
-  maybeAddExpression(expression: ExpressionFilter): void {
-    const parsed = parseExpression(expression);
-    if (parsed) this.expressions.push(parsed);
-  }
-
-  /** Adds an already-db-level condition to the simple conditions list. */
-  addSimpleCondition(condition: ColumnCondition): void {
-    this.conditions.push(condition);
-  }
-
-  /** Adds an already-db-level expression to the expressions list. */
-  addParsedExpression(parsed: ParsedExpressionFilter): void {
-    this.expressions.push(parsed);
-  }
-
-  /**
-   * Adds a user-facing `ParsedValueFilter` to the inline conditions.
-   *
-   * Unless it's something like `in: [a1, null]`, in which case we split it into two `is-null` and `in` conditions.
-   */
-  addValueFilter(alias: string, column: Column, filter: ParsedValueFilter<any>): void {
-    if (filter.kind === "in" && filter.value.includes(null)) {
-      // If the filter contains a null, we need to split it into an `is-null` and `in` condition
-      const isNull = {
-        kind: "column",
-        alias,
-        column: column.columnName,
-        dbType: column.dbType,
-        cond: { kind: "is-null" },
-      } satisfies ColumnCondition;
-      const inValues = {
-        kind: "column",
-        alias,
-        column: column.columnName,
-        dbType: column.dbType,
-        cond: {
-          kind: "in",
-          // Filter out the nulls from the in condition
-          value: filter.value.filter((v) => v !== null).map((v) => column.mapToDb(v)),
-        },
-      } satisfies ColumnCondition;
-      // Now OR them back together
-      this.expressions.push({ kind: "exp", op: "or", conditions: [isNull, inValues] });
-    } else {
-      const cond = {
-        kind: "column",
-        alias,
-        column: column.columnName,
-        dbType: column.dbType,
-        // Rewrite the user-facing domain values to db values
-        cond: mapToDb(column, filter),
-      } satisfies ColumnCondition;
-      this.conditions.push(cond);
-    }
-  }
-
-  /** Combines our collected `conditions` & `expressions` into a single `ParsedExpressionFilter`. */
-  toExpressionFilter(): ParsedExpressionFilter | undefined {
-    const { expressions, conditions } = this;
-    if (conditions.length === 0 && expressions.length === 1) {
-      // If no inline conditions, and just 1 opt expression, just use that
-      return expressions[0];
-    } else if (conditions.length > 0 || expressions.length > 0) {
-      // Combine the conditions within the `em.find` join literal & the `conditions` as ANDs
-      return { kind: "exp", op: "and", conditions: [...conditions, ...expressions] };
-    }
-    return undefined;
-  }
-}
-
-/** Converts domain-level values like string ids/enums into their db equivalent. */
 export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedValueFilter<any> {
   // ...to teach this `mapToDb` function to handle/rewrite `in: [1, null]` handling, we'd need to:
   // 1. return a maybe-simple/maybe-nested condition, so basically a `ParsedExpressionCondition`, because
@@ -1076,44 +966,23 @@ function filterSoftDeletes(meta: EntityMetadata, softDeletes: "include" | "exclu
   );
 }
 
-function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter | undefined {
-  const [op, expressions] =
-    "and" in expression && expression.and
-      ? ["and" as const, expression.and]
-      : "or" in expression && expression.or
-        ? ["or" as const, expression.or]
-        : fail(`Invalid expression ${expression}`);
-  const conditions = expressions.map((exp) => (exp && ("and" in exp || "or" in exp) ? parseExpression(exp) : exp));
-  const [skip, valid] = partition(conditions, (cond) => cond === undefined || cond === skipCondition);
-  if ((skip.length > 0 && expression.pruneIfUndefined === "any") || valid.length === 0) {
-    return undefined;
-  }
-  return { kind: "exp", op, conditions: valid.filter(isDefined) };
-}
-
-export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[]] {
+export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[], LateralJoinTable[], CrossJoinTable[]] {
   let primary: PrimaryTable;
   const joins: JoinTable[] = [];
+  const laterals: LateralJoinTable[] = [];
+  const crosses: CrossJoinTable[] = [];
   for (const table of query.tables) {
     if (table.join === "primary") {
       primary = table;
+    } else if (table.join === "lateral") {
+      laterals.push(table);
+    } else if (table.join === "cross") {
+      crosses.push(table);
     } else {
       joins.push(table);
     }
   }
-  return [primary!, joins];
-}
-
-export function joinKeywords(join: JoinTable): string {
-  return join.join === "inner" ? "JOIN" : "LEFT OUTER JOIN";
-}
-
-export function joinClause(join: JoinTable): string {
-  return `${joinKeywords(join)} ${kq(join.table)} ${kq(join.alias)} ON ${join.col1} = ${join.col2}`;
-}
-
-export function joinClauses(joins: ParsedTable[]): string[] {
-  return joins.map((t) => (t.join !== "primary" ? joinClause(t) : ""));
+  return [primary!, joins, laterals, crosses];
 }
 
 function needsClassPerTableJoins(meta: EntityMetadata): boolean {

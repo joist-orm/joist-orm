@@ -1,6 +1,6 @@
 import { ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
-import { assertNever } from "../utils";
+import { assertNever, cleanSql } from "../utils";
 import { buildWhereClause } from "./buildUtils";
 
 /**
@@ -27,7 +27,7 @@ export function buildRawQuery(
   const bindings: any[] = [];
 
   if (parsed.cte) {
-    sql += parsed.cte.sql + " ";
+    sql += cleanSql(parsed.cte.sql) + " ";
     bindings.push(...parsed.cte.bindings);
   }
 

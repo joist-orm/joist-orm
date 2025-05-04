@@ -3,6 +3,7 @@ import { Entity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
+import { kq } from "../keywords";
 import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
 import { fail } from "../utils";
 import {
@@ -38,7 +39,7 @@ export function findCountDataLoader<T extends Entity>(
         const { where, ...options } = queries[0];
         const query = parseFindQuery(getMetadata(type), where, options);
         const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");
-        query.selects = [`count("${primary.alias}".id) as count`];
+        query.selects = [`count(distinct ${kq(primary.alias)}.id) as count`];
         query.orderBys = [];
         const rows = await em.driver.executeFind(em, query, {});
         return [Number(rows[0].count)];
@@ -63,7 +64,8 @@ export function findCountDataLoader<T extends Entity>(
       args.unshift({ columnName: "tag", dbType: "int" });
 
       // We're not returning the entities, just counting them...
-      query.selects = ["count(*) as count"];
+      const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");
+      query.selects = [`count(distinct ${kq(primary.alias)}.id) as count`];
       query.orderBys = [];
 
       const query2: ParsedFindQuery = {

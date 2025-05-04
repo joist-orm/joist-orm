@@ -181,25 +181,16 @@ async function batchDelete(txn: TransactionSql, op: DeleteOp): Promise<void> {
   await txn`DELETE FROM ${txn(tableName)} WHERE id IN ${txn(ids)}`;
 }
 
-/**
- * Interleaves a SQL query with placeholders (?) and bindings for template literal use
- *
- * @param sql - the postgres.js Sql instance
- * @param query - SQL query string with ? placeholders
- * @param bindings - Array of values to bind to the placeholders
- * @returns An array with string fragments and binding values interleaved
- */
+const questionMark = /\?/g;
+
+/** Converts Knex-style sql with `?` and `bindings[]` params to postgres.js with `$1` params. */
 function convertToSql(sql: Sql, query: string, bindings: any[]): PendingQuery<any> {
-  // Split the query string by the placeholder character '?'
-  const fragments = query.split("?");
-  if (fragments.length - 1 !== bindings.length) {
-    throw new Error(`Mismatch between placeholders (${fragments.length - 1}) and bindings (${bindings.length})`);
-  }
-  // postgres.js does runtime detection of the `raw` property to determine if it's a template string
-  const templateStrings = Object.assign(fragments, {
-    raw: fragments,
-  }) as unknown as TemplateStringsArray;
-  return sql(templateStrings, ...bindings);
+  let count = 0;
+  return sql.unsafe(
+    query.replace(questionMark, () => `$${++count}`),
+    bindings,
+    { prepare: true },
+  );
 }
 
 function findArrayMaxSize(columnValues: readonly any[][]): number {

@@ -1,6 +1,6 @@
 import { ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
-import { assertNever } from "../utils";
+import { assertNever, cleanSql } from "../utils";
 import { buildWhereClause } from "./buildUtils";
 
 /**
@@ -21,13 +21,13 @@ export function buildRawQuery(
   const needsDistinct =
     parsed.tables.some((t) => t.join === "outer" && t.distinct !== false) &&
     // If this is a `findCount`, it will rewrite the `select` to have its own distinct
-    !parsed.selects.find((s) => s.startsWith("count("));
+    !parsed.selects.find((s) => typeof s === "string" && s.startsWith("count("));
 
   let sql = "";
   const bindings: any[] = [];
 
   if (parsed.cte) {
-    sql += parsed.cte.sql + " ";
+    sql += cleanSql(parsed.cte.sql) + " ";
     bindings.push(...parsed.cte.bindings);
   }
 
@@ -35,7 +35,12 @@ export function buildRawQuery(
   parsed.selects.forEach((s, i) => {
     const maybeDistinct = i === 0 && needsDistinct ? buildDistinctOn(parsed, primary) : "";
     const maybeComma = i === parsed.selects.length - 1 ? "" : ", ";
-    sql += maybeDistinct + s + maybeComma;
+    if (typeof s === "string") {
+      sql += maybeDistinct + s + maybeComma;
+    } else {
+      sql += maybeDistinct + s.sql + maybeComma;
+      bindings.push(...s.bindings);
+    }
   });
 
   // If we're doing "select distinct" for o2m joins, then all order bys must be selects
@@ -56,14 +61,15 @@ export function buildRawQuery(
       sql += ` LEFT OUTER JOIN ${as(t)} ON ${t.col1} = ${t.col2}`;
     } else if (t.join === "primary") {
       // handled above
+    } else if (t.join === "lateral") {
+      const { sql: subQ, bindings: subB } = buildRawQuery(t.query, {});
+      sql += ` CROSS JOIN LATERAL (${subQ}) AS ${kq(t.alias)}`;
+      bindings.push(...subB);
+    } else if (t.join === "cross") {
+      sql += ` CROSS JOIN ${as(t)}`;
     } else {
       assertNever(t.join);
     }
-  }
-
-  if (parsed.lateralJoins) {
-    sql += " " + parsed.lateralJoins.joins.join("\n");
-    bindings.push(...parsed.lateralJoins.bindings);
   }
 
   if (parsed.condition) {
@@ -72,6 +78,10 @@ export function buildRawQuery(
       sql += " WHERE " + where[0];
       bindings.push(...where[1]);
     }
+  }
+
+  if (parsed.groupBys && parsed.groupBys.length > 0) {
+    sql += " GROUP BY " + parsed.groupBys.map((ob) => kqDot(ob.alias, ob.column)).join(", ");
   }
 
   if (parsed.orderBys.length > 0) {

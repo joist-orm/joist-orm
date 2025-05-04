@@ -23,7 +23,11 @@ export function buildKnexQuery(
 
   parsed.selects.forEach((s, i) => {
     const maybeDistinct = i === 0 && needsDistinct ? "distinct " : "";
-    query.select(knex.raw(`${maybeDistinct}${s}`));
+    if (typeof s === "string") {
+      query.select(knex.raw(`${maybeDistinct}${s}`));
+    } else {
+      query.select(knex.raw(`${maybeDistinct}${s.sql}`, s.bindings));
+    }
   });
 
   parsed.tables.forEach((t) => {
@@ -37,14 +41,17 @@ export function buildKnexQuery(
       case "primary":
         // ignore
         break;
+      case "lateral":
+        const { sql, bindings } = buildKnexQuery(knex, t.query, {}).toSQL();
+        query.crossJoin(knex.raw(`lateral (${sql}) as ${kq(t.alias)}`, bindings));
+        break;
+      case "cross":
+        query.crossJoin(asRaw(t));
+        break;
       default:
         assertNever(t);
     }
   });
-
-  if (parsed.lateralJoins) {
-    query.joinRaw(parsed.lateralJoins.joins.join("\n"), parsed.lateralJoins.bindings);
-  }
 
   if (parsed.condition) {
     const where = internals.buildWhereClause(parsed.condition, true);
@@ -61,6 +68,11 @@ export function buildKnexQuery(
         query.select(knex.raw(kqDot(alias, column)));
       }
       query.orderBy(knex.raw(kqDot(alias, column)) as any, order);
+    });
+
+  parsed.groupBys &&
+    parsed.groupBys.forEach(({ alias, column }) => {
+      query.groupByRaw(kqDot(alias, column));
     });
 
   if (limit) query.limit(limit);

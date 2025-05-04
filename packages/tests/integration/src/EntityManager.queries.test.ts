@@ -2457,7 +2457,7 @@ describe("EntityManager.queries", () => {
     expect(parseFindQuery(tm, where, opts)).toMatchObject({
       selects: [`t.*`],
       tables: [{ alias: "t", table: "tasks", join: "primary" }],
-      condition: { kind: "exp", op: "and", conditions: [] },
+      condition: undefined,
     });
   });
 
@@ -3043,12 +3043,7 @@ describe("EntityManager.queries", () => {
               cond: { kind: "is-null" },
               pruneable: true,
             },
-            {
-              conditions: [
-                { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a" } },
-              ],
-              op: "and",
-            },
+            { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a" } },
           ],
         },
         orderBys: [expect.anything()],

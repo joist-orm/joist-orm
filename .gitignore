@@ -21,3 +21,5 @@ junit*.xml
 .idea/**/usage.statistics.xml
 .idea/**/dictionaries
 .idea/**/shelf
+
+**/.claude/settings.local.json

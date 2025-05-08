@@ -34,7 +34,7 @@ export function insertAuthor(row: {
   favorite_shape?: string;
   address?: object;
   business_address?: object;
-  quotes?: string;
+  quotes?: string[];
   graduated?: any;
   number_of_atoms?: string;
   number_of_public_reviews?: number;
@@ -169,7 +169,7 @@ export async function insertPublisher(row: {
     {
       id: row.id ?? 1,
       city: row.city ?? "city",
-      shared_column: row.shared_column,
+      shared_column: row.shared_column ?? null,
     },
     true,
   );
@@ -192,7 +192,7 @@ export async function insertLargePublisher(row: {
   spotlight_author_id?: number;
   rating?: number;
 }) {
-  const { country = "country", shared_column, ...others } = row;
+  const { country = "country", shared_column = null, ...others } = row;
   await testDriver.insert("publishers", {
     base_sync_default: "FactorySyncDefault",
     base_async_default: "FactoryAsyncDefault",
@@ -222,7 +222,7 @@ export async function insertSmallPublisher(row: {
   // Used to test reactive fields that only exist on a subtype
   all_author_names?: string;
 }) {
-  const { city = "city", shared_column, ...others } = row;
+  const { city = "city", shared_column = null, ...others } = row;
   await testDriver.insert("publishers", {
     base_sync_default: "FactorySyncDefault",
     base_async_default: "FactoryAsyncDefault",

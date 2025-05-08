@@ -122,6 +122,6 @@
     }
   },
   "entitiesDirectory": "./src/entities",
-  "transactionType": "Knex.Transaction@knex",
+  "transactionType": "TransactionSql@postgres",
   "version": "0.0.1"
 }

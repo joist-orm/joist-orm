@@ -13,7 +13,6 @@
     "build"
   ],
   "dependencies": {
-    "pg": "^8.15.5",
     "pg-connection-string": "^2.8.5"
   },
   "scripts": {

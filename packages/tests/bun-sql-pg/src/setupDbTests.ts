@@ -7,7 +7,7 @@ import { EntityManager } from "src/entities/index.ts";
 expect.extend({ toMatchEntity });
 
 // Any connections settings...
-const sql = new SQL();
+export const sql = new SQL();
 
 export function newEntityManager(): EntityManager {
   const ctx = { sql };

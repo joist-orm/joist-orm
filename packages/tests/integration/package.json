@@ -25,7 +25,7 @@
     "joist-graphql-resolver-utils": "workspace:*",
     "joist-orm": "workspace:*",
     "joist-plugin-join-preloading": "workspace:*",
-    "mitata": "^0.1.14"
+    "mitata": "^1.0.34"
   },
   "devDependencies": {
     "@graphql-tools/graphql-file-loader": "^8.0.19",
@@ -44,7 +44,7 @@
     "joist-test-utils": "workspace:*",
     "joist-transform-properties": "workspace:*",
     "kelonio": "^0.10.0",
-    "postgres": "^3.4.5",
+    "postgres": "github:stephenh/postgres",
     "prettier": "^3.5.3",
     "prettier-plugin-organize-imports": "^4.1.0",
     "superstruct": "0.15.5",

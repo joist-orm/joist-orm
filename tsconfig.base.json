@@ -8,6 +8,7 @@
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
+    "esModuleInterop": true,
     "incremental": true,
     "plugins": [
       { "transform": "typescript-transform-paths" },

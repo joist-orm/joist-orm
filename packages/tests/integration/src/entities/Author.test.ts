@@ -6,7 +6,7 @@ import {
   insertPublisher,
   select,
 } from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
+import { newEntityManager, sql } from "@src/testEm";
 import { defaultValue, getMetadata, isNewEntity } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
@@ -191,6 +191,14 @@ describe("Author", () => {
         lastName: "a1",
       }),
     ]);
+  });
+
+  it("unnests", async () => {
+    // inferType incorrectly types `[false]` as boolean
+    console.log(await sql`SELECT unnest(${[false]}::boolean[])`);
+    // Without for our jsonb fix, this is a) encoded as a int[][] i.e. `{{"1","2"},{"5"}}`
+    const jsonb = [[1, 2], [5]];
+    console.log(await sql`SELECT unnest(${jsonb}::jsonb[])::json`);
   });
 
   it("can skip reactive validation rules", async () => {

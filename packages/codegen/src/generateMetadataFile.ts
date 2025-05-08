@@ -114,7 +114,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         serdeType = PrimitiveSerde;
       }
       serde = isArray
-        ? code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}[]", true)`
+        ? code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}[]", true, ${!p.notNull})`
         : code`new ${serdeType}("${fieldName}", "${columnName}", "${columnType}")`;
     }
     const extras = columnType === "citext" ? code`citext: true,` : "";
@@ -156,6 +156,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
     const { fieldName, enumDetailType, notNull, isArray, columnName, columnType, derived } = field;
     const serdeType = isArray ? EnumArrayFieldSerde : EnumFieldSerde;
     const columnTypeWithArray = `${columnType}${isArray ? "[]" : ""}`;
+    const maybeIsNullable = isArray ? `, ${!notNull}` : "";
     fields[fieldName] = code`
       {
         kind: "enum",
@@ -164,7 +165,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         required: ${notNull},
         derived: ${!derived ? false : `"${derived}"`},
         enumDetailType: ${enumDetailType},
-        serde: new ${serdeType}("${fieldName}", "${columnName}", "${columnTypeWithArray}", ${enumDetailType}),
+        serde: new ${serdeType}("${fieldName}", "${columnName}", "${columnTypeWithArray}"${maybeIsNullable}, ${enumDetailType}),
         immutable: false,
         ${maybeDefault(field)}
       }

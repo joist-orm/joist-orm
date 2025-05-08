@@ -1,5 +1,5 @@
 ---
-title: Initial Pipelining Benchmark
+title: Pipelining for 3-6x Faster Commits
 slug: blog/initial-pipelining-benchmark
 date: 2025-04-20
 authors: shaberman
@@ -114,11 +114,29 @@ Is all we need to control exactly how much latency toxiproxy injects between eve
 
 We'll look at Joist's pipeline performance in a future post, but for now we'll stay closer to the metal and use [postgres.js](https://github.com/porsager/postgres) to directly execute SQL statements in a few benchmarks.
 
-We're using postgres.js, instead of the venerable node-pg, because postgres.js implements pipelining, while node-pg does not yet.
+We're using postgres.js instead of the venerable node-pg solely because postgres.js implements pipelining, but node-pg does not yet.
 
 postgres.js also has an extremely seamless way to use pipelining--any statements issued in parallel (i.e. a `Promise.all`) within a `sql.begin` are automatically pipelined for us.
 
 Very neat!
+
+:::tip[Info]
+
+The Postgres [pipelining docs](https://www.postgresql.org/docs/current/libpq-pipeline-mode.html) make a valid point that pipelining requires async behavior, which in traditional blocking languages like Java & C, is a significant complexity increase, such that pipelining may not be worth the trade-off.
+
+However, JavaScript is already async & non-blocking, so submitting several requests in parallel, and waiting for them to return, is extremely natural; it's just `Promise.all`:
+
+```ts
+// Example of how easy/natural submitting parallel requests is in JS
+const [response1, response2, response3] = await Promise.all([
+  sendRequest1(),
+  sendRequest2(),
+  sendRequest3(),
+]);
+```
+
+:::
+
 
 ## Benchmarks
 
@@ -199,7 +217,7 @@ We expect this to be fast as well.
 
 ## Performance Results
 
-I've ran the benchmark with a series of latencies & statements.
+I've run the benchmark with a series of latencies & statements.
 
 1ms latency, 10 statements:
 
@@ -299,17 +317,21 @@ A few notes on these numbers:
 
 ## Pipelining FTW
 
-I wanted to focus on this raw SQL benchmark, just to better understand pipelining's performance impact, and I think it's an obvious win: **3-6x speedups** in multi-statement transactions merely from making sure our driver supports pipelining.
+I created this raw SQL benchmark to better understand pipelining's l-wlevel performance impact, and I think it's an obvious win: **3-6x speedups** in multi-statement transactions.
 
-In the Postgres [pipelining docs](https://www.postgresql.org/docs/current/libpq-pipeline-mode.html), they make a valid point that pipelining requires async behavior, which in traditional blocking languages like Java & C, is a significant complexity increase, that pipelining may not be worth the trade-off.
+As a reminder/summary, to leverage pipelining you need three things:
 
-But JavaScript is already async & non-blocking, so pipelining is a mere `Promise.all` away.
+1. A postgresql driver that supports it,
+2. Be executing multi-statement transactions, and
+3. Structure your code such that all the transaction statements are submitted in parallel
 
-In a future/next post, we'll swap these raw SQL benchmarks out for higher-level ORM benchmarks, to see pipelining's impact in hopefully more realistic scenarios.
+This last one is where Joist is the most helpful--it's `em.flush()` method automatically generates the `INSERT`s, `UPDATE`s, and `DELETE`s for your changes, and so it can automatically submit them using a `Promise.all`, and not require any restructuring in your code. 
+
+In a future/next post, we'll swap these raw SQL benchmarks out for higher-level ORM benchmarks, to see pipelining's impact in more realistic scenarios.
 
 :::tip[info]
 
-The code for this post is in the [pipeline.ts](https://github.com/joist-orm/joist-benchmarks/blob/main/packages/benchmark/src/pipeline.ts) file in the [joist-benchmarks](https://github.com/joist-orm/joist-benchmarks/) has the code.
+The code for this post is in [pipeline.ts](https://github.com/joist-orm/joist-benchmarks/blob/main/packages/benchmark/src/pipeline.ts) in the [joist-benchmarks](https://github.com/joist-orm/joist-benchmarks/) repo.
 
 After running `docker compose up -d`, invoking `yarn pipeline` should run the benchmark.
 

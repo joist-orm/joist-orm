@@ -4,7 +4,7 @@ slug: blog/initial-pipelining-benchmark
 date: 2025-04-20
 authors: shaberman
 tags: []
-_excerpt: ...
+excerpt: Pipelining INSERTs and UPDATEs statements to make commits 3-6x faster
 ---
 
 I've known about Postgres's [pipeline mode](https://www.postgresql.org/docs/current/libpq-pipeline-mode.html) for a while, and finally have some prototyping of pipelining in general, and alpha builds of Joist running with pipeline mode (coming soon!).

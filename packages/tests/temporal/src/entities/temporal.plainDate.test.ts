@@ -1,6 +1,7 @@
 import { knex, newEntityManager } from "@src/setupDbTests";
 import { jan1, jan2, jan3 } from "@src/utils";
 import { PrimitiveField, alias, getMetadata } from "joist-orm";
+import { JsonAggregatePreloader } from "joist-plugin-join-preloading";
 import { Temporal } from "temporal-polyfill";
 import { Author, Book, newAuthor, newBook } from "./entities";
 
@@ -89,5 +90,15 @@ describe("plainDate", () => {
     await em.flush();
     const result = await em.find(Book, { author: { birthday: { lte: jan2 } } });
     expect(result).toEqual([b1, b2]);
+  });
+
+  it("works with preloading", async () => {
+    const em = newEntityManager();
+    const authors = [jan1, jan2, jan3].map((birthday) => newAuthor(em, { birthday }));
+    const [b1, b2, b3] = authors.map((author) => newBook(em, { author }));
+    await em.flush();
+
+    const em2 = newEntityManager({ preloadPlugin: new JsonAggregatePreloader() });
+    const loaded = await em2.find(Author, {}, { populate: "books" });
   });
 });

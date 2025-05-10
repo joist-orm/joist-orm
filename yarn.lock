@@ -8432,25 +8432,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"joist-plugin-join-preloading@workspace:*, joist-plugin-join-preloading@workspace:packages/plugins/join-preloading":
-  version: 0.0.0-use.local
-  resolution: "joist-plugin-join-preloading@workspace:packages/plugins/join-preloading"
-  dependencies:
-    "@swc/core": "npm:^1.11.22"
-    "@swc/jest": "npm:^0.2.38"
-    "@types/jest": "npm:^29.5.14"
-    "@types/node": "npm:^22.13.10"
-    jest: "npm:30.0.0-alpha.7"
-    joist-test-utils: "workspace:*"
-    prettier: "npm:^3.5.3"
-    prettier-plugin-organize-imports: "npm:^4.1.0"
-    tsconfig-paths: "npm:^4.2.0"
-    typescript: "npm:5.8.3"
-  peerDependencies:
-    joist-orm: "workspace:*"
-  languageName: unknown
-  linkType: soft
-
 "joist-test-utils@workspace:*, joist-test-utils@workspace:packages/test-utils":
   version: 0.0.0-use.local
   resolution: "joist-test-utils@workspace:packages/test-utils"
@@ -8573,7 +8554,6 @@ __metadata:
     joist-knex: "workspace:*"
     joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
-    joist-plugin-join-preloading: "workspace:*"
     joist-test-utils: "workspace:*"
     joist-transform-properties: "workspace:*"
     kelonio: "npm:^0.10.0"
@@ -8652,7 +8632,6 @@ __metadata:
     joist-codegen: "workspace:*"
     joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
-    joist-plugin-join-preloading: "workspace:*"
     joist-test-utils: "workspace:*"
     node-pg-migrate: "npm:^7.9.1"
     prettier: "npm:^3.5.3"

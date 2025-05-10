@@ -1,25 +1,14 @@
-import {
-  AliasAssigner,
-  ConditionBuilder,
-  Entity,
-  EntityMetadata,
-  EntityOrId,
-  getEmInternalApi,
-  getTables,
-  HintNode,
-  JoinResult,
-  JoinTable,
-  keyToNumber,
-  keyToTaggedId,
-  kq,
-  kqDot,
-  LateralJoinTable,
-  LoadHint,
-  NestedLoadHint,
-  ParsedFindQuery,
-  PreloadHydrator,
-  PreloadPlugin,
-} from "joist-orm";
+import { AliasAssigner } from "../AliasAssigner";
+import { ConditionBuilder } from "../ConditionBuilder";
+import { Entity } from "../Entity";
+import { getEmInternalApi } from "../EntityManager";
+import { EntityMetadata } from "../EntityMetadata";
+import { EntityOrId, HintNode } from "../HintTree";
+import { keyToNumber, keyToTaggedId } from "../keys";
+import { kq, kqDot } from "../keywords";
+import { LoadHint, NestedLoadHint } from "../loadHints";
+import { JoinResult, PreloadHydrator, PreloadPlugin } from "../plugins/PreloadPlugin";
+import { getTables, JoinTable, LateralJoinTable, ParsedFindQuery } from "../QueryParser";
 import { canPreload } from "./canPreload";
 import { partitionHint } from "./partitionHint";
 

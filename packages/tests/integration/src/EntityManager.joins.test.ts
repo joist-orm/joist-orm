@@ -11,7 +11,7 @@ import {
   insertTag,
   update,
 } from "@src/entities/inserts";
-import { testing } from "joist-plugin-join-preloading";
+import { testing } from "joist-orm";
 import { jan1, jan2 } from "src/testDates";
 import { Author, Book, Critic, LargePublisher, Publisher } from "./entities";
 

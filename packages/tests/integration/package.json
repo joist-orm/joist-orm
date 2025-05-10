@@ -24,7 +24,6 @@
   "dependencies": {
     "joist-graphql-resolver-utils": "workspace:*",
     "joist-orm": "workspace:*",
-    "joist-plugin-join-preloading": "workspace:*",
     "mitata": "^0.1.14"
   },
   "devDependencies": {

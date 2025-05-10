@@ -1,8 +1,7 @@
-import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
-import { setDefaultEntityLimit } from "joist-orm";
-import { Author, Book, Publisher, newAuthor, newBook, newPublisher } from "./entities";
-
+import { insertAuthor, insertBook, insertPublisher, update } from "@src/entities/inserts";
 import { isPreloadingEnabled, newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
+import { setDefaultEntityLimit } from "joist-orm";
+import { Author, Book, newAuthor, newBook, newPublisher, Publisher, SmallPublisher } from "./entities";
 
 describe("EntityManager.populate", () => {
   it("can populate many-to-one", async () => {
@@ -223,5 +222,17 @@ describe("EntityManager.populate", () => {
     // @ts-expect-error
     const p = em.load(Author, "a:1", { publisher: "size" });
     await expect(p).rejects.toThrow("Invalid load hint 'size' on SmallPublisher:1");
+  });
+
+  it("can preload m2o from base type", async () => {
+    // Given an entity using CTI
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await update("publishers", { id: 1, spotlight_author_id: 1 });
+    // And we want to populate a m2o key that exists in the base `publishers` table
+    const em = newEntityManager();
+    const p = await em.load(SmallPublisher, "p:1");
+    // Then it does not blow up
+    await em.populate(p, "spotlightAuthor");
   });
 });

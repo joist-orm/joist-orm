@@ -76,10 +76,10 @@ export function populateDataLoader(
               },
               orderBys: [],
             };
-            const hydrator = preloader.addPreloading(meta, layerNode, query);
             // If we're selecting from small_publishers, join in our base class in case
             // the preloader wants to join on a column like `publishers.group_id`
             addTablePerClassJoinsAndClassTag(query, meta, alias, false);
+            const hydrator = preloader.addPreloading(meta, layerNode, query);
             if (hydrator) {
               const rows = await em.driver.executeFind(em, query, {});
               const entitiesById = indexBy(entities, (e) => keyToNumber(meta, e.id));

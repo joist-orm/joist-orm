@@ -1,3 +1,10 @@
+# [1.247.0](https://github.com/joist-orm/joist-orm/compare/v1.246.2...v1.247.0) (2025-05-10)
+
+
+### Features
+
+* Inline the preloading plugin. ([#1493](https://github.com/joist-orm/joist-orm/issues/1493)) ([0c55b16](https://github.com/joist-orm/joist-orm/commit/0c55b1605df339e6b72f5abd7bd3475706b40d74))
+
 ## [1.246.2](https://github.com/joist-orm/joist-orm/compare/v1.246.1...v1.246.2) (2025-05-10)
 
 

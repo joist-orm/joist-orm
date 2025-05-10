@@ -881,7 +881,9 @@ export function addTablePerClassJoinsAndClassTag(
     if (isPrimary) {
       selects.push(`${alias}_b${i}.*`);
     }
-    tables.push({
+    // Put the join right after the primary `FROM` table, so that it comes before any
+    // preloading `CROSS JOIN LATERAL`s that might want to use its columns for their joins.
+    tables.splice(1, 0, {
       alias: `${alias}_b${i}`,
       table: bt.tableName,
       join: "outer",
@@ -903,7 +905,7 @@ export function addTablePerClassJoinsAndClassTag(
     meta.subTypes.forEach((st, i) => {
       const stAlias = `${alias}_s${i}`;
       selects.push(`${stAlias}.*`);
-      tables.push({
+      tables.splice(1, 0, {
         alias: stAlias,
         table: st.tableName,
         join: "outer",

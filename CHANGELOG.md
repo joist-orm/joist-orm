@@ -1,3 +1,10 @@
+## [1.246.2](https://github.com/joist-orm/joist-orm/compare/v1.246.1...v1.246.2) (2025-05-10)
+
+
+### Bug Fixes
+
+* Fix preloading m2os from the base type. ([#1492](https://github.com/joist-orm/joist-orm/issues/1492)) ([9d9aa3a](https://github.com/joist-orm/joist-orm/commit/9d9aa3a6244b61e2110bd42320957a3b166e854b))
+
 ## [1.246.1](https://github.com/joist-orm/joist-orm/compare/v1.246.0...v1.246.1) (2025-05-10)
 
 

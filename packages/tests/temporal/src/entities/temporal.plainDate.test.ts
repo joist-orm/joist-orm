@@ -1,6 +1,7 @@
 import { knex, newEntityManager } from "@src/setupDbTests";
 import { jan1, jan2, jan3 } from "@src/utils";
 import { PrimitiveField, alias, getMetadata } from "joist-orm";
+import { JsonAggregatePreloader } from "joist-plugin-join-preloading";
 import { Temporal } from "temporal-polyfill";
 import { Author, Book, newAuthor, newBook } from "./entities";
 
@@ -89,5 +90,31 @@ describe("plainDate", () => {
     await em.flush();
     const result = await em.find(Book, { author: { birthday: { lte: jan2 } } });
     expect(result).toEqual([b1, b2]);
+  });
+
+  // These are really preloading tests, that are in the temporal test suite primarily
+  // because it's the easiest place to reproduce the issues we found in prod.
+  describe("preloading", () => {
+    it("works with preloading array columns", async () => {
+      const em = newEntityManager();
+      // Given books have a timestamp array column
+      newAuthor(em, { books: [{}, {}] });
+      await em.flush();
+      // When we preload the books
+      const em2 = newEntityManager({ preloadPlugin: new JsonAggregatePreloader() });
+      // Then it works
+      await em2.findOneOrFail(Author, {}, { populate: "books" });
+    });
+
+    it("works with preloading timestamp columns", async () => {
+      const em = newEntityManager();
+      // Given books have a timestamp column
+      newAuthor(em, { books: [{}] });
+      await em.flush();
+      const em2 = newEntityManager({ preloadPlugin: new JsonAggregatePreloader() });
+      const a1 = await em2.findOneOrFail(Author, {}, { populate: "books" });
+      // When we access it, it does not blow up
+      expect(a1.books.get[0].updatedAt).toBeInstanceOf(Temporal.ZonedDateTime);
+    });
   });
 });

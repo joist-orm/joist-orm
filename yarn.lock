@@ -8652,6 +8652,7 @@ __metadata:
     joist-codegen: "workspace:*"
     joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
+    joist-plugin-join-preloading: "workspace:*"
     joist-test-utils: "workspace:*"
     node-pg-migrate: "npm:^7.9.1"
     prettier: "npm:^3.5.3"

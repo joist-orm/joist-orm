@@ -1,4 +1,11 @@
-import { EntityMetadata, Field, ManyToManyField, ManyToOneField, OneToManyField, OneToOneField } from "joist-orm";
+import {
+  EntityMetadata,
+  Field,
+  ManyToManyField,
+  ManyToOneField,
+  OneToManyField,
+  OneToOneField,
+} from "../EntityMetadata";
 
 export function canPreload(
   meta: EntityMetadata,

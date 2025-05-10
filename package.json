@@ -23,7 +23,6 @@
     "packages/knex",
     "packages/migration-utils",
     "packages/orm",
-    "packages/plugins/join-preloading",
     "packages/utils",
     "packages/test-utils",
     "packages/tests/bun",

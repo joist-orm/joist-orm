@@ -9,6 +9,7 @@ import { getProperties } from "./getProperties";
 import { New } from "./loadHints";
 import { isAllSqlPaths } from "./loadLens";
 import { FactoryInitialValue } from "./newTestInstance";
+import { partitionHint } from "./preloading/partitionHint";
 import { isAsyncProperty, isReactiveField, isReactiveGetter, isReactiveQueryField } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
@@ -16,7 +17,7 @@ import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
 import { OptsOf } from "./typeMap";
 import { fail } from "./utils";
 
-export const testing = { isAllSqlPaths, getDefaultDependencies };
+export const testing = { isAllSqlPaths, getDefaultDependencies, partitionHint };
 export const internals = { buildWhereClause };
 export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner";
@@ -76,6 +77,7 @@ export {
 } from "./newTestInstance";
 export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
 export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
+export { JsonAggregatePreloader } from "./preloading/JsonAggregatePreloader";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
 export {

@@ -1,12 +1,8 @@
-import {
-  deepNormalizeHint,
-  EntityMetadata,
-  getProperties,
-  LoadHint,
-  NestedLoadHint,
-  normalizeHint,
-  ReactiveReferenceImpl,
-} from "joist-orm";
+import { EntityMetadata } from "../EntityMetadata";
+import { getProperties } from "../getProperties";
+import { LoadHint, NestedLoadHint } from "../loadHints";
+import { deepNormalizeHint, normalizeHint } from "../normalizeHints";
+import { ReactiveReferenceImpl } from "../relations";
 import { canPreload } from "./canPreload";
 
 /** Partitions a hint into SQL-able and non-SQL-able hints. */

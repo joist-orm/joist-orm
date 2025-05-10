@@ -17,7 +17,6 @@
     { "path": "../../graphql-resolver-utils" },
     { "path": "../../migration-utils" },
     { "path": "../../orm" },
-    { "path": "../../plugins/join-preloading" },
     { "path": "../../utils" },
     { "path": "../../test-utils" }
   ]

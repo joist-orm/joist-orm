@@ -1,3 +1,10 @@
+## [1.246.1](https://github.com/joist-orm/joist-orm/compare/v1.246.0...v1.246.1) (2025-05-10)
+
+
+### Bug Fixes
+
+* Fix preloading with temporal ([#1491](https://github.com/joist-orm/joist-orm/issues/1491)) ([a435fd2](https://github.com/joist-orm/joist-orm/commit/a435fd285318efbe8731ebaf8c2d0668b39fea0e))
+
 # [1.246.0](https://github.com/joist-orm/joist-orm/compare/v1.245.1...v1.246.0) (2025-05-04)
 
 

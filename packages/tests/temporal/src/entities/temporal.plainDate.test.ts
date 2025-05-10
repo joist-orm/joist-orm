@@ -92,13 +92,25 @@ describe("plainDate", () => {
     expect(result).toEqual([b1, b2]);
   });
 
-  it("works with preloading", async () => {
+  it("works with preloading array columns", async () => {
     const em = newEntityManager();
-    const authors = [jan1, jan2, jan3].map((birthday) => newAuthor(em, { birthday }));
-    const [b1, b2, b3] = authors.map((author) => newBook(em, { author }));
+    // Given books have a timestamp array column
+    newAuthor(em, { books: [{}, {}] });
     await em.flush();
-
+    // When we preload the books
     const em2 = newEntityManager({ preloadPlugin: new JsonAggregatePreloader() });
-    const loaded = await em2.find(Author, {}, { populate: "books" });
+    // Then it works
+    await em2.findOneOrFail(Author, {}, { populate: "books" });
+  });
+
+  it("works with preloading timestamp columns", async () => {
+    const em = newEntityManager();
+    // Given books have a timestamp column
+    newAuthor(em, { books: [{}] });
+    await em.flush();
+    const em2 = newEntityManager({ preloadPlugin: new JsonAggregatePreloader() });
+    const a1 = await em2.findOneOrFail(Author, {}, { populate: "books" });
+    // When we access it
+    console.log(a1.books.get[0].updatedAt);
   });
 });

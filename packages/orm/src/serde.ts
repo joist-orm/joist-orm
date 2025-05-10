@@ -59,7 +59,19 @@ export interface Column {
   dbValue(data: any, entity: Entity, tableName: string, fixups: InsertFixup[] | undefined): any;
   /** For a given domain value, return the database value, i.e. for putting `em.find` params into a db WHERE clause. */
   mapToDb(value: any): any;
-  /** For converting `json_agg`-preloaded JSON values into their domain type. */
+  /**
+   * For converting `json_agg`-preloaded JSON values into *ResultSet* type.
+   *
+   * I.e. our `#orm.row` hash always wants the db-side value, as-is coming from the database driver.
+   * During `getField`, we always expect the ResultSet value, b/c we lazy call `setOnEntity` to go
+   * from db-value to domain-value.
+   *
+   * So `mapFromJsonAgg` is for preloading that needs to go from json-value *only to db-value*.
+   *
+   * I.e. for types like temporal, which we keep as strings in `row`, the json-value will match
+   * the db-value, so `mapFromJsonAgg` can be a noop. But (at one point...) `Date`s we store as
+   * `Date`s in `row`, so then `mapFromJsonAgg` needs to convert string json-value value into a `Date`.
+   */
   mapFromJsonAgg(value: any): any;
   isArray: boolean;
 }
@@ -114,11 +126,13 @@ export class CustomSerdeAdapter implements FieldSerde {
   }
 
   mapFromJsonAgg(value: any): any {
-    return value === null
-      ? value
-      : this.isArray
-        ? value.map((value: any) => this.mapper.fromDb(value))
-        : this.mapper.fromDb(value);
+    // Assume the database JSON value matches the ResultSet value
+    return value;
+    // return value === null
+    //   ? value
+    //   : this.isArray
+    //     ? value.map((value: any) => this.mapper.fromDb(value))
+    //     : this.mapper.fromDb(value);
   }
 }
 

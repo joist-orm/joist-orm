@@ -113,6 +113,8 @@ export function up(b: MigrationBuilder): void {
     initials: { type: "varchar(255)", notNull: true, default: "..." },
     // for testing async derived values
     number_of_books: { type: "integer", notNull: true },
+    // for testing async derived values from other derived values
+    amount_of_books: { type: "integer", notNull: true },
     // for testing async derived enums
     range_of_books: foreignKey("book_range", { notNull: false }),
     // for testing async derived value via a polymorphic reference

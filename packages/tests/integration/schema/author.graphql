@@ -37,6 +37,7 @@ type Author {
   mentees: [Author!]!
   mentorNames: String
   isFunny: Boolean!
+  amountOfBooks: Int!
 }
 
 input SaveAuthorInput {

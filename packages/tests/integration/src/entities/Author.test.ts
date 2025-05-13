@@ -687,4 +687,17 @@ describe("Author", () => {
     const authors = await em.find(Author, { certificate: { eq: new Uint8Array([11, 22]) } });
     expect(authors.length).toBe(1);
   });
+
+  it("can derive async from another derived async field", async () => {
+    // Given an author with a book
+    await insertAuthor({ first_name: "a1", number_of_books: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    // When we load the author
+    const a1 = await em.load(Author, "a:1");
+    // Then the number of books is 1
+    expect(a1.numberOfBooks.get).toEqual(1);
+    // And the amount of books is 1
+    expect(a1.amountOfBooks.get).toEqual(1);
+  });
 });

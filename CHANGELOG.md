@@ -1,3 +1,10 @@
+## [1.247.1](https://github.com/joist-orm/joist-orm/compare/v1.247.0...v1.247.1) (2025-05-14)
+
+
+### Bug Fixes
+
+* Fix findOrCreate returning deleted entities. ([#1496](https://github.com/joist-orm/joist-orm/issues/1496)) ([2cb01af](https://github.com/joist-orm/joist-orm/commit/2cb01afa4b598552f22e437bdb9f2e252fad779d))
+
 # [1.247.0](https://github.com/joist-orm/joist-orm/compare/v1.246.2...v1.247.0) (2025-05-10)
 
 

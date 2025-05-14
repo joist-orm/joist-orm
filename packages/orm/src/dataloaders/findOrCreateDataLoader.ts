@@ -94,12 +94,14 @@ export function findOrCreateDataLoader<T extends Entity>(
       }
 
       // If we didn't find it in the EM, do the db query/em.create
-      const entities = await em.find(
-        type,
-        // Convert `publisher: undefined` --> `publisher: null`, and we need to make a copy anyway
-        Object.fromEntries(Object.entries(where).map(([k, v]) => [k, v === undefined ? null : v])) as any,
-        { softDeletes },
-      );
+      const entities = (
+        await em.find(
+          type,
+          // Convert `publisher: undefined` --> `publisher: null`, and we need to make a copy anyway
+          Object.fromEntries(Object.entries(where).map(([k, v]) => [k, v === undefined ? null : v])) as any,
+          { softDeletes },
+        )
+      ).filter((e) => !e.isDeletedEntity);
       let entity: T;
       if (entities.length > 1) {
         throw new TooManyError(`Found more than one existing ${type.name} with ${whereAsString(where)}`);

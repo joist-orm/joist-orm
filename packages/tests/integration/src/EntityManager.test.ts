@@ -865,7 +865,7 @@ describe("EntityManager", () => {
     expect(await p1.comments.load()).toMatchEntity([c]);
   });
 
-  it("can create with findOrCreate and ignore deleted entities", async () => {
+  it("can create with findOrCreate and ignore deleted/flushed entities", async () => {
     await insertPublisher({ name: "p1" });
     await insertComment({ text: "c1", parent_publisher_id: 1 });
     const em = newEntityManager();
@@ -874,7 +874,19 @@ describe("EntityManager", () => {
     em.delete(c1);
     await em.flush();
     const c2 = await em.findOrCreate(Comment, { parent: p1 }, {});
-    expect(c2.idMaybe).toBeUndefined();
+    expect(c2.isNewEntity).toBe(true);
+    expect(await p1.comments.load()).toMatchEntity([c2]);
+  });
+
+  it("can create with findOrCreate and ignore deleted/unflushed entities", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertComment({ text: "c1", parent_publisher_id: 1 });
+    const em = newEntityManager();
+    const p1 = await em.load(Publisher, "p:1");
+    const c1 = await em.load(Comment, "comment:1", "parent");
+    em.delete(c1);
+    const c2 = await em.findOrCreate(Comment, { parent: p1 }, {});
+    expect(c2.isNewEntity).toBe(true);
     expect(await p1.comments.load()).toMatchEntity([c2]);
   });
 

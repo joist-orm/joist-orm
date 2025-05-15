@@ -1630,6 +1630,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * updated values that should be put into the entities. A few internal callers set this to false,
    * i.e. when we're loading collections and have db results that are potentially stale compared to
    * the WIP entity state.
+   * todo sanity check this
    */
   public hydrate<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,

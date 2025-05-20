@@ -42,10 +42,12 @@ export function insertAuthor(row: {
   deleted_at?: any;
   certificate?: any;
   range_of_books?: number;
+  amount_of_books?: number;
 }) {
   return testDriver.insert("authors", {
     initials: row.first_name[0],
     number_of_books: 0,
+    amount_of_books: 0,
     tags_of_all_books: "",
     ...row,
   });

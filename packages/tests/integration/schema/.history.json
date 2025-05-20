@@ -19,6 +19,7 @@
   "Author": [
     "address",
     "age",
+    "amountOfBooks",
     "author",
     "authorBooks",
     "authors",

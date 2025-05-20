@@ -41,6 +41,7 @@ import {
   newAuthor,
   newBook,
   newBookReview,
+  newComment,
   newPublisher,
   newSmallPublisher,
   newTag,
@@ -1738,6 +1739,7 @@ describe("EntityManager", () => {
       );
     });
   });
+
   it("fails on optimistic lock collisions", async () => {
     // Given an existing author
     await insertAuthor({ first_name: "f" });
@@ -1749,6 +1751,30 @@ describe("EntityManager", () => {
     await update("authors", { id: 1, updated_at: "2050-01-01" });
     // When we try to save our changes
     await expect(em.flush()).rejects.toThrow("Oplock failure for authors rows 1");
+  });
+
+  it("can create entities that use updated_at timestamp", async () => {
+    const em = newEntityManager();
+    const c1 = newComment(em);
+    await em.flush();
+    c1.text = "changed";
+    await em.flush();
+    await delay(50);
+    c1.text = "changed 2";
+    await em.flush();
+  });
+
+  it("can update entities that use updated_at timestamp", async () => {
+    await insertAuthor({ first_name: "f" });
+    await insertComment({ text: "c1", parent_author_id: 1 });
+    const em = newEntityManager();
+    const c1 = await em.load(Comment, "comment:1");
+    await em.flush();
+    c1.text = "changed";
+    await em.flush();
+    c1.text = "changed 2";
+    await delay(50);
+    await em.flush();
   });
 
   describe("sameEntity", () => {

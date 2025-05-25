@@ -7,6 +7,8 @@ sidebar:
 
 One of Joist's biggest differentiators is its focus on **entities** and **domain modeling**.
 
+I.e. we consider Joist a "real ORM", that helps you model your business logic, and not "just a query builder" that fetches POJOs & leaves your codebase without a sensible, scalable structure for business logic & validation rules.
+
 ## Tldr: Structure
 
 The tldr of "Why Entities?" is that they provide a structure for your application's business logic, which means:
@@ -139,7 +141,7 @@ Joist's entities are classes, which often invokes a knee-jerk "anti-OOP" reactio
 
 However, we primarily use the `class Author extends AuthorCodegen` pattern to "inject" code-generated getters & setters into entities, as the most ergonomic workflow we've found so far.
 
-The intent of Joist's entities is not to "encapsulate behavior" or "hide state" in traditional OOP sense--their job is precisely to expose state to clients/business logic.
+The intent of Joist's entities is not to "encapsulate behavior" or "hide state" in traditional OOP sense (i.e. some taken-to-the-extreme applications for OOP assert you shouldn't even have getters to get your data out of the entity, which is way too purist for Joist's pragmatic approach)--their job is precisely to expose state to clients/business logic.
 
 Additionally, we think "exposing _abstracted_ state", i.e. helper methods that calculate cross-entity derived fields, is also a perfectly fine idea--TypeScript classes are a natural place for this logic to live, as the logic is effectively "overlaid on top" of the raw POJO coming back from the database.
 

@@ -151,15 +151,15 @@ describe("EntityManager.factories", () => {
      [
        "Creating new Tag at EntityManager.factories.test.ts:142↩",
        "  created Tag#1 added to scope↩",
-       "  books = creating new Book↩",
+       "  books[0] = creating new Book↩",
        "    author = creating new Author↩",
        "      created Author#3 added to scope↩",
        "    created Book#1 added to scope↩",
-       "    tags = Tag#1 from opt↩",
-       "  books = creating new Book↩",
+       "    tags[0] = Tag#1 from opt↩",
+       "  books[1] = creating new Book↩",
        "    author = Author#3 from scope↩",
        "    created Book#2 added to scope↩",
-       "    tags = Tag#1 from opt↩",
+       "    tags[0] = Tag#1 from opt↩",
      ]
     `);
   });
@@ -226,7 +226,7 @@ describe("EntityManager.factories", () => {
        "  author = Author#2 from scope↩",
        "  reviewer = Author#2 from scope↩",
        "  created Book#1 added to scope↩",
-       "  comments = creating new Comment↩",
+       "  comments[0] = creating new Comment↩",
        "    parent = Book#1 from opt↩",
        "    created Comment#1 added to scope↩",
      ]
@@ -255,7 +255,7 @@ describe("EntityManager.factories", () => {
        "  reviewer = Author#1 from em↩",
        "  randomComment = Comment#2 from scope↩",
        "  created Book#1 added to scope↩",
-       "  comments = Comment#2 from opt↩",
+       "  comments[0] = Comment#2 from opt↩",
      ]
     `);
   });
@@ -899,13 +899,13 @@ describe("EntityManager.factories", () => {
          "  parentGroup = creating new ParentGroup↩",
          "    created ParentGroup#2 added to scope↩",
          "  created ChildGroup#1 added to scope↩",
-         "  childItems = creating new ChildItem↩",
+         "  childItems[0] = creating new ChildItem↩",
          "    childGroup = ChildGroup#1 from opt↩",
          "    parentItem = creating new ParentItem↩",
          "      parentGroup = ParentGroup#2 from opt↩",
          "      created ParentItem#1 added to scope↩",
          "    created ChildItem#1 added to scope↩",
-         "  childItems = creating new ChildItem↩",
+         "  childItems[1] = creating new ChildItem↩",
          "    childGroup = ChildGroup#1 from opt↩",
          "    parentItem = creating new ParentItem↩",
          "      parentGroup = ParentGroup#2 from opt↩",

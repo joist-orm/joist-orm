@@ -112,7 +112,7 @@ export function newTestInstance<T extends Entity>(
         switch (field.kind) {
           case "m2o":
           case "poly":
-            return [fieldName, resolveFactoryOpt(em, opts, field, optValue, undefined)];
+            return [fieldName, resolveFactoryOpt(em, opts, field, optValue, undefined, undefined)];
           case "o2o":
           case "o2m":
           case "m2m":
@@ -169,13 +169,13 @@ export function newTestInstance<T extends Entity>(
             selfFields.push(fieldName);
             return [];
           } else {
-            return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
+            return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined, undefined)];
           }
         }
       } else if (field.kind === "enum" && required && !field.derived) {
         return [fieldName, field.enumDetailType.getValues()[0]];
       } else if (field.kind === "poly" && required) {
-        return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
+        return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined, undefined)];
       }
 
       return [];
@@ -232,22 +232,24 @@ export function newTestInstance<T extends Entity>(
       // If this is a list of children, i.e. book.authors, handle partials to newTestInstance'd
       return [
         fieldName,
-        (optValue as Array<any>).map((opt) => {
+        (optValue as Array<any>).map((opt, i) => {
           // console.log(`${field.fieldName}`, i);
-          return resolveFactoryOpt(em, withBranchMap(opts), field, opt, entity);
+          return resolveFactoryOpt(em, withBranchMap(opts), field, opt, entity, i);
         }),
       ];
     } else if (field.kind == "m2m") {
       return [
         fieldName,
-        (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, withBranchMap(opts), field, opt, [entity] as any)),
+        (optValue as Array<any>).map((opt, i) =>
+          resolveFactoryOpt(em, withBranchMap(opts), field, opt, [entity] as any, i),
+        ),
       ];
     } else if (field.kind === "o2o") {
       const otherField = field.otherMetadata().allFields[field.otherFieldName];
       const isReactiveReference = "derived" in otherField && otherField.derived === "async";
       if (isReactiveReference) return [];
       // If this is an o2o, i.e. author.image, just pass the optValue (i.e. it won't be a list)
-      return [fieldName, resolveFactoryOpt(em, opts, field, optValue as any, entity)];
+      return [fieldName, resolveFactoryOpt(em, opts, field, optValue as any, entity, undefined)];
     } else {
       return []; // Assume createOpts handled this
     }
@@ -291,22 +293,24 @@ function resolveFactoryOpt<T extends Entity>(
   field: OneToManyField | ManyToOneField | OneToOneField | ManyToManyField | PolymorphicField,
   opt: FactoryEntityOpt<any> | undefined,
   maybeEntity: T | undefined,
+  fieldIndex: number | undefined,
 ): T | IdOf<T> {
   const use = getOrCreateUseMap(opts);
   const { meta, otherFieldName } = metaFromFieldAndOpt(field, opt);
   // const meta = field.kind === "poly" ? field.components[0].otherMetadata() : field.otherMetadata();
   // const otherFieldName = field.kind === "poly" ? field.components[0].otherFieldName : field.otherFieldName;
+  const fieldWithIndex = `${field.fieldName}${fieldIndex !== undefined ? `[${fieldIndex}]` : ""}`;
   if (isEntity(opt)) {
-    logger?.logFoundOpt(field.fieldName, opt);
+    logger?.logFoundOpt(fieldWithIndex, opt);
     return opt as T;
   } else if (isId(opt)) {
     // Try finding the entity in the UoW, otherwise fallback on just setting it as the id (which we support that now)
     const found = (em.entities.find((e) => e.idTaggedMaybe === opt || getTestId(em, e) === opt) as T) || opt;
-    logger?.logFoundOpt(field.fieldName, found);
+    logger?.logFoundOpt(fieldWithIndex, found);
     return found;
   } else if (opt && !isPlainObject(opt) && !(opt instanceof MaybeNew)) {
     // If opt isn't a POJO, assume this is a completely-custom factory
-    logger?.logNotFoundAndCreating(field.fieldName, meta);
+    logger?.logNotFoundAndCreating(fieldWithIndex, meta);
     return meta.factory(em, opt);
   } else {
     // Look for an obvious default
@@ -325,21 +329,21 @@ function resolveFactoryOpt<T extends Entity>(
           .map((meta) => getObviousDefault(em, meta, use))
           .find((existing) => !!existing[0]) || [undefined, undefined];
         if (existing) {
-          logger?.[loggerKey](field.fieldName, existing);
+          logger?.[loggerKey](fieldWithIndex, existing);
           return existing as T;
         }
       } else {
         // Otherwise fall though to making a new entity via the factory
         const [existing, loggerKey] = getObviousDefault(em, meta, use);
         if (existing) {
-          logger?.[loggerKey](field.fieldName, existing);
+          logger?.[loggerKey](fieldWithIndex, existing);
           return existing as T;
         }
       }
     }
     // If this is image.author (m2o) but the other-side is an o2o, pass null instead of []
     maybeEntity ??= (meta.allFields[otherFieldName].kind === "o2o" ? null : []) as any;
-    logger?.logNotFoundAndCreating(field.fieldName, meta);
+    logger?.logNotFoundAndCreating(fieldWithIndex, meta);
     return meta.factory(em, {
       // Because of the `!isPlainObject` above, opt will either be undefined or an object here
       ...applyUse((opt as any) || {}, use, meta),

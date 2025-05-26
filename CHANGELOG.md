@@ -1,3 +1,10 @@
+## [1.247.2](https://github.com/joist-orm/joist-orm/compare/v1.247.1...v1.247.2) (2025-05-26)
+
+
+### Bug Fixes
+
+* Add o2m/m2m index to factory logging. ([#1500](https://github.com/joist-orm/joist-orm/issues/1500)) ([e5a532f](https://github.com/joist-orm/joist-orm/commit/e5a532f80ee5a75382d07ac75defa025dcc12839))
+
 ## [1.247.1](https://github.com/joist-orm/joist-orm/compare/v1.247.0...v1.247.1) (2025-05-14)
 
 

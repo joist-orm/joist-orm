@@ -73,9 +73,10 @@ export class IsLoadedCache {
   }
 
   resetSmartCache(meta: EntityMetadata, fieldName: string): void {
+    // These are RFs in other entities that are watching/reacting to this entity/fieldName
     const rfs = getReactiveFieldsIncludingReadOnly(meta);
     for (const rf of rfs) {
-      // I.e. we've written to Author.firstName, and this RF depends on it
+      // I.e. we've written to Author.firstName, and this RF in Book/otherMeta depends on it
       if (rf.fields.includes(fieldName)) {
         const otherMeta = getMetadata(rf.cstr);
         // Find any cache entries for this rf.cstr + rf.fieldName

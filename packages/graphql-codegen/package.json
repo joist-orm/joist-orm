@@ -21,7 +21,7 @@
     "@dprint/json": "0.15.6",
     "@types/prettier": "^3.0.0",
     "change-case": "^4.1.2",
-    "graphql": "^16.10.0",
+    "graphql": "^16.11.0",
     "joist-codegen": "workspace:*",
     "joist-utils": "workspace:*",
     "pluralize": "^8.0.0",
@@ -29,10 +29,10 @@
     "ts-poet": "^6.11.0"
   },
   "devDependencies": {
-    "@swc/core": "^1.11.22",
+    "@swc/core": "^1.11.29",
     "@swc/jest": "^0.2.38",
     "@types/jest": "^29.5.14",
-    "@types/node": "^22.13.10",
+    "@types/node": "^22.15.24",
     "jest": "30.0.0-alpha.7",
     "prettier-plugin-organize-imports": "^4.1.0",
     "tsconfig-paths": "^4.2.0",

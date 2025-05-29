@@ -15,7 +15,7 @@
     "joist-utils": "workspace:*"
   },
   "devDependencies": {
-    "@swc/core": "^1.11.22",
+    "@swc/core": "^1.11.29",
     "@swc/jest": "^0.2.38",
     "@types/jest": "^29.5.14",
     "jest": "30.0.0-alpha.7",

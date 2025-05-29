@@ -1,6 +1,6 @@
 // @ts-check
 import starlight from "@astrojs/starlight";
-import tailwind from "@astrojs/tailwind";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import starlightBlog from "starlight-blog";
 
@@ -8,7 +8,6 @@ import starlightBlog from "starlight-blog";
 const config = defineConfig({
   site: "https://joist-orm.io",
   integrations: [
-    tailwind({ applyBaseStyles: false }),
     starlight({
       title: "Joist",
       logo: {
@@ -16,7 +15,7 @@ const config = defineConfig({
         dark: "./src/assets/logos/logo-2.png",
         replacesTitle: true,
       },
-      customCss: ["./src/tailwind.css"],
+      customCss: ["./src/styles/global.css"],
       social: [
         { icon: "github", label: "GitHub", href: "https://github.com/joist-orm/joist-orm" },
         { icon: "x.com", label: "X", href: "https://x.com/Joist_Orm" },
@@ -46,6 +45,7 @@ const config = defineConfig({
       ],
     }),
   ],
+  vite: { plugins: [tailwindcss()] },
 });
 
 export default config;

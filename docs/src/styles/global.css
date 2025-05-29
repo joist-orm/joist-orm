@@ -1,0 +1,19 @@
+@import url("https://rsms.me/inter/inter.css");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
+@layer base, starlight, theme, components, utilities;
+
+@import "@astrojs/starlight-tailwind";
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme {
+  --font-sans: "Inter var", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+/* Ensure code blocks use JetBrains Mono */
+code,
+pre {
+  font-family: "JetBrains Mono", monospace;
+}

@@ -29,8 +29,8 @@ import {
   SmallPublisher,
 } from "@src/entities";
 import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
+import ansiRegex from "ansi-regex";
 import { maybeNew, maybeNewPoly, newTestInstance, noValue, setFactoryWriter, testIndex } from "joist-orm";
-import ansiRegex = require("ansi-regex");
 
 let factoryOutput: string[] = [];
 

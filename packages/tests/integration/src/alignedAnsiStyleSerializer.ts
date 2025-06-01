@@ -1,4 +1,4 @@
-import ansiRegex = require("ansi-regex");
+import ansiRegex from "ansi-regex";
 import type { NewPlugin } from "pretty-format";
 
 /** Drop the colorized ANSI chars b/c we're not trying to test Jest colorization itself. */

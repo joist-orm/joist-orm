@@ -1,3 +1,10 @@
+# [1.248.0](https://github.com/joist-orm/joist-orm/compare/v1.247.3...v1.248.0) (2025-06-05)
+
+
+### Features
+
+* Allow sorting by m2o fields. ([#1504](https://github.com/joist-orm/joist-orm/issues/1504)) ([6fb71b7](https://github.com/joist-orm/joist-orm/commit/6fb71b736362da4775c32759ac95e9365daa6f05))
+
 ## [1.247.3](https://github.com/joist-orm/joist-orm/compare/v1.247.2...v1.247.3) (2025-06-05)
 
 

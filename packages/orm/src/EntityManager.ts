@@ -1024,14 +1024,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * Results are unique, i.e. if doing `em.loadLens([b1, b2], b => b.author.publisher)` point to the
    * same `Publisher`, it will only be returned as a single value.
    */
-  public async loadLens<T extends EntityW, U, V>(entities: T[], fn: (lens: Lens<T>) => Lens<U, V>): Promise<U[]>;
+  public async loadLens<T extends EntityW, U, V>(
+    entities: readonly T[],
+    fn: (lens: Lens<T>) => Lens<U, V>,
+  ): Promise<U[]>;
   public async loadLens<T extends EntityW, U extends EntityW, V, const H extends LoadHint<U>>(
-    entities: T[],
+    entities: readonly T[],
     fn: (lens: Lens<T>) => Lens<U, V>,
     populate: H,
   ): Promise<Loaded<U, H>[]>;
   public async loadLens<T extends EntityW, U, V>(
-    entities: T[],
+    entities: readonly T[],
     fn: (lens: Lens<T>) => Lens<U, V>,
     populate?: any,
   ): Promise<V> {

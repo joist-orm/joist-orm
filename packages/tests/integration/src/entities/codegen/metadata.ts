@@ -342,7 +342,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     "comment": { kind: "o2o", fieldName: "comment", fieldIdName: "commentId", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined, immutable: false },
   },
   allFields: {},
-  orderBy: undefined,
+  orderBy: "critic",
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
   config: bookReviewConfig,
   factory: newBookReview,

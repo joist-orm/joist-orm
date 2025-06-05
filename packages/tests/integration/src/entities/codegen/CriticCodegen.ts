@@ -339,14 +339,10 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get bookReviews(): Collection<Critic, BookReview> {
-    return this.__data.relations.bookReviews ??= hasMany(
-      this,
-      bookReviewMeta,
-      "bookReviews",
-      "critic",
-      "critic_id",
-      undefined,
-    );
+    return this.__data.relations.bookReviews ??= hasMany(this, bookReviewMeta, "bookReviews", "critic", "critic_id", {
+      "field": "critic",
+      "direction": "ASC",
+    });
   }
 
   get favoriteLargePublisher(): ManyToOneReference<Critic, LargePublisher, undefined> {

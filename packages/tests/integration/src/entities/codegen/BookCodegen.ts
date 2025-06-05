@@ -459,7 +459,10 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get reviews(): Collection<Book, BookReview> {
-    return this.__data.relations.reviews ??= hasMany(this, bookReviewMeta, "reviews", "book", "book_id", undefined);
+    return this.__data.relations.reviews ??= hasMany(this, bookReviewMeta, "reviews", "book", "book_id", {
+      "field": "critic",
+      "direction": "ASC",
+    });
   }
 
   get comments(): Collection<Book, Comment> {

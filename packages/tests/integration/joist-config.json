@@ -36,7 +36,11 @@
     "AuthorStat": { "tag": "as" },
     "Book": { "fields": { "search": { "derived": "async" } }, "orderBy": "title", "tag": "b" },
     "BookAdvance": { "tag": "ba" },
-    "BookReview": { "fields": { "isPublic": { "derived": "async" }, "isTest": { "derived": "async" } }, "tag": "br" },
+    "BookReview": {
+      "fields": { "isPublic": { "derived": "async" }, "isTest": { "derived": "async" } },
+      "orderBy": "critic",
+      "tag": "br"
+    },
     "Child": { "tag": "child" },
     "ChildGroup": { "tag": "cg" },
     "ChildItem": { "tag": "ci" },

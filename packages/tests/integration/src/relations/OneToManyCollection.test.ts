@@ -1,6 +1,7 @@
+import { expect } from "@jest/globals";
 import { insertAuthor, insertBook, insertBookReview, insertPublisher, select } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
-import { Author, Book, Publisher, newAuthor, newBook, newPublisher, newUser } from "../entities";
+import { Author, Book, Publisher, newAuthor, newBook, newCritic, newPublisher, newUser } from "../entities";
 
 describe("OneToManyCollection", () => {
   it("loads collections", async () => {
@@ -649,6 +650,27 @@ describe("OneToManyCollection", () => {
     newAuthor(em, { firstName: "a3", books: [{}] });
     const authors = await p.authors.load();
     expect(authors).toMatchEntity([{ firstName: "a3" }, { firstName: "a2" }, { firstName: "a1" }]);
+  });
+
+  it("can sort by an m2o field", async () => {
+    const em = newEntityManager();
+    const [c1, c2] = [newCritic(em), newCritic(em)];
+    await em.flush();
+    const [c3, c4] = [newCritic(em), newCritic(em)];
+    const b = newBook(em, {
+      reviews: [
+        { critic: c4 }, // Put the newest first
+        { critic: c3 },
+        { critic: c2 },
+        { critic: c1 },
+      ],
+    });
+    expect(b.reviews.get).toMatchEntity([
+      { critic: c1 },
+      { critic: c2 },
+      { critic: c3 },
+      { critic: c4 }, // Newest ends up last
+    ]);
   });
 
   it("caches get access", async () => {

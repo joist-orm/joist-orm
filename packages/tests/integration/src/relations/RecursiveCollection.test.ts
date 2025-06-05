@@ -1,5 +1,5 @@
 import { insertAuthor, insertBook, select, update } from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
+import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import { RecursiveCycleError, withLoaded } from "joist-orm";
 import { Author, Book, newAuthor, newBook } from "../entities";
 
@@ -9,8 +9,12 @@ describe("RecursiveCollection", () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2", mentor_id: 1 });
       await insertAuthor({ first_name: "a3", mentor_id: 2 });
+      resetQueryCount();
       const em = newEntityManager();
       const a3 = await em.load(Author, "a:3", "mentorsRecursive");
+      expect(queries[1]).toMatchInlineSnapshot(
+        `"WITH RECURSIVE a_cte AS ( SELECT b.id, b.mentor_id FROM authors b WHERE b.id = ANY($1) UNION SELECT r.id, r.mentor_id FROM authors r JOIN a_cte ON r.id = a_cte.mentor_id ) SELECT "a".* FROM authors AS a JOIN a_cte AS a_cte ON a.id = a_cte.id ORDER BY a.id ASC LIMIT $2"`,
+      );
       expect(a3.mentorsRecursive.get).toMatchEntity([{ firstName: "a2" }, { firstName: "a1" }]);
     });
 

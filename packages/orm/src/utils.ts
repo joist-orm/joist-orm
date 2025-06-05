@@ -2,7 +2,7 @@ import { Entity } from "./Entity";
 import { OrderBy } from "./EntityFilter";
 import { isDefined } from "./EntityManager";
 import { New } from "./loadHints";
-import { isReactiveField } from "./relations";
+import { isReactiveField, isReference } from "./relations";
 
 export type MaybePromise<T> = T | Promise<T>;
 
@@ -160,13 +160,24 @@ export function asNew<T extends Entity>(entity: T): New<T> {
 }
 
 export function compareValues(av: any, bv: any, direction: OrderBy): number {
+  const d = direction === "ASC" ? 1 : -1;
   if (isReactiveField(av)) {
     av = !av.isSet ? -1 : av.get;
   }
   if (isReactiveField(bv)) {
     bv = !bv.isSet ? -1 : bv.get;
   }
-  const d = direction === "ASC" ? 1 : -1;
+  if (isReference(av) && isReference(bv)) {
+    const aIsNew = av.isLoaded && (av as any).get?.isNewEntity;
+    const bIsNew = bv.isLoaded && (bv as any).get?.isNewEntity;
+    const bothSame = (aIsNew && bIsNew) || (!aIsNew && !bIsNew);
+    if (!bothSame) {
+      if (aIsNew) return 1 * d; // New entities are always "greater than" loaded entities
+      if (bIsNew) return -1 * d; // Loaded entities are always "less than" new entities
+    }
+    av = av.idTaggedMaybe ?? (av.isLoaded && (av as any).get?.toString()) ?? undefined;
+    bv = bv.idTaggedMaybe ?? (bv.isLoaded && (bv as any).get?.toString()) ?? undefined;
+  }
   if (!isDefined(av) || !isDefined(bv)) {
     return !av && !bv ? 0 : (!av ? 1 : -1) * d;
   } else if (typeof av === "number" && typeof bv === "number") {

@@ -43,6 +43,7 @@ describe("withLoaded", () => {
   it("with a m2o", async () => {
     const em = newEntityManager();
     const author = newAuthor(em, { publisher: {} });
+    const a = withLoaded(author);
     const { publisher } = withLoaded(author);
     expect(publisher?.name).toEqual("LargePublisher 1");
   });
@@ -53,7 +54,8 @@ describe("withLoaded", () => {
     const em = newEntityManager();
     const book = await em.load(Book, "b:1");
     expect(() => {
-      const { author } = withLoaded(book as any);
+      const { author } = withLoaded(book as Book);
+      console.log(author.id);
     }).toThrow("Book:1.author is not loaded");
   });
 

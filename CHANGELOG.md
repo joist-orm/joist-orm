@@ -1,3 +1,10 @@
+## [1.247.3](https://github.com/joist-orm/joist-orm/compare/v1.247.2...v1.247.3) (2025-06-05)
+
+
+### Bug Fixes
+
+* Allow readonly arrays to em.loadLens. ([#1503](https://github.com/joist-orm/joist-orm/issues/1503)) ([121ceb8](https://github.com/joist-orm/joist-orm/commit/121ceb8357833b82522a0c30b5221d99ac9d9a1c))
+
 ## [1.247.2](https://github.com/joist-orm/joist-orm/compare/v1.247.1...v1.247.2) (2025-05-26)
 
 

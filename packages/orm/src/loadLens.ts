@@ -83,7 +83,7 @@ export type Lens<T, R = T> = {
 // subclass itself, so we use the codegen hammer in our subclass to force the right Lens type
 // in a .load stub that just calls us for the implementation.
 export async function loadLens<T extends Entity, U, V>(
-  start: T | T[],
+  start: T | readonly T[],
   fn: (lens: Lens<T>) => Lens<U, V>,
   opts: { forceReload?: boolean; sql?: boolean } = {},
 ): Promise<V> {
@@ -110,7 +110,7 @@ export async function loadLens<T extends Entity, U, V>(
     // If there is only 1 path, don't both with the fancy join
     if (paths.length > 1) {
       // TODO We can only do this is _none_ of the paths are loaded, otherwise we'll miss WIP mutations
-      if (Array.isArray(start)) {
+      if (isReadOnlyArray(start)) {
         const em = start[0].em;
         return (await lensDataLoader(em, meta.cstr, true, paths)
           .loadMany(start.map((e) => e.idTagged))
@@ -214,7 +214,11 @@ function maybeLoad(object: any, path: string, opts: { forceReload?: boolean }): 
  *
  * This assumes you've first evaluated the lens with `loadLens` and now can access it synchronously.
  */
-export function getLens<T, U, V>(startMeta: EntityMetadata, start: T | T[], fn: (lens: Lens<T>) => Lens<U, V>): V {
+export function getLens<T, U, V>(
+  startMeta: EntityMetadata,
+  start: T | readonly T[],
+  fn: (lens: Lens<T>) => Lens<U, V>,
+): V {
   const paths = collectPaths(fn);
   let currentMeta: EntityMetadata | undefined = startMeta;
   let current: any = start;
@@ -261,7 +265,7 @@ function maybeAdd(set: Set<any>, value: any) {
 }
 
 /** Returns whether a lens is loaded; primarily for deeply loaded instances in tests. */
-export function isLensLoaded<T, U, V>(start: T | T[], fn: (lens: Lens<T>) => Lens<U, V>): boolean {
+export function isLensLoaded<T, U, V>(start: T | readonly T[], fn: (lens: Lens<T>) => Lens<U, V>): boolean {
   // This is a huge copy/paste of `getLens` but we check `isNotLoaded` and early return
   // as soon as we find any not-loaded relation
   const paths = collectPaths(fn);
@@ -330,4 +334,9 @@ function collectPaths(fn: Function): string[] {
   // Invoke the lens function to record the navigation path on our proxy
   fn(proxy as any);
   return paths;
+}
+
+// Work around https://github.com/microsoft/TypeScript/issues/17002
+function isReadOnlyArray<T>(value: T | readonly T[]): value is readonly T[] {
+  return Array.isArray(value);
 }

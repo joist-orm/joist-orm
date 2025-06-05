@@ -226,15 +226,15 @@ export function maybePopulateThen<T extends Entity, H extends LoadHint<T>, R>(
   return isLoaded(entity, hint) ? fn(entity) : (entity as any).populate(hint).then(fn);
 }
 
-export function assertLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
+export function assertLoaded<T extends Entity, const H extends LoadHint<T>>(
   entity: T,
   hint: H,
-): asserts entity is L {
+): asserts entity is Loaded<T, H> {
   if (!isLoaded(entity, hint)) fail(`${entity.id} is not loaded for ${JSON.stringify(hint)}`);
 }
 
-export function ensureLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(entity: T, hint: H): L {
-  assertLoaded<T, H, L>(entity, hint);
+export function ensureLoaded<T extends Entity, const H extends LoadHint<T>>(entity: T, hint: H): Loaded<T, H> {
+  assertLoaded<T, H>(entity, hint);
   return entity;
 }
 

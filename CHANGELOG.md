@@ -1,3 +1,10 @@
+## [1.248.1](https://github.com/joist-orm/joist-orm/compare/v1.248.0...v1.248.1) (2025-06-10)
+
+
+### Bug Fixes
+
+* Add const to ensureLoaded hint to fix inference. ([#1508](https://github.com/joist-orm/joist-orm/issues/1508)) ([ffa27ac](https://github.com/joist-orm/joist-orm/commit/ffa27ac25bc259f0accdce2c26b6ade3bf672f74))
+
 # [1.248.0](https://github.com/joist-orm/joist-orm/compare/v1.247.3...v1.248.0) (2025-06-05)
 
 

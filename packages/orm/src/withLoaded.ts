@@ -99,12 +99,12 @@ export function withLoaded<T extends Entity, H extends LoadHint<T>, L extends Lo
   );
 }
 
-export function ensureWithLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
+export function ensureWithLoaded<T extends Entity, const H extends LoadHint<T>>(
   entity: T,
   hint: H,
-): WithLoaded<T, H, L> {
-  assertLoaded<T, H, L>(entity, hint);
-  return withLoaded<T, H, L>(entity);
+): WithLoaded<T, H, Loaded<T, H>> {
+  assertLoaded<T, H>(entity, hint);
+  return withLoaded(entity);
 }
 
 /**

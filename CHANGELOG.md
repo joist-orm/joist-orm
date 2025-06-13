@@ -1,3 +1,10 @@
+# [1.249.0](https://github.com/joist-orm/joist-orm/compare/v1.248.1...v1.249.0) (2025-06-13)
+
+
+### Features
+
+* added isRefreshing helper function for EntityManager ([#1510](https://github.com/joist-orm/joist-orm/issues/1510)) ([7132ef0](https://github.com/joist-orm/joist-orm/commit/7132ef0de0d7ce9f7c72067914a92dc1fe854d11))
+
 ## [1.248.1](https://github.com/joist-orm/joist-orm/compare/v1.248.0...v1.248.1) (2025-06-10)
 
 

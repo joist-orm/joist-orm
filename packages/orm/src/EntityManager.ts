@@ -227,6 +227,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   #fieldLogger: FieldLogger | undefined;
   #isLoadedCache = new IsLoadedCache();
   private __api: EntityManagerInternalApi;
+  private __isRefreshing = false;
   mode: EntityManagerMode = "writes";
 
   constructor(em: EntityManager<C, Entity, TX>);
@@ -1545,6 +1546,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   async refresh(entity: EntityW): Promise<void>;
   async refresh(entities: ReadonlyArray<EntityW>): Promise<void>;
   async refresh(param?: EntityW | ReadonlyArray<EntityW> | { deepLoad?: boolean }): Promise<void> {
+    this.__isRefreshing = true;
     this.#dataloaders = {};
     this.#preloadedRelations = new Map();
     const deepLoad = param && "deepLoad" in param && param.deepLoad;
@@ -1616,6 +1618,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         );
       }
     }
+    this.__isRefreshing = false;
   }
 
   public get numberOfEntities(): number {
@@ -1876,6 +1879,10 @@ export interface EntityManagerInternalApi {
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {
   return (em as any)["__api"];
+}
+
+export function isRefreshing(em: EntityManager): boolean {
+  return em["__isRefreshing"];
 }
 
 let defaultEntityLimit = 50_000;

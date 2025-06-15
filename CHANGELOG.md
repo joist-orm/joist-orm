@@ -1,3 +1,10 @@
+## [1.249.1](https://github.com/joist-orm/joist-orm/compare/v1.249.0...v1.249.1) (2025-06-15)
+
+
+### Bug Fixes
+
+* Fix synchronous setDefaults for RQFs. ([#1512](https://github.com/joist-orm/joist-orm/issues/1512)) ([5ce4fe7](https://github.com/joist-orm/joist-orm/commit/5ce4fe747a9faeb1c35ab1d268347620a5761ca8))
+
 # [1.249.0](https://github.com/joist-orm/joist-orm/compare/v1.248.1...v1.249.0) (2025-06-13)
 
 

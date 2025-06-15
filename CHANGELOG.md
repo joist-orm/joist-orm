@@ -1,3 +1,10 @@
+## [1.249.2](https://github.com/joist-orm/joist-orm/compare/v1.249.1...v1.249.2) (2025-06-15)
+
+
+### Bug Fixes
+
+* Add invalid fieldName check. ([#1513](https://github.com/joist-orm/joist-orm/issues/1513)) ([22b6093](https://github.com/joist-orm/joist-orm/commit/22b6093c470f14d94c0d55f2380056fec07f96c6))
+
 ## [1.249.1](https://github.com/joist-orm/joist-orm/compare/v1.249.0...v1.249.1) (2025-06-15)
 
 

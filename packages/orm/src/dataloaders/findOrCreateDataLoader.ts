@@ -42,7 +42,7 @@ export function findOrCreateDataLoader<T extends Entity>(
   const batchKey = `${type.name}-${whereValue}-${softDeletes}`;
 
   const invalidKeys = Object.keys(where).filter((key) => {
-    const field = meta.allFields[key];
+    const field = meta.allFields[key] ?? fail(`Invalid field ${key}`);
     const supported =
       field.kind === "primitive" || field.kind === "enum" || field.kind === "m2o" || field.kind === "poly";
     return !supported;

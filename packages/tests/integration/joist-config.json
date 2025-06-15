@@ -79,7 +79,10 @@
       "tag": "p"
     },
     "PublisherGroup": {
-      "fields": { "numberOfBookReviews": { "derived": "async" } },
+      "fields": {
+        "numberOfBookReviews": { "derived": "async" },
+        "numberOfBookReviewsFormatted": { "derived": "async" }
+      },
       "relations": { "critics": { "large": true } },
       "tag": "pg"
     },

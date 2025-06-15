@@ -7,7 +7,7 @@ import {
   select,
 } from "@src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
-import { Book, BookReview, Publisher, newBookReview, newLargePublisher } from "../entities";
+import { Book, BookReview, newBookReview, newLargePublisher, Publisher, SmallPublisherGroup } from "../entities";
 
 describe("ReactiveQueryField", () => {
   it("skips UPDATE after INSERT if value hasn't changed", async () => {
@@ -160,5 +160,12 @@ describe("ReactiveQueryField", () => {
     expect((await select("publishers"))[0]).toMatchObject({ number_of_book_reviews: 1 });
     expect((await select("publisher_groups"))[0]).toMatchObject({ number_of_book_reviews: 1 });
     expect(await select("book_reviews")).toHaveLength(1);
+  });
+
+  it("can save varchar columns with sync setDefaults", async () => {
+    const em = newEntityManager();
+    em.create(SmallPublisherGroup, { name: "spg1" });
+    await em.flush();
+    expect((await select("publisher_groups"))[0]).toMatchObject({ number_of_book_reviews_formatted: "count=0" });
   });
 });

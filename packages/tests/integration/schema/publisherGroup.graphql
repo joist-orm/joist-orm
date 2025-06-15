@@ -10,12 +10,14 @@ type PublisherGroup {
   publishers: [Publisher!]!
   critics: [Critic!]!
   numberOfBookReviews: Int
+  numberOfBookReviewsFormatted: String!
 }
 
 input SavePublisherGroupInput {
   id: ID
   name: String
   numberOfBookReviews: Int
+  numberOfBookReviewsFormatted: String
 }
 
 type SavePublisherGroupResult {

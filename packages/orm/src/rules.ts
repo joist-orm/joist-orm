@@ -2,9 +2,9 @@ import { Changes, EntityChanges } from "./changes";
 import { Entity } from "./Entity";
 import { getField } from "./fields";
 import { ReactiveHint } from "./reactiveHints";
-import { ManyToOneReferenceImpl } from "./relations";
+import { isReactiveQueryField, ManyToOneReferenceImpl } from "./relations";
 import { FieldsOf } from "./typeMap";
-import { MaybePromise, groupBy, maybePromiseThen } from "./utils";
+import { groupBy, MaybePromise, maybePromiseThen } from "./utils";
 
 export enum ValidationCode {
   required = "required",
@@ -59,11 +59,17 @@ export class ValidationErrors extends Error {
  * This is added automatically by codegen to entities based on FK not-nulls.
  */
 export function newRequiredRule<T extends Entity>(key: keyof FieldsOf<T> & string): ValidationRule<T> {
-  // Use getField so that we peer through relations
-  return (entity) =>
-    getField(entity, key) === undefined
-      ? { field: key, code: ValidationCode.required, message: `${key} is required` }
-      : undefined;
+  return (entity) => {
+    // Use getField so that we peer through relations
+    if (getField(entity, key) === undefined) {
+      if (entity.isNewEntity && isReactiveQueryField((entity as any)[key])) {
+        throw new Error(
+          `ReactiveQueryField ${entity.constructor.name}.${key} must have a default value, either in the database or with config.setDefault (see the 4th step in https://joist-orm.io/modeling/reactive-fields/#reactive-query-fields.`,
+        );
+      }
+      return { field: key, code: ValidationCode.required, message: `${key} is required` };
+    }
+  };
 }
 
 /**

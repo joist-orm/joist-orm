@@ -65,6 +65,7 @@ export interface PublisherGroupFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
+  numberOfBookReviewsFormatted: { kind: "primitive"; type: string; unique: false; nullable: never; derived: true };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   publishers: { kind: "o2m"; type: Publisher };
@@ -84,6 +85,7 @@ export interface PublisherGroupFilter {
   id?: ValueFilter<PublisherGroupId, never> | null;
   name?: ValueFilter<string, null>;
   numberOfBookReviews?: ValueFilter<number, never>;
+  numberOfBookReviewsFormatted?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
@@ -95,6 +97,7 @@ export interface PublisherGroupGraphQLFilter {
   id?: ValueGraphQLFilter<PublisherGroupId>;
   name?: ValueGraphQLFilter<string>;
   numberOfBookReviews?: ValueGraphQLFilter<number>;
+  numberOfBookReviewsFormatted?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
@@ -116,17 +119,20 @@ export interface PublisherGroupOrder {
   id?: OrderBy;
   name?: OrderBy;
   numberOfBookReviews?: OrderBy;
+  numberOfBookReviewsFormatted?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
 }
 
 export interface PublisherGroupFactoryExtras {
   withNumberOfBookReviews?: number;
+  withNumberOfBookReviewsFormatted?: string;
 }
 
 export const publisherGroupConfig = new ConfigApi<PublisherGroup, Context>();
 
 publisherGroupConfig.addRule("numberOfBookReviews", newRequiredRule("numberOfBookReviews"));
+publisherGroupConfig.addRule("numberOfBookReviewsFormatted", newRequiredRule("numberOfBookReviewsFormatted"));
 publisherGroupConfig.addRule(newRequiredRule("createdAt"));
 publisherGroupConfig.addRule(newRequiredRule("updatedAt"));
 
@@ -182,6 +188,8 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   abstract readonly numberOfBookReviews: ReactiveField<PublisherGroup, number>;
+
+  abstract readonly numberOfBookReviewsFormatted: ReactiveField<PublisherGroup, string>;
 
   get createdAt(): Date {
     return getField(this, "createdAt");

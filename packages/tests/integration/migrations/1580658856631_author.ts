@@ -42,6 +42,8 @@ export function up(b: MigrationBuilder): void {
     name: "text",
     // For testing ReactiveFields that depend on ReactiveQueryFields
     number_of_book_reviews: { type: "int", notNull: true },
+    // For testing ReactiveQueryFields that are text
+    number_of_book_reviews_formatted: { type: "varchar(100)", notNull: true },
   });
 
   // Used to test SmallPublisher.group specializing to SmallPublisherGroup

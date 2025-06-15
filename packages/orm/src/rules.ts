@@ -62,6 +62,9 @@ export function newRequiredRule<T extends Entity>(key: keyof FieldsOf<T> & strin
   return (entity) => {
     // Use getField so that we peer through relations
     if (getField(entity, key) === undefined) {
+      // Sanity check for ReactiveQueryFields--this should be cheap to just always do; alternatively we could
+      // have a RQF-specific `rqfRequiredRule` so that other `newRequiredRule` users don't pay the cost of these
+      // two `if` checks`.
       if (entity.isNewEntity && isReactiveQueryField((entity as any)[key])) {
         throw new Error(
           `ReactiveQueryField ${entity.constructor.name}.${key} must have a default value, either in the database or with config.setDefault (see the 4th step in https://joist-orm.io/modeling/reactive-fields/#reactive-query-fields.`,

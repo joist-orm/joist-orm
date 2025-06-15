@@ -382,103 +382,157 @@ describe("EntityManager.reactiveRules", () => {
   });
 
   it.withCtx("creates the right reactive field targets", async () => {
-    expect(getReactiveFields(Book)).toEqual([
-      { kind: "populate", cstr: "Author", name: "numberOfBooks", fields: ["author", "deletedAt"], path: ["author"] },
-      { kind: "populate", cstr: "Author", name: "bookComments", fields: ["author", "deletedAt"], path: ["author"] },
-      {
-        kind: "populate",
-        cstr: "Author",
-        name: "numberOfPublicReviews",
-        fields: ["author", "deletedAt"],
-        path: ["author"],
-      },
-      {
-        kind: "populate",
-        cstr: "Author",
-        name: "numberOfPublicReviews2",
-        fields: ["author", "deletedAt"],
-        path: ["author"],
-      },
-      {
-        kind: "populate",
-        cstr: "Author",
-        name: "tagsOfAllBooks",
-        fields: ["author", "deletedAt", "tags"],
-        path: ["author"],
-      },
-      { kind: "populate", cstr: "Author", name: "search", fields: ["author", "deletedAt", "title"], path: ["author"] },
-      { kind: "populate", cstr: "Author", name: "rangeOfBooks", fields: ["author", "deletedAt"], path: ["author"] },
-      { kind: "populate", cstr: "Author", name: "favoriteBook", fields: ["author", "deletedAt"], path: ["author"] },
-      { kind: "populate", cstr: "Book", name: "search", fields: ["author", "title"], path: [] },
-      { kind: "populate", cstr: "BookReview", name: "isPublic", fields: ["author"], path: ["reviews"] },
-      { kind: "populate", cstr: "Comment", name: "parentTags", fields: ["tags"], path: ["comments"] },
-      {
-        kind: "query",
-        cstr: "LargePublisher",
-        name: "numberOfBookReviews",
-        fields: ["author", "deletedAt"],
-        path: ["author", "publisher@LargePublisher"],
-      },
-      {
-        kind: "populate",
-        cstr: "LargePublisher",
-        name: "titlesOfFavoriteBooks",
-        fields: ["title"],
-        path: ["favoriteAuthor", "publisher@LargePublisher"],
-      },
-      {
-        kind: "populate",
-        cstr: "LargePublisher",
-        name: "favoriteAuthor",
-        fields: ["author", "deletedAt"],
-        path: ["author", "publisher@LargePublisher"],
-      },
-
-      {
-        kind: "query",
-        cstr: "Publisher",
-        name: "numberOfBookReviews",
-        fields: ["author", "deletedAt"],
-        path: ["author", "publisher"],
-      },
-      {
-        kind: "populate",
-        cstr: "Publisher",
-        name: "titlesOfFavoriteBooks",
-        fields: ["title"],
-        path: ["favoriteAuthor", "publisher"],
-      },
-      {
-        kind: "populate",
-        cstr: "Publisher",
-        name: "favoriteAuthor",
-        fields: ["author", "deletedAt"],
-        path: ["author", "publisher"],
-      },
-      {
-        kind: "query",
-        cstr: "SmallPublisher",
-        name: "numberOfBookReviews",
-        fields: ["author", "deletedAt"],
-        path: ["author", "publisher@SmallPublisher"],
-      },
-      {
-        kind: "populate",
-        cstr: "SmallPublisher",
-        name: "titlesOfFavoriteBooks",
-        fields: ["title"],
-        path: ["favoriteAuthor", "publisher@SmallPublisher"],
-      },
-      {
-        kind: "populate",
-        cstr: "SmallPublisher",
-        name: "favoriteAuthor",
-        fields: ["author", "deletedAt"],
-        path: ["author", "publisher@SmallPublisher"],
-      },
-    ]);
-
     let i = 0;
+    const bRfs = getReactiveFields(Book);
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "numberOfBooks",
+      fields: ["author", "deletedAt"],
+      path: ["author"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "bookComments",
+      fields: ["author", "deletedAt"],
+      path: ["author"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "numberOfPublicReviews",
+      fields: ["author", "deletedAt"],
+      path: ["author"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "numberOfPublicReviews2",
+      fields: ["author", "deletedAt"],
+      path: ["author"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "tagsOfAllBooks",
+      fields: ["author", "deletedAt", "tags"],
+      path: ["author"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "search",
+      fields: ["author", "deletedAt", "title"],
+      path: ["author"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "rangeOfBooks",
+      fields: ["author", "deletedAt"],
+      path: ["author"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "favoriteBook",
+      fields: ["author", "deletedAt"],
+      path: ["author"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Book",
+      name: "search",
+      fields: ["author", "title"],
+      path: [],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "BookReview",
+      name: "isPublic",
+      fields: ["author"],
+      path: ["reviews"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Comment",
+      name: "parentTags",
+      fields: ["tags"],
+      path: ["comments"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "query",
+      cstr: "LargePublisher",
+      name: "numberOfBookReviews",
+      fields: ["author", "deletedAt"],
+      path: ["author", "publisher@LargePublisher"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "LargePublisher",
+      name: "titlesOfFavoriteBooks",
+      fields: ["title"],
+      path: ["favoriteAuthor", "publisher@LargePublisher"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "LargePublisher",
+      name: "favoriteAuthor",
+      fields: ["author", "deletedAt"],
+      path: ["author", "publisher@LargePublisher"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "query",
+      cstr: "Publisher",
+      name: "numberOfBookReviews",
+      fields: ["author", "deletedAt"],
+      path: ["author", "publisher"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Publisher",
+      name: "titlesOfFavoriteBooks",
+      fields: ["title"],
+      path: ["favoriteAuthor", "publisher"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Publisher",
+      name: "favoriteAuthor",
+      fields: ["author", "deletedAt"],
+      path: ["author", "publisher"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "query",
+      cstr: "PublisherGroup",
+      name: "numberOfBookReviewsFormatted",
+      fields: ["author", "deletedAt"],
+      path: ["author", "publisher", "group"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "query",
+      cstr: "SmallPublisher",
+      name: "numberOfBookReviews",
+      fields: ["author", "deletedAt"],
+      path: ["author", "publisher@SmallPublisher"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "SmallPublisher",
+      name: "titlesOfFavoriteBooks",
+      fields: ["title"],
+      path: ["favoriteAuthor", "publisher@SmallPublisher"],
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "SmallPublisher",
+      name: "favoriteAuthor",
+      fields: ["author", "deletedAt"],
+      path: ["author", "publisher@SmallPublisher"],
+    });
+
+    i = 0;
     const brRfs = getReactiveFields(BookReview);
     expect(brRfs[i++]).toEqual({
       kind: "populate",
@@ -530,6 +584,13 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfBookReviews",
       fields: [],
       path: ["book", "author", "publisher"],
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "query",
+      cstr: "PublisherGroup",
+      name: "numberOfBookReviewsFormatted",
+      fields: [],
+      path: ["book", "author", "publisher", "group"],
     });
     expect(brRfs[i++]).toEqual({
       kind: "query",

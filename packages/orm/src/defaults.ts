@@ -33,7 +33,8 @@ export function setSyncDefaults(entity: Entity): void {
       // from the codegen constructor, so the user-defined `hasReactiveQueryField` fields will
       // not have been initialized yet (i.e. `entity[field]` will be undefined and not yet an
       // `instanceof ReactiveQueryField`). Thankfully we can just use setField.
-      setField(entity, fieldName, maybeFn);
+      const value = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
+      setField(entity, fieldName, value);
     } else if (!isRelation(field)) {
       const hasBeenSet = fieldName in getInstanceData(entity).data;
       if (!hasBeenSet) {

@@ -7,9 +7,9 @@ sidebar:
 
 Reactive Fields are values that can be calculated/derived from other data within your domain model, for example:
 
-* Deriving an Author's `fullName` from their `firstName` and `lastName`
-* Deriving an Author's `numberOfBooks` from their `books` collection
-* Deriving any calculated value, as simple or complicated as you like
+- Deriving an Author's `fullName` from their `firstName` and `lastName`
+- Deriving an Author's `numberOfBooks` from their `books` collection
+- Deriving any calculated value, as simple or complicated as you like
 
 Reactive Fields **are stored in the database** as regular primitive columns, so they are not calculated on-the-fly when you access them--this makes them very cheap to access, and means they are basically **instantly-updated materialized views**.
 
@@ -19,7 +19,7 @@ Reactive Fields **are stored in the database** as regular primitive columns, so 
 
 The killer feature of Joist's Reactive Fields is that Joist will **automatically keep them up-to-date** as their data changes.
 
-Joist uses each Reactive Field's "reactive hint" to watch for __any write__ that affects calculated values during `em.flush`, and then, when this happens, loads the RF into memory and recalculates it, in __the same `em.flush` transaction as the original write__--which means the RF values are **always atomically updated**.
+Joist uses each Reactive Field's "reactive hint" to watch for **any write** that affects calculated values during `em.flush`, and then, when this happens, loads the RF into memory and recalculates it, in **the same `em.flush` transaction as the original write**--which means the RF values are **always atomically updated**.
 
 For example, given a Reactive Field `totalReviewRatings` on `Author`:
 
@@ -31,18 +31,18 @@ class Author extends AuthorCodegen {
     // - populates the `a` instance passed to our lambda, and
     // - declaratively tells Joist what data we need to react to
     { books: { reviews: "rating" } },
-    a => a.books.get.reduce((sum, b) => sum + b.reviews.get.reduce((sum, r) => sum + r.rating, 0), 0),
+    (a) => a.books.get.reduce((sum, b) => sum + b.reviews.get.reduce((sum, r) => sum + r.rating, 0), 0),
   );
 }
 ```
 
 The reactive hint of `{ books: { reviews: "rating" } }` allows Joist to automatically call the lambda whenever:
 
-* A `BookReview.rating` changes, on the `review.book.author` entity
-* A `BookReview.book` changes, on the `book.author` entities (old and new)
-* A `BookReview` is created/deleted, on the `review.book.author` entity
-* A `Book` is created/deleted, on the `book.author` entity
-* A `Book.author` changes, on the new `book.author` entities (old and new)
+- A `BookReview.rating` changes, on the `review.book.author` entity
+- A `BookReview.book` changes, on the `book.author` entities (old and new)
+- A `BookReview` is created/deleted, on the `review.book.author` entity
+- A `Book` is created/deleted, on the `book.author` entity
+- A `Book.author` changes, on the new `book.author` entities (old and new)
 
 Basically, if you reason about "when should an Author need to recalculate its `totalReviewRatings`?", this list is the exhaustive set of writes that could affect the value.
 
@@ -54,16 +54,15 @@ Joist's reactivity depends on all writes going through the domain model, i.e. no
 
 That said, if the underlying data does drift, or you've updated your reactive field's business logic and need it to be recalculated, you can call `em.recalc` on any entity, and all of its reactive fields will be recalculated and updated in the database.
 
-At [Homebound](https://www.homebound.com/), we use a `recalcEntities` background job, using [graphile-worker](https://worker.graphile.org/), to recalculate fields across all rows in a table, whenever we've added new RFs and changed the business logic of existing ones--much like applying data migrations via SQL, except that RF logic is written TypeScript, so for us more idiomatic and enjoyable to write.  
+At [Homebound](https://www.homebound.com/), we use a `recalcEntities` background job, using [graphile-worker](https://worker.graphile.org/), to recalculate fields across all rows in a table, whenever we've added new RFs and changed the business logic of existing ones--much like applying data migrations via SQL, except that RF logic is written TypeScript, so for us more idiomatic and enjoyable to write.
 
 :::
-
 
 ## Sync Reactive Fields
 
 Synchronous reactive fields are just getters that calculate the field's value (and store it in the database column) from other fields on the entity itself.
 
-After adding the column for a sync field to the database, i.e. an `authors.initials` column, you mark the field as `derived: "sync"` in `joist-config.json`: 
+After adding the column for a sync field to the database, i.e. an `authors.initials` column, you mark the field as `derived: "sync"` in `joist-config.json`:
 
 ```json
 {
@@ -124,12 +123,12 @@ Note that the `numberOfBooks` property **must be explicitly typed** as `Reactive
 
 The `hasReactiveField` function takes three arguments:
 
-* `fieldName` the name of the field in the entity and `joist-config.json`.
-* `reactiveHint` any fields that should trigger recalculation of the reactive field.
-  
-   This can be a string (`"firstName"`), an array of strings (`["firstName", "books"]`), or an object literal of nested relationships (`{ books: { reviews: "title" } }`).
+- `fieldName` the name of the field in the entity and `joist-config.json`.
+- `reactiveHint` any fields that should trigger recalculation of the reactive field.
 
-* `fn` the function that calculates the value of the derived field.
+  This can be a string (`"firstName"`), an array of strings (`["firstName", "books"]`), or an object literal of nested relationships (`{ books: { reviews: "title" } }`).
+
+- `fn` the function that calculates the value of the derived field.
 
   This function will be called with the entity as the only argument. All the fields in the reactiveHint will be loaded before this function is called and can be accessed synchronously using `get`.
 
@@ -162,10 +161,10 @@ class Publisher {
 
 The `hasReactiveQueryField` takes four arguments:
 
-* `fieldName` the name of the field in the entity and `joist-config.json`.
-* `paramHint` a reactive hint of data that will be loaded into memory, similar to a regular `ReactiveField`.
-* `dbHint` a reactive hint of data that will *not* be loaded into memory, but if it changes will still cause the field to be recalculated.
-* `fn` the function that calculates the value of the derived field.
+- `fieldName` the name of the field in the entity and `joist-config.json`.
+- `paramHint` a reactive hint of data that will be loaded into memory, similar to a regular `ReactiveField`.
+- `dbHint` a reactive hint of data that will _not_ be loaded into memory, but if it changes will still cause the field to be recalculated.
+- `fn` the function that calculates the value of the derived field.
 
   This function will have access to the data in `paramHint`, and then should issue a database query that summarizes/queries against the fields in the `dbHint`.
 
@@ -177,6 +176,11 @@ For example, a flow for the `numberOfBookReviews` above might be:
 2. A request creates a new `BookReview` and call `em.flush`
 3. During `em.flush`, Joist realises that the `Publisher.numberOfBookReviews` needs recalculated
 4. Joist will first issue an `INSERT INTO book_reviews` for the `BookReview`
+
+   Because we haven't called `numberOfBookReviews` yet, if the column is `NOT NULL`, Joist uses default value as a temporary/placeholder value.
+
+   This can be either a static `DEFAULT` value in the database schema (which Joist's `codegen` step will pick up & create a `config.setDefault` call for, or an explicit `config.setDefault` call in your entity file).
+
 5. With the transaction still open, the `em.findCount` query runs and sees the updated count
 6. Joist then issues an additional `UPDATE publishers` query to update the `Publisher`
 7. The transaction is then committed
@@ -185,6 +189,6 @@ Note that this "issue a `SELECT` with a transaction open" is not normally how Jo
 
 :::tip[Tip]
 
-Currently, the `ReactiveQueryField`'s query is not limited (i.e. either by type-checking or runtime verification) to querying against **only** data described in the `dbHint`, but you should ensure that it does, as otherwise field value may drift from the value calculated by the query. 
+Currently, the `ReactiveQueryField`'s query is not limited (i.e. either by type-checking or runtime verification) to querying against **only** data described in the `dbHint`, but you should ensure that it does, as otherwise field value may drift from the value calculated by the query.
 
 :::

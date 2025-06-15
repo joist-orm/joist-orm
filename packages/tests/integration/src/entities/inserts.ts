@@ -237,12 +237,21 @@ export function insertTag(row: { id?: number; name: string }) {
 }
 
 export function insertPublisherGroup(row: { id?: number; name: string; number_of_book_reviews?: number }) {
-  return testDriver.insert("publisher_groups", { number_of_book_reviews: 0, ...row });
+  return testDriver.insert("publisher_groups", {
+    number_of_book_reviews: 0,
+    number_of_book_reviews_formatted: "count=0",
+    ...row,
+  });
 }
 
 export async function insertSmallPublisherGroup(row: { id: number; name: string; number_of_book_reviews?: number }) {
   const { id, ...base } = row;
-  await testDriver.insert("publisher_groups", { id, number_of_book_reviews: 0, ...base });
+  await testDriver.insert("publisher_groups", {
+    id,
+    number_of_book_reviews: 0,
+    number_of_book_reviews_formatted: "count=0",
+    ...base,
+  });
   await testDriver.insert("small_publisher_groups", { id, small_name: row.id }, true);
 }
 

@@ -1,0 +1,7 @@
+type SmallPublisherGroup {
+  numberOfBookReviewsFormatted: String!
+}
+
+input SaveSmallPublisherGroupInput {
+  numberOfBookReviewsFormatted: String
+}

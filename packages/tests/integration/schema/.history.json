@@ -260,7 +260,16 @@
     "type",
     "updatedAt"
   ],
-  "PublisherGroup": ["createdAt", "critics", "id", "name", "numberOfBookReviews", "publishers", "updatedAt"],
+  "PublisherGroup": [
+    "createdAt",
+    "critics",
+    "id",
+    "name",
+    "numberOfBookReviews",
+    "numberOfBookReviewsFormatted",
+    "publishers",
+    "updatedAt"
+  ],
   "SaveAdminUserInput": [
     "authorManyToOneId",
     "bio",
@@ -411,7 +420,7 @@
   "SaveParentGroupResult": ["parentGroup"],
   "SaveParentItemInput": ["id", "name", "parentGroupId"],
   "SaveParentItemResult": ["parentItem"],
-  "SavePublisherGroupInput": ["id", "name", "numberOfBookReviews"],
+  "SavePublisherGroupInput": ["id", "name", "numberOfBookReviews", "numberOfBookReviewsFormatted"],
   "SavePublisherGroupResult": ["publisherGroup"],
   "SavePublisherInput": [
     "baseAsyncDefault",
@@ -437,7 +446,7 @@
     "updatedAt"
   ],
   "SavePublisherResult": ["publisher"],
-  "SaveSmallPublisherGroupInput": ["id", "name", "smallName"],
+  "SaveSmallPublisherGroupInput": ["id", "name", "numberOfBookReviewsFormatted", "smallName"],
   "SaveSmallPublisherGroupResult": ["smallPublisherGroup"],
   "SaveSmallPublisherInput": [
     "allAuthorNames",
@@ -564,7 +573,16 @@
     "updatedAt",
     "users"
   ],
-  "SmallPublisherGroup": ["createdAt", "id", "name", "numberOfBookReviews", "publishers", "smallName", "updatedAt"],
+  "SmallPublisherGroup": [
+    "createdAt",
+    "id",
+    "name",
+    "numberOfBookReviews",
+    "numberOfBookReviewsFormatted",
+    "publishers",
+    "smallName",
+    "updatedAt"
+  ],
   "Tag": ["authors", "bookReviews", "books", "createdAt", "id", "name", "publishers", "tasks", "updatedAt"],
   "Task": [
     "asyncDefault_1",

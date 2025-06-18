@@ -1,3 +1,10 @@
+## [1.249.3](https://github.com/joist-orm/joist-orm/compare/v1.249.2...v1.249.3) (2025-06-18)
+
+
+### Bug Fixes
+
+* Fix max stack size error from pushing large arrays. ([#1515](https://github.com/joist-orm/joist-orm/issues/1515)) ([9875176](https://github.com/joist-orm/joist-orm/commit/9875176625d8de2ab980275b88114162ac0d7ad2))
+
 ## [1.249.2](https://github.com/joist-orm/joist-orm/compare/v1.249.1...v1.249.2) (2025-06-15)
 
 

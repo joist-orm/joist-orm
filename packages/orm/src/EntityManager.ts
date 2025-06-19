@@ -215,7 +215,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * of our `flush` loop, and b) cascade deletions before we recalc fields & run user hooks,
    * so that both see the most accurate state.
    */
-  #pendingCascadeDeletes: Entity[] = [];
+  #pendingDeletes: Entity[] = [];
   #dataloaders: Record<string, LoaderCache> = {};
   readonly #joinRows: Record<string, JoinRows> = {};
   /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
@@ -1256,7 +1256,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // Synchronously unhook the entity if the relations are loaded
     getCascadeDeleteRelations(entity).forEach((r) => r.maybeCascadeDelete());
     // And queue the cascade deletes
-    this.#pendingCascadeDeletes.push(entity);
+    this.#pendingDeletes.push(entity);
   }
 
   async assignNewIds() {
@@ -1316,7 +1316,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // Also do this before calling `recalcPendingDerivedValues` to avoid recalculating
       // fields on entities that will be deleted (and probably have unset/invalid FKs
       // that would NPE their logic anyway).
-      await this.cascadeDeletes();
+      await this.flushDeletes();
       // Recalc before we run hooks, so the hooks will see the latest calculated values.
       await this.#rm.recalcPendingDerivedValues("reactiveFields");
     });
@@ -1370,7 +1370,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           recalcSynchronousDerivedFields(todos);
 
           // The hooks could have deleted this-loop or prior-loop entities, so re-cascade again.
-          await this.cascadeDeletes();
+          await this.flushDeletes();
           // The hooks could have changed fields, so recalc again.
           await this.#rm.recalcPendingDerivedValues("reactiveFields");
 
@@ -1781,24 +1781,25 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   /** Recursively cascades any pending deletions. */
-  private async cascadeDeletes(): Promise<void> {
-    let entities = this.#pendingCascadeDeletes;
-    this.#pendingCascadeDeletes = [];
+  private async flushDeletes(): Promise<void> {
+    let entities = this.#pendingDeletes;
+    if (entities.length === 0) return;
+    this.#pendingDeletes = [];
     let relationsToCleanup: AbstractRelationImpl<unknown, unknown>[] = [];
     // Loop if our deletes cascade to other deletes
     while (entities.length > 0) {
       // For cascade delete relations, cascade the delete...
-      await Promise.all(
-        entities.flatMap(getCascadeDeleteRelations).map((r) => r.load().then(() => r.maybeCascadeDelete())),
-      );
+      const p = entities.flatMap(getCascadeDeleteRelations).map((r) => r.load().then(() => r.maybeCascadeDelete()));
+      console.log("promises", p.length);
+      await Promise.all(p);
       // Run the beforeDelete hook before we unhook the entity
       const todos = createTodos(entities);
       await beforeDelete(this.ctx, todos);
       // For all relations, unhook the entity from the other side
       // (...we're using `concat` because `.push(...reallyBigArray)` with ~100k relations can blow the stack size
       relationsToCleanup = relationsToCleanup.concat(entities.flatMap(getRelations));
-      entities = this.#pendingCascadeDeletes;
-      this.#pendingCascadeDeletes = [];
+      entities = this.#pendingDeletes;
+      this.#pendingDeletes = [];
     }
     // For all relations, unhook the entity from the other side
     await Promise.all(relationsToCleanup.map((r) => r.cleanupOnEntityDeleted()));

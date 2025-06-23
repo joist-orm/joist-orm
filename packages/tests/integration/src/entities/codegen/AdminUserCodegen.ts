@@ -46,6 +46,7 @@ import {
   type UserIdsOpts,
   type UserOpts,
   type UserOrder,
+  UserPublisherGroup,
 } from "../entities";
 
 export type AdminUserId = Flavor<string, "User">;
@@ -276,6 +277,10 @@ export abstract class AdminUserCodegen extends User implements Entity {
 
   get directs(): Collection<AdminUser, User> {
     return super.directs as Collection<AdminUser, User>;
+  }
+
+  get publisherGroups(): Collection<AdminUser, UserPublisherGroup> {
+    return super.publisherGroups as Collection<AdminUser, UserPublisherGroup>;
   }
 
   get manager(): ManyToOneReference<AdminUser, User, undefined> {

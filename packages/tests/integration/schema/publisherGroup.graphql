@@ -11,6 +11,7 @@ type PublisherGroup {
   critics: [Critic!]!
   numberOfBookReviews: Int
   numberOfBookReviewsFormatted: String!
+  smallName: String
 }
 
 input SavePublisherGroupInput {
@@ -18,6 +19,7 @@ input SavePublisherGroupInput {
   name: String
   numberOfBookReviews: Int
   numberOfBookReviewsFormatted: String
+  smallName: String
 }
 
 type SavePublisherGroupResult {

@@ -82,6 +82,8 @@ import {
   TaskOld,
   type TaskOldId,
   taskOldMeta,
+  TinyPublisherGroup,
+  type TinyPublisherGroupId,
 } from "../entities";
 
 export type PublisherId = Flavor<string, "Publisher">;
@@ -175,6 +177,7 @@ export interface PublisherFilter {
     FilterOf<SmallPublisherGroup>,
     null
   >;
+  groupTinyPublisherGroup?: EntityFilter<TinyPublisherGroup, TinyPublisherGroupId, FilterOf<TinyPublisherGroup>, null>;
   spotlightAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   bookAdvances?: EntityFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
@@ -209,6 +212,12 @@ export interface PublisherGraphQLFilter {
     SmallPublisherGroup,
     SmallPublisherGroupId,
     GraphQLFilterOf<SmallPublisherGroup>,
+    null
+  >;
+  groupTinyPublisherGroup?: EntityGraphQLFilter<
+    TinyPublisherGroup,
+    TinyPublisherGroupId,
+    GraphQLFilterOf<TinyPublisherGroup>,
     null
   >;
   spotlightAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;

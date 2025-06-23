@@ -1,6 +1,5 @@
 import {
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -21,23 +20,20 @@ import {
   loadLens,
   newChangesProxy,
   type OptsOf,
-  type OrderBy,
   type PartialOrNull,
-  setField,
   setOpts,
   type TaggedId,
   toIdOf,
   toJSON,
   type ToJsonHint,
   updatePartial,
-  type ValueFilter,
-  type ValueGraphQLFilter,
 } from "joist-orm";
 import { type Context } from "src/context";
 import {
   type Entity,
   EntityManager,
-  newSmallPublisherGroup,
+  newTinyPublisherGroup,
+  Publisher,
   PublisherGroup,
   type PublisherGroupFields,
   type PublisherGroupFilter,
@@ -45,116 +41,118 @@ import {
   type PublisherGroupIdsOpts,
   type PublisherGroupOpts,
   type PublisherGroupOrder,
-  SmallPublisher,
-  SmallPublisherGroup,
-  smallPublisherGroupMeta,
-  type SmallPublisherId,
-  smallPublisherMeta,
+  TinyPublisherGroup,
+  tinyPublisherGroupMeta,
   UserPublisherGroup,
   type UserPublisherGroupId,
   userPublisherGroupMeta,
 } from "../entities";
 
-export type SmallPublisherGroupId = Flavor<string, "PublisherGroup">;
+export type TinyPublisherGroupId = Flavor<string, "PublisherGroup">;
 
-export interface SmallPublisherGroupFields extends PublisherGroupFields {
+export interface TinyPublisherGroupFields extends PublisherGroupFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
-  smallName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   userPublisherGroups: { kind: "o2m"; type: UserPublisherGroup };
-  publishers: { kind: "o2m"; type: SmallPublisher };
 }
 
-export interface SmallPublisherGroupOpts extends PublisherGroupOpts {
-  smallName?: string | null;
+export interface TinyPublisherGroupOpts extends PublisherGroupOpts {
   userPublisherGroups?: UserPublisherGroup[];
-  publishers?: SmallPublisher[];
 }
 
-export interface SmallPublisherGroupIdsOpts extends PublisherGroupIdsOpts {
+export interface TinyPublisherGroupIdsOpts extends PublisherGroupIdsOpts {
   userPublisherGroupIds?: UserPublisherGroupId[] | null;
-  publisherIds?: SmallPublisherId[] | null;
 }
 
-export interface SmallPublisherGroupFilter extends PublisherGroupFilter {
-  smallName?: ValueFilter<string, null>;
+export interface TinyPublisherGroupFilter extends PublisherGroupFilter {
   userPublisherGroups?: EntityFilter<
     UserPublisherGroup,
     UserPublisherGroupId,
     FilterOf<UserPublisherGroup>,
     null | undefined
   >;
-  publishers?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null | undefined>;
 }
 
-export interface SmallPublisherGroupGraphQLFilter extends PublisherGroupGraphQLFilter {
-  smallName?: ValueGraphQLFilter<string>;
+export interface TinyPublisherGroupGraphQLFilter extends PublisherGroupGraphQLFilter {
   userPublisherGroups?: EntityGraphQLFilter<
     UserPublisherGroup,
     UserPublisherGroupId,
     GraphQLFilterOf<UserPublisherGroup>,
     null | undefined
   >;
-  publishers?: EntityGraphQLFilter<SmallPublisher, SmallPublisherId, GraphQLFilterOf<SmallPublisher>, null | undefined>;
 }
 
-export interface SmallPublisherGroupOrder extends PublisherGroupOrder {
-  smallName?: OrderBy;
+export interface TinyPublisherGroupOrder extends PublisherGroupOrder {
 }
 
-export interface SmallPublisherGroupFactoryExtras {
+export interface TinyPublisherGroupFactoryExtras {
 }
 
-export const smallPublisherGroupConfig = new ConfigApi<SmallPublisherGroup, Context>();
+export const tinyPublisherGroupConfig = new ConfigApi<TinyPublisherGroup, Context>();
 
 declare module "joist-orm" {
   interface TypeMap {
-    SmallPublisherGroup: {
-      entityType: SmallPublisherGroup;
-      filterType: SmallPublisherGroupFilter;
-      gqlFilterType: SmallPublisherGroupGraphQLFilter;
-      orderType: SmallPublisherGroupOrder;
-      optsType: SmallPublisherGroupOpts;
-      fieldsType: SmallPublisherGroupFields;
-      optIdsType: SmallPublisherGroupIdsOpts;
-      factoryExtrasType: SmallPublisherGroupFactoryExtras;
-      factoryOptsType: Parameters<typeof newSmallPublisherGroup>[1];
+    TinyPublisherGroup: {
+      entityType: TinyPublisherGroup;
+      filterType: TinyPublisherGroupFilter;
+      gqlFilterType: TinyPublisherGroupGraphQLFilter;
+      orderType: TinyPublisherGroupOrder;
+      optsType: TinyPublisherGroupOpts;
+      fieldsType: TinyPublisherGroupFields;
+      optIdsType: TinyPublisherGroupIdsOpts;
+      factoryExtrasType: TinyPublisherGroupFactoryExtras;
+      factoryOptsType: Parameters<typeof newTinyPublisherGroup>[1];
     };
   }
 }
 
-export abstract class SmallPublisherGroupCodegen extends PublisherGroup implements Entity {
+export abstract class TinyPublisherGroupCodegen extends PublisherGroup implements Entity {
   static readonly tagName = "pg";
-  static readonly metadata: EntityMetadata<SmallPublisherGroup>;
+  static readonly metadata: EntityMetadata<TinyPublisherGroup>;
 
-  declare readonly __type: { 0: "PublisherGroup"; 1: "SmallPublisherGroup" };
+  declare readonly __type: { 0: "PublisherGroup"; 1: "TinyPublisherGroup" };
 
-  constructor(em: EntityManager, opts: SmallPublisherGroupOpts) {
+  constructor(em: EntityManager, opts: TinyPublisherGroupOpts) {
     super(em, opts);
-    setOpts(this as any as SmallPublisherGroup, opts, { calledFromConstructor: true });
+    setOpts(this as any as TinyPublisherGroup, opts, { calledFromConstructor: true });
   }
 
-  get id(): SmallPublisherGroupId {
-    return this.idMaybe || failNoIdYet("SmallPublisherGroup");
+  get id(): TinyPublisherGroupId {
+    return this.idMaybe || failNoIdYet("TinyPublisherGroup");
   }
 
-  get idMaybe(): SmallPublisherGroupId | undefined {
-    return toIdOf(smallPublisherGroupMeta, this.idTaggedMaybe);
+  get idMaybe(): TinyPublisherGroupId | undefined {
+    return toIdOf(tinyPublisherGroupMeta, this.idTaggedMaybe);
   }
 
   get idTagged(): TaggedId {
-    return this.idTaggedMaybe || failNoIdYet("SmallPublisherGroup");
+    return this.idTaggedMaybe || failNoIdYet("TinyPublisherGroup");
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
     return getField(this, "id");
   }
 
-  get smallName(): string | undefined {
-    return getField(this, "smallName");
-  }
-
-  set smallName(smallName: string | undefined) {
-    setField(this, "smallName", cleanStringValue(smallName));
+  /**
+   * Partial update taking any subset of the entities fields.
+   *
+   * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
+   * is left as untouched.
+   *
+   * Collections are exhaustively set to the new values, however,
+   * {@link https://joist-orm.io/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
+   *
+   * @example
+   * ```
+   * entity.setPartial({
+   *   firstName: 'foo' // updated
+   *   lastName: undefined // do nothing
+   *   age: null // unset, (i.e. set it as undefined)
+   * });
+   * ```
+   * @see {@link https://joist-orm.io/features/partial-update-apis | Partial Update APIs} on the Joist docs
+   */
+  set(opts: Partial<TinyPublisherGroupOpts>): void {
+    setOpts(this as any as TinyPublisherGroup, opts);
   }
 
   /**
@@ -176,31 +174,8 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
    * ```
    * @see {@link https://joist-orm.io/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
-  set(opts: Partial<SmallPublisherGroupOpts>): void {
-    setOpts(this as any as SmallPublisherGroup, opts);
-  }
-
-  /**
-   * Partial update taking any subset of the entities fields.
-   *
-   * Unlike `set`, null is used as a marker to mean "unset this field", and undefined
-   * is left as untouched.
-   *
-   * Collections are exhaustively set to the new values, however,
-   * {@link https://joist-orm.io/features/partial-update-apis#incremental-collection-updates | Incremental collection updates} are supported.
-   *
-   * @example
-   * ```
-   * entity.setPartial({
-   *   firstName: 'foo' // updated
-   *   lastName: undefined // do nothing
-   *   age: null // unset, (i.e. set it as undefined)
-   * });
-   * ```
-   * @see {@link https://joist-orm.io/features/partial-update-apis | Partial Update APIs} on the Joist docs
-   */
-  setPartial(opts: PartialOrNull<SmallPublisherGroupOpts>): void {
-    setOpts(this as any as SmallPublisherGroup, opts as OptsOf<SmallPublisherGroup>, { partial: true });
+  setPartial(opts: PartialOrNull<TinyPublisherGroupOpts>): void {
+    setOpts(this as any as TinyPublisherGroup, opts as OptsOf<TinyPublisherGroup>, { partial: true });
   }
 
   /**
@@ -223,8 +198,8 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
    * ```
    * @see {@link https://joist-orm.io/features/partial-update-apis | Partial Update APIs} on the Joist docs
    */
-  setDeepPartial(opts: DeepPartialOrNull<SmallPublisherGroup>): Promise<void> {
-    return updatePartial(this as any as SmallPublisherGroup, opts);
+  setDeepPartial(opts: DeepPartialOrNull<TinyPublisherGroup>): Promise<void> {
+    return updatePartial(this as any as TinyPublisherGroup, opts);
   }
 
   /**
@@ -232,7 +207,7 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
    *
    * @see {@link https://joist-orm.io/features/changed-fields | Changed Fields} on the Joist docs
    */
-  get changes(): Changes<SmallPublisherGroup> {
+  get changes(): Changes<TinyPublisherGroup> {
     return newChangesProxy(this) as any;
   }
 
@@ -241,8 +216,8 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
    *
    * @see {@link https://joist-orm.io/advanced/lenses | Lens Traversal} on the Joist docs
    */
-  load<U, V>(fn: (lens: Lens<SmallPublisherGroup>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
-    return loadLens(this as any as SmallPublisherGroup, fn, opts);
+  load<U, V>(fn: (lens: Lens<TinyPublisherGroup>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
+    return loadLens(this as any as TinyPublisherGroup, fn, opts);
   }
 
   /**
@@ -250,23 +225,23 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
    *
    * @see {@link https://joist-orm.io/features/loading-entities#1-object-graph-navigation | Loading entities} on the Joist docs
    */
-  populate<const H extends LoadHint<SmallPublisherGroup>>(hint: H): Promise<Loaded<SmallPublisherGroup, H>>;
-  populate<const H extends LoadHint<SmallPublisherGroup>>(
+  populate<const H extends LoadHint<TinyPublisherGroup>>(hint: H): Promise<Loaded<TinyPublisherGroup, H>>;
+  populate<const H extends LoadHint<TinyPublisherGroup>>(
     opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<SmallPublisherGroup, H>>;
-  populate<const H extends LoadHint<SmallPublisherGroup>, V>(
+  ): Promise<Loaded<TinyPublisherGroup, H>>;
+  populate<const H extends LoadHint<TinyPublisherGroup>, V>(
     hint: H,
-    fn: (pg: Loaded<SmallPublisherGroup, H>) => V,
+    fn: (pg: Loaded<TinyPublisherGroup, H>) => V,
   ): Promise<V>;
-  populate<const H extends LoadHint<SmallPublisherGroup>, V>(
+  populate<const H extends LoadHint<TinyPublisherGroup>, V>(
     opts: { hint: H; forceReload?: boolean },
-    fn: (pg: Loaded<SmallPublisherGroup, H>) => V,
+    fn: (pg: Loaded<TinyPublisherGroup, H>) => V,
   ): Promise<V>;
-  populate<const H extends LoadHint<SmallPublisherGroup>, V>(
+  populate<const H extends LoadHint<TinyPublisherGroup>, V>(
     hintOrOpts: any,
-    fn?: (pg: Loaded<SmallPublisherGroup, H>) => V,
-  ): Promise<Loaded<SmallPublisherGroup, H> | V> {
-    return this.em.populate(this as any as SmallPublisherGroup, hintOrOpts, fn);
+    fn?: (pg: Loaded<TinyPublisherGroup, H>) => V,
+  ): Promise<Loaded<TinyPublisherGroup, H> | V> {
+    return this.em.populate(this as any as TinyPublisherGroup, hintOrOpts, fn);
   }
 
   /**
@@ -274,10 +249,10 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
    *
    * Type Guarded via Loaded<>
    */
-  isLoaded<const H extends LoadHint<SmallPublisherGroup>>(
+  isLoaded<const H extends LoadHint<TinyPublisherGroup>>(
     hint: H,
-  ): this is Loaded<SmallPublisherGroup | PublisherGroup, H> {
-    return isLoaded(this as any as SmallPublisherGroup, hint);
+  ): this is Loaded<TinyPublisherGroup | PublisherGroup, H> {
+    return isLoaded(this as any as TinyPublisherGroup, hint);
   }
 
   /**
@@ -295,30 +270,23 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
    * @see {@link https://joist-orm.io/advanced/json-payloads | Json Payloads} on the Joist docs
    */
   toJSON(): object;
-  toJSON<const H extends ToJsonHint<SmallPublisherGroup>>(hint: H): Promise<JsonPayload<SmallPublisherGroup, H>>;
+  toJSON<const H extends ToJsonHint<TinyPublisherGroup>>(hint: H): Promise<JsonPayload<TinyPublisherGroup, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
   }
 
-  get userPublisherGroups(): Collection<SmallPublisherGroup, UserPublisherGroup> {
+  get userPublisherGroups(): Collection<TinyPublisherGroup, UserPublisherGroup> {
     return this.__data.relations.userPublisherGroups ??= hasMany(
       this,
       userPublisherGroupMeta,
       "userPublisherGroups",
       "publisher",
-      "publisher_small_group_id",
+      "publisher_tiny_group_id",
       undefined,
     );
   }
 
-  get publishers(): Collection<SmallPublisherGroup, SmallPublisher> {
-    return this.__data.relations.publishers ??= hasMany(
-      this,
-      smallPublisherMeta,
-      "publishers",
-      "group",
-      "group_id",
-      undefined,
-    );
+  get publishers(): Collection<TinyPublisherGroup, Publisher> {
+    return super.publishers as Collection<TinyPublisherGroup, Publisher>;
   }
 }

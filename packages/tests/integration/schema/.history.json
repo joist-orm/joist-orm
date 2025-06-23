@@ -12,6 +12,7 @@
     "manager",
     "name",
     "originalEmail",
+    "publisherGroups",
     "role",
     "trialPeriod",
     "updatedAt"
@@ -221,7 +222,9 @@
     "saveTaskItem",
     "saveTaskNew",
     "saveTaskOld",
-    "saveUser"
+    "saveTinyPublisherGroup",
+    "saveUser",
+    "saveUserPublisherGroup"
   ],
   "NewTask": ["id", "specialNewField"],
   "OldTask": ["id", "specialOldField"],
@@ -268,6 +271,7 @@
     "numberOfBookReviews",
     "numberOfBookReviewsFormatted",
     "publishers",
+    "smallName",
     "updatedAt"
   ],
   "SaveAdminUserInput": [
@@ -420,7 +424,7 @@
   "SaveParentGroupResult": ["parentGroup"],
   "SaveParentItemInput": ["id", "name", "parentGroupId"],
   "SaveParentItemResult": ["parentItem"],
-  "SavePublisherGroupInput": ["id", "name", "numberOfBookReviews", "numberOfBookReviewsFormatted"],
+  "SavePublisherGroupInput": ["id", "name", "numberOfBookReviews", "numberOfBookReviewsFormatted", "smallName"],
   "SavePublisherGroupResult": ["publisherGroup"],
   "SavePublisherInput": [
     "baseAsyncDefault",
@@ -525,6 +529,8 @@
   ],
   "SaveTaskOldResult": ["taskOld"],
   "SaveTaskResult": ["task"],
+  "SaveTinyPublisherGroupInput": ["id", "name", "smallName"],
+  "SaveTinyPublisherGroupResult": ["tinyPublisherGroup"],
   "SaveUserInput": [
     "authorManyToOneId",
     "bio",
@@ -536,6 +542,15 @@
     "originalEmail",
     "trialPeriod"
   ],
+  "SaveUserPublisherGroupInput": [
+    "id",
+    "publisherGroupId",
+    "publisherId",
+    "publisherSmallGroupId",
+    "publisherTinyGroupId",
+    "userId"
+  ],
+  "SaveUserPublisherGroupResult": ["userPublisherGroup"],
   "SaveUserResult": ["user"],
   "SmallPublisher": [
     "allAuthorNames",
@@ -581,7 +596,8 @@
     "numberOfBookReviewsFormatted",
     "publishers",
     "smallName",
-    "updatedAt"
+    "updatedAt",
+    "userPublisherGroups"
   ],
   "Tag": ["authors", "bookReviews", "books", "createdAt", "id", "name", "publishers", "tasks", "updatedAt"],
   "Task": [
@@ -663,6 +679,17 @@
     "type",
     "updatedAt"
   ],
+  "TinyPublisherGroup": [
+    "createdAt",
+    "id",
+    "name",
+    "numberOfBookReviews",
+    "numberOfBookReviewsFormatted",
+    "publishers",
+    "smallName",
+    "updatedAt",
+    "userPublisherGroups"
+  ],
   "User": [
     "authorManyToOne",
     "bio",
@@ -676,8 +703,20 @@
     "manager",
     "name",
     "originalEmail",
+    "publisherGroups",
     "trialPeriod",
     "updatedAt"
   ],
-  "UserFavoritePublisher": ["LargePublisher", "SmallPublisher"]
+  "UserFavoritePublisher": ["LargePublisher", "SmallPublisher"],
+  "UserPublisherGroup": [
+    "createdAt",
+    "id",
+    "publisher",
+    "publisherGroup",
+    "publisherSmallGroup",
+    "publisherTinyGroup",
+    "updatedAt",
+    "user"
+  ],
+  "UserPublisherGroupPublisher": ["SmallPublisherGroup", "TinyPublisherGroup"]
 }

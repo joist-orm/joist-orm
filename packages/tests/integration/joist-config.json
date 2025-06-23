@@ -88,13 +88,12 @@
     },
     "SmallPublisher": {
       "fields": { "allAuthorNames": { "derived": "async" }, "city": { "hasDefault": true } },
-      "relations": {
-        "group": { "subType": "SmallPublisherGroup" },
-        "selfReferential": { "skipRecursiveRelations": true }
-      },
       "tag": "p"
     },
-    "SmallPublisherGroup": { "relations": { "publishers": { "subType": "SmallPublisher" } }, "tag": "pg" },
+    "SmallPublisherGroup": {
+      "relations": { "children": { "subType": "TinyPublisherGroup" }, "publishers": { "subType": "SmallPublisher" } },
+      "tag": "pg"
+    },
     "Tag": { "tag": "t" },
     "Task": {
       "fields": {
@@ -119,6 +118,7 @@
       "tag": "task"
     },
     "TaskItem": { "tag": "ti" },
+    "TinyPublisherGroup": { "relations": { "parent": { "subType": "SmallPublisherGroup" } }, "tag": "pg" },
     "User": {
       "fields": {
         "ipAddress": { "type": "IpAddress@src/entities/types" },
@@ -126,7 +126,8 @@
       },
       "relations": { "favoritePublisher": { "polymorphic": true }, "manager": { "skipRecursiveRelations": true } },
       "tag": "u"
-    }
+    },
+    "UserPublisherGroup": { "relations": { "publisher": { "polymorphic": "notNull" } }, "tag": "upg" }
   },
   "entitiesDirectory": "./src/entities",
   "transactionType": "Knex.Transaction@knex",

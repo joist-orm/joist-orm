@@ -3,17 +3,21 @@ import {
   countOfBooks,
   countOfBookToTags,
   countOfTags,
+  countOfUserPublisherGroups,
   insertAuthor,
   insertBook,
   insertBookReview,
   insertBookToTag,
   insertComment,
   insertImage,
+  insertSmallPublisherGroup,
   insertTag,
+  insertTinyPublisherGroup,
+  insertUser,
   select,
 } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
-import { Author, Book, Comment, ImageType, LargePublisher, newAuthor } from "./entities";
+import { Author, Book, Comment, ImageType, LargePublisher, newAuthor, User, UserPublisherGroup } from "./entities";
 
 describe("EntityManager.upsert", () => {
   it("can create new entity with valid data", async () => {
@@ -452,6 +456,20 @@ describe("EntityManager.upsert", () => {
       await em.flush();
       // Then we have both m2m rows
       expect(await countOfBookToTags()).toEqual(2);
+    });
+
+    fit("collections can incrementally add children aaa", async () => {
+      // Given a book with one tag
+      const pg2 = await insertSmallPublisherGroup({ name: "p2", id: 2 });
+      const pg1 = await insertTinyPublisherGroup({ name: "p1", id: 1 });
+      await insertUser({ name: "u1" });
+      const em = newEntityManager();
+      // When we incrementally add a single publisher
+      await em.upsert(User, { id: "u:1", publisherGroups: [{ publisherId: "pg:1", op: "include" }] });
+      await em.flush();
+      // Then we have one publisher
+      const result = await em.find(UserPublisherGroup, { user: { id: "u:1" } });
+      expect(result).toMatchEntity([{ user: { id: "u:1" }, publisher: { id: "pg:1" } }]);
     });
 
     it("collections can incrementally add children without loading the collection", async () => {

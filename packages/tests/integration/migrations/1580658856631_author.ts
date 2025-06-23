@@ -44,6 +44,7 @@ export function up(b: MigrationBuilder): void {
     number_of_book_reviews: { type: "int", notNull: true },
     // For testing ReactiveQueryFields that are text
     number_of_book_reviews_formatted: { type: "varchar(100)", notNull: true },
+    small_name: { type: "text", notNull: false },
   });
 
   // Used to test SmallPublisher.group specializing to SmallPublisherGroup
@@ -51,6 +52,8 @@ export function up(b: MigrationBuilder): void {
     // Just some placeholder field that is SmallPublisherGroup-only
     small_name: "text",
   });
+  
+  createSubTable(b, "publisher_groups", "tiny_publisher_groups", {});
 
   createEntityTable(b, "publishers", {
     name: { type: "varchar(255)", notNull: true },
@@ -313,6 +316,12 @@ export function up(b: MigrationBuilder): void {
     original_email: { type: "varchar(255)", notNull: true },
     // for testing tstzrange fields
     trial_period: { type: "tstzrange", notNull: false },
+  });
+
+  createEntityTable(b, "user_publisher_groups", {
+    user_id: foreignKey("users", { notNull: true }),
+    publisher_small_group_id: foreignKey("small_publisher_groups", { notNull: false }),
+    publisher_tiny_group_id: foreignKey("tiny_publisher_groups", { notNull: false }),
   });
 
   // For testing subclasses with their own rules...

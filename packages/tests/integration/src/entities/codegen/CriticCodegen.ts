@@ -62,6 +62,8 @@ import {
   type PublisherGroupOrder,
   SmallPublisherGroup,
   type SmallPublisherGroupId,
+  TinyPublisherGroup,
+  type TinyPublisherGroupId,
 } from "../entities";
 
 export type CriticId = Flavor<string, "Critic">;
@@ -104,6 +106,7 @@ export interface CriticFilter {
     FilterOf<SmallPublisherGroup>,
     null
   >;
+  groupTinyPublisherGroup?: EntityFilter<TinyPublisherGroup, TinyPublisherGroupId, FilterOf<TinyPublisherGroup>, null>;
   criticColumn?: EntityFilter<CriticColumn, CriticColumnId, FilterOf<CriticColumn>, null | undefined>;
   bookReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
 }
@@ -119,6 +122,12 @@ export interface CriticGraphQLFilter {
     SmallPublisherGroup,
     SmallPublisherGroupId,
     GraphQLFilterOf<SmallPublisherGroup>,
+    null
+  >;
+  groupTinyPublisherGroup?: EntityGraphQLFilter<
+    TinyPublisherGroup,
+    TinyPublisherGroupId,
+    GraphQLFilterOf<TinyPublisherGroup>,
     null
   >;
   criticColumn?: EntityGraphQLFilter<CriticColumn, CriticColumnId, GraphQLFilterOf<CriticColumn>, null | undefined>;

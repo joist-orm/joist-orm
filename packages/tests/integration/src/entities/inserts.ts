@@ -252,7 +252,18 @@ export async function insertSmallPublisherGroup(row: { id: number; name: string;
     number_of_book_reviews_formatted: "count=0",
     ...base,
   });
-  await testDriver.insert("small_publisher_groups", { id, small_name: row.id }, true);
+  await testDriver.insert("small_publisher_groups", { id }, true);
+}
+
+export async function insertTinyPublisherGroup(row: { id: number; name: string; number_of_book_reviews?: number }) {
+  const { id, ...base } = row;
+  await testDriver.insert("publisher_groups", {
+    id,
+    number_of_book_reviews: 0,
+    number_of_book_reviews_formatted: "count=0",
+    ...base,
+  });
+  await testDriver.insert("tiny_publisher_groups", { id }, true);
 }
 
 export function insertBookToTag(row: { id?: number; book_id: number; tag_id: number }) {
@@ -307,6 +318,10 @@ export function countOfTags() {
 
 export function countOfBookToTags() {
   return testDriver.count("books_to_tags");
+}
+
+export function countOfUserPublisherGroups() {
+  return testDriver.count("user_publisher_groups");
 }
 
 export function countOfAuthors() {

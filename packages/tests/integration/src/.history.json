@@ -56,8 +56,12 @@
     "resolvers/mutations/taskNew/saveTaskNewResolver.ts",
     "resolvers/mutations/taskOld/saveTaskOldResolver.test.ts",
     "resolvers/mutations/taskOld/saveTaskOldResolver.ts",
+    "resolvers/mutations/tinyPublisherGroup/saveTinyPublisherGroupResolver.test.ts",
+    "resolvers/mutations/tinyPublisherGroup/saveTinyPublisherGroupResolver.ts",
     "resolvers/mutations/user/saveUserResolver.test.ts",
     "resolvers/mutations/user/saveUserResolver.ts",
+    "resolvers/mutations/userPublisherGroup/saveUserPublisherGroupResolver.test.ts",
+    "resolvers/mutations/userPublisherGroup/saveUserPublisherGroupResolver.ts",
     "resolvers/objects/adminUser/adminUserResolvers.test.ts",
     "resolvers/objects/adminUser/adminUserResolvers.ts",
     "resolvers/objects/author/authorResolvers.test.ts",
@@ -114,7 +118,11 @@
     "resolvers/objects/taskNew/taskNewResolvers.ts",
     "resolvers/objects/taskOld/taskOldResolvers.test.ts",
     "resolvers/objects/taskOld/taskOldResolvers.ts",
+    "resolvers/objects/tinyPublisherGroup/tinyPublisherGroupResolvers.test.ts",
+    "resolvers/objects/tinyPublisherGroup/tinyPublisherGroupResolvers.ts",
     "resolvers/objects/user/userResolvers.test.ts",
-    "resolvers/objects/user/userResolvers.ts"
+    "resolvers/objects/user/userResolvers.ts",
+    "resolvers/objects/userPublisherGroup/userPublisherGroupResolvers.test.ts",
+    "resolvers/objects/userPublisherGroup/userPublisherGroupResolvers.ts"
   ]
 }

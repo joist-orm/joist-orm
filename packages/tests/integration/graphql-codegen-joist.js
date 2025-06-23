@@ -32,7 +32,9 @@ const mappers = {
   TaskNew: "src/entities#TaskNew",
   TaskOld: "src/entities#TaskOld",
   TaskTypeDetail: "src/entities#TaskType",
+  TinyPublisherGroup: "src/entities#TinyPublisherGroup",
   User: "src/entities#User",
+  UserPublisherGroup: "src/entities#UserPublisherGroup",
 };
 
 const enumValues = {

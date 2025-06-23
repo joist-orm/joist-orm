@@ -1,0 +1,29 @@
+extend type Mutation {
+  saveUserPublisherGroup(input: SaveUserPublisherGroupInput!): SaveUserPublisherGroupResult!
+}
+
+type UserPublisherGroup {
+  id: ID!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  publisherSmallGroup: SmallPublisherGroup
+  publisherTinyGroup: TinyPublisherGroup
+  user: UserLike!
+  publisherGroup: UserPublisherGroupPublisherGroup
+  publisher: UserPublisherGroupPublisher
+}
+
+input SaveUserPublisherGroupInput {
+  id: ID
+  publisherSmallGroupId: ID
+  publisherTinyGroupId: ID
+  userId: ID
+  publisherGroupId: ID
+  publisherId: ID
+}
+
+type SaveUserPublisherGroupResult {
+  userPublisherGroup: UserPublisherGroup!
+}
+
+union UserPublisherGroupPublisher = SmallPublisherGroup | TinyPublisherGroup

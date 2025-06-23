@@ -1,0 +1,3 @@
+type AdminUser {
+  publisherGroups: [UserPublisherGroup!]!
+}

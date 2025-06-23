@@ -28,7 +28,9 @@ import { Task } from "../Task";
 import { TaskItem } from "../TaskItem";
 import { TaskNew } from "../TaskNew";
 import { TaskOld } from "../TaskOld";
+import { TinyPublisherGroup } from "../TinyPublisherGroup";
 import { User } from "../User";
+import { UserPublisherGroup } from "../UserPublisherGroup";
 import {
   adminUserConfig,
   AdvanceStatuses,
@@ -75,7 +77,9 @@ import {
   newTaskItem,
   newTaskNew,
   newTaskOld,
+  newTinyPublisherGroup,
   newUser,
+  newUserPublisherGroup,
   parentGroupConfig,
   parentItemConfig,
   publisherConfig,
@@ -90,7 +94,9 @@ import {
   taskNewConfig,
   taskOldConfig,
   TaskTypes,
+  tinyPublisherGroupConfig,
   userConfig,
+  userPublisherGroupConfig,
 } from "../entities";
 
 setRuntimeConfig({ temporal: false });
@@ -706,6 +712,7 @@ export const publisherGroupMeta: EntityMetadata<PublisherGroup> = {
     "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "text"), immutable: false },
     "numberOfBookReviews": { kind: "primitive", fieldName: "numberOfBookReviews", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "number", serde: new PrimitiveSerde("numberOfBookReviews", "number_of_book_reviews", "int"), immutable: false },
     "numberOfBookReviewsFormatted": { kind: "primitive", fieldName: "numberOfBookReviewsFormatted", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("numberOfBookReviewsFormatted", "number_of_book_reviews_formatted", "character varying"), immutable: false, default: "config" },
+    "smallName": { kind: "primitive", fieldName: "smallName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("smallName", "small_name", "text"), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
     "publishers": { kind: "o2m", fieldName: "publishers", fieldIdName: "publisherIds", required: false, otherMetadata: () => publisherMeta, otherFieldName: "group", serde: undefined, immutable: false },
@@ -737,7 +744,6 @@ export const smallPublisherMeta: EntityMetadata<SmallPublisher> = {
     "sharedColumn": { kind: "primitive", fieldName: "sharedColumn", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("sharedColumn", "shared_column", "text"), immutable: false },
     "allAuthorNames": { kind: "primitive", fieldName: "allAuthorNames", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("allAuthorNames", "all_author_names", "text"), immutable: false },
     "selfReferential": { kind: "m2o", fieldName: "selfReferential", fieldIdName: "selfReferentialId", derived: false, required: false, otherMetadata: () => smallPublisherMeta, otherFieldName: "smallPublishers", serde: new KeySerde("p", "selfReferential", "self_referential_id", "int"), immutable: false },
-    "group": { kind: "m2o", fieldName: "group", fieldIdName: "groupId", derived: false, required: false, otherMetadata: () => smallPublisherGroupMeta, otherFieldName: "publishers", serde: new KeySerde("pg", "group", "group_id", "int"), immutable: false },
     "smallPublishers": { kind: "o2m", fieldName: "smallPublishers", fieldIdName: "smallPublisherIds", required: false, otherMetadata: () => smallPublisherMeta, otherFieldName: "selfReferential", serde: undefined, immutable: false },
     "users": { kind: "o2m", fieldName: "users", fieldIdName: "userIds", required: false, otherMetadata: () => userMeta, otherFieldName: "favoritePublisher", serde: undefined, immutable: false },
   },
@@ -764,6 +770,7 @@ export const smallPublisherGroupMeta: EntityMetadata<SmallPublisherGroup> = {
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("pg", "id", "id", "int"), immutable: true },
     "smallName": { kind: "primitive", fieldName: "smallName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("smallName", "small_name", "text"), immutable: false },
+    "userPublisherGroups": { kind: "o2m", fieldName: "userPublisherGroups", fieldIdName: "userPublisherGroupIds", required: false, otherMetadata: () => userPublisherGroupMeta, otherFieldName: "publisher", serde: undefined, immutable: false },
     "publishers": { kind: "o2m", fieldName: "publishers", fieldIdName: "publisherIds", required: false, otherMetadata: () => smallPublisherMeta, otherFieldName: "group", serde: undefined, immutable: false },
   },
   allFields: {},
@@ -872,6 +879,30 @@ export const taskItemMeta: EntityMetadata<TaskItem> = {
 
 (TaskItem as any).metadata = taskItemMeta;
 
+export const tinyPublisherGroupMeta: EntityMetadata<TinyPublisherGroup> = {
+  cstr: TinyPublisherGroup,
+  type: "TinyPublisherGroup",
+  baseType: "PublisherGroup",
+  inheritanceType: "cti",
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "pg",
+  tableName: "tiny_publisher_groups",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("pg", "id", "id", "int"), immutable: true },
+    "userPublisherGroups": { kind: "o2m", fieldName: "userPublisherGroups", fieldIdName: "userPublisherGroupIds", required: false, otherMetadata: () => userPublisherGroupMeta, otherFieldName: "publisher", serde: undefined, immutable: false },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: undefined,
+  config: tinyPublisherGroupConfig,
+  factory: newTinyPublisherGroup,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(TinyPublisherGroup as any).metadata = tinyPublisherGroupMeta;
+
 export const userMeta: EntityMetadata<User> = {
   cstr: User,
   type: "User",
@@ -896,6 +927,7 @@ export const userMeta: EntityMetadata<User> = {
     "authorManyToOne": { kind: "m2o", fieldName: "authorManyToOne", fieldIdName: "authorManyToOneId", derived: false, required: false, otherMetadata: () => authorMeta, otherFieldName: "userOneToOne", serde: new KeySerde("a", "authorManyToOne", "author_id", "int"), immutable: false },
     "createdComments": { kind: "o2m", fieldName: "createdComments", fieldIdName: "createdCommentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "user", serde: undefined, immutable: false },
     "directs": { kind: "o2m", fieldName: "directs", fieldIdName: "directIds", required: false, otherMetadata: () => userMeta, otherFieldName: "manager", serde: undefined, immutable: false },
+    "publisherGroups": { kind: "o2m", fieldName: "publisherGroups", fieldIdName: "publisherGroupIds", required: false, otherMetadata: () => userPublisherGroupMeta, otherFieldName: "user", serde: undefined, immutable: false },
     "likedComments": { kind: "m2m", fieldName: "likedComments", fieldIdName: "likedCommentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "likedByUsers", serde: undefined, immutable: false, joinTableName: "users_to_comments", columnNames: ["liked_by_user_id", "comment_id"] },
     "favoritePublisher": {
       kind: "poly",
@@ -917,6 +949,40 @@ export const userMeta: EntityMetadata<User> = {
 };
 
 (User as any).metadata = userMeta;
+
+export const userPublisherGroupMeta: EntityMetadata<UserPublisherGroup> = {
+  cstr: UserPublisherGroup,
+  type: "UserPublisherGroup",
+  baseType: undefined,
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "upg",
+  tableName: "user_publisher_groups",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("upg", "id", "id", "int"), immutable: true },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
+    "user": { kind: "m2o", fieldName: "user", fieldIdName: "userId", derived: false, required: true, otherMetadata: () => userMeta, otherFieldName: "publisherGroups", serde: new KeySerde("u", "user", "user_id", "int"), immutable: false },
+    "publisher": {
+      kind: "poly",
+      fieldName: "publisher",
+      fieldIdName: "publisherId",
+      required: true,
+      components: [{ otherMetadata: () => smallPublisherGroupMeta, otherFieldName: "userPublisherGroups", columnName: "publisher_small_group_id" }, { otherMetadata: () => tinyPublisherGroupMeta, otherFieldName: "userPublisherGroups", columnName: "publisher_tiny_group_id" }],
+      serde: new PolymorphicKeySerde(() => userPublisherGroupMeta, "publisher"),
+      immutable: false,
+    },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
+  config: userPublisherGroupConfig,
+  factory: newUserPublisherGroup,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(UserPublisherGroup as any).metadata = userPublisherGroupMeta;
 
 export const taskNewMeta: EntityMetadata<TaskNew> = {
   cstr: TaskNew,
@@ -1006,7 +1072,9 @@ export const allMetadata = [
   tagMeta,
   taskMeta,
   taskItemMeta,
+  tinyPublisherGroupMeta,
   userMeta,
+  userPublisherGroupMeta,
   taskNewMeta,
   taskOldMeta,
 ];

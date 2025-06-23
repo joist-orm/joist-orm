@@ -57,6 +57,7 @@ import {
   SmallPublisher,
   SmallPublisherGroup,
   type SmallPublisherId,
+  TinyPublisherGroup,
 } from "../entities";
 
 export type PublisherGroupId = Flavor<string, "PublisherGroup">;
@@ -66,6 +67,7 @@ export interface PublisherGroupFields {
   name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   numberOfBookReviews: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
   numberOfBookReviewsFormatted: { kind: "primitive"; type: string; unique: false; nullable: never; derived: true };
+  smallName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   publishers: { kind: "o2m"; type: Publisher };
@@ -74,6 +76,7 @@ export interface PublisherGroupFields {
 
 export interface PublisherGroupOpts {
   name?: string | null;
+  smallName?: string | null;
   publishers?: Publisher[];
 }
 
@@ -86,6 +89,7 @@ export interface PublisherGroupFilter {
   name?: ValueFilter<string, null>;
   numberOfBookReviews?: ValueFilter<number, never>;
   numberOfBookReviewsFormatted?: ValueFilter<string, never>;
+  smallName?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
@@ -98,6 +102,7 @@ export interface PublisherGroupGraphQLFilter {
   name?: ValueGraphQLFilter<string>;
   numberOfBookReviews?: ValueGraphQLFilter<number>;
   numberOfBookReviewsFormatted?: ValueGraphQLFilter<string>;
+  smallName?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
@@ -120,6 +125,7 @@ export interface PublisherGroupOrder {
   name?: OrderBy;
   numberOfBookReviews?: OrderBy;
   numberOfBookReviewsFormatted?: OrderBy;
+  smallName?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
 }
@@ -190,6 +196,14 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   abstract readonly numberOfBookReviews: ReactiveField<PublisherGroup, number>;
 
   abstract readonly numberOfBookReviewsFormatted: ReactiveField<PublisherGroup, string>;
+
+  get smallName(): string | undefined {
+    return getField(this, "smallName");
+  }
+
+  set smallName(smallName: string | undefined) {
+    setField(this, "smallName", cleanStringValue(smallName));
+  }
 
   get createdAt(): Date {
     return getField(this, "createdAt");
@@ -278,6 +292,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
     PublisherGroup,
     | keyof (FieldsOf<PublisherGroup> & RelationsOf<PublisherGroup>)
     | keyof (FieldsOf<SmallPublisherGroup> & RelationsOf<SmallPublisherGroup>)
+    | keyof (FieldsOf<TinyPublisherGroup> & RelationsOf<TinyPublisherGroup>)
   > {
     return newChangesProxy(this) as any;
   }

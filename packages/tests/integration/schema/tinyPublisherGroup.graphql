@@ -1,0 +1,25 @@
+extend type Mutation {
+  saveTinyPublisherGroup(input: SaveTinyPublisherGroupInput!): SaveTinyPublisherGroupResult!
+}
+
+type TinyPublisherGroup {
+  id: ID!
+  name: String
+  numberOfBookReviews: Int!
+  numberOfBookReviewsFormatted: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  publishers: [Publisher!]!
+  userPublisherGroups: [UserPublisherGroup!]!
+  smallName: String
+}
+
+input SaveTinyPublisherGroupInput {
+  id: ID
+  name: String
+  smallName: String
+}
+
+type SaveTinyPublisherGroupResult {
+  tinyPublisherGroup: TinyPublisherGroup!
+}

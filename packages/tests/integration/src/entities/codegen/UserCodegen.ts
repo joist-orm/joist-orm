@@ -64,6 +64,9 @@ import {
   SmallPublisher,
   User,
   userMeta,
+  UserPublisherGroup,
+  type UserPublisherGroupId,
+  userPublisherGroupMeta,
 } from "../entities";
 
 export type UserId = Flavor<string, "User">;
@@ -93,6 +96,7 @@ export interface UserFields {
   likedComments: { kind: "m2m"; type: Comment };
   createdComments: { kind: "o2m"; type: Comment };
   directs: { kind: "o2m"; type: User };
+  publisherGroups: { kind: "o2m"; type: UserPublisherGroup };
 }
 
 export interface UserOpts {
@@ -108,6 +112,7 @@ export interface UserOpts {
   favoritePublisher?: UserFavoritePublisher;
   createdComments?: Comment[];
   directs?: User[];
+  publisherGroups?: UserPublisherGroup[];
   likedComments?: Comment[];
 }
 
@@ -117,6 +122,7 @@ export interface UserIdsOpts {
   favoritePublisherId?: IdOf<UserFavoritePublisher> | null;
   createdCommentIds?: CommentId[] | null;
   directIds?: UserId[] | null;
+  publisherGroupIds?: UserPublisherGroupId[] | null;
   likedCommentIds?: CommentId[] | null;
 }
 
@@ -137,6 +143,12 @@ export interface UserFilter {
   createdComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   directs?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   directsAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
+  publisherGroups?: EntityFilter<
+    UserPublisherGroup,
+    UserPublisherGroupId,
+    FilterOf<UserPublisherGroup>,
+    null | undefined
+  >;
   likedComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   favoritePublisher?: EntityFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
   favoritePublisherLargePublisher?: EntityFilter<LargePublisher, IdOf<LargePublisher>, FilterOf<LargePublisher>, null>;
@@ -160,6 +172,12 @@ export interface UserGraphQLFilter {
   createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   directs?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   directsAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
+  publisherGroups?: EntityGraphQLFilter<
+    UserPublisherGroup,
+    UserPublisherGroupId,
+    GraphQLFilterOf<UserPublisherGroup>,
+    null | undefined
+  >;
   likedComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   favoritePublisher?: EntityGraphQLFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
   favoritePublisherLargePublisher?: EntityGraphQLFilter<
@@ -463,6 +481,17 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   get directs(): Collection<User, User> {
     return this.__data.relations.directs ??= hasMany(this, userMeta, "directs", "manager", "manager_id", undefined);
+  }
+
+  get publisherGroups(): Collection<User, UserPublisherGroup> {
+    return this.__data.relations.publisherGroups ??= hasMany(
+      this,
+      userPublisherGroupMeta,
+      "publisherGroups",
+      "user",
+      "user_id",
+      undefined,
+    );
   }
 
   get manager(): ManyToOneReference<User, User, undefined> {

@@ -115,8 +115,11 @@ export function findOrCreateDataLoader<T extends Entity>(
       }
       return keys.map(() => entity);
     },
-    // Our filter tuple is a complex object, so object-hash it to ensure caching works
-    { cacheKeyFn },
+    {
+      // If we're called multiple times, keep invoking the function in case our 1st invocation's
+      // created entities were `em.delete`-d.
+      cache: false,
+    },
   );
 }
 

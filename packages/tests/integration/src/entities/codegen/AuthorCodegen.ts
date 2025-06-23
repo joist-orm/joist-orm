@@ -103,6 +103,7 @@ export interface AuthorFields {
   ssn: { kind: "primitive"; type: string; unique: true; nullable: undefined; derived: false };
   initials: { kind: "primitive"; type: string; unique: false; nullable: never; derived: true };
   numberOfBooks: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
+  amountOfBooks: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
   bookComments: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   isPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
   age: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
@@ -204,6 +205,7 @@ export interface AuthorFilter {
   ssn?: ValueFilter<string, null>;
   initials?: ValueFilter<string, never>;
   numberOfBooks?: ValueFilter<number, never>;
+  amountOfBooks?: ValueFilter<number, never>;
   bookComments?: ValueFilter<string, null>;
   isPopular?: BooleanFilter<null>;
   age?: ValueFilter<number, null>;
@@ -266,6 +268,7 @@ export interface AuthorGraphQLFilter {
   ssn?: ValueGraphQLFilter<string>;
   initials?: ValueGraphQLFilter<string>;
   numberOfBooks?: ValueGraphQLFilter<number>;
+  amountOfBooks?: ValueGraphQLFilter<number>;
   bookComments?: ValueGraphQLFilter<string>;
   isPopular?: BooleanGraphQLFilter;
   age?: ValueGraphQLFilter<number>;
@@ -338,6 +341,7 @@ export interface AuthorOrder {
   ssn?: OrderBy;
   initials?: OrderBy;
   numberOfBooks?: OrderBy;
+  amountOfBooks?: OrderBy;
   bookComments?: OrderBy;
   isPopular?: OrderBy;
   age?: OrderBy;
@@ -371,6 +375,7 @@ export interface AuthorOrder {
 
 export interface AuthorFactoryExtras {
   withNumberOfBooks?: number;
+  withAmountOfBooks?: number;
   withBookComments?: string | null;
   withNickNamesUpper?: string[] | null;
   withMentorNames?: string | null;
@@ -386,6 +391,7 @@ export const authorConfig = new ConfigApi<Author, Context>();
 authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("initials"));
 authorConfig.addRule("numberOfBooks", newRequiredRule("numberOfBooks"));
+authorConfig.addRule("amountOfBooks", newRequiredRule("amountOfBooks"));
 authorConfig.addRule(newRequiredRule("isFunny"));
 authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
@@ -465,6 +471,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   abstract get initials(): string;
 
   abstract readonly numberOfBooks: ReactiveField<Author, number>;
+
+  abstract readonly amountOfBooks: ReactiveField<Author, number>;
 
   abstract readonly bookComments: ReactiveField<Author, string | undefined>;
 

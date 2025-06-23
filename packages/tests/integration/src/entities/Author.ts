@@ -195,6 +195,15 @@ export class Author extends AuthorCodegen {
       return a.books.get.length;
     },
   );
+  
+  /** Example of a derived async property relying in another derived async property. */
+  readonly amountOfBooks: ReactiveField<Author, number> = hasReactiveField(
+    "amountOfBooks",
+    "numberOfBooks",
+    (a) => {
+      return a.numberOfBooks.get ?? 0;
+    },
+  );
 
   /** Example of a ReactiveField that uses recursive relations. */
   readonly mentorNames: ReactiveField<Author, string | undefined> = hasReactiveField(

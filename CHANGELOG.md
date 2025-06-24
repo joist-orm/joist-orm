@@ -1,3 +1,10 @@
+## [1.249.4](https://github.com/joist-orm/joist-orm/compare/v1.249.3...v1.249.4) (2025-06-24)
+
+
+### Bug Fixes
+
+* Allow createdAt for m2m tables. ([#1520](https://github.com/joist-orm/joist-orm/issues/1520)) ([9427da9](https://github.com/joist-orm/joist-orm/commit/9427da9e68693a033129d8e54e35cf087b1a2098)), closes [#1519](https://github.com/joist-orm/joist-orm/issues/1519)
+
 ## [1.249.3](https://github.com/joist-orm/joist-orm/compare/v1.249.2...v1.249.3) (2025-06-18)
 
 

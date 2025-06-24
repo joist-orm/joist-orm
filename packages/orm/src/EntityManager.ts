@@ -1790,7 +1790,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     while (entities.length > 0) {
       // For cascade delete relations, cascade the delete...
       const p = entities.flatMap(getCascadeDeleteRelations).map((r) => r.load().then(() => r.maybeCascadeDelete()));
-      console.log("promises", p.length);
       await Promise.all(p);
       // Run the beforeDelete hook before we unhook the entity
       const todos = createTodos(entities);

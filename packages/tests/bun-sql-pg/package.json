@@ -22,11 +22,11 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
-    "jest": "30.0.0-alpha.7",
+    "jest": "30.0.2",
     "joist-codegen": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
-    "prettier": "^3.5.3",
+    "prettier": "^3.6.0",
     "prettier-plugin-organize-imports": "^4.1.0",
     "typescript": "5.8.3"
   },

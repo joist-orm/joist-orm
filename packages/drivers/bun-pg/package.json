@@ -23,7 +23,7 @@
     "joist-orm": "workspace:*"
   },
   "devDependencies": {
-    "prettier": "^3.5.3",
+    "prettier": "^3.6.0",
     "prettier-plugin-organize-imports": "^4.1.0",
     "tsconfig-paths": "^4.2.0",
     "typescript": "5.8.3"

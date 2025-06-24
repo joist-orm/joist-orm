@@ -25,7 +25,7 @@
     "joist-codegen": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
-    "prettier": "^3.5.3",
+    "prettier": "^3.6.0",
     "prettier-plugin-organize-imports": "^4.1.0",
     "tsx": "^4.19.3",
     "typescript": "5.8.3"

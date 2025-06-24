@@ -9,15 +9,18 @@ export * from "./codegen/AuthorCodegen";
 export * from "./codegen/BookCodegen";
 export * from "./codegen/DatabaseOwnerCodegen";
 export * from "./codegen/PaintingCodegen";
+export * from "./codegen/TagCodegen";
 export * from "./Artist";
 export * from "./Author";
 export * from "./Book";
 export * from "./DatabaseOwner";
 export * from "./Painting";
+export * from "./Tag";
 
 export * from "./factories/newArtist";
 export * from "./factories/newAuthor";
 export * from "./factories/newBook";
 export * from "./factories/newDatabaseOwner";
 export * from "./factories/newPainting";
+export * from "./factories/newTag";
 export * from "./codegen/metadata";

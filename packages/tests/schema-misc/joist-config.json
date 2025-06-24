@@ -7,7 +7,8 @@
     "Author": { "tag": "a" },
     "Book": { "tag": "b" },
     "DatabaseOwner": { "tag": "do" },
-    "Painting": { "tag": "p" }
+    "Painting": { "tag": "p" },
+    "Tag": { "tag": "t" }
   },
   "entitiesDirectory": "./src/entities",
   "ignoredTables": ["pgmigrations"],

@@ -140,12 +140,17 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
     const knex = (em.txn ?? fail("Expected EntityManager.txn to be set")) as Knex.Transaction;
     for (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
       if (newRows.length > 0) {
+        // We use a `DO UPDATE SET id` so that our `RETURNING id` returns the ids of conflicted rows,
+        // which we use in the post-processing to see that the "new-to-us" rows already existed, and
+        // save their PK into our in-memory `newRows`.
+        //
+        // If we have just `DO NOTHING`, then the `RETURNING id` will not return anything for those rows.
         const sql = cleanSql(`
-          INSERT INTO ${joinTableName} (${m2m.columnName}, ${m2m.otherColumnName})
+          INSERT INTO ${joinTableName} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
           VALUES ${zeroTo(newRows.length)
             .map(() => "(?, ?) ")
             .join(", ")}
-          ON CONFLICT (${m2m.columnName}, ${m2m.otherColumnName}) DO UPDATE SET id = ${joinTableName}.id
+          ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO UPDATE SET id = ${joinTableName}.id
           RETURNING id;
         `);
         const meta1 = getMetadata(m2m.entity);

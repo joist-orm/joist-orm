@@ -1,3 +1,10 @@
+## [1.249.5](https://github.com/joist-orm/joist-orm/compare/v1.249.4...v1.249.5) (2025-06-24)
+
+
+### Bug Fixes
+
+* Bump jest, prettier. ([#1518](https://github.com/joist-orm/joist-orm/issues/1518)) ([dfb2c88](https://github.com/joist-orm/joist-orm/commit/dfb2c88747299c865851e885e21bfe39b2b5b5fa))
+
 ## [1.249.4](https://github.com/joist-orm/joist-orm/compare/v1.249.3...v1.249.4) (2025-06-24)
 
 

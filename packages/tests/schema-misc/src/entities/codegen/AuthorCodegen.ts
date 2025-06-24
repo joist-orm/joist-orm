@@ -16,6 +16,7 @@ import {
   getField,
   type GraphQLFilterOf,
   hasMany,
+  hasManyToMany,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -38,7 +39,19 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import { type Context } from "src/context";
-import { Author, authorMeta, Book, type BookId, bookMeta, type Entity, EntityManager, newAuthor } from "../entities";
+import {
+  Author,
+  authorMeta,
+  Book,
+  type BookId,
+  bookMeta,
+  type Entity,
+  EntityManager,
+  newAuthor,
+  Tag,
+  type TagId,
+  tagMeta,
+} from "../entities";
 
 export type AuthorId = Flavor<string, "Author">;
 
@@ -49,6 +62,7 @@ export interface AuthorFields {
   delete: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  tags: { kind: "m2m"; type: Tag };
   books: { kind: "o2m"; type: Book };
 }
 
@@ -57,10 +71,12 @@ export interface AuthorOpts {
   lastName?: string | null;
   delete?: boolean | null;
   books?: Book[];
+  tags?: Tag[];
 }
 
 export interface AuthorIdsOpts {
   bookIds?: BookId[] | null;
+  tagIds?: TagId[] | null;
 }
 
 export interface AuthorFilter {
@@ -71,6 +87,7 @@ export interface AuthorFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
 export interface AuthorGraphQLFilter {
@@ -81,6 +98,7 @@ export interface AuthorGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
 
 export interface AuthorOrder {
@@ -314,5 +332,17 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   get books(): Collection<Author, Book> {
     return this.__data.relations.books ??= hasMany(this, bookMeta, "books", "author", "authorId", undefined);
+  }
+
+  get tags(): Collection<Author, Tag> {
+    return this.__data.relations.tags ??= hasManyToMany(
+      this,
+      "author_to_tags",
+      "tags",
+      "authorId",
+      tagMeta,
+      "authors",
+      "tagId",
+    );
   }
 }

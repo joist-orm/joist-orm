@@ -5,7 +5,8 @@ import { Author } from "../Author";
 import { Book } from "../Book";
 import { DatabaseOwner } from "../DatabaseOwner";
 import { Painting } from "../Painting";
-import { artistConfig, authorConfig, bookConfig, databaseOwnerConfig, newArtist, newAuthor, newBook, newDatabaseOwner, newPainting, paintingConfig } from "../entities";
+import { Tag } from "../Tag";
+import { artistConfig, authorConfig, bookConfig, databaseOwnerConfig, newArtist, newAuthor, newBook, newDatabaseOwner, newPainting, newTag, paintingConfig, tagConfig } from "../entities";
 
 setRuntimeConfig({ temporal: false });
 
@@ -59,6 +60,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "createdAt", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updatedAt", "timestamp with time zone"), immutable: false },
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", serde: undefined, immutable: false },
+    "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, otherMetadata: () => tagMeta, otherFieldName: "authors", serde: undefined, immutable: false, joinTableName: "author_to_tags", columnNames: ["authorId", "tagId"] },
   },
   allFields: {},
   orderBy: undefined,
@@ -141,5 +143,29 @@ export const paintingMeta: EntityMetadata<Painting> = {
 
 (Painting as any).metadata = paintingMeta;
 
-export const allMetadata = [artistMeta, authorMeta, bookMeta, databaseOwnerMeta, paintingMeta];
+export const tagMeta: EntityMetadata<Tag> = {
+  cstr: Tag,
+  type: "Tag",
+  baseType: undefined,
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "t",
+  tableName: "tags",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("t", "id", "id", "int"), immutable: true },
+    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying"), immutable: false },
+    "authors": { kind: "m2m", fieldName: "authors", fieldIdName: "authorIds", required: false, otherMetadata: () => authorMeta, otherFieldName: "tags", serde: undefined, immutable: false, joinTableName: "author_to_tags", columnNames: ["tagId", "authorId"] },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
+  config: tagConfig,
+  factory: newTag,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(Tag as any).metadata = tagMeta;
+
+export const allMetadata = [artistMeta, authorMeta, bookMeta, databaseOwnerMeta, paintingMeta, tagMeta];
 configureMetadata(allMetadata);

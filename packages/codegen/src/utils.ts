@@ -66,7 +66,7 @@ export function isJoinTable(config: Config, t: Table): boolean {
     const hasTwoFks = columns.filter((c) => c.isForeignKey).length === 2;
     const hasThreeColumns = columns.length === 3;
     const hasFourColumnsOneIsCreatedAt =
-      columns.length === 4 && columns.filter((c) => c.name === "created_at").length === 1;
+      columns.length === 4 && columns.filter((c) => c.name === "created_at" || c.name === "createdAt").length === 1;
     return hasOnePk && hasTwoFks && (hasThreeColumns || hasFourColumnsOneIsCreatedAt);
   });
 }

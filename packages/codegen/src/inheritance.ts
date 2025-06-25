@@ -1,9 +1,10 @@
 import {
   DbMetadata,
   EntityDbMetadata,
+  makeEntity,
+  ManyToManyField,
   ManyToOneField,
   PolymorphicFieldComponent,
-  makeEntity,
 } from "./EntityDbMetadata";
 import { Config } from "./config";
 import { fail } from "./utils";
@@ -179,6 +180,9 @@ function expandSingleTableInheritance(
               ...this.manyToOnes.filter((r) => !r.isDeferredAndDeferrable),
               ...this.polymorphics.flatMap((p) => p.components).filter((c) => !c.isDeferredAndDeferrable),
             ];
+          },
+          get nonDeferredManyToManyFks(): Array<ManyToManyField> {
+            return this.manyToManys.filter((r) => !r.isDeferredAndDeferrable);
           },
         };
 

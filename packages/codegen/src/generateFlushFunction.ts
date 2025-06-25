@@ -3,7 +3,16 @@ import { DbMetadata } from "./EntityDbMetadata";
 
 /** Creates a `flush_database` stored procedure to truncate all the tables between tests. */
 export async function createFlushFunction(client: Client, db: DbMetadata): Promise<void> {
-  const hasAnyNonDeferredFks = db.entities.some((e) => e.nonDeferredFks.length > 0);
+  // We only check nonDeferredManyToManyFks here (and not other places) b/c we don't really count/track m2ms
+  // as true FK dependencies -- they would a) always create cycles, and b) it's easiest enough for us to just
+  // always have `flush_database` / `em.flush` delete from m2m tables first, to avoid FK delete constraints
+  // errors when we delete from the main entity tables.
+  //
+  // ...but, because order matters for the m2m tables, then we have to use the `generateExplicitFlushFunction`
+  // instead of the cuter `generateSequenceFlushFunction`.
+  const hasAnyNonDeferredFks = db.entities.some(
+    (e) => e.nonDeferredFks.length > 0 || e.nonDeferredManyToManyFks.length > 0,
+  );
   const hasAnyNonSequenceIds = db.entities.some((e) => e.primaryKey.columnType === "uuid");
   if (hasAnyNonSequenceIds || hasAnyNonDeferredFks) {
     await client.query(generateExplicitFlushFunction(db));

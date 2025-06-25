@@ -56,7 +56,10 @@ export async function maybeSetForeignKeyOrdering(config: Config, entities: Entit
 }
 
 async function writeAlterTables(
-  nonDeferredFks: Array<{ entity: EntityDbMetadata; m2o: ManyToOneField | PolymorphicFieldComponent }>,
+  nonDeferredFks: Array<{
+    entity: EntityDbMetadata;
+    m2o: ManyToOneField | PolymorphicFieldComponent;
+  }>,
 ): Promise<void> {
   const queries = nonDeferredFks.map(({ entity, m2o }) => {
     return `ALTER TABLE ${entity.tableName} ALTER CONSTRAINT ${m2o.constraintName} DEFERRABLE INITIALLY DEFERRED;`;

@@ -31,10 +31,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/compiler@npm:^2.10.3, @astrojs/compiler@npm:^2.11.0":
-  version: 2.11.0
-  resolution: "@astrojs/compiler@npm:2.11.0"
-  checksum: 10/41e6727d35d7002d1a59a20faf046def0a17bdeff911c211414338fb84081410d8aa5aec230dbd989d1851d15c0e2771e735480a002363a0d6c982d59ed965f7
+"@astrojs/compiler@npm:^2.10.3, @astrojs/compiler@npm:^2.12.2":
+  version: 2.12.2
+  resolution: "@astrojs/compiler@npm:2.12.2"
+  checksum: 10/51c0a399333ca9cd35b9301dbb4c14399f1ace50029b7365f8fffafb71b487b7d46e513dd96c3ab842fbe6e23b83616df98f90229a4623a1059c5e774cd1c41f
   languageName: node
   linkType: hard
 
@@ -1212,37 +1212,37 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@graphql-tools/graphql-file-loader@npm:^8.0.19":
-  version: 8.0.19
-  resolution: "@graphql-tools/graphql-file-loader@npm:8.0.19"
+"@graphql-tools/graphql-file-loader@npm:^8.0.20":
+  version: 8.0.20
+  resolution: "@graphql-tools/graphql-file-loader@npm:8.0.20"
   dependencies:
-    "@graphql-tools/import": "npm:7.0.18"
+    "@graphql-tools/import": "npm:7.0.19"
     "@graphql-tools/utils": "npm:^10.8.6"
     globby: "npm:^11.0.3"
     tslib: "npm:^2.4.0"
     unixify: "npm:^1.0.0"
   peerDependencies:
     graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
-  checksum: 10/f7b8871582fdb925ba4b54463bdad651777a53769eafbf1febe1783ab25208a1c787fa2f3a16caabee0f9c1621adad47df539973539c57037f748c6c9d4ef103
+  checksum: 10/b7ee7f5ca55c753ac7bb9e3a3673f3398f663088d6b8c05c54fa454062642841aa94fe290bfab37a899e9a9c408e21ed7e3d429e0b2166f2baed0125fbd4eda4
   languageName: node
   linkType: hard
 
-"@graphql-tools/import@npm:7.0.18":
-  version: 7.0.18
-  resolution: "@graphql-tools/import@npm:7.0.18"
+"@graphql-tools/import@npm:7.0.19":
+  version: 7.0.19
+  resolution: "@graphql-tools/import@npm:7.0.19"
   dependencies:
     "@graphql-tools/utils": "npm:^10.8.6"
     resolve-from: "npm:5.0.0"
     tslib: "npm:^2.4.0"
   peerDependencies:
     graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
-  checksum: 10/739086fcaffefa8efa38648477fd4aea41a87b5fa3f78552a2a7b6249dce1d84d84e164e61c73811d6ce9e8f5754b6bab675f7255482bf5ba080f83759a37138
+  checksum: 10/78ce39f05d30894d850201669b3acad774406514ae7a4c13058f52465786405b6bc59f4255f01bcd046bee74bbbcde54a49a6d23fae7d7666ed7abdfca8fbae3
   languageName: node
   linkType: hard
 
-"@graphql-tools/load@npm:^8.0.19":
-  version: 8.0.19
-  resolution: "@graphql-tools/load@npm:8.0.19"
+"@graphql-tools/load@npm:^8.1.0":
+  version: 8.1.0
+  resolution: "@graphql-tools/load@npm:8.1.0"
   dependencies:
     "@graphql-tools/schema": "npm:^10.0.23"
     "@graphql-tools/utils": "npm:^10.8.6"
@@ -1250,7 +1250,7 @@ __metadata:
     tslib: "npm:^2.4.0"
   peerDependencies:
     graphql: ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
-  checksum: 10/e1526a03db9187de748c54db32673fc20b1ae1be0bb9b3e9a477c43428e964f51f98ff8f4fe1564030058ecf199f1eeab65b9f4ec10a7792bbc2bebee7494d46
+  checksum: 10/4601dda7eb32cb8afed2379102ad82f8a948e478f42c7b1f354a3468ca8dfcdcc2a89e6c6ebcbb574c77eaa80d47f20c27230bdcd6c2d0a3600fa1d6a450cc95
   languageName: node
   linkType: hard
 
@@ -3059,92 +3059,92 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swc/core-darwin-arm64@npm:1.11.22":
-  version: 1.11.22
-  resolution: "@swc/core-darwin-arm64@npm:1.11.22"
+"@swc/core-darwin-arm64@npm:1.12.6":
+  version: 1.12.6
+  resolution: "@swc/core-darwin-arm64@npm:1.12.6"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@swc/core-darwin-x64@npm:1.11.22":
-  version: 1.11.22
-  resolution: "@swc/core-darwin-x64@npm:1.11.22"
+"@swc/core-darwin-x64@npm:1.12.6":
+  version: 1.12.6
+  resolution: "@swc/core-darwin-x64@npm:1.12.6"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@swc/core-linux-arm-gnueabihf@npm:1.11.22":
-  version: 1.11.22
-  resolution: "@swc/core-linux-arm-gnueabihf@npm:1.11.22"
+"@swc/core-linux-arm-gnueabihf@npm:1.12.6":
+  version: 1.12.6
+  resolution: "@swc/core-linux-arm-gnueabihf@npm:1.12.6"
   conditions: os=linux & cpu=arm
   languageName: node
   linkType: hard
 
-"@swc/core-linux-arm64-gnu@npm:1.11.22":
-  version: 1.11.22
-  resolution: "@swc/core-linux-arm64-gnu@npm:1.11.22"
+"@swc/core-linux-arm64-gnu@npm:1.12.6":
+  version: 1.12.6
+  resolution: "@swc/core-linux-arm64-gnu@npm:1.12.6"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@swc/core-linux-arm64-musl@npm:1.11.22":
-  version: 1.11.22
-  resolution: "@swc/core-linux-arm64-musl@npm:1.11.22"
+"@swc/core-linux-arm64-musl@npm:1.12.6":
+  version: 1.12.6
+  resolution: "@swc/core-linux-arm64-musl@npm:1.12.6"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@swc/core-linux-x64-gnu@npm:1.11.22":
-  version: 1.11.22
-  resolution: "@swc/core-linux-x64-gnu@npm:1.11.22"
+"@swc/core-linux-x64-gnu@npm:1.12.6":
+  version: 1.12.6
+  resolution: "@swc/core-linux-x64-gnu@npm:1.12.6"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@swc/core-linux-x64-musl@npm:1.11.22":
-  version: 1.11.22
-  resolution: "@swc/core-linux-x64-musl@npm:1.11.22"
+"@swc/core-linux-x64-musl@npm:1.12.6":
+  version: 1.12.6
+  resolution: "@swc/core-linux-x64-musl@npm:1.12.6"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@swc/core-win32-arm64-msvc@npm:1.11.22":
-  version: 1.11.22
-  resolution: "@swc/core-win32-arm64-msvc@npm:1.11.22"
+"@swc/core-win32-arm64-msvc@npm:1.12.6":
+  version: 1.12.6
+  resolution: "@swc/core-win32-arm64-msvc@npm:1.12.6"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@swc/core-win32-ia32-msvc@npm:1.11.22":
-  version: 1.11.22
-  resolution: "@swc/core-win32-ia32-msvc@npm:1.11.22"
+"@swc/core-win32-ia32-msvc@npm:1.12.6":
+  version: 1.12.6
+  resolution: "@swc/core-win32-ia32-msvc@npm:1.12.6"
   conditions: os=win32 & cpu=ia32
   languageName: node
   linkType: hard
 
-"@swc/core-win32-x64-msvc@npm:1.11.22":
-  version: 1.11.22
-  resolution: "@swc/core-win32-x64-msvc@npm:1.11.22"
+"@swc/core-win32-x64-msvc@npm:1.12.6":
+  version: 1.12.6
+  resolution: "@swc/core-win32-x64-msvc@npm:1.12.6"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
-"@swc/core@npm:^1.11.22":
-  version: 1.11.22
-  resolution: "@swc/core@npm:1.11.22"
+"@swc/core@npm:^1.12.6":
+  version: 1.12.6
+  resolution: "@swc/core@npm:1.12.6"
   dependencies:
-    "@swc/core-darwin-arm64": "npm:1.11.22"
-    "@swc/core-darwin-x64": "npm:1.11.22"
-    "@swc/core-linux-arm-gnueabihf": "npm:1.11.22"
-    "@swc/core-linux-arm64-gnu": "npm:1.11.22"
-    "@swc/core-linux-arm64-musl": "npm:1.11.22"
-    "@swc/core-linux-x64-gnu": "npm:1.11.22"
-    "@swc/core-linux-x64-musl": "npm:1.11.22"
-    "@swc/core-win32-arm64-msvc": "npm:1.11.22"
-    "@swc/core-win32-ia32-msvc": "npm:1.11.22"
-    "@swc/core-win32-x64-msvc": "npm:1.11.22"
+    "@swc/core-darwin-arm64": "npm:1.12.6"
+    "@swc/core-darwin-x64": "npm:1.12.6"
+    "@swc/core-linux-arm-gnueabihf": "npm:1.12.6"
+    "@swc/core-linux-arm64-gnu": "npm:1.12.6"
+    "@swc/core-linux-arm64-musl": "npm:1.12.6"
+    "@swc/core-linux-x64-gnu": "npm:1.12.6"
+    "@swc/core-linux-x64-musl": "npm:1.12.6"
+    "@swc/core-win32-arm64-msvc": "npm:1.12.6"
+    "@swc/core-win32-ia32-msvc": "npm:1.12.6"
+    "@swc/core-win32-x64-msvc": "npm:1.12.6"
     "@swc/counter": "npm:^0.1.3"
-    "@swc/types": "npm:^0.1.21"
+    "@swc/types": "npm:^0.1.23"
   peerDependencies:
     "@swc/helpers": ">=0.5.17"
   dependenciesMeta:
@@ -3171,7 +3171,7 @@ __metadata:
   peerDependenciesMeta:
     "@swc/helpers":
       optional: true
-  checksum: 10/eac7c51051294c8b56381e91cd4ca151a203995531b678ddbab691d0633da19d61b3417ab61fb56ab439a49673dc29a31148b8e3df56c645de5bcaa4924f965c
+  checksum: 10/e5522a38b3b83999e4fe50cb8f6a2886dbf6054c227251930d83dd6002e11f83b09b2d50cd6e1be30a0313fa6dee68d26c8232f901e96ae7513204addb11eb43
   languageName: node
   linkType: hard
 
@@ -3204,12 +3204,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swc/types@npm:^0.1.21":
-  version: 0.1.21
-  resolution: "@swc/types@npm:0.1.21"
+"@swc/types@npm:^0.1.23":
+  version: 0.1.23
+  resolution: "@swc/types@npm:0.1.23"
   dependencies:
     "@swc/counter": "npm:^0.1.3"
-  checksum: 10/6554bf5c78519f49099a2ba448d170191a14b1c7a35df848f10ee4d6c03ecd681e5213884905187de1d1d221589ec8b5cb77f477d099dc1627c3ec9d7f2fcdb0
+  checksum: 10/8d9d73dd1fc9335105105da57595ab913bad6addd4fbcb2eb147300694630232225eb7dc74b733205af33352803e4fcefc18e3a36f8924cf821ef91384767670
   languageName: node
   linkType: hard
 
@@ -3414,10 +3414,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tsconfig/node20@npm:^20.1.5":
-  version: 20.1.5
-  resolution: "@tsconfig/node20@npm:20.1.5"
-  checksum: 10/6d689785f7b6ffd09d2cd0565290235ddc650932f6c110701dd38732b3c0b57ba039a3663268ae4a16b855d55ec2fbd48a53910e5a5fc7f196caaa4074dd0a53
+"@tsconfig/node20@npm:^20.1.6":
+  version: 20.1.6
+  resolution: "@tsconfig/node20@npm:20.1.6"
+  checksum: 10/ddfacb4d50d4395051029fa6350ec26564ff77002d7bf28f0509b3a43f2ab8afeca1210317e9bb536b48738effdccaa56b855a19d06fd106feae6f7e8e21a650
   languageName: node
   linkType: hard
 
@@ -3540,13 +3540,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/inquirer@npm:^9.0.7":
-  version: 9.0.7
-  resolution: "@types/inquirer@npm:9.0.7"
+"@types/inquirer@npm:^9.0.8":
+  version: 9.0.8
+  resolution: "@types/inquirer@npm:9.0.8"
   dependencies:
     "@types/through": "npm:*"
     rxjs: "npm:^7.2.0"
-  checksum: 10/84cefdd10d7ca747ae2338ea35518020abbc28f7670ade446e367c4cd333153618b374d30830253f31a9567dd26e7f3093fb3cd20210af5ba27a1a91b89bb97e
+  checksum: 10/ed265fde2d9814f138092e3734e979edc56e080f624c2fbc52a10db38a6519406eeb9a1a1ac0d5335487257ab63d1a749431e828773ca89a2eb77018f5c170ab
   languageName: node
   linkType: hard
 
@@ -3634,12 +3634,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:^22.13.10":
-  version: 22.13.10
-  resolution: "@types/node@npm:22.13.10"
+"@types/node@npm:*, @types/node@npm:^22.15.33":
+  version: 22.15.33
+  resolution: "@types/node@npm:22.15.33"
   dependencies:
-    undici-types: "npm:~6.20.0"
-  checksum: 10/57dc6a5e0110ca9edea8d7047082e649fa7fa813f79e4a901653b9174141c622f4336435648baced5b38d9f39843f404fa2d8d7a10981610da26066bc8caab48
+    undici-types: "npm:~6.21.0"
+  checksum: 10/5734cbca7fc363f3d6ad191e1be645cc9885d642e9f90688892459f10629cf663d2206e7ed7b255dd476baaa86fb011aa09647e77520958b5993b391f793856f
   languageName: node
   linkType: hard
 
@@ -3664,14 +3664,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/pg@npm:^8.11.14":
-  version: 8.11.14
-  resolution: "@types/pg@npm:8.11.14"
+"@types/pg@npm:^8.15.4":
+  version: 8.15.4
+  resolution: "@types/pg@npm:8.15.4"
   dependencies:
     "@types/node": "npm:*"
     pg-protocol: "npm:*"
-    pg-types: "npm:^4.0.1"
-  checksum: 10/4761b6bf8e4352b5e8a9304208fb526e793ab5689e0995a85431b908dadf8c5d29e4ae60f586ddb5876d38ad6c1bcae073e36d60ff6497a0148a904f3a104be7
+    pg-types: "npm:^2.2.0"
+  checksum: 10/dd9203ae6732acad4892513fc99eb2bc699935a95b62e9fdbdcc6d1a90f63881b5fd89d4cac1729790ab3d0bb7c64130b144c65abef34e6bbed063ff43a739a6
   languageName: node
   linkType: hard
 
@@ -3700,10 +3700,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/semver@npm:^7.5.5, @types/semver@npm:^7.5.8":
-  version: 7.5.8
-  resolution: "@types/semver@npm:7.5.8"
-  checksum: 10/3496808818ddb36deabfe4974fd343a78101fa242c4690044ccdc3b95dcf8785b494f5d628f2f47f38a702f8db9c53c67f47d7818f2be1b79f2efb09692e1178
+"@types/semver@npm:^7.5.5, @types/semver@npm:^7.7.0":
+  version: 7.7.0
+  resolution: "@types/semver@npm:7.7.0"
+  checksum: 10/ee4514c6c852b1c38f951239db02f9edeea39f5310fad9396a00b51efa2a2d96b3dfca1ae84c88181ea5b7157c57d32d7ef94edacee36fbf975546396b85ba5b
   languageName: node
   linkType: hard
 
@@ -4207,10 +4207,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ansis@npm:^3.15.0":
-  version: 3.15.0
-  resolution: "ansis@npm:3.15.0"
-  checksum: 10/f9517e855789b2c8cc1f442d36499e8238e6dbf4b6bc6cc27d2826050749253d758f633aaec122a5f39a0e00c3753c1ebe6e47f7daa3f45f339bbbbbebc7fbfd
+"ansis@npm:^3.17.0":
+  version: 3.17.0
+  resolution: "ansis@npm:3.17.0"
+  checksum: 10/6fd6bc4d1187b894d9706f4c141c81b788e90766426617385486dae38f8b2f5a1726d8cc754939e44265f92a9db4647d5136cb1425435c39ac42b35e3acf4f3d
   languageName: node
   linkType: hard
 
@@ -4379,11 +4379,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"astro@npm:5.8.0":
-  version: 5.8.0
-  resolution: "astro@npm:5.8.0"
+"astro@npm:5.10.1":
+  version: 5.10.1
+  resolution: "astro@npm:5.10.1"
   dependencies:
-    "@astrojs/compiler": "npm:^2.11.0"
+    "@astrojs/compiler": "npm:^2.12.2"
     "@astrojs/internal-helpers": "npm:0.6.1"
     "@astrojs/markdown-remark": "npm:6.3.2"
     "@astrojs/telemetry": "npm:3.3.0"
@@ -4450,7 +4450,7 @@ __metadata:
       optional: true
   bin:
     astro: astro.js
-  checksum: 10/9ac4d84a04c3be1f90c4a2064bd2e9391ee7bcdbe4fede096449bd7fd05f8cad7d5b8bfcc500513fd47ebf3c83d3f06396becea83d8650b7ae8e5d5c78a69d27
+  checksum: 10/5c3926f427c97aa21e259a897587efbf742864bb9edea4efce5f4d8fc7cd2db8bfc25831e3cecb3f7a62b7754447142e5e086f107ae1053f8fad88acb891fa60
   languageName: node
   linkType: hard
 
@@ -4778,12 +4778,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bun-types@npm:^1.2.10":
-  version: 1.2.10
-  resolution: "bun-types@npm:1.2.10"
+"bun-types@npm:^1.2.17":
+  version: 1.2.17
+  resolution: "bun-types@npm:1.2.17"
   dependencies:
     "@types/node": "npm:*"
-  checksum: 10/75a57f4d79d2fe5c3f391ad3f1931559ed56a7848153b36083a0cde367651d73f31971040c67f0d75db193d27e541e1fae83a1f95696dde4a05f954ad62796e4
+  checksum: 10/20f8a1fe7cb1375db22947da6ed68178058ac5895259e8ebb89b934540d523621786e831825931cf0aec87239674d839d2c108dab0ca7f258acd7a9539be5aff
   languageName: node
   linkType: hard
 
@@ -6951,10 +6951,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"graphql@npm:^16.10.0":
-  version: 16.10.0
-  resolution: "graphql@npm:16.10.0"
-  checksum: 10/d42cf81ddcf3a61dfb213217576bf33c326f15b02c4cee369b373dc74100cbdcdc4479b3b797e79b654dabd8fddf50ef65ff75420e9ce5596c02e21f24c9126a
+"graphql@npm:^16.11.0":
+  version: 16.11.0
+  resolution: "graphql@npm:16.11.0"
+  checksum: 10/e3e1633d0b464bbb3fa41283fae938bd3bac801c350555b3f1a129d99fb3cfe157fa69c1389229dba902731942eb08bdea4b29f1271965feee8779576b26ef01
   languageName: node
   linkType: hard
 
@@ -8557,12 +8557,12 @@ __metadata:
     "@dprint/formatter": "npm:^0.2.1"
     "@dprint/json": "npm:0.15.6"
     "@swc/jest": "npm:^0.2.38"
-    "@types/inquirer": "npm:^9.0.7"
+    "@types/inquirer": "npm:^9.0.8"
     "@types/jest": "npm:^30.0.0"
     "@types/jscodeshift": "npm:^17.3.0"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.33"
     "@types/pluralize": "npm:^0.0.33"
-    "@types/semver": "npm:^7.5.8"
+    "@types/semver": "npm:^7.7.0"
     change-case: "npm:^4.1.2"
     fast-glob: "npm:^3.3.3"
     inquirer: "npm:^9.3.7"
@@ -8570,19 +8570,19 @@ __metadata:
     joist-utils: "workspace:*"
     jscodeshift: "npm:^17.3.0"
     knex: "npm:^3.1.0"
-    pg: "npm:^8.15.5"
+    pg: "npm:^8.16.2"
     pg-structure: "npm:^7.15.3"
     pluralize: "npm:^8.0.0"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
-    semver: "npm:^7.7.1"
+    semver: "npm:^7.7.2"
     ts-node-dev: "npm:^2.0.0"
-    ts-poet: "npm:^6.11.0"
+    ts-poet: "npm:^6.12.0"
     tsconfig-paths: "npm:^4.2.0"
-    tsx: "npm:^4.19.3"
+    tsx: "npm:^4.20.3"
     typescript: "npm:5.8.3"
-    zod: "npm:^3.24.3"
-    zod-to-json-schema: "npm:^3.24.5"
+    zod: "npm:^3.25.67"
+    zod-to-json-schema: "npm:^3.24.6"
   bin:
     joist-codegen: build/index.js
   languageName: unknown
@@ -8596,7 +8596,7 @@ __metadata:
     "@astrojs/starlight": "npm:^0.34.4"
     "@astrojs/starlight-tailwind": "npm:^4.0.1"
     "@tailwindcss/vite": "npm:^4.1.10"
-    astro: "npm:5.8.0"
+    astro: "npm:5.10.1"
     sharp: "npm:^0.34.2"
     starlight-blog: "npm:^0.24.0"
     tailwindcss: "npm:^4.1.10"
@@ -8608,9 +8608,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-driver-bun-pg@workspace:packages/drivers/bun-pg"
   dependencies:
-    bun-types: "npm:^1.2.10"
+    bun-types: "npm:^1.2.17"
     joist-orm: "workspace:*"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.8.3"
@@ -8623,20 +8623,20 @@ __metadata:
   dependencies:
     "@dprint/formatter": "npm:^0.2.1"
     "@dprint/json": "npm:0.15.6"
-    "@swc/core": "npm:^1.11.22"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.33"
     "@types/prettier": "npm:^3.0.0"
     change-case: "npm:^4.1.2"
-    graphql: "npm:^16.10.0"
+    graphql: "npm:^16.11.0"
     jest: "npm:30.0.2"
     joist-codegen: "workspace:*"
     joist-utils: "workspace:*"
     pluralize: "npm:^8.0.0"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
-    ts-poet: "npm:^6.11.0"
+    ts-poet: "npm:^6.12.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.8.3"
   languageName: unknown
@@ -8646,15 +8646,15 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-graphql-resolver-utils@workspace:packages/graphql-resolver-utils"
   dependencies:
-    "@swc/core": "npm:^1.11.22"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.13.10"
-    graphql: "npm:^16.10.0"
+    "@types/node": "npm:^22.15.33"
+    graphql: "npm:^16.11.0"
     jest: "npm:30.0.2"
     joist-orm: "workspace:*"
     joist-test-utils: "workspace:*"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.8.3"
@@ -8665,14 +8665,14 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-knex@workspace:packages/knex"
   dependencies:
-    "@swc/core": "npm:^1.11.22"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.33"
     jest: "npm:30.0.2"
     knex: "npm:^3.1.0"
-    pg: "npm:^8.15.5"
-    prettier: "npm:^3.6.0"
+    pg: "npm:^8.16.2"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     ts-node-dev: "npm:^2.0.0"
     tsconfig-paths: "npm:^4.2.0"
@@ -8684,18 +8684,18 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-migration-utils@workspace:packages/migration-utils"
   dependencies:
-    "@swc/core": "npm:^1.11.22"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.33"
     "@types/pluralize": "npm:^0.0.33"
     jest: "npm:30.0.2"
     joist-utils: "workspace:*"
     node-pg-migrate: "npm:^7.9.1"
-    pg: "npm:^8.15.5"
+    pg: "npm:^8.16.2"
     pg-structure: "npm:^7.15.3"
     pluralize: "npm:^8.0.0"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     ts-node-dev: "npm:^2.0.0"
     tsconfig-paths: "npm:^4.2.0"
@@ -8707,21 +8707,21 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-orm@workspace:packages/orm"
   dependencies:
-    "@swc/core": "npm:^1.11.22"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.33"
     "@types/object-hash": "npm:^3.0.6"
-    "@types/pg": "npm:^8.11.14"
-    ansis: "npm:^3.15.0"
+    "@types/pg": "npm:^8.15.4"
+    ansis: "npm:^3.17.0"
     dataloader: "npm:^2.2.3"
     jest: "npm:30.0.2"
     joist-utils: "workspace:*"
     knex: "npm:^3.1.0"
     object-hash: "npm:^3.0.0"
-    pg: "npm:^8.15.5"
+    pg: "npm:^8.16.2"
     pg-types: "npm:^4.0.2"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     temporal-polyfill: "npm:^0.3.0"
     ts-node-dev: "npm:^2.0.0"
@@ -8734,13 +8734,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-test-utils@workspace:packages/test-utils"
   dependencies:
-    "@swc/core": "npm:^1.11.22"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
     jest: "npm:30.0.2"
     joist-orm: "workspace:*"
     joist-utils: "workspace:*"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     ts-node-dev: "npm:^2.0.0"
     tsconfig-paths: "npm:^4.2.0"
@@ -8752,8 +8752,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-bun-sql-pg@workspace:packages/tests/bun-sql-pg"
   dependencies:
-    "@types/node": "npm:^22.13.10"
-    bun-types: "npm:^1.2.10"
+    "@types/node": "npm:^22.15.33"
+    bun-types: "npm:^1.2.17"
     jest: "npm:30.0.2"
     joist-codegen: "workspace:*"
     joist-driver-bun-pg: "workspace:*"
@@ -8761,7 +8761,7 @@ __metadata:
     joist-orm: "workspace:*"
     joist-test-utils: "workspace:*"
     node-pg-migrate: "npm:^7.9.1"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     typescript: "npm:5.8.3"
   languageName: unknown
@@ -8771,16 +8771,16 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-bun@workspace:packages/tests/bun"
   dependencies:
-    "@types/node": "npm:^22.13.10"
-    bun-types: "npm:^1.2.10"
+    "@types/node": "npm:^22.15.33"
+    bun-types: "npm:^1.2.17"
     joist-codegen: "workspace:*"
     joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
     joist-test-utils: "workspace:*"
     node-pg-migrate: "npm:^7.9.1"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
-    tsx: "npm:^4.19.3"
+    tsx: "npm:^4.20.3"
     typescript: "npm:5.8.3"
   languageName: unknown
   linkType: soft
@@ -8789,10 +8789,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-esm-misc@workspace:packages/tests/esm-misc"
   dependencies:
-    "@swc/core": "npm:^1.11.22"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.33"
     jest: "npm:30.0.2"
     jest-junit: "npm:^16.0.0"
     joist-codegen: "workspace:*"
@@ -8800,7 +8800,7 @@ __metadata:
     joist-orm: "workspace:*"
     joist-test-utils: "workspace:*"
     node-pg-migrate: "npm:^7.9.1"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     superstruct: "npm:0.15.5"
     ts-node: "npm:^10.9.2"
@@ -8813,10 +8813,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-immediate-foreign-keys@workspace:packages/tests/immediate-foreign-keys"
   dependencies:
-    "@swc/core": "npm:^1.11.22"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.33"
     env-cmd: "npm:^10.1.0"
     jest: "npm:30.0.2"
     jest-junit: "npm:^16.0.0"
@@ -8824,11 +8824,11 @@ __metadata:
     joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
     joist-test-utils: "workspace:*"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     superstruct: "npm:0.15.5"
     tsconfig-paths: "npm:^4.2.0"
-    tsx: "npm:^4.19.3"
+    tsx: "npm:^4.20.3"
     typescript: "npm:5.8.3"
   languageName: unknown
   linkType: soft
@@ -8837,12 +8837,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-integration@workspace:packages/tests/integration"
   dependencies:
-    "@graphql-tools/graphql-file-loader": "npm:^8.0.19"
-    "@graphql-tools/load": "npm:^8.0.19"
-    "@swc/core": "npm:^1.11.22"
+    "@graphql-tools/graphql-file-loader": "npm:^8.0.20"
+    "@graphql-tools/load": "npm:^8.1.0"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.33"
     ansi-regex: "npm:^5.0.1"
     env-cmd: "npm:^10.1.0"
     jest: "npm:30.0.2"
@@ -8855,18 +8855,18 @@ __metadata:
     joist-orm: "workspace:*"
     joist-test-utils: "workspace:*"
     joist-transform-properties: "workspace:*"
-    kelonio: "npm:^0.10.0"
+    kelonio: "npm:^0.11.0"
     mitata: "npm:^0.1.14"
-    postgres: "npm:^3.4.5"
-    prettier: "npm:^3.6.0"
+    postgres: "npm:^3.4.7"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     superstruct: "npm:0.15.5"
     ts-jest: "npm:^29.4.0"
     ts-patch: "npm:^3.3.0"
     tsconfig-paths: "npm:^4.2.0"
-    tsx: "npm:^4.19.3"
+    tsx: "npm:^4.20.3"
     typescript: "npm:5.8.3"
-    zod: "npm:^3.24.3"
+    zod: "npm:^3.25.67"
   languageName: unknown
   linkType: soft
 
@@ -8874,10 +8874,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-number-ids@workspace:packages/tests/number-ids"
   dependencies:
-    "@swc/core": "npm:^1.11.22"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.33"
     env-cmd: "npm:^10.1.0"
     jest: "npm:30.0.2"
     jest-junit: "npm:^16.0.0"
@@ -8885,11 +8885,11 @@ __metadata:
     joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
     joist-test-utils: "workspace:*"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     superstruct: "npm:0.15.5"
     tsconfig-paths: "npm:^4.2.0"
-    tsx: "npm:^4.19.3"
+    tsx: "npm:^4.20.3"
     typescript: "npm:5.8.3"
   languageName: unknown
   linkType: soft
@@ -8898,10 +8898,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-schema-misc@workspace:packages/tests/schema-misc"
   dependencies:
-    "@swc/core": "npm:^1.11.22"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.33"
     jest: "npm:30.0.2"
     jest-junit: "npm:^16.0.0"
     joist-codegen: "workspace:*"
@@ -8909,7 +8909,7 @@ __metadata:
     joist-orm: "workspace:*"
     joist-test-utils: "workspace:*"
     node-pg-migrate: "npm:^7.9.1"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     superstruct: "npm:0.15.5"
     ts-node: "npm:^10.9.2"
@@ -8922,10 +8922,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-temporal@workspace:packages/tests/temporal"
   dependencies:
-    "@swc/core": "npm:^1.11.22"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.33"
     jest: "npm:30.0.2"
     jest-junit: "npm:^16.0.0"
     joist-codegen: "workspace:*"
@@ -8933,7 +8933,7 @@ __metadata:
     joist-orm: "workspace:*"
     joist-test-utils: "workspace:*"
     node-pg-migrate: "npm:^7.9.1"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     superstruct: "npm:0.15.5"
     temporal-polyfill: "npm:^0.3.0"
@@ -8947,10 +8947,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-untagged-ids@workspace:packages/tests/untagged-ids"
   dependencies:
-    "@swc/core": "npm:^1.11.22"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.33"
     env-cmd: "npm:^10.1.0"
     jest: "npm:30.0.2"
     jest-junit: "npm:^16.0.0"
@@ -8958,11 +8958,11 @@ __metadata:
     joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
     joist-test-utils: "workspace:*"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     superstruct: "npm:0.15.5"
     tsconfig-paths: "npm:^4.2.0"
-    tsx: "npm:^4.19.3"
+    tsx: "npm:^4.20.3"
     typescript: "npm:5.8.3"
   languageName: unknown
   linkType: soft
@@ -8971,10 +8971,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-uuid-ids@workspace:packages/tests/uuid-ids"
   dependencies:
-    "@swc/core": "npm:^1.11.22"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.33"
     env-cmd: "npm:^10.1.0"
     jest: "npm:30.0.2"
     jest-junit: "npm:^16.0.0"
@@ -8982,11 +8982,11 @@ __metadata:
     joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
     joist-test-utils: "workspace:*"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     superstruct: "npm:0.15.5"
     tsconfig-paths: "npm:^4.2.0"
-    tsx: "npm:^4.19.3"
+    tsx: "npm:^4.20.3"
     typescript: "npm:5.8.3"
   languageName: unknown
   linkType: soft
@@ -8995,12 +8995,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-transform-properties@workspace:packages/transform-properties"
   dependencies:
-    "@swc/core": "npm:^1.11.22"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.33"
     jest: "npm:30.0.2"
-    prettier: "npm:^3.6.0"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     ts-node-dev: "npm:^2.0.0"
     tsconfig-paths: "npm:^4.2.0"
@@ -9012,14 +9012,14 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-utils@workspace:packages/utils"
   dependencies:
-    "@swc/core": "npm:^1.11.22"
+    "@swc/core": "npm:^1.12.6"
     "@swc/jest": "npm:^0.2.38"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.13.10"
+    "@types/node": "npm:^22.15.33"
     jest: "npm:30.0.2"
-    pg: "npm:^8.15.5"
-    pg-connection-string: "npm:^2.8.5"
-    prettier: "npm:^3.6.0"
+    pg: "npm:^8.16.2"
+    pg-connection-string: "npm:^2.9.1"
+    prettier: "npm:^3.6.1"
     prettier-plugin-organize-imports: "npm:^4.1.0"
     ts-node-dev: "npm:^2.0.0"
     tsconfig-paths: "npm:^4.2.0"
@@ -9037,10 +9037,10 @@ __metadata:
     "@semantic-release/git": "npm:^10.0.1"
     "@semantic-release/github": "npm:^11.0.3"
     "@semantic-release/release-notes-generator": "npm:^14.0.3"
-    "@tsconfig/node20": "npm:^20.1.5"
+    "@tsconfig/node20": "npm:^20.1.6"
     env-cmd: "npm:^10.1.0"
     expect-type: "npm:^1.2.1"
-    mprocs: "npm:^0.7.2"
+    mprocs: "npm:^0.7.3"
     semantic-release: "npm:^24.2.5"
     ts-patch: "npm:^3.3.0"
     typescript: "npm:5.8.3"
@@ -9212,14 +9212,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"kelonio@npm:^0.10.0":
-  version: 0.10.0
-  resolution: "kelonio@npm:0.10.0"
+"kelonio@npm:^0.11.0":
+  version: 0.11.0
+  resolution: "kelonio@npm:0.11.0"
   dependencies:
     browser-hrtime: "npm:^1.0.0"
     eventemitter3: "npm:^5.0.0"
     mathjs: "npm:^10.5.2"
-  checksum: 10/16dbf668e387de72da18a3c227ce02ce2cf1510e09e437938e751028bde0c0e2087261d7526eee94e9dc814b9f455f78db5fa5efe86f01c19f07bac4e6a3413a
+  checksum: 10/ce08b33275f574001ee6a1a4fd54927dd223a3c4926222d45c104d8e716916bcea6ce007ea06da4e8591bde36e8cbdb39dbefe3bcdbf0f2fecf731d0b74b33af
   languageName: node
   linkType: hard
 
@@ -10854,12 +10854,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mprocs@npm:^0.7.2":
-  version: 0.7.2
-  resolution: "mprocs@npm:0.7.2"
+"mprocs@npm:^0.7.3":
+  version: 0.7.3
+  resolution: "mprocs@npm:0.7.3"
   bin:
     mprocs: cli.js
-  checksum: 10/e5a20bd31d4482f6f4f86e381db135defd9acd533a19b04a79a3acf628cf36c6a1f6e5d2c8962af0045fc9ffd801dc676b7c18577e0ac2f56c24bb060e0e5caf
+  checksum: 10/2c25690b4bb1e03cf30cd01f683684f62c65e879a2d662501e479d233871ab39d229041f15c61b37e7aec3f5db22af4b5c53d0475bd77ab543379cadcfb4ef0b
   languageName: node
   linkType: hard
 
@@ -11955,10 +11955,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg-cloudflare@npm:^1.2.5":
-  version: 1.2.5
-  resolution: "pg-cloudflare@npm:1.2.5"
-  checksum: 10/13181a5d8243758bc6651426368097c89a2ff226d2ed8119f2777b15eea5e22953b5605b3d4861e68cd2109e1b08d3eea143e495bcefccaf7a0c8f70b69a0b51
+"pg-cloudflare@npm:^1.2.6":
+  version: 1.2.6
+  resolution: "pg-cloudflare@npm:1.2.6"
+  checksum: 10/8b9bede2db8ada18b3edcd6d920e41def65117038fbef303de2c3c203744d7ad7cfc6b5177e4e2a75975334545e3e395bfaeb3bd7ec154d6a74faf503d0384ad
   languageName: node
   linkType: hard
 
@@ -11969,10 +11969,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg-connection-string@npm:^2.2.1, pg-connection-string@npm:^2.8.5":
-  version: 2.8.5
-  resolution: "pg-connection-string@npm:2.8.5"
-  checksum: 10/2a4e08ce9c86d67943870292745c939f981cb0105cc02f8459e2e2bbd265560060ac1cdf99126ef86371902ffe2624ae0171ce307e28ca4b7aec00725f1c80e1
+"pg-connection-string@npm:^2.2.1, pg-connection-string@npm:^2.9.1":
+  version: 2.9.1
+  resolution: "pg-connection-string@npm:2.9.1"
+  checksum: 10/40e9e9cd752121e72bff18d83e6c7ecda9056426815a84294de018569a319293c924704c8b7f0604fdc588835c7927647dea4f3c87a014e715bcbb17d794e9f0
   languageName: node
   linkType: hard
 
@@ -11990,19 +11990,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg-pool@npm:^3.9.5":
-  version: 3.9.5
-  resolution: "pg-pool@npm:3.9.5"
+"pg-pool@npm:^3.10.1":
+  version: 3.10.1
+  resolution: "pg-pool@npm:3.10.1"
   peerDependencies:
     pg: ">=8.0"
-  checksum: 10/065166c1dabd18db8974850ffe84aeb6a0a35cb074c550e11b1681ac6d800e04b79131f1ffc31952f7cedc07cfc0deb96dd39e9069340fe5298ef4b05bf565a4
+  checksum: 10/b389a714be59ebe53ec412cbff513191cc0b7a203faa5d26416b6a038cafdfe30fbf1a5936b77bb76109c49bd7c4a116870a5a46a45796b1b34c96f016d7fbe2
   languageName: node
   linkType: hard
 
-"pg-protocol@npm:*, pg-protocol@npm:^1.9.5":
-  version: 1.9.5
-  resolution: "pg-protocol@npm:1.9.5"
-  checksum: 10/690b18d421fda1a004dcc07fe5aa06d3511775aae6ea424586e039c7954c463bc358bb00a93d064ccee16d378a7a9c27102fef348eee30f3d5d4105ff3d4151c
+"pg-protocol@npm:*, pg-protocol@npm:^1.10.2":
+  version: 1.10.2
+  resolution: "pg-protocol@npm:1.10.2"
+  checksum: 10/4c14668ae1ec1515d421ead8eb2ce3227a4286082b55330e45eb9d512ef900650425af2a3e9672c4b43d0bc121ce920229598593c5a76127f37ca9910d0194e6
   languageName: node
   linkType: hard
 
@@ -12023,7 +12023,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg-types@npm:^2.1.0":
+"pg-types@npm:2.2.0, pg-types@npm:^2.2.0":
   version: 2.2.0
   resolution: "pg-types@npm:2.2.0"
   dependencies:
@@ -12036,7 +12036,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg-types@npm:^4.0.1, pg-types@npm:^4.0.2":
+"pg-types@npm:^4.0.2":
   version: 4.0.2
   resolution: "pg-types@npm:4.0.2"
   dependencies:
@@ -12051,16 +12051,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg@npm:^8.0.3, pg@npm:^8.15.5":
-  version: 8.15.5
-  resolution: "pg@npm:8.15.5"
+"pg@npm:^8.0.3, pg@npm:^8.16.2":
+  version: 8.16.2
+  resolution: "pg@npm:8.16.2"
   dependencies:
-    pg-cloudflare: "npm:^1.2.5"
-    pg-connection-string: "npm:^2.8.5"
-    pg-pool: "npm:^3.9.5"
-    pg-protocol: "npm:^1.9.5"
-    pg-types: "npm:^2.1.0"
-    pgpass: "npm:1.x"
+    pg-cloudflare: "npm:^1.2.6"
+    pg-connection-string: "npm:^2.9.1"
+    pg-pool: "npm:^3.10.1"
+    pg-protocol: "npm:^1.10.2"
+    pg-types: "npm:2.2.0"
+    pgpass: "npm:1.0.5"
   peerDependencies:
     pg-native: ">=3.0.1"
   dependenciesMeta:
@@ -12069,16 +12069,16 @@ __metadata:
   peerDependenciesMeta:
     pg-native:
       optional: true
-  checksum: 10/993d2b395d175770e944ed4859013c122a6676e8f3886aecd15aa11febf6213cbb0cb7225cbc1f0519a909935044c82c1ac2f412992949dbbdcc2eb10bc799a0
+  checksum: 10/e34056b3758e996cf24635412e62c4d44ac2fd41f1e389a0dc0346b9965d0dc763e4f72d30d4de497d2b3495ee0ec44c39e930ec464aa4622db257895955e184
   languageName: node
   linkType: hard
 
-"pgpass@npm:1.x":
-  version: 1.0.2
-  resolution: "pgpass@npm:1.0.2"
+"pgpass@npm:1.0.5":
+  version: 1.0.5
+  resolution: "pgpass@npm:1.0.5"
   dependencies:
-    split: "npm:^1.0.0"
-  checksum: 10/4f09d81d5aa9e3e409e2a58dc71f889ca92233d66772adcb810e53e637b49013ae84b8dd831aa5e6f1413bffb4b9b1eafd1a05227c8cf05c39f5cd276d4e9492
+    split2: "npm:^4.1.0"
+  checksum: 10/0a6f3bf76e36bdb3c20a7e8033140c732767bba7e81f845f7489fc3123a2bd6e3b8e704f08cba86b117435414b5d2422e20ba9d5f2efb6f0c75c9efca73e8e87
   languageName: node
   linkType: hard
 
@@ -12258,10 +12258,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postgres@npm:^3.4.5":
-  version: 3.4.5
-  resolution: "postgres@npm:3.4.5"
-  checksum: 10/b51341a8640bd63c42caf2a866c8b6bcac0d4cc1b85985f01eb3fd941eb7bf3fe5200bcf6983eaa1d42ae7555d85f4ff51d35916b5543b95aecfe98b76213611
+"postgres@npm:^3.4.7":
+  version: 3.4.7
+  resolution: "postgres@npm:3.4.7"
+  checksum: 10/ef5b43b137412c13d907da0d37e7d4141653365fd371ffa000e124076119fe14ef95a27b1469f2ed6fb006f855746fc65087f326a124fe320a2b1f3bbec397f4
   languageName: node
   linkType: hard
 
@@ -12279,12 +12279,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:*, prettier@npm:^3.6.0":
-  version: 3.6.0
-  resolution: "prettier@npm:3.6.0"
+"prettier@npm:*, prettier@npm:^3.6.1":
+  version: 3.6.1
+  resolution: "prettier@npm:3.6.1"
   bin:
     prettier: bin/prettier.cjs
-  checksum: 10/5c0db5a8e32d2ac9824d8bc652990dfd534bc7a7c6f26d99d50c9146a2d9befb3cd1cc86c4aee71caf6b264d421a4b4b5961e31a62dda3790b8fec2521a76eef
+  checksum: 10/e2c4b47bf1bda4f932143e52e0f57239dd60cfef08296b56d4073426e2d310edc353a7daa5285a546bd3c1619c76894759cc98d82d4ac710f72a711ae2899bcc
   languageName: node
   linkType: hard
 
@@ -13742,21 +13742,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"split2@npm:^4.1.0":
+  version: 4.2.0
+  resolution: "split2@npm:4.2.0"
+  checksum: 10/09bbefc11bcf03f044584c9764cd31a252d8e52cea29130950b26161287c11f519807c5e54bd9e5804c713b79c02cefe6a98f4688630993386be353e03f534ab
+  languageName: node
+  linkType: hard
+
 "split2@npm:~1.0.0":
   version: 1.0.0
   resolution: "split2@npm:1.0.0"
   dependencies:
     through2: "npm:~2.0.0"
   checksum: 10/61bd2228f57dc31e1b5965d969db450ae4c385899b8adfb9da45486ae23862ad005a5b4efee1f4ac6530667c6d51e89bc695a64ca7266f1b8847e3806fcafda3
-  languageName: node
-  linkType: hard
-
-"split@npm:^1.0.0":
-  version: 1.0.1
-  resolution: "split@npm:1.0.1"
-  dependencies:
-    through: "npm:2"
-  checksum: 10/12f4554a5792c7e98bb3e22b53c63bfa5ef89aa704353e1db608a55b51f5b12afaad6e4a8ecf7843c15f273f43cdadd67b3705cc43d48a75c2cf4641d51f7e7a
   languageName: node
   linkType: hard
 
@@ -14232,13 +14230,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"through@npm:2":
-  version: 2.3.8
-  resolution: "through@npm:2.3.8"
-  checksum: 10/5da78346f70139a7d213b65a0106f3c398d6bc5301f9248b5275f420abc2c4b1e77c2abc72d218dedc28c41efb2e7c312cb76a7730d04f9c2d37d247da3f4198
-  languageName: node
-  linkType: hard
-
 "tildify@npm:2.0.0":
   version: 2.0.0
   resolution: "tildify@npm:2.0.0"
@@ -14498,12 +14489,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-poet@npm:^6.11.0":
-  version: 6.11.0
-  resolution: "ts-poet@npm:6.11.0"
+"ts-poet@npm:^6.12.0":
+  version: 6.12.0
+  resolution: "ts-poet@npm:6.12.0"
   dependencies:
     dprint-node: "npm:^1.0.8"
-  checksum: 10/7ad4b463a717f5006ef85311583d75dcf999ce29306d9fb954d4fb618b787c0e10d5790b2aa6030182eb6f34d3dc0909bd543ff496ac7b4c285080cfd70f57e9
+  checksum: 10/0b0c2802625f2ecb3341abce998dd4c5797d16656871202c790a1dc8ca154c4ab923cee8cba816d00764766bd2c1a5d11517c0d21ce77819f174ba78e2aa732d
   languageName: node
   linkType: hard
 
@@ -14551,9 +14542,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tsx@npm:^4.19.3":
-  version: 4.19.3
-  resolution: "tsx@npm:4.19.3"
+"tsx@npm:^4.20.3":
+  version: 4.20.3
+  resolution: "tsx@npm:4.20.3"
   dependencies:
     esbuild: "npm:~0.25.0"
     fsevents: "npm:~2.3.3"
@@ -14563,7 +14554,7 @@ __metadata:
       optional: true
   bin:
     tsx: dist/cli.mjs
-  checksum: 10/a7e7f41e5593b242772050abacf51908aa8a6d4d9ea6c29e80161eb557d664a0f4cc8d38d0c8c151fddb6c2e9e337af27ba0e269c9707ccd7eeff0e0ea7fcf98
+  checksum: 10/62f40d06a41deebd51690b086f4387d842a826542639b6a26fd6cf09158c6b44956ca9d9088146330ab0622587b2329981cc3584b89025040f3aa100c50ac13c
   languageName: node
   linkType: hard
 
@@ -14697,10 +14688,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"undici-types@npm:~6.20.0":
-  version: 6.20.0
-  resolution: "undici-types@npm:6.20.0"
-  checksum: 10/583ac7bbf4ff69931d3985f4762cde2690bb607844c16a5e2fbb92ed312fe4fa1b365e953032d469fa28ba8b224e88a595f0b10a449332f83fa77c695e567dbe
+"undici-types@npm:~6.21.0":
+  version: 6.21.0
+  resolution: "undici-types@npm:6.21.0"
+  checksum: 10/ec8f41aa4359d50f9b59fa61fe3efce3477cc681908c8f84354d8567bb3701fafdddf36ef6bff307024d3feb42c837cf6f670314ba37fc8145e219560e473d14
   languageName: node
   linkType: hard
 
@@ -15838,12 +15829,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod-to-json-schema@npm:^3.24.5":
-  version: 3.24.5
-  resolution: "zod-to-json-schema@npm:3.24.5"
+"zod-to-json-schema@npm:^3.24.5, zod-to-json-schema@npm:^3.24.6":
+  version: 3.24.6
+  resolution: "zod-to-json-schema@npm:3.24.6"
   peerDependencies:
     zod: ^3.24.1
-  checksum: 10/1af291b4c429945c9568c2e924bdb7c66ab8d139cbeb9a99b6e9fc9e1b02863f85d07759b9303714f07ceda3993dcaf0ebcb80d2c18bb2aaf5502b2c1016affd
+  checksum: 10/a2c30cf1f250aa79a7f975e65b4236d1abafafd63b43c43475057f28ce6e13f4c882391553c656fb426fd09665e6ae293c2439b4ed8600863beda43fb1a56922
   languageName: node
   linkType: hard
 
@@ -15857,10 +15848,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^3.24.2, zod@npm:^3.24.3":
-  version: 3.24.3
-  resolution: "zod@npm:3.24.3"
-  checksum: 10/1b15db625ca633324084f3a8587bfb907043bbca407a09f7d5da6a9781b3838c68e9312b49e91e479d2f8bf04cdda5810803ac9504e3b7ccbec3adf2de625fb8
+"zod@npm:^3.24.2, zod@npm:^3.25.67":
+  version: 3.25.67
+  resolution: "zod@npm:3.25.67"
+  checksum: 10/0e35432dcca7f053e63f5dd491a87c78abe0d981817547252c3b6d05f0f58788695d1a69724759c6501dff3fd62929be24c9f314a3625179bee889150f7a61fa
   languageName: node
   linkType: hard
 

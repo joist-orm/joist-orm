@@ -2,7 +2,7 @@ import { Author, Book, BookReview, newAuthor, newPublisher, newSmallPublisher } 
 import { insertAuthor, insertBook, insertBookReview, insertPublisher, select, update } from "@src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import { ReactionLogger, setReactionLogging } from "joist-orm";
-import ansiRegex = require("ansi-regex");
+import ansiRegex from "ansi-regex";
 
 let reactionOutput: string[] = [];
 

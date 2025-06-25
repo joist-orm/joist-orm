@@ -45,8 +45,8 @@ import {
   type ValueFilter,
   type ValueGraphQLFilter,
 } from "joist-orm";
-import { type Context } from "src/context";
-import { type IpAddress, type PasswordValue } from "src/entities/types";
+import type { Context } from "src/context";
+import type { IpAddress, PasswordValue } from "src/entities/types";
 import {
   AdminUser,
   type AdminUserId,

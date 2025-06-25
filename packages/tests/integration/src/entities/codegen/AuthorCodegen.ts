@@ -47,7 +47,7 @@ import {
   type ValueFilter,
   type ValueGraphQLFilter,
 } from "joist-orm";
-import { type Context } from "src/context";
+import type { Context } from "src/context";
 import { Address, address, AddressSchema, Quotes, quotes } from "src/entities/types";
 import { assert } from "superstruct";
 import { z } from "zod";

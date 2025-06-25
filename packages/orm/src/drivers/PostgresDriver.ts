@@ -284,14 +284,15 @@ export function setupLatestPgTypes(temporal: RuntimeConfig["temporal"]): void {
     const noop = (s: string) => s;
     const noopArray = (s: string) => array.parse(s, noop);
 
-    const { TIMESTAMP, TIMESTAMPTZ, DATE } = builtins;
+    const { TIMESTAMP, TIMESTAMPTZ, DATE } = types.builtins;
     types.setTypeParser(DATE, noop);
     types.setTypeParser(TIMESTAMP, noop);
     types.setTypeParser(TIMESTAMPTZ, noop);
 
-    types.setTypeParser(1182, noopArray); // date[]
-    types.setTypeParser(1115, noopArray); // timestamp[]
-    types.setTypeParser(1185, noopArray); // timestamptz[]
+    // Use `as number` b/c the typings of shadowed pg-types from `pg` and `pg-types` top-level don't line up
+    types.setTypeParser(1182 as number, noopArray); // date[]
+    types.setTypeParser(1115 as number, noopArray); // timestamp[]
+    types.setTypeParser(1185 as number, noopArray); // timestamptz[]
   } else {
     types.setTypeParser(types.builtins.TIMESTAMPTZ, getTypeParser(builtins.TIMESTAMPTZ));
   }

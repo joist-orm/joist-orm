@@ -29,7 +29,7 @@ import {
   type ValueFilter,
   type ValueGraphQLFilter,
 } from "joist-orm";
-import { type Context } from "src/context";
+import type { Context } from "src/context";
 import { DatabaseOwner, databaseOwnerMeta, type Entity, EntityManager, newDatabaseOwner } from "../entities";
 
 export type DatabaseOwnerId = Flavor<string, "DatabaseOwner">;

@@ -19,11 +19,11 @@
     "build"
   ],
   "dependencies": {
-    "bun-types": "^1.2.10",
+    "bun-types": "^1.2.17",
     "joist-orm": "workspace:*"
   },
   "devDependencies": {
-    "prettier": "^3.6.0",
+    "prettier": "^3.6.1",
     "prettier-plugin-organize-imports": "^4.1.0",
     "tsconfig-paths": "^4.2.0",
     "typescript": "5.8.3"

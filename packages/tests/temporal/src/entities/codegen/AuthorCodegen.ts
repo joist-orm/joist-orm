@@ -35,7 +35,7 @@ import {
   type ValueFilter,
   type ValueGraphQLFilter,
 } from "joist-orm";
-import { type Context } from "src/context";
+import type { Context } from "src/context";
 import { Temporal } from "temporal-polyfill";
 import { Author, authorMeta, Book, type BookId, bookMeta, type Entity, EntityManager, newAuthor } from "../entities";
 

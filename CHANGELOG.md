@@ -1,3 +1,10 @@
+## [1.249.6](https://github.com/joist-orm/joist-orm/compare/v1.249.5...v1.249.6) (2025-06-25)
+
+
+### Bug Fixes
+
+* Fix flushing m2ms without deferred FKs. ([#1523](https://github.com/joist-orm/joist-orm/issues/1523)) ([5bc70aa](https://github.com/joist-orm/joist-orm/commit/5bc70aa0ab89821c612e834304adf8450b27df0e))
+
 ## [1.249.5](https://github.com/joist-orm/joist-orm/compare/v1.249.4...v1.249.5) (2025-06-24)
 
 

@@ -21,6 +21,7 @@ export async function createFlushFunction(client: Client, db: DbMetadata): Promi
 export function generateExplicitFlushFunction(db: DbMetadata): string {
   // Leave code/enum tables alone
   const tables = [
+    ...db.joinTables,
     ...[...db.entities]
       .sort((a, b) => {
         // Flush books before authors if it has non-deferred FKs
@@ -35,7 +36,6 @@ export function generateExplicitFlushFunction(db: DbMetadata): string {
         return j - i;
       })
       .map((e) => e.tableName),
-    ...db.joinTables,
   ];
 
   // Note that, for whatever reason, doing DELETEs + ALTER SEQUENCEs is dramatically faster than TRUNCATEs.
@@ -56,7 +56,7 @@ export function generateExplicitFlushFunction(db: DbMetadata): string {
         .filter((m2o) => m2o.onDelete !== "SET NULL" && m2o.onDelete !== "CASCADE")
         // Look for FKs to tables whose DELETEs come after us
         .filter((m2o) => db.entitiesByName[m2o.otherEntity.name].nonDeferredFkOrder > t.nonDeferredFkOrder)
-        .map((m2o) => `UPDATE ${t.tableName} SET ${m2o.columnName} = NULL;`),
+        .map((m2o) => `UPDATE ${t.tableName} SET "${m2o.columnName}" = NULL;`),
     );
 
   const statements = [...setFksNulls, ...deletes].join("\n");

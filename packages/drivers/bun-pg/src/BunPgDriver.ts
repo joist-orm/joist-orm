@@ -147,7 +147,7 @@ async function batchUpdate(txn: TransactionSQL, op: UpdateOp): Promise<void> {
   `;
 
   const bindings = rows.flat();
-  const result = await txn(cleanSql(sql), bindings);
+  const result = await txn(cleanSql(sql) as any, bindings);
 
   if (result.rows.length !== rows.length) {
     const updated = new Set(result.rows.map((r: any) => r.id));

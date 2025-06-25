@@ -1,5 +1,5 @@
 import { configureMetadata, DateSerde, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PrimitiveSerde, setRuntimeConfig } from "joist-orm";
-import { type Context } from "src/context";
+import type { Context } from "src/context";
 import { Artist } from "../Artist";
 import { Author } from "../Author";
 import { Book } from "../Book";

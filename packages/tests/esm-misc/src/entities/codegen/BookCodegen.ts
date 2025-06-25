@@ -35,7 +35,7 @@ import {
   type ValueFilter,
   type ValueGraphQLFilter,
 } from "joist-orm";
-import { type Context } from "../../context.ts";
+import type { Context } from "../../context.ts";
 import {
   Author,
   type AuthorId,

@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.15.33",
-    "jest": "30.0.2",
+    "jest": "30.0.3",
     "joist-codegen": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",

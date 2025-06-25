@@ -1,3 +1,10 @@
+## [1.249.7](https://github.com/joist-orm/joist-orm/compare/v1.249.6...v1.249.7) (2025-06-25)
+
+
+### Bug Fixes
+
+* Generate explicit flush_database when non-deferred m2ms. ([#1524](https://github.com/joist-orm/joist-orm/issues/1524)) ([6520764](https://github.com/joist-orm/joist-orm/commit/65207648c294b92ce066ab00acbd476f41e91362))
+
 ## [1.249.6](https://github.com/joist-orm/joist-orm/compare/v1.249.5...v1.249.6) (2025-06-25)
 
 

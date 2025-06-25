@@ -22,6 +22,7 @@
     "docker:reset": "docker compose exec db ./reset.sh"
   },
   "dependencies": {
+    "ansi-regex": "^5.0.1",
     "joist-graphql-resolver-utils": "workspace:*",
     "joist-orm": "workspace:*",
     "mitata": "^0.1.14"

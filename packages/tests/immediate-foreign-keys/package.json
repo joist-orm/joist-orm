@@ -23,7 +23,7 @@
     "@types/jest": "^30.0.0",
     "@types/node": "^22.15.33",
     "env-cmd": "^10.1.0",
-    "jest": "30.0.2",
+    "jest": "30.0.3",
     "jest-junit": "^16.0.0",
     "joist-codegen": "workspace:*",
     "joist-migration-utils": "workspace:*",

@@ -40,7 +40,7 @@
     "@swc/jest": "^0.2.38",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.15.33",
-    "jest": "30.0.2",
+    "jest": "30.0.3",
     "prettier": "^3.6.1",
     "prettier-plugin-organize-imports": "^4.1.0",
     "ts-node-dev": "^2.0.0",

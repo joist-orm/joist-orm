@@ -65,6 +65,9 @@ export function newEntityMetadata(name: string, opts: Partial<EntityDbMetadata> 
     get nonDeferredFks() {
       return [];
     },
+    get nonDeferredManyToManyFks() {
+      return [];
+    },
     ...opts,
   };
 }

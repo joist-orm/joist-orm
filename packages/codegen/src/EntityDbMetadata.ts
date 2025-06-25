@@ -195,6 +195,7 @@ export type ManyToManyField = Field & {
   otherFieldName: string;
   otherColumnName: string;
   isLargeCollection: boolean;
+  isDeferredAndDeferrable: boolean;
 };
 
 /** I.e. a `Comment.parent` reference that groups `comments.parent_book_id` and `comments.parent_book_review_id`. */
@@ -353,6 +354,10 @@ export class EntityDbMetadata {
       ...this.manyToOnes.filter((r) => !r.isDeferredAndDeferrable),
       ...this.polymorphics.flatMap((p) => p.components).filter((c) => !c.isDeferredAndDeferrable),
     ];
+  }
+
+  get nonDeferredManyToManyFks(): Array<ManyToManyField> {
+    return this.manyToManys.filter((r) => !r.isDeferredAndDeferrable);
   }
 }
 
@@ -628,6 +633,7 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
   // For foo_to_bar.some_foo_id use the `some_foo_id` column i.e. `someFoos`
   const fieldName = manyToManyName(targetForeignKey.columns[0]);
   const otherFieldName = manyToManyName(foreignKey.columns[0]);
+  const isDeferredAndDeferrable = targetForeignKey.isDeferred && targetForeignKey.isDeferrable;
   return {
     kind: "m2m",
     joinTableName: r.joinTable.name,
@@ -639,6 +645,7 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
     otherColumnName: targetForeignKey.columns[0].name,
     ignore: isFieldIgnored(config, entity, fieldName) || isFieldIgnored(config, otherEntity, otherFieldName),
     isLargeCollection: isLargeCollection(config, entity, fieldName),
+    isDeferredAndDeferrable,
   };
 }
 

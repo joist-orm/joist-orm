@@ -1876,7 +1876,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     // If not indexed yet, check if we should enable indexing
     if (!this.#indexManager.indexedTypes.has(typeName)) {
-      if (this.#indexManager.shouldIndexType(entityType, entitiesOfType.length)) {
+      if (this.#indexManager.shouldIndexType(entitiesOfType.length)) {
         // enableIndexingForType will index all entities including the current one
         this.#indexManager.enableIndexingForType(entityType, entitiesOfType);
         return; // No need to add individually since enableIndexingForType handles it

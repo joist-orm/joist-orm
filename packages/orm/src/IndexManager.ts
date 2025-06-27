@@ -4,12 +4,11 @@ import { ManyToOneReference, PolymorphicReference, isLoadedReference } from "./r
 
 type FieldValue = any;
 type FieldName = string;
-type EntityTypeName = string;
+type EntityTag = string;
 
 // Index structure: EntityType -> FieldName -> FieldValue -> Set<Entity>
 type FieldIndex = Map<FieldValue, Set<Entity>>;
 type EntityFieldIndexes = Map<FieldName, FieldIndex>;
-type TypeIndexes = Map<EntityTypeName, EntityFieldIndexes>;
 
 // Special indexes for m2o fields that can be either saved (id-based) or unsaved (instance-based)
 type M2oIndex = {
@@ -19,25 +18,22 @@ type M2oIndex = {
 };
 
 /**
- * IndexManager provides field-based indexing for entity queries to avoid O(n) linear scans.
+ * IndexManager provides field-based indexing for entity queries to avoid O(n) linear scans of `em.entities`.
  *
  * Key features:
  * - Only indexes entity types with >1000 entities to avoid overhead for small datasets
  * - Supports dual indexing for m2o/poly fields (by ID for saved, by instance for unsaved)
  * - Automatically maintains indexes when fields are updated via setField()
- * - Drop-in replacement for linear entityMatches filtering
  */
 export class IndexManager {
-  private indexes: TypeIndexes = new Map();
-  private m2oIndexes: Map<EntityTypeName, Map<FieldName, M2oIndex>> = new Map();
-  readonly indexedTypes: Set<EntityTypeName> = new Set();
-  private readonly indexThreshold = 1_000;
+  readonly #indexes: Map<EntityTag, EntityFieldIndexes> = new Map();
+  readonly #m2oIndexes: Map<EntityTag, Map<FieldName, M2oIndex>> = new Map();
+  readonly indexedTypes: Set<EntityTag> = new Set();
+  readonly #indexThreshold = 1_000;
 
-  /**
-   * Determines if a given entity type should be indexed based on entity count.
-   */
-  shouldIndexType(entityType: any, entityCount: number): boolean {
-    return entityCount >= this.indexThreshold;
+  /** @return if we should index entities of this type/count. */
+  shouldIndexType(entityCount: number): boolean {
+    return entityCount >= this.#indexThreshold;
   }
 
   /**
@@ -54,8 +50,8 @@ export class IndexManager {
     const meta = getMetadata(entityType);
 
     // Initialize index structures
-    this.indexes.set(typeName, new Map());
-    this.m2oIndexes.set(typeName, new Map());
+    this.#indexes.set(typeName, new Map());
+    this.#m2oIndexes.set(typeName, new Map());
 
     // Build indexes for all entities of this type
     for (const entity of entities) {
@@ -69,8 +65,8 @@ export class IndexManager {
   disableIndexingForType(entityType: any): void {
     const typeName = entityType.name;
     this.indexedTypes.delete(typeName);
-    this.indexes.delete(typeName);
-    this.m2oIndexes.delete(typeName);
+    this.#indexes.delete(typeName);
+    this.#m2oIndexes.delete(typeName);
   }
 
   /**
@@ -133,8 +129,8 @@ export class IndexManager {
       return null; // Not indexed, use linear search
     }
 
-    const typeIndexes = this.indexes.get(typeName)!;
-    const typeM2oIndexes = this.m2oIndexes.get(typeName)!;
+    const typeIndexes = this.#indexes.get(typeName)!;
+    const typeM2oIndexes = this.#m2oIndexes.get(typeName)!;
 
     // Start with all entities, then intersect with each field constraint
     let candidates: Set<Entity> | null = null;
@@ -160,8 +156,8 @@ export class IndexManager {
 
   private addEntityToIndexes<T extends Entity>(entity: T, meta: EntityMetadata): void {
     const typeName = meta.type;
-    const typeIndexes = this.indexes.get(typeName)!;
-    const typeM2oIndexes = this.m2oIndexes.get(typeName)!;
+    const typeIndexes = this.#indexes.get(typeName)!;
+    const typeM2oIndexes = this.#m2oIndexes.get(typeName)!;
 
     // Index all fields
     for (const [fieldName, field] of Object.entries(meta.allFields)) {
@@ -215,7 +211,7 @@ export class IndexManager {
   }
 
   private addToRegularIndex(entity: Entity, typeName: string, fieldName: string, value: any): void {
-    const typeIndexes = this.indexes.get(typeName)!;
+    const typeIndexes = this.#indexes.get(typeName)!;
 
     if (!typeIndexes.has(fieldName)) {
       typeIndexes.set(fieldName, new Map());
@@ -230,7 +226,7 @@ export class IndexManager {
   }
 
   private removeFromRegularIndex(entity: Entity, typeName: string, fieldName: string, value: any): void {
-    const typeIndexes = this.indexes.get(typeName);
+    const typeIndexes = this.#indexes.get(typeName);
     if (!typeIndexes) return;
 
     const fieldIndex = typeIndexes.get(fieldName);
@@ -246,7 +242,7 @@ export class IndexManager {
   }
 
   private addToM2oIndex(entity: Entity, typeName: string, fieldName: string, value: any): void {
-    const typeM2oIndexes = this.m2oIndexes.get(typeName)!;
+    const typeM2oIndexes = this.#m2oIndexes.get(typeName)!;
 
     if (!typeM2oIndexes.has(fieldName)) {
       typeM2oIndexes.set(fieldName, {
@@ -288,7 +284,7 @@ export class IndexManager {
   }
 
   private removeFromM2oIndex(entity: Entity, typeName: string, fieldName: string, value: any): void {
-    const typeM2oIndexes = this.m2oIndexes.get(typeName);
+    const typeM2oIndexes = this.#m2oIndexes.get(typeName);
     if (!typeM2oIndexes) return;
 
     const m2oIndex = typeM2oIndexes.get(fieldName);

@@ -2,13 +2,8 @@ import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { getInstanceData } from "./BaseEntity";
 import { setAsyncDefaults } from "./defaults";
 import { getField, setField } from "./fields";
+import { IndexManager } from "./IndexManager";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
-import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
-import { FlushLock } from "./FlushLock";
-import { IsLoadedCache } from "./IsLoadedCache";
-import { JoinRows } from "./JoinRows";
-import { ReactionsManager } from "./ReactionsManager";
-import { JoinRowTodo, Todo, combineJoinRows, createTodos } from "./Todo";
 import { getReactiveRules } from "./caches";
 import { ReactiveRule, constraintNameToValidationError } from "./config";
 import { getMetadataForType } from "./configure";
@@ -19,6 +14,8 @@ import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreat
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { populateDataLoader } from "./dataloaders/populateDataLoader";
 import { Driver } from "./drivers";
+import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
+import { FlushLock } from "./FlushLock";
 import {
   BaseEntity,
   CustomCollection,
@@ -65,13 +62,17 @@ import {
   tagId,
   toTaggedId,
 } from "./index";
+import { IsLoadedCache } from "./IsLoadedCache";
+import { JoinRows } from "./JoinRows";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { WriteFn } from "./logging/FactoryLogger";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";
+import { ReactionsManager } from "./ReactionsManager";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
+import { JoinRowTodo, Todo, combineJoinRows, createTodos } from "./Todo";
 import { OptsOf, OrderOf } from "./typeMap";
 import { upsert } from "./upsert";
 import { MaybePromise, assertNever, fail, failIfAnyRejected, getOrSet, groupBy, partition, toArray } from "./utils";
@@ -204,6 +205,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
   // performance issue where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
   readonly #entityIndex: Map<string, Entity> = new Map();
+  // Provides field-based indexing for entity types with >1000 entities to optimize findWithNewOrChanged
+  readonly #indexManager: IndexManager = new IndexManager();
   #isValidating: boolean = false;
   readonly #pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
   #preloadedRelations: Map<string, Map<string, Entity[]>> = new Map();
@@ -269,6 +272,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       hooks: this.#hooks,
       rm: this.#rm,
       isLoadedCache: this.#isLoadedCache,
+      get indexManager() {
+        return em.#indexManager;
+      },
 
       joinRows(m2m: ManyToManyCollection<any, any>): JoinRows {
         return getOrSet(em.#joinRows, m2m.joinTableName, () => new JoinRows(m2m, em.#rm));
@@ -597,8 +603,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const copy: any = Object.fromEntries(Object.entries(where).filter(([, v]) => v !== undefined));
     const persisted = await this.find(type, copy, { softDeletes });
     const unchanged = persisted.filter((e) => !e.isNewEntity && !e.isDirtyEntity && !e.isDeletedEntity);
-    const maybeNew = this.entities.filter(
-      (e) => e instanceof type && (e.isNewEntity || e.isDirtyEntity) && !e.isDeletedEntity && entityMatches(e, where),
+    const maybeNew = this.#findEntitiesWithIndexes(type, where).filter(
+      (e) => (e.isNewEntity || e.isDirtyEntity) && !e.isDeletedEntity,
     );
     const found = [...unchanged, ...maybeNew];
     if (populate) {
@@ -1213,6 +1219,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     if (this.#entities.length >= this.entityLimit) {
       throw new Error(`More than ${this.entityLimit} entities have been instantiated`);
     }
+
+    // Check if we should enable indexing for this entity type
+    this.#maybeEnableIndexingForEntityType(entity);
 
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
     if (entity.isNewEntity) {
@@ -1853,6 +1862,44 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   async [Symbol.asyncDispose](): Promise<void> {
     await this.flush();
   }
+
+  /**
+   * Checks if indexing should be enabled for the entity type and enables it if threshold is reached.
+   */
+  #maybeEnableIndexingForEntityType(entity: Entity): void {
+    const meta = getMetadata(entity);
+    const entityType = meta.cstr as any;
+    const typeName = meta.type;
+
+    // Count entities of this type
+    const entitiesOfType = this.#entities.filter((e) => e instanceof entityType);
+
+    // If not indexed yet, check if we should enable indexing
+    if (!this.#indexManager.indexedTypes.has(typeName)) {
+      if (this.#indexManager.shouldIndexType(entityType, entitiesOfType.length)) {
+        // enableIndexingForType will index all entities including the current one
+        this.#indexManager.enableIndexingForType(entityType, entitiesOfType);
+        return; // No need to add individually since enableIndexingForType handles it
+      }
+    } else {
+      // Type is already indexed, add this entity to the index
+      this.#indexManager.addEntity(entity);
+    }
+  }
+
+  /**
+   * Returns entities matching the filter using indexed search when available.
+   */
+  #findEntitiesWithIndexes<T extends Entity>(entityType: any, where: any): T[] {
+    // Try indexed search first
+    const indexedResults = this.#indexManager.findMatching(entityType, where);
+    if (indexedResults !== null) {
+      return indexedResults as T[];
+    }
+
+    // Fallback to linear search
+    return this.entities.filter((e) => e instanceof entityType && !e.isDeletedEntity && entityMatches(e, where)) as T[];
+  }
 }
 
 /** Provides an internal API to the `EntityManager`. */
@@ -1876,6 +1923,7 @@ export interface EntityManagerInternalApi {
   checkWritesAllowed: () => void;
   get fieldLogger(): FieldLogger | undefined;
   get isLoadedCache(): IsLoadedCache;
+  get indexManager(): IndexManager;
 }
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {

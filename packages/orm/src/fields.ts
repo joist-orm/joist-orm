@@ -92,7 +92,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
       const currentValue = getField(entity, fieldName);
       // Update field indexes if the entity type is indexed
       getEmInternalApi(em).indexManager.updateFieldIndex(entity, fieldName, currentValue, newValue);
-      
+
       data[fieldName] = newValue;
       delete originalData[fieldName];
       fieldLogger?.logSet(entity, fieldName, newValue);
@@ -116,10 +116,10 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   }
   fieldLogger?.logSet(entity, fieldName, newValue);
   getEmInternalApi(em).rm.queueDownstreamReactiveFields(entity, fieldName);
-  
+
   // Update field indexes if the entity type is indexed
   getEmInternalApi(em).indexManager.updateFieldIndex(entity, fieldName, currentValue, newValue);
-  
+
   data[fieldName] = newValue;
   return true;
 }

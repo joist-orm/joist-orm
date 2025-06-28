@@ -1,408 +1,216 @@
 import { Entity, isEntity } from "./Entity";
-import { EntityMetadata, getMetadata, isManyToOneField, isPolymorphicField } from "./EntityMetadata";
+import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { ManyToOneReference, PolymorphicReference, isLoadedReference } from "./relations";
+import { groupBy } from "./utils";
 
 type FieldValue = any;
 type FieldName = string;
-type EntityTypeName = string;
+type EntityTag = string;
 
-// Index structure: EntityType -> FieldName -> FieldValue -> Set<Entity>
-type FieldIndex = Map<FieldValue, Set<Entity>>;
-type EntityFieldIndexes = Map<FieldName, FieldIndex>;
-type TypeIndexes = Map<EntityTypeName, EntityFieldIndexes>;
-
-// Special indexes for m2o fields that can be either saved (id-based) or unsaved (instance-based)
-type M2oIndex = {
-  byId: Map<string, Set<Entity>>; // For saved entities: id -> entities
-  byInstance: Map<Entity, Set<Entity>>; // For unsaved entities: entity instance -> entities
-  byNull: Set<Entity>; // For null/undefined values
-};
+// The test reproducing a n^2 with n=500 went from 100ms to 50ms if indexed
+const indexThreshold = 500;
 
 /**
- * IndexManager provides field-based indexing for entity queries to avoid O(n) linear scans.
+ * IndexManager provides field-based indexing for entity queries to avoid O(n) linear scans of `em.entities`.
  *
  * Key features:
  * - Only indexes entity types with >1000 entities to avoid overhead for small datasets
  * - Supports dual indexing for m2o/poly fields (by ID for saved, by instance for unsaved)
  * - Automatically maintains indexes when fields are updated via setField()
- * - Drop-in replacement for linear entityMatches filtering
  */
 export class IndexManager {
-  private indexes: TypeIndexes = new Map();
-  private m2oIndexes: Map<EntityTypeName, Map<FieldName, M2oIndex>> = new Map();
-  readonly indexedTypes: Set<EntityTypeName> = new Set();
-  private readonly indexThreshold = 1_000;
+  readonly #indexes: Map<EntityTag, Map<FieldName, FieldIndex>> = new Map();
 
-  /**
-   * Determines if a given entity type should be indexed based on entity count.
-   */
-  shouldIndexType(entityType: any, entityCount: number): boolean {
-    return entityCount >= this.indexThreshold;
+  /** @return if we should index entities of this type/count. */
+  shouldIndexType(entityCount: number): boolean {
+    return entityCount >= indexThreshold;
   }
 
-  /**
-   * Enables indexing for an entity type and builds initial indexes.
-   */
-  enableIndexingForType<T extends Entity>(entityType: any, entities: T[]): void {
-    const typeName = entityType.name;
+  /** Visible for testing. */
+  isIndexed(tagName: string): boolean {
+    return this.#indexes.has(tagName);
+  }
 
-    if (this.indexedTypes.has(typeName)) {
-      return; // Already indexed
-    }
+  /** Enables indexing for an entity type and builds initial indexes. */
+  enableIndexingForType<T extends Entity>(meta: EntityMetadata<T>, entities: T[]): void {
+    const { tagName } = meta;
+    if (this.#indexes.has(tagName)) return; // Already indexed
+    this.#indexes.set(tagName, new Map());
 
-    this.indexedTypes.add(typeName);
-    const meta = getMetadata(entityType);
-
-    // Initialize index structures
-    this.indexes.set(typeName, new Map());
-    this.m2oIndexes.set(typeName, new Map());
-
-    // Build indexes for all entities of this type
-    for (const entity of entities) {
-      this.addEntityToIndexes(entity, meta);
+    // If subtypes are involved, group by each subtype
+    if (meta.baseType || meta.subTypes.length > 0) {
+      [...groupBy(entities, (e) => getMetadata(e)).entries()].forEach(([meta, entities]) => {
+        this.addEntitiesToIndex(meta, entities);
+      });
+    } else {
+      this.addEntitiesToIndex(meta, entities);
     }
   }
 
-  /**
-   * Disables indexing for an entity type (when count drops below threshold).
-   */
-  disableIndexingForType(entityType: any): void {
-    const typeName = entityType.name;
-    this.indexedTypes.delete(typeName);
-    this.indexes.delete(typeName);
-    this.m2oIndexes.delete(typeName);
-  }
-
-  /**
-   * Adds an entity to all relevant indexes.
-   */
-  addEntity<T extends Entity>(entity: T): void {
+  /** Adds an entity to all relevant indexes. */
+  maybeIndexEntity(entity: Entity): void {
     const meta = getMetadata(entity);
-    const typeName = meta.type;
-
-    if (!this.indexedTypes.has(typeName)) {
-      return; // Type not indexed
+    if (this.#indexes.has(meta.tagName)) {
+      this.addEntitiesToIndex(meta, [entity]);
     }
-
-    this.addEntityToIndexes(entity, meta);
   }
 
-  /**
-   * Removes an entity from all relevant indexes.
-   */
-  removeEntity<T extends Entity>(entity: T): void {
+  /** Updates indexes when a field value changes. */
+  maybeUpdateFieldIndex(entity: Entity, fieldName: string, oldValue: any, newValue: any): void {
+    // Fast return for the common case, which is no indexing
+    if (this.#indexes.size === 0) return;
+
     const meta = getMetadata(entity);
-    const typeName = meta.type;
+    const fieldIndexes = this.#indexes.get(meta.tagName);
+    if (!fieldIndexes) return; // Type not indexed
 
-    if (!this.indexedTypes.has(typeName)) {
-      return; // Type not indexed
-    }
+    const field = meta.allFields[fieldName] ?? fail(`Invalid field ${fieldName}`);
+    const fieldIndex = fieldIndexes.get(field.fieldName);
+    if (!fieldIndex) return; // Field is not indexed
 
-    this.removeEntityFromIndexes(entity, meta);
-  }
-
-  /**
-   * Updates indexes when a field value changes.
-   */
-  updateFieldIndex<T extends Entity>(entity: T, fieldName: string, oldValue: any, newValue: any): void {
-    const meta = getMetadata(entity);
-    const typeName = meta.type;
-
-    if (!this.indexedTypes.has(typeName)) {
-      return; // Type not indexed
-    }
-
-    const field = meta.allFields[fieldName];
-    if (!field) return;
-
-    // Remove from old value index
-    this.removeFromFieldIndex(entity, meta, fieldName, oldValue);
-
-    // Add to new value index
-    this.addToFieldIndex(entity, meta, fieldName, newValue);
+    fieldIndex.remove(oldValue, entity);
+    fieldIndex.add(newValue, entity);
   }
 
   /**
    * Finds entities matching the given where clause using indexes.
    * Returns null if the type is not indexed (fallback to linear search).
    */
-  findMatching<T extends Entity>(entityType: any, where: any): T[] | null {
-    const typeName = entityType.name;
-
-    if (!this.indexedTypes.has(typeName)) {
-      return null; // Not indexed, use linear search
+  findMatching<T extends Entity>(meta: EntityMetadata<T>, where: any): T[] {
+    const { tagName } = meta;
+    if (!this.#indexes.has(tagName)) {
+      throw new Error(`${meta.type} is not indexed`);
     }
-
-    const typeIndexes = this.indexes.get(typeName)!;
-    const typeM2oIndexes = this.m2oIndexes.get(typeName)!;
-
-    // Start with all entities, then intersect with each field constraint
-    let candidates: Set<Entity> | null = null;
-
+    const fieldIndexes = this.#indexes.get(tagName)!;
+    // Start with all entities of the 1st condition, then intersect (AND) each subsequent field in `where`
+    let candidates: Set<Entity> | undefined;
     for (const [fieldName, value] of Object.entries(where)) {
-      const fieldCandidates = this.getFieldMatches(typeIndexes, typeM2oIndexes, fieldName, value);
-
-      if (candidates === null) {
-        candidates = fieldCandidates;
+      const fieldIndex = fieldIndexes.get(fieldName) ?? new FieldIndex();
+      const fieldCandidates = fieldIndex.get(value) ?? new Set();
+      if (!candidates) {
+        candidates = fieldCandidates; // This is the 1st clause
       } else {
-        // Intersect with previous candidates
-        candidates = this.intersectSets(candidates, fieldCandidates);
+        candidates = intersectSets(candidates, fieldCandidates);
       }
-
       // Early exit if no candidates remain
-      if (candidates.size === 0) {
-        break;
-      }
+      if (candidates.size === 0) break;
     }
-
-    return candidates ? (Array.from(candidates) as T[]) : [];
+    return candidates ? ([...candidates] as T[]) : [];
   }
 
-  private addEntityToIndexes<T extends Entity>(entity: T, meta: EntityMetadata): void {
-    const typeName = meta.type;
-    const typeIndexes = this.indexes.get(typeName)!;
-    const typeM2oIndexes = this.m2oIndexes.get(typeName)!;
-
-    // Index all fields
+  // `entities` should all be of the exact same subtype
+  private addEntitiesToIndex(meta: EntityMetadata, entities: Entity[]): void {
+    const { tagName } = meta;
+    const indexes = this.#indexes.get(tagName)!;
+    // Iterate over each field so we can do a shared fieldIndex lookup
     for (const [fieldName, field] of Object.entries(meta.allFields)) {
-      try {
-        const value = this.getFieldValue(entity, fieldName);
-        this.addToFieldIndex(entity, meta, fieldName, value);
-      } catch (e) {
-        // Skip fields that can't be read (e.g., unloaded references)
-        continue;
+      let fieldIndex = indexes.get(fieldName);
+      if (!fieldIndex) {
+        fieldIndex = new FieldIndex();
+        indexes.set(fieldName, fieldIndex);
+      }
+      for (const entity of entities) {
+        const value = getFieldValue(entity, fieldName);
+        fieldIndex.add(value, entity);
       }
     }
   }
+}
 
-  private removeEntityFromIndexes<T extends Entity>(entity: T, meta: EntityMetadata): void {
-    const typeName = meta.type;
+// Use the same field access pattern as entityMatches
+function getFieldValue(entity: Entity, fieldName: string): any {
+  const meta = getMetadata(entity);
+  const field = meta.allFields[fieldName] ?? fail();
 
-    // Remove from all field indexes
-    for (const [fieldName, field] of Object.entries(meta.allFields)) {
-      try {
-        const value = this.getFieldValue(entity, fieldName);
-        this.removeFromFieldIndex(entity, meta, fieldName, value);
-      } catch (e) {
-        // Skip fields that can't be read
-        continue;
-      }
-    }
-  }
-
-  private addToFieldIndex<T extends Entity>(entity: T, meta: EntityMetadata, fieldName: string, value: any): void {
-    const typeName = meta.type;
-    const field = meta.allFields[fieldName];
-    if (!field) return;
-
-    if (isManyToOneField(field) || isPolymorphicField(field)) {
-      this.addToM2oIndex(entity, typeName, fieldName, value);
-    } else {
-      this.addToRegularIndex(entity, typeName, fieldName, value);
-    }
-  }
-
-  private removeFromFieldIndex<T extends Entity>(entity: T, meta: EntityMetadata, fieldName: string, value: any): void {
-    const typeName = meta.type;
-    const field = meta.allFields[fieldName];
-    if (!field) return;
-
-    if (isManyToOneField(field) || isPolymorphicField(field)) {
-      this.removeFromM2oIndex(entity, typeName, fieldName, value);
-    } else {
-      this.removeFromRegularIndex(entity, typeName, fieldName, value);
-    }
-  }
-
-  private addToRegularIndex(entity: Entity, typeName: string, fieldName: string, value: any): void {
-    const typeIndexes = this.indexes.get(typeName)!;
-
-    if (!typeIndexes.has(fieldName)) {
-      typeIndexes.set(fieldName, new Map());
-    }
-
-    const fieldIndex = typeIndexes.get(fieldName)!;
-    if (!fieldIndex.has(value)) {
-      fieldIndex.set(value, new Set());
-    }
-
-    fieldIndex.get(value)!.add(entity);
-  }
-
-  private removeFromRegularIndex(entity: Entity, typeName: string, fieldName: string, value: any): void {
-    const typeIndexes = this.indexes.get(typeName);
-    if (!typeIndexes) return;
-
-    const fieldIndex = typeIndexes.get(fieldName);
-    if (!fieldIndex) return;
-
-    const valueSet = fieldIndex.get(value);
-    if (valueSet) {
-      valueSet.delete(entity);
-      if (valueSet.size === 0) {
-        fieldIndex.delete(value);
-      }
-    }
-  }
-
-  private addToM2oIndex(entity: Entity, typeName: string, fieldName: string, value: any): void {
-    const typeM2oIndexes = this.m2oIndexes.get(typeName)!;
-
-    if (!typeM2oIndexes.has(fieldName)) {
-      typeM2oIndexes.set(fieldName, {
-        byId: new Map(),
-        byInstance: new Map(),
-        byNull: new Set(),
-      });
-    }
-
-    const m2oIndex = typeM2oIndexes.get(fieldName)!;
-
-    if (value === null || value === undefined) {
-      m2oIndex.byNull.add(entity);
-    } else if (isEntity(value)) {
-      if (value.isNewEntity) {
-        // Unsaved entity - index by instance
-        if (!m2oIndex.byInstance.has(value)) {
-          m2oIndex.byInstance.set(value, new Set());
-        }
-        m2oIndex.byInstance.get(value)!.add(entity);
+  const fn = fieldName as keyof Entity;
+  switch (field.kind) {
+    case "primaryKey":
+      return entity.idTaggedMaybe;
+    case "enum":
+    case "primitive":
+      return (entity as any)[fn];
+    case "m2o":
+    case "poly":
+      const relation = (entity as any)[fn] as
+        | ManyToOneReference<Entity, any, any>
+        | PolymorphicReference<Entity, any, any>;
+      if (isLoadedReference(relation)) {
+        return relation.get;
+      } else if (relation.isSet) {
+        return relation.id;
       } else {
-        // Saved entity - index by ID
-        const id = value.idTaggedMaybe || value.id;
-        if (id) {
-          const idStr = String(id);
-          if (!m2oIndex.byId.has(idStr)) {
-            m2oIndex.byId.set(idStr, new Set());
-          }
-          m2oIndex.byId.get(idStr)!.add(entity);
-        }
-      }
-    } else if (typeof value === "string") {
-      // Direct ID reference
-      if (!m2oIndex.byId.has(value)) {
-        m2oIndex.byId.set(value, new Set());
-      }
-      m2oIndex.byId.get(value)!.add(entity);
-    }
-  }
-
-  private removeFromM2oIndex(entity: Entity, typeName: string, fieldName: string, value: any): void {
-    const typeM2oIndexes = this.m2oIndexes.get(typeName);
-    if (!typeM2oIndexes) return;
-
-    const m2oIndex = typeM2oIndexes.get(fieldName);
-    if (!m2oIndex) return;
-
-    if (value === null || value === undefined) {
-      m2oIndex.byNull.delete(entity);
-    } else if (isEntity(value)) {
-      if (value.isNewEntity) {
-        const instanceSet = m2oIndex.byInstance.get(value);
-        if (instanceSet) {
-          instanceSet.delete(entity);
-          if (instanceSet.size === 0) {
-            m2oIndex.byInstance.delete(value);
-          }
-        }
-      } else {
-        const id = value.idTaggedMaybe || value.id;
-        if (id) {
-          const idStr = String(id);
-          const idSet = m2oIndex.byId.get(idStr);
-          if (idSet) {
-            idSet.delete(entity);
-            if (idSet.size === 0) {
-              m2oIndex.byId.delete(idStr);
-            }
-          }
-        }
-      }
-    } else if (typeof value === "string") {
-      const idSet = m2oIndex.byId.get(value);
-      if (idSet) {
-        idSet.delete(entity);
-        if (idSet.size === 0) {
-          m2oIndex.byId.delete(value);
-        }
-      }
-    }
-  }
-
-  private getFieldMatches(
-    typeIndexes: EntityFieldIndexes,
-    typeM2oIndexes: Map<FieldName, M2oIndex>,
-    fieldName: string,
-    value: any,
-  ): Set<Entity> {
-    // Check if it's an m2o field
-    const m2oIndex = typeM2oIndexes.get(fieldName);
-    if (m2oIndex) {
-      return this.getM2oMatches(m2oIndex, value);
-    }
-
-    // Regular field index
-    const fieldIndex = typeIndexes.get(fieldName);
-    if (!fieldIndex) {
-      return new Set(); // No index for this field
-    }
-
-    return fieldIndex.get(value) || new Set();
-  }
-
-  private getM2oMatches(m2oIndex: M2oIndex, value: any): Set<Entity> {
-    if (value === null || value === undefined) {
-      return new Set(m2oIndex.byNull);
-    } else if (isEntity(value)) {
-      if (value.isNewEntity) {
-        return m2oIndex.byInstance.get(value) || new Set();
-      } else {
-        const id = value.idTaggedMaybe || value.id;
-        return id ? m2oIndex.byId.get(String(id)) || new Set() : new Set();
-      }
-    } else if (typeof value === "string") {
-      return m2oIndex.byId.get(value) || new Set();
-    }
-
-    return new Set();
-  }
-
-  private intersectSets(set1: Set<Entity>, set2: Set<Entity>): Set<Entity> {
-    const result = new Set<Entity>();
-    for (const entity of set1) {
-      if (set2.has(entity)) {
-        result.add(entity);
-      }
-    }
-    return result;
-  }
-
-  private getFieldValue(entity: Entity, fieldName: string): any {
-    // Use the same field access pattern as entityMatches
-    const meta = getMetadata(entity);
-    const field = meta.allFields[fieldName];
-    if (!field) return undefined;
-
-    const fn = fieldName as keyof Entity;
-    switch (field.kind) {
-      case "primaryKey":
-      case "enum":
-      case "primitive":
-        return (entity as any)[fn];
-      case "m2o":
-      case "poly":
-        const relation = (entity as any)[fn] as
-          | ManyToOneReference<Entity, any, any>
-          | PolymorphicReference<Entity, any, any>;
-        if (isLoadedReference(relation)) {
-          return relation.get;
-        } else if (relation.isSet) {
-          return relation.id;
-        } else {
-          return undefined;
-        }
-      default:
         return undefined;
+      }
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * For a given field, like `firstName`, holds the reverse index of value `bob` -> entities `[a1, a2]`.
+ *
+ * This also handles indexes `Entity` values as both instances & IDs, to handle both:
+ * - new/unpersisted entities not yet having IDs, and
+ * - relations not having loaded their instances yet
+ */
+class FieldIndex {
+  readonly #valueToEntities = new Map<FieldValue, Set<Entity>>();
+
+  /** @return entities that have `value` as their current value for this field. */
+  get(value: any): Set<Entity> | undefined {
+    if (isEntity(value) && value.idTaggedMaybe) {
+      // If `value` is a persisted entity like `a:1`, and entities could have indexed their `author_id=a:1` field
+      // values as the unloaded "just an a:1 string id" value, before `a:1` was loaded into memory.
+      const matchId = this.#valueToEntities.get(value.idTaggedMaybe);
+      // But other entities could also have indexes `a:1` as an instance, so go ahead and check both
+      const matchInstance = this.#valueToEntities.get(value);
+      if (matchId && matchInstance) {
+        return new Set([...matchId, ...matchInstance]);
+      }
+      return matchId ?? matchInstance;
+    }
+    return this.#valueToEntities.get(value);
+  }
+
+  add(value: any, entity: Entity): void {
+    // If this is an entity, store both the entity itself & its ID
+    if (isEntity(value) && value.idTaggedMaybe) {
+      this.doAdd(value.idTaggedMaybe, entity);
+    }
+    this.doAdd(value, entity);
+  }
+
+  remove(value: any, entity: Entity): void {
+    if (isEntity(value) && value.idTaggedMaybe) {
+      this.doRemove(value.idTaggedMaybe, entity);
+    }
+    this.doRemove(value, entity);
+  }
+
+  private doAdd(value: any, entity: Entity): void {
+    const set = this.#valueToEntities.get(value) ?? new Set();
+    if (set.size === 0) this.#valueToEntities.set(value, set);
+    set.add(entity);
+  }
+
+  private doRemove(value: any, entity: Entity): void {
+    const set = this.#valueToEntities.get(value);
+    if (set) {
+      set.delete(entity);
+      if (set.size === 0) {
+        this.#valueToEntities.delete(value);
+      }
     }
   }
+}
+
+function intersectSets<T>(set1: Set<T>, set2: Set<T>): Set<T> {
+  const [smaller, larger] = set1.size <= set2.size ? [set1, set2] : [set2, set1];
+  const result = new Set<T>();
+  for (const item of smaller) {
+    if (larger.has(item)) {
+      result.add(item);
+    }
+  }
+  return result;
 }

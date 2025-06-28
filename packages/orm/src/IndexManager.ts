@@ -205,9 +205,12 @@ class FieldIndex {
 }
 
 function intersectSets<T>(set1: Set<T>, set2: Set<T>): Set<T> {
+  const [smaller, larger] = set1.size <= set2.size ? [set1, set2] : [set2, set1];
   const result = new Set<T>();
-  for (const e of set1) {
-    if (set2.has(e)) result.add(e);
+  for (const item of smaller) {
+    if (larger.has(item)) {
+      result.add(item);
+    }
   }
   return result;
 }

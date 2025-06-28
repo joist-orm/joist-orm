@@ -4,12 +4,10 @@ import { Author, newPublisher } from "./entities";
 import { zeroTo } from "./utils";
 
 describe("IndexManager", () => {
-  it("should not enable indexing for entity types with < 1000 entities", async () => {
+  it("should not enable indexing for entity types with < 500 entities", async () => {
     const em = newEntityManager();
-    // Create 999 authors
-    for (let i = 0; i < 999; i++) {
-      em.create(Author, { firstName: `Author${i}` });
-    }
+    // Create 499 authors
+    zeroTo(499).forEach((i) => em.create(Author, { firstName: `Author${i}` }));
     // And `find...` to potentially trigger index creation
     await em.findWithNewOrChanged(Author, { firstName: "..." });
     // Then indexing should not be enabled for Author type

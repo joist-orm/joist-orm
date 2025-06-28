@@ -185,17 +185,16 @@ class FieldIndex {
   }
 
   private doAdd(value: any, entity: Entity): void {
-    if (!this.#valueToEntities.has(value)) {
-      this.#valueToEntities.set(value, new Set());
-    }
-    this.#valueToEntities.get(value)!.add(entity);
+    const set = this.#valueToEntities.get(value) ?? new Set();
+    if (set.size === 0) this.#valueToEntities.set(value, set);
+    set.add(entity);
   }
 
   private doRemove(value: any, entity: Entity): void {
-    const entities = this.#valueToEntities.get(value);
-    if (entities) {
-      entities.delete(entity);
-      if (entities.size === 0) {
+    const set = this.#valueToEntities.get(value);
+    if (set) {
+      set.delete(entity);
+      if (set.size === 0) {
         this.#valueToEntities.delete(value);
       }
     }

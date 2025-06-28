@@ -25,6 +25,7 @@
       <excludeFolder url="file://$MODULE_DIR$/.yarn" />
       <excludeFolder url="file://$MODULE_DIR$/packages/tests/immediate-foreign-keys/build" />
       <excludeFolder url="file://$MODULE_DIR$/docs/.astro" />
+      <excludeFolder url="file://$MODULE_DIR$/.jj" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

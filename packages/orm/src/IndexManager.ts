@@ -17,7 +17,6 @@ type EntityTag = string;
  */
 export class IndexManager {
   readonly #indexes: Map<EntityTag, Map<FieldName, FieldIndex>> = new Map();
-  readonly #indexedTags: Set<EntityTag> = new Set();
   // The test reproducing a n^2 with n=500 went from 100ms to 50ms if indexed
   readonly #indexThreshold = 500;
 
@@ -28,14 +27,13 @@ export class IndexManager {
 
   /** Visible for testing. */
   isIndexed(tagName: string): boolean {
-    return this.#indexedTags.has(tagName);
+    return this.#indexes.has(tagName);
   }
 
   /** Enables indexing for an entity type and builds initial indexes. */
   enableIndexingForType<T extends Entity>(meta: EntityMetadata<T>, entities: T[]): void {
     const { tagName } = meta;
-    if (this.#indexedTags.has(tagName)) return; // Already indexed
-    this.#indexedTags.add(tagName);
+    if (this.#indexes.has(tagName)) return; // Already indexed
     this.#indexes.set(tagName, new Map());
 
     // If subtypes are involved, group by each subtype
@@ -51,7 +49,7 @@ export class IndexManager {
   /** Adds an entity to all relevant indexes. */
   maybeIndexEntity(entity: Entity): void {
     const meta = getMetadata(entity);
-    if (this.#indexedTags.has(meta.tagName)) {
+    if (this.#indexes.has(meta.tagName)) {
       this.addEntitiesToIndex(meta, [entity]);
     }
   }
@@ -59,7 +57,7 @@ export class IndexManager {
   /** Updates indexes when a field value changes. */
   maybeUpdateFieldIndex(entity: Entity, fieldName: string, oldValue: any, newValue: any): void {
     // Fast return for the common case, which is no indexing
-    if (this.#indexedTags.size === 0) return;
+    if (this.#indexes.size === 0) return;
 
     const meta = getMetadata(entity);
     const fieldIndexes = this.#indexes.get(meta.tagName);
@@ -79,7 +77,7 @@ export class IndexManager {
    */
   findMatching<T extends Entity>(meta: EntityMetadata<T>, where: any): T[] {
     const { tagName } = meta;
-    if (!this.#indexedTags.has(tagName)) {
+    if (!this.#indexes.has(tagName)) {
       throw new Error(`${meta.type} is not indexed`);
     }
     const fieldIndexes = this.#indexes.get(tagName)!;

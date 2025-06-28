@@ -604,7 +604,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const copy: any = Object.fromEntries(Object.entries(where).filter(([, v]) => v !== undefined));
     const persisted = await this.find(type, copy, { softDeletes });
     const unchanged = persisted.filter((e) => !e.isNewEntity && !e.isDirtyEntity && !e.isDeletedEntity);
-    const maybeNew = this.#filterEntities<T>(type, where).filter(
+    const maybeNew = this.filterEntities<T>(type, where).filter(
       (e) => (e.isNewEntity || e.isDirtyEntity) && !e.isDeletedEntity,
     );
     const found = [...unchanged, ...maybeNew];
@@ -1879,7 +1879,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   /** Returns entities matching the filter using indexed search when available. */
-  #filterEntities<T extends Entity>(cstr: EntityConstructor<T>, where: any): T[] {
+  filterEntities<T extends Entity>(cstr: EntityConstructor<T>, where: Partial<OptsOf<T>>): T[] {
     const meta = getMetadata(cstr);
     const entities = (this.#entitiesByTag.get(meta.tagName) as T[]) ?? [];
     if (this.#indexManager.shouldIndexType(entities.length)) {
@@ -1892,8 +1892,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       );
     } else {
       return (
-        this.#entitiesByTag
-          .get(meta.tagName)!
+        entities
           // Still filter by `instanceof cstr` to handle subtyping
           .filter((e) => e instanceof cstr && !e.isDeletedEntity && entityMatches(e, where)) as T[]
       );

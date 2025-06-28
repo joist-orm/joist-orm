@@ -1,5 +1,6 @@
 import { insertAuthor, insertBook, insertComment, insertPublisher, insertTag } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
+import { zeroTo } from "src/utils";
 import { Author, Book, Comment, Publisher, Tag, newAuthor, newBook, newPublisher, newTag } from "./entities";
 
 describe("EntityManager.findOrCreate", () => {
@@ -316,6 +317,22 @@ describe("EntityManager.findOrCreate", () => {
     const b1 = newBook(em);
     const promise = em.findOrCreate(Author, { firstName: "a2", books: [b1] }, {}, {});
     await expect(promise).rejects.toThrow("findOrCreate only supports");
+  });
+
+  it("should handle large datasets efficiently", async () => {
+    const em = newEntityManager();
+    const n = 5_000;
+    // Given a large number of authors in memory
+    zeroTo(n).forEach((i) => em.create(Author, { firstName: `Author${i}` }));
+    const start = performance.now();
+    // When we do a potential n^2 `findOrCreate`
+    const result = await Promise.all(zeroTo(n).map((i) => em.findOrCreate(Author, { firstName: `Author${i}` }, {})));
+    const end = performance.now();
+    // Then it completes much faster (13 seconds -> 700ms)
+    expect(end - start).toBeLessThan(n); // Nms for n searches
+    // And verify we found the existing entity, not created a new one
+    const authors = em.entities.filter((e) => e instanceof Author);
+    expect(authors.length).toBe(n);
   });
 });
 

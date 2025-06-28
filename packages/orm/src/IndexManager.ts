@@ -56,15 +56,18 @@ export class IndexManager {
   }
 
   /** Updates indexes when a field value changes. */
-  updateFieldIndex(entity: Entity, fieldName: string, oldValue: any, newValue: any): void {
+  maybeUpdateFieldIndex(entity: Entity, fieldName: string, oldValue: any, newValue: any): void {
+    // Fast return for the common case, which is no indexing
+    if (this.#indexedTags.size === 0) return;
+
     const meta = getMetadata(entity);
-    if (!this.#indexedTags.has(meta.tagName)) return; // Type not indexed
+    const fieldIndexes = this.#indexes.get(meta.tagName);
+    if (!fieldIndexes) return; // Type not indexed
+
     const field = meta.allFields[fieldName] ?? fail(`Invalid field ${fieldName}`);
-    let fieldIndex = this.#indexes.get(meta.tagName)!.get(field.fieldName);
-    if (!fieldIndex) {
-      fieldIndex = new FieldIndex();
-      this.#indexes.get(meta.tagName)!.set(field.fieldName, fieldIndex);
-    }
+    const fieldIndex = fieldIndexes.get(field.fieldName);
+    if (!fieldIndex) return; // Field is not indexed
+
     fieldIndex.remove(oldValue, entity);
     fieldIndex.add(newValue, entity);
   }

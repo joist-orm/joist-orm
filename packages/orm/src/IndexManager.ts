@@ -7,6 +7,9 @@ type FieldValue = any;
 type FieldName = string;
 type EntityTag = string;
 
+// The test reproducing a n^2 with n=500 went from 100ms to 50ms if indexed
+const indexThreshold = 500;
+
 /**
  * IndexManager provides field-based indexing for entity queries to avoid O(n) linear scans of `em.entities`.
  *
@@ -17,12 +20,10 @@ type EntityTag = string;
  */
 export class IndexManager {
   readonly #indexes: Map<EntityTag, Map<FieldName, FieldIndex>> = new Map();
-  // The test reproducing a n^2 with n=500 went from 100ms to 50ms if indexed
-  readonly #indexThreshold = 500;
 
   /** @return if we should index entities of this type/count. */
   shouldIndexType(entityCount: number): boolean {
-    return entityCount >= this.#indexThreshold;
+    return entityCount >= indexThreshold;
   }
 
   /** Visible for testing. */

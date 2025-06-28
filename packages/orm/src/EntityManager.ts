@@ -1884,9 +1884,19 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const entities = (this.#entitiesByTag.get(meta.tagName) as T[]) ?? [];
     if (this.#indexManager.shouldIndexType(entities.length)) {
       this.#indexManager.enableIndexingForType(meta, entities);
-      return this.#indexManager.findMatching(meta, where)!.filter((e) => !e.isDeletedEntity);
+      return (
+        this.#indexManager
+          .findMatching(meta, where)
+          // Still filter by `instanceof cstr` to handle subtyping
+          .filter((e) => e instanceof cstr && !e.isDeletedEntity)
+      );
     } else {
-      return this.entities.filter((e) => e instanceof cstr && !e.isDeletedEntity && entityMatches(e, where)) as T[];
+      return (
+        this.#entitiesByTag
+          .get(meta.tagName)!
+          // Still filter by `instanceof cstr` to handle subtyping
+          .filter((e) => e instanceof cstr && !e.isDeletedEntity && entityMatches(e, where)) as T[]
+      );
     }
   }
 }

@@ -18,7 +18,8 @@ type EntityTag = string;
 export class IndexManager {
   readonly #indexes: Map<EntityTag, Map<FieldName, FieldIndex>> = new Map();
   readonly #indexedTags: Set<EntityTag> = new Set();
-  readonly #indexThreshold = 1_000;
+  // The test reproducing a n^2 with n=500 went from 100ms to 50ms if indexed
+  readonly #indexThreshold = 500;
 
   /** @return if we should index entities of this type/count. */
   shouldIndexType(entityCount: number): boolean {

@@ -201,11 +201,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   /** When we're flushing, the connection/transaction. */
   public txn: TX | undefined;
   public entityLimit: number = defaultEntityLimit;
-  readonly #entitiesByTag: Map<string, Entity[]> = new Map();
   readonly #entitiesArray: Entity[] = [];
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
   // performance issue where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
-  readonly #entityIndex: Map<string, Entity> = new Map();
+  readonly #entitiesById: Map<string, Entity> = new Map();
+  readonly #entitiesByTag: Map<string, Entity[]> = new Map();
   // Provides field-based indexing for entity types with >1000 entities to optimize findWithNewOrChanged
   readonly #indexManager = new IndexManager();
   #isValidating: boolean = false;
@@ -319,7 +319,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   getEntity(id: TaggedId): Entity | undefined;
   getEntity(id: TaggedId): Entity | undefined {
     assertIdIsTagged(id);
-    return this.#entityIndex.get(id);
+    return this.#entitiesById.get(id);
   }
 
   /**
@@ -1216,7 +1216,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       if (this.findExistingInstance(maybeId) !== undefined) {
         throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
       }
-      this.#entityIndex.set(maybeId, entity);
+      this.#entitiesById.set(maybeId, entity);
     }
     this.#entitiesArray.push(entity);
     const set = this.#entitiesByTag.get(baseMeta.tagName) ?? [];
@@ -1279,7 +1279,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     await this.getLoader<Entity, Entity>("assign-new-ids", "global", async (entities) => {
       let todos = createTodos(entities);
       await this.driver.assignNewIds(this, todos);
-      for (const e of entities) this.#entityIndex.set(e.idTagged, e);
+      for (const e of entities) this.#entitiesById.set(e.idTagged, e);
       return entities;
     })
       .loadMany(pendingEntities)
@@ -1460,7 +1460,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             if (this.#rm.hasPendingReactiveQueries()) {
               // Reset all flushed entities to we only flush net-new changes
               for (const e of entitiesToFlush) {
-                if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
+                if (e.isNewEntity && !e.isDeletedEntity) this.#entitiesById.set(e.idTagged, e);
                 getInstanceData(e).resetForRqfLoop();
               }
               // Actually do the recalc
@@ -1498,7 +1498,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
         // Update the `#orm` field to reflect the new state
         for (const e of allFlushedEntities) {
-          if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
+          if (e.isNewEntity && !e.isDeletedEntity) this.#entitiesById.set(e.idTagged, e);
           getInstanceData(e).resetAfterFlushed();
         }
         // Update the joinRows refs to reflect the new state
@@ -1650,7 +1650,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   // Currently only public for the driver impls
   public findExistingInstance<T extends EntityW>(id: string): T | undefined {
     assertIdIsTagged(id);
-    return this.#entityIndex.get(id) as T | undefined;
+    return this.#entitiesById.get(id) as T | undefined;
   }
 
   /**
@@ -1683,7 +1683,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         getInstanceData(entity).row = row;
 
         // This is a mini copy-paste of em.register that doesn't re-findExistingInstance
-        this.#entityIndex.set(taggedId, entity as any);
+        this.#entitiesById.set(taggedId, entity as any);
         this.#entitiesArray.push(entity as any);
         if (this.#entitiesArray.length >= this.entityLimit) {
           throw new Error(`More than ${this.entityLimit} entities have been instantiated`);

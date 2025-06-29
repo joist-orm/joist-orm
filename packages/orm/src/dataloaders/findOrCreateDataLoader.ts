@@ -71,7 +71,7 @@ export function findOrCreateDataLoader<T extends Entity>(
       // Before we find/create an entity, see if we have a maybe-new one in the EM already.
       // This will also use any WIP changes we've made to the found entity, which ideally is
       // something `em.find` would do as well, but its queries are much more complex...
-      const inMemory = em.entities.filter((e) => e instanceof type && !e.isDeletedEntity && entityMatches(e, where));
+      const inMemory = em.filterEntities(type, where);
       if (inMemory.length > 1) {
         throw new TooManyError(`Found more than one existing ${type.name} with ${whereAsString(where)}`);
       } else if (inMemory.length === 1) {

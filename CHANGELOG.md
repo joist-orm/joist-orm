@@ -1,3 +1,10 @@
+# [1.250.0](https://github.com/joist-orm/joist-orm/compare/v1.249.8...v1.250.0) (2025-06-29)
+
+
+### Features
+
+* Use indexes for findWithNewOrChanged ([#1527](https://github.com/joist-orm/joist-orm/issues/1527)) ([c54e59d](https://github.com/joist-orm/joist-orm/commit/c54e59d8fc158224f1d2ddb7b0db26a2918cb5de))
+
 ## [1.249.8](https://github.com/joist-orm/joist-orm/compare/v1.249.7...v1.249.8) (2025-06-25)
 
 

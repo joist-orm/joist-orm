@@ -1,6 +1,6 @@
 import { Context } from "src/context";
 import { SaveSmallPublisherInput } from "src/generated/graphql-types";
-import { saveSmallPublisher } from "src/resolvers/mutations/smallPublisher/saveSmallPublisherResolver";
+import { saveSmallPublisher } from "src/resolvers/smallPublisher/saveSmallPublisherMutation";
 import { run } from "src/resolvers/testUtils";
 
 describe("saveSmallPublisher", () => {

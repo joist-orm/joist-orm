@@ -1,4 +1,4 @@
-import { savePublisher } from "src/resolvers/mutations/publisher/savePublisherResolver";
+import { savePublisher } from "src/resolvers/publisher/savePublisherMutation";
 import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 

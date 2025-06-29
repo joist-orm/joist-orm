@@ -1,4 +1,4 @@
-import { saveBookReview } from "src/resolvers/mutations/bookReview/saveBookReviewResolver";
+import { saveBookReview } from "src/resolvers/bookReview/saveBookReviewMutation";
 import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 

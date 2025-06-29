@@ -1,5 +1,5 @@
 import { newAuthor } from "src/entities";
-import { saveComment } from "src/resolvers/mutations/comment/saveCommentResolver";
+import { saveComment } from "src/resolvers/comment/saveCommentMutation";
 import { makeRunInputMutation } from "src/resolvers/testUtils";
 
 describe("saveComment", () => {

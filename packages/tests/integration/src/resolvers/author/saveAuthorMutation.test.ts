@@ -1,5 +1,5 @@
 import { Author } from "src/entities";
-import { saveAuthor } from "src/resolvers/mutations/author/saveAuthorResolver";
+import { saveAuthor } from "src/resolvers/author/saveAuthorMutation";
 import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 

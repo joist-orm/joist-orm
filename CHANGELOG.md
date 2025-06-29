@@ -1,3 +1,10 @@
+# [1.251.0](https://github.com/joist-orm/joist-orm/compare/v1.250.0...v1.251.0) (2025-06-29)
+
+
+### Features
+
+* Update findOrCreate to use indexed filtering. ([#1531](https://github.com/joist-orm/joist-orm/issues/1531)) ([f9fc0f1](https://github.com/joist-orm/joist-orm/commit/f9fc0f10afc3287c322a600436def4a9951c13b2))
+
 # [1.250.0](https://github.com/joist-orm/joist-orm/compare/v1.249.8...v1.250.0) (2025-06-29)
 
 

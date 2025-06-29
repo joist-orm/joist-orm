@@ -1,6 +1,7 @@
 import { camelCase } from "change-case";
 import { DbMetadata, EntityDbMetadata } from "joist-codegen";
 import { groupBy } from "joist-utils";
+import pluralize from "pluralize";
 import { GqlField, GqlUnion, mapTypescriptTypeToGraphQLType, upsertIntoFile } from "./graphqlUtils";
 import { loadHistory, writeHistory } from "./history";
 import { Fs } from "./utils";
@@ -17,6 +18,8 @@ export async function generateGraphqlSchemaFiles(fs: Fs, dbMeta: DbMetadata): Pr
   const { entities } = dbMeta;
   // Generate the "ideal" fields based solely on the domain model
   const fields = [
+    // Going to roll this out in a follow up PR...
+    // ...createQueryFields(entities),
     ...createSaveMutation(entities),
     ...createEntityFields(dbMeta),
     ...createSaveEntityInputFields(dbMeta),
@@ -149,6 +152,33 @@ function createSaveMutation(entities: EntityDbMetadata[]): GqlField[] {
       argsString: `input: ${inputType}!`,
       extends: true,
     };
+  });
+}
+
+/** Makes the `Query.${entity}` and `Query.${entity}s` placeholders. */
+function createQueryFields(entities: EntityDbMetadata[]): GqlField[] {
+  return entities.flatMap((e) => {
+    const file = fileName(e);
+    return [
+      {
+        file,
+        objectType: "output",
+        objectName: "Query",
+        fieldName: camelCase(e.entity.name),
+        fieldType: `${e.entity.name}!`,
+        argsString: `id: ID!`,
+        extends: true,
+      },
+      {
+        file,
+        objectType: "output",
+        objectName: "Query",
+        fieldName: pluralize(camelCase(e.entity.name)),
+        fieldType: `[${e.entity.name}!]!`,
+        argsString: `filter: ${e.entity.name}Filter!`,
+        extends: true,
+      },
+    ];
   });
 }
 

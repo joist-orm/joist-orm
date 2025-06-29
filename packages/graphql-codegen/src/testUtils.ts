@@ -1,5 +1,6 @@
 import { snakeCase } from "change-case";
-import { EntityDbMetadata, EnumField, makeEntity, ManyToOneField, PrimitiveField } from "joist-codegen";
+import { DbMetadata, EntityDbMetadata, EnumField, makeEntity, ManyToOneField, PrimitiveField } from "joist-codegen";
+import { keyBy } from "joist-utils";
 import { plural } from "pluralize";
 import { imp } from "ts-poet";
 import { Fs } from "./utils";
@@ -11,6 +12,27 @@ export function newFs(files: Record<string, string>): Fs {
     save: async (fileName, content) => {
       files[fileName] = content;
     },
+  };
+}
+
+export function newDbMeta(opt: EntityDbMetadata[] | Partial<DbMetadata>): DbMetadata {
+  const entities = Array.isArray(opt) ? opt : (opt.entities ?? []);
+  const entitiesByName = keyBy(entities, "name");
+  // Hook up baseType/subTypes
+  for (const entity of entities) {
+    if (entity.baseClassName) {
+      const baseType = entitiesByName[entity.baseClassName];
+      entity.baseType = baseType;
+      baseType.subTypes.push(entity);
+    }
+  }
+  return {
+    entities,
+    enums: {},
+    pgEnums: {},
+    joinTables: [],
+    totalTables: 10,
+    entitiesByName,
   };
 }
 

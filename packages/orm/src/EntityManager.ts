@@ -2,13 +2,8 @@ import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { getInstanceData } from "./BaseEntity";
 import { setAsyncDefaults } from "./defaults";
 import { getField, setField } from "./fields";
+import { IndexManager } from "./IndexManager";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
-import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
-import { FlushLock } from "./FlushLock";
-import { IsLoadedCache } from "./IsLoadedCache";
-import { JoinRows } from "./JoinRows";
-import { ReactionsManager } from "./ReactionsManager";
-import { JoinRowTodo, Todo, combineJoinRows, createTodos } from "./Todo";
 import { getReactiveRules } from "./caches";
 import { ReactiveRule, constraintNameToValidationError } from "./config";
 import { getMetadataForType } from "./configure";
@@ -19,6 +14,8 @@ import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreat
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { populateDataLoader } from "./dataloaders/populateDataLoader";
 import { Driver } from "./drivers";
+import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
+import { FlushLock } from "./FlushLock";
 import {
   BaseEntity,
   CustomCollection,
@@ -65,13 +62,17 @@ import {
   tagId,
   toTaggedId,
 } from "./index";
+import { IsLoadedCache } from "./IsLoadedCache";
+import { JoinRows } from "./JoinRows";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { WriteFn } from "./logging/FactoryLogger";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";
+import { ReactionsManager } from "./ReactionsManager";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
+import { JoinRowTodo, Todo, combineJoinRows, createTodos } from "./Todo";
 import { OptsOf, OrderOf } from "./typeMap";
 import { upsert } from "./upsert";
 import { MaybePromise, assertNever, fail, failIfAnyRejected, getOrSet, groupBy, partition, toArray } from "./utils";
@@ -200,10 +201,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   /** When we're flushing, the connection/transaction. */
   public txn: TX | undefined;
   public entityLimit: number = defaultEntityLimit;
-  readonly #entities: Entity[] = [];
+  readonly #entitiesArray: Entity[] = [];
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
   // performance issue where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
-  readonly #entityIndex: Map<string, Entity> = new Map();
+  readonly #entitiesById: Map<string, Entity> = new Map();
+  readonly #entitiesByTag: Map<string, Entity[]> = new Map();
+  // Provides field-based indexing for entity types with >1000 entities to optimize findWithNewOrChanged
+  readonly #indexManager = new IndexManager();
   #isValidating: boolean = false;
   readonly #pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
   #preloadedRelations: Map<string, Map<string, Entity[]>> = new Map();
@@ -268,6 +272,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       mutatedCollections: new Set(),
       hooks: this.#hooks,
       rm: this.#rm,
+      indexManager: this.#indexManager,
       isLoadedCache: this.#isLoadedCache,
 
       joinRows(m2m: ManyToManyCollection<any, any>): JoinRows {
@@ -306,7 +311,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
   /** Returns a read-only shallow copy of the currently-loaded entities. */
   get entities(): ReadonlyArray<Entity> {
-    return [...this.#entities];
+    return [...this.#entitiesArray];
   }
 
   /** Looks up `id` in the list of already-loaded entities. */
@@ -314,7 +319,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   getEntity(id: TaggedId): Entity | undefined;
   getEntity(id: TaggedId): Entity | undefined {
     assertIdIsTagged(id);
-    return this.#entityIndex.get(id);
+    return this.#entitiesById.get(id);
   }
 
   /**
@@ -548,7 +553,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // clause before knowing if it should adjust teh amount.
     const isSelectAll = Object.keys(where).length === 0;
     if (isSelectAll) {
-      for (const entity of this.#entities) {
+      const tagged = this.#entitiesByTag.get(getMetadata(type).tagName) ?? [];
+      for (const entity of tagged) {
+        // Still do an `instanceof` to handle subtypes
         if (entity instanceof type) {
           if (entity.isNewEntity) {
             count++;
@@ -577,16 +584,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * @param type the entity type to find
    * @param where the fields to look up the existing entity by
    */
-  async findWithNewOrChanged<T extends EntityW, F extends Partial<OptsOf<T>>>(
+  async findWithNewOrChanged<T extends Entity, F extends Partial<OptsOf<T>>>(
     type: EntityConstructor<T>,
     where: F,
   ): Promise<T[]>;
-  async findWithNewOrChanged<T extends EntityW, F extends Partial<OptsOf<T>>, const H extends LoadHint<T>>(
+  async findWithNewOrChanged<T extends Entity, F extends Partial<OptsOf<T>>, const H extends LoadHint<T>>(
     type: EntityConstructor<T>,
     where: F,
     options?: { populate?: H; softDeletes?: "include" | "exclude" },
   ): Promise<Loaded<T, H>[]>;
-  async findWithNewOrChanged<T extends EntityW, F extends Partial<OptsOf<T>>, const H extends LoadHint<T>>(
+  async findWithNewOrChanged<T extends Entity, F extends Partial<OptsOf<T>>, const H extends LoadHint<T>>(
     type: EntityConstructor<T>,
     where: F,
     options?: { populate?: H; softDeletes?: "include" | "exclude" },
@@ -597,8 +604,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const copy: any = Object.fromEntries(Object.entries(where).filter(([, v]) => v !== undefined));
     const persisted = await this.find(type, copy, { softDeletes });
     const unchanged = persisted.filter((e) => !e.isNewEntity && !e.isDirtyEntity && !e.isDeletedEntity);
-    const maybeNew = this.entities.filter(
-      (e) => e instanceof type && (e.isNewEntity || e.isDirtyEntity) && !e.isDeletedEntity && entityMatches(e, where),
+    const maybeNew = this.#filterEntities<T>(type, where).filter(
+      (e) => (e.isNewEntity || e.isDirtyEntity) && !e.isDeletedEntity,
     );
     const found = [...unchanged, ...maybeNew];
     if (populate) {
@@ -1201,22 +1208,30 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
   register(entity: Entity, maybeExplicitId?: string): void {
+    const baseMeta = getBaseMeta(getMetadata(entity));
+
+    // Keep our indexes up to date...
     const maybeId = entity.idTaggedMaybe ?? maybeExplicitId;
     if (maybeId) {
       if (this.findExistingInstance(maybeId) !== undefined) {
         throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
       }
-      this.#entityIndex.set(maybeId, entity);
+      this.#entitiesById.set(maybeId, entity);
     }
+    this.#entitiesArray.push(entity);
+    const set = this.#entitiesByTag.get(baseMeta.tagName) ?? [];
+    if (set.length === 0) this.#entitiesByTag.set(baseMeta.tagName, set);
+    set.push(entity);
 
-    this.#entities.push(entity);
-    if (this.#entities.length >= this.entityLimit) {
+    if (this.#entitiesArray.length >= this.entityLimit) {
       throw new Error(`More than ${this.entityLimit} entities have been instantiated`);
     }
 
+    // If indexing is enabled for this type, add it...
+    this.#indexManager.maybeIndexEntity(entity);
+
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
     if (entity.isNewEntity) {
-      const baseMeta = getBaseMeta(getMetadata(entity));
       const { createdAt, updatedAt } = baseMeta.timestampFields ?? {};
       const { data } = getInstanceData(entity);
       const now = new Date();
@@ -1264,7 +1279,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     await this.getLoader<Entity, Entity>("assign-new-ids", "global", async (entities) => {
       let todos = createTodos(entities);
       await this.driver.assignNewIds(this, todos);
-      for (const e of entities) this.#entityIndex.set(e.idTagged, e);
+      for (const e of entities) this.#entitiesById.set(e.idTagged, e);
       return entities;
     })
       .loadMany(pendingEntities)
@@ -1445,7 +1460,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             if (this.#rm.hasPendingReactiveQueries()) {
               // Reset all flushed entities to we only flush net-new changes
               for (const e of entitiesToFlush) {
-                if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
+                if (e.isNewEntity && !e.isDeletedEntity) this.#entitiesById.set(e.idTagged, e);
                 getInstanceData(e).resetForRqfLoop();
               }
               // Actually do the recalc
@@ -1483,7 +1498,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
         // Update the `#orm` field to reflect the new state
         for (const e of allFlushedEntities) {
-          if (e.isNewEntity && !e.isDeletedEntity) this.#entityIndex.set(e.idTagged, e);
+          if (e.isNewEntity && !e.isDeletedEntity) this.#entitiesById.set(e.idTagged, e);
           getInstanceData(e).resetAfterFlushed();
         }
         // Update the joinRows refs to reflect the new state
@@ -1551,7 +1566,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     this.#preloadedRelations = new Map();
     const deepLoad = param && "deepLoad" in param && param.deepLoad;
     let todo =
-      param === undefined ? this.#entities : Array.isArray(param) ? param : isEntity(param) ? [param] : this.#entities;
+      param === undefined
+        ? this.#entitiesArray
+        : Array.isArray(param)
+          ? param
+          : isEntity(param)
+            ? [param]
+            : this.#entitiesArray;
     const done = new Set<Entity>();
     while (todo.length > 0) {
       const copy = [...todo];
@@ -1629,7 +1650,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   // Currently only public for the driver impls
   public findExistingInstance<T extends EntityW>(id: string): T | undefined {
     assertIdIsTagged(id);
-    return this.#entityIndex.get(id) as T | undefined;
+    return this.#entitiesById.get(id) as T | undefined;
   }
 
   /**
@@ -1662,11 +1683,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         getInstanceData(entity).row = row;
 
         // This is a mini copy-paste of em.register that doesn't re-findExistingInstance
-        this.#entityIndex.set(taggedId, entity as any);
-        this.#entities.push(entity as any);
-        if (this.#entities.length >= this.entityLimit) {
+        this.#entitiesById.set(taggedId, entity as any);
+        this.#entitiesArray.push(entity as any);
+        if (this.#entitiesArray.length >= this.entityLimit) {
           throw new Error(`More than ${this.entityLimit} entities have been instantiated`);
         }
+        const set = this.#entitiesByTag.get(maybeBaseMeta.tagName) ?? [];
+        if (set.length === 0) this.#entitiesByTag.set(maybeBaseMeta.tagName, set);
+        set.push(entity as any);
       } else if (options?.overwriteExisting === true) {
         // Usually if the entity already exists, we don't write over it, but in this case we assume that
         // `EntityManager.refresh` is telling us to explicitly load the latest data.
@@ -1853,6 +1877,28 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   async [Symbol.asyncDispose](): Promise<void> {
     await this.flush();
   }
+
+  /** Returns entities matching the filter using indexed search when available. */
+  #filterEntities<T extends Entity>(cstr: EntityConstructor<T>, where: any): T[] {
+    const meta = getMetadata(cstr);
+    const entities = (this.#entitiesByTag.get(meta.tagName) as T[]) ?? [];
+    if (this.#indexManager.shouldIndexType(entities.length)) {
+      this.#indexManager.enableIndexingForType(meta, entities);
+      return (
+        this.#indexManager
+          .findMatching(meta, where)
+          // Still filter by `instanceof cstr` to handle subtyping
+          .filter((e) => e instanceof cstr && !e.isDeletedEntity)
+      );
+    } else {
+      return (
+        this.#entitiesByTag
+          .get(meta.tagName)!
+          // Still filter by `instanceof cstr` to handle subtyping
+          .filter((e) => e instanceof cstr && !e.isDeletedEntity && entityMatches(e, where)) as T[]
+      );
+    }
+  }
 }
 
 /** Provides an internal API to the `EntityManager`. */
@@ -1871,6 +1917,7 @@ export interface EntityManagerInternalApi {
 
   hooks: Record<EntityManagerHook, HookFn<any>[]>;
   rm: ReactionsManager;
+  indexManager: IndexManager;
   preloader: PreloadPlugin | undefined;
   isValidating: boolean;
   checkWritesAllowed: () => void;

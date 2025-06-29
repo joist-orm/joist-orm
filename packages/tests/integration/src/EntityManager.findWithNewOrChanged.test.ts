@@ -1,5 +1,7 @@
 import { insertAuthor, insertPublisher } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
+import { getEmInternalApi } from "joist-orm";
+import { zeroTo } from "src/utils";
 import { Author, newPublisher } from "./entities";
 
 describe("EntityManager.findWithNewOrChanged", () => {
@@ -127,5 +129,77 @@ describe("EntityManager.findWithNewOrChanged", () => {
     const em = newEntityManager();
     const authors = await em.findWithNewOrChanged(Author, { publisher: null });
     expect(authors).toMatchEntity([{ firstName: "a3" }]);
+  });
+
+  describe("indexed", () => {
+    it("should handle large datasets efficiently with IndexManager", async () => {
+      const em = newEntityManager();
+      const n = 5_000;
+      // Create entities to trigger indexing
+      zeroTo(n).forEach((i) => em.create(Author, { firstName: `Author${i}` }));
+      // Test that searches are now efficient
+      const start = performance.now();
+      const results = await Promise.all(
+        zeroTo(n).map((i) => em.findWithNewOrChanged(Author, { firstName: `Author${i}` })),
+      );
+      const end = performance.now();
+      // Verify indexing is enabled after crossing threshold
+      expect(getEmInternalApi(em).indexManager.isIndexed("a")).toBe(true);
+      // Should complete much faster than linear O(n) search
+      expect(end - start).toBeLessThan(n); // Nms for n searches
+      // Verify all searches returned correct results
+      results.forEach((result, i) => {
+        expect(result.length).toBe(1);
+        expect(result[0].firstName).toBe(`Author${i}`);
+      });
+    });
+
+    it("should handle updates efficiently with indexes", async () => {
+      const em = newEntityManager();
+      const n = 5_000;
+      // Given enough entities
+      const authors = zeroTo(n).map((i) => em.create(Author, { firstName: `Author${i}` }));
+      // And a find has triggered index creation
+      await em.findWithNewOrChanged(Author, { firstName: "a1" });
+      // When we update many entities
+      const start = performance.now();
+      for (let i = 0; i < n; i++) {
+        authors[i].firstName = `Updated${i}`;
+      }
+      // And we search for the updated entities
+      const results = await Promise.all(
+        zeroTo(n).map((i) => em.findWithNewOrChanged(Author, { firstName: `Updated${i}` })),
+      );
+      const end = performance.now();
+      // Then it should complete efficiently
+      expect(end - start).toBeLessThan(n);
+      // And with the right results
+      results.forEach((result, i) => {
+        expect(result.length).toBe(1);
+        expect(result[0].firstName).toBe(`Updated${i}`);
+      });
+    });
+
+    it("should handle m2o relationships efficiently with indexes", async () => {
+      const em = newEntityManager();
+      const n = 5_000;
+      // Given some publishers
+      const publishers = zeroTo(10).map((i) => newPublisher(em, { name: `Publisher${i}` }));
+      // And enough authors to trigger indexing
+      const authors = zeroTo(n).map((i) => {
+        const publisher = publishers[i % 10];
+        return em.create(Author, { firstName: `Author${i}`, publisher });
+      });
+      const start = performance.now();
+      // When we search by different publishers
+      const results = await Promise.all(publishers.map((publisher) => em.findWithNewOrChanged(Author, { publisher })));
+      const end = performance.now();
+      // Then it should complete efficiently
+      expect(end - start).toBeLessThan(n);
+      // And each publisher should have n/10 authors
+      results.forEach((result) => {
+        expect(result.length).toBe(n / 10);
+      });
+    });
   });
 });

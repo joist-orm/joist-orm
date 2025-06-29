@@ -1,8 +1,8 @@
 import { Author, Book, BookReview, newAuthor, newPublisher, newSmallPublisher } from "@src/entities";
 import { insertAuthor, insertBook, insertBookReview, insertPublisher, select, update } from "@src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
-import { ReactionLogger, setReactionLogging } from "joist-orm";
 import ansiRegex from "ansi-regex";
+import { ReactionLogger, setReactionLogging } from "joist-orm";
 
 let reactionOutput: string[] = [];
 

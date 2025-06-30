@@ -9,7 +9,7 @@ const makeRunObjectField = imp("makeRunObjectField@src/resolvers/testUtils");
 /**
  * Generates a base resolver using the entityResolver utility.
  *
- * This also preempts our other Joist-agnostic resolver scaffolding because [1] b/c `joist-codegen`
+ * This also preempts our other Joist-agnostic resolver scaffolding [1] because b/c `joist-codegen`
  * will run first and put these Joist-aware resolvers in place first.
  *
  * Then when [1] runs, it will only output resolver scaffolding for non-entity resolvers.
@@ -26,14 +26,14 @@ export function generateObjectResolvers(config: Config, entities: EntityDbMetada
         ...${entityResolver}(${type}),
       };
     `;
-    return { name: `resolvers/objects/${camelName}/${camelName}Resolvers.ts`, overwrite: false, contents };
+    return { name: `resolvers/${camelName}/${camelName}Resolvers.ts`, overwrite: false, contents };
   });
 
   const testFiles = entities.map((e) => {
     const { name } = e;
     const camelName = camelCase(name);
     const factory = imp(`new${name}@src/entities`);
-    const resolverConst = imp(`${camelName}Resolvers@src/resolvers/objects/${camelName}/${camelName}Resolvers`);
+    const resolverConst = imp(`${camelName}Resolvers@src/resolvers/${camelName}/${camelName}Resolvers`);
 
     const tagName = config.entities[name].tag || "entity";
     const keys = e.primitives.map((field) => `"${field.fieldName}"`).join(", ");
@@ -53,7 +53,7 @@ export function generateObjectResolvers(config: Config, entities: EntityDbMetada
       const runFields = ${makeRunObjectFields}(${resolverConst});
       const runField = ${makeRunObjectField}(${resolverConst});
     `;
-    return { name: `resolvers/objects/${camelName}/${camelName}Resolvers.test.ts`, overwrite: false, contents };
+    return { name: `resolvers/${camelName}/${camelName}Resolvers.test.ts`, overwrite: false, contents };
   });
 
   return [...resolvers, ...testFiles];

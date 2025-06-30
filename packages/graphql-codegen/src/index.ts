@@ -5,6 +5,7 @@ import { generateEnumsGraphql } from "./generateEnumsGraphql";
 import { generateGraphqlCodegen } from "./generateGraphqlCodegen";
 import { generateGraphqlSchemaFiles } from "./generateGraphqlSchemaFiles";
 import { generateObjectResolvers } from "./generateObjectResolvers";
+import { generateQueryResolvers } from "./generateQueryResolvers";
 import { generateSaveResolvers } from "./generateSaveResolvers";
 import { loadHistory, writeHistory } from "./history";
 import { Fs, newFsImpl } from "./utils";
@@ -20,6 +21,7 @@ export async function run(config: Config, dbMeta: DbMetadata): Promise<CodegenFi
   const conditionalResolvers = [
     ...generateObjectResolvers(config, entities),
     ...generateSaveResolvers(config, entities),
+    ...generateQueryResolvers(dbMeta),
   ];
   const srcFs = newFsImpl("./src");
   await writeOnce(config, srcFs, conditionalResolvers);

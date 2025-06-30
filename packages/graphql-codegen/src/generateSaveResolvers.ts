@@ -28,13 +28,13 @@ export function generateSaveResolvers(config: Config, entities: EntityDbMetadata
         },
       };
     `;
-    return { name: `resolvers/mutations/${camelName}/save${name}Resolver.ts`, overwrite: false, contents };
+    return { name: `resolvers/${camelName}/save${name}Resolver.ts`, overwrite: false, contents };
   });
 
   const testFiles = entities.map((e) => {
     const { name } = e;
     const camelName = camelCase(name);
-    const resolverConst = imp(`save${name}@src/resolvers/mutations/${camelName}/save${name}Resolver`);
+    const resolverConst = imp(`save${name}@src/resolvers/${camelName}/save${name}Resolver`);
 
     const contents = code`
       describe("save${name}", () => {
@@ -43,10 +43,10 @@ export function generateSaveResolvers(config: Config, entities: EntityDbMetadata
           expect(result).toBeDefined()
         });
       });
-      
+
       const runSave = ${makeRunInputMutation}(${resolverConst});
     `;
-    return { name: `resolvers/mutations/${camelName}/save${name}Resolver.test.ts`, overwrite: false, contents };
+    return { name: `resolvers/${camelName}/save${name}Resolver.test.ts`, overwrite: false, contents };
   });
 
   return [...resolvers, ...testFiles];

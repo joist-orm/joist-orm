@@ -1,4 +1,4 @@
-import { saveBookAdvance } from "src/resolvers/mutations/bookAdvance/saveBookAdvanceResolver";
+import { saveBookAdvance } from "src/resolvers/bookAdvance/saveBookAdvanceMutation";
 import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 

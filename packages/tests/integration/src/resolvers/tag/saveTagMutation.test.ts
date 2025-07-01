@@ -1,4 +1,4 @@
-import { saveTag } from "src/resolvers/mutations/tag/saveTagResolver";
+import { saveTag } from "src/resolvers/tag/saveTagMutation";
 import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 

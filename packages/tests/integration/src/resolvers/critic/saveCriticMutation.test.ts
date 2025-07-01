@@ -1,4 +1,4 @@
-import { saveCritic } from "src/resolvers/mutations/critic/saveCriticResolver";
+import { saveCritic } from "src/resolvers/critic/saveCriticMutation";
 import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 

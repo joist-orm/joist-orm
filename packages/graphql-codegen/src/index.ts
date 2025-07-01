@@ -19,7 +19,9 @@ export async function run(config: Config, dbMeta: DbMetadata): Promise<CodegenFi
   const { entities, enums } = dbMeta;
   const conditionalResolvers = [
     ...generateObjectResolvers(config, entities),
-    ...generateSaveResolvers(config, entities),
+    ...generateSaveResolvers(dbMeta),
+    // Going to roll this out as a follow up
+    // ...generateQueryResolvers(dbMeta),
   ];
   const srcFs = newFsImpl("./src");
   await writeOnce(config, srcFs, conditionalResolvers);

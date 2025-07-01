@@ -1,5 +1,5 @@
 import { camelCase } from "change-case";
-import { Config, EntityDbMetadata } from "joist-codegen";
+import { DbMetadata } from "joist-codegen";
 import { CodegenFile, code, imp } from "ts-poet";
 
 const saveEntity = imp("saveEntity@src/resolvers/utils");
@@ -16,38 +16,39 @@ const makeRunInputMutation = imp("makeRunInputMutation@src/resolvers/testUtils")
  *
  * [1]: https://github.com/homebound-team/graphql-typescript-resolver-scaffolding
  */
-export function generateSaveResolvers(config: Config, entities: EntityDbMetadata[]): CodegenFile[] {
-  const resolvers = entities.map((e) => {
+export function generateSaveResolvers(db: DbMetadata): CodegenFile[] {
+  return db.entities.flatMap((e) => {
     const { name } = e;
     const camelName = camelCase(name);
     const type = imp(`${name}@src/entities`);
-    const contents = code`
-      export const save${name}: Pick<${mutationResolvers}, "save${name}"> = {
-        async save${name}(_, args, ctx) {
-          return { ${camelName}: await ${saveEntity}(ctx, ${type}, args.input) };
-        },
-      };
-    `;
-    return { name: `resolvers/mutations/${camelName}/save${name}Resolver.ts`, overwrite: false, contents };
-  });
-
-  const testFiles = entities.map((e) => {
-    const { name } = e;
-    const camelName = camelCase(name);
-    const resolverConst = imp(`save${name}@src/resolvers/mutations/${camelName}/save${name}Resolver`);
-
-    const contents = code`
-      describe("save${name}", () => {
-        it.withCtx("can create", async (ctx) => {
-          const result = await runSave(ctx, () => ({}));
-          expect(result).toBeDefined()
+    const fileName = `save${name}Mutation`;
+    const resolverConst = imp(`save${name}@src/resolvers/${camelName}/${fileName}`);
+    return [
+      {
+        name: `resolvers/${camelName}/${fileName}.ts`,
+        overwrite: false,
+        contents: code`
+          export const save${name}: Pick<${mutationResolvers}, "save${name}"> = {
+            async save${name}(_, args, ctx) {
+              return { ${camelName}: await ${saveEntity}(ctx, ${type}, args.input) };
+            },
+          };
+        `,
+      },
+      {
+        name: `resolvers/${camelName}/${fileName}.test.ts`,
+        overwrite: false,
+        contents: code`
+        describe("save${name}", () => {
+          it.withCtx("can create", async (ctx) => {
+            const result = await runSave(ctx, () => ({}));
+            expect(result).toBeDefined()
+          });
         });
-      });
-      
-      const runSave = ${makeRunInputMutation}(${resolverConst});
-    `;
-    return { name: `resolvers/mutations/${camelName}/save${name}Resolver.test.ts`, overwrite: false, contents };
-  });
 
-  return [...resolvers, ...testFiles];
+        const runSave = ${makeRunInputMutation}(${resolverConst});
+      `,
+      },
+    ];
+  });
 }

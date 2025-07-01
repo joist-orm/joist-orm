@@ -1,4 +1,4 @@
-import { saveImage } from "src/resolvers/mutations/image/saveImageResolver";
+import { saveImage } from "src/resolvers/image/saveImageMutation";
 import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 

@@ -1,3 +1,10 @@
+# [1.252.0](https://github.com/joist-orm/joist-orm/compare/v1.251.0...v1.252.0) (2025-07-01)
+
+
+### Features
+
+* Update for gql resolver reorg ([#1532](https://github.com/joist-orm/joist-orm/issues/1532)) ([7837dea](https://github.com/joist-orm/joist-orm/commit/7837deac5dd0f86b3df463f298065e67ee5a159a))
+
 # [1.251.0](https://github.com/joist-orm/joist-orm/compare/v1.250.0...v1.251.0) (2025-06-29)
 
 

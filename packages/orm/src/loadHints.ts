@@ -226,6 +226,11 @@ export function maybePopulateThen<T extends Entity, H extends LoadHint<T>, R>(
   return isLoaded(entity, hint) ? fn(entity) : (entity as any).populate(hint).then(fn);
 }
 
+/**
+ * Runtime checks that `entity` has `hint` loaded, and type guards it as a `Loaded<T, hint>`.
+ *
+ * Similar to `ensureLoaded`, although `ensureLoaded` returns its value.
+ */
 export function assertLoaded<T extends Entity, const H extends LoadHint<T>>(
   entity: T,
   hint: H,
@@ -233,9 +238,23 @@ export function assertLoaded<T extends Entity, const H extends LoadHint<T>>(
   if (!isLoaded(entity, hint)) fail(`${entity.id} is not loaded for ${JSON.stringify(hint)}`);
 }
 
+/**
+ * Runtime checks that `entity` has `hint` loaded, and returns it as a `Loaded<T, entity>`.
+ *
+ * Similar to `assertLoaded`, although `assertLoaded` is a boolean type guard.
+ */
 export function ensureLoaded<T extends Entity, const H extends LoadHint<T>>(entity: T, hint: H): Loaded<T, H> {
   assertLoaded<T, H>(entity, hint);
   return entity;
+}
+
+/**
+ * Unsafe type check for `entity` to `hint`, *without* a runtime type check.
+ *
+ * You should only use this if you're extremely sure that entity has hint loaded.
+ */
+export function unsafeLoaded<T extends Entity, const H extends LoadHint<T>>(entity: T, hint: H): Loaded<T, H> {
+  return entity as Loaded<T, H>;
 }
 
 /** From any `Relations` field in `T`, i.e. for loader hints. */

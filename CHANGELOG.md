@@ -1,3 +1,10 @@
+# [1.253.0](https://github.com/joist-orm/joist-orm/compare/v1.252.0...v1.253.0) (2025-07-03)
+
+
+### Features
+
+* Add unsafeLoaded. ([#1533](https://github.com/joist-orm/joist-orm/issues/1533)) ([bf1e48e](https://github.com/joist-orm/joist-orm/commit/bf1e48e9954317828e2e18a27f1ae1072763ad96))
+
 # [1.252.0](https://github.com/joist-orm/joist-orm/compare/v1.251.0...v1.252.0) (2025-07-01)
 
 

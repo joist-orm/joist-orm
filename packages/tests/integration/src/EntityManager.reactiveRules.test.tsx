@@ -143,7 +143,7 @@ describe("EntityManager.reactiveRules", () => {
         { id: 2, tags_of_all_books: "t1" },
       ]);
       // And we only needed to do 1 recalc
-      expect(em.entities.filter((e) => e instanceof Author).length).toBe(1);
+      expect(em.getEntities(Author).length).toBe(1);
     });
   });
 

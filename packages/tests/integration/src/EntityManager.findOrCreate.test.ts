@@ -280,7 +280,7 @@ describe("EntityManager.findOrCreate", () => {
       em.findOrCreate(Author, { firstName: "a1" }, {}, { lastName: "C" }),
     ]);
     // Then they returned the same entity
-    expect(em.entities.filter((e) => e instanceof Author).length).toBe(1);
+    expect(em.getEntities(Author).length).toBe(1);
     // And the first upsert wins
     expect(a1.lastName).toBe("B");
   });
@@ -331,7 +331,7 @@ describe("EntityManager.findOrCreate", () => {
     // Then it completes much faster (13 seconds -> 700ms)
     expect(end - start).toBeLessThan(n); // Nms for n searches
     // And verify we found the existing entity, not created a new one
-    const authors = em.entities.filter((e) => e instanceof Author);
+    const authors = em.getEntities(Author);
     expect(authors.length).toBe(n);
   });
 });

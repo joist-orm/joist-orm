@@ -1,3 +1,10 @@
+# [1.254.0](https://github.com/joist-orm/joist-orm/compare/v1.253.0...v1.254.0) (2025-07-07)
+
+
+### Features
+
+* Add EntityManager.getEntities(type). ([#1535](https://github.com/joist-orm/joist-orm/issues/1535)) ([bd0ecf5](https://github.com/joist-orm/joist-orm/commit/bd0ecf5ae47ec8e9ea19293ad222d1091f97fcc8))
+
 # [1.253.0](https://github.com/joist-orm/joist-orm/compare/v1.252.0...v1.253.0) (2025-07-03)
 
 

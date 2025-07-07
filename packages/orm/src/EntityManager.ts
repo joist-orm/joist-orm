@@ -314,6 +314,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     return [...this.#entitiesArray];
   }
 
+  /** Returns a read-only list of the currently-loaded entities of `type`. */
+  getEntities<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): ReadonlyArray<T> {
+    const meta = getMetadata(type);
+    const entities = this.#entitiesByTag.get(meta.tagName) ?? [];
+    // If we're a subtype, `entities` might have base/other subtypes
+    return (meta.baseType ? entities.filter((e) => e instanceof type) : entities) as T[];
+  }
+
   /** Looks up `id` in the list of already-loaded entities. */
   getEntity<T extends Entity & { id: string }>(id: IdOf<T>): T | undefined;
   getEntity(id: TaggedId): Entity | undefined;

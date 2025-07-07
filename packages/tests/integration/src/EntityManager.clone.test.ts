@@ -81,7 +81,7 @@ describe("EntityManager.clone", () => {
     // Then the cloned books end up with the same author
     expect(b1_clone).toMatchEntity({ author: b2_clone.author.get });
     // And we only created 1 new author
-    expect(em.entities.filter((e) => e instanceof Author)).toMatchEntity([a1, {}]);
+    expect(em.getEntities(Author)).toMatchEntity([a1, {}]);
   });
 
   it("can clone entities and referenced entities", async () => {

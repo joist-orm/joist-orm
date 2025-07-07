@@ -99,7 +99,7 @@ describe("EntityManager.factories", () => {
     // When we create the book
     const b = newBook(em, { author: maybeNew<Author>({}), tags: [{ publishers: [p] }] });
     // Then we made a new entity
-    expect(em.entities.filter((e) => e instanceof Author)).toMatchEntity([{}, {}, {}]);
+    expect(em.getEntities(Author)).toMatchEntity([{}, {}, {}]);
   });
 
   it("can create a child and a required parent with opts", async () => {
@@ -270,7 +270,7 @@ describe("EntityManager.factories", () => {
       bookReviews: [{}, {}],
     });
     // Then we only created 1 author
-    expect(em.entities.filter((e) => e instanceof Author)).toMatchEntity([{}]);
+    expect(em.getEntities(Author)).toMatchEntity([{}]);
   });
 
   it("can create a child and use an existing parent from EntityManager", async () => {

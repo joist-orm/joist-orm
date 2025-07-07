@@ -397,7 +397,7 @@ function getObviousDefault<T extends Entity>(
   // ...in theory seeding our `use` map with the only-one entities was supposed to prevent the
   // need for doing this (the entities would already be in the use map that we just checked),
   // but that approach doesn't catch created-as-side-effect entities.
-  const existing = em.entities.filter((e) => e instanceof metadata.cstr);
+  const existing = em.getEntities(metadata.cstr);
   if (existing.length === 1) {
     return [existing[0] as T, "logFoundSingleEntity"];
   }
@@ -603,14 +603,14 @@ class MaybeNew<T extends Entity> {
  * Despite the name, these are 1-based, i.e. the first `Author` is `a1`.
  */
 export function getTestIndex<T extends Entity>(em: EntityManager, type: MaybeAbstractEntityConstructor<T>): number {
-  const existing = em.entities.filter((e) => e instanceof type);
+  const existing = em.getEntities(type);
   return existing.length + 1;
 }
 
 /** Fakes a probably-right id for un-persisted entities. Solely used for quick lookups in tests/factories. */
 function getTestId<T extends Entity>(em: EntityManager, entity: T): string {
   const meta = getMetadata(entity);
-  const sameType = em.entities.filter((e) => e instanceof meta.cstr);
+  const sameType = em.getEntities(meta.cstr);
   return tagId(meta, String(sameType.indexOf(entity) + 1));
 }
 

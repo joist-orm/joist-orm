@@ -38,6 +38,7 @@ import {
   newAuthor,
   newBook,
   newBookReview,
+  newLargePublisher,
   newPublisher,
   newSmallPublisher,
   smallPublisherBeforeFlushRan,
@@ -1501,6 +1502,36 @@ describe("EntityManager", () => {
     const em2 = new EntityManager(em);
     // Then the ctx.em is updated
     expect(em2.ctx.em).toBe(em2);
+  });
+
+  describe("getEntities", () => {
+    it("can return only specific entities", async () => {
+      const em = newEntityManager();
+      const a = newAuthor(em);
+      newBook(em);
+      expect(em.getEntities(Author)).toMatchEntity([a]);
+    });
+
+    it("can return only subtype entities", async () => {
+      const em = newEntityManager();
+      const sp = newSmallPublisher(em);
+      newLargePublisher(em);
+      expect(em.getEntities(SmallPublisher)).toMatchEntity([sp]);
+    });
+
+    it("can return base type entities", async () => {
+      const em = newEntityManager();
+      const sp = newSmallPublisher(em);
+      const lp = newLargePublisher(em);
+      expect(em.getEntities(Publisher)).toMatchEntity([sp, lp]);
+    });
+
+    it("returns deleted entities", async () => {
+      const em = newEntityManager();
+      const a = newAuthor(em);
+      em.delete(a);
+      expect(em.getEntities(Author)).toMatchEntity([a]);
+    });
   });
 });
 

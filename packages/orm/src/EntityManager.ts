@@ -17,7 +17,6 @@ import { Driver } from "./drivers";
 import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
 import {
-  BaseEntity,
   CustomCollection,
   CustomReference,
   DeepPartialOrNull,
@@ -2045,10 +2044,7 @@ async function validateReactiveRules(
   });
 
   const p2 = Object.values(joinRowTodos).flatMap((todo) => {
-    // Cheat and use `Object.values` + `filter instanceof BaseEntity` to handle the variable keys
-    const entities: Entity[] = [...todo.newRows, ...todo.deletedRows]
-      .flatMap((jr) => Object.values(jr))
-      .filter((e) => e instanceof BaseEntity) as any;
+    const entities = [...todo.newRows, ...todo.deletedRows].flatMap((jr) => Object.values(jr.columns));
     // Do the first side
     const p1 = getReactiveRules(todo.m2m.meta)
       .filter((rule) => rule.fields.includes(todo.m2m.fieldName))

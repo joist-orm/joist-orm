@@ -69,7 +69,7 @@ export class PostgresTestDriver implements TestDriver {
   }
 
   async delete(tableName: string, id: number): Promise<void> {
-    await this.knex(tableName).where("id", 1).del();
+    await this.knex(tableName).where("id", id).del();
   }
 
   async count(tableName: string): Promise<number> {

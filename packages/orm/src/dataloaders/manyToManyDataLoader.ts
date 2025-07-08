@@ -76,7 +76,7 @@ async function load<T extends Entity, U extends Entity>(
   //
   // Eventually we could have this query join into the entity tables themselves, i.e.
   // `books` and `tags`, and use those results to hydrate the newly-found entities.
-  await joinRows.loadRows(rows);
+  await joinRows.loadRows(taggedIds, rows);
 
   // Map the requested keys, i.e. book_id=2 back to "the (other) tags for book 2".
   return taggedIds.map((id) => {

@@ -103,7 +103,7 @@ export class JoinRows {
   }
 
   /** Adds an existing join row to this table. */
-  addExisting(m2m: ManyToManyCollection<any, any>, id: number, e1: Entity, e2: Entity): void {
+  addPreloadedRow(m2m: ManyToManyCollection<any, any>, id: number, e1: Entity, e2: Entity): void {
     const existing = this.index.get(e1, e2);
     if (existing) {
       // Treat any existing WIP change as source-of-truth, so leave it alone
@@ -119,7 +119,7 @@ export class JoinRows {
   }
 
   /** Look up/create our internal JoinRow psuedo-entities for the db rows. */
-  async loadRows(dbRows: any[]): Promise<void> {
+  async loadRows(taggedIds: string[], dbRows: any[]): Promise<void> {
     const { em } = this.m2m.entity;
     const { columnName: column1, otherColumnName: column2 } = this.m2m;
     const { meta: meta1, otherMeta: meta2 } = this.m2m;
@@ -133,6 +133,13 @@ export class JoinRows {
 
     // Make sure we have entities in memory for all the joined-to tables
     await Promise.all([em.loadAll(meta1.cstr, oneIds), em.loadAll(meta2.cstr, twoIds)]);
+
+    // If we're doing a em.refresh/reload, we need to watch for rows that are no longer here
+    const existingRows = new Set<JoinRow>();
+    for (const id of taggedIds) {
+      const others = this.index.getOthers(em.getEntity(id)!);
+      for (const row of others) existingRows.add(row);
+    }
 
     let i = 0;
     for (const dbRow of dbRows) {
@@ -152,8 +159,15 @@ export class JoinRows {
         // If a placeholder row was created while a ManyToManyCollection was unloaded, and we find it during
         // a subsequent load/query, update its id to be what is in the database.
         row.id = dbRow.id;
+        // Mark this row as still valid
+        existingRows.delete(row);
       }
     }
+
+    // Mark all no-longer-there rows as deleted
+    existingRows.forEach((row) => {
+      row.deleted = true;
+    });
   }
 
   getOthers(entity: Entity): Entity[] {

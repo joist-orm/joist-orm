@@ -259,6 +259,10 @@ export function insertBookToTag(row: { id?: number; book_id: number; tag_id: num
   return testDriver.insert("books_to_tags", row);
 }
 
+export function deleteBookToTag(id: number) {
+  return testDriver.delete("books_to_tags", id);
+}
+
 export function insertPublisherToTag(row: { id?: number; publisher_id: number; tag_id: number }) {
   return testDriver.insert("publishers_to_tags", row);
 }

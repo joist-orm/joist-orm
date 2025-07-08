@@ -3,6 +3,7 @@ import {
   countOfBookReviews,
   countOfBooks,
   del,
+  deleteBookToTag,
   insertAuthor,
   insertBook,
   insertBookReview,
@@ -523,19 +524,23 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     await insertTag({ name: "t1" });
+    await insertTag({ name: "t2" });
+    await insertTag({ name: "t3" });
+    // Given we've loaded an entity with initially two tags
     await insertBookToTag({ tag_id: 1, book_id: 1 });
-    // Given we've loaded an entity with a
+    await insertBookToTag({ tag_id: 2, book_id: 1 });
     const em = newEntityManager();
     const b1 = await em.load(Book, "1", "tags");
-    expect(b1.tags.get.length).toEqual(1);
+    expect(b1.tags.get.length).toEqual(2);
     // And a new join row is added by someone else
-    await insertTag({ name: "t2" });
-    await insertBookToTag({ tag_id: 2, book_id: 1 });
+    await insertBookToTag({ tag_id: 3, book_id: 1 });
+    // And an existing join row is deleted by someone else
+    await deleteBookToTag(2);
     resetQueryCount();
     // When we refresh the entity
     await em.refresh(b1);
     // Then we have the new data
-    expect(b1.tags.get!.length).toEqual(2);
+    expect(b1).toMatchEntity({ tags: [{ name: "t1" }, { name: "t3" }] });
     // 2 because of Book.author + Book.prequel
     expect(queries.length).toBe(isPreloadingEnabled ? 2 : 4);
   });

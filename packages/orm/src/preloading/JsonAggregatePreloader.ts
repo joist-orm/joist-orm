@@ -246,10 +246,13 @@ function calcLateralJoins<I extends EntityOrId>(
             )[0];
           // Tell the internal JoinRow booking-keeping about this m2m row
           if (field.kind === "m2m") {
+            // TODO This `addExisting` needs to be pulled up, out of the `arrays.map`, so we can do a `loadRows`-ish
+            // call that passes all now-known m2m rows into JoinRows as a single list, so that it can mark any
+            // deleted-from-under-us m2m rows as deleted.
             const m2m = (parent as any)[key];
             getEmInternalApi(em)
               .joinRows(m2m)
-              .addExisting(m2m, array[0] as any, parent, entity);
+              .addPreloadedRow(m2m, array[0] as any, parent, entity);
           }
           // Within each child, look for grandchildren
           subJoins.forEach((sub, i) => {

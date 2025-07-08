@@ -1,3 +1,10 @@
+## [1.255.1](https://github.com/joist-orm/joist-orm/compare/v1.255.0...v1.255.1) (2025-07-08)
+
+
+### Bug Fixes
+
+* Fix m2m reload w/deleted rows. ([#1537](https://github.com/joist-orm/joist-orm/issues/1537)) ([f2ee85f](https://github.com/joist-orm/joist-orm/commit/f2ee85f3fbdd072496e3554c11f696250803aef5))
+
 # [1.255.0](https://github.com/joist-orm/joist-orm/compare/v1.254.0...v1.255.0) (2025-07-08)
 
 

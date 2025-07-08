@@ -1,3 +1,10 @@
+## [1.255.2](https://github.com/joist-orm/joist-orm/compare/v1.255.1...v1.255.2) (2025-07-08)
+
+
+### Bug Fixes
+
+* Fix m2m indexing for self-referential m2ms. ([#1538](https://github.com/joist-orm/joist-orm/issues/1538)) ([99fb0bd](https://github.com/joist-orm/joist-orm/commit/99fb0bdede5658df231c248516beb2de1fc36999))
+
 ## [1.255.1](https://github.com/joist-orm/joist-orm/compare/v1.255.0...v1.255.1) (2025-07-08)
 
 

@@ -1,3 +1,10 @@
+# [1.255.0](https://github.com/joist-orm/joist-orm/compare/v1.254.0...v1.255.0) (2025-07-08)
+
+
+### Features
+
+* Add indexing to m2m JoinRows. ([#1536](https://github.com/joist-orm/joist-orm/issues/1536)) ([f3a2ae1](https://github.com/joist-orm/joist-orm/commit/f3a2ae1bb390bfe8294846f64989f16246218846))
+
 # [1.254.0](https://github.com/joist-orm/joist-orm/compare/v1.253.0...v1.254.0) (2025-07-07)
 
 

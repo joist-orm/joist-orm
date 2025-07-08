@@ -1,7 +1,6 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
-import { JoinRow } from "../JoinRows";
 import { ManyToManyCollection, ParsedFindQuery, getMetadata, keyToNumber } from "../index";
 import { abbreviation, getOrSet } from "../utils";
 
@@ -29,16 +28,16 @@ async function load<T extends Entity, U extends Entity>(
 ): Promise<U[][]> {
   const { em } = collection.entity;
 
-  // Make a map that will be both `tag_id=t:2 -> [...]` and `book_id=b:3 -> [...]`
-  const rowsByKey: Record<string, JoinRow[]> = {};
   // Keep a reference to our row to track updates/deletes
   const joinRows = getEmInternalApi(em).joinRows(collection);
 
   // Break out `column_id=string` keys out
   const columns: Record<string, string[]> = {};
+  const taggedIds: string[] = [];
   keys.forEach((key) => {
     const [columnId, id] = key.split("=");
     getOrSet(columns, columnId, []).push(id);
+    taggedIds.push(id);
   });
 
   const alias = abbreviation(collection.joinTableName);
@@ -77,21 +76,10 @@ async function load<T extends Entity, U extends Entity>(
   //
   // Eventually we could have this query join into the entity tables themselves, i.e.
   // `books` and `tags`, and use those results to hydrate the newly-found entities.
-  await Promise.all(
-    rows.map(async (dbRow) => {
-      // We may have already loaded this join row in a prior load of the opposite side of this m2m.
-      const emRow = await joinRows.findForRow(dbRow);
-      // Put this row into the map for both join table columns, i.e. `book_id=2` and `tag_id=3`
-      getOrSet(rowsByKey, `${column1}=${(emRow[column1] as Entity).id}`, []).push(emRow);
-      getOrSet(rowsByKey, `${column2}=${(emRow[column2] as Entity).id}`, []).push(emRow);
-    }),
-  );
+  await joinRows.loadRows(rows);
 
-  // Map the requested keys, i.e. book_id=2 back to "the tags for book 2".
-  return keys.map((key) => {
-    const [column] = key.split("=");
-    const joinRows = rowsByKey[key] || [];
-    const otherColumn = column === collection.columnName ? collection.otherColumnName : collection.columnName;
-    return joinRows.map((joinRow) => joinRow[otherColumn] as U);
+  // Map the requested keys, i.e. book_id=2 back to "the (other) tags for book 2".
+  return taggedIds.map((id) => {
+    return joinRows.getOthers(em.getEntity(id) ?? fail()) as U[];
   });
 }

@@ -157,8 +157,8 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
         const meta2 = m2m.otherMeta;
         const bindings = newRows.flatMap((row) => {
           return [
-            keyToNumber(meta1, maybeResolveReferenceToId(row[m2m.columnName] as any))!,
-            keyToNumber(meta2, maybeResolveReferenceToId(row[m2m.otherColumnName] as any))!,
+            keyToNumber(meta1, maybeResolveReferenceToId(row.columns[m2m.columnName] as any))!,
+            keyToNumber(meta2, maybeResolveReferenceToId(row.columns[m2m.otherColumnName] as any))!,
           ];
         });
         const { rows } = await knex.raw(sql, bindings);
@@ -185,8 +185,8 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
             .map(
               (e) =>
                 [
-                  deTagId(m2m.meta, maybeResolveReferenceToId(e[m2m.columnName] as any)!),
-                  deTagId(m2m.otherMeta, maybeResolveReferenceToId(e[m2m.otherColumnName] as any)!),
+                  deTagId(m2m.meta, maybeResolveReferenceToId(e.columns[m2m.columnName] as any)!),
+                  deTagId(m2m.otherMeta, maybeResolveReferenceToId(e.columns[m2m.otherColumnName] as any)!),
                 ] as any,
             )
             // Watch for m2m rows that got added-then-removed to entities that were themselves added-then-removed,

@@ -11,6 +11,7 @@ import { remove } from "./utils";
 export class JoinRows {
   // The in-memory rows for our m2m table.
   private readonly rows: JoinRow[] = [];
+  private readonly index = new ManyToManyIndex();
 
   constructor(
     // This could be either side of the m2m relation, depending on which is accessed first.
@@ -23,20 +24,19 @@ export class JoinRows {
   addNew(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity): void {
     if (!e1) throw new Error(`Cannot add a m2m row with an entity that is ${e1}`);
     if (!e2) throw new Error(`Cannot add a m2m row with an entity that is ${e2}`);
-    const { columnName, otherColumnName } = m2m;
     const { em } = this.m2m.entity;
-    const existing = this.rows.find((r) => r[columnName] === e1 && r[otherColumnName] === e2);
+    const existing = this.index.get(e1, e2);
     if (existing) {
       existing.deleted = false;
       existing.op = JoinRowOperation.Pending;
     } else {
-      const joinRow: JoinRow = {
-        id: undefined,
-        [m2m.columnName]: e1,
-        [m2m.otherColumnName]: e2,
+      const row = {
         op: JoinRowOperation.Pending,
-      };
-      this.rows.push(joinRow);
+        id: undefined,
+        columns: { [m2m.columnName]: e1, [m2m.otherColumnName]: e2 },
+      } satisfies JoinRow;
+      this.rows.push(row);
+      this.index.add(e1, e2, row);
     }
     getEmInternalApi(e1.em).isLoadedCache.resetIsLoaded(e1, m2m.fieldName);
     getEmInternalApi(e1.em).isLoadedCache.resetIsLoaded(e2, m2m.otherFieldName);
@@ -52,19 +52,26 @@ export class JoinRows {
 
   /** Adds a new remove to this table. */
   addRemove(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity): void {
-    const { columnName, otherColumnName } = m2m;
     const { em } = this.m2m.entity;
-    const existing = this.rows.find((r) => r[columnName] === e1 && r[otherColumnName] === e2);
+    const existing = this.index.get(e1, e2);
     if (existing) {
       if (!existing.id) {
         remove(this.rows, existing);
+        this.index.remove(existing);
       } else {
         existing.deleted = true;
       }
       existing.op = JoinRowOperation.Pending;
     } else {
       // Use -1 to force the sortJoinRows to notice us as dirty ("delete: true but id is set")
-      this.rows.push({ id: -1, [columnName]: e1, [otherColumnName]: e2, deleted: true, op: JoinRowOperation.Pending });
+      const row = {
+        op: JoinRowOperation.Pending,
+        id: -1,
+        columns: { [m2m.columnName]: e1, [m2m.otherColumnName]: e2 },
+        deleted: true,
+      } satisfies JoinRow;
+      this.rows.push(row);
+      this.index.add(e1, e2, row);
     }
     getEmInternalApi(e1.em).isLoadedCache.resetIsLoaded(e1, m2m.fieldName);
     getEmInternalApi(e1.em).isLoadedCache.resetIsLoaded(e2, m2m.otherFieldName);
@@ -83,69 +90,78 @@ export class JoinRows {
     const { columnName, otherColumnName } = m2m;
     // I.e. if we did `t1.books.remove(b1)` find all join rows that have
     // `tag_id=t1`, are marked for deletion, and then `.map` them to the removed book.
-    const rows = this.rows.filter((r) => r[columnName] === e1 && r.deleted);
-    return rows.map((r) => r[otherColumnName] as Entity);
+    const removedRows = this.index.getOthers(e1).filter((r) => r.deleted);
+    return removedRows.map((r) => r.columns[otherColumnName]);
   }
 
   addedFor(m2m: ManyToManyCollection<any, any>, e1: Entity): Entity[] {
     const { columnName, otherColumnName } = m2m;
-    const newRows = this.rows.filter(
-      (r) => r.id === undefined && r.deleted !== true && r.op === "pending" && r[columnName] === e1,
-    );
-    return newRows.map((r) => r[otherColumnName] as Entity);
+    const addedRows = this.index
+      .getOthers(e1)
+      .filter((r) => r.id === undefined && r.deleted !== true && r.op === JoinRowOperation.Pending);
+    return addedRows.map((r) => r.columns[otherColumnName]);
   }
 
   /** Adds an existing join row to this table. */
   addExisting(m2m: ManyToManyCollection<any, any>, id: number, e1: Entity, e2: Entity): void {
-    const { columnName, otherColumnName } = m2m;
-    const existing = this.rows.find((r) => r[columnName] === e1 && r[otherColumnName] === e2);
+    const existing = this.index.get(e1, e2);
     if (existing) {
       // Treat any existing WIP change as source-of-truth, so leave it alone
     } else {
-      const joinRow: JoinRow = { id, [m2m.columnName]: e1, [m2m.otherColumnName]: e2, op: JoinRowOperation.Pending };
-      this.rows.push(joinRow);
+      const row = {
+        op: JoinRowOperation.Pending,
+        id,
+        columns: { [m2m.columnName]: e1, [m2m.otherColumnName]: e2 },
+      } satisfies JoinRow;
+      this.rows.push(row);
+      this.index.add(e1, e2, row);
     }
   }
 
-  /**
-   * Look up/create our JoinRow psuedo-entity for the given db row.
-   *
-   * This is a promise b/c we'll `em.load` both sides of the join row. We could potentially avoid
-   * this if our m2m load returned entities in the result set, then we could `em.hydrate` instead.
-   */
-  async findForRow(dbRow: any): Promise<JoinRow> {
+  /** Look up/create our internal JoinRow psuedo-entities for the db rows. */
+  async loadRows(dbRows: any[]): Promise<void> {
     const { em } = this.m2m.entity;
     const { columnName: column1, otherColumnName: column2 } = this.m2m;
     const { meta: meta1, otherMeta: meta2 } = this.m2m;
-    let row = this.rows.find((jr) => {
-      return (
-        // Use idMaybe because row join might be for a not-yet-flushed new entity
-        (jr[column1] as Entity).idMaybe === keyToTaggedId(meta1, dbRow[column1]) &&
-        (jr[column2] as Entity).idMaybe === keyToTaggedId(meta2, dbRow[column2])
-      );
-    });
-    if (!row) {
-      // For this join table row, load the entities of both foreign keys. Because we are `EntityManager.load`,
-      // this is N+1 safe (and will check the Unit of Work for already-loaded entities), but per ^ comment
-      // we chould pull these from the row itself if we did a fancier join.
-      const p1 = em.load(meta1.cstr, keyToTaggedId(meta1, dbRow[column1])!);
-      const p2 = em.load(meta2.cstr, keyToTaggedId(meta2, dbRow[column2])!);
-      const [e1, e2] = await Promise.all([p1, p2]);
-      row = {
-        id: dbRow.id,
-        m2m: this.m2m,
-        [column1]: e1,
-        [column2]: e2,
-        created_at: dbRow.created_at,
-        op: JoinRowOperation.Completed,
-      };
-      this.rows.push(row);
-    } else {
-      // If a placeholder row was created while a ManyToManyCollection was unloaded, and we find it during
-      // a subsequent load/query, update its id to be what is in the database.
-      row.id = dbRow.id;
+
+    const oneIds = [];
+    const twoIds = [];
+    for (const dbRow of dbRows) {
+      oneIds.push(keyToTaggedId(meta1, dbRow[column1]));
+      twoIds.push(keyToTaggedId(meta2, dbRow[column2]));
     }
-    return row;
+
+    // Make sure we have entities in memory for all the joined-to tables
+    await Promise.all([em.loadAll(meta1.cstr, oneIds), em.loadAll(meta2.cstr, twoIds)]);
+
+    let i = 0;
+    for (const dbRow of dbRows) {
+      const e1 = em.getEntity(oneIds[i])!;
+      const e2 = em.getEntity(twoIds[i++])!;
+      let row = this.index.get(e1, e2);
+      if (!row) {
+        row = {
+          op: JoinRowOperation.Completed,
+          id: dbRow.id,
+          columns: { [column1]: e1, [column2]: e2 },
+          created_at: dbRow.created_at,
+        };
+        this.rows.push(row);
+        this.index.add(e1, e2, row);
+      } else {
+        // If a placeholder row was created while a ManyToManyCollection was unloaded, and we find it during
+        // a subsequent load/query, update its id to be what is in the database.
+        row.id = dbRow.id;
+      }
+    }
+  }
+
+  getOthers(entity: Entity): Entity[] {
+    const others = this.index.getOthers(entity);
+    if (others.length === 0) return [];
+    const [c1, c2] = Object.keys(others[0].columns);
+    const c = others[0].columns[c1] === entity ? c2 : c1;
+    return others.filter((o) => !o.deleted).map((row) => row.columns[c]);
   }
 
   /** Scans our `rows` for newly-added/newly-deleted rows that need `INSERT`s/`UPDATE`s. */
@@ -185,11 +201,6 @@ export class JoinRows {
  * This makes the column1+column2 combination a composite key.
  */
 export interface JoinRow {
-  id: number | undefined;
-  // The two columns; unfortunately the TS index signature requires unioning all possible types
-  [column: string]: number | Entity | undefined | boolean | Date | JoinRowOperation;
-  created_at?: Date;
-  deleted?: boolean;
   /**
    * Whether our relation has been processed or not.
    *
@@ -198,6 +209,10 @@ export interface JoinRow {
    * - `completed` means we've been flushed and `em.flush` has completed
    */
   op: JoinRowOperation;
+  id: number | undefined;
+  columns: Record<string, Entity>;
+  created_at?: Date;
+  deleted?: boolean;
 }
 
 /** An enum to track our insert/delete state progression. */
@@ -205,4 +220,46 @@ export enum JoinRowOperation {
   Pending = "pending",
   Flushed = "flushed",
   Completed = "completed",
+}
+
+/** Keep an in-memory index to avoid sequentially scanning `rows`. */
+class ManyToManyIndex {
+  private index = new Map<Entity, Map<Entity, JoinRow>>();
+
+  add(e1: Entity, e2: Entity, value: JoinRow): void {
+    // Store both e1+e2 => value and e2+e1 => value so we can do lookups from either side
+    // (...and also so that `getOthers` works)
+    this.#doAdd(e1, e2, value);
+    this.#doAdd(e2, e1, value);
+  }
+
+  remove(value: JoinRow): void {
+    const [e1, e2] = Object.values(value.columns);
+    this.#doRemove(e1, e2);
+    this.#doRemove(e2, e1);
+  }
+
+  get(e1: Entity, e2: Entity): JoinRow | undefined {
+    // Since we populate both e1+e2 & e2+e1, we can do just a single lookup here, without
+    // worrying which of columnA/columnB is e1/e2.
+    return this.index.get(e1)?.get(e2);
+  }
+
+  /** Cheat and use the index to return "the other entities" for `entity`. */
+  getOthers(entity: Entity): JoinRow[] {
+    const map = this.index.get(entity);
+    // It's empty m2m collection won't have any other entities, and so no index entries
+    return map ? Array.from(map.values()) : [];
+  }
+
+  #doAdd(e1: Entity, e2: Entity, value: JoinRow): void {
+    if (!this.index.has(e2)) {
+      this.index.set(e2, new Map());
+    }
+    this.index.get(e2)!.set(e1, value);
+  }
+
+  #doRemove(e1: Entity, e2: Entity): void {
+    this.index.get(e1)?.delete(e2);
+  }
 }

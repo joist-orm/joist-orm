@@ -33,11 +33,11 @@ async function load<T extends Entity, U extends Entity>(
 
   // Break out `column_id=string` keys out
   const columns: Record<string, string[]> = {};
-  const taggedIds: string[] = [];
+  const tuples: [string, string][] = [];
   keys.forEach((key) => {
     const [columnId, id] = key.split("=");
     getOrSet(columns, columnId, []).push(id);
-    taggedIds.push(id);
+    tuples.push([columnId, id]);
   });
 
   const alias = abbreviation(collection.joinTableName);
@@ -76,10 +76,10 @@ async function load<T extends Entity, U extends Entity>(
   //
   // Eventually we could have this query join into the entity tables themselves, i.e.
   // `books` and `tags`, and use those results to hydrate the newly-found entities.
-  await joinRows.loadRows(taggedIds, rows);
+  await joinRows.loadRows(tuples, rows);
 
   // Map the requested keys, i.e. book_id=2 back to "the (other) tags for book 2".
-  return taggedIds.map((id) => {
-    return joinRows.getOthers(em.getEntity(id) ?? fail()) as U[];
+  return tuples.map(([column, id]) => {
+    return joinRows.getOthers(column, em.getEntity(id) ?? fail()) as U[];
   });
 }

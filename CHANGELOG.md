@@ -1,3 +1,10 @@
+# [1.256.0](https://github.com/joist-orm/joist-orm/compare/v1.255.2...v1.256.0) (2025-07-13)
+
+
+### Features
+
+* Add raw conditions to aliases. ([#1539](https://github.com/joist-orm/joist-orm/issues/1539)) ([d0720c5](https://github.com/joist-orm/joist-orm/commit/d0720c5f31996fc8fc33ccd3a8d7fdbaba4760f8)), closes [#699](https://github.com/joist-orm/joist-orm/issues/699)
+
 ## [1.255.2](https://github.com/joist-orm/joist-orm/compare/v1.255.1...v1.255.2) (2025-07-08)
 
 

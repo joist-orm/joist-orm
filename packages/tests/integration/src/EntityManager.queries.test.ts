@@ -2848,6 +2848,17 @@ describe("EntityManager.queries", () => {
       expect(authors.length).toEqual(2);
     });
 
+    it("can use aliases for jsonb path exists in a batch", async () => {
+      await insertAuthor({ first_name: "a1", address: { street: "rr1" } });
+      await insertAuthor({ first_name: "a2", address: { street: "rr2" } });
+      const em = newEntityManager();
+      const a = alias(Author);
+      await Promise.all([
+        em.find(Author, { as: a }, { conditions: { and: [a.address.pathExists(`$.street`)] } }),
+        em.find(Author, { as: a }, { conditions: { and: [a.address.pathExists(`$.city`)] } }),
+      ]);
+    });
+
     it("can use aliases for jsonb path predicate", async () => {
       await insertAuthor({ first_name: "a1", address: { street: "rr1" } });
       await insertAuthor({ first_name: "a2", address: { street: "rr2" } });
@@ -2859,6 +2870,17 @@ describe("EntityManager.queries", () => {
         { conditions: { and: [a.address.pathIsTrue(`$.street == "rr2"`)] } },
       );
       expect(authors.length).toEqual(1);
+    });
+
+    it("can use aliases for jsonb path predicate in a batch", async () => {
+      await insertAuthor({ first_name: "a1", address: { street: "rr1" } });
+      await insertAuthor({ first_name: "a2", address: { street: "rr2" } });
+      const em = newEntityManager();
+      const a = alias(Author);
+      await Promise.all([
+        em.find(Author, { as: a }, { conditions: { and: [a.address.pathIsTrue(`$.street == "rr1"`)] } }),
+        em.find(Author, { as: a }, { conditions: { and: [a.address.pathIsTrue(`$.street == "rr2"`)] } }),
+      ]);
     });
 
     it("prunes unused joins", async () => {

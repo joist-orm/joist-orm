@@ -277,6 +277,8 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: ArgCounter): [string, b
     case "nregex":
     case "iregex":
     case "niregex":
+    case "jsonPathExists":
+    case "jsonPathPredicate":
     case "contains":
     case "overlaps":
     case "containedBy": {

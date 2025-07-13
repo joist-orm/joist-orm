@@ -703,7 +703,9 @@ export type ParsedValueFilter<V> =
   | { kind: "overlaps"; value: readonly V[] }
   | { kind: "noverlaps"; value: readonly V[] }
   | { kind: "containedBy"; value: readonly V[] }
-  | { kind: "between"; value: [V, V] };
+  | { kind: "between"; value: [V, V] }
+  | { kind: "jsonPathExists"; value: string }
+  | { kind: "jsonPathPredicate"; value: string };
 
 /**
  * Parses the many/hodgepodge (ergonomic!) patterns of value filters into a `ParsedValueFilter[]`.
@@ -849,6 +851,8 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
       return filter;
     case "is-null":
     case "not-null":
+    case "jsonPathExists":
+    case "jsonPathPredicate":
       return filter;
     default:
       throw assertNever(filter);

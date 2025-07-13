@@ -53,10 +53,23 @@ export interface PrimitiveAlias<V, N extends null | never> {
   search(value: V | undefined): ExpressionCondition;
   between(v1: V | undefined, v2: V | undefined): ExpressionCondition;
   // need to move to ArrayAlias
-  contains(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
-  ncontains(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
+  // ...added the `string` to support jsonb contains like `WHERE profile @> '{"age": 25}'`
+  // Ideally this would go in a JsonbAlias
+  contains(value: string | V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
+  ncontains(value: string | V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
   overlaps(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
   noverlaps(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
+  /**
+   * Add `exp` to the query, which should include the operator & expression and any
+   * bound parameters (but not include the column name).
+   *
+   * We use knex-style placeholders, i.e. `?` and `\\?` to escape question marks, i.e.
+   *
+   * ```ts
+   * a.address.raw("@\\? ?", ['$.street ? (@ == "rr2")'])`
+   * ```
+   */
+  raw(exp: string, bindings: readonly any[] | undefined): ExpressionCondition;
 }
 
 export interface EntityAlias<T> {
@@ -153,6 +166,24 @@ class AbstractAliasColumn<V> {
     // Track the conditions we've created to re-write the alias when we're bound
     this.callbacks.push((newMeta, newAlias) => {
       cond.alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
+    });
+    return cond;
+  }
+
+  protected addRawCondition(exp: string, bindings: readonly any[]): RawCondition {
+    const cond = {
+      kind: "raw",
+      aliases: [] as string[],
+      condition: `unset.${this.column.columnName} ${exp}`,
+      pruneable: false,
+      bindings,
+    } satisfies RawCondition;
+    // Update `unset` placeholder when we're bound
+    this.callbacks.push((newMeta, newAlias) => {
+      // Add a base-table/sub-table alias if needed
+      const alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
+      if (!cond.aliases.includes(alias)) cond.aliases.push(alias);
+      cond.condition = cond.condition.replace("unset", alias);
     });
     return cond;
   }
@@ -282,13 +313,13 @@ class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<
   }
 
   // V will already be an array
-  contains(v1: V | undefined): ColumnCondition {
+  contains(v1: string | V | undefined): ColumnCondition {
     if (v1 === undefined) return skipCondition;
     return this.addCondition({ kind: "contains", value: v1 as any });
   }
 
   // V will already be an array
-  ncontains(v1: V | undefined): ColumnCondition {
+  ncontains(v1: string | V | undefined): ColumnCondition {
     if (v1 === undefined) return skipCondition;
     return this.addCondition({ kind: "ncontains", value: v1 as any });
   }
@@ -302,6 +333,11 @@ class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<
   noverlaps(v1: V | undefined): ColumnCondition {
     if (v1 === undefined) return skipCondition;
     return this.addCondition({ kind: "noverlaps", value: v1 as any });
+  }
+
+  raw(exp: string, bindings: readonly any[] | undefined): RawCondition | ColumnCondition {
+    if (bindings === undefined) return skipCondition;
+    return this.addRawCondition(exp, bindings);
   }
 }
 

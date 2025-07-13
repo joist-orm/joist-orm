@@ -2813,6 +2813,32 @@ describe("EntityManager.queries", () => {
       });
     });
 
+    it("can use aliases for raw conditions", async () => {
+      await insertAuthor({ first_name: "a1", address: { street: "rr1" } });
+      await insertAuthor({ first_name: "a2", address: { street: "rr2" } });
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(
+        Author,
+        { as: a },
+        { conditions: { and: [a.address.raw("@\\? ?", ['$.street ? (@ == "rr2")'])] } },
+      );
+      expect(authors.length).toEqual(1);
+    });
+
+    it("can use aliases for jsonb contains", async () => {
+      await insertAuthor({ first_name: "a1", address: { street: "rr1" } });
+      await insertAuthor({ first_name: "a2", address: { street: "rr2" } });
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(
+        Author,
+        { as: a },
+        { conditions: { and: [a.address.contains(`{"street": "rr2"}`)] } },
+      );
+      expect(authors.length).toEqual(1);
+    });
+
     it("prunes unused joins", async () => {
       const [a, p, b] = aliases(Author, Publisher, Book);
       expect(parseFindQuery(am, { as: a, publisher: { as: p }, books: { as: b } }, opts)).toEqual({

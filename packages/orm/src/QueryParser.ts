@@ -48,7 +48,7 @@ export interface RawCondition {
   /** The condition itself, i.e. `SUM(a.age) DESC`. */
   condition: string;
   /** The bindings within `condition`, i.e. `SUM(${alias}.amount) > ?`. */
-  bindings: any[];
+  bindings: readonly any[];
   /** Used to mark system-added conditions (like `LATERAL JOIN` conditions), which can be ignored when pruning unused joins. */
   pruneable: boolean;
 }
@@ -834,10 +834,15 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
     case "overlaps":
     case "noverlaps":
     case "containedBy":
-      if (!column.isArray) {
-        throw new Error(`${filter.kind} is only unsupported on array columns`);
+      const supportsContains = column.isArray || column.dbType === "jsonb";
+      if (!supportsContains) {
+        throw new Error(`${filter.kind} is only unsupported on array or jsonb columns`);
       }
-      filter.value = column.mapToDb(filter.value);
+      if (column.isArray) {
+        filter.value = column.mapToDb(filter.value);
+      } else {
+        // leave jsonb values alone
+      }
       return filter;
     case "between":
       filter.value = [column.mapToDb(filter.value[0]), column.mapToDb(filter.value[1])];

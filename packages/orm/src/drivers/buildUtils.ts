@@ -25,7 +25,7 @@ export function buildWhereClause(exp: ParsedExpressionFilter, topLevel = false):
   return [sql, tuples.flatMap(([, bindings]) => bindings)];
 }
 
-function buildRawCondition(raw: RawCondition): [string, any[]] {
+function buildRawCondition(raw: RawCondition): [string, readonly any[]] {
   return [raw.condition, raw.bindings];
 }
 

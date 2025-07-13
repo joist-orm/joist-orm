@@ -196,6 +196,12 @@ export function collectAndReplaceArgs(query: ParsedFindQuery): { columnName: str
           args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
           args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
           return rewriteToRawCondition(c, argsIndex);
+        } else if (kind === "jsonPathExists" || kind === "jsonPathPredicate") {
+          // The CTE needs to use `::jsonpath` instead of `::jsonb`, otherwise we'll get an invalid
+          // operator error for `jsonb @@ jsonb`. ...maybe the `ColumnCondition` should have a dbType
+          // baked into its ADT? Then we could avoid this special case handling.
+          args.push({ columnName: `arg${args.length}`, dbType: "jsonpath" });
+          return rewriteToRawCondition(c, argsIndex);
         } else {
           args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
           return rewriteToRawCondition(c, argsIndex);

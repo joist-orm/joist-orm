@@ -1,3 +1,10 @@
+# [1.257.0](https://github.com/joist-orm/joist-orm/compare/v1.256.0...v1.257.0) (2025-07-13)
+
+
+### Features
+
+* Add alias pathIsTrue and pathExists for jsonb queries. ([#1540](https://github.com/joist-orm/joist-orm/issues/1540)) ([ba34237](https://github.com/joist-orm/joist-orm/commit/ba342375f2dfbcafccedbf0aab209b2824d14624))
+
 # [1.256.0](https://github.com/joist-orm/joist-orm/compare/v1.255.2...v1.256.0) (2025-07-13)
 
 

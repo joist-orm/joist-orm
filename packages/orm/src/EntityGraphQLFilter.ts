@@ -70,6 +70,8 @@ export const operators = [
   "contains",
   "overlaps",
   "containedBy",
+  "jsonPathExists",
+  "jsonPathPredicate",
 ] as const;
 
 export type Operator = (typeof operators)[number];
@@ -95,6 +97,9 @@ export const opToFn: Record<Exclude<Operator, "in" | "nin" | "between">, string>
   containedBy: "<@",
   // containsSome / hasSome
   overlaps: "&&",
+  // Kinda weird, but escape the operator for knex
+  jsonPathExists: "@\\?",
+  jsonPathPredicate: "@@",
 };
 
 /** A GraphQL version of EntityFilter. */

@@ -59,6 +59,25 @@ export interface PrimitiveAlias<V, N extends null | never> {
   ncontains(value: string | V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
   overlaps(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
   noverlaps(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
+
+  /**
+   * Adds a JSON path existence condition, using the `@?` operator.
+   *
+   * Any values should be embedded directly within the `jsonPath`, because postgres does not
+   * support parameterized JSON path expressions. The entire `jsonPath` is treated as a parameter,
+   * so this is safe from SQL injection.
+   */
+  pathExists(jsonPath: string | undefined): ExpressionCondition;
+
+  /**
+   * Adds a JSON path predicate condition, using the `@@` operator.
+   *
+   * Any values should be embedded directly within the `jsonPath`, because postgres does not
+   * support parameterized JSON path expressions. The entire `jsonPath` is treated as a parameter,
+   * so this is safe from SQL injection.
+   */
+  pathIsTrue(jsonPath: string | undefined): ExpressionCondition;
+
   /**
    * Add `exp` to the query, which should include the operator & expression and any
    * bound parameters (but not include the column name).
@@ -333,6 +352,16 @@ class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<
   noverlaps(v1: V | undefined): ColumnCondition {
     if (v1 === undefined) return skipCondition;
     return this.addCondition({ kind: "noverlaps", value: v1 as any });
+  }
+
+  pathExists(jsonPath: string | undefined): ColumnCondition {
+    if (jsonPath === undefined) return skipCondition;
+    return this.addCondition({ kind: "jsonPathExists", value: jsonPath });
+  }
+
+  pathIsTrue(jsonPath: string | undefined): ColumnCondition {
+    if (jsonPath === undefined) return skipCondition;
+    return this.addCondition({ kind: "jsonPathPredicate", value: jsonPath });
   }
 
   raw(exp: string, bindings: readonly any[] | undefined): RawCondition | ColumnCondition {

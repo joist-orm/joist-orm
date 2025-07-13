@@ -48,6 +48,8 @@ function buildCondition(cc: ColumnCondition): [string, any[]] {
     case "nregex":
     case "iregex":
     case "niregex":
+    case "jsonPathExists":
+    case "jsonPathPredicate":
     case "contains":
     case "containedBy":
     case "overlaps": {

@@ -1,3 +1,10 @@
+## [1.257.1](https://github.com/joist-orm/joist-orm/compare/v1.257.0...v1.257.1) (2025-07-13)
+
+
+### Bug Fixes
+
+* Fix batching of jsonpath operators. ([#1541](https://github.com/joist-orm/joist-orm/issues/1541)) ([af89674](https://github.com/joist-orm/joist-orm/commit/af89674a645f80dc1f6f68a65964e5ad8d63a8b3))
+
 # [1.257.0](https://github.com/joist-orm/joist-orm/compare/v1.256.0...v1.257.0) (2025-07-13)
 
 

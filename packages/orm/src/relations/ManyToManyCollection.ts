@@ -196,7 +196,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     return this.filterDeleted(this.doGet(), { withDeleted: false });
   }
 
-  set(values: U[]): void {
+  set(values: readonly U[]): void {
     ensureNotDeleted(this.entity);
     if (this.#loaded === undefined) {
       throw new Error("set was called when not loaded");

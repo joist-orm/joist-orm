@@ -1,3 +1,10 @@
+# [1.258.0](https://github.com/joist-orm/joist-orm/compare/v1.257.1...v1.258.0) (2025-07-14)
+
+
+### Features
+
+* Support inline pathExists/pathIsTrue conditions. ([#1542](https://github.com/joist-orm/joist-orm/issues/1542)) ([d4141d5](https://github.com/joist-orm/joist-orm/commit/d4141d57a4f0ae61afced78b31962fe4c69e36c3))
+
 ## [1.257.1](https://github.com/joist-orm/joist-orm/compare/v1.257.0...v1.257.1) (2025-07-13)
 
 

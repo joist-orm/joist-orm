@@ -84,6 +84,9 @@ export type ValueFilter<V, N> =
   | { contains: V | undefined }
   | { overlaps: V | undefined }
   | { containedBy: V | undefined }
+  // should put these in a dedicated JsonbFilter
+  | { pathExists: string | undefined }
+  | { pathIsTrue: string | undefined }
   // this is between
   | { gte: V | undefined; lte: V | undefined }
   | { between: [V, V] | undefined };

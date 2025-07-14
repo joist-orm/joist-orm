@@ -167,7 +167,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     return this.#loaded;
   }
 
-  set(values: U[]): void {
+  set(values: readonly U[]): void {
     ensureNotDeleted(this.entity);
     if (this.#loaded === undefined) {
       throw new Error("set was called when not loaded");
@@ -181,7 +181,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       // The `em.delete` will internally invalidate our `#getSorted` / `#allSorted` caches, which will be dirty now
       implicitlyDeleted.forEach((e) => this.entity.em.delete(e));
       // Keep the implicitlyDeleted values for `getWithDeleted` to return
-      values.push(...implicitlyDeleted);
+      values = [...values, ...implicitlyDeleted];
     }
 
     // Make a copy for safe iteration

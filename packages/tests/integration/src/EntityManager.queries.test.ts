@@ -2491,6 +2491,22 @@ describe("EntityManager.queries", () => {
     const f2 = { publisher: "p:1" } satisfies UniqueFilter<Author>;
   });
 
+  it("can use jsonb path exists", async () => {
+    await insertAuthor({ first_name: "a1", address: { street: "rr1" } });
+    await insertAuthor({ first_name: "a2", address: { street: "rr2" } });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { address: { pathExists: `$.street` } });
+    expect(authors.length).toEqual(2);
+  });
+
+  it("can use for jsonb path predicate", async () => {
+    await insertAuthor({ first_name: "a1", address: { street: "rr1" } });
+    await insertAuthor({ first_name: "a2", address: { street: "rr2" } });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { address: { pathIsTrue: `$.street == "rr2"` } });
+    expect(authors.length).toEqual(1);
+  });
+
   describe("complex queries", () => {
     it("can use aliases for or", async () => {
       await insertAuthor({ first_name: "a1" });

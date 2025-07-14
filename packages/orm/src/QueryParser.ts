@@ -775,6 +775,10 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
             case "overlaps":
             case "containedBy":
               return { kind: key, value: filter[key] };
+            case "pathExists":
+              return { kind: "jsonPathExists" as const, value: filter[key] };
+            case "pathIsTrue":
+              return { kind: "jsonPathPredicate" as const, value: filter[key] };
             case "search":
               return { kind: "ilike" as const, value: makeLike(filter[key]) };
             case "between":

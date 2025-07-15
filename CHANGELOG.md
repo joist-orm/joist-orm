@@ -1,3 +1,10 @@
+# [1.259.0](https://github.com/joist-orm/joist-orm/compare/v1.258.0...v1.259.0) (2025-07-15)
+
+
+### Features
+
+* support Map in run ([#1544](https://github.com/joist-orm/joist-orm/issues/1544)) ([ccb2bb7](https://github.com/joist-orm/joist-orm/commit/ccb2bb75ffa15ea375ebed6d57451e091c345719))
+
 # [1.258.0](https://github.com/joist-orm/joist-orm/compare/v1.257.1...v1.258.0) (2025-07-14)
 
 

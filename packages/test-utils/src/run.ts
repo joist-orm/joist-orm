@@ -65,6 +65,8 @@ function gatherEntities(result: any): Entity[] {
     return [result];
   } else if (Array.isArray(result)) {
     return result.flatMap(gatherEntities);
+  } else if (result instanceof Map) {
+    return [...result.values(), ...result.keys()].flatMap(gatherEntities);
   } else if (result !== null && typeof result === "object" && result?.constructor === Object) {
     return Object.values(result).flatMap(gatherEntities);
   } else {

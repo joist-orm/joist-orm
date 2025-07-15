@@ -92,6 +92,8 @@ async function mapResultToOriginalEm<R>(em: EntityManager, result: R): Promise<R
       return cache[value.id];
     } else if (Array.isArray(value)) {
       return value.map(doMap) as any;
+    } else if (value instanceof Map) {
+      return new Map<any, any>([...value.entries()].map(([key, value]) => [doMap(key), doMap(value)]));
     } else if (typeof value === "object" && value?.constructor === Object) {
       return Object.fromEntries(Object.entries(value).map(([key, value]: [string, any]) => [key, doMap(value)]));
     } else {

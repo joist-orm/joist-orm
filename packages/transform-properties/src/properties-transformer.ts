@@ -133,7 +133,8 @@ function shouldRewrite(typeName: string | undefined): boolean {
 // but that still requires looking at `package.json`'s `type=module`, so its easier to just look directly
 // at the transformed-so-far source.
 function detectModuleFormat(sourceFile: ts.SourceFile): "esm" | "cjs" {
-  ts.forEachChild(sourceFile, (node) => {
+  // `guess` will be the first non-truthy value returned from `forEachChild`
+  const guess = ts.forEachChild(sourceFile, (node) => {
     if (ts.isImportDeclaration(node)) return "esm";
     if (
       ts.isCallExpression(node) &&
@@ -143,7 +144,7 @@ function detectModuleFormat(sourceFile: ts.SourceFile): "esm" | "cjs" {
     )
       return "cjs";
   });
-  return "cjs";
+  return guess ?? "cjs";
 }
 
 // Check if this node is at the module scope

@@ -70,14 +70,14 @@ for schema_file in "$SCHEMA_DIR"/*.graphql; do
     fi
 
     # Build import mapping for objects
-    object_dir="$SRC_DIR/object/$entity_name"
+    object_dir="$SRC_DIR/objects/$entity_name"
     if [ -d "$object_dir" ]; then
         for file in "$object_dir"/*; do
             [ ! -f "$file" ] && continue
             filename=$(basename "$file")
             if [[ "$filename" == *.ts ]]; then
                 base_name="${filename%.ts}"
-                old_import_path="src/resolvers/object/$entity_name/$base_name"
+                old_import_path="src/resolvers/objects/$entity_name/$base_name"
                 new_import_path="src/resolvers/$entity_name/$base_name"
                 import_map["$old_import_path"]="$new_import_path"
             fi
@@ -198,9 +198,9 @@ for schema_file in "$SCHEMA_DIR"/*.graphql; do
     fi
 
     # Process object directory
-    object_dir="$SRC_DIR/object/$entity_name"
+    object_dir="$SRC_DIR/objects/$entity_name"
     if [ -d "$object_dir" ]; then
-        echo "  Moving files from object/$entity_name to $entity_name/"
+        echo "  Moving files from objects/$entity_name to $entity_name/"
         for file in "$object_dir"/*; do
             [ ! -f "$file" ] && continue
             filename=$(basename "$file")

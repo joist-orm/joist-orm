@@ -1,3 +1,10 @@
+# [1.260.0](https://github.com/joist-orm/joist-orm/compare/v1.259.0...v1.260.0) (2025-07-24)
+
+
+### Features
+
+* add unless/if opts to all rule helpers ([#1548](https://github.com/joist-orm/joist-orm/issues/1548)) ([2b1e66d](https://github.com/joist-orm/joist-orm/commit/2b1e66dc074bfb447b4a9cf45332fdf970b2b6a9))
+
 # [1.259.0](https://github.com/joist-orm/joist-orm/compare/v1.258.0...v1.259.0) (2025-07-15)
 
 

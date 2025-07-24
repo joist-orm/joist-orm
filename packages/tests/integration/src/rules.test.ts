@@ -1,5 +1,12 @@
-import { getMetadata, newRequiredRule, ValidationCode, ValidationErrors } from "joist-orm";
-import { Author, LargePublisher, Publisher, SmallPublisher } from "src/entities";
+import {
+  cannotBeUpdated,
+  getMetadata,
+  newRequiredRule,
+  ValidationCode,
+  ValidationErrors,
+  ValidationRuleResult,
+} from "joist-orm";
+import { Author, LargePublisher, newAuthor, Publisher, SmallPublisher } from "src/entities";
 import { insertAuthor } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
@@ -12,6 +19,30 @@ describe("ValidationErrors", () => {
     it("cannot be used on o2o fields", () => {
       // @ts-expect-error
       newRequiredRule<Author>("image");
+    });
+
+    it("requires a field", () => {
+      const em = newEntityManager();
+      const author = newAuthor(em, { firstName: null! });
+      const fn = newRequiredRule<Author>("firstName");
+      const result = fn(author) as ValidationRuleResult;
+      expect(result).toMatchObject({ code: "required", message: "firstName is required", field: "firstName" });
+    });
+
+    it("can be run conditionally with unless", () => {
+      const em = newEntityManager();
+      const author = newAuthor(em, { firstName: null! });
+      const fn = newRequiredRule<Author>("firstName", { unless: () => true });
+      const result = fn(author) as ValidationRuleResult;
+      expect(result).toBeUndefined();
+    });
+
+    it("can be run conditionally with if", () => {
+      const em = newEntityManager();
+      const author = newAuthor(em, { firstName: null! });
+      const fn = newRequiredRule<Author>("firstName", { if: () => false });
+      const result = fn(author) as ValidationRuleResult;
+      expect(result).toBeUndefined();
     });
   });
 
@@ -50,6 +81,40 @@ describe("ValidationErrors", () => {
 
       const lp = getMetadata(SmallPublisher);
       expect(lp.allFields["group"].immutable).toBe(true);
+    });
+
+    it("does not allow updating a value", async () => {
+      const em = newEntityManager();
+      const author = newAuthor(em);
+      await em.flush();
+      author.firstName = "new name";
+      const fn = cannotBeUpdated("firstName");
+      const result = fn(author) as ValidationRuleResult;
+      expect(result).toMatchObject({
+        code: "not-updatable",
+        field: "firstName",
+        message: "firstName cannot be updated",
+      });
+    });
+
+    it("runs conditionally with unless", async () => {
+      const em = newEntityManager();
+      const author = newAuthor(em);
+      await em.flush();
+      author.firstName = "new name";
+      const fn = cannotBeUpdated("firstName", { unless: () => true });
+      const result = fn(author) as ValidationRuleResult;
+      expect(result).toBeUndefined();
+    });
+
+    it("runs conditionally with if", async () => {
+      const em = newEntityManager();
+      const author = newAuthor(em);
+      await em.flush();
+      author.firstName = "new name";
+      const fn = cannotBeUpdated("firstName", { if: () => false });
+      const result = fn(author) as ValidationRuleResult;
+      expect(result).toBeUndefined();
     });
   });
 });

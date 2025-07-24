@@ -39,6 +39,23 @@ export type GenericError = { message: string; field?: string; code?: string };
 /** Combines the GenericError with the `entity` that caused it. */
 export type ValidationError = { entity: Entity } & GenericError;
 
+export type ValidationRuleOptsFn<T extends Entity> = (entity: T) => MaybePromise<boolean>;
+export type ValidationRuleOpts<T extends Entity> = {
+  unless?: ValidationRuleOptsFn<T>;
+  if?: ValidationRuleOptsFn<T>;
+};
+
+function errorMessage(errors: ValidationError[]): string {
+  if (errors.length === 1) {
+    return `Validation error: ${errors[0].entity.toString()} ${errors[0].message}`;
+  } else {
+    const message = [...groupBy(errors, (e) => e.entity.toString()).entries()]
+      .map(([entityToString, errors]) => `${entityToString} ${errors.map((e) => e.message).join(", ")}`)
+      .join(", ");
+    return `Validation errors (${errors.length}): ${message}`;
+  }
+}
+
 export class ValidationErrors extends Error {
   public errors: Array<GenericError | ValidationError>;
   public readonly toJSON: () => string;
@@ -53,13 +70,35 @@ export class ValidationErrors extends Error {
   }
 }
 
+function ruleWithOpts<T extends Entity>(
+  opts: ValidationRuleOpts<T>,
+  fn: (entity: T) => ValidationRuleResult,
+): ValidationRule<T> {
+  return (entity) => {
+    // Since all of our rules are sync, we run the rule first, then check if we should have run it second since this
+    // may be an async operation.  This way we can avoid running promises if we don't have to.
+    const result = fn(entity);
+    if (result === undefined) return;
+    const { unless, if: _if } = opts;
+    if (unless === undefined && _if === undefined) return result;
+    const shouldRun = [unless ?? (() => false), _if ?? (() => true)].map((fn) => fn(entity));
+    return maybePromiseThen(
+      shouldRun.some((r) => r instanceof Promise) ? Promise.all(shouldRun) : (shouldRun as boolean[]),
+      ([unless, _if]) => (!unless && _if ? result : undefined),
+    );
+  };
+}
+
 /**
  * Creates a validation rule for required fields.
  *
  * This is added automatically by codegen to entities based on FK not-nulls.
  */
-export function newRequiredRule<T extends Entity>(key: keyof FieldsOf<T> & string): ValidationRule<T> {
-  return (entity) => {
+export function newRequiredRule<T extends Entity>(
+  key: keyof FieldsOf<T> & string,
+  opts: ValidationRuleOpts<T> = {},
+): ValidationRule<T> {
+  return ruleWithOpts(opts, (entity) => {
     // Use getField so that we peer through relations
     if (getField(entity, key) === undefined) {
       // Sanity check for ReactiveQueryFields--this should be cheap to just always do; alternatively we could
@@ -72,7 +111,7 @@ export function newRequiredRule<T extends Entity>(key: keyof FieldsOf<T> & strin
       }
       return { field: key, code: ValidationCode.required, message: `${key} is required` };
     }
-  };
+  });
 }
 
 /**
@@ -82,22 +121,26 @@ export function newRequiredRule<T extends Entity>(key: keyof FieldsOf<T> & strin
  */
 export function cannotBeUpdated<T extends Entity, K extends keyof Changes<T> & string>(
   field: K,
-  unless?: (entity: T) => MaybePromise<boolean>,
+  opts?: ValidationRuleOpts<T>,
+): CannotBeUpdatedRule<T>;
+export function cannotBeUpdated<T extends Entity, K extends keyof Changes<T> & string>(
+  field: K,
+  unless?: ValidationRuleOptsFn<T>,
+): CannotBeUpdatedRule<T>;
+export function cannotBeUpdated<T extends Entity, K extends keyof Changes<T> & string>(
+  field: K,
+  optsOrUnless?: ValidationRuleOpts<T> | ValidationRuleOptsFn<T>,
 ): CannotBeUpdatedRule<T> {
-  const fn = async (entity: T) => {
+  const opts = typeof optsOrUnless === "function" ? { unless: optsOrUnless } : (optsOrUnless ?? {});
+  const fn = ruleWithOpts(opts, (entity: T) => {
     // For now putting the `EntityChanges` cast here to avoid breaking cannotBeUpdated rules
     // on base types, see Publisher.ts's `cannotBeUpdated("type")` repro.
     if ((entity as any as EntityChanges<T>).changes[field].hasUpdated) {
-      return maybePromiseThen(unless ? unless(entity) : false, (result) => {
-        if (!result) {
-          return { field, code: ValidationCode.cannotBeUpdated, message: `${field} cannot be updated` };
-        }
-        return undefined;
-      });
+      return { field, code: ValidationCode.cannotBeUpdated, message: `${field} cannot be updated` };
     }
-    return undefined;
-  };
-  return Object.assign(fn, { field, immutable: unless === undefined });
+    return;
+  });
+  return Object.assign(fn, { field, immutable: opts.unless === undefined && opts.if === undefined });
 }
 
 type CannotBeUpdatedRule<T extends Entity> = ValidationRule<T> & { field: string; immutable: boolean };
@@ -109,26 +152,16 @@ export function isCannotBeUpdatedRule(rule: Function): rule is CannotBeUpdatedRu
 /** For STI, enforces subtype-specific relations/FKs at runtime. */
 export function mustBeSubType<T extends Entity, K extends keyof Changes<T> & string>(
   relationName: K,
+  opts: ValidationRuleOpts<T> = {},
 ): ValidationRule<T> {
-  return (entity) => {
+  return ruleWithOpts(opts, (entity) => {
     const m2o = (entity as any)[relationName] as ManyToOneReferenceImpl<any, any, any>;
     const other = m2o.get;
     const otherCstr = m2o.otherMeta.cstr;
     if (other && !(other instanceof otherCstr)) {
       return `${relationName} must be a ${otherCstr.name} not ${other}`;
     }
-  };
-}
-
-function errorMessage(errors: ValidationError[]): string {
-  if (errors.length === 1) {
-    return `Validation error: ${errors[0].entity.toString()} ${errors[0].message}`;
-  } else {
-    const message = [...groupBy(errors, (e) => e.entity.toString()).entries()]
-      .map(([entityToString, errors]) => `${entityToString} ${errors.map((e) => e.message).join(", ")}`)
-      .join(", ");
-    return `Validation errors (${errors.length}): ${message}`;
-  }
+  });
 }
 
 /**
@@ -137,6 +170,9 @@ function errorMessage(errors: ValidationError[]): string {
  *
  * @param field The field to validate
  * @param minValue The inclusive minimum value. e.g 0 range is [0, Infinity]
+ * @param opts Optional validation rule options that control when the rule should run:
+ *   - unless: Function that returns true to skip validation
+ *   - if: Function that returns true to run validation
  *
  * @example
  * // Age cannot be smaller than 0
@@ -145,10 +181,11 @@ function errorMessage(errors: ValidationError[]): string {
 export function minValueRule<T extends Entity, K extends keyof T & string>(
   field: K,
   minValue: number,
+  opts: ValidationRuleOpts<T> = {},
 ): ValidationRule<T> {
-  return (entity) => {
+  return ruleWithOpts(opts, (entity) => {
     const value = entity[field];
-    // Ignore undefined and null values
+    // Ignore undefined and null values. These should be handled by required rules
     if (value === undefined || value === null) return;
     // Show an error when the value type is not a number
     if (typeof value !== "number") {
@@ -163,7 +200,7 @@ export function minValueRule<T extends Entity, K extends keyof T & string>(
       };
     }
     return;
-  };
+  });
 }
 
 /**
@@ -172,6 +209,9 @@ export function minValueRule<T extends Entity, K extends keyof T & string>(
  *
  * @param field The field to validate
  * @param maxValue The include maximum value. e.g 10 range is [-Infinity, 10]
+ * @param opts Optional validation rule options that control when the rule should run:
+ *   - unless: Function that returns true to skip validation
+ *   - if: Function that returns true to run validation
  *
  * @example
  * // Age cannot be greater than 150
@@ -180,10 +220,11 @@ export function minValueRule<T extends Entity, K extends keyof T & string>(
 export function maxValueRule<T extends Entity, K extends keyof T & string>(
   field: K,
   maxValue: number,
+  opts: ValidationRuleOpts<T> = {},
 ): ValidationRule<T> {
-  return (entity) => {
+  return ruleWithOpts(opts, (entity) => {
     const value = entity[field];
-    // Ignore undefined and null values
+    // Ignore undefined and null values. These should be handled by required rules
     if (value === undefined || value === null) return;
     // Show an error when the value type is not a number
     if (typeof value !== "number") {
@@ -197,9 +238,8 @@ export function maxValueRule<T extends Entity, K extends keyof T & string>(
         message: `${field} must be smaller than or equal to ${maxValue}`,
       };
     }
-
     return;
-  };
+  });
 }
 
 /**
@@ -209,8 +249,10 @@ export function maxValueRule<T extends Entity, K extends keyof T & string>(
  * @param field The field to validate
  * @param minValue The inclusive minimum value. e.g  0 [0,   Infinity]
  * @param maxValue The include maximum value.   e.g 10 [-Infinity, 10]
+ * @param opts Optional validation rule options that control when the rule should run:
+ *   - unless: Function that returns true to skip validation
+ *   - if: Function that returns true to run validation * @example
  *
- * @example
  * // Age must be between 0 and 150
  * config.addRule(rangeValueRule("age", 0, 150));
  */
@@ -218,15 +260,15 @@ export function rangeValueRule<T extends Entity, K extends keyof T & string>(
   field: K,
   minValue: number,
   maxValue: number,
+  opts: ValidationRuleOpts<T> = {},
 ): ValidationRule<T> {
-  return (entity) => {
-    // Check min and max value rules
-    const minValueResult = minValueRule<T, K>(field, minValue)(entity);
-    const maxValueResult = maxValueRule<T, K>(field, maxValue)(entity);
-
+  return ruleWithOpts(opts, (entity) => {
+    // Check min and max value rules.  Because these are called without opts, it should be safe to treat them as sync.
+    const minValueResult = minValueRule<T, K>(field, minValue)(entity) as ValidationRuleResult;
+    const maxValueResult = maxValueRule<T, K>(field, maxValue)(entity) as ValidationRuleResult;
     // Return any errors or nothing
     if (minValueResult) return minValueResult;
     if (maxValueResult) return maxValueResult;
     return;
-  };
+  });
 }

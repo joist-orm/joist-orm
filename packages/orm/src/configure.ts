@@ -41,9 +41,13 @@ export function resetConstructorMap(): void {
   tagToConstructorMap.clear();
 }
 
+export function getConstructorFromTag(tag: string): MaybeAbstractEntityConstructor<any> {
+  return tagToConstructorMap.get(tag) ?? fail(`Unknown tag: "${tag}" `);
+}
+
 export function getConstructorFromTaggedId(id: TaggedId): MaybeAbstractEntityConstructor<any> {
   const tag = tagFromId(id);
-  return tagToConstructorMap.get(tag) ?? fail(`Unknown tag: "${tag}" `);
+  return getConstructorFromTag(tag);
 }
 
 export function getMetadataForTable(tableName: string): EntityMetadata {

@@ -28,14 +28,14 @@
     "mitata": "^0.1.14"
   },
   "devDependencies": {
-    "@graphql-tools/graphql-file-loader": "^8.0.20",
-    "@graphql-tools/load": "^8.1.0",
-    "@swc/core": "^1.12.6",
-    "@swc/jest": "^0.2.38",
+    "@graphql-tools/graphql-file-loader": "^8.0.22",
+    "@graphql-tools/load": "^8.1.2",
+    "@swc/core": "^1.13.2",
+    "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
-    "@types/node": "^22.15.33",
+    "@types/node": "^22.16.5",
     "env-cmd": "^10.1.0",
-    "jest": "30.0.3",
+    "jest": "30.0.5",
     "jest-junit": "^16.0.0",
     "joist-codegen": "workspace:*",
     "joist-graphql-codegen": "workspace:*",
@@ -45,14 +45,14 @@
     "joist-transform-properties": "workspace:*",
     "kelonio": "^0.11.0",
     "postgres": "^3.4.7",
-    "prettier": "^3.6.1",
-    "prettier-plugin-organize-imports": "^4.1.0",
+    "prettier": "^3.6.2",
+    "prettier-plugin-organize-imports": "^4.2.0",
     "superstruct": "0.15.5",
     "ts-jest": "^29.4.0",
     "ts-patch": "^3.3.0",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^4.20.3",
     "typescript": "5.8.3",
-    "zod": "^3.25.67"
+    "zod": "^3.25.76"
   }
 }

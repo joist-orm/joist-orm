@@ -1907,9 +1907,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     if (pendingEntities.length > 0) {
       fail("Cannot fork an EntityManager with pending changes");
     }
+    // copy the context so that it's distinct between the two ems and so we can update any references from the old em
+    // to the new one later
     const ctx: C = { ...oldEm.ctx };
     const newEm = new EntityManager<C, Entity, TX>(ctx, { em: oldEm });
-    if ("em" in (ctx as any)) Object.assign(ctx as any, { em: newEm });
     // hydrate (ie, create) each entity from the oldEm in the newEm
     oldEm.#entitiesByTag.forEach((entities, tag) => {
       // tags are always defined by the base constructor, so we use that as hydrate expects the base class as its argument
@@ -1948,14 +1949,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         loadedRelations.forEach((relation) => (newEntity as any)[relation].preload());
       });
     });
-    // If there are any entities in the context, then they are from oldEm and need to be replaced with entities from newEm
+    // Inspect the top level keys in the context and replace any references from oldEm with newEm while also replacing
+    // any entities from oldEm with their version in newEm
     const _ctx = ctx as Record<string, any>;
-    Object.entries(_ctx)
-      .filter(([, value]) => isEntity(value))
-      .forEach(([key, oldEntity]: [string, Entity]) => {
-        _ctx[key] = newEm.#entitiesById.get(oldEntity.idTagged)!;
-      });
-
+    Object.entries(_ctx).forEach(([key, value]) => {
+      if (isEntity(value) && value.em === oldEm) {
+        _ctx[key] = newEm.#entitiesById.get(value.idTagged)!;
+      } else if (value === oldEm) {
+        _ctx[key] = newEm;
+      }
+    });
     return newEm;
   }
 }

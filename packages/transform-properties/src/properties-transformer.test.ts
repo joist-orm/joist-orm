@@ -51,6 +51,23 @@ describe("properties-transformer", () => {
      "
     `);
   });
+
+  it("should detect CommonJS for NodeNext without type module", () => {
+    const source = `
+      import { hasAsyncProperty } from "joist-orm";
+      class Author {
+        readonly numberOfBooks: AsyncProperty<number> = hasAsyncProperty<number>(() => {
+          return 1;
+        });
+      }
+    `;
+    const result = compile(source, {
+      module: ts.ModuleKind.NodeNext,
+    });
+    // Should generate CommonJS output since package.json doesn't have "type": "module"
+    expect(result).toContain('require("joist-orm")');
+    expect(result).toContain("const { setCurrentlyInstantiatingEntity } = joist_orm_1;");
+  });
 });
 
 function compile(source: string, opts: ts.CompilerOptions): string {

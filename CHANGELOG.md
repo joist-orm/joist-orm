@@ -1,3 +1,10 @@
+# [1.261.0](https://github.com/joist-orm/joist-orm/compare/v1.260.1...v1.261.0) (2025-07-27)
+
+
+### Features
+
+* add em.fork ([#1550](https://github.com/joist-orm/joist-orm/issues/1550)) ([1dbbe74](https://github.com/joist-orm/joist-orm/commit/1dbbe745a7a44bf2336cca683e941776832d3f10))
+
 ## [1.260.1](https://github.com/joist-orm/joist-orm/compare/v1.260.0...v1.260.1) (2025-07-27)
 
 

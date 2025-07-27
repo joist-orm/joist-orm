@@ -6,7 +6,7 @@ import { IndexManager } from "./IndexManager";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
 import { getReactiveRules } from "./caches";
 import { ReactiveRule, constraintNameToValidationError } from "./config";
-import { getMetadataForType } from "./configure";
+import { getConstructorFromTag, getMetadataForType } from "./configure";
 import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
 import { findDataLoader } from "./dataloaders/findDataLoader";
@@ -155,10 +155,10 @@ export interface TimestampFields {
   deletedAt: string | undefined;
 }
 
-export interface EntityManagerOpts<TX = unknown> {
-  driver: Driver<TX>;
-  preloadPlugin?: PreloadPlugin;
-}
+export type EntityManagerOpts<TX = unknown> = (
+  | { driver: Driver<TX>; em?: undefined }
+  | { driver?: undefined; em: EntityManager<any, any, any> }
+) & { preloadPlugin?: PreloadPlugin };
 
 export interface FlushOptions {
   /** Skip all validations, including reactive validations, when flushing */
@@ -233,33 +233,21 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   private __isRefreshing = false;
   mode: EntityManagerMode = "writes";
 
-  constructor(em: EntityManager<C, Entity, TX>);
   constructor(ctx: C, opts: EntityManagerOpts<TX>);
   constructor(ctx: C, driver: Driver<TX>);
-  constructor(emOrCtx: EntityManager<C, Entity, TX> | C, driverOrOpts?: EntityManagerOpts<TX> | Driver<TX>) {
-    if (emOrCtx instanceof EntityManager) {
-      // Setup from the existing EntityManager
-      const em = emOrCtx;
-      this.driver = em.driver;
-      this.#preloader = em.#preloader;
+  constructor(ctx: C, driverOrOpts: EntityManagerOpts<TX> | Driver<TX>) {
+    const opts = (
+      driverOrOpts.constructor === Object ? driverOrOpts : { driver: driverOrOpts }
+    ) as EntityManagerOpts<TX>;
+    this.ctx = ctx;
+    this.driver = opts.driver ?? opts.em!.driver;
+    this.#preloader = opts.preloadPlugin ?? (opts.em ? opts.em.#preloader : this.driver.defaultPlugins.preloadPlugin);
+
+    if (opts.em) {
       this.#hooks = {
-        beforeTransaction: [...em.#hooks.beforeTransaction],
-        afterTransaction: [...em.#hooks.afterTransaction],
+        beforeTransaction: [...opts.em.#hooks.beforeTransaction],
+        afterTransaction: [...opts.em.#hooks.afterTransaction],
       };
-      this.ctx = em.ctx;
-      if (this.ctx && typeof this.ctx === "object" && "em" in this.ctx) {
-        this.ctx = Object.assign(this.ctx, { em: this });
-      }
-    } else if (driverOrOpts && "executeFind" in driverOrOpts) {
-      // Passed a driver directly
-      this.ctx = emOrCtx;
-      this.driver = driverOrOpts;
-      this.#preloader = this.driver.defaultPlugins.preloadPlugin;
-    } else {
-      // Passed an opts hash
-      this.ctx = emOrCtx;
-      this.driver = driverOrOpts!.driver;
-      this.#preloader = driverOrOpts!.preloadPlugin ?? this.driver.defaultPlugins.preloadPlugin;
     }
 
     // Expose some of our private fields as the EntityManagerInternalApi
@@ -1904,6 +1892,104 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           .filter((e) => e instanceof cstr && !e.isDeletedEntity && entityMatches(e, where)) as T[]
       );
     }
+  }
+
+  /**
+   * Creates a new EntityManager that shares the same entities as the current one but allows independent changes.
+   *
+   * This is useful for scenarios where you want to:
+   *
+   * - Preload data for use as a cache
+   * - Make speculative changes that may or may not be committed
+   * - Escape a transaction scope
+   *
+   * The fork will:
+   *
+   * - Copy all currently loaded entities to the new EntityManager
+   * - Copy any loaded relation data to keep `.isLoaded` / `.get` state consistent
+   * - Copy and update references to the EntityManager and its entities in the context, which is itself shallowly copied
+   *
+   * The fork will NOT:
+   *
+   * - Copy any pending changes (must call .flush() first)
+   * - Share any changes made in either EntityManager with the other
+   *
+   * @throws {Error} If called on an EntityManager with pending changes
+   * @returns A new EntityManager with copied entity state
+   */
+  fork(): EntityManager<C, Entity, TX> {
+    const oldEm = this;
+    const pendingEntities = oldEm.entities.filter((e) => getInstanceData(e).pendingOperation !== "none");
+    if (pendingEntities.length > 0) {
+      fail("Cannot fork an EntityManager with pending changes");
+    }
+    // copy the context so that it's distinct between the two ems and so we can update any references from the old em
+    // to the new one later
+    const ctx: C = { ...oldEm.ctx };
+    const newEm = new EntityManager<C, Entity, TX>(ctx, { em: oldEm });
+    // hydrate (ie, create) each entity from the oldEm in the newEm
+    oldEm.#entitiesByTag.forEach((entities, tag) => {
+      // tags are always defined by the base constructor, so we use that as hydrate expects the base class as its argument
+      const baseCstr = getConstructorFromTag(tag);
+      // We copy the raw row data for each entity to avoid any potential conflict. Then we ensure the correct concrete
+      // __class key is set for hydrate to use, if necessary (ie, cti), to actually instantiate the entity.
+      const rows = entities.map((e) => {
+        const instanceData = getInstanceData(e);
+        const meta = getMetadata(e);
+        const row = { ...instanceData.row };
+        if (!("id" in row)) {
+          // If we didn't get an id in our row data, then this entity was created by oldEm and flushed, so we have no
+          // row data and need to construct it manually
+          Object.values(meta.allFields).forEach((field) =>
+            field.serde?.columns?.forEach(
+              (column) => (row[column.columnName] = column.mapToDb(getField(e, field.fieldName))),
+            ),
+          );
+        }
+        if (meta.inheritanceType === "cti") row["__class"] = e.constructor.name;
+        return row;
+      });
+      newEm.hydrate(baseCstr, rows);
+    });
+    // set the preload cache for each loaded relation from oldEm in the newEm so that get / isLoaded should just work
+    // on the new entities.  group by concrete class so that we only have to gather the relation definitions once per
+    // type.
+    groupBy(oldEm.entities, (e) => e.constructor as EntityConstructor<Entity>).forEach((entities, cstr) => {
+      const meta = getMetadata(cstr);
+      // use allFields so that we get fields from the base type as well
+      const relations = Object.entries(meta.allFields)
+        // these are all the kinds for concrete (ie, not custom) relations
+        .filter(([, field]) => ["o2m", "lo2m", "m2o", "m2m", "o2o", "poly"].includes(field.kind))
+        .map(([name]) => name);
+      entities.forEach((oldEntity) => {
+        // each entity could have different loaded status for each relation
+        const loadedRelations = relations.filter((field) => (oldEntity as any)[field].isLoaded);
+        const cache = new Map(
+          loadedRelations.map((field) => [
+            field,
+            // this should be safe because we are only using loaded relations, and we made sure to copy every entity
+            // between ems
+            toArray((oldEntity as any)[field].get).map((e: Entity) => newEm.#entitiesById.get(e.idTagged)!),
+          ]),
+        );
+        newEm.#preloadedRelations.set(oldEntity.idTagged, cache);
+        const newEntity = newEm.#entitiesById.get(oldEntity.idTagged)!;
+        // force each relation to preload on the new entity
+        loadedRelations.forEach((relation) => (newEntity as any)[relation].preload());
+      });
+    });
+    // Inspect the top level keys in the context and replace any references from oldEm with newEm (ie, ctx.em === newEm)
+    // while also replacing any entities from oldEm with their version in newEm (eg, if the user is stored in the
+    // context, then `ctx.user.em === newEm`).
+    const _ctx = ctx as Record<string, any>;
+    Object.entries(_ctx).forEach(([key, value]) => {
+      if (isEntity(value) && value.em === oldEm) {
+        _ctx[key] = newEm.#entitiesById.get(value.idTagged)!;
+      } else if (value === oldEm) {
+        _ctx[key] = newEm;
+      }
+    });
+    return newEm;
   }
 }
 

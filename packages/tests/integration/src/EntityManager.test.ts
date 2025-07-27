@@ -29,6 +29,7 @@ import { jan1, jan2 } from "src/testDates";
 import {
   Author,
   Book,
+  BookReview,
   Color,
   Entity,
   EntityManager,
@@ -1499,16 +1500,6 @@ describe("EntityManager", () => {
     expect(rows[0].first_name).toEqual("f2");
   });
 
-  it("can create an em2 with a valid context", async () => {
-    // Given an em that is within its own context
-    const em = newEntityManager();
-    expect(em.ctx.em).toBe(em);
-    // When we make a new em2
-    const em2 = new EntityManager(em);
-    // Then the ctx.em is updated
-    expect(em2.ctx.em).toBe(em2);
-  });
-
   describe("getEntities", () => {
     it("can return only specific entities", async () => {
       const em = newEntityManager();
@@ -1536,6 +1527,54 @@ describe("EntityManager", () => {
       const a = newAuthor(em);
       em.delete(a);
       expect(em.getEntities(Author)).toMatchEntity([a]);
+    });
+  });
+
+  describe("fork", () => {
+    it.withCtx("creates a new EntityManager with the same entities in memory", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ author_id: 1, title: "b1" });
+      await insertBookReview({ book_id: 1, rating: 5 });
+      const em = newEntityManager();
+      const author = await em.findOneOrFail(Author, {});
+      const book = await em.findOneOrFail(Book, {});
+      const review = await em.findOneOrFail(BookReview, {});
+      const result = em.fork();
+      expect(result.entities).toMatchEntity([author, book, review]);
+      const [a, b, r] = result.entities;
+      expect(a).not.toBe(author);
+      expect(b).not.toBe(book);
+      expect(r).not.toBe(review);
+    });
+
+    it.withCtx("creates a new EntityManager with the same loaded relations", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertBook({ author_id: 1, title: "b1" });
+      const em = newEntityManager();
+      const author = await em.findOneOrFail(Author, {}, { populate: "books" });
+      expect(author.books.isLoaded).toBe(true);
+      expect(author).toMatchEntity({ books: [{ id: "b:1" }] });
+      expect(author.publisher.isLoaded).toBe(false);
+      const result = em.fork();
+      const a = result.entities[0] as Author;
+      expect(a.books.isLoaded).toBe(true);
+      expect(a).toMatchEntity({ books: [{ id: "b:1" }] });
+      expect(a.publisher.isLoaded).toBe(false);
+    });
+
+    it.withCtx("fails when the em has pending changes", async () => {
+      const em = newEntityManager();
+      newAuthor(em);
+      expect(() => em.fork()).toThrow("Cannot fork an EntityManager with pending changes");
+    });
+
+    it.withCtx("does not fail if pending changes are flushed first", async () => {
+      const em = newEntityManager();
+      newAuthor(em);
+      await em.flush();
+      const result = em.fork();
+      expect(result.entities).toMatchEntity([{ id: "a:1" }]);
     });
   });
 });

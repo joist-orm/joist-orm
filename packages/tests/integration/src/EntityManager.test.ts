@@ -1568,6 +1568,14 @@ describe("EntityManager", () => {
       newAuthor(em);
       expect(() => em.fork()).toThrow("Cannot fork an EntityManager with pending changes");
     });
+
+    it.withCtx("does not fail if pending changes are flushed first", async () => {
+      const em = newEntityManager();
+      newAuthor(em);
+      await em.flush();
+      const result = em.fork();
+      expect(result.entities).toMatchEntity([{ id: "a:1" }]);
+    });
   });
 });
 

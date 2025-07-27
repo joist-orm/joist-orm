@@ -1901,6 +1901,29 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     }
   }
 
+  /**
+   * Creates a new EntityManager that shares the same entities as the current one but allows independent changes.
+   *
+   * This is useful for scenarios where you want to:
+   *
+   * - Make speculative changes that may or may not be committed
+   * - Run validation rules against potential changes before applying them
+   * - Create an isolated transaction scope
+   *
+   * The fork will:
+   *
+   * - Copy all currently loaded entities to the new EntityManager
+   * - Copy any loaded relation data to keep `.isLoaded` / `.get` state consistent
+   * - Copy and update references to the EntityManager and its entities in the context, which is itself shallow copied
+   *
+   * The fork will NOT:
+   *
+   * - Copy any pending changes (must call .flush() first)
+   * - Share any changes made in either EntityManager with the other
+   *
+   * @throws {Error} If called on an EntityManager with pending changes
+   * @returns A new EntityManager with copied entity state
+   */
   fork(): EntityManager<C, Entity, TX> {
     const oldEm = this;
     const pendingEntities = oldEm.entities.filter((e) => getInstanceData(e).pendingOperation !== "none");
@@ -1916,10 +1939,22 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // tags are always defined by the base constructor, so we use that as hydrate expects the base class as its argument
       const baseCstr = getConstructorFromTag(tag);
       // We copy the raw row data for each entity to avoid any potential conflict. Then we ensure the correct concrete
-      // __class key is set for hydrate to use to actually instantiate the entity.
+      // __class key is set for hydrate to use, if necessary (ie, cti), to actually instantiate the entity.
       const rows = entities.map((e) => {
-        const { row, data } = getInstanceData(e);
-        return { ...(row ?? data), __class: e.constructor.name };
+        const instanceData = getInstanceData(e);
+        const meta = getMetadata(e);
+        const row = { ...instanceData.row };
+        if (!("id" in row)) {
+          // If we didn't get an id in our row data, then this entity was created by oldEm and flushed, so we have no
+          // row data and need to construct it manually
+          Object.values(meta.allFields).forEach((field) =>
+            field.serde?.columns?.forEach(
+              (column) => (row[column.columnName] = column.mapToDb(getField(e, field.fieldName))),
+            ),
+          );
+        }
+        if (meta.inheritanceType === "cti") row["__class"] = e.constructor.name;
+        return row;
       });
       newEm.hydrate(baseCstr, rows);
     });
@@ -1939,7 +1974,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         const cache = new Map(
           loadedRelations.map((field) => [
             field,
-            // this should be safe because we are only using loaded relations and we made sure to copy every entity between ems
+            // this should be safe because we are only using loaded relations, and we made sure to copy every entity
+            // between ems
             toArray((oldEntity as any)[field].get).map((e: Entity) => newEm.#entitiesById.get(e.idTagged)!),
           ]),
         );
@@ -1949,8 +1985,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         loadedRelations.forEach((relation) => (newEntity as any)[relation].preload());
       });
     });
-    // Inspect the top level keys in the context and replace any references from oldEm with newEm while also replacing
-    // any entities from oldEm with their version in newEm
+    // Inspect the top level keys in the context and replace any references from oldEm with newEm (ie, ctx.em === newEm)
+    // while also replacing any entities from oldEm with their version in newEm (eg, if the user is stored in the
+    // context, then `ctx.user.em === newEm`).
     const _ctx = ctx as Record<string, any>;
     Object.entries(_ctx).forEach(([key, value]) => {
       if (isEntity(value) && value.em === oldEm) {

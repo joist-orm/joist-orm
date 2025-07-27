@@ -123,6 +123,30 @@ If you have multiple test databases (i.e. one per Jest work), you can set the pa
 }
 ```
 
+### `temporal`
+
+Joist has native support for the new [temporal](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Temporal) standard via either the native implementation itself (if `Temporal` is available at runtime), or the `temporal-polyfill` and `@js-temporal/polyfill` polyfills.
+
+When enabled, all `timestamptz`, `date`, etc., columns will use their respective `Temporal.ZonedDateTime` and `Temporal.PlainDate` types.
+
+You can enable by setting the `temporal` option to `true`:
+
+```json
+{
+  "temporal": true
+}
+```
+
+Instead of just a boolean, you can also use an object to specify the time zone you'd like to use for conversion between `Temporal.Instant` and `Date`:
+
+```json
+{
+  "temporal": {
+    "timeZone": "America/New_York"
+  }
+}
+```
+
 ### `ignoredTables`
 
 Allows ignoring tables, i.e. not generating TypeScript entities for them.

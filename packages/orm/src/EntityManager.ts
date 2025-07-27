@@ -155,17 +155,10 @@ export interface TimestampFields {
   deletedAt: string | undefined;
 }
 
-export type EntityManagerOpts<TX = unknown> =
-  | {
-      driver: Driver<TX>;
-      preloadPlugin?: PreloadPlugin;
-      em?: EntityManager<any, any, any>;
-    }
-  | {
-      driver?: Driver<TX>;
-      preloadPlugin?: PreloadPlugin;
-      em: EntityManager<any, any, any>;
-    };
+export type EntityManagerOpts<TX = unknown> = (
+  | { driver: Driver<TX>; em?: undefined }
+  | { driver?: undefined; em: EntityManager<any, any, any> }
+) & { preloadPlugin?: PreloadPlugin };
 
 export interface FlushOptions {
   /** Skip all validations, including reactive validations, when flushing */
@@ -1906,15 +1899,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    *
    * This is useful for scenarios where you want to:
    *
+   * - Preload data for use as a cache
    * - Make speculative changes that may or may not be committed
-   * - Run validation rules against potential changes before applying them
-   * - Create an isolated transaction scope
+   * - Escape a transaction scope
    *
    * The fork will:
    *
    * - Copy all currently loaded entities to the new EntityManager
    * - Copy any loaded relation data to keep `.isLoaded` / `.get` state consistent
-   * - Copy and update references to the EntityManager and its entities in the context, which is itself shallow copied
+   * - Copy and update references to the EntityManager and its entities in the context, which is itself shallowly copied
    *
    * The fork will NOT:
    *

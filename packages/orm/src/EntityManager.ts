@@ -894,6 +894,98 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         : fail("no entities were cloned given the provided options");
   }
 
+  /**
+   * Merges multiple source entities into a target entity by updating all references that point
+   * to the source entities to instead point to the target entity.
+   *
+   * This method loads all relations from the source entities, updates any entity that
+   * references a source entity to reference the target entity instead, and then automatically
+   * deletes the source entities.
+   *
+   * @param target - The entity that will become the target of all merged references
+   * @param sources - Array of entities whose references will be redirected to the target
+   * @param opts - Options to control merge behavior
+   *   @param autoDelete - Whether to automatically delete source entities (default: true)
+   * @returns Promise that resolves when all references have been updated and sources deleted
+   *
+   * @example
+   * // Merge duplicate authors - all books pointing to author2 will now point to author1
+   * // author2 will be automatically deleted
+   * await em.merge(author1, [author2]);
+   *
+   * @example
+   * // Merge multiple duplicate publishers into one
+   * // publisher2 and publisher3 will be automatically deleted
+   * await em.merge(publisher1, [publisher2, publisher3]);
+   *
+   * @example
+   * // Merge without auto-deleting sources (for custom cleanup logic)
+   * await em.merge(author1, [author2], { autoDelete: false });
+   * // Custom logic here...
+   * em.delete(author2);
+   */
+  public async merge<T extends Entity>(target: T, sources: T[], opts?: { autoDelete?: boolean }): Promise<void> {
+    const autoDelete = opts?.autoDelete ?? true;
+    if (sources.length === 0) return;
+
+    // Make sure source and target are the same type (Before we call `populate` below which will fail on invalid load hints)
+    const targetMeta = getMetadata(target);
+    for (const source of sources) {
+      const sourceMeta = getMetadata(source);
+      if (sourceMeta.type !== targetMeta.type) {
+        throw new Error(`Cannot merge entities of different types: ${targetMeta.type} and ${sourceMeta.type}`);
+      }
+    }
+
+    const fields = Object.values(targetMeta.allFields)
+      .filter((field) => ["o2m", "m2o", "m2m", "o2o"].includes(field.kind))
+      .map((field) => field.fieldName);
+    await this.populate(sources, fields as any as LoadHint<T>);
+
+    for (const source of sources) {
+      // Find all reverse relations (things that point to this entity)
+      for (const field of Object.values(targetMeta.allFields)) {
+        const { kind } = field;
+        if (kind === "o2m") {
+          for (const other of (source as any)[field.fieldName].get) {
+            (other as any)[field.otherFieldName].set(target);
+          }
+        } else if (kind === "o2o") {
+          const other = (source as any)[field.fieldName].get;
+          if (other) {
+            (other as any)[field.otherFieldName].set(target);
+          }
+        } else if (kind === "m2m") {
+          for (const other of (source as any)[field.fieldName].get) {
+            const collection = (other as any)[field.otherFieldName];
+            collection.remove(source);
+            collection.add(target);
+          }
+        } else if (
+          kind === "primitive" ||
+          kind === "primaryKey" ||
+          kind === "enum" ||
+          kind === "poly" ||
+          kind === "m2o" ||
+          kind === "lo2m"
+        ) {
+          // These field types don't need merge handling - they're either:
+          // - primitive values that don't create references (primitive, enum)
+          // - primary keys that shouldn't be merged
+          // - forward references that we handle from the reverse side (m2o)
+          // - large collections that are handled separately (lo2m)
+        } else {
+          assertNever(kind);
+        }
+      }
+    }
+
+    // Auto-delete source entities if requested
+    if (autoDelete) {
+      for (const source of sources) this.delete(source);
+    }
+  }
+
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
   public async load<T extends EntityW & { id: string }>(id: IdOf<T>): Promise<T>;
   public async load(id: TaggedId): Promise<Entity>;

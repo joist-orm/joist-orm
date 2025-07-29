@@ -11,10 +11,9 @@ workflows:
           matrix:
             parameters:
               node-version:
-                - "18" # EOL 30 Apr 2025
                 - "20" # EOL 30 Apr 2026
                 - "22" # EOL 30 Apr 2027
-                - "23" # Current
+                - "24" # Current
                 - "bun"
 
 jobs:
@@ -24,7 +23,7 @@ jobs:
         description: Node version to run tests under (set by matrix build config)
         type: string
     machine:
-      image: ubuntu-2204:current
+      image: ubuntu-2404:current
     resource_class: large
     steps:
       - checkout
@@ -32,7 +31,7 @@ jobs:
       - when:
           condition:
             not:
-              equal: [ << parameters.node-version >>, bun ]
+              equal: [<< parameters.node-version >>, bun]
           steps:
             - node/install:
                 node-version: << parameters.node-version >>
@@ -41,7 +40,7 @@ jobs:
                 pkg-manager: yarn
       - when:
           condition:
-            equal: [ << parameters.node-version >>, bun ]
+            equal: [<< parameters.node-version >>, bun]
           steps:
             - node/install:
                 node-version: "23"
@@ -69,7 +68,7 @@ jobs:
       - when:
           condition:
             not:
-              equal: [ << parameters.node-version >>, bun ]
+              equal: [<< parameters.node-version >>, bun]
           steps:
             - run:
                 name: Run tests
@@ -77,7 +76,7 @@ jobs:
       # For Node 23, run esm-misc
       - when:
           condition:
-            equal: [ << parameters.node-version >>, 23 ]
+            equal: [<< parameters.node-version >>, 23]
           steps:
             - run:
                 name: Run esm tests
@@ -85,7 +84,7 @@ jobs:
       # For bun (with the default node-pg/knex driver), run only the bun:test-based tests
       - when:
           condition:
-            equal: [ << parameters.node-version >>, bun ]
+            equal: [<< parameters.node-version >>, bun]
           steps:
             - run:
                 name: Run tests
@@ -96,10 +95,9 @@ jobs:
       - when:
           condition:
             and:
-              - equal: [ main, << pipeline.git.branch >> ]
-              - equal: [ "22", << parameters.node-version >> ]
+              - equal: [main, << pipeline.git.branch >>]
+              - equal: ["22", << parameters.node-version >>]
           steps:
             - run:
                 name: Release
                 command: yarn semantic-release
-

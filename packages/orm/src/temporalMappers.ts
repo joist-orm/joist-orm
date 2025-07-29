@@ -54,7 +54,7 @@ export const zonedDateTimeMapper: CustomSerde<Temporal.ZonedDateTime, string> = 
       // Produce a ZDT from a PG output like "2021-01-01 12:00:00-05:00"
       fromDb: (s) => {
         const [offset] = s.match(/([+-]\d{2}(?::?\d{2})?)$/) ?? [];
-        return t.ZonedDateTime.from(`${s}[${offset ?? "UTC"}]`);
+        return t.ZonedDateTime.from(`${s}[${!offset || /^\+00(:?00)?$/.test(offset) ? "UTC" : offset}]`);
       },
       // Match a PG `TIMESTAMPTZ` input format, i.e. "2021-01-01T12:00:00-05:00"
       toDb: (zdt) => zdt.toString({ timeZoneName: "never" }),

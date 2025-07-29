@@ -2131,6 +2131,84 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     });
     return newEm;
   }
+
+  /**
+   * Migrates an entity from one EntityManager to another, ensuring all relations specified in the hint are
+   * also migrated.
+   *
+   * This method is primarily used when you need to move entities between different EntityManager instances
+   * while preserving their loaded state and relationships. This is useful for scenarios like:
+   *
+   * - Moving entities between transaction boundaries
+   * - Creating test fixtures that reference entities from a different EntityManager
+   * - Sharing entities between different parts of your application
+   *
+   * The migration process:
+   * 1. If the entity already exists in this EntityManager, returns it
+   * 2. Otherwise, creates a new instance with the same data
+   * 3. Recursively migrates any loaded relations specified in the hint
+   *
+   * @param original - The entity to migrate from another EntityManager
+   * @param hint - The load hint specifying which relations to migrate
+   * @returns The migrated entity with all specified relations loaded
+   */
+  migrateEntity<T extends Entity, H extends LoadHint<T>>(original: T, hint: H): Loaded<T, H>;
+  migrateEntity<T extends Entity, H extends LoadHint<T>>(original: T, hint: H, normalizedHint?: H): Loaded<T, H> {
+    if (!normalizedHint) {
+      assertLoaded(original, hint);
+      normalizedHint = deepNormalizeHint(hint) as H;
+    }
+
+    if (original.em === this) return original as any;
+
+    const meta = getMetadata(original);
+
+    let result = this.#entitiesById.get(original.idTagged) as T | undefined;
+
+    if (!result) {
+      const { row: oldRow, data, originalData } = getInstanceData(original);
+      const meta = getMetadata(original);
+      const row: Record<string, any> = meta.inheritanceType === "cti" ? { __class: original.constructor.name } : {};
+      Object.values(meta.allFields)
+        .flatMap((field) => field.serde?.columns.map((column) => [field, column] as const) ?? [])
+        .forEach(([field, column]) => {
+          const value: any =
+            field.fieldName in originalData || field.fieldName in data
+              ? // If our field is in originalData, then the field has been changed since flush. Our `row` should
+                // reflect what would have come from the db so use originalData when present
+                column.rowValue(field.fieldName in originalData ? originalData : data)
+              : // data is lazy and isn't set until it's accessed, so if the field isn't present there, then we should
+                // be safe to pull the raw data out of `row`
+                oldRow[column.columnName];
+          row[column.columnName] = value ?? null;
+        });
+
+      result = this.hydrate(getBaseMeta(meta).cstr, [row])[0]!;
+    }
+
+    const cache = new Map<string, Entity[]>();
+
+    Object.entries(normalizedHint).forEach(([fieldName, subHint]) => {
+      const field = meta.allFields[fieldName];
+      if (!field) {
+        const property = (result as any)[fieldName];
+        let loadHint: LoadHint<Entity> =
+          (property as any).loadHint ?? fail(`${fieldName} cannot be migrated, it has no loadHint`);
+        this.migrateEntity(original, loadHint);
+      } else if (["o2m", "lo2m", "m2o", "m2m", "o2o", "poly"].includes(field.kind)) {
+        const entities = toArray((original as any)[fieldName].get).map(
+          (e: Entity) => (this.migrateEntity as any)(e, subHint, subHint) as Entity,
+        );
+        cache.set(fieldName, entities);
+      }
+    });
+
+    this.#preloadedRelations.set(original.idTagged, cache);
+    // force each relation to preload on the new entity
+    [...cache.keys()].forEach((relation) => (result as any)[relation].preload());
+
+    return result as any;
+  }
 }
 
 /** Provides an internal API to the `EntityManager`. */

@@ -1,6 +1,6 @@
 import { Entity } from "../Entity";
 import { getEmInternalApi, IdOf } from "../EntityManager";
-import { Collection, ensureNotDeleted, fail } from "../index";
+import { Collection, ensureNotDeleted, fail, LoadHint } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 
@@ -15,6 +15,7 @@ export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
   remove?: (entity: T, other: U) => void;
   /** Whether the reference is loaded, even w/o an explicit `.load` call, i.e. for DeepNew test instances. */
   isLoaded: () => boolean;
+  loadHint?: ((entity: T) => LoadHint<T>) | LoadHint<T>;
 };
 
 /**
@@ -37,6 +38,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
   private loadPromise: Promise<any> | undefined;
   #hasBeenSet = false;
   #isLoaded: boolean | undefined = undefined;
+  #loadHint: LoadHint<T> | undefined;
 
   constructor(
     entity: T,
@@ -62,6 +64,14 @@ export class CustomCollection<T extends Entity, U extends Entity>
 
   resetIsLoaded(): void {
     this.#isLoaded = undefined;
+  }
+
+  get loadHint(): LoadHint<T> | undefined {
+    if (this.#loadHint === undefined && this.opts.loadHint !== undefined) {
+      const { loadHint } = this.opts;
+      this.#loadHint = typeof loadHint === "function" ? loadHint(this.entity) : loadHint;
+    }
+    return this.#loadHint;
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {

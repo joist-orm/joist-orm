@@ -1,7 +1,7 @@
 import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { getEmInternalApi, IdOf, TaggedId } from "../EntityManager";
-import { ensureNotDeleted, fail, getMetadata, getProperties, Reference } from "../index";
+import { ensureNotDeleted, fail, getMetadata, getProperties, LoadHint, Reference } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
@@ -22,6 +22,7 @@ export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends ne
   set?: (entity: T, other: U) => void;
   /** Whether the reference is loaded, even w/o an explicit `.load` call, i.e. for DeepNew test instances. */
   isLoaded: (entity: T) => boolean;
+  loadHint?: ((entity: T) => LoadHint<T>) | LoadHint<T>;
 };
 
 /**
@@ -44,6 +45,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   private loadPromise: Promise<unknown> | undefined;
   #hasBeenSet = false;
   #isLoaded: boolean | undefined;
+  #loadHint: LoadHint<T> | undefined;
 
   constructor(
     entity: T,
@@ -69,6 +71,14 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
 
   resetIsLoaded(): void {
     this.#isLoaded = undefined;
+  }
+
+  get loadHint(): LoadHint<T> | undefined {
+    if (this.#loadHint === undefined && this.opts.loadHint !== undefined) {
+      const { loadHint } = this.opts;
+      this.#loadHint = typeof loadHint === "function" ? loadHint(this.entity) : loadHint;
+    }
+    return this.#loadHint;
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {

@@ -1,5 +1,15 @@
 import { currentlyInstantiatingEntity } from "../BaseEntity";
-import { CustomReference, Entity, getLens, getMetadata, isLensLoaded, Lens, loadLens, Reference } from "../index";
+import {
+  CustomReference,
+  Entity,
+  getLens,
+  getMetadata,
+  isLensLoaded,
+  Lens,
+  lensToLoadHint,
+  loadLens,
+  Reference,
+} from "../index";
 
 /**
  * Creates a CustomReference that will walk across references in the object graph.
@@ -17,5 +27,6 @@ export function hasOneThrough<T extends Entity, U extends Entity, N extends neve
     load: (entity, opts) => loadLens(entity, lens, opts),
     get: () => getLens(meta, entity, lens),
     isLoaded: () => isLensLoaded(entity, lens),
+    loadHint: () => lensToLoadHint(lens),
   });
 }

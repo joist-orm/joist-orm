@@ -46,7 +46,6 @@ import {
   ValidationRuleResult,
   asConcreteCstr,
   assertIdIsTagged,
-  assertLoaded,
   deepNormalizeHint,
   getBaseAndSelfMetas,
   getBaseMeta,
@@ -2035,25 +2034,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const baseCstr = getConstructorFromTag(tag);
       // We copy the raw row data for each entity to avoid any potential conflict. Then we ensure the correct concrete
       // __class key is set for hydrate to use, if necessary (ie, cti), to actually instantiate the entity.
-      const rows = persistedEntities.map((e) => {
-        const { row: oldRow, data, originalData } = getInstanceData(e);
-        const meta = getMetadata(e);
-        const row: Record<string, any> = meta.inheritanceType === "cti" ? { __class: e.constructor.name } : {};
-        Object.values(meta.allFields)
-          .flatMap((field) => field.serde?.columns.map((column) => [field, column] as const) ?? [])
-          .forEach(([field, column]) => {
-            const value: any =
-              field.fieldName in originalData || field.fieldName in data
-                ? // If our field is in originalData, then the field has been changed since flush. Our `row` should
-                  // reflect what would have come from the db so use originalData when present
-                  column.rowValue(field.fieldName in originalData ? originalData : data)
-                : // data is lazy and isn't set until it's accessed, so if the field isn't present there, then we should
-                  // be safe to pull the raw data out of `row`
-                  oldRow[column.columnName];
-            row[column.columnName] = value ?? null;
-          });
-        return row;
-      });
+      const rows = persistedEntities.map((e) => createRowFromEntityData(e));
       newEm.hydrate(baseCstr, rows);
       // Create blank entities in newEm for each unpersisted entity from oldEm.  They will be populated later in the
       // allowPendingChanges step as they should not be present otherwise.
@@ -2667,4 +2648,25 @@ function getDefaultWriteFn(ctx: unknown): WriteFn {
     ctx.logger.debug instanceof Function
     ? ctx.logger.debug.bind(ctx.logger)
     : console.log;
+}
+
+// Generates what a row from the db would look like for a given entity
+function createRowFromEntityData(e: Entity) {
+  const { row: oldRow, data, originalData } = getInstanceData(e);
+  const meta = getMetadata(e);
+  const row: Record<string, any> = meta.inheritanceType === "cti" ? { __class: e.constructor.name } : {};
+  Object.values(meta.allFields)
+    .flatMap((field) => field.serde?.columns.map((column) => [field, column] as const) ?? [])
+    .forEach(([field, column]) => {
+      const value: any =
+        field.fieldName in originalData || field.fieldName in data
+          ? // If our field is in originalData, then the field has been changed since flush. Our `row` should
+            // reflect what would have come from the db so use originalData when present
+            column.rowValue(field.fieldName in originalData ? originalData : data)
+          : // data is lazy and isn't set until it's accessed, so if the field isn't present there, then we should
+            // be safe to pull the raw data out of `row`
+            oldRow[column.columnName];
+      row[column.columnName] = value ?? null;
+    });
+  return row;
 }

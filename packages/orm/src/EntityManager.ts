@@ -46,6 +46,7 @@ import {
   ValidationRuleResult,
   asConcreteCstr,
   assertIdIsTagged,
+  assertLoaded,
   deepNormalizeHint,
   getBaseAndSelfMetas,
   getBaseMeta,
@@ -2166,27 +2167,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     let result = this.#entitiesById.get(original.idTagged) as T | undefined;
 
     if (!result) {
-      const { row: oldRow, data, originalData } = getInstanceData(original);
       const meta = getMetadata(original);
-      const row: Record<string, any> = meta.inheritanceType === "cti" ? { __class: original.constructor.name } : {};
-      Object.values(meta.allFields)
-        .flatMap((field) => field.serde?.columns.map((column) => [field, column] as const) ?? [])
-        .forEach(([field, column]) => {
-          const value: any =
-            field.fieldName in originalData || field.fieldName in data
-              ? // If our field is in originalData, then the field has been changed since flush. Our `row` should
-                // reflect what would have come from the db so use originalData when present
-                column.rowValue(field.fieldName in originalData ? originalData : data)
-              : // data is lazy and isn't set until it's accessed, so if the field isn't present there, then we should
-                // be safe to pull the raw data out of `row`
-                oldRow[column.columnName];
-          row[column.columnName] = value ?? null;
-        });
-
+      const row = createRowFromEntityData(original);
       result = this.hydrate(getBaseMeta(meta).cstr, [row])[0]!;
     }
 
-    const cache = new Map<string, Entity[]>();
+    const cache = this.#preloadedRelations.get(original.idTagged) ?? new Map<string, Entity[]>();
 
     Object.entries(normalizedHint).forEach(([fieldName, subHint]) => {
       const field = meta.allFields[fieldName];

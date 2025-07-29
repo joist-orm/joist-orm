@@ -119,12 +119,23 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     return this._isLoaded;
   }
 
+  /**
+   * Looks for an entity in `EntityManager`, b/c we may have it in memory even if
+   * our reference is not specifically loaded.
+   */
+  maybeFindEntity(): U | undefined {
+    // Check this.loaded first b/c a new entity won't have an id yet
+    const { idTaggedMaybe } = this;
+    return this.loaded ?? (idTaggedMaybe !== undefined ? (this.entity.em.getEntity(idTaggedMaybe) as U) : undefined);
+  }
+
   get isPreloaded(): boolean {
-    return false;
+    return !!this.maybeFindEntity();
   }
 
   preload(): void {
-    throw new Error("Not implemented");
+    this.loaded = this.maybeFindEntity();
+    this._isLoaded = true;
   }
 
   private doGet(opts?: { withDeleted?: boolean }): U | N {

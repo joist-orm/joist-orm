@@ -35,20 +35,28 @@ export const plainDateTimeMapper: CustomSerde<Temporal.PlainDateTime, string> = 
   : temporalNotAvailable;
 
 /**
- * Converts Postgres `TIMESTAMPTZ`, `TIMESTAMPTZ WITH TIME ZONE` to/from Temporal.PlainDateTime.
+ * Converts Postgres `TIMESTAMPTZ`, `TIMESTAMPTZ WITH TIME ZONE` to/from Temporal.ZonedDateTime.
  *
- * Specifically Postgres uses ISO 8601, which Temporal does as well, except that:
+ * Specifically, Postgres uses ISO 8601, which Temporal supports as well, except that PG ouputs a space instead of `T`
+ * between the date/time for output.
  *
- * - PG uses a space instead of `T` between the date/time, and
- * - Temporal needs `[UTC]`appended, b/c even with the numeric offset, it wants to know which specific zone.
+ * Additionally, `Temporal.ZonedDateTime.from` expects a time zone literal name to be supplied as part of the string,
+ * but this is not stored by postgres.
+ *
+ * As such, we parse the offset and append it to string passed to `from` as the time zone.  This means that if we did a
+ * round trip of generating a db value then parsing it, then it may not strictly equal the original zdt.
+ *
+ * Finally, PG stores dates as UTC and converts them to its local time zone for output, so we could get any offset
+ * theoretically.  If, somehow, we don't get an offset, then we assume UTC.
  */
 export const zonedDateTimeMapper: CustomSerde<Temporal.ZonedDateTime, string> = t
   ? {
-      // Should we use the application's time zone here? Afaiu we're using an explicit
-      // offset anyway, so I believe the time zone is effectively irrelevant, albeit maybe
-      // it would be used for DST/etc nuances when doing date calculations.
-      fromDb: (s) => t.ZonedDateTime.from(s.replace(" ", "T") + "[UTC]"),
-      // Match the pg `TIMESTAMPTZ` format, i.e. "2021-01-01 12:00:00-05:00"
-      toDb: (zdt) => `${zdt.toPlainDate().toString()} ${zdt.toPlainTime().toString()}${zdt.offset}`,
+      // Produce a ZDT from a PG output like "2021-01-01 12:00:00-05:00"
+      fromDb: (s) => {
+        const [offset] = s.match(/([+-]\d{2}(?::?\d{2})?)$/) ?? [];
+        return t.ZonedDateTime.from(`${s}[${offset ?? "UTC"}]`);
+      },
+      // Match a PG `TIMESTAMPTZ` input format, i.e. "2021-01-01T12:00:00-05:00"
+      toDb: (zdt) => zdt.toString({ timeZoneName: "never" }),
     }
   : temporalNotAvailable;

@@ -46,6 +46,7 @@ import {
   ValidationRuleResult,
   asConcreteCstr,
   assertIdIsTagged,
+  assertLoaded,
   deepNormalizeHint,
   getBaseAndSelfMetas,
   getBaseMeta,
@@ -2006,54 +2007,103 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * - Copy any pending changes (must call .flush() first)
    * - Share any changes made in either EntityManager with the other
    *
+   * @param opts options to control the fork behavior
+   *  - allowPendingChanges - allows the em being forked to have pending changes and forces the resulting em to have
+   *  `mode` set to "in-memory-writes".  Changes to entities will be persisted across ems. Optional. default: false
+   *
    * @throws {Error} If called on an EntityManager with pending changes
    * @returns A new EntityManager with copied entity state
    */
-  fork(): EntityManager<C, Entity, TX> {
+  fork(opts: { allowPendingChanges?: boolean } = {}): EntityManager<C, Entity, TX> {
+    const { allowPendingChanges = false } = opts;
     const oldEm = this;
     const pendingEntities = oldEm.entities.filter((e) => getInstanceData(e).pendingOperation !== "none");
-    if (pendingEntities.length > 0) {
+    if (!allowPendingChanges && pendingEntities.length > 0) {
       fail("Cannot fork an EntityManager with pending changes");
     }
-    // copy the context so that it's distinct between the two ems and so we can update any references from the old em
+    // copy the context so that it's distinct between the two ems, and so we can update any references from the old em
     // to the new one later
-    const ctx: C = { ...oldEm.ctx };
-    const newEm = new EntityManager<C, Entity, TX>(ctx, { em: oldEm });
+    const ctx = { ...oldEm.ctx } as Record<string, any>;
+    const newEm = new EntityManager<C, Entity, TX>(ctx as C, { em: oldEm });
+    if (allowPendingChanges) newEm.mode = "in-memory-writes";
     // hydrate (ie, create) each entity from the oldEm in the newEm
     oldEm.#entitiesByTag.forEach((entities, tag) => {
+      const [unpersistedEntities, persistedEntities] = allowPendingChanges
+        ? partition(entities, (e) => e.isNewEntity)
+        : [[], entities];
       // tags are always defined by the base constructor, so we use that as hydrate expects the base class as its argument
       const baseCstr = getConstructorFromTag(tag);
       // We copy the raw row data for each entity to avoid any potential conflict. Then we ensure the correct concrete
       // __class key is set for hydrate to use, if necessary (ie, cti), to actually instantiate the entity.
-      const rows = entities.map((e) => {
-        const instanceData = getInstanceData(e);
+      const rows = persistedEntities.map((e) => {
+        const { row: oldRow, data, originalData } = getInstanceData(e);
         const meta = getMetadata(e);
-        const row = { ...instanceData.row };
-        if (!("id" in row)) {
-          // If we didn't get an id in our row data, then this entity was created by oldEm and flushed, so we have no
-          // row data and need to construct it manually
-          Object.values(meta.allFields).forEach((field) =>
-            field.serde?.columns?.forEach(
-              (column) => (row[column.columnName] = column.mapToDb(getField(e, field.fieldName))),
-            ),
-          );
-        }
-        if (meta.inheritanceType === "cti") row["__class"] = e.constructor.name;
+        const row: Record<string, any> = meta.inheritanceType === "cti" ? { __class: e.constructor.name } : {};
+        Object.values(meta.allFields)
+          .flatMap((field) => field.serde?.columns.map((column) => [field, column] as const) ?? [])
+          .forEach(([field, column]) => {
+            const value: any =
+              field.fieldName in originalData || field.fieldName in data
+                ? // If our field is in originalData, then the field has been changed since flush. Our `row` should
+                  // reflect what would have come from the db so use originalData when present
+                  column.rowValue(field.fieldName in originalData ? originalData : data)
+                : // data is lazy and isn't set until it's accessed, so if the field isn't present there, then we should
+                  // be safe to pull the raw data out of `row`
+                  oldRow[column.columnName];
+            row[column.columnName] = value ?? null;
+          });
         return row;
       });
       newEm.hydrate(baseCstr, rows);
+      // Create blank entities in newEm for each unpersisted entity from oldEm.  They will be populated later in the
+      // allowPendingChanges step as they should not be present otherwise.
+      unpersistedEntities.forEach((e) => newEm.create(e.constructor as EntityConstructor<Entity>, {} as any));
     });
+
+    function findEntity(oldEntity: Entity): Entity {
+      if (oldEntity.isNewEntity) {
+        const index = parseInt(oldEntity.toString().split("#").pop()!) - 1;
+        return newEm.getEntities(oldEntity.constructor as EntityConstructor<Entity>)[index];
+      } else {
+        return newEm.getEntity(oldEntity.idTagged)!;
+      }
+    }
+
+    // If we are allowing pending changes, then we need to copy any changes across to newEm
+    if (allowPendingChanges) {
+      oldEm.entities.forEach((oldEntity) => {
+        const { originalData: oldOriginalData, data: oldData } = getInstanceData(oldEntity);
+        const newEntity = findEntity(oldEntity);
+        const { originalData: newOriginalData, data: newData } = getInstanceData(newEntity);
+        // for new entities, anything in `data` is changed and should be copied across. for existing entities, we
+        // only care about changed fields, which are enumerated by originalData
+        const maybeEntity = (value: any) => (isEntity(value) ? findEntity(value as Entity) : value);
+        Object.keys(oldEntity.isNewEntity ? oldData : oldOriginalData).forEach((fieldName) => {
+          // copy over originalData so .changes is consistent across ems
+          if (fieldName in oldOriginalData) newOriginalData[fieldName] = maybeEntity(oldOriginalData[fieldName]);
+          newData[fieldName] = maybeEntity(oldData[fieldName]);
+        });
+      });
+    }
+
     // set the preload cache for each loaded relation from oldEm in the newEm so that get / isLoaded should just work
     // on the new entities.  group by concrete class so that we only have to gather the relation definitions once per
     // type.
     groupBy(oldEm.entities, (e) => e.constructor as EntityConstructor<Entity>).forEach((entities, cstr) => {
+      // deleted entities will fail if you try to `get` their relations, so skip them since they should be cleared
+      // out regardless
+      entities = entities.filter((e) => !e.isDeletedEntity);
+      const [unpersistedEntities, persistedEntities] = allowPendingChanges
+        ? partition(entities, (e) => e.isNewEntity)
+        : [[], entities];
       const meta = getMetadata(cstr);
       // use allFields so that we get fields from the base type as well
       const relations = Object.entries(meta.allFields)
         // these are all the kinds for concrete (ie, not custom) relations
+        // TODO: support recursive collections
         .filter(([, field]) => ["o2m", "lo2m", "m2o", "m2m", "o2o", "poly"].includes(field.kind))
         .map(([name]) => name);
-      entities.forEach((oldEntity) => {
+      persistedEntities.forEach((oldEntity) => {
         // each entity could have different loaded status for each relation
         const loadedRelations = relations.filter((field) => (oldEntity as any)[field].isLoaded);
         const cache = new Map(
@@ -2061,7 +2111,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             field,
             // this should be safe because we are only using loaded relations, and we made sure to copy every entity
             // between ems
-            toArray((oldEntity as any)[field].get).map((e: Entity) => newEm.#entitiesById.get(e.idTagged)!),
+            toArray((oldEntity as any)[field].get).map((e: Entity) => findEntity(e)),
           ]),
         );
         newEm.#preloadedRelations.set(oldEntity.idTagged, cache);
@@ -2069,16 +2119,30 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // force each relation to preload on the new entity
         loadedRelations.forEach((relation) => (newEntity as any)[relation].preload());
       });
+      unpersistedEntities.forEach((oldEntity) => {
+        const newEntity = findEntity(oldEntity);
+        relations
+          // every relation should be loaded on a new entity, so calling get should be safe
+          .map((field) => [field, (oldEntity as any)[field].get] as const)
+          .filter(([, oldValue]) => oldValue !== undefined)
+          .filter(([, oldValue]) => !Array.isArray(oldValue) || oldValue.length > 0)
+          .forEach(([field, oldValue]) => {
+            const newValue = Array.isArray(oldValue) ? oldValue.map((e) => findEntity(e)) : findEntity(oldValue);
+            // we may have already copied over the instance data, in which case `setFromOpts` would detect this as
+            // the same entity that's already set in data and early exit, so delete ourselves from data first
+            delete getInstanceData(newEntity).data[field];
+            (newEntity as any)[field].setFromOpts(newValue);
+          });
+      });
     });
     // Inspect the top level keys in the context and replace any references from oldEm with newEm (ie, ctx.em === newEm)
     // while also replacing any entities from oldEm with their version in newEm (eg, if the user is stored in the
     // context, then `ctx.user.em === newEm`).
-    const _ctx = ctx as Record<string, any>;
-    Object.entries(_ctx).forEach(([key, value]) => {
+    Object.entries(ctx).forEach(([key, value]) => {
       if (isEntity(value) && value.em === oldEm) {
-        _ctx[key] = newEm.#entitiesById.get(value.idTagged)!;
+        ctx[key] = findEntity(value as Entity);
       } else if (value === oldEm) {
-        _ctx[key] = newEm;
+        ctx[key] = newEm;
       }
     });
     return newEm;

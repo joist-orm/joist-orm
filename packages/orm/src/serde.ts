@@ -57,6 +57,8 @@ export interface Column {
   dbType: string;
   /** From the given `__orm.data` hash, return this columns value, i.e. for putting in `UPDATE` params. */
   dbValue(data: any, entity: Entity, tableName: string, fixups: InsertFixup[] | undefined): any;
+  /** Used by em.fork to create an __orm.row from an __orm.data. Should output what we would expect from a db query **/
+  rowValue(data: any): any;
   /** For a given domain value, return the database value, i.e. for putting `em.find` params into a db WHERE clause. */
   mapToDb(value: any): any;
   /**
@@ -121,6 +123,10 @@ export class CustomSerdeAdapter implements FieldSerde {
       : undefined;
   }
 
+  rowValue(data: any): any {
+    return this.dbValue(data);
+  }
+
   mapToDb(value: any): any {
     return value === null ? value : this.mapper.toDb(value);
   }
@@ -159,6 +165,10 @@ export class PrimitiveSerde implements FieldSerde {
 
   dbValue(data: any) {
     return this.mapToDb(data[this.fieldName]);
+  }
+
+  rowValue(data: any): any {
+    return this.dbValue(data);
   }
 
   mapToDb(value: any) {
@@ -244,6 +254,10 @@ export class BigIntSerde implements FieldSerde {
     return data[this.fieldName];
   }
 
+  rowValue(data: any): any {
+    return this.dbValue(data);
+  }
+
   mapToDb(value: any) {
     return value;
   }
@@ -279,6 +293,10 @@ export class DecimalToNumberSerde implements FieldSerde {
 
   dbValue(data: any) {
     return data[this.fieldName];
+  }
+
+  rowValue(data: any): any {
+    return this.dbValue(data);
   }
 
   mapToDb(value: any) {
@@ -328,6 +346,11 @@ export class KeySerde implements FieldSerde {
       return null;
     }
     return keyToNumber(this.meta, maybeResolveReferenceToId(value));
+  }
+
+  rowValue(data: any): any {
+    // we don't have any fixups since we are trying to recreate what comes out of the db, so this is safe
+    return this.dbValue(data, undefined!, undefined!, undefined);
   }
 
   mapToDb(value: any) {
@@ -391,6 +414,9 @@ export class PolymorphicKeySerde implements FieldSerde {
       mapFromJsonAgg(value: any): any {
         return value === null ? value : value;
       },
+      rowValue(data: any): any {
+        return this.dbValue(data);
+      },
     }));
   }
 
@@ -423,6 +449,10 @@ export class EnumFieldSerde implements FieldSerde {
     return this.enumObject.findByCode(data[this.fieldName])?.id;
   }
 
+  rowValue(data: any): any {
+    return this.dbValue(data);
+  }
+
   mapToDb(value: any) {
     return this.enumObject.findByCode(value)?.id;
   }
@@ -449,6 +479,10 @@ export class EnumArrayFieldSerde implements FieldSerde {
 
   dbValue(data: any) {
     return data[this.fieldName]?.map((code: any) => this.enumObject.getByCode(code).id) || [];
+  }
+
+  rowValue(data: any): any {
+    return this.dbValue(data);
   }
 
   mapToDb(value: any) {
@@ -492,6 +526,11 @@ export class SuperstructSerde implements FieldSerde {
     return JSON.stringify(data[this.fieldName]);
   }
 
+  // JSON is returned by postgres already parsed, so if we are trying to recreate that we don't need to stringify
+  rowValue(data: any): any {
+    return data[this.fieldName];
+  }
+
   mapToDb(value: any) {
     return JSON.stringify(value);
   }
@@ -517,6 +556,11 @@ export class JsonSerde implements FieldSerde {
 
   dbValue(data: any) {
     return JSON.stringify(data[this.fieldName]);
+  }
+
+  // JSON is returned by postgres already parsed, so if we are trying to recreate that we don't need to stringify
+  rowValue(data: any): any {
+    return data[this.fieldName];
   }
 
   mapToDb(value: any) {
@@ -552,6 +596,11 @@ export class ZodSerde implements FieldSerde {
   dbValue(data: any) {
     // assume the data is already valid b/c it came from the entity
     return JSON.stringify(data[this.fieldName]);
+  }
+
+  // JSON is returned by postgres already parsed, so if we are trying to recreate that we don't need to stringify
+  rowValue(data: any): any {
+    return data[this.fieldName];
   }
 
   mapToDb(value: any) {

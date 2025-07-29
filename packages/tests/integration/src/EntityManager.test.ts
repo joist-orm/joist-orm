@@ -8,6 +8,7 @@ import {
   insertBook,
   insertBookReview,
   insertBookToTag,
+  insertComment,
   insertPublisher,
   insertTag,
   select,
@@ -31,6 +32,7 @@ import {
   Book,
   BookReview,
   Color,
+  Comment,
   Entity,
   EntityManager,
   Publisher,
@@ -1531,7 +1533,7 @@ describe("EntityManager", () => {
   });
 
   describe("fork", () => {
-    it.withCtx("creates a new EntityManager with the same entities in memory", async () => {
+    it("creates a new EntityManager with the same entities in memory", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ author_id: 1, title: "b1" });
       await insertBookReview({ book_id: 1, rating: 5 });
@@ -1547,7 +1549,7 @@ describe("EntityManager", () => {
       expect(r).not.toBe(review);
     });
 
-    it.withCtx("creates a new EntityManager with the same loaded relations", async () => {
+    it("creates a new EntityManager with the same loaded relations", async () => {
       await insertPublisher({ name: "p1" });
       await insertAuthor({ first_name: "a1", publisher_id: 1 });
       await insertBook({ author_id: 1, title: "b1" });
@@ -1563,18 +1565,88 @@ describe("EntityManager", () => {
       expect(a.publisher.isLoaded).toBe(false);
     });
 
-    it.withCtx("fails when the em has pending changes", async () => {
+    it("fails when the em has pending changes", async () => {
       const em = newEntityManager();
       newAuthor(em);
       expect(() => em.fork()).toThrow("Cannot fork an EntityManager with pending changes");
     });
 
-    it.withCtx("does not fail if pending changes are flushed first", async () => {
+    it("does not fail if pending changes are flushed first and pulls updated data", async () => {
+      await insertAuthor({ first_name: "a1" });
       const em = newEntityManager();
-      newAuthor(em);
+      const author = await em.findOneOrFail(Author, {});
+      author.firstName = "Updated Author";
+      newAuthor(em, { firstName: "New Author" });
       await em.flush();
       const result = em.fork();
-      expect(result.entities).toMatchEntity([{ id: "a:1" }]);
+      expect(result.entities as Author[]).toMatchEntity([
+        { id: "a:1", firstName: "Updated Author" },
+        { id: "a:2", firstName: "New Author" },
+      ]);
+    });
+
+    it("works across polymorphic relations", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertComment({ text: "", parent_author_id: 1 });
+      const em = newEntityManager();
+      const comment = await em.findOneOrFail(Comment, {}, { populate: "parent" });
+      expect(comment.parent.isLoaded).toBe(true);
+      const result = em.fork();
+      const c = result.entities[0] as Comment;
+      expect(c.parent.isLoaded).toBe(true);
+      expect(c).toMatchEntity({ parent: { id: "a:1" } });
+    });
+
+    it("updates references to entities and the em in the new ctx", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const author = await em.findOneOrFail(Author, {});
+      Object.assign(em.ctx, { author });
+      const result = em.fork();
+      const { ctx } = result;
+      expect(ctx.em).toBe(result);
+      expect((ctx as any).author.em).toBe(result);
+      expect((ctx as any).author).not.toBe(author);
+    });
+
+    describe("allowPendingChanges: true", () => {
+      it("copies new entities with their relations", async () => {
+        await insertAuthor({ first_name: "a1" });
+        const em = newEntityManager();
+        const author = await em.findOneOrFail(Author, {}, { populate: "books" });
+        const book = em.create(Book, { title: "Test Book", author });
+        em.create(BookReview, { book, rating: 5 });
+        const result = em.fork({ allowPendingChanges: true });
+        expect(result.entities as [Author, Book, BookReview]).toMatchEntity([
+          { idMaybe: "a:1", books: [{ title: "Test Book" }] },
+          { idMaybe: undefined, title: "Test Book", reviews: [{ rating: 5 }], author: "a:1" } as any,
+          { idMaybe: undefined, book: { title: "Test Book" }, rating: 5 },
+        ]);
+      });
+
+      it("copies changes to persisted entities", async () => {
+        await insertAuthor({ first_name: "a1" });
+        await insertPublisher({ name: "p1" });
+        const em = newEntityManager();
+        const author = await em.findOneOrFail(Author, {});
+        const publisher = await em.findOneOrFail(Publisher, {});
+        author.firstName = "Updated Author";
+        author.publisher.set(publisher);
+        expect(author.changes.publisher.hasChanged).toBe(true);
+        const result = em.fork({ allowPendingChanges: true });
+        const [a, p] = result.entities as [Author, Publisher];
+        expect(a).toMatchEntity({ firstName: "Updated Author", publisher: p });
+        expect(a.changes.firstName.hasChanged).toBe(true);
+        expect(a.changes.firstName.originalValue).toBe("a1");
+        expect(a.changes.publisher.hasChanged).toBe(true);
+        expect(a.changes.publisher.originalValue).toBe(undefined);
+      });
+
+      it("sets the resulting em to in-memory-writes", () => {
+        const em = newEntityManager();
+        const result = em.fork({ allowPendingChanges: true });
+        expect(result.mode).toEqual("in-memory-writes");
+      });
     });
   });
 });

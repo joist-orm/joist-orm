@@ -1,3 +1,10 @@
+# [1.262.0](https://github.com/joist-orm/joist-orm/compare/v1.261.0...v1.262.0) (2025-07-29)
+
+
+### Features
+
+* Add em.merge. ([#1553](https://github.com/joist-orm/joist-orm/issues/1553)) ([0282090](https://github.com/joist-orm/joist-orm/commit/02820902847ce33ee073e3bffd5ba2de15df8c28))
+
 # [1.261.0](https://github.com/joist-orm/joist-orm/compare/v1.260.1...v1.261.0) (2025-07-27)
 
 

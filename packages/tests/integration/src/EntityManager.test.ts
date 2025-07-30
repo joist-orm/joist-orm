@@ -10,6 +10,7 @@ import {
   insertBookToTag,
   insertComment,
   insertPublisher,
+  insertSmallPublisher,
   insertTag,
   select,
   update,
@@ -27,6 +28,7 @@ import {
   sameEntity,
 } from "joist-orm";
 import { jan1, jan2 } from "src/testDates";
+import { twoOf } from "src/utils";
 import {
   Author,
   Book,
@@ -1647,6 +1649,121 @@ describe("EntityManager", () => {
         const result = em.fork({ allowPendingChanges: true });
         expect(result.mode).toEqual("in-memory-writes");
       });
+    });
+  });
+
+  describe("importEntity", () => {
+    it("can import an entity", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const a1 = await em1.findOneOrFail(Author, {});
+      const a2 = em2.importEntity(a1);
+      expect(a2).toMatchEntity({ firstName: "a1" });
+      expect(a2.em).toBe(em2);
+      expect(a2).not.toBe(a1);
+    });
+
+    it("can import an entity with loaded relations", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ author_id: 1, title: "b1" });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const a1 = await em1.findOneOrFail(Author, {}, { populate: "books" });
+      const a2 = em2.importEntity(a1, "books");
+      expect(a2.books.isLoaded).toBe(true);
+      expect(a2).toMatchEntity({ books: [{ title: "b1" }] });
+    });
+
+    it("can import an entity with polymorphic relations", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertComment({ parent_author_id: 1, text: "c1" });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const c1 = await em1.findOneOrFail(Comment, {}, { populate: "parent" });
+      const c2 = em2.importEntity(c1, "parent");
+      expect(c2.parent.isLoaded).toBe(true);
+      expect(c2).toMatchEntity({ parent: { firstName: "a1" } });
+    });
+
+    it("can import an entity with a custom relation", async () => {
+      await insertSmallPublisher({ name: "sp1" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertComment({ parent_author_id: 1, text: "c1" });
+      await insertComment({ parent_publisher_id: 1, text: "c2" });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const a1 = await em1.findOneOrFail(Author, {}, { populate: "latestComment" });
+      const a2 = em2.importEntity(a1, "latestComment");
+      expect(a2.latestComment.isLoaded).toBe(true);
+      expect(a2.publisher.isLoaded).toBe(true);
+      expect(a2.comments.isLoaded).toBe(true);
+      expect((a2 as any).publisher.get.comments.isLoaded).toBe(true);
+    });
+
+    it("can import an entity with an async prop", async () => {
+      await insertSmallPublisher({ name: "sp1" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertComment({ parent_author_id: 1, text: "c1" });
+      await insertComment({ parent_publisher_id: 1, text: "c2" });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const a1 = await em1.findOneOrFail(Author, {}, { populate: "latestComments" });
+      const a2 = em2.importEntity(a1, "latestComments");
+      expect(a2.latestComments.isLoaded).toBe(true);
+      expect(a2.publisher.isLoaded).toBe(true);
+      expect(a2.comments.isLoaded).toBe(true);
+      expect((a2 as any).publisher.get.comments.isLoaded).toBe(true);
+    });
+
+    it("does not load relations not specified in the hint even if they are loaded in the source em", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ author_id: 1, title: "b1" });
+      await insertComment({ parent_author_id: 1, text: "c1" });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const a1 = await em1.findOneOrFail(Author, {}, { populate: ["books", "comments"] });
+      const a2 = em2.importEntity(a1, "books");
+      expect(a2.books.isLoaded).toBe(true);
+      expect(a2.comments.isLoaded).toBe(false);
+      expect(em2.entities).toMatchEntity([{ id: "a:1" }, { id: "b:1" }]);
+    });
+
+    it("imports the same entity only once", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const a1 = await em1.findOneOrFail(Author, {});
+      const a2 = em2.importEntity(a1);
+      const a3 = em2.importEntity(a1);
+      expect(a2).toBe(a3);
+      expect(em2.entities).toHaveLength(1);
+    });
+
+    it("fails if the source is not loaded for the hint", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const a1 = await em1.findOneOrFail(Author, {});
+      const result = () => em2.importEntity(a1 as any, "books");
+      expect(result).toThrow('a:1 is not loaded for "books"');
+    });
+
+    it("fails if the source is a new entity", async () => {
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const a1 = newAuthor(em1);
+      const result = () => em2.importEntity(a1 as any, "books");
+      expect(result).toThrow("cannot import new entities");
+    });
+
+    it("fails if the source is dirty", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const a1 = await em1.findOneOrFail(Author, {});
+      em1.delete(a1);
+      const result = () => em2.importEntity(a1 as any, "books");
+      expect(result).toThrow("cannot import deleted entities");
+    });
+
+    it("fails if the source is dirty", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const a1 = await em1.findOneOrFail(Author, {});
+      a1.firstName = "Updated Author";
+      const result = () => em2.importEntity(a1 as any, "books");
+      expect(result).toThrow("cannot import dirty entities");
     });
   });
 });

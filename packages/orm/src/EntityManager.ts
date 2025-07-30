@@ -2149,50 +2149,56 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * 2. Otherwise, creates a new instance with the same data
    * 3. Recursively migrates any loaded relations specified in the hint
    *
-   * @param original - The entity to migrate from another EntityManager
+   * @param source - The entity to migrate from another EntityManager
    * @param hint - The load hint specifying which relations to migrate
    * @returns The migrated entity with all specified relations loaded
    */
+  importEntity<T extends Entity>(original: T): T;
   importEntity<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(original: L, hint: H): L;
   importEntity<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
-    original: L,
-    hint: H,
+    source: L,
+    hint?: H,
     normalizedHint?: H,
   ): L {
+    if (source.isNewEntity) fail("cannot import new entities");
+    if (source.isDeletedEntity) fail("cannot import deleted entities");
+    if (source.isDirtyEntity) fail("cannot import dirty entities");
+
+    hint ??= {} as H;
     if (!normalizedHint) {
-      assertLoaded(original, hint);
+      assertLoaded(source, hint);
       normalizedHint = deepNormalizeHint(hint) as H;
     }
 
-    if (original.em === this) return original as any;
+    if (source.em === this) return source as any;
 
-    const meta = getMetadata(original);
+    const meta = getMetadata(source);
 
-    let result = this.#entitiesById.get(original.idTagged) as T | undefined;
+    let result = this.#entitiesById.get(source.idTagged) as T | undefined;
 
     if (!result) {
-      const meta = getMetadata(original);
-      const row = createRowFromEntityData(original);
+      const meta = getMetadata(source);
+      const row = createRowFromEntityData(source);
       result = this.hydrate(getBaseMeta(meta).cstr, [row])[0]!;
     }
 
-    const cache = this.#preloadedRelations.get(original.idTagged) ?? new Map<string, Entity[]>();
+    const cache = this.#preloadedRelations.get(source.idTagged) ?? new Map<string, Entity[]>();
 
     Object.entries(normalizedHint).forEach(([fieldName, subHint]) => {
       const field = meta.allFields[fieldName];
       if (!field) {
         const property = (result as any)[fieldName];
         let loadHint: H = (property as any).loadHint ?? fail(`${fieldName} cannot be migrated, it has no loadHint`);
-        this.importEntity<T, H, L>(original, loadHint);
+        this.importEntity<T, H, L>(source, loadHint);
       } else if (["o2m", "lo2m", "m2o", "m2m", "o2o", "poly"].includes(field.kind)) {
-        const entities = toArray((original as any)[fieldName].get).map(
+        const entities = toArray((source as any)[fieldName].get).map(
           (e: Entity) => (this.importEntity as any)(e, subHint, subHint) as Entity,
         );
         cache.set(fieldName, entities);
       }
     });
 
-    this.#preloadedRelations.set(original.idTagged, cache);
+    this.#preloadedRelations.set(source.idTagged, cache);
     // force each relation to preload on the new entity
     [...cache.keys()].forEach((relation) => (result as any)[relation].preload());
 

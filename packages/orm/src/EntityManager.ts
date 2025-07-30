@@ -2134,8 +2134,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   /**
-   * Migrates an entity from one EntityManager to another, ensuring all relations specified in the hint are
-   * also migrated.
+   * Copies an entity from one EntityManager to another, ensuring all relations specified in the hint are
+   * also copied.
    *
    * This method is primarily used when you need to move entities between different EntityManager instances
    * while preserving their loaded state and relationships. This is useful for scenarios like:
@@ -2153,8 +2153,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * @param hint - The load hint specifying which relations to migrate
    * @returns The migrated entity with all specified relations loaded
    */
-  migrateEntity<T extends Entity, H extends LoadHint<T>>(original: T, hint: H): Loaded<T, H>;
-  migrateEntity<T extends Entity, H extends LoadHint<T>>(original: T, hint: H, normalizedHint?: H): Loaded<T, H> {
+  importEntity<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(original: L, hint: H): L;
+  importEntity<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
+    original: L,
+    hint: H,
+    normalizedHint?: H,
+  ): L {
     if (!normalizedHint) {
       assertLoaded(original, hint);
       normalizedHint = deepNormalizeHint(hint) as H;
@@ -2178,12 +2182,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const field = meta.allFields[fieldName];
       if (!field) {
         const property = (result as any)[fieldName];
-        let loadHint: LoadHint<Entity> =
-          (property as any).loadHint ?? fail(`${fieldName} cannot be migrated, it has no loadHint`);
-        this.migrateEntity(original, loadHint);
+        let loadHint: H = (property as any).loadHint ?? fail(`${fieldName} cannot be migrated, it has no loadHint`);
+        this.importEntity<T, H, L>(original, loadHint);
       } else if (["o2m", "lo2m", "m2o", "m2m", "o2o", "poly"].includes(field.kind)) {
         const entities = toArray((original as any)[fieldName].get).map(
-          (e: Entity) => (this.migrateEntity as any)(e, subHint, subHint) as Entity,
+          (e: Entity) => (this.importEntity as any)(e, subHint, subHint) as Entity,
         );
         cache.set(fieldName, entities);
       }

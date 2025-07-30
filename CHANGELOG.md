@@ -1,3 +1,10 @@
+## [1.262.1](https://github.com/joist-orm/joist-orm/compare/v1.262.0...v1.262.1) (2025-07-30)
+
+
+### Bug Fixes
+
+* address issues with em.fork ([#1555](https://github.com/joist-orm/joist-orm/issues/1555)) ([7fd78c5](https://github.com/joist-orm/joist-orm/commit/7fd78c52ec81af7a5122f9c3e9d3cfdb4771d7b0))
+
 # [1.262.0](https://github.com/joist-orm/joist-orm/compare/v1.261.0...v1.262.0) (2025-07-29)
 
 

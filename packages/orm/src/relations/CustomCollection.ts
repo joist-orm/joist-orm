@@ -15,6 +15,10 @@ export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
   remove?: (entity: T, other: U) => void;
   /** Whether the reference is loaded, even w/o an explicit `.load` call, i.e. for DeepNew test instances. */
   isLoaded: () => boolean;
+  /**
+   * A load hint that can be used to speculatively traverse the dependencies of this collection.  Currently
+   * only used by em.importEntity and can be omitted if the collection isn't used with it.
+   */
   loadHint?: ((entity: T) => LoadHint<T>) | LoadHint<T>;
 };
 

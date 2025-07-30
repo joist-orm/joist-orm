@@ -9,6 +9,7 @@ import {
   insertBookReview,
   insertBookToTag,
   insertComment,
+  insertImage,
   insertPublisher,
   insertSmallPublisher,
   insertTag,
@@ -37,6 +38,7 @@ import {
   Comment,
   Entity,
   EntityManager,
+  Image,
   Publisher,
   PublisherSize,
   SmallPublisher,
@@ -1764,6 +1766,15 @@ describe("EntityManager", () => {
       a1.firstName = "Updated Author";
       const result = () => em2.importEntity(a1 as any, "books");
       expect(result).toThrow("cannot import dirty entities");
+    });
+
+    it("fails if a custom relation or prop does not have a load hint", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertImage({ type_id: 2, author_id: 1, file_name: "i1" });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const i1 = await em1.findOneOrFail(Image, {}, { populate: "owner" });
+      const result = () => em2.importEntity(i1 as any, "owner");
+      expect(result).toThrow("Image:1.owner cannot be imported as it has no loadHint");
     });
   });
 });

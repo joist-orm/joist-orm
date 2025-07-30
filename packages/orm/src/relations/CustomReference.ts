@@ -22,6 +22,10 @@ export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends ne
   set?: (entity: T, other: U) => void;
   /** Whether the reference is loaded, even w/o an explicit `.load` call, i.e. for DeepNew test instances. */
   isLoaded: (entity: T) => boolean;
+  /**
+   * A load hint that can be used to speculatively traverse the dependencies of this reference.  Currently
+   * only used by em.importEntity and can be omitted if the reference isn't used with it.
+   */
   loadHint?: ((entity: T) => LoadHint<T>) | LoadHint<T>;
 };
 

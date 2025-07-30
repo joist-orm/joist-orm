@@ -2188,7 +2188,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const field = meta.allFields[fieldName];
       if (!field) {
         const property = (result as any)[fieldName];
-        let loadHint: H = (property as any).loadHint ?? fail(`${fieldName} cannot be migrated, it has no loadHint`);
+        let loadHint: H =
+          (property as any).loadHint ?? fail(`${source}.${fieldName} cannot be imported as it has no loadHint`);
         this.importEntity<T, H, L>(source, loadHint);
       } else if (["o2m", "lo2m", "m2o", "m2m", "o2o", "poly"].includes(field.kind)) {
         const entities = toArray((source as any)[fieldName].get).map(

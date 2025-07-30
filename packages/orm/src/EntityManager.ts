@@ -2008,7 +2008,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    *
    * @param opts options to control the fork behavior
    *  - allowPendingChanges - allows the em being forked to have pending changes and forces the resulting em to have
-   *  `mode` set to "in-memory-writes".  Changes to entities will be persisted across ems. Optional. default: false
+   *  `mode` set to "in-memory-writes".  Changes to entities in the original em will be copied to the resulting em.
+   *  Optional. default: false
    *
    * @throws {Error} If called on an EntityManager with pending changes
    * @returns A new EntityManager with copied entity state
@@ -2052,19 +2053,21 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     // If we are allowing pending changes, then we need to copy any changes across to newEm
     if (allowPendingChanges) {
-      oldEm.entities.forEach((oldEntity) => {
-        const { originalData: oldOriginalData, data: oldData } = getInstanceData(oldEntity);
-        const newEntity = findEntity(oldEntity);
-        const { originalData: newOriginalData, data: newData } = getInstanceData(newEntity);
-        // for new entities, anything in `data` is changed and should be copied across. for existing entities, we
-        // only care about changed fields, which are enumerated by originalData
-        const maybeEntity = (value: any) => (isEntity(value) ? findEntity(value as Entity) : value);
-        Object.keys(oldEntity.isNewEntity ? oldData : oldOriginalData).forEach((fieldName) => {
-          // copy over originalData so .changes is consistent across ems
-          if (fieldName in oldOriginalData) newOriginalData[fieldName] = maybeEntity(oldOriginalData[fieldName]);
-          newData[fieldName] = maybeEntity(oldData[fieldName]);
+      oldEm.entities
+        .filter((e) => e.isNewEntity || e.isDirtyEntity)
+        .forEach((oldEntity) => {
+          const { originalData: oldOriginalData, data: oldData } = getInstanceData(oldEntity);
+          const newEntity = findEntity(oldEntity);
+          const { originalData: newOriginalData, data: newData } = getInstanceData(newEntity);
+          // for new entities, anything in `data` is changed and should be copied across. for existing entities, we
+          // only care about changed fields, which are enumerated by originalData
+          const maybeEntity = (value: any) => (isEntity(value) ? findEntity(value as Entity) : value);
+          Object.keys(oldEntity.isNewEntity ? oldData : oldOriginalData).forEach((fieldName) => {
+            // copy over originalData so .changes is consistent across ems
+            if (fieldName in oldOriginalData) newOriginalData[fieldName] = maybeEntity(oldOriginalData[fieldName]);
+            newData[fieldName] = maybeEntity(oldData[fieldName]);
+          });
         });
-      });
     }
 
     // set the preload cache for each loaded relation from oldEm in the newEm so that get / isLoaded should just work

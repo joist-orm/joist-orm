@@ -1,3 +1,10 @@
+# [1.263.0](https://github.com/joist-orm/joist-orm/compare/v1.262.1...v1.263.0) (2025-07-30)
+
+
+### Features
+
+* add em.importEntity ([#1556](https://github.com/joist-orm/joist-orm/issues/1556)) ([bdefacc](https://github.com/joist-orm/joist-orm/commit/bdefacc300583ca71f51ec21016518932d1c0a56))
+
 ## [1.262.1](https://github.com/joist-orm/joist-orm/compare/v1.262.0...v1.262.1) (2025-07-30)
 
 

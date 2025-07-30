@@ -2089,16 +2089,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         .filter(([, field]) => ["o2m", "lo2m", "m2o", "m2m", "o2o", "poly"].includes(field.kind))
         .map(([name]) => name);
       persistedEntities.forEach((oldEntity) => {
-        // each entity could have different loaded status for each relation
-        const loadedRelations = relations.filter((field) => (oldEntity as any)[field].isLoaded);
         const newEntity = findEntity(oldEntity);
-        loadedRelations.forEach((field) => {
-          // this should be safe because we are only using loaded relations, and we made sure to copy every entity
-          // between ems
-          const entities = toArray((oldEntity as any)[field].get).map((e: Entity) => findEntity(e));
-          internalApi.setPreloadedRelation(oldEntity.idTagged, field, entities);
-          (newEntity as any)[field].preload();
-        });
+        relations
+          // each entity could have different loaded status for each relation, so we have to filter per entity
+          .filter((field) => (oldEntity as any)[field].isLoaded)
+          .forEach((field) => {
+            // this should be safe because we are only using loaded relations, and we made sure to copy every entity
+            // between ems
+            const entities = toArray((oldEntity as any)[field].get).map((e: Entity) => findEntity(e));
+            internalApi.setPreloadedRelation(oldEntity.idTagged, field, entities);
+            (newEntity as any)[field].preload();
+          });
       });
       unpersistedEntities.forEach((oldEntity) => {
         const newEntity = findEntity(oldEntity);

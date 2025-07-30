@@ -34,6 +34,7 @@ export function hasManyDerived<T extends Entity, U extends Entity, H extends Loa
       }
     },
     isLoaded: () => isLoaded(entity, loadHint),
+    loadHint,
     ...(rest as any),
   });
 }

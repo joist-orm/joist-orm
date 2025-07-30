@@ -11,6 +11,7 @@ import {
   PrimitiveField,
 } from "./EntityMetadata";
 import { lensDataLoader } from "./dataloaders/lensDataLoader";
+import { LoadHint } from "./loadHints";
 import { isAsyncProperty } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 
@@ -295,6 +296,15 @@ export function isLensLoaded<T, U, V>(start: T | readonly T[], fn: (lens: Lens<T
     }
   }
   return true;
+}
+
+export function lensToLoadHint<T extends Entity, U, V>(fn: (lens: Lens<T>) => Lens<U, V>): LoadHint<T> {
+  const paths = collectPaths(fn);
+  let current = {};
+  for (const path of paths.reverse()) {
+    current = { [path]: current };
+  }
+  return current as LoadHint<T>;
 }
 
 function isNotLoaded(object: any, path: string): boolean {

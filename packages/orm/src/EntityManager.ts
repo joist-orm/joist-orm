@@ -46,6 +46,7 @@ import {
   ValidationRuleResult,
   asConcreteCstr,
   assertIdIsTagged,
+  assertLoaded,
   deepNormalizeHint,
   getBaseAndSelfMetas,
   getBaseMeta,
@@ -2069,7 +2070,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           });
         });
     }
-
+    const internalApi = getEmInternalApi(newEm);
     // set the preload cache for each loaded relation from oldEm in the newEm so that get / isLoaded should just work
     // on the new entities.  group by concrete class so that we only have to gather the relation definitions once per
     // type.
@@ -2088,20 +2089,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         .filter(([, field]) => ["o2m", "lo2m", "m2o", "m2m", "o2o", "poly"].includes(field.kind))
         .map(([name]) => name);
       persistedEntities.forEach((oldEntity) => {
-        // each entity could have different loaded status for each relation
-        const loadedRelations = relations.filter((field) => (oldEntity as any)[field].isLoaded);
-        const cache = new Map(
-          loadedRelations.map((field) => [
-            field,
+        const newEntity = findEntity(oldEntity);
+        relations
+          // each entity could have different loaded status for each relation, so we have to filter per entity
+          .filter((field) => (oldEntity as any)[field].isLoaded)
+          .forEach((field) => {
             // this should be safe because we are only using loaded relations, and we made sure to copy every entity
             // between ems
-            toArray((oldEntity as any)[field].get).map((e: Entity) => findEntity(e)),
-          ]),
-        );
-        newEm.#preloadedRelations.set(oldEntity.idTagged, cache);
-        const newEntity = newEm.#entitiesById.get(oldEntity.idTagged)!;
-        // force each relation to preload on the new entity
-        loadedRelations.forEach((relation) => (newEntity as any)[relation].preload());
+            const entities = toArray((oldEntity as any)[field].get).map((e: Entity) => findEntity(e));
+            internalApi.setPreloadedRelation(oldEntity.idTagged, field, entities);
+            (newEntity as any)[field].preload();
+          });
       });
       unpersistedEntities.forEach((oldEntity) => {
         const newEntity = findEntity(oldEntity);
@@ -2130,6 +2128,75 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       }
     });
     return newEm;
+  }
+
+  /**
+   * Copies an entity from one EntityManager to another, ensuring all relations specified in the hint are
+   * also copied.
+   *
+   * This method is primarily used when you need to move entities between different EntityManager instances
+   * while preserving their loaded state and relationships. This is useful for scenarios like:
+   *
+   * - Moving entities between transaction boundaries
+   * - Creating test fixtures that reference entities from a different EntityManager
+   * - Sharing entities between different parts of your application
+   *
+   * The migration process:
+   * 1. If the entity already exists in this EntityManager, returns it
+   * 2. Otherwise, creates a new instance with the same data
+   * 3. Recursively migrates any loaded relations specified in the hint
+   *
+   * @param source - The entity to migrate from another EntityManager
+   * @param hint - The load hint specifying which relations to migrate
+   * @returns The migrated entity with all specified relations loaded
+   */
+  importEntity<T extends Entity>(original: T): T;
+  importEntity<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(original: L, hint: H): L;
+  importEntity<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
+    source: L,
+    hint?: H,
+    normalizedHint?: H,
+  ): L {
+    if (source.isNewEntity) fail("cannot import new entities");
+    if (source.isDeletedEntity) fail("cannot import deleted entities");
+    if (source.isDirtyEntity) fail("cannot import dirty entities");
+
+    hint ??= {} as H;
+    if (!normalizedHint) {
+      assertLoaded(source, hint);
+      normalizedHint = deepNormalizeHint(hint) as H;
+    }
+
+    if (source.em === this) return source as any;
+
+    const meta = getMetadata(source);
+
+    let result = this.#entitiesById.get(source.idTagged) as T | undefined;
+
+    if (!result) {
+      const meta = getMetadata(source);
+      const row = createRowFromEntityData(source);
+      result = this.hydrate(getBaseMeta(meta).cstr, [row])[0]!;
+    }
+
+    const internalApi = getEmInternalApi(this);
+    Object.entries(normalizedHint).forEach(([fieldName, subHint]) => {
+      const field = meta.allFields[fieldName];
+      if (!field) {
+        const property = (result as any)[fieldName];
+        let loadHint: H =
+          (property as any).loadHint ?? fail(`${source}.${fieldName} cannot be imported as it has no loadHint`);
+        this.importEntity<T, H, L>(source, loadHint);
+      } else if (["o2m", "lo2m", "m2o", "m2m", "o2o", "poly"].includes(field.kind)) {
+        const entities = toArray((source as any)[fieldName].get).map(
+          (e: Entity) => (this.importEntity as any)(e, subHint, subHint) as Entity,
+        );
+        internalApi.setPreloadedRelation(source.idTagged, fieldName, entities);
+        (result as any)[fieldName].preload();
+      }
+    });
+
+    return result as any;
   }
 }
 

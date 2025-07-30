@@ -24,5 +24,6 @@ export function hasOneDerived<
     load: (entity, opts) => entity.em.populate(entity, { hint: loadHint, ...opts }),
     get: () => get(entity as Loaded<T, H>),
     isLoaded: () => isLoaded(entity, loadHint as LoadHint<T>),
+    loadHint,
   });
 }

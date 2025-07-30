@@ -2070,7 +2070,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           });
         });
     }
-
+    const internalApi = getEmInternalApi(newEm);
     // set the preload cache for each loaded relation from oldEm in the newEm so that get / isLoaded should just work
     // on the new entities.  group by concrete class so that we only have to gather the relation definitions once per
     // type.
@@ -2091,18 +2091,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       persistedEntities.forEach((oldEntity) => {
         // each entity could have different loaded status for each relation
         const loadedRelations = relations.filter((field) => (oldEntity as any)[field].isLoaded);
-        const cache = new Map(
-          loadedRelations.map((field) => [
-            field,
-            // this should be safe because we are only using loaded relations, and we made sure to copy every entity
-            // between ems
-            toArray((oldEntity as any)[field].get).map((e: Entity) => findEntity(e)),
-          ]),
-        );
-        newEm.#preloadedRelations.set(oldEntity.idTagged, cache);
-        const newEntity = newEm.#entitiesById.get(oldEntity.idTagged)!;
-        // force each relation to preload on the new entity
-        loadedRelations.forEach((relation) => (newEntity as any)[relation].preload());
+        const newEntity = findEntity(oldEntity);
+        loadedRelations.forEach((field) => {
+          // this should be safe because we are only using loaded relations, and we made sure to copy every entity
+          // between ems
+          const entities = toArray((oldEntity as any)[field].get).map((e: Entity) => findEntity(e));
+          internalApi.setPreloadedRelation(oldEntity.idTagged, field, entities);
+          (newEntity as any)[field].preload();
+        });
       });
       unpersistedEntities.forEach((oldEntity) => {
         const newEntity = findEntity(oldEntity);
@@ -2182,8 +2178,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       result = this.hydrate(getBaseMeta(meta).cstr, [row])[0]!;
     }
 
-    const cache = this.#preloadedRelations.get(source.idTagged) ?? new Map<string, Entity[]>();
-
+    const internalApi = getEmInternalApi(this);
     Object.entries(normalizedHint).forEach(([fieldName, subHint]) => {
       const field = meta.allFields[fieldName];
       if (!field) {
@@ -2195,13 +2190,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         const entities = toArray((source as any)[fieldName].get).map(
           (e: Entity) => (this.importEntity as any)(e, subHint, subHint) as Entity,
         );
-        cache.set(fieldName, entities);
+        internalApi.setPreloadedRelation(source.idTagged, fieldName, entities);
+        (result as any)[fieldName].preload();
       }
     });
-
-    this.#preloadedRelations.set(source.idTagged, cache);
-    // force each relation to preload on the new entity
-    [...cache.keys()].forEach((relation) => (result as any)[relation].preload());
 
     return result as any;
   }

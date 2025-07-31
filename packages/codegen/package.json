@@ -39,7 +39,7 @@
   "devDependencies": {
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
-    "@types/node": "^22.16.5",
+    "@types/node": "^24.1.0",
     "jest": "30.0.5",
     "prettier": "^3.6.2",
     "prettier-plugin-organize-imports": "^4.2.0",

@@ -211,9 +211,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/starlight@npm:^0.35.1":
-  version: 0.35.1
-  resolution: "@astrojs/starlight@npm:0.35.1"
+"@astrojs/starlight@npm:^0.35.2":
+  version: 0.35.2
+  resolution: "@astrojs/starlight@npm:0.35.2"
   dependencies:
     "@astrojs/markdown-remark": "npm:^6.3.1"
     "@astrojs/mdx": "npm:^4.2.3"
@@ -244,7 +244,7 @@ __metadata:
     vfile: "npm:^6.0.2"
   peerDependencies:
     astro: ^5.5.0
-  checksum: 10/1e4705abc7576df0df41254886a7663314bb17103b1a674e1acee2cdb6522c468b9dcb048f1fdd9a9b1be592dbaf3dc3cb05c4eef182cfdc97f954eba40a1ba1
+  checksum: 10/8580b535d852d4284cc6914cccb8eb7ef8c49e50e3efcd43f4ebae2da9fd491f06d198bc0903d717154370b6f83e34d0546b90ce4d187368f3d9e35f42bca083
   languageName: node
   linkType: hard
 
@@ -3038,90 +3038,90 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swc/core-darwin-arm64@npm:1.13.2":
-  version: 1.13.2
-  resolution: "@swc/core-darwin-arm64@npm:1.13.2"
+"@swc/core-darwin-arm64@npm:1.13.3":
+  version: 1.13.3
+  resolution: "@swc/core-darwin-arm64@npm:1.13.3"
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
 
-"@swc/core-darwin-x64@npm:1.13.2":
-  version: 1.13.2
-  resolution: "@swc/core-darwin-x64@npm:1.13.2"
+"@swc/core-darwin-x64@npm:1.13.3":
+  version: 1.13.3
+  resolution: "@swc/core-darwin-x64@npm:1.13.3"
   conditions: os=darwin & cpu=x64
   languageName: node
   linkType: hard
 
-"@swc/core-linux-arm-gnueabihf@npm:1.13.2":
-  version: 1.13.2
-  resolution: "@swc/core-linux-arm-gnueabihf@npm:1.13.2"
+"@swc/core-linux-arm-gnueabihf@npm:1.13.3":
+  version: 1.13.3
+  resolution: "@swc/core-linux-arm-gnueabihf@npm:1.13.3"
   conditions: os=linux & cpu=arm
   languageName: node
   linkType: hard
 
-"@swc/core-linux-arm64-gnu@npm:1.13.2":
-  version: 1.13.2
-  resolution: "@swc/core-linux-arm64-gnu@npm:1.13.2"
+"@swc/core-linux-arm64-gnu@npm:1.13.3":
+  version: 1.13.3
+  resolution: "@swc/core-linux-arm64-gnu@npm:1.13.3"
   conditions: os=linux & cpu=arm64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@swc/core-linux-arm64-musl@npm:1.13.2":
-  version: 1.13.2
-  resolution: "@swc/core-linux-arm64-musl@npm:1.13.2"
+"@swc/core-linux-arm64-musl@npm:1.13.3":
+  version: 1.13.3
+  resolution: "@swc/core-linux-arm64-musl@npm:1.13.3"
   conditions: os=linux & cpu=arm64 & libc=musl
   languageName: node
   linkType: hard
 
-"@swc/core-linux-x64-gnu@npm:1.13.2":
-  version: 1.13.2
-  resolution: "@swc/core-linux-x64-gnu@npm:1.13.2"
+"@swc/core-linux-x64-gnu@npm:1.13.3":
+  version: 1.13.3
+  resolution: "@swc/core-linux-x64-gnu@npm:1.13.3"
   conditions: os=linux & cpu=x64 & libc=glibc
   languageName: node
   linkType: hard
 
-"@swc/core-linux-x64-musl@npm:1.13.2":
-  version: 1.13.2
-  resolution: "@swc/core-linux-x64-musl@npm:1.13.2"
+"@swc/core-linux-x64-musl@npm:1.13.3":
+  version: 1.13.3
+  resolution: "@swc/core-linux-x64-musl@npm:1.13.3"
   conditions: os=linux & cpu=x64 & libc=musl
   languageName: node
   linkType: hard
 
-"@swc/core-win32-arm64-msvc@npm:1.13.2":
-  version: 1.13.2
-  resolution: "@swc/core-win32-arm64-msvc@npm:1.13.2"
+"@swc/core-win32-arm64-msvc@npm:1.13.3":
+  version: 1.13.3
+  resolution: "@swc/core-win32-arm64-msvc@npm:1.13.3"
   conditions: os=win32 & cpu=arm64
   languageName: node
   linkType: hard
 
-"@swc/core-win32-ia32-msvc@npm:1.13.2":
-  version: 1.13.2
-  resolution: "@swc/core-win32-ia32-msvc@npm:1.13.2"
+"@swc/core-win32-ia32-msvc@npm:1.13.3":
+  version: 1.13.3
+  resolution: "@swc/core-win32-ia32-msvc@npm:1.13.3"
   conditions: os=win32 & cpu=ia32
   languageName: node
   linkType: hard
 
-"@swc/core-win32-x64-msvc@npm:1.13.2":
-  version: 1.13.2
-  resolution: "@swc/core-win32-x64-msvc@npm:1.13.2"
+"@swc/core-win32-x64-msvc@npm:1.13.3":
+  version: 1.13.3
+  resolution: "@swc/core-win32-x64-msvc@npm:1.13.3"
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
 
-"@swc/core@npm:^1.13.2":
-  version: 1.13.2
-  resolution: "@swc/core@npm:1.13.2"
+"@swc/core@npm:^1.13.3":
+  version: 1.13.3
+  resolution: "@swc/core@npm:1.13.3"
   dependencies:
-    "@swc/core-darwin-arm64": "npm:1.13.2"
-    "@swc/core-darwin-x64": "npm:1.13.2"
-    "@swc/core-linux-arm-gnueabihf": "npm:1.13.2"
-    "@swc/core-linux-arm64-gnu": "npm:1.13.2"
-    "@swc/core-linux-arm64-musl": "npm:1.13.2"
-    "@swc/core-linux-x64-gnu": "npm:1.13.2"
-    "@swc/core-linux-x64-musl": "npm:1.13.2"
-    "@swc/core-win32-arm64-msvc": "npm:1.13.2"
-    "@swc/core-win32-ia32-msvc": "npm:1.13.2"
-    "@swc/core-win32-x64-msvc": "npm:1.13.2"
+    "@swc/core-darwin-arm64": "npm:1.13.3"
+    "@swc/core-darwin-x64": "npm:1.13.3"
+    "@swc/core-linux-arm-gnueabihf": "npm:1.13.3"
+    "@swc/core-linux-arm64-gnu": "npm:1.13.3"
+    "@swc/core-linux-arm64-musl": "npm:1.13.3"
+    "@swc/core-linux-x64-gnu": "npm:1.13.3"
+    "@swc/core-linux-x64-musl": "npm:1.13.3"
+    "@swc/core-win32-arm64-msvc": "npm:1.13.3"
+    "@swc/core-win32-ia32-msvc": "npm:1.13.3"
+    "@swc/core-win32-x64-msvc": "npm:1.13.3"
     "@swc/counter": "npm:^0.1.3"
     "@swc/types": "npm:^0.1.23"
   peerDependencies:
@@ -3150,7 +3150,7 @@ __metadata:
   peerDependenciesMeta:
     "@swc/helpers":
       optional: true
-  checksum: 10/ca4d05c44c3e36f7d3f68dda9b53eb1e7e1c9f07701d526c8484605bf4a744cbcb83e1cadb0b4b57723d98ba799d3a75508b2219751ad5fdb29491ca325c680d
+  checksum: 10/d9f933b69b6872b69a40a926eafd98a6088e545027e031f32717f7112ce39c58ba6714a44cd894b31a619a2999b94756582735eb3ec69a35ff434da2b537e868
   languageName: node
   linkType: hard
 
@@ -3627,12 +3627,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:^22.16.5":
-  version: 22.16.5
-  resolution: "@types/node@npm:22.16.5"
+"@types/node@npm:*, @types/node@npm:^24.1.0":
+  version: 24.1.0
+  resolution: "@types/node@npm:24.1.0"
   dependencies:
-    undici-types: "npm:~6.21.0"
-  checksum: 10/ba45b5c9113cbc5edb12960fcfe7e80db2c998af5c1931264240695b27d756570d92462150b95781bd67a03aa82111cc970ab0f4504eb99213edff8bf425354e
+    undici-types: "npm:~7.8.0"
+  checksum: 10/02c3d91e1407a93a2363f97a245475fa0f6209d3f3e6ba9fdaabe65389e3e078f648da81b8738125dec6b6bf98c50fb928f36f4e72b8b015817bc21479a868c2
   languageName: node
   linkType: hard
 
@@ -3657,14 +3657,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/pg@npm:^8.15.4":
-  version: 8.15.4
-  resolution: "@types/pg@npm:8.15.4"
+"@types/pg@npm:^8.15.5":
+  version: 8.15.5
+  resolution: "@types/pg@npm:8.15.5"
   dependencies:
     "@types/node": "npm:*"
     pg-protocol: "npm:*"
     pg-types: "npm:^2.2.0"
-  checksum: 10/dd9203ae6732acad4892513fc99eb2bc699935a95b62e9fdbdcc6d1a90f63881b5fd89d4cac1729790ab3d0bb7c64130b144c65abef34e6bbed063ff43a739a6
+  checksum: 10/31bae283d044cd87a62fcbf1dc4d5a431783f4b19cad769bf5ad23794ccff969ae6fe7915c352a7b78a7159bc8b945560a5f76e74091e283c089618d1aacfff5
   languageName: node
   linkType: hard
 
@@ -4351,9 +4351,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"astro@npm:5.12.3":
-  version: 5.12.3
-  resolution: "astro@npm:5.12.3"
+"astro@npm:5.12.6":
+  version: 5.12.6
+  resolution: "astro@npm:5.12.6"
   dependencies:
     "@astrojs/compiler": "npm:^2.12.2"
     "@astrojs/internal-helpers": "npm:0.6.1"
@@ -4415,7 +4415,7 @@ __metadata:
     xxhash-wasm: "npm:^1.1.0"
     yargs-parser: "npm:^21.1.1"
     yocto-spinner: "npm:^0.2.1"
-    zod: "npm:^3.24.2"
+    zod: "npm:^3.24.4"
     zod-to-json-schema: "npm:^3.24.5"
     zod-to-ts: "npm:^1.2.0"
   dependenciesMeta:
@@ -4423,7 +4423,7 @@ __metadata:
       optional: true
   bin:
     astro: astro.js
-  checksum: 10/8c6f2fd651b0b829ae6e1f086239b4df8397366382f72efdc256414414007ba2ab83e1e60fa2b49e8308fb1c1b071c2902b6c21aa1681a42f62074325b51bb2b
+  checksum: 10/a4a8dc602da54d083188f2b748a91120353d483a9c6b4b0e48b573223b6dff7abe11f2f8aee1c5eea9d9c8b3545548ac3c46f86f113cecd7e2ac9b09b205c931
   languageName: node
   linkType: hard
 
@@ -8479,7 +8479,7 @@ __metadata:
     "@types/inquirer": "npm:^9.0.8"
     "@types/jest": "npm:^30.0.0"
     "@types/jscodeshift": "npm:^17.3.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     "@types/pluralize": "npm:^0.0.33"
     "@types/semver": "npm:^7.7.0"
     change-case: "npm:^4.1.2"
@@ -8512,10 +8512,10 @@ __metadata:
   resolution: "joist-docs@workspace:docs"
   dependencies:
     "@astrojs/check": "npm:^0.9.4"
-    "@astrojs/starlight": "npm:^0.35.1"
+    "@astrojs/starlight": "npm:^0.35.2"
     "@astrojs/starlight-tailwind": "npm:^4.0.1"
     "@tailwindcss/vite": "npm:^4.1.11"
-    astro: "npm:5.12.3"
+    astro: "npm:5.12.6"
     sharp: "npm:^0.34.3"
     starlight-blog: "npm:^0.24.0"
     tailwindcss: "npm:^4.1.11"
@@ -8542,10 +8542,10 @@ __metadata:
   dependencies:
     "@dprint/formatter": "npm:^0.2.1"
     "@dprint/json": "npm:0.15.6"
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     "@types/prettier": "npm:^3.0.0"
     change-case: "npm:^4.1.2"
     graphql: "npm:^16.11.0"
@@ -8565,10 +8565,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-graphql-resolver-utils@workspace:packages/graphql-resolver-utils"
   dependencies:
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     graphql: "npm:^16.11.0"
     jest: "npm:30.0.5"
     joist-orm: "workspace:*"
@@ -8584,10 +8584,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-knex@workspace:packages/knex"
   dependencies:
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     jest: "npm:30.0.5"
     knex: "npm:^3.1.0"
     pg: "npm:^8.16.3"
@@ -8603,10 +8603,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-migration-utils@workspace:packages/migration-utils"
   dependencies:
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     "@types/pluralize": "npm:^0.0.33"
     jest: "npm:30.0.5"
     joist-utils: "workspace:*"
@@ -8626,12 +8626,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-orm@workspace:packages/orm"
   dependencies:
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     "@types/object-hash": "npm:^3.0.6"
-    "@types/pg": "npm:^8.15.4"
+    "@types/pg": "npm:^8.15.5"
     ansis: "npm:^3.17.0"
     dataloader: "npm:^2.2.3"
     jest: "npm:30.0.5"
@@ -8653,7 +8653,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-test-utils@workspace:packages/test-utils"
   dependencies:
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
     jest: "npm:30.0.5"
@@ -8671,7 +8671,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-bun-sql-pg@workspace:packages/tests/bun-sql-pg"
   dependencies:
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     bun-types: "npm:^1.2.19"
     jest: "npm:30.0.5"
     joist-codegen: "workspace:*"
@@ -8690,7 +8690,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-bun@workspace:packages/tests/bun"
   dependencies:
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     bun-types: "npm:^1.2.19"
     joist-codegen: "workspace:*"
     joist-migration-utils: "workspace:*"
@@ -8708,10 +8708,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-esm-misc@workspace:packages/tests/esm-misc"
   dependencies:
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     jest: "npm:30.0.5"
     jest-junit: "npm:^16.0.0"
     joist-codegen: "workspace:*"
@@ -8732,10 +8732,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-immediate-foreign-keys@workspace:packages/tests/immediate-foreign-keys"
   dependencies:
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     env-cmd: "npm:^10.1.0"
     jest: "npm:30.0.5"
     jest-junit: "npm:^16.0.0"
@@ -8758,10 +8758,10 @@ __metadata:
   dependencies:
     "@graphql-tools/graphql-file-loader": "npm:^8.0.22"
     "@graphql-tools/load": "npm:^8.1.2"
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     ansi-regex: "npm:^5.0.1"
     env-cmd: "npm:^10.1.0"
     jest: "npm:30.0.5"
@@ -8793,10 +8793,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-number-ids@workspace:packages/tests/number-ids"
   dependencies:
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     env-cmd: "npm:^10.1.0"
     jest: "npm:30.0.5"
     jest-junit: "npm:^16.0.0"
@@ -8817,10 +8817,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-schema-misc@workspace:packages/tests/schema-misc"
   dependencies:
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     jest: "npm:30.0.5"
     jest-junit: "npm:^16.0.0"
     joist-codegen: "workspace:*"
@@ -8841,10 +8841,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-temporal@workspace:packages/tests/temporal"
   dependencies:
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     jest: "npm:30.0.5"
     jest-junit: "npm:^16.0.0"
     joist-codegen: "workspace:*"
@@ -8866,10 +8866,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-untagged-ids@workspace:packages/tests/untagged-ids"
   dependencies:
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     env-cmd: "npm:^10.1.0"
     jest: "npm:30.0.5"
     jest-junit: "npm:^16.0.0"
@@ -8890,10 +8890,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-uuid-ids@workspace:packages/tests/uuid-ids"
   dependencies:
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     env-cmd: "npm:^10.1.0"
     jest: "npm:30.0.5"
     jest-junit: "npm:^16.0.0"
@@ -8914,10 +8914,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-transform-properties@workspace:packages/transform-properties"
   dependencies:
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     jest: "npm:30.0.5"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.2.0"
@@ -8931,10 +8931,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-utils@workspace:packages/utils"
   dependencies:
-    "@swc/core": "npm:^1.13.2"
+    "@swc/core": "npm:^1.13.3"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^22.16.5"
+    "@types/node": "npm:^24.1.0"
     jest: "npm:30.0.5"
     pg: "npm:^8.16.3"
     pg-connection-string: "npm:^2.9.1"
@@ -14618,10 +14618,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"undici-types@npm:~6.21.0":
-  version: 6.21.0
-  resolution: "undici-types@npm:6.21.0"
-  checksum: 10/ec8f41aa4359d50f9b59fa61fe3efce3477cc681908c8f84354d8567bb3701fafdddf36ef6bff307024d3feb42c837cf6f670314ba37fc8145e219560e473d14
+"undici-types@npm:~7.8.0":
+  version: 7.8.0
+  resolution: "undici-types@npm:7.8.0"
+  checksum: 10/fcff3fbab234f067fbd69e374ee2c198ba74c364ceaf6d93db7ca267e784457b5518cd01d0d2329b075f412574205ea3172a9a675facb49b4c9efb7141cd80b7
   languageName: node
   linkType: hard
 
@@ -15797,7 +15797,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^3.24.2, zod@npm:^3.25.76":
+"zod@npm:^3.24.2, zod@npm:^3.24.4, zod@npm:^3.25.76":
   version: 3.25.76
   resolution: "zod@npm:3.25.76"
   checksum: 10/f0c963ec40cd96858451d1690404d603d36507c1fc9682f2dae59ab38b578687d542708a7fdbf645f77926f78c9ed558f57c3d3aa226c285f798df0c4da16995

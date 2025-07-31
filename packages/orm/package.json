@@ -21,7 +21,7 @@
   ],
   "dependencies": {
     "@types/object-hash": "^3.0.6",
-    "@types/pg": "^8.15.4",
+    "@types/pg": "^8.15.5",
     "ansis": "^3.17.0",
     "dataloader": "^2.2.3",
     "joist-utils": "workspace:*",
@@ -31,10 +31,10 @@
     "pg-types": "^4.0.2"
   },
   "devDependencies": {
-    "@swc/core": "^1.13.2",
+    "@swc/core": "^1.13.3",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
-    "@types/node": "^22.16.5",
+    "@types/node": "^24.1.0",
     "jest": "30.0.5",
     "prettier": "^3.6.2",
     "prettier-plugin-organize-imports": "^4.2.0",

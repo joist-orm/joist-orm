@@ -2,9 +2,8 @@
 title: MikroORM
 description: Comparison to MikroORM
 sidebar:
-  order: 5
+  order: 1
 ---
-
 
 ## Similarities
 
@@ -35,3 +34,5 @@ Joist can easily be run with `tsx`; Mikro's decorators require a `tsc`-based too
 Joist's `em.find` API supports [condition pruning](/features/queries-find/#condition--join-pruning) for ergonomic filter/listing endpoints.
 
 Joist has first-class support for GraphQL, including ever-green schema scaffolding.
+
+Joist has out-of-the-box factories for pleasant, idiomatic tests that scale to 10,000s of tests.

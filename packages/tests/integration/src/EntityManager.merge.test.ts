@@ -27,13 +27,15 @@ describe("EntityManager.merge", () => {
     const [b1, b2] = await em.find(Book, {});
 
     // When we merge a2 into a1
-    await em.merge(a1, [a2]);
+    const changed = await em.merge(a1, [a2]);
     // Populate the books collection for the assertion
     await em.populate(a1, "books");
     // Then a1 should have both books
     expect(a1).toMatchEntity({ books: [b1, b2] });
     // And b2 should now point to a1
     expect(await b2.author.load()).toBe(a1);
+    // And we are told which book changed
+    expect(changed).toMatchEntity([b2]);
     // And the source author should be automatically deleted
     await em.flush();
     expect(await numberOf(em, Author, Book)).toEqual([1, 2]);

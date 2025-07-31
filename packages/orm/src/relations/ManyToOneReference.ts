@@ -100,7 +100,12 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     const current = this.current();
     // Resolve the id to an entity
     if (!isEntity(current) && current !== undefined) {
-      this.loaded = (await this.entity.em.load(this.otherMeta.cstr, current)) as any as U;
+      const entity = (await this.entity.em.load(this.otherMeta.cstr, current)) as any as U;
+      // In extremely rare cases, someone might have called `set` while this promise was in-flight,
+      // so make sure our current value is still the same as the fetched entity.
+      if (sameEntity(entity, this.current())) {
+        this.loaded = entity;
+      }
     } else {
       this.loaded = current;
     }

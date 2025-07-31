@@ -1,3 +1,10 @@
+## [1.263.1](https://github.com/joist-orm/joist-orm/compare/v1.263.0...v1.263.1) (2025-07-31)
+
+
+### Bug Fixes
+
+* Disable cannotBeUpdated during em.merge. ([#1557](https://github.com/joist-orm/joist-orm/issues/1557)) ([74a9195](https://github.com/joist-orm/joist-orm/commit/74a919575777f1fffe18c61d1a2ac1bc008b80a3))
+
 # [1.263.0](https://github.com/joist-orm/joist-orm/compare/v1.262.1...v1.263.0) (2025-07-30)
 
 

@@ -29,6 +29,7 @@ const config = defineConfig({
         { label: "Advanced Features", autogenerate: { directory: "advanced" } },
         { label: "Logging", autogenerate: { directory: "logging" } },
         { label: "Testing", autogenerate: { directory: "testing" } },
+        { label: "Comparisons", autogenerate: { directory: "comparisons" } },
         { label: "FAQ", link: "/faq/" },
         { label: "Blog", link: "/blog" },
       ],

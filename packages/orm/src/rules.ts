@@ -1,8 +1,9 @@
 import { Changes, EntityChanges } from "./changes";
 import { Entity } from "./Entity";
+import { getEmInternalApi } from "./EntityManager";
 import { getField } from "./fields";
 import { ReactiveHint } from "./reactiveHints";
-import { isReactiveQueryField, ManyToOneReferenceImpl } from "./relations";
+import { isLoadedReference, isReactiveQueryField, ManyToOneReferenceImpl } from "./relations";
 import { FieldsOf } from "./typeMap";
 import { groupBy, MaybePromise, maybePromiseThen } from "./utils";
 
@@ -136,6 +137,9 @@ export function cannotBeUpdated<T extends Entity, K extends keyof Changes<T> & s
     // For now putting the `EntityChanges` cast here to avoid breaking cannotBeUpdated rules
     // on base types, see Publisher.ts's `cannotBeUpdated("type")` repro.
     if ((entity as any as EntityChanges<T>).changes[field].hasUpdated) {
+      const value = (entity as any)[field];
+      // If we're being changed b/c of an em.merge, that is okay
+      if (isLoadedReference(value) && getEmInternalApi(entity.em).isMerging(value.get)) return;
       return { field, code: ValidationCode.cannotBeUpdated, message: `${field} cannot be updated` };
     }
     return;

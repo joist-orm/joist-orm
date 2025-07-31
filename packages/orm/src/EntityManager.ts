@@ -230,6 +230,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   readonly #preloader: PreloadPlugin | undefined;
   #fieldLogger: FieldLogger | undefined;
   #isLoadedCache = new IsLoadedCache();
+  #merging: Set<EntityW> | undefined;
   private __api: EntityManagerInternalApi;
   private __isRefreshing = false;
   mode: EntityManagerMode = "writes";
@@ -262,6 +263,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       rm: this.#rm,
       indexManager: this.#indexManager,
       isLoadedCache: this.#isLoadedCache,
+
+      isMerging(entity: EntityW): boolean {
+        return em.#merging?.has(entity) ?? false;
+      },
 
       joinRows(m2m: ManyToManyCollection<any, any>): JoinRows {
         return getOrSet(em.#joinRows, m2m.joinTableName, () => new JoinRows(m2m, em.#rm));
@@ -929,6 +934,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const autoDelete = opts?.autoDelete ?? true;
     if (sources.length === 0) return;
 
+    this.#merging ??= new Set();
+    // Allow cannotBeUpdated to see that anyone pointed to the new target is allowed to change
+    this.#merging.add(target);
+
     // Make sure source and target are the same type (Before we call `populate` below which will fail on invalid load hints)
     const targetMeta = getMetadata(target);
     for (const source of sources) {
@@ -949,15 +958,20 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         const { kind } = field;
         if (kind === "o2m") {
           for (const other of (source as any)[field.fieldName].get) {
+            this.#merging.add(other); // Tell ReactionsManager to react to normally-read-only fields
             (other as any)[field.otherFieldName].set(target);
           }
         } else if (kind === "o2o") {
+          const otherField = field.otherMetadata().allFields[field.otherFieldName];
+          if (otherField.kind === "m2o" && otherField.derived) continue;
           const other = (source as any)[field.fieldName].get;
           if (other) {
+            this.#merging.add(other); // Tell ReactionsManager to react to normally-read-only fields
             (other as any)[field.otherFieldName].set(target);
           }
         } else if (kind === "m2m") {
           for (const other of (source as any)[field.fieldName].get) {
+            this.#merging.add(other); // Tell ReactionsManager to react to normally-read-only fields
             const collection = (other as any)[field.otherFieldName];
             collection.remove(source);
             collection.add(target);
@@ -1606,6 +1620,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       // Fixup the `deleted` field on entities that were created then immediately deleted
       for (const e of createdThenDeleted) getInstanceData(e).fixupCreatedThenDeleted();
+      this.#merging?.clear();
 
       return [...allFlushedEntities];
     } catch (e) {
@@ -2220,6 +2235,7 @@ export interface EntityManagerInternalApi {
   preloader: PreloadPlugin | undefined;
   isValidating: boolean;
   checkWritesAllowed: () => void;
+  isMerging: (entity: Entity) => boolean;
   get fieldLogger(): FieldLogger | undefined;
   get isLoadedCache(): IsLoadedCache;
 }

@@ -51,8 +51,10 @@ RUN chmod uo+x /reset.sh
 
 # Create the console.sh file
 RUN echo "#!/bin/bash" > /console.sh && \
-  echo "set -e" >> /console.sh && \
-  echo "psql -v ON_ERROR_STOP=1 --username ${APP_USERNAME} --dbname ${APP_DBNAME}" >> /console.sh && \
-  chmod u+x /console.sh
+    echo "set -e" >> /console.sh && \
+    echo "psql -v ON_ERROR_STOP=1 --username ${APP_USERNAME} --dbname ${APP_DBNAME}" >> /console.sh && \
+    chmod u+x /console.sh
 
-CMD ["postgres", "-c", "fsync=off"]
+# fsync = Skip committing to desk for local dev
+# The rest are settings from Claude to make db-restore faster
+CMD ["postgres", "-c", "fsync=off", "-c", "maintenance_work_mem=1GB", "-c", "checkpoint_completion_target=0.9", "-c", "wal_buffers=64MB", "-c", "shared_buffers=512MB"]

@@ -930,9 +930,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * // Custom logic here...
    * em.delete(author2);
    */
-  public async merge<T extends Entity>(target: T, sources: T[], opts?: { autoDelete?: boolean }): Promise<void> {
+  public async merge<T extends Entity>(target: T, sources: T[], opts?: { autoDelete?: boolean }): Promise<Entity[]> {
     const autoDelete = opts?.autoDelete ?? true;
-    if (sources.length === 0) return;
+    if (sources.length === 0) return [];
 
     this.#merging ??= new Set();
     // Allow cannotBeUpdated to see that anyone pointed to the new target is allowed to change
@@ -952,6 +952,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       .map((field) => field.fieldName);
     await this.populate(sources, fields as any as LoadHint<T>);
 
+    const changedEntities: Entity[] = [];
     for (const source of sources) {
       // Find all reverse relations (things that point to this entity)
       for (const field of Object.values(targetMeta.allFields)) {
@@ -960,6 +961,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           for (const other of (source as any)[field.fieldName].get) {
             this.#merging.add(other); // Tell ReactionsManager to react to normally-read-only fields
             (other as any)[field.otherFieldName].set(target);
+            changedEntities.push(other);
           }
         } else if (kind === "o2o") {
           const otherField = field.otherMetadata().allFields[field.otherFieldName];
@@ -968,6 +970,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           if (other) {
             this.#merging.add(other); // Tell ReactionsManager to react to normally-read-only fields
             (other as any)[field.otherFieldName].set(target);
+            changedEntities.push(other);
           }
         } else if (kind === "m2m") {
           for (const other of (source as any)[field.fieldName].get) {
@@ -975,6 +978,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             const collection = (other as any)[field.otherFieldName];
             collection.remove(source);
             collection.add(target);
+            changedEntities.push(other);
           }
         } else if (
           kind === "primitive" ||
@@ -999,6 +1003,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     if (autoDelete) {
       for (const source of sources) this.delete(source);
     }
+
+    return changedEntities;
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */

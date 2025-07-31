@@ -71,11 +71,11 @@ class ManyToManyFieldStatusImpl<T extends Entity, U extends Entity> implements M
   }
 
   get hasChanged(): boolean {
-    return this.#joinRows.hasChanges;
+    return this.changed.length > 0;
   }
 
   get hasUpdated(): boolean {
-    return !this.#entity.isNewEntity && this.#joinRows.hasChanges;
+    return !this.#entity.isNewEntity && this.changed.length > 0;
   }
 
   get originalEntities(): Promise<readonly U[]> {

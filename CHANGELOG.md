@@ -1,3 +1,10 @@
+## [1.263.2](https://github.com/joist-orm/joist-orm/compare/v1.263.1...v1.263.2) (2025-07-31)
+
+
+### Bug Fixes
+
+* Return changed entities from merge. ([#1560](https://github.com/joist-orm/joist-orm/issues/1560)) ([c76adc6](https://github.com/joist-orm/joist-orm/commit/c76adc6cdb3d87aafe807bc322b565d2a9339cae))
+
 ## [1.263.1](https://github.com/joist-orm/joist-orm/compare/v1.263.0...v1.263.1) (2025-07-31)
 
 

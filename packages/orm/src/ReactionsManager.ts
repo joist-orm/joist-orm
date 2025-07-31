@@ -1,8 +1,8 @@
 import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { getReactiveFields } from "./caches";
+import { getReactiveFields, getReactiveFieldsIncludingReadOnly } from "./caches";
 import { ReactiveField } from "./config";
-import { EntityManager, NoIdError } from "./index";
+import { EntityManager, getEmInternalApi, NoIdError } from "./index";
 import { globalLogger, ReactionLogger } from "./logging/ReactionLogger";
 import { followReverseHint } from "./reactiveHints";
 import { Relation } from "./relations";
@@ -52,7 +52,7 @@ export class ReactionsManager {
    */
   queueDownstreamReactiveFields(entity: Entity, fieldName: string): void {
     // Use the reverse index of ReactiveFields that configureMetadata sets up
-    for (const rf of getReactiveFields(getMetadata(entity))) {
+    for (const rf of this.getReactiveFields(entity)) {
       if (rf.fields.includes(fieldName)) {
         // We always queue the RF/entity, even if we're mid-flush or even mid-recalc, to avoid:
         // - firstName is changed from a1 to a2
@@ -73,7 +73,7 @@ export class ReactionsManager {
   /** Dequeues reactivity on `fieldName`, i.e. if it's no longer dirty. */
   dequeueDownstreamReactiveFields(entity: Entity, fieldName: string): void {
     // Use the reverse index of ReactiveFields that configureMetadata sets up
-    for (const rf of getReactiveFields(getMetadata(entity))) {
+    for (const rf of this.getReactiveFields(entity)) {
       if (rf.fields.includes(fieldName)) {
         const pending = this.getPending(rf);
         if (pending.done.has(entity)) {
@@ -98,7 +98,7 @@ export class ReactionsManager {
 
   /** Queue all downstream reactive fields that depend on this entity being created or deleted. */
   queueAllDownstreamFields(entity: Entity, reason: "created" | "deleted"): void {
-    const rfs = getReactiveFields(getMetadata(entity));
+    const rfs = this.getReactiveFields(entity);
     for (const rf of rfs) {
       this.getPending(rf).todo.add(entity);
       this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
@@ -267,5 +267,13 @@ export class ReactionsManager {
       this.dirtyFields.set(meta.tagName, dirty);
     }
     return dirty;
+  }
+
+  private getReactiveFields(entity: Entity): ReactiveField[] {
+    // If two books are getting merged, and so a normally-immutable `BookReview.book` is being changed,
+    // then even normally-immutable fields need to be recalculated.
+    return getEmInternalApi(this.em).isMerging(entity)
+      ? getReactiveFieldsIncludingReadOnly(getMetadata(entity))
+      : getReactiveFields(getMetadata(entity));
   }
 }

@@ -6,10 +6,13 @@ import {
   insertImage,
   insertPublisher,
   insertTag,
+  select,
 } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 import { EntityManager, MaybeAbstractEntityConstructor } from "joist-orm";
-import { Author, Book, Comment, Image, Publisher, Tag } from "./entities";
+import { Author, Book, Comment, Image, newAuthor, newBook, Publisher, Tag } from "./entities";
+import { jan1 } from "./testDates";
+import { twoOf } from "./utils";
 
 describe("EntityManager.merge", () => {
   it("can merge one source and one target", async () => {
@@ -222,6 +225,46 @@ describe("EntityManager.merge", () => {
     em.delete(a2);
     await em.flush();
     expect(await numberOf(em, Author, Book)).toEqual([1, 2]);
+  });
+
+  it("can merge children with cannotBeUpdated rules", async () => {
+    const em = newEntityManager();
+    // Given two books
+    const b1 = newBook(em, { reviews: [{}] });
+    const b2 = newBook(em, { reviews: [{}] });
+    await em.flush();
+    // When we merge the books
+    await em.merge(b1, [b2]);
+    // Then it passes, without throwing `BookReview.book cannot be updated`
+    await em.flush();
+    // Then b1 should have both reviews
+    expect(b1).toMatchEntity({ reviews: [{}, {}] });
+    // But then later we cannot change it against
+    const br1 = b1.reviews.get[0];
+    br1.book.set(newBook(em));
+    await expect(em.flush()).rejects.toThrow("book cannot be updated");
+  });
+
+  it("can merge children and recalc reactive fields", async () => {
+    const em = newEntityManager();
+    // Given two Authoas that each can have public book reviews
+    const [a1, a2] = twoOf(() => newAuthor(em, { age: 30, graduated: jan1 }));
+    // And two books, each with their own (public) review
+    const b1 = newBook(em, { author: a1, reviews: [{ rating: 1 }] });
+    const b2 = newBook(em, { author: a2, reviews: [{ rating: 1 }] });
+    await em.flush();
+    // And so initially there are 1 public reviews each
+    expect(a1.numberOfPublicReviews.get).toBe(1);
+    expect(a2.numberOfPublicReviews.get).toBe(1);
+
+    // When we merge the books in a new em
+    const em2 = newEntityManager();
+    await em2.merge(await em2.load(Book, "b:1"), [await em2.load(Book, "b:2")]);
+    await em2.flush();
+    // Then both values were recalced
+    const rows = await select("authors");
+    expect(rows[0]).toMatchObject({ id: 1, number_of_public_reviews: 2 });
+    expect(rows[1]).toMatchObject({ id: 2, number_of_public_reviews: 0 });
   });
 });
 

@@ -1,3 +1,10 @@
+## [1.263.3](https://github.com/joist-orm/joist-orm/compare/v1.263.2...v1.263.3) (2025-07-31)
+
+
+### Bug Fixes
+
+* Fix race condition in m2o.load. ([#1561](https://github.com/joist-orm/joist-orm/issues/1561)) ([b7c512a](https://github.com/joist-orm/joist-orm/commit/b7c512a048f976ba5991439b0d68afbc3ee905fa))
+
 ## [1.263.2](https://github.com/joist-orm/joist-orm/compare/v1.263.1...v1.263.2) (2025-07-31)
 
 

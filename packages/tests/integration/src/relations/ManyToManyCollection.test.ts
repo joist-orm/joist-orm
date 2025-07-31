@@ -10,7 +10,7 @@ import {
 } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 import { Author, Book, Tag, newAuthor, newBook, newBookReview, newSmallPublisher, newTag, newUser } from "../entities";
-import { zeroTo } from "../utils";
+import { twoOf, zeroTo } from "../utils";
 
 describe("ManyToManyCollection", () => {
   it("can load a many-to-many", async () => {
@@ -667,6 +667,23 @@ describe("ManyToManyCollection", () => {
       expect(a1.changes.tags.hasUpdated).toBe(true);
       expect(t1.changes.authors.hasUpdated).toBe(true);
       expect(t2.changes.authors.hasUpdated).toBe(true);
+    });
+
+    it("is not changed when new and other changes", async () => {
+      const em = newEntityManager();
+      const [a1, a2] = twoOf(() => newAuthor(em));
+      expect(a1.changes.tags.hasChanged).toBe(false);
+      a2.tags.add(newTag(em, 1));
+      expect(a1.changes.tags.hasChanged).toBe(false);
+    });
+
+    it("is not changed when existing and other changes", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      const [a1, a2] = await em.find(Author, {}, { populate: "tags" });
+      a2.tags.add(newTag(em, 1));
+      expect(a1.changes.tags.hasChanged).toBe(false);
     });
   });
 

@@ -100,7 +100,11 @@ export class JoinRows {
     const { columnName, otherColumnName } = m2m;
     const addedRows = this.index
       .getOthers(m2m.columnName, e1)
-      .filter((r) => r.id === undefined && r.deleted !== true && r.op === JoinRowOperation.Pending);
+      .filter(
+        (r) =>
+          ((r.id === undefined && r.op === JoinRowOperation.Pending) || r.op === JoinRowOperation.Flushed) &&
+          r.deleted !== true,
+      );
     return addedRows.map((r) => r.columns[otherColumnName]);
   }
 

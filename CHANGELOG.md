@@ -1,3 +1,10 @@
+## [1.263.4](https://github.com/joist-orm/joist-orm/compare/v1.263.3...v1.263.4) (2025-07-31)
+
+
+### Bug Fixes
+
+* Fix m2m changes. ([#1563](https://github.com/joist-orm/joist-orm/issues/1563)) ([d526702](https://github.com/joist-orm/joist-orm/commit/d526702c0f117841d588cc5774c8fa099352c2b2))
+
 ## [1.263.3](https://github.com/joist-orm/joist-orm/compare/v1.263.2...v1.263.3) (2025-07-31)
 
 

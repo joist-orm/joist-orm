@@ -283,6 +283,13 @@ export class ReactiveReferenceImpl<
     this.#isCached = true;
   }
 
+  import(other: ReactiveReferenceImpl<T, U, H, N>, findEntity: (e: U) => U): void {
+    this.#loaded = other.#loaded ? findEntity(other.#loaded) : undefined;
+    this.#loadedMode = "ref";
+    this.#isLoaded = true;
+    this.#isCached = true;
+  }
+
   /** Returns the tagged id of the current value. */
   get idTaggedMaybe(): TaggedId | N {
     ensureNotDeleted(this.entity, "pending");

@@ -135,6 +135,11 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     this._isLoaded = true;
   }
 
+  import(other: ManyToOneReferenceImpl<T, U, N>, findEntity: (e: U) => U): void {
+    this.loaded = other.loaded ? findEntity(other.loaded) : undefined;
+    this._isLoaded = true;
+  }
+
   private doGet(opts?: { withDeleted?: boolean }): U | N {
     ensureNotDeleted(this.entity, "pending");
     // This should only be callable in the type system if we've already resolved this to an instance,

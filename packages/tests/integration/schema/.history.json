@@ -36,6 +36,7 @@
     "graduated",
     "id",
     "image",
+    "imageTagNames",
     "initials",
     "isFunny",
     "isPopular",
@@ -157,7 +158,7 @@
     "updatedAt"
   ],
   "CriticColumn": ["createdAt", "critic", "id", "name", "updatedAt"],
-  "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "type", "updatedAt"],
+  "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "tags", "type", "updatedAt"],
   "LargePublisher": [
     "authors",
     "baseAsyncDefault",
@@ -296,6 +297,7 @@
     "fullName",
     "graduated",
     "id",
+    "imageTagNames",
     "initials",
     "isFunny",
     "isPopular",
@@ -583,7 +585,7 @@
     "smallName",
     "updatedAt"
   ],
-  "Tag": ["authors", "bookReviews", "books", "createdAt", "id", "name", "publishers", "tasks", "updatedAt"],
+  "Tag": ["authors", "bookReviews", "books", "createdAt", "id", "images", "name", "publishers", "tasks", "updatedAt"],
   "Task": [
     "asyncDefault_1",
     "asyncDefault_2",

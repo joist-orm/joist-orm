@@ -6,6 +6,7 @@ import {
   ensureNotDeleted,
   fail,
   getEmInternalApi,
+  getInstanceData,
   getMetadata,
   isEntity,
   isLoaded,
@@ -138,6 +139,9 @@ export class ReactiveReferenceImpl<
     if (entity.isNewEntity) {
       const isLoaded = isEntity(this.current()) ? true : undefined;
     }
+    // If the property transformer is not enabled, then the RR will not be in the relations map because they are
+    // defined in the implementation file and not the codegen file.  So we should insert ourselves regardless.
+    getInstanceData(entity).relations[fieldName] = this;
   }
 
   async load(opts?: { withDeleted?: true; forceReload?: true }): Promise<U | N> {
@@ -278,6 +282,13 @@ export class ReactiveReferenceImpl<
 
   preload(): void {
     this.#loaded = this.maybeFindEntity();
+    this.#loadedMode = "ref";
+    this.#isLoaded = true;
+    this.#isCached = true;
+  }
+
+  import(other: ReactiveReferenceImpl<T, U, H, N>, findEntity: (e: U) => U): void {
+    this.#loaded = other.#loaded ? findEntity(other.#loaded) : undefined;
     this.#loadedMode = "ref";
     this.#isLoaded = true;
     this.#isCached = true;

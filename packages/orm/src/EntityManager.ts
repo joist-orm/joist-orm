@@ -5,7 +5,7 @@ import { getField, setField } from "./fields";
 import { IndexManager } from "./IndexManager";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
 import { getReactiveRules } from "./caches";
-import { ReactiveRule, constraintNameToValidationError } from "./config";
+import { constraintNameToValidationError, ReactiveRule } from "./config";
 import { getConstructorFromTag, getMetadataForType } from "./configure";
 import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
@@ -17,54 +17,56 @@ import { Driver } from "./drivers";
 import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
 import {
+  asConcreteCstr,
+  assertIdIsTagged,
+  assertLoaded,
+  Column,
   CustomCollection,
   CustomReference,
+  deepNormalizeHint,
   DeepPartialOrNull,
   EntityHook,
   EntityMetadata,
   EnumField,
   ExpressionFilter,
+  Field,
   FieldLogger,
   FieldLoggerWatch,
   FilterWithAlias,
-  GraphQLFilterOf,
-  GraphQLFilterWithAlias,
-  InstanceData,
-  Lens,
-  ManyToManyCollection,
-  OneToManyCollection,
-  PartialOrNull,
-  PolymorphicReferenceImpl,
-  ReactionLogger,
-  ReactiveHint,
-  Reference,
-  TimestampSerde,
-  UniqueFilter,
-  ValidationError,
-  ValidationErrors,
-  ValidationRule,
-  ValidationRuleResult,
-  asConcreteCstr,
-  assertIdIsTagged,
-  assertLoaded,
-  deepNormalizeHint,
   getBaseAndSelfMetas,
   getBaseMeta,
   getConstructorFromTaggedId,
   getMetadata,
   getRelationEntries,
   getRelations,
+  GraphQLFilterOf,
+  GraphQLFilterWithAlias,
+  InstanceData,
   isLoadedReference,
   keyToTaggedId,
+  Lens,
   loadLens,
+  ManyToManyCollection,
+  OneToManyCollection,
   parseFindQuery,
+  PartialOrNull,
+  PolymorphicReferenceImpl,
+  ReactionLogger,
+  ReactiveHint,
+  Reference,
   setOpts,
   tagId,
+  TimestampSerde,
   toTaggedId,
+  UniqueFilter,
+  ValidationError,
+  ValidationErrors,
+  ValidationRule,
+  ValidationRuleResult,
 } from "./index";
 import { IsLoadedCache } from "./IsLoadedCache";
 import { JoinRows } from "./JoinRows";
-import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
+import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { WriteFn } from "./logging/FactoryLogger";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";
 import { ReactionsManager } from "./ReactionsManager";
@@ -72,10 +74,10 @@ import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
-import { JoinRowTodo, Todo, combineJoinRows, createTodos } from "./Todo";
+import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
 import { OptsOf, OrderOf } from "./typeMap";
 import { upsert } from "./upsert";
-import { MaybePromise, assertNever, fail, failIfAnyRejected, getOrSet, groupBy, partition, toArray } from "./utils";
+import { assertNever, fail, failIfAnyRejected, getOrSet, groupBy, MaybePromise, partition, toArray } from "./utils";
 
 // polyfill
 (Symbol as any).asyncDispose ??= Symbol("Symbol.asyncDispose");
@@ -2039,115 +2041,108 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   fork(opts: { allowPendingChanges?: boolean } = {}): EntityManager<C, Entity, TX> {
     const { allowPendingChanges = false } = opts;
     const oldEm = this;
-    const pendingEntities = oldEm.entities.filter((e) => getInstanceData(e).pendingOperation !== "none");
-    if (!allowPendingChanges && pendingEntities.length > 0) {
-      fail("Cannot fork an EntityManager with pending changes");
-    }
     // copy the context so that it's distinct between the two ems, and so we can update any references from the old em
     // to the new one later
     const ctx = { ...oldEm.ctx } as Record<string, any>;
     const newEm = new EntityManager<C, Entity, TX>(ctx as C, { em: oldEm });
     if (allowPendingChanges) newEm.mode = "in-memory-writes";
     // hydrate (ie, create) each entity from the oldEm in the newEm
-    oldEm.#entitiesByTag.forEach((entities, tag) => {
-      const [unpersistedEntities, persistedEntities] = allowPendingChanges
-        ? partition(entities, (e) => e.isNewEntity)
-        : [[], entities];
+    for (const [tag, entities] of oldEm.#entitiesByTag.entries()) {
       // tags are always defined by the base constructor, so we use that as hydrate expects the base class as its argument
       const baseCstr = getConstructorFromTag(tag);
-      // We copy the raw row data for each entity to avoid any potential conflict. Then we ensure the correct concrete
-      // __class key is set for hydrate to use, if necessary (ie, cti), to actually instantiate the entity.
-      const rows = persistedEntities.map((e) => createRowFromEntityData(e));
+      let rows = new Array<any>(entities.length);
+      let i = 0;
+      for (const entity of entities) {
+        const instanceData = (entity as any).__data as InstanceData;
+        if (!allowPendingChanges && instanceData.pendingOperation !== "none") {
+          fail("Cannot fork an EntityManager with pending changes");
+        } else if (instanceData.isNewEntity) {
+          // Create blank entities in newEm for each unpersisted entity from oldEm.  They will be populated later in the
+          // allowPendingChanges step as they should not be present otherwise.
+          newEm.create(entity.constructor as EntityConstructor<Entity>, {} as any);
+        } else {
+          // We copy the raw row data for each entity to avoid any potential conflict. Then we ensure the correct concrete
+          // __class key is set for hydrate to use, if necessary (ie, cti), to actually instantiate the entity.
+          rows[i] = createRowFromEntityData(entity);
+          i++;
+        }
+      }
+      if (rows.length !== i) rows = rows.slice(0, i);
       newEm.hydrate(baseCstr, rows);
-      // Create blank entities in newEm for each unpersisted entity from oldEm.  They will be populated later in the
-      // allowPendingChanges step as they should not be present otherwise.
-      unpersistedEntities.forEach((e) => newEm.create(e.constructor as EntityConstructor<Entity>, {} as any));
-    });
+    }
 
     function findEntity(oldEntity: Entity): Entity {
       if (oldEntity.isNewEntity) {
         const index = parseInt(oldEntity.toString().split("#").pop()!) - 1;
         return newEm.getEntities(oldEntity.constructor as EntityConstructor<Entity>)[index];
       } else {
-        return newEm.getEntity(oldEntity.idTagged)!;
+        return newEm.#entitiesById.get(oldEntity.idTagged)!;
       }
     }
 
     // If we are allowing pending changes, then we need to copy any changes across to newEm
     if (allowPendingChanges) {
-      oldEm.entities
-        .filter((e) => e.isNewEntity || e.isDirtyEntity)
-        .forEach((oldEntity) => {
-          const { originalData: oldOriginalData, data: oldData } = getInstanceData(oldEntity);
-          const newEntity = findEntity(oldEntity);
-          const { originalData: newOriginalData, data: newData } = getInstanceData(newEntity);
-          // for new entities, anything in `data` is changed and should be copied across. for existing entities, we
-          // only care about changed fields, which are enumerated by originalData
-          const maybeEntity = (value: any) => (isEntity(value) ? findEntity(value as Entity) : value);
-          Object.keys(oldEntity.isNewEntity ? oldData : oldOriginalData).forEach((fieldName) => {
-            // copy over originalData so .changes is consistent across ems
-            if (fieldName in oldOriginalData) newOriginalData[fieldName] = maybeEntity(oldOriginalData[fieldName]);
-            newData[fieldName] = maybeEntity(oldData[fieldName]);
-          });
-        });
+      for (const oldEntity of oldEm.entities) {
+        const oldInstanceData = (oldEntity as any).__data as InstanceData;
+        if (!(oldInstanceData.isNewEntity || oldInstanceData.isDirtyEntity)) continue;
+        const { originalData: oldOriginalData, data: oldData } = oldInstanceData;
+        const newEntity = findEntity(oldEntity);
+        const { originalData: newOriginalData, data: newData } = (newEntity as any).__data as InstanceData;
+        // for new entities, anything in `data` is changed and should be copied across. for existing entities, we
+        // only care about changed fields, which are enumerated by originalData
+        const maybeEntity = (value: any) => (isEntity(value) ? findEntity(value as Entity) : value);
+
+        const fields = Object.keys(oldEntity.isNewEntity ? oldData : oldOriginalData);
+        for (const field of fields) {
+          // copy over originalData so .changes is consistent across ems
+          if (field in oldOriginalData) newOriginalData[field] = maybeEntity(oldOriginalData[field]);
+          newData[field] = maybeEntity(oldData[field]);
+        }
+      }
     }
-    const internalApi = getEmInternalApi(newEm);
-    // set the preload cache for each loaded relation from oldEm in the newEm so that get / isLoaded should just work
-    // on the new entities.  group by concrete class so that we only have to gather the relation definitions once per
-    // type.
-    groupBy(oldEm.entities, (e) => e.constructor as EntityConstructor<Entity>).forEach((entities, cstr) => {
-      // deleted entities will fail if you try to `get` their relations, so skip them since they should be cleared
-      // out regardless
-      entities = entities.filter((e) => !e.isDeletedEntity);
-      const [unpersistedEntities, persistedEntities] = allowPendingChanges
-        ? partition(entities, (e) => e.isNewEntity)
-        : [[], entities];
-      const meta = getMetadata(cstr);
-      // use allFields so that we get fields from the base type as well
-      const relations = Object.entries(meta.allFields)
-        // these are all the kinds for concrete (ie, not custom) relations
-        // TODO: support recursive collections
-        .filter(([, field]) => ["o2m", "lo2m", "m2o", "m2m", "o2o", "poly"].includes(field.kind))
-        .map(([name]) => name);
-      persistedEntities.forEach((oldEntity) => {
-        const newEntity = findEntity(oldEntity);
-        relations
-          // each entity could have different loaded status for each relation, so we have to filter per entity
-          .filter((field) => (oldEntity as any)[field].isLoaded)
-          .forEach((field) => {
-            // this should be safe because we are only using loaded relations, and we made sure to copy every entity
-            // between ems
-            const entities = toArray((oldEntity as any)[field].get).map((e: Entity) => findEntity(e));
-            internalApi.setPreloadedRelation(oldEntity.idTagged, field, entities);
-            (newEntity as any)[field].preload();
-          });
-      });
-      unpersistedEntities.forEach((oldEntity) => {
-        const newEntity = findEntity(oldEntity);
-        relations
+    // import every loaded concrete (ie, not custom) relation into the new em
+    for (const oldEntity of oldEm.entities) {
+      const newEntity = findEntity(oldEntity);
+      if (oldEntity.isDeletedEntity) {
+        // If the old entity was deleted, that should be persisted in the new em
+        ((newEntity as any).__data as InstanceData).markDeleted(newEntity);
+        // deleted entities will fail if you try to `get` their relations, so skip them since they should be cleared
+        // out regardless
+        continue;
+      }
+
+      const { relations } = (oldEntity as any).__data as InstanceData;
+      for (const [field, relation] of Object.entries(relations)) {
+        // With transform-properties on, custom relations are inserted into the `relations` map. Custom relations don't
+        // store any data, so we can ignore them by checking if the relation implements `import`
+        // TODO: add `import` to recursiveCollection
+        if (!("import" in relation)) continue;
+        if (oldEntity.isNewEntity) {
           // every relation should be loaded on a new entity, so calling get should be safe
-          .map((field) => [field, (oldEntity as any)[field].get] as const)
-          .filter(([, oldValue]) => oldValue !== undefined)
-          .filter(([, oldValue]) => !Array.isArray(oldValue) || oldValue.length > 0)
-          .forEach(([field, oldValue]) => {
-            const newValue = Array.isArray(oldValue) ? oldValue.map((e) => findEntity(e)) : findEntity(oldValue);
-            // we may have already copied over the instance data, in which case `setFromOpts` would detect this as
-            // the same entity that's already set in data and early exit, so delete ourselves from data first
-            delete getInstanceData(newEntity).data[field];
-            (newEntity as any)[field].setFromOpts(newValue);
-          });
-      });
-    });
+          const oldValue = relation.get;
+          if (oldValue === undefined) continue;
+          if (Array.isArray(oldValue) && oldValue.length === 0) continue;
+          const newValue = Array.isArray(oldValue) ? oldValue.map((e) => findEntity(e)) : findEntity(oldValue);
+          // we may have already copied over the instance data, in which case `setFromOpts` would detect this as
+          // the same entity that's already set in data and early exit, so delete ourselves from data first
+          delete ((newEntity as any).__data as InstanceData).data[field];
+          (newEntity as any)[field].setFromOpts(newValue);
+        } else {
+          const isLoaded = "_isLoaded" in relation ? relation._isLoaded : relation.isLoaded;
+          if (isLoaded) (newEntity as any)[field].import(relation, findEntity);
+        }
+      }
+    }
     // Inspect the top level keys in the context and replace any references from oldEm with newEm (ie, ctx.em === newEm)
     // while also replacing any entities from oldEm with their version in newEm (eg, if the user is stored in the
     // context, then `ctx.user.em === newEm`).
-    Object.entries(ctx).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(ctx)) {
       if (isEntity(value) && value.em === oldEm) {
         ctx[key] = findEntity(value as Entity);
       } else if (value === oldEm) {
         ctx[key] = newEm;
       }
-    });
+    }
     return newEm;
   }
 
@@ -2200,22 +2195,20 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       result = this.hydrate(getBaseMeta(meta).cstr, [row])[0]!;
     }
 
-    const internalApi = getEmInternalApi(this);
-    Object.entries(normalizedHint).forEach(([fieldName, subHint]) => {
+    for (const [fieldName, subHint] of Object.entries(normalizedHint)) {
       const field = meta.allFields[fieldName];
+      const relationOrProp = (result as any)[fieldName];
       if (!field) {
-        const property = (result as any)[fieldName];
         let loadHint: H =
-          (property as any).loadHint ?? fail(`${source}.${fieldName} cannot be imported as it has no loadHint`);
+          (relationOrProp as any).loadHint ?? fail(`${source}.${fieldName} cannot be imported as it has no loadHint`);
         this.importEntity<T, H, L>(source, loadHint);
-      } else if (["o2m", "lo2m", "m2o", "m2m", "o2o", "poly"].includes(field.kind)) {
-        const entities = toArray((source as any)[fieldName].get).map(
+      } else if ("import" in relationOrProp) {
+        relationOrProp.import(
+          (source as any)[fieldName],
           (e: Entity) => (this.importEntity as any)(e, subHint, subHint) as Entity,
         );
-        internalApi.setPreloadedRelation(source.idTagged, fieldName, entities);
-        (result as any)[fieldName].preload();
       }
-    });
+    }
 
     return result as any;
   }
@@ -2742,23 +2735,38 @@ function getDefaultWriteFn(ctx: unknown): WriteFn {
     : console.log;
 }
 
+const fieldMap: Record<string, [Field, Column][]> = {};
 // Generates what a row from the db would look like for a given entity
 function createRowFromEntityData(e: Entity) {
-  const { row: oldRow, data, originalData } = getInstanceData(e);
-  const meta = getMetadata(e);
-  const row: Record<string, any> = meta.inheritanceType === "cti" ? { __class: e.constructor.name } : {};
-  Object.values(meta.allFields)
-    .flatMap((field) => field.serde?.columns.map((column) => [field, column] as const) ?? [])
-    .forEach(([field, column]) => {
-      const value: any =
-        field.fieldName in originalData || field.fieldName in data
-          ? // If our field is in originalData, then the field has been changed since flush. Our `row` should
-            // reflect what would have come from the db so use originalData when present
-            column.rowValue(field.fieldName in originalData ? originalData : data)
-          : // data is lazy and isn't set until it's accessed, so if the field isn't present there, then we should
-            // be safe to pull the raw data out of `row`
-            oldRow[column.columnName];
-      row[column.columnName] = value ?? null;
-    });
+  const { row: oldRow, data, originalData } = (e as any).__data as InstanceData;
+  const __class = e.constructor.name;
+  const { metadata: meta } = (e as any).__data as InstanceData;
+  if (!fieldMap[__class]) {
+    fieldMap[__class] = [];
+    for (const field of Object.values(meta.allFields)) {
+      if (!field.serde) continue;
+      for (const column of field.serde.columns) {
+        fieldMap[__class].push([field, column]);
+      }
+    }
+  }
+
+  const row: Record<string, any> = meta.inheritanceType === "cti" ? { __class } : {};
+
+  for (const [field, column] of fieldMap[__class]) {
+    const value: any =
+      // Ideally, we could only go through the serde for data that has actually changed since the last time it was
+      // fetched from the db and just use the row value for everything else.  Unfortunately, we lose track of which
+      // fields are modified on flush. So we have to assume that anything present in `data` is a change and push it
+      // through the serde.
+      field.fieldName in originalData || field.fieldName in data
+        ? // If our field is in originalData, then the field has been changed since flush. Our `row` should
+          // reflect what would come from the db if we queried it right now, so use originalData when present
+          column.rowValue(field.fieldName in originalData ? originalData : data)
+        : // `data` is lazy and isn't set until it's accessed, so if the field isn't present there, then we should
+          // be safe to pull the raw data out of `row`
+          oldRow[column.columnName];
+    row[column.columnName] = value ?? null;
+  }
   return row;
 }

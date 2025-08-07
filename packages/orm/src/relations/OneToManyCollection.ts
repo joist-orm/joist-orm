@@ -142,6 +142,21 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     this.maybeAppendAddedBeforeLoaded();
   }
 
+  import(other: OneToManyCollection<T, U>, findEntity: (e: U) => U): void {
+    function map(v: U[] | undefined): U[] | undefined {
+      if (v === undefined) return undefined;
+      const result = new Array<U>(v.length);
+      for (let i = 0; i < v.length; i++) result[i] = findEntity(v[i]);
+      return result;
+    }
+
+    this.#loaded = map(other.#loaded);
+    this.#added = map(other.#added);
+    this.#removed = map(other.#removed);
+    this.#getSorted = undefined;
+    this.#allSorted = undefined;
+  }
+
   // todo: this only be a readonly U[]
   get get(): U[] {
     ensureNotDeleted(this.entity, "pending");

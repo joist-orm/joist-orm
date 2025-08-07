@@ -212,6 +212,11 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     this._isLoaded = true;
   }
 
+  import(other: OneToOneReferenceImpl<T, U>, findEntity: (e: U) => U): void {
+    this.loaded = other.loaded ? findEntity(other.loaded) : undefined;
+    this._isLoaded = true;
+  }
+
   get getWithDeleted(): U | undefined {
     return this.filterDeleted(this.doGet(), { withDeleted: true });
   }

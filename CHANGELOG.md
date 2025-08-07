@@ -1,3 +1,10 @@
+# [1.266.0](https://github.com/joist-orm/joist-orm/compare/v1.265.0...v1.266.0) (2025-08-07)
+
+
+### Features
+
+* Add EntityManager.delete(array) overload. ([#1568](https://github.com/joist-orm/joist-orm/issues/1568)) ([81f8db6](https://github.com/joist-orm/joist-orm/commit/81f8db6c4b0c05d7407f022b9268e519b1459fda))
+
 # [1.265.0](https://github.com/joist-orm/joist-orm/compare/v1.264.0...v1.265.0) (2025-08-07)
 
 

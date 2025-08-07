@@ -12,7 +12,7 @@
   "dependencies": {
     "@astrojs/starlight": "^0.35.2",
     "@astrojs/starlight-tailwind": "^4.0.1",
-    "astro": "5.12.6",
+    "astro": "5.12.8",
     "sharp": "^0.34.3",
     "starlight-blog": "^0.24.0"
   },

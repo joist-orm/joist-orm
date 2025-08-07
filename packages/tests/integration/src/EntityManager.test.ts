@@ -434,8 +434,7 @@ describe("EntityManager", () => {
     const p1 = await em.load(Publisher, "1");
     const p2 = await em.load(Publisher, "2");
     // When they are deleted
-    em.delete(p1);
-    em.delete(p2);
+    em.delete([p1, p2]);
     await em.flush();
     // Then the rows are deleted
     expect((await select("publishers")).length).toEqual(0);

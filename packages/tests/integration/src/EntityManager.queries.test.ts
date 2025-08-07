@@ -62,6 +62,7 @@ import {
   newBook,
   newTag,
 } from "./entities";
+import { twoOf } from "./utils";
 
 const am = getMetadata(Author);
 const bm = getMetadata(Book);
@@ -2840,6 +2841,15 @@ describe("EntityManager.queries", () => {
         { conditions: { and: [a.address.raw("@\\? ?", ['$.street ? (@ == "rr2")'])] } },
       );
       expect(authors.length).toEqual(1);
+    });
+
+    it("can use aliases for m2m with raw conditions", async () => {
+      const em = newEntityManager();
+      const [book1, book2] = twoOf((i) => newBook(em, { tags: [{ name: `t${i + 1}` }] }));
+      await em.flush();
+      const t = alias(Tag);
+      const result = await em.find(Book, { tags: { as: t } }, { conditions: { and: [t.name.raw("in (?)", ["t2"])] } });
+      expect(result).toMatchEntity([book2]);
     });
 
     it("can use aliases for jsonb contains", async () => {

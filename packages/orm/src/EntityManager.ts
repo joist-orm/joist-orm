@@ -2100,14 +2100,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         }
       }
     }
-    // set the preload cache for each loaded relation from oldEm in the newEm so that get / isLoaded should just work
-    // on the new entities.  group by concrete class so that we only have to gather the relation definitions once per
-    // type.
+    // import every loaded concrete (ie, not custom) relation into the new em
     for (const oldEntity of oldEm.entities) {
-      // deleted entities will fail if you try to `get` their relations, so skip them since they should be cleared
-      // out regardless
-      if (oldEntity.isDeletedEntity) continue;
       const newEntity = findEntity(oldEntity);
+      if (oldEntity.isDeletedEntity) {
+        // If the old entity was deleted, that should be persisted in the new em
+        ((newEntity as any).__data as InstanceData).markDeleted(newEntity);
+        // deleted entities will fail if you try to `get` their relations, so skip them since they should be cleared
+        // out regardless
+        continue;
+      }
+
       const { relations } = (oldEntity as any).__data as InstanceData;
       for (const [field, relation] of Object.entries(relations)) {
         // With transform-properties on, custom relations are inserted into the `relations` map. Custom relations don't

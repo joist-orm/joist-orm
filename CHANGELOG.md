@@ -1,3 +1,10 @@
+# [1.264.0](https://github.com/joist-orm/joist-orm/compare/v1.263.4...v1.264.0) (2025-08-07)
+
+
+### Features
+
+* Add raw conditions to EntityAlias ([#1567](https://github.com/joist-orm/joist-orm/issues/1567)) ([ef9f54e](https://github.com/joist-orm/joist-orm/commit/ef9f54e316e2a1b0ee9416cd5caa75618a267902))
+
 ## [1.263.4](https://github.com/joist-orm/joist-orm/compare/v1.263.3...v1.263.4) (2025-07-31)
 
 

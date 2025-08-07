@@ -42,6 +42,7 @@ export function insertAuthor(row: {
   deleted_at?: any;
   certificate?: any;
   range_of_books?: number;
+  root_mentor_id?: number;
 }) {
   return testDriver.insert("authors", {
     initials: row.first_name[0],

@@ -5,6 +5,7 @@ import {
   del,
   deleteBookToTag,
   insertAuthor,
+  insertAuthorToTag,
   insertBook,
   insertBookReview,
   insertBookToTag,
@@ -1589,7 +1590,70 @@ describe("EntityManager", () => {
       ]);
     });
 
-    it("works across polymorphic relations", async () => {
+    it("works across a loaded o2m", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertComment({ text: "", parent_author_id: 1 });
+      const em = newEntityManager();
+      const author = await em.findOneOrFail(Author, {}, { populate: "comments" });
+      expect(author.comments.isLoaded).toBe(true);
+      const result = em.fork();
+      const a = result.entities[0] as Author;
+      expect(a.comments.isLoaded).toBe(true);
+      expect(a).toMatchEntity({ comments: [{ id: "comment:1" }] });
+    });
+
+    it("works across a loaded m2m", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertTag({ name: "t1" });
+      await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+      const em = newEntityManager();
+      const author = await em.findOneOrFail(Author, {}, { populate: "tags" });
+      expect(author.tags.isLoaded).toBe(true);
+      const result = em.fork();
+      const a = result.entities[0] as Author;
+      expect(a.tags.isLoaded).toBe(true);
+      expect(a).toMatchEntity({ tags: [{ id: "t:1" }] });
+    });
+
+    it("works across a loaded m2o", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ author_id: 1, title: "b1" });
+      const em = newEntityManager();
+      const book = await em.findOneOrFail(Book, {}, { populate: "author" });
+      expect(book.author.isLoaded).toBe(true);
+      const result = em.fork();
+      const b = result.entities[0] as Book;
+      expect(b.author.isLoaded).toBe(true);
+      expect(b).toMatchEntity({ author: { id: "a:1" } });
+    });
+
+    it("works across a loaded o2o", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertImage({ author_id: 1, type_id: 2, file_name: "i1" });
+      const em = newEntityManager();
+      const author = await em.findOneOrFail(Author, {}, { populate: "image" });
+      expect(author.image.isLoaded).toBe(true);
+      const result = em.fork();
+      const a = result.entities[0] as Author;
+      expect(a.image.isLoaded).toBe(true);
+      expect(a).toMatchEntity({ image: { id: "i:1" } });
+    });
+
+    it("works across a loaded reactive references", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", root_mentor_id: 1 });
+      const em = newEntityManager();
+      const author = await em.load(Author, "a:2", "rootMentor");
+      expect(em.entities).toMatchEntity([author, { id: "a:1" }]);
+      expect(author.rootMentor.isLoaded).toBe(true);
+      const result = em.fork();
+      const a = result.entities[0] as Author;
+      expect(result.entities).toMatchEntity([{ id: "a:2" }, { id: "a:1" }]);
+      // expect(a.rootMentor.isLoaded).toBe(true);
+      expect(a).toMatchEntity({ rootMentor: { id: "a:1" } });
+    });
+
+    it("works across a loaded polymorphic reference", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertComment({ text: "", parent_author_id: 1 });
       const em = newEntityManager();
@@ -1665,7 +1729,7 @@ describe("EntityManager", () => {
       expect(a2).not.toBe(a1);
     });
 
-    it("can import an entity with loaded relations", async () => {
+    it("can import an entity with a loaded o2m", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ author_id: 1, title: "b1" });
       const [em1, em2] = twoOf(() => newEntityManager());
@@ -1675,7 +1739,50 @@ describe("EntityManager", () => {
       expect(a2).toMatchEntity({ books: [{ title: "b1" }] });
     });
 
-    it("can import an entity with polymorphic relations", async () => {
+    it("can import an entity with a loaded m2m", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertTag({ name: "t1" });
+      await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const a1 = await em1.findOneOrFail(Author, {}, { populate: "tags" });
+      const a2 = em2.importEntity(a1, "tags");
+      expect(a2.tags.isLoaded).toBe(true);
+      expect(a2).toMatchEntity({ tags: [{ id: "t:1" }] });
+    });
+
+    it("can import an entity with a loaded m2o", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ author_id: 1, title: "b1" });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const b1 = await em1.findOneOrFail(Book, {}, { populate: "author" });
+      expect(b1.author.isLoaded).toBe(true);
+      const b2 = em2.importEntity(b1, "author");
+      expect(b2.author.isLoaded).toBe(true);
+      expect(b2.author.get.id).toBe("a:1");
+      expect(b2).toMatchEntity({ author: { id: "a:1" } });
+    });
+
+    it("can import an entity with a loaded o2o", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertImage({ author_id: 1, type_id: 2, file_name: "i1" });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const a1 = await em1.findOneOrFail(Author, {}, { populate: "image" });
+      const a2 = em2.importEntity(a1, "image");
+      expect(a2.image.isLoaded).toBe(true);
+      expect(a2).toMatchEntity({ image: { id: "i:1" } });
+    });
+
+    it("can import an entity with a reactive reference", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", root_mentor_id: 1 });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const a1 = await em1.load(Author, "a:2", "rootMentor");
+      const a2 = em2.importEntity(a1, "rootMentor");
+      expect(a2.rootMentor.isLoaded).toBe(true);
+      expect(a2).toMatchEntity({ rootMentor: { id: "a:1" } });
+    });
+
+    it("can import an entity with a polymorphic reference", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertComment({ parent_author_id: 1, text: "c1" });
       const [em1, em2] = twoOf(() => newEntityManager());

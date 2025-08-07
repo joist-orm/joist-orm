@@ -1370,16 +1370,31 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * may still point to this entity. We defer unsetting these not-currently-loaded references
    * until `EntityManager.flush`, when we can make the async calls to load-and-unset them.
    */
-  delete(entity: Entity): void {
-    // Early return if already deleted.
-    const alreadyMarked = getInstanceData(entity).markDeleted(entity);
-    if (!alreadyMarked) return;
-    // Any derived fields that read this entity will need recalc-d
-    this.#rm.queueAllDownstreamFields(entity, "deleted");
-    // Synchronously unhook the entity if the relations are loaded
-    getCascadeDeleteRelations(entity).forEach((r) => r.maybeCascadeDelete());
-    // And queue the cascade deletes
-    this.#pendingDeletes.push(entity);
+  delete(entity: Entity): void;
+  /**
+   * Marks entities to be deleted.
+   *
+   * Any loaded collections that are currently "pointing to" this entity will be updated to
+   * no longer include this entity, i.e. if you `em.delete(b1)`, then `author.books` will have
+   * `b1` removed (if needed).
+   *
+   * This is done for all currently-loaded collections; i.e. technically unloaded collections
+   * may still point to this entity. We defer unsetting these not-currently-loaded references
+   * until `EntityManager.flush`, when we can make the async calls to load-and-unset them.
+   */
+  delete(entities: Entity[]): void;
+  delete(entityOrArray: Entity | Entity[]): void {
+    for (const entity of toArray(entityOrArray)) {
+      // Early return if already deleted.
+      const alreadyMarked = getInstanceData(entity).markDeleted(entity);
+      if (!alreadyMarked) continue;
+      // Any derived fields that read this entity will need recalc-d
+      this.#rm.queueAllDownstreamFields(entity, "deleted");
+      // Synchronously unhook the entity if the relations are loaded
+      getCascadeDeleteRelations(entity).forEach((r) => r.maybeCascadeDelete());
+      // And queue the cascade deletes
+      this.#pendingDeletes.push(entity);
+    }
   }
 
   async assignNewIds() {

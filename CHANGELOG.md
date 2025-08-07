@@ -1,3 +1,10 @@
+# [1.265.0](https://github.com/joist-orm/joist-orm/compare/v1.264.0...v1.265.0) (2025-08-07)
+
+
+### Features
+
+* em.fork and em.importEntity performance improvements ([#1566](https://github.com/joist-orm/joist-orm/issues/1566)) ([816ab03](https://github.com/joist-orm/joist-orm/commit/816ab03d605521265c8360307fcba33e00a428e4))
+
 # [1.264.0](https://github.com/joist-orm/joist-orm/compare/v1.263.4...v1.264.0) (2025-08-07)
 
 

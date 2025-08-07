@@ -149,6 +149,8 @@ export function up(b: MigrationBuilder): void {
     root_mentor_id: foreignKey("authors", { notNull: false }),
     // for testing ReactiveFields against recursive relations
     mentor_names: { type: "text", notNull: false },
+    // for testing reacting through the image o2o
+    image_tag_names: { type: "text", notNull: false },
     // for testing jsonb columns
     address: { type: "jsonb", notNull: false },
     business_address: { type: "jsonb", notNull: false },
@@ -418,6 +420,7 @@ export function up(b: MigrationBuilder): void {
   createManyToManyTable(b, "authors_to_tags", "authors", "tags");
   createManyToManyTable(b, "book_reviews_to_tags", "book_reviews", "tags");
   createManyToManyTable(b, "task_to_tags", "tasks", "tags");
+  createManyToManyTable(b, "image_to_tags", "images", "tags");
   // for testing table-per-class m2m
   createManyToManyTable(b, "publishers_to_tags", "publishers", "tags");
   // for testing m2m renames and name inference

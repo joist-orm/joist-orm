@@ -8,6 +8,7 @@ type Tag {
   bookReviews: [BookReview!]!
   tasks: [Task!]!
   authors: [Author!]!
+  images: [Image!]!
 }
 
 input SaveTagInput {

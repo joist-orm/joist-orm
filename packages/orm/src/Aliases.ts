@@ -100,6 +100,7 @@ export interface EntityAlias<T> {
   gte(value: IdOf<T> | null | undefined): ExpressionCondition;
   lt(value: IdOf<T> | null | undefined): ExpressionCondition;
   lte(value: IdOf<T> | null | undefined): ExpressionCondition;
+  raw(exp: string, bindings: readonly any[] | undefined): ExpressionCondition;
 }
 
 export const aliasMgmt = Symbol("aliasMgmt");
@@ -439,6 +440,11 @@ class EntityAliasImpl<T> extends AbstractAliasColumn<IdType> implements EntityAl
     } else {
       return this.addCondition({ kind: "lte", value: value as any });
     }
+  }
+
+  raw(exp: string, bindings: readonly any[] | undefined): RawCondition | ColumnCondition {
+    if (bindings === undefined) return skipCondition;
+    return this.addRawCondition(exp, bindings);
   }
 }
 

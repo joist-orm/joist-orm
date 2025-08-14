@@ -1,3 +1,10 @@
+## [1.266.1](https://github.com/joist-orm/joist-orm/compare/v1.266.0...v1.266.1) (2025-08-14)
+
+
+### Bug Fixes
+
+* Export unsafeLoaded. ([#1570](https://github.com/joist-orm/joist-orm/issues/1570)) ([0a8e43c](https://github.com/joist-orm/joist-orm/commit/0a8e43cb3d9e46dc2ec24a119967df369c12221d))
+
 # [1.266.0](https://github.com/joist-orm/joist-orm/compare/v1.265.0...v1.266.0) (2025-08-07)
 
 

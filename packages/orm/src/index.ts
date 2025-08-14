@@ -57,6 +57,7 @@ export {
   NestedLoadHint,
   New,
   RelationsIn,
+  unsafeLoaded,
 } from "./loadHints";
 export * from "./loadLens";
 export { setFactoryWriter } from "./logging/FactoryLogger";

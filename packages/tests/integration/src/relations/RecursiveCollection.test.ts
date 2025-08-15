@@ -326,4 +326,8 @@ describe("RecursiveCollection", () => {
       expect(sequelsRecursive).toMatchEntity([]);
     });
   });
+
+  // TODO: add tests for recursive m2m relations
+  describe("children m2m", () => {});
+  describe("parents m2m", () => {});
 });

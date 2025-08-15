@@ -14,6 +14,8 @@ import {
   getField,
   type GraphQLFilterOf,
   hasManyToMany,
+  hasManyToManyRecursiveChildren,
+  hasManyToManyRecursiveParents,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -25,6 +27,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type ReadOnlyCollection,
   setField,
   setOpts,
   type TaggedId,
@@ -382,6 +385,96 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
       taskMeta,
       "tags",
       "task_id",
+    );
+  }
+
+  get authorsRecursive(): ReadOnlyCollection<Tag, Author> {
+    return this.__data.relations.authorsRecursive ??= hasManyToManyRecursiveParents(
+      this,
+      "authorsRecursive",
+      "authors",
+      "tagsRecursive",
+    );
+  }
+
+  get tagsRecursive(): ReadOnlyCollection<Tag, Author> {
+    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveChildren(
+      this,
+      "tagsRecursive",
+      "authors",
+      "authorsRecursive",
+    );
+  }
+
+  get booksRecursive(): ReadOnlyCollection<Tag, Book> {
+    return this.__data.relations.booksRecursive ??= hasManyToManyRecursiveParents(
+      this,
+      "booksRecursive",
+      "books",
+      "tagsRecursive",
+    );
+  }
+
+  get tagsRecursive(): ReadOnlyCollection<Tag, Book> {
+    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveChildren(
+      this,
+      "tagsRecursive",
+      "books",
+      "booksRecursive",
+    );
+  }
+
+  get bookReviewsRecursive(): ReadOnlyCollection<Tag, BookReview> {
+    return this.__data.relations.bookReviewsRecursive ??= hasManyToManyRecursiveParents(
+      this,
+      "bookReviewsRecursive",
+      "bookReviews",
+      "tagsRecursive",
+    );
+  }
+
+  get tagsRecursive(): ReadOnlyCollection<Tag, BookReview> {
+    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveChildren(
+      this,
+      "tagsRecursive",
+      "bookReviews",
+      "bookReviewsRecursive",
+    );
+  }
+
+  get publishersRecursive(): ReadOnlyCollection<Tag, Publisher> {
+    return this.__data.relations.publishersRecursive ??= hasManyToManyRecursiveParents(
+      this,
+      "publishersRecursive",
+      "publishers",
+      "tagsRecursive",
+    );
+  }
+
+  get tagsRecursive(): ReadOnlyCollection<Tag, Publisher> {
+    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveChildren(
+      this,
+      "tagsRecursive",
+      "publishers",
+      "publishersRecursive",
+    );
+  }
+
+  get tasksRecursive(): ReadOnlyCollection<Tag, Task> {
+    return this.__data.relations.tasksRecursive ??= hasManyToManyRecursiveParents(
+      this,
+      "tasksRecursive",
+      "tasks",
+      "tagsRecursive",
+    );
+  }
+
+  get tagsRecursive(): ReadOnlyCollection<Tag, Task> {
+    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveChildren(
+      this,
+      "tagsRecursive",
+      "tasks",
+      "tasksRecursive",
     );
   }
 }

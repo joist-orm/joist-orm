@@ -17,6 +17,8 @@ import {
   type GraphQLFilterOf,
   hasMany,
   hasManyToMany,
+  hasManyToManyRecursiveChildren,
+  hasManyToManyRecursiveParents,
   hasOne,
   hasOneToOne,
   hasRecursiveChildren,
@@ -903,6 +905,24 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
       tagMeta,
       "authors",
       "tag_id",
+    );
+  }
+
+  get tagsRecursive(): ReadOnlyCollection<Author, Tag> {
+    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveParents(
+      this,
+      "tagsRecursive",
+      "tags",
+      "authorsRecursive",
+    );
+  }
+
+  get authorsRecursive(): ReadOnlyCollection<Author, Tag> {
+    return this.__data.relations.authorsRecursive ??= hasManyToManyRecursiveChildren(
+      this,
+      "authorsRecursive",
+      "tags",
+      "tagsRecursive",
     );
   }
 }

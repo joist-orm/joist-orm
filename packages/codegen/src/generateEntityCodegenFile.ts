@@ -63,6 +63,8 @@ import {
   hasLargeManyToMany,
   hasMany,
   hasManyToMany,
+  hasManyToManyRecursiveChildren,
+  hasManyToManyRecursiveParents,
   hasOne,
   hasOnePolymorphic,
   hasOneToOne,
@@ -1081,6 +1083,35 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     return { kind: "concrete", fieldName, decl, init };
   });
 
+  // Add recursive ManyToMany collections
+  const m2mRecursive: Relation[] = meta.manyToManys
+    // Allow disabling recursive relations
+    .filter(
+      (m2m) =>
+        !config.entities[meta.inheritanceType === "sti" && meta.baseClassName ? meta.baseClassName : meta.name]
+          ?.relations?.[m2m.fieldName]?.skipRecursiveRelations,
+    )
+    .flatMap((m2m) => {
+      const { fieldName: m2mName, otherFieldName, otherEntity } = m2m;
+      const parentsField = `${plural(m2mName)}Recursive`;
+      const childrenField = `${otherFieldName}Recursive`;
+
+      return [
+        {
+          kind: "concrete",
+          fieldName: parentsField,
+          decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
+          init: code`${hasManyToManyRecursiveParents}(this, "${parentsField}", "${m2mName}", "${childrenField}")`,
+        },
+        {
+          kind: "concrete",
+          fieldName: childrenField,
+          decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
+          init: code`${hasManyToManyRecursiveChildren}(this, "${childrenField}", "${m2mName}", "${parentsField}")`,
+        },
+      ];
+    });
+
   // Add Polymorphic
   const polymorphic: Relation[] = meta.polymorphics.map((p) => {
     const { fieldName, notNull, fieldType } = p;
@@ -1090,7 +1121,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     return { kind: "concrete", fieldName, decl, init };
   });
 
-  return [o2m, o2mBase, lo2m, m2o, m2oBase, m2oRecursive, o2o, o2oBase, m2m, m2mBase, lm2m, polymorphic].flat();
+  return [o2m, o2mBase, lo2m, m2o, m2oBase, m2oRecursive, o2o, o2oBase, m2m, m2mBase, lm2m, m2mRecursive, polymorphic].flat();
 }
 
 function maybeOptional(notNull: boolean): string {

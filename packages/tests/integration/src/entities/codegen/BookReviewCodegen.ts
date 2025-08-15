@@ -15,6 +15,8 @@ import {
   getField,
   type GraphQLFilterOf,
   hasManyToMany,
+  hasManyToManyRecursiveChildren,
+  hasManyToManyRecursiveParents,
   hasOne,
   hasOneToOne,
   isLoaded,
@@ -31,6 +33,7 @@ import {
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
+  type ReadOnlyCollection,
   setField,
   setOpts,
   type TaggedId,
@@ -372,6 +375,24 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
       tagMeta,
       "bookReviews",
       "tag_id",
+    );
+  }
+
+  get tagsRecursive(): ReadOnlyCollection<BookReview, Tag> {
+    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveParents(
+      this,
+      "tagsRecursive",
+      "tags",
+      "bookReviewsRecursive",
+    );
+  }
+
+  get bookReviewsRecursive(): ReadOnlyCollection<BookReview, Tag> {
+    return this.__data.relations.bookReviewsRecursive ??= hasManyToManyRecursiveChildren(
+      this,
+      "bookReviewsRecursive",
+      "tags",
+      "tagsRecursive",
     );
   }
 }

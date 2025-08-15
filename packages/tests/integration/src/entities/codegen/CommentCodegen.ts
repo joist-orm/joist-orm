@@ -15,6 +15,8 @@ import {
   type GraphQLFilterOf,
   hasMany,
   hasManyToMany,
+  hasManyToManyRecursiveChildren,
+  hasManyToManyRecursiveParents,
   hasOne,
   hasOnePolymorphic,
   type IdOf,
@@ -34,6 +36,7 @@ import {
   type PartialOrNull,
   type PolymorphicReference,
   type ReactiveField,
+  type ReadOnlyCollection,
   setField,
   setOpts,
   type TaggedId,
@@ -383,6 +386,24 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
       userMeta,
       "likedComments",
       "liked_by_user_id",
+    );
+  }
+
+  get likedByUsersUserRecursive(): ReadOnlyCollection<Comment, User> {
+    return this.__data.relations.likedByUsersUserRecursive ??= hasManyToManyRecursiveParents(
+      this,
+      "likedByUsersUserRecursive",
+      "likedByUsers",
+      "likedCommentsUserRecursive",
+    );
+  }
+
+  get likedCommentsUserRecursive(): ReadOnlyCollection<Comment, User> {
+    return this.__data.relations.likedCommentsUserRecursive ??= hasManyToManyRecursiveChildren(
+      this,
+      "likedCommentsUserRecursive",
+      "likedByUsers",
+      "likedByUsersUserRecursive",
     );
   }
 

@@ -281,21 +281,21 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
     );
   }
 
-  get authorsRecursive(): ReadOnlyCollection<Tag, Author> {
-    return this.__data.relations.authorsRecursive ??= hasManyToManyRecursiveParents(
+  get authorsAuthorRecursive(): ReadOnlyCollection<Tag, Author> {
+    return this.__data.relations.authorsAuthorRecursive ??= hasManyToManyRecursiveParents(
       this,
-      "authorsRecursive",
+      "authorsAuthorRecursive",
       "authors",
-      "tagsRecursive",
+      "tagsAuthorRecursive",
     );
   }
 
-  get tagsRecursive(): ReadOnlyCollection<Tag, Author> {
-    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveChildren(
+  get tagsAuthorRecursive(): ReadOnlyCollection<Tag, Author> {
+    return this.__data.relations.tagsAuthorRecursive ??= hasManyToManyRecursiveChildren(
       this,
-      "tagsRecursive",
+      "tagsAuthorRecursive",
       "authors",
-      "authorsRecursive",
+      "authorsAuthorRecursive",
     );
   }
 }

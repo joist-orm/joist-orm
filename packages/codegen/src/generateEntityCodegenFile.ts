@@ -1093,8 +1093,8 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     )
     .flatMap((m2m) => {
       const { fieldName: m2mName, otherFieldName, otherEntity } = m2m;
-      const parentsField = `${plural(m2mName)}Recursive`;
-      const childrenField = `${otherFieldName}Recursive`;
+      const parentsField = `${plural(m2mName)}${otherEntity.name}Recursive`;
+      const childrenField = `${otherFieldName}${otherEntity.name}Recursive`;
 
       return [
         {

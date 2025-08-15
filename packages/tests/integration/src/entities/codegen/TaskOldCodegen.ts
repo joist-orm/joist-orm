@@ -427,21 +427,21 @@ export abstract class TaskOldCodegen extends Task implements Entity {
     );
   }
 
-  get publishersRecursive(): ReadOnlyCollection<TaskOld, Publisher> {
-    return this.__data.relations.publishersRecursive ??= hasManyToManyRecursiveParents(
+  get publishersPublisherRecursive(): ReadOnlyCollection<TaskOld, Publisher> {
+    return this.__data.relations.publishersPublisherRecursive ??= hasManyToManyRecursiveParents(
       this,
-      "publishersRecursive",
+      "publishersPublisherRecursive",
       "publishers",
-      "tasksRecursive",
+      "tasksPublisherRecursive",
     );
   }
 
-  get tasksRecursive(): ReadOnlyCollection<TaskOld, Publisher> {
-    return this.__data.relations.tasksRecursive ??= hasManyToManyRecursiveChildren(
+  get tasksPublisherRecursive(): ReadOnlyCollection<TaskOld, Publisher> {
+    return this.__data.relations.tasksPublisherRecursive ??= hasManyToManyRecursiveChildren(
       this,
-      "tasksRecursive",
+      "tasksPublisherRecursive",
       "publishers",
-      "publishersRecursive",
+      "publishersPublisherRecursive",
     );
   }
 

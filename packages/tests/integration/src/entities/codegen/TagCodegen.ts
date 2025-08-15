@@ -388,93 +388,93 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
     );
   }
 
-  get authorsRecursive(): ReadOnlyCollection<Tag, Author> {
-    return this.__data.relations.authorsRecursive ??= hasManyToManyRecursiveParents(
+  get authorsAuthorRecursive(): ReadOnlyCollection<Tag, Author> {
+    return this.__data.relations.authorsAuthorRecursive ??= hasManyToManyRecursiveParents(
       this,
-      "authorsRecursive",
+      "authorsAuthorRecursive",
       "authors",
-      "tagsRecursive",
+      "tagsAuthorRecursive",
     );
   }
 
-  get tagsRecursive(): ReadOnlyCollection<Tag, Author> {
-    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveChildren(
+  get tagsAuthorRecursive(): ReadOnlyCollection<Tag, Author> {
+    return this.__data.relations.tagsAuthorRecursive ??= hasManyToManyRecursiveChildren(
       this,
-      "tagsRecursive",
+      "tagsAuthorRecursive",
       "authors",
-      "authorsRecursive",
+      "authorsAuthorRecursive",
     );
   }
 
-  get booksRecursive(): ReadOnlyCollection<Tag, Book> {
-    return this.__data.relations.booksRecursive ??= hasManyToManyRecursiveParents(
+  get booksBookRecursive(): ReadOnlyCollection<Tag, Book> {
+    return this.__data.relations.booksBookRecursive ??= hasManyToManyRecursiveParents(
       this,
-      "booksRecursive",
+      "booksBookRecursive",
       "books",
-      "tagsRecursive",
+      "tagsBookRecursive",
     );
   }
 
-  get tagsRecursive(): ReadOnlyCollection<Tag, Book> {
-    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveChildren(
+  get tagsBookRecursive(): ReadOnlyCollection<Tag, Book> {
+    return this.__data.relations.tagsBookRecursive ??= hasManyToManyRecursiveChildren(
       this,
-      "tagsRecursive",
+      "tagsBookRecursive",
       "books",
-      "booksRecursive",
+      "booksBookRecursive",
     );
   }
 
-  get bookReviewsRecursive(): ReadOnlyCollection<Tag, BookReview> {
-    return this.__data.relations.bookReviewsRecursive ??= hasManyToManyRecursiveParents(
+  get bookReviewsBookReviewRecursive(): ReadOnlyCollection<Tag, BookReview> {
+    return this.__data.relations.bookReviewsBookReviewRecursive ??= hasManyToManyRecursiveParents(
       this,
-      "bookReviewsRecursive",
+      "bookReviewsBookReviewRecursive",
       "bookReviews",
-      "tagsRecursive",
+      "tagsBookReviewRecursive",
     );
   }
 
-  get tagsRecursive(): ReadOnlyCollection<Tag, BookReview> {
-    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveChildren(
+  get tagsBookReviewRecursive(): ReadOnlyCollection<Tag, BookReview> {
+    return this.__data.relations.tagsBookReviewRecursive ??= hasManyToManyRecursiveChildren(
       this,
-      "tagsRecursive",
+      "tagsBookReviewRecursive",
       "bookReviews",
-      "bookReviewsRecursive",
+      "bookReviewsBookReviewRecursive",
     );
   }
 
-  get publishersRecursive(): ReadOnlyCollection<Tag, Publisher> {
-    return this.__data.relations.publishersRecursive ??= hasManyToManyRecursiveParents(
+  get publishersPublisherRecursive(): ReadOnlyCollection<Tag, Publisher> {
+    return this.__data.relations.publishersPublisherRecursive ??= hasManyToManyRecursiveParents(
       this,
-      "publishersRecursive",
+      "publishersPublisherRecursive",
       "publishers",
-      "tagsRecursive",
+      "tagsPublisherRecursive",
     );
   }
 
-  get tagsRecursive(): ReadOnlyCollection<Tag, Publisher> {
-    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveChildren(
+  get tagsPublisherRecursive(): ReadOnlyCollection<Tag, Publisher> {
+    return this.__data.relations.tagsPublisherRecursive ??= hasManyToManyRecursiveChildren(
       this,
-      "tagsRecursive",
+      "tagsPublisherRecursive",
       "publishers",
-      "publishersRecursive",
+      "publishersPublisherRecursive",
     );
   }
 
-  get tasksRecursive(): ReadOnlyCollection<Tag, Task> {
-    return this.__data.relations.tasksRecursive ??= hasManyToManyRecursiveParents(
+  get tasksTaskRecursive(): ReadOnlyCollection<Tag, Task> {
+    return this.__data.relations.tasksTaskRecursive ??= hasManyToManyRecursiveParents(
       this,
-      "tasksRecursive",
+      "tasksTaskRecursive",
       "tasks",
-      "tagsRecursive",
+      "tagsTaskRecursive",
     );
   }
 
-  get tagsRecursive(): ReadOnlyCollection<Tag, Task> {
-    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveChildren(
+  get tagsTaskRecursive(): ReadOnlyCollection<Tag, Task> {
+    return this.__data.relations.tagsTaskRecursive ??= hasManyToManyRecursiveChildren(
       this,
-      "tagsRecursive",
+      "tagsTaskRecursive",
       "tasks",
-      "tasksRecursive",
+      "tasksTaskRecursive",
     );
   }
 }

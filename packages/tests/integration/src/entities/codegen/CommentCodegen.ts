@@ -389,21 +389,21 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
     );
   }
 
-  get likedByUsersRecursive(): ReadOnlyCollection<Comment, User> {
-    return this.__data.relations.likedByUsersRecursive ??= hasManyToManyRecursiveParents(
+  get likedByUsersUserRecursive(): ReadOnlyCollection<Comment, User> {
+    return this.__data.relations.likedByUsersUserRecursive ??= hasManyToManyRecursiveParents(
       this,
-      "likedByUsersRecursive",
+      "likedByUsersUserRecursive",
       "likedByUsers",
-      "likedCommentsRecursive",
+      "likedCommentsUserRecursive",
     );
   }
 
-  get likedCommentsRecursive(): ReadOnlyCollection<Comment, User> {
-    return this.__data.relations.likedCommentsRecursive ??= hasManyToManyRecursiveChildren(
+  get likedCommentsUserRecursive(): ReadOnlyCollection<Comment, User> {
+    return this.__data.relations.likedCommentsUserRecursive ??= hasManyToManyRecursiveChildren(
       this,
-      "likedCommentsRecursive",
+      "likedCommentsUserRecursive",
       "likedByUsers",
-      "likedByUsersRecursive",
+      "likedByUsersUserRecursive",
     );
   }
 

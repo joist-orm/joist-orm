@@ -1,4 +1,5 @@
-import { recursiveManyToManyChildrenDataLoader } from "dataloaders/recursiveManyToManyChildrenDataLoader";
+import { recursiveManyToManyChildrenDataLoader } from "../dataloaders/recursiveManyToManyChildrenDataLoader";
+import { recursiveManyToManyParentsDataLoader } from "../dataloaders/recursiveManyToManyParentsDataLoader";
 import { recursiveChildrenDataLoader } from "../dataloaders/recursiveChildrenDataLoader";
 import { recursiveParentsDataLoader } from "../dataloaders/recursiveParentsDataLoader";
 import {
@@ -22,7 +23,6 @@ import { IsLoadedCachable } from "../IsLoadedCache";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReadOnlyCollection } from "./ReadOnlyCollection";
 import { RelationT, RelationU } from "./Relation";
-import { recursiveManyToManyParentsDataLoader } from "dataloaders/recursiveManyToManyParentsDataLoader";
 
 /**
  * An alias for creating `RecursiveParentsCollectionImpl`s.

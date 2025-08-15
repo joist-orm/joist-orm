@@ -349,21 +349,21 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     );
   }
 
-  get tagsRecursive(): ReadOnlyCollection<Author, Tag> {
-    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveParents(
+  get tagsTagRecursive(): ReadOnlyCollection<Author, Tag> {
+    return this.__data.relations.tagsTagRecursive ??= hasManyToManyRecursiveParents(
       this,
-      "tagsRecursive",
+      "tagsTagRecursive",
       "tags",
-      "authorsRecursive",
+      "authorsTagRecursive",
     );
   }
 
-  get authorsRecursive(): ReadOnlyCollection<Author, Tag> {
-    return this.__data.relations.authorsRecursive ??= hasManyToManyRecursiveChildren(
+  get authorsTagRecursive(): ReadOnlyCollection<Author, Tag> {
+    return this.__data.relations.authorsTagRecursive ??= hasManyToManyRecursiveChildren(
       this,
-      "authorsRecursive",
+      "authorsTagRecursive",
       "tags",
-      "tagsRecursive",
+      "tagsTagRecursive",
     );
   }
 }

@@ -655,39 +655,39 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
     );
   }
 
-  get tagsRecursive(): ReadOnlyCollection<Publisher, Tag> {
-    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveParents(
+  get tagsTagRecursive(): ReadOnlyCollection<Publisher, Tag> {
+    return this.__data.relations.tagsTagRecursive ??= hasManyToManyRecursiveParents(
       this,
-      "tagsRecursive",
+      "tagsTagRecursive",
       "tags",
-      "publishersRecursive",
+      "publishersTagRecursive",
     );
   }
 
-  get publishersRecursive(): ReadOnlyCollection<Publisher, Tag> {
-    return this.__data.relations.publishersRecursive ??= hasManyToManyRecursiveChildren(
+  get publishersTagRecursive(): ReadOnlyCollection<Publisher, Tag> {
+    return this.__data.relations.publishersTagRecursive ??= hasManyToManyRecursiveChildren(
       this,
-      "publishersRecursive",
+      "publishersTagRecursive",
       "tags",
-      "tagsRecursive",
+      "tagsTagRecursive",
     );
   }
 
-  get tasksRecursive(): ReadOnlyCollection<Publisher, TaskOld> {
-    return this.__data.relations.tasksRecursive ??= hasManyToManyRecursiveParents(
+  get tasksTaskOldRecursive(): ReadOnlyCollection<Publisher, TaskOld> {
+    return this.__data.relations.tasksTaskOldRecursive ??= hasManyToManyRecursiveParents(
       this,
-      "tasksRecursive",
+      "tasksTaskOldRecursive",
       "tasks",
-      "publishersRecursive",
+      "publishersTaskOldRecursive",
     );
   }
 
-  get publishersRecursive(): ReadOnlyCollection<Publisher, TaskOld> {
-    return this.__data.relations.publishersRecursive ??= hasManyToManyRecursiveChildren(
+  get publishersTaskOldRecursive(): ReadOnlyCollection<Publisher, TaskOld> {
+    return this.__data.relations.publishersTaskOldRecursive ??= hasManyToManyRecursiveChildren(
       this,
-      "publishersRecursive",
+      "publishersTaskOldRecursive",
       "tasks",
-      "tasksRecursive",
+      "tasksTaskOldRecursive",
     );
   }
 }

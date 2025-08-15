@@ -488,21 +488,21 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
     );
   }
 
-  get likedCommentsRecursive(): ReadOnlyCollection<User, Comment> {
-    return this.__data.relations.likedCommentsRecursive ??= hasManyToManyRecursiveParents(
+  get likedCommentsCommentRecursive(): ReadOnlyCollection<User, Comment> {
+    return this.__data.relations.likedCommentsCommentRecursive ??= hasManyToManyRecursiveParents(
       this,
-      "likedCommentsRecursive",
+      "likedCommentsCommentRecursive",
       "likedComments",
-      "likedByUsersRecursive",
+      "likedByUsersCommentRecursive",
     );
   }
 
-  get likedByUsersRecursive(): ReadOnlyCollection<User, Comment> {
-    return this.__data.relations.likedByUsersRecursive ??= hasManyToManyRecursiveChildren(
+  get likedByUsersCommentRecursive(): ReadOnlyCollection<User, Comment> {
+    return this.__data.relations.likedByUsersCommentRecursive ??= hasManyToManyRecursiveChildren(
       this,
-      "likedByUsersRecursive",
+      "likedByUsersCommentRecursive",
       "likedComments",
-      "likedCommentsRecursive",
+      "likedCommentsCommentRecursive",
     );
   }
 

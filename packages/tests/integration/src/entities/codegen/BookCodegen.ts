@@ -552,21 +552,21 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
     );
   }
 
-  get tagsRecursive(): ReadOnlyCollection<Book, Tag> {
-    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveParents(
+  get tagsTagRecursive(): ReadOnlyCollection<Book, Tag> {
+    return this.__data.relations.tagsTagRecursive ??= hasManyToManyRecursiveParents(
       this,
-      "tagsRecursive",
+      "tagsTagRecursive",
       "tags",
-      "booksRecursive",
+      "booksTagRecursive",
     );
   }
 
-  get booksRecursive(): ReadOnlyCollection<Book, Tag> {
-    return this.__data.relations.booksRecursive ??= hasManyToManyRecursiveChildren(
+  get booksTagRecursive(): ReadOnlyCollection<Book, Tag> {
+    return this.__data.relations.booksTagRecursive ??= hasManyToManyRecursiveChildren(
       this,
-      "booksRecursive",
+      "booksTagRecursive",
       "tags",
-      "tagsRecursive",
+      "tagsTagRecursive",
     );
   }
 }

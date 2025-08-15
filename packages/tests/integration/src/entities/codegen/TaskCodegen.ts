@@ -494,21 +494,21 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
     );
   }
 
-  get tagsRecursive(): ReadOnlyCollection<Task, Tag> {
-    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveParents(
+  get tagsTagRecursive(): ReadOnlyCollection<Task, Tag> {
+    return this.__data.relations.tagsTagRecursive ??= hasManyToManyRecursiveParents(
       this,
-      "tagsRecursive",
+      "tagsTagRecursive",
       "tags",
-      "tasksRecursive",
+      "tasksTagRecursive",
     );
   }
 
-  get tasksRecursive(): ReadOnlyCollection<Task, Tag> {
-    return this.__data.relations.tasksRecursive ??= hasManyToManyRecursiveChildren(
+  get tasksTagRecursive(): ReadOnlyCollection<Task, Tag> {
+    return this.__data.relations.tasksTagRecursive ??= hasManyToManyRecursiveChildren(
       this,
-      "tasksRecursive",
+      "tasksTagRecursive",
       "tags",
-      "tagsRecursive",
+      "tagsTagRecursive",
     );
   }
 }

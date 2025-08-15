@@ -378,21 +378,21 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     );
   }
 
-  get tagsRecursive(): ReadOnlyCollection<BookReview, Tag> {
-    return this.__data.relations.tagsRecursive ??= hasManyToManyRecursiveParents(
+  get tagsTagRecursive(): ReadOnlyCollection<BookReview, Tag> {
+    return this.__data.relations.tagsTagRecursive ??= hasManyToManyRecursiveParents(
       this,
-      "tagsRecursive",
+      "tagsTagRecursive",
       "tags",
-      "bookReviewsRecursive",
+      "bookReviewsTagRecursive",
     );
   }
 
-  get bookReviewsRecursive(): ReadOnlyCollection<BookReview, Tag> {
-    return this.__data.relations.bookReviewsRecursive ??= hasManyToManyRecursiveChildren(
+  get bookReviewsTagRecursive(): ReadOnlyCollection<BookReview, Tag> {
+    return this.__data.relations.bookReviewsTagRecursive ??= hasManyToManyRecursiveChildren(
       this,
-      "bookReviewsRecursive",
+      "bookReviewsTagRecursive",
       "tags",
-      "tagsRecursive",
+      "tagsTagRecursive",
     );
   }
 }

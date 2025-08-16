@@ -1,7 +1,6 @@
 import { insertAuthor, insertImage, select } from "@src/entities/inserts";
-import { Author, Image, ImageType, newAuthor, newImage } from "../entities";
-
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
+import { Author, Image, ImageType, newAuthor, newImage } from "../entities";
 
 describe("OneToOneReference", () => {
   it("can load a set reference", async () => {

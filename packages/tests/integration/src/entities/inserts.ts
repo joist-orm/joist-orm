@@ -43,6 +43,7 @@ export function insertAuthor(row: {
   certificate?: any;
   range_of_books?: number;
   root_mentor_id?: number;
+  image_tag_names?: string;
 }) {
   return testDriver.insert("authors", {
     initials: row.first_name[0],
@@ -270,6 +271,10 @@ export function insertPublisherToTag(row: { id?: number; publisher_id: number; t
 
 export function insertAuthorToTag(row: { id?: number; author_id: number; tag_id: number }) {
   return testDriver.insert("authors_to_tags", row);
+}
+
+export function insertImageToTag(row: { id?: number; image_id: number; tag_id: number }) {
+  return testDriver.insert("image_to_tags", row);
 }
 
 export function insertBookReview(row: {

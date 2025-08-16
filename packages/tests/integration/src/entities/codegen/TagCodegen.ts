@@ -48,6 +48,9 @@ import {
   bookReviewMeta,
   type Entity,
   EntityManager,
+  Image,
+  type ImageId,
+  imageMeta,
   newTag,
   Publisher,
   type PublisherId,
@@ -69,6 +72,7 @@ export interface TagFields {
   authors: { kind: "m2m"; type: Author };
   books: { kind: "m2m"; type: Book };
   bookReviews: { kind: "m2m"; type: BookReview };
+  images: { kind: "m2m"; type: Image };
   publishers: { kind: "m2m"; type: Publisher };
   tasks: { kind: "m2m"; type: Task };
 }
@@ -78,6 +82,7 @@ export interface TagOpts {
   authors?: Author[];
   books?: Book[];
   bookReviews?: BookReview[];
+  images?: Image[];
   publishers?: Publisher[];
   tasks?: Task[];
 }
@@ -86,6 +91,7 @@ export interface TagIdsOpts {
   authorIds?: AuthorId[] | null;
   bookIds?: BookId[] | null;
   bookReviewIds?: BookReviewId[] | null;
+  imageIds?: ImageId[] | null;
   publisherIds?: PublisherId[] | null;
   taskIds?: TaskId[] | null;
 }
@@ -98,6 +104,7 @@ export interface TagFilter {
   authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   bookReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
+  images?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
   tasks?: EntityFilter<Task, TaskId, FilterOf<Task>, null | undefined>;
 }
@@ -110,6 +117,7 @@ export interface TagGraphQLFilter {
   authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   bookReviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
+  images?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
   tasks?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null | undefined>;
 }
@@ -358,6 +366,18 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
       bookReviewMeta,
       "tags",
       "book_review_id",
+    );
+  }
+
+  get images(): Collection<Tag, Image> {
+    return this.__data.relations.images ??= hasManyToMany(
+      this,
+      "image_to_tags",
+      "images",
+      "tag_id",
+      imageMeta,
+      "tags",
+      "image_id",
     );
   }
 

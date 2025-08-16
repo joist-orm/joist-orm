@@ -100,6 +100,13 @@ export class Author extends AuthorCodegen {
       ].join(", "),
   );
 
+  // For testing reacting through a o2o field
+  readonly imageTagNames: ReactiveField<Author, string | undefined> = hasReactiveField(
+    "imageTagNames",
+    { image: { tags: "name" } },
+    (a) => a.image.get?.tags.get.map((t) => t.name).join(", "),
+  );
+
   readonly search: ReactiveField<Author, string> = hasReactiveField(
     "search",
     { books: "title", firstName: {} },

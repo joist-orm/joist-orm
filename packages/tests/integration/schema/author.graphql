@@ -37,6 +37,7 @@ type Author {
   mentees: [Author!]!
   mentorNames: String
   isFunny: Boolean!
+  imageTagNames: String
 }
 
 input SaveAuthorInput {
@@ -64,6 +65,7 @@ input SaveAuthorInput {
   rangeOfBooks: BookRange
   mentorNames: String
   isFunny: Boolean
+  imageTagNames: String
 }
 
 type SaveAuthorResult {

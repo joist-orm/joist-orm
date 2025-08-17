@@ -12,7 +12,7 @@ export function recursiveManyToManyParentsDataLoader<T extends Entity, U extends
 ): DataLoader<Entity, U[]> {
   let { meta, fieldName } = collection;
   // This could be called from subtypes to get relations defined on the parent. So we need to make sure we are using the
-  // correct meta by walking the inheritance tree until we find the meta that actually has the root m2o field
+  // correct meta by walking the inheritance tree until we find the meta that actually has the root m2m field
   while (!(collection.m2mFieldName in meta.fields) && meta.baseType) meta = getMetadataForType(meta.baseType);
   const batchKey = `${meta.tableName}-${fieldName}`;
   return em.getLoader("m2m-parents-recursive", batchKey, async (children) => {
@@ -23,6 +23,8 @@ export function recursiveManyToManyParentsDataLoader<T extends Entity, U extends
     const query: ParsedFindQuery = {
       selects: [`"${alias}".*`],
       tables: [
+        // We still select directly from our table, and join into the CTE so that we
+        // can use `addTablePerClassJoinsAndClassTag` to get inheritance added for free.
         { alias, join: "primary", table: meta.tableName },
         { alias: `${alias}_cte`, join: "inner", table: `${alias}_cte`, col1: `${alias}.id`, col2: `${alias}_cte.id` },
       ],
@@ -49,8 +51,8 @@ export function recursiveManyToManyParentsDataLoader<T extends Entity, U extends
 
     const rows = await em.driver.executeFind(em, query, {});
 
-    // Since we're preloading m2os up the tree, merely having the entities in the EM is enough
-    // for the ManyToOneReferenceImpl to find them, so we don't need to map them back to the
+    // Since we're preloading all parent entities through the M2M join table, merely having the entities in the EM is enough
+    // for the RecursiveManyToManyParentsCollectionImpl to find them, so we don't need to map them back to the
     // keys, or push them into the preloader cache.
     em.hydrate(meta.cstr, rows);
 

@@ -327,7 +327,7 @@ describe("RecursiveCollection", () => {
     });
   });
 
-  // TODO: add tests for recursive m2m relations
-  describe("children m2m", () => {});
-  describe("parents m2m", () => {});
+  // TODO: add a self-referential M2M table for testing recursive M2M relations
+  // describe("children m2m", () => {});
+  // describe("parents m2m", () => {});
 });

@@ -21,8 +21,8 @@ export function recursiveManyToManyChildrenDataLoader<T extends Entity, U extend
   collection: RecursiveManyToManyChildrenCollectionImpl<T, U>,
 ): DataLoader<Entity, U[]> {
   let { meta, fieldName } = collection;
-  // This could be called from subtypes to get relations defined on the parent. So we need to make sure we are using the
-  // correct meta by walking the inheritance tree until we find the meta that actually has the root o2m field
+  // Walk up the inheritance tree to find the meta that actually declares this M2M field,
+  // in case this loader is called on a subtype that inherits the relation.
   while (!(collection.m2mFieldName in meta.fields) && meta.baseType) meta = getMetadataForType(meta.baseType);
   const batchKey = `${meta.tableName}-${fieldName}`;
   return em.getLoader("m2m-children-recursive", batchKey, async (parents) => {
@@ -53,7 +53,6 @@ export function recursiveManyToManyChildrenDataLoader<T extends Entity, U extend
             JOIN ${alias}_cte ON r.${sourceColumn} = ${alias}_cte.id
           )
         `,
-        // RecursiveChildrenCollectionImpl won't call `.load` on new entities, so we can assume entities have an id
         bindings: [unsafeDeTagIds(parents.map((e) => e.idTagged))],
       },
     };
@@ -73,7 +72,6 @@ export function recursiveManyToManyChildrenDataLoader<T extends Entity, U extend
     for (const [parentId, children] of entitiesById) {
       if (parentId !== "root") {
         getEmInternalApi(em).setPreloadedRelation(parentId, m2m.fieldName, children);
-        // I thought we could delay calling this, but currently `em.populate` calls `preload()` explicitly
         (em.getEntity(parentId) as any)[m2m.fieldName].preload();
       }
     }

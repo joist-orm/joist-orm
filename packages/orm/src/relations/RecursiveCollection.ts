@@ -1,6 +1,6 @@
+import { recursiveChildrenDataLoader } from "../dataloaders/recursiveChildrenDataLoader";
 import { recursiveManyToManyChildrenDataLoader } from "../dataloaders/recursiveManyToManyChildrenDataLoader";
 import { recursiveManyToManyParentsDataLoader } from "../dataloaders/recursiveManyToManyParentsDataLoader";
-import { recursiveChildrenDataLoader } from "../dataloaders/recursiveChildrenDataLoader";
 import { recursiveParentsDataLoader } from "../dataloaders/recursiveParentsDataLoader";
 import {
   appendStack,
@@ -56,13 +56,13 @@ export function hasRecursiveChildren<T extends Entity, U extends Entity>(
 /**
  * An alias for creating `RecursiveManyToManyParentsCollectionImpl`s.
  *
- * I.e. for `Author.mentor` (m2m), we can return `Author.mentorsRecursive` recursively looking up
- * through the junction table to find all parents.
+ * I.e.  if an `Author` has many `mentors` through a M2M relation, we can return `Author.mentorsRecursive`
+ * to recursively find all parent authors through the junction table.
  */
 export function hasManyToManyRecursiveParents<T extends Entity, U extends Entity>(
   entity: T,
   fieldName: keyof T & string, // i.e. `author.mentorsRecursive`
-  m2mName: keyof T & string, // i.e. `author.mentor`
+  m2mName: keyof T & string,
   otherFieldName: keyof T & string, // i.e. `author.menteesRecursive`
 ): ReadOnlyCollection<T, U> {
   return new RecursiveManyToManyParentsCollectionImpl(entity, fieldName, m2mName, otherFieldName);
@@ -71,13 +71,13 @@ export function hasManyToManyRecursiveParents<T extends Entity, U extends Entity
 /**
  * An alias for creating `RecursiveManyToManyChildrenCollectionImpl`s.
  *
- * I.e. for `Author.mentees` (m2m), we can return `Author.menteesRecursive` recursively looking down
- * through the junction table to find all children.
+ * I.e. if an `Author` has many `mentees` through a M2M relation, we can return `Author.menteesRecursive`
+ * to recursively find all child authors through the junction table.
  */
 export function hasManyToManyRecursiveChildren<T extends Entity, U extends Entity>(
   entity: T,
   fieldName: keyof T & string, // i.e. `author.menteesRecursive`
-  m2mName: keyof T & string, // i.e. `author.mentees`
+  m2mName: keyof T & string,
   otherFieldName: keyof T & string, // i.e. `author.mentorsRecursive`
 ): ReadOnlyCollection<T, U> {
   return new RecursiveManyToManyChildrenCollectionImpl(entity, fieldName, m2mName, otherFieldName);
@@ -400,9 +400,7 @@ export class RecursiveManyToManyParentsCollectionImpl<T extends Entity, U extend
   get isLoaded(): boolean {
     if (this.#loaded !== undefined) return this.#loaded;
     this.#loaded = this.findUnloadedCollection() === undefined;
-    if (this.entity.em) {
-      getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
-    }
+    getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
     return this.#loaded;
   }
 
@@ -456,13 +454,11 @@ export class RecursiveManyToManyParentsCollectionImpl<T extends Entity, U extend
       const current = todo.pop()!;
       if (visited.has(current)) throw new RecursiveCycleError(this, [...visited, current]);
       visited.add(current);
-
       const relation = (current as any)[this.#m2mName];
       if (isCollection(relation) && !isLoadedCollection(relation)) {
         return relation;
       }
-
-      // If loaded, add all parents to the todo list for further traversal
+      // If loaded, add to the list for further traversal
       if (isCollection(relation) && isLoadedCollection(relation)) {
         todo.push(...getLoadedCollection(relation));
       }
@@ -506,9 +502,7 @@ export class RecursiveManyToManyChildrenCollectionImpl<T extends Entity, U exten
   get isLoaded(): boolean {
     if (this.#loaded !== undefined) return this.#loaded;
     this.#loaded = this.findUnloadedCollection() === undefined;
-    if (this.entity.em) {
-      getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
-    }
+    getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
     return this.#loaded;
   }
 
@@ -530,32 +524,27 @@ export class RecursiveManyToManyChildrenCollectionImpl<T extends Entity, U exten
   }
 
   toString(): string {
-    return `RecursiveChildrenCollectionImpl(entity: ${this.entity}, fieldName: ${this.fieldName})`;
+    return `RecursiveManyToManyChildrenCollectionImpl(entity: ${this.entity}, fieldName: ${this.fieldName})`;
   }
 
   doGet(): U[] {
     ensureNotDeleted(this.entity, "pending");
-    const unloaded = this.findUnloadedCollection();
-    if (unloaded) {
-      throw new Error(this.toString() + `.get was called but ${unloaded} was not loaded`);
-    }
-    const children: U[] = [];
+    const parents: U[] = [];
     const visited = new Set<U>();
-    const todo: U[] = getLoadedCollection((this.entity as any)[this.#m2mName]);
+    const todo: U[] = getLoadedCollection(this.entity[this.#m2mName]);
 
     while (todo.length > 0) {
       const current = todo.pop()!;
       if (visited.has(current)) throw new RecursiveCycleError(this, [...visited, current]);
       visited.add(current);
-      children.push(current);
-      // Enqueue the children of current entity recursively
+      parents.push(current);
       todo.push(...getLoadedCollection((current as any)[this.#m2mName]));
     }
 
-    return children;
+    return parents;
   }
 
-  /** Finds any unloaded children for recursion. */
+  /** Finds any unloaded children M2M collections recursively. */
   private findUnloadedCollection(): Collection<any, any> | undefined {
     const visited = new Set<any>();
     const todo: U[] = [this.entity as any];
@@ -564,13 +553,11 @@ export class RecursiveManyToManyChildrenCollectionImpl<T extends Entity, U exten
       const current = todo.pop()!;
       if (visited.has(current)) throw new RecursiveCycleError(this, [...visited, current]);
       visited.add(current);
-
       const relation = (current as any)[this.#m2mName];
       if (isCollection(relation) && !isLoadedCollection(relation)) {
         return relation;
       }
-
-      // If loaded, add all children to the todo list for further traversal
+      // If the collection loaded, add its children to the todo list for further traversal
       if (isCollection(relation) && isLoadedCollection(relation)) {
         todo.push(...getLoadedCollection(relation));
       }

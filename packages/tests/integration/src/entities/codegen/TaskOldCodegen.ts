@@ -13,6 +13,8 @@ import {
   type GraphQLFilterOf,
   hasMany,
   hasManyToMany,
+  hasManyToManyRecursiveChildren,
+  hasManyToManyRecursiveParents,
   hasOne,
   hasRecursiveChildren,
   hasRecursiveParents,
@@ -422,6 +424,24 @@ export abstract class TaskOldCodegen extends Task implements Entity {
       publisherMeta,
       "tasks",
       "publisher_id",
+    );
+  }
+
+  get publishersPublisherRecursive(): ReadOnlyCollection<TaskOld, Publisher> {
+    return this.__data.relations.publishersPublisherRecursive ??= hasManyToManyRecursiveParents(
+      this,
+      "publishersPublisherRecursive",
+      "publishers",
+      "tasksPublisherRecursive",
+    );
+  }
+
+  get tasksPublisherRecursive(): ReadOnlyCollection<TaskOld, Publisher> {
+    return this.__data.relations.tasksPublisherRecursive ??= hasManyToManyRecursiveChildren(
+      this,
+      "tasksPublisherRecursive",
+      "publishers",
+      "publishersPublisherRecursive",
     );
   }
 

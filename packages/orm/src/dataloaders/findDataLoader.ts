@@ -79,15 +79,40 @@ export function findDataLoader<T extends Entity>(
       // Build the list of 'arg1', 'arg2', ... strings
       const { where, ...options } = queries[0];
       const query = parseFindQuery(getMetadata(type), where, options);
+
+      // Get the `{ column; dbType }`[] that should be consistent all queries
       const args = collectAndReplaceArgs(query);
       args.unshift({ columnName: "tag", dbType: "int" });
+
+      // I.e.
+      // - find1=[firstName=bob, age=24]
+      // - find2=[firstName=sue, age=25]
+      const findBindings = createBindings(meta, queries);
+      for (let i = 1; i < args.length; i++) {
+        const firstValue = findBindings[0][i];
+        let foundDifferent = false;
+        for (let j = 1; j < findBindings.length; j++) {
+          if (findBindings[j][i] !== firstValue) {
+            foundDifferent = true;
+            break;
+          }
+        }
+        if (!foundDifferent) {
+          delete args[i];
+          // delete from each findBindings[i + 1]
+          for (let j = 0; j < findBindings.length; j++) {
+            delete findBindings[j][i];
+          }
+          i--;
+        }
+      }
 
       query.selects.unshift("array_agg(_find.tag) as _tags");
       // Inject a cross join into the query
       query.tables.unshift({ join: "cross", table: "_find", alias: "_find" });
       query.cte = {
         sql: buildValuesCte("_find", args, queries),
-        bindings: createBindings(meta, queries),
+        bindings: findBindings.flat(),
       };
       // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
       query.groupBys = query.selects
@@ -227,13 +252,14 @@ function rewriteToRawCondition(c: ColumnCondition, argsIndex: ArgCounter): RawCo
   };
 }
 
-export function createBindings(meta: EntityMetadata, queries: readonly FilterAndSettings<any>[]): any[] {
-  const bindings: any[] = [];
+export function createBindings(meta: EntityMetadata, queries: readonly FilterAndSettings<any>[]): any[][] {
+  const bindings: any[][] = [];
   queries.forEach((query, i) => {
     const { where, ...opts } = query;
     // add this query's `tag` value
-    bindings.push(i);
-    collectValues(bindings, parseFindQuery(meta, where, opts));
+    const binding = [i];
+    collectValues(binding, parseFindQuery(meta, where, opts));
+    bindings.push(binding);
   });
   return bindings;
 }

@@ -2243,6 +2243,12 @@ describe("EntityManager.queries", () => {
     expect(book.title).toBe("b2");
   });
 
+  // add test with { books: title, reviews: rating } }` and make sure they both
+  // get put into the same EXISTS? although if they were ANDed they could be separate
+
+  // but also child further m2o down the tree need to go into the EXISTS anyway
+  // i.e. add test of author -> books -> reviewer, the reviewer join must be inside EXISTS
+
   it("can find through o2m with all children matching", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });

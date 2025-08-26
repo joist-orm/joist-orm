@@ -10,6 +10,7 @@ import { groupBy, MaybePromise, maybePromiseThen } from "./utils";
 export enum ValidationCode {
   required = "required",
   cannotBeUpdated = "not-updatable",
+  cannotBeChanged = "not-changeable",
   numeric = "not-numeric",
   minValue = "under-min",
   maxValue = "over-max",
@@ -72,7 +73,7 @@ export class ValidationErrors extends Error {
 }
 
 function ruleWithOpts<T extends Entity>(
-  opts: ValidationRuleOpts<T>,
+  opts: ValidationRuleOpts<T> | undefined,
   fn: (entity: T) => ValidationRuleResult,
 ): ValidationRule<T> {
   return (entity) => {
@@ -80,7 +81,7 @@ function ruleWithOpts<T extends Entity>(
     // may be an async operation.  This way we can avoid running promises if we don't have to.
     const result = fn(entity);
     if (result === undefined) return;
-    const { unless, if: _if } = opts;
+    const { unless, if: _if } = opts ?? {};
     if (unless === undefined && _if === undefined) return result;
     const shouldRun = [unless ?? (() => false), _if ?? (() => true)].map((fn) => fn(entity));
     return maybePromiseThen(
@@ -145,6 +146,30 @@ export function cannotBeUpdated<T extends Entity, K extends keyof Changes<T> & s
     return;
   });
   return Object.assign(fn, { field, immutable: opts.unless === undefined && opts.if === undefined });
+}
+
+/**
+ * Creates a validation rule that a field cannot be changed once set.
+ *
+ * If the optional `unless` function returns true, then the update is allowed.
+ */
+export function cannotBeChanged<T extends Entity, K extends keyof Changes<T> & string>(
+  field: K,
+  opts?: ValidationRuleOpts<T>,
+): ValidationRule<T> {
+  return ruleWithOpts(opts, (entity: T) => {
+    const changes = (entity as any as EntityChanges<T>).changes[field];
+    if (changes.kind === "m2m" || changes.kind === "o2m") {
+      throw new Error("cannotBeChanged is only supported on primitive & m2o fields");
+    } else if (changes.hasUpdated) {
+      const originalValue = changes.originalValue;
+      if (originalValue === undefined) return;
+      const value = getField(entity, field);
+      if (getEmInternalApi(entity.em).isMerging(value)) return;
+      return { field, code: ValidationCode.cannotBeChanged, message: `${field} cannot be changed` };
+    }
+    return;
+  });
 }
 
 type CannotBeUpdatedRule<T extends Entity> = ValidationRule<T> & { field: string; immutable: boolean };

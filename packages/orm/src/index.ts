@@ -82,6 +82,7 @@ export { JsonAggregatePreloader } from "./preloading/JsonAggregatePreloader";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
 export {
+  cannotBeChanged,
   cannotBeUpdated,
   GenericError,
   maxValueRule,

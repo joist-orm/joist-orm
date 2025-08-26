@@ -1,4 +1,5 @@
 import {
+  cannotBeChanged,
   cannotBeUpdated,
   getMetadata,
   newRequiredRule,
@@ -6,8 +7,8 @@ import {
   ValidationErrors,
   ValidationRuleResult,
 } from "joist-orm";
-import { Author, LargePublisher, newAuthor, Publisher, SmallPublisher } from "src/entities";
-import { insertAuthor } from "src/entities/inserts";
+import { Author, LargePublisher, newAuthor, newPublisher, Publisher, SmallPublisher } from "src/entities";
+import { insertAuthor, insertPublisher } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
 
 describe("ValidationErrors", () => {
@@ -43,6 +44,54 @@ describe("ValidationErrors", () => {
       const fn = newRequiredRule<Author>("firstName", { if: () => false });
       const result = fn(author) as ValidationRuleResult;
       expect(result).toBeUndefined();
+    });
+  });
+
+  describe("cannotBeChanged", () => {
+    it("allows primitive fields to be set when new", async () => {
+      const em = newEntityManager();
+      const a = newAuthor(em);
+      expect(cannotBeChanged("firstName")(a)).toBeUndefined();
+    });
+
+    it("allows primitive fields to be set when old", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      a.lastName = "last";
+      expect(cannotBeChanged("lastName")(a)).toBeUndefined();
+    });
+
+    it("disallows primitive fields to be set when already set", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "l1" });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      a.lastName = "last";
+      expect(cannotBeChanged("lastName")(a)).toMatchObject({ message: "lastName cannot be changed" });
+    });
+
+    it("allows m2o fields to be set when new", async () => {
+      const em = newEntityManager();
+      const a = newAuthor(em, { publisher: {} });
+      expect(cannotBeChanged("publisher")(a)).toBeUndefined();
+    });
+
+    it("allows m2o fields to be set when old", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      a.publisher.set(newPublisher(em));
+      expect(cannotBeChanged("publisher")(a)).toBeUndefined();
+    });
+
+    it("disallows m2o fields to be set when already set", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      a.publisher.set(newPublisher(em));
+      const rule = cannotBeChanged("publisher");
+      expect(await rule(a)).toMatchObject({ message: "publisher cannot be changed" });
     });
   });
 

@@ -141,6 +141,26 @@ Also, you can make this conditional, i.e. on a status:
 config.addRule(cannotBeUpdated("cost", (e) => e.isDraft));
 ```
 
+### Cannot Be Changed
+
+If a field can only be set *once*, but not necessarily on create, you can use `cannotBeChanged`:
+
+```typescript
+// Don't let the publisher change, once set
+config.addRule(cannotBeChanged("publisher"));
+```
+
+Also, you can make this conditional, i.e. on a status:
+
+```typescript
+// Don't let the publisher change, unless fired
+config.addRule(cannotBeChanged("publisher", {
+   unless: (author) => author.isFired,
+}));
+```
+
+Note that changes *within* the initial `EntityManager` are allowed, i.e. a `Author.publisher` can be set to `p1` and then immediately changed to `p2`; but then in future `em.flush`es, it can no longer be changed.
+
 ## Database Constraints
 
 Generally, Joist prefers implementing domain model validation rules in TypeScript code, where rules are easier to write and test than if written as SQL triggers/stored procedures/etc.

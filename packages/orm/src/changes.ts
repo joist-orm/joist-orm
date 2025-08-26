@@ -1,15 +1,17 @@
 import { getInstanceData } from "./BaseEntity";
-import { Entity, isEntity } from "./Entity";
-import { IdOf, isId } from "./EntityManager";
+import { Entity } from "./Entity";
+import { IdOf } from "./EntityManager";
 import { getField, isChangeableField } from "./fields";
 import {
   Field,
   ManyToManyCollection,
   OneToManyCollection,
   RelationsOf,
-  getConstructorFromTaggedId,
+  assertNever,
   getEmInternalApi,
   getMetadata,
+  isEntity,
+  isId,
 } from "./index";
 import { JoinRows } from "./JoinRows";
 import { FieldsOf, OptsOf } from "./typeMap";
@@ -24,14 +26,95 @@ export interface FieldStatus<T> {
   originalValue?: T;
 }
 
-/** Exposes a field's changed/original value in each entity's `this.changes` property. */
+/**
+ * Provides a base class for field/primitive & m2o status impls.
+ *
+ * We use a separate base class so that the primitive & m2o subtypes can have their own
+ * `kind: ...` consts, that if the m2o just subtyped the primitive directly, wouldn't be
+ * allowed.
+ */
+abstract class BaseFieldStatusImpl<T> {
+  entity: Entity;
+  fieldName: string;
+
+  constructor(entity: Entity, fieldName: string) {
+    this.entity = entity;
+    this.fieldName = fieldName;
+  }
+
+  get originalValue(): T | undefined {
+    const { originalData, data } = getInstanceData(this.entity);
+    // If `p` is in originalData, always respect that, even if it's undefined
+    return this.fieldName in originalData ? originalData[this.fieldName] : getField(this.entity, this.fieldName as any);
+  }
+
+  get hasChanged(): boolean {
+    const { originalData, data } = getInstanceData(this.entity);
+    // Use `__orm.data[p] !== undefined` instead of `p in entity.__orm.data` because if a new (or cloned) entity
+    // sets-then-unsets a value, it will return to `undefined` but still be present in `__orm.data`.
+    return this.entity.isNewEntity ? data[this.fieldName] !== undefined : this.fieldName in originalData;
+  }
+
+  get hasUpdated(): boolean {
+    const { originalData } = getInstanceData(this.entity);
+    return !this.entity.isNewEntity && this.fieldName in originalData;
+  }
+}
+
+/** Field status for primitive, enum, & primary key columns. */
+export interface PrimitiveFieldStatus<T> extends FieldStatus<T> {
+  kind: "field";
+}
+
+/** Implements the primitive field status, by extend base & just adding our `kind` const. */
+class PrimitiveFieldStatusImpl<T> extends BaseFieldStatusImpl<T> implements PrimitiveFieldStatus<T> {
+  kind = "field" as const;
+}
+
+/** Implements the m2o field status, by extend base, & adding `originalEntity`. */
+class ManyToOneFieldStatusImpl<T extends Entity>
+  extends BaseFieldStatusImpl<IdOf<T>>
+  implements ManyToOneFieldStatus<T>
+{
+  kind = "m2o" as const;
+
+  /**
+   * Returns our original entity's `id`.
+   *
+   * We can know `originalValue` has an `id` available (i.e. is not new), b/c original values defacto
+   * came from the database.
+   *
+   * We also return the id so that `entity.changes.m2oField.originalValue` has a consistent API,
+   * regardless of whether the `entity.m2oField` itself is loaded or unloaded.
+   */
+  get originalValue() {
+    const originalValue = super.originalValue;
+    return isEntity(originalValue) ? (originalValue.id as IdOf<T>) : originalValue;
+  }
+
+  /** Returns the original entity instance, which may not be loaded into memory yet, or undefined. */
+  get originalEntity(): Promise<T | undefined> {
+    const originalValue = this.originalValue;
+    if (isEntity(originalValue)) {
+      return Promise.resolve(originalValue as T);
+    } else if (isId(originalValue)) {
+      return this.entity.em.load(originalValue) as Promise<T>;
+    } else {
+      return Promise.resolve(undefined);
+    }
+  }
+}
+
+/** Provides a m2o/reference field's changed/original value in the entity's `this.changes` property. */
 export interface ManyToOneFieldStatus<T extends Entity> extends FieldStatus<IdOf<T>> {
+  kind: "m2o";
   /** The original entity, will be `undefined` if the entity new or the m2o was `null`. */
   originalEntity: Promise<T | undefined>;
 }
 
-/** Provides access to a m2m relation's added/removed/changed/original values. */
+/** Provides a m2m relation's added/removed/changed/original values. */
 export interface ManyToManyFieldStatus<U extends Entity> {
+  kind: "m2m";
   added: U[];
   removed: U[];
   changed: U[];
@@ -41,6 +124,7 @@ export interface ManyToManyFieldStatus<U extends Entity> {
 }
 
 class ManyToManyFieldStatusImpl<T extends Entity, U extends Entity> implements ManyToManyFieldStatus<U> {
+  readonly kind = "m2m";
   readonly #entity: T;
   readonly #m2m: ManyToManyCollection<T, any>;
   readonly #joinRows: JoinRows;
@@ -89,6 +173,7 @@ class ManyToManyFieldStatusImpl<T extends Entity, U extends Entity> implements M
 }
 
 export interface OneToManyFieldStatus<U extends Entity> {
+  kind: "o2m";
   added: U[];
   removed: U[];
   changed: U[];
@@ -99,6 +184,7 @@ export interface OneToManyFieldStatus<U extends Entity> {
 
 /** Provides access to an o2m relation's added/removed/changed entities. */
 class OneToManyFieldStatusImpl<T extends Entity, U extends Entity> implements OneToManyFieldStatus<U> {
+  readonly kind = "o2m";
   readonly #entity: T;
   readonly #o2m: OneToManyCollection<T, U>;
 
@@ -178,7 +264,7 @@ export type Changes<T extends Entity, K = keyof (FieldsOf<T> & RelationsOf<T>), 
       : FieldsOf<T>[P] extends { type: infer U | undefined }
         ? U extends Entity
           ? ManyToOneFieldStatus<U>
-          : FieldStatus<U>
+          : PrimitiveFieldStatus<U>
         : never;
 };
 
@@ -201,7 +287,7 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
   return new Proxy(entity, {
     get(
       target,
-      p: PropertyKey,
+      p: PropertyKey & string,
     ):
       | FieldStatus<any>
       | ManyToOneFieldStatus<any>
@@ -214,50 +300,23 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
         return getChangedFieldNames(entity, false);
       } else if (typeof p === "symbol") {
         throw new Error(`Unsupported call to ${String(p)}`);
-      } else if (getMetadata(entity).allFields[p]?.kind === "m2m") {
+      }
+      const kind = getMetadata(entity).allFields[p]?.kind;
+      if (kind === "m2m") {
         return new ManyToManyFieldStatusImpl(entity, p as keyof T);
-      } else if (getMetadata(entity).allFields[p]?.kind === "o2m") {
+      } else if (kind === "o2m") {
         return new OneToManyFieldStatusImpl(entity, p as keyof T);
       } else if (!isChangeableField(entity, p as any)) {
         throw new Error(`Invalid changes field ${p}`);
+      } else if (kind === "m2o" || kind === "poly") {
+        return new ManyToOneFieldStatusImpl(entity, p);
+      } else if (kind === "enum" || kind === "primitive" || kind === "primaryKey") {
+        return new PrimitiveFieldStatusImpl(entity, p);
+      } else if (kind === "lo2m" || kind === "o2o") {
+        throw new Error(`changes are not supported for ${kind} ${p}`);
+      } else {
+        return assertNever(kind);
       }
-
-      const { originalData, data } = getInstanceData(entity);
-      // If `p` is in originalData, always respect that, even if it's undefined
-      const originalValue = p in originalData ? originalData[p] : getField(entity, p as any);
-      // Use `__orm.data[p] !== undefined` instead of `p in entity.__orm.data` because if a new (or cloned) entity
-      // sets-then-unsets a value, it will return to `undefined` but still be present in `__orm.data`.
-      const hasChanged = entity.isNewEntity ? data[p] !== undefined : p in originalData;
-      // const hasChanged = entity.isNewEntity ? p in entity.__orm.data : p in entity.__orm.originalData;
-      const hasUpdated = !entity.isNewEntity && p in originalData;
-
-      const fields = {
-        hasChanged,
-        hasUpdated,
-        get originalValue() {
-          // To be consistent whether a reference is loaded/unloaded, always coerce an entity to its id
-          return isEntity(originalValue) ? originalValue.id : originalValue;
-        },
-      };
-
-      // Only conditionally add `originalEntity` to avoid non-entities fields having a field that
-      // a deep-cyclic formatter (like Jest) will blindly call and blow up.
-      const meta = getMetadata(entity);
-      if (meta && meta.allFields[p] && addOriginalEntity[meta.allFields[p].kind]) {
-        Object.assign(fields, {
-          get originalEntity() {
-            if (isEntity(originalValue)) {
-              return Promise.resolve(originalValue);
-            } else if (isId(originalValue)) {
-              return entity.em.load(getConstructorFromTaggedId(originalValue), originalValue);
-            } else {
-              return Promise.resolve();
-            }
-          },
-        });
-      }
-
-      return fields;
     },
   }) as any;
 }

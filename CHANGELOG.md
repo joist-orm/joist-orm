@@ -1,3 +1,10 @@
+# [1.267.0](https://github.com/joist-orm/joist-orm/compare/v1.266.1...v1.267.0) (2025-08-26)
+
+
+### Features
+
+* Add cannotBeChanged. ([#1574](https://github.com/joist-orm/joist-orm/issues/1574)) ([7393d2f](https://github.com/joist-orm/joist-orm/commit/7393d2fc8e8b6a94c2626a06e29287453b8dfdc4))
+
 ## [1.266.1](https://github.com/joist-orm/joist-orm/compare/v1.266.0...v1.266.1) (2025-08-14)
 
 

@@ -1,11 +1,9 @@
-// @ts-check
 import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import starlightBlog from "starlight-blog";
 import starlightLlmsTxt from 'starlight-llms-txt'
 import { readFileSync } from 'fs';
-import { join } from 'path';
 import { glob } from 'glob';
 
 // https://astro.build/config

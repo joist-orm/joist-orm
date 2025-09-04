@@ -41,7 +41,7 @@ docker compose up -d db
 
 The `docker-compose.yml` exposes the `sample_app` database on port `5342`, so it is accessible with an environment variable of:
 
-```env
+```ini
 DATABASE_URL=postgres://sample_user:local@localhost:5432/sample_app
 ```
 

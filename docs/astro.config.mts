@@ -61,7 +61,7 @@ function getLlmConfig(): StarlightLllmsTextOptions {
   return {
     projectName: "Joist ORM",
     description: "An opinionated TypeScript ORM for Node.js and PostgreSQL focused on domain modeling, featuring schema-driven code generation, guaranteed N+1 prevention via DataLoader, reactive validation rules, and strong type safety for building robust backend applications.",
-    details: `The Joist ORM ecosystem is made up of the following NPM packages:\n\n${publicJoistPackages.map(pkg => `- ${pkg}`).join('\n')}.\n All of these packages are described in these documentation sets.`,
+    details: `The Joist ORM ecosystem is made up of the following NPM packages:\n\n${publicJoistPackages.map(pkg => `- ${pkg}`).join('\n')}\n\nAll of these packages are described in these documentation sets.`,
     customSets: [
       {
         label: "Configuration and Setup",

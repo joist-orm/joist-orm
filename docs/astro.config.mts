@@ -3,6 +3,10 @@ import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import starlightBlog from "starlight-blog";
+import starlightLlmsTxt from 'starlight-llms-txt'
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { glob } from 'glob';
 
 // https://astro.build/config
 const config = defineConfig({
@@ -43,10 +47,49 @@ const config = defineConfig({
             },
           },
         }),
+        starlightLlmsTxt({
+          ...getLlmConfig(),
+        }),
       ],
     }),
   ],
   vite: { plugins: [tailwindcss()] },
 });
+
+type StarlightLllmsTextOptions = Parameters<typeof starlightLlmsTxt>[0];
+function getLlmConfig(): StarlightLllmsTextOptions {
+  const publicJoistPackages = getPublicJoistPackages();
+
+  return {
+    projectName: "Joist ORM",
+    description: "An opinionated TypeScript ORM for Node.js and PostgreSQL focused on domain modeling, featuring schema-driven code generation, guaranteed N+1 prevention via DataLoader, reactive validation rules, and strong type safety for building robust backend applications.",
+    details: `The Joist ORM ecosystem is made up of the following NPM packages:\n\n${publicJoistPackages.map(pkg => `- ${pkg}`).join('\n')}`
+  }
+}
+
+function getPublicJoistPackages(): string[] {
+  const packageJsonFiles = glob.sync('../packages/*/package.json');
+  const publicPackages: string[] = [];
+
+  for (const filePath of packageJsonFiles) {
+    try {
+      const packageJson = JSON.parse(readFileSync(filePath, 'utf-8'));
+
+      // Skip if private: true
+      if (packageJson.private === true) {
+        continue;
+      }
+
+      // Add the package name if it exists
+      if (packageJson.name) {
+        publicPackages.push(packageJson.name);
+      }
+    } catch (error) {
+      console.warn(`Failed to read package.json at ${filePath}:`, error);
+    }
+  }
+
+  return publicPackages.sort();
+}
 
 export default config;

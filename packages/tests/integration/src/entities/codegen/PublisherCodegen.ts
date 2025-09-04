@@ -16,6 +16,8 @@ import {
   type GraphQLFilterOf,
   hasMany,
   hasManyToMany,
+  hasManyToManyRecursiveChildren,
+  hasManyToManyRecursiveParents,
   hasOne,
   isLoaded,
   type JsonPayload,
@@ -31,6 +33,7 @@ import {
   type PartialOrNull,
   type ReactiveField,
   type ReactiveReference,
+  type ReadOnlyCollection,
   type RelationsOf,
   setField,
   setOpts,
@@ -649,6 +652,42 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
       taskOldMeta,
       "publishers",
       "task_id",
+    );
+  }
+
+  get tagsTagRecursive(): ReadOnlyCollection<Publisher, Tag> {
+    return this.__data.relations.tagsTagRecursive ??= hasManyToManyRecursiveParents(
+      this,
+      "tagsTagRecursive",
+      "tags",
+      "publishersTagRecursive",
+    );
+  }
+
+  get publishersTagRecursive(): ReadOnlyCollection<Publisher, Tag> {
+    return this.__data.relations.publishersTagRecursive ??= hasManyToManyRecursiveChildren(
+      this,
+      "publishersTagRecursive",
+      "tags",
+      "tagsTagRecursive",
+    );
+  }
+
+  get tasksTaskOldRecursive(): ReadOnlyCollection<Publisher, TaskOld> {
+    return this.__data.relations.tasksTaskOldRecursive ??= hasManyToManyRecursiveParents(
+      this,
+      "tasksTaskOldRecursive",
+      "tasks",
+      "publishersTaskOldRecursive",
+    );
+  }
+
+  get publishersTaskOldRecursive(): ReadOnlyCollection<Publisher, TaskOld> {
+    return this.__data.relations.publishersTaskOldRecursive ??= hasManyToManyRecursiveChildren(
+      this,
+      "publishersTaskOldRecursive",
+      "tasks",
+      "tasksTaskOldRecursive",
     );
   }
 }

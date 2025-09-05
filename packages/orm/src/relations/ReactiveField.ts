@@ -95,22 +95,29 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   }
 
   async load(opts?: { forceReload?: boolean }): Promise<V> {
+    // Even without `forceReload=true`, any explicit calls to `.load()` ==> ensure a fresh value,
+    // because `.get` may have cached the stale/previously-calculated value.
+    //
+    // (Currently `em.populate` / `populateDataLoader` has a hack/escape hatch that ignores calling
+    // RF.load(), to avoid pulling in the RF subgraph over using the materialized value, which ideally would be
+    // replaced with us learning to do the maybeDirty approach.)
     if (!this.isLoaded || opts?.forceReload) {
-      // Even without `forceReload=true`, any explicit calls to `.load()` ==> ensure a fresh value,
-      // because `.get` may have cached the stale/previously-calculated value.
-      //
-      // (Currently `em.populate` / `populateDataLoader` has a hack/escape hatch that ignores calling
-      // RF.load(), to avoid pulling in the RF subgraph over using the materialized value, which ideally would be
-      // replaced with us learning to do the maybeDirty approach.)
-      this.#isCached = false;
       return (this.#loadPromise ??= this.entity.em.populate(this.entity, { hint: this.loadHint } as any).then(() => {
         this.#loadPromise = undefined;
         this.#isLoaded = true;
         getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+        // Wait and reset `#isCached` until inside this `then`, so that we don't have a race condition where:
+        // - two relations (us and someone else) are both passed to `em.calc`
+        // - their load hint is simpler, so their promises resolves first, and their `.get` calls our `.get`
+        // - our `.get` sees we're not loaded, but calls `fieldValue` for the existing value, and dutifully sets `#isCached=true`
+        // - finally our promise runs, and if we didn't immediately set `#isCached=false` here, our `.get` would again
+        //   early return and keep using the stale fieldValue.
+        this.resetCacheUnlessFactoryPinned();
         // Go through `this.get` so that `setField` is called to set our latest value
         return this.get;
       }));
     }
+    this.resetCacheUnlessFactoryPinned();
     return this.get;
   }
 
@@ -120,12 +127,13 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     // Some ReactiveFields can have surprisingly expensive calculations, especially in loops
     // or those that invoke loops, so cache the value.
     if (this.#isCached) return this.fieldValue;
-    // isLoaded will watch for our previously-loaded subgraph being mutated, and if we've
-    // drifted to not-loaded, it's better to fail and tell the user.
+    // isLoaded will watch for our previously-loaded subgraph being mutated (isLoaded is locally cached but hooked into
+    // our IsLoadedCache cache that is immediately invalidated on write-path), and if we've drifted to not-loaded, it's
+    // better to fail and tell the user.
     if (this.isLoaded) {
       const newValue = fn(this.entity as Reacted<T, H>);
       if (!getEmInternalApi(this.entity.em).isValidating) {
-        // setField will immediately invalidate
+        // setField will immediately invalidate downstream #isLoaded/#isCached values
         setField(this.entity, this.fieldName, newValue);
         this.#isCached = true;
         getEmInternalApi(this.entity.em).isLoadedCache.add(this);
@@ -160,8 +168,7 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     // Even though we reset this on every mutation, `isLoaded` will still realize when the subgraph
     // is still loaded (as it did before we added caching), so users won't see false positive.
     this.#isLoaded = undefined;
-    // If factories asked for a hard-coded value, don't reset the cached flag
-    if (this.#isCached !== "factory-value") this.#isCached = false;
+    this.resetCacheUnlessFactoryPinned();
   }
 
   get loadHint(): any {
@@ -175,6 +182,12 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   }
 
   [AsyncPropertyT] = undefined as any as T;
+
+  private resetCacheUnlessFactoryPinned(): void {
+    // If factories asked for a hard-coded value, don't reset the cached flag
+    if (this.#isCached === "factory-value") return;
+    this.#isCached = false;
+  }
 }
 
 /** Type guard utility for determining if an entity field is an AsyncProperty. */

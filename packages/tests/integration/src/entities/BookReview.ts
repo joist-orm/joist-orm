@@ -58,7 +58,7 @@ export class BookReview extends BookReviewCodegen {
   readonly isTest: ReactiveField<BookReview, boolean> = hasReactiveField("isTest", { comment: "text" }, (review) => {
     return !!review.comment.get?.text?.includes("Test");
   });
-  
+
   // Used to test dependent reactivity
   readonly isTestChain: ReactiveField<BookReview, boolean> = hasReactiveField("isTestChain", "isTest", (review) => {
     return review.isTest.get;

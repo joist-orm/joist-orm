@@ -201,6 +201,9 @@ describe("ReactiveField", () => {
     expect(entities).toMatchEntity([a2, br2]);
     // Then the author's hooks ran as expected
     expect(a2.transientFields.beforeFlushRan).toBe(true);
+
+    // And the values in the db are correct
+    expect(await select("book_reviews")).toMatchObject([{ is_test: true, is_test_chain: true }]);
   });
 
   it("does not transitively load reactive fields used by other reactive fields", async () => {

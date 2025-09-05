@@ -1,3 +1,10 @@
+## [1.267.1](https://github.com/joist-orm/joist-orm/compare/v1.267.0...v1.267.1) (2025-09-05)
+
+
+### Bug Fixes
+
+* Fix ReactiveFields not being recalculated. ([#1579](https://github.com/joist-orm/joist-orm/issues/1579)) ([1d1396e](https://github.com/joist-orm/joist-orm/commit/1d1396e4b3468e5897cff2839ab3596787d559d6))
+
 # [1.267.0](https://github.com/joist-orm/joist-orm/compare/v1.266.1...v1.267.0) (2025-08-26)
 
 

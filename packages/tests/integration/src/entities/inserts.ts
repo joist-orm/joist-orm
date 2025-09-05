@@ -279,7 +279,7 @@ export function insertBookReview(row: {
   is_public?: boolean;
   is_test?: boolean;
 }) {
-  return testDriver.insert("book_reviews", { is_public: true, is_test: false, ...row });
+  return testDriver.insert("book_reviews", { is_public: true, is_test: false, is_test2: false, ...row });
 }
 
 export function insertImage(row: {

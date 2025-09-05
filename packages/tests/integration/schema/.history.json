@@ -122,6 +122,7 @@
     "isOnFavoriteBook",
     "isPublic",
     "isTest",
+    "isTest2",
     "parent",
     "parentComment",
     "rating",
@@ -362,6 +363,7 @@
     "id",
     "isOnFavoriteBook",
     "isPublic",
+    "isTest2",
     "rating",
     "updatedAt"
   ],

@@ -316,6 +316,7 @@ describe("EntityManager.reactiveRules", () => {
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: [], path: ["book"], fn },
       { cstr: "BookReview", name: sm(/BookReviewCodegen.ts:\d+/), fields: ["isPublic"], path: [], fn },
       { cstr: "BookReview", name: sm(/BookReviewCodegen.ts:\d+/), fields: ["isTest"], path: [], fn },
+      { cstr: "BookReview", name: sm(/BookReviewCodegen.ts:\d+/), fields: ["isTest2"], path: [], fn },
     ]);
 
     expect(getReactiveRules(SmallPublisher)).toMatchObject([
@@ -557,6 +558,7 @@ describe("EntityManager.reactiveRules", () => {
     });
     expect(brRfs[i++]).toEqual({ kind: "populate", cstr: "BookReview", name: "isPublic", fields: [], path: [] });
     expect(brRfs[i++]).toEqual({ kind: "populate", cstr: "BookReview", name: "isTest", fields: [], path: [] });
+    expect(brRfs[i++]).toEqual({ kind: "populate", cstr: "BookReview", name: "isTest2", fields: ["isTest"], path: [] });
     expect(brRfs[i++]).toEqual({
       kind: "populate",
       cstr: "Comment",

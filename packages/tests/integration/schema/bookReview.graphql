@@ -10,6 +10,7 @@ type BookReview {
   parentComment: Comment
   isTest: Boolean!
   tags: [Tag!]!
+  isTest2: Boolean!
 }
 
 input SaveBookReviewInput {

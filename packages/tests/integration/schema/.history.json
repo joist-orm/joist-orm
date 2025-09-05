@@ -122,6 +122,7 @@
     "isOnFavoriteBook",
     "isPublic",
     "isTest",
+    "isTestChain",
     "parent",
     "parentComment",
     "rating",

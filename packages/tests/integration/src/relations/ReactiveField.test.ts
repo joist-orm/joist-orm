@@ -162,6 +162,50 @@ describe("ReactiveField", () => {
     expect(a2.transientFields.beforeFlushRan).toBe(true);
   });
 
+  it("can em.recalc to update multiple stale, dependent values", async () => {
+    const em = newEntityManager();
+    // Given an author with a book that has a review that should be public
+    const a1 = new Author(em, { firstName: "a1", age: 22, graduated: new Date() });
+    const b1 = newBook(em, { author: a1 });
+    const br = newBookReview(em, { rating: 1, book: b1 });
+    const comment = newComment(em, { text: "", parent: br });
+
+    await em.flush();
+    expect(a1.numberOfPublicReviews2.get).toEqual(1);
+    expect(br.isTest.get).toEqual(false);
+    expect(br.isTestChain.get).toEqual(false);
+
+    // And the comment is set to be Test, but not calculated
+    await knex.raw(`UPDATE comments SET text = 'Test' WHERE id = ${comment.idUntagged}`);
+
+    // When the objects are loaded into a new Entity Manager
+    const em2 = newEntityManager();
+    const a2 = await em2.load(Author, a1.id);
+    const br2 = await em2.load(BookReview, br.id);
+
+    // Then nothing has been touched
+    expect(a2.numberOfPublicReviews2.get).toEqual(1);
+    expect(br2.isTest.get).toEqual(false);
+    expect(br2.isTestChain.get).toEqual(false);
+
+    // And when the book review object is touched and flushed to have its fields recalculated
+    await em2.recalc(br2);
+
+    // Then the value is updated on both the book review AND its dependent field on the author
+    expect(br2.isTest.get).toEqual(true);
+    expect(br2.isTestChain.get).toEqual(true);
+    expect(a2.numberOfPublicReviews2.get).toEqual(0);
+
+    // And when we flush, both entities were committed
+    const entities = await em2.flush();
+    expect(entities).toMatchEntity([a2, br2]);
+    // Then the author's hooks ran as expected
+    expect(a2.transientFields.beforeFlushRan).toBe(true);
+
+    // And the values in the db are correct
+    expect(await select("book_reviews")).toMatchObject([{ is_test: true, is_test_chain: true }]);
+  });
+
   it("does not transitively load reactive fields used by other reactive fields", async () => {
     {
       const em = newEntityManager();

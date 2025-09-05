@@ -59,6 +59,11 @@ export class BookReview extends BookReviewCodegen {
     return !!review.comment.get?.text?.includes("Test");
   });
 
+  // Used to test dependent reactivity
+  readonly isTestChain: ReactiveField<BookReview, boolean> = hasReactiveField("isTestChain", "isTest", (review) => {
+    return review.isTest.get;
+  });
+
   // Used to test reactivity to hasReactiveAsyncProperty results changing.
   readonly isPublic2: AsyncProperty<BookReview, boolean> = hasReactiveAsyncProperty({ comment: "text" }, (review) => {
     review.transientFields.numberOfIsPublic2Calcs++;

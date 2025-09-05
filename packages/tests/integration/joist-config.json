@@ -37,7 +37,11 @@
     "Book": { "fields": { "search": { "derived": "async" } }, "orderBy": "title", "tag": "b" },
     "BookAdvance": { "tag": "ba" },
     "BookReview": {
-      "fields": { "isPublic": { "derived": "async" }, "isTest": { "derived": "async" } },
+      "fields": {
+        "isPublic": { "derived": "async" },
+        "isTest": { "derived": "async" },
+        "isTestChain": { "derived": "async" }
+      },
       "orderBy": "critic",
       "tag": "br"
     },

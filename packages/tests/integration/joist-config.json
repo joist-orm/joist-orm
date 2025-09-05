@@ -40,7 +40,7 @@
       "fields": {
         "isPublic": { "derived": "async" },
         "isTest": { "derived": "async" },
-        "isTest2": { "derived": "async" }
+        "isTestChain": { "derived": "async" }
       },
       "orderBy": "critic",
       "tag": "br"

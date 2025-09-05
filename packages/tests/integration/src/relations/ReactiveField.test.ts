@@ -173,7 +173,7 @@ describe("ReactiveField", () => {
     await em.flush();
     expect(a1.numberOfPublicReviews2.get).toEqual(1);
     expect(br.isTest.get).toEqual(false);
-    expect(br.isTest2.get).toEqual(false);
+    expect(br.isTestChain.get).toEqual(false);
 
     // And the comment is set to be Test, but not calculated
     await knex.raw(`UPDATE comments SET text = 'Test' WHERE id = ${comment.idUntagged}`);
@@ -186,14 +186,14 @@ describe("ReactiveField", () => {
     // Then nothing has been touched
     expect(a2.numberOfPublicReviews2.get).toEqual(1);
     expect(br2.isTest.get).toEqual(false);
-    expect(br2.isTest2.get).toEqual(false);
+    expect(br2.isTestChain.get).toEqual(false);
 
     // And when the book review object is touched and flushed to have its fields recalculated
     await em2.recalc(br2);
 
     // Then the value is updated on both the book review AND its dependent field on the author
     expect(br2.isTest.get).toEqual(true);
-    expect(br2.isTest2.get).toEqual(true);
+    expect(br2.isTestChain.get).toEqual(true);
     expect(a2.numberOfPublicReviews2.get).toEqual(0);
 
     // And when we flush, both entities were committed

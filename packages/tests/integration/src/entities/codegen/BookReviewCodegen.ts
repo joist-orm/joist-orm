@@ -71,7 +71,7 @@ export interface BookReviewFields {
   rating: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
   isPublic: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: true };
   isTest: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: true };
-  isTest2: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: true };
+  isTestChain: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: true };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   book: { kind: "m2o"; type: Book; nullable: never; derived: false };
@@ -99,7 +99,7 @@ export interface BookReviewFilter {
   rating?: ValueFilter<number, never>;
   isPublic?: BooleanFilter<never>;
   isTest?: BooleanFilter<never>;
-  isTest2?: BooleanFilter<never>;
+  isTestChain?: BooleanFilter<never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   book?: EntityFilter<Book, BookId, FilterOf<Book>, never>;
@@ -113,7 +113,7 @@ export interface BookReviewGraphQLFilter {
   rating?: ValueGraphQLFilter<number>;
   isPublic?: BooleanGraphQLFilter;
   isTest?: BooleanGraphQLFilter;
-  isTest2?: BooleanGraphQLFilter;
+  isTestChain?: BooleanGraphQLFilter;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
@@ -127,7 +127,7 @@ export interface BookReviewOrder {
   rating?: OrderBy;
   isPublic?: OrderBy;
   isTest?: OrderBy;
-  isTest2?: OrderBy;
+  isTestChain?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   book?: BookOrder;
@@ -137,7 +137,7 @@ export interface BookReviewOrder {
 export interface BookReviewFactoryExtras {
   withIsPublic?: boolean;
   withIsTest?: boolean;
-  withIsTest2?: boolean;
+  withIsTestChain?: boolean;
 }
 
 export const bookReviewConfig = new ConfigApi<BookReview, Context>();
@@ -145,7 +145,7 @@ export const bookReviewConfig = new ConfigApi<BookReview, Context>();
 bookReviewConfig.addRule(newRequiredRule("rating"));
 bookReviewConfig.addRule("isPublic", newRequiredRule("isPublic"));
 bookReviewConfig.addRule("isTest", newRequiredRule("isTest"));
-bookReviewConfig.addRule("isTest2", newRequiredRule("isTest2"));
+bookReviewConfig.addRule("isTestChain", newRequiredRule("isTestChain"));
 bookReviewConfig.addRule(newRequiredRule("createdAt"));
 bookReviewConfig.addRule(newRequiredRule("updatedAt"));
 bookReviewConfig.addRule(newRequiredRule("book"));
@@ -205,7 +205,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
 
   abstract readonly isTest: ReactiveField<BookReview, boolean>;
 
-  abstract readonly isTest2: ReactiveField<BookReview, boolean>;
+  abstract readonly isTestChain: ReactiveField<BookReview, boolean>;
 
   get createdAt(): Date {
     return getField(this, "createdAt");

@@ -60,7 +60,7 @@ export class BookReview extends BookReviewCodegen {
   });
   
   // Used to test dependent reactivity
-  readonly isTest2: ReactiveField<BookReview, boolean> = hasReactiveField("isTest2", "isTest", (review) => {
+  readonly isTestChain: ReactiveField<BookReview, boolean> = hasReactiveField("isTestChain", "isTest", (review) => {
     return review.isTest.get;
   });
 

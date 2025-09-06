@@ -112,6 +112,7 @@ export interface AuthorFields {
   wasEverPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
   isFunny: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: false };
   mentorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  imageTagNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   address: { kind: "primitive"; type: Address; unique: false; nullable: undefined; derived: false };
   businessAddress: {
     kind: "primitive";
@@ -213,6 +214,7 @@ export interface AuthorFilter {
   wasEverPopular?: BooleanFilter<null>;
   isFunny?: BooleanFilter<never>;
   mentorNames?: ValueFilter<string, null>;
+  imageTagNames?: ValueFilter<string, null>;
   address?: ValueFilter<Address, null>;
   businessAddress?: ValueFilter<z.input<typeof AddressSchema>, null>;
   quotes?: ValueFilter<Quotes, null>;
@@ -275,6 +277,7 @@ export interface AuthorGraphQLFilter {
   wasEverPopular?: BooleanGraphQLFilter;
   isFunny?: BooleanGraphQLFilter;
   mentorNames?: ValueGraphQLFilter<string>;
+  imageTagNames?: ValueGraphQLFilter<string>;
   address?: ValueGraphQLFilter<Address>;
   businessAddress?: ValueGraphQLFilter<z.input<typeof AddressSchema>>;
   quotes?: ValueGraphQLFilter<Quotes>;
@@ -347,6 +350,7 @@ export interface AuthorOrder {
   wasEverPopular?: OrderBy;
   isFunny?: OrderBy;
   mentorNames?: OrderBy;
+  imageTagNames?: OrderBy;
   address?: OrderBy;
   businessAddress?: OrderBy;
   quotes?: OrderBy;
@@ -374,6 +378,7 @@ export interface AuthorFactoryExtras {
   withBookComments?: string | null;
   withNickNamesUpper?: string[] | null;
   withMentorNames?: string | null;
+  withImageTagNames?: string | null;
   withNumberOfPublicReviews?: number | null;
   withNumberOfPublicReviews2?: number | null;
   withTagsOfAllBooks?: string | null;
@@ -519,6 +524,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   abstract readonly mentorNames: ReactiveField<Author, string | undefined>;
+
+  abstract readonly imageTagNames: ReactiveField<Author, string | undefined>;
 
   get address(): Address | undefined {
     return getField(this, "address");

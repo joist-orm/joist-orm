@@ -2,6 +2,7 @@ import {
   BaseEntity,
   type Changes,
   cleanStringValue,
+  type Collection,
   ConfigApi,
   type DeepPartialOrNull,
   type EntityFilter,
@@ -12,6 +13,7 @@ import {
   type Flavor,
   getField,
   type GraphQLFilterOf,
+  hasManyToMany,
   hasOne,
   isLoaded,
   type JsonPayload,
@@ -61,6 +63,9 @@ import {
   type PublisherOrder,
   SmallPublisher,
   type SmallPublisherId,
+  Tag,
+  type TagId,
+  tagMeta,
 } from "../entities";
 
 export type ImageId = Flavor<string, "Image">;
@@ -74,6 +79,7 @@ export interface ImageFields {
   author: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   book: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
   publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
+  tags: { kind: "m2m"; type: Tag };
 }
 
 export interface ImageOpts {
@@ -82,12 +88,14 @@ export interface ImageOpts {
   author?: Author | AuthorId | null;
   book?: Book | BookId | null;
   publisher?: Publisher | PublisherId | null;
+  tags?: Tag[];
 }
 
 export interface ImageIdsOpts {
   authorId?: AuthorId | null;
   bookId?: BookId | null;
   publisherId?: PublisherId | null;
+  tagIds?: TagId[] | null;
 }
 
 export interface ImageFilter {
@@ -101,6 +109,7 @@ export interface ImageFilter {
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null>;
   publisherLargePublisher?: EntityFilter<LargePublisher, LargePublisherId, FilterOf<LargePublisher>, null>;
   publisherSmallPublisher?: EntityFilter<SmallPublisher, SmallPublisherId, FilterOf<SmallPublisher>, null>;
+  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
 export interface ImageGraphQLFilter {
@@ -124,6 +133,7 @@ export interface ImageGraphQLFilter {
     GraphQLFilterOf<SmallPublisher>,
     null
   >;
+  tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
 
 export interface ImageOrder {
@@ -376,5 +386,17 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
 
   get publisher(): ManyToOneReference<Image, Publisher, undefined> {
     return this.__data.relations.publisher ??= hasOne(this, publisherMeta, "publisher", "images");
+  }
+
+  get tags(): Collection<Image, Tag> {
+    return this.__data.relations.tags ??= hasManyToMany(
+      this,
+      "image_to_tags",
+      "tags",
+      "image_id",
+      tagMeta,
+      "images",
+      "tag_id",
+    );
   }
 }

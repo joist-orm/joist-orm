@@ -12,6 +12,7 @@
         "ignoreEnumFkRequiredWithDefault": { "ignore": true },
         "ignoreUsedToBeUseful": { "ignore": true },
         "ignoreUsedToBeUsefulRequiredWithDefault": { "ignore": true },
+        "imageTagNames": { "derived": "async" },
         "initials": { "derived": "sync" },
         "mentorNames": { "derived": "async" },
         "nickNamesUpper": { "derived": "async" },

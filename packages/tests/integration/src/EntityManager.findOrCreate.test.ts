@@ -6,7 +6,7 @@ import { Author, Book, Comment, Publisher, Tag, newAuthor, newBook, newPublisher
 describe("EntityManager.findOrCreate", () => {
   it("can find with findOrCreate", async () => {
     const em = newEntityManager();
-    new Author(em, { firstName: "a1" });
+    em.create(Author, { firstName: "a1" });
     await em.flush();
     const a = await em.findOrCreate(Author, { firstName: "a1" }, {});
     expect(a.id).toEqual("a:1");
@@ -14,7 +14,7 @@ describe("EntityManager.findOrCreate", () => {
 
   it("can find by optional field with findOrCreate", async () => {
     const em = newEntityManager();
-    new Author(em, { firstName: "a1", age: 20 });
+    em.create(Author, { firstName: "a1", age: 20 });
     await em.flush();
     const a = await em.findOrCreate(Author, { age: 20 }, { firstName: "a2" });
     expect(a.id).toEqual("a:1");
@@ -36,7 +36,7 @@ describe("EntityManager.findOrCreate", () => {
 
   it("can create with findOrCreate", async () => {
     const em = newEntityManager();
-    new Author(em, { firstName: "a1" });
+    em.create(Author, { firstName: "a1" });
     await em.flush();
     const a = await em.findOrCreate(Author, { firstName: "a2" }, { age: 20 }, { lastName: "l" });
     expect(a.idMaybe).toBeUndefined();
@@ -89,7 +89,7 @@ describe("EntityManager.findOrCreate", () => {
 
   it("can upsert with findOrCreate", async () => {
     const em = newEntityManager();
-    new Author(em, { firstName: "a1" });
+    em.create(Author, { firstName: "a1" });
     await em.flush();
     const a = await em.findOrCreate(Author, { firstName: "a1" }, { age: 20 }, { lastName: "l" });
     expect(a.id).toEqual("a:1");

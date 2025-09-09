@@ -24,7 +24,7 @@ describe("OneToOneReference", () => {
     const em = newEntityManager();
     const author = newAuthor(em, { firstName: "a1" });
     expect(author.image.isSet).toEqual(false);
-    const image = new Image(em, { fileName: "f1", type: ImageType.AuthorImage });
+    const image = em.create(Image, { fileName: "f1", type: ImageType.AuthorImage });
     author.image.set(image);
     expect(author.image.isSet).toEqual(true);
     await em.flush();

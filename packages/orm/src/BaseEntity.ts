@@ -1,14 +1,5 @@
 import { IdType } from "./Entity";
-import {
-  Entity,
-  EntityManager,
-  InstanceData,
-  TaggedId,
-  deTagId,
-  getEmInternalApi,
-  getMetadata,
-  keyToNumber,
-} from "./index";
+import { Entity, EntityManager, InstanceData, TaggedId, deTagId, getMetadata, keyToNumber } from "./index";
 
 export let currentlyInstantiatingEntity: Entity | undefined;
 
@@ -39,18 +30,15 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   // We use a protected field so that subclass getters can easily access `this.__data.relations`.
   protected readonly __data!: InstanceData;
 
-  protected constructor(em: EM, optsOrId: any) {
-    const isNew = typeof optsOrId !== "string";
+  /** The single-arg constructor is our psuedo-public API that can only be called by the EntityManager. */
+  constructor(em: EntityManager);
+  constructor(em: EntityManager, isNew?: boolean) {
+    if (isNew === undefined) {
+      throw new Error("Entities must be constructed by calling em.create or em.load");
+    }
     const data = new InstanceData(em, (this.constructor as any).metadata, isNew);
     // This makes it non-enumerable to avoid Jest/recursive things tripping over it
     Object.defineProperty(this, "__data", { value: data, enumerable: false, writable: false, configurable: false });
-    // Only do em.register for em.create-d entities, otherwise defer to hydrate to em.register
-    if (isNew) {
-      em.register(this, optsOrId?.id);
-      // api will be undefined during getFakeInstance
-      const api = getEmInternalApi(em);
-      api?.fieldLogger?.logCreate(this);
-    }
     currentlyInstantiatingEntity = this;
   }
 

@@ -126,11 +126,6 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
 
   declare readonly __type: { 0: "Artist" };
 
-  constructor(em: EntityManager, opts: ArtistOpts) {
-    super(em, opts);
-    setOpts(this as any as Artist, opts, { calledFromConstructor: true });
-  }
-
   get id(): ArtistId {
     return this.idMaybe || failNoIdYet("Artist");
   }

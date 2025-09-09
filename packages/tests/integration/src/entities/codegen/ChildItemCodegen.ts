@@ -133,11 +133,6 @@ export abstract class ChildItemCodegen extends BaseEntity<EntityManager, string>
 
   declare readonly __type: { 0: "ChildItem" };
 
-  constructor(em: EntityManager, opts: ChildItemOpts) {
-    super(em, opts);
-    setOpts(this as any as ChildItem, opts, { calledFromConstructor: true });
-  }
-
   get id(): ChildItemId {
     return this.idMaybe || failNoIdYet("ChildItem");
   }

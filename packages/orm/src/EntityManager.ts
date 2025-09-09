@@ -1,6 +1,6 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { getInstanceData } from "./BaseEntity";
-import { setAsyncDefaults } from "./defaults";
+import { setAsyncDefaults, setSyncDefaults } from "./defaults";
 import { getField, setField } from "./fields";
 import { IndexManager } from "./IndexManager";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
@@ -18,6 +18,7 @@ import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
 import {
   asConcreteCstr,
+  asInternalCstr,
   assertIdIsTagged,
   assertLoaded,
   Column,
@@ -89,7 +90,8 @@ import { assertNever, fail, failIfAnyRejected, getOrSet, groupBy, MaybePromise, 
  * implement this and instead only have the `AbsEntityConstructor` type.
  */
 export interface EntityConstructor<T> {
-  new (em: EntityManager<any, any, any>, opts: any): T;
+  /** The pseudo-public constructor for entities; only the `EntityManager` should actually instantiate entities. */
+  new (em: EntityManager<any, any, any>): T;
 
   // Use any for now to pass the `.includes` test in `EntityConstructor.test.ts`. We could
   // probably do some sort of `tagOf(T)` look up, similar to filter types, which would return
@@ -682,8 +684,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
   public create<T extends EntityW, O extends OptsOf<T>>(type: EntityConstructor<T>, opts: O): New<T, O> {
-    // The constructor will run setOpts which handles defaulting collections to the right state.
-    return new type(this, opts) as New<T, O>;
+    return this.#doCreate(type, opts, false) as New<T, O>;
   }
 
   /**
@@ -699,13 +700,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * See `upsert` for the upsert/deep upsert behavior.
    */
   public createPartial<T extends EntityW>(type: EntityConstructor<T>, opts: PartialOrNull<OptsOf<T>>): T {
-    // We force some manual calls to setOpts to mimic `setUnsafe`'s behavior that `undefined` should
-    // mean "ignore" (and we assume validation rules will catch it later) but still set
-    // `calledFromConstructor` because this is _basically_ like calling `new`.
-    const entity = new type(this, undefined!);
-    // Could remove the `as OptsOf<T>` by adding a method overload on `partial: true`
-    setOpts(entity, opts as OptsOf<T>, { partial: true, calledFromConstructor: true });
-    return entity;
+    return this.#doCreate(type, opts, true);
   }
 
   /**
@@ -862,7 +857,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       // Call `new` just like the user would do
       // The `asConcreteCstr` is safe b/c we got meta from a concrete/already-instantiated entity
-      const clone = new (asConcreteCstr(meta.cstr))(this, copy);
+      const clone = this.create(asConcreteCstr(meta.cstr), copy);
 
       return [entity, clone] as const;
     });
@@ -1316,51 +1311,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     });
   }
 
-  /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
-  register(entity: Entity, maybeExplicitId?: string): void {
-    const baseMeta = getBaseMeta(getMetadata(entity));
-
-    // Keep our indexes up to date...
-    const maybeId = entity.idTaggedMaybe ?? maybeExplicitId;
-    if (maybeId) {
-      if (this.findExistingInstance(maybeId) !== undefined) {
-        throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
-      }
-      this.#entitiesById.set(maybeId, entity);
-    }
-    this.#entitiesArray.push(entity);
-    const set = this.#entitiesByTag.get(baseMeta.tagName) ?? [];
-    if (set.length === 0) this.#entitiesByTag.set(baseMeta.tagName, set);
-    set.push(entity);
-
-    if (this.#entitiesArray.length >= this.entityLimit) {
-      throw new Error(`More than ${this.entityLimit} entities have been instantiated`);
-    }
-
-    // If indexing is enabled for this type, add it...
-    this.#indexManager.maybeIndexEntity(entity);
-
-    // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
-    if (entity.isNewEntity) {
-      const { createdAt, updatedAt } = baseMeta.timestampFields ?? {};
-      const { data } = getInstanceData(entity);
-      const now = new Date();
-      if (createdAt) {
-        const serde = baseMeta.fields[createdAt].serde as TimestampSerde<unknown>;
-        data[createdAt] = serde.mapFromNow(now);
-      }
-      if (updatedAt) {
-        const serde = baseMeta.fields[updatedAt].serde as TimestampSerde<unknown>;
-        data[updatedAt] = serde.mapFromNow(now);
-      }
-      // Set the discriminator for STI
-      if (baseMeta.inheritanceType === "sti") {
-        setStiDiscriminatorValue(baseMeta, entity);
-      }
-      this.#rm.queueAllDownstreamFields(entity, "created");
-    }
-  }
-
   /**
    * Marks an instance to be deleted.
    *
@@ -1775,7 +1725,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   // Handles our Unit of Work-style look up / deduplication of entity instances.
   // Currently only public for the driver impls
   public findExistingInstance<T extends EntityW>(id: string): T | undefined {
-    assertIdIsTagged(id);
     return this.#entitiesById.get(id) as T | undefined;
   }
 
@@ -1804,19 +1753,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       if (!entity) {
         // Look for __class from the driver telling us which subtype to instantiate
         const meta = findConcreteMeta(maybeBaseMeta, row);
+        const type = asInternalCstr(meta.cstr);
         // Pass id as a hint that we're in hydrate mode
-        entity = new (asConcreteCstr(meta.cstr))(this, taggedId) as T;
+        entity = new type(this, false) as T;
         getInstanceData(entity).row = row;
-
-        // This is a mini copy-paste of em.register that doesn't re-findExistingInstance
-        this.#entitiesById.set(taggedId, entity as any);
-        this.#entitiesArray.push(entity as any);
-        if (this.#entitiesArray.length >= this.entityLimit) {
-          throw new Error(`More than ${this.entityLimit} entities have been instantiated`);
-        }
-        const set = this.#entitiesByTag.get(maybeBaseMeta.tagName) ?? [];
-        if (set.length === 0) this.#entitiesByTag.set(maybeBaseMeta.tagName, set);
-        set.push(entity as any);
+        this.#doRegister(entity as any, taggedId);
       } else if (options?.overwriteExisting === true) {
         // Usually if the entity already exists, we don't write over it, but in this case we assume that
         // `EntityManager.refresh` is telling us to explicitly load the latest data.
@@ -2226,6 +2167,78 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     }
 
     return result as any;
+  }
+
+  /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
+  #doCreate<T extends EntityW>(type: EntityConstructor<T>, opts: any, partial: boolean): T {
+    const entity = new (asInternalCstr(type))(this, true);
+
+    // Set a default createdAt/updatedAt
+    const baseMeta = getBaseMeta(getMetadata(entity));
+    if (baseMeta.timestampFields) {
+      this.#assignTimestamps(entity, baseMeta);
+    }
+
+    // Set the discriminator for STI
+    if (baseMeta.inheritanceType === "sti") {
+      setStiDiscriminatorValue(baseMeta, entity);
+    }
+
+    // Check opts.id for an explicitly-set id
+    this.#doRegister(entity as any, opts.id);
+
+    // api will be undefined during getFakeInstance
+    const api = getEmInternalApi(this);
+    api?.fieldLogger?.logCreate(entity);
+
+    setOpts(entity, opts, { partial, calledFromConstructor: true });
+
+    // Apply any synchronous defaults, after the opts have been applied
+    if (!(this as any).fakeInstance) {
+      setSyncDefaults(entity);
+    }
+
+    this.#rm.queueAllDownstreamFields(entity, "created");
+
+    return entity;
+  }
+
+  #assignTimestamps(entity: EntityW, baseMeta: EntityMetadata): void {
+    const { createdAt, updatedAt } = baseMeta.timestampFields ?? {};
+    const { data } = getInstanceData(entity);
+    const now = new Date();
+    if (createdAt) {
+      const serde = baseMeta.fields[createdAt].serde as TimestampSerde<unknown>;
+      data[createdAt] = serde.mapFromNow(now);
+    }
+    if (updatedAt) {
+      const serde = baseMeta.fields[updatedAt].serde as TimestampSerde<unknown>;
+      data[updatedAt] = serde.mapFromNow(now);
+    }
+  }
+
+  /** Registers a newly-instantiated entity with our EntityManager; only called by #doCreate and hydrate. */
+  #doRegister(entity: Entity, id?: string): void {
+    // Keep our indexes up to date...
+    const maybeId = id ?? entity.idTaggedMaybe;
+    if (maybeId) {
+      if (this.findExistingInstance(maybeId) !== undefined) {
+        throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
+      }
+      this.#entitiesById.set(maybeId, entity);
+    }
+    this.#entitiesArray.push(entity);
+
+    const meta = getMetadata(entity);
+    const set = this.#entitiesByTag.get(meta.tagName) ?? [];
+    if (set.length === 0) this.#entitiesByTag.set(meta.tagName, set);
+    set.push(entity);
+    if (this.#entitiesArray.length >= this.entityLimit) {
+      throw new Error(`More than ${this.entityLimit} entities have been instantiated`);
+    }
+
+    // If indexing is enabled for this type, add it...
+    this.#indexManager.maybeIndexEntity(entity);
   }
 }
 

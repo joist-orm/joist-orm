@@ -24,7 +24,7 @@ describe("EntityManager.clone", () => {
 
     // Given an entity
     const p1 = newPublisher(em, { name: "p1" });
-    const a1 = new Author(em, { firstName: "a1", publisher: p1 });
+    const a1 = em.create(Author, { firstName: "a1", publisher: p1 });
     await em.flush();
 
     // When we clone that entity
@@ -60,7 +60,7 @@ describe("EntityManager.clone", () => {
     // Given an entity created in 1 UoW
     const em = newEntityManager();
     const p1 = newPublisher(em, { name: "p1" });
-    const a1 = new Author(em, { firstName: "a1", publisher: p1 });
+    const a1 = em.create(Author, { firstName: "a1", publisher: p1 });
     await em.flush();
 
     // When we clone it in a 2nd UoW
@@ -153,9 +153,9 @@ describe("EntityManager.clone", () => {
     const em = newEntityManager();
 
     // Given an entity with a reference to another entity with a many-to-many reference
-    const a1 = new Author(em, { firstName: "a1" });
-    const b1 = new Book(em, { title: "b1", author: a1 });
-    const t1 = new Tag(em, { name: "t1", books: [b1] });
+    const a1 = em.create(Author, { firstName: "a1" });
+    const b1 = em.create(Book, { title: "b1", author: a1 });
+    const t1 = em.create(Tag, { name: "t1", books: [b1] });
     await em.flush();
 
     // When we clone that entity and its nested references, which include a many-to-many reference
@@ -169,9 +169,9 @@ describe("EntityManager.clone", () => {
     const em = newEntityManager();
 
     // Given an entity with a reference to another entity with a one-to-one
-    const a1 = new Author(em, { firstName: "a1" });
-    const b1 = new Book(em, { title: "b1", author: a1 });
-    const i1 = new Image(em, { fileName: "11", type: ImageType.BookImage, book: b1 });
+    const a1 = em.create(Author, { firstName: "a1" });
+    const b1 = em.create(Book, { title: "b1", author: a1 });
+    const i1 = em.create(Image, { fileName: "11", type: ImageType.BookImage, book: b1 });
     await em.flush();
 
     // When we clone that entity and its nested references
@@ -192,7 +192,7 @@ describe("EntityManager.clone", () => {
     const em = newEntityManager();
 
     // Given an entity with a reference to another entity
-    const a1 = new Author(em, { firstName: "a1", books: [newBook(em)] });
+    const a1 = em.create(Author, { firstName: "a1", books: [newBook(em)] });
     await em.flush();
 
     // When we clone that entity and don't pass a populate hint for the reference
@@ -207,7 +207,7 @@ describe("EntityManager.clone", () => {
     const em = newEntityManager();
     // Given an entity
     const p1 = newPublisher(em, { name: "p1" });
-    const a1 = new Author(em, { firstName: "a1", publisher: p1 });
+    const a1 = em.create(Author, { firstName: "a1", publisher: p1 });
     await em.flush();
     // When we clone that entity
     const a2 = await em.clone(a1);
@@ -259,7 +259,7 @@ describe("EntityManager.clone", () => {
   it("can skip primitives", async () => {
     const em = newEntityManager();
     const p1 = newPublisher(em, { name: "p1" });
-    const a1 = new Author(em, { firstName: "a1", publisher: p1 });
+    const a1 = em.create(Author, { firstName: "a1", publisher: p1 });
     const a2 = await em.clone(a1, { skip: ["firstName"] });
     expect(a2.firstName).toBe(undefined);
   });
@@ -267,7 +267,7 @@ describe("EntityManager.clone", () => {
   it("can skip m2os", async () => {
     const em = newEntityManager();
     const p1 = newPublisher(em, { name: "p1" });
-    const a1 = new Author(em, { firstName: "a1", publisher: p1 });
+    const a1 = em.create(Author, { firstName: "a1", publisher: p1 });
     const a2 = await em.clone(a1, { skip: ["publisher"] });
     expect(a2.publisher.isSet).toBe(false);
   });
@@ -427,7 +427,7 @@ describe("EntityManager.clone", () => {
   it("can protected fields", async () => {
     // Given an entity created and set a protected field
     const em = newEntityManager();
-    const a1 = new Author(em, { firstName: "a1", isPopular: true });
+    const a1 = em.create(Author, { firstName: "a1", isPopular: true });
     expect(a1.wasEverPopular).toBe(true);
     // When we clone it
     const a2 = await em.clone(a1);

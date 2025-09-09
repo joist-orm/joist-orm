@@ -226,11 +226,6 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   declare readonly __type: { 0: "User" };
 
-  constructor(em: EntityManager, opts: UserOpts) {
-    super(em, opts);
-    setOpts(this as any as User, opts, { calledFromConstructor: true });
-  }
-
   get id(): UserId {
     return this.idMaybe || failNoIdYet("User");
   }

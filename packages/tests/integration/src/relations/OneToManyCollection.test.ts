@@ -601,7 +601,7 @@ describe("OneToManyCollection", () => {
 
   it("can forceReload a new one-to-many that is empty", async () => {
     const em = newEntityManager();
-    const author = new Author(em, { firstName: "a1" });
+    const author = em.create(Author, { firstName: "a1" });
     const loaded = await author.populate({ hint: "books", forceReload: true });
     expect(loaded.books.get.length).toBe(0);
   });

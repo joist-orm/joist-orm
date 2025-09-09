@@ -123,11 +123,6 @@ export abstract class T5BookCodegen extends BaseEntity<EntityManager, number> im
 
   declare readonly __type: { 0: "T5Book" };
 
-  constructor(em: EntityManager, opts: T5BookOpts) {
-    super(em, opts);
-    setOpts(this as any as T5Book, opts, { calledFromConstructor: true });
-  }
-
   get id(): T5BookId {
     return this.idMaybe || failNoIdYet("T5Book");
   }

@@ -169,11 +169,6 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
 
   declare readonly __type: { 0: "Image" };
 
-  constructor(em: EntityManager, opts: ImageOpts) {
-    super(em, opts);
-    setOpts(this as any as Image, opts, { calledFromConstructor: true });
-  }
-
   get id(): ImageId {
     return this.idMaybe || failNoIdYet("Image");
   }

@@ -163,11 +163,6 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
 
   declare readonly __type: { 0: "AuthorStat" };
 
-  constructor(em: EntityManager, opts: AuthorStatOpts) {
-    super(em, opts);
-    setOpts(this as any as AuthorStat, opts, { calledFromConstructor: true });
-  }
-
   get id(): AuthorStatId {
     return this.idMaybe || failNoIdYet("AuthorStat");
   }

@@ -112,11 +112,6 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
 
   declare readonly __type: { 0: "T5BookReview" };
 
-  constructor(em: EntityManager, opts: T5BookReviewOpts) {
-    super(em, opts);
-    setOpts(this as any as T5BookReview, opts, { calledFromConstructor: true });
-  }
-
   get id(): T5BookReviewId {
     return this.idMaybe || failNoIdYet("T5BookReview");
   }

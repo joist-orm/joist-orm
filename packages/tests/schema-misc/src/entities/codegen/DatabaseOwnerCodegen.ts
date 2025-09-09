@@ -90,11 +90,6 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
 
   declare readonly __type: { 0: "DatabaseOwner" };
 
-  constructor(em: EntityManager, opts: DatabaseOwnerOpts) {
-    super(em, opts);
-    setOpts(this as any as DatabaseOwner, opts, { calledFromConstructor: true });
-  }
-
   get id(): DatabaseOwnerId {
     return this.idMaybe || failNoIdYet("DatabaseOwner");
   }

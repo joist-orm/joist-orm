@@ -288,15 +288,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   abstract readonly favoriteAuthor: ReactiveReference<Publisher, Author, undefined>;
 
-  constructor(em: EntityManager, opts: PublisherOpts) {
-    super(em, opts);
-    setOpts(this as any as Publisher, opts, { calledFromConstructor: true });
-
-    if (this.constructor === Publisher && !(em as any).fakeInstance) {
-      throw new Error(`Publisher ${typeof opts === "string" ? opts : ""} must be instantiated via a subtype`);
-    }
-  }
-
   get id(): PublisherId {
     return this.idMaybe || failNoIdYet("Publisher");
   }

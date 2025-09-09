@@ -46,13 +46,13 @@ describe("Author", () => {
 
   it("can have validation logic", async () => {
     const em = newEntityManager();
-    new Author(em, { firstName: "a1", lastName: "a1" });
+    em.create(Author, { firstName: "a1", lastName: "a1" });
     await expect(em.flush()).rejects.toThrow("firstName and lastName must be different");
   });
 
   it("can have multiple validation rules", async () => {
     const em = newEntityManager();
-    new Author(em, { firstName: "NotAllowedLastName", lastName: "NotAllowedLastName" });
+    em.create(Author, { firstName: "NotAllowedLastName", lastName: "NotAllowedLastName" });
     await expect(em.flush()).rejects.toThrow(
       "Validation errors (2): Author#1 firstName and lastName must be different, lastName is invalid",
     );
@@ -76,8 +76,8 @@ describe("Author", () => {
 
   it("can have async validation rules", async () => {
     const em = newEntityManager();
-    const a1 = new Author(em, { firstName: "a1" });
-    new Book(em, { title: "a1", author: a1 });
+    const a1 = em.create(Author, { firstName: "a1" });
+    em.create(Book, { title: "a1", author: a1 });
     await expect(em.flush()).rejects.toThrow(
       "Validation error: Author#1 A book title cannot be the author's firstName",
     );
@@ -104,7 +104,7 @@ describe("Author", () => {
     const em = newEntityManager();
     // When we add a 13th book
     const a1 = await em.load(Author, "1");
-    const b1 = new Book(em, { title: "b1", author: a1 });
+    const b1 = em.create(Book, { title: "b1", author: a1 });
     // Then the Author validation rule fails
     await expect(em.flush()).rejects.toThrow("Author:1 An author cannot have 13 books");
   });
@@ -181,7 +181,7 @@ describe("Author", () => {
     // Given an author with the same first and last name
     // Given that a validation exists preventing the firstName and lastName from being the same values
     const em = newEntityManager();
-    new Author(em, { firstName: "a1", lastName: "a1" });
+    em.create(Author, { firstName: "a1", lastName: "a1" });
 
     // When a flush occurs with the skipValidation option set to true
     // Then it does not throw an exception
@@ -196,8 +196,8 @@ describe("Author", () => {
   it("can skip reactive validation rules", async () => {
     const em = newEntityManager();
     // Given the book and author start out with acceptable names
-    const a1 = new Author(em, { firstName: "a1" });
-    const b1 = new Book(em, { title: "b1", author: a1 });
+    const a1 = em.create(Author, { firstName: "a1" });
+    const b1 = em.create(Book, { title: "b1", author: a1 });
     await em.flush();
 
     // When the book name is later changed to collide with the author
@@ -212,7 +212,7 @@ describe("Author", () => {
     // Given an author with the same first and last name
     // Given that a validation exists preventing the firstName and lastName from being the same values
     const em = newEntityManager();
-    const a1 = new Author(em, { firstName: "a1", lastName: "a1" });
+    const a1 = em.create(Author, { firstName: "a1", lastName: "a1" });
     expect(a1.transientFields.afterValidationRan).toBe(false);
 
     // When a flush occurs with the skipValidation option set to true
@@ -224,7 +224,7 @@ describe("Author", () => {
 
   it("can have lifecycle hooks", async () => {
     const em = newEntityManager();
-    const a1 = new Author(em, { firstName: "a1" });
+    const a1 = em.create(Author, { firstName: "a1" });
     expect(a1.transientFields.beforeFlushRan).toBe(false);
     expect(a1.transientFields.beforeCreateRan).toBe(false);
     expect(a1.transientFields.beforeCreateAsyncRan).toBe(false);
@@ -261,7 +261,7 @@ describe("Author", () => {
 
   it("can access the context in hooks", async () => {
     const em = newEntityManager();
-    new Author(em, { firstName: "a1" });
+    em.create(Author, { firstName: "a1" });
     await em.flush();
     expect(makeApiCall).toHaveBeenCalledWith("Author.beforeFlush");
   });
@@ -269,7 +269,7 @@ describe("Author", () => {
   describe("changes", () => {
     it("on create set fields are considered changed but not updated", async () => {
       const em = newEntityManager();
-      const a1 = new Author(em, { firstName: "f1", lastName: "ln" });
+      const a1 = em.create(Author, { firstName: "f1", lastName: "ln" });
       expect(a1.changes.firstName.hasChanged).toBe(true);
       expect(a1.changes.firstName.hasUpdated).toBe(false);
       expect(a1.changes.firstName.originalValue).toBe(undefined);
@@ -329,7 +329,7 @@ describe("Author", () => {
 
     it("has the right type for strings", async () => {
       const em = newEntityManager();
-      const a1 = new Author(em, { firstName: "f1", lastName: "ln" });
+      const a1 = em.create(Author, { firstName: "f1", lastName: "ln" });
       await em.flush();
       a1.firstName = "f11";
       expect(a1.changes.firstName.originalValue!.length).toEqual(2);
@@ -425,7 +425,7 @@ describe("Author", () => {
 
   it("can set new opts", async () => {
     const em = newEntityManager();
-    const author = new Author(em, { firstName: "a1", lastName: "a1" });
+    const author = em.create(Author, { firstName: "a1", lastName: "a1" });
     author.set({ firstName: "a2", lastName: "a2" });
     expect(author.firstName).toEqual("a2");
     expect(author.lastName).toEqual("a2");
@@ -433,7 +433,7 @@ describe("Author", () => {
 
   it("cannot set empty string names", async () => {
     const em = newEntityManager();
-    new Author(em, { firstName: "" });
+    em.create(Author, { firstName: "" });
     await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
@@ -446,7 +446,7 @@ describe("Author", () => {
 
   it("can set protected fields", async () => {
     const em = newEntityManager();
-    const author = new Author(em, { firstName: "a1", isPopular: true });
+    const author = em.create(Author, { firstName: "a1", isPopular: true });
     expect(author.wasEverPopular).toEqual(true);
     await em.flush();
     // But they cannot be called directly

@@ -5,6 +5,13 @@ import { getInstanceData } from "joist-orm";
 import { jan1 } from "src/testDates";
 
 describe("Entity", () => {
+  it("cannot be instantiated directly", () => {
+    const em = newEntityManager();
+    expect(() => {
+      new Author(em);
+    }).toThrow("Entities must be constructed by calling em.create or em.load");
+  });
+
   it("has a toString", async () => {
     const em = newEntityManager();
     const a = newAuthor(em);
@@ -71,7 +78,7 @@ describe("Entity", () => {
 
     it("setting optional fields to null is allowed", () => {
       const em = newEntityManager();
-      const author = new Author(em, { firstName: "a1" });
+      const author = em.create(Author, { firstName: "a1" });
       author.set({ lastName: null });
       expect(author.lastName).toBeUndefined();
     });
@@ -137,7 +144,7 @@ describe("Entity", () => {
   describe("setPartial", () => {
     it("treats undefined as leave", () => {
       const em = newEntityManager();
-      const author = new Author(em, { firstName: "a1" });
+      const author = em.create(Author, { firstName: "a1" });
       author.setPartial({ firstName: undefined });
       expect(author.firstName).toEqual("a1");
     });

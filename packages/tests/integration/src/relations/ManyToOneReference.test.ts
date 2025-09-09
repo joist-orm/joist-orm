@@ -52,8 +52,8 @@ describe("ManyToOneReference", () => {
 
   it("can save a foreign key", async () => {
     const em = newEntityManager();
-    const author = new Author(em, { firstName: "a1" });
-    new Book(em, { title: "t1", author });
+    const author = em.create(Author, { firstName: "a1" });
+    em.create(Book, { title: "t1", author });
     await em.flush();
 
     const rows = await select("books");

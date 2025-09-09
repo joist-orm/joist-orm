@@ -127,11 +127,6 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
 
   declare readonly __type: { 0: "ParentGroup" };
 
-  constructor(em: EntityManager, opts: ParentGroupOpts) {
-    super(em, opts);
-    setOpts(this as any as ParentGroup, opts, { calledFromConstructor: true });
-  }
-
   get id(): ParentGroupId {
     return this.idMaybe || failNoIdYet("ParentGroup");
   }

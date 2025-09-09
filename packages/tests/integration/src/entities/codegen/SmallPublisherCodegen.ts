@@ -46,7 +46,6 @@ import {
   BookAdvance,
   Comment,
   type Entity,
-  EntityManager,
   Image,
   newSmallPublisher,
   Publisher,
@@ -162,11 +161,6 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   static readonly metadata: EntityMetadata<SmallPublisher>;
 
   declare readonly __type: { 0: "Publisher"; 1: "SmallPublisher" };
-
-  constructor(em: EntityManager, opts: SmallPublisherOpts) {
-    super(em, opts);
-    setOpts(this as any as SmallPublisher, opts, { calledFromConstructor: true });
-  }
 
   get id(): SmallPublisherId {
     return this.idMaybe || failNoIdYet("SmallPublisher");

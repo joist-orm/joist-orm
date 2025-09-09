@@ -198,11 +198,6 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
 
   declare readonly __type: { 0: "Task" };
 
-  constructor(em: EntityManager, opts: TaskOpts) {
-    super(em, opts);
-    setOpts(this as any as Task, opts, { calledFromConstructor: true });
-  }
-
   get id(): TaskId {
     return this.idMaybe || failNoIdYet("Task");
   }

@@ -337,10 +337,10 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ first_name: "a1" });
 
     const em = newEntityManager();
-    const publisher = new SmallPublisher(em, {
+    const publisher = em.create(SmallPublisher, {
       name: "p1",
       city: "c1",
-      spotlightAuthor: new Author(em, { firstName: "a1" }),
+      spotlightAuthor: em.create(Author, { firstName: "a1" }),
     });
     const where = { publisher } satisfies AuthorFilter;
     const authors = await em.find(Author, where);

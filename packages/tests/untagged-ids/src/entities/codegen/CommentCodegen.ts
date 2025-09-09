@@ -126,11 +126,6 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
 
   declare readonly __type: { 0: "Comment" };
 
-  constructor(em: EntityManager, opts: CommentOpts) {
-    super(em, opts);
-    setOpts(this as any as Comment, opts, { calledFromConstructor: true });
-  }
-
   get id(): CommentId {
     return this.idMaybe || failNoIdYet("Comment");
   }

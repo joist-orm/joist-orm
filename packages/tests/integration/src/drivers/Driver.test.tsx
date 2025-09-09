@@ -8,7 +8,7 @@ describe("Driver", () => {
   describe("flushEntities", () => {
     it("can insert", async () => {
       const em = newEntityManager();
-      const author = new Author(em, { firstName: "a1" });
+      const author = em.create(Author, { firstName: "a1" });
       // Pretend EntityManager.flush ran
       setField(author, "initials", "a");
       setField(author, "numberOfBooks", 0);
@@ -37,7 +37,7 @@ describe("Driver", () => {
       await insertAuthor({ first_name: "a1", updated_at: jan1 });
 
       const em = newEntityManager();
-      const author = new Author(em, { firstName: "a1" });
+      const author = em.create(Author, { firstName: "a1" });
       // author.__orm.data.updated_at = jan1;
       // author.__orm.data.id = "a:1";
       // author.firstName = "changed";

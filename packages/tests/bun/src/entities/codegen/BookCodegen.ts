@@ -113,11 +113,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   declare readonly __type: { 0: "Book" };
 
-  constructor(em: EntityManager, opts: BookOpts) {
-    super(em, opts);
-    setOpts(this as any as Book, opts, { calledFromConstructor: true });
-  }
-
   get id(): BookId {
     return this.idMaybe || failNoIdYet("Book");
   }

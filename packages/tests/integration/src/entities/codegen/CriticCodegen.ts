@@ -165,11 +165,6 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
 
   declare readonly __type: { 0: "Critic" };
 
-  constructor(em: EntityManager, opts: CriticOpts) {
-    super(em, opts);
-    setOpts(this as any as Critic, opts, { calledFromConstructor: true });
-  }
-
   get id(): CriticId {
     return this.idMaybe || failNoIdYet("Critic");
   }

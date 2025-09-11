@@ -577,7 +577,7 @@ describe("ManyToManyCollection", () => {
   it("can forceReload a new many-to-many that is empty", async () => {
     const em = newEntityManager();
     const author = newAuthor(em);
-    const book = new Book(em, { title: "b1", author });
+    const book = em.create(Book, { title: "b1", author });
     const loaded = await book.populate({ hint: "tags", forceReload: true });
     expect(loaded.tags.get.length).toBe(0);
   });
@@ -586,7 +586,7 @@ describe("ManyToManyCollection", () => {
     const em = newEntityManager();
     const author = newAuthor(em);
     const t1 = newTag(em, { name: "t1" });
-    const book = new Book(em, { title: "b1", author, tags: [t1] });
+    const book = em.create(Book, { title: "b1", author, tags: [t1] });
     const loaded = await book.populate({ hint: "tags", forceReload: true });
     expect(loaded.tags.get.length).toBe(1);
   });

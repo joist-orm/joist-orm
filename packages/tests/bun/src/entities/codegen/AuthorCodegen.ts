@@ -123,11 +123,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   declare readonly __type: { 0: "Author" };
 
-  constructor(em: EntityManager, opts: AuthorOpts) {
-    super(em, opts);
-    setOpts(this as any as Author, opts, { calledFromConstructor: true });
-  }
-
   get id(): AuthorId {
     return this.idMaybe || failNoIdYet("Author");
   }

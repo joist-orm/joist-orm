@@ -58,13 +58,13 @@ The non-null `Author.firstName` field is enforced as required on construction:
 
 ```typescript
 // Valid
-new Author(em, { firstName: "bob" });
+em.create(Author, { firstName: "bob" });
 // Not valid
-new Author(em, {});
+em.create(Author, {});
 // Not valid
-new Author(em, { firstName: null });
+em.create(Author, { firstName: null });
 // Not valid
-new Author(em, { firstName: undefined });
+em.create(Author, { firstName: undefined });
 ```
 
 And for updates made via the `set` method:

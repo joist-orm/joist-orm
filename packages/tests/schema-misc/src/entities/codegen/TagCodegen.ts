@@ -101,11 +101,6 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
 
   declare readonly __type: { 0: "Tag" };
 
-  constructor(em: EntityManager, opts: TagOpts) {
-    super(em, opts);
-    setOpts(this as any as Tag, opts, { calledFromConstructor: true });
-  }
-
   get id(): TagId {
     return this.idMaybe || failNoIdYet("Tag");
   }

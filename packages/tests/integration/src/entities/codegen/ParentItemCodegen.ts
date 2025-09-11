@@ -132,11 +132,6 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
 
   declare readonly __type: { 0: "ParentItem" };
 
-  constructor(em: EntityManager, opts: ParentItemOpts) {
-    super(em, opts);
-    setOpts(this as any as ParentItem, opts, { calledFromConstructor: true });
-  }
-
   get id(): ParentItemId {
     return this.idMaybe || failNoIdYet("ParentItem");
   }

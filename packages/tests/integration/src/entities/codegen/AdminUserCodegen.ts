@@ -37,7 +37,6 @@ import {
   Author,
   Comment,
   type Entity,
-  EntityManager,
   newAdminUser,
   User,
   type UserFields,
@@ -102,11 +101,6 @@ export abstract class AdminUserCodegen extends User implements Entity {
   static readonly metadata: EntityMetadata<AdminUser>;
 
   declare readonly __type: { 0: "User"; 1: "AdminUser" };
-
-  constructor(em: EntityManager, opts: AdminUserOpts) {
-    super(em, opts);
-    setOpts(this as any as AdminUser, opts, { calledFromConstructor: true });
-  }
 
   get id(): AdminUserId {
     return this.idMaybe || failNoIdYet("AdminUser");

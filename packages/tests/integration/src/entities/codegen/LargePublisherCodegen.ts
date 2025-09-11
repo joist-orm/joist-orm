@@ -50,7 +50,6 @@ import {
   type CriticId,
   criticMeta,
   type Entity,
-  EntityManager,
   Image,
   LargePublisher,
   largePublisherMeta,
@@ -152,11 +151,6 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   static readonly metadata: EntityMetadata<LargePublisher>;
 
   declare readonly __type: { 0: "Publisher"; 1: "LargePublisher" };
-
-  constructor(em: EntityManager, opts: LargePublisherOpts) {
-    super(em, opts);
-    setOpts(this as any as LargePublisher, opts, { calledFromConstructor: true });
-  }
 
   get id(): LargePublisherId {
     return this.idMaybe || failNoIdYet("LargePublisher");

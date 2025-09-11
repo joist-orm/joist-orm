@@ -147,17 +147,9 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const maybePreventBaseTypeInstantiation = meta.abstract
     ? code`
     if (this.constructor === ${entity.type} && !(em as any).fakeInstance) {
-      throw new Error(\`${entity.type} \${typeof opts === "string" ? opts : ""} must be instantiated via a subtype\`);
+      throw new Error(\`${entity.type} must be instantiated via a subtype\`);
     }`
     : "";
-
-  const cstr = code`
-    constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
-      super(em, opts);
-      ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
-      ${maybePreventBaseTypeInstantiation}
-    }
-  `;
 
   let maybeOtherTypeChanges;
   if (subEntities.length > 0) {
@@ -256,8 +248,6 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       };
 
       ${relations.filter((r) => r.kind === "abstract").map((r) => r.line)}
-
-      ${cstr}
 
       get id(): ${entityName}Id {
         return this.idMaybe || ${failNoIdYet}("${entityName}");

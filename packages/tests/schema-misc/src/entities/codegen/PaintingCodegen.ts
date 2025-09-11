@@ -123,11 +123,6 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
 
   declare readonly __type: { 0: "Painting" };
 
-  constructor(em: EntityManager, opts: PaintingOpts) {
-    super(em, opts);
-    setOpts(this as any as Painting, opts, { calledFromConstructor: true });
-  }
-
   get id(): PaintingId {
     return this.idMaybe || failNoIdYet("Painting");
   }

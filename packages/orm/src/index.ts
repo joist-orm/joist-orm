@@ -1,8 +1,8 @@
 import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
-import { EntityConstructor, MaybeAbstractEntityConstructor } from "./EntityManager";
+import { EntityConstructor, EntityManager, MaybeAbstractEntityConstructor } from "./EntityManager";
 import { EntityMetadata, getBaseMeta, getMetadata } from "./EntityMetadata";
-import { getDefaultDependencies, setSyncDefaults } from "./defaults";
+import { getDefaultDependencies } from "./defaults";
 import { buildWhereClause } from "./drivers/buildUtils";
 import { getField, setField } from "./fields";
 import { getProperties } from "./getProperties";
@@ -127,15 +127,10 @@ export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
  */
 export function setOpts<T extends Entity>(
   entity: T,
-  values: Partial<OptsOf<T>> | string | undefined,
-  opts?: { calledFromConstructor?: boolean; partial?: boolean },
+  values: Partial<OptsOf<T>> | undefined,
+  opts?: { partial?: boolean; calledFromConstructor?: boolean },
 ): void {
-  const { calledFromConstructor, partial } = opts || {};
-
-  // If `values` is a string (i.e. the id), this instance is being hydrated from a database row,
-  // so skip all this, because `hydrate` manually calls `serde.setOnEntity`.
-  if (typeof values === "string") return;
-
+  const { calledFromConstructor = false, partial } = opts || {};
   // If `values` is undefined, we're being called by `createPartial` that will do its
   // own opt handling, but we still want the sync defaults applied after this opts handling.
   if (values !== undefined) {
@@ -143,13 +138,6 @@ export function setOpts<T extends Entity>(
     for (const [key, _value] of Object.entries(values as {})) {
       setOpt(meta, entity, key, _value, partial, calledFromConstructor);
     }
-  }
-
-  // Apply any synchronous defaults, after the opts have been applied
-  if (calledFromConstructor && !(entity.em as any).fakeInstance) {
-    // If calledFromConstructor=true, this must be a new entity because we've got
-    // an early-return up above that checks for `em.hydrate` passing in ids
-    setSyncDefaults(entity);
   }
 }
 
@@ -253,6 +241,13 @@ export function getRelationEntries(entity: Entity): [string, AbstractRelationImp
 
 /** Casts a "maybe abstract" cstr to a concrete cstr when the calling code knows it's safe. */
 export function asConcreteCstr<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): EntityConstructor<T> {
+  return cstr as any;
+}
+
+/** Casts a "maybe abstract" cstr to a concrete cstr when the calling code knows it's safe. */
+export function asInternalCstr<T extends Entity>(
+  cstr: MaybeAbstractEntityConstructor<T>,
+): { new (em: EntityManager<any, any, any>, isNew: boolean): T } {
   return cstr as any;
 }
 

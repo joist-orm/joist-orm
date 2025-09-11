@@ -123,11 +123,6 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
 
   declare readonly __type: { 0: "CriticColumn" };
 
-  constructor(em: EntityManager, opts: CriticColumnOpts) {
-    super(em, opts);
-    setOpts(this as any as CriticColumn, opts, { calledFromConstructor: true });
-  }
-
   get id(): CriticColumnId {
     return this.idMaybe || failNoIdYet("CriticColumn");
   }

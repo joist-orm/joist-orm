@@ -44,7 +44,7 @@ Joist generates both sides of relations, and will keep them automatically in syn
 ```typescript
 const a1 = em.load(Author, "a:1", "books");
 // Create a new book for a1
-const b1 = new Book(em, { title: "b1", author: a1 });
+const b1 = em.create(Book, { title: "b1", author: a1 });
 // a1.books already has b1 in it, so your view of data is always consistent
 expect(a1.books.get.includes(b1)).toBe(true);
 ```
@@ -165,8 +165,8 @@ describe("Author", () => {
   it("can have reactive validation rules", async () => {
     const em = newEntityManager();
     // Given the book and author start out with acceptable names
-    const a1 = new Author(em, { firstName: "a1" });
-    const b1 = new Book(em, { title: "b1", author: a1 });
+    const a1 = em.create(Author, { firstName: "a1" });
+    const b1 = em.create(Book, { title: "b1", author: a1 });
     await em.flush();
     // When the book name is later changed to collide with the author
     b1.title = "a1";

@@ -140,7 +140,7 @@ describe("EntityManager", () => {
 
   it("inserts a new entity", async () => {
     const em = newEntityManager();
-    const author = new Author(em, { firstName: "a1" });
+    const author = em.create(Author, { firstName: "a1" });
     await em.flush();
 
     const rows = await select("authors");
@@ -150,7 +150,7 @@ describe("EntityManager", () => {
 
   it("inserts then updates new entity", async () => {
     const em = newEntityManager();
-    const author = new Author(em, { firstName: "a1" });
+    const author = em.create(Author, { firstName: "a1" });
     await em.flush();
     author.firstName = "a2";
     await em.flush();
@@ -162,8 +162,8 @@ describe("EntityManager", () => {
 
   it("inserts multiple entities in bulk", async () => {
     const em = newEntityManager();
-    new Author(em, { firstName: "a1" });
-    new Author(em, { firstName: "a2" });
+    em.create(Author, { firstName: "a1" });
+    em.create(Author, { firstName: "a2" });
     await em.flush();
     // 4 = begin, assign ids, insert, commit
     expect(numberOfQueries).toEqual(2 + maybeBeginAndCommit());
@@ -173,7 +173,7 @@ describe("EntityManager", () => {
 
   it("updates an entity", async () => {
     const em = newEntityManager();
-    const author = new Author(em, { firstName: "a1" });
+    const author = em.create(Author, { firstName: "a1" });
     await em.flush();
     expect(author.id).toEqual("a:1");
 
@@ -204,7 +204,7 @@ describe("EntityManager", () => {
 
   it("does not update inserted-then-unchanged entities", async () => {
     const em = newEntityManager();
-    new Author(em, { firstName: "a1" });
+    em.create(Author, { firstName: "a1" });
     await em.flush();
     resetQueryCount();
     await em.flush();
@@ -213,7 +213,7 @@ describe("EntityManager", () => {
 
   it("does not update updated-then-unchanged entities", async () => {
     const em = newEntityManager();
-    const author = new Author(em, { firstName: "a1" });
+    const author = em.create(Author, { firstName: "a1" });
     await em.flush();
     author.firstName = "a2";
     await em.flush();
@@ -237,7 +237,7 @@ describe("EntityManager", () => {
   it("does not insert created-then-deleted entities", async () => {
     const em = newEntityManager();
     resetQueryCount();
-    const a = new Author(em, { firstName: "a1" });
+    const a = em.create(Author, { firstName: "a1" });
     em.delete(a);
     await em.flush();
     // Then we didn't issue any queries
@@ -635,7 +635,7 @@ describe("EntityManager", () => {
     // Given we create both an author and publisher
     const em = newEntityManager();
     const p1 = newPublisher(em, { name: "p1" });
-    new Author(em, { firstName: "a1", publisher: p1 });
+    em.create(Author, { firstName: "a1", publisher: p1 });
     // And we've flush all the entities to the db
     await em.flush();
     // When we load p1.authors for the 1st time
@@ -796,8 +796,8 @@ describe("EntityManager", () => {
 
   it("can save tables with self-references", async () => {
     const em = newEntityManager();
-    const mentor = new Author(em, { firstName: "m1" });
-    new Author(em, { firstName: "a1", mentor });
+    const mentor = em.create(Author, { firstName: "m1" });
+    em.create(Author, { firstName: "a1", mentor });
     await em.flush();
     const rows = await select("authors");
     expect(rows.length).toEqual(2);
@@ -807,8 +807,8 @@ describe("EntityManager", () => {
 
   it("can save entities with columns that are keywords", async () => {
     const em = newEntityManager();
-    const a1 = new Author(em, { firstName: "a1" });
-    const b1 = new Book(em, { title: "b1", author: a1 });
+    const a1 = em.create(Author, { firstName: "a1" });
+    const b1 = em.create(Book, { title: "b1", author: a1 });
     await em.flush();
     b1.order = 1;
     await em.flush();
@@ -818,7 +818,7 @@ describe("EntityManager", () => {
 
   it("can set derived values", async () => {
     const em = newEntityManager();
-    const a1 = new Author(em, { firstName: "a1", lastName: "last" });
+    const a1 = em.create(Author, { firstName: "a1", lastName: "last" });
     expect(a1.initials).toEqual("al");
     await em.flush();
     expect((await select("authors"))[0]["initials"]).toEqual("al");
@@ -991,8 +991,8 @@ describe("EntityManager", () => {
 
   it("can delete an entity with a reverseHint in a transaction", async () => {
     const em = newEntityManager();
-    const a1 = new Author(em, { firstName: "a1" });
-    const b1 = new Book(em, { title: "title", author: a1 });
+    const a1 = em.create(Author, { firstName: "a1" });
+    const b1 = em.create(Book, { title: "title", author: a1 });
     await em.flush();
     await em.transaction(async () => {
       em.delete(b1);
@@ -1003,7 +1003,7 @@ describe("EntityManager", () => {
 
   it("can save entities", async () => {
     const em = newEntityManager();
-    const a1 = new Author(em, { firstName: "a1" });
+    const a1 = em.create(Author, { firstName: "a1" });
     expect(a1.isNewEntity).toBe(true);
     expect(a1.isDirtyEntity).toBe(true);
     await em.flush();
@@ -1015,7 +1015,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
 
     // Given a newly created entity
-    const a1 = new Author(em, { firstName: "a1" });
+    const a1 = em.create(Author, { firstName: "a1" });
 
     // When we flush the entity manager
     const [result] = await em.flush();
@@ -1028,7 +1028,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
 
     // Given an entity
-    const a1 = new Author(em, { firstName: "a1" });
+    const a1 = em.create(Author, { firstName: "a1" });
     await em.flush();
 
     // When we update that entity
@@ -1044,7 +1044,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
 
     // Given an entity
-    const a1 = new Author(em, { firstName: "a1" });
+    const a1 = em.create(Author, { firstName: "a1" });
     await em.flush();
 
     // When we delete that entity
@@ -1207,7 +1207,7 @@ describe("EntityManager", () => {
   describe("jsonb columns", () => {
     it("can save superstruct values", async () => {
       const em = newEntityManager();
-      new Author(em, { firstName: "a1", address: { street: "123 Main" } });
+      em.create(Author, { firstName: "a1", address: { street: "123 Main" } });
       await em.flush();
       const rows = await select("authors");
       expect(rows.length).toEqual(1);
@@ -1223,7 +1223,7 @@ describe("EntityManager", () => {
 
     it("can save array values", async () => {
       const em = newEntityManager();
-      new Author(em, { firstName: "a1", quotes: ["incredible", "funny", "seminal"] });
+      em.create(Author, { firstName: "a1", quotes: ["incredible", "funny", "seminal"] });
       await em.flush();
       const rows = await select("authors");
       expect(rows.length).toEqual(1);
@@ -1240,13 +1240,13 @@ describe("EntityManager", () => {
     it("rejects saving invalid superstruct values", async () => {
       const em = newEntityManager();
       expect(() => {
-        new Author(em, { firstName: "a1", address: { street2: "123 Main" } as any });
+        em.create(Author, { firstName: "a1", address: { street2: "123 Main" } as any });
       }).toThrow("At path: street -- Expected a string, but received: undefined");
     });
 
     it("can save zodSchema values", async () => {
       const em = newEntityManager();
-      new Author(em, { firstName: "a1", businessAddress: { street: "123 Main" } });
+      em.create(Author, { firstName: "a1", businessAddress: { street: "123 Main" } });
       await em.flush();
       const rows = await select("authors");
       expect(rows.length).toEqual(1);
@@ -1263,7 +1263,7 @@ describe("EntityManager", () => {
     it("rejects saving invalid zodSchema values", async () => {
       const em = newEntityManager();
       expect(() => {
-        new Author(em, { firstName: "a1", businessAddress: { street2: "123 Main" } as any });
+        em.create(Author, { firstName: "a1", businessAddress: { street2: "123 Main" } as any });
       }).toThrow(
         JSON.stringify(
           [

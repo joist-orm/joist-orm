@@ -53,8 +53,8 @@ describe("ReactiveField", () => {
 
   it("calcs reactive fields on create", async () => {
     const em = newEntityManager();
-    const a1 = new Author(em, { firstName: "a1" });
-    new Book(em, { title: "b1", author: a1 });
+    const a1 = em.create(Author, { firstName: "a1" });
+    em.create(Book, { title: "b1", author: a1 });
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(1);
     const rows = await select("authors");
@@ -63,8 +63,8 @@ describe("ReactiveField", () => {
 
   it("calcs reactive enums on create", async () => {
     const em = newEntityManager();
-    const a1 = new Author(em, { firstName: "a1" });
-    new Book(em, { title: "b1", author: a1 });
+    const a1 = em.create(Author, { firstName: "a1" });
+    em.create(Book, { title: "b1", author: a1 });
     await em.flush();
     expect(a1.rangeOfBooks.get).toEqual(BookRange.Few);
     const rows = await select("authors");
@@ -73,7 +73,7 @@ describe("ReactiveField", () => {
 
   it("caches get calls", async () => {
     const em = newEntityManager();
-    const a1 = new Author(em, { firstName: "a1" });
+    const a1 = em.create(Author, { firstName: "a1" });
     expect(a1.numberOfBooks.get).toBe(0);
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
     expect(a1.numberOfBooks.get).toBe(0);
@@ -90,19 +90,19 @@ describe("ReactiveField", () => {
 
   it("can access reactive fields immediately without loading", async () => {
     const em = newEntityManager();
-    const a1 = new Author(em, { firstName: "a1" });
+    const a1 = em.create(Author, { firstName: "a1" });
     expect(a1.numberOfBooks.get).toEqual(0);
   });
 
   it("recalcs when o2m relation updated", async () => {
     const em = newEntityManager();
     // Given an author with initially no books
-    const a1 = new Author(em, { firstName: "a1" });
+    const a1 = em.create(Author, { firstName: "a1" });
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(0);
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(1);
     // When we add a book
-    new Book(em, { title: "b1", author: a1 });
+    em.create(Book, { title: "b1", author: a1 });
     // Then the author ReactiveField is recaled
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(1);
@@ -128,7 +128,7 @@ describe("ReactiveField", () => {
   it("can em.recalc to update a stale value", async () => {
     const em = newEntityManager();
     // Given an author with a book that has a review that should be public
-    const a1 = new Author(em, { firstName: "a1", age: 22, graduated: new Date() });
+    const a1 = em.create(Author, { firstName: "a1", age: 22, graduated: new Date() });
     const b1 = newBook(em, { author: a1 });
     const br = newBookReview(em, { rating: 1, book: b1 });
     const comment = newComment(em, { text: "", parent: br });
@@ -165,7 +165,7 @@ describe("ReactiveField", () => {
   it("can em.recalc to update multiple stale, dependent values", async () => {
     const em = newEntityManager();
     // Given an author with a book that has a review that should be public
-    const a1 = new Author(em, { firstName: "a1", age: 22, graduated: new Date() });
+    const a1 = em.create(Author, { firstName: "a1", age: 22, graduated: new Date() });
     const b1 = newBook(em, { author: a1 });
     const br = newBookReview(em, { rating: 1, book: b1 });
     const comment = newComment(em, { text: "", parent: br });
@@ -210,7 +210,7 @@ describe("ReactiveField", () => {
     {
       const em = newEntityManager();
       // Given an author with a RF, numberOfPublicReviews2, that uses a RF on BookReview, isPublic
-      const a1 = new Author(em, { firstName: "a1", age: 22, graduated: new Date() });
+      const a1 = em.create(Author, { firstName: "a1", age: 22, graduated: new Date() });
       const b1 = newBook(em, { author: a1 });
       const br = newBookReview(em, { rating: 1, book: b1 });
       newComment(em, { text: "", parent: br });
@@ -234,8 +234,8 @@ describe("ReactiveField", () => {
   it("can save when reactive fields values don't change", async () => {
     const em = newEntityManager();
     // Given an author with a book
-    const a1 = new Author(em, { firstName: "a1" });
-    const b1 = new Book(em, { author: a1, title: "b1" });
+    const a1 = em.create(Author, { firstName: "a1" });
+    const b1 = em.create(Book, { author: a1, title: "b1" });
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(1);
     // And we calc'd it once during flush, and again in the ^ `.get`
@@ -367,10 +367,10 @@ describe("ReactiveField", () => {
     it("crawls both old & new values while reversing m2os", async () => {
       const em = newEntityManager();
       // Given two authors
-      const a1 = new Author(em, { firstName: "a1" });
-      const a2 = new Author(em, { firstName: "a2" });
+      const a1 = em.create(Author, { firstName: "a1" });
+      const a2 = em.create(Author, { firstName: "a2" });
       //  And a book that is originally associated with a1
-      const b1 = new Book(em, { title: "b1", author: a1 });
+      const b1 = em.create(Book, { title: "b1", author: a1 });
       await em.flush();
       expect(a1.numberOfBooks.get).toEqual(1);
       expect(a2.numberOfBooks.get).toEqual(0);
@@ -388,7 +388,7 @@ describe("ReactiveField", () => {
       await insertAuthor({ first_name: "a1", number_of_books: 1 });
       await insertBook({ title: "b1", author_id: 1 });
       // When we make a new author for b1 (and a1 is not even in the UnitOfWork)
-      const a2 = new Author(em, { firstName: "a2" });
+      const a2 = em.create(Author, { firstName: "a2" });
       const b1 = await em.load(Book, "1");
       b1.author.set(a2);
       await em.flush();

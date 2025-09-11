@@ -46,7 +46,6 @@ import {
   type CommentId,
   commentMeta,
   type Entity,
-  EntityManager,
   newTaskOld,
   Publisher,
   type PublisherId,
@@ -159,11 +158,6 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   static readonly metadata: EntityMetadata<TaskOld>;
 
   declare readonly __type: { 0: "Task"; 1: "TaskOld" };
-
-  constructor(em: EntityManager, opts: TaskOldOpts) {
-    super(em, opts);
-    setOpts(this as any as TaskOld, opts, { calledFromConstructor: true });
-  }
 
   get id(): TaskOldId {
     return this.idMaybe || failNoIdYet("TaskOld");

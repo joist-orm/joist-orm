@@ -36,7 +36,6 @@ import {
 import type { Context } from "src/context";
 import {
   type Entity,
-  EntityManager,
   newSmallPublisherGroup,
   PublisherGroup,
   type PublisherGroupFields,
@@ -109,11 +108,6 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
   static readonly metadata: EntityMetadata<SmallPublisherGroup>;
 
   declare readonly __type: { 0: "PublisherGroup"; 1: "SmallPublisherGroup" };
-
-  constructor(em: EntityManager, opts: SmallPublisherGroupOpts) {
-    super(em, opts);
-    setOpts(this as any as SmallPublisherGroup, opts, { calledFromConstructor: true });
-  }
 
   get id(): SmallPublisherGroupId {
     return this.idMaybe || failNoIdYet("SmallPublisherGroup");

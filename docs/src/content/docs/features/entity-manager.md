@@ -21,7 +21,7 @@ For example:
 
 ```ts
 const em = newEntityManager();
-const author = new Author(em, { firstName: "a1" });
+const author = em.create(Author, { firstName: "a1" });
 await em.flush();
 author.firstName = "a2";
 await em.flush();
@@ -56,7 +56,7 @@ Optionally, another way to create an entity is to do:
 
 ```ts
 const em = newEntityManager();
-const a = new Author(em, { firstName: "a1", address: { street: "123 Main" } });
+const a = em.create(Author, { firstName: "a1", address: { street: "123 Main" } });
 ```
 
 
@@ -81,7 +81,7 @@ Another option to updating is setting the field directly.
 
 ```ts
 const em = newEntityManager();
-const author = new Author(em, { firstName: "a1" });
+const author = em.create(Author, { firstName: "a1" });
 await em.flush();
 author.firstName = "a2";
 await em.flush();

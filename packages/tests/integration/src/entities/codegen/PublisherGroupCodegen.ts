@@ -158,11 +158,6 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
 
   declare readonly __type: { 0: "PublisherGroup" };
 
-  constructor(em: EntityManager, opts: PublisherGroupOpts) {
-    super(em, opts);
-    setOpts(this as any as PublisherGroup, opts, { calledFromConstructor: true });
-  }
-
   get id(): PublisherGroupId {
     return this.idMaybe || failNoIdYet("PublisherGroup");
   }

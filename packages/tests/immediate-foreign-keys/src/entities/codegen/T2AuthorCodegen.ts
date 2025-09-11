@@ -119,11 +119,6 @@ export abstract class T2AuthorCodegen extends BaseEntity<EntityManager, number> 
 
   declare readonly __type: { 0: "T2Author" };
 
-  constructor(em: EntityManager, opts: T2AuthorOpts) {
-    super(em, opts);
-    setOpts(this as any as T2Author, opts, { calledFromConstructor: true });
-  }
-
   get id(): T2AuthorId {
     return this.idMaybe || failNoIdYet("T2Author");
   }

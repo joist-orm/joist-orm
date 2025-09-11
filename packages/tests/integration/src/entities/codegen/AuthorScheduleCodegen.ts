@@ -122,11 +122,6 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
 
   declare readonly __type: { 0: "AuthorSchedule" };
 
-  constructor(em: EntityManager, opts: AuthorScheduleOpts) {
-    super(em, opts);
-    setOpts(this as any as AuthorSchedule, opts, { calledFromConstructor: true });
-  }
-
   get id(): AuthorScheduleId {
     return this.idMaybe || failNoIdYet("AuthorSchedule");
   }

@@ -1,7 +1,7 @@
 import { BaseEntity, getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityMetadata } from "./EntityMetadata";
-import { asConcreteCstr } from "./index";
+import { asConcreteCstr, asInternalCstr } from "./index";
 
 /**
  * Returns the relations in `meta`, both those defined in the codegen file + any user-defined `CustomReference`s.
@@ -83,7 +83,7 @@ const fakeInstances: Record<string, Entity> = {};
  */
 export function getFakeInstance(meta: EntityMetadata): Entity {
   // asConcreteCstr is safe b/c we're just doing property scanning and not real instantiation
-  return (fakeInstances[meta.cstr.name] ??= new (asConcreteCstr(meta.cstr))(
+  return (fakeInstances[meta.cstr.name] ??= new (asInternalCstr(meta.cstr))(
     {
       register: (entity: any) => {
         const orm = getInstanceData(entity);
@@ -93,7 +93,7 @@ export function getFakeInstance(meta: EntityMetadata): Entity {
       // Tell our "cannot instantiate an abstract class" constructor logic check to chill
       fakeInstance: true,
     } as any,
-    {},
+    true,
   ));
 }
 

@@ -1,3 +1,10 @@
+## [1.267.2](https://github.com/joist-orm/joist-orm/compare/v1.267.1...v1.267.2) (2025-09-11)
+
+
+### Bug Fixes
+
+* Move em.register calls out of the cstr. ([#1581](https://github.com/joist-orm/joist-orm/issues/1581)) ([ff634ba](https://github.com/joist-orm/joist-orm/commit/ff634bae9a12ddde91820833c8d5269738ab3e2f))
+
 ## [1.267.1](https://github.com/joist-orm/joist-orm/compare/v1.267.0...v1.267.1) (2025-09-05)
 
 

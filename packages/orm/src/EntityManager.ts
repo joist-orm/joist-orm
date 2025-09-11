@@ -2665,6 +2665,9 @@ function findConcreteMeta(maybeBaseMeta: EntityMetadata, row: any): EntityMetada
     return maybeBaseMeta;
   }
   if (row.__class) {
+    if (row.__class === "_" && maybeBaseMeta.ctiAbstract) {
+      throw new Error(`${maybeBaseMeta.type} ${tagId(maybeBaseMeta, row.id)} must be instantiated via a subtype`);
+    }
     // Look for the CTI __class from the driver telling us which subtype to instantiate
     return maybeBaseMeta.subTypes.find((st) => st.type === row.__class) ?? maybeBaseMeta;
   } else if (maybeBaseMeta.inheritanceType === "sti") {

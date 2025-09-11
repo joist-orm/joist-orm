@@ -1,3 +1,10 @@
+## [1.267.3](https://github.com/joist-orm/joist-orm/compare/v1.267.2...v1.267.3) (2025-09-11)
+
+
+### Bug Fixes
+
+* Restore abstract class enforcement. ([#1584](https://github.com/joist-orm/joist-orm/issues/1584)) ([6fc2e40](https://github.com/joist-orm/joist-orm/commit/6fc2e4083793b3afdd9451ee29d984a793f19c95))
+
 ## [1.267.2](https://github.com/joist-orm/joist-orm/compare/v1.267.1...v1.267.2) (2025-09-11)
 
 

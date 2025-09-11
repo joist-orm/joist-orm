@@ -35,6 +35,8 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
   const maybeInheritanceType = meta.inheritanceType ? `inheritanceType: "${meta.inheritanceType}",` : "";
   const maybeStiColumn = meta.stiDiscriminatorField ? `stiDiscriminatorField: "${meta.stiDiscriminatorField}",` : "";
   const maybeStiValue = meta.stiDiscriminatorValue ? `stiDiscriminatorValue: ${meta.stiDiscriminatorValue},` : "";
+  const maybeCtiAbstract = meta.abstract ? `ctiAbstract: ${meta.abstract},` : "";
+  // Force subtype `timestampFields` to be `undefined` to ensure all runtime code is reading from the baseMeta values.
   // Force subtype `timestampFields` to be `undefined` to ensure all runtime code is reading from the baseMeta values.
   const maybeTimestampConfig = meta.baseClassName
     ? code`undefined`
@@ -51,7 +53,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
     export const ${entity.metaName}: ${EntityMetadata}<${entity.name}> = {
       cstr: ${entity.typeForMetadataFile},
       type: "${entity.name}",
-      baseType: ${maybeBaseType}, ${maybeInheritanceType} ${maybeStiColumn} ${maybeStiValue}
+      baseType: ${maybeBaseType}, ${maybeInheritanceType} ${maybeStiColumn} ${maybeStiValue} ${maybeCtiAbstract}
       idType: "${config.idType ?? "tagged-string"}",
       idDbType: "${meta.primaryKey.columnType}",
       tagName: "${meta.tagName}",

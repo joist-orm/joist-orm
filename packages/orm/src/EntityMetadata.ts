@@ -42,6 +42,8 @@ export interface EntityMetadata<T extends Entity = any> {
   stiDiscriminatorField?: string;
   /** The discriminator enum value for this subtype; only set on sub metas. */
   stiDiscriminatorValue?: number;
+  /** Whether this type is abstract (cannot be instantiated directly). */
+  ctiAbstract?: boolean;
   tagName: string;
   fields: Record<string, Field>;
   allFields: Record<string, Field & { aliasSuffix: string }>;

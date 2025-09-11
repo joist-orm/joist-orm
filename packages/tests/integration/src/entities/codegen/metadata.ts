@@ -649,6 +649,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
   type: "Publisher",
   baseType: undefined,
   inheritanceType: "cti",
+  ctiAbstract: true,
   idType: "tagged-string",
   idDbType: "int",
   tagName: "p",

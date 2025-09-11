@@ -947,7 +947,7 @@ export function addTablePerClassJoinsAndClassTag(
     // If our meta has no subtypes, we're a left type and don't need a __class
     const cases = meta.subTypes.map((st, i) => `WHEN ${alias}_s${i}.id IS NOT NULL THEN '${st.type}'`);
     if (cases.length > 0) {
-      selects.push(`CASE ${cases.join(" ")} ELSE '${meta.type}' END as __class`);
+      selects.push(`CASE ${cases.join(" ")} ELSE '_' END as __class`);
     }
   }
 }

@@ -1,3 +1,10 @@
+## [1.267.4](https://github.com/joist-orm/joist-orm/compare/v1.267.3...v1.267.4) (2025-09-12)
+
+
+### Bug Fixes
+
+* Don't set opts for derived fields. ([#1585](https://github.com/joist-orm/joist-orm/issues/1585)) ([17f4350](https://github.com/joist-orm/joist-orm/commit/17f4350e353c32157f89a1beca662466855d8502))
+
 ## [1.267.3](https://github.com/joist-orm/joist-orm/compare/v1.267.2...v1.267.3) (2025-09-11)
 
 

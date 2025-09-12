@@ -334,7 +334,7 @@ export class ReactiveReferenceImpl<
   }
 
   setFromOpts(_: U | IdOf<U> | N): void {
-    throw new Error("ReactiveReferences cannot be set via opts");
+    throw new Error(`ReactiveReference ${this.entity}.${this.fieldName} cannot be set via opts`);
   }
 
   maybeCascadeDelete(): void {

@@ -426,7 +426,7 @@ function applyUse(optsMaybeNew: object, use: UseMap, metadata: EntityMetadata): 
     .filter((f) => !(f.fieldName in opts))
     .forEach((f) => {
       // And set them to the current `use` entity for their type, if it exists
-      if ((isManyToOneField(f) || isOneToOneField(f)) && use.has(f.otherMetadata().cstr)) {
+      if (((isManyToOneField(f) && !f.derived) || isOneToOneField(f)) && use.has(f.otherMetadata().cstr)) {
         const def = use.get(f.otherMetadata().cstr)!;
         // Only pass explicit/user-defined `use` entities, so that factories can "fan out" if they want,
         // and not see other factory-created entities look like user-specific values.

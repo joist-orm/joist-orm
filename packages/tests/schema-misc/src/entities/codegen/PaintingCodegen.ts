@@ -292,6 +292,9 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get artist(): ManyToOneReference<Painting, Artist, never> {
-    return this.__data.relations.artist ??= hasOne(this, artistMeta, "artist", "paintings");
+    return this.__data.relations.artist ??= (hasOne(this, artistMeta, "artist", "paintings") as any).create(
+      this,
+      "artist",
+    );
   }
 }

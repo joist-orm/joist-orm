@@ -349,32 +349,24 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   }
 
   get book(): ManyToOneReference<BookReview, Book, never> {
-    return this.__data.relations.book ??= hasOne(this, bookMeta, "book", "reviews");
+    return this.__data.relations.book ??= (hasOne(this, bookMeta, "book", "reviews") as any).create(this, "book");
   }
 
   get critic(): ManyToOneReference<BookReview, Critic, undefined> {
-    return this.__data.relations.critic ??= hasOne(this, criticMeta, "critic", "bookReviews");
+    return this.__data.relations.critic ??= (hasOne(this, criticMeta, "critic", "bookReviews") as any).create(
+      this,
+      "critic",
+    );
   }
 
   get comment(): OneToOneReference<BookReview, Comment> {
-    return this.__data.relations.comment ??= hasOneToOne(
-      this,
-      commentMeta,
-      "comment",
-      "parent",
-      "parent_book_review_id",
-    );
+    return this.__data.relations.comment ??=
+      (hasOneToOne(this, commentMeta, "comment", "parent", "parent_book_review_id") as any).create(this, "comment");
   }
 
   get tags(): Collection<BookReview, Tag> {
-    return this.__data.relations.tags ??= hasManyToMany(
-      this,
-      "book_reviews_to_tags",
-      "tags",
-      "book_review_id",
-      tagMeta,
-      "bookReviews",
-      "tag_id",
-    );
+    return this.__data.relations.tags ??=
+      (hasManyToMany(this, "book_reviews_to_tags", "tags", "book_review_id", tagMeta, "bookReviews", "tag_id") as any)
+        .create(this, "tags");
   }
 }

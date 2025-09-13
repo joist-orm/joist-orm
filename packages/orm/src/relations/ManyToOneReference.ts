@@ -17,6 +17,7 @@ import {
   toIdOf,
   toTaggedId,
 } from "../index";
+import { lazyRelation } from "../newEntity";
 import { maybeAdd, maybeRemove } from "../utils";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
@@ -30,7 +31,9 @@ export function hasOne<T extends Entity, U extends Entity, N extends never | und
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
 ): ManyToOneReference<T, U, N> {
-  return new ManyToOneReferenceImpl<T, U, N>(entity, otherMeta, fieldName, otherFieldName);
+  return lazyRelation((entity: T, fieldName) => {
+    return new ManyToOneReferenceImpl<T, U, N>(entity, otherMeta, fieldName as keyof T & string, otherFieldName);
+  });
 }
 
 /** Type guard utility for determining if an entity field is a ManyToOneReference. */

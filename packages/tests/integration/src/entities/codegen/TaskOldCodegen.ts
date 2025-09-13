@@ -320,103 +320,91 @@ export abstract class TaskOldCodegen extends Task implements Entity {
   }
 
   get comments(): Collection<TaskOld, Comment> {
-    return this.__data.relations.comments ??= hasMany(
-      this,
-      commentMeta,
-      "comments",
-      "parent",
-      "parent_task_id",
-      undefined,
-    );
+    return this.__data.relations.comments ??=
+      (hasMany(this, commentMeta, "comments", "parent", "parent_task_id", undefined) as any).create(this, "comments");
   }
 
   get oldTaskTaskItems(): Collection<TaskOld, TaskItem> {
-    return this.__data.relations.oldTaskTaskItems ??= hasMany(
-      this,
-      taskItemMeta,
-      "oldTaskTaskItems",
-      "oldTask",
-      "old_task_id",
-      undefined,
-    );
+    return this.__data.relations.oldTaskTaskItems ??=
+      (hasMany(this, taskItemMeta, "oldTaskTaskItems", "oldTask", "old_task_id", undefined) as any).create(
+        this,
+        "oldTaskTaskItems",
+      );
   }
 
   get tasks(): Collection<TaskOld, TaskOld> {
-    return this.__data.relations.tasks ??= hasMany(
-      this,
-      taskOldMeta,
-      "tasks",
-      "parentOldTask",
-      "parent_old_task_id",
-      undefined,
-    );
+    return this.__data.relations.tasks ??=
+      (hasMany(this, taskOldMeta, "tasks", "parentOldTask", "parent_old_task_id", undefined) as any).create(
+        this,
+        "tasks",
+      );
   }
 
   get copiedTo(): Collection<TaskOld, TaskOld> {
-    return this.__data.relations.copiedTo ??= hasMany(
-      this,
-      taskOldMeta,
-      "copiedTo",
-      "copiedFrom",
-      "copied_from_id",
-      undefined,
-    );
+    return this.__data.relations.copiedTo ??=
+      (hasMany(this, taskOldMeta, "copiedTo", "copiedFrom", "copied_from_id", undefined) as any).create(
+        this,
+        "copiedTo",
+      );
   }
 
   get parentOldTask(): ManyToOneReference<TaskOld, TaskOld, undefined> {
-    return this.__data.relations.parentOldTask ??= hasOne(this, taskOldMeta, "parentOldTask", "tasks");
+    return this.__data.relations.parentOldTask ??= (hasOne(this, taskOldMeta, "parentOldTask", "tasks") as any).create(
+      this,
+      "parentOldTask",
+    );
   }
 
   get copiedFrom(): ManyToOneReference<TaskOld, TaskOld, undefined> {
-    return this.__data.relations.copiedFrom ??= hasOne(this, taskOldMeta, "copiedFrom", "copiedTo");
+    return this.__data.relations.copiedFrom ??= (hasOne(this, taskOldMeta, "copiedFrom", "copiedTo") as any).create(
+      this,
+      "copiedFrom",
+    );
   }
 
   get parentOldTasksRecursive(): ReadOnlyCollection<TaskOld, TaskOld> {
-    return this.__data.relations.parentOldTasksRecursive ??= hasRecursiveParents(
-      this,
-      "parentOldTasksRecursive",
-      "parentOldTask",
-      "tasksRecursive",
-    );
+    return this.__data.relations.parentOldTasksRecursive ??=
+      (hasRecursiveParents(this, "parentOldTasksRecursive", "parentOldTask", "tasksRecursive") as any).create(
+        this,
+        "parentOldTasksRecursive",
+      );
   }
 
   get tasksRecursive(): ReadOnlyCollection<TaskOld, TaskOld> {
-    return this.__data.relations.tasksRecursive ??= hasRecursiveChildren(
-      this,
-      "tasksRecursive",
-      "tasks",
-      "parentOldTasksRecursive",
-    );
+    return this.__data.relations.tasksRecursive ??=
+      (hasRecursiveChildren(this, "tasksRecursive", "tasks", "parentOldTasksRecursive") as any).create(
+        this,
+        "tasksRecursive",
+      );
   }
 
   get copiedFromsRecursive(): ReadOnlyCollection<TaskOld, TaskOld> {
-    return this.__data.relations.copiedFromsRecursive ??= hasRecursiveParents(
-      this,
-      "copiedFromsRecursive",
-      "copiedFrom",
-      "copiedToRecursive",
-    );
+    return this.__data.relations.copiedFromsRecursive ??=
+      (hasRecursiveParents(this, "copiedFromsRecursive", "copiedFrom", "copiedToRecursive") as any).create(
+        this,
+        "copiedFromsRecursive",
+      );
   }
 
   get copiedToRecursive(): ReadOnlyCollection<TaskOld, TaskOld> {
-    return this.__data.relations.copiedToRecursive ??= hasRecursiveChildren(
-      this,
-      "copiedToRecursive",
-      "copiedTo",
-      "copiedFromsRecursive",
-    );
+    return this.__data.relations.copiedToRecursive ??=
+      (hasRecursiveChildren(this, "copiedToRecursive", "copiedTo", "copiedFromsRecursive") as any).create(
+        this,
+        "copiedToRecursive",
+      );
   }
 
   get publishers(): Collection<TaskOld, Publisher> {
-    return this.__data.relations.publishers ??= hasManyToMany(
-      this,
-      "tasks_to_publishers",
-      "publishers",
-      "task_id",
-      publisherMeta,
-      "tasks",
-      "publisher_id",
-    );
+    return this.__data.relations.publishers ??=
+      (hasManyToMany(
+        this,
+        "tasks_to_publishers",
+        "publishers",
+        "task_id",
+        publisherMeta,
+        "tasks",
+        "publisher_id",
+      ) as any).create(this, "publishers");
   }
 
   get taskTaskItems(): Collection<TaskOld, TaskItem> {

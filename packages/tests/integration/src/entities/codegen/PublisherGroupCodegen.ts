@@ -337,17 +337,12 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   get publishers(): Collection<PublisherGroup, Publisher> {
-    return this.__data.relations.publishers ??= hasMany(
-      this,
-      publisherMeta,
-      "publishers",
-      "group",
-      "group_id",
-      undefined,
-    );
+    return this.__data.relations.publishers ??=
+      (hasMany(this, publisherMeta, "publishers", "group", "group_id", undefined) as any).create(this, "publishers");
   }
 
   get critics(): LargeCollection<PublisherGroup, Critic> {
-    return this.__data.relations.critics ??= hasLargeMany(this, criticMeta, "critics", "group", "group_id");
+    return this.__data.relations.critics ??= (hasLargeMany(this, criticMeta, "critics", "group", "group_id") as any)
+      .create(this, "critics");
   }
 }

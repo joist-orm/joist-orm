@@ -314,21 +314,22 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   }
 
   get childItems(): Collection<ChildGroup, ChildItem> {
-    return this.__data.relations.childItems ??= hasMany(
-      this,
-      childItemMeta,
-      "childItems",
-      "childGroup",
-      "child_group_id",
-      undefined,
-    );
+    return this.__data.relations.childItems ??=
+      (hasMany(this, childItemMeta, "childItems", "childGroup", "child_group_id", undefined) as any).create(
+        this,
+        "childItems",
+      );
   }
 
   get childGroup(): ManyToOneReference<ChildGroup, Child, never> {
-    return this.__data.relations.childGroup ??= hasOne(this, childMeta, "childGroup", "groups");
+    return this.__data.relations.childGroup ??= (hasOne(this, childMeta, "childGroup", "groups") as any).create(
+      this,
+      "childGroup",
+    );
   }
 
   get parentGroup(): ManyToOneReference<ChildGroup, ParentGroup, never> {
-    return this.__data.relations.parentGroup ??= hasOne(this, parentGroupMeta, "parentGroup", "childGroups");
+    return this.__data.relations.parentGroup ??= (hasOne(this, parentGroupMeta, "parentGroup", "childGroups") as any)
+      .create(this, "parentGroup");
   }
 }

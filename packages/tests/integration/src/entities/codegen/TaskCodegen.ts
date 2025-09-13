@@ -432,58 +432,40 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get copiedTo(): Collection<Task, Task> {
-    return this.__data.relations.copiedTo ??= hasMany(
-      this,
-      taskMeta,
-      "copiedTo",
-      "copiedFrom",
-      "copied_from_id",
-      undefined,
-    );
+    return this.__data.relations.copiedTo ??=
+      (hasMany(this, taskMeta, "copiedTo", "copiedFrom", "copied_from_id", undefined) as any).create(this, "copiedTo");
   }
 
   get taskTaskItems(): Collection<Task, TaskItem> {
-    return this.__data.relations.taskTaskItems ??= hasMany(
-      this,
-      taskItemMeta,
-      "taskTaskItems",
-      "task",
-      "task_id",
-      undefined,
-    );
+    return this.__data.relations.taskTaskItems ??=
+      (hasMany(this, taskItemMeta, "taskTaskItems", "task", "task_id", undefined) as any).create(this, "taskTaskItems");
   }
 
   get copiedFrom(): ManyToOneReference<Task, Task, undefined> {
-    return this.__data.relations.copiedFrom ??= hasOne(this, taskMeta, "copiedFrom", "copiedTo");
+    return this.__data.relations.copiedFrom ??= (hasOne(this, taskMeta, "copiedFrom", "copiedTo") as any).create(
+      this,
+      "copiedFrom",
+    );
   }
 
   get copiedFromsRecursive(): ReadOnlyCollection<Task, Task> {
-    return this.__data.relations.copiedFromsRecursive ??= hasRecursiveParents(
-      this,
-      "copiedFromsRecursive",
-      "copiedFrom",
-      "copiedToRecursive",
-    );
+    return this.__data.relations.copiedFromsRecursive ??=
+      (hasRecursiveParents(this, "copiedFromsRecursive", "copiedFrom", "copiedToRecursive") as any).create(
+        this,
+        "copiedFromsRecursive",
+      );
   }
 
   get copiedToRecursive(): ReadOnlyCollection<Task, Task> {
-    return this.__data.relations.copiedToRecursive ??= hasRecursiveChildren(
-      this,
-      "copiedToRecursive",
-      "copiedTo",
-      "copiedFromsRecursive",
-    );
+    return this.__data.relations.copiedToRecursive ??=
+      (hasRecursiveChildren(this, "copiedToRecursive", "copiedTo", "copiedFromsRecursive") as any).create(
+        this,
+        "copiedToRecursive",
+      );
   }
 
   get tags(): Collection<Task, Tag> {
-    return this.__data.relations.tags ??= hasManyToMany(
-      this,
-      "task_to_tags",
-      "tags",
-      "task_id",
-      tagMeta,
-      "tasks",
-      "tag_id",
-    );
+    return this.__data.relations.tags ??=
+      (hasManyToMany(this, "task_to_tags", "tags", "task_id", tagMeta, "tasks", "tag_id") as any).create(this, "tags");
   }
 }

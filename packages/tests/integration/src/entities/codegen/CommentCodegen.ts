@@ -359,29 +359,34 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get books(): Collection<Comment, Book> {
-    return this.__data.relations.books ??= hasMany(this, bookMeta, "books", "randomComment", "random_comment_id", {
-      "field": "title",
-      "direction": "ASC",
-    });
+    return this.__data.relations.books ??=
+      (hasMany(this, bookMeta, "books", "randomComment", "random_comment_id", {
+        "field": "title",
+        "direction": "ASC",
+      }) as any).create(this, "books");
   }
 
   get user(): ManyToOneReference<Comment, User, undefined> {
-    return this.__data.relations.user ??= hasOne(this, userMeta, "user", "createdComments");
-  }
-
-  get likedByUsers(): Collection<Comment, User> {
-    return this.__data.relations.likedByUsers ??= hasManyToMany(
+    return this.__data.relations.user ??= (hasOne(this, userMeta, "user", "createdComments") as any).create(
       this,
-      "users_to_comments",
-      "likedByUsers",
-      "comment_id",
-      userMeta,
-      "likedComments",
-      "liked_by_user_id",
+      "user",
     );
   }
 
+  get likedByUsers(): Collection<Comment, User> {
+    return this.__data.relations.likedByUsers ??=
+      (hasManyToMany(
+        this,
+        "users_to_comments",
+        "likedByUsers",
+        "comment_id",
+        userMeta,
+        "likedComments",
+        "liked_by_user_id",
+      ) as any).create(this, "likedByUsers");
+  }
+
   get parent(): PolymorphicReference<Comment, CommentParent, never> {
-    return this.__data.relations.parent ??= hasOnePolymorphic(this, "parent");
+    return this.__data.relations.parent ??= (hasOnePolymorphic(this, "parent") as any).create(this, "parent");
   }
 }

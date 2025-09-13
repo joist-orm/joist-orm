@@ -303,13 +303,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get paintings(): Collection<Artist, Painting> {
-    return this.__data.relations.paintings ??= hasMany(
-      this,
-      paintingMeta,
-      "paintings",
-      "artist",
-      "artistId",
-      undefined,
-    );
+    return this.__data.relations.paintings ??=
+      (hasMany(this, paintingMeta, "paintings", "artist", "artistId", undefined) as any).create(this, "paintings");
   }
 }

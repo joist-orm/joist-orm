@@ -450,98 +450,92 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get advances(): Collection<Book, BookAdvance> {
-    return this.__data.relations.advances ??= hasMany(this, bookAdvanceMeta, "advances", "book", "book_id", undefined);
+    return this.__data.relations.advances ??=
+      (hasMany(this, bookAdvanceMeta, "advances", "book", "book_id", undefined) as any).create(this, "advances");
   }
 
   get reviews(): Collection<Book, BookReview> {
-    return this.__data.relations.reviews ??= hasMany(this, bookReviewMeta, "reviews", "book", "book_id", {
-      "field": "critic",
-      "direction": "ASC",
-    });
+    return this.__data.relations.reviews ??=
+      (hasMany(this, bookReviewMeta, "reviews", "book", "book_id", { "field": "critic", "direction": "ASC" }) as any)
+        .create(this, "reviews");
   }
 
   get comments(): Collection<Book, Comment> {
-    return this.__data.relations.comments ??= hasMany(
-      this,
-      commentMeta,
-      "comments",
-      "parent",
-      "parent_book_id",
-      undefined,
-    );
+    return this.__data.relations.comments ??=
+      (hasMany(this, commentMeta, "comments", "parent", "parent_book_id", undefined) as any).create(this, "comments");
   }
 
   get prequel(): ManyToOneReference<Book, Book, undefined> {
-    return this.__data.relations.prequel ??= hasOne(this, bookMeta, "prequel", "sequel");
+    return this.__data.relations.prequel ??= (hasOne(this, bookMeta, "prequel", "sequel") as any).create(
+      this,
+      "prequel",
+    );
   }
 
   get author(): ManyToOneReference<Book, Author, never> {
-    return this.__data.relations.author ??= hasOne(this, authorMeta, "author", "books");
+    return this.__data.relations.author ??= (hasOne(this, authorMeta, "author", "books") as any).create(this, "author");
   }
 
   get reviewer(): ManyToOneReference<Book, Author, undefined> {
-    return this.__data.relations.reviewer ??= hasOne(this, authorMeta, "reviewer", "reviewerBooks");
+    return this.__data.relations.reviewer ??= (hasOne(this, authorMeta, "reviewer", "reviewerBooks") as any).create(
+      this,
+      "reviewer",
+    );
   }
 
   get randomComment(): ManyToOneReference<Book, Comment, undefined> {
-    return this.__data.relations.randomComment ??= hasOne(this, commentMeta, "randomComment", "books");
+    return this.__data.relations.randomComment ??= (hasOne(this, commentMeta, "randomComment", "books") as any).create(
+      this,
+      "randomComment",
+    );
   }
 
   get prequelsRecursive(): ReadOnlyCollection<Book, Book> {
-    return this.__data.relations.prequelsRecursive ??= hasRecursiveParents(
-      this,
-      "prequelsRecursive",
-      "prequel",
-      "sequelsRecursive",
-    );
+    return this.__data.relations.prequelsRecursive ??=
+      (hasRecursiveParents(this, "prequelsRecursive", "prequel", "sequelsRecursive") as any).create(
+        this,
+        "prequelsRecursive",
+      );
   }
 
   get sequelsRecursive(): ReadOnlyCollection<Book, Book> {
-    return this.__data.relations.sequelsRecursive ??= hasRecursiveChildren(
-      this,
-      "sequelsRecursive",
-      "sequel",
-      "prequelsRecursive",
-    );
+    return this.__data.relations.sequelsRecursive ??=
+      (hasRecursiveChildren(this, "sequelsRecursive", "sequel", "prequelsRecursive") as any).create(
+        this,
+        "sequelsRecursive",
+      );
   }
 
   get sequel(): OneToOneReference<Book, Book> {
-    return this.__data.relations.sequel ??= hasOneToOne(this, bookMeta, "sequel", "prequel", "prequel_id");
+    return this.__data.relations.sequel ??= (hasOneToOne(this, bookMeta, "sequel", "prequel", "prequel_id") as any)
+      .create(this, "sequel");
   }
 
   get currentDraftAuthor(): OneToOneReference<Book, Author> {
-    return this.__data.relations.currentDraftAuthor ??= hasOneToOne(
-      this,
-      authorMeta,
-      "currentDraftAuthor",
-      "currentDraftBook",
-      "current_draft_book_id",
-    );
+    return this.__data.relations.currentDraftAuthor ??=
+      (hasOneToOne(this, authorMeta, "currentDraftAuthor", "currentDraftBook", "current_draft_book_id") as any).create(
+        this,
+        "currentDraftAuthor",
+      );
   }
 
   get favoriteAuthor(): OneToOneReference<Book, Author> {
-    return this.__data.relations.favoriteAuthor ??= hasOneToOne(
-      this,
-      authorMeta,
-      "favoriteAuthor",
-      "favoriteBook",
-      "favorite_book_id",
-    );
+    return this.__data.relations.favoriteAuthor ??=
+      (hasOneToOne(this, authorMeta, "favoriteAuthor", "favoriteBook", "favorite_book_id") as any).create(
+        this,
+        "favoriteAuthor",
+      );
   }
 
   get image(): OneToOneReference<Book, Image> {
-    return this.__data.relations.image ??= hasOneToOne(this, imageMeta, "image", "book", "book_id");
+    return this.__data.relations.image ??= (hasOneToOne(this, imageMeta, "image", "book", "book_id") as any).create(
+      this,
+      "image",
+    );
   }
 
   get tags(): Collection<Book, Tag> {
-    return this.__data.relations.tags ??= hasManyToMany(
-      this,
-      "books_to_tags",
-      "tags",
-      "book_id",
-      tagMeta,
-      "books",
-      "tag_id",
-    );
+    return this.__data.relations.tags ??=
+      (hasManyToMany(this, "books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id") as any).create(this, "tags");
   }
 }

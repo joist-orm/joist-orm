@@ -262,14 +262,10 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get authors(): Collection<Tag, Author> {
-    return this.__data.relations.authors ??= hasManyToMany(
-      this,
-      "author_to_tags",
-      "authors",
-      "tagId",
-      authorMeta,
-      "tags",
-      "authorId",
-    );
+    return this.__data.relations.authors ??=
+      (hasManyToMany(this, "author_to_tags", "authors", "tagId", authorMeta, "tags", "authorId") as any).create(
+        this,
+        "authors",
+      );
   }
 }

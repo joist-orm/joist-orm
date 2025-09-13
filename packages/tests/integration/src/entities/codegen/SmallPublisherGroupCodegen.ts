@@ -277,13 +277,10 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
   }
 
   get publishers(): Collection<SmallPublisherGroup, SmallPublisher> {
-    return this.__data.relations.publishers ??= hasMany(
-      this,
-      smallPublisherMeta,
-      "publishers",
-      "group",
-      "group_id",
-      undefined,
-    );
+    return this.__data.relations.publishers ??=
+      (hasMany(this, smallPublisherMeta, "publishers", "group", "group_id", undefined) as any).create(
+        this,
+        "publishers",
+      );
   }
 }

@@ -321,62 +321,45 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get authors(): Collection<Tag, Author> {
-    return this.__data.relations.authors ??= hasManyToMany(
-      this,
-      "authors_to_tags",
-      "authors",
-      "tag_id",
-      authorMeta,
-      "tags",
-      "author_id",
-    );
+    return this.__data.relations.authors ??=
+      (hasManyToMany(this, "authors_to_tags", "authors", "tag_id", authorMeta, "tags", "author_id") as any).create(
+        this,
+        "authors",
+      );
   }
 
   get books(): Collection<Tag, Book> {
-    return this.__data.relations.books ??= hasManyToMany(
-      this,
-      "books_to_tags",
-      "books",
-      "tag_id",
-      bookMeta,
-      "tags",
-      "book_id",
-    );
+    return this.__data.relations.books ??=
+      (hasManyToMany(this, "books_to_tags", "books", "tag_id", bookMeta, "tags", "book_id") as any).create(
+        this,
+        "books",
+      );
   }
 
   get bookReviews(): Collection<Tag, BookReview> {
-    return this.__data.relations.bookReviews ??= hasManyToMany(
-      this,
-      "book_reviews_to_tags",
-      "bookReviews",
-      "tag_id",
-      bookReviewMeta,
-      "tags",
-      "book_review_id",
-    );
+    return this.__data.relations.bookReviews ??=
+      (hasManyToMany(
+        this,
+        "book_reviews_to_tags",
+        "bookReviews",
+        "tag_id",
+        bookReviewMeta,
+        "tags",
+        "book_review_id",
+      ) as any).create(this, "bookReviews");
   }
 
   get publishers(): Collection<Tag, Publisher> {
-    return this.__data.relations.publishers ??= hasManyToMany(
-      this,
-      "publishers_to_tags",
-      "publishers",
-      "tag_id",
-      publisherMeta,
-      "tags",
-      "publisher_id",
-    );
+    return this.__data.relations.publishers ??=
+      (hasManyToMany(this, "publishers_to_tags", "publishers", "tag_id", publisherMeta, "tags", "publisher_id") as any)
+        .create(this, "publishers");
   }
 
   get tasks(): Collection<Tag, Task> {
-    return this.__data.relations.tasks ??= hasManyToMany(
-      this,
-      "task_to_tags",
-      "tasks",
-      "tag_id",
-      taskMeta,
-      "tags",
-      "task_id",
-    );
+    return this.__data.relations.tasks ??=
+      (hasManyToMany(this, "task_to_tags", "tasks", "tag_id", taskMeta, "tags", "task_id") as any).create(
+        this,
+        "tasks",
+      );
   }
 }

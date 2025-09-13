@@ -274,6 +274,9 @@ export abstract class T1BookCodegen extends BaseEntity<EntityManager, number> im
   }
 
   get author(): ManyToOneReference<T1Book, T1Author, never> {
-    return this.__data.relations.author ??= hasOne(this, t1AuthorMeta, "author", "t1Books");
+    return this.__data.relations.author ??= (hasOne(this, t1AuthorMeta, "author", "t1Books") as any).create(
+      this,
+      "author",
+    );
   }
 }

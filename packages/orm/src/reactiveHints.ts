@@ -305,7 +305,7 @@ function reverseSubHint(
     //
     // I.e. we specifically don't need to handle RFs & RRs ^, because the EntityManager.flush loop will
     // notice their primitive values changing, and kicking off any downstream reactive fields as necessary.
-    const p = getProperties(meta)[key];
+    let p = getProperties(meta)[key];
     if (p instanceof AsyncPropertyImpl) {
       // If the field is marked as readonly (i.e. using the `_ro` suffix), then we can assume that applies to its
       // entire hint as well and can simply omit it. This also allows us to use non-reactive async props as long as

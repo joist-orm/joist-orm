@@ -574,72 +574,55 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get authors(): Collection<Publisher, Author> {
-    return this.__data.relations.authors ??= hasMany(this, authorMeta, "authors", "publisher", "publisher_id", {
-      "field": "numberOfBooks",
-      "direction": "ASC",
-    });
+    return this.__data.relations.authors ??=
+      (hasMany(this, authorMeta, "authors", "publisher", "publisher_id", {
+        "field": "numberOfBooks",
+        "direction": "ASC",
+      }) as any).create(this, "authors");
   }
 
   get bookAdvances(): Collection<Publisher, BookAdvance> {
-    return this.__data.relations.bookAdvances ??= hasMany(
-      this,
-      bookAdvanceMeta,
-      "bookAdvances",
-      "publisher",
-      "publisher_id",
-      undefined,
-    );
+    return this.__data.relations.bookAdvances ??=
+      (hasMany(this, bookAdvanceMeta, "bookAdvances", "publisher", "publisher_id", undefined) as any).create(
+        this,
+        "bookAdvances",
+      );
   }
 
   get comments(): Collection<Publisher, Comment> {
-    return this.__data.relations.comments ??= hasMany(
-      this,
-      commentMeta,
-      "comments",
-      "parent",
-      "parent_publisher_id",
-      undefined,
-    );
+    return this.__data.relations.comments ??=
+      (hasMany(this, commentMeta, "comments", "parent", "parent_publisher_id", undefined) as any).create(
+        this,
+        "comments",
+      );
   }
 
   get images(): Collection<Publisher, Image> {
-    return this.__data.relations.images ??= hasMany(this, imageMeta, "images", "publisher", "publisher_id", undefined);
+    return this.__data.relations.images ??=
+      (hasMany(this, imageMeta, "images", "publisher", "publisher_id", undefined) as any).create(this, "images");
   }
 
   get group(): ManyToOneReference<Publisher, PublisherGroup, undefined> {
-    return this.__data.relations.group ??= hasOne(this, publisherGroupMeta, "group", "publishers");
+    return this.__data.relations.group ??= (hasOne(this, publisherGroupMeta, "group", "publishers") as any).create(
+      this,
+      "group",
+    );
   }
 
   get spotlightAuthor(): ManyToOneReference<Publisher, Author, undefined> {
-    return this.__data.relations.spotlightAuthor ??= hasOne(
-      this,
-      authorMeta,
-      "spotlightAuthor",
-      "spotlightAuthorPublishers",
-    );
+    return this.__data.relations.spotlightAuthor ??=
+      (hasOne(this, authorMeta, "spotlightAuthor", "spotlightAuthorPublishers") as any).create(this, "spotlightAuthor");
   }
 
   get tags(): Collection<Publisher, Tag> {
-    return this.__data.relations.tags ??= hasManyToMany(
-      this,
-      "publishers_to_tags",
-      "tags",
-      "publisher_id",
-      tagMeta,
-      "publishers",
-      "tag_id",
-    );
+    return this.__data.relations.tags ??=
+      (hasManyToMany(this, "publishers_to_tags", "tags", "publisher_id", tagMeta, "publishers", "tag_id") as any)
+        .create(this, "tags");
   }
 
   get tasks(): Collection<Publisher, TaskOld> {
-    return this.__data.relations.tasks ??= hasManyToMany(
-      this,
-      "tasks_to_publishers",
-      "tasks",
-      "publisher_id",
-      taskOldMeta,
-      "publishers",
-      "task_id",
-    );
+    return this.__data.relations.tasks ??=
+      (hasManyToMany(this, "tasks_to_publishers", "tasks", "publisher_id", taskOldMeta, "publishers", "task_id") as any)
+        .create(this, "tasks");
   }
 }

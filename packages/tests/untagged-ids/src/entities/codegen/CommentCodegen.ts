@@ -295,6 +295,6 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get parent(): PolymorphicReference<Comment, CommentParent, never> {
-    return this.__data.relations.parent ??= hasOnePolymorphic(this, "parent");
+    return this.__data.relations.parent ??= (hasOnePolymorphic(this, "parent") as any).create(this, "parent");
   }
 }

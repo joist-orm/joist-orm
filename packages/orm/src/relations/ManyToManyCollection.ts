@@ -13,6 +13,7 @@ import {
 } from "../";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
+import { lazyRelation } from "../newEntity";
 import { maybeAdd, maybeRemove, remove } from "../utils";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
@@ -27,15 +28,17 @@ export function hasManyToMany<T extends Entity, U extends Entity>(
   otherFieldName: keyof U & string,
   otherColumnName: string,
 ): Collection<T, U> {
-  return new ManyToManyCollection<T, U>(
-    joinTableName,
-    entity,
-    fieldName,
-    columnName,
-    otherMeta,
-    otherFieldName,
-    otherColumnName,
-  );
+  return lazyRelation((entity: T, fieldName) => {
+    return new ManyToManyCollection<T, U>(
+      joinTableName,
+      entity,
+      fieldName as keyof T & string,
+      columnName,
+      otherMeta,
+      otherFieldName,
+      otherColumnName,
+    );
+  });
 }
 
 export class ManyToManyCollection<T extends Entity, U extends Entity>

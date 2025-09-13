@@ -275,6 +275,6 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
   }
 
   get book(): ManyToOneReference<T5BookReview, T5Book, undefined> {
-    return this.__data.relations.book ??= hasOne(this, t5BookMeta, "book", "reviews");
+    return this.__data.relations.book ??= (hasOne(this, t5BookMeta, "book", "reviews") as any).create(this, "book");
   }
 }

@@ -284,10 +284,14 @@ export abstract class T5BookCodegen extends BaseEntity<EntityManager, number> im
   }
 
   get reviews(): Collection<T5Book, T5BookReview> {
-    return this.__data.relations.reviews ??= hasMany(this, t5BookReviewMeta, "reviews", "book", "book_id", undefined);
+    return this.__data.relations.reviews ??=
+      (hasMany(this, t5BookReviewMeta, "reviews", "book", "book_id", undefined) as any).create(this, "reviews");
   }
 
   get author(): ManyToOneReference<T5Book, T5Author, never> {
-    return this.__data.relations.author ??= hasOne(this, t5AuthorMeta, "author", "t5Books");
+    return this.__data.relations.author ??= (hasOne(this, t5AuthorMeta, "author", "t5Books") as any).create(
+      this,
+      "author",
+    );
   }
 }

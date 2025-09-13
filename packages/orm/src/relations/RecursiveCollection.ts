@@ -18,6 +18,7 @@ import {
   Relation,
 } from "../index";
 import { IsLoadedCachable } from "../IsLoadedCache";
+import { lazyRelation } from "../newEntity";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReadOnlyCollection } from "./ReadOnlyCollection";
 import { RelationT, RelationU } from "./Relation";
@@ -33,7 +34,9 @@ export function hasRecursiveParents<T extends Entity, U extends Entity>(
   m2oName: keyof T & string, // i.e. `author.mentor`
   otherFieldName: keyof T & string, // i.e. `author.menteesRecursive`
 ): ReadOnlyCollection<T, U> {
-  return new RecursiveParentsCollectionImpl(entity, fieldName, m2oName, otherFieldName);
+  return lazyRelation((entity: T, fieldName) => {
+    return new RecursiveParentsCollectionImpl(entity, fieldName as keyof T & string, m2oName, otherFieldName);
+  });
 }
 
 /**
@@ -47,7 +50,9 @@ export function hasRecursiveChildren<T extends Entity, U extends Entity>(
   o2mName: keyof T & string, // i.e. `author.mentees`
   otherFieldName: keyof T & string, // i.e. `author.mentorsRecursive`
 ): ReadOnlyCollection<T, U> {
-  return new RecursiveChildrenCollectionImpl(entity, fieldName, o2mName, otherFieldName);
+  return lazyRelation((entity: T, fieldName) => {
+    return new RecursiveChildrenCollectionImpl(entity, fieldName as keyof T & string, o2mName, otherFieldName);
+  });
 }
 
 /**

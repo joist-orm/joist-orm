@@ -1,7 +1,7 @@
 import { Collection, isLoaded } from "../";
-import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { LoadHint, Loaded } from "../loadHints";
+import { lazyRelation } from "../newEntity";
 import { CustomCollection } from "./CustomCollection";
 
 type HasManyDerivedOpts<T extends Entity, U extends Entity, H extends LoadHint<T>> = {
@@ -23,18 +23,20 @@ export function hasManyDerived<T extends Entity, U extends Entity, H extends Loa
   loadHint: H,
   opts: HasManyDerivedOpts<T, U, H>,
 ): Collection<T, U> {
-  const entity: T = currentlyInstantiatingEntity as T;
   const { load, ...rest } = opts;
-  return new CustomCollection<T, U>(entity, {
-    load(entity, opts) {
-      if (load) {
-        return load(entity, opts);
-      } else {
-        return entity.em.populate(entity, { hint: loadHint, ...opts });
-      }
-    },
-    isLoaded: () => isLoaded(entity, loadHint),
-    loadHint,
-    ...(rest as any),
-  });
+  return lazyRelation(
+    (entity: T) =>
+      new CustomCollection<T, U>(entity, {
+        load(entity, opts) {
+          if (load) {
+            return load(entity, opts);
+          } else {
+            return entity.em.populate(entity, { hint: loadHint, ...opts });
+          }
+        },
+        isLoaded: () => isLoaded(entity, loadHint),
+        loadHint,
+        ...(rest as any),
+      }),
+  );
 }

@@ -1,10 +1,10 @@
-import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { getEmInternalApi } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { getField, isFieldSet, setField } from "../fields";
 import { isLoaded } from "../index";
 import { IsLoadedCachable } from "../IsLoadedCache";
+import { lazyRelation } from "../newEntity";
 import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
 import { AsyncPropertyT } from "./hasAsyncProperty";
@@ -71,8 +71,9 @@ export function hasReactiveField<T extends Entity, const H extends ReactiveHint<
   hint: H,
   fn: (entity: Reacted<T, H>) => V,
 ): ReactiveField<T, V> {
-  const entity = currentlyInstantiatingEntity as T;
-  return new ReactiveFieldImpl(entity, fieldName, hint, fn);
+  return lazyRelation((entity: T, fieldName) => {
+    return new ReactiveFieldImpl(entity, fieldName as keyof T & string, hint, fn);
+  });
 }
 
 export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>

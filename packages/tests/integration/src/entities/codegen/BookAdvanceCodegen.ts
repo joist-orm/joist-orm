@@ -341,10 +341,13 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   get book(): ManyToOneReference<BookAdvance, Book, never> {
-    return this.__data.relations.book ??= hasOne(this, bookMeta, "book", "advances");
+    return this.__data.relations.book ??= (hasOne(this, bookMeta, "book", "advances") as any).create(this, "book");
   }
 
   get publisher(): ManyToOneReference<BookAdvance, Publisher, never> {
-    return this.__data.relations.publisher ??= hasOne(this, publisherMeta, "publisher", "bookAdvances");
+    return this.__data.relations.publisher ??= (hasOne(this, publisherMeta, "publisher", "bookAdvances") as any).create(
+      this,
+      "publisher",
+    );
   }
 }

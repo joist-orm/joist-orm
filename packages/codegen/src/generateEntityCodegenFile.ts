@@ -320,7 +320,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         .map((r) => {
           return code`
             get ${r.fieldName}(): ${r.decl} {
-              return this.__data.relations.${r.fieldName} ??= ${r.init};
+              return this.__data.relations.${r.fieldName} ??= (${r.init} as any).create(this, "${r.fieldName}");
             }
           `;
         })}

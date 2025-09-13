@@ -301,24 +301,18 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   }
 
   get childGroups(): Collection<ParentGroup, ChildGroup> {
-    return this.__data.relations.childGroups ??= hasMany(
-      this,
-      childGroupMeta,
-      "childGroups",
-      "parentGroup",
-      "parent_group_id",
-      undefined,
-    );
+    return this.__data.relations.childGroups ??=
+      (hasMany(this, childGroupMeta, "childGroups", "parentGroup", "parent_group_id", undefined) as any).create(
+        this,
+        "childGroups",
+      );
   }
 
   get parentItems(): Collection<ParentGroup, ParentItem> {
-    return this.__data.relations.parentItems ??= hasMany(
-      this,
-      parentItemMeta,
-      "parentItems",
-      "parentGroup",
-      "parent_group_id",
-      undefined,
-    );
+    return this.__data.relations.parentItems ??=
+      (hasMany(this, parentItemMeta, "parentItems", "parentGroup", "parent_group_id", undefined) as any).create(
+        this,
+        "parentItems",
+      );
   }
 }

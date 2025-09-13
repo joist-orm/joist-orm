@@ -1,8 +1,8 @@
-import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { getMetadata } from "../EntityMetadata";
 import { getField, isFieldSet, setField } from "../fields";
 import { ReactiveField, deepNormalizeHint, isLoaded } from "../index";
+import { lazyRelation } from "../newEntity";
 import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { mergeNormalizedHints } from "../utils";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
@@ -28,8 +28,9 @@ export function hasReactiveQueryField<
   dbHint: H2,
   fn: (entity: Reacted<T, H1>) => Promise<V>,
 ): ReactiveField<T, V> {
-  const entity = currentlyInstantiatingEntity as T;
-  return new ReactiveQueryFieldImpl(entity, fieldName, paramHint, dbHint, fn);
+  return lazyRelation((entity: T, fieldName) => {
+    return new ReactiveQueryFieldImpl(entity, fieldName as keyof T & string, paramHint, dbHint, fn);
+  });
 }
 
 export class ReactiveQueryFieldImpl<T extends Entity, H1 extends ReactiveHint<T>, H2 extends ReactiveHint<T>, V>

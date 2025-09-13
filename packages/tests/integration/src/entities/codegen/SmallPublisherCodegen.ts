@@ -335,38 +335,29 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   }
 
   get smallPublishers(): Collection<SmallPublisher, SmallPublisher> {
-    return this.__data.relations.smallPublishers ??= hasMany(
-      this,
-      smallPublisherMeta,
-      "smallPublishers",
-      "selfReferential",
-      "self_referential_id",
-      undefined,
-    );
+    return this.__data.relations.smallPublishers ??=
+      (hasMany(this, smallPublisherMeta, "smallPublishers", "selfReferential", "self_referential_id", undefined) as any)
+        .create(this, "smallPublishers");
   }
 
   get users(): Collection<SmallPublisher, User> {
-    return this.__data.relations.users ??= hasMany(
-      this,
-      userMeta,
-      "users",
-      "favoritePublisher",
-      "favorite_publisher_small_id",
-      undefined,
-    );
+    return this.__data.relations.users ??=
+      (hasMany(this, userMeta, "users", "favoritePublisher", "favorite_publisher_small_id", undefined) as any).create(
+        this,
+        "users",
+      );
   }
 
   get selfReferential(): ManyToOneReference<SmallPublisher, SmallPublisher, undefined> {
-    return this.__data.relations.selfReferential ??= hasOne(
-      this,
-      smallPublisherMeta,
-      "selfReferential",
-      "smallPublishers",
-    );
+    return this.__data.relations.selfReferential ??=
+      (hasOne(this, smallPublisherMeta, "selfReferential", "smallPublishers") as any).create(this, "selfReferential");
   }
 
   get group(): ManyToOneReference<SmallPublisher, SmallPublisherGroup, undefined> {
-    return this.__data.relations.group ??= hasOne(this, smallPublisherGroupMeta, "group", "publishers");
+    return this.__data.relations.group ??= (hasOne(this, smallPublisherGroupMeta, "group", "publishers") as any).create(
+      this,
+      "group",
+    );
   }
 
   get authors(): Collection<SmallPublisher, Author> {

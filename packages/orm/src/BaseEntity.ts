@@ -1,14 +1,6 @@
 import { IdType } from "./Entity";
 import { Entity, EntityManager, InstanceData, TaggedId, deTagId, getMetadata, keyToNumber } from "./index";
 
-export let currentlyInstantiatingEntity: Entity | undefined;
-
-/** Used by our `joist-transform-properties` to lazy init properties and by sync defaults to reset if an entity is
- * created as a default. */
-export function setCurrentlyInstantiatingEntity(entity: Entity): void {
-  currentlyInstantiatingEntity = entity;
-}
-
 /**
  * Returns the internal `__data` tracking field for `entity`.
  *
@@ -36,10 +28,9 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
     if (isNew === undefined) {
       throw new Error("Entities must be constructed by calling em.create or em.load");
     }
-    const data = new InstanceData(em, (this.constructor as any).metadata, isNew);
-    // This makes it non-enumerable to avoid Jest/recursive things tripping over it
-    Object.defineProperty(this, "__data", { value: data, enumerable: false, writable: false, configurable: false });
-    currentlyInstantiatingEntity = this;
+    // This code path won't be reused for real entities, as they go through the `newEntity`
+    // construction process that lazifies the relations.
+    baseEntityCstr(em, this, isNew);
   }
 
   // This gives rules a way to access the fully typed object instead of their Reacted view.
@@ -148,4 +139,14 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   [Symbol.for("nodejs.util.inspect.custom")](): string {
     return this.toString();
   }
+}
+
+/**
+ * The constructor logic for `BaseEntity` but exposed so that `newEntity` can use it too
+ * on its `Object.create`-d instances.
+ */
+export function baseEntityCstr(em: EntityManager, entity: BaseEntity<any, any>, isNew: boolean): void {
+  const data = new InstanceData(em, (entity.constructor as any).metadata, isNew);
+  // This makes it non-enumerable to avoid Jest/recursive things tripping over it
+  Object.defineProperty(entity, "__data", { value: data, enumerable: false, writable: false, configurable: false });
 }

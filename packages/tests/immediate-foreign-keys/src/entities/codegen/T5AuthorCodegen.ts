@@ -271,6 +271,7 @@ export abstract class T5AuthorCodegen extends BaseEntity<EntityManager, number> 
   }
 
   get t5Books(): Collection<T5Author, T5Book> {
-    return this.__data.relations.t5Books ??= hasMany(this, t5BookMeta, "t5Books", "author", "author_id", undefined);
+    return this.__data.relations.t5Books ??=
+      (hasMany(this, t5BookMeta, "t5Books", "author", "author_id", undefined) as any).create(this, "t5Books");
   }
 }

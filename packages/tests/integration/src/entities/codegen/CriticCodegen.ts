@@ -334,32 +334,30 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get bookReviews(): Collection<Critic, BookReview> {
-    return this.__data.relations.bookReviews ??= hasMany(this, bookReviewMeta, "bookReviews", "critic", "critic_id", {
-      "field": "critic",
-      "direction": "ASC",
-    });
+    return this.__data.relations.bookReviews ??=
+      (hasMany(this, bookReviewMeta, "bookReviews", "critic", "critic_id", {
+        "field": "critic",
+        "direction": "ASC",
+      }) as any).create(this, "bookReviews");
   }
 
   get favoriteLargePublisher(): ManyToOneReference<Critic, LargePublisher, undefined> {
-    return this.__data.relations.favoriteLargePublisher ??= hasOne(
-      this,
-      largePublisherMeta,
-      "favoriteLargePublisher",
-      "critics",
-    );
+    return this.__data.relations.favoriteLargePublisher ??=
+      (hasOne(this, largePublisherMeta, "favoriteLargePublisher", "critics") as any).create(
+        this,
+        "favoriteLargePublisher",
+      );
   }
 
   get group(): ManyToOneReference<Critic, PublisherGroup, undefined> {
-    return this.__data.relations.group ??= hasOne(this, publisherGroupMeta, "group", "critics");
+    return this.__data.relations.group ??= (hasOne(this, publisherGroupMeta, "group", "critics") as any).create(
+      this,
+      "group",
+    );
   }
 
   get criticColumn(): OneToOneReference<Critic, CriticColumn> {
-    return this.__data.relations.criticColumn ??= hasOneToOne(
-      this,
-      criticColumnMeta,
-      "criticColumn",
-      "critic",
-      "critic_id",
-    );
+    return this.__data.relations.criticColumn ??=
+      (hasOneToOne(this, criticColumnMeta, "criticColumn", "critic", "critic_id") as any).create(this, "criticColumn");
   }
 }

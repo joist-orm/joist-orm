@@ -308,6 +308,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get books(): Collection<Author, Book> {
-    return this.__data.relations.books ??= hasMany(this, bookMeta, "books", "author", "authorId", undefined);
+    return this.__data.relations.books ??= (hasMany(this, bookMeta, "books", "author", "authorId", undefined) as any)
+      .create(this, "books");
   }
 }

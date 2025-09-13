@@ -331,34 +331,22 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   get critics(): Collection<LargePublisher, Critic> {
-    return this.__data.relations.critics ??= hasMany(
-      this,
-      criticMeta,
-      "critics",
-      "favoriteLargePublisher",
-      "favorite_large_publisher_id",
-      undefined,
-    );
+    return this.__data.relations.critics ??=
+      (hasMany(this, criticMeta, "critics", "favoriteLargePublisher", "favorite_large_publisher_id", undefined) as any)
+        .create(this, "critics");
   }
 
   get users(): Collection<LargePublisher, User> {
-    return this.__data.relations.users ??= hasMany(
-      this,
-      userMeta,
-      "users",
-      "favoritePublisher",
-      "favorite_publisher_large_id",
-      undefined,
-    );
+    return this.__data.relations.users ??=
+      (hasMany(this, userMeta, "users", "favoritePublisher", "favorite_publisher_large_id", undefined) as any).create(
+        this,
+        "users",
+      );
   }
 
   get spotlightAuthor(): ManyToOneReference<LargePublisher, Author, never> {
-    return this.__data.relations.spotlightAuthor ??= hasOne(
-      this,
-      authorMeta,
-      "spotlightAuthor",
-      "spotlightAuthorPublishers",
-    );
+    return this.__data.relations.spotlightAuthor ??=
+      (hasOne(this, authorMeta, "spotlightAuthor", "spotlightAuthorPublishers") as any).create(this, "spotlightAuthor");
   }
 
   get authors(): Collection<LargePublisher, Author> {

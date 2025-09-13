@@ -304,10 +304,12 @@ export abstract class ChildItemCodegen extends BaseEntity<EntityManager, string>
   }
 
   get childGroup(): ManyToOneReference<ChildItem, ChildGroup, never> {
-    return this.__data.relations.childGroup ??= hasOne(this, childGroupMeta, "childGroup", "childItems");
+    return this.__data.relations.childGroup ??= (hasOne(this, childGroupMeta, "childGroup", "childItems") as any)
+      .create(this, "childGroup");
   }
 
   get parentItem(): ManyToOneReference<ChildItem, ParentItem, never> {
-    return this.__data.relations.parentItem ??= hasOne(this, parentItemMeta, "parentItem", "childItems");
+    return this.__data.relations.parentItem ??= (hasOne(this, parentItemMeta, "parentItem", "childItems") as any)
+      .create(this, "parentItem");
   }
 }

@@ -3,6 +3,7 @@ import { Entity } from "../Entity";
 import { appendStack, IdOf, sameEntity } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { ensureNotDeleted, getMetadata, ManyToOneReferenceImpl } from "../index";
+import { lazyRelation } from "../newEntity";
 import { remove } from "../utils";
 import { LargeCollection } from "./LargeCollection";
 import { RelationT, RelationU } from "./Relation";
@@ -15,7 +16,15 @@ export function hasLargeMany<T extends Entity, U extends Entity>(
   otherFieldName: keyof U & string,
   otherColumnName: string,
 ): LargeCollection<T, U> {
-  return new OneToManyLargeCollection(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
+  return lazyRelation((entity: T, fieldName) => {
+    return new OneToManyLargeCollection(
+      entity,
+      otherMeta,
+      fieldName as keyof T & string,
+      otherFieldName,
+      otherColumnName,
+    );
+  });
 }
 
 export class OneToManyLargeCollection<T extends Entity, U extends Entity> implements LargeCollection<T, U> {

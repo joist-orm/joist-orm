@@ -1,6 +1,6 @@
 import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
-import { EntityConstructor, EntityManager, MaybeAbstractEntityConstructor } from "./EntityManager";
+import { EntityConstructor, MaybeAbstractEntityConstructor } from "./EntityManager";
 import { EntityMetadata, getBaseMeta, getMetadata } from "./EntityMetadata";
 import { getDefaultDependencies } from "./defaults";
 import { buildWhereClause } from "./drivers/buildUtils";
@@ -22,7 +22,7 @@ export const internals = { buildWhereClause };
 export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner";
 export * from "./Aliases";
-export { BaseEntity, getInstanceData, setCurrentlyInstantiatingEntity } from "./BaseEntity";
+export { BaseEntity, getInstanceData } from "./BaseEntity";
 export { ConditionBuilder } from "./ConditionBuilder";
 export { Entity, IdType, isEntity } from "./Entity";
 export * from "./EntityFields";
@@ -241,13 +241,6 @@ export function getRelationEntries(entity: Entity): [string, AbstractRelationImp
 
 /** Casts a "maybe abstract" cstr to a concrete cstr when the calling code knows it's safe. */
 export function asConcreteCstr<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): EntityConstructor<T> {
-  return cstr as any;
-}
-
-/** Casts a "maybe abstract" cstr to a concrete cstr when the calling code knows it's safe. */
-export function asInternalCstr<T extends Entity>(
-  cstr: MaybeAbstractEntityConstructor<T>,
-): { new (em: EntityManager<any, any, any>, isNew: boolean): T } {
   return cstr as any;
 }
 

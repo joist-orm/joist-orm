@@ -281,17 +281,17 @@ export abstract class T2BookCodegen extends BaseEntity<EntityManager, number> im
   }
 
   get t2Authors(): Collection<T2Book, T2Author> {
-    return this.__data.relations.t2Authors ??= hasMany(
-      this,
-      t2AuthorMeta,
-      "t2Authors",
-      "favoriteBook",
-      "favorite_book_id",
-      undefined,
-    );
+    return this.__data.relations.t2Authors ??=
+      (hasMany(this, t2AuthorMeta, "t2Authors", "favoriteBook", "favorite_book_id", undefined) as any).create(
+        this,
+        "t2Authors",
+      );
   }
 
   get author(): ManyToOneReference<T2Book, T2Author, never> {
-    return this.__data.relations.author ??= hasOne(this, t2AuthorMeta, "author", "t2Books");
+    return this.__data.relations.author ??= (hasOne(this, t2AuthorMeta, "author", "t2Books") as any).create(
+      this,
+      "author",
+    );
   }
 }

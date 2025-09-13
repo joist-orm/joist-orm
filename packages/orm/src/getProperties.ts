@@ -72,7 +72,7 @@ export function getProperties(meta: EntityMetadata, keepRelationConstructors = f
   propertiesCache2[key] = Object.fromEntries(properties);
 
   // But expose to everyone else the concrete/constructed relations
-  Object.assign(cached, Object.fromEntries(properties));
+  Object.assign(cached, Object.fromEntries(properties.filter(([fieldName]) => fieldName !== "transientFields")));
   for (const [fieldName, value] of properties) {
     if (value instanceof RelationConstructor) {
       (instance as any)[fieldName] = (cached as any)[fieldName] = value.create(instance, fieldName);

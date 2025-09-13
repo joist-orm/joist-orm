@@ -1,47 +1,59 @@
 import { authorMeta, bookMeta, bookReviewMeta, imageMeta, publisherMeta } from "@src/entities";
-import {
-  AsyncPropertyImpl,
-  CustomCollection,
-  CustomReference,
-  ManyToManyCollection,
-  ManyToOneReferenceImpl,
-  OneToManyCollection,
-  OneToOneReferenceImpl,
-  UnknownProperty,
-  getProperties,
-} from "joist-orm";
-import {
-  RecursiveChildrenCollectionImpl,
-  RecursiveParentsCollectionImpl,
-} from "joist-orm/build/relations/RecursiveCollection";
+import { CustomCollection, CustomReference, getProperties } from "joist-orm";
 
 describe("getProperties", () => {
   it("should work", () => {
     const props = getProperties(bookMeta);
-    expect(props).toEqual({
-      advances: expect.any(OneToManyCollection),
-      reviews: expect.any(OneToManyCollection),
-      comments: expect.any(OneToManyCollection),
-      commentParentInfo: expect.any(AsyncPropertyImpl),
-      author: expect.any(ManyToOneReferenceImpl),
-      reviewer: expect.any(ManyToOneReferenceImpl),
-      randomComment: expect.any(ManyToOneReferenceImpl),
-      authorSetWhenDeleteRuns: expect.any(UnknownProperty),
-      afterCommitCheckTagsChanged: expect.any(UnknownProperty),
-      currentDraftAuthor: expect.any(OneToOneReferenceImpl),
-      favoriteAuthor: expect.any(OneToOneReferenceImpl),
-      prequel: expect.any(ManyToOneReferenceImpl),
-      prequelsRecursive: expect.any(RecursiveParentsCollectionImpl),
-      sequel: expect.any(OneToOneReferenceImpl),
-      sequelsRecursive: expect.any(RecursiveChildrenCollectionImpl),
-      image: expect.any(OneToOneReferenceImpl),
-      tags: expect.any(ManyToManyCollection),
-      favoriteColorsRuleInvoked: 0,
-      firstNameRuleInvoked: 0,
-      reviewsRuleInvoked: 0,
-      rulesInvoked: 0,
-      numberOfBooks2RuleInvoked: 0,
-    });
+
+    expect(Object.keys(props).sort()).toEqual([
+      "advances",
+      "author",
+      "commentParentInfo",
+      "comments",
+      "createdAt",
+      "currentDraftAuthor",
+      "favoriteAuthor",
+      "image",
+      "prequel",
+      "prequelsRecursive",
+      "randomComment",
+      "reviewer",
+      "reviews",
+      "search",
+      "sequel",
+      "sequelsRecursive",
+      "tags",
+      "updatedAt",
+    ]);
+
+    expect(
+      Object.fromEntries(
+        Object.entries(props).map(([key, value]) => {
+          return [key, value.constructor?.name ?? typeof value];
+        }),
+      ),
+    ).toMatchInlineSnapshot(`
+     {
+       "advances": "OneToManyCollection",
+       "author": "ManyToOneReferenceImpl",
+       "commentParentInfo": "AsyncPropertyImpl",
+       "comments": "OneToManyCollection",
+       "createdAt": "UnknownProperty",
+       "currentDraftAuthor": "OneToOneReferenceImpl",
+       "favoriteAuthor": "OneToOneReferenceImpl",
+       "image": "OneToOneReferenceImpl",
+       "prequel": "ManyToOneReferenceImpl",
+       "prequelsRecursive": "RecursiveParentsCollectionImpl",
+       "randomComment": "ManyToOneReferenceImpl",
+       "reviewer": "ManyToOneReferenceImpl",
+       "reviews": "OneToManyCollection",
+       "search": "ReactiveFieldImpl",
+       "sequel": "OneToOneReferenceImpl",
+       "sequelsRecursive": "RecursiveChildrenCollectionImpl",
+       "tags": "ManyToManyCollection",
+       "updatedAt": "UnknownProperty",
+     }
+    `);
   });
 
   it("works for custom references", () => {

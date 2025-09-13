@@ -17,7 +17,7 @@ import {
   toIdOf,
   toTaggedId,
 } from "../index";
-import { lazyRelation } from "../newEntity";
+import { lazyRelation, resolveOtherMeta } from "../newEntity";
 import { maybeAdd, maybeRemove } from "../utils";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
@@ -32,6 +32,7 @@ export function hasOne<T extends Entity, U extends Entity, N extends never | und
   otherFieldName: keyof U & string,
 ): ManyToOneReference<T, U, N> {
   return lazyRelation((entity: T, fieldName) => {
+    otherMeta ??= resolveOtherMeta(entity, fieldName);
     return new ManyToOneReferenceImpl<T, U, N>(entity, otherMeta, fieldName as keyof T & string, otherFieldName);
   });
 }

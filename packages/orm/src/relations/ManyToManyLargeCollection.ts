@@ -3,7 +3,7 @@ import { Entity } from "../Entity";
 import { appendStack, IdOf } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { ensureNotDeleted, getMetadata, ManyToManyCollection, toTaggedId } from "../index";
-import { lazyRelation } from "../newEntity";
+import { lazyRelation, resolveOtherMeta } from "../newEntity";
 import { remove } from "../utils";
 import { LargeCollection } from "./LargeCollection";
 import { RelationT, RelationU } from "./Relation";
@@ -19,6 +19,7 @@ export function hasLargeManyToMany<T extends Entity, U extends Entity>(
   otherColumnName: string,
 ): LargeCollection<T, U> {
   return lazyRelation((entity: T, fieldName) => {
+    otherMeta ??= resolveOtherMeta(entity, fieldName);
     return new ManyToManyLargeCollection(
       joinTableName,
       entity,

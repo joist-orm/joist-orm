@@ -1,7 +1,7 @@
 import { baseEntityCstr } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityConstructor, EntityManager } from "./EntityManager";
-import { getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { getProperties } from "./getProperties";
 
 const lazySymbol = Symbol("lazy");
@@ -61,6 +61,18 @@ function moveRelationsToGetters(cstr: EntityConstructor<any>): void {
  */
 export function lazyRelation<T extends Entity, R>(fn: (entity: T, fieldName: string) => R): R {
   return new RelationConstructor(fn) as R;
+}
+
+/**
+ * When `lazyRelation`s boot for the very first time, its when the `class`s are being evaled
+ * before the `metadata.ts` file has run, so all of the `otherMetadata` imports are still
+ * undefined.
+ *
+ * This `resolveOtherMeta` can be run after class-boot, and during `configure`, to take an
+ * entity + field and return the now-available `otherMetadata`.
+ */
+export function resolveOtherMeta(entity: Entity, fieldName: string): EntityMetadata {
+  return (getMetadata(entity).allFields[fieldName] as any).otherMetadata();
 }
 
 export class RelationConstructor<T extends Entity> {

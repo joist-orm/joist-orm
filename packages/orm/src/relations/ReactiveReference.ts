@@ -18,7 +18,7 @@ import { Entity } from "../Entity";
 import { IdOf } from "../EntityManager";
 import { getField, setField } from "../fields";
 import { IsLoadedCachable } from "../IsLoadedCache";
-import { lazyRelation } from "../newEntity";
+import { lazyRelation, resolveOtherMeta } from "../newEntity";
 import { MaybeReactedEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";
@@ -77,6 +77,7 @@ export function hasReactiveReference<
   fn: (entity: Reacted<T, H>) => MaybeReactedEntity<U> | N,
 ): ReactiveReference<T, U, N> {
   return lazyRelation((entity: T, fieldName) => {
+    otherMeta ??= resolveOtherMeta(entity, fieldName);
     return new ReactiveReferenceImpl<T, U, H, N>(entity, fieldName as keyof T & string, otherMeta, hint, fn);
   });
 }

@@ -24,19 +24,18 @@ export function hasManyDerived<T extends Entity, U extends Entity, H extends Loa
   opts: HasManyDerivedOpts<T, U, H>,
 ): Collection<T, U> {
   const { load, ...rest } = opts;
-  return lazyRelation(
-    (entity: T) =>
-      new CustomCollection<T, U>(entity, {
-        load(entity, opts) {
-          if (load) {
-            return load(entity, opts);
-          } else {
-            return entity.em.populate(entity, { hint: loadHint, ...opts });
-          }
-        },
-        isLoaded: () => isLoaded(entity, loadHint),
-        loadHint,
-        ...(rest as any),
-      }),
-  );
+  return lazyRelation((entity: T) => {
+    return new CustomCollection<T, U>(entity, {
+      load(entity, opts) {
+        if (load) {
+          return load(entity, opts);
+        } else {
+          return entity.em.populate(entity, { hint: loadHint, ...opts });
+        }
+      },
+      isLoaded: () => isLoaded(entity, loadHint),
+      loadHint,
+      ...(rest as any),
+    });
+  });
 }

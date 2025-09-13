@@ -40,7 +40,6 @@ import { Temporal } from "temporal-polyfill";
 import {
   Author,
   type AuthorId,
-  authorMeta,
   type AuthorOrder,
   Book,
   bookMeta,
@@ -135,6 +134,8 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   static readonly metadata: EntityMetadata<Book>;
 
   declare readonly __type: { 0: "Book" };
+
+  readonly author: ManyToOneReference<Book, Author, never> = hasOne("books");
 
   get id(): BookId {
     return this.idMaybe || failNoIdYet("Book");
@@ -318,9 +319,5 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   toJSON<const H extends ToJsonHint<Book>>(hint: H): Promise<JsonPayload<Book, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get author(): ManyToOneReference<Book, Author, never> {
-    return this.__data.relations.author ??= (hasOne(this, authorMeta, "author", "books") as any).create(this, "author");
   }
 }

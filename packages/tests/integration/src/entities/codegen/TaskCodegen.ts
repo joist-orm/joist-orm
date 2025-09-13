@@ -52,11 +52,9 @@ import {
   newTask,
   Tag,
   type TagId,
-  tagMeta,
   Task,
   TaskItem,
   type TaskItemId,
-  taskItemMeta,
   taskMeta,
   TaskNew,
   type TaskNewId,
@@ -197,6 +195,16 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   static readonly metadata: EntityMetadata<Task>;
 
   declare readonly __type: { 0: "Task" };
+
+  readonly copiedTo: Collection<Task, Task> = hasMany("copiedFrom", "copied_from_id", undefined);
+  readonly taskTaskItems: Collection<Task, TaskItem> = hasMany("task", "task_id", undefined);
+  readonly copiedFrom: ManyToOneReference<Task, Task, undefined> = hasOne("copiedTo");
+  readonly copiedFromsRecursive: ReadOnlyCollection<Task, Task> = hasRecursiveParents(
+    "copiedFrom",
+    "copiedToRecursive",
+  );
+  readonly copiedToRecursive: ReadOnlyCollection<Task, Task> = hasRecursiveChildren("copiedTo", "copiedFromsRecursive");
+  readonly tags: Collection<Task, Tag> = hasManyToMany("task_to_tags", "task_id", "tasks", "tag_id");
 
   get id(): TaskId {
     return this.idMaybe || failNoIdYet("Task");
@@ -429,43 +437,5 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   toJSON<const H extends ToJsonHint<Task>>(hint: H): Promise<JsonPayload<Task, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get copiedTo(): Collection<Task, Task> {
-    return this.__data.relations.copiedTo ??=
-      (hasMany(this, taskMeta, "copiedTo", "copiedFrom", "copied_from_id", undefined) as any).create(this, "copiedTo");
-  }
-
-  get taskTaskItems(): Collection<Task, TaskItem> {
-    return this.__data.relations.taskTaskItems ??=
-      (hasMany(this, taskItemMeta, "taskTaskItems", "task", "task_id", undefined) as any).create(this, "taskTaskItems");
-  }
-
-  get copiedFrom(): ManyToOneReference<Task, Task, undefined> {
-    return this.__data.relations.copiedFrom ??= (hasOne(this, taskMeta, "copiedFrom", "copiedTo") as any).create(
-      this,
-      "copiedFrom",
-    );
-  }
-
-  get copiedFromsRecursive(): ReadOnlyCollection<Task, Task> {
-    return this.__data.relations.copiedFromsRecursive ??=
-      (hasRecursiveParents(this, "copiedFromsRecursive", "copiedFrom", "copiedToRecursive") as any).create(
-        this,
-        "copiedFromsRecursive",
-      );
-  }
-
-  get copiedToRecursive(): ReadOnlyCollection<Task, Task> {
-    return this.__data.relations.copiedToRecursive ??=
-      (hasRecursiveChildren(this, "copiedToRecursive", "copiedTo", "copiedFromsRecursive") as any).create(
-        this,
-        "copiedToRecursive",
-      );
-  }
-
-  get tags(): Collection<Task, Tag> {
-    return this.__data.relations.tags ??=
-      (hasManyToMany(this, "task_to_tags", "tags", "task_id", tagMeta, "tasks", "tag_id") as any).create(this, "tags");
   }
 }

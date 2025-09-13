@@ -39,7 +39,6 @@ import type { Context } from "src/context";
 import {
   Author,
   type AuthorId,
-  authorMeta,
   type AuthorOrder,
   AuthorSchedule,
   authorScheduleMeta,
@@ -121,6 +120,8 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   static readonly metadata: EntityMetadata<AuthorSchedule>;
 
   declare readonly __type: { 0: "AuthorSchedule" };
+
+  readonly author: ManyToOneReference<AuthorSchedule, Author, never> = hasOne("schedules");
 
   get id(): AuthorScheduleId {
     return this.idMaybe || failNoIdYet("AuthorSchedule");
@@ -293,12 +294,5 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   toJSON<const H extends ToJsonHint<AuthorSchedule>>(hint: H): Promise<JsonPayload<AuthorSchedule, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get author(): ManyToOneReference<AuthorSchedule, Author, never> {
-    return this.__data.relations.author ??= (hasOne(this, authorMeta, "author", "schedules") as any).create(
-      this,
-      "author",
-    );
   }
 }

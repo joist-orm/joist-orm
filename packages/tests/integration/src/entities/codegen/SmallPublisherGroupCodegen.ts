@@ -48,7 +48,6 @@ import {
   SmallPublisherGroup,
   smallPublisherGroupMeta,
   type SmallPublisherId,
-  smallPublisherMeta,
 } from "../entities";
 
 export type SmallPublisherGroupId = Flavor<string, "PublisherGroup">;
@@ -108,6 +107,8 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
   static readonly metadata: EntityMetadata<SmallPublisherGroup>;
 
   declare readonly __type: { 0: "PublisherGroup"; 1: "SmallPublisherGroup" };
+
+  readonly publishers: Collection<SmallPublisherGroup, SmallPublisher> = hasMany("group", "group_id", undefined);
 
   get id(): SmallPublisherGroupId {
     return this.idMaybe || failNoIdYet("SmallPublisherGroup");
@@ -274,13 +275,5 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
   toJSON<const H extends ToJsonHint<SmallPublisherGroup>>(hint: H): Promise<JsonPayload<SmallPublisherGroup, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get publishers(): Collection<SmallPublisherGroup, SmallPublisher> {
-    return this.__data.relations.publishers ??=
-      (hasMany(this, smallPublisherMeta, "publishers", "group", "group_id", undefined) as any).create(
-        this,
-        "publishers",
-      );
   }
 }

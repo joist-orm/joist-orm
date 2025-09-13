@@ -37,7 +37,7 @@ import {
 } from "joist-orm";
 import type { Context } from "src/context";
 import { Temporal } from "temporal-polyfill";
-import { Author, authorMeta, Book, type BookId, bookMeta, type Entity, EntityManager, newAuthor } from "../entities";
+import { Author, authorMeta, Book, type BookId, type Entity, EntityManager, newAuthor } from "../entities";
 
 export type AuthorId = Flavor<string, "Author">;
 
@@ -156,6 +156,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   static readonly metadata: EntityMetadata<Author>;
 
   declare readonly __type: { 0: "Author" };
+
+  readonly books: Collection<Author, Book> = hasMany("author", "author_id", undefined);
 
   get id(): AuthorId {
     return this.idMaybe || failNoIdYet("Author");
@@ -387,10 +389,5 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   toJSON<const H extends ToJsonHint<Author>>(hint: H): Promise<JsonPayload<Author, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get books(): Collection<Author, Book> {
-    return this.__data.relations.books ??= (hasMany(this, bookMeta, "books", "author", "author_id", undefined) as any)
-      .create(this, "books");
   }
 }

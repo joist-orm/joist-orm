@@ -36,16 +36,7 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  Child,
-  ChildGroup,
-  type ChildGroupId,
-  childGroupMeta,
-  childMeta,
-  type Entity,
-  EntityManager,
-  newChild,
-} from "../entities";
+import { Child, ChildGroup, type ChildGroupId, childMeta, type Entity, EntityManager, newChild } from "../entities";
 
 export type ChildId = Flavor<string, "Child">;
 
@@ -118,6 +109,8 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
   static readonly metadata: EntityMetadata<Child>;
 
   declare readonly __type: { 0: "Child" };
+
+  readonly groups: Collection<Child, ChildGroup> = hasMany("childGroup", "child_group_id", undefined);
 
   get id(): ChildId {
     return this.idMaybe || failNoIdYet("Child");
@@ -285,13 +278,5 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
   toJSON<const H extends ToJsonHint<Child>>(hint: H): Promise<JsonPayload<Child, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get groups(): Collection<Child, ChildGroup> {
-    return this.__data.relations.groups ??=
-      (hasMany(this, childGroupMeta, "groups", "childGroup", "child_group_id", undefined) as any).create(
-        this,
-        "groups",
-      );
   }
 }

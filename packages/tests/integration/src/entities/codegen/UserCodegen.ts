@@ -52,11 +52,9 @@ import {
   type AdminUserId,
   Author,
   type AuthorId,
-  authorMeta,
   type AuthorOrder,
   Comment,
   type CommentId,
-  commentMeta,
   type Entity,
   EntityManager,
   LargePublisher,
@@ -225,6 +223,18 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   static readonly metadata: EntityMetadata<User>;
 
   declare readonly __type: { 0: "User" };
+
+  readonly createdComments: Collection<User, Comment> = hasMany("user", "user_id", undefined);
+  readonly directs: Collection<User, User> = hasMany("manager", "manager_id", undefined);
+  readonly manager: ManyToOneReference<User, User, undefined> = hasOne("directs");
+  readonly authorManyToOne: ManyToOneReference<User, Author, undefined> = hasOne("userOneToOne");
+  readonly likedComments: Collection<User, Comment> = hasManyToMany(
+    "users_to_comments",
+    "liked_by_user_id",
+    "likedByUsers",
+    "comment_id",
+  );
+  readonly favoritePublisher: PolymorphicReference<User, UserFavoritePublisher, undefined> = hasOnePolymorphic();
 
   get id(): UserId {
     return this.idMaybe || failNoIdYet("User");
@@ -443,50 +453,5 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   toJSON<const H extends ToJsonHint<User>>(hint: H): Promise<JsonPayload<User, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get createdComments(): Collection<User, Comment> {
-    return this.__data.relations.createdComments ??=
-      (hasMany(this, commentMeta, "createdComments", "user", "user_id", undefined) as any).create(
-        this,
-        "createdComments",
-      );
-  }
-
-  get directs(): Collection<User, User> {
-    return this.__data.relations.directs ??=
-      (hasMany(this, userMeta, "directs", "manager", "manager_id", undefined) as any).create(this, "directs");
-  }
-
-  get manager(): ManyToOneReference<User, User, undefined> {
-    return this.__data.relations.manager ??= (hasOne(this, userMeta, "manager", "directs") as any).create(
-      this,
-      "manager",
-    );
-  }
-
-  get authorManyToOne(): ManyToOneReference<User, Author, undefined> {
-    return this.__data.relations.authorManyToOne ??=
-      (hasOne(this, authorMeta, "authorManyToOne", "userOneToOne") as any).create(this, "authorManyToOne");
-  }
-
-  get likedComments(): Collection<User, Comment> {
-    return this.__data.relations.likedComments ??=
-      (hasManyToMany(
-        this,
-        "users_to_comments",
-        "likedComments",
-        "liked_by_user_id",
-        commentMeta,
-        "likedByUsers",
-        "comment_id",
-      ) as any).create(this, "likedComments");
-  }
-
-  get favoritePublisher(): PolymorphicReference<User, UserFavoritePublisher, undefined> {
-    return this.__data.relations.favoritePublisher ??= (hasOnePolymorphic(this, "favoritePublisher") as any).create(
-      this,
-      "favoritePublisher",
-    );
   }
 }

@@ -10,14 +10,12 @@ import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `ManyToManyLargeCollection`s. */
 export function hasLargeManyToMany<T extends Entity, U extends Entity>(
-  entity: T,
   joinTableName: string,
-  fieldName: keyof T & string,
   columnName: string,
-  otherMeta: EntityMetadata<U>,
   otherFieldName: keyof U & string,
   otherColumnName: string,
 ): LargeCollection<T, U> {
+  let otherMeta: EntityMetadata<U>;
   return lazyRelation((entity: T, fieldName) => {
     otherMeta ??= resolveOtherMeta(entity, fieldName);
     return new ManyToManyLargeCollection(

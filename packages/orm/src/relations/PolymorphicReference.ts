@@ -20,10 +20,11 @@ import { OneToManyCollection } from "./OneToManyCollection";
 import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
 
-export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends never | undefined>(
-  entity: T,
-  fieldName: keyof T & string,
-): PolymorphicReference<T, U, N> {
+export function hasOnePolymorphic<
+  T extends Entity,
+  U extends Entity,
+  N extends never | undefined,
+>(): PolymorphicReference<T, U, N> {
   return lazyRelation((entity: T, fieldName) => {
     return new PolymorphicReferenceImpl<T, U, N>(entity, fieldName as keyof T & string);
   });

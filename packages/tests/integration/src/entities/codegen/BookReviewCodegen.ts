@@ -45,23 +45,19 @@ import type { Context } from "src/context";
 import {
   Book,
   type BookId,
-  bookMeta,
   type BookOrder,
   BookReview,
   bookReviewMeta,
   Comment,
   type CommentId,
-  commentMeta,
   Critic,
   type CriticId,
-  criticMeta,
   type CriticOrder,
   type Entity,
   EntityManager,
   newBookReview,
   Tag,
   type TagId,
-  tagMeta,
 } from "../entities";
 
 export type BookReviewId = Flavor<string, "BookReview">;
@@ -171,6 +167,16 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   static readonly metadata: EntityMetadata<BookReview>;
 
   declare readonly __type: { 0: "BookReview" };
+
+  readonly book: ManyToOneReference<BookReview, Book, never> = hasOne("reviews");
+  readonly critic: ManyToOneReference<BookReview, Critic, undefined> = hasOne("bookReviews");
+  readonly comment: OneToOneReference<BookReview, Comment> = hasOneToOne("parent", "parent_book_review_id");
+  readonly tags: Collection<BookReview, Tag> = hasManyToMany(
+    "book_reviews_to_tags",
+    "book_review_id",
+    "bookReviews",
+    "tag_id",
+  );
 
   get id(): BookReviewId {
     return this.idMaybe || failNoIdYet("BookReview");
@@ -346,27 +352,5 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   toJSON<const H extends ToJsonHint<BookReview>>(hint: H): Promise<JsonPayload<BookReview, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get book(): ManyToOneReference<BookReview, Book, never> {
-    return this.__data.relations.book ??= (hasOne(this, bookMeta, "book", "reviews") as any).create(this, "book");
-  }
-
-  get critic(): ManyToOneReference<BookReview, Critic, undefined> {
-    return this.__data.relations.critic ??= (hasOne(this, criticMeta, "critic", "bookReviews") as any).create(
-      this,
-      "critic",
-    );
-  }
-
-  get comment(): OneToOneReference<BookReview, Comment> {
-    return this.__data.relations.comment ??=
-      (hasOneToOne(this, commentMeta, "comment", "parent", "parent_book_review_id") as any).create(this, "comment");
-  }
-
-  get tags(): Collection<BookReview, Tag> {
-    return this.__data.relations.tags ??=
-      (hasManyToMany(this, "book_reviews_to_tags", "tags", "book_review_id", tagMeta, "bookReviews", "tag_id") as any)
-        .create(this, "tags");
   }
 }

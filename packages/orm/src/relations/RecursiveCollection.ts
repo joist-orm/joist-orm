@@ -29,8 +29,6 @@ import { RelationT, RelationU } from "./Relation";
  * I.e. for `Author.mentor` (m2o fk), we can return `Author.mentorsRecursive` recursively looking up.
  */
 export function hasRecursiveParents<T extends Entity, U extends Entity>(
-  entity: T,
-  fieldName: keyof T & string, // i.e. `author.mentorsRecursive`
   m2oName: keyof T & string, // i.e. `author.mentor`
   otherFieldName: keyof T & string, // i.e. `author.menteesRecursive`
 ): ReadOnlyCollection<T, U> {
@@ -45,8 +43,6 @@ export function hasRecursiveParents<T extends Entity, U extends Entity>(
  * I.e. for `Author.mentees` (o2m), we can return `Author.menteesRecursive` recursively looking down.
  */
 export function hasRecursiveChildren<T extends Entity, U extends Entity>(
-  entity: T,
-  fieldName: keyof T & string, // i.e. `author.menteesRecursive`
   o2mName: keyof T & string, // i.e. `author.mentees`
   otherFieldName: keyof T & string, // i.e. `author.mentorsRecursive`
 ): ReadOnlyCollection<T, U> {

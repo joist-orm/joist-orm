@@ -126,6 +126,8 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
 
   declare readonly __type: { 0: "Comment" };
 
+  readonly parent: PolymorphicReference<Comment, CommentParent, never> = hasOnePolymorphic();
+
   get id(): CommentId {
     return this.idMaybe || failNoIdYet("Comment");
   }
@@ -292,9 +294,5 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   toJSON<const H extends ToJsonHint<Comment>>(hint: H): Promise<JsonPayload<Comment, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get parent(): PolymorphicReference<Comment, CommentParent, never> {
-    return this.__data.relations.parent ??= (hasOnePolymorphic(this, "parent") as any).create(this, "parent");
   }
 }

@@ -56,10 +56,8 @@ import {
   authorMeta,
   AuthorSchedule,
   type AuthorScheduleId,
-  authorScheduleMeta,
   Book,
   type BookId,
-  bookMeta,
   type BookOrder,
   BookRange,
   Color,
@@ -67,31 +65,25 @@ import {
   Colors,
   Comment,
   type CommentId,
-  commentMeta,
   type Entity,
   EntityManager,
   FavoriteShape,
   Image,
   type ImageId,
-  imageMeta,
   LargePublisher,
   type LargePublisherId,
   newAuthor,
   Publisher,
   type PublisherId,
-  publisherMeta,
   type PublisherOrder,
   SmallPublisher,
   type SmallPublisherId,
   Tag,
   type TagId,
-  tagMeta,
   TaskNew,
   type TaskNewId,
-  taskNewMeta,
   User,
   type UserId,
-  userMeta,
 } from "../entities";
 
 export type AuthorId = Flavor<string, "Author">;
@@ -414,8 +406,29 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   declare readonly __type: { 0: "Author" };
 
   abstract readonly rootMentor: ReactiveReference<Author, Author, undefined>;
-
   abstract readonly favoriteBook: ReactiveReference<Author, Book, undefined>;
+  readonly mentees: Collection<Author, Author> = hasMany("mentor", "mentor_id", undefined);
+  readonly books: Collection<Author, Book> = hasMany("author", "author_id", { "field": "order", "direction": "ASC" });
+  readonly reviewerBooks: Collection<Author, Book> = hasMany("reviewer", "reviewer_id", {
+    "field": "title",
+    "direction": "ASC",
+  });
+  readonly schedules: Collection<Author, AuthorSchedule> = hasMany("author", "author_id", undefined);
+  readonly comments: Collection<Author, Comment> = hasMany("parent", "parent_author_id", undefined);
+  readonly spotlightAuthorPublishers: Collection<Author, Publisher> = hasMany(
+    "spotlightAuthor",
+    "spotlight_author_id",
+    undefined,
+  );
+  readonly tasks: Collection<Author, TaskNew> = hasMany("specialNewAuthor", "special_new_author_id", undefined);
+  readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne("mentees");
+  readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne("currentDraftAuthor");
+  readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne("authors");
+  readonly mentorsRecursive: ReadOnlyCollection<Author, Author> = hasRecursiveParents("mentor", "menteesRecursive");
+  readonly menteesRecursive: ReadOnlyCollection<Author, Author> = hasRecursiveChildren("mentees", "mentorsRecursive");
+  readonly image: OneToOneReference<Author, Image> = hasOneToOne("author", "author_id");
+  readonly userOneToOne: OneToOneReference<Author, User> = hasOneToOne("authorManyToOne", "author_id");
+  readonly tags: Collection<Author, Tag> = hasManyToMany("authors_to_tags", "author_id", "authors", "tag_id");
 
   get id(): AuthorId {
     return this.idMaybe || failNoIdYet("Author");
@@ -781,114 +794,5 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   toJSON<const H extends ToJsonHint<Author>>(hint: H): Promise<JsonPayload<Author, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get mentees(): Collection<Author, Author> {
-    return this.__data.relations.mentees ??=
-      (hasMany(this, authorMeta, "mentees", "mentor", "mentor_id", undefined) as any).create(this, "mentees");
-  }
-
-  get books(): Collection<Author, Book> {
-    return this.__data.relations.books ??=
-      (hasMany(this, bookMeta, "books", "author", "author_id", { "field": "order", "direction": "ASC" }) as any).create(
-        this,
-        "books",
-      );
-  }
-
-  get reviewerBooks(): Collection<Author, Book> {
-    return this.__data.relations.reviewerBooks ??=
-      (hasMany(this, bookMeta, "reviewerBooks", "reviewer", "reviewer_id", {
-        "field": "title",
-        "direction": "ASC",
-      }) as any).create(this, "reviewerBooks");
-  }
-
-  get schedules(): Collection<Author, AuthorSchedule> {
-    return this.__data.relations.schedules ??=
-      (hasMany(this, authorScheduleMeta, "schedules", "author", "author_id", undefined) as any).create(
-        this,
-        "schedules",
-      );
-  }
-
-  get comments(): Collection<Author, Comment> {
-    return this.__data.relations.comments ??=
-      (hasMany(this, commentMeta, "comments", "parent", "parent_author_id", undefined) as any).create(this, "comments");
-  }
-
-  get spotlightAuthorPublishers(): Collection<Author, Publisher> {
-    return this.__data.relations.spotlightAuthorPublishers ??=
-      (hasMany(
-        this,
-        publisherMeta,
-        "spotlightAuthorPublishers",
-        "spotlightAuthor",
-        "spotlight_author_id",
-        undefined,
-      ) as any).create(this, "spotlightAuthorPublishers");
-  }
-
-  get tasks(): Collection<Author, TaskNew> {
-    return this.__data.relations.tasks ??=
-      (hasMany(this, taskNewMeta, "tasks", "specialNewAuthor", "special_new_author_id", undefined) as any).create(
-        this,
-        "tasks",
-      );
-  }
-
-  get mentor(): ManyToOneReference<Author, Author, undefined> {
-    return this.__data.relations.mentor ??= (hasOne(this, authorMeta, "mentor", "mentees") as any).create(
-      this,
-      "mentor",
-    );
-  }
-
-  get currentDraftBook(): ManyToOneReference<Author, Book, undefined> {
-    return this.__data.relations.currentDraftBook ??=
-      (hasOne(this, bookMeta, "currentDraftBook", "currentDraftAuthor") as any).create(this, "currentDraftBook");
-  }
-
-  get publisher(): ManyToOneReference<Author, Publisher, undefined> {
-    return this.__data.relations.publisher ??= (hasOne(this, publisherMeta, "publisher", "authors") as any).create(
-      this,
-      "publisher",
-    );
-  }
-
-  get mentorsRecursive(): ReadOnlyCollection<Author, Author> {
-    return this.__data.relations.mentorsRecursive ??=
-      (hasRecursiveParents(this, "mentorsRecursive", "mentor", "menteesRecursive") as any).create(
-        this,
-        "mentorsRecursive",
-      );
-  }
-
-  get menteesRecursive(): ReadOnlyCollection<Author, Author> {
-    return this.__data.relations.menteesRecursive ??=
-      (hasRecursiveChildren(this, "menteesRecursive", "mentees", "mentorsRecursive") as any).create(
-        this,
-        "menteesRecursive",
-      );
-  }
-
-  get image(): OneToOneReference<Author, Image> {
-    return this.__data.relations.image ??= (hasOneToOne(this, imageMeta, "image", "author", "author_id") as any).create(
-      this,
-      "image",
-    );
-  }
-
-  get userOneToOne(): OneToOneReference<Author, User> {
-    return this.__data.relations.userOneToOne ??=
-      (hasOneToOne(this, userMeta, "userOneToOne", "authorManyToOne", "author_id") as any).create(this, "userOneToOne");
-  }
-
-  get tags(): Collection<Author, Tag> {
-    return this.__data.relations.tags ??=
-      (hasManyToMany(this, "authors_to_tags", "tags", "author_id", tagMeta, "authors", "tag_id") as any).create(
-        this,
-        "tags",
-      );
   }
 }

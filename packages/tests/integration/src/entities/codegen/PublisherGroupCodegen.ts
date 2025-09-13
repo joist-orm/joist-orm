@@ -43,7 +43,6 @@ import {
 import type { Context } from "src/context";
 import {
   Critic,
-  criticMeta,
   type Entity,
   EntityManager,
   LargePublisher,
@@ -53,7 +52,6 @@ import {
   PublisherGroup,
   publisherGroupMeta,
   type PublisherId,
-  publisherMeta,
   SmallPublisher,
   SmallPublisherGroup,
   type SmallPublisherId,
@@ -157,6 +155,9 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   static readonly metadata: EntityMetadata<PublisherGroup>;
 
   declare readonly __type: { 0: "PublisherGroup" };
+
+  readonly publishers: Collection<PublisherGroup, Publisher> = hasMany("group", "group_id", undefined);
+  readonly critics: LargeCollection<PublisherGroup, Critic> = hasLargeMany("group", "group_id");
 
   get id(): PublisherGroupId {
     return this.idMaybe || failNoIdYet("PublisherGroup");
@@ -334,15 +335,5 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   toJSON<const H extends ToJsonHint<PublisherGroup>>(hint: H): Promise<JsonPayload<PublisherGroup, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get publishers(): Collection<PublisherGroup, Publisher> {
-    return this.__data.relations.publishers ??=
-      (hasMany(this, publisherMeta, "publishers", "group", "group_id", undefined) as any).create(this, "publishers");
-  }
-
-  get critics(): LargeCollection<PublisherGroup, Critic> {
-    return this.__data.relations.critics ??= (hasLargeMany(this, criticMeta, "critics", "group", "group_id") as any)
-      .create(this, "critics");
   }
 }

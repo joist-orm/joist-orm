@@ -38,7 +38,6 @@ import type { Context } from "src/context";
 import {
   Author,
   type AuthorId,
-  authorMeta,
   type AuthorOrder,
   BookReview,
   bookReviewMeta,
@@ -111,6 +110,8 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   static readonly metadata: EntityMetadata<BookReview>;
 
   declare readonly __type: { 0: "BookReview" };
+
+  readonly book: ManyToOneReference<BookReview, Author, never> = hasOne("bookReviews");
 
   get id(): BookReviewId {
     return this.idMaybe || failNoIdYet("BookReview");
@@ -272,9 +273,5 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   toJSON<const H extends ToJsonHint<BookReview>>(hint: H): Promise<JsonPayload<BookReview, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get book(): ManyToOneReference<BookReview, Author, never> {
-    return this.__data.relations.book ??= (hasOne(this, authorMeta, "book", "bookReviews") as any).create(this, "book");
   }
 }

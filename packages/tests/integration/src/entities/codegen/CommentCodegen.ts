@@ -51,7 +51,6 @@ import {
   Author,
   Book,
   type BookId,
-  bookMeta,
   BookReview,
   Comment,
   commentMeta,
@@ -62,7 +61,6 @@ import {
   TaskOld,
   User,
   type UserId,
-  userMeta,
   type UserOrder,
 } from "../entities";
 
@@ -185,6 +183,19 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   static readonly metadata: EntityMetadata<Comment>;
 
   declare readonly __type: { 0: "Comment" };
+
+  readonly books: Collection<Comment, Book> = hasMany("randomComment", "random_comment_id", {
+    "field": "title",
+    "direction": "ASC",
+  });
+  readonly user: ManyToOneReference<Comment, User, undefined> = hasOne("createdComments");
+  readonly likedByUsers: Collection<Comment, User> = hasManyToMany(
+    "users_to_comments",
+    "comment_id",
+    "likedComments",
+    "liked_by_user_id",
+  );
+  readonly parent: PolymorphicReference<Comment, CommentParent, never> = hasOnePolymorphic();
 
   get id(): CommentId {
     return this.idMaybe || failNoIdYet("Comment");
@@ -356,37 +367,5 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   toJSON<const H extends ToJsonHint<Comment>>(hint: H): Promise<JsonPayload<Comment, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get books(): Collection<Comment, Book> {
-    return this.__data.relations.books ??=
-      (hasMany(this, bookMeta, "books", "randomComment", "random_comment_id", {
-        "field": "title",
-        "direction": "ASC",
-      }) as any).create(this, "books");
-  }
-
-  get user(): ManyToOneReference<Comment, User, undefined> {
-    return this.__data.relations.user ??= (hasOne(this, userMeta, "user", "createdComments") as any).create(
-      this,
-      "user",
-    );
-  }
-
-  get likedByUsers(): Collection<Comment, User> {
-    return this.__data.relations.likedByUsers ??=
-      (hasManyToMany(
-        this,
-        "users_to_comments",
-        "likedByUsers",
-        "comment_id",
-        userMeta,
-        "likedComments",
-        "liked_by_user_id",
-      ) as any).create(this, "likedByUsers");
-  }
-
-  get parent(): PolymorphicReference<Comment, CommentParent, never> {
-    return this.__data.relations.parent ??= (hasOnePolymorphic(this, "parent") as any).create(this, "parent");
   }
 }

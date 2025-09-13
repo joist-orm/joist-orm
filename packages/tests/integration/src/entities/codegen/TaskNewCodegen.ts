@@ -42,7 +42,6 @@ import type { Context } from "src/context";
 import {
   Author,
   type AuthorId,
-  authorMeta,
   type AuthorOrder,
   type Entity,
   newTaskNew,
@@ -54,7 +53,6 @@ import {
   type TaskIdsOpts,
   TaskItem,
   type TaskItemId,
-  taskItemMeta,
   TaskNew,
   taskNewMeta,
   type TaskOpts,
@@ -149,6 +147,27 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   static readonly metadata: EntityMetadata<TaskNew>;
 
   declare readonly __type: { 0: "Task"; 1: "TaskNew" };
+
+  readonly newTaskTaskItems: Collection<TaskNew, TaskItem> = hasMany("newTask", "new_task_id", undefined);
+  readonly selfReferentialTasks: Collection<TaskNew, TaskNew> = hasMany(
+    "selfReferential",
+    "self_referential_id",
+    undefined,
+  );
+  readonly copiedTo: Collection<TaskNew, TaskNew> = hasMany("copiedFrom", "copied_from_id", undefined);
+  readonly selfReferential: ManyToOneReference<TaskNew, TaskNew, undefined> = hasOne("selfReferentialTasks");
+  readonly specialNewAuthor: ManyToOneReference<TaskNew, Author, undefined> = hasOne("tasks");
+  readonly copiedFrom: ManyToOneReference<TaskNew, TaskNew, undefined> = hasOne("copiedTo");
+  readonly copiedFromsRecursive: ReadOnlyCollection<TaskNew, TaskNew> = hasRecursiveParents(
+    "copiedFrom",
+    "copiedToRecursive",
+  );
+  readonly copiedToRecursive: ReadOnlyCollection<TaskNew, TaskNew> = hasRecursiveChildren(
+    "copiedTo",
+    "copiedFromsRecursive",
+  );
+  declare readonly taskTaskItems: Collection<TaskNew, TaskItem>;
+  declare readonly tags: Collection<TaskNew, Tag>;
 
   get id(): TaskNewId {
     return this.idMaybe || failNoIdYet("TaskNew");
@@ -308,68 +327,5 @@ export abstract class TaskNewCodegen extends Task implements Entity {
   toJSON<const H extends ToJsonHint<TaskNew>>(hint: H): Promise<JsonPayload<TaskNew, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get newTaskTaskItems(): Collection<TaskNew, TaskItem> {
-    return this.__data.relations.newTaskTaskItems ??=
-      (hasMany(this, taskItemMeta, "newTaskTaskItems", "newTask", "new_task_id", undefined) as any).create(
-        this,
-        "newTaskTaskItems",
-      );
-  }
-
-  get selfReferentialTasks(): Collection<TaskNew, TaskNew> {
-    return this.__data.relations.selfReferentialTasks ??=
-      (hasMany(this, taskNewMeta, "selfReferentialTasks", "selfReferential", "self_referential_id", undefined) as any)
-        .create(this, "selfReferentialTasks");
-  }
-
-  get copiedTo(): Collection<TaskNew, TaskNew> {
-    return this.__data.relations.copiedTo ??=
-      (hasMany(this, taskNewMeta, "copiedTo", "copiedFrom", "copied_from_id", undefined) as any).create(
-        this,
-        "copiedTo",
-      );
-  }
-
-  get selfReferential(): ManyToOneReference<TaskNew, TaskNew, undefined> {
-    return this.__data.relations.selfReferential ??=
-      (hasOne(this, taskNewMeta, "selfReferential", "selfReferentialTasks") as any).create(this, "selfReferential");
-  }
-
-  get specialNewAuthor(): ManyToOneReference<TaskNew, Author, undefined> {
-    return this.__data.relations.specialNewAuthor ??= (hasOne(this, authorMeta, "specialNewAuthor", "tasks") as any)
-      .create(this, "specialNewAuthor");
-  }
-
-  get copiedFrom(): ManyToOneReference<TaskNew, TaskNew, undefined> {
-    return this.__data.relations.copiedFrom ??= (hasOne(this, taskNewMeta, "copiedFrom", "copiedTo") as any).create(
-      this,
-      "copiedFrom",
-    );
-  }
-
-  get copiedFromsRecursive(): ReadOnlyCollection<TaskNew, TaskNew> {
-    return this.__data.relations.copiedFromsRecursive ??=
-      (hasRecursiveParents(this, "copiedFromsRecursive", "copiedFrom", "copiedToRecursive") as any).create(
-        this,
-        "copiedFromsRecursive",
-      );
-  }
-
-  get copiedToRecursive(): ReadOnlyCollection<TaskNew, TaskNew> {
-    return this.__data.relations.copiedToRecursive ??=
-      (hasRecursiveChildren(this, "copiedToRecursive", "copiedTo", "copiedFromsRecursive") as any).create(
-        this,
-        "copiedToRecursive",
-      );
-  }
-
-  get taskTaskItems(): Collection<TaskNew, TaskItem> {
-    return super.taskTaskItems as Collection<TaskNew, TaskItem>;
-  }
-
-  get tags(): Collection<TaskNew, Tag> {
-    return super.tags as Collection<TaskNew, Tag>;
   }
 }

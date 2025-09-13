@@ -23,19 +23,17 @@ const OneToOne = Symbol();
 
 /** An alias for creating `OneToOneReference`s. */
 export function hasOneToOne<T extends Entity, U extends Entity>(
-  entity: T,
-  otherMeta: EntityMetadata<U>,
-  fieldName: keyof T & string,
-  otherFieldName: keyof U & string,
+  otherFieldName: string,
   otherColumnName: string,
 ): OneToOneReference<T, U> {
+  let otherMeta: EntityMetadata<U>;
   return lazyRelation((entity: T, fieldName) => {
     otherMeta ??= resolveOtherMeta(entity, fieldName);
     return new OneToOneReferenceImpl<T, U>(
       entity,
       otherMeta,
       fieldName as keyof T & string,
-      otherFieldName,
+      otherFieldName as keyof U & string,
       otherColumnName,
     );
   });

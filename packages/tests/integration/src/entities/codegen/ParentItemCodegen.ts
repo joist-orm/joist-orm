@@ -41,13 +41,11 @@ import type { Context } from "src/context";
 import {
   ChildItem,
   type ChildItemId,
-  childItemMeta,
   type Entity,
   EntityManager,
   newParentItem,
   ParentGroup,
   type ParentGroupId,
-  parentGroupMeta,
   type ParentGroupOrder,
   ParentItem,
   parentItemMeta,
@@ -131,6 +129,9 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
   static readonly metadata: EntityMetadata<ParentItem>;
 
   declare readonly __type: { 0: "ParentItem" };
+
+  readonly childItems: Collection<ParentItem, ChildItem> = hasMany("parentItem", "parent_item_id", undefined);
+  readonly parentGroup: ManyToOneReference<ParentItem, ParentGroup, never> = hasOne("parentItems");
 
   get id(): ParentItemId {
     return this.idMaybe || failNoIdYet("ParentItem");
@@ -300,18 +301,5 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
   toJSON<const H extends ToJsonHint<ParentItem>>(hint: H): Promise<JsonPayload<ParentItem, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get childItems(): Collection<ParentItem, ChildItem> {
-    return this.__data.relations.childItems ??=
-      (hasMany(this, childItemMeta, "childItems", "parentItem", "parent_item_id", undefined) as any).create(
-        this,
-        "childItems",
-      );
-  }
-
-  get parentGroup(): ManyToOneReference<ParentItem, ParentGroup, never> {
-    return this.__data.relations.parentGroup ??= (hasOne(this, parentGroupMeta, "parentGroup", "parentItems") as any)
-      .create(this, "parentGroup");
   }
 }

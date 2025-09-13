@@ -248,6 +248,16 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       };
 
       ${relations.filter((r) => r.kind === "abstract").map((r) => r.line)}
+      ${relations
+        .filter((r) => r.kind === "concrete")
+        .map((r) => {
+          return code`readonly ${r.fieldName}: ${r.decl} = ${r.init};`;
+        })}
+      ${relations
+        .filter((r) => r.kind === "super")
+        .map((r) => {
+          return code`declare readonly ${r.fieldName}: ${r.decl};`;
+        })}
 
       get id(): ${entityName}Id {
         return this.idMaybe || ${failNoIdYet}("${entityName}");
@@ -314,25 +324,6 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       toJSON(hint?: any): object {
         return !hint || typeof hint === "string" ? super.toJSON() : ${toJSON}(this, hint);
       }
-
-      ${relations
-        .filter((r) => r.kind === "concrete")
-        .map((r) => {
-          return code`
-            get ${r.fieldName}(): ${r.decl} {
-              return this.__data.relations.${r.fieldName} ??= (${r.init} as any).create(this, "${r.fieldName}");
-            }
-          `;
-        })}
-      ${relations
-        .filter((r) => r.kind === "super")
-        .map((r) => {
-          return code`
-            get ${r.fieldName}(): ${r.decl} {
-              return super.${r.fieldName} as ${r.decl};
-            }
-          `;
-        })}
     }
   `;
 }
@@ -924,19 +915,17 @@ function createPgEnums(meta: EntityDbMetadata) {
   });
 }
 
-function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity) {
+function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity): Relation[] {
   // Add ManyToOne entities
   const m2o: Relation[] = meta.manyToOnes.map((m2o) => {
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
     const maybeOptional = notNull ? "never" : "undefined";
     if (m2o.derived === "async") {
-      const line = code`
-        abstract readonly ${fieldName}: ${ReactiveReference}<${entity.name}, ${otherEntity.type}, ${maybeOptional}>;
-      `;
+      const line = code`abstract readonly ${fieldName}: ${ReactiveReference}<${entity.name}, ${otherEntity.type}, ${maybeOptional}>;`;
       return { kind: "abstract", line } as const;
     }
     const decl = code`${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>`;
-    const init = code`${hasOne}(this, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}")`;
+    const init = code`${hasOne}("${otherFieldName}")`;
     return { kind: "concrete", fieldName, decl, init };
   });
   // Specialize
@@ -977,13 +966,13 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
           kind: "concrete",
           fieldName: parentsField,
           decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
-          init: code`${hasRecursiveParents}(this, "${parentsField}", "${m2oName}", "${childrenField}")`,
+          init: code`${hasRecursiveParents}("${m2oName}", "${childrenField}")`,
         },
         {
           kind: "concrete",
           fieldName: childrenField,
           decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
-          init: code`${hasRecursiveChildren}(this, "${childrenField}", "${otherFieldName}", "${parentsField}")`,
+          init: code`${hasRecursiveChildren}("${otherFieldName}", "${parentsField}")`,
         },
       ];
     });
@@ -992,7 +981,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
   const o2m: Relation[] = meta.oneToManys.map((o2m) => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity, orderBy } = o2m;
     const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`${hasMany}(this, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}", ${orderBy})`;
+    const init = code`${hasMany}("${otherFieldName}", "${otherColumnName}", ${orderBy})`;
     return { kind: "concrete", fieldName, decl, init };
   });
   // Specialize
@@ -1010,7 +999,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
   const lo2m: Relation[] = meta.largeOneToManys.map((o2m) => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
     const decl = code`${LargeCollection}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`${hasLargeMany}(this, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
+    const init = code`${hasLargeMany}("${otherFieldName}", "${otherColumnName}")`;
     return { kind: "concrete", fieldName, decl, init };
   });
 
@@ -1018,7 +1007,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
   const o2o: Relation[] = meta.oneToOnes.map((o2o) => {
     const { fieldName, otherEntity, otherFieldName, otherColumnName } = o2o;
     const decl = code`${OneToOneReference}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`${hasOneToOne}(this, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
+    const init = code`${hasOneToOne}("${otherFieldName}", "${otherColumnName}")`;
     return { kind: "concrete", fieldName, decl, init };
   });
   // Specialize
@@ -1035,11 +1024,8 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
     const init = code`
       ${hasManyToMany}(
-        this,
         "${joinTableName}",
-        "${fieldName}",
         "${columnName}",
-        ${otherEntity.metaType},
         "${otherFieldName}",
         "${otherColumnName}",
       )`;
@@ -1059,11 +1045,8 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     const decl = code`${LargeCollection}<${entity.type}, ${otherEntity.type}>`;
     const init = code`
       ${hasLargeManyToMany}(
-        this,
         "${joinTableName}",
-        "${fieldName}",
         "${columnName}",
-        ${otherEntity.metaType},
         "${otherFieldName}",
         "${otherColumnName}",
       );
@@ -1076,7 +1059,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     const { fieldName, notNull, fieldType } = p;
     const maybeOptional = notNull ? "never" : "undefined";
     const decl = code`${PolymorphicReference}<${entity.type}, ${fieldType}, ${maybeOptional}>`;
-    const init = code`${hasOnePolymorphic}(this, "${fieldName}")`;
+    const init = code`${hasOnePolymorphic}()`;
     return { kind: "concrete", fieldName, decl, init };
   });
 

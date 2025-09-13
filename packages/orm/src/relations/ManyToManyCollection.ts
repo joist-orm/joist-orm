@@ -20,14 +20,12 @@ import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `ManyToManyCollections`s. */
 export function hasManyToMany<T extends Entity, U extends Entity>(
-  entity: T,
   joinTableName: string,
-  fieldName: keyof T & string,
   columnName: string,
-  otherMeta: EntityMetadata<U>,
   otherFieldName: keyof U & string,
   otherColumnName: string,
 ): Collection<T, U> {
+  let otherMeta: EntityMetadata<U>;
   return lazyRelation((entity: T, fieldName) => {
     otherMeta ??= resolveOtherMeta(entity, fieldName);
     return new ManyToManyCollection<T, U>(

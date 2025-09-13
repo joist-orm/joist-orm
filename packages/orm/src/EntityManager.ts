@@ -1660,7 +1660,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         copy
           .filter((e) => e.idTaggedMaybe && !e.isDeletedEntity)
           .map((entity) => {
-            const relations = getRelationEntries(entity);
             // Pass these as a hint to potentially preload them
             const hint = getRelationEntries(entity)
               .filter(([_, r]) => deepLoad || r.isLoaded)

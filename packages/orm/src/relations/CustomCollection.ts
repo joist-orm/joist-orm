@@ -1,6 +1,7 @@
 import { Entity } from "../Entity";
 import { getEmInternalApi, IdOf } from "../EntityManager";
 import { Collection, ensureNotDeleted, fail, LoadHint } from "../index";
+import { lazyRelation } from "../newEntity";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 
@@ -21,6 +22,14 @@ export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
    */
   loadHint?: ((entity: T) => LoadHint<T>) | LoadHint<T>;
 };
+
+export function hasCustomCollection<T extends Entity, U extends Entity>(
+  opts: CustomCollectionOpts<T, U>,
+): CustomCollection<T, U> {
+  return lazyRelation((entity: T) => {
+    return new CustomCollection<T, U>(entity, opts);
+  });
+}
 
 /**
  * Allows user-defined collections that will work in `populate` / preload hints.

@@ -2,7 +2,7 @@ import {
   AsyncProperty,
   cannotBeUpdated,
   Collection,
-  CustomCollection,
+  hasCustomCollection,
   hasReactiveAsyncProperty,
   hasReactiveField,
   hasReactiveQueryField,
@@ -109,7 +109,7 @@ export abstract class Publisher extends PublisherCodegen {
   );
 
   // Example of a custom collection that can add/remove
-  readonly allImages: Collection<Publisher, Image> = new CustomCollection(this, {
+  readonly allImages: Collection<Publisher, Image> = hasCustomCollection<Publisher, Image>({
     load: (entity, opts) => entity.populate({ hint: allImagesHint, ...opts }),
     get: (entity) => {
       const loaded = entity as Loaded<Publisher, typeof allImagesHint>;

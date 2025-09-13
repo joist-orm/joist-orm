@@ -14,6 +14,7 @@ import {
   smallPublisherConfig as config,
   Entity,
   PublisherGroup,
+  publisherTransientFields,
   SmallPublisherCodegen,
 } from "./entities";
 
@@ -26,12 +27,15 @@ export const smallPublisherBeforeFlushRan = { value: false };
 
 export class SmallPublisher extends SmallPublisherCodegen implements HasGroup<SmallPublisher> {
   static afterMetadataHasBaseTypes = false;
-  public beforeFlushRan = false;
-  public beforeCreateRan = false;
-  public beforeUpdateRan = false;
-  public beforeDeleteRan = false;
-  public afterValidationRan = false;
-  public afterCommitRan = false;
+  transientFields = {
+    ...publisherTransientFields,
+    beforeFlushRan: false,
+    beforeCreateRan: false,
+    beforeUpdateRan: false,
+    beforeDeleteRan: false,
+    afterValidationRan: false,
+    afterCommitRan: false,
+  };
 
   // Used for testing a derived property that only exists on a subtype
   readonly allAuthorNames: ReactiveField<SmallPublisher, string> = hasReactiveField(
@@ -92,27 +96,27 @@ config.beforeFlush(() => {
 });
 
 config.beforeFlush(async (sp) => {
-  sp.beforeFlushRan = true;
+  sp.transientFields.beforeFlushRan = true;
 });
 
 config.beforeCreate((sp) => {
-  sp.beforeCreateRan = true;
+  sp.transientFields.beforeCreateRan = true;
 });
 
 config.beforeUpdate((sp) => {
-  sp.beforeUpdateRan = true;
+  sp.transientFields.beforeUpdateRan = true;
 });
 
 config.afterValidation((sp) => {
-  sp.afterValidationRan = true;
+  sp.transientFields.afterValidationRan = true;
 });
 
 config.beforeDelete((sp) => {
-  sp.beforeDeleteRan = true;
+  sp.transientFields.beforeDeleteRan = true;
 });
 
 config.afterCommit((sp) => {
-  sp.afterCommitRan = true;
+  sp.transientFields.afterCommitRan = true;
 });
 
 // add a default for city in such a way that scanEntities won't pick it up so that we can test overriding defaults

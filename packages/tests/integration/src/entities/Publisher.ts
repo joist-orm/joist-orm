@@ -26,17 +26,20 @@ import {
 
 const allImagesHint = { images: [], authors: { image: [], books: "image" } } as const;
 
-export abstract class Publisher extends PublisherCodegen {
-  transientFields = {
-    numberOfBookReviewEvals: 0,
-    numberOfBookReviewCalcs: 0,
-    wasNewInBeforeCommit: undefined as boolean | undefined,
-    changedInBeforeCommit: [] as string[],
-    bookAdvanceTitlesSnapshotCalcs: 0,
-    numberOfBookAdvancesSnapshotCalcs: 0,
-  };
+export const publisherTransientFields = {
+  numberOfBookReviewEvals: 0,
+  numberOfBookReviewCalcs: 0,
+  wasNewInBeforeCommit: undefined as boolean | undefined,
+  changedInBeforeCommit: [] as string[],
+  bookAdvanceTitlesSnapshotCalcs: 0,
+  numberOfBookAdvancesSnapshotCalcs: 0,
+};
 
+export abstract class Publisher extends PublisherCodegen {
   static afterMetadataHasSubTypes = false;
+  transientFields = {
+    ...publisherTransientFields,
+  };
 
   /** Example of a reactive query. */
   readonly numberOfBookReviews: ReactiveField<Publisher, number> = hasReactiveQueryField(

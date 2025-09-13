@@ -44,12 +44,6 @@ describe("ClassTableInheritance", () => {
       expect.arrayContaining([
         "allImages",
         "commentParentInfo",
-        "beforeFlushRan",
-        "beforeCreateRan",
-        "beforeUpdateRan",
-        "beforeDeleteRan",
-        "afterValidationRan",
-        "afterCommitRan",
         "smallPublishers",
         "users",
         "selfReferential",
@@ -169,27 +163,27 @@ describe("ClassTableInheritance", () => {
   it("runs hooks on subtypes", async () => {
     const em = newEntityManager();
     const sp = em.create(SmallPublisher, { name: "sp", city: "city" });
-    expect(sp.beforeFlushRan).toBe(false);
-    expect(sp.beforeCreateRan).toBe(false);
-    expect(sp.beforeUpdateRan).toBe(false);
-    expect(sp.afterCommitRan).toBe(false);
-    expect(sp.afterValidationRan).toBe(false);
-    expect(sp.beforeDeleteRan).toBe(false);
+    expect(sp.transientFields.beforeFlushRan).toBe(false);
+    expect(sp.transientFields.beforeCreateRan).toBe(false);
+    expect(sp.transientFields.beforeUpdateRan).toBe(false);
+    expect(sp.transientFields.afterCommitRan).toBe(false);
+    expect(sp.transientFields.afterValidationRan).toBe(false);
+    expect(sp.transientFields.beforeDeleteRan).toBe(false);
     await em.flush();
-    expect(sp.beforeFlushRan).toBe(true);
-    expect(sp.beforeCreateRan).toBe(true);
-    expect(sp.beforeUpdateRan).toBe(false);
-    expect(sp.beforeDeleteRan).toBe(false);
-    expect(sp.afterValidationRan).toBe(true);
-    expect(sp.afterCommitRan).toBe(true);
+    expect(sp.transientFields.beforeFlushRan).toBe(true);
+    expect(sp.transientFields.beforeCreateRan).toBe(true);
+    expect(sp.transientFields.beforeUpdateRan).toBe(false);
+    expect(sp.transientFields.beforeDeleteRan).toBe(false);
+    expect(sp.transientFields.afterValidationRan).toBe(true);
+    expect(sp.transientFields.afterCommitRan).toBe(true);
     sp.name = "new name";
-    sp.beforeCreateRan = false;
+    sp.transientFields.beforeCreateRan = false;
     await em.flush();
-    expect(sp.beforeCreateRan).toBe(false);
-    expect(sp.beforeUpdateRan).toBe(true);
+    expect(sp.transientFields.beforeCreateRan).toBe(false);
+    expect(sp.transientFields.beforeUpdateRan).toBe(true);
     em.delete(sp);
     await em.flush();
-    expect(sp.beforeDeleteRan).toBe(true);
+    expect(sp.transientFields.beforeDeleteRan).toBe(true);
   });
 
   it("can load a subtype from separate tables via the base type", async () => {

@@ -770,11 +770,11 @@ describe("ManyToManyCollection", () => {
       const sp = newSmallPublisher(em);
       const t1 = newTag(em, { name: "t1" });
       await em.flush();
-      sp.beforeFlushRan = false;
+      sp.transientFields.beforeFlushRan = false;
       // When we set the m2m relation
       sp.tags.add(t1);
       await em.flush();
-      expect(sp.beforeFlushRan).toBe(true);
+      expect(sp.transientFields.beforeFlushRan).toBe(true);
     });
   });
 });

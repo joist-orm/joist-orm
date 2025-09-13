@@ -757,12 +757,12 @@ describe("ManyToManyCollection", () => {
       const book = newBook(em, { title: "To be changed by hook" });
       const t1 = newTag(em, { name: "t1" });
       await em.flush();
-      expect(book.afterCommitCheckTagsChanged).toBe(undefined);
+      expect(book.transientFields.afterCommitCheckTagsChanged).toBe(undefined);
       // When we set the m2m relation
       book.tags.add(t1);
       await em.flush();
       // Then we observed `book.changes.fields` had tags in it
-      expect(book.afterCommitCheckTagsChanged).toBe(true);
+      expect(book.transientFields.afterCommitCheckTagsChanged).toBe(true);
     });
 
     it("detects adds m2m on subtypes", async () => {

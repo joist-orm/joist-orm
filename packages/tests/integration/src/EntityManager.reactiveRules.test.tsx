@@ -26,26 +26,26 @@ describe("EntityManager.reactiveRules", () => {
     const b = newBook(em, { author: a });
     await em.flush();
     // Then we invoke both rules on initial save
-    expect(b.firstNameRuleInvoked).toBe(1);
-    expect(b.favoriteColorsRuleInvoked).toBe(1);
+    expect(b.transientFields.firstNameRuleInvoked).toBe(1);
+    expect(b.transientFields.favoriteColorsRuleInvoked).toBe(1);
     // And when the Author.firstName changes
     a.firstName = "a2";
     await em.flush();
     // Then only the firstName validation rule runs again
-    expect(b.firstNameRuleInvoked).toBe(2);
-    expect(b.favoriteColorsRuleInvoked).toBe(1);
+    expect(b.transientFields.firstNameRuleInvoked).toBe(2);
+    expect(b.transientFields.favoriteColorsRuleInvoked).toBe(1);
     // And when we change the favorite color
     a.favoriteColors = [Color.Red];
     await em.flush();
     // Then only the favoriteColors rule runs
-    expect(b.firstNameRuleInvoked).toBe(2);
-    expect(b.firstNameRuleInvoked).toBe(2);
+    expect(b.transientFields.firstNameRuleInvoked).toBe(2);
+    expect(b.transientFields.firstNameRuleInvoked).toBe(2);
     // And when we change something else
     a.mentor.set(newAuthor(em));
     await em.flush();
     // Then neither rule ran
-    expect(b.firstNameRuleInvoked).toBe(2);
-    expect(b.firstNameRuleInvoked).toBe(2);
+    expect(b.transientFields.firstNameRuleInvoked).toBe(2);
+    expect(b.transientFields.firstNameRuleInvoked).toBe(2);
   });
 
   describe("m2m", () => {
@@ -152,15 +152,15 @@ describe("EntityManager.reactiveRules", () => {
     const b = newBook(em, { title: "b1" });
     await em.flush();
     // Then we invoke both rules on initial save
-    expect(b.rulesInvoked).toBe(1);
-    expect(b.firstNameRuleInvoked).toBe(1);
-    expect(b.favoriteColorsRuleInvoked).toBe(1);
+    expect(b.transientFields.rulesInvoked).toBe(1);
+    expect(b.transientFields.firstNameRuleInvoked).toBe(1);
+    expect(b.transientFields.favoriteColorsRuleInvoked).toBe(1);
     // And when the title changes
     b.title = "b2";
     await em.flush();
     // Then the field-level rules did not run
-    expect(b.firstNameRuleInvoked).toBe(1);
-    expect(b.favoriteColorsRuleInvoked).toBe(1);
+    expect(b.transientFields.firstNameRuleInvoked).toBe(1);
+    expect(b.transientFields.favoriteColorsRuleInvoked).toBe(1);
   });
 
   it.withCtx("runs all rules on create", async ({ em }) => {
@@ -207,17 +207,17 @@ describe("EntityManager.reactiveRules", () => {
     const b = newBook(em);
     await em.flush();
     // And the rule runs on initial create
-    expect(b.reviewsRuleInvoked).toBe(1);
+    expect(b.transientFields.reviewsRuleInvoked).toBe(1);
     // When we add a new review
     const br = newBookReview(em, { book: b });
     await em.flush();
     // Then the rule runs again
-    expect(b.reviewsRuleInvoked).toBe(2);
+    expect(b.transientFields.reviewsRuleInvoked).toBe(2);
     // And when we delete the review
     em.delete(br);
     await em.flush();
     // Then the rule runs again
-    expect(b.reviewsRuleInvoked).toBe(3);
+    expect(b.transientFields.reviewsRuleInvoked).toBe(3);
   });
 
   it.withCtx("skips traversing through subtype-only relations", async ({ em }) => {
@@ -558,7 +558,13 @@ describe("EntityManager.reactiveRules", () => {
     });
     expect(brRfs[i++]).toEqual({ kind: "populate", cstr: "BookReview", name: "isPublic", fields: [], path: [] });
     expect(brRfs[i++]).toEqual({ kind: "populate", cstr: "BookReview", name: "isTest", fields: [], path: [] });
-    expect(brRfs[i++]).toEqual({ kind: "populate", cstr: "BookReview", name: "isTestChain", fields: ["isTest"], path: [] });
+    expect(brRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "BookReview",
+      name: "isTestChain",
+      fields: ["isTest"],
+      path: [],
+    });
     expect(brRfs[i++]).toEqual({
       kind: "populate",
       cstr: "Comment",

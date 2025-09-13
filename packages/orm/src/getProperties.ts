@@ -33,7 +33,9 @@ export function getProperties(meta: EntityMetadata, keepRelationConstructors = f
   // on fake instances" getters to throw nonsense errors anyway (which we suppress), so it should be fine.
   const cached = (propertiesCache[key] = {});
 
-  const instance = getFakeInstance(meta);
+  const fakeEm = undefined as any;
+  const instance = new (meta.cstr as any)(fakeEm, true);
+  fakeInstances[meta.cstr.name] = instance;
 
   // Mostly for historical reasons, we don't treat known primitives/enums as properties,
   // i.e. properties were originally meant to be the wrapper objects like `hasOne`,
@@ -70,15 +72,14 @@ export function getProperties(meta: EntityMetadata, keepRelationConstructors = f
   propertiesCache2[key] = Object.fromEntries(properties);
 
   // But expose to everyone else the concrete/constructed relations
-  return Object.assign(
-    cached,
-    Object.fromEntries(
-      properties.map(([fieldName, value]) => [
-        fieldName,
-        value instanceof RelationConstructor ? value.create(instance, fieldName) : value,
-      ]),
-    ),
-  );
+  Object.assign(cached, Object.fromEntries(properties));
+  for (const [fieldName, value] of properties) {
+    if (value instanceof RelationConstructor) {
+      (instance as any)[fieldName] = (cached as any)[fieldName] = value.create(instance, fieldName);
+    }
+  }
+
+  return cached;
 }
 
 export class UnknownProperty {}
@@ -93,8 +94,9 @@ const fakeInstances: Record<string, Entity> = {};
  * be inspected on boot.
  */
 export function getFakeInstance(meta: EntityMetadata): Entity {
-  const fakeEm = undefined as any;
-  return (fakeInstances[meta.cstr.name] ??= new (meta.cstr as any)(fakeEm, true));
+  // Use getProperties to create the fake instance
+  getProperties(meta);
+  return fakeInstances[meta.cstr.name] ?? fail(`${meta.cstr.name} fake instance not found`);
 }
 
 // These are keys we codegen into `AuthorCodegen` files to get the best typing

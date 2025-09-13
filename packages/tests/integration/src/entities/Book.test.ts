@@ -41,6 +41,6 @@ describe("Book", () => {
     await em.flush();
     em.delete(a);
     await em.flush();
-    expect(b.authorSetWhenDeleteRuns).toBe(true);
+    expect(b.transientFields.authorSetWhenDeleteRuns).toBe(true);
   });
 });

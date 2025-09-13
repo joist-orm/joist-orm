@@ -141,8 +141,8 @@ describe("Author", () => {
     const b = em.create(Book, { title: "b", author: a });
     await em.flush();
     // Then book is only validated once
-    expect(b.rulesInvoked).toEqual(1);
-    expect(b.firstNameRuleInvoked).toEqual(1);
+    expect(b.transientFields.rulesInvoked).toEqual(1);
+    expect(b.transientFields.firstNameRuleInvoked).toEqual(1);
   });
 
   it("delete does not blow up due to reactive validation rules", async () => {

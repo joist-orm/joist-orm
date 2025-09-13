@@ -113,7 +113,6 @@ export abstract class Publisher extends PublisherCodegen {
     load: (entity, opts) => entity.populate({ hint: allImagesHint, ...opts }),
     get: (entity) => {
       const loaded = entity as Loaded<Publisher, typeof allImagesHint>;
-
       return loaded.authors.get
         .reduce(
           (images, author) => {
@@ -141,7 +140,7 @@ export abstract class Publisher extends PublisherCodegen {
         entity.em.delete(value);
       }
     },
-    isLoaded: () => isLoaded(this, allImagesHint as any),
+    isLoaded: (entity) => isLoaded(entity, allImagesHint as any),
   });
 
   /** For testing reacting to poly CommentParent properties. */

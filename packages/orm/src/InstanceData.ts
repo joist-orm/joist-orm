@@ -32,6 +32,7 @@ export class InstanceData {
   isTouched: boolean = false;
 
   /** Creates the `#orm` field. */
+
   constructor(em: EntityManager, metadata: EntityMetadata, isNew: boolean) {
     this.em = em;
     this.metadata = metadata;

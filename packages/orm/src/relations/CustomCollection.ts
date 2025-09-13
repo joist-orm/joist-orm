@@ -15,7 +15,7 @@ export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
   add?: (entity: T, other: U) => void;
   remove?: (entity: T, other: U) => void;
   /** Whether the reference is loaded, even w/o an explicit `.load` call, i.e. for DeepNew test instances. */
-  isLoaded: () => boolean;
+  isLoaded: (entity: T) => boolean;
   /**
    * A load hint that can be used to speculatively traverse the dependencies of this collection.  Currently
    * only used by em.importEntity and can be omitted if the collection isn't used with it.
@@ -71,7 +71,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
   get isLoaded(): boolean {
     if (this.#isLoaded !== undefined) return this.#isLoaded;
     getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
-    this.#isLoaded = this.opts.isLoaded();
+    this.#isLoaded = this.opts.isLoaded(this.entity);
     return this.#isLoaded;
   }
 

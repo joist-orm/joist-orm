@@ -20,6 +20,9 @@ export function newEntity<T extends Entity>(em: EntityManager, cstr: EntityConst
     moveRelationsToGetters(cstr);
     (cstr as any)[lazySymbol] = true;
   }
+  // This side-steps the `Author` constructor that initializes fields instance-level fields, which instead
+  // we've shoved up to be getters on the prototype, and the only instance field we expect to have is `__data`,
+  // which is set by the `baseEntityCstr` call.
   const entity = Object.create(cstr.prototype) as T;
   baseEntityCstr(em, entity as any, isNew);
   return entity;

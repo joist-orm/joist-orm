@@ -4,16 +4,17 @@ import { EntityConstructor, EntityManager } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { getProperties } from "./getProperties";
 
+// Marks a constructor like Author has having had our relation getters installed
 const lazySymbol = Symbol("lazy");
 
 /**
  * Constructs an instance of `cstr` but with relations all made lazy.
  *
- * Specifically we avoid going through `new` b/c that instantiates the instance-level
- * relations like `hooks = hasMany`.
+ * Specifically we avoid going through `new` b/c that invokes the `constructor` which instantiates
+ * the instance-level class fields/relations like `hooks = hasMany`.
  *
- * Instead, we just call `Object.create`, which skips the constructor/super calls, and
- * any `this.books` will be handled by lazy getters that we set on the prototype.
+ * Instead, we just call `Object.create`, which does not make any constructor/super calls, and instead
+ * let any `this.books` accesses resolve to the getters we've installed on the prototype.
  */
 export function newEntity<T extends Entity>(em: EntityManager, cstr: EntityConstructor<T>, isNew: boolean): T {
   if (!(cstr as any)[lazySymbol]) {
@@ -41,6 +42,12 @@ function moveRelationsToGetters(cstr: EntityConstructor<any>): void {
     } else if (fieldName === "transientFields") {
       Object.defineProperty(cstr.prototype, fieldName, {
         get(this: any) {
+          // This prototype-level `get` will only ever be called once per instance, b/c when we're
+          // called for the first/only time, we set an instance-level `this.transientFields` that, for
+          // all future calls, will resolve to the instance's own copy of the fields.
+          //
+          // This has the pleasant upshot of making the instance-level `transientFields` lazy, and
+          // they will not be created on an instance until they're actually asked for.
           const copy = structuredClone(value);
           Object.defineProperty(this, "transientFields", { value: copy });
           return copy;
@@ -64,22 +71,30 @@ export function lazyRelation<T extends Entity, R>(fn: (entity: T, fieldName: str
 }
 
 /**
- * When `lazyRelation`s boot for the very first time, its when the `class`s are being evaled
- * before the `metadata.ts` file has run, so all of the `otherMetadata` imports are still
- * undefined.
+ * Easily resolves `otherMetadata` fields for lazy relations.
  *
- * This `resolveOtherMeta` can be run after class-boot, and during `configure`, to take an
- * entity + field and return the now-available `otherMetadata`.
+ * When `lazyRelation`s are initialized for their first/only time, i.e. the `books = hasBooks(authorMetadata)`
+ * call that `getFakeInstance` does, it's when the class bodies are still being evaled, which is before the
+ * `metadata.ts` file has run.
+ *
+ * This means that any `authorMetadata` consts would still be undefined.
+ *
+ * So instead we just do not bother passing metadata consts to `has...` methods, and instead let the methods
+ * one-time resolve `otherMetadata` on their first invocation, which will be after the `metadata.ts` file has
+ * finished importing, and the consts are all defined.
  */
 export function resolveOtherMeta(entity: Entity, fieldName: string): EntityMetadata {
   return (getMetadata(entity).allFields[fieldName] as any).otherMetadata();
 }
 
+/** Wraps `has...` relation constructors in an easily-identifiable container. */
 export class RelationConstructor<T extends Entity> {
   #fn: (entity: T, fieldName: string) => any;
   constructor(fn: (entity: T, fieldName: string) => any) {
     this.#fn = fn;
   }
+
+  /** Called by our getters to lazily create the relation on first access. */
   create(entity: T, fieldName: string) {
     return this.#fn(entity, fieldName);
   }

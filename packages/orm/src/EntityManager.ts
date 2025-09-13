@@ -2069,7 +2069,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       const { relations } = (oldEntity as any).__data as InstanceData;
       for (const [field, relation] of Object.entries(relations)) {
-        // With transform-properties on, custom relations are inserted into the `relations` map. Custom relations don't
+        // With lazyRelation, custom relations are inserted into the `relations` map. Custom relations don't
         // store any data, so we can ignore them by checking if the relation implements `import`
         // TODO: add `import` to recursiveCollection
         if (!("import" in relation)) continue;

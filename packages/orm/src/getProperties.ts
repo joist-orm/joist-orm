@@ -52,7 +52,6 @@ export function getProperties(meta: EntityMetadata, keepRelationConstructors = f
   // Recursively looking for ownKeys will find:
   // - Custom properties set on the instance, like `readonly author: Reference<Author> = hasOneThrough(...)`
   // - Getters declared within the class like `get initials()`
-  // - Getters auto-created by transform-properties when it lazies `readonly author = hasOneThrough(...)` relations
   // - Getters declared within the codegen classes like `get books(): Reference<...>`
   const properties = getRecursiveOwnNames(instance)
     .filter((key) => key !== "constructor" && !key.startsWith("__") && !knownPrimitives.includes(key))

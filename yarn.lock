@@ -8774,7 +8774,6 @@ __metadata:
     joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
     joist-test-utils: "workspace:*"
-    joist-transform-properties: "workspace:*"
     kelonio: "npm:^0.11.0"
     mitata: "npm:^0.1.14"
     postgres: "npm:^3.4.7"
@@ -8907,23 +8906,6 @@ __metadata:
     superstruct: "npm:0.15.5"
     tsconfig-paths: "npm:^4.2.0"
     tsx: "npm:^4.20.3"
-    typescript: "npm:5.8.3"
-  languageName: unknown
-  linkType: soft
-
-"joist-transform-properties@workspace:*, joist-transform-properties@workspace:packages/transform-properties":
-  version: 0.0.0-use.local
-  resolution: "joist-transform-properties@workspace:packages/transform-properties"
-  dependencies:
-    "@swc/core": "npm:^1.13.3"
-    "@swc/jest": "npm:^0.2.39"
-    "@types/jest": "npm:^30.0.0"
-    "@types/node": "npm:^24.1.0"
-    jest: "npm:30.0.5"
-    prettier: "npm:^3.6.2"
-    prettier-plugin-organize-imports: "npm:^4.2.0"
-    ts-node-dev: "npm:^2.0.0"
-    tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.8.3"
   languageName: unknown
   linkType: soft

@@ -2,7 +2,7 @@ import { baseEntityCstr } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityConstructor, EntityManager } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { getProperties } from "./getProperties";
+import { getRelationConstructors } from "./getProperties";
 
 // Marks a constructor like Author has having had our relation getters installed
 const lazySymbol = Symbol("lazy");
@@ -31,8 +31,7 @@ export function newEntity<T extends Entity>(em: EntityManager, cstr: EntityConst
 
 function moveRelationsToGetters(cstr: EntityConstructor<any>): void {
   // Reuse getProperties's detect
-  const properties = getProperties(getMetadata(cstr), true);
-  for (const [fieldName, value] of Object.entries(properties)) {
+  for (const [fieldName, value] of getRelationConstructors(getMetadata(cstr))) {
     if (value instanceof RelationConstructor) {
       Object.defineProperty(cstr.prototype, fieldName, {
         get(this: any) {

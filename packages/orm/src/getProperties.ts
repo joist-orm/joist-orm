@@ -19,11 +19,11 @@ import { partition } from "./utils";
  * Basically the values won't be `undefined`, to avoid throwing off `if getPropertyes(meta)[key]`
  * checks.
  */
-export function getProperties(meta: EntityMetadata, keepRelationConstructors = false): Record<string, any> {
+export function getProperties(meta: EntityMetadata): Record<string, any> {
   // If meta is an STI subtype, give it a different key
   const key = meta.stiDiscriminatorValue ? `${meta.tableName}:${meta.stiDiscriminatorValue}` : meta.tableName;
   if (propertiesCache[key]) {
-    return keepRelationConstructors ? relationConstructorsCache[key] : propertiesCache[key];
+    return propertiesCache[key];
   }
 
   // Immediately populate key to avoid infinite loops when we later call `instance[key]` to probe
@@ -82,11 +82,7 @@ export function getProperties(meta: EntityMetadata, keepRelationConstructors = f
   // Keep one version with the relations still lazy, solely for `newEntity`
   // (technically newEntity will only ask for this once-per-cstr, so a cache is kind of over-kill,
   // but creating it here, right before we `relationCstr.create`, is a convenient spot).
-  relationConstructorsCache[key] = Object.fromEntries([
-    ...properties,
-    // Kind of a hack, but leak `transientFields` to `newEntity` so it has the instance-level seed value
-    ...otherFields,
-  ]);
+  relationConstructors[key] = [...relationFields, ...otherFields];
 
   // But expose to everyone else the concrete/constructed relations
   Object.assign(
@@ -102,11 +98,22 @@ export function getProperties(meta: EntityMetadata, keepRelationConstructors = f
   return cached;
 }
 
+/**
+ * Returns the `RelationConstructor`s (...and transientField) for `meta`.
+ *
+ * Should only be used by `newEntity` while moving relations to the prototype.
+ */
+export function getRelationConstructors(meta: EntityMetadata): [string, RelationConstructor<any> | object][] {
+  getProperties(meta); // We populate the relationConstructors during getProperties
+  const key = meta.stiDiscriminatorValue ? `${meta.tableName}:${meta.stiDiscriminatorValue}` : meta.tableName;
+  return relationConstructors[key];
+}
+
 export class UnknownProperty {}
 const unknown = new UnknownProperty();
 
 const propertiesCache: Record<string, any> = {};
-const relationConstructorsCache: Record<string, any> = {};
+const relationConstructors: Record<string, any> = {};
 
 // These are keys we codegen into `AuthorCodegen` files to get the best typing
 // experience, but really should be treated as BaseEntity keys that we don't

@@ -10,7 +10,6 @@ describe("getProperties", () => {
       "author",
       "commentParentInfo",
       "comments",
-      "createdAt",
       "currentDraftAuthor",
       "favoriteAuthor",
       "image",
@@ -23,7 +22,6 @@ describe("getProperties", () => {
       "sequel",
       "sequelsRecursive",
       "tags",
-      "updatedAt",
     ]);
 
     expect(
@@ -38,7 +36,6 @@ describe("getProperties", () => {
        "author": "ManyToOneReferenceImpl",
        "commentParentInfo": "AsyncPropertyImpl",
        "comments": "OneToManyCollection",
-       "createdAt": "UnknownProperty",
        "currentDraftAuthor": "OneToOneReferenceImpl",
        "favoriteAuthor": "OneToOneReferenceImpl",
        "image": "OneToOneReferenceImpl",
@@ -51,7 +48,6 @@ describe("getProperties", () => {
        "sequel": "OneToOneReferenceImpl",
        "sequelsRecursive": "RecursiveChildrenCollectionImpl",
        "tags": "ManyToManyCollection",
-       "updatedAt": "UnknownProperty",
      }
     `);
   });

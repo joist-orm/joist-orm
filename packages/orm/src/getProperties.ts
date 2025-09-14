@@ -68,7 +68,7 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
     ...relationFields,
     // And then any prototype-level getters/methods like `isRed` by recursively looking for ownKeys
     // (this is the previously-mentioned nod to entityResolver to let it copy over getters/methods).
-    ...getRecursiveOwnNames(Object.getPrototypeOf(instance))
+    ...getRecursivePrototypeKeys(instance)
       .filter((key) => !knownPrimitives.includes(key))
       .map((key) => {
         try {
@@ -135,10 +135,13 @@ const ignoredKeys = new Set([
   "toJSON",
 ]);
 
-// function getRecursiveOwnNames(cstr: MaybeAbstractEntityConstructor<any>): string[] {
-function getRecursiveOwnNames(instance: any): string[] {
+function getRecursivePrototypeKeys(instance: any): string[] {
   const keys: string[] = [];
-  for (let curr = instance; curr && curr !== BaseEntity.prototype; curr = Object.getPrototypeOf(curr)) {
+  for (
+    let curr = Object.getPrototypeOf(instance);
+    curr && curr !== BaseEntity.prototype;
+    curr = Object.getPrototypeOf(curr)
+  ) {
     for (const name of Object.getOwnPropertyNames(curr)) {
       if (!ignoredKeys.has(name)) {
         keys.push(name);

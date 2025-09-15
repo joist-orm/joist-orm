@@ -2,7 +2,7 @@ import { baseEntityCstr } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityConstructor, EntityManager } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { getRelationConstructors } from "./getProperties";
+import { getLazyFields } from "./getProperties";
 
 // Marks a constructor like Author has having had our relation getters installed
 const lazySymbol = Symbol("lazy");
@@ -31,8 +31,8 @@ export function newEntity<T extends Entity>(em: EntityManager, cstr: EntityConst
 
 function moveRelationsToGetters(cstr: EntityConstructor<any>): void {
   // Reuse getProperties's detect
-  for (const [fieldName, value] of getRelationConstructors(getMetadata(cstr))) {
-    if (value instanceof RelationConstructor) {
+  for (const [fieldName, value] of getLazyFields(getMetadata(cstr))) {
+    if (value instanceof LazyField) {
       Object.defineProperty(cstr.prototype, fieldName, {
         get(this: any) {
           return (this.__data.relations[fieldName] ??= value.create(this, fieldName));
@@ -57,16 +57,16 @@ function moveRelationsToGetters(cstr: EntityConstructor<any>): void {
 }
 
 /**
- * A function for `has...` methods to integrate with the `newEntity` lazy relation system.
+ * A function for `has...` methods to integrate with the `newEntity` lazy field system.
  *
  * We need TypeScript to still see `books = hasMany(...)` as being typed as `Many<Book>`,
  * so this method's return type is `R` i.e. the `Many<Book>` relation type.
  *
- * But at runtime we actually want this to be a `RelationConstructor` that can be rewritten
+ * But at runtime we actually want this to be a `LazyField` that can be rewritten
  * into a getter, and only invoked when the relation is actually accessed.
  */
-export function lazyRelation<T extends Entity, R>(fn: (entity: T, fieldName: string) => R): R {
-  return new RelationConstructor(fn) as R;
+export function lazyField<T extends Entity, R>(fn: (entity: T, fieldName: string) => R): R {
+  return new LazyField(fn) as R;
 }
 
 /**
@@ -87,7 +87,7 @@ export function resolveOtherMeta(entity: Entity, fieldName: string): EntityMetad
 }
 
 /** Wraps `has...` relation constructors in an easily-identifiable container. */
-export class RelationConstructor<T extends Entity> {
+export class LazyField<T extends Entity> {
   #fn: (entity: T, fieldName: string) => any;
   constructor(fn: (entity: T, fieldName: string) => any) {
     this.#fn = fn;

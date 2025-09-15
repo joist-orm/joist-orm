@@ -1,7 +1,7 @@
 import { isLoaded } from "../";
 import { Entity } from "../Entity";
 import { LoadHint, Loaded } from "../loadHints";
-import { lazyRelation } from "../newEntity";
+import { lazyField } from "../newEntity";
 import { CustomReference } from "./CustomReference";
 import { Reference } from "./Reference";
 
@@ -19,7 +19,7 @@ export function hasOneDerived<
   V extends U | N,
   const H extends LoadHint<T>,
 >(loadHint: H, get: (entity: Loaded<T, H>) => V): Reference<T, U, N> {
-  return lazyRelation((entity: T) => {
+  return lazyField((entity: T) => {
     return new CustomReference<T, U, N>(entity, {
       load: (entity, opts) => entity.em.populate(entity, { hint: loadHint, ...opts }),
       get: () => get(entity as Loaded<T, H>),

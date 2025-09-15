@@ -9,7 +9,7 @@ import {
   loadLens,
   Reference,
 } from "../index";
-import { lazyRelation } from "../newEntity";
+import { lazyField } from "../newEntity";
 
 /**
  * Creates a CustomReference that will walk across references in the object graph.
@@ -21,7 +21,7 @@ import { lazyRelation } from "../newEntity";
 export function hasOneThrough<T extends Entity, U extends Entity, N extends never | undefined, V extends U | N>(
   lens: (lens: Lens<T>) => Lens<V>,
 ): Reference<T, U, N> {
-  return lazyRelation((entity: T) => {
+  return lazyField((entity: T) => {
     const meta = getMetadata(entity);
     return new CustomReference<T, U, N>(entity, {
       load: (entity, opts) => loadLens(entity, lens, opts),

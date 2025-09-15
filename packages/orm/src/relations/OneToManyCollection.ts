@@ -16,7 +16,7 @@ import {
   sameEntity,
 } from "../index";
 import { IsLoadedCachable } from "../IsLoadedCache";
-import { lazyRelation, resolveOtherMeta } from "../newEntity";
+import { lazyField, resolveOtherMeta } from "../newEntity";
 import { clear, compareValues, maybeAdd, maybeRemove, remove } from "../utils";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
@@ -29,7 +29,7 @@ export function hasMany<T extends Entity, U extends Entity>(
   orderBy: { field: string; direction: OrderBy } | undefined,
 ): Collection<T, U> {
   let otherMeta: EntityMetadata<U>;
-  return lazyRelation((entity: T, fieldName) => {
+  return lazyField((entity: T, fieldName) => {
     otherMeta ??= resolveOtherMeta(entity, fieldName);
     return new OneToManyCollection(
       entity,

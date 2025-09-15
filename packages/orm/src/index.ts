@@ -63,7 +63,7 @@ export * from "./loadLens";
 export { setFactoryWriter } from "./logging/FactoryLogger";
 export * from "./logging/FieldLogger";
 export { ReactionLogger, setReactionLogging } from "./logging/ReactionLogger";
-export { lazyRelation } from "./newEntity";
+export { lazyField } from "./newEntity";
 export {
   defaultValue,
   FactoryEntityOpt,

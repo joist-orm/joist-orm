@@ -1,6 +1,6 @@
 import { BaseEntity } from "./BaseEntity";
 import { EntityMetadata } from "./EntityMetadata";
-import { RelationConstructor } from "./newEntity";
+import { LazyField } from "./newEntity";
 import { partition } from "./utils";
 
 /**
@@ -50,10 +50,7 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
 
   // We can look directly at the `instance` to find all relations (`has...` calls), and any other
   // instance-level fields (of which only the special `transientFields` is expected/allowed).
-  const [relationFields, otherFields] = partition(
-    Object.entries(instance),
-    ([, value]) => value instanceof RelationConstructor,
-  );
+  const [relationFields, otherFields] = partition(Object.entries(instance), ([, value]) => value instanceof LazyField);
 
   // Enforce transientFields usage
   const invalidFields = otherFields.filter(([fieldName]) => fieldName !== "transientFields");
@@ -82,7 +79,7 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
   // Keep one version with the relations still lazy, solely for `newEntity`
   // (technically newEntity will only ask for this once-per-cstr, so a cache is kind of over-kill,
   // but creating it here, right before we `relationCstr.create`, is a convenient spot).
-  relationConstructors[key] = [...relationFields, ...otherFields];
+  lazyFields[key] = [...relationFields, ...otherFields];
 
   // But expose to everyone else the concrete/constructed relations
   Object.assign(
@@ -90,7 +87,7 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
     Object.fromEntries(
       properties.map(([fieldName, value]) => [
         fieldName,
-        value instanceof RelationConstructor ? value.create(instance, fieldName) : value,
+        value instanceof LazyField ? value.create(instance, fieldName) : value,
       ]),
     ),
   );
@@ -99,21 +96,21 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
 }
 
 /**
- * Returns the `RelationConstructor`s (...and transientField) for `meta`.
+ * Returns the `LazyField`s (...and transientField) for `meta`.
  *
  * Should only be used by `newEntity` while moving relations to the prototype.
  */
-export function getRelationConstructors(meta: EntityMetadata): [string, RelationConstructor<any> | object][] {
-  getProperties(meta); // We populate the relationConstructors during getProperties
+export function getLazyFields(meta: EntityMetadata): [string, LazyField<any> | object][] {
+  getProperties(meta); // We populate the lazyFields during getProperties
   const key = meta.stiDiscriminatorValue ? `${meta.tableName}:${meta.stiDiscriminatorValue}` : meta.tableName;
-  return relationConstructors[key];
+  return lazyFields[key];
 }
 
 export class UnknownProperty {}
 const unknown = new UnknownProperty();
 
 const propertiesCache: Record<string, any> = {};
-const relationConstructors: Record<string, any> = {};
+const lazyFields: Record<string, any> = {};
 
 // These are keys we codegen into `AuthorCodegen` files to get the best typing
 // experience, but really should be treated as BaseEntity keys that we don't

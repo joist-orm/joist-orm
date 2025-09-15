@@ -13,7 +13,7 @@ import {
   getInstanceData,
   maybeResolveReferenceToId,
 } from "../index";
-import { lazyRelation } from "../newEntity";
+import { lazyField } from "../newEntity";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";
 import { OneToManyCollection } from "./OneToManyCollection";
@@ -25,7 +25,7 @@ export function hasOnePolymorphic<
   U extends Entity,
   N extends never | undefined,
 >(): PolymorphicReference<T, U, N> {
-  return lazyRelation((entity: T, fieldName) => {
+  return lazyField((entity: T, fieldName) => {
     return new PolymorphicReferenceImpl<T, U, N>(entity, fieldName as keyof T & string);
   });
 }

@@ -3,7 +3,7 @@ import { Entity } from "../Entity";
 import { appendStack, IdOf, sameEntity } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { ensureNotDeleted, getMetadata, ManyToOneReferenceImpl } from "../index";
-import { lazyRelation, resolveOtherMeta } from "../newEntity";
+import { lazyField, resolveOtherMeta } from "../newEntity";
 import { remove } from "../utils";
 import { LargeCollection } from "./LargeCollection";
 import { RelationT, RelationU } from "./Relation";
@@ -14,7 +14,7 @@ export function hasLargeMany<T extends Entity, U extends Entity>(
   otherColumnName: string,
 ): LargeCollection<T, U> {
   let otherMeta: EntityMetadata<U>;
-  return lazyRelation((entity: T, fieldName) => {
+  return lazyField((entity: T, fieldName) => {
     otherMeta ??= resolveOtherMeta(entity, fieldName);
     return new OneToManyLargeCollection(
       entity,

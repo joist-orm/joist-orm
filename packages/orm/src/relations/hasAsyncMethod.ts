@@ -1,6 +1,6 @@
 import { Entity } from "../Entity";
 import { LoadHint, Loaded, isLoaded } from "../loadHints";
-import { lazyRelation } from "../newEntity";
+import { lazyField } from "../newEntity";
 
 const AsyncMethodM = Symbol();
 export const AsyncMethodPopulateSecret = Symbol();
@@ -20,7 +20,7 @@ export function hasAsyncMethod<T extends Entity, const H extends LoadHint<T>, A 
   loadHint: H,
   fn: (entity: Loaded<T, H>, ...args: A) => V,
 ): AsyncMethod<T, A, V> {
-  return lazyRelation((entity: T) => {
+  return lazyField((entity: T) => {
     return new AsyncMethodImpl(entity, loadHint, fn);
   });
 }

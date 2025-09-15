@@ -12,7 +12,7 @@ import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity } from "../Entity";
 import { EntityMetadata } from "../EntityMetadata";
 import { setField } from "../fields";
-import { lazyRelation, resolveOtherMeta } from "../newEntity";
+import { lazyField, resolveOtherMeta } from "../newEntity";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId, ManyToOneReference } from "./ManyToOneReference";
 import { isReactiveReference } from "./ReactiveReference";
@@ -27,7 +27,7 @@ export function hasOneToOne<T extends Entity, U extends Entity>(
   otherColumnName: string,
 ): OneToOneReference<T, U> {
   let otherMeta: EntityMetadata<U>;
-  return lazyRelation((entity: T, fieldName) => {
+  return lazyField((entity: T, fieldName) => {
     otherMeta ??= resolveOtherMeta(entity, fieldName);
     return new OneToOneReferenceImpl<T, U>(
       entity,

@@ -1,7 +1,7 @@
 import { Entity } from "../Entity";
 import { getEmInternalApi, IdOf, TaggedId } from "../EntityManager";
 import { ensureNotDeleted, fail, getMetadata, getProperties, LoadHint, Reference } from "../index";
-import { lazyRelation } from "../newEntity";
+import { lazyField } from "../newEntity";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
@@ -10,7 +10,7 @@ import { RelationT, RelationU } from "./Relation";
 export function hasCustomReference<T extends Entity, U extends Entity, N extends never | undefined>(
   opts: CustomReferenceOpts<T, U, N>,
 ): CustomReference<T, U, N> {
-  return lazyRelation((entity: T) => {
+  return lazyField((entity: T) => {
     return new CustomReference<T, U, N>(entity, opts);
   });
 }

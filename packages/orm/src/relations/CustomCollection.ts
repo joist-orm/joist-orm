@@ -1,7 +1,7 @@
 import { Entity } from "../Entity";
 import { getEmInternalApi, IdOf } from "../EntityManager";
 import { Collection, ensureNotDeleted, fail, LoadHint } from "../index";
-import { lazyRelation } from "../newEntity";
+import { lazyField } from "../newEntity";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 
@@ -26,7 +26,7 @@ export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
 export function hasCustomCollection<T extends Entity, U extends Entity>(
   opts: CustomCollectionOpts<T, U>,
 ): CustomCollection<T, U> {
-  return lazyRelation((entity: T) => {
+  return lazyField((entity: T) => {
     return new CustomCollection<T, U>(entity, opts);
   });
 }

@@ -1,7 +1,7 @@
 import { Entity } from "../Entity";
 import { getMetadata } from "../EntityMetadata";
 import { LoadHint, Loaded, isLoaded } from "../loadHints";
-import { lazyRelation } from "../newEntity";
+import { lazyField } from "../newEntity";
 import { MaybeReactedPropertyEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { tryResolve } from "../utils";
 
@@ -30,7 +30,7 @@ export function hasAsyncProperty<T extends Entity, const H extends LoadHint<T>, 
   loadHint: H,
   fn: (entity: Loaded<T, H>) => V,
 ): AsyncProperty<T, V> {
-  return lazyRelation((entity: T) => {
+  return lazyField((entity: T) => {
     return new AsyncPropertyImpl(entity, loadHint, fn);
   });
 }
@@ -47,7 +47,7 @@ export function hasReactiveAsyncProperty<T extends Entity, const H extends React
   reactiveHint: H,
   fn: (entity: Reacted<T, H>) => MaybeReactedPropertyEntity<V>,
 ): AsyncProperty<T, V> {
-  return lazyRelation((entity: T) => {
+  return lazyField((entity: T) => {
     return new AsyncPropertyImpl(entity, reactiveHint as any, fn as any, { isReactive: true });
   });
 }

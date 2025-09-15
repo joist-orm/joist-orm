@@ -21,6 +21,6 @@
     "@tailwindcss/vite": "^4.1.11",
     "starlight-llms-txt": "^0.6.0",
     "tailwindcss": "^4.1.11",
-    "typescript": "^5.8.3"
+    "typescript": "^5.9.2"
   }
 }

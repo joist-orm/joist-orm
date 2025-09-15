@@ -39,7 +39,6 @@ import type { Context } from "src/context";
 import {
   Artist,
   type ArtistId,
-  artistMeta,
   type ArtistOrder,
   type Entity,
   EntityManager,
@@ -122,6 +121,8 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   static readonly metadata: EntityMetadata<Painting>;
 
   declare readonly __type: { 0: "Painting" };
+
+  readonly artist: ManyToOneReference<Painting, Artist, never> = hasOne("paintings");
 
   get id(): PaintingId {
     return this.idMaybe || failNoIdYet("Painting");
@@ -289,9 +290,5 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   toJSON<const H extends ToJsonHint<Painting>>(hint: H): Promise<JsonPayload<Painting, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get artist(): ManyToOneReference<Painting, Artist, never> {
-    return this.__data.relations.artist ??= hasOne(this, artistMeta, "artist", "paintings");
   }
 }

@@ -44,13 +44,11 @@ import {
   newT5Book,
   T5Author,
   type T5AuthorId,
-  t5AuthorMeta,
   type T5AuthorOrder,
   T5Book,
   t5BookMeta,
   T5BookReview,
   type T5BookReviewId,
-  t5BookReviewMeta,
 } from "../entities";
 
 export type T5BookId = Flavor<number, "T5Book">;
@@ -122,6 +120,9 @@ export abstract class T5BookCodegen extends BaseEntity<EntityManager, number> im
   static readonly metadata: EntityMetadata<T5Book>;
 
   declare readonly __type: { 0: "T5Book" };
+
+  readonly reviews: Collection<T5Book, T5BookReview> = hasMany("book", "book_id", undefined);
+  readonly author: ManyToOneReference<T5Book, T5Author, never> = hasOne("t5Books");
 
   get id(): T5BookId {
     return this.idMaybe || failNoIdYet("T5Book");
@@ -281,13 +282,5 @@ export abstract class T5BookCodegen extends BaseEntity<EntityManager, number> im
   toJSON<const H extends ToJsonHint<T5Book>>(hint: H): Promise<JsonPayload<T5Book, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get reviews(): Collection<T5Book, T5BookReview> {
-    return this.__data.relations.reviews ??= hasMany(this, t5BookReviewMeta, "reviews", "book", "book_id", undefined);
-  }
-
-  get author(): ManyToOneReference<T5Book, T5Author, never> {
-    return this.__data.relations.author ??= hasOne(this, t5AuthorMeta, "author", "t5Books");
   }
 }

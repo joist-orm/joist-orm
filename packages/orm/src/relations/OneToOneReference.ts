@@ -12,6 +12,7 @@ import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity } from "../Entity";
 import { EntityMetadata } from "../EntityMetadata";
 import { setField } from "../fields";
+import { lazyField, resolveOtherMeta } from "../newEntity";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId, ManyToOneReference } from "./ManyToOneReference";
 import { isReactiveReference } from "./ReactiveReference";
@@ -19,6 +20,24 @@ import { Reference, ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
 
 const OneToOne = Symbol();
+
+/** An alias for creating `OneToOneReference`s. */
+export function hasOneToOne<T extends Entity, U extends Entity>(
+  otherFieldName: string,
+  otherColumnName: string,
+): OneToOneReference<T, U> {
+  let otherMeta: EntityMetadata<U>;
+  return lazyField((entity: T, fieldName) => {
+    otherMeta ??= resolveOtherMeta(entity, fieldName);
+    return new OneToOneReferenceImpl<T, U>(
+      entity,
+      otherMeta,
+      fieldName as keyof T & string,
+      otherFieldName as keyof U & string,
+      otherColumnName,
+    );
+  });
+}
 
 /** The lazy-loaded/lookup side of a one-to-one, i.e. the side w/o the unique foreign key column. */
 export interface OneToOneReference<T extends Entity, U extends Entity> extends Reference<T, U, undefined> {
@@ -58,17 +77,6 @@ export function isLoadedOneToOneReference(
   maybeReference: any,
 ): maybeReference is Reference<any, any, any> & LoadedOneToOneReference<any, any> {
   return isOneToOneReference(maybeReference) && maybeReference.isLoaded;
-}
-
-/** An alias for creating `OneToOneReference`s. */
-export function hasOneToOne<T extends Entity, U extends Entity>(
-  entity: T,
-  otherMeta: EntityMetadata<U>,
-  fieldName: keyof T & string,
-  otherFieldName: keyof U & string,
-  otherColumnName: string,
-): OneToOneReference<T, U> {
-  return new OneToOneReferenceImpl<T, U>(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
 }
 
 /**

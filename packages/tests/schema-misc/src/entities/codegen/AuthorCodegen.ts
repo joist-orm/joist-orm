@@ -44,13 +44,11 @@ import {
   authorMeta,
   Book,
   type BookId,
-  bookMeta,
   type Entity,
   EntityManager,
   newAuthor,
   Tag,
   type TagId,
-  tagMeta,
 } from "../entities";
 
 export type AuthorId = Flavor<string, "Author">;
@@ -140,6 +138,9 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   static readonly metadata: EntityMetadata<Author>;
 
   declare readonly __type: { 0: "Author" };
+
+  readonly books: Collection<Author, Book> = hasMany("author", "authorId", undefined);
+  readonly tags: Collection<Author, Tag> = hasManyToMany("author_to_tags", "authorId", "authors", "tagId");
 
   get id(): AuthorId {
     return this.idMaybe || failNoIdYet("Author");
@@ -323,21 +324,5 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   toJSON<const H extends ToJsonHint<Author>>(hint: H): Promise<JsonPayload<Author, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get books(): Collection<Author, Book> {
-    return this.__data.relations.books ??= hasMany(this, bookMeta, "books", "author", "authorId", undefined);
-  }
-
-  get tags(): Collection<Author, Tag> {
-    return this.__data.relations.tags ??= hasManyToMany(
-      this,
-      "author_to_tags",
-      "tags",
-      "authorId",
-      tagMeta,
-      "authors",
-      "tagId",
-    );
   }
 }

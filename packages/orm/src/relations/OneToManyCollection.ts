@@ -16,6 +16,7 @@ import {
   sameEntity,
 } from "../index";
 import { IsLoadedCachable } from "../IsLoadedCache";
+import { lazyField, resolveOtherMeta } from "../newEntity";
 import { clear, compareValues, maybeAdd, maybeRemove, remove } from "../utils";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
@@ -23,14 +24,22 @@ import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(
-  entity: T,
-  otherMeta: EntityMetadata<U>,
-  fieldName: keyof T & string,
-  otherFieldName: keyof U & string,
+  otherFieldName: string,
   otherColumnName: string,
-  orderBy: { field: keyof U; direction: OrderBy } | undefined,
+  orderBy: { field: string; direction: OrderBy } | undefined,
 ): Collection<T, U> {
-  return new OneToManyCollection(entity, otherMeta, fieldName, otherFieldName, otherColumnName, orderBy);
+  let otherMeta: EntityMetadata<U>;
+  return lazyField((entity: T, fieldName) => {
+    otherMeta ??= resolveOtherMeta(entity, fieldName);
+    return new OneToManyCollection(
+      entity,
+      otherMeta,
+      fieldName as keyof T & string,
+      otherFieldName as keyof U & string,
+      otherColumnName,
+      orderBy as any,
+    );
+  });
 }
 
 export class OneToManyCollection<T extends Entity, U extends Entity>

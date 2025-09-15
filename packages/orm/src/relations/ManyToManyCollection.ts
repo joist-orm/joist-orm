@@ -13,29 +13,31 @@ import {
 } from "../";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
+import { lazyField, resolveOtherMeta } from "../newEntity";
 import { maybeAdd, maybeRemove, remove } from "../utils";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `ManyToManyCollections`s. */
 export function hasManyToMany<T extends Entity, U extends Entity>(
-  entity: T,
   joinTableName: string,
-  fieldName: keyof T & string,
   columnName: string,
-  otherMeta: EntityMetadata<U>,
   otherFieldName: keyof U & string,
   otherColumnName: string,
 ): Collection<T, U> {
-  return new ManyToManyCollection<T, U>(
-    joinTableName,
-    entity,
-    fieldName,
-    columnName,
-    otherMeta,
-    otherFieldName,
-    otherColumnName,
-  );
+  let otherMeta: EntityMetadata<U>;
+  return lazyField((entity: T, fieldName) => {
+    otherMeta ??= resolveOtherMeta(entity, fieldName);
+    return new ManyToManyCollection<T, U>(
+      joinTableName,
+      entity,
+      fieldName as keyof T & string,
+      columnName,
+      otherMeta,
+      otherFieldName,
+      otherColumnName,
+    );
+  });
 }
 
 export class ManyToManyCollection<T extends Entity, U extends Entity>

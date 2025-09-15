@@ -39,24 +39,19 @@ import type { Context } from "src/context";
 import {
   Author,
   type AuthorId,
-  authorMeta,
   Book,
   type BookId,
-  bookMeta,
   BookReview,
   type BookReviewId,
-  bookReviewMeta,
   type Entity,
   EntityManager,
   newTag,
   Publisher,
   type PublisherId,
-  publisherMeta,
   Tag,
   tagMeta,
   Task,
   type TaskId,
-  taskMeta,
 } from "../entities";
 
 export type TagId = Flavor<string, "Tag">;
@@ -151,6 +146,22 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   static readonly metadata: EntityMetadata<Tag>;
 
   declare readonly __type: { 0: "Tag" };
+
+  readonly authors: Collection<Tag, Author> = hasManyToMany("authors_to_tags", "tag_id", "tags", "author_id");
+  readonly books: Collection<Tag, Book> = hasManyToMany("books_to_tags", "tag_id", "tags", "book_id");
+  readonly bookReviews: Collection<Tag, BookReview> = hasManyToMany(
+    "book_reviews_to_tags",
+    "tag_id",
+    "tags",
+    "book_review_id",
+  );
+  readonly publishers: Collection<Tag, Publisher> = hasManyToMany(
+    "publishers_to_tags",
+    "tag_id",
+    "tags",
+    "publisher_id",
+  );
+  readonly tasks: Collection<Tag, Task> = hasManyToMany("task_to_tags", "tag_id", "tags", "task_id");
 
   get id(): TagId {
     return this.idMaybe || failNoIdYet("Tag");
@@ -318,65 +329,5 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   toJSON<const H extends ToJsonHint<Tag>>(hint: H): Promise<JsonPayload<Tag, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get authors(): Collection<Tag, Author> {
-    return this.__data.relations.authors ??= hasManyToMany(
-      this,
-      "authors_to_tags",
-      "authors",
-      "tag_id",
-      authorMeta,
-      "tags",
-      "author_id",
-    );
-  }
-
-  get books(): Collection<Tag, Book> {
-    return this.__data.relations.books ??= hasManyToMany(
-      this,
-      "books_to_tags",
-      "books",
-      "tag_id",
-      bookMeta,
-      "tags",
-      "book_id",
-    );
-  }
-
-  get bookReviews(): Collection<Tag, BookReview> {
-    return this.__data.relations.bookReviews ??= hasManyToMany(
-      this,
-      "book_reviews_to_tags",
-      "bookReviews",
-      "tag_id",
-      bookReviewMeta,
-      "tags",
-      "book_review_id",
-    );
-  }
-
-  get publishers(): Collection<Tag, Publisher> {
-    return this.__data.relations.publishers ??= hasManyToMany(
-      this,
-      "publishers_to_tags",
-      "publishers",
-      "tag_id",
-      publisherMeta,
-      "tags",
-      "publisher_id",
-    );
-  }
-
-  get tasks(): Collection<Tag, Task> {
-    return this.__data.relations.tasks ??= hasManyToMany(
-      this,
-      "task_to_tags",
-      "tasks",
-      "tag_id",
-      taskMeta,
-      "tags",
-      "task_id",
-    );
   }
 }

@@ -102,6 +102,12 @@ export abstract class AdminUserCodegen extends User implements Entity {
 
   declare readonly __type: { 0: "User"; 1: "AdminUser" };
 
+  declare readonly createdComments: Collection<AdminUser, Comment>;
+  declare readonly directs: Collection<AdminUser, User>;
+  declare readonly manager: ManyToOneReference<AdminUser, User, undefined>;
+  declare readonly authorManyToOne: ManyToOneReference<AdminUser, Author, undefined>;
+  declare readonly likedComments: Collection<AdminUser, Comment>;
+
   get id(): AdminUserId {
     return this.idMaybe || failNoIdYet("AdminUser");
   }
@@ -262,25 +268,5 @@ export abstract class AdminUserCodegen extends User implements Entity {
   toJSON<const H extends ToJsonHint<AdminUser>>(hint: H): Promise<JsonPayload<AdminUser, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get createdComments(): Collection<AdminUser, Comment> {
-    return super.createdComments as Collection<AdminUser, Comment>;
-  }
-
-  get directs(): Collection<AdminUser, User> {
-    return super.directs as Collection<AdminUser, User>;
-  }
-
-  get manager(): ManyToOneReference<AdminUser, User, undefined> {
-    return super.manager as ManyToOneReference<AdminUser, User, undefined>;
-  }
-
-  get authorManyToOne(): ManyToOneReference<AdminUser, Author, undefined> {
-    return super.authorManyToOne as ManyToOneReference<AdminUser, Author, undefined>;
-  }
-
-  get likedComments(): Collection<AdminUser, Comment> {
-    return super.likedComments as Collection<AdminUser, Comment>;
   }
 }

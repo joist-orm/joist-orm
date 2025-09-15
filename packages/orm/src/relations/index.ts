@@ -1,5 +1,5 @@
 export { Collection, LoadedCollection, isCollection, isLoadedCollection } from "./Collection";
-export { CustomCollection } from "./CustomCollection";
+export { CustomCollection, hasCustomCollection } from "./CustomCollection";
 export { CustomReference, hasCustomReference } from "./CustomReference";
 export { AsyncMethod, LoadedMethod, hasAsyncMethod } from "./hasAsyncMethod";
 export {

@@ -1,6 +1,7 @@
 import { Entity } from "../Entity";
 import { getEmInternalApi, IdOf } from "../EntityManager";
 import { Collection, ensureNotDeleted, fail, LoadHint } from "../index";
+import { lazyField } from "../newEntity";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 
@@ -14,13 +15,21 @@ export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
   add?: (entity: T, other: U) => void;
   remove?: (entity: T, other: U) => void;
   /** Whether the reference is loaded, even w/o an explicit `.load` call, i.e. for DeepNew test instances. */
-  isLoaded: () => boolean;
+  isLoaded: (entity: T) => boolean;
   /**
    * A load hint that can be used to speculatively traverse the dependencies of this collection.  Currently
    * only used by em.importEntity and can be omitted if the collection isn't used with it.
    */
   loadHint?: ((entity: T) => LoadHint<T>) | LoadHint<T>;
 };
+
+export function hasCustomCollection<T extends Entity, U extends Entity>(
+  opts: CustomCollectionOpts<T, U>,
+): CustomCollection<T, U> {
+  return lazyField((entity: T) => {
+    return new CustomCollection<T, U>(entity, opts);
+  });
+}
 
 /**
  * Allows user-defined collections that will work in `populate` / preload hints.
@@ -62,7 +71,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
   get isLoaded(): boolean {
     if (this.#isLoaded !== undefined) return this.#isLoaded;
     getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
-    this.#isLoaded = this.opts.isLoaded();
+    this.#isLoaded = this.opts.isLoaded(this.entity);
     return this.#isLoaded;
   }
 

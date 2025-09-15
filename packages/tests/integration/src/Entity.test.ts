@@ -5,6 +5,12 @@ import { getInstanceData } from "joist-orm";
 import { jan1 } from "src/testDates";
 
 describe("Entity", () => {
+  it("passes instanceof", () => {
+    const em = newEntityManager();
+    const a = em.create(Author, { firstName: "a1" });
+    expect(a instanceof Author).toBe(true);
+  });
+
   it("cannot be instantiated directly", () => {
     const em = newEntityManager();
     expect(() => {

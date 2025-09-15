@@ -54,8 +54,6 @@ This can initially feel awkward, but it provides a truly type-safe API, given th
 
 This is often how business logic wants to interact with the domain model--a continual incremental loading of data as needed, as conditional codepaths are executed, instead of an endpoint/program exhaustively knowing up-front exactly what data will be necessary.
 
-If performance is a concern (loading thousands of entities with many custom properties), Joist provides a [ts-patch transform](/advanced/transform-properties) to rewrite the properties as lazy getters in production builds. 
-
 ## Can't I just use Zod for validations in my controller?
 
 Zod works great for crossing the "untyped blob" to "typed POJO" divide, and Joist actually supports Zod for `jsonb` columns, which is a similar "untyped jsonb to typed POJO" use case.

@@ -36,7 +36,7 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Author, type AuthorId, authorMeta, type Entity, EntityManager, newTag, Tag, tagMeta } from "../entities";
+import { Author, type AuthorId, type Entity, EntityManager, newTag, Tag, tagMeta } from "../entities";
 
 export type TagId = Flavor<string, "Tag">;
 
@@ -100,6 +100,8 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   static readonly metadata: EntityMetadata<Tag>;
 
   declare readonly __type: { 0: "Tag" };
+
+  readonly authors: Collection<Tag, Author> = hasManyToMany("author_to_tags", "tagId", "tags", "authorId");
 
   get id(): TagId {
     return this.idMaybe || failNoIdYet("Tag");
@@ -259,17 +261,5 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   toJSON<const H extends ToJsonHint<Tag>>(hint: H): Promise<JsonPayload<Tag, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get authors(): Collection<Tag, Author> {
-    return this.__data.relations.authors ??= hasManyToMany(
-      this,
-      "author_to_tags",
-      "authors",
-      "tagId",
-      authorMeta,
-      "tags",
-      "authorId",
-    );
   }
 }

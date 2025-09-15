@@ -42,7 +42,6 @@ import {
   newT5BookReview,
   T5Book,
   type T5BookId,
-  t5BookMeta,
   type T5BookOrder,
   T5BookReview,
   t5BookReviewMeta,
@@ -111,6 +110,8 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
   static readonly metadata: EntityMetadata<T5BookReview>;
 
   declare readonly __type: { 0: "T5BookReview" };
+
+  readonly book: ManyToOneReference<T5BookReview, T5Book, undefined> = hasOne("reviews");
 
   get id(): T5BookReviewId {
     return this.idMaybe || failNoIdYet("T5BookReview");
@@ -272,9 +273,5 @@ export abstract class T5BookReviewCodegen extends BaseEntity<EntityManager, numb
   toJSON<const H extends ToJsonHint<T5BookReview>>(hint: H): Promise<JsonPayload<T5BookReview, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get book(): ManyToOneReference<T5BookReview, T5Book, undefined> {
-    return this.__data.relations.book ??= hasOne(this, t5BookMeta, "book", "reviews");
   }
 }

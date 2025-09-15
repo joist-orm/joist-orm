@@ -43,14 +43,11 @@ import {
   type TaskId,
   TaskItem,
   taskItemMeta,
-  taskMeta,
   TaskNew,
   type TaskNewId,
-  taskNewMeta,
   type TaskNewOrder,
   TaskOld,
   type TaskOldId,
-  taskOldMeta,
   type TaskOldOrder,
   type TaskOrder,
 } from "../entities";
@@ -140,6 +137,10 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
   static readonly metadata: EntityMetadata<TaskItem>;
 
   declare readonly __type: { 0: "TaskItem" };
+
+  readonly newTask: ManyToOneReference<TaskItem, TaskNew, undefined> = hasOne("newTaskTaskItems");
+  readonly oldTask: ManyToOneReference<TaskItem, TaskOld, undefined> = hasOne("oldTaskTaskItems");
+  readonly task: ManyToOneReference<TaskItem, Task, undefined> = hasOne("taskTaskItems");
 
   get id(): TaskItemId {
     return this.idMaybe || failNoIdYet("TaskItem");
@@ -299,17 +300,5 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
   toJSON<const H extends ToJsonHint<TaskItem>>(hint: H): Promise<JsonPayload<TaskItem, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get newTask(): ManyToOneReference<TaskItem, TaskNew, undefined> {
-    return this.__data.relations.newTask ??= hasOne(this, taskNewMeta, "newTask", "newTaskTaskItems");
-  }
-
-  get oldTask(): ManyToOneReference<TaskItem, TaskOld, undefined> {
-    return this.__data.relations.oldTask ??= hasOne(this, taskOldMeta, "oldTask", "oldTaskTaskItems");
-  }
-
-  get task(): ManyToOneReference<TaskItem, Task, undefined> {
-    return this.__data.relations.task ??= hasOne(this, taskMeta, "task", "taskTaskItems");
   }
 }

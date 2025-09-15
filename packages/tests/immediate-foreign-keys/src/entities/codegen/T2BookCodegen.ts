@@ -44,7 +44,6 @@ import {
   newT2Book,
   T2Author,
   type T2AuthorId,
-  t2AuthorMeta,
   type T2AuthorOrder,
   T2Book,
   t2BookMeta,
@@ -119,6 +118,9 @@ export abstract class T2BookCodegen extends BaseEntity<EntityManager, number> im
   static readonly metadata: EntityMetadata<T2Book>;
 
   declare readonly __type: { 0: "T2Book" };
+
+  readonly t2Authors: Collection<T2Book, T2Author> = hasMany("favoriteBook", "favorite_book_id", undefined);
+  readonly author: ManyToOneReference<T2Book, T2Author, never> = hasOne("t2Books");
 
   get id(): T2BookId {
     return this.idMaybe || failNoIdYet("T2Book");
@@ -278,20 +280,5 @@ export abstract class T2BookCodegen extends BaseEntity<EntityManager, number> im
   toJSON<const H extends ToJsonHint<T2Book>>(hint: H): Promise<JsonPayload<T2Book, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get t2Authors(): Collection<T2Book, T2Author> {
-    return this.__data.relations.t2Authors ??= hasMany(
-      this,
-      t2AuthorMeta,
-      "t2Authors",
-      "favoriteBook",
-      "favorite_book_id",
-      undefined,
-    );
-  }
-
-  get author(): ManyToOneReference<T2Book, T2Author, never> {
-    return this.__data.relations.author ??= hasOne(this, t2AuthorMeta, "author", "t2Books");
   }
 }

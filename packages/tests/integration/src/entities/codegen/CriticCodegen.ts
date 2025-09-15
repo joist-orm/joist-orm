@@ -43,22 +43,18 @@ import type { Context } from "src/context";
 import {
   BookReview,
   type BookReviewId,
-  bookReviewMeta,
   Critic,
   CriticColumn,
   type CriticColumnId,
-  criticColumnMeta,
   criticMeta,
   type Entity,
   EntityManager,
   LargePublisher,
   type LargePublisherId,
-  largePublisherMeta,
   type LargePublisherOrder,
   newCritic,
   PublisherGroup,
   type PublisherGroupId,
-  publisherGroupMeta,
   type PublisherGroupOrder,
   SmallPublisherGroup,
   type SmallPublisherGroupId,
@@ -164,6 +160,14 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   static readonly metadata: EntityMetadata<Critic>;
 
   declare readonly __type: { 0: "Critic" };
+
+  readonly bookReviews: Collection<Critic, BookReview> = hasMany("critic", "critic_id", {
+    "field": "critic",
+    "direction": "ASC",
+  });
+  readonly favoriteLargePublisher: ManyToOneReference<Critic, LargePublisher, undefined> = hasOne("critics");
+  readonly group: ManyToOneReference<Critic, PublisherGroup, undefined> = hasOne("critics");
+  readonly criticColumn: OneToOneReference<Critic, CriticColumn> = hasOneToOne("critic", "critic_id");
 
   get id(): CriticId {
     return this.idMaybe || failNoIdYet("Critic");
@@ -331,35 +335,5 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   toJSON<const H extends ToJsonHint<Critic>>(hint: H): Promise<JsonPayload<Critic, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get bookReviews(): Collection<Critic, BookReview> {
-    return this.__data.relations.bookReviews ??= hasMany(this, bookReviewMeta, "bookReviews", "critic", "critic_id", {
-      "field": "critic",
-      "direction": "ASC",
-    });
-  }
-
-  get favoriteLargePublisher(): ManyToOneReference<Critic, LargePublisher, undefined> {
-    return this.__data.relations.favoriteLargePublisher ??= hasOne(
-      this,
-      largePublisherMeta,
-      "favoriteLargePublisher",
-      "critics",
-    );
-  }
-
-  get group(): ManyToOneReference<Critic, PublisherGroup, undefined> {
-    return this.__data.relations.group ??= hasOne(this, publisherGroupMeta, "group", "critics");
-  }
-
-  get criticColumn(): OneToOneReference<Critic, CriticColumn> {
-    return this.__data.relations.criticColumn ??= hasOneToOne(
-      this,
-      criticColumnMeta,
-      "criticColumn",
-      "critic",
-      "critic_id",
-    );
   }
 }

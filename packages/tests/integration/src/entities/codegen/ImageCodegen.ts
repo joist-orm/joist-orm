@@ -39,11 +39,9 @@ import type { Context } from "src/context";
 import {
   Author,
   type AuthorId,
-  authorMeta,
   type AuthorOrder,
   Book,
   type BookId,
-  bookMeta,
   type BookOrder,
   type Entity,
   EntityManager,
@@ -57,7 +55,6 @@ import {
   newImage,
   Publisher,
   type PublisherId,
-  publisherMeta,
   type PublisherOrder,
   SmallPublisher,
   type SmallPublisherId,
@@ -168,6 +165,10 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   static readonly metadata: EntityMetadata<Image>;
 
   declare readonly __type: { 0: "Image" };
+
+  readonly author: ManyToOneReference<Image, Author, undefined> = hasOne("image");
+  readonly book: ManyToOneReference<Image, Book, undefined> = hasOne("image");
+  readonly publisher: ManyToOneReference<Image, Publisher, undefined> = hasOne("images");
 
   get id(): ImageId {
     return this.idMaybe || failNoIdYet("Image");
@@ -359,17 +360,5 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   toJSON<const H extends ToJsonHint<Image>>(hint: H): Promise<JsonPayload<Image, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get author(): ManyToOneReference<Image, Author, undefined> {
-    return this.__data.relations.author ??= hasOne(this, authorMeta, "author", "image");
-  }
-
-  get book(): ManyToOneReference<Image, Book, undefined> {
-    return this.__data.relations.book ??= hasOne(this, bookMeta, "book", "image");
-  }
-
-  get publisher(): ManyToOneReference<Image, Publisher, undefined> {
-    return this.__data.relations.publisher ??= hasOne(this, publisherMeta, "publisher", "images");
   }
 }

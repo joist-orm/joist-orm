@@ -48,29 +48,23 @@ import type { Context } from "src/context";
 import {
   Author,
   type AuthorId,
-  authorMeta,
   type AuthorOrder,
   Book,
   BookAdvance,
   type BookAdvanceId,
-  bookAdvanceMeta,
   bookMeta,
   BookReview,
   type BookReviewId,
-  bookReviewMeta,
   Comment,
   type CommentId,
-  commentMeta,
   type CommentOrder,
   type Entity,
   EntityManager,
   Image,
   type ImageId,
-  imageMeta,
   newBook,
   Tag,
   type TagId,
-  tagMeta,
 } from "../entities";
 
 export type BookId = Flavor<string, "Book">;
@@ -234,6 +228,27 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   static readonly metadata: EntityMetadata<Book>;
 
   declare readonly __type: { 0: "Book" };
+
+  readonly advances: Collection<Book, BookAdvance> = hasMany("book", "book_id", undefined);
+  readonly reviews: Collection<Book, BookReview> = hasMany("book", "book_id", {
+    "field": "critic",
+    "direction": "ASC",
+  });
+  readonly comments: Collection<Book, Comment> = hasMany("parent", "parent_book_id", undefined);
+  readonly prequel: ManyToOneReference<Book, Book, undefined> = hasOne("sequel");
+  readonly author: ManyToOneReference<Book, Author, never> = hasOne("books");
+  readonly reviewer: ManyToOneReference<Book, Author, undefined> = hasOne("reviewerBooks");
+  readonly randomComment: ManyToOneReference<Book, Comment, undefined> = hasOne("books");
+  readonly prequelsRecursive: ReadOnlyCollection<Book, Book> = hasRecursiveParents("prequel", "sequelsRecursive");
+  readonly sequelsRecursive: ReadOnlyCollection<Book, Book> = hasRecursiveChildren("sequel", "prequelsRecursive");
+  readonly sequel: OneToOneReference<Book, Book> = hasOneToOne("prequel", "prequel_id");
+  readonly currentDraftAuthor: OneToOneReference<Book, Author> = hasOneToOne(
+    "currentDraftBook",
+    "current_draft_book_id",
+  );
+  readonly favoriteAuthor: OneToOneReference<Book, Author> = hasOneToOne("favoriteBook", "favorite_book_id");
+  readonly image: OneToOneReference<Book, Image> = hasOneToOne("book", "book_id");
+  readonly tags: Collection<Book, Tag> = hasManyToMany("books_to_tags", "book_id", "books", "tag_id");
 
   get id(): BookId {
     return this.idMaybe || failNoIdYet("Book");
@@ -447,101 +462,5 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   toJSON<const H extends ToJsonHint<Book>>(hint: H): Promise<JsonPayload<Book, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get advances(): Collection<Book, BookAdvance> {
-    return this.__data.relations.advances ??= hasMany(this, bookAdvanceMeta, "advances", "book", "book_id", undefined);
-  }
-
-  get reviews(): Collection<Book, BookReview> {
-    return this.__data.relations.reviews ??= hasMany(this, bookReviewMeta, "reviews", "book", "book_id", {
-      "field": "critic",
-      "direction": "ASC",
-    });
-  }
-
-  get comments(): Collection<Book, Comment> {
-    return this.__data.relations.comments ??= hasMany(
-      this,
-      commentMeta,
-      "comments",
-      "parent",
-      "parent_book_id",
-      undefined,
-    );
-  }
-
-  get prequel(): ManyToOneReference<Book, Book, undefined> {
-    return this.__data.relations.prequel ??= hasOne(this, bookMeta, "prequel", "sequel");
-  }
-
-  get author(): ManyToOneReference<Book, Author, never> {
-    return this.__data.relations.author ??= hasOne(this, authorMeta, "author", "books");
-  }
-
-  get reviewer(): ManyToOneReference<Book, Author, undefined> {
-    return this.__data.relations.reviewer ??= hasOne(this, authorMeta, "reviewer", "reviewerBooks");
-  }
-
-  get randomComment(): ManyToOneReference<Book, Comment, undefined> {
-    return this.__data.relations.randomComment ??= hasOne(this, commentMeta, "randomComment", "books");
-  }
-
-  get prequelsRecursive(): ReadOnlyCollection<Book, Book> {
-    return this.__data.relations.prequelsRecursive ??= hasRecursiveParents(
-      this,
-      "prequelsRecursive",
-      "prequel",
-      "sequelsRecursive",
-    );
-  }
-
-  get sequelsRecursive(): ReadOnlyCollection<Book, Book> {
-    return this.__data.relations.sequelsRecursive ??= hasRecursiveChildren(
-      this,
-      "sequelsRecursive",
-      "sequel",
-      "prequelsRecursive",
-    );
-  }
-
-  get sequel(): OneToOneReference<Book, Book> {
-    return this.__data.relations.sequel ??= hasOneToOne(this, bookMeta, "sequel", "prequel", "prequel_id");
-  }
-
-  get currentDraftAuthor(): OneToOneReference<Book, Author> {
-    return this.__data.relations.currentDraftAuthor ??= hasOneToOne(
-      this,
-      authorMeta,
-      "currentDraftAuthor",
-      "currentDraftBook",
-      "current_draft_book_id",
-    );
-  }
-
-  get favoriteAuthor(): OneToOneReference<Book, Author> {
-    return this.__data.relations.favoriteAuthor ??= hasOneToOne(
-      this,
-      authorMeta,
-      "favoriteAuthor",
-      "favoriteBook",
-      "favorite_book_id",
-    );
-  }
-
-  get image(): OneToOneReference<Book, Image> {
-    return this.__data.relations.image ??= hasOneToOne(this, imageMeta, "image", "book", "book_id");
-  }
-
-  get tags(): Collection<Book, Tag> {
-    return this.__data.relations.tags ??= hasManyToMany(
-      this,
-      "books_to_tags",
-      "tags",
-      "book_id",
-      tagMeta,
-      "books",
-      "tag_id",
-    );
   }
 }

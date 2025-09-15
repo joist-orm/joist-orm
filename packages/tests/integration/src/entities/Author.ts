@@ -40,7 +40,7 @@ export class Author extends AuthorCodegen {
       // set / add / remove callbacks are totally contrived to test that they work
       set: (author, values) => {
         values.forEach((book) => {
-          this.reviewedBooks.add(book);
+          author.reviewedBooks.add(book);
         });
         author.books.get.filter((book) => !values.includes(book)).forEach((book) => author.reviewedBooks.remove(book));
       },
@@ -48,7 +48,6 @@ export class Author extends AuthorCodegen {
       add: (author, book) => {
         const loaded = book as Loaded<Book, "reviews">;
         author.books.add(book);
-
         if (loaded.reviews.get.length === 0) {
           author.em.create(BookReview, { rating: 5, book });
         }

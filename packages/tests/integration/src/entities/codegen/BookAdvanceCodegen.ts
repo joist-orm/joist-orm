@@ -43,7 +43,6 @@ import {
   BookAdvance,
   bookAdvanceMeta,
   type BookId,
-  bookMeta,
   type BookOrder,
   type Entity,
   EntityManager,
@@ -52,7 +51,6 @@ import {
   newBookAdvance,
   Publisher,
   type PublisherId,
-  publisherMeta,
   type PublisherOrder,
   SmallPublisher,
   type SmallPublisherId,
@@ -153,6 +151,9 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   static readonly metadata: EntityMetadata<BookAdvance>;
 
   declare readonly __type: { 0: "BookAdvance" };
+
+  readonly book: ManyToOneReference<BookAdvance, Book, never> = hasOne("advances");
+  readonly publisher: ManyToOneReference<BookAdvance, Publisher, never> = hasOne("bookAdvances");
 
   get id(): BookAdvanceId {
     return this.idMaybe || failNoIdYet("BookAdvance");
@@ -338,13 +339,5 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   toJSON<const H extends ToJsonHint<BookAdvance>>(hint: H): Promise<JsonPayload<BookAdvance, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get book(): ManyToOneReference<BookAdvance, Book, never> {
-    return this.__data.relations.book ??= hasOne(this, bookMeta, "book", "advances");
-  }
-
-  get publisher(): ManyToOneReference<BookAdvance, Publisher, never> {
-    return this.__data.relations.publisher ??= hasOne(this, publisherMeta, "publisher", "bookAdvances");
   }
 }

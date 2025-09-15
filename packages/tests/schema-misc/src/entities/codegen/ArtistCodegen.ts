@@ -36,16 +36,7 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  Artist,
-  artistMeta,
-  type Entity,
-  EntityManager,
-  newArtist,
-  Painting,
-  type PaintingId,
-  paintingMeta,
-} from "../entities";
+import { Artist, artistMeta, type Entity, EntityManager, newArtist, Painting, type PaintingId } from "../entities";
 
 export type ArtistId = Flavor<string, "Artist">;
 
@@ -125,6 +116,8 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   static readonly metadata: EntityMetadata<Artist>;
 
   declare readonly __type: { 0: "Artist" };
+
+  readonly paintings: Collection<Artist, Painting> = hasMany("artist", "artistId", undefined);
 
   get id(): ArtistId {
     return this.idMaybe || failNoIdYet("Artist");
@@ -300,16 +293,5 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   toJSON<const H extends ToJsonHint<Artist>>(hint: H): Promise<JsonPayload<Artist, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get paintings(): Collection<Artist, Painting> {
-    return this.__data.relations.paintings ??= hasMany(
-      this,
-      paintingMeta,
-      "paintings",
-      "artist",
-      "artistId",
-      undefined,
-    );
   }
 }

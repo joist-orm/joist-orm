@@ -3,19 +3,27 @@ import { Entity } from "../Entity";
 import { appendStack, IdOf, sameEntity } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { ensureNotDeleted, getMetadata, ManyToOneReferenceImpl } from "../index";
+import { lazyField, resolveOtherMeta } from "../newEntity";
 import { remove } from "../utils";
 import { LargeCollection } from "./LargeCollection";
 import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `OneToManyLargeCollection`s. */
 export function hasLargeMany<T extends Entity, U extends Entity>(
-  entity: T,
-  otherMeta: EntityMetadata<U>,
-  fieldName: keyof T & string,
-  otherFieldName: keyof U & string,
+  otherFieldName: string,
   otherColumnName: string,
 ): LargeCollection<T, U> {
-  return new OneToManyLargeCollection(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
+  let otherMeta: EntityMetadata<U>;
+  return lazyField((entity: T, fieldName) => {
+    otherMeta ??= resolveOtherMeta(entity, fieldName);
+    return new OneToManyLargeCollection(
+      entity,
+      otherMeta,
+      fieldName as keyof T & string,
+      otherFieldName as keyof U & string,
+      otherColumnName,
+    );
+  });
 }
 
 export class OneToManyLargeCollection<T extends Entity, U extends Entity> implements LargeCollection<T, U> {

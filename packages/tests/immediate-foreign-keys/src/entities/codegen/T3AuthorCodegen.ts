@@ -46,7 +46,6 @@ import {
   t3AuthorMeta,
   T3Book,
   type T3BookId,
-  t3BookMeta,
   type T3BookOrder,
 } from "../entities";
 
@@ -119,6 +118,9 @@ export abstract class T3AuthorCodegen extends BaseEntity<EntityManager, number> 
   static readonly metadata: EntityMetadata<T3Author>;
 
   declare readonly __type: { 0: "T3Author" };
+
+  readonly t3Books: Collection<T3Author, T3Book> = hasMany("author", "author_id", undefined);
+  readonly favoriteBook: ManyToOneReference<T3Author, T3Book, never> = hasOne("t3Authors");
 
   get id(): T3AuthorId {
     return this.idMaybe || failNoIdYet("T3Author");
@@ -278,13 +280,5 @@ export abstract class T3AuthorCodegen extends BaseEntity<EntityManager, number> 
   toJSON<const H extends ToJsonHint<T3Author>>(hint: H): Promise<JsonPayload<T3Author, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get t3Books(): Collection<T3Author, T3Book> {
-    return this.__data.relations.t3Books ??= hasMany(this, t3BookMeta, "t3Books", "author", "author_id", undefined);
-  }
-
-  get favoriteBook(): ManyToOneReference<T3Author, T3Book, never> {
-    return this.__data.relations.favoriteBook ??= hasOne(this, t3BookMeta, "favoriteBook", "t3Authors");
   }
 }

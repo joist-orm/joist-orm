@@ -1,5 +1,5 @@
-import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
+import { lazyField } from "../newEntity";
 import { Reacted, ShallowReactiveHint } from "../reactiveHints";
 import { AsyncPropertyT } from "./hasAsyncProperty";
 
@@ -25,8 +25,9 @@ export function hasReactiveGetter<T extends Entity, const H extends ShallowReact
   hint: H,
   fn: (entity: Reacted<T, H>) => V,
 ): ReactiveGetter<T, V> {
-  const entity = currentlyInstantiatingEntity as T;
-  return new ReactiveGetterImpl(entity, fieldName, hint, fn);
+  return lazyField((entity: T, fieldName) => {
+    return new ReactiveGetterImpl(entity, fieldName as keyof T & string, hint, fn);
+  });
 }
 
 export class ReactiveGetterImpl<T extends Entity, const H extends ShallowReactiveHint<T>, V>

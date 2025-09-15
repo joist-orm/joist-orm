@@ -36,16 +36,7 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import {
-  type Entity,
-  EntityManager,
-  newT1Author,
-  T1Author,
-  t1AuthorMeta,
-  T1Book,
-  type T1BookId,
-  t1BookMeta,
-} from "../entities";
+import { type Entity, EntityManager, newT1Author, T1Author, t1AuthorMeta, T1Book, type T1BookId } from "../entities";
 
 export type T1AuthorId = Flavor<number, "T1Author">;
 
@@ -109,6 +100,8 @@ export abstract class T1AuthorCodegen extends BaseEntity<EntityManager, number> 
   static readonly metadata: EntityMetadata<T1Author>;
 
   declare readonly __type: { 0: "T1Author" };
+
+  readonly t1Books: Collection<T1Author, T1Book> = hasMany("author", "author_id", undefined);
 
   get id(): T1AuthorId {
     return this.idMaybe || failNoIdYet("T1Author");
@@ -268,9 +261,5 @@ export abstract class T1AuthorCodegen extends BaseEntity<EntityManager, number> 
   toJSON<const H extends ToJsonHint<T1Author>>(hint: H): Promise<JsonPayload<T1Author, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get t1Books(): Collection<T1Author, T1Book> {
-    return this.__data.relations.t1Books ??= hasMany(this, t1BookMeta, "t1Books", "author", "author_id", undefined);
   }
 }

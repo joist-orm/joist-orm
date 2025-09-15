@@ -3,7 +3,7 @@ import { MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
 import { EntityMetadata, ManyToOneField, OneToManyField, getMetadata } from "./EntityMetadata";
 import { setBooted } from "./config";
 import { AsyncDefault } from "./defaults";
-import { getFakeInstance } from "./getProperties";
+import { getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { reverseReactiveHint } from "./reactiveHints";
 import { ReactiveReferenceImpl, Reference } from "./relations";
@@ -202,7 +202,7 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
         (f.kind === "enum" && f.derived === "async"),
     );
     for (const field of reactiveFields) {
-      const ap = (getFakeInstance(meta) as any)[field.fieldName] as
+      const ap = (getProperties(meta) as any)[field.fieldName] as
         | ReactiveFieldImpl<any, any, any>
         | ReactiveQueryFieldImpl<any, any, any, any>
         | ReactiveReferenceImpl<any, any, any, any>

@@ -1,12 +1,12 @@
-import { CustomReference, Reference } from "joist-orm";
-import { Author, Book, ImageCodegen, ImageType, Publisher, imageConfig as config } from "./entities";
+import { hasCustomReference, Reference } from "joist-orm";
+import { Author, Book, imageConfig as config, ImageCodegen, ImageType, Publisher } from "./entities";
 
 type ImageOwner = Book | Publisher | Author;
 
 export class Image extends ImageCodegen {
   // We don't use hasOneThrough or hasOneDerived b/c we use the ImageType to do a
   // selective .load instead of a load hint that probes every possible table.
-  readonly owner: Reference<Image, ImageOwner, undefined> = new CustomReference<Image, ImageOwner, undefined>(this, {
+  readonly owner: Reference<Image, ImageOwner, undefined> = hasCustomReference<Image, ImageOwner, undefined>({
     load: async (image) => {
       await image.ownerRef.load();
     },
@@ -15,7 +15,7 @@ export class Image extends ImageCodegen {
       // TODO should validate other matches ImageType
       image.ownerRef.set(other as any);
     },
-    isLoaded: () => this.ownerRef.isLoaded,
+    isLoaded: (entity) => entity.ownerRef.isLoaded,
   });
 
   private get ownerRef() {

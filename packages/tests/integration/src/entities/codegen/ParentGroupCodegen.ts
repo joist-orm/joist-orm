@@ -39,7 +39,6 @@ import type { Context } from "src/context";
 import {
   ChildGroup,
   type ChildGroupId,
-  childGroupMeta,
   type Entity,
   EntityManager,
   newParentGroup,
@@ -47,7 +46,6 @@ import {
   parentGroupMeta,
   ParentItem,
   type ParentItemId,
-  parentItemMeta,
 } from "../entities";
 
 export type ParentGroupId = Flavor<string, "ParentGroup">;
@@ -126,6 +124,9 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   static readonly metadata: EntityMetadata<ParentGroup>;
 
   declare readonly __type: { 0: "ParentGroup" };
+
+  readonly childGroups: Collection<ParentGroup, ChildGroup> = hasMany("parentGroup", "parent_group_id", undefined);
+  readonly parentItems: Collection<ParentGroup, ParentItem> = hasMany("parentGroup", "parent_group_id", undefined);
 
   get id(): ParentGroupId {
     return this.idMaybe || failNoIdYet("ParentGroup");
@@ -298,27 +299,5 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   toJSON<const H extends ToJsonHint<ParentGroup>>(hint: H): Promise<JsonPayload<ParentGroup, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get childGroups(): Collection<ParentGroup, ChildGroup> {
-    return this.__data.relations.childGroups ??= hasMany(
-      this,
-      childGroupMeta,
-      "childGroups",
-      "parentGroup",
-      "parent_group_id",
-      undefined,
-    );
-  }
-
-  get parentItems(): Collection<ParentGroup, ParentItem> {
-    return this.__data.relations.parentItems ??= hasMany(
-      this,
-      parentItemMeta,
-      "parentItems",
-      "parentGroup",
-      "parent_group_id",
-      undefined,
-    );
   }
 }

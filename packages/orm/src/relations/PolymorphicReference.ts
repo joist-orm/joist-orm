@@ -13,17 +13,21 @@ import {
   getInstanceData,
   maybeResolveReferenceToId,
 } from "../index";
+import { lazyField } from "../newEntity";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
 
-export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends never | undefined>(
-  entity: T,
-  fieldName: keyof T & string,
-): PolymorphicReference<T, U, N> {
-  return new PolymorphicReferenceImpl<T, U, N>(entity, fieldName);
+export function hasOnePolymorphic<
+  T extends Entity,
+  U extends Entity,
+  N extends never | undefined,
+>(): PolymorphicReference<T, U, N> {
+  return lazyField((entity: T, fieldName) => {
+    return new PolymorphicReferenceImpl<T, U, N>(entity, fieldName as keyof T & string);
+  });
 }
 
 /** Type guard utility for determining if an entity field is a PolymorphicReference. */

@@ -41,13 +41,10 @@ import {
   authorMeta,
   Book,
   type BookId,
-  bookMeta,
   BookReview,
   type BookReviewId,
-  bookReviewMeta,
   Comment,
   type CommentId,
-  commentMeta,
   type Entity,
   EntityManager,
   newAuthor,
@@ -140,6 +137,10 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   static readonly metadata: EntityMetadata<Author>;
 
   declare readonly __type: { 0: "Author" };
+
+  readonly books: Collection<Author, Book> = hasMany("author", "author_id", undefined);
+  readonly bookReviews: Collection<Author, BookReview> = hasMany("book", "book_id", undefined);
+  readonly comments: Collection<Author, Comment> = hasMany("parent", "parent_author_id", undefined);
 
   get id(): AuthorId {
     return this.idMaybe || failNoIdYet("Author");
@@ -315,31 +316,5 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   toJSON<const H extends ToJsonHint<Author>>(hint: H): Promise<JsonPayload<Author, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get books(): Collection<Author, Book> {
-    return this.__data.relations.books ??= hasMany(this, bookMeta, "books", "author", "author_id", undefined);
-  }
-
-  get bookReviews(): Collection<Author, BookReview> {
-    return this.__data.relations.bookReviews ??= hasMany(
-      this,
-      bookReviewMeta,
-      "bookReviews",
-      "book",
-      "book_id",
-      undefined,
-    );
-  }
-
-  get comments(): Collection<Author, Comment> {
-    return this.__data.relations.comments ??= hasMany(
-      this,
-      commentMeta,
-      "comments",
-      "parent",
-      "parent_author_id",
-      undefined,
-    );
   }
 }

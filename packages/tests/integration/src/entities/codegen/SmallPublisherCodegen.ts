@@ -58,14 +58,12 @@ import {
   SmallPublisher,
   SmallPublisherGroup,
   type SmallPublisherGroupId,
-  smallPublisherGroupMeta,
   type SmallPublisherGroupOrder,
   smallPublisherMeta,
   Tag,
   TaskOld,
   User,
   type UserId,
-  userMeta,
 } from "../entities";
 
 export type SmallPublisherId = Flavor<string, "Publisher">;
@@ -161,6 +159,26 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   static readonly metadata: EntityMetadata<SmallPublisher>;
 
   declare readonly __type: { 0: "Publisher"; 1: "SmallPublisher" };
+
+  readonly smallPublishers: Collection<SmallPublisher, SmallPublisher> = hasMany(
+    "selfReferential",
+    "self_referential_id",
+    undefined,
+  );
+  readonly users: Collection<SmallPublisher, User> = hasMany(
+    "favoritePublisher",
+    "favorite_publisher_small_id",
+    undefined,
+  );
+  readonly selfReferential: ManyToOneReference<SmallPublisher, SmallPublisher, undefined> = hasOne("smallPublishers");
+  readonly group: ManyToOneReference<SmallPublisher, SmallPublisherGroup, undefined> = hasOne("publishers");
+  declare readonly authors: Collection<SmallPublisher, Author>;
+  declare readonly bookAdvances: Collection<SmallPublisher, BookAdvance>;
+  declare readonly comments: Collection<SmallPublisher, Comment>;
+  declare readonly images: Collection<SmallPublisher, Image>;
+  declare readonly spotlightAuthor: ManyToOneReference<SmallPublisher, Author, undefined>;
+  declare readonly tags: Collection<SmallPublisher, Tag>;
+  declare readonly tasks: Collection<SmallPublisher, TaskOld>;
 
   get id(): SmallPublisherId {
     return this.idMaybe || failNoIdYet("SmallPublisher");
@@ -332,68 +350,5 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   toJSON<const H extends ToJsonHint<SmallPublisher>>(hint: H): Promise<JsonPayload<SmallPublisher, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get smallPublishers(): Collection<SmallPublisher, SmallPublisher> {
-    return this.__data.relations.smallPublishers ??= hasMany(
-      this,
-      smallPublisherMeta,
-      "smallPublishers",
-      "selfReferential",
-      "self_referential_id",
-      undefined,
-    );
-  }
-
-  get users(): Collection<SmallPublisher, User> {
-    return this.__data.relations.users ??= hasMany(
-      this,
-      userMeta,
-      "users",
-      "favoritePublisher",
-      "favorite_publisher_small_id",
-      undefined,
-    );
-  }
-
-  get selfReferential(): ManyToOneReference<SmallPublisher, SmallPublisher, undefined> {
-    return this.__data.relations.selfReferential ??= hasOne(
-      this,
-      smallPublisherMeta,
-      "selfReferential",
-      "smallPublishers",
-    );
-  }
-
-  get group(): ManyToOneReference<SmallPublisher, SmallPublisherGroup, undefined> {
-    return this.__data.relations.group ??= hasOne(this, smallPublisherGroupMeta, "group", "publishers");
-  }
-
-  get authors(): Collection<SmallPublisher, Author> {
-    return super.authors as Collection<SmallPublisher, Author>;
-  }
-
-  get bookAdvances(): Collection<SmallPublisher, BookAdvance> {
-    return super.bookAdvances as Collection<SmallPublisher, BookAdvance>;
-  }
-
-  get comments(): Collection<SmallPublisher, Comment> {
-    return super.comments as Collection<SmallPublisher, Comment>;
-  }
-
-  get images(): Collection<SmallPublisher, Image> {
-    return super.images as Collection<SmallPublisher, Image>;
-  }
-
-  get spotlightAuthor(): ManyToOneReference<SmallPublisher, Author, undefined> {
-    return super.spotlightAuthor as ManyToOneReference<SmallPublisher, Author, undefined>;
-  }
-
-  get tags(): Collection<SmallPublisher, Tag> {
-    return super.tags as Collection<SmallPublisher, Tag>;
-  }
-
-  get tasks(): Collection<SmallPublisher, TaskOld> {
-    return super.tasks as Collection<SmallPublisher, TaskOld>;
   }
 }

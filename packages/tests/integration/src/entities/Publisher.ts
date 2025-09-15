@@ -2,7 +2,7 @@ import {
   AsyncProperty,
   cannotBeUpdated,
   Collection,
-  CustomCollection,
+  hasCustomCollection,
   hasReactiveAsyncProperty,
   hasReactiveField,
   hasReactiveQueryField,
@@ -26,17 +26,20 @@ import {
 
 const allImagesHint = { images: [], authors: { image: [], books: "image" } } as const;
 
-export abstract class Publisher extends PublisherCodegen {
-  transientFields = {
-    numberOfBookReviewEvals: 0,
-    numberOfBookReviewCalcs: 0,
-    wasNewInBeforeCommit: undefined as boolean | undefined,
-    changedInBeforeCommit: [] as string[],
-    bookAdvanceTitlesSnapshotCalcs: 0,
-    numberOfBookAdvancesSnapshotCalcs: 0,
-  };
+export const publisherTransientFields = {
+  numberOfBookReviewEvals: 0,
+  numberOfBookReviewCalcs: 0,
+  wasNewInBeforeCommit: undefined as boolean | undefined,
+  changedInBeforeCommit: [] as string[],
+  bookAdvanceTitlesSnapshotCalcs: 0,
+  numberOfBookAdvancesSnapshotCalcs: 0,
+};
 
+export abstract class Publisher extends PublisherCodegen {
   static afterMetadataHasSubTypes = false;
+  transientFields = {
+    ...publisherTransientFields,
+  };
 
   /** Example of a reactive query. */
   readonly numberOfBookReviews: ReactiveField<Publisher, number> = hasReactiveQueryField(
@@ -109,11 +112,10 @@ export abstract class Publisher extends PublisherCodegen {
   );
 
   // Example of a custom collection that can add/remove
-  readonly allImages: Collection<Publisher, Image> = new CustomCollection(this, {
+  readonly allImages: Collection<Publisher, Image> = hasCustomCollection<Publisher, Image>({
     load: (entity, opts) => entity.populate({ hint: allImagesHint, ...opts }),
     get: (entity) => {
       const loaded = entity as Loaded<Publisher, typeof allImagesHint>;
-
       return loaded.authors.get
         .reduce(
           (images, author) => {
@@ -141,7 +143,7 @@ export abstract class Publisher extends PublisherCodegen {
         entity.em.delete(value);
       }
     },
-    isLoaded: () => isLoaded(this, allImagesHint as any),
+    isLoaded: (entity) => isLoaded(entity, allImagesHint as any),
   });
 
   /** For testing reacting to poly CommentParent properties. */

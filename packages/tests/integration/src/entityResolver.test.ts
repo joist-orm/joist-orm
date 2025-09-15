@@ -137,4 +137,12 @@ describe("entityResolver", () => {
     const result = await entityResolver(Author).mentorsRecursive(a, {}, {}, undefined!);
     expect(result).toMatchEntity([{ id: "a:2" }, { id: "a:1" }]);
   });
+
+  it("can load enum getter methods", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1");
+    const result = await entityResolver(Author).isRed(a, {}, {}, undefined!);
+    expect(result).toBe(false);
+  });
 });

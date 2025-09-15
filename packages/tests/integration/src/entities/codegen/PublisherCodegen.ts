@@ -46,25 +46,20 @@ import type { Context } from "src/context";
 import {
   Author,
   type AuthorId,
-  authorMeta,
   type AuthorOrder,
   BookAdvance,
   type BookAdvanceId,
-  bookAdvanceMeta,
   Comment,
   type CommentId,
-  commentMeta,
   type Entity,
   EntityManager,
   Image,
   type ImageId,
-  imageMeta,
   LargePublisher,
   newPublisher,
   Publisher,
   PublisherGroup,
   type PublisherGroupId,
-  publisherGroupMeta,
   type PublisherGroupOrder,
   publisherMeta,
   PublisherSize,
@@ -78,10 +73,8 @@ import {
   type SmallPublisherGroupId,
   Tag,
   type TagId,
-  tagMeta,
   TaskOld,
   type TaskOldId,
-  taskOldMeta,
 } from "../entities";
 
 export type PublisherId = Flavor<string, "Publisher">;
@@ -287,6 +280,27 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   declare readonly __type: { 0: "Publisher" };
 
   abstract readonly favoriteAuthor: ReactiveReference<Publisher, Author, undefined>;
+  readonly authors: Collection<Publisher, Author> = hasMany("publisher", "publisher_id", {
+    "field": "numberOfBooks",
+    "direction": "ASC",
+  });
+  readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany("publisher", "publisher_id", undefined);
+  readonly comments: Collection<Publisher, Comment> = hasMany("parent", "parent_publisher_id", undefined);
+  readonly images: Collection<Publisher, Image> = hasMany("publisher", "publisher_id", undefined);
+  readonly group: ManyToOneReference<Publisher, PublisherGroup, undefined> = hasOne("publishers");
+  readonly spotlightAuthor: ManyToOneReference<Publisher, Author, undefined> = hasOne("spotlightAuthorPublishers");
+  readonly tags: Collection<Publisher, Tag> = hasManyToMany(
+    "publishers_to_tags",
+    "publisher_id",
+    "publishers",
+    "tag_id",
+  );
+  readonly tasks: Collection<Publisher, TaskOld> = hasManyToMany(
+    "tasks_to_publishers",
+    "publisher_id",
+    "publishers",
+    "task_id",
+  );
 
   get id(): PublisherId {
     return this.idMaybe || failNoIdYet("Publisher");
@@ -571,75 +585,5 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   toJSON<const H extends ToJsonHint<Publisher>>(hint: H): Promise<JsonPayload<Publisher, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get authors(): Collection<Publisher, Author> {
-    return this.__data.relations.authors ??= hasMany(this, authorMeta, "authors", "publisher", "publisher_id", {
-      "field": "numberOfBooks",
-      "direction": "ASC",
-    });
-  }
-
-  get bookAdvances(): Collection<Publisher, BookAdvance> {
-    return this.__data.relations.bookAdvances ??= hasMany(
-      this,
-      bookAdvanceMeta,
-      "bookAdvances",
-      "publisher",
-      "publisher_id",
-      undefined,
-    );
-  }
-
-  get comments(): Collection<Publisher, Comment> {
-    return this.__data.relations.comments ??= hasMany(
-      this,
-      commentMeta,
-      "comments",
-      "parent",
-      "parent_publisher_id",
-      undefined,
-    );
-  }
-
-  get images(): Collection<Publisher, Image> {
-    return this.__data.relations.images ??= hasMany(this, imageMeta, "images", "publisher", "publisher_id", undefined);
-  }
-
-  get group(): ManyToOneReference<Publisher, PublisherGroup, undefined> {
-    return this.__data.relations.group ??= hasOne(this, publisherGroupMeta, "group", "publishers");
-  }
-
-  get spotlightAuthor(): ManyToOneReference<Publisher, Author, undefined> {
-    return this.__data.relations.spotlightAuthor ??= hasOne(
-      this,
-      authorMeta,
-      "spotlightAuthor",
-      "spotlightAuthorPublishers",
-    );
-  }
-
-  get tags(): Collection<Publisher, Tag> {
-    return this.__data.relations.tags ??= hasManyToMany(
-      this,
-      "publishers_to_tags",
-      "tags",
-      "publisher_id",
-      tagMeta,
-      "publishers",
-      "tag_id",
-    );
-  }
-
-  get tasks(): Collection<Publisher, TaskOld> {
-    return this.__data.relations.tasks ??= hasManyToMany(
-      this,
-      "tasks_to_publishers",
-      "tasks",
-      "publisher_id",
-      taskOldMeta,
-      "publishers",
-      "task_id",
-    );
   }
 }

@@ -18,7 +18,6 @@ import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
 import {
   asConcreteCstr,
-  asInternalCstr,
   assertIdIsTagged,
   assertLoaded,
   Column,
@@ -69,6 +68,7 @@ import { IsLoadedCache } from "./IsLoadedCache";
 import { JoinRows } from "./JoinRows";
 import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { WriteFn } from "./logging/FactoryLogger";
+import { newEntity } from "./newEntity";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";
 import { ReactionsManager } from "./ReactionsManager";
 import { followReverseHint } from "./reactiveHints";
@@ -1753,9 +1753,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       if (!entity) {
         // Look for __class from the driver telling us which subtype to instantiate
         const meta = findConcreteMeta(maybeBaseMeta, row);
-        const type = asInternalCstr(meta.cstr);
         // Pass id as a hint that we're in hydrate mode
-        entity = new type(this, false) as T;
+        entity = newEntity(this, asConcreteCstr(meta.cstr), false) as T;
         getInstanceData(entity).row = row;
         this.#doRegister(entity as any, taggedId);
       } else if (options?.overwriteExisting === true) {
@@ -2069,7 +2068,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       const { relations } = (oldEntity as any).__data as InstanceData;
       for (const [field, relation] of Object.entries(relations)) {
-        // With transform-properties on, custom relations are inserted into the `relations` map. Custom relations don't
+        // With lazyRelation, custom relations are inserted into the `relations` map. Custom relations don't
         // store any data, so we can ignore them by checking if the relation implements `import`
         // TODO: add `import` to recursiveCollection
         if (!("import" in relation)) continue;
@@ -2171,7 +2170,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
   #doCreate<T extends EntityW>(type: EntityConstructor<T>, opts: any, partial: boolean): T {
-    const entity = new (asInternalCstr(type))(this, true);
+    const entity = newEntity(this, type, true);
 
     // Set a default createdAt/updatedAt
     const baseMeta = getBaseMeta(getMetadata(entity));

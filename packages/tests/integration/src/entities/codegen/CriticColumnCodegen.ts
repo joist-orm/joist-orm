@@ -41,7 +41,6 @@ import {
   CriticColumn,
   criticColumnMeta,
   type CriticId,
-  criticMeta,
   type CriticOrder,
   type Entity,
   EntityManager,
@@ -122,6 +121,8 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   static readonly metadata: EntityMetadata<CriticColumn>;
 
   declare readonly __type: { 0: "CriticColumn" };
+
+  readonly critic: ManyToOneReference<CriticColumn, Critic, never> = hasOne("criticColumn");
 
   get id(): CriticColumnId {
     return this.idMaybe || failNoIdYet("CriticColumn");
@@ -291,9 +292,5 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   toJSON<const H extends ToJsonHint<CriticColumn>>(hint: H): Promise<JsonPayload<CriticColumn, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get critic(): ManyToOneReference<CriticColumn, Critic, never> {
-    return this.__data.relations.critic ??= hasOne(this, criticMeta, "critic", "criticColumn");
   }
 }

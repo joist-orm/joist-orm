@@ -42,13 +42,11 @@ import {
   type AdminUserId,
   Author,
   type AuthorId,
-  authorMeta,
   type AuthorOrder,
   BookAdvance,
   Comment,
   Critic,
   type CriticId,
-  criticMeta,
   type Entity,
   Image,
   LargePublisher,
@@ -66,7 +64,6 @@ import {
   TaskOld,
   User,
   type UserId,
-  userMeta,
 } from "../entities";
 
 export type LargePublisherId = Flavor<string, "Publisher">;
@@ -151,6 +148,25 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   static readonly metadata: EntityMetadata<LargePublisher>;
 
   declare readonly __type: { 0: "Publisher"; 1: "LargePublisher" };
+
+  readonly critics: Collection<LargePublisher, Critic> = hasMany(
+    "favoriteLargePublisher",
+    "favorite_large_publisher_id",
+    undefined,
+  );
+  readonly users: Collection<LargePublisher, User> = hasMany(
+    "favoritePublisher",
+    "favorite_publisher_large_id",
+    undefined,
+  );
+  readonly spotlightAuthor: ManyToOneReference<LargePublisher, Author, never> = hasOne("spotlightAuthorPublishers");
+  declare readonly authors: Collection<LargePublisher, Author>;
+  declare readonly bookAdvances: Collection<LargePublisher, BookAdvance>;
+  declare readonly comments: Collection<LargePublisher, Comment>;
+  declare readonly images: Collection<LargePublisher, Image>;
+  declare readonly group: ManyToOneReference<LargePublisher, PublisherGroup, undefined>;
+  declare readonly tags: Collection<LargePublisher, Tag>;
+  declare readonly tasks: Collection<LargePublisher, TaskOld>;
 
   get id(): LargePublisherId {
     return this.idMaybe || failNoIdYet("LargePublisher");
@@ -328,64 +344,5 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   toJSON<const H extends ToJsonHint<LargePublisher>>(hint: H): Promise<JsonPayload<LargePublisher, H>>;
   toJSON(hint?: any): object {
     return !hint || typeof hint === "string" ? super.toJSON() : toJSON(this, hint);
-  }
-
-  get critics(): Collection<LargePublisher, Critic> {
-    return this.__data.relations.critics ??= hasMany(
-      this,
-      criticMeta,
-      "critics",
-      "favoriteLargePublisher",
-      "favorite_large_publisher_id",
-      undefined,
-    );
-  }
-
-  get users(): Collection<LargePublisher, User> {
-    return this.__data.relations.users ??= hasMany(
-      this,
-      userMeta,
-      "users",
-      "favoritePublisher",
-      "favorite_publisher_large_id",
-      undefined,
-    );
-  }
-
-  get spotlightAuthor(): ManyToOneReference<LargePublisher, Author, never> {
-    return this.__data.relations.spotlightAuthor ??= hasOne(
-      this,
-      authorMeta,
-      "spotlightAuthor",
-      "spotlightAuthorPublishers",
-    );
-  }
-
-  get authors(): Collection<LargePublisher, Author> {
-    return super.authors as Collection<LargePublisher, Author>;
-  }
-
-  get bookAdvances(): Collection<LargePublisher, BookAdvance> {
-    return super.bookAdvances as Collection<LargePublisher, BookAdvance>;
-  }
-
-  get comments(): Collection<LargePublisher, Comment> {
-    return super.comments as Collection<LargePublisher, Comment>;
-  }
-
-  get images(): Collection<LargePublisher, Image> {
-    return super.images as Collection<LargePublisher, Image>;
-  }
-
-  get group(): ManyToOneReference<LargePublisher, PublisherGroup, undefined> {
-    return super.group as ManyToOneReference<LargePublisher, PublisherGroup, undefined>;
-  }
-
-  get tags(): Collection<LargePublisher, Tag> {
-    return super.tags as Collection<LargePublisher, Tag>;
-  }
-
-  get tasks(): Collection<LargePublisher, TaskOld> {
-    return super.tasks as Collection<LargePublisher, TaskOld>;
   }
 }

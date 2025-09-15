@@ -1,7 +1,7 @@
-import { BaseEntity, getInstanceData } from "./BaseEntity";
-import { Entity } from "./Entity";
+import { BaseEntity } from "./BaseEntity";
 import { EntityMetadata } from "./EntityMetadata";
-import { asConcreteCstr, asInternalCstr } from "./index";
+import { LazyField } from "./newEntity";
+import { partition } from "./utils";
 
 /**
  * Returns the relations in `meta`, both those defined in the codegen file + any user-defined `CustomReference`s.
@@ -33,7 +33,8 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
   // on fake instances" getters to throw nonsense errors anyway (which we suppress), so it should be fine.
   const cached = (propertiesCache[key] = {});
 
-  const instance = getFakeInstance(meta);
+  const fakeEm = undefined as any;
+  const instance = new (meta.cstr as any)(fakeEm, true);
 
   // Mostly for historical reasons, we don't treat known primitives/enums as properties,
   // i.e. properties were originally meant to be the wrapper objects like `hasOne`,
@@ -47,60 +48,75 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
     .filter((f) => f.kind === "primaryKey" || f.kind === "primitive" || f.kind === "enum")
     .map((f) => f.fieldName);
 
-  const properties = Object.fromEntries(
-    // Recursively looking for ownKeys will find:
-    // - Custom properties set on the instance, like `readonly author: Reference<Author> = hasOneThrough(...)`
-    // - Getters declared within the class like `get initials()`
-    // - Getters auto-created by transform-properties when it lazies `readonly author = hasOneThrough(...)` relations
-    // - Getters declared within the codegen classes like `get books(): Reference<...>`
-    getRecursiveOwnNames(instance)
-      .filter((key) => key !== "constructor" && !key.startsWith("__") && !knownPrimitives.includes(key))
+  // We can look directly at the `instance` to find all relations (`has...` calls), and any other
+  // instance-level fields (of which only the special `transientFields` is expected/allowed).
+  const [relationFields, otherFields] = partition(Object.entries(instance), ([, value]) => value instanceof LazyField);
+
+  // Enforce transientFields usage
+  const invalidFields = otherFields.filter(([fieldName]) => fieldName !== "transientFields");
+  if (invalidFields.length > 0) {
+    throw new Error(
+      `${meta.type} has invalid class fields, ${invalidFields.map(([k]) => k).join(", ")} should go in transientFields`,
+    );
+  }
+
+  const properties = [
+    // Include the instance-level relations that will be getter-ized by `newEntity`
+    ...relationFields,
+    // And then any prototype-level getters/methods like `isRed` by recursively looking for ownKeys
+    // (this is the previously-mentioned nod to entityResolver to let it copy over getters/methods).
+    ...getRecursivePrototypeKeys(instance)
+      .filter((key) => !knownPrimitives.includes(key))
       .map((key) => {
-        // Return the value of `instance[key]` but wrap it in a try/catch in case it's
-        // a getter that runs code that fails b/c of the dummy state we're in.
         try {
           return [key, (instance as any)[key] ?? unknown];
         } catch {
           return [key, unknown];
         }
-      })
-      // Purposefully return methods, primitives, etc. so that `entityResolver` can add them to the resolver
-      .filter(([key]) => key !== "fullNonReactiveAccess" && key !== "transientFields"),
+      }),
+  ];
+
+  // Keep one version with the relations still lazy, solely for `newEntity`
+  // (technically newEntity will only ask for this once-per-cstr, so a cache is kind of over-kill,
+  // but creating it here, right before we `relationCstr.create`, is a convenient spot).
+  lazyFields[key] = [...relationFields, ...otherFields];
+
+  // But expose to everyone else the concrete/constructed relations
+  Object.assign(
+    cached,
+    Object.fromEntries(
+      properties.map(([fieldName, value]) => [
+        fieldName,
+        value instanceof LazyField ? value.create(instance, fieldName) : value,
+      ]),
+    ),
   );
 
-  return Object.assign(cached, properties);
+  return cached;
+}
+
+/**
+ * Returns the `LazyField`s (...and transientField) for `meta`.
+ *
+ * Should only be used by `newEntity` while moving relations to the prototype.
+ */
+export function getLazyFields(meta: EntityMetadata): [string, LazyField<any> | object][] {
+  getProperties(meta); // We populate the lazyFields during getProperties
+  const key = meta.stiDiscriminatorValue ? `${meta.tableName}:${meta.stiDiscriminatorValue}` : meta.tableName;
+  return lazyFields[key];
 }
 
 export class UnknownProperty {}
 const unknown = new UnknownProperty();
 
 const propertiesCache: Record<string, any> = {};
-const fakeInstances: Record<string, Entity> = {};
-
-/**
- * Returns a fake instance of `meta` so that user-defined `CustomReference` and `AsyncProperty`s can
- * be inspected on boot.
- */
-export function getFakeInstance(meta: EntityMetadata): Entity {
-  // asConcreteCstr is safe b/c we're just doing property scanning and not real instantiation
-  return (fakeInstances[meta.cstr.name] ??= new (asInternalCstr(meta.cstr))(
-    {
-      register: (entity: any) => {
-        const orm = getInstanceData(entity);
-        (orm as any).metadata = meta;
-        orm.data = {};
-      },
-      // Tell our "cannot instantiate an abstract class" constructor logic check to chill
-      fakeInstance: true,
-    } as any,
-    true,
-  ));
-}
+const lazyFields: Record<string, any> = {};
 
 // These are keys we codegen into `AuthorCodegen` files to get the best typing
 // experience, but really should be treated as BaseEntity keys that we don't
 // need to expose from `getProperties`.
 const ignoredKeys = new Set([
+  "constructor",
   "id",
   "idMaybe",
   "idTagged",
@@ -116,11 +132,18 @@ const ignoredKeys = new Set([
   "toJSON",
 ]);
 
-// function getRecursiveOwnNames(cstr: MaybeAbstractEntityConstructor<any>): string[] {
-function getRecursiveOwnNames(instance: any): string[] {
+function getRecursivePrototypeKeys(instance: any): string[] {
   const keys: string[] = [];
-  for (let curr = instance; curr && curr !== BaseEntity.prototype; curr = Object.getPrototypeOf(curr)) {
-    keys.push(...Object.getOwnPropertyNames(curr));
+  for (
+    let curr = Object.getPrototypeOf(instance);
+    curr && curr !== BaseEntity.prototype;
+    curr = Object.getPrototypeOf(curr)
+  ) {
+    for (const name of Object.getOwnPropertyNames(curr)) {
+      if (!ignoredKeys.has(name)) {
+        keys.push(name);
+      }
+    }
   }
-  return keys.filter((k) => !ignoredKeys.has(k));
+  return keys;
 }

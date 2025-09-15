@@ -2,14 +2,17 @@ import { AsyncProperty, hasReactiveAsyncProperty, hasReactiveField, ReactiveFiel
 import { Author, BookCodegen, bookReviewBeforeFlushRan, bookConfig as config } from "./entities";
 
 export class Book extends BookCodegen {
-  rulesInvoked = 0;
-  firstNameRuleInvoked = 0;
-  favoriteColorsRuleInvoked = 0;
-  reviewsRuleInvoked = 0;
-  numberOfBooks2RuleInvoked = 0;
-  authorSetWhenDeleteRuns: boolean | undefined = undefined;
-  afterCommitCheckTagsChanged: boolean | undefined = undefined;
-  transientFields = { throwNpeInSearch: false, bookReviewBeforeFlushRan: false };
+  transientFields = {
+    rulesInvoked: 0,
+    firstNameRuleInvoked: 0,
+    favoriteColorsRuleInvoked: 0,
+    reviewsRuleInvoked: 0,
+    numberOfBooks2RuleInvoked: 0,
+    authorSetWhenDeleteRuns: undefined as boolean | undefined,
+    afterCommitCheckTagsChanged: undefined as boolean | undefined,
+    throwNpeInSearch: false,
+    bookReviewBeforeFlushRan: false,
+  };
 
   /** For testing reacting to poly CommentParent properties. */
   readonly commentParentInfo: AsyncProperty<Book, string> = hasReactiveAsyncProperty(
@@ -30,7 +33,7 @@ export class Book extends BookCodegen {
 }
 
 config.addRule((book) => {
-  book.rulesInvoked++;
+  book.transientFields.rulesInvoked++;
 });
 
 // A noop rule to make Book reactive on author.firstName
@@ -41,7 +44,7 @@ config.addRule({ author: "firstName" }, (b) => {
   // @ts-expect-error
   noop(b.author.get.changes.lastName.hasChanged);
   // And record the side effect for assertions
-  b.fullNonReactiveAccess.firstNameRuleInvoked++;
+  b.fullNonReactiveAccess.transientFields.firstNameRuleInvoked++;
 });
 
 // Another noop rule to make Book reactive on author.favoriteColors
@@ -49,17 +52,17 @@ config.addRule({ author: ["favoriteColors", "firstName:ro"] }, (b) => {
   if (b.author.get.favoriteColors.length > 2) {
     return `${b.author.get.firstName} has too many colors`;
   }
-  b.fullNonReactiveAccess.favoriteColorsRuleInvoked++;
+  b.fullNonReactiveAccess.transientFields.favoriteColorsRuleInvoked++;
 });
 
 // Example of a rule on reviews, where the BookReview.book is cannotBeUpdated
 config.addRule("reviews", (b) => {
-  b.fullNonReactiveAccess.reviewsRuleInvoked++;
+  b.fullNonReactiveAccess.transientFields.reviewsRuleInvoked++;
 });
 
 // Another noop rule to make Book reactive on author.numberOfBooks2, an async property
 config.addRule({ author: "numberOfBooks2" }, (b) => {
-  b.fullNonReactiveAccess.numberOfBooks2RuleInvoked++;
+  b.fullNonReactiveAccess.transientFields.numberOfBooks2RuleInvoked++;
 });
 
 /**
@@ -97,7 +100,7 @@ config.cascadeDelete("reviews");
 // Verify that beforeDelete hooks see their pre-unhooked-state, because if they run
 // after the entity is unhooked, they won't be able to access their relationships.
 config.beforeDelete("author", (b) => {
-  b.authorSetWhenDeleteRuns = b.author.getWithDeleted !== undefined;
+  b.transientFields.authorSetWhenDeleteRuns = b.author.getWithDeleted !== undefined;
 });
 
 // Test m2m reactivity on collection size
@@ -124,7 +127,7 @@ config.beforeFlush((b) => {
 config.afterCommit((book) => {
   if (book.changes.fields.includes("tags")) {
     // Arbitrary logic to identify that this hook fired on unit tests
-    book.afterCommitCheckTagsChanged = true;
+    book.transientFields.afterCommitCheckTagsChanged = true;
   }
 });
 

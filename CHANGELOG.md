@@ -1,3 +1,10 @@
+# [1.268.0](https://github.com/joist-orm/joist-orm/compare/v1.267.4...v1.268.0) (2025-09-15)
+
+
+### Features
+
+* Lazy relations w/o transforms ([#1586](https://github.com/joist-orm/joist-orm/issues/1586)) ([5d24ea4](https://github.com/joist-orm/joist-orm/commit/5d24ea41ace8a4684686fa8cbb65ded076e73823))
+
 ## [1.267.4](https://github.com/joist-orm/joist-orm/compare/v1.267.3...v1.267.4) (2025-09-12)
 
 

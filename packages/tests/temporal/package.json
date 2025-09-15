@@ -20,11 +20,11 @@
     "temporal-polyfill": "^0.3.0"
   },
   "devDependencies": {
-    "@swc/core": "^1.13.3",
+    "@swc/core": "^1.13.5",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.1.0",
-    "jest": "30.0.5",
+    "jest": "30.1.3",
     "jest-junit": "^16.0.0",
     "joist-codegen": "workspace:*",
     "joist-migration-utils": "workspace:*",
@@ -34,6 +34,6 @@
     "superstruct": "0.15.5",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "5.8.3"
+    "typescript": "5.9.2"
   }
 }

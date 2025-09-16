@@ -1,3 +1,10 @@
+## [1.268.3](https://github.com/joist-orm/joist-orm/compare/v1.268.2...v1.268.3) (2025-09-16)
+
+
+### Bug Fixes
+
+* Add check for creating abstract classes. ([#1590](https://github.com/joist-orm/joist-orm/issues/1590)) ([6d17cdb](https://github.com/joist-orm/joist-orm/commit/6d17cdb58618c90709d38f890835f2e7f991180c))
+
 ## [1.268.2](https://github.com/joist-orm/joist-orm/compare/v1.268.1...v1.268.2) (2025-09-16)
 
 

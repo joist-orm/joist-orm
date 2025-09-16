@@ -17,18 +17,31 @@ const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>
 const tableToMetaMap = new Map<string, EntityMetadata>();
 const typeToMetaMap = new Map<string, EntityMetadata>();
 
+let previousBootError: any;
+
 /** Performs our boot-time initialization, i.e. hooking up reactivity. */
 export function configureMetadata(metas: EntityMetadata[]): void {
-  populateConstructorMaps(metas);
-  hookUpBaseTypeAndSubTypes(metas);
-  setImmutableFields(metas);
-  populatePolyComponentFields(metas);
-  fireAfterMetadatas(metas);
-  // Do these after `fireAfterMetadatas`, in case afterMetadata callbacks added more defaults/rules
-  copyAsyncDefaults(metas);
-  reverseIndexReactivity(metas);
-  copyRunBeforeBooksToBaseType(metas);
-  setBooted();
+  // Add explicit "did we already fail" check b/c if a transformer like tsx gets a runtime error from
+  // here, it can potentially suppress it, move on to another file, which will naively re-invoke
+  // `configureMetadata` again, and fail with a very confusing "Duplicate tag" error
+  if (previousBootError) {
+    throw previousBootError;
+  }
+  try {
+    populateConstructorMaps(metas);
+    hookUpBaseTypeAndSubTypes(metas);
+    setImmutableFields(metas);
+    populatePolyComponentFields(metas);
+    fireAfterMetadatas(metas);
+    // Do these after `fireAfterMetadatas`, in case afterMetadata callbacks added more defaults/rules
+    copyAsyncDefaults(metas);
+    reverseIndexReactivity(metas);
+    copyRunBeforeBooksToBaseType(metas);
+    setBooted();
+  } catch (e) {
+    previousBootError = e;
+    throw e;
+  }
 }
 
 function fireAfterMetadatas(metas: EntityMetadata[]): void {

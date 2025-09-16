@@ -3,6 +3,7 @@ import { Entity } from "./Entity";
 import { EntityConstructor, EntityManager } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { getLazyFields } from "./getProperties";
+import { fail } from "./utils";
 
 // Marks a constructor like Author has having had our relation getters installed
 const lazySymbol = Symbol("lazy");
@@ -83,7 +84,9 @@ export function lazyField<T extends Entity, R>(fn: (entity: T, fieldName: string
  * finished importing, and the consts are all defined.
  */
 export function resolveOtherMeta(entity: Entity, fieldName: string): EntityMetadata {
-  return (getMetadata(entity).allFields[fieldName] as any).otherMetadata();
+  const meta = getMetadata(entity);
+  const field: any = meta.allFields[fieldName] ?? fail(`Could not find field ${meta.type}.${fieldName}`);
+  return field.otherMetadata();
 }
 
 /** Wraps `has...` relation constructors in an easily-identifiable container. */

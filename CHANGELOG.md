@@ -1,3 +1,10 @@
+## [1.268.2](https://github.com/joist-orm/joist-orm/compare/v1.268.1...v1.268.2) (2025-09-16)
+
+
+### Bug Fixes
+
+* Add more helpful error message. ([#1589](https://github.com/joist-orm/joist-orm/issues/1589)) ([b79e4df](https://github.com/joist-orm/joist-orm/commit/b79e4df8a2a342a42658e2d13c62f43d3dd60d55))
+
 ## [1.268.1](https://github.com/joist-orm/joist-orm/compare/v1.268.0...v1.268.1) (2025-09-16)
 
 

@@ -22,19 +22,19 @@ export class ReactionLogger {
     return performance.now();
   }
 
-  logQueued(entity: Entity, fieldName: string, rf: ReactiveActor): void {
+  logQueued(entity: Entity, fieldName: string, ra: ReactiveActor): void {
     this.log(
       green.bold(`${entity.toTaggedString()}`) + yellow(`.${fieldName}`),
       gray(`changed, queuing`),
-      green.bold(`${entity.toTaggedString()}`) + yellow(maybeDotPath(rf)) + yellow(rf.name),
+      green.bold(`${entity.toTaggedString()}`) + yellow(maybeDotPath(ra)) + yellow(ra.name),
     );
   }
 
-  logQueuedAll(entity: Entity, reason: string, rf: ReactiveActor): void {
+  logQueuedAll(entity: Entity, reason: string, ra: ReactiveActor): void {
     this.log(
       green.bold(`${entity.toTaggedString()}`),
       gray(`${reason}, queuing`),
-      green.bold(`${entity.toTaggedString()}`) + green(maybeDotPath(rf)) + yellow(rf.name),
+      green.bold(`${entity.toTaggedString()}`) + green(maybeDotPath(ra)) + yellow(ra.name),
     );
   }
 
@@ -45,17 +45,17 @@ export class ReactionLogger {
     );
   }
 
-  logWalked(todo: Entity[], rf: ReactiveActor, entities: Entity[]): void {
+  logWalked(todo: Entity[], ra: ReactiveActor, entities: Entity[]): void {
     // Keep for future debugging...
     const from = todo[0].constructor.name;
     this.log(
       " ", // indent
       gray(`Walked`),
       white(`${todo.length}`),
-      green.bold(`${from}`) + green(`.${rf.path.join(".")}`),
+      green.bold(`${from}`) + green(`.${ra.path.join(".")}`),
       gray("paths, found"),
       white(`${entities.length}`),
-      green.bold(`${rf.cstr.name}`) + green(".") + yellow(rf.name),
+      green.bold(`${ra.cstr.name}`) + green(".") + yellow(ra.name),
       gray("to recalc"),
     );
     if (entities.length > 0) {
@@ -104,6 +104,6 @@ export function setReactionLogging(arg: boolean | ReactionLogger): void {
   globalLogger = typeof arg === "boolean" ? (arg ? new ReactionLogger() : undefined) : arg;
 }
 
-function maybeDotPath(rf: ReactiveActor): string {
-  return rf.path.length > 0 ? `.${rf.path.join(".")}.` : ".";
+function maybeDotPath(ra: ReactiveActor): string {
+  return ra.path.length > 0 ? `.${ra.path.join(".")}.` : ".";
 }

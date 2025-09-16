@@ -206,11 +206,11 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
         }
       }
 
-      // Look for reactive hooks to reverse
+      // Look for reactions to reverse
       for (const { name, hint, fn } of meta.config.__data.reactions) {
         const reversals = reverseReactiveHint(meta.cstr, meta.cstr, hint);
-        // For each reversal, tell its config about the reverse hint to force-re-validate
-        // the original hook's instance any time it changes.
+        // For each reversal, tell its config about the reverse hint to force-rerun
+        // the original reaction's instance any time it changes.
         for (const { entity, path, fields } of reversals) {
           getMetadata(entity).config.__data.reactiveActors.push({
             kind: "reaction",

@@ -1,6 +1,6 @@
 import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { getReactiveFieldsIncludingReadOnly } from "./caches";
+import { getReactiveActorsIncludingReadOnly } from "./caches";
 
 /**
  * Interface for our relations that have dynamic & expensive `isLoaded` checks.
@@ -74,7 +74,7 @@ export class IsLoadedCache {
 
   resetSmartCache(meta: EntityMetadata, fieldName: string): void {
     // These are RFs in other entities that are watching/reacting to this entity/fieldName
-    const rfs = getReactiveFieldsIncludingReadOnly(meta);
+    const rfs = getReactiveActorsIncludingReadOnly(meta);
     for (const rf of rfs) {
       // I.e. we've written to Author.firstName, and this RF in Book/otherMeta depends on it
       if (rf.fields.includes(fieldName)) {

@@ -1,8 +1,8 @@
 import ansis from "ansis";
-import { ReactiveField } from "../config";
+import { ReactiveActor } from "../config";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
-import { Relation } from "../relations";
+import { ReactiveAction } from "../ReactionsManager";
 import { groupBy } from "../utils";
 
 const { gray, green, yellow, white } = ansis;
@@ -22,7 +22,7 @@ export class ReactionLogger {
     return performance.now();
   }
 
-  logQueued(entity: Entity, fieldName: string, rf: ReactiveField): void {
+  logQueued(entity: Entity, fieldName: string, rf: ReactiveActor): void {
     this.log(
       green.bold(`${entity.toTaggedString()}`) + yellow(`.${fieldName}`),
       gray(`changed, queuing`),
@@ -30,7 +30,7 @@ export class ReactionLogger {
     );
   }
 
-  logQueuedAll(entity: Entity, reason: string, rf: ReactiveField): void {
+  logQueuedAll(entity: Entity, reason: string, rf: ReactiveActor): void {
     this.log(
       green.bold(`${entity.toTaggedString()}`),
       gray(`${reason}, queuing`),
@@ -38,14 +38,14 @@ export class ReactionLogger {
     );
   }
 
-  logStartingRecalc(em: EntityManager, kind: "reactiveFields" | "reactiveQueries"): void {
+  logStartingRecalc(em: EntityManager, kind: "reactiveActors" | "reactiveQueries"): void {
     this.log(
       white.bold(`Recalculating reactive ${kind === "reactiveQueries" ? "queries" : "fields"} values...`),
       this.entityCount(em),
     );
   }
 
-  logWalked(todo: Entity[], rf: ReactiveField, relations: Relation<any, any>[]): void {
+  logWalked(todo: Entity[], rf: ReactiveActor, entities: Entity[]): void {
     // Keep for future debugging...
     const from = todo[0].constructor.name;
     this.log(
@@ -54,32 +54,32 @@ export class ReactionLogger {
       white(`${todo.length}`),
       green.bold(`${from}`) + green(`.${rf.path.join(".")}`),
       gray("paths, found"),
-      white(`${relations.length}`),
+      white(`${entities.length}`),
       green.bold(`${rf.cstr.name}`) + green(".") + yellow(rf.name),
       gray("to recalc"),
     );
-    if (relations.length > 0) {
+    if (entities.length > 0) {
       this.log(
         "   ", // indent
         gray("["),
         todo.map((e) => e.toTaggedString()).join(" "),
         gray("] -> ["),
-        [...new Set(relations)].map((r) => r.entity.toTaggedString()).join(" "),
+        [...new Set(entities)].map((e) => e.toTaggedString()).join(" "),
         gray("]"),
       );
     }
   }
 
-  logLoading(em: EntityManager, relations: any[]): void {
-    this.log(" ", gray("Loading"), String(relations.length), gray("relations..."), this.entityCount(em));
-    // Group by the relation name
-    [...groupBy(relations, (r) => `${r.entity.constructor.name}.${r.fieldName}`).entries()].forEach(([, relations]) => {
-      const r = relations[0];
+  logLoading(em: EntityManager, actions: ReactiveAction[]): void {
+    this.log(" ", gray("Loading"), String(actions.length), gray("actions..."), this.entityCount(em));
+    // Group by the action name
+    [...groupBy(actions, (a) => `${a.entity.constructor.name},${a.ra.name}`).values()].forEach((actions) => {
+      const { ra, entity } = actions[0];
       this.log(
         "   ",
-        green.bold(r.entity.constructor.name) + green(".") + yellow(r.fieldName),
+        green.bold(entity.constructor.name) + green(".") + yellow(ra.name),
         gray("-> ["),
-        String(relations.map((r: any) => r.entity.toTaggedString()).join(" ")),
+        String(actions.map((a) => a.entity.toTaggedString()).join(" ")),
         gray("]"),
       );
     });
@@ -104,6 +104,6 @@ export function setReactionLogging(arg: boolean | ReactionLogger): void {
   globalLogger = typeof arg === "boolean" ? (arg ? new ReactionLogger() : undefined) : arg;
 }
 
-function maybeDotPath(rf: ReactiveField): string {
+function maybeDotPath(rf: ReactiveActor): string {
   return rf.path.length > 0 ? `.${rf.path.join(".")}.` : ".";
 }

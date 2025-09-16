@@ -1408,7 +1408,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // that would NPE their logic anyway).
       await this.flushDeletes();
       // Recalc before we run hooks, so the hooks will see the latest calculated values.
-      await this.#rm.recalcPendingDerivedValues("reactiveFields");
+      await this.#rm.recalcPendingDerivedValues("reactiveActors");
     });
 
     const createdThenDeleted: Set<Entity> = new Set();
@@ -1462,7 +1462,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           // The hooks could have deleted this-loop or prior-loop entities, so re-cascade again.
           await this.flushDeletes();
           // The hooks could have changed fields, so recalc again.
-          await this.#rm.recalcPendingDerivedValues("reactiveFields");
+          await this.#rm.recalcPendingDerivedValues("reactiveActors");
 
           if (this.#rm.hasFieldsPendingAssignedIds) {
             await this.assignNewIds();
@@ -1542,7 +1542,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               await this.#fl.allowWrites(async () => {
                 await this.#rm.recalcPendingDerivedValues("reactiveQueries");
                 // If any ReactiveFields depended on ReactiveQueryFields, go ahead and calc those now
-                await this.#rm.recalcPendingDerivedValues("reactiveFields");
+                await this.#rm.recalcPendingDerivedValues("reactiveActors");
               });
               // Advance `now` so that our triggers don't think our UPDATEs are forgetting to self-bump
               // updated_at, and bump it themselves, which could cause a subsequent error.
@@ -1832,7 +1832,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     // `.load()` recalculated the immediate relations, go ahead and recalc any downstream fields.
     // We'll still defer ReactiveQueryFields to the em.flush loop.
-    await this.#rm.recalcPendingDerivedValues("reactiveFields");
+    await this.#rm.recalcPendingDerivedValues("reactiveActors");
   }
 
   public beforeTransaction(fn: HookFn<TX>) {

@@ -32,6 +32,8 @@ type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<unknown>;
 
 export const constraintNameToValidationError: Record<string, string> = {};
 
+type Settable<T extends Entity> = keyof SettableFields<FieldsOf<T>> & string;
+
 let booted = false;
 
 /**
@@ -83,12 +85,14 @@ export class ConfigApi<T extends Entity, C> {
       this.__data.rules.push({ name, fn, hint: undefined });
     } else {
       const hint = ruleOrHint;
+      let loadHint: LoadHint<T>;
       // Create a wrapper around the user's function to populate
       const fn = (entity: T) => {
-        // Ideally we'd convert this once outside `fn`, but we don't have `metadata` yet
-        const loadHint = convertToLoadHint(getMetadata(entity), hint);
+        // Ideally, we'd convert this outside `wrappedFn`, but we don't have `metadata` yet. So we do it lazily on the
+        // first call.
+        loadHint ??= convertToLoadHint<T>(getMetadata(entity), hint);
         if (Object.keys(loadHint).length > 0) {
-          return entity.em.populate(entity, loadHint as any).then((loaded) => maybeRule!(loaded));
+          return entity.em.populate(entity, loadHint).then(maybeRule!);
         }
         return maybeRule!(entity);
       };
@@ -172,21 +176,39 @@ export class ConfigApi<T extends Entity, C> {
     this.addHook("afterCommit", fn);
   }
 
+  addReaction<H extends ReactiveHint<T>>(hint: H, fn: HookFn<Reacted<T, H>, C>): void {
+    // Keep the name so we can uniquely identify this reaction later and also aid debugging/tracing
+    const name = getCallerName();
+    this.ensurePreBoot(name, "addReaction");
+    let loadHint: LoadHint<T>;
+    // Create a wrapper around the user's function to populate
+    const wrappedFn = (entity: T, ctx: C) => {
+      // Ideally, we'd convert this outside `wrappedFn`, but we don't have `metadata` yet. So we do it lazily on the
+      // first call.
+      loadHint ??= convertToLoadHint<T>(getMetadata(entity), hint);
+      if (Object.keys(loadHint).length > 0) {
+        return entity.em.populate(entity, loadHint as any).then((loaded) => fn(loaded as Reacted<T, H>, ctx));
+      }
+      return fn(entity as Reacted<T, H>, ctx);
+    };
+    this.__data.reactions.push({ name, fn: wrappedFn, hint });
+  }
+
   /** Adds a synchronous default for `fieldName` to a hard-coded `value`. */
-  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string, F = FieldsOf<T>[K]>(
+  setDefault<K extends Settable<T>, F = FieldsOf<T>[K]>(
     fieldName: K,
     // Allow returning undefined to mean "no default"
     value: F extends EntityField ? F["type"] : never,
   ): void;
   /** Adds a synchronous default for `fieldName` to the result of simple sync lambda. */
-  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string, F = FieldsOf<T>[K]>(
+  setDefault<K extends Settable<T>, F = FieldsOf<T>[K]>(
     fieldName: K,
     // ...this doesn't technically declare what other fields of `entity` we depend on,
     // which ideally we want to drive "which default to set first?" precedence decisions.
     fn: (entity: T) => F extends EntityField ? F["type"] | undefined : never,
   ): void;
   /** Adds an asynchronous default for `fieldName` to the result of a hinted lambda. */
-  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string, const H extends ReactiveHint<T>, F = FieldsOf<T>[K]>(
+  setDefault<K extends Settable<T>, const H extends ReactiveHint<T>, F = FieldsOf<T>[K]>(
     fieldName: K,
     // We use a ReactiveHint so that we get field-level dependencies that means someday
     // we could drive "which default to set first?" precedence decisions.
@@ -290,6 +312,30 @@ export interface ReactiveField {
   name: string;
 }
 
+export interface Reaction {
+  kind: "reaction";
+  /** The source we're reacting to, specifically which base/subtype cstr. */
+  source: MaybeAbstractEntityConstructor<any>;
+  /** The fields on this source entity that would trigger the downstream hook's eval. */
+  fields: string[];
+  /** The constructor of downstream entity that owns the reaction. */
+  cstr: MaybeAbstractEntityConstructor<any>;
+  /** The name (source location) of the downstream reaction. */
+  name: string;
+  /** The path from this source entity to the downstream entity for this reaction. */
+  path: string[];
+  /** The downstream reaction function. */
+  fn: HookFn<any, any>;
+}
+
+export type ReactiveActor = ReactiveField | Reaction;
+
+interface ReactionInternal<T extends Entity, H extends ReactiveHint<T>, C> {
+  name: string;
+  fn: HookFn<Reacted<T, H>, C>;
+  hint: H;
+}
+
 type AfterMetadataCallback<T extends Entity> = (meta: EntityMetadata<T>) => void;
 
 /** The internal state of an entity's configuration data, i.e. validation rules/hooks. */
@@ -298,6 +344,8 @@ export class ConfigData<T extends Entity, C> {
   runHooksBefore: EntityConstructor<any>[] = [];
   /** The validation rules for this entity type. */
   rules: ValidationRuleInternal<T>[] = [];
+  /** The reactions for this entity type. */
+  reactions: ReactionInternal<T, any, C>[] = [];
   /** The hooks for this entity type. */
   hooks: Record<EntityHook, HookFn<T, C>[]> = {
     beforeDelete: [],
@@ -315,8 +363,8 @@ export class ConfigData<T extends Entity, C> {
 
   // An array of the reactive rules that depend on this entity
   reactiveRules: ReactiveRule[] = [];
-  // An array of the reactive fields that depend on this entity
-  reactiveDerivedValues: ReactiveField[] = [];
+  // An array of the reactive fields and reactions that depend on this entity
+  reactiveActors: ReactiveActor[] = [];
   cascadeDeleteFields: Array<keyof RelationsIn<T>> = [];
   touchOnChange: Set<keyof RelationsIn<T>> = new Set();
   // Constantly converting reactive hints to load hints is expense, so cache them here

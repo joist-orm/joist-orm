@@ -205,6 +205,24 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
           }
         }
       }
+
+      // Look for reactive hooks to reverse
+      for (const { name, hint, fn } of meta.config.__data.reactions) {
+        const reversals = reverseReactiveHint(meta.cstr, meta.cstr, hint);
+        // For each reversal, tell its config about the reverse hint to force-re-validate
+        // the original hook's instance any time it changes.
+        for (const { entity, path, fields } of reversals) {
+          getMetadata(entity).config.__data.reactiveActors.push({
+            kind: "reaction",
+            source: entity,
+            cstr: meta.cstr,
+            name,
+            fields,
+            path,
+            fn,
+          });
+        }
+      }
     }
 
     // Look for ReactiveFields to reverse
@@ -226,7 +244,7 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
       if (ap?.reactiveHint) {
         const reversals = reverseReactiveHint(meta.cstr, meta.cstr, ap.reactiveHint);
         for (const { kind, entity, path, fields } of reversals) {
-          getMetadata(entity).config.__data.reactiveDerivedValues.push({
+          getMetadata(entity).config.__data.reactiveActors.push({
             kind: ap instanceof ReactiveQueryFieldImpl ? "query" : "populate",
             cstr: meta.cstr,
             isReadOnly: kind === "read-only",

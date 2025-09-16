@@ -42,8 +42,8 @@ export class JoinRows {
     }
     getEmInternalApi(e1.em).isLoadedCache.resetIsLoaded(e1, m2m.fieldName);
     getEmInternalApi(e1.em).isLoadedCache.resetIsLoaded(e2, m2m.otherFieldName);
-    this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
-    this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
+    this.rm.queueDownstreamReactiveActors(e1, m2m.fieldName);
+    this.rm.queueDownstreamReactiveActors(e2, m2m.otherFieldName);
     if (getBaseAndSelfMetas(e1).some((meta) => meta.config.__data.touchOnChange.has(m2m.fieldName))) {
       em.touch(e1);
     }
@@ -77,8 +77,8 @@ export class JoinRows {
     }
     getEmInternalApi(e1.em).isLoadedCache.resetIsLoaded(e1, m2m.fieldName);
     getEmInternalApi(e1.em).isLoadedCache.resetIsLoaded(e2, m2m.otherFieldName);
-    this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
-    this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
+    this.rm.queueDownstreamReactiveActors(e1, m2m.fieldName);
+    this.rm.queueDownstreamReactiveActors(e2, m2m.otherFieldName);
     if (getBaseAndSelfMetas(e1).some((meta) => meta.config.__data.touchOnChange.has(m2m.fieldName))) {
       em.touch(e1);
     }

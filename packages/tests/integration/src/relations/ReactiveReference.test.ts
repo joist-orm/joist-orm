@@ -216,9 +216,9 @@ describe("ReactiveReference", () => {
        "  Walked 1 Book.favoriteAuthor.publisher@LargePublisher paths, found 0 LargePublisher.titlesOfFavoriteBooks to recalc↩",
        "  Walked 1 Book.favoriteAuthor.publisher@SmallPublisher paths, found 1 SmallPublisher.titlesOfFavoriteBooks to recalc↩",
        "    [ b:1 ] -> [ p:1 ]↩",
-       "  Loading 3 relations... (em.entities=3)↩",
-       "    Author.search -> [ a:1 ]↩",
+       "  Loading 3 actions... (em.entities=3)↩",
        "    Book.search -> [ b:1 ]↩",
+       "    Author.search -> [ a:1 ]↩",
        "    SmallPublisher.titlesOfFavoriteBooks -> [ p:1 ]↩",
        "    took 0 millis (em.entities=3)↩",
      ]

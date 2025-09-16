@@ -73,18 +73,18 @@ export class IsLoadedCache {
   }
 
   resetSmartCache(meta: EntityMetadata, fieldName: string): void {
-    // These are RFs in other entities that are watching/reacting to this entity/fieldName
-    const rfs = getReactiveActorsIncludingReadOnly(meta);
-    for (const rf of rfs) {
-      // I.e. we've written to Author.firstName, and this RF in Book/otherMeta depends on it
-      if (rf.fields.includes(fieldName)) {
-        const otherMeta = getMetadata(rf.cstr);
-        // Find any cache entries for this rf.cstr + rf.fieldName
-        const set = this.#smartCache[otherMeta.tagName]?.[rf.name];
+    // These are RAs in other entities that are watching/reacting to this entity/fieldName
+    const ras = getReactiveActorsIncludingReadOnly(meta);
+    for (const ra of ras) {
+      // I.e. we've written to Author.firstName, and this RA in Book/otherMeta depends on it
+      if (ra.fields.includes(fieldName)) {
+        const otherMeta = getMetadata(ra.cstr);
+        // Find any cache entries for this ra.cstr + ra.fieldName
+        const set = this.#smartCache[otherMeta.tagName]?.[ra.name];
         if (set?.size > 0) {
           for (const target of set) {
             target.resetIsLoaded();
-            // Is this target itself a RF/RR? If so, transitively reset its cache as well.
+            // Is this target itself a RA/RR? If so, transitively reset its cache as well.
             const otherMeta = getMetadata(target.entity);
             const otherField = otherMeta.allFields[target.fieldName];
             if ("derived" in otherField && otherField.derived) {

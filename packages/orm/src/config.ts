@@ -176,7 +176,7 @@ export class ConfigApi<T extends Entity, C> {
     this.addHook("afterCommit", fn);
   }
 
-  addReaction<H extends ReactiveHint<T>>(hint: H, fn: HookFn<Reacted<T, H>, C>): void {
+  addReaction<H extends ReactiveHint<T>>(hint: H, fn: HookFn<Loaded<T, H>, C>): void {
     // Keep the name so we can uniquely identify this reaction later and also aid debugging/tracing
     const name = getCallerName();
     this.ensurePreBoot(name, "addReaction");
@@ -187,9 +187,9 @@ export class ConfigApi<T extends Entity, C> {
       // first call.
       loadHint ??= convertToLoadHint<T>(getMetadata(entity), hint);
       if (Object.keys(loadHint).length > 0) {
-        return entity.em.populate(entity, loadHint as any).then((loaded) => fn(loaded as Reacted<T, H>, ctx));
+        return entity.em.populate(entity, loadHint).then((loaded) => fn(loaded as Loaded<T, H>, ctx));
       }
-      return fn(entity as Reacted<T, H>, ctx);
+      return fn(entity as Loaded<T, H>, ctx);
     };
     this.__data.reactions.push({ name, fn: wrappedFn, hint });
   }
@@ -318,6 +318,8 @@ export interface Reaction {
   source: MaybeAbstractEntityConstructor<any>;
   /** The fields on this source entity that would trigger the downstream hook's eval. */
   fields: string[];
+  /** Read-only/immutable fields that are used in the function. */
+  isReadOnly: boolean;
   /** The constructor of downstream entity that owns the reaction. */
   cstr: MaybeAbstractEntityConstructor<any>;
   /** The name (source location) of the downstream reaction. */

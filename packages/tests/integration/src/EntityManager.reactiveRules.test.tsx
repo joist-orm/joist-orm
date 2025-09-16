@@ -886,7 +886,7 @@ function getReactiveRules(cstr: MaybeAbstractEntityConstructor<any>): any[] {
 
 function getReactiveActors(cstr: MaybeAbstractEntityConstructor<any>): any[] {
   return getMetadata(cstr)
-    .config.__data.reactiveActors.filter((rule) => rule.kind === "reaction" || !rule.isReadOnly)
+    .config.__data.reactiveActors.filter((rule) => !rule.isReadOnly)
     .map((rule) => {
       const { cstr, ...rest } = rule;
       delete (rest as any)["isReadOnly"];

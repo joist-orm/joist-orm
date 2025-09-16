@@ -2,26 +2,26 @@ import { ReactiveActor, ReactiveRule } from "./config";
 import { EntityMetadata, getBaseAndSelfMetas, getBaseSelfAndSubMetas } from "./EntityMetadata";
 
 // We calculate these all the time, so cache them for good measure.
-const reactiveFieldCache: WeakMap<EntityMetadata, ReactiveActor[]> = new WeakMap();
-const reactiveFieldWithReadOnlyCache: WeakMap<EntityMetadata, ReactiveActor[]> = new WeakMap();
+const reactiveActorCache: WeakMap<EntityMetadata, ReactiveActor[]> = new WeakMap();
+const reactiveActorWithReadOnlyCache: WeakMap<EntityMetadata, ReactiveActor[]> = new WeakMap();
 const reactiveRuleCache: WeakMap<EntityMetadata, ReactiveRule[]> = new WeakMap();
 
 export function getReactiveActors(meta: EntityMetadata): ReactiveActor[] {
-  let fields = reactiveFieldCache.get(meta);
+  let fields = reactiveActorCache.get(meta);
   if (fields === undefined) {
-    fields = getBaseAndSelfMetas(meta).flatMap((m) => [
-      ...m.config.__data.reactiveActors.filter((r) => r.kind === "reaction" || !r.isReadOnly),
-    ]);
-    reactiveFieldCache.set(meta, fields);
+    fields = getBaseAndSelfMetas(meta)
+      .flatMap((m) => m.config.__data.reactiveActors)
+      .filter((r) => !r.isReadOnly);
+    reactiveActorCache.set(meta, fields);
   }
   return fields;
 }
 
 export function getReactiveActorsIncludingReadOnly(meta: EntityMetadata): ReactiveActor[] {
-  let fields = reactiveFieldWithReadOnlyCache.get(meta);
+  let fields = reactiveActorWithReadOnlyCache.get(meta);
   if (fields === undefined) {
     fields = getBaseAndSelfMetas(meta).flatMap((m) => m.config.__data.reactiveActors);
-    reactiveFieldWithReadOnlyCache.set(meta, fields);
+    reactiveActorWithReadOnlyCache.set(meta, fields);
   }
   return fields;
 }

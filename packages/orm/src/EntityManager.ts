@@ -1796,7 +1796,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   /**
-   * Recalculates the reactive fields for an entity, and any downstream reactive fields that depend on them.
+   * Recalculates the reactive fields for an entity, and any downstream reactive fields or reactions that depend on them.
    *
    * You shouldn't need to call this unless the derived fields have drifted from the underlying data, which
    * should only happen if:
@@ -1830,7 +1830,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         }),
     );
 
-    // `.load()` recalculated the immediate relations, go ahead and recalc any downstream fields.
+    // `.load()` recalculated the immediate relations, go ahead and recalc any downstream actors.
     // We'll still defer ReactiveQueryFields to the em.flush loop.
     await this.#rm.recalcPendingDerivedValues("reactiveActors");
   }

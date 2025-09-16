@@ -211,11 +211,12 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
         const reversals = reverseReactiveHint(meta.cstr, meta.cstr, hint);
         // For each reversal, tell its config about the reverse hint to force-rerun
         // the original reaction's instance any time it changes.
-        for (const { entity, path, fields } of reversals) {
+        for (const { kind, entity, path, fields } of reversals) {
           getMetadata(entity).config.__data.reactiveActors.push({
             kind: "reaction",
             source: entity,
             cstr: meta.cstr,
+            isReadOnly: kind === "read-only",
             name,
             fields,
             path,

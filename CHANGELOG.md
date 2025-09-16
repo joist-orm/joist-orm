@@ -1,3 +1,10 @@
+## [1.268.1](https://github.com/joist-orm/joist-orm/compare/v1.268.0...v1.268.1) (2025-09-16)
+
+
+### Bug Fixes
+
+* Fix tsx suppressing configure boot errors. ([#1588](https://github.com/joist-orm/joist-orm/issues/1588)) ([a2132c2](https://github.com/joist-orm/joist-orm/commit/a2132c24b3e63aea4fe1c2fa44ac6256a4eff1b6))
+
 # [1.268.0](https://github.com/joist-orm/joist-orm/compare/v1.267.4...v1.268.0) (2025-09-15)
 
 

@@ -76,13 +76,13 @@ export class ReactionsManager {
       if (r.fields.includes(fieldName)) {
         const pending = this.getPending(r);
         if (pending.done.has(entity)) {
-          // Ironically, if we've already run this r, asking to dequeue probably means
+          // Ironically, if we've already run this reactable, asking to dequeue probably means
           // we need to run it again (to recalc its value), b/c this could be a mid-flush change, i.e.:
           // - firstName = a1 from db
-          // - firstName is changed to a2, triggers initials r
+          // - firstName is changed to a2, triggers initials reactable
           // - firstName is changed back to a1, which is the original value, so setField
-          //   thinks we can dequeue the r
-          // - but actually our r needs to be re-run with the restored value
+          //   thinks we can dequeue the reactable
+          // - but actually our reactable needs to be re-run with the restored value
           pending.todo.add(entity);
         } else if (r.fields.length === 1) {
           // We can only delete/dequeue a reaction if `fieldName` is the only or last field

@@ -384,7 +384,7 @@ describe("EntityManager.reactiveRules", () => {
 
   it.withCtx("creates the right reactive field targets", async () => {
     let i = 0;
-    const bRfs = getReactiveActors(Book);
+    const bRfs = getReactables(Book);
     expect(bRfs[i++]).toEqual({
       kind: "populate",
       cstr: "Author",
@@ -534,7 +534,7 @@ describe("EntityManager.reactiveRules", () => {
     });
 
     i = 0;
-    const brRfs = getReactiveActors(BookReview);
+    const brRfs = getReactables(BookReview);
     expect(brRfs[i++]).toEqual({
       kind: "populate",
       cstr: "Author",
@@ -884,9 +884,9 @@ function getReactiveRules(cstr: MaybeAbstractEntityConstructor<any>): any[] {
   });
 }
 
-function getReactiveActors(cstr: MaybeAbstractEntityConstructor<any>): any[] {
+function getReactables(cstr: MaybeAbstractEntityConstructor<any>): any[] {
   return getMetadata(cstr)
-    .config.__data.reactiveActors.filter((rule) => !rule.isReadOnly)
+    .config.__data.reactables.filter((rule) => !rule.isReadOnly)
     .map((rule) => {
       const { cstr, ...rest } = rule;
       delete (rest as any)["isReadOnly"];

@@ -1403,12 +1403,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     await this.#fl.allowWrites(async () => {
       // Cascade deletes now that we're async (i.e. to keep `em.delete` synchronous).
-      // Also do this before calling `recalcPendingActors` to avoid recalculating
+      // Also do this before calling `recalcPendingReactables` to avoid recalculating
       // fields on entities that will be deleted (and probably have unset/invalid FKs
       // that would NPE their logic anyway).
       await this.flushDeletes();
       // Recalc before we run hooks, so the hooks will see the latest calculated values.
-      await this.#rm.recalcPendingActors("reactiveActors");
+      await this.#rm.recalcPendingReactables("reactables");
     });
 
     const createdThenDeleted: Set<Entity> = new Set();
@@ -1462,7 +1462,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           // The hooks could have deleted this-loop or prior-loop entities, so re-cascade again.
           await this.flushDeletes();
           // The hooks could have changed fields, so recalc again.
-          await this.#rm.recalcPendingActors("reactiveActors");
+          await this.#rm.recalcPendingReactables("reactables");
 
           if (this.#rm.hasFieldsPendingAssignedIds) {
             await this.assignNewIds();
@@ -1540,9 +1540,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               }
               // Actually do the recalc
               await this.#fl.allowWrites(async () => {
-                await this.#rm.recalcPendingActors("reactiveQueries");
+                await this.#rm.recalcPendingReactables("reactiveQueries");
                 // If any ReactiveFields depended on ReactiveQueryFields, go ahead and calc those now
-                await this.#rm.recalcPendingActors("reactiveActors");
+                await this.#rm.recalcPendingReactables("reactables");
               });
               // Advance `now` so that our triggers don't think our UPDATEs are forgetting to self-bump
               // updated_at, and bump it themselves, which could cause a subsequent error.
@@ -1830,9 +1830,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         }),
     );
 
-    // `.load()` recalculated the immediate relations, go ahead and recalc any downstream actors.
+    // `.load()` recalculated the immediate relations, go ahead and recalc any downstream reactables.
     // We'll still defer ReactiveQueryFields to the em.flush loop.
-    await this.#rm.recalcPendingActors("reactiveActors");
+    await this.#rm.recalcPendingReactables("reactables");
   }
 
   public beforeTransaction(fn: HookFn<TX>) {

@@ -1,6 +1,6 @@
 import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { getReactiveActorsIncludingReadOnly } from "./caches";
+import { getReactablesIncludingReadOnly } from "./caches";
 
 /**
  * Interface for our relations that have dynamic & expensive `isLoaded` checks.
@@ -73,18 +73,18 @@ export class IsLoadedCache {
   }
 
   resetSmartCache(meta: EntityMetadata, fieldName: string): void {
-    // These are RAs in other entities that are watching/reacting to this entity/fieldName
-    const ras = getReactiveActorsIncludingReadOnly(meta);
-    for (const ra of ras) {
-      // I.e. we've written to Author.firstName, and this RA in Book/otherMeta depends on it
-      if (ra.fields.includes(fieldName)) {
-        const otherMeta = getMetadata(ra.cstr);
-        // Find any cache entries for this ra.cstr + ra.fieldName
-        const set = this.#smartCache[otherMeta.tagName]?.[ra.name];
+    // These are reactables in other entities that are watching/reacting to this entity/fieldName
+    const reactables = getReactablesIncludingReadOnly(meta);
+    for (const r of reactables) {
+      // I.e. we've written to Author.firstName, and this r in Book/otherMeta depends on it
+      if (r.fields.includes(fieldName)) {
+        const otherMeta = getMetadata(r.cstr);
+        // Find any cache entries for this r.cstr + r.fieldName
+        const set = this.#smartCache[otherMeta.tagName]?.[r.name];
         if (set?.size > 0) {
           for (const target of set) {
             target.resetIsLoaded();
-            // Is this target itself a RA/RR? If so, transitively reset its cache as well.
+            // Is this target itself a r/RR? If so, transitively reset its cache as well.
             const otherMeta = getMetadata(target.entity);
             const otherField = otherMeta.allFields[target.fieldName];
             if ("derived" in otherField && otherField.derived) {

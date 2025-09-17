@@ -1,5 +1,5 @@
 import ansis from "ansis";
-import { ReactiveActor } from "../config";
+import { Reactable } from "../config";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
 import { ReactiveAction } from "../ReactionsManager";
@@ -22,40 +22,40 @@ export class ReactionLogger {
     return performance.now();
   }
 
-  logQueued(entity: Entity, fieldName: string, ra: ReactiveActor): void {
+  logQueued(entity: Entity, fieldName: string, r: Reactable): void {
     this.log(
       green.bold(`${entity.toTaggedString()}`) + yellow(`.${fieldName}`),
       gray(`changed, queuing`),
-      green.bold(`${entity.toTaggedString()}`) + yellow(maybeDotPath(ra)) + yellow(ra.name),
+      green.bold(`${entity.toTaggedString()}`) + yellow(maybeDotPath(r)) + yellow(r.name),
     );
   }
 
-  logQueuedAll(entity: Entity, reason: string, ra: ReactiveActor): void {
+  logQueuedAll(entity: Entity, reason: string, r: Reactable): void {
     this.log(
       green.bold(`${entity.toTaggedString()}`),
       gray(`${reason}, queuing`),
-      green.bold(`${entity.toTaggedString()}`) + green(maybeDotPath(ra)) + yellow(ra.name),
+      green.bold(`${entity.toTaggedString()}`) + green(maybeDotPath(r)) + yellow(r.name),
     );
   }
 
-  logStartingRecalc(em: EntityManager, kind: "reactiveActors" | "reactiveQueries"): void {
+  logStartingRecalc(em: EntityManager, kind: "reactables" | "reactiveQueries"): void {
     this.log(
       white.bold(`Recalculating reactive ${kind === "reactiveQueries" ? "queries" : "fields"} values...`),
       this.entityCount(em),
     );
   }
 
-  logWalked(todo: Entity[], ra: ReactiveActor, entities: Entity[]): void {
+  logWalked(todo: Entity[], r: Reactable, entities: Entity[]): void {
     // Keep for future debugging...
     const from = todo[0].constructor.name;
     this.log(
       " ", // indent
       gray(`Walked`),
       white(`${todo.length}`),
-      green.bold(`${from}`) + green(`.${ra.path.join(".")}`),
+      green.bold(`${from}`) + green(`.${r.path.join(".")}`),
       gray("paths, found"),
       white(`${entities.length}`),
-      green.bold(`${ra.cstr.name}`) + green(".") + yellow(ra.name),
+      green.bold(`${r.cstr.name}`) + green(".") + yellow(r.name),
       gray("to recalc"),
     );
     if (entities.length > 0) {
@@ -73,11 +73,11 @@ export class ReactionLogger {
   logLoading(em: EntityManager, actions: ReactiveAction[]): void {
     this.log(" ", gray("Loading"), String(actions.length), gray("actions..."), this.entityCount(em));
     // Group by the action name
-    [...groupBy(actions, (a) => `${a.entity.constructor.name},${a.ra.name}`).values()].forEach((actions) => {
-      const { ra, entity } = actions[0];
+    [...groupBy(actions, (a) => `${a.entity.constructor.name},${a.r.name}`).values()].forEach((actions) => {
+      const { r, entity } = actions[0];
       this.log(
         "   ",
-        green.bold(entity.constructor.name) + green(".") + yellow(ra.name),
+        green.bold(entity.constructor.name) + green(".") + yellow(r.name),
         gray("-> ["),
         String(actions.map((a) => a.entity.toTaggedString()).join(" ")),
         gray("]"),
@@ -104,6 +104,6 @@ export function setReactionLogging(arg: boolean | ReactionLogger): void {
   globalLogger = typeof arg === "boolean" ? (arg ? new ReactionLogger() : undefined) : arg;
 }
 
-function maybeDotPath(ra: ReactiveActor): string {
-  return ra.path.length > 0 ? `.${ra.path.join(".")}.` : ".";
+function maybeDotPath(r: Reactable): string {
+  return r.path.length > 0 ? `.${r.path.join(".")}.` : ".";
 }

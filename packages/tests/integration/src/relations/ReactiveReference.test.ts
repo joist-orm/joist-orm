@@ -220,6 +220,12 @@ describe("ReactiveReference", () => {
        "    Book.search -> [ b:1 ]↩",
        "    Author.search -> [ a:1 ]↩",
        "    SmallPublisher.titlesOfFavoriteBooks -> [ p:1 ]↩",
+       "a:1.search changed, queuing a:1.rf↩",
+       "    took 0 millis (em.entities=3)↩",
+       "  Walked 1 Author. paths, found 1 Author.rf to recalc↩",
+       "    [ a:1 ] -> [ a:1 ]↩",
+       "  Loading 1 actions... (em.entities=3)↩",
+       "    Author.rf -> [ a:1 ]↩",
        "    took 0 millis (em.entities=3)↩",
      ]
     `);

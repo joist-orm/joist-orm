@@ -651,5 +651,5 @@ function getInternalReactions(cstr: MaybeAbstractEntityConstructor<any>): any[] 
 }
 
 function getReactions(cstr: MaybeAbstractEntityConstructor<any>): any[] {
-  return getMetadata(cstr).config.__data.reactiveActors.filter((ra) => ra.kind === "reaction");
+  return getMetadata(cstr).config.__data.reactables.filter((r) => r.kind === "reaction");
 }

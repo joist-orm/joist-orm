@@ -213,7 +213,7 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
       // For each reversal, tell its config about the reverse hint to force-rerun
       // the original reaction's instance any time it changes.
       for (const { kind, entity, path, fields } of reversals) {
-        getMetadata(entity).config.__data.reactiveActors.push({
+        getMetadata(entity).config.__data.reactables.push({
           kind: "reaction",
           source: entity,
           cstr: meta.cstr,
@@ -245,7 +245,7 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
       if (ap?.reactiveHint) {
         const reversals = reverseReactiveHint(meta.cstr, meta.cstr, ap.reactiveHint);
         for (const { kind, entity, path, fields } of reversals) {
-          getMetadata(entity).config.__data.reactiveActors.push({
+          getMetadata(entity).config.__data.reactables.push({
             kind: ap instanceof ReactiveQueryFieldImpl ? "query" : "populate",
             cstr: meta.cstr,
             isReadOnly: kind === "read-only",

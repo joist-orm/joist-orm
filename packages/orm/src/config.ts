@@ -338,7 +338,7 @@ export interface Reaction {
   fn: HookFn<any, any>;
 }
 
-export type ReactiveActor = ReactiveField | Reaction;
+export type Reactable = ReactiveField | Reaction;
 
 interface ReactionInternal<T extends Entity, H extends ReactiveHint<T>, C> {
   name: string;
@@ -374,7 +374,7 @@ export class ConfigData<T extends Entity, C> {
   // An array of the reactive rules that depend on this entity
   reactiveRules: ReactiveRule[] = [];
   // An array of the reactive fields and reactions that depend on this entity
-  reactiveActors: ReactiveActor[] = [];
+  reactables: Reactable[] = [];
   cascadeDeleteFields: Array<keyof RelationsIn<T>> = [];
   touchOnChange: Set<keyof RelationsIn<T>> = new Set();
   // Constantly converting reactive hints to load hints is expense, so cache them here

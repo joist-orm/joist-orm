@@ -6,7 +6,7 @@ import { getLazyFields } from "./getProperties";
 import { fail } from "./utils";
 
 // Marks a constructor like Author has having had our relation getters installed
-const lazySymbol = Symbol("lazy");
+const movedCstrs: Set<EntityConstructor<any>> = new Set();
 
 /**
  * Constructs an instance of `cstr` but with relations all made lazy.
@@ -18,9 +18,9 @@ const lazySymbol = Symbol("lazy");
  * let any `this.books` accesses resolve to the getters we've installed on the prototype.
  */
 export function newEntity<T extends Entity>(em: EntityManager, cstr: EntityConstructor<T>, isNew: boolean): T {
-  if (!(cstr as any)[lazySymbol]) {
+  if (!movedCstrs.has(cstr)) {
     moveRelationsToGetters(cstr);
-    (cstr as any)[lazySymbol] = true;
+    movedCstrs.add(cstr);
   }
   const meta = getMetadata(cstr);
   if (meta.ctiAbstract) fail(`Cannot create an instance of abstract entity ${meta.type}`);

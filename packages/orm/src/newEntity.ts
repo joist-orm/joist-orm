@@ -18,7 +18,7 @@ const lazySymbol = Symbol("lazy");
  * let any `this.books` accesses resolve to the getters we've installed on the prototype.
  */
 export function newEntity<T extends Entity>(em: EntityManager, cstr: EntityConstructor<T>, isNew: boolean): T {
-  if (!cstr.hasOwnProperty(lazySymbol)) {
+  if (!Object.hasOwn(cstr, lazySymbol)) {
     moveRelationsToGetters(cstr);
     (cstr as any)[lazySymbol] = true;
   }

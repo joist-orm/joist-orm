@@ -1,3 +1,10 @@
+## [1.268.4](https://github.com/joist-orm/joist-orm/compare/v1.268.3...v1.268.4) (2025-09-17)
+
+
+### Bug Fixes
+
+* use Object.hasOwn to check if a class has had relations moved ([#1593](https://github.com/joist-orm/joist-orm/issues/1593)) ([26d2205](https://github.com/joist-orm/joist-orm/commit/26d2205c62e321ac26e3a1c4ca10f6e5a1a44961))
+
 ## [1.268.3](https://github.com/joist-orm/joist-orm/compare/v1.268.2...v1.268.3) (2025-09-16)
 
 

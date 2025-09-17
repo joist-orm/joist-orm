@@ -134,6 +134,17 @@ export class Author extends AuthorCodegen {
     favoriteBookCalcInvoked: 0,
     graduatedRuleInvoked: 0,
     deleteDuringFlush: false,
+    reactions: {
+      direct: 0,
+      m2o: 0,
+      o2m: 0,
+      m2m: 0,
+      rf: 0,
+      rr: 0,
+      setViaHook: 0,
+      immutable: 0,
+      afterMetadata: 0,
+    },
   };
 
   /** Example of using populate within an entity on itself. */
@@ -387,6 +398,53 @@ config.setDefault(
   ["publisher", "firstName"], // Add a dummy load hint to make this async, so it doesn't just run-first for free
   (a) => [a.firstName],
 );
+
+// direct field reaction
+config.addReaction("direct", "firstName", (a) => {
+  a.transientFields.reactions.direct += 1;
+});
+
+// m2o reaction
+config.addReaction("m2o", { publisher: "name" }, (a) => {
+  a.transientFields.reactions.m2o += 1;
+});
+
+// o2m reaction
+config.addReaction("o2m", { mentees: "firstName" }, (a) => {
+  a.transientFields.reactions.o2m += 1;
+});
+
+// m2m reaction
+config.addReaction("m2m", { tags: "name" }, (a) => {
+  a.transientFields.reactions.m2m += 1;
+});
+
+// reactive field reaction
+config.addReaction("rf", "search", (a) => {
+  a.transientFields.reactions.rf += 1;
+});
+
+// reactive reference reaction
+config.addReaction("rr", "rootMentor", (a) => {
+  a.transientFields.reactions.rr += 1;
+});
+
+// set-via-hook reaction
+config.addReaction("setViaHook", "graduated", (a) => {
+  a.transientFields.reactions.setViaHook += 1;
+});
+
+// immutable field reaction
+config.addReaction("immutable", { publisher: "type" }, (a) => {
+  a.transientFields.reactions.immutable += 1;
+});
+
+// afterMetadata reaction
+config.afterMetadata(() => {
+  config.addReaction("ssn", (a) => {
+    a.transientFields.reactions.afterMetadata += 1;
+  });
+});
 
 // Example accessing ctx from beforeFlush
 config.beforeFlush(async (author, ctx) => {

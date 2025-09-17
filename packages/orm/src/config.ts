@@ -176,9 +176,17 @@ export class ConfigApi<T extends Entity, C> {
     this.addHook("afterCommit", fn);
   }
 
-  addReaction<H extends ReactiveHint<T>>(hint: H, fn: HookFn<Loaded<T, H>, C>): void {
+  addReaction<H extends ReactiveHint<T>>(hint: H, fn: HookFn<Loaded<T, H>, C>): void;
+  addReaction<H extends ReactiveHint<T>>(name: string, hint: H, fn: HookFn<Loaded<T, H>, C>): void;
+  addReaction<H extends ReactiveHint<T>>(
+    nameOrHint: string | H,
+    hintOrFn: H | HookFn<Loaded<T, H>, C>,
+    maybeFn?: HookFn<Loaded<T, H>, C>,
+  ): void {
     // Keep the name so we can uniquely identify this reaction later and also aid debugging/tracing
-    const name = getCallerName();
+    const name = typeof maybeFn === "function" ? (nameOrHint as string) : getCallerName();
+    const hint = (maybeFn ? hintOrFn : nameOrHint) as H;
+    const fn = (maybeFn ?? hintOrFn) as HookFn<Loaded<T, H>, C>;
     this.ensurePreBoot(name, "addReaction");
     let loadHint: LoadHint<T>;
     // Create a wrapper around the user's function to populate

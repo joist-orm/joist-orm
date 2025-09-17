@@ -47,7 +47,7 @@ export class ReactionsManager {
    *
    * This method can be synchronous b/c we internally queue the `ReactiveActor` reverse
    * indexes on the given source `fieldName`, and don't crawl/walk back to the downstream
-   * entities/fields until `recalcPendingDerivedValues` is called.
+   * entities/fields until `recalcPendingActors` is called.
    */
   queueDownstreamReactiveActors(entity: Entity, fieldName: string): void {
     // Use the reverse index of ReactiveActors that configureMetadata sets up
@@ -132,7 +132,7 @@ export class ReactionsManager {
    *
    * We also do this in a loop to handle reactive fields depending on other reactive fields.
    */
-  async recalcPendingDerivedValues(kind: "reactiveActors" | "reactiveQueries") {
+  async recalcPendingActors(kind: "reactiveActors" | "reactiveQueries") {
     if (this.#needsRecalc(kind)) this.logger?.logStartingRecalc(this.em, kind);
 
     let loops = 0;
@@ -179,7 +179,7 @@ export class ReactionsManager {
       // Use allSettled so that we can watch for derived values that want to use an entity's id
       // i.e. they can fail, but we'll queue them from later.
       const startTime = this.logger?.now() ?? 0;
-      const results = await Promise.allSettled(actions.map(this.#doAction));
+      const results = await Promise.allSettled(actions.map((a) => this.#doAction(a)));
       const endTime = this.logger?.now() ?? 0;
       this.logger?.logLoadingTime(this.em, endTime - startTime);
 
@@ -221,7 +221,9 @@ export class ReactionsManager {
     this.actionsPendingAssignedIds.clear();
 
     const startTime = this.logger?.now() ?? 0;
-    const results = await Promise.allSettled(actions.filter((a) => !a.entity.isDeletedEntity).map(this.#doAction));
+    const results = await Promise.allSettled(
+      actions.filter((a) => !a.entity.isDeletedEntity).map((a) => this.#doAction(a)),
+    );
     const endTime = this.logger?.now() ?? 0;
     this.logger?.logLoadingTime(this.em, endTime - startTime);
 

@@ -176,7 +176,34 @@ export class ConfigApi<T extends Entity, C> {
     this.addHook("afterCommit", fn);
   }
 
+  /**
+   * Adds a reaction that runs during flush whenever fields in the `hint` change.
+   *
+   * Reactions are somewhere in between hooks and reactive fields/references:
+   * 1. Can make arbitrary changes to any entity like a hook
+   * 2. Only run when the provided hint has changes, not on every flush, like an RF/RR
+   * 3. Run when the entity itself has no changes, like an RF/RF
+   * 4. Can run multiple times per flush, like an RF/RF.  Be careful to avoid creating
+   *    circular dependencies in the hint and to make the function idempotent.
+   *
+   * @param hint The fields to watch for changes and load before running the reaction
+   * @param fn The reaction function to run
+   */
   addReaction<H extends ReactiveHint<T>>(hint: H, fn: HookFn<Loaded<T, H>, C>): void;
+  /**
+   * Adds a named reaction that runs during flush whenever fields in the `hint` change.
+   *
+   * Reactions are somewhere in between hooks and reactive fields/references:
+   * 1. Can make arbitrary changes to any entity like a hook
+   * 2. Only run when `hint` has changes, not on every flush, like an RF/RR
+   * 3. Can run when the entity itself has no changes, like an RF/RF
+   * 4. Can run multiple times per flush, like an RF/RF.  Be careful to avoid creating
+   *    circular dependencies in the hint and to make the function idempotent.
+   *
+   * @param name A name to identify this reaction for debugging
+   * @param hint The fields to watch for changes and load before running the reaction
+   * @param fn The reaction function to run
+   */
   addReaction<H extends ReactiveHint<T>>(name: string, hint: H, fn: HookFn<Loaded<T, H>, C>): void;
   addReaction<H extends ReactiveHint<T>>(
     nameOrHint: string | H,

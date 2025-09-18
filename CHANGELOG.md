@@ -1,3 +1,10 @@
+# [1.269.0](https://github.com/joist-orm/joist-orm/compare/v1.268.5...v1.269.0) (2025-09-18)
+
+
+### Features
+
+* add config.addReaction ([#1591](https://github.com/joist-orm/joist-orm/issues/1591)) ([1eff57f](https://github.com/joist-orm/joist-orm/commit/1eff57ff36e22d4ce8e24d96b4c6e48f6981cbd3))
+
 ## [1.268.5](https://github.com/joist-orm/joist-orm/compare/v1.268.4...v1.268.5) (2025-09-18)
 
 

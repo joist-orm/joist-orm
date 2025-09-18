@@ -3571,6 +3571,20 @@ describe("EntityManager.queries", () => {
     expect(result).toMatchEntity([{ name: "User 1" }]);
   });
 
+  it("fails nicely on invalid polymorphic ids", async () => {
+    const em = newEntityManager();
+    const where = { parent: ["c:1", "c:2", "a:1"] } satisfies CommentFilter;
+    const result = em.find(Comment, where);
+    await expect(result).rejects.toThrow("Invalid tagged ids passed to Comment.parent: c:1,c:2");
+  });
+
+  it("fails nicely on invalid polymorphic id", async () => {
+    const em = newEntityManager();
+    const where = { parent: "c:1" } satisfies CommentFilter;
+    const result = em.find(Comment, where);
+    await expect(result).rejects.toThrow("Invalid tagged id passed to Comment.parent: c:1");
+  });
+
   it("can find across subtype restricted o2ms", async () => {
     await insertSmallPublisherGroup({ id: 1, name: "spg1" });
     await insertSmallPublisher({ id: 1, name: "sp1", group_id: 1, city: "sp city" });

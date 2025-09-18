@@ -9,6 +9,9 @@ import { glob } from 'glob';
 // https://astro.build/config
 const config = defineConfig({
   site: "https://joist-orm.io",
+  redirects: {
+    "/advanced/transform-properties": "/faq/#why-is-joist-transform-properties-no-longer-required",
+  },
   integrations: [
     starlight({
       title: "Joist",
@@ -94,7 +97,10 @@ function getLlmConfig(): StarlightLllmsTextOptions {
     ],
     exclude: [
       "blog/**", // this is mostly marketing content, not helpful for LLMs
-      "why-joist", // just a redirect
+
+      // redirects
+      "why-joist",
+      "advanced/transform-properties",
     ],
   }
 }

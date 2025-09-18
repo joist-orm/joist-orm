@@ -127,3 +127,18 @@ Then you either need to enable `skipLibCheck: "true"` in your `tsconfig.json` (r
 Joist uses [ts-poet](https://github.com/stephenh/ts-poet) and [dprint-node](https://github.com/devongovett/dprint-node) to generate & format code, as dprint is significantly faster than Prettier when generating large amounts of code.
 
 The ts-poet output attempts to be "prettier-ish", but if you'd like to customize it, you can create a `.dprint.json` file as per the [dprint docs](https://dprint.dev/setup/#hidden-config-file).
+
+## Why is `joist-transform-properties` no longer required?
+
+Previously, Joist provided the optional [`joist-transform-properties` package](https://www.npmjs.com/package/joist-transform-properties) TypeScript transform to implement lazy relations at TypeScript compile time.
+This approach required using `ts-patch`, which made integration with other runtimes (like `bun`) more complicated.
+
+Starting with version 1.268.0, Joist has moved to a pure JavaScript runtime solution that eliminates the need for `joist-transform-properties`. The new implementation:
+
+- **Uses JavaScript prototypes**: Creates entity instances with `Object.create(Author.prototype)` without invoking constructors
+- **Runtime lazy loading**: Relations are created on-demand using prototype getters instead of compile-time transforms
+- **Simpler build process**: No longer requires TypeScript transform configuration in your build tools
+
+If you're upgrading from an older version of Joist, you can safely remove `joist-transform-properties` from your dependencies and build configuration. All lazy relation functionality continues to work exactly the same from a developer perspective, but now uses a more elegant runtime approach.
+
+**Migration**: Simply remove `joist-transform-properties` from your `package.json` and any transform configuration from your TypeScript/webpack setup. No code changes are required in your entities or application logic.

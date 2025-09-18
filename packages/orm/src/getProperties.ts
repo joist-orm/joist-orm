@@ -96,7 +96,7 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
   // lambdas created.  If any of them reference `this`, then they'll actually be referencing the fake instance.  So we
   // need to clear out any properties directly on the fake instance now that we're done with it and use a proxy to
   // intercept any attempts to access `this` from within the callbacks and fail.
-  Object.setPrototypeOf(instance, instancePrototypeProxy);
+  Object.setPrototypeOf(instance, afterGetPropertiesInstancePrototypeProxy);
   for (const prop of Object.getOwnPropertyNames(instance)) {
     if (prop !== "__data") delete instance[prop];
   }
@@ -104,7 +104,10 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
   return cached;
 }
 
-const instancePrototypeProxy = new Proxy({}, { get: () => fail("Cannot use 'this' in a property callback") });
+const afterGetPropertiesInstancePrototypeProxy = new Proxy(
+  {},
+  { get: () => fail("Cannot use 'this' in a property callback") },
+);
 
 /**
  * Returns the `LazyField`s (...and transientField) for `meta`.

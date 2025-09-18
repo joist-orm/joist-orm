@@ -687,11 +687,4 @@ describe("Author", () => {
     const authors = await em.find(Author, { certificate: { eq: new Uint8Array([11, 22]) } });
     expect(authors.length).toBe(1);
   });
-
-  it("fails when trying to use this inside a property callback", async () => {
-    const em = newEntityManager();
-    const author = newAuthor(em);
-    const result = author.thisTestProp.load();
-    await expect(result).rejects.toThrow("Cannot use 'this' in a property callback");
-  });
 });

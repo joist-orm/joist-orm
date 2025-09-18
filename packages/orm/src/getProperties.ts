@@ -1,7 +1,7 @@
 import { BaseEntity } from "./BaseEntity";
 import { EntityMetadata } from "./EntityMetadata";
 import { LazyField } from "./newEntity";
-import { partition } from "./utils";
+import { fail, partition } from "./utils";
 
 /**
  * Returns the relations in `meta`, both those defined in the codegen file + any user-defined `CustomReference`s.
@@ -92,8 +92,22 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
     ),
   );
 
+  // Since our fake instance is actually generating the callbacks for our lazy fields, it will be captured in any
+  // lambdas created.  If any of them reference `this`, then they'll actually be referencing the fake instance.  So we
+  // need to clear out any properties directly on the fake instance now that we're done with it and use a proxy to
+  // intercept any attempts to access `this` from within the callbacks and fail.
+  Object.setPrototypeOf(instance, afterGetPropertiesInstancePrototypeProxy);
+  for (const prop of Object.getOwnPropertyNames(instance)) {
+    if (prop !== "__data") delete instance[prop];
+  }
+
   return cached;
 }
+
+const afterGetPropertiesInstancePrototypeProxy = new Proxy(
+  {},
+  { get: () => fail("Cannot use 'this' in a property callback") },
+);
 
 /**
  * Returns the `LazyField`s (...and transientField) for `meta`.

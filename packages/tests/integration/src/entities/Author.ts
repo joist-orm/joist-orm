@@ -112,6 +112,9 @@ export class Author extends AuthorCodegen {
     (a.nickNames ?? []).map((n) => n.toUpperCase()),
   );
 
+  // this prop should fail if loaded to test preventing `this` usage in props/relations/fields
+  readonly thisTestProp: AsyncProperty<Author, any> = hasAsyncProperty({}, () => this.search);
+
   public transientFields = {
     beforeFlushRan: false,
     beforeCreateRan: false,

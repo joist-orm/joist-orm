@@ -95,7 +95,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
       data[fieldName] = newValue;
       delete originalData[fieldName];
       fieldLogger?.logSet(entity, fieldName, newValue);
-      getEmInternalApi(em).rm.dequeueDownstreamReactiveFields(entity, fieldName);
+      getEmInternalApi(em).rm.dequeueDownstreamReactables(entity, fieldName);
       return true;
     }
   }
@@ -114,7 +114,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
     originalData[fieldName] = currentValue;
   }
   fieldLogger?.logSet(entity, fieldName, newValue);
-  getEmInternalApi(em).rm.queueDownstreamReactiveFields(entity, fieldName);
+  getEmInternalApi(em).rm.queueDownstreamReactables(entity, fieldName);
 
   getEmInternalApi(em).indexManager.maybeUpdateFieldIndex(entity, fieldName, currentValue, newValue);
 

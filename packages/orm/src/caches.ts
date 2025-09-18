@@ -1,27 +1,27 @@
-import { ReactiveField, ReactiveRule } from "./config";
+import { Reactable, ReactiveRule } from "./config";
 import { EntityMetadata, getBaseAndSelfMetas, getBaseSelfAndSubMetas } from "./EntityMetadata";
 
 // We calculate these all the time, so cache them for good measure.
-const reactiveFieldCache: WeakMap<EntityMetadata, ReactiveField[]> = new WeakMap();
-const reactiveFieldWithReadOnlyCache: WeakMap<EntityMetadata, ReactiveField[]> = new WeakMap();
+const reactableCache: WeakMap<EntityMetadata, Reactable[]> = new WeakMap();
+const reactableWithReadOnlyCache: WeakMap<EntityMetadata, Reactable[]> = new WeakMap();
 const reactiveRuleCache: WeakMap<EntityMetadata, ReactiveRule[]> = new WeakMap();
 
-export function getReactiveFields(meta: EntityMetadata): ReactiveField[] {
-  let fields = reactiveFieldCache.get(meta);
+export function getReactables(meta: EntityMetadata): Reactable[] {
+  let fields = reactableCache.get(meta);
   if (fields === undefined) {
     fields = getBaseAndSelfMetas(meta)
-      .flatMap((m) => m.config.__data.reactiveDerivedValues)
+      .flatMap((m) => m.config.__data.reactables)
       .filter((r) => !r.isReadOnly);
-    reactiveFieldCache.set(meta, fields);
+    reactableCache.set(meta, fields);
   }
   return fields;
 }
 
-export function getReactiveFieldsIncludingReadOnly(meta: EntityMetadata): ReactiveField[] {
-  let fields = reactiveFieldWithReadOnlyCache.get(meta);
+export function getReactablesIncludingReadOnly(meta: EntityMetadata): Reactable[] {
+  let fields = reactableWithReadOnlyCache.get(meta);
   if (fields === undefined) {
-    fields = getBaseAndSelfMetas(meta).flatMap((m) => m.config.__data.reactiveDerivedValues);
-    reactiveFieldWithReadOnlyCache.set(meta, fields);
+    fields = getBaseAndSelfMetas(meta).flatMap((m) => m.config.__data.reactables);
+    reactableWithReadOnlyCache.set(meta, fields);
   }
   return fields;
 }

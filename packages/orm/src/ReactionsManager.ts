@@ -1,13 +1,12 @@
 import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { getReactiveFields, getReactiveFieldsIncludingReadOnly } from "./caches";
-import { ReactiveField } from "./config";
+import { getReactables, getReactablesIncludingReadOnly } from "./caches";
+import { Reactable } from "./config";
 import { EntityManager, getEmInternalApi, NoIdError } from "./index";
 import { globalLogger, ReactionLogger } from "./logging/ReactionLogger";
 import { followReverseHint } from "./reactiveHints";
-import { Relation } from "./relations";
-import { AbstractPropertyImpl } from "./relations/AbstractPropertyImpl";
 
+export type ReactiveAction = { r: Reactable; entity: Entity };
 /**
  * Manages the reactivity of tracking which source fields have changed and finding/recalculating
  * their downstream derived fields.
@@ -16,8 +15,8 @@ import { AbstractPropertyImpl } from "./relations/AbstractPropertyImpl";
  * of `Book.isPublic`, but derived fields can themselves be source fields as well.
  */
 export class ReactionsManager {
-  /** Stores all source `ReactiveField`s that have been marked for later traversal. */
-  private pendingFieldReactions: Map<ReactiveField, { todo: Set<Entity>; done: Set<Entity> }> = new Map();
+  /** Stores all source `Reactables`s that have been marked for later traversal. */
+  private pendingReactables: Map<Reactable, { todo: Set<Entity>; done: Set<Entity> }> = new Map();
   /**
    * A map of entity tagName -> fields that have been marked as dirty.
    *
@@ -32,8 +31,8 @@ export class ReactionsManager {
    * Derived fields we tried to calculate, but they failed with `NoIdError`s, so we'll
    * try again during `em.flush`.
    */
-  private relationsPendingAssignedIds: Set<Relation<any, any>> = new Set();
-  private needsRecalc = { populate: false, query: false };
+  private actionsPendingAssignedIds: Map<string, ReactiveAction> = new Map();
+  private needsRecalc = { populate: false, query: false, reaction: false };
   private logger: ReactionLogger | undefined = globalLogger;
   private em: EntityManager;
   /** These are NPEs that *might* have been from invalid m2o fields, so we only throw them after validation. */
@@ -46,49 +45,49 @@ export class ReactionsManager {
   /**
    * Queue all downstream reactive fields that depend on `fieldName` as a source field.
    *
-   * This method can be synchronous b/c we internally queue the `ReactiveField` reverse
+   * This method can be synchronous b/c we internally queue the `Reactable` reverse
    * indexes on the given source `fieldName`, and don't crawl/walk back to the downstream
-   * entities/fields until `recalcPendingDerivedValues` is called.
+   * entities/fields until `recalcPendingReactables` is called.
    */
-  queueDownstreamReactiveFields(entity: Entity, fieldName: string): void {
-    // Use the reverse index of ReactiveFields that configureMetadata sets up
-    for (const rf of this.getReactiveFields(entity)) {
-      if (rf.fields.includes(fieldName)) {
-        // We always queue the RF/entity, even if we're mid-flush or even mid-recalc, to avoid:
+  queueDownstreamReactables(entity: Entity, fieldName: string): void {
+    // Use the reverse index of Reactables that configureMetadata sets up
+    for (const r of this.getReactables(entity)) {
+      if (r.fields.includes(fieldName)) {
+        // We always queue the reactable/entity, even if we're mid-flush or even mid-recalc, to avoid:
         // - firstName is changed from a1 to a2
-        // - this triggers firstName's RF to `Author.initials` to be queued
+        // - this triggers firstName's reactable to `Author.initials` to be queued
         // - during the 1st em.flush loop, we recalc `Author.initials` and it didn't change
         // - during the 1st em.flush loop, a hook changes firstName from a2 to b2
-        // - if we skip re-queuing firstName's RFs, we will miss that initials needs
+        // - if we skip re-queuing firstName's reactables, we will miss that initials needs
         //   its `.load()` called again so that it's `setField` marks `initials` as
         //   dirty, otherwise it will be left out of any INSERTs/UPDATEs.
-        this.getPending(rf).todo.add(entity);
-        this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
-        this.needsRecalc[rf.kind] = true;
-        this.logger?.logQueued(entity, fieldName, rf);
+        this.getPending(r).todo.add(entity);
+        this.getDirtyFields(getMetadata(r.cstr)).add(r.name);
+        this.needsRecalc[r.kind] = true;
+        this.logger?.logQueued(entity, fieldName, r);
       }
     }
   }
 
   /** Dequeues reactivity on `fieldName`, i.e. if it's no longer dirty. */
-  dequeueDownstreamReactiveFields(entity: Entity, fieldName: string): void {
-    // Use the reverse index of ReactiveFields that configureMetadata sets up
-    for (const rf of this.getReactiveFields(entity)) {
-      if (rf.fields.includes(fieldName)) {
-        const pending = this.getPending(rf);
+  dequeueDownstreamReactables(entity: Entity, fieldName: string): void {
+    // Use the reverse index of Reactables that configureMetadata sets up
+    for (const r of this.getReactables(entity)) {
+      if (r.fields.includes(fieldName)) {
+        const pending = this.getPending(r);
         if (pending.done.has(entity)) {
-          // Ironically, if we've already run this RF, asking to dequeue probably means
-          // we need run it again (to recalc its value), b/c this could be a mid-flush change, i.e.:
+          // Ironically, if we've already run this reactable, asking to dequeue probably means
+          // we need to run it again (to recalc its value), b/c this could be a mid-flush change, i.e.:
           // - firstName = a1 from db
-          // - firstName is changed to a2, triggers initials RF
+          // - firstName is changed to a2, triggers initials reactable
           // - firstName is changed back to a1, which is the original value, so setField
-          //   thinks we can dequeue the RF
-          // - but actually our RF needs to be re-run with the restored value
+          //   thinks we can dequeue the reactable
+          // - but actually our reactable needs to be re-run with the restored value
           pending.todo.add(entity);
-        } else if (rf.fields.length === 1) {
+        } else if (r.fields.length === 1) {
           // We can only delete/dequeue a reaction if `fieldName` is the only or last field
-          // that had triggered `rf` to run. Since we don't track that currently, i.e. we'd
-          // need to have a `Pending.dirtyFields`, for now just only dequeue if `rf` only
+          // that had triggered `r` to run. Since we don't track that currently, i.e. we'd
+          // need to have a `Pending.dirtyFields`, for now just only dequeue if `r` only
           // has one field (which is us) anyway.
           pending.todo.delete(entity);
         }
@@ -98,12 +97,11 @@ export class ReactionsManager {
 
   /** Queue all downstream reactive fields that depend on this entity being created or deleted. */
   queueAllDownstreamFields(entity: Entity, reason: "created" | "deleted"): void {
-    const rfs = this.getReactiveFields(entity);
-    for (const rf of rfs) {
-      this.getPending(rf).todo.add(entity);
-      this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
-      this.needsRecalc[rf.kind] = true;
-      this.logger?.logQueuedAll(entity, reason, rf);
+    for (const r of this.getReactables(entity)) {
+      this.getPending(r).todo.add(entity);
+      this.getDirtyFields(getMetadata(r.cstr)).add(r.name);
+      this.needsRecalc[r.kind] = true;
+      this.logger?.logQueuedAll(entity, reason, r);
     }
   }
 
@@ -128,56 +126,60 @@ export class ReactionsManager {
   }
 
   /**
-   * Given source `ReactiveField` "reverse indexes" that have been queued as dirty by calls
+   * Given source `Reactable` "reverse indexes" that have been queued as dirty by calls
    * to setters, `em.register`, or `em.delete`, asynchronously walks/crawls to the downstream
    * derived fields and calls `.load()` on them to calc.
    *
    * We also do this in a loop to handle reactive fields depending on other reactive fields.
    */
-  async recalcPendingDerivedValues(kind: "reactiveFields" | "reactiveQueries") {
-    // Map our parameter `kind` value (which is a nicer name) to the shorter ADT kind
-    const k = kind === "reactiveFields" ? "populate" : "query";
-    if (this.needsRecalc[k]) {
-      this.logger?.logStartingRecalc(this.em, kind);
-    }
+  async recalcPendingReactables(kind: "reactables" | "reactiveQueries") {
+    if (this.#needsRecalc(kind)) this.logger?.logStartingRecalc(this.em, kind);
 
     let loops = 0;
-    while (this.needsRecalc[k]) {
-      // ...we probably should only loop for `kind=populate` ReactiveFields, and `kind=query`
+    while (this.#needsRecalc(kind)) {
+      // ...we probably should only loop for `kind=reactables` Reactables, and `kind=reactiveQueries`
       // ReactiveQueryFields should probably only have a single loop, after which we return and
       // let `em.flush` push the latest values to the db, so our 2nd-order ReactiveQueryFields
       // will see the latest value.
-      this.needsRecalc[k] = false;
-      const relations = await Promise.all(
-        [...this.pendingFieldReactions.entries()].map(async ([rf, pending]) => {
-          // Skip reactive queries until post-flush
-          if (kind === "reactiveFields" && rf.kind === "query") return [];
-          if (kind === "reactiveQueries" && rf.kind === "populate") return [];
+      if (kind === "reactables") {
+        this.needsRecalc.populate = false;
+        this.needsRecalc.reaction = false;
+      } else {
+        this.needsRecalc.query = false;
+      }
 
+      const actionsMap: Map<string, ReactiveAction> = new Map();
+
+      await Promise.all(
+        [...this.pendingReactables.entries()].map(async ([r, pending]) => {
+          // Skip reactive queries until post-flush
+          if (kind === "reactables" && r.kind === "query") return [];
+          if (kind === "reactiveQueries" && (r.kind === "populate" || r.kind === "reaction")) return [];
           // Copy pending and clear it
           const todo = [...pending.todo];
           if (todo.length === 0) return [];
           pending.todo.clear();
-
           for (const doing of todo) pending.done.add(doing);
-          // Walk back from the source to any downstream fields
-          const relations = (await followReverseHint(rf.name, todo, rf.path))
+          // Walk back from the source to any downstream entities
+          const entities = (await followReverseHint(r.name, todo, r.path))
             .filter((entity) => !entity.isDeletedEntity)
-            .filter((e) => e instanceof rf.cstr)
-            .map((entity) => (entity as any)[rf.name]);
-          this.logger?.logWalked(todo, rf, relations);
-          return relations;
+            .filter((e) => e instanceof r.cstr);
+          this.logger?.logWalked(todo, r, entities);
+          entities.forEach((entity) => {
+            const key = `${entity}_${r.name}`;
+            // We could arrive at the same reactable from multiple paths (eg, 2 dependent fields changed), so we need to
+            // dedupe based on the entity and reactable to only run each action once for any given entity per loop
+            if (!actionsMap.has(key)) actionsMap.set(key, { r, entity });
+          });
         }),
       );
-      // Multiple reactions could have pointed back to the same reactive field, so
-      // dedupe the found relations before calling .load.
-      const unique = [...new Set(relations.flat())];
-      this.logger?.logLoading(this.em, unique);
 
-      // Use allSettled so that we can watch for derived values that want to use the entity'd id,
+      const actions = [...actionsMap.values()];
+      this.logger?.logLoading(this.em, actions);
+      // Use allSettled so that we can watch for derived values that want to use an entity's id
       // i.e. they can fail, but we'll queue them from later.
       const startTime = this.logger?.now() ?? 0;
-      const results = await Promise.allSettled(unique.map((r: any) => r.load()));
+      const results = await Promise.allSettled(actions.map((a) => this.#doAction(a)));
       const endTime = this.logger?.now() ?? 0;
       this.logger?.logLoadingTime(this.em, endTime - startTime);
 
@@ -186,7 +188,9 @@ export class ReactionsManager {
         if (result.status === "rejected") {
           // Let `author.id` and `book.author.get.firstName` errors run again after flush/hooks fills them in
           if (result.reason instanceof NoIdError || result.reason instanceof TypeError) {
-            this.relationsPendingAssignedIds.add(unique[i]);
+            const action = actions[i];
+            const key = `${action.entity}_${action.r.name}`;
+            this.actionsPendingAssignedIds.set(key, action);
           } else {
             failures.push(result.reason);
           }
@@ -205,20 +209,20 @@ export class ReactionsManager {
 
   /** Clears all the pending source fields, i.e. after `em.flush` is complete. */
   clear(): void {
-    this.pendingFieldReactions = new Map();
+    this.pendingReactables = new Map();
   }
 
   get hasFieldsPendingAssignedIds(): boolean {
-    return this.relationsPendingAssignedIds.size > 0;
+    return this.actionsPendingAssignedIds.size > 0;
   }
 
   async recalcRelationsPendingAssignedIds(): Promise<void> {
-    const relations = [...this.relationsPendingAssignedIds];
-    this.relationsPendingAssignedIds.clear();
+    const actions = [...this.actionsPendingAssignedIds.values()];
+    this.actionsPendingAssignedIds.clear();
 
     const startTime = this.logger?.now() ?? 0;
     const results = await Promise.allSettled(
-      relations.filter((r) => r instanceof AbstractPropertyImpl && !r.entity.isDeletedEntity).map((r: any) => r.load()),
+      actions.filter((a) => !a.entity.isDeletedEntity).map((a) => this.#doAction(a)),
     );
     const endTime = this.logger?.now() ?? 0;
     this.logger?.logLoadingTime(this.em, endTime - startTime);
@@ -251,11 +255,20 @@ export class ReactionsManager {
     }
   }
 
-  private getPending(rf: ReactiveField): { todo: Set<Entity>; done: Set<Entity> } {
-    let pending = this.pendingFieldReactions.get(rf);
+  #doAction(action: ReactiveAction) {
+    const { r, entity } = action;
+    return r.kind === "reaction" ? r.fn(entity, this.em.ctx) : (entity as any)[r.name].load();
+  }
+
+  #needsRecalc(kind: "reactables" | "reactiveQueries"): boolean {
+    return kind === "reactables" ? this.needsRecalc.populate || this.needsRecalc.reaction : this.needsRecalc.query;
+  }
+
+  private getPending(r: Reactable): { todo: Set<Entity>; done: Set<Entity> } {
+    let pending = this.pendingReactables.get(r);
     if (!pending) {
       pending = { todo: new Set(), done: new Set() };
-      this.pendingFieldReactions.set(rf, pending);
+      this.pendingReactables.set(r, pending);
     }
     return pending;
   }
@@ -269,11 +282,11 @@ export class ReactionsManager {
     return dirty;
   }
 
-  private getReactiveFields(entity: Entity): ReactiveField[] {
+  private getReactables(entity: Entity): Reactable[] {
     // If two books are getting merged, and so a normally-immutable `BookReview.book` is being changed,
     // then even normally-immutable fields need to be recalculated.
     return getEmInternalApi(this.em).isMerging(entity)
-      ? getReactiveFieldsIncludingReadOnly(getMetadata(entity))
-      : getReactiveFields(getMetadata(entity));
+      ? getReactablesIncludingReadOnly(getMetadata(entity))
+      : getReactables(getMetadata(entity));
   }
 }

@@ -1,3 +1,10 @@
+## [1.268.5](https://github.com/joist-orm/joist-orm/compare/v1.268.4...v1.268.5) (2025-09-18)
+
+
+### Bug Fixes
+
+* Nicer error messages on poly invalid tagged ids. ([#1594](https://github.com/joist-orm/joist-orm/issues/1594)) ([9b6647d](https://github.com/joist-orm/joist-orm/commit/9b6647d27bc413724ff8b22fe574ce037510f3b6))
+
 ## [1.268.4](https://github.com/joist-orm/joist-orm/compare/v1.268.3...v1.268.4) (2025-09-17)
 
 

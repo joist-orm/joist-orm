@@ -2,6 +2,7 @@ import { ExpressionFilter } from "./EntityFilter";
 import { isDefined } from "./EntityManager";
 import {
   ColumnCondition,
+  ExistsCondition,
   mapToDb,
   ParsedExpressionCondition,
   ParsedExpressionFilter,
@@ -17,7 +18,7 @@ type PartialSome<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 /** Converts domain-level values like string ids/enums into their db equivalent. */
 export class ConditionBuilder {
   /** Simple, single-column conditions, which will be AND-d together. */
-  private conditions: (ColumnCondition | RawCondition)[] = [];
+  private conditions: (ColumnCondition | RawCondition | ExistsCondition)[] = [];
   /** Complex expressions, which will also be AND-d together with `conditions`. */
   private expressions: ParsedExpressionFilter[] = [];
 
@@ -28,7 +29,7 @@ export class ConditionBuilder {
   }
 
   /** Adds an already-db-level condition to the simple conditions list. */
-  addSimpleCondition(condition: ColumnCondition): void {
+  addSimpleCondition(condition: ColumnCondition | ExistsCondition): void {
     this.conditions.push(condition);
   }
 
@@ -157,6 +158,10 @@ export class ConditionBuilder {
             if ("rewritten" in cond) return;
             throw new Error("Joist doesn't support raw conditions in lateral joins yet");
           }
+        } else if (cond.kind === "exists") {
+          // For exists conditions with a subquery, we might need to recurse into the subquery
+          // but for now, we'll just skip handling lateral joins within EXISTS subqueries
+          // TODO: Add proper handling if needed
         } else {
           assertNever(cond);
         }

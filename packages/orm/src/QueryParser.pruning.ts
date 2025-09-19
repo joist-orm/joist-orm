@@ -82,6 +82,8 @@ export function deepFindConditions(
         todo.push(c);
       } else if (c.kind === "column" || c.kind === "raw") {
         if (!filterPruneable || !c.pruneable) result.push(c);
+      } else if (c.kind === "exists") {
+        // todo
       } else {
         assertNever(c);
       }

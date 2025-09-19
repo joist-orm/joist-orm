@@ -4,7 +4,7 @@ import postgres from "postgres";
 
 async function main() {
   const mitata = await import("mitata");
-  const { run, bench, group, baseline } = mitata;
+  const { run, bench, group } = mitata;
 
   const sql = postgres("postgres://joist:local@localhost:5435/joist", { max: 4 });
 

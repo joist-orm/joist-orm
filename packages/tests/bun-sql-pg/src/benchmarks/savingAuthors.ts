@@ -8,19 +8,19 @@ const driver = new BunPgDriver(sql);
 
 async function main() {
   const mitata = await import("mitata");
-  const { run, bench, group, baseline } = mitata;
+  const { run, bench, group } = mitata;
 
   group("bun-sql", () => {
     bench("saving 1 author", async () => {
       const em = new EntityManager({} as Context, { driver });
-      const a = em.create(Author, { firstName: "a" });
+      em.create(Author, { firstName: "a" });
       await em.flush();
     });
 
     bench("saving 20 authors", async () => {
       const em = new EntityManager({} as Context, { driver });
       for (let i = 0; i < 20; i++) {
-        const a = em.create(Author, { firstName: `a${i}` });
+        em.create(Author, { firstName: `a${i}` });
       }
       await em.flush();
     });

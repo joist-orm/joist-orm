@@ -24,7 +24,7 @@
     "ansi-regex": "^5.0.1",
     "joist-graphql-resolver-utils": "workspace:*",
     "joist-orm": "workspace:*",
-    "mitata": "^0.1.14"
+    "mitata": "^1.0.34"
   },
   "devDependencies": {
     "@graphql-tools/graphql-file-loader": "^8.0.22",

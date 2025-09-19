@@ -14,7 +14,7 @@ const driver = new PostgresDriver(knex);
 
 async function main() {
   const mitata = await import("mitata");
-  const { run, bench, group, baseline } = mitata;
+  const { run, bench, group } = mitata;
 
   group("integration-knex", () => {
     bench("saving 1 author", async () => {

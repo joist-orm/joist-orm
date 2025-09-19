@@ -1,6 +1,8 @@
 import { IdType } from "./Entity";
 import { Entity, EntityManager, InstanceData, TaggedId, deTagId, getMetadata, keyToNumber } from "./index";
 
+export let currentlyInstantiatingEntity: Entity | undefined = undefined;
+
 /**
  * Returns the internal `__data` tracking field for `entity`.
  *
@@ -28,6 +30,7 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
     if (isNew === undefined) {
       throw new Error("Entities must be constructed by calling em.create or em.load");
     }
+    currentlyInstantiatingEntity = this;
     // This code path won't be reused for real entities, as they go through the `newEntity`
     // construction process that lazifies the relations.
     baseEntityCstr(em, this, isNew);

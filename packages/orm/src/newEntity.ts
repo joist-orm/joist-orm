@@ -1,4 +1,4 @@
-import { baseEntityCstr } from "./BaseEntity";
+import { currentlyInstantiatingEntity } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityConstructor, EntityManager } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
@@ -18,17 +18,17 @@ const lazySymbol = Symbol("lazy");
  * let any `this.books` accesses resolve to the getters we've installed on the prototype.
  */
 export function newEntity<T extends Entity>(em: EntityManager, cstr: EntityConstructor<T>, isNew: boolean): T {
-  if (!Object.hasOwn(cstr, lazySymbol)) {
-    moveRelationsToGetters(cstr);
-    (cstr as any)[lazySymbol] = true;
-  }
+  // if (!Object.hasOwn(cstr, lazySymbol)) {
+  //   moveRelationsToGetters(cstr);
+  //   (cstr as any)[lazySymbol] = true;
+  // }
   const meta = getMetadata(cstr);
   if (meta.ctiAbstract) fail(`Cannot create an instance of abstract entity ${meta.type}`);
   // This side-steps the `Author` constructor that initializes fields instance-level fields, which instead
   // we've shoved up to be getters on the prototype, and the only instance field we expect to have is `__data`,
   // which is set by the `baseEntityCstr` call.
-  const entity = Object.create(cstr.prototype) as T;
-  baseEntityCstr(em, entity as any, isNew);
+  const entity = new (cstr as any)(em, true) as T;
+  // baseEntityCstr(em, entity as any, isNew);
   return entity;
 }
 
@@ -69,7 +69,7 @@ function moveRelationsToGetters(cstr: EntityConstructor<any>): void {
  * into a getter, and only invoked when the relation is actually accessed.
  */
 export function lazyField<T extends Entity, R>(fn: (entity: T, fieldName: string) => R): R {
-  return new LazyField(fn) as R;
+  return fn(currentlyInstantiatingEntity as T, "test"); // new LazyField(fn) as R;
 }
 
 /**

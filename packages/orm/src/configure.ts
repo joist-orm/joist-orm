@@ -35,8 +35,8 @@ export function configureMetadata(metas: EntityMetadata[]): void {
     fireAfterMetadatas(metas);
     // Do these after `fireAfterMetadatas`, in case afterMetadata callbacks added more defaults/rules
     copyAsyncDefaults(metas);
-    reverseIndexReactivity(metas);
-    copyRunBeforeBooksToBaseType(metas);
+    // reverseIndexReactivity(metas);
+    // copyRunBeforeBooksToBaseType(metas);
     setBooted();
   } catch (e) {
     previousBootError = e;

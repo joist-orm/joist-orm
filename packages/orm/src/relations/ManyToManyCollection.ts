@@ -13,7 +13,7 @@ import {
 } from "../";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
-import { lazyField, resolveOtherMeta } from "../newEntity";
+import { lazyField } from "../newEntity";
 import { maybeAdd, maybeRemove, remove } from "../utils";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
@@ -27,13 +27,13 @@ export function hasManyToMany<T extends Entity, U extends Entity>(
 ): Collection<T, U> {
   let otherMeta: EntityMetadata<U>;
   return lazyField((entity: T, fieldName) => {
-    otherMeta ??= resolveOtherMeta(entity, fieldName);
+    // otherMeta ??= resolveOtherMeta(entity, fieldName);
     return new ManyToManyCollection<T, U>(
       joinTableName,
       entity,
       fieldName as keyof T & string,
       columnName,
-      otherMeta,
+      otherMeta!,
       otherFieldName,
       otherColumnName,
     );

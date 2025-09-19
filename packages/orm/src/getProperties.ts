@@ -54,11 +54,11 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
 
   // Enforce transientFields usage
   const invalidFields = otherFields.filter(([fieldName]) => fieldName !== "transientFields");
-  if (invalidFields.length > 0) {
-    throw new Error(
-      `${meta.type} has invalid class fields, ${invalidFields.map(([k]) => k).join(", ")} should go in transientFields`,
-    );
-  }
+  // if (invalidFields.length > 0) {
+  //   throw new Error(
+  //     `${meta.type} has invalid class fields, ${invalidFields.map(([k]) => k).join(", ")} should go in transientFields`,
+  //   );
+  // }
 
   const properties = [
     // Include the instance-level relations that will be getter-ized by `newEntity`

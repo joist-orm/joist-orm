@@ -17,7 +17,7 @@ import {
   toIdOf,
   toTaggedId,
 } from "../index";
-import { lazyField, resolveOtherMeta } from "../newEntity";
+import { lazyField } from "../newEntity";
 import { maybeAdd, maybeRemove } from "../utils";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
@@ -30,8 +30,8 @@ export function hasOne<T extends Entity, U extends Entity, N extends never | und
 ): ManyToOneReference<T, U, N> {
   let otherMeta: EntityMetadata<U>;
   return lazyField((entity: T, fieldName) => {
-    otherMeta ??= resolveOtherMeta(entity, fieldName);
-    return new ManyToOneReferenceImpl<T, U, N>(entity, otherMeta, fieldName as keyof T & string, otherFieldName);
+    // otherMeta ??= resolveOtherMeta(entity, fieldName);
+    return new ManyToOneReferenceImpl<T, U, N>(entity, otherMeta!, fieldName as keyof T & string, otherFieldName);
   });
 }
 
@@ -39,6 +39,8 @@ export function hasOne<T extends Entity, U extends Entity, N extends never | und
 export function isManyToOneReference(maybeReference: any): maybeReference is ManyToOneReference<any, any, any> {
   return maybeReference instanceof ManyToOneReferenceImpl;
 }
+
+export let manyToOneReferenceCounter = 0;
 
 export interface ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends Reference<T, U, N> {

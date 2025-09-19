@@ -1,8 +1,8 @@
-import { baseEntityCstr } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityConstructor, EntityManager } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { getLazyFields } from "./getProperties";
+import { InstanceData } from "./InstanceData";
 import { fail } from "./utils";
 
 // Marks a constructor like Author has having had our relation getters installed
@@ -25,11 +25,10 @@ export function newEntity<T extends Entity>(em: EntityManager, cstr: EntityConst
   const meta = getMetadata(cstr);
   if (meta.ctiAbstract) fail(`Cannot create an instance of abstract entity ${meta.type}`);
   // This side-steps the `Author` constructor that initializes fields instance-level fields, which instead
-  // we've shoved up to be getters on the prototype, and the only instance field we expect to have is `__data`,
-  // which is set by the `baseEntityCstr` call.
-  const entity = Object.create(cstr.prototype) as T;
-  baseEntityCstr(em, entity as any, isNew);
-  return entity;
+  // we've moved up to getters on the prototype, and the only instance field `__data`.
+  const entity = { __data: new InstanceData(em, meta, isNew) };
+  Object.setPrototypeOf(entity, cstr.prototype);
+  return entity as any as T;
 }
 
 function moveRelationsToGetters(cstr: EntityConstructor<any>): void {

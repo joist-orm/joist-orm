@@ -193,8 +193,7 @@ export class ReactionsManager {
           // Let `author.id` and `book.author.get.firstName` errors run again after flush/hooks fills them in
           if (result.reason instanceof NoIdError || result.reason instanceof TypeError) {
             const action = actions[i];
-            const key = `${action.entity}_${action.r.name}`;
-            this.actionsPendingAssignedIds.set(key, action);
+            this.actionsPendingAssignedIds.set(action.key, action);
           } else {
             failures.push(result.reason);
           }

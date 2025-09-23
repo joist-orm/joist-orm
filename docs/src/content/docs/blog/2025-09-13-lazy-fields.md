@@ -174,3 +174,25 @@ And, per DX, it enables our codebases to explore modern tooling, because we're b
 If you want to explore this approach in a minimal example, there is a proof-of-concept repository we used to prototype the approach [here](https://github.com/stephenh/lazy-ts-fields/tree/main/src).
 
 :::
+
+```text
+benchmark                            avg (min … max) p75 / p99    (min … top 1%)
+---------------------------------------------------- -------------------------------
+
+new cstr() vanilla js          4.98 µs/iter   5.00 µs   █▅                 
+                      (4.11 µs … 176.31 µs)   8.92 µs   ██▃                
+                    ( 32.00  b …   1.16 mb)  29.87 kb ▁████▅▃▂▂▁▁▁▁▁▁▁▁▁▁▁▁
+                    
+joist-transform-properties   258.26 ns/iter 258.62 ns      █               
+                    (248.18 ns … 331.49 ns) 279.27 ns      ██              
+                    (296.04  b … 661.47  b) 496.61  b ▂▁▂▂████▃▄▃▂▂▂▂▁▁▁▁▁▁
+
+newEntity()                  157.89 ns/iter 156.26 ns ██                   
+                    (152.97 ns … 305.13 ns) 222.49 ns ██                   
+                    (351.71  b … 708.99  b) 441.30  b ██▃▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+
+lazy codegen                   7.24 µs/iter   7.58 µs     █       ▄        
+                        (6.16 µs … 8.56 µs)   8.49 µs     █       █        
+                    ( 16.66 kb …  18.12 kb)  17.61 kb ▅▁▁▅█▁▁▁▁█▁▁██▁▅▁▁▁▁
+
+```

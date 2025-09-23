@@ -16,23 +16,31 @@ class Author {
 }
 ```
 
-This is very ergonomic, i.e. no decorators (which we [do not care for](/blog/avoiding-decorators/)), so much so that at [Homebound](https://www.homebound.com/), we've written (or codegen-d) literally thousands of these class fields-based relations in our domain models.
+This is very ergonomic, i.e. no decorators (which we [do not care for](/blog/avoiding-decorators/)), so much so that at [Homebound](https://www.homebound.com/), we've written (or codegen-d) literally thousands of these class fields in our domain models.
 
-The class fields/relations are great because they allow business logic to incrementally crawl/walk through the object graph/domain model, and only load the data that the business logic actually needs for its computation--very standard, albeit old school, ORM behavior.
+:::tip
 
-## Eager Initialization
+Unlike query-builder ORMs like Prisma, Joist's class fields can be incrementally populated (and cached!), which we track in the [type system](/goals/load-safe-relations).
+
+This allows business logic to dynamically/iteratively load data as-needed for its computation ([without N+1s](/goals/avoiding-n-plus-1s/)), instead of having to "one-shot" load it as part of a single, up-front query.
+
+:::
+
+## Cost: Eager Field Initialization
 
 This approach has worked really well, with the only downside being that JavaScript's class fields are eagerly initialized.
 
-This means when `new Author` is called, all of the relations in `class Author`, like `books = hasMany(...)` above, another `publisher = hasOne(...)`, etc., are created & allocated in memory, even if the code that called `new Author` doesn't end up using the `books` relation (maybe it only uses `publisher`).
+This means when `new Author` is called, all the relations in `class Author`, like `books = hasMany(...)` above, and any others like `publisher = hasOne(...)`, etc., are immediately created & allocated in memory.
 
-This is fine when `Author` has a handful of relations, but in sufficiently-complicated domain models, some of our core entities have 30 relations, and the cost of creating 30 relations `x` 1,000 of rows can start to add up.
+These class fields are allocated every time, even if the code that called `new Author` doesn't end up using the `books` relation (maybe it only uses `publisher`).
+
+This eager-ness is fine when `Author` has a handful of relations, but in sufficiently-complicated domain models, some of our core entities have 30 relations, and the cost of creating 30 relations `x` 1,000 of rows can start to add up.
 
 So our goal has been to keep the `books = hasMany("books")` syntax, but make the fields lazy.
 
 ## First Approach: Codegen
 
-Not surprisingly for Joist, our first solution was to leverage code generation.
+Not surprisingly, our first solution was to leverage code generation.
 
 For an application's default, foreign-key-based relations like one-to-many, many-to-one, etc., Joist already generates a `AuthorCodegen` class that has all of the boilerplate relations defined for free.
 
@@ -58,7 +66,7 @@ class Author extends AuthorCodegen {
 
 This works great! We get lazy initization and no one cares that the generated output is a little longer/more verbose.
 
-However, Joist also has a robust set of user-defined relations, for things like [ReactiveField]():
+However, Joist also has a robust set of user-defined relations, for [rich domain modeling](/modeling/why-entities/), i.e. things like [ReactiveField](/modeling/reactive-fields/):
 
 ```ts
 class Author {
@@ -105,7 +113,7 @@ When articulated this way, a native-JavaScript solution starts to emerge, and ev
 
 ### Side-stepping fields with Object.create
 
-The insight to avoid field initializers is they happen "when the constructor is called"--what if we just don't call the constructor (i.e. don't call `new Author`)?
+The insight to avoid field initializers is they happen "when the constructor is called"--what if we just don't call the constructor? I.e. don't call `new Author`?
 
 What if we could create a empty `author` instance (no fields assigned), but hooked up to the class's prototype, so it would still "quack like an Author"?
 
@@ -161,7 +169,7 @@ And that's it--we've done a one-time/on-boot "probe" of `new Author`, to find it
 
 When callers access the relations like `author.books`, `author.publisher` they will still be there, and still "look like fields" to the type system, but they'll be lazily created.
 
-## Achieved
+## Performance Achieved
 
 Looking at what we've achieved, we've made lazy class fields in JavaScript, just by using the platform's native features--prototypes!
 
@@ -174,3 +182,20 @@ And, per DX, it enables our codebases to explore modern tooling, because we're b
 If you want to explore this approach in a minimal example, there is a proof-of-concept repository we used to prototype the approach [here](https://github.com/stephenh/lazy-ts-fields/tree/main/src).
 
 :::
+
+```text
+benchmark                            avg (min … max) p75 / p99    (min … top 1%)
+---------------------------------------------------- -------------------------------
+
+new cstr() vanilla js          4.98 µs/iter   5.00 µs   █▅
+                      (4.11 µs … 176.31 µs)   8.92 µs   ██▃
+                    ( 32.00  b …   1.16 mb)  29.87 kb ▁████▅▃▂▂▁▁▁▁▁▁▁▁▁▁▁▁
+
+joist-transform-properties   258.26 ns/iter 258.62 ns      █
+                    (248.18 ns … 331.49 ns) 279.27 ns      ██
+                    (296.04  b … 661.47  b) 496.61  b ▂▁▂▂████▃▄▃▂▂▂▂▁▁▁▁▁▁
+
+newEntity()                  157.89 ns/iter 156.26 ns ██
+                    (152.97 ns … 305.13 ns) 222.49 ns ██
+                    (351.71  b … 708.99  b) 441.30  b ██▃▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+```

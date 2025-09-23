@@ -200,11 +200,10 @@ export class ReactionsManager {
         }
       });
       if (failures.length > 0) throw failures[0];
-      // Record any succesful actions that should only run once so we don't run them again
+      // Record any successful actions that should only run once so we don't run them again
       actions.forEach(({ key, r }) => {
         if (r.runOnce) this.processedActions.add(key);
       });
-
       // This should generally not happen, only if two reactive fields depend on each other,
       // which in theory should probably be caught/blow up in the `configureMetadata` step,
       // but if it's not caught sooner, at least don't infinite loop.

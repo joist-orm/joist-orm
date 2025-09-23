@@ -208,7 +208,7 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
     }
 
     // Look for reactions to reverse
-    for (const { name, hint, fn } of meta.config.__data.reactions) {
+    for (const { name, hint, fn, runOnce } of meta.config.__data.reactions) {
       const reversals = reverseReactiveHint(meta.cstr, meta.cstr, hint);
       // For each reversal, tell its config about the reverse hint to force-rerun
       // the original reaction's instance any time it changes.
@@ -222,6 +222,7 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
           fields,
           path,
           fn,
+          runOnce,
         });
       }
     }

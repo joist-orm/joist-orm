@@ -147,6 +147,7 @@ export class Author extends AuthorCodegen {
       setViaHook: 0,
       immutable: 0,
       afterMetadata: 0,
+      runOnce: 0,
     },
   };
 
@@ -447,6 +448,14 @@ config.afterMetadata(() => {
   config.addReaction("ssn", (a) => {
     a.transientFields.reactions.afterMetadata += 1;
   });
+});
+
+config.addReaction("runOnce", "nickNames", {
+  runOnce: true,
+  fn: (a) => {
+    if (a.nickNames !== undefined && a.nickNames.length === 0) a.nickNames = [a.firstName + "ster"];
+    a.transientFields.reactions.runOnce += 1;
+  },
 });
 
 // Example accessing ctx from beforeFlush

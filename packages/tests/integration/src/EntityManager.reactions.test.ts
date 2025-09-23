@@ -14,15 +14,16 @@ describe("EntityManager.reactions", () => {
   it.withCtx("creates the right internal reactions", async () => {
     const fn = expect.any(Function);
     expect(getInternalReactions(Author)).toMatchObject([
-      { name: "direct", hint: "firstName", fn },
-      { name: "m2o", hint: { publisher: "name" }, fn },
-      { name: "o2m", hint: { mentees: "firstName" }, fn },
-      { name: "m2m", hint: { tags: "name" }, fn },
-      { name: "rf", hint: "search", fn },
-      { name: "rr", hint: "rootMentor", fn },
-      { name: "setViaHook", hint: "graduated", fn },
-      { name: "immutable", hint: { publisher: "type" }, fn },
-      { name: expect.stringMatching(/^Author.ts:\d+$/), hint: "ssn", fn },
+      { name: "direct", hint: "firstName", fn, runOnce: false },
+      { name: "m2o", hint: { publisher: "name" }, fn, runOnce: false },
+      { name: "o2m", hint: { mentees: "firstName" }, fn, runOnce: false },
+      { name: "m2m", hint: { tags: "name" }, fn, runOnce: false },
+      { name: "rf", hint: "search", fn, runOnce: false },
+      { name: "rr", hint: "rootMentor", fn, runOnce: false },
+      { name: "setViaHook", hint: "graduated", fn, runOnce: false },
+      { name: "immutable", hint: { publisher: "type" }, fn, runOnce: false },
+      { name: "runOnce", hint: "nickNames", fn, runOnce: true },
+      { name: expect.stringMatching(/^Author.ts:\d+$/), hint: "ssn", fn, runOnce: false },
     ]);
     expect(getInternalReactions(User)).toMatchObject([{ name: "poly", hint: { favoritePublisher: "name" }, fn }]);
   });
@@ -97,6 +98,7 @@ describe("EntityManager.reactions", () => {
         isReadOnly: false,
         name: "direct",
         fn,
+        runOnce: false,
       },
       {
         kind: "reaction",
@@ -107,6 +109,7 @@ describe("EntityManager.reactions", () => {
         isReadOnly: false,
         name: "m2o",
         fn,
+        runOnce: false,
       },
       {
         kind: "reaction",
@@ -117,6 +120,7 @@ describe("EntityManager.reactions", () => {
         isReadOnly: false,
         name: "o2m",
         fn,
+        runOnce: false,
       },
       {
         kind: "reaction",
@@ -127,6 +131,7 @@ describe("EntityManager.reactions", () => {
         isReadOnly: false,
         name: "o2m",
         fn,
+        runOnce: false,
       },
       {
         kind: "reaction",
@@ -137,6 +142,7 @@ describe("EntityManager.reactions", () => {
         isReadOnly: false,
         name: "m2m",
         fn,
+        runOnce: false,
       },
       {
         kind: "reaction",
@@ -147,6 +153,7 @@ describe("EntityManager.reactions", () => {
         isReadOnly: false,
         name: "rf",
         fn,
+        runOnce: false,
       },
       {
         kind: "reaction",
@@ -157,6 +164,7 @@ describe("EntityManager.reactions", () => {
         isReadOnly: false,
         name: "rr",
         fn,
+        runOnce: false,
       },
       {
         kind: "reaction",
@@ -167,6 +175,7 @@ describe("EntityManager.reactions", () => {
         isReadOnly: false,
         name: "setViaHook",
         fn,
+        runOnce: false,
       },
       {
         kind: "reaction",
@@ -177,6 +186,18 @@ describe("EntityManager.reactions", () => {
         isReadOnly: false,
         name: "immutable",
         fn,
+        runOnce: false,
+      },
+      {
+        kind: "reaction",
+        cstr: Author,
+        fields: ["nickNames"],
+        path: [],
+        source: Author,
+        isReadOnly: false,
+        name: "runOnce",
+        fn,
+        runOnce: true,
       },
       {
         kind: "reaction",
@@ -187,6 +208,7 @@ describe("EntityManager.reactions", () => {
         isReadOnly: false,
         name: expect.stringMatching(/^Author.ts:\d+$/),
         fn,
+        runOnce: false,
       },
     ]);
   });
@@ -209,6 +231,7 @@ describe("EntityManager.reactions", () => {
       rr: 0,
       setViaHook: 0,
       afterMetadata: 0,
+      runOnce: 0,
     });
   });
 
@@ -228,6 +251,7 @@ describe("EntityManager.reactions", () => {
       rr: 1,
       setViaHook: 1,
       afterMetadata: 1,
+      runOnce: 1,
     });
     // And when we trigger another flush where the author is no longer new
     em.touch(a);
@@ -243,6 +267,7 @@ describe("EntityManager.reactions", () => {
       rr: 1,
       setViaHook: 1,
       afterMetadata: 1,
+      runOnce: 1,
     });
   });
 
@@ -642,6 +667,21 @@ describe("EntityManager.reactions", () => {
       await em.flush();
       // Then the reaction runs
       expect(a2.transientFields.reactions.rr).toBe(1);
+    });
+  });
+
+  describe("runOnce", () => {
+    it.withCtx("only runs once per flush when true", async ({ em }) => {
+      // Given an author
+      await insertAuthor({ first_name: "a1" });
+      const a = await em.load(Author, "a:1");
+      expect(a.transientFields.reactions.runOnce).toBe(0);
+      // When a field is set to a value that would cause the reaction to run multiple times normally
+      a.nickNames = []; // The hook will set this to ["a1ster"] which would ordinarily cause the reaction to run twice
+      await em.flush();
+      // Then the reaction runs exactly once
+      expect(a.nickNames).toEqual(["a1ster"]);
+      expect(a.transientFields.reactions.runOnce).toBe(1);
     });
   });
 });

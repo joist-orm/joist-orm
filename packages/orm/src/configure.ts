@@ -253,6 +253,7 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
             name: field.fieldName,
             path,
             fields,
+            runOnce: false,
           });
         }
       }

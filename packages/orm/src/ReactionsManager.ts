@@ -172,7 +172,7 @@ export class ReactionsManager {
             // dedupe based on the entity and reactable to only run each action once for any given entity per loop
             if (actionsMap.has(key)) return;
             // If this reactable has already run and shouldn't run again, then skip it
-            if ("runOnce" in r && r.runOnce && this.processedActions.has(key)) return;
+            if (r.runOnce && this.processedActions.has(key)) return;
             actionsMap.set(key, { key, r, entity });
           });
         }),
@@ -203,7 +203,7 @@ export class ReactionsManager {
       if (failures.length > 0) throw failures[0];
       // Record any succesful actions that should only run once so we don't run them again
       actions.forEach(({ key, r }) => {
-        if ("runOnce" in r && r.runOnce) this.processedActions.add(key);
+        if (r.runOnce) this.processedActions.add(key);
       });
 
       // This should generally not happen, only if two reactive fields depend on each other,

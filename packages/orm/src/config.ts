@@ -384,6 +384,7 @@ export interface ReactiveField {
   path: string[];
   /** The name of the reactive field in the downstream entity to recalc. */
   name: string;
+  runOnce: false;
 }
 
 export interface Reaction {

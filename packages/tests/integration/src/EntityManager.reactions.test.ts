@@ -682,6 +682,12 @@ describe("EntityManager.reactions", () => {
       // Then the reaction runs exactly once
       expect(a.nickNames).toEqual(["a1ster"]);
       expect(a.transientFields.reactions.runOnce).toBe(1);
+      // When we set the value again and flush
+      a.nickNames = [];
+      await em.flush();
+      // Then the reaction has run one more time
+      expect(a.nickNames).toEqual(["a1ster"]);
+      expect(a.transientFields.reactions.runOnce).toBe(2);
     });
   });
 });

@@ -391,6 +391,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfBooks",
       fields: ["author", "deletedAt"],
       path: ["author"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -398,6 +399,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "bookComments",
       fields: ["author", "deletedAt"],
       path: ["author"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -405,6 +407,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfPublicReviews",
       fields: ["author", "deletedAt"],
       path: ["author"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -412,6 +415,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfPublicReviews2",
       fields: ["author", "deletedAt"],
       path: ["author"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -419,6 +423,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "tagsOfAllBooks",
       fields: ["author", "deletedAt", "tags"],
       path: ["author"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -426,6 +431,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "search",
       fields: ["author", "deletedAt", "title"],
       path: ["author"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -433,6 +439,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "rangeOfBooks",
       fields: ["author", "deletedAt"],
       path: ["author"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -440,6 +447,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "favoriteBook",
       fields: ["author", "deletedAt"],
       path: ["author"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -447,6 +455,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "search",
       fields: ["author", "title"],
       path: [],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -454,6 +463,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "isPublic",
       fields: ["author"],
       path: ["reviews"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -461,6 +471,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "parentTags",
       fields: ["tags"],
       path: ["comments"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "query",
@@ -468,6 +479,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfBookReviews",
       fields: ["author", "deletedAt"],
       path: ["author", "publisher@LargePublisher"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -475,6 +487,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "titlesOfFavoriteBooks",
       fields: ["title"],
       path: ["favoriteAuthor", "publisher@LargePublisher"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -482,6 +495,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "favoriteAuthor",
       fields: ["author", "deletedAt"],
       path: ["author", "publisher@LargePublisher"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "query",
@@ -489,6 +503,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfBookReviews",
       fields: ["author", "deletedAt"],
       path: ["author", "publisher"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -496,6 +511,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "titlesOfFavoriteBooks",
       fields: ["title"],
       path: ["favoriteAuthor", "publisher"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -503,6 +519,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "favoriteAuthor",
       fields: ["author", "deletedAt"],
       path: ["author", "publisher"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "query",
@@ -510,6 +527,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfBookReviewsFormatted",
       fields: ["author", "deletedAt"],
       path: ["author", "publisher", "group"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "query",
@@ -517,6 +535,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfBookReviews",
       fields: ["author", "deletedAt"],
       path: ["author", "publisher@SmallPublisher"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -524,6 +543,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "titlesOfFavoriteBooks",
       fields: ["title"],
       path: ["favoriteAuthor", "publisher@SmallPublisher"],
+      runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
       kind: "populate",
@@ -531,6 +551,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "favoriteAuthor",
       fields: ["author", "deletedAt"],
       path: ["author", "publisher@SmallPublisher"],
+      runOnce: false,
     });
 
     i = 0;
@@ -541,6 +562,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfPublicReviews",
       fields: ["isPublic", "rating"],
       path: ["book", "author"],
+      runOnce: false,
     });
     expect(brRfs[i++]).toEqual({
       kind: "populate",
@@ -548,6 +570,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfPublicReviews2",
       fields: ["isPublic", "isTest", "rating"],
       path: ["book", "author"],
+      runOnce: false,
     });
     expect(brRfs[i++]).toEqual({
       kind: "populate",
@@ -555,15 +578,31 @@ describe("EntityManager.reactiveRules", () => {
       name: "favoriteBook",
       fields: ["rating"],
       path: ["book", "author"],
+      runOnce: false,
     });
-    expect(brRfs[i++]).toEqual({ kind: "populate", cstr: "BookReview", name: "isPublic", fields: [], path: [] });
-    expect(brRfs[i++]).toEqual({ kind: "populate", cstr: "BookReview", name: "isTest", fields: [], path: [] });
+    expect(brRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "BookReview",
+      name: "isPublic",
+      fields: [],
+      path: [],
+      runOnce: false,
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "BookReview",
+      name: "isTest",
+      fields: [],
+      path: [],
+      runOnce: false,
+    });
     expect(brRfs[i++]).toEqual({
       kind: "populate",
       cstr: "BookReview",
       name: "isTestChain",
       fields: ["isTest"],
       path: [],
+      runOnce: false,
     });
     expect(brRfs[i++]).toEqual({
       kind: "populate",
@@ -571,6 +610,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "parentTags",
       fields: ["isPublic"],
       path: ["book", "comments"],
+      runOnce: false,
     });
     expect(brRfs[i++]).toEqual({
       kind: "populate",
@@ -578,6 +618,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "parentTags",
       fields: ["tags"],
       path: ["comment"],
+      runOnce: false,
     });
     expect(brRfs[i++]).toEqual({
       kind: "query",
@@ -585,6 +626,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfBookReviews",
       fields: [],
       path: ["book", "author", "publisher@LargePublisher"],
+      runOnce: false,
     });
     expect(brRfs[i++]).toEqual({
       kind: "query",
@@ -592,6 +634,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfBookReviews",
       fields: [],
       path: ["book", "author", "publisher"],
+      runOnce: false,
     });
     expect(brRfs[i++]).toEqual({
       kind: "query",
@@ -599,6 +642,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfBookReviewsFormatted",
       fields: [],
       path: ["book", "author", "publisher", "group"],
+      runOnce: false,
     });
     expect(brRfs[i++]).toEqual({
       kind: "query",
@@ -606,6 +650,7 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfBookReviews",
       fields: [],
       path: ["book", "author", "publisher@SmallPublisher"],
+      runOnce: false,
     });
   });
 

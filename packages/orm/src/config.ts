@@ -30,6 +30,8 @@ export type EntityHook =
   | "afterCommit";
 type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<unknown>;
 
+type AddReactionOpts = { runOnce?: boolean; name?: string };
+
 export const constraintNameToValidationError: Record<string, string> = {};
 
 type Settable<T extends Entity> = keyof SettableFields<FieldsOf<T>> & string;
@@ -205,15 +207,38 @@ export class ConfigApi<T extends Entity, C> {
    * @param fn The reaction function to run
    */
   addReaction<H extends ReactiveHint<T>>(name: string, hint: H, fn: HookFn<Loaded<T, H>, C>): void;
+  /**
+   * Adds a reaction that runs during flush whenever fields in the `hint` change.
+   *
+   * Reactions are somewhere in between hooks and reactive fields/references:
+   * 1. Can make arbitrary changes to any entity like a hook
+   * 2. Only run when `hint` has changes, not on every flush, like an RF/RR
+   * 3. Can run when the entity itself has no changes, like an RF/RF
+   * 4. Can run multiple times per flush, like an RF/RF.  Be careful to avoid creating
+   *    circular dependencies in the hint and to make the function idempotent.
+   *
+   * @param opts Options object containing:
+   *   - runOnce - If true, the reaction will only run once per flush, not every time the hint changes. Optional.
+   *   default: false.
+   *   - name - A name to identify this reaction for debugging
+   * @param hint The fields to watch for changes and load before running the reaction
+   * @param fn The reaction function to run
+   */
+  addReaction<H extends ReactiveHint<T>>(opts: AddReactionOpts, hint: H, fn: HookFn<Loaded<T, H>, C>): void;
   addReaction<H extends ReactiveHint<T>>(
-    nameOrHint: string | H,
+    nameOrOptsOrHint: string | AddReactionOpts | H,
     hintOrFn: H | HookFn<Loaded<T, H>, C>,
     maybeFn?: HookFn<Loaded<T, H>, C>,
   ): void {
     // Keep the name so we can uniquely identify this reaction later and also aid debugging/tracing
-    const name = typeof maybeFn === "function" ? (nameOrHint as string) : getCallerName();
-    const hint = (maybeFn ? hintOrFn : nameOrHint) as H;
-    const fn = (maybeFn ?? hintOrFn) as HookFn<Loaded<T, H>, C>;
+    const fn = maybeFn ?? (hintOrFn as HookFn<Loaded<T, H>, C>);
+    const hint = (maybeFn ? hintOrFn : nameOrOptsOrHint) as H;
+    const opts = maybeFn
+      ? typeof nameOrOptsOrHint === "string"
+        ? { name: nameOrOptsOrHint }
+        : (nameOrOptsOrHint as AddReactionOpts)
+      : {};
+    const { name = getCallerName(), runOnce = false } = opts;
     this.ensurePreBoot(name, "addReaction");
     let loadHint: LoadHint<T>;
     // Create a wrapper around the user's function to populate
@@ -226,7 +251,7 @@ export class ConfigApi<T extends Entity, C> {
       }
       return fn(entity as Loaded<T, H>, ctx);
     };
-    this.__data.reactions.push({ name, fn: wrappedFn, hint });
+    this.__data.reactions.push({ name, fn: wrappedFn, hint, runOnce });
   }
 
   /** Adds a synchronous default for `fieldName` to a hard-coded `value`. */
@@ -345,6 +370,7 @@ export interface ReactiveField {
   path: string[];
   /** The name of the reactive field in the downstream entity to recalc. */
   name: string;
+  runOnce: false;
 }
 
 export interface Reaction {
@@ -363,6 +389,8 @@ export interface Reaction {
   path: string[];
   /** The downstream reaction function. */
   fn: HookFn<any, any>;
+  /** If true, the reaction should only run once per flush, not every time the hint changes. */
+  runOnce: boolean;
 }
 
 export type Reactable = ReactiveField | Reaction;
@@ -371,6 +399,7 @@ interface ReactionInternal<T extends Entity, H extends ReactiveHint<T>, C> {
   name: string;
   fn: HookFn<Reacted<T, H>, C>;
   hint: H;
+  runOnce: boolean;
 }
 
 type AfterMetadataCallback<T extends Entity> = (meta: EntityMetadata<T>) => void;

@@ -6,7 +6,7 @@ import { EntityManager, getEmInternalApi, NoIdError } from "./index";
 import { globalLogger, ReactionLogger } from "./logging/ReactionLogger";
 import { followReverseHint } from "./reactiveHints";
 
-export type ReactiveAction = { r: Reactable; entity: Entity };
+export type ReactiveAction = { key: string; r: Reactable; entity: Entity };
 /**
  * Manages the reactivity of tracking which source fields have changed and finding/recalculating
  * their downstream derived fields.
@@ -32,6 +32,7 @@ export class ReactionsManager {
    * try again during `em.flush`.
    */
   private actionsPendingAssignedIds: Map<string, ReactiveAction> = new Map();
+  private processedActions: Set<string> = new Set();
   private needsRecalc = { populate: false, query: false, reaction: false };
   private logger: ReactionLogger | undefined = globalLogger;
   private em: EntityManager;
@@ -169,7 +170,10 @@ export class ReactionsManager {
             const key = `${entity}_${r.name}`;
             // We could arrive at the same reactable from multiple paths (eg, 2 dependent fields changed), so we need to
             // dedupe based on the entity and reactable to only run each action once for any given entity per loop
-            if (!actionsMap.has(key)) actionsMap.set(key, { r, entity });
+            if (actionsMap.has(key)) return;
+            // If this reactable has already run and shouldn't run again, then skip it
+            if (r.runOnce && this.processedActions.has(key)) return;
+            actionsMap.set(key, { key, r, entity });
           });
         }),
       );
@@ -189,15 +193,17 @@ export class ReactionsManager {
           // Let `author.id` and `book.author.get.firstName` errors run again after flush/hooks fills them in
           if (result.reason instanceof NoIdError || result.reason instanceof TypeError) {
             const action = actions[i];
-            const key = `${action.entity}_${action.r.name}`;
-            this.actionsPendingAssignedIds.set(key, action);
+            this.actionsPendingAssignedIds.set(action.key, action);
           } else {
             failures.push(result.reason);
           }
         }
       });
       if (failures.length > 0) throw failures[0];
-
+      // Record any successful actions that should only run once so we don't run them again
+      actions.forEach(({ key, r }) => {
+        if (r.runOnce) this.processedActions.add(key);
+      });
       // This should generally not happen, only if two reactive fields depend on each other,
       // which in theory should probably be caught/blow up in the `configureMetadata` step,
       // but if it's not caught sooner, at least don't infinite loop.
@@ -210,6 +216,7 @@ export class ReactionsManager {
   /** Clears all the pending source fields, i.e. after `em.flush` is complete. */
   clear(): void {
     this.pendingReactables = new Map();
+    this.processedActions.clear();
   }
 
   get hasFieldsPendingAssignedIds(): boolean {

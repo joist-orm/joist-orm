@@ -1,3 +1,11 @@
+# [1.270.0](https://github.com/joist-orm/joist-orm/compare/v1.269.0...v1.270.0) (2025-09-24)
+
+
+### Features
+
+* add basic Plugin and PluginManager support ([#1603](https://github.com/joist-orm/joist-orm/issues/1603)) ([d2ada61](https://github.com/joist-orm/joist-orm/commit/d2ada61d9081c5e72e4ed38a7bb27c41677b645b))
+* add runOnce option to addReaction ([#1602](https://github.com/joist-orm/joist-orm/issues/1602)) ([886ce5c](https://github.com/joist-orm/joist-orm/commit/886ce5cff7fbee2df59bbe73a2f6924918b59115))
+
 # [1.269.0](https://github.com/joist-orm/joist-orm/compare/v1.268.5...v1.269.0) (2025-09-18)
 
 

@@ -1478,13 +1478,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
             if (this.#rm.hasFieldsPendingAssignedIds) {
               await this.assignNewIds();
-              await this.#rm.recalcRelationsPendingAssignedIds();
+              await this.#rm.recalcReactablesPendingAssignedIds();
             }
 
             if (loops++ > 50) {
               fail("recalc looped too many times, probably a circular dependency");
             }
-            // recalcRelationsPendingAssignedIds could have dirtied additional fields, so re-run until we've settled
+            // recalcReactablesPendingAssignedIds could have dirtied additional fields that have their own dependent
+            // reactables, so re-run until we've settled
           } while (this.#rm.hasPendingReactables);
 
           for (const e of pendingHooks) hooksInvoked.add(e);

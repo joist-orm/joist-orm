@@ -227,7 +227,7 @@ export class ReactionsManager {
     return this.needsRecalc.populate || this.needsRecalc.reaction;
   }
 
-  async recalcRelationsPendingAssignedIds(): Promise<void> {
+  async recalcReactablesPendingAssignedIds(): Promise<void> {
     const actions = [...this.actionsPendingAssignedIds.values()];
     this.actionsPendingAssignedIds.clear();
 

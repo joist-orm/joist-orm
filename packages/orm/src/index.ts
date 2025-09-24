@@ -33,6 +33,7 @@ export * from "./EntityMetadata";
 export { EnumMetadata } from "./EnumMetadata";
 export { EntityOrId, HintNode } from "./HintTree";
 export { InstanceData } from "./InstanceData";
+export { Plugin } from "./PluginManager";
 export * from "./QueryParser";
 export * from "./changes";
 export { ConfigApi, EntityHook, resetBootFlag } from "./config";

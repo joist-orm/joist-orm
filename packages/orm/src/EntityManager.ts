@@ -50,6 +50,7 @@ import {
   OneToManyCollection,
   parseFindQuery,
   PartialOrNull,
+  Plugin,
   PolymorphicReferenceImpl,
   ReactionLogger,
   ReactiveHint,
@@ -69,6 +70,7 @@ import { JoinRows } from "./JoinRows";
 import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { WriteFn } from "./logging/FactoryLogger";
 import { newEntity } from "./newEntity";
+import { PluginManager } from "./PluginManager";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";
 import { ReactionsManager } from "./ReactionsManager";
 import { followReverseHint } from "./reactiveHints";
@@ -303,6 +305,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       get fieldLogger() {
         return em.#fieldLogger;
       },
+
+      pluginManager: undefined,
     };
   }
 
@@ -2168,6 +2172,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     return result as any;
   }
 
+  addPlugin(plugin: Plugin): void {
+    (getEmInternalApi(this).pluginManager ??= new PluginManager(this)).addPlugin(plugin);
+  }
+
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
   #doCreate<T extends EntityW>(type: EntityConstructor<T>, opts: any, partial: boolean): T {
     const entity = newEntity(this, type, true);
@@ -2264,6 +2272,7 @@ export interface EntityManagerInternalApi {
   isMerging: (entity: Entity) => boolean;
   get fieldLogger(): FieldLogger | undefined;
   get isLoadedCache(): IsLoadedCache;
+  pluginManager: PluginManager | undefined;
 }
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {

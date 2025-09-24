@@ -450,12 +450,9 @@ config.afterMetadata(() => {
   });
 });
 
-config.addReaction("runOnce", "nickNames", {
-  runOnce: true,
-  fn: (a) => {
-    if (a.nickNames !== undefined && a.nickNames.length === 0) a.nickNames = [a.firstName + "ster"];
-    a.transientFields.reactions.runOnce += 1;
-  },
+config.addReaction({ name: "runOnce", runOnce: true }, "nickNames", (a) => {
+  if (a.nickNames !== undefined && a.nickNames.length === 0) a.nickNames = [a.firstName + "ster"];
+  a.transientFields.reactions.runOnce += 1;
 });
 
 // Example accessing ctx from beforeFlush

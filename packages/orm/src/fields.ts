@@ -64,7 +64,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   const { rm, pluginManager, indexManager, fieldLogger } = getEmInternalApi(em);
   const { data, originalData, flushedData } = getInstanceData(entity);
 
-  pluginManager.beforeSetField(entity, fieldName, newValue);
+  pluginManager?.beforeSetField?.(entity, fieldName, newValue);
 
   // If a `set` occurs during the ReactiveQueryField-loop, copy the last-flushed value to flushedData.
   // Then our `pendingOperation` logic can tell "do we need another micro-flush?" separately

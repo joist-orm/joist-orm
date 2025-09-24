@@ -306,7 +306,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         return em.#fieldLogger;
       },
 
-      pluginManager: new PluginManager(em),
+      pluginManager: undefined,
     };
   }
 
@@ -2173,7 +2173,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   addPlugin(plugin: Plugin): void {
-    getEmInternalApi(this).pluginManager.addPlugin(plugin);
+    (getEmInternalApi(this).pluginManager ??= new PluginManager(this)).addPlugin(plugin);
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
@@ -2272,7 +2272,7 @@ export interface EntityManagerInternalApi {
   isMerging: (entity: Entity) => boolean;
   get fieldLogger(): FieldLogger | undefined;
   get isLoadedCache(): IsLoadedCache;
-  pluginManager: PluginManager;
+  pluginManager: PluginManager | undefined;
 }
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {

@@ -2,7 +2,7 @@ import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { getReactables, getReactablesIncludingReadOnly } from "./caches";
 import { Reactable } from "./config";
-import { EntityManager, getEmInternalApi, NoIdError } from "./index";
+import { EntityManager, fail, getEmInternalApi, NoIdError } from "./index";
 import { globalLogger, ReactionLogger } from "./logging/ReactionLogger";
 import { followReverseHint } from "./reactiveHints";
 
@@ -203,9 +203,7 @@ export class ReactionsManager {
       // This should generally not happen, only if two reactive fields depend on each other,
       // which in theory should probably be caught/blow up in the `configureMetadata` step,
       // but if it's not caught sooner, at least don't infinite loop.
-      if (loops++ > 50) {
-        throw new Error("recalc looped too many times, probably a circular dependency");
-      }
+      if (loops++ > 50) fail("recalc looped too many times, probably a circular dependency");
     }
   }
 

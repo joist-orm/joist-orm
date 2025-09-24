@@ -1472,8 +1472,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           // The hooks could have deleted this-loop or prior-loop entities, so re-cascade again.
           await this.flushDeletes();
           let loops = 0;
-          // The hooks could have changed fields, so recalc again.
           do {
+            // The hooks could have changed fields, so recalc again.
             await this.#rm.recalcPendingReactables("reactables");
 
             if (this.#rm.hasFieldsPendingAssignedIds) {
@@ -1481,11 +1481,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               await this.#rm.recalcReactablesPendingAssignedIds();
             }
 
-            if (loops++ > 50) {
-              fail("recalc looped too many times, probably a circular dependency");
-            }
-            // recalcReactablesPendingAssignedIds could have dirtied additional fields that have their own dependent
-            // reactables, so re-run until we've settled
+            if (loops++ > 50) fail("recalc looped too many times, probably a circular dependency");
+            // recalcReactablesPendingAssignedIds could have changed more fields or even created new entities, so we
+            // need to loop until we've settled completely.
           } while (this.#rm.hasPendingReactables);
 
           for (const e of pendingHooks) hooksInvoked.add(e);

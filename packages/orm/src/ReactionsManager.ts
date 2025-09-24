@@ -122,10 +122,6 @@ export class ReactionsManager {
     return this.getDirtyFields(getMetadata(entity)).has(fieldName);
   }
 
-  hasPendingReactiveQueries(): boolean {
-    return this.needsRecalc.query;
-  }
-
   /**
    * Given source `Reactable` "reverse indexes" that have been queued as dirty by calls
    * to setters, `em.register`, or `em.delete`, asynchronously walks/crawls to the downstream
@@ -221,6 +217,14 @@ export class ReactionsManager {
 
   get hasFieldsPendingAssignedIds(): boolean {
     return this.actionsPendingAssignedIds.size > 0;
+  }
+
+  get hasPendingReactiveQueries(): boolean {
+    return this.needsRecalc.query;
+  }
+
+  get hasPendingReactables(): boolean {
+    return this.needsRecalc.populate || this.needsRecalc.reaction;
   }
 
   async recalcRelationsPendingAssignedIds(): Promise<void> {

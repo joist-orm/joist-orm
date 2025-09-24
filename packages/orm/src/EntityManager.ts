@@ -1471,13 +1471,21 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
           // The hooks could have deleted this-loop or prior-loop entities, so re-cascade again.
           await this.flushDeletes();
+          let loops = 0;
           // The hooks could have changed fields, so recalc again.
-          await this.#rm.recalcPendingReactables("reactables");
+          do {
+            await this.#rm.recalcPendingReactables("reactables");
 
-          if (this.#rm.hasFieldsPendingAssignedIds) {
-            await this.assignNewIds();
-            await this.#rm.recalcRelationsPendingAssignedIds();
-          }
+            if (this.#rm.hasFieldsPendingAssignedIds) {
+              await this.assignNewIds();
+              await this.#rm.recalcRelationsPendingAssignedIds();
+            }
+
+            if (loops++ > 50) {
+              fail("recalc looped too many times, probably a circular dependency");
+            }
+            // recalcRelationsPendingAssignedIds could have dirtied additional fields, so re-run until we've settled
+          } while (this.#rm.hasPendingReactables);
 
           for (const e of pendingHooks) hooksInvoked.add(e);
           pendingHooks.clear();
@@ -1542,7 +1550,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               await this.driver.flushJoinTables(this, joinRowTodos);
             }
             // Now that we've flushed, look for ReactiveQueries that need to be recalculated
-            if (this.#rm.hasPendingReactiveQueries()) {
+            if (this.#rm.hasPendingReactiveQueries) {
               // Reset all flushed entities to we only flush net-new changes
               for (const e of entitiesToFlush) {
                 if (e.isNewEntity && !e.isDeletedEntity) this.#entitiesById.set(e.idTagged, e);

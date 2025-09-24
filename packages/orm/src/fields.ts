@@ -61,8 +61,10 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   // Tell any `#isLoaded` or `#value` caches that they might be stale
   getEmInternalApi(em).isLoadedCache.resetIsLoaded(entity, fieldName);
 
-  const { fieldLogger } = getEmInternalApi(em);
+  const { rm, pluginManager, indexManager, fieldLogger } = getEmInternalApi(em);
   const { data, originalData, flushedData } = getInstanceData(entity);
+
+  pluginManager.beforeSetField(entity, fieldName, newValue);
 
   // If a `set` occurs during the ReactiveQueryField-loop, copy the last-flushed value to flushedData.
   // Then our `pendingOperation` logic can tell "do we need another micro-flush?" separately
@@ -90,12 +92,12 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   if (fieldName in originalData) {
     if (equalOrSameEntity(originalData[fieldName], newValue)) {
       const currentValue = getField(entity, fieldName);
-      getEmInternalApi(em).indexManager.maybeUpdateFieldIndex(entity, fieldName, currentValue, newValue);
+      indexManager.maybeUpdateFieldIndex(entity, fieldName, currentValue, newValue);
 
       data[fieldName] = newValue;
       delete originalData[fieldName];
       fieldLogger?.logSet(entity, fieldName, newValue);
-      getEmInternalApi(em).rm.dequeueDownstreamReactables(entity, fieldName);
+      rm.dequeueDownstreamReactables(entity, fieldName);
       return true;
     }
   }
@@ -114,9 +116,9 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
     originalData[fieldName] = currentValue;
   }
   fieldLogger?.logSet(entity, fieldName, newValue);
-  getEmInternalApi(em).rm.queueDownstreamReactables(entity, fieldName);
+  rm.queueDownstreamReactables(entity, fieldName);
 
-  getEmInternalApi(em).indexManager.maybeUpdateFieldIndex(entity, fieldName, currentValue, newValue);
+  indexManager.maybeUpdateFieldIndex(entity, fieldName, currentValue, newValue);
 
   data[fieldName] = newValue;
   return true;

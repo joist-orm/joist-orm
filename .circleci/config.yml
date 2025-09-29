@@ -49,7 +49,9 @@ jobs:
                 pkg-manager: yarn
             - run:
                 name: Install Bun
-                command: curl -fsSL https://bun.sh/install | bash
+                command: |
+                  curl -fsSL https://bun.sh/install | bash
+                  echo 'export PATH="$HOME/.bun/bin:$PATH"' >> $BASH_ENV
 
       - run: yarn build
       - run:

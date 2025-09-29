@@ -1,3 +1,10 @@
+# [1.271.0](https://github.com/joist-orm/joist-orm/compare/v1.270.0...v1.271.0) (2025-09-29)
+
+
+### Features
+
+* add isFlushing and expose isRefreshing directly on EntityManager ([#1605](https://github.com/joist-orm/joist-orm/issues/1605)) ([98fcdbf](https://github.com/joist-orm/joist-orm/commit/98fcdbfcb893a764d324acc90b8e25381e688f73))
+
 # [1.270.0](https://github.com/joist-orm/joist-orm/compare/v1.269.0...v1.270.0) (2025-09-24)
 
 

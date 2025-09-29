@@ -53,4 +53,8 @@ export class FlushLock {
       }
     }
   }
+
+  get isFlushing(): boolean {
+    return this.#isFlushing;
+  }
 }

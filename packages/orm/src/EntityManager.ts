@@ -269,6 +269,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       rm: this.#rm,
       indexManager: this.#indexManager,
       isLoadedCache: this.#isLoadedCache,
+      pluginManager: undefined,
 
       isMerging(entity: EntityW): boolean {
         return em.#merging?.has(entity) ?? false;
@@ -306,7 +307,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         return em.#fieldLogger;
       },
 
-      pluginManager: undefined,
+      get isFlushing() {
+        return em.#fl.isFlushing;
+      },
     };
   }
 
@@ -2273,6 +2276,7 @@ export interface EntityManagerInternalApi {
   get fieldLogger(): FieldLogger | undefined;
   get isLoadedCache(): IsLoadedCache;
   pluginManager: PluginManager | undefined;
+  isFlushing: boolean;
 }
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {

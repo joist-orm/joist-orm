@@ -238,7 +238,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   #isLoadedCache = new IsLoadedCache();
   #merging: Set<EntityW> | undefined;
   private __api: EntityManagerInternalApi;
-  private __isRefreshing = false;
+  #isRefreshing = false;
   mode: EntityManagerMode = "writes";
 
   constructor(ctx: C, opts: EntityManagerOpts<TX>);
@@ -269,6 +269,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       rm: this.#rm,
       indexManager: this.#indexManager,
       isLoadedCache: this.#isLoadedCache,
+      pluginManager: undefined,
 
       isMerging(entity: EntityW): boolean {
         return em.#merging?.has(entity) ?? false;
@@ -305,8 +306,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       get fieldLogger() {
         return em.#fieldLogger;
       },
-
-      pluginManager: undefined,
     };
   }
 
@@ -1641,7 +1640,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   async refresh(entity: EntityW): Promise<void>;
   async refresh(entities: ReadonlyArray<EntityW>): Promise<void>;
   async refresh(param?: EntityW | ReadonlyArray<EntityW> | { deepLoad?: boolean }): Promise<void> {
-    this.__isRefreshing = true;
+    this.#isRefreshing = true;
     this.#dataloaders = {};
     this.#preloadedRelations = new Map();
     const deepLoad = param && "deepLoad" in param && param.deepLoad;
@@ -1719,7 +1718,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         );
       }
     }
-    this.__isRefreshing = false;
+    this.#isRefreshing = false;
   }
 
   public get numberOfEntities(): number {
@@ -2176,6 +2175,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     (getEmInternalApi(this).pluginManager ??= new PluginManager(this)).addPlugin(plugin);
   }
 
+  get isRefreshing() {
+    return this.#isRefreshing;
+  }
+
+  get isFlushing() {
+    return this.#fl.isFlushing;
+  }
+
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
   #doCreate<T extends EntityW>(type: EntityConstructor<T>, opts: any, partial: boolean): T {
     const entity = newEntity(this, type, true);
@@ -2277,10 +2284,6 @@ export interface EntityManagerInternalApi {
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {
   return (em as any)["__api"];
-}
-
-export function isRefreshing(em: EntityManager): boolean {
-  return em["__isRefreshing"];
 }
 
 let defaultEntityLimit = 50_000;

@@ -1,3 +1,10 @@
+# [1.272.0](https://github.com/joist-orm/joist-orm/compare/v1.271.1...v1.272.0) (2025-09-30)
+
+
+### Features
+
+* rename and add new entity manager transaction hooks ([#1607](https://github.com/joist-orm/joist-orm/issues/1607)) ([e2c7317](https://github.com/joist-orm/joist-orm/commit/e2c731717c19b461638f67affada6d8fb1c55a61))
+
 ## [1.271.1](https://github.com/joist-orm/joist-orm/compare/v1.271.0...v1.271.1) (2025-09-30)
 
 

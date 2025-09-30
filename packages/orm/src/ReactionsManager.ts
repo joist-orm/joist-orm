@@ -2,7 +2,7 @@ import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { getReactables, getReactablesIncludingReadOnly } from "./caches";
 import { Reactable } from "./config";
-import { EntityManager, fail, getEmInternalApi, NoIdError } from "./index";
+import { EntityManager, getEmInternalApi, NoIdError } from "./index";
 import { globalLogger, ReactionLogger } from "./logging/ReactionLogger";
 import { followReverseHint } from "./reactiveHints";
 
@@ -27,11 +27,6 @@ export class ReactionsManager {
    * Instead, we just track the dirty fields by type-of-entity, which is enough for `isPendingRecalc`.
    */
   private dirtyFields: Map<string, Set<string>> = new Map();
-  /**
-   * Derived fields we tried to calculate, but they failed with `NoIdError`s, so we'll
-   * try again during `em.flush`.
-   */
-  private actionsPendingAssignedIds: Map<string, ReactiveAction> = new Map();
   private processedActions: Set<string> = new Set();
   private needsRecalc = { populate: false, query: false, reaction: false };
   private logger: ReactionLogger | undefined = globalLogger;
@@ -122,6 +117,10 @@ export class ReactionsManager {
     return this.getDirtyFields(getMetadata(entity)).has(fieldName);
   }
 
+  hasPendingReactiveQueries(): boolean {
+    return this.needsRecalc.query;
+  }
+
   /**
    * Given source `Reactable` "reverse indexes" that have been queued as dirty by calls
    * to setters, `em.register`, or `em.delete`, asynchronously walks/crawls to the downstream
@@ -183,18 +182,43 @@ export class ReactionsManager {
       const endTime = this.logger?.now() ?? 0;
       this.logger?.logLoadingTime(this.em, endTime - startTime);
 
+      const actionsPendingAssignedIds: Map<string, ReactiveAction> = new Map();
       const failures: any[] = [];
       results.forEach((result, i) => {
         if (result.status === "rejected") {
           // Let `author.id` and `book.author.get.firstName` errors run again after flush/hooks fills them in
           if (result.reason instanceof NoIdError || result.reason instanceof TypeError) {
             const action = actions[i];
-            this.actionsPendingAssignedIds.set(action.key, action);
+            actionsPendingAssignedIds.set(action.key, action);
           } else {
             failures.push(result.reason);
           }
         }
       });
+
+      // If we have any actions that need to be re-run because they failed due to a missing id, then we assign ids and
+      // re-run them.
+      if (actionsPendingAssignedIds.size > 0) {
+        await this.em.assignNewIds();
+        const actions = [...actionsPendingAssignedIds.values()];
+        const startTime = this.logger?.now() ?? 0;
+        const results = await Promise.allSettled(
+          actions.filter((a) => !a.entity.isDeletedEntity).map((a) => this.#doAction(a)),
+        );
+        const endTime = this.logger?.now() ?? 0;
+        this.logger?.logLoadingTime(this.em, endTime - startTime);
+        results.forEach((result) => {
+          if (result.status === "rejected") {
+            if (result.reason instanceof TypeError) {
+              // Defer to the validation error to catch this
+              this.suppressedTypeErrors.push(result.reason);
+            } else {
+              failures.push(result.reason);
+            }
+          }
+        });
+      }
+
       if (failures.length > 0) throw failures[0];
       // Record any successful actions that should only run once so we don't run them again
       actions.forEach(({ key, r }) => {
@@ -203,7 +227,9 @@ export class ReactionsManager {
       // This should generally not happen, only if two reactive fields depend on each other,
       // which in theory should probably be caught/blow up in the `configureMetadata` step,
       // but if it's not caught sooner, at least don't infinite loop.
-      if (loops++ > 50) fail("recalc looped too many times, probably a circular dependency");
+      if (loops++ > 50) {
+        throw new Error("recalc looped too many times, probably a circular dependency");
+      }
     }
   }
 
@@ -211,43 +237,6 @@ export class ReactionsManager {
   clear(): void {
     this.pendingReactables = new Map();
     this.processedActions.clear();
-  }
-
-  get hasFieldsPendingAssignedIds(): boolean {
-    return this.actionsPendingAssignedIds.size > 0;
-  }
-
-  get hasPendingReactiveQueries(): boolean {
-    return this.needsRecalc.query;
-  }
-
-  get hasPendingReactables(): boolean {
-    return this.needsRecalc.populate || this.needsRecalc.reaction;
-  }
-
-  async recalcReactablesPendingAssignedIds(): Promise<void> {
-    const actions = [...this.actionsPendingAssignedIds.values()];
-    this.actionsPendingAssignedIds.clear();
-
-    const startTime = this.logger?.now() ?? 0;
-    const results = await Promise.allSettled(
-      actions.filter((a) => !a.entity.isDeletedEntity).map((a) => this.#doAction(a)),
-    );
-    const endTime = this.logger?.now() ?? 0;
-    this.logger?.logLoadingTime(this.em, endTime - startTime);
-
-    const failures: any[] = [];
-    results.forEach((result) => {
-      if (result.status === "rejected") {
-        if (result.reason instanceof TypeError) {
-          // Defer to the validation error to catch this
-          this.suppressedTypeErrors.push(result.reason);
-        } else {
-          failures.push(result.reason);
-        }
-      }
-    });
-    if (failures.length > 0) throw failures[0];
   }
 
   setLogger(logger: ReactionLogger | undefined): void {

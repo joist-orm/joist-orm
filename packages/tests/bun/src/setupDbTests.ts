@@ -26,5 +26,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await knex.destroy();
+  // This runs once per test file, so we cannot destroy or it will break everything after the
+  // first test. Oddly enough the process still seems to shutdown cleanly.
+  // await knex.destroy();
 });

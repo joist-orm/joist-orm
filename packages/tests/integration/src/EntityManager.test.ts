@@ -936,13 +936,13 @@ describe("EntityManager", () => {
     }).toThrow("Unknown field invalidKey");
   });
 
-  it("runs a transaction hooks once on flush", async () => {
+  it("runs transaction hooks once on flush", async () => {
     const em = newEntityManager();
     const counts: Record<EntityManagerHook, number> = {
-      beforeTransactionStart: 0,
-      afterTransactionStart: 0,
-      beforeTransactionCommit: 0,
-      afterTransactionCommit: 0,
+      beforeBegin: 0,
+      afterBegin: 0,
+      beforeCommit: 0,
+      afterCommit: 0,
     };
     (Object.keys(counts) as EntityManagerHook[]).forEach((key) => {
       em[key](() => (counts[key] += 1));
@@ -950,20 +950,20 @@ describe("EntityManager", () => {
     em.create(Author, { firstName: "a1" });
     await em.flush();
     expect(counts).toEqual({
-      beforeTransactionStart: 1,
-      afterTransactionStart: 1,
-      beforeTransactionCommit: 1,
-      afterTransactionCommit: 1,
+      beforeBegin: 1,
+      afterBegin: 1,
+      beforeCommit: 1,
+      afterCommit: 1,
     });
   });
 
-  it("runs a afterTransactionStart once on a transaction", async () => {
+  it("runs transaction hooks once on a transaction regardless of flush count", async () => {
     const em = newEntityManager();
     const counts: Record<EntityManagerHook, number> = {
-      beforeTransactionStart: 0,
-      afterTransactionStart: 0,
-      beforeTransactionCommit: 0,
-      afterTransactionCommit: 0,
+      beforeBegin: 0,
+      afterBegin: 0,
+      beforeCommit: 0,
+      afterCommit: 0,
     };
     (Object.keys(counts) as EntityManagerHook[]).forEach((key) => {
       em[key](() => (counts[key] += 1));
@@ -976,10 +976,10 @@ describe("EntityManager", () => {
       await em.flush();
     });
     expect(counts).toEqual({
-      beforeTransactionStart: 1,
-      afterTransactionStart: 1,
-      beforeTransactionCommit: 1,
-      afterTransactionCommit: 1,
+      beforeBegin: 1,
+      afterBegin: 1,
+      beforeCommit: 1,
+      afterCommit: 1,
     });
   });
 

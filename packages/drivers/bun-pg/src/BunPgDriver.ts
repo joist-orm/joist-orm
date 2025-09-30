@@ -1,10 +1,10 @@
 import { sql, SQL, type TransactionSQL } from "bun";
 import {
-  afterTransactionCommit,
-  afterTransactionStart,
-  beforeTransactionCommit,
-  beforeTransactionStart,
   Driver,
+  driverAfterBegin,
+  driverAfterCommit,
+  driverBeforeBegin,
+  driverBeforeCommit,
   EntityManager,
   fail,
   IdAssigner,
@@ -44,19 +44,19 @@ export class BunPgDriver implements Driver<TransactionSQL> {
     if (em.txn) {
       return fn(em.txn as TransactionSQL);
     } else {
-      await beforeTransactionStart(em, this.#sql);
+      await driverBeforeBegin(em, this.#sql);
       const result = await this.#sql.begin(async (txn) => {
         em.txn = txn;
         try {
-          await afterTransactionStart(em, txn);
+          await driverAfterBegin(em, txn);
           const result = await fn(txn);
-          await beforeTransactionCommit(em, txn);
+          await driverBeforeCommit(em, txn);
           return result;
         } finally {
           em.txn = undefined;
         }
       });
-      await afterTransactionCommit(em, this.#sql);
+      await driverAfterCommit(em, this.#sql);
       return result;
     }
   }

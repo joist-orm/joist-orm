@@ -1,3 +1,10 @@
+## [1.272.1](https://github.com/joist-orm/joist-orm/compare/v1.272.0...v1.272.1) (2025-09-30)
+
+
+### Bug Fixes
+
+* assign ids and recalc reactables pending ids within recalcPendingReactables ([#1604](https://github.com/joist-orm/joist-orm/issues/1604)) ([4bf9c7d](https://github.com/joist-orm/joist-orm/commit/4bf9c7d452f229301540baf3622f2b7245537879))
+
 # [1.272.0](https://github.com/joist-orm/joist-orm/compare/v1.271.1...v1.272.0) (2025-09-30)
 
 

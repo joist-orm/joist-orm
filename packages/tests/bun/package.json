@@ -16,18 +16,18 @@
     "test": "bun test --reporter=junit --reporter-outfile=../../../artifacts/junit-tests-bun.xml"
   },
   "dependencies": {
-    "bun-types": "^1.2.19",
+    "bun-types": "^1.2.23",
     "joist-orm": "workspace:*",
-    "node-pg-migrate": "^7.9.1"
+    "node-pg-migrate": "^8.0.3"
   },
   "devDependencies": {
-    "@types/node": "^24.1.0",
+    "@types/node": "^24.6.0",
     "joist-codegen": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
     "prettier": "^3.6.2",
-    "prettier-plugin-organize-imports": "^4.2.0",
-    "tsx": "^4.20.5",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "tsx": "^4.20.6",
     "typescript": "5.9.2"
   }
 }

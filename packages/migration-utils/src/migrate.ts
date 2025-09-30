@@ -1,10 +1,10 @@
-import pgMigrate from "node-pg-migrate";
+import { runner } from "node-pg-migrate";
 import { Client } from "pg";
 
 const productionDirectory = "/home/node/app/migrations";
 
 export async function runMigrationsIfNeeded(client: Client, dir: string = productionDirectory): Promise<void> {
-  await pgMigrate({
+  await runner({
     dbClient: client,
     migrationsTable: "migrations",
     dir,

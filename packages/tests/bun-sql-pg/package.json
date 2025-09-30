@@ -15,19 +15,19 @@
     "test-skip": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand --logHeapUsage"
   },
   "dependencies": {
-    "bun-types": "^1.2.19",
+    "bun-types": "^1.2.23",
     "joist-driver-bun-pg": "workspace:*",
     "joist-orm": "workspace:*",
-    "node-pg-migrate": "^7.9.1"
+    "node-pg-migrate": "^8.0.3"
   },
   "devDependencies": {
-    "@types/node": "^24.1.0",
-    "jest": "30.1.3",
+    "@types/node": "^24.6.0",
+    "jest": "30.2.0",
     "joist-codegen": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
     "prettier": "^3.6.2",
-    "prettier-plugin-organize-imports": "^4.2.0",
+    "prettier-plugin-organize-imports": "^4.3.0",
     "typescript": "5.9.2"
   },
   "imports": {

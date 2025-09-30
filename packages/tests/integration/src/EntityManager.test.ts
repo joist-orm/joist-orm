@@ -21,6 +21,7 @@ import { isPreloadingEnabled, knex, newEntityManager, numberOfQueries, queries, 
 import { buildQuery } from "joist-knex";
 import {
   EntityConstructor,
+  EntityManagerHook,
   FilterWithAlias,
   Entity as JoistEntity,
   Loaded,
@@ -935,22 +936,37 @@ describe("EntityManager", () => {
     }).toThrow("Unknown field invalidKey");
   });
 
-  it("runs a beforeTransaction once on flush", async () => {
+  it("runs a transaction hooks once on flush", async () => {
     const em = newEntityManager();
-    let beforeTransactionCount = 0;
-    em.beforeTransaction(() => {
-      beforeTransactionCount += 1;
+    const counts: Record<EntityManagerHook, number> = {
+      beforeTransactionStart: 0,
+      afterTransactionStart: 0,
+      beforeTransactionCommit: 0,
+      afterTransactionCommit: 0,
+    };
+    (Object.keys(counts) as EntityManagerHook[]).forEach((key) => {
+      em[key](() => (counts[key] += 1));
     });
     em.create(Author, { firstName: "a1" });
     await em.flush();
-    expect(beforeTransactionCount).toEqual(1);
+    expect(counts).toEqual({
+      beforeTransactionStart: 1,
+      afterTransactionStart: 1,
+      beforeTransactionCommit: 1,
+      afterTransactionCommit: 1,
+    });
   });
 
-  it("runs a beforeTransaction once on a transaction", async () => {
+  it("runs a afterTransactionStart once on a transaction", async () => {
     const em = newEntityManager();
-    let beforeTransactionCount = 0;
-    em.beforeTransaction(() => {
-      beforeTransactionCount += 1;
+    const counts: Record<EntityManagerHook, number> = {
+      beforeTransactionStart: 0,
+      afterTransactionStart: 0,
+      beforeTransactionCommit: 0,
+      afterTransactionCommit: 0,
+    };
+    (Object.keys(counts) as EntityManagerHook[]).forEach((key) => {
+      em[key](() => (counts[key] += 1));
     });
     await em.transaction(async () => {
       em.create(Author, { firstName: "a1" });
@@ -959,34 +975,12 @@ describe("EntityManager", () => {
       em.create(Author, { firstName: "a2" });
       await em.flush();
     });
-    expect(beforeTransactionCount).toEqual(1);
-  });
-
-  it("runs a afterTransaction once on flush", async () => {
-    const em = newEntityManager();
-    let afterTransactionCount = 0;
-    em.afterTransaction(() => {
-      afterTransactionCount += 1;
+    expect(counts).toEqual({
+      beforeTransactionStart: 1,
+      afterTransactionStart: 1,
+      beforeTransactionCommit: 1,
+      afterTransactionCommit: 1,
     });
-    em.create(Author, { firstName: "a1" });
-    await em.flush();
-    expect(afterTransactionCount).toEqual(1);
-  });
-
-  it("runs a afterTransaction once on a transaction", async () => {
-    const em = newEntityManager();
-    let afterTransactionCount = 0;
-    em.afterTransaction(() => {
-      afterTransactionCount += 1;
-    });
-    await em.transaction(async () => {
-      em.create(Author, { firstName: "a1" });
-      await em.flush();
-
-      em.create(Author, { firstName: "a2" });
-      await em.flush();
-    });
-    expect(afterTransactionCount).toEqual(1);
   });
 
   it("can delete an entity with a reverseHint in a transaction", async () => {

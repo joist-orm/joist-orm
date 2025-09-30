@@ -1,3 +1,10 @@
+## [1.271.1](https://github.com/joist-orm/joist-orm/compare/v1.271.0...v1.271.1) (2025-09-30)
+
+
+### Bug Fixes
+
+* Bump deps including node-pg-migrate. ([#1608](https://github.com/joist-orm/joist-orm/issues/1608)) ([863eb89](https://github.com/joist-orm/joist-orm/commit/863eb892826d81a05cfd1d79536a649eb3e079e5))
+
 # [1.271.0](https://github.com/joist-orm/joist-orm/compare/v1.270.0...v1.271.0) (2025-09-29)
 
 

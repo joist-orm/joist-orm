@@ -1427,7 +1427,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // Make sure two ReactiveQueryFields don't ping-pong each other forever
     let hookLoops = 0;
     let now = getNow();
-    this.#rm.clearSuppressedTypeErrors();
     const suppressedDefaultTypeErrors: Error[] = [];
 
     // Make a lambda that we can invoke multiple times, if we loop for ReactiveQueryFields
@@ -1473,11 +1472,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           await this.flushDeletes();
           // The hooks could have changed fields, so recalc again.
           await this.#rm.recalcPendingReactables("reactables");
-
-          if (this.#rm.hasFieldsPendingAssignedIds) {
-            await this.assignNewIds();
-            await this.#rm.recalcRelationsPendingAssignedIds();
-          }
 
           for (const e of pendingHooks) hooksInvoked.add(e);
           pendingHooks.clear();
@@ -1616,6 +1610,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       if (e instanceof InMemoryRollbackError) return [...allFlushedEntities];
       throw e;
     } finally {
+      this.#rm.clearSuppressedTypeErrors();
       this.#fl.releaseLock();
     }
   }

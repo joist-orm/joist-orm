@@ -4,9 +4,11 @@ import { builtins, getTypeParser } from "pg-types";
 import array from "postgres-array";
 import { buildValuesCte } from "../dataloaders/findDataLoader";
 import {
-  afterTransaction,
-  beforeTransaction,
   deTagId,
+  driverAfterBegin,
+  driverAfterCommit,
+  driverBeforeBegin,
+  driverBeforeCommit,
   EntityManager,
   fail,
   getMetadata,
@@ -80,17 +82,20 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
     if (em.txn) {
       return fn(em.txn as Knex.Transaction);
     }
-    return this.knex.transaction(async (txn) => {
+    await driverBeforeBegin(em, this.knex);
+    const result = await this.knex.transaction(async (txn) => {
       em.txn = txn;
       try {
-        await beforeTransaction(em, txn);
+        await driverAfterBegin(em, txn);
         const result = await fn(txn);
-        await afterTransaction(em, txn);
+        await driverBeforeCommit(em, txn);
         return result;
       } finally {
         em.txn = undefined;
       }
     });
+    await driverAfterCommit(em, this.knex);
+    return result;
   }
 
   async assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void> {

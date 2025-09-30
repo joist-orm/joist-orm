@@ -150,7 +150,7 @@ export function isId(value: any): value is IdOf<unknown> {
   return value && typeof value === "string";
 }
 
-export type EntityManagerHook = "beforeTransaction" | "afterTransaction";
+export type EntityManagerHook = "beforeBegin" | "afterBegin" | "beforeCommit" | "afterCommit";
 
 type HookFn<TX> = (em: EntityManager, txn: TX) => MaybePromise<any>;
 
@@ -232,7 +232,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   readonly #rm = new ReactionsManager(this);
   /** Ensures our `em.flush` method is not interrupted. */
   readonly #fl = new FlushLock();
-  readonly #hooks: Record<EntityManagerHook, HookFn<any>[]> = { beforeTransaction: [], afterTransaction: [] };
+  readonly #hooks: Record<EntityManagerHook, HookFn<any>[]> = {
+    beforeBegin: [],
+    afterBegin: [],
+    beforeCommit: [],
+    afterCommit: [],
+  };
   readonly #preloader: PreloadPlugin | undefined;
   #fieldLogger: FieldLogger | undefined;
   #isLoadedCache = new IsLoadedCache();
@@ -253,8 +258,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     if (opts.em) {
       this.#hooks = {
-        beforeTransaction: [...opts.em.#hooks.beforeTransaction],
-        afterTransaction: [...opts.em.#hooks.afterTransaction],
+        beforeBegin: [...opts.em.#hooks.beforeBegin],
+        afterBegin: [...opts.em.#hooks.afterBegin],
+        beforeCommit: [...opts.em.#hooks.beforeCommit],
+        afterCommit: [...opts.em.#hooks.afterCommit],
       };
     }
 
@@ -1838,14 +1845,21 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     await this.#rm.recalcPendingReactables("reactables");
   }
 
-  public beforeTransaction(fn: HookFn<TX>) {
-    this.#hooks.beforeTransaction.push(fn);
+  public beforeBegin(fn: HookFn<TX>) {
+    this.#hooks.beforeBegin.push(fn);
   }
 
-  public afterTransaction(fn: HookFn<TX>) {
-    this.#hooks.afterTransaction.push(fn);
+  public afterBegin(fn: HookFn<TX>) {
+    this.#hooks.afterBegin.push(fn);
   }
 
+  public beforeCommit(fn: HookFn<TX>) {
+    this.#hooks.beforeCommit.push(fn);
+  }
+
+  public afterCommit(fn: HookFn<TX>) {
+    this.#hooks.afterCommit.push(fn);
+  }
   /**
    * Returns an EntityManager-scoped (i.e. request scoped) data loader.
    *
@@ -2441,12 +2455,20 @@ async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
   }
 }
 
-export function beforeTransaction<TXN>(em: EntityManager<any, any, TXN>, txn: TXN): Promise<unknown> {
-  return Promise.all(getEmInternalApi(em).hooks.beforeTransaction.map((fn) => fn(em, txn)));
+export function driverBeforeBegin<TXN>(em: EntityManager<any, any, TXN>, txn: TXN): Promise<unknown> {
+  return Promise.all(getEmInternalApi(em).hooks.beforeBegin.map((fn) => fn(em, txn)));
 }
 
-export function afterTransaction<TXN>(em: EntityManager<any, any, TXN>, txn: TXN): Promise<unknown> {
-  return Promise.all(getEmInternalApi(em).hooks.afterTransaction.map((fn) => fn(em, txn)));
+export function driverAfterBegin<TXN>(em: EntityManager<any, any, TXN>, txn: TXN): Promise<unknown> {
+  return Promise.all(getEmInternalApi(em).hooks.afterBegin.map((fn) => fn(em, txn)));
+}
+
+export function driverBeforeCommit<TXN>(em: EntityManager<any, any, TXN>, txn: TXN): Promise<unknown> {
+  return Promise.all(getEmInternalApi(em).hooks.beforeCommit.map((fn) => fn(em, txn)));
+}
+
+export function driverAfterCommit<TXN>(em: EntityManager<any, any, TXN>, txn: TXN): Promise<unknown> {
+  return Promise.all(getEmInternalApi(em).hooks.afterCommit.map((fn) => fn(em, txn)));
 }
 
 async function runHookOnTodos(

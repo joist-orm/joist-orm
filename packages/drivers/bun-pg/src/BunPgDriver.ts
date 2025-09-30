@@ -1,8 +1,10 @@
 import { sql, SQL, type TransactionSQL } from "bun";
 import {
-  afterTransaction,
-  beforeTransaction,
   Driver,
+  driverAfterBegin,
+  driverAfterCommit,
+  driverBeforeBegin,
+  driverBeforeCommit,
   EntityManager,
   fail,
   IdAssigner,
@@ -38,21 +40,24 @@ export class BunPgDriver implements Driver<TransactionSQL> {
     throw new Error("Method not implemented.");
   }
 
-  transaction<T>(em: EntityManager, fn: (txn: TransactionSQL) => Promise<T>): Promise<T> {
+  async transaction<T>(em: EntityManager, fn: (txn: TransactionSQL) => Promise<T>): Promise<T> {
     if (em.txn) {
       return fn(em.txn as TransactionSQL);
     } else {
-      return this.#sql.begin(async (txn) => {
+      await driverBeforeBegin(em, this.#sql);
+      const result = await this.#sql.begin(async (txn) => {
         em.txn = txn;
         try {
-          await beforeTransaction(em, txn);
+          await driverAfterBegin(em, txn);
           const result = await fn(txn);
-          await afterTransaction(em, txn);
+          await driverBeforeCommit(em, txn);
           return result;
         } finally {
           em.txn = undefined;
         }
       });
+      await driverAfterCommit(em, this.#sql);
+      return result;
     }
   }
 

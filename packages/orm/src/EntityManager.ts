@@ -1411,6 +1411,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     this.#fl.startLock();
 
+    this.#rm.clearSuppressedTypeErrors();
+
     await this.#fl.allowWrites(async () => {
       // Cascade deletes now that we're async (i.e. to keep `em.delete` synchronous).
       // Also do this before calling `recalcPendingReactables` to avoid recalculating
@@ -1427,7 +1429,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // Make sure two ReactiveQueryFields don't ping-pong each other forever
     let hookLoops = 0;
     let now = getNow();
-    this.#rm.clearSuppressedTypeErrors();
     const suppressedDefaultTypeErrors: Error[] = [];
 
     // Make a lambda that we can invoke multiple times, if we loop for ReactiveQueryFields

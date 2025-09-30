@@ -1411,8 +1411,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     this.#fl.startLock();
 
-    this.#rm.clearSuppressedTypeErrors();
-
     await this.#fl.allowWrites(async () => {
       // Cascade deletes now that we're async (i.e. to keep `em.delete` synchronous).
       // Also do this before calling `recalcPendingReactables` to avoid recalculating
@@ -1612,6 +1610,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       if (e instanceof InMemoryRollbackError) return [...allFlushedEntities];
       throw e;
     } finally {
+      this.#rm.clearSuppressedTypeErrors();
       this.#fl.releaseLock();
     }
   }

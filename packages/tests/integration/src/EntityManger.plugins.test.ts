@@ -69,7 +69,7 @@ describe("EntityManger.plugins", () => {
   });
 
   describe("afterFind", () => {
-    class BeforeFindPlugin extends Plugin {
+    class AfterFindPlugin extends Plugin {
       calls: Parameters<Required<Plugin>["afterFind"]>[] = [];
 
       afterFind(...args: Parameters<Required<Plugin>["afterFind"]>) {
@@ -80,7 +80,7 @@ describe("EntityManger.plugins", () => {
     it.withCtx("is called with the meta, operation and returned rows on find", async (ctx) => {
       await insertAuthor({ first_name: "a1" });
       const { em } = ctx;
-      const plugin = new BeforeFindPlugin();
+      const plugin = new AfterFindPlugin();
       em.addPlugin(plugin);
       expect(plugin.calls).toHaveLength(0);
       await em.find(Author, {});

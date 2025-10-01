@@ -77,12 +77,57 @@ export interface JoinTable {
   distinct?: boolean;
 }
 
+/**
+ * Creates a `CROSS JOIN`, currently used for our `em.find` batching.
+ *
+ * I.e. queries like:
+ *
+ * ```sql
+ * WITH _find (tag, arg1, arg2) AS (VALUES
+ *   (0::int, 'a'::varchar, 'a'::varchar),
+ *   (1, 'b', 'b'),
+ *   (2, 'c', 'c')
+ * )
+ * SELECT a.*, array_agg(_find.tag) AS _tags
+ * FROM authors a
+ * CROSS JOIN _find AS _find
+ * WHERE a.first_name = _find.arg0 OR a.last_name = _find.arg1
+ * GROUP BY a.id
+ * ```
+ */
 export interface CrossJoinTable {
   join: "cross";
+  /** The new alias for the joined table. */
   alias: string;
+  /** The table name to join into the query. */
   table: string;
 }
 
+/**
+ * Adds `WITH` CTE clauses to the query.
+ *
+ * I.e. queries like:
+ *
+ * ```sql
+ * WITH _find (tag, arg0, arg1) AS (
+ *   VALUES ($1::int, $2::character varying, $3::character varying), ($4, $5, $6)
+ * )
+ * ```
+ */
+export interface ParsedCteClause {
+  /** The new alias for the CTE, i.e. `_find` in the above query. */
+  alias: string;
+  /** The columns, i.e. `tag, arg0, arg1` in the above query. */
+  columns?: { columnName: string; dbType: string }[];
+  /** The subquery for the AS of the CTE clause. */
+  query: { kind: "raw"; sql: string; bindings: readonly any[] };
+  /** Whether to include a `RECURSIVE` keyword after the `WITH`. */
+  recursive?: boolean;
+}
+
+/**
+ * Creates `LATERAL JOIN`s, currently used by `findCount` and JSON preloading.
+ */
 export interface LateralJoinTable {
   join: "lateral";
   alias: string;
@@ -124,7 +169,7 @@ export interface ParsedFindQuery {
   /** Any optional orders to add before the default 'order by id'. */
   orderBys: ParsedOrderBy[];
   /** Optional CTE to prefix to the query, i.e. for recursive relations. */
-  cte?: { sql: string; bindings: readonly any[] };
+  ctes?: ParsedCteClause[];
 }
 
 /** Parses an `em.find` filter into a `ParsedFindQuery` AST for simpler execution. */
@@ -194,7 +239,7 @@ export function parseFindQuery(
       addTablePerClassJoinsAndClassTag(query, meta, alias, true);
     } else if (meta.inheritanceType === "cti" && fieldName && !(fieldName in meta.fields)) {
       // For cti, our meta might be a subtype while the FK is actually on the base table.  This should only be the case
-      // when the fk is on another table (eg o2o/o2m).  In these cases, we'll be passed a field name and can verify if
+      // when the fk is on another table (e.g. o2o/o2m).  In these cases, we'll be passed a field name and can verify if
       // its directly in our meta, if not we should assume it's in the base type and join that in first.
       meta.baseTypes.forEach((bt, i) => {
         tables.push({

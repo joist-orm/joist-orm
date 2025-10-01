@@ -9,6 +9,7 @@ import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { buildHintTree } from "../HintTree";
 import {
   ColumnCondition,
+  ParsedCteClause,
   ParsedFindQuery,
   ParsedValueFilter,
   RawCondition,
@@ -17,7 +18,7 @@ import {
   parseFindQuery,
 } from "../QueryParser";
 import { visitConditions } from "../QueryVisitor";
-import { kq, kqDot } from "../keywords";
+import { kqDot } from "../keywords";
 import { LoadHint } from "../loadHints";
 import { maybeRequireTemporal } from "../temporal";
 import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "../temporalMappers";
@@ -85,10 +86,7 @@ export function findDataLoader<T extends Entity>(
       query.selects.unshift("array_agg(_find.tag) as _tags");
       // Inject a cross join into the query
       query.tables.unshift({ join: "cross", table: "_find", alias: "_find" });
-      query.cte = {
-        sql: buildValuesCte("_find", args, queries),
-        bindings: createBindings(meta, queries),
-      };
+      query.ctes = [buildValuesCte("_find", args, queries, createBindings(meta, queries))];
       // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
       query.groupBys = query.selects
         .filter((s) => typeof s === "string")
@@ -227,6 +225,8 @@ function rewriteToRawCondition(c: ColumnCondition, argsIndex: ArgCounter): RawCo
   };
 }
 
+// Given the `N` queries that we're batching, create a single bindings array that will
+// have `[t0, ...q0 bindings, t1, ...q1 bindings, t2, ...q2 bindings, ...]`.
 export function createBindings(meta: EntityMetadata, queries: readonly FilterAndSettings<any>[]): any[] {
   const bindings: any[] = [];
   queries.forEach((query, i) => {
@@ -311,14 +311,32 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: ArgCounter): [string, b
   }
 }
 
+/**
+ * Creates a `VALUES (...), (...)` SQL string for use in a CTE, typically for our
+ * batch INSERTs/UPDATEs where the CTE is how we inject N rows of data/params into
+ * the single INSERT/UPDATE statement.
+ *
+ * The caller is responsible for filling in the `bindings`, which should have 1
+ * entry for each `rows x columns` cell.
+ */
 export function buildValuesCte(
-  tableName: string,
+  alias: string,
   columns: { columnName: string; dbType: string }[],
   rows: readonly any[],
-): string {
-  return `WITH ${tableName} (${columns.map((c) => `${kq(c.columnName)}`).join(", ")}) AS (VALUES
-      ${rows.map((_, i) => `(${columns.map((c) => (i === 0 ? `?::${c.dbType}` : `?`)).join(", ")})`).join(", ")}
-  )`;
+  // Should have a value for each `row x column` cell.
+  bindings: readonly any[],
+): ParsedCteClause {
+  return {
+    alias,
+    columns,
+    query: {
+      kind: "raw",
+      sql: `VALUES
+        ${rows.map((_, i) => `(${columns.map((c) => (i === 0 ? `?::${c.dbType}` : `?`)).join(", ")})`).join(", ")}
+      `,
+      bindings,
+    },
+  };
 }
 
 function ensureUnderLimit(em: EntityManager, rows: unknown[]): void {

@@ -9,13 +9,16 @@ import { keyToNumber } from "../keys";
 import { LoadHint } from "../loadHints";
 import { abbreviation, indexBy } from "../utils";
 
+export const loadOperation: `load-${boolean}` = "load-true";
+
 export function loadDataLoader<T extends Entity>(
   em: EntityManager,
   meta: EntityMetadata,
   overwriteExisting: boolean = false,
 ): DataLoader<{ entity: string; hint: LoadHint<T> | undefined }, T | undefined> {
   // Batch different populate hints together and defer to the hint tree to do the right thing
-  return em.getLoader(`load-${overwriteExisting}`, meta.type, async (loads) => {
+  const operation: typeof loadOperation = `load-${overwriteExisting}`;
+  return em.getLoader(operation, meta.type, async (loads) => {
     const keys = loads.map((l) => keyToNumber(meta, l.entity));
     const alias = abbreviation(meta.tableName);
     const query = {
@@ -34,7 +37,7 @@ export function loadDataLoader<T extends Entity>(
     const preloadHydrator = preloader && preloader.addPreloading(meta, buildHintTree(loads), query);
     // Skip maybeAddOrderBy?
     // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
-    const rows = await em.driver.executeFind(em, query, {});
+    const rows = await em["executeFind"](meta, operation, query, {});
     // Pass overwriteExisting (which defaults to false) because it might be EntityManager.refresh calling us.
     const entities = em.hydrate(meta.cstr, rows, { overwriteExisting });
     preloadHydrator && preloadHydrator(rows, entities);

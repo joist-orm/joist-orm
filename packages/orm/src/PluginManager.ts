@@ -1,15 +1,21 @@
 import { Entity } from "./Entity";
-import { EntityManager } from "./EntityManager";
+import { EntityManager, FindOperation } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 import { ParsedFindQuery } from "./QueryParser";
 import { fail } from "./utils";
 
 interface PluginMethods {
   beforeSetField?(entity: Entity, field: string, newValue: any): void;
-  beforeFind?(meta: EntityMetadata, query: ParsedFindQuery): void;
+  beforeFind?(
+    meta: EntityMetadata,
+    operation: FindOperation,
+    query: ParsedFindQuery,
+    settings: { limit?: number; offset?: number },
+  ): void;
+  afterFind?(meta: EntityMetadata, operation: FindOperation, rows: any[]): void;
 }
 
-const pluginMethods = ["beforeSetField", "beforeFind"] as (keyof PluginMethods)[];
+const pluginMethods = ["beforeSetField", "beforeFind", "afterFind"] as (keyof PluginMethods)[];
 
 const emSymbol = Symbol("em");
 export abstract class Plugin {

@@ -1,7 +1,8 @@
-import { Entity, EntityMetadata, getMetadata, ParsedFindQuery, Plugin } from "joist-orm";
+import { getMetadata, Plugin } from "joist-orm";
 import { ImmutableEntitiesPlugin } from "joist-orm/build/plugins/ImmutableEntitiesPlugin";
 import { describe } from "node:test";
 import { Author, Image, newAuthor } from "src/entities";
+import { insertAuthor } from "src/entities/inserts";
 import { twoOf } from "src/utils";
 
 describe("EntityManger.plugins", () => {
@@ -19,16 +20,13 @@ describe("EntityManger.plugins", () => {
 
   describe("beforeSetField", () => {
     class BeforeSetFieldPlugin extends Plugin {
-      callCount = 0;
-      field: string = undefined!;
-      originalValue: any;
-      newValue: any;
+      calls: Parameters<Required<Plugin>["beforeSetField"]>[] = [];
+      originalValue: any[] = [];
 
-      beforeSetField(entity: Entity, field: string, newValue: any) {
-        this.callCount += 1;
-        this.field = field;
-        this.originalValue = entity[field as keyof Entity];
-        this.newValue = newValue;
+      beforeSetField(...args: Parameters<Required<Plugin>["beforeSetField"]>) {
+        const [entity, field] = args;
+        this.calls.push(args);
+        this.originalValue.push(entity[field as keyof typeof entity]);
       }
     }
 
@@ -36,54 +34,59 @@ describe("EntityManger.plugins", () => {
       const { em } = ctx;
       const plugin = new BeforeSetFieldPlugin();
       em.addPlugin(plugin);
-      expect(plugin.callCount).toBe(0);
+      expect(plugin.calls).toHaveLength(0);
       // use Image because it doesn't have any defaults that would call setField multiple times on create
-      const author = em.createPartial(Image, { fileName: "original name" });
-      expect(plugin.callCount).toBe(1);
-      expect(plugin.field).toBe("fileName");
-      expect(plugin.originalValue).toBe(undefined);
-      expect(plugin.newValue).toBe("original name");
-      author.fileName = "new name";
-      expect(plugin.callCount).toBe(2);
-      expect(plugin.field).toBe("fileName");
-      expect(plugin.originalValue).toBe("original name");
-      expect(plugin.newValue).toBe("new name");
+      const image = em.createPartial(Image, { fileName: "original name" });
+      expect(plugin.calls).toHaveLength(1);
+      expect(plugin.calls[0]).toEqual([image, "fileName", "original name"]);
+      expect(plugin.originalValue[0]).toEqual(undefined);
+      image.fileName = "new name";
+      expect(plugin.calls).toHaveLength(2);
+      expect(plugin.calls[1]).toEqual([image, "fileName", "new name"]);
+      expect(plugin.originalValue[1]).toEqual("original name");
     });
   });
 
   describe("beforeFind", () => {
     class BeforeFindPlugin extends Plugin {
-      callCount = 0;
-      meta: EntityMetadata = undefined!;
-      query: ParsedFindQuery = undefined!;
+      calls: Parameters<Required<Plugin>["beforeFind"]>[] = [];
 
-      beforeFind(meta: EntityMetadata, query: ParsedFindQuery) {
-        this.callCount += 1;
-        this.meta = meta;
-        this.query = query;
+      beforeFind(...args: Parameters<Required<Plugin>["beforeFind"]>) {
+        this.calls.push(args);
       }
     }
 
-    it.withCtx("is called with the meta and query when a single query is executed", async (ctx) => {
+    it.withCtx("is called with the meta, operation and query on find", async (ctx) => {
       const { em } = ctx;
       const plugin = new BeforeFindPlugin();
       em.addPlugin(plugin);
-      expect(plugin.callCount).toBe(0);
+      expect(plugin.calls).toHaveLength(0);
       await em.find(Author, {});
-      expect(plugin.callCount).toBe(1);
-      expect(plugin.meta).toBe(getMetadata(Author));
-      expect(plugin.query).toMatchObject({});
+      expect(plugin.calls).toEqual([[getMetadata(Author), "find", expect.objectContaining({}), {}]]);
     });
 
-    it.withCtx("is called once with the meta and query when multiple queries are executed", async (ctx) => {
+    // TODO: do we want to test every operation here?
+  });
+
+  describe("afterFind", () => {
+    class BeforeFindPlugin extends Plugin {
+      calls: Parameters<Required<Plugin>["afterFind"]>[] = [];
+
+      afterFind(...args: Parameters<Required<Plugin>["afterFind"]>) {
+        this.calls.push(args);
+      }
+    }
+
+    it.withCtx("is called with the meta, operation and returned rows on find", async (ctx) => {
+      await insertAuthor({ first_name: "a1" });
       const { em } = ctx;
       const plugin = new BeforeFindPlugin();
       em.addPlugin(plugin);
-      expect(plugin.callCount).toBe(0);
-      await Promise.all([em.find(Author, {}), em.find(Author, {})]);
-      expect(plugin.callCount).toBe(1);
-      expect(plugin.meta).toBe(getMetadata(Author));
-      expect(plugin.query).toMatchObject({});
+      expect(plugin.calls).toHaveLength(0);
+      await em.find(Author, {});
+      expect(plugin.calls).toEqual([[getMetadata(Author), "find", [expect.objectContaining({})]]]);
     });
+
+    // TODO: do we want to test every operation here?
   });
 });

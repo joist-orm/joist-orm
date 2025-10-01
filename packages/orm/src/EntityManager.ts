@@ -7,12 +7,20 @@ import { IndexManager } from "./IndexManager";
 import { getReactiveRules } from "./caches";
 import { constraintNameToValidationError, ReactiveRule } from "./config";
 import { getConstructorFromTag, getMetadataForType } from "./configure";
-import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
-import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
-import { findDataLoader } from "./dataloaders/findDataLoader";
+import { findByUniqueDataLoader, findByUniqueOperation } from "./dataloaders/findByUniqueDataLoader";
+import { findCountDataLoader, findCountOperation } from "./dataloaders/findCountDataLoader";
+import { findDataLoader, findOperation } from "./dataloaders/findDataLoader";
 import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
-import { loadDataLoader } from "./dataloaders/loadDataLoader";
-import { populateDataLoader } from "./dataloaders/populateDataLoader";
+import { lensOperation } from "./dataloaders/lensDataLoader";
+import { loadDataLoader, loadOperation } from "./dataloaders/loadDataLoader";
+import { manyToManyDataOperation } from "./dataloaders/manyToManyDataLoader";
+import { manyToManyFindOperation } from "./dataloaders/manyToManyFindDataLoader";
+import { oneToManyDataOperation } from "./dataloaders/oneToManyDataLoader";
+import { oneToManyFindOperation } from "./dataloaders/oneToManyFindDataLoader";
+import { oneToOneDataOperation } from "./dataloaders/oneToOneDataLoader";
+import { populateDataLoader, populateOperation } from "./dataloaders/populateDataLoader";
+import { recursiveChildrenOperation } from "./dataloaders/recursiveChildrenDataLoader";
+import { recursiveParentsOperation } from "./dataloaders/recursiveParentsDataLoader";
 import { Driver } from "./drivers";
 import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
@@ -48,6 +56,7 @@ import {
   loadLens,
   ManyToManyCollection,
   OneToManyCollection,
+  ParsedFindQuery,
   parseFindQuery,
   PartialOrNull,
   Plugin,
@@ -181,6 +190,21 @@ export interface FlushOptions {
  */
 export type EntityManagerMode = "read-only" | "in-memory-writes" | "writes";
 
+export type FindOperation =
+  | typeof findOperation
+  | "findPaginated"
+  | typeof findByUniqueOperation
+  | typeof findCountOperation
+  | typeof lensOperation
+  | typeof loadOperation
+  | typeof manyToManyDataOperation
+  | typeof manyToManyFindOperation
+  | typeof oneToManyDataOperation
+  | typeof oneToManyFindOperation
+  | typeof oneToOneDataOperation
+  | typeof populateOperation
+  | typeof recursiveChildrenOperation
+  | typeof recursiveParentsOperation;
 /**
  * The EntityManager is the primary way nearly all code, i.e. anything that finds/creates/updates/deletes entities,
  * will interact with the database.
@@ -403,14 +427,28 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     options: FindPaginatedFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
     const { populate, limit, offset, ...rest } = options || {};
-    const query = parseFindQuery(getMetadata(type), where, rest);
-    const rows = await this.driver.executeFind(this, query, { limit, offset });
+    const meta = getMetadata(type);
+    const query = parseFindQuery(meta, where, rest);
+    const rows = await this.executeFind(meta, "findPaginated", query, { limit, offset });
     // check row limit
     const result = this.hydrate(type, rows);
     if (populate) {
       await this.populate(result, populate);
     }
     return result;
+  }
+
+  private async executeFind(
+    meta: EntityMetadata,
+    operation: FindOperation,
+    parsed: ParsedFindQuery,
+    settings: { limit?: number; offset?: number },
+  ) {
+    const { pluginManager } = getEmInternalApi(this);
+    pluginManager?.beforeFind?.(meta, operation, parsed, settings);
+    const rows = await this.driver.executeFind(this, parsed, settings);
+    pluginManager?.afterFind?.(meta, operation, rows);
+    return rows;
   }
 
   /**

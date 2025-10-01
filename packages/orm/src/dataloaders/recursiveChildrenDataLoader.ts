@@ -18,6 +18,8 @@ import {
 import { RecursiveChildrenCollectionImpl } from "../relations/RecursiveCollection";
 import { abbreviation, groupBy } from "../utils";
 
+export const recursiveChildrenOperation = "o2m-recursive";
+
 export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
   collection: RecursiveChildrenCollectionImpl<T, U>,
@@ -27,7 +29,7 @@ export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
   // correct meta by walking the inheritance tree until we find the meta that actually has the root o2m field
   while (!(collection.o2mFieldName in meta.fields) && meta.baseType) meta = getMetadataForType(meta.baseType);
   const batchKey = `${meta.tableName}-${fieldName}`;
-  return em.getLoader("o2m-recursive", batchKey, async (parents) => {
+  return em.getLoader(recursiveChildrenOperation, batchKey, async (parents) => {
     const o2m = meta.allFields[collection.o2mFieldName] as OneToManyField | OneToOneField;
     const m2o = meta.allFields[o2m.otherFieldName] as ManyToOneField;
     const { columnName } = m2o.serde.columns[0];
@@ -58,7 +60,7 @@ export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
 
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
 
-    const rows = await em.driver.executeFind(em, query, {});
+    const rows = await em["executeFind"](meta, recursiveChildrenOperation, query, {});
     const entities = em.hydrate(meta.cstr, rows);
 
     // For all the entities we found, group them by their parent (or the root node, which has no parent)

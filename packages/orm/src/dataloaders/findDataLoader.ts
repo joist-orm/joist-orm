@@ -23,6 +23,8 @@ import { maybeRequireTemporal } from "../temporal";
 import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "../temporalMappers";
 import { assertNever } from "../utils";
 
+export const findOperation = "find";
+
 export function findDataLoader<T extends Entity>(
   em: EntityManager,
   type: MaybeAbstractEntityConstructor<T>,
@@ -39,7 +41,7 @@ export function findDataLoader<T extends Entity>(
   const batchKey = getBatchKeyFromGenericStructure(meta, query);
 
   return em.getLoader(
-    "find",
+    findOperation,
     // It's unlikely we'll have simultaneous em.finds with the same WHERE clause structure
     // but lots of different load hints, and it'd be complicated to implement the preloading
     // in a way that doesn't naively over-fetch data (which our loadDataLoader does prevent,
@@ -56,10 +58,9 @@ export function findDataLoader<T extends Entity>(
         // a prior invocation that instantiated our dataloader instance.
         const query = parseFindQuery(meta, where, opts);
         // Maybe add preload joins
-        const { preloader, pluginManager } = getEmInternalApi(em);
+        const { preloader } = getEmInternalApi(em);
         const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
-        pluginManager?.beforeFind?.(meta, query);
-        const rows = await em.driver.executeFind(em, query, opts);
+        const rows = await em["executeFind"](meta, findOperation, query, opts);
         ensureUnderLimit(em, rows);
         const entities = em.hydrate(type, rows);
         preloadHydrator?.(rows, entities);
@@ -108,7 +109,7 @@ export function findDataLoader<T extends Entity>(
         }
       }
 
-      const { preloader, pluginManager } = getEmInternalApi(em);
+      const { preloader } = getEmInternalApi(em);
       const preloadJoins = preloader && hint && preloader.getPreloadJoins(meta, buildHintTree(hint), query);
       if (preloadJoins) {
         query.selects.push(
@@ -120,9 +121,8 @@ export function findDataLoader<T extends Entity>(
         );
         query.tables.push(...preloadJoins.map((j) => j.join));
       }
-      pluginManager?.beforeFind?.(meta, query);
 
-      const rows = await em.driver.executeFind(em, query, { limit: em.entityLimit });
+      const rows = await em["executeFind"](meta, findOperation, query, { limit: em.entityLimit });
       ensureUnderLimit(em, rows);
 
       const entities = em.hydrate(type, rows);

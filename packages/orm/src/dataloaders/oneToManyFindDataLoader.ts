@@ -10,6 +10,8 @@ import {
 } from "../index";
 import { abbreviation } from "../utils";
 
+export const oneToManyFindOperation = "o2m-find";
+
 /** Batches o2m.find/include calls (i.e. that don't fully load the o2m relation). */
 export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
@@ -17,7 +19,7 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
 ): DataLoader<string, U | undefined> {
   const { meta } = collection;
   const batchKey = `${meta.tableName}-${collection.fieldName}`;
-  return em.getLoader("o2m-find", batchKey, async (keys) => {
+  return em.getLoader(oneToManyFindOperation, batchKey, async (keys) => {
     const { em } = collection.entity;
 
     const meta = collection.otherMeta;
@@ -65,7 +67,7 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
     // Skip maybeAddOrderBy b/c we're only returning 1 result
     // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
 
-    const rows = await em.driver.executeFind(em, query, {});
+    const rows = await em["executeFind"](collection.otherMeta, oneToManyFindOperation, query, {});
     em.hydrate(collection.otherMeta.cstr, rows);
 
     // Decode `id=b:1,author_id=a:1`

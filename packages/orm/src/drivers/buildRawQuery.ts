@@ -26,11 +26,26 @@ export function buildRawQuery(
   let sql = "";
   const bindings: any[] = [];
 
-  if (parsed.ctes) {
-    for (const cte of parsed.ctes) {
-      sql += buildCteSql(cte);
+  if (parsed.ctes && parsed.ctes.length > 0) {
+    const hasRecursive = parsed.ctes.some((cte) => cte.recursive);
+    const maybeRecursive = hasRecursive ? " RECURSIVE" : "";
+    sql += `WITH${maybeRecursive}`;
+    for (let i = 0; i < parsed.ctes.length; i++) {
+      const cte = parsed.ctes[i];
+      sql += i > 0 ? ", " : "";
+      sql += ` ${cte.alias}`;
+      if (cte.columns) {
+        sql += " (";
+        for (let j = 0; j < cte.columns.length; j++) {
+          sql += j > 0 ? ", " : "";
+          sql += kq(cte.columns[j].columnName);
+        }
+        sql += ")";
+      }
+      sql += ` AS (${cleanSql(cte.query.sql)})`;
       bindings.push(...cte.query.bindings);
     }
+    sql += " ";
   }
 
   sql += "SELECT ";
@@ -114,7 +129,7 @@ function buildDistinctOn(parsed: ParsedFindQuery, primary: ParsedTable): string 
 export function buildCteSql(cte: ParsedCteClause): string {
   const maybeRecursive = cte.recursive ? "RECURSIVE " : "";
   const maybeColumns = cte.columns ? ` (${cte.columns.map((c) => kq(c.columnName)).join(", ")})` : "";
-  return `WITH ${maybeRecursive}${cte.alias}${maybeColumns} AS (${cleanSql(cte.query.sql)} ) `;
+  return `WITH ${maybeRecursive}${cte.alias}${maybeColumns} AS (${cleanSql(cte.query.sql)} )`;
 }
 
 const as = (t: ParsedTable) => `${kq(t.table)} AS ${kq(t.alias)}`;

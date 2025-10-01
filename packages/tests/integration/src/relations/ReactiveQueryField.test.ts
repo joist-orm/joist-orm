@@ -43,7 +43,7 @@ describe("ReactiveQueryField", () => {
     expect(queries).toMatchInlineSnapshot(`
      [
        "select nextval('publishers_id_seq') from generate_series(1, 1) UNION ALL select nextval('authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('books_id_seq') from generate_series(1, 2) UNION ALL select nextval('book_reviews_id_seq') from generate_series(1, 2)",
-       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::character varying), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.deleted_at IS NULL AND a.last_name = _find.arg0 GROUP BY a.id ORDER BY a.id ASC LIMIT $5",
+       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::character varying), ($3, $4)) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.deleted_at IS NULL AND a.last_name = _find.arg0 GROUP BY a.id ORDER BY a.id ASC LIMIT $5",
        "BEGIN;",
        "INSERT INTO "publishers" ("id", "name", "latitude", "longitude", "huge_number", "number_of_book_reviews", "deleted_at", "titles_of_favorite_books", "book_advance_titles_snapshot", "number_of_book_advances_snapshot", "base_sync_default", "base_async_default", "created_at", "updated_at", "favorite_author_name", "rating", "size_id", "type_id", "favorite_author_id", "group_id", "spotlight_author_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)",
        "INSERT INTO "large_publishers" ("id", "shared_column", "country") VALUES ($1, $2, $3)",

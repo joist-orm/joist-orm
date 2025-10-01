@@ -4,12 +4,14 @@ import { EntityManager } from "../EntityManager";
 import { keyToNumber, ManyToManyCollection, ManyToManyLargeCollection, ParsedFindQuery, tagId } from "../index";
 import { abbreviation } from "../utils";
 
+export const manyToManyFindOperation = "m2m-find";
+
 /** Batches m2m.find/include calls (i.e. that don't fully load the m2m relation). */
 export function manyToManyFindDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
   collection: ManyToManyCollection<T, U> | ManyToManyLargeCollection<T, U>,
 ): DataLoader<string, boolean> {
-  return em.getLoader("m2m-find", collection.joinTableName, (keys) => load(collection, keys));
+  return em.getLoader(manyToManyFindOperation, collection.joinTableName, (keys) => load(collection, keys));
 }
 
 async function load<T extends Entity, U extends Entity>(
@@ -61,7 +63,7 @@ async function load<T extends Entity, U extends Entity>(
     orderBys: [{ alias, column: "id", order: "ASC" }],
   };
 
-  const rows = await em.driver.executeFind(em, query, {});
+  const rows = await em["executeFind"](collection.otherMeta, manyToManyFindOperation, query, {});
 
   const column1 = collection.columnName;
   const column2 = collection.otherColumnName;

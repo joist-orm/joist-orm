@@ -11,6 +11,8 @@ import {
 import { Column } from "../serde";
 import { abbreviation, groupBy } from "../utils";
 
+export const findByUniqueOperation = "find-by-unique";
+
 export function findByUniqueDataLoader<T extends Entity>(
   em: EntityManager,
   type: MaybeAbstractEntityConstructor<T>,
@@ -18,7 +20,7 @@ export function findByUniqueDataLoader<T extends Entity>(
   softDeletes: "include" | "exclude",
 ): DataLoader<any, unknown | undefined> {
   const batchKey = `${type.name}-${field.fieldName}-${softDeletes}`;
-  return em.getLoader("find-by-unique", batchKey, async (values) => {
+  return em.getLoader(findByUniqueOperation, batchKey, async (values) => {
     const meta = getMetadata(type);
     const alias = abbreviation(meta.tableName);
 
@@ -49,7 +51,7 @@ export function findByUniqueDataLoader<T extends Entity>(
         throw new Error(`Unsupported field ${field.fieldName}`);
     }
 
-    const rows = await em.driver.executeFind(em, query, {});
+    const rows = await em["executeFind"](meta, findByUniqueOperation, query, {});
 
     const rowsByValue = groupBy(rows, (row) => row[column.columnName]);
 

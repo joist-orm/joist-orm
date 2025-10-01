@@ -17,6 +17,8 @@ import { getRelationFromMaybePolyKey, isPolyHint } from "../reactiveHints";
 import { ReactiveFieldImpl } from "../relations/ReactiveField";
 import { toArray } from "../utils";
 
+export const populateOperation = "populate";
+
 export function populateDataLoader(
   em: EntityManager,
   meta: EntityMetadata,
@@ -41,7 +43,7 @@ export function populateDataLoader(
       ? `${meta.tagName}:${opts.forceReload}`
       : `${meta.tagName}:${JSON.stringify(hint)}:${opts.forceReload}`;
   return em.getLoader(
-    "populate",
+    populateOperation,
     batchKey,
     async (populates) => {
       async function populateLayer(layerMeta: EntityMetadata | undefined, layerNode: HintNode<Entity>): Promise<any[]> {
@@ -81,7 +83,7 @@ export function populateDataLoader(
             addTablePerClassJoinsAndClassTag(query, meta, alias, false);
             const hydrator = preloader.addPreloading(meta, layerNode, query);
             if (hydrator) {
-              const rows = await em.driver.executeFind(em, query, {});
+              const rows = await em["executeFind"](meta, populateOperation, query, {});
               const entitiesById = indexBy(entities, (e) => keyToNumber(meta, e.id));
               const entitiesInOrder = rows.map((row) => entitiesById.get(row["id"]));
               hydrator(rows, entitiesInOrder);

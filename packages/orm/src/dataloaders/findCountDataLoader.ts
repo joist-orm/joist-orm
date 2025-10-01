@@ -14,6 +14,8 @@ import {
   whereFilterHash,
 } from "./findDataLoader";
 
+export const findCountOperation = "find-count";
+
 export function findCountDataLoader<T extends Entity>(
   em: EntityManager,
   type: MaybeAbstractEntityConstructor<T>,
@@ -29,7 +31,7 @@ export function findCountDataLoader<T extends Entity>(
   const batchKey = getBatchKeyFromGenericStructure(meta, query);
 
   return em.getLoader(
-    "find-count",
+    findCountOperation,
     batchKey,
     async (queries) => {
       // We're guaranteed that these queries all have the same structure
@@ -37,11 +39,12 @@ export function findCountDataLoader<T extends Entity>(
       // Don't bother with the CTE if there's only 1 query (or each query has exactly the same filter values)
       if (queries.length === 1) {
         const { where, ...options } = queries[0];
-        const query = parseFindQuery(getMetadata(type), where, options);
+        const meta = getMetadata(type);
+        const query = parseFindQuery(meta, where, options);
         const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");
         query.selects = [`count(distinct ${kq(primary.alias)}.id) as count`];
         query.orderBys = [];
-        const rows = await em.driver.executeFind(em, query, {});
+        const rows = await em["executeFind"](meta, findCountOperation, query, {});
         return [Number(rows[0].count)];
       }
 
@@ -83,7 +86,7 @@ export function findCountDataLoader<T extends Entity>(
         orderBys: [],
       };
 
-      const rows = await em.driver.executeFind(em, query2, {});
+      const rows = await em["executeFind"](meta, findCountOperation, query2, {});
 
       // Make an empty array for each batched query, per the dataloader contract
       const results = queries.map(() => 0);

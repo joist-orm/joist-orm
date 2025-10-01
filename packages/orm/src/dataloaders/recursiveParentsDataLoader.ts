@@ -13,6 +13,8 @@ import {
 import { RecursiveParentsCollectionImpl } from "../relations/RecursiveCollection";
 import { abbreviation } from "../utils";
 
+export const recursiveParentsOperation = "m2o-recursive";
+
 export function recursiveParentsDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
   collection: RecursiveParentsCollectionImpl<T, U>,
@@ -22,7 +24,7 @@ export function recursiveParentsDataLoader<T extends Entity, U extends Entity>(
   // correct meta by walking the inheritance tree until we find the meta that actually has the root m2o field
   while (!(collection.m2oFieldName in meta.fields) && meta.baseType) meta = getMetadataForType(meta.baseType);
   const batchKey = `${meta.tableName}-${fieldName}`;
-  return em.getLoader("m2o-recursive", batchKey, async (children) => {
+  return em.getLoader(recursiveParentsOperation, batchKey, async (children) => {
     const m2o = meta.allFields[collection.m2oFieldName] as ManyToOneField;
     // ...can `getField` return a new entity? In theory, we shouldn't see new entities because
     // RecursiveParentsCollectionImpl.load/isLoaded will see the `ManyToOneReferenceImpl` as loaded.
@@ -54,7 +56,7 @@ export function recursiveParentsDataLoader<T extends Entity, U extends Entity>(
 
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
 
-    const rows = await em.driver.executeFind(em, query, {});
+    const rows = await em["executeFind"](meta, recursiveParentsOperation, query, {});
 
     // Since we're preloading m2os up the tree, merely having the entities in the EM is enough
     // for the ManyToOneReferenceImpl to find them, so we don't need to map them back to the

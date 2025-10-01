@@ -21,6 +21,8 @@ import { deTagIds, tagId } from "../keys";
 import { mapPathsToTarget } from "../loadLens";
 import { abbreviation, groupBy } from "../utils";
 
+export const lensOperation = "lens";
+
 /**
  * Loads lens paths via SQL.
  *
@@ -35,7 +37,7 @@ export function lensDataLoader<T extends Entity>(
 ): DataLoader<TaggedId, T | T[]> {
   // Batch lens loads by type + path to avoid N+1s
   const batchKey = `${type.name}-${paths.join("/")}`;
-  return em.getLoader("lens", batchKey, async (sourceIds) => {
+  return em.getLoader(lensOperation, batchKey, async (sourceIds) => {
     const aliases: Record<string, number> = {};
     function getAlias(tableName: string): string {
       const abbrev = abbreviation(tableName);
@@ -187,7 +189,7 @@ export function lensDataLoader<T extends Entity>(
     });
 
     // Get back `__source_id, target.*`
-    const rows = await em.driver.executeFind(em, query, {});
+    const rows = await em["executeFind"](target, lensOperation, query, {});
 
     // Group the target entities (i.e. BookReview) by the source id we reached them from.
     const entitiesBySourceId = new Map(

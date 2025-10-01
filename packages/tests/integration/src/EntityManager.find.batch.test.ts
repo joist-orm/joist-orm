@@ -31,7 +31,7 @@ describe("EntityManager.find.batch", () => {
     // And it's the regular/sane query, i.e. not auto-batched
     expect(queries).toEqual([
       [
-        `WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) )`,
+        `WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4))`,
         ` SELECT array_agg(_find.tag) as _tags, p.*, p_s0.*, p_s1.*, p.id as id,`,
         ` COALESCE(p_s0.shared_column, p_s1.shared_column) as shared_column,`,
         ` CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE '_' END as __class`,
@@ -63,7 +63,7 @@ describe("EntityManager.find.batch", () => {
     expect(queries).toEqual([
       [
         `WITH _find (tag, arg0, arg1) AS (VALUES`,
-        ` ($1::int, $2::character varying, $3::character varying), ($4, $5, $6) )`,
+        ` ($1::int, $2::character varying, $3::character varying), ($4, $5, $6))`,
         ` SELECT array_agg(_find.tag) as _tags, a.*`,
         ` FROM authors AS a`,
         ` CROSS JOIN _find AS _find`,
@@ -91,7 +91,7 @@ describe("EntityManager.find.batch", () => {
     expect(queries).toEqual([
       [
         `WITH _find (tag, arg0, arg1) AS (VALUES`,
-        ` ($1::int, $2::character varying, $3::character varying), ($4, $5, $6) )`,
+        ` ($1::int, $2::character varying, $3::character varying), ($4, $5, $6))`,
         ` SELECT array_agg(_find.tag) as _tags, a.*`,
         ` FROM authors AS a`,
         ` CROSS JOIN _find AS _find`,
@@ -132,7 +132,7 @@ describe("EntityManager.find.batch", () => {
     // And it is still auto-batched
     expect(queries).toMatchInlineSnapshot(`
      [
-       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.id = _find.arg0 GROUP BY a.id ORDER BY a.first_name DESC, a.id ASC LIMIT $5",
+       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4)) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.id = _find.arg0 GROUP BY a.id ORDER BY a.first_name DESC, a.id ASC LIMIT $5",
      ]
     `);
     // And the results are the expected reverse of each other
@@ -151,7 +151,7 @@ describe("EntityManager.find.batch", () => {
     // And it is still auto-batched
     expect(queries).toMatchInlineSnapshot(`
      [
-       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE a.id = _find.arg0 GROUP BY a.id, p.id ORDER BY p.id ASC, a.id ASC LIMIT $5",
+       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4)) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find LEFT OUTER JOIN publishers AS p ON a.publisher_id = p.id WHERE a.id = _find.arg0 GROUP BY a.id, p.id ORDER BY p.id ASC, a.id ASC LIMIT $5",
      ]
     `);
     // And the results are the expected reverse of each other
@@ -166,7 +166,7 @@ describe("EntityManager.find.batch", () => {
     ]);
     expect(queries).toMatchInlineSnapshot(`
      [
-       "WITH _find (tag, arg0, arg1) AS (VALUES ($1::int, $2::int, $3::int), ($4, $5, $6) ) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.deleted_at IS NULL AND a.age BETWEEN _find.arg0 AND _find.arg1 GROUP BY a.id ORDER BY a.id ASC LIMIT $7",
+       "WITH _find (tag, arg0, arg1) AS (VALUES ($1::int, $2::int, $3::int), ($4, $5, $6)) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.deleted_at IS NULL AND a.age BETWEEN _find.arg0 AND _find.arg1 GROUP BY a.id ORDER BY a.id ASC LIMIT $7",
      ]
     `);
   });
@@ -185,7 +185,7 @@ describe("EntityManager.find.batch", () => {
     expect(q2.length).toBe(2);
     expect(queries).toMatchInlineSnapshot(`
      [
-       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int[]), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.deleted_at IS NULL AND a.age = ANY(_find.arg0) GROUP BY a.id ORDER BY a.id ASC LIMIT $5",
+       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int[]), ($3, $4)) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.deleted_at IS NULL AND a.age = ANY(_find.arg0) GROUP BY a.id ORDER BY a.id ASC LIMIT $5",
      ]
     `);
   });
@@ -204,7 +204,7 @@ describe("EntityManager.find.batch", () => {
     expect(q2.length).toBe(1);
     expect(queries).toMatchInlineSnapshot(`
      [
-       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int[]), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.deleted_at IS NULL AND a.age != ALL(_find.arg0) GROUP BY a.id ORDER BY a.id ASC LIMIT $5",
+       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int[]), ($3, $4)) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.deleted_at IS NULL AND a.age != ALL(_find.arg0) GROUP BY a.id ORDER BY a.id ASC LIMIT $5",
      ]
     `);
   });
@@ -228,7 +228,7 @@ describe("EntityManager.find.batch", () => {
     ]);
     expect(queries).toMatchInlineSnapshot(`
      [
-       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::character varying), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.deleted_at IS NULL AND a.first_name LIKE _find.arg0 GROUP BY a.id ORDER BY a.id ASC LIMIT $5",
+       "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::character varying), ($3, $4)) SELECT array_agg(_find.tag) as _tags, a.* FROM authors AS a CROSS JOIN _find AS _find WHERE a.deleted_at IS NULL AND a.first_name LIKE _find.arg0 GROUP BY a.id ORDER BY a.id ASC LIMIT $5",
      ]
     `);
   });
@@ -296,7 +296,7 @@ describe("EntityManager.find.batch", () => {
     expect(queries).toEqual([
       [
         `WITH _find (tag, arg0) AS (VALUES`,
-        ` ($1::int, $2::favorite_shape), ($3, $4) )`,
+        ` ($1::int, $2::favorite_shape), ($3, $4))`,
         ` SELECT array_agg(_find.tag) as _tags, a.*`,
         ` FROM authors AS a`,
         ` CROSS JOIN _find AS _find`,
@@ -360,7 +360,7 @@ describe("EntityManager.find.batch", () => {
     // And it's the regular/sane query, i.e. not auto-batched
     expect(queries).toEqual([
       [
-        `WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) )`,
+        `WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4))`,
         ` SELECT array_agg(_find.tag) as _tags, "as".*`,
         ` FROM author_schedules AS "as"`,
         ` CROSS JOIN _find AS _find`,
@@ -386,7 +386,7 @@ describe("EntityManager.find.batch", () => {
     // And it's the regular/sane query, i.e. not auto-batched
     expect(queries).toEqual([
       [
-        `WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) )`,
+        `WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4))`,
         ` SELECT _find.tag as tag, _data.count as count FROM _find AS _find`,
         ` CROSS JOIN LATERAL`,
         ` (SELECT count(distinct "as".id) as count FROM author_schedules AS "as" WHERE "as".id = _find.arg0)`,
@@ -410,7 +410,7 @@ describe("EntityManager.find.batch", () => {
     // And it's the regular/sane query, i.e. not auto-batched
     expect(queries).toEqual([
       [
-        `WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) )`,
+        `WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4))`,
         ` SELECT array_agg(_find.tag) as _tags, a.*`,
         ` FROM authors AS a`,
         ` CROSS JOIN _find AS _find`,
@@ -435,7 +435,7 @@ describe("EntityManager.find.batch", () => {
     // And it's the regular/sane query, i.e. not auto-batched
     expect(queries).toEqual([
       [
-        `WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) )`,
+        `WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4))`,
         ` SELECT array_agg(_find.tag) as _tags, a.*`,
         ` FROM authors AS a`,
         ` CROSS JOIN _find AS _find`,

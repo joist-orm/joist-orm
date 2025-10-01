@@ -1,3 +1,10 @@
+# [1.274.0](https://github.com/joist-orm/joist-orm/compare/v1.273.0...v1.274.0) (2025-10-01)
+
+
+### Features
+
+* Support multiple ParsedFindQuery CTEs. ([#1613](https://github.com/joist-orm/joist-orm/issues/1613)) ([c33c94a](https://github.com/joist-orm/joist-orm/commit/c33c94a6ecac75426d6fdf5aa0b3109b5c839785))
+
 # [1.273.0](https://github.com/joist-orm/joist-orm/compare/v1.272.1...v1.273.0) (2025-10-01)
 
 

@@ -13,11 +13,11 @@ import { findDataLoader, findOperation } from "./dataloaders/findDataLoader";
 import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
 import { lensOperation } from "./dataloaders/lensDataLoader";
 import { loadDataLoader, loadOperation } from "./dataloaders/loadDataLoader";
-import { manyToManyDataOperation } from "./dataloaders/manyToManyDataLoader";
+import { manyToManyLoadOperation } from "./dataloaders/manyToManyDataLoader";
 import { manyToManyFindOperation } from "./dataloaders/manyToManyFindDataLoader";
-import { oneToManyDataOperation } from "./dataloaders/oneToManyDataLoader";
+import { oneToManyLoadOperation } from "./dataloaders/oneToManyDataLoader";
 import { oneToManyFindOperation } from "./dataloaders/oneToManyFindDataLoader";
-import { oneToOneDataOperation } from "./dataloaders/oneToOneDataLoader";
+import { oneToOneLoadOperation } from "./dataloaders/oneToOneDataLoader";
 import { populateDataLoader, populateOperation } from "./dataloaders/populateDataLoader";
 import { recursiveChildrenOperation } from "./dataloaders/recursiveChildrenDataLoader";
 import { recursiveParentsOperation } from "./dataloaders/recursiveParentsDataLoader";
@@ -197,11 +197,11 @@ export type FindOperation =
   | typeof findCountOperation
   | typeof lensOperation
   | typeof loadOperation
-  | typeof manyToManyDataOperation
+  | typeof manyToManyLoadOperation
   | typeof manyToManyFindOperation
-  | typeof oneToManyDataOperation
+  | typeof oneToManyLoadOperation
   | typeof oneToManyFindOperation
-  | typeof oneToOneDataOperation
+  | typeof oneToOneLoadOperation
   | typeof populateOperation
   | typeof recursiveChildrenOperation
   | typeof recursiveParentsOperation;

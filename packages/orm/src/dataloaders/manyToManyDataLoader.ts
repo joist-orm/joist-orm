@@ -4,7 +4,7 @@ import { EntityManager, getEmInternalApi } from "../EntityManager";
 import { ManyToManyCollection, ParsedFindQuery, getMetadata, keyToNumber } from "../index";
 import { abbreviation, getOrSet } from "../utils";
 
-export const manyToManyDataOperation = "m2m-load";
+export const manyToManyLoadOperation = "m2m-load";
 
 /** Batches m2m.load calls. */
 export function manyToManyDataLoader<T extends Entity, U extends Entity>(
@@ -15,7 +15,7 @@ export function manyToManyDataLoader<T extends Entity, U extends Entity>(
   // which side of the relation the `collection` is coming from, so
   // the `load` impl will have to handle keys that come from either
   // side of the relation.
-  return em.getLoader(manyToManyDataOperation, collection.joinTableName, (keys) => load(collection, keys));
+  return em.getLoader(manyToManyLoadOperation, collection.joinTableName, (keys) => load(collection, keys));
 }
 
 /**
@@ -66,7 +66,7 @@ async function load<T extends Entity, U extends Entity>(
   };
 
   // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
-  const rows = await em["executeFind"](collection.otherMeta, manyToManyDataOperation, query, {});
+  const rows = await em["executeFind"](collection.otherMeta, manyToManyLoadOperation, query, {});
 
   // The order of column1/column2 doesn't really matter, i.e. if the opposite-side collection is later used
   const { columnName: column1, otherColumnName: column2 } = collection;

@@ -12,7 +12,7 @@ import {
 } from "../index";
 import { abbreviation, groupBy } from "../utils";
 
-export const oneToManyDataOperation = "o2m-load";
+export const oneToManyLoadOperation = "o2m-load";
 
 export function oneToManyDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
@@ -21,7 +21,7 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
   // The metadata for the entity that contains the collection
   const { meta: oneMeta, fieldName } = collection;
   const batchKey = `${oneMeta.tableName}-${fieldName}`;
-  return em.getLoader(oneToManyDataOperation, batchKey, async (_keys) => {
+  return em.getLoader(oneToManyLoadOperation, batchKey, async (_keys) => {
     const { otherMeta: meta } = collection;
 
     assertIdsAreTagged(_keys);
@@ -51,7 +51,7 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
     // Skip maybeAddOrderBy b/c we'll sort in memory anyway
     // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
 
-    const rows = await em["executeFind"](meta, oneToManyDataOperation, query, {});
+    const rows = await em["executeFind"](meta, oneToManyLoadOperation, query, {});
 
     const entities = em.hydrate(meta.cstr, rows);
     // .filter((e) => !e.isDeletedEntity);

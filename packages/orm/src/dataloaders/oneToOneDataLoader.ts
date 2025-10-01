@@ -13,7 +13,7 @@ import {
 import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
 import { abbreviation, groupBy } from "../utils";
 
-export const oneToOneDataOperation = "o2o-load";
+export const oneToOneLoadOperation = "o2o-load";
 
 export function oneToOneDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
@@ -22,7 +22,7 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
   // The metadata for the entity that contains the reference
   const meta = getMetadata(reference.entity);
   const batchKey = `${meta.tableName}-${reference.fieldName}`;
-  return em.getLoader(oneToOneDataOperation, batchKey, async (_keys) => {
+  return em.getLoader(oneToOneLoadOperation, batchKey, async (_keys) => {
     const { otherMeta, otherFieldName } = reference;
 
     assertIdsAreTagged(_keys);
@@ -51,7 +51,7 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
     };
     addTablePerClassJoinsAndClassTag(query, otherMeta, alias, true);
 
-    const rows = await em["executeFind"](otherMeta, oneToOneDataOperation, query, {});
+    const rows = await em["executeFind"](otherMeta, oneToOneLoadOperation, query, {});
     const entities = em.hydrate(otherMeta.cstr, rows);
 
     const entitiesByOtherId = groupBy(entities, (entity) => {

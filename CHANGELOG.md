@@ -1,3 +1,10 @@
+## [1.274.1](https://github.com/joist-orm/joist-orm/compare/v1.274.0...v1.274.1) (2025-10-01)
+
+
+### Bug Fixes
+
+* Fix sql generation for multiple CTEs. ([#1616](https://github.com/joist-orm/joist-orm/issues/1616)) ([7fe20c4](https://github.com/joist-orm/joist-orm/commit/7fe20c463e61db91a7f4804ea06e4f1a5a3501c9))
+
 # [1.274.0](https://github.com/joist-orm/joist-orm/compare/v1.273.0...v1.274.0) (2025-10-01)
 
 

@@ -6,8 +6,8 @@ import {
   PublisherSizes,
   PublisherTypes,
   TaskTypes,
-} from "src/entities";
-import { Resolvers } from "src/generated/graphql-types";
+} from "#src/entities";
+import { Resolvers } from "#src/generated/graphql-types";
 
 type EnumDetails =
   | "AdvanceStatusDetail"

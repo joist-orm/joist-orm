@@ -57,8 +57,8 @@ export function findDataLoader<T extends Entity>(
         const query = parseFindQuery(meta, where, opts);
         // Maybe add preload joins
         const { preloader, pluginManager } = getEmInternalApi(em);
-        pluginManager?.beforeFind?.(meta, query);
         const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
+        pluginManager?.beforeFind?.(meta, query);
         const rows = await em.driver.executeFind(em, query, opts);
         ensureUnderLimit(em, rows);
         const entities = em.hydrate(type, rows);
@@ -109,7 +109,6 @@ export function findDataLoader<T extends Entity>(
       }
 
       const { preloader, pluginManager } = getEmInternalApi(em);
-      pluginManager?.beforeFind?.(meta, query);
       const preloadJoins = preloader && hint && preloader.getPreloadJoins(meta, buildHintTree(hint), query);
       if (preloadJoins) {
         query.selects.push(
@@ -121,6 +120,7 @@ export function findDataLoader<T extends Entity>(
         );
         query.tables.push(...preloadJoins.map((j) => j.join));
       }
+      pluginManager?.beforeFind?.(meta, query);
 
       const rows = await em.driver.executeFind(em, query, { limit: em.entityLimit });
       ensureUnderLimit(em, rows);

@@ -41,17 +41,23 @@ export function recursiveParentsDataLoader<T extends Entity, U extends Entity>(
         { alias: `${alias}_cte`, join: "inner", table: `${alias}_cte`, col1: `${alias}.id`, col2: `${alias}_cte.id` },
       ],
       orderBys: [{ alias, column: "id", order: "ASC" }],
-      cte: {
-        // b is our base case, which is the immediate parents of the children we're loading,
-        // and r is the recursive case of finding their parents.
-        sql: `
-          WITH RECURSIVE ${alias}_cte AS (
-            SELECT b.id, b.${columnName} FROM ${kq(meta.tableName)} b WHERE b.id = ANY(?)
-            UNION
-            SELECT r.id, r.${columnName} FROM ${kq(meta.tableName)} r JOIN ${alias}_cte ON r.id = ${alias}_cte.${columnName}
-          )`,
-        bindings: [unsafeDeTagIds(immediateParentIds)],
-      },
+      ctes: [
+        {
+          alias: `${alias}_cte`,
+          query: {
+            kind: "raw",
+            // b is our base case, which is the immediate parents of the children we're loading,
+            // and r is the recursive case of finding their parents.
+            sql: `
+              SELECT b.id, b.${columnName} FROM ${kq(meta.tableName)} b WHERE b.id = ANY(?)
+              UNION
+              SELECT r.id, r.${columnName} FROM ${kq(meta.tableName)} r JOIN ${alias}_cte ON r.id = ${alias}_cte.${columnName}
+            `,
+            bindings: [unsafeDeTagIds(immediateParentIds)],
+          },
+          recursive: true,
+        },
+      ],
     };
 
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);

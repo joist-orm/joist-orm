@@ -16,6 +16,7 @@ import {
 import { JoinRowTodo, Todo } from "joist-orm/build/Todo";
 import { buildValuesCte } from "joist-orm/build/dataloaders/findDataLoader";
 import { DeleteOp, generateOps, InsertOp, UpdateOp } from "joist-orm/build/drivers/EntityWriter";
+import { buildCteSql } from "joist-orm/build/drivers/buildRawQuery";
 import { getRuntimeConfig } from "joist-orm/build/runtimeConfig";
 import { batched, cleanSql } from "joist-orm/build/utils";
 
@@ -124,7 +125,7 @@ function batchInsert(txn: TransactionSQL, op: InsertOp): Promise<unknown> {
 async function batchUpdate(txn: TransactionSQL, op: UpdateOp): Promise<void> {
   const { tableName, columns, rows, updatedAt } = op;
 
-  const cte = buildValuesCte("data", columns, rows);
+  const cte = buildValuesCte("data", columns, rows, rows.flat());
 
   // JS Dates only have millisecond-level precision, so we may have dropped/lost accuracy when
   // reading Postgres's microsecond-level `timestamptz` values; using `date_trunc` "downgrades"
@@ -140,7 +141,7 @@ async function batchUpdate(txn: TransactionSQL, op: UpdateOp): Promise<void> {
         : "";
 
   const sql = `
-    ${cte}
+    ${buildCteSql(cte)}
     UPDATE ${kq(tableName)}
     SET ${columns
       .filter((c) => c.columnName !== "id" && c.columnName !== "__original_updated_at")
@@ -151,8 +152,7 @@ async function batchUpdate(txn: TransactionSQL, op: UpdateOp): Promise<void> {
     RETURNING ${kq(tableName)}.id
   `;
 
-  const bindings = rows.flat();
-  const result = await txn(cleanSql(sql) as any, bindings);
+  const result = await txn(cleanSql(sql) as any, cte.query.bindings);
 
   if (result.rows.length !== rows.length) {
     const updated = new Set(result.rows.map((r: any) => r.id));

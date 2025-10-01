@@ -79,10 +79,7 @@ export function findCountDataLoader<T extends Entity>(
           { join: "lateral", query: query, table: meta.tableName, alias: "_data", fromAlias: "_f" },
         ],
         // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
-        cte: {
-          sql: buildValuesCte("_find", args, queries),
-          bindings: createBindings(meta, queries),
-        },
+        ctes: [buildValuesCte("_find", args, queries, createBindings(meta, queries))],
         orderBys: [],
       };
 

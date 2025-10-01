@@ -44,18 +44,24 @@ export function recursiveChildrenDataLoader<T extends Entity, U extends Entity>(
         { alias: `${alias}_cte`, join: "inner", table: `${alias}_cte`, col1: `${alias}.id`, col2: `${alias}_cte.id` },
       ],
       orderBys: [{ alias, column: "id", order: "ASC" }],
-      cte: {
-        // b is our base case, which is the immediate children of the parents, and r is the
-        // recursive case of finding their children.
-        sql: `
-          WITH RECURSIVE ${alias}_cte AS (
+      ctes: [
+        {
+          alias: `${alias}_cte`,
+          query: {
+            kind: "raw",
+            // b is our base case, which is the immediate children of the parents, and r is the
+            // recursive case of finding their children.
+            sql: `
              SELECT b.id, b.${columnName} FROM ${kq(meta.tableName)} b WHERE b.${columnName} = ANY(?)
              UNION
              SELECT r.id, r.${columnName} FROM ${kq(meta.tableName)} r JOIN ${alias}_cte ON r.${columnName} = ${alias}_cte.id
-          )`,
-        // RecursiveChildrenCollectionImpl won't call `.load` on new entities, so we can assume entities have an id
-        bindings: [unsafeDeTagIds(parents.map((e) => e.idTagged))],
-      },
+            `,
+            // RecursiveChildrenCollectionImpl won't call `.load` on new entities, so we can assume entities have an id
+            bindings: [unsafeDeTagIds(parents.map((e) => e.idTagged))],
+          },
+          recursive: true,
+        },
+      ],
     };
 
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);

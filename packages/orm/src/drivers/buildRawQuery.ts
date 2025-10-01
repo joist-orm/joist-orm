@@ -1,4 +1,4 @@
-import { ParsedFindQuery, ParsedTable } from "../QueryParser";
+import { ParsedCteClause, ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
 import { assertNever, cleanSql } from "../utils";
 import { buildWhereClause } from "./buildUtils";
@@ -26,9 +26,11 @@ export function buildRawQuery(
   let sql = "";
   const bindings: any[] = [];
 
-  if (parsed.cte) {
-    sql += cleanSql(parsed.cte.sql) + " ";
-    bindings.push(...parsed.cte.bindings);
+  if (parsed.ctes) {
+    for (const cte of parsed.ctes) {
+      sql += buildCteSql(cte);
+      bindings.push(...cte.query.bindings);
+    }
   }
 
   sql += "SELECT ";
@@ -107,6 +109,12 @@ function buildDistinctOn(parsed: ParsedFindQuery, primary: ParsedTable): string 
     kqDot(primary.alias, "id"),
   ];
   return `DISTINCT ON (${columns.join(", ")}) `;
+}
+
+export function buildCteSql(cte: ParsedCteClause): string {
+  const maybeRecursive = cte.recursive ? "RECURSIVE " : "";
+  const maybeColumns = cte.columns ? ` (${cte.columns.map((c) => kq(c.columnName)).join(", ")})` : "";
+  return `WITH ${maybeRecursive}${cte.alias}${maybeColumns} AS (${cleanSql(cte.query.sql)} ) `;
 }
 
 const as = (t: ParsedTable) => `${kq(t.table)} AS ${kq(t.alias)}`;

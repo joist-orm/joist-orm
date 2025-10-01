@@ -1,3 +1,10 @@
+# [1.273.0](https://github.com/joist-orm/joist-orm/compare/v1.272.1...v1.273.0) (2025-10-01)
+
+
+### Features
+
+* add beforeFind / afterFind callbacks support to plugins ([#1611](https://github.com/joist-orm/joist-orm/issues/1611)) ([a490252](https://github.com/joist-orm/joist-orm/commit/a4902528e67351ed476b7933d30dca54f0431908))
+
 ## [1.272.1](https://github.com/joist-orm/joist-orm/compare/v1.272.0...v1.272.1) (2025-09-30)
 
 

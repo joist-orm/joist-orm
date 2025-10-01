@@ -2,9 +2,9 @@ import { camelCase, sentenceCase } from "change-case";
 import { Config, EntityDbMetadata } from "joist-codegen";
 import { CodegenFile, code, imp } from "ts-poet";
 
-const entityResolver = imp("entityResolver@src/resolvers/utils");
-const makeRunObjectFields = imp("makeRunObjectFields@src/resolvers/testUtils");
-const makeRunObjectField = imp("makeRunObjectField@src/resolvers/testUtils");
+const entityResolver = imp("entityResolver@#src/resolvers/utils");
+const makeRunObjectFields = imp("makeRunObjectFields@#src/resolvers/testUtils");
+const makeRunObjectField = imp("makeRunObjectField@#src/resolvers/testUtils");
 
 /**
  * Generates a base resolver using the entityResolver utility.
@@ -19,8 +19,8 @@ const makeRunObjectField = imp("makeRunObjectField@src/resolvers/testUtils");
 export function generateObjectResolvers(config: Config, entities: EntityDbMetadata[]): CodegenFile[] {
   const resolvers = entities.map((e) => {
     const camelName = camelCase(e.name);
-    const type = imp(`${e.name}@src/entities`);
-    const resolverType = imp(`${e.name}Resolvers@src/generated/graphql-types`);
+    const type = imp(`${e.name}@#src/entities`);
+    const resolverType = imp(`${e.name}Resolvers@#src/generated/graphql-types`);
     const contents = code`
       export const ${camelName}Resolvers: ${resolverType} = {
         ...${entityResolver}(${type}),
@@ -32,8 +32,8 @@ export function generateObjectResolvers(config: Config, entities: EntityDbMetada
   const testFiles = entities.map((e) => {
     const { name } = e;
     const camelName = camelCase(name);
-    const factory = imp(`new${name}@src/entities`);
-    const resolverConst = imp(`${camelName}Resolvers@src/resolvers/${camelName}/${camelName}Resolvers`);
+    const factory = imp(`new${name}@#src/entities`);
+    const resolverConst = imp(`${camelName}Resolvers@#src/resolvers/${camelName}/${camelName}Resolvers`);
 
     const tagName = config.entities[name].tag || "entity";
     const keys = e.primitives.map((field) => `"${field.fieldName}"`).join(", ");

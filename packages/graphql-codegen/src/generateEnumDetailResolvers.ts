@@ -8,7 +8,7 @@ export function generateEnumDetailResolvers(enums: EnumMetadata): CodegenFile {
   const enumNames = Object.values(enums).map(({ name }) => name);
 
   const resolvers = Object.values(enums).map(({ name, extraPrimitives }) => {
-    const type = imp(`${pluralize(name)}@src/entities`);
+    const type = imp(`${pluralize(name)}@#src/entities`);
     return code`
       ${name}Detail: {
         code: (root) => root,
@@ -20,7 +20,7 @@ export function generateEnumDetailResolvers(enums: EnumMetadata): CodegenFile {
     `;
   });
 
-  const Resolvers = imp("Resolvers@src/generated/graphql-types");
+  const Resolvers = imp("Resolvers@#src/generated/graphql-types");
 
   const contents = code`
     type EnumDetails = ${enumNames.length === 0 ? "never" : enumNames.map((n) => `"${n}Detail"`).join(" | ")};

@@ -11,9 +11,9 @@ describe("generateSaveResolvers", () => {
     // We now have a graphql file
     expect(resolver.name).toBe("resolvers/author/saveAuthorMutation.ts");
     expect(resolver.contents.toString()).toMatchInlineSnapshot(`
-     "import { Author } from "src/entities";
-     import { MutationResolvers } from "src/generated/graphql-types";
-     import { saveEntity } from "src/resolvers/utils";
+     "import { Author } from "#src/entities";
+     import { MutationResolvers } from "#src/generated/graphql-types";
+     import { saveEntity } from "#src/resolvers/utils";
 
      export const saveAuthor: Pick<MutationResolvers, "saveAuthor"> = {
        async saveAuthor(_, args, ctx) {

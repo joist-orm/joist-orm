@@ -20,6 +20,17 @@ Reactions differ from Lifecycle Hooks in that they:
 * **Can run multiple times per flush** as the reactivity graph settles
 * **Takes a [reactive hint](./reactive-fields/#always-up-to-date)** rather than a simpler load hint
 
+
+Comparison table with Hooks and Reactive Fields:
+
+| Feature                       | Hooks | Reactions | Reactive Fields / References |
+|-------------------------------|-------|-----------|------------------------------|
+| Runs on every flush           | Yes   | No        | No                           |
+| Arbitrary entity mutation     | Yes   | Yes       | No                           |
+| Runs multiple times per flush | No    | Yes       | Yes                          |
+| Requires database column      | No    | No        | Yes                          |
+| Selective triggering          | No    | Yes       | Yes                          |
+
 :::caution
 
 Because reactions can run multiple times per flush, ensure your reaction functions are **idempotent** (safe to run multiple times with the same result) and avoid creating circular dependencies in your reactive hints.
@@ -112,17 +123,6 @@ config.addReaction(
   }
 );
 ```
-
-## Comparison with Hooks and Reactive Fields
-
-| Feature | Hooks | Reactions | Reactive Fields |
-|---------|-------|-----------|-----------------|
-| Runs on every flush | Yes (when entity changes) | No (only when hint changes) |  No (only when hint changes) |
-| Can mutate entities | Yes | Yes | No |
-| Runs multiple times | No | Yes | Yes (recalcs) |
-| Stored in database | No | No | Yes |
-| Requires database column | No | No | Yes |
-| Selective triggering | No | Yes (via hint) | Yes (via hint) |
 
 ## Best Practices
 

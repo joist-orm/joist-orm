@@ -12,14 +12,18 @@
   "scripts": {
     "migrate": "DATABASE_URL=postgres://joist:local@localhost:5435/esm node-pg-migrate up --decamelize=false --migrations-dir=./migrations",
     "format": "prettier --ignore-path ../../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
-    "codegen": "node ../../codegen",
+    "codegen": "node ../../codegen && graphql-codegen --config graphql-codegen.cjs",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand --logHeapUsage"
   },
   "dependencies": {
     "joist-orm": "workspace:*",
-    "node-pg-migrate": "^8.0.3"
+    "node-pg-migrate": "^8.0.3",
+    "temporal-polyfill": "^0.3.0"
   },
   "devDependencies": {
+    "@graphql-codegen/add": "^6.0.0",
+    "@graphql-codegen/cli": "^6.0.0",
+    "@homebound/graphql-typescript-simple-resolvers": "^1.57.0",
     "@swc/core": "^1.13.20",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
@@ -27,6 +31,7 @@
     "jest": "30.2.0",
     "jest-junit": "^16.0.0",
     "joist-codegen": "workspace:*",
+    "joist-graphql-codegen": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
     "prettier": "^3.6.2",

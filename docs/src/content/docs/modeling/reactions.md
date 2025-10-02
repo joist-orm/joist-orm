@@ -70,7 +70,7 @@ The name will appear in error messages and logs, making it easier to trace which
 
 ## Run-Once Reactions
 
-By default, reactions can run multiple times during a flush as the reactivity graph settles. If you need a reaction to run only once per flush, use the `runOnce` option:
+By default, reactions can run multiple times during a flush as the reactivity graph settles. If you need a reaction to run only once per flush, use the `runOnce` option.  Be aware this means your reaction will not be called again if further changes occur during the same flush:
 
 ```typescript
 config.addReaction(
@@ -130,6 +130,6 @@ config.addReaction(
 2. **Make reactions idempotent**: Since they can run multiple times, ensure they produce the same result
 3. **Avoid circular dependencies**: Don't create reactions where A triggers B which triggers A
 4. **Use read-only relations**: Mark relations as `:ro` when you only need to read them, not react to them
-5. **Consider `runOnce`**: If your reaction has side effects (like sending notifications), use `runOnce: true`
-6. **Name your reactions**: For easier debugging, especially in complex domain models
+5. **Don't list all fields**: Only list the fields you need to react to, not all accessed fields like in a rule or reactive field
+6. **Consider `runOnce`**: If your reaction has side effects (like sending notifications), use `runOnce: true`
 7. **Prefer Reactive Field/Reference for stored values**: If you're calculating a value to store in the database, use a Reactive Field/Reference instead

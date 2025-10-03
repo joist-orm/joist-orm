@@ -12,7 +12,7 @@
   "scripts": {
     "migrate": "DATABASE_URL=postgres://joist:local@localhost:5435/esm node-pg-migrate up --decamelize=false --migrations-dir=./migrations",
     "format": "prettier --ignore-path ../../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
-    "codegen": "node ../../codegen && graphql-codegen --config graphql-codegen.cjs",
+    "codegen": "node ../../codegen && graphql-codegen --config graphql-codegen.mjs",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand --logHeapUsage"
   },
   "dependencies": {

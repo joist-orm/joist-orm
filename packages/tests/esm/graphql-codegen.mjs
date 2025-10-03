@@ -1,10 +1,10 @@
-const { mappers, enumValues } = require("./graphql-codegen-joist.cjs");
+import { enumValues, mappers } from "./graphql-codegen-joist.mjs";
 
 // We modeled ProjectTeamMember to allow a resolver to return placeholder objects as
 // potential/unassigned values. This means they can't be mapped types they may not necessarily be just an entity.
 const { ProjectTeamMember, ...joistMappers } = mappers;
 
-module.exports = {
+export default {
   overwrite: true,
   schema: "./schema/**/*.graphql",
   documents: null,

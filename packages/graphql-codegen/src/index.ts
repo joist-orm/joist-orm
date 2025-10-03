@@ -7,7 +7,7 @@ import { generateGraphqlSchemaFiles } from "./generateGraphqlSchemaFiles";
 import { generateObjectResolvers } from "./generateObjectResolvers";
 import { generateSaveResolvers } from "./generateSaveResolvers";
 import { loadHistory, writeHistory } from "./history";
-import { Fs, newFsImpl } from "./utils";
+import { Fs, getImportExtension, newFsImpl } from "./utils";
 
 export async function run(config: Config, dbMeta: DbMetadata): Promise<CodegenFile[]> {
   const fs = newFsImpl("./schema");
@@ -19,7 +19,7 @@ export async function run(config: Config, dbMeta: DbMetadata): Promise<CodegenFi
   const { entities, enums } = dbMeta;
   const conditionalResolvers = [
     ...generateObjectResolvers(config, entities),
-    ...generateSaveResolvers(dbMeta),
+    ...generateSaveResolvers(config, dbMeta),
     // Going to roll this out as a follow up
     // ...generateQueryResolvers(dbMeta),
   ];
@@ -28,8 +28,8 @@ export async function run(config: Config, dbMeta: DbMetadata): Promise<CodegenFi
 
   return [
     await generateEnumsGraphql(enums),
-    generateEnumDetailResolvers(enums),
-    generateGraphqlCodegen(entities, enums),
+    generateEnumDetailResolvers(config, enums),
+    generateGraphqlCodegen(config, entities, enums),
   ];
 }
 
@@ -38,12 +38,13 @@ async function writeOnce(config: Config, fs: Fs, files: CodegenFile[]) {
   // We sneak a `files` entry into the history map, which is usually `type -> fields[]`
   const history = await loadHistory(fs);
   const filesHistory = (history["files"] = history["files"] || []);
+  const esmExt = getImportExtension(config);
   await Promise.all(
     files.map(async (file) => {
       if (!filesHistory.includes(file.name)) {
         // Even if it's not in the history, make sure it doesn't already exist on disk
         if (!(await fs.exists(file.name))) {
-          await fs.save(file.name, contentToString(file));
+          await fs.save(file.name, contentToString(file, esmExt));
         }
         filesHistory.push(file.name);
       }
@@ -52,9 +53,12 @@ async function writeOnce(config: Config, fs: Fs, files: CodegenFile[]) {
   await writeHistory(fs, history);
 }
 
-function contentToString(file: CodegenFile): string {
+function contentToString(file: CodegenFile, esmExt: "ts" | "js" | null): string {
   if (typeof file.contents === "string") {
     return file.contents;
   }
-  return file.contents.toString({ path: file.name });
+  return file.contents.toString({
+    path: file.name,
+    importExtensions: esmExt || false,
+  });
 }

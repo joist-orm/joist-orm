@@ -1,4 +1,5 @@
 import { promises as fs } from "fs";
+import { Config } from "joist-codegen";
 import { isPlainObject } from "joist-utils";
 import { dirname } from "path";
 
@@ -54,4 +55,12 @@ export function sortKeys<T extends object>(o: T): T {
       },
       {} as any as T,
     );
+}
+
+export function getImportExtension(config: Config): "ts" | "js" | null {
+  return config.esm ? (config.allowImportingTsExtensions ? "ts" : "js") : null;
+}
+
+export function getEntitiesImportPath(config: Config): string {
+  return config.esm ? "src/entities/index.ts" : "src/entities";
 }

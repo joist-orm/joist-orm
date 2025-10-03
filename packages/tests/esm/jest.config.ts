@@ -5,9 +5,11 @@ export default {
   ...createDefaultEsmPreset(),
   testMatch: ["<rootDir>/src/**/*.test.(ts|tsx)"],
   globalSetup: "<rootDir>/src/setupTestEnv.ts",
+  setupFilesAfterEnv: ["<rootDir>/src/setupIt.ts", "<rootDir>/src/setupDbTests.ts"],
   testEnvironment: "node",
   moduleNameMapper: {
     "^(\\.{1,2}/.*)\\.js$": "$1",
+    "^src/(.*).js": "<rootDir>/src/$1",
   },
   reporters: [
     "default",
@@ -15,7 +17,7 @@ export default {
       "jest-junit",
       {
         outputDirectory: "../../../artifacts",
-        outputName: `junit-tests-integration-${process.env.PLUGINS ?? "stock"}.xml`,
+        outputName: `junit-tests-esm.xml`,
         usePathForSuiteName: "true",
       },
     ],

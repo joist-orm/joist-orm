@@ -1,10 +1,11 @@
 import { camelCase } from "change-case";
-import { DbMetadata } from "joist-codegen";
+import { Config, DbMetadata } from "joist-codegen";
 import { CodegenFile, code, imp } from "ts-poet";
+import { getEntitiesImportPath } from "./utils";
 
-const saveEntity = imp("saveEntity@src/resolvers/utils");
-const mutationResolvers = imp("MutationResolvers@src/generated/graphql-types");
-const makeRunInputMutation = imp("makeRunInputMutation@src/resolvers/testUtils");
+const saveEntity = imp("saveEntity@src/resolvers/utils.ts");
+const mutationResolvers = imp("t:MutationResolvers@src/generated/graphql-types.ts");
+const makeRunInputMutation = imp("makeRunInputMutation@src/resolvers/testUtils.ts");
 
 /**
  * Generates a save resolver.
@@ -16,13 +17,14 @@ const makeRunInputMutation = imp("makeRunInputMutation@src/resolvers/testUtils")
  *
  * [1]: https://github.com/homebound-team/graphql-typescript-resolver-scaffolding
  */
-export function generateSaveResolvers(db: DbMetadata): CodegenFile[] {
+export function generateSaveResolvers(config: Config, db: DbMetadata): CodegenFile[] {
+  const entitiesPath = getEntitiesImportPath(config);
   return db.entities.flatMap((e) => {
     const { name } = e;
     const camelName = camelCase(name);
-    const type = imp(`${name}@src/entities`);
+    const type = imp(`${name}@${entitiesPath}`);
     const fileName = `save${name}Mutation`;
-    const resolverConst = imp(`save${name}@src/resolvers/${camelName}/${fileName}`);
+    const resolverConst = imp(`save${name}@src/resolvers/${camelName}/${fileName}.ts`);
     return [
       {
         name: `resolvers/${camelName}/${fileName}.ts`,

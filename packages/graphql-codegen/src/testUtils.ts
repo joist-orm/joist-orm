@@ -1,9 +1,17 @@
 import { snakeCase } from "change-case";
-import { DbMetadata, EntityDbMetadata, EnumField, makeEntity, ManyToOneField, PrimitiveField } from "joist-codegen";
+import {
+  Config,
+  DbMetadata,
+  EntityDbMetadata,
+  EnumField,
+  makeEntity,
+  ManyToOneField,
+  PrimitiveField,
+} from "joist-codegen";
 import { keyBy } from "joist-utils";
 import { plural } from "pluralize";
-import { imp } from "ts-poet";
-import { Fs } from "./utils";
+import { CodegenFile, imp } from "ts-poet";
+import { Fs, getImportExtension } from "./utils";
 
 export function newFs(files: Record<string, string>): Fs {
   return {
@@ -138,4 +146,19 @@ export function newManyToOneField(
     onDelete: "NO ACTION" as any,
     ...opts,
   };
+}
+
+/**
+ * Mimics the contentToString flow from packages/codegen/src/index.ts to test import extension handling.
+ * This reproduces the same logic used in production when saving files.
+ */
+export function renderCodegenFile(file: CodegenFile, config: Config): string {
+  const esmExt = getImportExtension(config);
+  if (typeof file.contents === "string") {
+    return file.contents;
+  }
+  return file.contents.toString({
+    path: file.name,
+    importExtensions: esmExt || false,
+  });
 }

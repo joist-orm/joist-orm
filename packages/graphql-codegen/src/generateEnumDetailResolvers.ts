@@ -1,14 +1,16 @@
 import { camelCase } from "change-case";
-import { EnumMetadata } from "joist-codegen";
+import { Config, EnumMetadata } from "joist-codegen";
 import pluralize from "pluralize";
 import { code, CodegenFile, imp } from "ts-poet";
+import { getEntitiesImportPath } from "./utils";
 
 /** Generates a `src/resolvers/enumResolvers.ts` with a resolver for each of our domain's "enum detail" types. */
-export function generateEnumDetailResolvers(enums: EnumMetadata): CodegenFile {
+export function generateEnumDetailResolvers(config: Config, enums: EnumMetadata): CodegenFile {
+  const entitiesPath = getEntitiesImportPath(config);
   const enumNames = Object.values(enums).map(({ name }) => name);
 
   const resolvers = Object.values(enums).map(({ name, extraPrimitives }) => {
-    const type = imp(`${pluralize(name)}@src/entities`);
+    const type = imp(`${pluralize(name)}@${entitiesPath}`);
     return code`
       ${name}Detail: {
         code: (root) => root,
@@ -20,7 +22,7 @@ export function generateEnumDetailResolvers(enums: EnumMetadata): CodegenFile {
     `;
   });
 
-  const Resolvers = imp("Resolvers@src/generated/graphql-types");
+  const Resolvers = imp("t:Resolvers@src/generated/graphql-types.ts");
 
   const contents = code`
     type EnumDetails = ${enumNames.length === 0 ? "never" : enumNames.map((n) => `"${n}Detail"`).join(" | ")};

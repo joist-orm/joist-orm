@@ -25,7 +25,7 @@ export function generateEntitiesFile(
     // when the subclasses extend the base classes, see:
     // https://medium.com/visual-development/how-to-fix-nasty-circular-dependency-issues-once-and-for-all-in-javascript-typescript-a04c987cf0de
     ${enums.map((table) => {
-      return `export * from "./enums/${tableToEntityName(config, table)}";`;
+      return `export * from "./enums/${tableToEntityName(config, table)}${esmExt}";`;
     })}
     ${pgEnums.map((meta) => {
       return `export * from "./enums/${meta.name}${esmExt}";`;

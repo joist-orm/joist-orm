@@ -37,8 +37,20 @@ import {
   type ValueFilter,
   type ValueGraphQLFilter,
 } from "joist-orm";
+import { Temporal } from "temporal-polyfill";
 import type { Context } from "../../context.js";
-import { Author, authorMeta, Book, type BookId, type Entity, EntityManager, newAuthor } from "../entities.js";
+import {
+  Author,
+  authorMeta,
+  Book,
+  type BookId,
+  Color,
+  ColorDetails,
+  Colors,
+  type Entity,
+  EntityManager,
+  newAuthor,
+} from "../entities.js";
 
 export type AuthorId = Flavor<string, "Author">;
 
@@ -47,8 +59,9 @@ export interface AuthorFields {
   firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   delete: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
+  favoriteColors: { kind: "enum"; type: Color[]; nullable: never };
   books: { kind: "o2m"; type: Book };
 }
 
@@ -56,6 +69,7 @@ export interface AuthorOpts {
   firstName: string;
   lastName?: string | null;
   delete?: boolean | null;
+  favoriteColors?: Color[];
   books?: Book[];
 }
 
@@ -68,8 +82,9 @@ export interface AuthorFilter {
   firstName?: ValueFilter<string, never>;
   lastName?: ValueFilter<string, null>;
   delete?: BooleanFilter<null>;
-  createdAt?: ValueFilter<Date, never>;
-  updatedAt?: ValueFilter<Date, never>;
+  createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
+  favoriteColors?: ValueFilter<Color[], null>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
 }
 
@@ -78,8 +93,9 @@ export interface AuthorGraphQLFilter {
   firstName?: ValueGraphQLFilter<string>;
   lastName?: ValueGraphQLFilter<string>;
   delete?: BooleanGraphQLFilter;
-  createdAt?: ValueGraphQLFilter<Date>;
-  updatedAt?: ValueGraphQLFilter<Date>;
+  createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
+  favoriteColors?: ValueGraphQLFilter<Color[]>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
 }
 
@@ -90,6 +106,7 @@ export interface AuthorOrder {
   delete?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  favoriteColors?: OrderBy;
 }
 
 export interface AuthorFactoryExtras {
@@ -165,12 +182,36 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     setField(this, "delete", value);
   }
 
-  get createdAt(): Date {
+  get createdAt(): Temporal.ZonedDateTime {
     return getField(this, "createdAt");
   }
 
-  get updatedAt(): Date {
+  get updatedAt(): Temporal.ZonedDateTime {
     return getField(this, "updatedAt");
+  }
+
+  get favoriteColors(): Color[] {
+    return getField(this, "favoriteColors") || [];
+  }
+
+  get favoriteColorsDetails(): ColorDetails[] {
+    return this.favoriteColors.map((code) => Colors.getByCode(code));
+  }
+
+  set favoriteColors(favoriteColors: Color[]) {
+    setField(this, "favoriteColors", favoriteColors);
+  }
+
+  get isRed(): boolean {
+    return this.favoriteColors.includes(Color.Red);
+  }
+
+  get isGreen(): boolean {
+    return this.favoriteColors.includes(Color.Green);
+  }
+
+  get isBlue(): boolean {
+    return this.favoriteColors.includes(Color.Blue);
   }
 
   /**

@@ -1,9 +1,18 @@
+const { createEnumTable, enumArrayColumn } = require("joist-migration-utils");
+
 exports.up = (b) => {
+  createEnumTable(b, "color", [
+    ["RED", "Red"],
+    ["GREEN", "Green"],
+    ["BLUE", "Blue"],
+  ]);
+
   // Create a table with createAt and updatedAt
   b.createTable("authors", {
     id: { type: "id", primaryKey: true },
     firstName: { type: "varchar(255)", notNull: true },
     lastName: { type: "varchar(255)", notNull: false },
+    favorite_colors: enumArrayColumn("color"),
     delete: { type: "boolean", notNull: false },
     createdAt: { type: "timestamptz", notNull: true },
     updatedAt: { type: "timestamptz", notNull: true },

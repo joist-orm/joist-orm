@@ -1,0 +1,31 @@
+extend type Mutation {
+  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+}
+
+extend type Query {
+  authors: [Author!]!
+  author(id: ID!): Author
+}
+
+type Author {
+  id: ID!
+  firstName: String!
+  lastName: String
+  delete: Boolean
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  favoriteColors: [Color!]!
+  books: [Book!]!
+}
+
+input SaveAuthorInput {
+  id: ID
+  firstName: String
+  lastName: String
+  delete: Boolean
+  favoriteColors: [Color!]
+}
+
+type SaveAuthorResult {
+  author: Author!
+}

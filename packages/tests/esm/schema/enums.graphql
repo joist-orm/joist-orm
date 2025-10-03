@@ -1,0 +1,14 @@
+enum Color {
+  RED
+  GREEN
+  BLUE
+}
+
+type ColorDetail {
+  code: Color!
+  name: String!
+}
+
+type AllEnumDetails {
+  color: [ColorDetail!]!
+}

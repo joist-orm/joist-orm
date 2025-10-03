@@ -8517,9 +8517,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"joist-tests-esm-misc@workspace:packages/tests/esm-misc":
+"joist-tests-esm@workspace:packages/tests/esm":
   version: 0.0.0-use.local
-  resolution: "joist-tests-esm-misc@workspace:packages/tests/esm-misc"
+  resolution: "joist-tests-esm@workspace:packages/tests/esm"
   dependencies:
     "@swc/core": "npm:^1.13.20"
     "@swc/jest": "npm:^0.2.39"

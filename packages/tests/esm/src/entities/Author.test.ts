@@ -2,7 +2,7 @@ import { afterAll, describe, it } from "@jest/globals";
 import { type EntityManagerOpts, PostgresDriver } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import knexModule from "knex";
-import { EntityManager, newAuthor } from "./entities.ts";
+import { EntityManager, newAuthor } from "./entities.js";
 
 const knex = knexModule({
   client: "pg",

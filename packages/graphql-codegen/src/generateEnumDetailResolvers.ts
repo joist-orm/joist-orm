@@ -2,10 +2,11 @@ import { camelCase } from "change-case";
 import { Config, EnumMetadata } from "joist-codegen";
 import pluralize from "pluralize";
 import { code, CodegenFile, imp } from "ts-poet";
+import { getEntitiesImportPath } from "./utils";
 
 /** Generates a `src/resolvers/enumResolvers.ts` with a resolver for each of our domain's "enum detail" types. */
 export function generateEnumDetailResolvers(config: Config, enums: EnumMetadata): CodegenFile {
-  const entitiesPath = config.esm ? "src/entities/index.ts" : "src/entities";
+  const entitiesPath = getEntitiesImportPath(config);
   const enumNames = Object.values(enums).map(({ name }) => name);
 
   const resolvers = Object.values(enums).map(({ name, extraPrimitives }) => {

@@ -1,6 +1,7 @@
 import { camelCase } from "change-case";
 import { Config, DbMetadata } from "joist-codegen";
 import { CodegenFile, code, imp } from "ts-poet";
+import { getEntitiesImportPath } from "./utils";
 
 const saveEntity = imp("saveEntity@src/resolvers/utils.ts");
 const mutationResolvers = imp("t:MutationResolvers@src/generated/graphql-types.ts");
@@ -17,7 +18,7 @@ const makeRunInputMutation = imp("makeRunInputMutation@src/resolvers/testUtils.t
  * [1]: https://github.com/homebound-team/graphql-typescript-resolver-scaffolding
  */
 export function generateSaveResolvers(config: Config, db: DbMetadata): CodegenFile[] {
-  const entitiesPath = config.esm ? "src/entities/index.ts" : "src/entities";
+  const entitiesPath = getEntitiesImportPath(config);
   return db.entities.flatMap((e) => {
     const { name } = e;
     const camelName = camelCase(name);

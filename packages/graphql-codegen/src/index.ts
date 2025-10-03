@@ -7,7 +7,7 @@ import { generateGraphqlSchemaFiles } from "./generateGraphqlSchemaFiles";
 import { generateObjectResolvers } from "./generateObjectResolvers";
 import { generateSaveResolvers } from "./generateSaveResolvers";
 import { loadHistory, writeHistory } from "./history";
-import { Fs, newFsImpl } from "./utils";
+import { Fs, getImportExtension, newFsImpl } from "./utils";
 
 export async function run(config: Config, dbMeta: DbMetadata): Promise<CodegenFile[]> {
   const fs = newFsImpl("./schema");
@@ -38,7 +38,7 @@ async function writeOnce(config: Config, fs: Fs, files: CodegenFile[]) {
   // We sneak a `files` entry into the history map, which is usually `type -> fields[]`
   const history = await loadHistory(fs);
   const filesHistory = (history["files"] = history["files"] || []);
-  const esmExt = config.esm ? (config.allowImportingTsExtensions ? "ts" : "js") : null;
+  const esmExt = getImportExtension(config);
   await Promise.all(
     files.map(async (file) => {
       if (!filesHistory.includes(file.name)) {

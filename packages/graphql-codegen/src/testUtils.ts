@@ -11,7 +11,7 @@ import {
 import { keyBy } from "joist-utils";
 import { plural } from "pluralize";
 import { CodegenFile, imp } from "ts-poet";
-import { Fs } from "./utils";
+import { Fs, getImportExtension } from "./utils";
 
 export function newFs(files: Record<string, string>): Fs {
   return {
@@ -153,7 +153,7 @@ export function newManyToOneField(
  * This reproduces the same logic used in production when saving files.
  */
 export function renderCodegenFile(file: CodegenFile, config: Config): string {
-  const esmExt = config.esm ? (config.allowImportingTsExtensions ? "ts" : "js") : null;
+  const esmExt = getImportExtension(config);
   if (typeof file.contents === "string") {
     return file.contents;
   }

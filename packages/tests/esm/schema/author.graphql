@@ -2,6 +2,11 @@ extend type Mutation {
   saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
 }
 
+extend type Query {
+  authors: [Author!]!
+  author(id: ID!): Author
+}
+
 type Author {
   id: ID!
   firstName: String!

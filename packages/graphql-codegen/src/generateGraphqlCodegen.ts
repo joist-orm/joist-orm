@@ -1,8 +1,8 @@
-import { EntityDbMetadata, EnumMetadata } from "joist-codegen";
+import { Config, EntityDbMetadata, EnumMetadata } from "joist-codegen";
 import { CodegenFile, code } from "ts-poet";
 
-/** Generates a `graphql-codegen-joist.js` with the auto-generated mapped type/enum value settings. */
-export function generateGraphqlCodegen(entities: EntityDbMetadata[], enums: EnumMetadata): CodegenFile {
+/** Generates a `graphql-codegen-joist.js` (or .cjs for ESM) with the auto-generated mapped type/enum value settings. */
+export function generateGraphqlCodegen(config: Config, entities: EntityDbMetadata[], enums: EnumMetadata): CodegenFile {
   const enumNames = Object.values(enums).map(({ name }) => name);
 
   // Combine the entity mapped types and enum detail mapped types
@@ -25,7 +25,9 @@ export function generateGraphqlCodegen(entities: EntityDbMetadata[], enums: Enum
     module.exports = { mappers, enumValues };
   `;
 
-  return { name: "../../graphql-codegen-joist.js", overwrite: true, contents };
+  // Use .cjs for ESM projects since this is a CommonJS module
+  const ext = config.esm ? "cjs" : "js";
+  return { name: `../../graphql-codegen-joist.${ext}`, overwrite: true, contents };
 }
 
 function sortObject<T extends object>(obj: T): T {

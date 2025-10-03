@@ -29,7 +29,7 @@ export async function run(config: Config, dbMeta: DbMetadata): Promise<CodegenFi
   return [
     await generateEnumsGraphql(enums),
     generateEnumDetailResolvers(config, enums),
-    generateGraphqlCodegen(entities, enums),
+    generateGraphqlCodegen(config, entities, enums),
   ];
 }
 

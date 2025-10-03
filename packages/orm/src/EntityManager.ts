@@ -1998,6 +1998,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   filterEntities<T extends Entity>(cstr: EntityConstructor<T>, where: Partial<OptsOf<T>>): T[] {
     const meta = getMetadata(cstr);
     const entities = (this.#entitiesByTag.get(meta.tagName) as T[]) ?? [];
+    // Don't bother filtering if there's no where clause (particularly b/c IndexManager.findMatching
+    // really expects there to be at least 1 condition)
+    if (Object.entries(where).length === 0) {
+      return entities;
+    }
     if (this.#indexManager.shouldIndexType(entities.length)) {
       this.#indexManager.enableIndexingForType(meta, entities);
       return (

@@ -6,6 +6,7 @@
   "entitiesDirectory": "./src/entities",
   "esm": true,
   "ignoredTables": ["pgmigrations"],
+  "temporal": true,
   "timestampColumns": {
     "createdAt": { "names": ["created_at", "createdAt"], "required": false },
     "updatedAt": { "names": ["updated_at", "updatedAt"], "required": false }

@@ -1,10 +1,11 @@
-import { configureMetadata, DateSerde, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PrimitiveSerde, setRuntimeConfig } from "joist-orm";
+import { configureMetadata, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PrimitiveSerde, setRuntimeConfig, ZonedDateTimeSerde } from "joist-orm";
+import { Temporal } from "temporal-polyfill";
 import type { Context } from "../../context.js";
 import { Author } from "../Author.js";
 import { Book } from "../Book.js";
 import { authorConfig, bookConfig, newAuthor, newBook } from "../entities.js";
 
-setRuntimeConfig({ temporal: false });
+setRuntimeConfig({ temporal: { "timeZone": "UTC" } });
 
 export class EntityManager extends EntityManager1<Context, Entity, unknown> {}
 
@@ -26,8 +27,8 @@ export const authorMeta: EntityMetadata<Author> = {
     "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("firstName", "firstName", "character varying"), immutable: false },
     "lastName": { kind: "primitive", fieldName: "lastName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("lastName", "lastName", "character varying"), immutable: false },
     "delete": { kind: "primitive", fieldName: "delete", fieldIdName: undefined, derived: false, required: false, protected: false, type: "boolean", serde: new PrimitiveSerde("delete", "delete", "boolean"), immutable: false },
-    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "createdAt", "timestamp with time zone"), immutable: false },
-    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updatedAt", "timestamp with time zone"), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("createdAt", "createdAt", "timestamp with time zone"), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("updatedAt", "updatedAt", "timestamp with time zone"), immutable: false },
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", serde: undefined, immutable: false },
   },
   allFields: {},

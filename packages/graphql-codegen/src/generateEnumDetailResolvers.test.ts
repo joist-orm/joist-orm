@@ -7,12 +7,12 @@ describe("generateEnumDetailResolvers", () => {
     const config: Partial<Config> = { esm: false };
     const file = await generateEnumDetailResolvers(config as Config, {});
     expect(toStringWithConfig(file, config as Config)).toMatchInlineSnapshot(`
-      "import { Resolvers } from "src/generated/graphql-types";
+     "import type { Resolvers } from "src/generated/graphql-types";
 
-      type EnumDetails = never;
+     type EnumDetails = never;
 
-      export const enumResolvers: Pick<Resolvers, EnumDetails> = {};
-      "
+     export const enumResolvers: Pick<Resolvers, EnumDetails> = {};
+     "
     `);
   });
 
@@ -20,12 +20,12 @@ describe("generateEnumDetailResolvers", () => {
     const config: Partial<Config> = { esm: true, allowImportingTsExtensions: false };
     const file = await generateEnumDetailResolvers(config as Config, {});
     expect(toStringWithConfig(file, config as Config)).toMatchInlineSnapshot(`
-      "import { Resolvers } from "src/generated/graphql-types.js";
+     "import type { Resolvers } from "src/generated/graphql-types.js";
 
-      type EnumDetails = never;
+     type EnumDetails = never;
 
-      export const enumResolvers: Pick<Resolvers, EnumDetails> = {};
-      "
+     export const enumResolvers: Pick<Resolvers, EnumDetails> = {};
+     "
     `);
   });
 
@@ -33,12 +33,12 @@ describe("generateEnumDetailResolvers", () => {
     const config: Partial<Config> = { esm: true, allowImportingTsExtensions: true };
     const file = await generateEnumDetailResolvers(config as Config, {});
     expect(toStringWithConfig(file, config as Config)).toMatchInlineSnapshot(`
-      "import { Resolvers } from "src/generated/graphql-types.ts";
+     "import type { Resolvers } from "src/generated/graphql-types.ts";
 
-      type EnumDetails = never;
+     type EnumDetails = never;
 
-      export const enumResolvers: Pick<Resolvers, EnumDetails> = {};
-      "
+     export const enumResolvers: Pick<Resolvers, EnumDetails> = {};
+     "
     `);
   });
 });

@@ -2,7 +2,7 @@ import { camelCase, sentenceCase } from "change-case";
 import { DbMetadata } from "joist-codegen";
 import { CodegenFile, code, imp } from "ts-poet";
 
-const queryResolvers = imp("QueryResolvers@src/generated/graphql-types");
+const queryResolvers = imp("t:QueryResolvers@src/generated/graphql-types");
 const makeRunResolver = imp("makeRunInputMutation@src/resolvers/testUtils");
 
 /**

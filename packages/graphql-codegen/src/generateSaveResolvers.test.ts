@@ -10,7 +10,7 @@ describe("generateSaveResolvers", () => {
     expect(resolver.name).toBe("resolvers/author/saveAuthorMutation.ts");
     expect(toStringWithConfig(resolver, config as Config)).toMatchInlineSnapshot(`
      "import { Author } from "src/entities";
-     import { MutationResolvers } from "src/generated/graphql-types";
+     import type { MutationResolvers } from "src/generated/graphql-types";
      import { saveEntity } from "src/resolvers/utils";
 
      export const saveAuthor: Pick<MutationResolvers, "saveAuthor"> = {
@@ -29,7 +29,7 @@ describe("generateSaveResolvers", () => {
     expect(resolver.name).toBe("resolvers/author/saveAuthorMutation.ts");
     expect(toStringWithConfig(resolver, config as Config)).toMatchInlineSnapshot(`
      "import { Author } from "src/entities/index.js";
-     import { MutationResolvers } from "src/generated/graphql-types.js";
+     import type { MutationResolvers } from "src/generated/graphql-types.js";
      import { saveEntity } from "src/resolvers/utils.js";
 
      export const saveAuthor: Pick<MutationResolvers, "saveAuthor"> = {

@@ -21,7 +21,7 @@ export function generateEnumDetailResolvers(config: Config, enums: EnumMetadata)
     `;
   });
 
-  const Resolvers = imp("Resolvers@src/generated/graphql-types.ts");
+  const Resolvers = imp("t:Resolvers@src/generated/graphql-types.ts");
 
   const contents = code`
     type EnumDetails = ${enumNames.length === 0 ? "never" : enumNames.map((n) => `"${n}Detail"`).join(" | ")};

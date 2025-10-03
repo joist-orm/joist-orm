@@ -3,7 +3,7 @@ import { Config, DbMetadata } from "joist-codegen";
 import { CodegenFile, code, imp } from "ts-poet";
 
 const saveEntity = imp("saveEntity@src/resolvers/utils.ts");
-const mutationResolvers = imp("MutationResolvers@src/generated/graphql-types.ts");
+const mutationResolvers = imp("t:MutationResolvers@src/generated/graphql-types.ts");
 const makeRunInputMutation = imp("makeRunInputMutation@src/resolvers/testUtils.ts");
 
 /**

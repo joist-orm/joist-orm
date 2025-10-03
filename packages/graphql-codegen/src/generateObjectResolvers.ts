@@ -21,7 +21,7 @@ export function generateObjectResolvers(config: Config, entities: EntityDbMetada
   const resolvers = entities.map((e) => {
     const camelName = camelCase(e.name);
     const type = imp(`${e.name}@${entitiesPath}`);
-    const resolverType = imp(`${e.name}Resolvers@src/generated/graphql-types.ts`);
+    const resolverType = imp(`t:${e.name}Resolvers@src/generated/graphql-types.ts`);
     const contents = code`
       export const ${camelName}Resolvers: ${resolverType} = {
         ...${entityResolver}(${type}),

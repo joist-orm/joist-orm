@@ -1,4 +1,4 @@
-import { Resolvers } from "src/generated/graphql-types.js";
+import type { Resolvers } from "src/generated/graphql-types.js";
 
 type EnumDetails = never;
 

@@ -11,7 +11,7 @@ describe("generateQueryResolvers", () => {
     // We now have a graphql file
     expect(resolver.name).toBe("resolvers/author/authorQuery.ts");
     expect(resolver.contents.toString()).toMatchInlineSnapshot(`
-     "import { QueryResolvers } from "src/generated/graphql-types";
+     "import type { QueryResolvers } from "src/generated/graphql-types";
 
      export const author: Pick<QueryResolvers, "author"> = {
        async author(_, args, ctx) {

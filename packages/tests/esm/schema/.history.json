@@ -1,8 +1,8 @@
 {
-  "Author": ["books", "createdAt", "delete", "firstName", "id", "lastName", "updatedAt"],
+  "Author": ["books", "createdAt", "delete", "favoriteColors", "firstName", "id", "lastName", "updatedAt"],
   "Book": ["author", "id", "title"],
   "Mutation": ["saveAuthor", "saveBook"],
-  "SaveAuthorInput": ["delete", "firstName", "id", "lastName"],
+  "SaveAuthorInput": ["delete", "favoriteColors", "firstName", "id", "lastName"],
   "SaveAuthorResult": ["author"],
   "SaveBookInput": ["authorId", "id", "title"],
   "SaveBookResult": ["book"]

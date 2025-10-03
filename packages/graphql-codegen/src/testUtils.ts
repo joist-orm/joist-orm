@@ -152,7 +152,7 @@ export function newManyToOneField(
  * Mimics the contentToString flow from packages/codegen/src/index.ts to test import extension handling.
  * This reproduces the same logic used in production when saving files.
  */
-export function toStringWithConfig(file: CodegenFile, config: Config): string {
+export function renderCodegenFile(file: CodegenFile, config: Config): string {
   const esmExt = config.esm ? (config.allowImportingTsExtensions ? "ts" : "js") : null;
   if (typeof file.contents === "string") {
     return file.contents;

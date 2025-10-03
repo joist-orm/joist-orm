@@ -1,6 +1,6 @@
 import { Config, DbMetadata, EntityDbMetadata } from "joist-codegen";
 import { generateSaveResolvers } from "./generateSaveResolvers";
-import { newDbMeta, newEntityMetadata, toStringWithConfig } from "./testUtils";
+import { newDbMeta, newEntityMetadata, renderCodegenFile } from "./testUtils";
 
 describe("generateSaveResolvers", () => {
   it("generates file with no extensions for non-ESM", async () => {
@@ -8,7 +8,7 @@ describe("generateSaveResolvers", () => {
     const entities: EntityDbMetadata[] = [newEntityMetadata("Author")];
     const [resolver] = await generate(config as Config, entities);
     expect(resolver.name).toBe("resolvers/author/saveAuthorMutation.ts");
-    expect(toStringWithConfig(resolver, config as Config)).toMatchInlineSnapshot(`
+    expect(renderCodegenFile(resolver, config as Config)).toMatchInlineSnapshot(`
      "import { Author } from "src/entities";
      import type { MutationResolvers } from "src/generated/graphql-types";
      import { saveEntity } from "src/resolvers/utils";
@@ -27,7 +27,7 @@ describe("generateSaveResolvers", () => {
     const entities: EntityDbMetadata[] = [newEntityMetadata("Author")];
     const [resolver] = await generate(config as Config, entities);
     expect(resolver.name).toBe("resolvers/author/saveAuthorMutation.ts");
-    expect(toStringWithConfig(resolver, config as Config)).toMatchInlineSnapshot(`
+    expect(renderCodegenFile(resolver, config as Config)).toMatchInlineSnapshot(`
      "import { Author } from "src/entities/index.js";
      import type { MutationResolvers } from "src/generated/graphql-types.js";
      import { saveEntity } from "src/resolvers/utils.js";

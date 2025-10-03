@@ -11,7 +11,7 @@ export default {
   generates: {
     "src/generated/graphql-types.ts": {
       config: {
-        contextType: "src/context#Context",
+        contextType: "src/context.js#Context",
         noSchemaStitching: true,
         avoidOptionals: true,
         scalars: {

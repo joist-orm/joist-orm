@@ -7,11 +7,11 @@ export function generateGraphqlCodegen(config: Config, entities: EntityDbMetadat
   const enumNames = Object.values(enums).map(({ name }) => name);
 
   // Combine the entity mapped types and enum detail mapped types
-  const entitiesImportPath = getEntitiesImportPath(config);
+  const entitiesMapperImportPath = getEntitiesImportPath(config).replace(/\.ts$/, ""); // Keep compatibility with the expected mapper format (no file extension)
   const mappedTypes = sortObject(
     Object.fromEntries([
-      ...entities.map(({ entity }) => [entity.name, `${entitiesImportPath}#${entity.name}`]),
-      ...enumNames.map((name) => [`${name}Detail`, `${entitiesImportPath}#${name}`]),
+      ...entities.map(({ entity }) => [entity.name, `${entitiesMapperImportPath}#${entity.name}`]),
+      ...enumNames.map((name) => [`${name}Detail`, `${entitiesMapperImportPath}#${name}`]),
     ]),
   );
 
@@ -22,7 +22,7 @@ export function generateGraphqlCodegen(config: Config, entities: EntityDbMetadat
         };
 
         export const enumValues = {
-          ${enumNames.map((name) => `${name}: "${entitiesImportPath}#${name}",`)}
+          ${enumNames.map((name) => `${name}: "${entitiesMapperImportPath}#${name}",`)}
         };
       `
     : code`
@@ -31,7 +31,7 @@ export function generateGraphqlCodegen(config: Config, entities: EntityDbMetadat
         };
 
         const enumValues = {
-          ${enumNames.map((name) => `${name}: "${entitiesImportPath}#${name}",`)}
+          ${enumNames.map((name) => `${name}: "${entitiesMapperImportPath}#${name}",`)}
         };
 
         module.exports = { mappers, enumValues };

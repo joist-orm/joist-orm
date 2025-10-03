@@ -1,6 +1,6 @@
-import { newAuthor } from "src/entities";
-import { authorResolvers } from "src/resolvers/author/authorResolvers";
-import { makeRunObjectField, makeRunObjectFields } from "src/resolvers/testUtils";
+import { newAuthor } from "src/entities/index.js";
+import { authorResolvers } from "src/resolvers/author/authorResolvers.js";
+import { makeRunObjectField, makeRunObjectFields } from "src/resolvers/testUtils.js";
 
 describe("authorResolvers", () => {
   it.withCtx("can return", async (ctx) => {

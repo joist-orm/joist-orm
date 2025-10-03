@@ -1,6 +1,6 @@
-import { newBook } from "src/entities";
-import { bookResolvers } from "src/resolvers/book/bookResolvers";
-import { makeRunObjectField, makeRunObjectFields } from "src/resolvers/testUtils";
+import { newBook } from "src/entities/index.js";
+import { bookResolvers } from "src/resolvers/book/bookResolvers.js";
+import { makeRunObjectField, makeRunObjectFields } from "src/resolvers/testUtils.js";
 
 describe("bookResolvers", () => {
   it.withCtx("can return", async (ctx) => {

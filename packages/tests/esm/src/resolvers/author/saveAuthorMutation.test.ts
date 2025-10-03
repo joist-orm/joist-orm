@@ -1,5 +1,5 @@
-import { saveAuthor } from "src/resolvers/author/saveAuthorMutation";
-import { makeRunInputMutation } from "src/resolvers/testUtils";
+import { saveAuthor } from "src/resolvers/author/saveAuthorMutation.js";
+import { makeRunInputMutation } from "src/resolvers/testUtils.js";
 
 describe("saveAuthor", () => {
   it.withCtx("can create", async (ctx) => {

@@ -1,5 +1,5 @@
-import { saveBook } from "src/resolvers/book/saveBookMutation";
-import { makeRunInputMutation } from "src/resolvers/testUtils";
+import { saveBook } from "src/resolvers/book/saveBookMutation.js";
+import { makeRunInputMutation } from "src/resolvers/testUtils.js";
 
 describe("saveBook", () => {
   it.withCtx("can create", async (ctx) => {

@@ -4,7 +4,7 @@
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "strict": true,
-    "types": ["node"],
+    "types": ["node", "jest"],
     "isolatedModules": true,
     "esModuleInterop": true,
     "skipLibCheck": true,

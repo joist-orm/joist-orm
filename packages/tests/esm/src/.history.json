@@ -1,0 +1,12 @@
+{
+  "files": [
+    "resolvers/author/authorResolvers.test.ts",
+    "resolvers/author/authorResolvers.ts",
+    "resolvers/author/saveAuthorMutation.test.ts",
+    "resolvers/author/saveAuthorMutation.ts",
+    "resolvers/book/bookResolvers.test.ts",
+    "resolvers/book/bookResolvers.ts",
+    "resolvers/book/saveBookMutation.test.ts",
+    "resolvers/book/saveBookMutation.ts"
+  ]
+}

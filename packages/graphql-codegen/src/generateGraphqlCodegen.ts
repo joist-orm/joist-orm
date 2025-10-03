@@ -1,7 +1,7 @@
 import { Config, EntityDbMetadata, EnumMetadata } from "joist-codegen";
 import { CodegenFile, code } from "ts-poet";
 
-/** Generates a `graphql-codegen-joist.js` (or .cjs for ESM) with the auto-generated mapped type/enum value settings. */
+/** Generates a `graphql-codegen-joist.js` (or .mjs for ESM) with the auto-generated mapped type/enum value settings. */
 export function generateGraphqlCodegen(config: Config, entities: EntityDbMetadata[], enums: EnumMetadata): CodegenFile {
   const enumNames = Object.values(enums).map(({ name }) => name);
 
@@ -13,20 +13,29 @@ export function generateGraphqlCodegen(config: Config, entities: EntityDbMetadat
     ]),
   );
 
-  const contents = code`
-    const mappers = {
-      ${Object.entries(mappedTypes).map(([key, value]) => `${key}: "${value}",`)}
-    };
+  const contents = config.esm
+    ? code`
+        export const mappers = {
+          ${Object.entries(mappedTypes).map(([key, value]) => `${key}: "${value}",`)}
+        };
 
-    const enumValues = {
-      ${enumNames.map((name) => `${name}: "src/entities#${name}",`)}
-    };
+        export const enumValues = {
+          ${enumNames.map((name) => `${name}: "src/entities#${name}",`)}
+        };
+      `
+    : code`
+        const mappers = {
+          ${Object.entries(mappedTypes).map(([key, value]) => `${key}: "${value}",`)}
+        };
 
-    module.exports = { mappers, enumValues };
-  `;
+        const enumValues = {
+          ${enumNames.map((name) => `${name}: "src/entities#${name}",`)}
+        };
 
-  // Use .cjs for ESM projects since this is a CommonJS module
-  const ext = config.esm ? "cjs" : "js";
+        module.exports = { mappers, enumValues };
+      `;
+
+  const ext = config.esm ? "mjs" : "js";
   return { name: `../../graphql-codegen-joist.${ext}`, overwrite: true, contents };
 }
 

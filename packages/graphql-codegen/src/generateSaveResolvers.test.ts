@@ -4,11 +4,11 @@ import { newDbMeta, newEntityMetadata, renderCodegenFile } from "./testUtils";
 
 describe("generateSaveResolvers", () => {
   it("generates file with no extensions for non-ESM", async () => {
-    const config: Partial<Config> = { esm: false };
+    const config = { esm: false } as Config;
     const entities: EntityDbMetadata[] = [newEntityMetadata("Author")];
-    const [resolver] = await generate(config as Config, entities);
+    const [resolver] = await generate(config, entities);
     expect(resolver.name).toBe("resolvers/author/saveAuthorMutation.ts");
-    expect(renderCodegenFile(resolver, config as Config)).toMatchInlineSnapshot(`
+    expect(renderCodegenFile(resolver, config)).toMatchInlineSnapshot(`
      "import { Author } from "src/entities";
      import type { MutationResolvers } from "src/generated/graphql-types";
      import { saveEntity } from "src/resolvers/utils";
@@ -23,11 +23,11 @@ describe("generateSaveResolvers", () => {
   });
 
   it("generates file with .js extensions for ESM", async () => {
-    const config: Partial<Config> = { esm: true, allowImportingTsExtensions: false };
+    const config = { esm: true, allowImportingTsExtensions: false } as Config;
     const entities: EntityDbMetadata[] = [newEntityMetadata("Author")];
-    const [resolver] = await generate(config as Config, entities);
+    const [resolver] = await generate(config, entities);
     expect(resolver.name).toBe("resolvers/author/saveAuthorMutation.ts");
-    expect(renderCodegenFile(resolver, config as Config)).toMatchInlineSnapshot(`
+    expect(renderCodegenFile(resolver, config)).toMatchInlineSnapshot(`
      "import { Author } from "src/entities/index.js";
      import type { MutationResolvers } from "src/generated/graphql-types.js";
      import { saveEntity } from "src/resolvers/utils.js";

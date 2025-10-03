@@ -38,7 +38,7 @@ async function writeOnce(config: Config, fs: Fs, files: CodegenFile[]) {
   // We sneak a `files` entry into the history map, which is usually `type -> fields[]`
   const history = await loadHistory(fs);
   const filesHistory = (history["files"] = history["files"] || []);
-  const esmExt = config.esm ? (config.allowImportingTsExtensions ? "ts" : "js") : "";
+  const esmExt = config.esm ? (config.allowImportingTsExtensions ? "ts" : "js") : null;
   await Promise.all(
     files.map(async (file) => {
       if (!filesHistory.includes(file.name)) {
@@ -53,12 +53,12 @@ async function writeOnce(config: Config, fs: Fs, files: CodegenFile[]) {
   await writeHistory(fs, history);
 }
 
-function contentToString(file: CodegenFile, esmExt: string): string {
+function contentToString(file: CodegenFile, esmExt: "ts" | "js" | null): string {
   if (typeof file.contents === "string") {
     return file.contents;
   }
   return file.contents.toString({
     path: file.name,
-    importExtensions: (esmExt as "ts" | "js") || false,
+    importExtensions: esmExt || false,
   });
 }

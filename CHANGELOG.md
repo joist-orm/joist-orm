@@ -1,3 +1,10 @@
+## [1.274.2](https://github.com/joist-orm/joist-orm/compare/v1.274.1...v1.274.2) (2025-10-03)
+
+
+### Bug Fixes
+
+* Fix findWithNewOrChanged on empty where clauses. ([#1624](https://github.com/joist-orm/joist-orm/issues/1624)) ([1b5f017](https://github.com/joist-orm/joist-orm/commit/1b5f0175bf0f5e39f772496e071fef918799a352))
+
 ## [1.274.1](https://github.com/joist-orm/joist-orm/compare/v1.274.0...v1.274.1) (2025-10-01)
 
 

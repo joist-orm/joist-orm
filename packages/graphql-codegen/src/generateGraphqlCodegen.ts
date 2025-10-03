@@ -1,15 +1,17 @@
 import { Config, EntityDbMetadata, EnumMetadata } from "joist-codegen";
 import { CodegenFile, code } from "ts-poet";
+import { getEntitiesImportPath } from "./utils";
 
 /** Generates a `graphql-codegen-joist.js` (or .mjs for ESM) with the auto-generated mapped type/enum value settings. */
 export function generateGraphqlCodegen(config: Config, entities: EntityDbMetadata[], enums: EnumMetadata): CodegenFile {
   const enumNames = Object.values(enums).map(({ name }) => name);
 
   // Combine the entity mapped types and enum detail mapped types
+  const entitiesImportPath = getEntitiesImportPath(config);
   const mappedTypes = sortObject(
     Object.fromEntries([
-      ...entities.map(({ entity }) => [entity.name, `src/entities#${entity.name}`]),
-      ...enumNames.map((name) => [`${name}Detail`, `src/entities#${name}`]),
+      ...entities.map(({ entity }) => [entity.name, `${entitiesImportPath}#${entity.name}`]),
+      ...enumNames.map((name) => [`${name}Detail`, `${entitiesImportPath}#${name}`]),
     ]),
   );
 
@@ -20,7 +22,7 @@ export function generateGraphqlCodegen(config: Config, entities: EntityDbMetadat
         };
 
         export const enumValues = {
-          ${enumNames.map((name) => `${name}: "src/entities#${name}",`)}
+          ${enumNames.map((name) => `${name}: "${entitiesImportPath}#${name}",`)}
         };
       `
     : code`
@@ -29,7 +31,7 @@ export function generateGraphqlCodegen(config: Config, entities: EntityDbMetadat
         };
 
         const enumValues = {
-          ${enumNames.map((name) => `${name}: "src/entities#${name}",`)}
+          ${enumNames.map((name) => `${name}: "${entitiesImportPath}#${name}",`)}
         };
 
         module.exports = { mappers, enumValues };

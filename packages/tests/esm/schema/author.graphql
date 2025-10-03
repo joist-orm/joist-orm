@@ -1,7 +1,3 @@
-extend type Query {
-  authors: [Author!]!
-}
-
 extend type Mutation {
   saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
 }
@@ -13,16 +9,16 @@ type Author {
   delete: Boolean
   createdAt: DateTime!
   updatedAt: DateTime!
-  books: [Book!]!
   favoriteColors: [Color!]!
+  books: [Book!]!
 }
 
 input SaveAuthorInput {
   id: ID
   firstName: String
   lastName: String
-  favoriteColors: [Color!]
   delete: Boolean
+  favoriteColors: [Color!]
 }
 
 type SaveAuthorResult {

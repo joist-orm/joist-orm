@@ -1,4 +1,4 @@
-import { DbMetadata, EntityDbMetadata } from "joist-codegen";
+import { Config, DbMetadata, EntityDbMetadata } from "joist-codegen";
 import { generateSaveResolvers } from "./generateSaveResolvers";
 import { newDbMeta, newEntityMetadata } from "./testUtils";
 
@@ -12,8 +12,8 @@ describe("generateSaveResolvers", () => {
     expect(resolver.name).toBe("resolvers/author/saveAuthorMutation.ts");
     expect(resolver.contents.toString()).toMatchInlineSnapshot(`
      "import { Author } from "src/entities";
-     import { MutationResolvers } from "src/generated/graphql-types";
-     import { saveEntity } from "src/resolvers/utils";
+     import { MutationResolvers } from "src/generated/graphql-types.ts";
+     import { saveEntity } from "src/resolvers/utils.ts";
 
      export const saveAuthor: Pick<MutationResolvers, "saveAuthor"> = {
        async saveAuthor(_, args, ctx) {
@@ -26,5 +26,5 @@ describe("generateSaveResolvers", () => {
 });
 
 async function generate(opt: EntityDbMetadata[] | Partial<DbMetadata>) {
-  return generateSaveResolvers(newDbMeta(opt));
+  return generateSaveResolvers({} as Config, newDbMeta(opt));
 }

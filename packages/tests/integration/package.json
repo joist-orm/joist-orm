@@ -10,6 +10,9 @@
   },
   "main": "build/src/index.js",
   "types": "build/src/index.d.ts",
+  "imports": {
+    "#src/*": "./build/src/*"
+  },
   "scripts": {
     "migrate": "DECAMELIZE=false env-cmd tsx ../../migration-utils",
     "test": "yarn test-stock && yarn test-preloading",

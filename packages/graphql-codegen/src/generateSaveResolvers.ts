@@ -2,9 +2,9 @@ import { camelCase } from "change-case";
 import { DbMetadata } from "joist-codegen";
 import { CodegenFile, code, imp } from "ts-poet";
 
-const saveEntity = imp("saveEntity@src/resolvers/utils");
-const mutationResolvers = imp("MutationResolvers@src/generated/graphql-types");
-const makeRunInputMutation = imp("makeRunInputMutation@src/resolvers/testUtils");
+const saveEntity = imp("saveEntity@#src/resolvers/utils");
+const mutationResolvers = imp("MutationResolvers@#src/generated/graphql-types");
+const makeRunInputMutation = imp("makeRunInputMutation@#src/resolvers/testUtils");
 
 /**
  * Generates a save resolver.
@@ -20,9 +20,9 @@ export function generateSaveResolvers(db: DbMetadata): CodegenFile[] {
   return db.entities.flatMap((e) => {
     const { name } = e;
     const camelName = camelCase(name);
-    const type = imp(`${name}@src/entities`);
+    const type = imp(`${name}@#src/entities`);
     const fileName = `save${name}Mutation`;
-    const resolverConst = imp(`save${name}@src/resolvers/${camelName}/${fileName}`);
+    const resolverConst = imp(`save${name}@#src/resolvers/${camelName}/${fileName}`);
     return [
       {
         name: `resolvers/${camelName}/${fileName}.ts`,

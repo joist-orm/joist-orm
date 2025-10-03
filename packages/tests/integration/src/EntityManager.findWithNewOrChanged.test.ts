@@ -30,6 +30,16 @@ describe("EntityManager.findWithNewOrChanged", () => {
     expect(authors).toMatchEntity([{ firstName: "a1" }]);
   });
 
+  it("finds new entities with empty where and indexed", async () => {
+    // Create enough authors to enable indexing
+    for (let i = 1; i <= 1000; i++) await insertAuthor({ first_name: `a${i}` });
+    const em = newEntityManager();
+    // And we create one more
+    em.create(Author, { firstName: "a1" });
+    const authors = await em.findWithNewOrChanged(Author, {});
+    expect(authors.length).toBe(1001);
+  });
+
   it("finds changed entities", async () => {
     await insertAuthor({ first_name: "a2" });
     const em = newEntityManager();

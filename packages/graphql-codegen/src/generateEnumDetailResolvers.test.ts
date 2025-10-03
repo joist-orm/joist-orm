@@ -3,42 +3,45 @@ import { generateEnumDetailResolvers } from "./generateEnumDetailResolvers";
 import { renderCodegenFile } from "./testUtils";
 
 describe("generateEnumDetailResolvers", () => {
-  it("generates file with no extensions for non-ESM", async () => {
-    const config: Partial<Config> = { esm: false };
-    const file = await generateEnumDetailResolvers(config as Config, {});
-    expect(renderCodegenFile(file, config as Config)).toMatchInlineSnapshot(`
+  it.each([
+    {
+      desc: "no extensions for non-ESM",
+      config: { esm: false } as Config,
+      snapshot: `
      "import type { Resolvers } from "src/generated/graphql-types";
 
      type EnumDetails = never;
 
      export const enumResolvers: Pick<Resolvers, EnumDetails> = {};
      "
-    `);
-  });
-
-  it("generates file with .js extensions for ESM", async () => {
-    const config: Partial<Config> = { esm: true, allowImportingTsExtensions: false };
-    const file = await generateEnumDetailResolvers(config as Config, {});
-    expect(renderCodegenFile(file, config as Config)).toMatchInlineSnapshot(`
+    `,
+    },
+    {
+      desc: ".js extensions for ESM",
+      config: { esm: true, allowImportingTsExtensions: false } as Config,
+      snapshot: `
      "import type { Resolvers } from "src/generated/graphql-types.js";
 
      type EnumDetails = never;
 
      export const enumResolvers: Pick<Resolvers, EnumDetails> = {};
      "
-    `);
-  });
-
-  it("generates file with .ts extensions for ESM with allowImportingTsExtensions", async () => {
-    const config: Partial<Config> = { esm: true, allowImportingTsExtensions: true };
-    const file = await generateEnumDetailResolvers(config as Config, {});
-    expect(renderCodegenFile(file, config as Config)).toMatchInlineSnapshot(`
+    `,
+    },
+    {
+      desc: ".ts extensions for ESM with allowImportingTsExtensions",
+      config: { esm: true, allowImportingTsExtensions: true } as Config,
+      snapshot: `
      "import type { Resolvers } from "src/generated/graphql-types.ts";
 
      type EnumDetails = never;
 
      export const enumResolvers: Pick<Resolvers, EnumDetails> = {};
      "
-    `);
+    `,
+    },
+  ])("generates file with $desc", async ({ config, snapshot }) => {
+    const file = await generateEnumDetailResolvers(config, {});
+    expect(renderCodegenFile(file, config)).toMatchInlineSnapshot(snapshot);
   });
 });

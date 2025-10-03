@@ -1,11 +1,18 @@
-import { makeRunInputMutation } from "src/resolvers/testUtils";
+import { Context } from "src/context";
+import { SaveUserInput } from "src/generated/graphql-types";
 import { saveUser } from "src/resolvers/user/saveUserMutation";
+import { run } from "src/resolvers/testUtils";
 
 describe("saveUser", () => {
   it.withCtx("can create", async (ctx) => {
-    const result = await runSave(ctx, () => ({}));
+    const result = await runSaveUser(ctx, () => ({
+      name: "test user",
+      email: "test@test.com",
+    }));
     expect(result).toBeDefined();
   });
 });
 
-const runSave = makeRunInputMutation(saveUser);
+function runSaveUser(ctx: Context, inputFn: () => SaveUserInput) {
+  return run(ctx, (ctx) => saveUser.saveUser({}, { input: inputFn() }, ctx, undefined!));
+}

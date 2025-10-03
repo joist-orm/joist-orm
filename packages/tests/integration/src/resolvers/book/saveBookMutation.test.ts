@@ -1,13 +1,11 @@
 import { saveBook } from "src/resolvers/book/saveBookMutation";
 import { makeRunInputMutation } from "src/resolvers/testUtils";
-import "src/setupDbTests";
 
-describe.skip("saveBook", () => {
+describe("saveBook", () => {
   it.withCtx("can create", async (ctx) => {
-    const { em } = ctx;
-    const result = await runSaveBook(ctx, () => ({}));
-    // const b = await em.load(Book, result.Book);
+    const result = await runSave(ctx, () => ({}));
+    expect(result).toBeDefined();
   });
 });
 
-const runSaveBook = makeRunInputMutation(saveBook);
+const runSave = makeRunInputMutation(saveBook);

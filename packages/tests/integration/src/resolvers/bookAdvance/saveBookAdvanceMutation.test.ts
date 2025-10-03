@@ -1,13 +1,11 @@
 import { saveBookAdvance } from "src/resolvers/bookAdvance/saveBookAdvanceMutation";
 import { makeRunInputMutation } from "src/resolvers/testUtils";
-import "src/setupDbTests";
 
-describe.skip("saveBookAdvance", () => {
+describe("saveBookAdvance", () => {
   it.withCtx("can create", async (ctx) => {
-    const { em } = ctx;
-    const result = await runSaveBookAdvance(ctx, () => ({}));
-    // const ba = await em.load(BookAdvance, result.BookAdvance);
+    const result = await runSave(ctx, () => ({}));
+    expect(result).toBeDefined();
   });
 });
 
-const runSaveBookAdvance = makeRunInputMutation(saveBookAdvance);
+const runSave = makeRunInputMutation(saveBookAdvance);

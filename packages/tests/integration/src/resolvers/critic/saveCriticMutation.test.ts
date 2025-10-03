@@ -1,13 +1,11 @@
 import { saveCritic } from "src/resolvers/critic/saveCriticMutation";
 import { makeRunInputMutation } from "src/resolvers/testUtils";
-import "src/setupDbTests";
 
-describe.skip("saveCritic", () => {
+describe("saveCritic", () => {
   it.withCtx("can create", async (ctx) => {
-    const { em } = ctx;
-    const result = await runSaveCritic(ctx, () => ({}));
-    // const c = await em.load(Critic, result.critic);
+    const result = await runSave(ctx, () => ({}));
+    expect(result).toBeDefined();
   });
 });
 
-const runSaveCritic = makeRunInputMutation(saveCritic);
+const runSave = makeRunInputMutation(saveCritic);

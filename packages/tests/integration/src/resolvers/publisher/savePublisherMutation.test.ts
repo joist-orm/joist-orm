@@ -1,13 +1,11 @@
 import { savePublisher } from "src/resolvers/publisher/savePublisherMutation";
 import { makeRunInputMutation } from "src/resolvers/testUtils";
-import "src/setupDbTests";
 
-describe.skip("savePublisher", () => {
+describe("savePublisher", () => {
   it.withCtx("can create", async (ctx) => {
-    const { em } = ctx;
-    const result = await runSavePublisher(ctx, () => ({}));
-    // const p = await em.load(Publisher, result.Publisher);
+    const result = await runSave(ctx, () => ({}));
+    expect(result).toBeDefined();
   });
 });
 
-const runSavePublisher = makeRunInputMutation(savePublisher);
+const runSave = makeRunInputMutation(savePublisher);

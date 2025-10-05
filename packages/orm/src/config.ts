@@ -37,6 +37,7 @@ export const constraintNameToValidationError: Record<string, string> = {};
 type Settable<T extends Entity> = keyof SettableFields<FieldsOf<T>> & string;
 
 let booted = false;
+let afterMetadataLocked = false;
 
 /**
  * Called at the end of `configureMetadata` to indicate the boot process is complete.
@@ -47,6 +48,10 @@ let booted = false;
  */
 export function setBooted(): void {
   booted = true;
+}
+
+export function setAfterMetadataLocked(): void {
+  afterMetadataLocked = true;
 }
 
 /** The public API to configure an Entity's hooks & validation rules. */
@@ -135,6 +140,11 @@ export class ConfigApi<T extends Entity, C> {
   }
 
   afterMetadata(fn: AfterMetadataCallback<T>): void {
+    if (afterMetadataLocked) {
+      throw new Error(
+        `config.afterMetadata on ${getCallerName()} must only be called on boot, before calling \`configureMetadata\` and not from other \`afterMetadata\` hooks.`,
+      );
+    }
     this.__data.afterMetadataCallbacks.push(fn);
   }
 
@@ -304,9 +314,11 @@ export class ConfigApi<T extends Entity, C> {
       if (isRunningInNextJs()) {
         // Reset our bag of config data to collect only the new rules/hooks
         this.__data = new ConfigData();
-        booted = false;
+        resetBootFlag();
       } else {
-        throw new Error(`config.${op} call ${name} must only be called on boot, before calling \`configureMetadata\`.`);
+        throw new Error(
+          `config.${op} call on ${name} must only be called on boot, before calling \`configureMetadata\`.`,
+        );
       }
     }
   }
@@ -328,6 +340,7 @@ function isRunningInNextJs(): boolean {
  */
 export function resetBootFlag(): void {
   booted = false;
+  afterMetadataLocked = false;
   resetConstructorMap();
 }
 

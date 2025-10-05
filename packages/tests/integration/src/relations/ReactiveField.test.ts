@@ -284,6 +284,35 @@ describe("ReactiveField", () => {
     expect(a1.favoriteBook.get!.title).toBe("b2");
   });
 
+  it("can recalc RFs without assigned ids", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em, { firstName: "a1" });
+    await em.recalc(a1);
+  });
+
+  it("can flush RFs that use initially unloaded m2o", async () => {
+    await insertPublisher({ name: "p1" });
+    const em = newEntityManager();
+    // When we initialize publisher as just the key
+    const a = newAuthor(em, { firstName: "a1", publisher: "p:1" });
+    // Then we can still flush and the reactive field sees the loaded publisher
+    await em.flush();
+    expect(a.search.get).toBe("a:1 a1 p1");
+  });
+
+  it("can flush RFs that use deleted entities", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1");
+    const b = await em.load(Book, "b:1");
+    em.delete(a);
+    await em.recalc(b);
+    // await em.flush();
+    expect(a.isDeletedEntity).toBe(true);
+    expect(b.isDeletedEntity).toBe(true);
+  });
+
   it("can recalc getters with em.recalc", async () => {
     // Given an author
     const em = newEntityManager();

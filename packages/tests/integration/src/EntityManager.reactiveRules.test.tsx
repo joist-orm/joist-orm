@@ -582,6 +582,14 @@ describe("EntityManager.reactiveRules", () => {
     });
     expect(brRfs[i++]).toEqual({
       kind: "populate",
+      cstr: "Book",
+      name: "search",
+      fields: ["rating"],
+      path: ["book"],
+      runOnce: false,
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "populate",
       cstr: "BookReview",
       name: "isPublic",
       fields: [],

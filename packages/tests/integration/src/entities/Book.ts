@@ -21,15 +21,20 @@ export class Book extends BookCodegen {
   );
 
   /** For testing accessing `book.author.get` when it's undefined. */
-  readonly search: ReactiveField<Book, string> = hasReactiveField("search", { author: "firstName", title: {} }, (b) => {
-    // Ensure that NPEs that aren't from validation errors aren't suppressed
-    if (b.transientFields.throwNpeInSearch) {
-      (undefined as any).willFail();
-    }
-    // This will NPE if author is undefined (which is what we're testing)
-    const { firstName } = b.author.get;
-    return [firstName, b.title].join(" ");
-  });
+  readonly search: ReactiveField<Book, string> = hasReactiveField(
+    "search",
+    { author: "firstName", title: {}, reviews: "rating" },
+    (b) => {
+      // Ensure that NPEs that aren't from validation errors aren't suppressed
+      if (b.transientFields.throwNpeInSearch) {
+        (undefined as any).willFail();
+      }
+      // This will NPE if author is undefined (which is what we're testing)
+      const { firstName } = b.author.get;
+      const maxRating = Math.max(...b.reviews.get.map((br) => br.rating));
+      return [firstName, b.title, maxRating ?? ""].join(" ");
+    },
+  );
 }
 
 config.addRule((book) => {

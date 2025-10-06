@@ -2012,7 +2012,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // Don't bother filtering if there's no where clause (particularly b/c IndexManager.findMatching
     // really expects there to be at least 1 condition)
     if (Object.entries(where).length === 0) {
-      return entities;
+      return entities.filter((e) => e instanceof cstr && !e.isDeletedEntity);
     }
     if (this.#indexManager.shouldIndexType(entities.length)) {
       this.#indexManager.enableIndexingForType(meta, entities);

@@ -35,9 +35,14 @@ describe("EntityManager.findWithNewOrChanged", () => {
     for (let i = 1; i <= 1000; i++) await insertAuthor({ first_name: `a${i}` });
     const em = newEntityManager();
     // And we create one more
-    em.create(Author, { firstName: "a1" });
-    const authors = await em.findWithNewOrChanged(Author, {});
+    const a = em.create(Author, { firstName: "a1" });
+    let authors = await em.findWithNewOrChanged(Author, {});
     expect(authors.length).toBe(1001);
+    // But if we delete it
+    em.delete(a);
+    // Then we don't see it
+    authors = await em.findWithNewOrChanged(Author, {});
+    expect(authors.length).toBe(1000);
   });
 
   it("finds changed entities", async () => {

@@ -101,10 +101,10 @@ export class Author extends AuthorCodegen {
 
   readonly search: ReactiveField<Author, string> = hasReactiveField(
     "search",
-    { books: "title", firstName: {} },
+    { books: "title", firstName: {}, publisher: "name" },
     (a) => {
-      const { books } = withLoaded(a);
-      return [a.id, a.firstName, ...books.map((b) => b.title)].filter(isDefined).join(" ");
+      const { books, publisher } = withLoaded(a);
+      return [a.id, a.firstName, publisher?.name, ...books.map((b) => b.title)].filter(isDefined).join(" ");
     },
   );
 

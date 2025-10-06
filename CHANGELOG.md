@@ -1,3 +1,10 @@
+## [1.274.5](https://github.com/joist-orm/joist-orm/compare/v1.274.4...v1.274.5) (2025-10-06)
+
+
+### Bug Fixes
+
+* Add missing subtype/deleted filter. ([#1629](https://github.com/joist-orm/joist-orm/issues/1629)) ([c93dcd3](https://github.com/joist-orm/joist-orm/commit/c93dcd3ca039340b4c0eeba272664012e7e1fdc7))
+
 ## [1.274.4](https://github.com/joist-orm/joist-orm/compare/v1.274.3...v1.274.4) (2025-10-06)
 
 

@@ -1,3 +1,10 @@
+## [1.274.4](https://github.com/joist-orm/joist-orm/compare/v1.274.3...v1.274.4) (2025-10-06)
+
+
+### Bug Fixes
+
+* Fix recalc RFs with new/deleted entities. ([#1626](https://github.com/joist-orm/joist-orm/issues/1626)) ([efb6a60](https://github.com/joist-orm/joist-orm/commit/efb6a600f382e95490d93be9b798f7e0a06e541c))
+
 ## [1.274.3](https://github.com/joist-orm/joist-orm/compare/v1.274.2...v1.274.3) (2025-10-06)
 
 

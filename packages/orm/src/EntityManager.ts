@@ -1487,10 +1487,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         maybeBumpUpdatedAt(createTodos([...alreadyRanHooks]), now);
       }
 
-      let forcePendingHooksLoop = false;
       // Run hooks in a series of loops until things "settle down"
-      while (pendingHooks.size > 0 || forcePendingHooksLoop) {
-        forcePendingHooksLoop = false;
+      while (pendingHooks.size > 0) {
         await this.#fl.allowWrites(async () => {
           // Run our hooks
           let todos = createTodos([...pendingHooks]);
@@ -1517,17 +1515,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           // deletes have been processed
           if (this.#rm.hasPendingTypeErrors) {
             await this.#rm.recalcPendingTypeErrors();
-            // If we successfully re-ran and have dirtied something new, then we need to run the entire flush loop
-            // again to rerun reactables and any hooks that they might trigger
-            if (!this.#rm.hasSuppressedTypeErrors && this.#rm.needsRecalc("reactables")) {
-              forcePendingHooksLoop = true;
-            }
+            // We need to re-run reactables again if we dirtied something while retrying type errors
+            if (this.#rm.needsRecalc("reactables")) await this.#rm.recalcPendingReactables("reactables");
           }
 
           for (const e of pendingHooks) hooksInvoked.add(e);
           pendingHooks.clear();
           // See if the hooks mutated any new, not-yet-hooksInvoked entities
           findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
+          // The final run of recalcPendingReactables could have left us with pending type errors and no entities in
+          // pendingHooks.  If so, we need to re-run recalcPendingTypeErrors to get those errors to transition into
+          // suppressed errors so that we will fail after simpleValidation.
+          if (pendingHooks.size === 0 && this.#rm.hasPendingTypeErrors) await this.#rm.recalcPendingTypeErrors();
         });
       }
       // We might have invoked hooks that immediately deleted a new entity (weird but allowed);

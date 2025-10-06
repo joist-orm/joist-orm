@@ -209,8 +209,15 @@ export class ReactionsManager {
         const results = await Promise.allSettled(actions.map((a) => this.#doAction(a)));
         const endTime = this.logger?.now() ?? 0;
         this.logger?.logLoadingTime(this.em, endTime - startTime);
-        results.forEach((result) => {
-          if (result.status === "rejected") failures.push(result.reason);
+        results.forEach((result, i) => {
+          if (result.status === "rejected") {
+            if (result.reason instanceof TypeError) {
+              const action = actions[i];
+              this.actionsPendingTypeErrors.set(action.key, action);
+            } else {
+              failures.push(result.reason);
+            }
+          }
         });
       }
 

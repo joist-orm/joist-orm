@@ -1,7 +1,7 @@
 import { Entity } from "./Entity";
 import { MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
 import { EntityMetadata, ManyToOneField, OneToManyField, getMetadata } from "./EntityMetadata";
-import { setBooted } from "./config";
+import { setAfterMetadataLocked, setBooted } from "./config";
 import { AsyncDefault } from "./defaults";
 import { getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
@@ -33,11 +33,13 @@ export function configureMetadata(metas: EntityMetadata[]): void {
     setImmutableFields(metas);
     populatePolyComponentFields(metas);
     fireAfterMetadatas(metas);
+    // Callers can make `config` calls during `afterMetadata` callbacks, but after that
+    // we don't allow any more config changes.
+    setBooted();
     // Do these after `fireAfterMetadatas`, in case afterMetadata callbacks added more defaults/rules
     copyAsyncDefaults(metas);
     reverseIndexReactivity(metas);
     copyRunBeforeBooksToBaseType(metas);
-    setBooted();
   } catch (e) {
     previousBootError = e;
     throw e;
@@ -45,6 +47,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
 }
 
 function fireAfterMetadatas(metas: EntityMetadata[]): void {
+  setAfterMetadataLocked();
   for (const meta of metas) {
     for (const fn of meta.config.__data.afterMetadataCallbacks) fn(meta);
   }

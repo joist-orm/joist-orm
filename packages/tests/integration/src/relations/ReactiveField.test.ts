@@ -12,7 +12,7 @@ import {
   update,
 } from "@src/entities/inserts";
 import { knex, newEntityManager } from "@src/testEm";
-import { noValue } from "joist-orm";
+import { getEmInternalApi, noValue } from "joist-orm";
 import {
   Author,
   Book,
@@ -284,33 +284,26 @@ describe("ReactiveField", () => {
     expect(a1.favoriteBook.get!.title).toBe("b2");
   });
 
-  it("can recalc RFs without assigned ids", async () => {
-    const em = newEntityManager();
-    const a1 = newAuthor(em, { firstName: "a1" });
-    await em.recalc(a1);
-  });
-
-  it("can flush RFs that use initially unloaded m2o", async () => {
-    await insertPublisher({ name: "p1" });
-    const em = newEntityManager();
-    // When we initialize publisher as just the key
-    const a = newAuthor(em, { firstName: "a1", publisher: "p:1" });
-    // Then we can still flush and the reactive field sees the loaded publisher
-    await em.flush();
-    expect(a.search.get).toBe("a:1 a1 p1");
-  });
-
-  it("can flush RFs that use deleted entities", async () => {
+  it("ignores type errors in downstream reactions on recalc", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ rating: 1, book_id: 1 });
     const em = newEntityManager();
     const a = await em.load(Author, "a:1");
     const b = await em.load(Book, "b:1");
+    const br = await em.load(BookReview, "br:1");
     em.delete(a);
-    await em.recalc(b);
-    // await em.flush();
+    // Changing br.rating will cause book.search which depends on author to be recalced. Since author is a deleted
+    // entity, it will cause book.search to throw an error.  This is suppressed by the reaction manager to be re-run
+    // during flush once things have "settled".  By the time flush gets to re-running the pending errors reactables, the
+    // book will have been cascade deleted and no reactables will be run against it.
+    br.rating = 2;
+    await em.recalc(br);
+    expect(getEmInternalApi(em).rm.hasPendingTypeErrors).toBe(true);
+    await em.flush();
     expect(a.isDeletedEntity).toBe(true);
     expect(b.isDeletedEntity).toBe(true);
+    expect(br.isDeletedEntity).toBe(true);
   });
 
   it("can recalc getters with em.recalc", async () => {

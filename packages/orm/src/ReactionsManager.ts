@@ -17,6 +17,7 @@ export type ReactiveAction = { key: string; r: Reactable; entity: Entity };
 export class ReactionsManager {
   /** Stores all source `Reactables`s that have been marked for later traversal. */
   private pendingReactables: Map<Reactable, { todo: Set<Entity>; done: Set<Entity> }> = new Map();
+  private actionsPendingTypeErrors: Map<string, ReactiveAction> = new Map();
   /**
    * A map of entity tagName -> fields that have been marked as dirty.
    *
@@ -28,7 +29,7 @@ export class ReactionsManager {
    */
   private dirtyFields: Map<string, Set<string>> = new Map();
   private processedActions: Set<string> = new Set();
-  private needsRecalc = { populate: false, query: false, reaction: false };
+  #needsRecalc = { populate: false, query: false, reaction: false };
   private logger: ReactionLogger | undefined = globalLogger;
   private em: EntityManager;
   /** These are NPEs that *might* have been from invalid m2o fields, so we only throw them after validation. */
@@ -59,7 +60,7 @@ export class ReactionsManager {
         //   dirty, otherwise it will be left out of any INSERTs/UPDATEs.
         this.getPending(r).todo.add(entity);
         this.getDirtyFields(getMetadata(r.cstr)).add(r.name);
-        this.needsRecalc[r.kind] = true;
+        this.#needsRecalc[r.kind] = true;
         this.logger?.logQueued(entity, fieldName, r);
       }
     }
@@ -96,7 +97,7 @@ export class ReactionsManager {
     for (const r of this.getReactables(entity)) {
       this.getPending(r).todo.add(entity);
       this.getDirtyFields(getMetadata(r.cstr)).add(r.name);
-      this.needsRecalc[r.kind] = true;
+      this.#needsRecalc[r.kind] = true;
       this.logger?.logQueuedAll(entity, reason, r);
     }
   }
@@ -118,7 +119,7 @@ export class ReactionsManager {
   }
 
   hasPendingReactiveQueries(): boolean {
-    return this.needsRecalc.query;
+    return this.#needsRecalc.query;
   }
 
   /**
@@ -129,19 +130,19 @@ export class ReactionsManager {
    * We also do this in a loop to handle reactive fields depending on other reactive fields.
    */
   async recalcPendingReactables(kind: "reactables" | "reactiveQueries") {
-    if (this.#needsRecalc(kind)) this.logger?.logStartingRecalc(this.em, kind);
+    if (this.needsRecalc(kind)) this.logger?.logStartingRecalc(this.em, kind);
 
     let loops = 0;
-    while (this.#needsRecalc(kind)) {
+    while (this.needsRecalc(kind)) {
       // ...we probably should only loop for `kind=reactables` Reactables, and `kind=reactiveQueries`
       // ReactiveQueryFields should probably only have a single loop, after which we return and
       // let `em.flush` push the latest values to the db, so our 2nd-order ReactiveQueryFields
       // will see the latest value.
       if (kind === "reactables") {
-        this.needsRecalc.populate = false;
-        this.needsRecalc.reaction = false;
+        this.#needsRecalc.populate = false;
+        this.#needsRecalc.reaction = false;
       } else {
-        this.needsRecalc.query = false;
+        this.#needsRecalc.query = false;
       }
 
       const actionsMap: Map<string, ReactiveAction> = new Map();
@@ -187,9 +188,12 @@ export class ReactionsManager {
       results.forEach((result, i) => {
         if (result.status === "rejected") {
           // Let `author.id` and `book.author.get.firstName` errors run again after flush/hooks fills them in
-          if (result.reason instanceof NoIdError || result.reason instanceof TypeError) {
+          if (result.reason instanceof NoIdError) {
             const action = actions[i];
             actionsPendingAssignedIds.set(action.key, action);
+          } else if (result.reason instanceof TypeError) {
+            const action = actions[i];
+            this.actionsPendingTypeErrors.set(action.key, action);
           } else {
             failures.push(result.reason);
           }
@@ -202,20 +206,11 @@ export class ReactionsManager {
         await this.em.assignNewIds();
         const actions = [...actionsPendingAssignedIds.values()];
         const startTime = this.logger?.now() ?? 0;
-        const results = await Promise.allSettled(
-          actions.filter((a) => !a.entity.isDeletedEntity).map((a) => this.#doAction(a)),
-        );
+        const results = await Promise.allSettled(actions.map((a) => this.#doAction(a)));
         const endTime = this.logger?.now() ?? 0;
         this.logger?.logLoadingTime(this.em, endTime - startTime);
         results.forEach((result) => {
-          if (result.status === "rejected") {
-            if (result.reason instanceof TypeError) {
-              // Defer to the validation error to catch this
-              this.suppressedTypeErrors.push(result.reason);
-            } else {
-              failures.push(result.reason);
-            }
-          }
+          if (result.status === "rejected") failures.push(result.reason);
         });
       }
 
@@ -231,6 +226,39 @@ export class ReactionsManager {
         throw new Error("recalc looped too many times, probably a circular dependency");
       }
     }
+  }
+
+  async recalcPendingTypeErrors() {
+    const actions = [...this.actionsPendingTypeErrors.values()];
+    this.actionsPendingTypeErrors.clear();
+
+    const startTime = this.logger?.now() ?? 0;
+    const results = await Promise.allSettled(
+      actions.filter((a) => !a.entity.isDeletedEntity).map((a) => this.#doAction(a)),
+    );
+    const endTime = this.logger?.now() ?? 0;
+    this.logger?.logLoadingTime(this.em, endTime - startTime);
+
+    const failures: any[] = [];
+    results.forEach((result) => {
+      if (result.status === "rejected") {
+        if (result.reason instanceof TypeError) {
+          // Defer to the validation error to catch this
+          this.suppressedTypeErrors.push(result.reason);
+        } else {
+          failures.push(result.reason);
+        }
+      }
+    });
+    if (failures.length > 0) throw failures[0];
+  }
+
+  get hasPendingTypeErrors(): boolean {
+    return this.actionsPendingTypeErrors.size > 0;
+  }
+
+  get hasSuppressedTypeErrors(): boolean {
+    return this.suppressedTypeErrors.length > 0;
   }
 
   /** Clears all the pending source fields, i.e. after `em.flush` is complete. */
@@ -258,8 +286,8 @@ export class ReactionsManager {
     return r.kind === "reaction" ? r.fn(entity, this.em.ctx) : (entity as any)[r.name].load();
   }
 
-  #needsRecalc(kind: "reactables" | "reactiveQueries"): boolean {
-    return kind === "reactables" ? this.needsRecalc.populate || this.needsRecalc.reaction : this.needsRecalc.query;
+  needsRecalc(kind: "reactables" | "reactiveQueries"): boolean {
+    return kind === "reactables" ? this.#needsRecalc.populate || this.#needsRecalc.reaction : this.#needsRecalc.query;
   }
 
   private getPending(r: Reactable): { todo: Set<Entity>; done: Set<Entity> } {

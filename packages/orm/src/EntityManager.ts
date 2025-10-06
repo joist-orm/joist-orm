@@ -1470,6 +1470,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // Make a lambda that we can invoke multiple times, if we loop for ReactiveQueryFields
     const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
       if (hookLoops++ >= 10) throw new Error("runHooksOnPendingEntities has ran 10 iterations, aborting");
+
       // Any dirty entities we find, even if we skipped firing their hooks on this loop
       const pendingFlush: Set<Entity> = new Set();
       // Subset of pendingFlush entities that we will run hooks on
@@ -1486,8 +1487,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         maybeBumpUpdatedAt(createTodos([...alreadyRanHooks]), now);
       }
 
+      let forcePendingHooksLoop = false;
       // Run hooks in a series of loops until things "settle down"
-      while (pendingHooks.size > 0) {
+      while (pendingHooks.size > 0 || forcePendingHooksLoop) {
+        forcePendingHooksLoop = false;
         await this.#fl.allowWrites(async () => {
           // Run our hooks
           let todos = createTodos([...pendingHooks]);
@@ -1510,6 +1513,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           await this.flushDeletes();
           // The hooks could have changed fields, so recalc again.
           await this.#rm.recalcPendingReactables("reactables");
+          // We may have reactables that failed earlier, but will succeed now that hooks have been run and cascade
+          // deletes have been processed
+          if (this.#rm.hasPendingTypeErrors) {
+            await this.#rm.recalcPendingTypeErrors();
+            // If we successfully re-ran and have dirtied something new, then we need to run the entire flush loop
+            // again to rerun reactables and any hooks that they might trigger
+            if (!this.#rm.hasSuppressedTypeErrors && this.#rm.needsRecalc("reactables")) {
+              forcePendingHooksLoop = true;
+            }
+          }
 
           for (const e of pendingHooks) hooksInvoked.add(e);
           pendingHooks.clear();

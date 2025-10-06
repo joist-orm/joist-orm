@@ -1470,7 +1470,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // Make a lambda that we can invoke multiple times, if we loop for ReactiveQueryFields
     const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
       if (hookLoops++ >= 10) throw new Error("runHooksOnPendingEntities has ran 10 iterations, aborting");
-
       // Any dirty entities we find, even if we skipped firing their hooks on this loop
       const pendingFlush: Set<Entity> = new Set();
       // Subset of pendingFlush entities that we will run hooks on

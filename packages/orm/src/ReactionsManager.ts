@@ -264,10 +264,6 @@ export class ReactionsManager {
     return this.actionsPendingTypeErrors.size > 0;
   }
 
-  get hasSuppressedTypeErrors(): boolean {
-    return this.suppressedTypeErrors.length > 0;
-  }
-
   /** Clears all the pending source fields, i.e. after `em.flush` is complete. */
   clear(): void {
     this.pendingReactables = new Map();

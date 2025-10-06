@@ -1,3 +1,10 @@
+## [1.274.3](https://github.com/joist-orm/joist-orm/compare/v1.274.2...v1.274.3) (2025-10-06)
+
+
+### Bug Fixes
+
+* Fail nested afterMetadata calls. ([#1628](https://github.com/joist-orm/joist-orm/issues/1628)) ([219f514](https://github.com/joist-orm/joist-orm/commit/219f5143e235632b2d8409353da8e19f48a21c9c))
+
 ## [1.274.2](https://github.com/joist-orm/joist-orm/compare/v1.274.1...v1.274.2) (2025-10-03)
 
 

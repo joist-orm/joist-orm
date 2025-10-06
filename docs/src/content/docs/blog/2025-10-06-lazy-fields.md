@@ -1,7 +1,7 @@
 ---
-title: Lazy Fields without Decorators or Transforms
+title: Lazy Fields for 30x speedup without Decorators or Transforms
 slug: blog/lazy-fields
-date: 2025-09-13
+date: 2025-10-06
 authors: shaberman
 tags: []
 excerpt: Joist leverages JavaScript's prototypes to blend great developer ergonomics/DX with performance.
@@ -149,7 +149,7 @@ const oldAuthor = await em.load(Author, "a:1");
 
 So our codebases were _already decoupled from the `new` operator_, and using `em.create` / `em.load` instead, as Joist uses these `em.create` & `em.load` methods to precisely control (and optimize) the entity creation/lifecycle.
 
-This was lucky! Our `em.create` / `em.load` API meant we already had a single choke point to swap out an optimized `Object.create`-based instantiation flow (instead of using `new`), and have the entire codebase benefit.
+This was lucky! Our `em.create` / `em.load` API meant we already had a single choke point to swap out an optimized `Object.create`-based instantiation flow (instead of using `new`), and have the entire codebase benefit, with very few/ideally zero changes.
 
 So far this is almost too easy--we've got an empty `author`, but of course `author.books.load()` does not work yet (it was a field that we skipped), so how do we get that `books` relation, and all the other relations, back?
 
@@ -187,14 +187,16 @@ We just need to call this `defineProperty` for `author.books`, `author.publisher
 
 We want to figure out "what are the fields on `Author` that we should move to the prototype"? Ideally just at runtime, i.e. without any AST parsing.
 
-Who can tell us what the fields are? Turns out the constructor can!
+Who can tell us what the fields are? ...the constructor!
 
-This is ironic, because we've been trying so hard to avoid the constructor (avoid calling `new`)--but, if we just call it once, during boot, we can use it as a one-time "probe" to discover the fields, and then never call it again.
+This is ironic, because we've been trying so hard to avoid the constructor (avoid calling `new`)--but if we just call it once, during boot, we can use it as a one-time "probe" to discover the fields, and then never call it again.
 
 We end up with a process like:
 
 1. When Joist boots, create a single "fake" `new Author` to let the constructor assign fields like `books = hasMany(...)` during the traditional object instantiation process
-2. Teach `hasBooks(...)` return a `LazyField` wrapper that isn't the true relation (it cannot actually hold/fetch `Book`s), but a lazy version that lets us identify (`instanceof`) "this `author.books` value is a lazy field"
+2. Teach `hasBooks(...)` to return a `LazyField` marker/wrapper that isn't the true relation (it cannot actually hold/fetch `Book`s), but instead a lazy version that lets us:
+   - a) identify "this `author.books` value is a lazy field", and
+   - b) later ask it to create the live relation, only when needed/accessed.
 3. For every `Object.entries(author)` where `value intanceof LazyField`, do an `Object.defineProperties` to "move" that field to the prototype, and call `lazyField.create()` when lazily accessed:
 
 ```ts
@@ -231,7 +233,23 @@ class Author extends AuthorCodegen {
 
 We created this convention solely for developer ergonomics: we want it to be abundantly clear that `someSpecialFlag` is not a database column, and wrapping these one-off fields in a `transientFields` object has been a great way to communicate that.
 
-Here again we got lucky--because `transientFields` is a known convention/hardcoded name, even though we're skipping the `new` operator (which normally defines the `transientFields` POJO on each instance), we can apply the same "move relations to the prototype" trick: we `defineProperty` a `Author.prototype.transientFields` getter to lazily create each instances' `transientFields` POJO on first access.
+Here again we got lucky--because `transientFields` is a known convention/hardcoded name, even though we're skipping the `new` operator (which normally defines the `transientFields` POJO on each instance), we can apply the same "move to the prototype" trick.
+
+We `defineProperty` a `Author.prototype.transientFields` getter to lazily create each instances' `transientFields` POJO on first access:
+
+```ts
+Object.defineProperty(cstr.prototype, "transientFields", {
+  get(this: any) {
+    // Give each instance its own lazily-created copy of transientFields
+    const copy = structuredClone(value);
+    // Once defined on the instance, this prototype getter won't be hit
+    // again, b/c author.transientFields will immediately find its instance
+    // level copy
+    Object.defineProperty(this, "transientFields", { value: copy });
+    return copy;
+  },
+});
+```
 
 So everything still works!
 

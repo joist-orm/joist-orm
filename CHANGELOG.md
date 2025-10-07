@@ -1,3 +1,10 @@
+## [1.274.6](https://github.com/joist-orm/joist-orm/compare/v1.274.5...v1.274.6) (2025-10-07)
+
+
+### Bug Fixes
+
+* Register entities earlier in create. ([#1632](https://github.com/joist-orm/joist-orm/issues/1632)) ([2c06f41](https://github.com/joist-orm/joist-orm/commit/2c06f41759d3a4c45b250d32a87cb37cf57e9363)), closes [#0](https://github.com/joist-orm/joist-orm/issues/0)
+
 ## [1.274.5](https://github.com/joist-orm/joist-orm/compare/v1.274.4...v1.274.5) (2025-10-06)
 
 

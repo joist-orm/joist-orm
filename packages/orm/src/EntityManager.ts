@@ -2250,6 +2250,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   #doCreate<T extends EntityW>(type: EntityConstructor<T>, opts: any, partial: boolean): T {
     const entity = newEntity(this, type, true);
 
+    // Check opts.id for an explicitly-set id
+    this.#doRegister(entity as any, opts.id);
+
     // Set a default createdAt/updatedAt
     const baseMeta = getBaseMeta(getMetadata(entity));
     if (baseMeta.timestampFields) {
@@ -2260,9 +2263,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     if (baseMeta.inheritanceType === "sti") {
       setStiDiscriminatorValue(baseMeta, entity);
     }
-
-    // Check opts.id for an explicitly-set id
-    this.#doRegister(entity as any, opts.id);
 
     // api will be undefined during getFakeInstance
     const api = getEmInternalApi(this);

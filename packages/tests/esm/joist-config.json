@@ -1,11 +1,12 @@
 {
-  "codegenPlugins": [],
+  "codegenPlugins": ["joist-graphql-codegen"],
   "contextType": "Context@../../context.js",
   "databaseUrl": "postgres://joist:local@localhost:5435/esm",
   "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
   "entitiesDirectory": "./src/entities",
   "esm": true,
   "ignoredTables": ["pgmigrations"],
+  "temporal": true,
   "timestampColumns": {
     "createdAt": { "names": ["created_at", "createdAt"], "required": false },
     "updatedAt": { "names": ["updated_at", "updatedAt"], "required": false }

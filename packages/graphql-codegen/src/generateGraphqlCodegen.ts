@@ -1,31 +1,44 @@
-import { EntityDbMetadata, EnumMetadata } from "joist-codegen";
+import { Config, EntityDbMetadata, EnumMetadata } from "joist-codegen";
 import { CodegenFile, code } from "ts-poet";
+import { getEntitiesImportPath } from "./utils";
 
-/** Generates a `graphql-codegen-joist.js` with the auto-generated mapped type/enum value settings. */
-export function generateGraphqlCodegen(entities: EntityDbMetadata[], enums: EnumMetadata): CodegenFile {
+/** Generates a `graphql-codegen-joist.js` (or .mjs for ESM) with the auto-generated mapped type/enum value settings. */
+export function generateGraphqlCodegen(config: Config, entities: EntityDbMetadata[], enums: EnumMetadata): CodegenFile {
   const enumNames = Object.values(enums).map(({ name }) => name);
 
   // Combine the entity mapped types and enum detail mapped types
+  const entitiesMapperImportPath = getEntitiesImportPath(config).replace(/\.ts$/, ""); // Keep compatibility with the expected mapper format (no file extension)
   const mappedTypes = sortObject(
     Object.fromEntries([
-      ...entities.map(({ entity }) => [entity.name, `src/entities#${entity.name}`]),
-      ...enumNames.map((name) => [`${name}Detail`, `src/entities#${name}`]),
+      ...entities.map(({ entity }) => [entity.name, `${entitiesMapperImportPath}#${entity.name}`]),
+      ...enumNames.map((name) => [`${name}Detail`, `${entitiesMapperImportPath}#${name}`]),
     ]),
   );
 
-  const contents = code`
-    const mappers = {
-      ${Object.entries(mappedTypes).map(([key, value]) => `${key}: "${value}",`)}
-    };
+  const contents = config.esm
+    ? code`
+        export const mappers = {
+          ${Object.entries(mappedTypes).map(([key, value]) => `${key}: "${value}",`)}
+        };
 
-    const enumValues = {
-      ${enumNames.map((name) => `${name}: "src/entities#${name}",`)}
-    };
+        export const enumValues = {
+          ${enumNames.map((name) => `${name}: "${entitiesMapperImportPath}#${name}",`)}
+        };
+      `
+    : code`
+        const mappers = {
+          ${Object.entries(mappedTypes).map(([key, value]) => `${key}: "${value}",`)}
+        };
 
-    module.exports = { mappers, enumValues };
-  `;
+        const enumValues = {
+          ${enumNames.map((name) => `${name}: "${entitiesMapperImportPath}#${name}",`)}
+        };
 
-  return { name: "../../graphql-codegen-joist.js", overwrite: true, contents };
+        module.exports = { mappers, enumValues };
+      `;
+
+  const ext = config.esm ? "mjs" : "js";
+  return { name: `../../graphql-codegen-joist.${ext}`, overwrite: true, contents };
 }
 
 function sortObject<T extends object>(obj: T): T {

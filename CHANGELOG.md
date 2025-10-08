@@ -1,3 +1,38 @@
+## [1.274.6](https://github.com/joist-orm/joist-orm/compare/v1.274.5...v1.274.6) (2025-10-07)
+
+
+### Bug Fixes
+
+* Register entities earlier in create. ([#1632](https://github.com/joist-orm/joist-orm/issues/1632)) ([2c06f41](https://github.com/joist-orm/joist-orm/commit/2c06f41759d3a4c45b250d32a87cb37cf57e9363)), closes [#0](https://github.com/joist-orm/joist-orm/issues/0)
+
+## [1.274.5](https://github.com/joist-orm/joist-orm/compare/v1.274.4...v1.274.5) (2025-10-06)
+
+
+### Bug Fixes
+
+* Add missing subtype/deleted filter. ([#1629](https://github.com/joist-orm/joist-orm/issues/1629)) ([c93dcd3](https://github.com/joist-orm/joist-orm/commit/c93dcd3ca039340b4c0eeba272664012e7e1fdc7))
+
+## [1.274.4](https://github.com/joist-orm/joist-orm/compare/v1.274.3...v1.274.4) (2025-10-06)
+
+
+### Bug Fixes
+
+* Fix recalc RFs with new/deleted entities. ([#1626](https://github.com/joist-orm/joist-orm/issues/1626)) ([efb6a60](https://github.com/joist-orm/joist-orm/commit/efb6a600f382e95490d93be9b798f7e0a06e541c))
+
+## [1.274.3](https://github.com/joist-orm/joist-orm/compare/v1.274.2...v1.274.3) (2025-10-06)
+
+
+### Bug Fixes
+
+* Fail nested afterMetadata calls. ([#1628](https://github.com/joist-orm/joist-orm/issues/1628)) ([219f514](https://github.com/joist-orm/joist-orm/commit/219f5143e235632b2d8409353da8e19f48a21c9c))
+
+## [1.274.2](https://github.com/joist-orm/joist-orm/compare/v1.274.1...v1.274.2) (2025-10-03)
+
+
+### Bug Fixes
+
+* Fix findWithNewOrChanged on empty where clauses. ([#1624](https://github.com/joist-orm/joist-orm/issues/1624)) ([1b5f017](https://github.com/joist-orm/joist-orm/commit/1b5f0175bf0f5e39f772496e071fef918799a352))
+
 ## [1.274.1](https://github.com/joist-orm/joist-orm/compare/v1.274.0...v1.274.1) (2025-10-01)
 
 

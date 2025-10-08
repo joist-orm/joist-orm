@@ -1510,11 +1510,22 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           await this.flushDeletes();
           // The hooks could have changed fields, so recalc again.
           await this.#rm.recalcPendingReactables("reactables");
+          // We may have reactables that failed earlier, but will succeed now that hooks have been run and cascade
+          // deletes have been processed
+          if (this.#rm.hasPendingTypeErrors) {
+            await this.#rm.recalcPendingTypeErrors();
+            // We need to re-run reactables again if we dirtied something while retrying type errors
+            if (this.#rm.needsRecalc("reactables")) await this.#rm.recalcPendingReactables("reactables");
+          }
 
           for (const e of pendingHooks) hooksInvoked.add(e);
           pendingHooks.clear();
           // See if the hooks mutated any new, not-yet-hooksInvoked entities
           findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
+          // The final run of recalcPendingReactables could have left us with pending type errors and no entities in
+          // pendingHooks.  If so, we need to re-run recalcPendingTypeErrors to get those errors to transition into
+          // suppressed errors so that we will fail after simpleValidation.
+          if (pendingHooks.size === 0 && this.#rm.hasPendingTypeErrors) await this.#rm.recalcPendingTypeErrors();
         });
       }
       // We might have invoked hooks that immediately deleted a new entity (weird but allowed);
@@ -1998,6 +2009,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   filterEntities<T extends Entity>(cstr: EntityConstructor<T>, where: Partial<OptsOf<T>>): T[] {
     const meta = getMetadata(cstr);
     const entities = (this.#entitiesByTag.get(meta.tagName) as T[]) ?? [];
+    // Don't bother filtering if there's no where clause (particularly b/c IndexManager.findMatching
+    // really expects there to be at least 1 condition)
+    if (Object.entries(where).length === 0) {
+      return entities.filter((e) => e instanceof cstr && !e.isDeletedEntity);
+    }
     if (this.#indexManager.shouldIndexType(entities.length)) {
       this.#indexManager.enableIndexingForType(meta, entities);
       return (
@@ -2234,6 +2250,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   #doCreate<T extends EntityW>(type: EntityConstructor<T>, opts: any, partial: boolean): T {
     const entity = newEntity(this, type, true);
 
+    // Check opts.id for an explicitly-set id
+    this.#doRegister(entity as any, opts.id);
+
     // Set a default createdAt/updatedAt
     const baseMeta = getBaseMeta(getMetadata(entity));
     if (baseMeta.timestampFields) {
@@ -2244,9 +2263,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     if (baseMeta.inheritanceType === "sti") {
       setStiDiscriminatorValue(baseMeta, entity);
     }
-
-    // Check opts.id for an explicitly-set id
-    this.#doRegister(entity as any, opts.id);
 
     // api will be undefined during getFakeInstance
     const api = getEmInternalApi(this);

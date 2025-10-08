@@ -95,7 +95,10 @@ export class IndexManager {
       // Early exit if no candidates remain
       if (candidates.size === 0) break;
     }
-    return candidates ? ([...candidates] as T[]) : [];
+    if (candidates === undefined) {
+      throw new Error(`Expected where clause with at least one condition`);
+    }
+    return [...candidates] as T[];
   }
 
   // `entities` should all be of the exact same subtype

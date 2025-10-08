@@ -1,3 +1,10 @@
+# [1.275.0](https://github.com/joist-orm/joist-orm/compare/v1.274.6...v1.275.0) (2025-10-08)
+
+
+### Features
+
+* support ESM in graphql-codegen ([#1620](https://github.com/joist-orm/joist-orm/issues/1620)) ([cd3a4a5](https://github.com/joist-orm/joist-orm/commit/cd3a4a52baba9c3f692019c6d521925ed4cdde4e))
+
 ## [1.274.6](https://github.com/joist-orm/joist-orm/compare/v1.274.5...v1.274.6) (2025-10-07)
 
 

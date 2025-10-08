@@ -2017,16 +2017,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@homebound/graphql-typescript-simple-resolvers@npm:^1.57.0":
-  version: 1.57.0
-  resolution: "@homebound/graphql-typescript-simple-resolvers@npm:1.57.0"
+"@homebound/graphql-typescript-simple-resolvers@npm:^1.58.0":
+  version: 1.58.0
+  resolution: "@homebound/graphql-typescript-simple-resolvers@npm:1.58.0"
   dependencies:
     "@graphql-codegen/plugin-helpers": "npm:^6.0.0"
     "@graphql-codegen/visitor-plugin-common": "npm:^6.0.0"
     "@homebound/activesupport": "npm:^1.9.0"
     change-case: "npm:^4.1.2"
     ts-poet: "npm:^6.12.0"
-  checksum: 10/18be5fb3e730b871c193c22911f897ddbee28ec99dad9881f0ccef218e1c2dd006b22e22751d495b6249cda0e9bc6cb45fd676180efd2893800a19cfab03ecb0
+  checksum: 10/50973be61e5303f53d985864f95b9dfe929d0dd5147dcf56af79316dd035aa7083fd267669d5bd5b8a2b6e6a9dd8d6c2631f1e6f8fc165af63f6b53a59677ff0
   languageName: node
   linkType: hard
 
@@ -9901,7 +9901,7 @@ __metadata:
   dependencies:
     "@graphql-codegen/add": "npm:^6.0.0"
     "@graphql-codegen/cli": "npm:^6.0.0"
-    "@homebound/graphql-typescript-simple-resolvers": "npm:^1.57.0"
+    "@homebound/graphql-typescript-simple-resolvers": "npm:^1.58.0"
     "@swc/core": "npm:^1.13.20"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"

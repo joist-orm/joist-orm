@@ -1,3 +1,10 @@
+# [1.276.0](https://github.com/joist-orm/joist-orm/compare/v1.275.1...v1.276.0) (2025-10-09)
+
+
+### Features
+
+* Add cte.kind=ast to ParsedFindQuery. ([#1636](https://github.com/joist-orm/joist-orm/issues/1636)) ([93bd152](https://github.com/joist-orm/joist-orm/commit/93bd152716e4fe9c4b5dedd902b9a06288fe07d0))
+
 ## [1.275.1](https://github.com/joist-orm/joist-orm/compare/v1.275.0...v1.275.1) (2025-10-09)
 
 

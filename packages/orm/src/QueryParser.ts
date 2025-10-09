@@ -120,7 +120,7 @@ export interface ParsedCteClause {
   /** The columns, i.e. `tag, arg0, arg1` in the above query. */
   columns?: { columnName: string; dbType: string }[];
   /** The subquery for the AS of the CTE clause. */
-  query: { kind: "raw"; sql: string; bindings: readonly any[] };
+  query: { kind: "raw"; sql: string; bindings: readonly any[] } | { kind: "ast"; query: ParsedFindQuery };
   /** Whether to include a `RECURSIVE` keyword after the `WITH`. */
   recursive?: boolean;
 }

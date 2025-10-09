@@ -42,8 +42,16 @@ export function buildRawQuery(
         }
         sql += ")";
       }
-      sql += ` AS (${cleanSql(cte.query.sql)})`;
-      bindings.push(...cte.query.bindings);
+      if (cte.query.kind === "raw") {
+        sql += ` AS (${cleanSql(cte.query.sql)})`;
+        bindings.push(...cte.query.bindings);
+      } else if (cte.query.kind === "ast") {
+        const nested = buildRawQuery(cte.query.query, {});
+        sql += ` AS (${nested.sql})`;
+        bindings.push(...nested.bindings);
+      } else {
+        assertNever(cte.query);
+      }
     }
     sql += " ";
   }
@@ -126,10 +134,22 @@ function buildDistinctOn(parsed: ParsedFindQuery, primary: ParsedTable): string 
   return `DISTINCT ON (${columns.join(", ")}) `;
 }
 
-export function buildCteSql(cte: ParsedCteClause): string {
+/** Creates the `WITH alias (...)` SQL for the given `cte`. */
+export function buildCteSql(cte: ParsedCteClause): { sql: string; bindings: readonly any[] } {
   const maybeRecursive = cte.recursive ? "RECURSIVE " : "";
   const maybeColumns = cte.columns ? ` (${cte.columns.map((c) => kq(c.columnName)).join(", ")})` : "";
-  return `WITH ${maybeRecursive}${cte.alias}${maybeColumns} AS (${cleanSql(cte.query.sql)} )`;
+  const prefix = `WITH ${maybeRecursive}${cte.alias}${maybeColumns} AS`;
+  if (cte.query.kind === "raw") {
+    return {
+      sql: `${prefix} (${cleanSql(cte.query.sql)} )`,
+      bindings: cte.query.bindings,
+    };
+  } else if (cte.query.kind === "ast") {
+    const { sql, bindings } = buildRawQuery(cte.query.query, {});
+    return { sql: `${prefix} (${sql})`, bindings };
+  } else {
+    assertNever(cte.query);
+  }
 }
 
 const as = (t: ParsedTable) => `${kq(t.table)} AS ${kq(t.alias)}`;

@@ -140,8 +140,11 @@ async function batchUpdate(txn: TransactionSQL, op: UpdateOp): Promise<void> {
         ? ` AND ${kqDot(tableName, updatedAt)} = data.__original_updated_at`
         : "";
 
+  // Use the `buildCteSql` helper to format the `buildValuesCte`
+  const { sql: cteSql, bindings: cteBindings } = buildCteSql(cte);
+
   const sql = `
-    ${buildCteSql(cte)}
+    ${cteSql}
     UPDATE ${kq(tableName)}
     SET ${columns
       .filter((c) => c.columnName !== "id" && c.columnName !== "__original_updated_at")
@@ -152,7 +155,7 @@ async function batchUpdate(txn: TransactionSQL, op: UpdateOp): Promise<void> {
     RETURNING ${kq(tableName)}.id
   `;
 
-  const result = await txn(cleanSql(sql) as any, cte.query.bindings);
+  const result = await txn(cleanSql(sql) as any, cteBindings);
 
   if (result.rows.length !== rows.length) {
     const updated = new Set(result.rows.map((r: any) => r.id));

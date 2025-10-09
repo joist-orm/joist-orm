@@ -47,4 +47,51 @@ describe("PostgresDriver.cte", () => {
     expect(results[0].first_name).toBe("a1");
     expect(results[1].first_name).toBe("a2");
   });
+
+  it("can execute a ParsedFindQuery with a CTE using nested ParsedFindQuery", async () => {
+    await insertAuthor({ first_name: "a1", age: 40 });
+    await insertAuthor({ first_name: "a2", age: 50 });
+    await insertAuthor({ first_name: "a3", age: 60 });
+
+    const em = newEntityManager();
+    const driver = (em as any).driver;
+
+    const parsed: ParsedFindQuery = {
+      selects: ["a.*"],
+      tables: [{ join: "primary", alias: "a", table: "authors" }],
+      ctes: [
+        {
+          alias: "min_age_cte",
+          columns: [{ columnName: "min_age", dbType: "int" }],
+          query: {
+            kind: "ast",
+            query: {
+              selects: ["MIN(a.age) as min_age"],
+              tables: [{ join: "primary", alias: "a", table: "authors" }],
+              orderBys: [],
+            },
+          },
+        },
+      ],
+      condition: {
+        kind: "exp",
+        op: "and",
+        conditions: [
+          {
+            kind: "raw",
+            aliases: ["a", "min_age_cte"],
+            condition: "a.age > (SELECT min_age FROM min_age_cte)",
+            bindings: [],
+            pruneable: false,
+          },
+        ],
+      },
+      orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+    };
+
+    const results = await driver.executeFind(em, parsed, {});
+    expect(results).toHaveLength(2);
+    expect(results[0].first_name).toBe("a2");
+    expect(results[1].first_name).toBe("a3");
+  });
 });

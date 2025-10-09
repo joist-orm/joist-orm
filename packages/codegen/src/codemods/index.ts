@@ -9,7 +9,7 @@ import { v1_226_0_rename_current_txn_knex } from "./v1_226_0_rename_current_txn_
 import { v1_245_0_upsert_rename } from "./v1_245_0_upsert_rename";
 
 export async function maybeRunTransforms(config: Config): Promise<void> {
-  const { default: inquirer } = await import("inquirer");
+  const { confirm } = await import("@inquirer/prompts");
   const confVersion = config.version;
 
   // Look for `0.0.1` as a hint that a) we're running in the Joist repo and
@@ -34,9 +34,7 @@ export async function maybeRunTransforms(config: Config): Promise<void> {
     `Your project is on Joist ${confVersion} and there are ${mods.length} codemods to help upgrade to ${thisVersion}.`,
   );
 
-  const run = await inquirer.prompt({
-    name: "run",
-    type: "confirm",
+  const run = await confirm({
     message: `Would you like to run them?`,
   });
 
@@ -48,9 +46,7 @@ export async function maybeRunTransforms(config: Config): Promise<void> {
 
   // Otherwise run them
   for (const mod of mods) {
-    const run = await inquirer.prompt({
-      name: "run",
-      type: "confirm",
+    const run = await confirm({
       message: `Do you want to run ${mod.description}?`,
     });
     if (!run) continue;

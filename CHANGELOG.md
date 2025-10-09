@@ -1,3 +1,10 @@
+## [1.275.1](https://github.com/joist-orm/joist-orm/compare/v1.275.0...v1.275.1) (2025-10-09)
+
+
+### Bug Fixes
+
+* bump inquirer to resolve `tmp` CVE ([#1635](https://github.com/joist-orm/joist-orm/issues/1635)) ([07e2b34](https://github.com/joist-orm/joist-orm/commit/07e2b3464e2528848b2c5ba1a1575da2f26aae70))
+
 # [1.275.0](https://github.com/joist-orm/joist-orm/compare/v1.274.6...v1.275.0) (2025-10-08)
 
 

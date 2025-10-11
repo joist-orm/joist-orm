@@ -1324,15 +1324,33 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const [preload, non] = this.#preloader.partitionHint(meta, hintOpt);
       if (preload) {
         const loader = populateDataLoader(this, meta, preload, "preload", opts);
-        await Promise.all(list.map((entity) => loader.load({ entity, hint: preload })));
+        await Promise.all(
+          list.map((entity) =>
+            loader.load({ entity, hint: preload }).catch(function populate(err: any) {
+              throw appendStack(err, new Error());
+            }),
+          ),
+        );
       }
       if (non) {
         const loader = populateDataLoader(this, meta, non, "intermixed", opts);
-        await Promise.all(list.map((entity) => loader.load({ entity, hint: non })));
+        await Promise.all(
+          list.map((entity) =>
+            loader.load({ entity, hint: non }).catch(function populate(err: any) {
+              throw appendStack(err, new Error());
+            }),
+          ),
+        );
       }
     } else {
       const loader = populateDataLoader(this, meta, hintOpt, "intermixed", opts);
-      await Promise.all(list.map((entity) => loader.load({ entity, hint: hintOpt })));
+      await Promise.all(
+        list.map((entity) =>
+          loader.load({ entity, hint: hintOpt }).catch(function populate(err: any) {
+            throw appendStack(err, new Error());
+          }),
+        ),
+      );
     }
 
     return fn ? fn(entityOrList as any) : (entityOrList as any);

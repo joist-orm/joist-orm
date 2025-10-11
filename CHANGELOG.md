@@ -1,3 +1,10 @@
+## [1.276.1](https://github.com/joist-orm/joist-orm/compare/v1.276.0...v1.276.1) (2025-10-11)
+
+
+### Bug Fixes
+
+* Add appendStack to em.populate. ([#1638](https://github.com/joist-orm/joist-orm/issues/1638)) ([10254c8](https://github.com/joist-orm/joist-orm/commit/10254c8e6c4867c4f55fd1be9e838e7a723c9175))
+
 # [1.276.0](https://github.com/joist-orm/joist-orm/compare/v1.275.1...v1.276.0) (2025-10-09)
 
 

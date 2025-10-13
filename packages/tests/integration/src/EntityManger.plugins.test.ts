@@ -45,6 +45,30 @@ describe("EntityManger.plugins", () => {
       expect(plugin.calls[1]).toEqual([image, "fileName", "new name"]);
       expect(plugin.originalValue[1]).toEqual("original name");
     });
+
+    it.withCtx("is not called when the value of a field stays the same", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new BeforeSetFieldPlugin();
+      const image = em.createPartial(Image, { fileName: "original name" });
+      em.addPlugin(plugin);
+      image.fileName = "original name";
+      expect(plugin.calls).toHaveLength(0);
+    });
+
+    it.withCtx("is called when the value of a field is reverted to its original value", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new BeforeSetFieldPlugin();
+      const image = em.createPartial(Image, { fileName: "original name" });
+      em.addPlugin(plugin);
+      image.fileName = "new name";
+      expect(plugin.calls).toHaveLength(1);
+      expect(plugin.calls[0]).toEqual([image, "fileName", "new name"]);
+      expect(plugin.originalValue[0]).toEqual("original name");
+      image.fileName = "original name";
+      expect(plugin.calls).toHaveLength(2);
+      expect(plugin.calls[1]).toEqual([image, "fileName", "original name"]);
+      expect(plugin.originalValue[1]).toEqual("new name");
+    });
   });
 
   describe("beforeFind", () => {

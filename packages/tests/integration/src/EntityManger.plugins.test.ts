@@ -3,6 +3,7 @@ import { ImmutableEntitiesPlugin } from "joist-orm/build/plugins/ImmutableEntiti
 import { describe } from "node:test";
 import { Author, Image, newAuthor } from "src/entities";
 import { insertAuthor } from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
 import { twoOf } from "src/utils";
 
 describe("EntityManger.plugins", () => {
@@ -15,6 +16,19 @@ describe("EntityManger.plugins", () => {
       plugin.addEntity(a2);
       expect(() => (a2.firstName = "changed")).toThrow("Cannot set field firstName on immutable entity Author#2");
       expect(() => (a1.firstName = "changed")).not.toThrow();
+    });
+
+    it("does not throw when setField is called via reactions that don't change", async () => {
+      const [em, em2] = twoOf(() => newEntityManager());
+      newAuthor(em, { firstName: `a1` });
+      await em.flush();
+      const plugin = new ImmutableEntitiesPlugin();
+      em2.addPlugin(plugin);
+      const author = await em2.load(Author, "a:1");
+      plugin.addEntity(author);
+      // This .load should call setField internally, but it shouldn't throw because beforeSetField isn't called.
+      // Unfortunately, I'm not sure if there's a way to assert that `setField` is actually called here
+      await expect(() => author.search.load()).resolves.not.toThrow();
     });
   });
 
@@ -44,6 +58,30 @@ describe("EntityManger.plugins", () => {
       expect(plugin.calls).toHaveLength(2);
       expect(plugin.calls[1]).toEqual([image, "fileName", "new name"]);
       expect(plugin.originalValue[1]).toEqual("original name");
+    });
+
+    it.withCtx("is not called when the value of a field stays the same", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new BeforeSetFieldPlugin();
+      const image = em.createPartial(Image, { fileName: "original name" });
+      em.addPlugin(plugin);
+      image.fileName = "original name";
+      expect(plugin.calls).toHaveLength(0);
+    });
+
+    it.withCtx("is called when the value of a field is reverted to its original value", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new BeforeSetFieldPlugin();
+      const image = em.createPartial(Image, { fileName: "original name" });
+      em.addPlugin(plugin);
+      image.fileName = "new name";
+      expect(plugin.calls).toHaveLength(1);
+      expect(plugin.calls[0]).toEqual([image, "fileName", "new name"]);
+      expect(plugin.originalValue[0]).toEqual("original name");
+      image.fileName = "original name";
+      expect(plugin.calls).toHaveLength(2);
+      expect(plugin.calls[1]).toEqual([image, "fileName", "original name"]);
+      expect(plugin.originalValue[1]).toEqual("new name");
     });
   });
 

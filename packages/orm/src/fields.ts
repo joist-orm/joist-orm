@@ -64,8 +64,6 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   const { rm, pluginManager, indexManager, fieldLogger } = getEmInternalApi(em);
   const { data, originalData, flushedData } = getInstanceData(entity);
 
-  pluginManager?.beforeSetField?.(entity, fieldName, newValue);
-
   // If a `set` occurs during the ReactiveQueryField-loop, copy the last-flushed value to flushedData.
   // Then our `pendingOperation` logic can tell "do we need another micro-flush?" separately
   // from our public-facing changed fields logic.
@@ -94,6 +92,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
       const currentValue = getField(entity, fieldName);
       indexManager.maybeUpdateFieldIndex(entity, fieldName, currentValue, newValue);
 
+      pluginManager?.beforeSetField?.(entity, fieldName, newValue);
       data[fieldName] = newValue;
       delete originalData[fieldName];
       fieldLogger?.logSet(entity, fieldName, newValue);
@@ -120,6 +119,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
   indexManager.maybeUpdateFieldIndex(entity, fieldName, currentValue, newValue);
 
+  pluginManager?.beforeSetField?.(entity, fieldName, newValue);
   data[fieldName] = newValue;
   return true;
 }

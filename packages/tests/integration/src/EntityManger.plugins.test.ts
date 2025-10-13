@@ -3,6 +3,7 @@ import { ImmutableEntitiesPlugin } from "joist-orm/build/plugins/ImmutableEntiti
 import { describe } from "node:test";
 import { Author, Image, newAuthor } from "src/entities";
 import { insertAuthor } from "src/entities/inserts";
+import { newEntityManager } from "src/testEm";
 import { twoOf } from "src/utils";
 
 describe("EntityManger.plugins", () => {
@@ -15,6 +16,19 @@ describe("EntityManger.plugins", () => {
       plugin.addEntity(a2);
       expect(() => (a2.firstName = "changed")).toThrow("Cannot set field firstName on immutable entity Author#2");
       expect(() => (a1.firstName = "changed")).not.toThrow();
+    });
+
+    it("does not throw when setField is called via reactions that don't change", async () => {
+      const [em, em2] = twoOf(() => newEntityManager());
+      newAuthor(em, { firstName: `a1` });
+      await em.flush();
+      const plugin = new ImmutableEntitiesPlugin();
+      em2.addPlugin(plugin);
+      const author = await em2.load(Author, "a:1");
+      plugin.addEntity(author);
+      // This .load should call setField internally, but it shouldn't throw because beforeSetField isn't called.
+      // Unfortunately, I'm not sure if there's a way to assert that `setField` is actually called here
+      await expect(() => author.search.load()).resolves.not.toThrow();
     });
   });
 

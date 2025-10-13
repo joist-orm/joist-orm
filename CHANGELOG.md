@@ -1,3 +1,10 @@
+## [1.276.2](https://github.com/joist-orm/joist-orm/compare/v1.276.1...v1.276.2) (2025-10-13)
+
+
+### Bug Fixes
+
+* skip beforeSetField when value is unchanged ([#1639](https://github.com/joist-orm/joist-orm/issues/1639)) ([c3932da](https://github.com/joist-orm/joist-orm/commit/c3932dad887904bb16b740f03bb4601e61b8f89b))
+
 ## [1.276.1](https://github.com/joist-orm/joist-orm/compare/v1.276.0...v1.276.1) (2025-10-11)
 
 

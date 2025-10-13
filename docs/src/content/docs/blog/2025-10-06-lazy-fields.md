@@ -16,7 +16,7 @@ class Author {
 }
 ```
 
-These class fields are very ergonomic, i.e. no decorators (which we [purposefully avoid](/blog/avoiding-decorators/) or other boilerplate), so much so that at [Homebound](https://www.homebound.com/), we've written (or codegen-d) literally thousands of these class fields in our domain models.
+These class fields are very ergonomic, i.e. no decorators (which we [purposefully avoid](/blog/avoiding-decorators/)) or other boilerplate, so much so that at [Homebound](https://www.homebound.com/), we've written (or codegen-d) literally thousands of these class fields in our domain models.
 
 :::tip
 
@@ -56,7 +56,7 @@ class AuthorCodegen {
 
   // Not a field anymore, but looks like one to callers
   get books(): OneToMany<Book> {
-    return (this.#relations ??= hasMany("books"));
+    return (this.#relations["books"] ??= hasMany("books"));
   }
 }
 
@@ -302,5 +302,4 @@ If you want to explore this `Object.create` approach in a minimal example, there
 
 Looking at what we've achieved, we've made all Joist relations/class fields lazy, with no decorators like `@lazy` or `@ManyToOne`, or our prior AST transforms; instead, just by taking the time to study the problem, and then leaning into one of JavaScript's core native features--prototypes!
 
-This work unblocks our current priority: improving the DX of our large, 500-table majestic monolith codebase, to feel as light & nimble as smaller codebases--and doing so without regressing real-world application performance. 
-
+This work unblocks our current priority: improving the DX of our large, 500-table majestic monolith codebase, to feel as light & nimble as smaller codebases--and doing so without regressing real-world application performance.

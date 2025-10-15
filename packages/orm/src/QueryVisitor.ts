@@ -66,7 +66,7 @@ export function visitFilter(pc: ParsedExpressionCondition, visitor: Visitor) {
         assertNever(c);
       }
     });
-    // iterate backwards so we don't mess up the indices
+    // do this after visiting the children, so we can do it in one pass and don't mess up the indices
     if (toRemove.size > 0) pc.conditions = pc.conditions.filter((_, i) => !toRemove.has(i));
   } else if (pc.kind === "column") {
     const result = visitor.visitCond(pc);

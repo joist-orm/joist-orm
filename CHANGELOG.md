@@ -1,3 +1,10 @@
+# [1.277.0](https://github.com/joist-orm/joist-orm/compare/v1.276.2...v1.277.0) (2025-10-15)
+
+
+### Features
+
+* add the ability to remove conditions to visitConditions ([#1642](https://github.com/joist-orm/joist-orm/issues/1642)) ([cc101b9](https://github.com/joist-orm/joist-orm/commit/cc101b9926abfbb11362db5ae630877eeea2193e))
+
 ## [1.276.2](https://github.com/joist-orm/joist-orm/compare/v1.276.1...v1.276.2) (2025-10-13)
 
 

@@ -1,5 +1,15 @@
 import { expect } from "@jest/globals";
-import { Author, LargePublisher, newAuthor, Publisher, SmallPublisher, Tag, User } from "@src/entities";
+import {
+  Author,
+  LargePublisher,
+  newAuthor,
+  newBook,
+  newPublisher,
+  Publisher,
+  SmallPublisher,
+  Tag,
+  User,
+} from "@src/entities";
 import {
   insertAuthor,
   insertAuthorToTag,
@@ -22,6 +32,7 @@ describe("EntityManager.reactions", () => {
       { name: "rr", hint: "rootMentor", fn, runOnce: false },
       { name: "setViaHook", hint: "graduated", fn, runOnce: false },
       { name: "immutable", hint: { publisher: "type" }, fn, runOnce: false },
+      { name: "observeNickNames", hint: "nickNames", fn, runOnce: false },
       { name: "runOnce", hint: "nickNames", fn, runOnce: true },
       { name: expect.stringMatching(/^Author.ts:\d+$/), hint: "ssn", fn, runOnce: false },
     ]);
@@ -195,6 +206,17 @@ describe("EntityManager.reactions", () => {
         path: [],
         source: Author,
         isReadOnly: false,
+        name: "observeNickNames",
+        fn,
+        runOnce: false,
+      },
+      {
+        kind: "reaction",
+        cstr: Author,
+        fields: ["nickNames"],
+        path: [],
+        source: Author,
+        isReadOnly: false,
         name: "runOnce",
         fn,
         runOnce: true,
@@ -232,6 +254,7 @@ describe("EntityManager.reactions", () => {
       setViaHook: 0,
       afterMetadata: 0,
       runOnce: 0,
+      observedNickNames: [],
     });
   });
 
@@ -252,6 +275,7 @@ describe("EntityManager.reactions", () => {
       setViaHook: 1,
       afterMetadata: 1,
       runOnce: 1,
+      observedNickNames: ["a1"],
     });
     // And when we trigger another flush where the author is no longer new
     em.touch(a);
@@ -268,7 +292,35 @@ describe("EntityManager.reactions", () => {
       setViaHook: 1,
       afterMetadata: 1,
       runOnce: 1,
+      observedNickNames: ["a1"],
     });
+  });
+
+  it.withCtx("reactions can observe sync defaults", async ({ em }) => {
+    // Given a new book that is created
+    const b = newBook(em);
+    // And the default was immediately applied
+    expect(b.notes).toBe("Notes for title");
+    // But the reaction does not immediately run
+    expect(b.transientFields.reactions.observedNotes).toEqual([]);
+    // When we flush
+    await em.flush();
+    // Then the reaction runs & observes the default value
+    expect(b.transientFields.reactions.observedNotes).toEqual(["Notes for title"]);
+  });
+
+  it.withCtx("reactions can observe async defaults", async ({ em }) => {
+    // Given a new author w/a publisher
+    const a = em.create(Author, { firstName: "a1", publisher: newPublisher(em) });
+    // And the default was not applied yet
+    expect(a.nickNames).toBe(undefined);
+    // And nor was the reaction ran
+    expect(a.transientFields.reactions.observedNickNames).toEqual([]);
+    // When we flush
+    await em.flush();
+    // Then the reaction technically runs first (with RF field calcs) and observes
+    // no nickNames, but then the nickName is set/mutated, the reaction runs again
+    expect(a.transientFields.reactions.observedNickNames).toEqual(["", "a1,aL"]);
   });
 
   it.withCtx("runs reaction triggered by a hook", async ({ em }) => {

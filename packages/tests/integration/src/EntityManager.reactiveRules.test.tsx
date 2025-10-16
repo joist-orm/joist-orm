@@ -450,6 +450,16 @@ describe("EntityManager.reactiveRules", () => {
       runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
+      kind: "reaction",
+      cstr: "Book",
+      name: "Book.ts:118",
+      fields: ["notes"],
+      path: [],
+      runOnce: false,
+      fn: expect.any(Function),
+      source: expect.any(Function),
+    });
+    expect(bRfs[i++]).toEqual({
       kind: "populate",
       cstr: "Book",
       name: "search",

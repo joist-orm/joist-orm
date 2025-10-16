@@ -148,6 +148,7 @@ export class Author extends AuthorCodegen {
       immutable: 0,
       afterMetadata: 0,
       runOnce: 0,
+      observedNickNames: [] as string[],
     },
   };
 
@@ -397,10 +398,14 @@ config.addRule("age", (a) => {
 config.cascadeDelete("books");
 
 // For testing cross-entity default dependencies, i.e. for Book.notes
+// And for testing reactions observing async defaults
 config.setDefault(
   "nickNames", // Reusing `nickNames` which is also used for testing `string[]` columns
-  ["publisher", "firstName"], // Add a dummy load hint to make this async, so it doesn't just run-first for free
-  (a) => [a.firstName],
+  { publisher: "name", firstName: {} }, // Add a load hint to make this async, so it doesn't just run-first for free
+  (a) => [
+    a.firstName,
+    ...(a.publisher.get ? [a.firstName.substring(0, 1) + a.publisher.get.name.substring(0, 1)] : []),
+  ],
 );
 
 // direct field reaction
@@ -448,6 +453,11 @@ config.afterMetadata(() => {
   config.addReaction("ssn", (a) => {
     a.transientFields.reactions.afterMetadata += 1;
   });
+});
+
+// For testing reactions observing defaults
+config.addReaction({ name: "observeNickNames" }, "nickNames", (a) => {
+  a.transientFields.reactions.observedNickNames.push(a.nickNames?.join(",") ?? "");
 });
 
 config.addReaction({ name: "runOnce", runOnce: true }, "nickNames", (a) => {

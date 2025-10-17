@@ -1,3 +1,10 @@
+# [1.278.0](https://github.com/joist-orm/joist-orm/compare/v1.277.0...v1.278.0) (2025-10-17)
+
+
+### Features
+
+* Add isFactoryCreation for detesting test data. ([#1644](https://github.com/joist-orm/joist-orm/issues/1644)) ([bf757de](https://github.com/joist-orm/joist-orm/commit/bf757debc0622cbfa4c777fd0c5b40acd83cb954))
+
 # [1.277.0](https://github.com/joist-orm/joist-orm/compare/v1.276.2...v1.277.0) (2025-10-15)
 
 

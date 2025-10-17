@@ -79,6 +79,7 @@ import { JoinRows } from "./JoinRows";
 import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { WriteFn } from "./logging/FactoryLogger";
 import { newEntity } from "./newEntity";
+import { resetFactoryCreated } from "./newTestInstance";
 import { PluginManager } from "./PluginManager";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";
 import { ReactionsManager } from "./ReactionsManager";
@@ -1679,6 +1680,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     } finally {
       this.#rm.clearSuppressedTypeErrors();
       this.#fl.releaseLock();
+      resetFactoryCreated();
     }
   }
 

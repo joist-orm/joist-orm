@@ -70,6 +70,7 @@ export {
   FactoryEntityOpt,
   FactoryOpts,
   getTestIndex,
+  isFactoryCreation,
   maybeBranchValue,
   maybeNew,
   maybeNewPoly,

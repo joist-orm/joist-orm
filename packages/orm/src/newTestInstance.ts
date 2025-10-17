@@ -25,6 +25,9 @@ import { assertNever } from "./utils";
 
 let logger: FactoryLogger | undefined = undefined;
 
+// Maybe we should scope this per-em, but assuming tests are single-threaded for now
+let factoryCreated = new WeakSet();
+
 /**
  * DeepPartial-esque type specific to our `newTestInstance` factory.
  *
@@ -197,6 +200,9 @@ export function newTestInstance<T extends Entity>(
   }
 
   const entity = em.create(cstr, createOpts) as New<T>;
+
+  // Report this as factory-created until the next em.flush
+  factoryCreated.add(entity);
 
   // If the type we just made doesn't exist in `use` yet, remember it. This works better than
   // looking at the values in `fullOpts`, because instead of waiting until the end of the
@@ -830,4 +836,12 @@ export function setFactoryLogging(enabled: boolean): void {
 /** Marker for tests setting derived values during test setup. */
 export class FactoryInitialValue {
   constructor(public readonly value: any) {}
+}
+
+export function isFactoryCreation(entity: Entity): boolean {
+  return factoryCreated.has(entity);
+}
+
+export function resetFactoryCreated(): void {
+  factoryCreated = new WeakSet<Entity>();
 }

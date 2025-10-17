@@ -30,7 +30,15 @@ import {
 } from "@src/entities";
 import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import ansiRegex from "ansi-regex";
-import { maybeNew, maybeNewPoly, newTestInstance, noValue, setFactoryWriter, testIndex } from "joist-orm";
+import {
+  isFactoryCreation,
+  maybeNew,
+  maybeNewPoly,
+  newTestInstance,
+  noValue,
+  setFactoryWriter,
+  testIndex,
+} from "joist-orm";
 
 let factoryOutput: string[] = [];
 
@@ -54,7 +62,7 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get.firstName).toEqual("a1");
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book at EntityManager.factories.test.ts:51↩",
+       "Creating new Book at EntityManager.factories.test.ts:59↩",
        "  author = creating new Author↩",
        "    created Author#1 added to scope↩",
        "  created Book#1 added to scope↩",
@@ -149,7 +157,7 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get).not.toMatchEntity(a2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Tag at EntityManager.factories.test.ts:142↩",
+       "Creating new Tag at EntityManager.factories.test.ts:150↩",
        "  created Tag#1 added to scope↩",
        "  books[0] = creating new Book↩",
        "    author = creating new Author↩",
@@ -175,7 +183,7 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get).toEqual(a1);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book at EntityManager.factories.test.ts:172↩",
+       "Creating new Book at EntityManager.factories.test.ts:180↩",
        "  ...adding Author#1 opt to scope↩",
        "  author = Author#1 from scope↩",
        "  created Book#1 added to scope↩",
@@ -893,7 +901,7 @@ describe("EntityManager.factories", () => {
       await em.flush();
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new ChildGroup at EntityManager.factories.test.ts:884↩",
+         "Creating new ChildGroup at EntityManager.factories.test.ts:892↩",
          "  childGroup = creating new Child↩",
          "    created Child#1 added to scope↩",
          "  parentGroup = creating new ParentGroup↩",
@@ -1041,6 +1049,14 @@ describe("EntityManager.factories", () => {
     const em2 = newEntityManager();
     const p2 = await em2.load(Publisher, "p:1");
     expect(p2.numberOfBookReviews.get).toBe(10);
+  });
+
+  it("supports isFactoryCreation", async () => {
+    const em = newEntityManager();
+    const p1 = newSmallPublisher(em);
+    expect(isFactoryCreation(p1)).toBe(true);
+    await em.flush();
+    expect(isFactoryCreation(p1)).toBe(false);
   });
 });
 

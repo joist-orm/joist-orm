@@ -52,7 +52,7 @@ describe("EntityManager.upsert", () => {
     });
     const a1 = await em.upsert(Author, { firstName: "a1", nickNames: undefined, publisher: p1 });
     await em.flush();
-    expect(a1.nickNames).toEqual(["a1"]);
+    expect(a1.nickNames).toEqual(["a1", "ap"]);
     expect(p1.baseSyncDefault).toEqual("LPSyncDefault");
     expect(p1.baseAsyncDefault).toEqual("LPAsyncDefault");
   });

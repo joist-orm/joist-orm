@@ -12,6 +12,7 @@ export class Book extends BookCodegen {
     afterCommitCheckTagsChanged: undefined as boolean | undefined,
     throwNpeInSearch: false,
     bookReviewBeforeFlushRan: false,
+    reactions: { observedNotes: [] as string[] },
   };
 
   /** For testing reacting to poly CommentParent properties. */
@@ -111,6 +112,11 @@ config.beforeDelete("author", (b) => {
 // Test m2m reactivity on collection size
 config.addRule("tags", (b) => {
   return b.tags.get.length === 3 ? "Cannot have exactly three tags" : undefined;
+});
+
+// For testing reactions observing fields set by defaults
+config.addReaction("notes", (b) => {
+  b.transientFields.reactions.observedNotes.push(b.notes);
 });
 
 // Example of a trigger for a many-to-many field

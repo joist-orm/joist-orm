@@ -75,6 +75,27 @@ export function buildKnexQuery(
       query.groupByRaw(kqDot(alias, column));
     });
 
+  if (parsed.ctes && parsed.ctes.length > 0) {
+    for (let i = 0; i < parsed.ctes.length; i++) {
+      const cte = parsed.ctes[i];
+      const args: Parameters<(typeof query)["with"]> = [cte.alias] as any;
+      if (cte.columns && cte.columns.length > 0) args.push(cte.columns.map((c) => c.columnName) as any);
+      if (cte.query.kind === "raw") {
+        args.push(knex.raw(cte.query.sql) as any);
+        if (cte.query.bindings) args.push(cte.query.bindings as any);
+      } else if (cte.query.kind === "ast") {
+        args.push(buildKnexQuery(knex, cte.query.query, {}) as any);
+      } else {
+        assertNever(cte.query);
+      }
+      if (cte.recursive) {
+        query.withRecursive(...args);
+      } else {
+        query.with(...args);
+      }
+    }
+  }
+
   if (limit) query.limit(limit);
   if (offset) query.offset(offset);
 

@@ -1,3 +1,10 @@
+# [1.279.0](https://github.com/joist-orm/joist-orm/compare/v1.278.0...v1.279.0) (2025-10-18)
+
+
+### Features
+
+* add onBind to AliasMgmt ([#1645](https://github.com/joist-orm/joist-orm/issues/1645)) ([22beea2](https://github.com/joist-orm/joist-orm/commit/22beea26a9f75f46b3459bbf91cac71b9aaaf433))
+
 # [1.278.0](https://github.com/joist-orm/joist-orm/compare/v1.277.0...v1.278.0) (2025-10-17)
 
 

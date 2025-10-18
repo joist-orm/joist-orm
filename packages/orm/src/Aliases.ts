@@ -103,12 +103,17 @@ export interface EntityAlias<T> {
   raw(exp: string, bindings: readonly any[] | undefined): ExpressionCondition;
 }
 
-export const aliasMgmt = Symbol("aliasMgmt");
+const aliasMgmt = Symbol("aliasMgmt");
+
+export function getAliasMgmt(alias: Alias<any>): AliasMgmt {
+  return (alias as any)[aliasMgmt];
+}
 
 /** Management interface for `QueryParser` to set Alias's canonical alias. */
 export interface AliasMgmt {
   tableName: string;
   setAlias(meta: EntityMetadata, alias: string): void;
+  onBind(callback: BindCallback): void;
 }
 
 type ConditionAndAlias = { cond: ColumnCondition; field: Field & { aliasSuffix: string } };
@@ -133,6 +138,9 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
     tableName: meta.tableName,
     setAlias(newMeta: EntityMetadata, newAlias: string) {
       for (const callback of callbacks) callback(newMeta, newAlias);
+    },
+    onBind(callback) {
+      callbacks.push(callback);
     },
   };
   return new Proxy(cstr, {

@@ -1,5 +1,5 @@
 import { groupBy, isPlainObject } from "joist-utils";
-import { aliasMgmt, isAlias } from "./Aliases";
+import { getAliasMgmt, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
@@ -279,9 +279,9 @@ export function parseFindQuery(
     // might actually be `a1` if there are two `authors` tables in the query, so push the
     // canonical alias value for the current clause into the Alias.
     if (filter && typeof filter === "object" && "as" in filter && isAlias(filter.as)) {
-      filter.as[aliasMgmt].setAlias(meta, alias);
+      getAliasMgmt(filter.as).setAlias(meta, alias);
     } else if (isAlias(filter)) {
-      filter[aliasMgmt].setAlias(meta, alias);
+      getAliasMgmt(filter).setAlias(meta, alias);
     }
 
     if (ef && ef.kind === "join") {

@@ -203,8 +203,8 @@ describe("ReactiveReference", () => {
      [
        "b:1.title changed, queuing b:1.author.search↩",
        "b:1.title changed, queuing b:1.search↩",
-       "b:1.title changed, queuing b:1.favoriteAuthor.publisher@LargePublisher.titlesOfFavoriteBooks↩",
        "b:1.title changed, queuing b:1.favoriteAuthor.publisher.titlesOfFavoriteBooks↩",
+       "b:1.title changed, queuing b:1.favoriteAuthor.publisher@LargePublisher.titlesOfFavoriteBooks↩",
        "b:1.title changed, queuing b:1.favoriteAuthor.publisher@SmallPublisher.titlesOfFavoriteBooks↩",
        "Recalculating reactive fields values... (em.entities=1)↩",
        "  Walked 1 Book. paths, found 1 Book.search to recalc↩",

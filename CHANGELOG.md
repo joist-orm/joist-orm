@@ -1,3 +1,10 @@
+# [1.280.0](https://github.com/joist-orm/joist-orm/compare/v1.279.0...v1.280.0) (2025-10-20)
+
+
+### Features
+
+* sort metas by inheritance hierarchy in configure ([#1647](https://github.com/joist-orm/joist-orm/issues/1647)) ([b82c509](https://github.com/joist-orm/joist-orm/commit/b82c50986d33b5543299660a87ebf716b39a0b1d))
+
 # [1.279.0](https://github.com/joist-orm/joist-orm/compare/v1.278.0...v1.279.0) (2025-10-18)
 
 

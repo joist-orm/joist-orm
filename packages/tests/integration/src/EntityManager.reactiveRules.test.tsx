@@ -485,30 +485,6 @@ describe("EntityManager.reactiveRules", () => {
     });
     expect(bRfs[i++]).toEqual({
       kind: "query",
-      cstr: "LargePublisher",
-      name: "numberOfBookReviews",
-      fields: ["author", "deletedAt"],
-      path: ["author", "publisher@LargePublisher"],
-      runOnce: false,
-    });
-    expect(bRfs[i++]).toEqual({
-      kind: "populate",
-      cstr: "LargePublisher",
-      name: "titlesOfFavoriteBooks",
-      fields: ["title"],
-      path: ["favoriteAuthor", "publisher@LargePublisher"],
-      runOnce: false,
-    });
-    expect(bRfs[i++]).toEqual({
-      kind: "populate",
-      cstr: "LargePublisher",
-      name: "favoriteAuthor",
-      fields: ["author", "deletedAt"],
-      path: ["author", "publisher@LargePublisher"],
-      runOnce: false,
-    });
-    expect(bRfs[i++]).toEqual({
-      kind: "query",
       cstr: "Publisher",
       name: "numberOfBookReviews",
       fields: ["author", "deletedAt"],
@@ -537,6 +513,30 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfBookReviewsFormatted",
       fields: ["author", "deletedAt"],
       path: ["author", "publisher", "group"],
+      runOnce: false,
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "query",
+      cstr: "LargePublisher",
+      name: "numberOfBookReviews",
+      fields: ["author", "deletedAt"],
+      path: ["author", "publisher@LargePublisher"],
+      runOnce: false,
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "LargePublisher",
+      name: "titlesOfFavoriteBooks",
+      fields: ["title"],
+      path: ["favoriteAuthor", "publisher@LargePublisher"],
+      runOnce: false,
+    });
+    expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "LargePublisher",
+      name: "favoriteAuthor",
+      fields: ["author", "deletedAt"],
+      path: ["author", "publisher@LargePublisher"],
       runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
@@ -640,14 +640,6 @@ describe("EntityManager.reactiveRules", () => {
     });
     expect(brRfs[i++]).toEqual({
       kind: "query",
-      cstr: "LargePublisher",
-      name: "numberOfBookReviews",
-      fields: [],
-      path: ["book", "author", "publisher@LargePublisher"],
-      runOnce: false,
-    });
-    expect(brRfs[i++]).toEqual({
-      kind: "query",
       cstr: "Publisher",
       name: "numberOfBookReviews",
       fields: [],
@@ -660,6 +652,14 @@ describe("EntityManager.reactiveRules", () => {
       name: "numberOfBookReviewsFormatted",
       fields: [],
       path: ["book", "author", "publisher", "group"],
+      runOnce: false,
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "query",
+      cstr: "LargePublisher",
+      name: "numberOfBookReviews",
+      fields: [],
+      path: ["book", "author", "publisher@LargePublisher"],
       runOnce: false,
     });
     expect(brRfs[i++]).toEqual({

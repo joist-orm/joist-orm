@@ -30,6 +30,14 @@ export function configureMetadata(metas: EntityMetadata[]): void {
   try {
     populateConstructorMaps(metas);
     hookUpBaseTypeAndSubTypes(metas);
+    // Sort metas in place by inheritance hierarchy, so that base types come before subtypes
+    metas.sort((a, b) => {
+      if (a.baseTypes.length > 0 && b.baseTypes.length === 0) return 1;
+      if (a.baseTypes.length === 0 && b.baseTypes.length > 0) return -1;
+      if (a.baseTypes.some((baseType) => baseType === b)) return 1;
+      if (b.baseTypes.some((baseType) => baseType === a)) return -1;
+      return a.type.localeCompare(b.type);
+    });
     setImmutableFields(metas);
     populatePolyComponentFields(metas);
     fireAfterMetadatas(metas);

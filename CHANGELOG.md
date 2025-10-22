@@ -1,3 +1,10 @@
+## [1.280.1](https://github.com/joist-orm/joist-orm/compare/v1.280.0...v1.280.1) (2025-10-22)
+
+
+### Bug Fixes
+
+* Fix missing findOne/findOneOrFail options. ([#1649](https://github.com/joist-orm/joist-orm/issues/1649)) ([c43a057](https://github.com/joist-orm/joist-orm/commit/c43a05779bf0625bbcbd3b2823d093ac425c1c23))
+
 # [1.280.0](https://github.com/joist-orm/joist-orm/compare/v1.279.0...v1.280.0) (2025-10-20)
 
 

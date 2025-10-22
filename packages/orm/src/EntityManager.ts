@@ -504,12 +504,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   public async findOne<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: { populate?: H; softDeletes?: "include" | "exclude" },
+    options?: FindFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H> | undefined>;
   async findOne<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: { populate?: any; softDeletes?: "include" | "exclude" },
+    options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T | undefined> {
     const list = await this.find(type, where, options);
     if (list.length === 0) {
@@ -529,12 +529,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   public async findOneOrFail<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options: { populate?: H; softDeletes?: "include" | "exclude" },
+    options: FindFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H>>;
   async findOneOrFail<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: { populate?: any; softDeletes?: "include" | "exclude" },
+    options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T> {
     const list = await this.find(type, where, options);
     if (list.length === 0) {

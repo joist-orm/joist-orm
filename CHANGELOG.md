@@ -1,3 +1,10 @@
+# [1.281.0](https://github.com/joist-orm/joist-orm/compare/v1.280.1...v1.281.0) (2025-10-24)
+
+
+### Features
+
+* Make em.create ids stable in toString. ([#1652](https://github.com/joist-orm/joist-orm/issues/1652)) ([9408ffa](https://github.com/joist-orm/joist-orm/commit/9408ffaf0e5743e6707f4738f68fb6baaaada7da)), closes [#1](https://github.com/joist-orm/joist-orm/issues/1) [#1625](https://github.com/joist-orm/joist-orm/issues/1625)
+
 ## [1.280.1](https://github.com/joist-orm/joist-orm/compare/v1.280.0...v1.280.1) (2025-10-22)
 
 

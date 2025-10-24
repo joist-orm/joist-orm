@@ -28,6 +28,8 @@ export class InstanceData {
   #deleted?: Operation;
   /** Whether our entity is new or not. */
   #new?: Operation;
+  /** The `a#1`, `a#2` index if we're an em.create-d entity. We never unset this, to keep ids stable across flushes. */
+  createId: string | undefined;
   /** Whether our entity should flush regardless of any other changes. */
   isTouched: boolean = false;
 

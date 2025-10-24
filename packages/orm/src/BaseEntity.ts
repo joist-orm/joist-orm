@@ -1,5 +1,14 @@
 import { IdType } from "./Entity";
-import { Entity, EntityManager, InstanceData, TaggedId, deTagId, getMetadata, keyToNumber } from "./index";
+import {
+  Entity,
+  EntityManager,
+  EntityMetadata,
+  InstanceData,
+  TaggedId,
+  deTagId,
+  getMetadata,
+  keyToNumber,
+} from "./index";
 
 /**
  * Returns the internal `__data` tracking field for `entity`.
@@ -89,27 +98,12 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
 
   toString(): string {
     const meta = getMetadata(this);
-    // Even if we've been `em.assignNewIds`-d before an `em.flush`, also have new entities
-    // return the `Author#1` syntax because it's really helpful for debugging to see what's new.
-    if (this.isNewEntity || this.idMaybe === undefined) {
-      const sameType = this.em.getEntities(meta.cstr).filter((e) => e.isNewEntity);
-      // Returns `Author#1` as a hint that it's a test id and not the real id
-      return `${meta.type}#${sameType.indexOf(this) + 1}`;
-    } else {
-      // Strip the tag because we add back the entity prefix
-      const id = keyToNumber(meta, this.id) || "new";
-      // Returns `Author:1` instead of `author:1` to differentiate the instance's toString from the tagged id itself
-      return `${meta.type}:${id}`;
-    }
+    return toStringWithPrefix(meta, this, meta.type);
   }
 
   toTaggedString(): string {
-    if (this.idMaybe) {
-      return this.idTagged;
-    }
     const meta = getMetadata(this);
-    const sameType = this.em.getEntities(meta.cstr).filter((e) => e.isNewEntity);
-    return `${meta.tagName}#${sameType.indexOf(this) + 1}`;
+    return toStringWithPrefix(meta, this, meta.tagName);
   }
 
   public get em(): EM {
@@ -139,6 +133,25 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   [Symbol.for("nodejs.util.inspect.custom")](): string {
     return this.toString();
   }
+}
+
+function toStringWithPrefix(meta: EntityMetadata, entity: Entity, prefix: string): string {
+  // Start with `Author` or `a`, depending on the caller
+  let result = prefix;
+  // Add `#1` if this is an em.create-d entity
+  const data = getInstanceData(entity);
+  const createId = data.createId;
+  if (createId) {
+    result += `#${createId}`;
+  }
+  // Add the `:1` but only after our flush is complete, otherwise the id is
+  // internally assigned but not really flushed/committed to the db yet
+  const dbId = entity.idTaggedMaybe;
+  if (data.pendingOperation !== "insert" && dbId) {
+    // Strip the tag because we add back the entity prefix
+    result += `:${keyToNumber(meta, dbId)}`;
+  }
+  return result;
 }
 
 /**

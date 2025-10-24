@@ -127,7 +127,7 @@ describe("SingleTableInheritance", () => {
     // @ts-expect-error
     ot2.copiedFrom.set(nt);
     // And either way it fails at runtime
-    await expect(em.flush()).rejects.toThrow("TaskOld#1 copiedFrom must be a TaskOld not TaskNew:1");
+    await expect(em.flush()).rejects.toThrow("TaskOld#4 copiedFrom must be a TaskOld not TaskNew#1:1");
   });
 
   it("only adds subtype fields to correct subtype", async () => {
@@ -317,7 +317,7 @@ describe("SingleTableInheritance", () => {
     // @ts-expect-error
     newTaskItem(em, { task: nt, newTask: nt, oldTask: nt });
     await expect(em.flush()).rejects.toThrow(
-      "TaskItem#1 newTask must be a TaskNew not TaskOld#1, TaskItem#2 oldTask must be a TaskOld not TaskNew#1",
+      "TaskItem#1 newTask must be a TaskNew not TaskOld#1, TaskItem#2 oldTask must be a TaskOld not TaskNew#2",
     );
   });
 

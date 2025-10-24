@@ -139,27 +139,24 @@ class ManyToManyFieldStatusImpl<T extends Entity, U extends Entity> implements M
   // any m2m mutation requires having both entities in-memory anyway, i.e. we can't do id-only/unloaded
   // mutation of m2m relations.
   get added(): U[] {
-    return this.#joinRows.addedFor(this.#m2m, this.#entity).sort(entityCompare) as U[];
+    return this.#added.sort(entityCompare);
   }
 
   get removed(): U[] {
-    return this.#joinRows.removedFor(this.#m2m, this.#entity).sort(entityCompare) as U[];
+    return this.#removed.sort(entityCompare);
   }
 
   get changed(): U[] {
-    return [
-      // Append added & removed
-      ...(this.#joinRows.addedFor(this.#m2m, this.#entity) as U[]),
-      ...(this.#joinRows.removedFor(this.#m2m, this.#entity) as U[]),
-    ].sort(entityCompare);
+    return [...this.#added, ...this.#removed].sort(entityCompare);
   }
 
   get hasChanged(): boolean {
-    return this.changed.length > 0;
+    // Calculating `changed: U[]` can be expensive if we sort, so just look at added/removed
+    return this.#added.length > 0 || this.#removed.length > 0;
   }
 
   get hasUpdated(): boolean {
-    return !this.#entity.isNewEntity && this.changed.length > 0;
+    return !this.#entity.isNewEntity && this.hasChanged;
   }
 
   get originalEntities(): Promise<readonly U[]> {
@@ -169,6 +166,14 @@ class ManyToManyFieldStatusImpl<T extends Entity, U extends Entity> implements M
       copy.push(...this.removed);
       return copy.sort(entityCompare);
     });
+  }
+
+  get #added(): U[] {
+    return this.#joinRows.addedFor(this.#m2m, this.#entity) as U[];
+  }
+
+  get #removed(): U[] {
+    return this.#joinRows.removedFor(this.#m2m, this.#entity) as U[];
   }
 }
 
@@ -197,23 +202,11 @@ class OneToManyFieldStatusImpl<T extends Entity, U extends Entity> implements On
   // the o2m (calling `add(other)` or `remove(other)` or `other.otherField = me`), all
   // require having the "other entity" in memory.
   get added(): U[] {
-    return [
-      ...this.#o2m.added(),
-      ...(this.#entity.isNewEntity
-        ? []
-        : ((getEmInternalApi(this.#entity.em).pendingChildren.get(this.#entity.idTagged)?.get(this.#o2m.fieldName)
-            ?.adds as U[]) ?? [])),
-    ].sort(entityCompare);
+    return this.#added.sort(entityCompare);
   }
 
   get removed(): U[] {
-    return [
-      ...this.#o2m.removed(),
-      ...(this.#entity.isNewEntity
-        ? []
-        : ((getEmInternalApi(this.#entity.em).pendingChildren.get(this.#entity.idTagged)?.get(this.#o2m.fieldName)
-            ?.removes as U[]) ?? [])),
-    ].sort(entityCompare);
+    return this.#removed.sort(entityCompare);
   }
 
   get changed(): U[] {
@@ -222,8 +215,7 @@ class OneToManyFieldStatusImpl<T extends Entity, U extends Entity> implements On
 
   get hasChanged(): boolean {
     // Calculating `changed: U[]` can be expensive if we sort, so just look at added/removed
-    // ...except that these both sort as well
-    return this.added.length > 0 || this.removed.length > 0;
+    return this.#added.length > 0 || this.#removed.length > 0;
   }
 
   get hasUpdated(): boolean {
@@ -237,6 +229,29 @@ class OneToManyFieldStatusImpl<T extends Entity, U extends Entity> implements On
       copy.push(...this.removed);
       return copy.sort(entityCompare);
     });
+  }
+
+  // This doesn't have to be a promise, b/c even if o2m is unloaded, to mutate
+  // the o2m (calling `add(other)` or `remove(other)` or `other.otherField = me`), all
+  // require having the "other entity" in memory.
+  get #added(): U[] {
+    return [
+      ...this.#o2m.added(),
+      ...(this.#entity.isNewEntity
+        ? []
+        : ((getEmInternalApi(this.#entity.em).pendingChildren.get(this.#entity.idTagged)?.get(this.#o2m.fieldName)
+            ?.adds as U[]) ?? [])),
+    ];
+  }
+
+  get #removed(): U[] {
+    return [
+      ...this.#o2m.removed(),
+      ...(this.#entity.isNewEntity
+        ? []
+        : ((getEmInternalApi(this.#entity.em).pendingChildren.get(this.#entity.idTagged)?.get(this.#o2m.fieldName)
+            ?.removes as U[]) ?? [])),
+    ];
   }
 }
 

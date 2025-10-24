@@ -25,6 +25,9 @@ export interface Entity {
   /**
    * Returns `type:id`, i.e. `Author:1` for persisted entities and `Author#1` for new entities.
    *
+   * Once an entity is persisted, we'll return `Author#1:1` to denote "the previously-new author #1
+   * is now authors row id=1 in the database".
+   *
    * This is meant to be used for developer-facing logging and debugging, and not a user-facing
    * name / display name.
    */

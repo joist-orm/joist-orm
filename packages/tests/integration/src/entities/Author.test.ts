@@ -15,8 +15,6 @@ import { Author, Book, BookId, Publisher, PublisherSize, newAuthor, newPublisher
 import { makeApiCall } from "../setupDbTests";
 import { zeroTo } from "../utils";
 
-const inspect = Symbol.for("nodejs.util.inspect.custom");
-
 describe("Author", () => {
   it("can load an entity with a tagged id", async () => {
     await insertAuthor({ first_name: "a1" });
@@ -93,7 +91,7 @@ describe("Author", () => {
     b1.title = "a1";
     // Then the validation rule is ran even though it's on the author entity
     await expect(em.flush()).rejects.toThrow(
-      "Validation error: Author:1 A book title cannot be the author's firstName",
+      "Validation error: Author#1:1 A book title cannot be the author's firstName",
     );
   });
 
@@ -586,23 +584,6 @@ describe("Author", () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);
     expect(a1.em).toEqual(em);
-  });
-
-  it("implements inspect for new entities", async () => {
-    const em = newEntityManager();
-    const [a1, a2] = [newAuthor(em), newAuthor(em)];
-    expect((a1 as any)[inspect]()).toEqual("Author#1");
-    expect((a2 as any)[inspect]()).toEqual("Author#2");
-  });
-
-  it("implements inspect for saved entities", async () => {
-    const em = newEntityManager();
-    const [a1, a2] = [newAuthor(em), newAuthor(em)];
-    await em.flush();
-    const a3 = newAuthor(em);
-    expect((a1 as any)[inspect]()).toEqual("Author:1");
-    expect((a2 as any)[inspect]()).toEqual("Author:2");
-    expect((a3 as any)[inspect]()).toEqual("Author#1");
   });
 
   it("can access deleted children", async () => {

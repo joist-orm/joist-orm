@@ -163,7 +163,7 @@ export class ReactionsManager {
             .filter((e) => e instanceof r.cstr);
           this.logger?.logWalked(todo, r, entities);
           entities.forEach((entity) => {
-            const key = `${entity}_${r.name}`;
+            const key = `${entity.toTaggedString()}_${r.name}`;
             // We could arrive at the same reactable from multiple paths (eg, 2 dependent fields changed), so we need to
             // dedupe based on the entity and reactable to only run each action once for any given entity per loop
             if (actionsMap.has(key)) return;

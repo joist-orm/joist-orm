@@ -4,6 +4,8 @@ import { newEntityManager } from "@src/testEm";
 import { getInstanceData } from "joist-orm";
 import { jan1 } from "src/testDates";
 
+const inspect = Symbol.for("nodejs.util.inspect.custom");
+
 describe("Entity", () => {
   it("passes instanceof", () => {
     const em = newEntityManager();
@@ -18,14 +20,16 @@ describe("Entity", () => {
     }).toThrow("Entities must be constructed by calling em.create or em.load");
   });
 
-  it("has a toString", async () => {
+  it("has toString", async () => {
     const em = newEntityManager();
     const a = newAuthor(em);
     expect(a.toString()).toBe("Author#1");
     await em.assignNewIds();
     expect(a.toString()).toBe("Author#1");
     await em.flush();
-    expect(a.toString()).toBe("Author:1");
+    expect(a.toString()).toBe("Author#1:1");
+    const a2 = newAuthor(em);
+    expect(a2.toString()).toBe("Author#2");
   });
 
   it("can toString a new-then-deleted entity", async () => {
@@ -46,6 +50,26 @@ describe("Entity", () => {
     expect(a2.toString()).toBe("Author#1");
     expect(a1.toTaggedString()).toBe("a:1");
     expect(a2.toTaggedString()).toBe("a#1");
+  });
+
+  it("has toTaggedString", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em);
+    expect(a.toTaggedString()).toBe("a#1");
+    await em.assignNewIds();
+    expect(a.toTaggedString()).toBe("a#1");
+    await em.flush();
+    expect(a.toTaggedString()).toBe("a#1:1");
+  });
+
+  it("implements inspect for saved entities", async () => {
+    const em = newEntityManager();
+    const [a1, a2] = [newAuthor(em), newAuthor(em)];
+    await em.flush();
+    const a3 = newAuthor(em);
+    expect((a1 as any)[inspect]()).toEqual("Author#1:1");
+    expect((a2 as any)[inspect]()).toEqual("Author#2:2");
+    expect((a3 as any)[inspect]()).toEqual("Author#3");
   });
 
   it("can toJSON a new entity", () => {

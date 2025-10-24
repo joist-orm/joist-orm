@@ -376,7 +376,7 @@ describe("ReactiveField", () => {
     // Then the rule does not run
     await em.flush();
     // And we did not load the Publisher into memory (i.e. the rule was not invoked)
-    expect(em.entities).toMatchEntity(["b:1", "comment:1", "a:1"]);
+    expect(em.entities).toMatchEntity(["b:1", "comment#1:1", "a:1"]);
     // But if we create a new publisher, and steal the author
     const a = await em.load(Author, "a:1");
     newPublisher(em, { name: "p2", authors: [a] });

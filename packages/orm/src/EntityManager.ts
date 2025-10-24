@@ -267,6 +267,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   #fieldLogger: FieldLogger | undefined;
   #isLoadedCache = new IsLoadedCache();
   #merging: Set<EntityW> | undefined;
+  /** Track `a#1`, `a#2`, etc indexes for `em.create`-d entities. */
+  #createCounter: Map<string, number> | undefined = undefined;
   private __api: EntityManagerInternalApi;
   #isRefreshing = false;
   mode: EntityManagerMode = "writes";
@@ -2269,6 +2271,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
   #doCreate<T extends EntityW>(type: EntityConstructor<T>, opts: any, partial: boolean): T {
     const entity = newEntity(this, type, true);
+
+    // Assign the next `a#1`, `a#2`, etc. id
+    const meta = getMetadata(type);
+    const counter = (this.#createCounter ??= new Map<string, number>());
+    const i = (counter.get(meta.tagName) ?? 0) + 1;
+    counter.set(meta.tagName, i);
+    getInstanceData(entity).createId = String(i);
 
     // Check opts.id for an explicitly-set id
     this.#doRegister(entity as any, opts.id);

@@ -87,8 +87,8 @@ describe("toMatchEntity", () => {
       + Received  + 1
 
         Object {
-      -   "author": "a:2",
-      +   "author": "a:1",
+      -   "author": "a#2:2",
+      +   "author": "a#1:1",
         }
     `);
   });
@@ -126,7 +126,7 @@ describe("toMatchEntity", () => {
 
         Object {
       -   "author": undefined,
-      +   "author": "a:1",
+      +   "author": "a#1:1",
         }
     `);
   });
@@ -165,8 +165,8 @@ describe("toMatchEntity", () => {
 
         Object {
           "books": Array [
-      +     "b:1",
-            "b:2",
+      +     "b#1:1",
+            "b#2:2",
           ],
         }
     `);
@@ -189,8 +189,8 @@ describe("toMatchEntity", () => {
 
         Object {
           "books": Array [
-            "b:1",
-      -     "b:2",
+            "b#1:1",
+      -     "b#2:2",
           ],
         }
     `);

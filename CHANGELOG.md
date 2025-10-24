@@ -1,3 +1,10 @@
+## [1.281.1](https://github.com/joist-orm/joist-orm/compare/v1.281.0...v1.281.1) (2025-10-24)
+
+
+### Bug Fixes
+
+* Remove sorting from m2m.hasChanged check. ([#1653](https://github.com/joist-orm/joist-orm/issues/1653)) ([cd17199](https://github.com/joist-orm/joist-orm/commit/cd17199c7679d5bba475208d60a81486ab02ae3d))
+
 # [1.281.0](https://github.com/joist-orm/joist-orm/compare/v1.280.1...v1.281.0) (2025-10-24)
 
 

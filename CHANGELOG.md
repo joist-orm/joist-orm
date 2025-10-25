@@ -1,3 +1,10 @@
+## [1.281.2](https://github.com/joist-orm/joist-orm/compare/v1.281.1...v1.281.2) (2025-10-25)
+
+
+### Bug Fixes
+
+* Remove ensureLoaded from m2o.isTaggedMaybe. ([#1654](https://github.com/joist-orm/joist-orm/issues/1654)) ([2b95b88](https://github.com/joist-orm/joist-orm/commit/2b95b88a12aa45b59f1304751e2b92e64c7f77f3))
+
 ## [1.281.1](https://github.com/joist-orm/joist-orm/compare/v1.281.0...v1.281.1) (2025-10-24)
 
 

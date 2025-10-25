@@ -214,7 +214,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   /** Returns the tagged id of the current value, or undefined if unset or a new entity. */
   get idTaggedMaybe(): TaggedId | undefined {
-    ensureNotDeleted(this.entity, "pending");
+    // Skip the deleted check so that `isPreloaded` doesn't blow up during em.refreshes/populates
+    // ensureNotDeleted(this.entity, "pending");
     return maybeResolveReferenceToId(this.current());
   }
 

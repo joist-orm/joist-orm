@@ -1,3 +1,10 @@
+# [1.282.0](https://github.com/joist-orm/joist-orm/compare/v1.281.2...v1.282.0) (2025-10-27)
+
+
+### Features
+
+* add em.getPlugins ([#1655](https://github.com/joist-orm/joist-orm/issues/1655)) ([304ae82](https://github.com/joist-orm/joist-orm/commit/304ae828baa7f5b713bac1da038ef371d87361bf))
+
 ## [1.281.2](https://github.com/joist-orm/joist-orm/compare/v1.281.1...v1.281.2) (2025-10-25)
 
 

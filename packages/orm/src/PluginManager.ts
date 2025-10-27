@@ -64,7 +64,7 @@ export interface Plugin extends PluginMethods {}
  * for callbacks that have at least one registered plugin, making unused plugin hooks
  * zero-cost at runtime.
  */
-export class PluginManager {
+export class PluginManager implements Required<PluginMethods> {
   #plugins: Plugin[] = [];
   readonly #pluginsByCallback: Partial<Record<keyof Plugin, Plugin[]>> = {};
   constructor(public readonly em: EntityManager) {}
@@ -113,5 +113,3 @@ export class PluginManager {
   ): void {}
   afterFind(meta: EntityMetadata, operation: FindOperation, rows: any[]) {}
 }
-
-export interface PluginManager extends Required<PluginMethods> {}

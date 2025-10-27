@@ -64,8 +64,8 @@ export interface Plugin extends PluginMethods {}
  * for callbacks that have at least one registered plugin, making unused plugin hooks
  * zero-cost at runtime.
  */
-export class PluginManager {
-  readonly plugins: Plugin[] = [];
+export class PluginManager implements Required<PluginMethods> {
+  #plugins: Plugin[] = [];
   readonly #pluginsByCallback: Partial<Record<keyof Plugin, Plugin[]>> = {};
   constructor(public readonly em: EntityManager) {}
 
@@ -80,22 +80,36 @@ export class PluginManager {
   addPlugin(plugin: Plugin) {
     if (plugin[emSymbol] !== undefined) fail("Cannot add plugin to multiple entity managers");
     plugin[emSymbol] = this.em;
-    this.plugins.push(plugin);
-
+    this.#plugins.push(plugin);
     for (const method of pluginMethods) {
       if (method in plugin) {
         (this.#pluginsByCallback[method] ??= []).push(plugin);
-        // As a performance optimization, we only create the method on the plugin manager once we have at least one
-        // plugin using that method. This is to make it so any unused plugin methods are effectively no-ops when called
-        // from within the em.
-        this[method] ??= function (this: PluginManager, ...args: any[]) {
-          for (const plugin of this.#pluginsByCallback[method]!) {
-            (plugin[method] as (...args: any[]) => unknown)(...args);
-          }
-        };
+        // As a performance optimization, we only create the actual implmentation for each method on the plugin manager
+        // once we have at least one plugin using that method. This is to make it so any unused plugin methods are
+        // effectively no-ops when called from within the em.
+        if (!Object.hasOwn(this, method)) {
+          this[method] = function (this: PluginManager, ...args: any[]) {
+            for (const plugin of this.#pluginsByCallback[method]!) {
+              (plugin[method] as (...args: any[]) => unknown)(...args);
+            }
+          };
+        }
       }
     }
   }
-}
 
-export interface PluginManager extends PluginMethods {}
+  get plugins(): readonly Plugin[] {
+    return this.#plugins;
+  }
+
+  /** Defined as no-op functions initially instead of using optional chaining for performance reasons.  see:
+   * https://adventures.nodeland.dev/archive/noop-functions-vs-optional-chaining-a-performance/ */
+  beforeSetField(entity: Entity, field: string, newValue: any): void {}
+  beforeFind(
+    meta: EntityMetadata,
+    operation: FindOperation,
+    query: ParsedFindQuery,
+    settings: { limit?: number; offset?: number },
+  ): void {}
+  afterFind(meta: EntityMetadata, operation: FindOperation, rows: any[]) {}
+}

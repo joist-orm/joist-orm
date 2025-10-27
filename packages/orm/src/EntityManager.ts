@@ -303,7 +303,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       rm: this.#rm,
       indexManager: this.#indexManager,
       isLoadedCache: this.#isLoadedCache,
-      pluginManager: undefined,
+      pluginManager: new PluginManager(this),
 
       isMerging(entity: EntityW): boolean {
         return em.#merging?.has(entity) ?? false;
@@ -448,9 +448,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     settings: { limit?: number; offset?: number },
   ) {
     const { pluginManager } = getEmInternalApi(this);
-    pluginManager?.beforeFind?.(meta, operation, parsed, settings);
+    pluginManager.beforeFind(meta, operation, parsed, settings);
     const rows = await this.driver.executeFind(this, parsed, settings);
-    pluginManager?.afterFind?.(meta, operation, rows);
+    pluginManager.afterFind(meta, operation, rows);
     return rows;
   }
 
@@ -2257,7 +2257,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   addPlugin(plugin: Plugin): void {
-    (getEmInternalApi(this).pluginManager ??= new PluginManager(this)).addPlugin(plugin);
+    getEmInternalApi(this).pluginManager.addPlugin(plugin);
+  }
+
+  getPlugins(): readonly Plugin[] {
+    return getEmInternalApi(this).pluginManager.plugins;
   }
 
   get isRefreshing() {
@@ -2371,7 +2375,7 @@ export interface EntityManagerInternalApi {
   isMerging: (entity: Entity) => boolean;
   get fieldLogger(): FieldLogger | undefined;
   get isLoadedCache(): IsLoadedCache;
-  pluginManager: PluginManager | undefined;
+  pluginManager: PluginManager;
 }
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {

@@ -92,7 +92,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
       const currentValue = getField(entity, fieldName);
       indexManager.maybeUpdateFieldIndex(entity, fieldName, currentValue, newValue);
 
-      pluginManager?.beforeSetField?.(entity, fieldName, newValue);
+      pluginManager.beforeSetField(entity, fieldName, newValue);
       data[fieldName] = newValue;
       delete originalData[fieldName];
       fieldLogger?.logSet(entity, fieldName, newValue);
@@ -119,7 +119,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
   indexManager.maybeUpdateFieldIndex(entity, fieldName, currentValue, newValue);
 
-  pluginManager?.beforeSetField?.(entity, fieldName, newValue);
+  pluginManager.beforeSetField(entity, fieldName, newValue);
   data[fieldName] = newValue;
   return true;
 }

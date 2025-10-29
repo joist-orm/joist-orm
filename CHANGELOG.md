@@ -1,3 +1,10 @@
+## [1.282.1](https://github.com/joist-orm/joist-orm/compare/v1.282.0...v1.282.1) (2025-10-29)
+
+
+### Bug Fixes
+
+* Simplify m2m binding generation. ([#1656](https://github.com/joist-orm/joist-orm/issues/1656)) ([02f5c8b](https://github.com/joist-orm/joist-orm/commit/02f5c8b662276d6bb0dd557f4eb3fde9fd4bdd5b))
+
 # [1.282.0](https://github.com/joist-orm/joist-orm/compare/v1.281.2...v1.282.0) (2025-10-27)
 
 

@@ -4,7 +4,6 @@ import { builtins, getTypeParser } from "pg-types";
 import array from "postgres-array";
 import { buildValuesCte } from "../dataloaders/findDataLoader";
 import {
-  deTagId,
   driverAfterBegin,
   driverAfterCommit,
   driverBeforeBegin,
@@ -13,7 +12,6 @@ import {
   fail,
   getMetadata,
   keyToNumber,
-  maybeResolveReferenceToId,
   ParsedFindQuery,
   PreloadPlugin,
   RuntimeConfig,
@@ -162,8 +160,8 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
         const meta2 = m2m.otherMeta;
         const bindings = newRows.flatMap((row) => {
           return [
-            keyToNumber(meta1, maybeResolveReferenceToId(row.columns[m2m.columnName] as any))!,
-            keyToNumber(meta2, maybeResolveReferenceToId(row.columns[m2m.otherColumnName] as any))!,
+            keyToNumber(meta1, row.columns[m2m.columnName].idTagged),
+            keyToNumber(meta2, row.columns[m2m.otherColumnName].idTagged),
           ];
         });
         const { rows } = await knex.raw(sql, bindings);
@@ -175,7 +173,6 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
       if (deletedRows.length > 0) {
         // `remove`s that were done against unloaded ManyToManyCollections will not have row ids
         const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== -1);
-
         if (haveIds.length > 0) {
           await knex(joinTableName)
             .del()
@@ -184,24 +181,23 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
               haveIds.map((e) => e.id!),
             );
         }
-
         if (noIds.length > 0) {
           const data = noIds
-            .map(
-              (e) =>
-                [
-                  deTagId(m2m.meta, maybeResolveReferenceToId(e.columns[m2m.columnName] as any)!),
-                  deTagId(m2m.otherMeta, maybeResolveReferenceToId(e.columns[m2m.otherColumnName] as any)!),
-                ] as any,
-            )
             // Watch for m2m rows that got added-then-removed to entities that were themselves added-then-removed,
-            // as the deTagId will be undefined for those, as we're skipping adding them to the database.
-            .filter(([id1, id2]) => id1 !== undefined && id2 !== undefined);
+            // as the idTagged will be undefined for those, as we're skipping adding them to the database.
+            .filter((row) => {
+              const e1 = row.columns[m2m.columnName];
+              const e2 = row.columns[m2m.columnName];
+              return !e1.isNewEntity && !e2.isNewEntity;
+            })
+            .map((e) => [
+              keyToNumber(m2m.meta, e.columns[m2m.columnName].idTagged),
+              keyToNumber(m2m.otherMeta, e.columns[m2m.otherColumnName].idTagged),
+            ]);
           if (data.length > 0) {
             await knex(joinTableName).del().whereIn([m2m.columnName, m2m.otherColumnName], data);
           }
         }
-
         deletedRows.forEach((row) => {
           row.id = undefined;
           row.op = JoinRowOperation.Flushed;

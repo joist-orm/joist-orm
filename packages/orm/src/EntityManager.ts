@@ -6,7 +6,7 @@ import { IndexManager } from "./IndexManager";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
 import { getReactiveRules } from "./caches";
 import { constraintNameToValidationError, ReactiveRule } from "./config";
-import { getConstructorFromTag, getMetadataForType } from "./configure";
+import { getConstructorFromTag, getMetadataForTable, getMetadataForType } from "./configure";
 import { findByUniqueDataLoader, findByUniqueOperation } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader, findCountOperation } from "./dataloaders/findCountDataLoader";
 import { findDataLoader, findOperation } from "./dataloaders/findDataLoader";
@@ -1792,6 +1792,40 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       }
     }
     this.#isRefreshing = false;
+  }
+
+  /**
+   * Loads the result of `get_table_data(...tables...)` into the EM, overwriting/updating
+   * data for any existing that exist, and creating new entities for new rows.
+   *
+   * @param rows one row per table, with `table_name` + `rows`-as-json columns
+   */
+  public refreshFromJsonRows(rows: any[]): void {
+    // ...eventually turn rows into a map so CTI probing could easily find its subtype tables
+    for (const row of rows) {
+      const { table_name: tableName, rows: tableRows } = row;
+      const meta = getMetadataForTable(tableName);
+
+      // Maybe create an up-front list of preloaders, i.e.:
+      // - Go through meta.allFields looking for FK type fields, i.e. book.author_id
+      // - For one, create a `preloadFn` that accepts the book row, gets the `author_id` value,
+      //   and then does like `preloadCache[a:1][books] += book`
+      // - After `hydrate`, do like `for row of rows, for preloader of preloaders, preloader(row)`
+
+      if (meta.inheritanceType === "cti" && meta.baseType) {
+        // cti subtypes could defer to their base type to find & glue their owns together
+      } else if (meta.inheritanceType === "cti" && !meta.baseType) {
+        // maybe recreate the rows how hydrate expects by probing rows
+      }
+
+      // Defer to hydrate to update/create the entities
+      // ...atm hydrate expects the rows to be "returned by SELECT" which will be slightly different
+      // from "returned by row_to_json", i.e. we will probably need an opt that tells it to use serde
+      // functions that can handle the json-ed version of the column data.
+      this.hydrate(meta.cstr, tableRows, { overwriteExisting: true });
+
+      // and then do relations, i.e. use the `for row of rows, preloader of preloaders`...
+    }
   }
 
   public get numberOfEntities(): number {

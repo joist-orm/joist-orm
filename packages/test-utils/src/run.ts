@@ -1,4 +1,4 @@
-import { Entity, EntityManager, isEntity } from "joist-orm";
+import { Entity, EntityManager, isEntity, RunRefreshPlugin } from "joist-orm";
 import { fail } from "joist-utils";
 import { Context } from "./context";
 
@@ -15,9 +15,12 @@ export async function run<C extends Context, T>(
   const { em } = ctx;
   // Ensure any test data we've setup is flushed
   await em.flush();
-  const result = await fn(await contextFn(ctx));
+  const newCtx = await contextFn(ctx);
+  const plugin = new RunRefreshPlugin();
+  newCtx.em.addPlugin(plugin);
+  const result = await fn(newCtx);
   // We expect `fn` (i.e. a resolver) to do its own UoW management, so don't flush.
-  await em.refresh({ deepLoad: true });
+  await plugin.refresh(em);
   return mapResultToOriginalEm(em, result);
 }
 

@@ -2,7 +2,7 @@ import { Entity } from "./Entity";
 import { EntityManager, FindOperation } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 import { ParsedFindQuery } from "./QueryParser";
-import { fail } from "./utils";
+import { JoinRowTodo, Todo } from "./Todo";
 
 interface PluginMethods {
   /**
@@ -35,11 +35,11 @@ interface PluginMethods {
    * @param rows The raw database rows returned from the query
    */
   afterFind?(meta: EntityMetadata, operation: FindOperation, rows: any[]): void;
+
+  beforeWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void;
 }
 
-const pluginMethods = ["beforeSetField", "beforeFind", "afterFind"] as (keyof PluginMethods)[];
-
-const emSymbol = Symbol("em");
+const pluginMethods = ["beforeSetField", "beforeFind", "afterFind", "beforeWrite"] as (keyof PluginMethods)[];
 /**
  * Base class for plugins that hook into entity lifecycle events.
  *
@@ -47,11 +47,8 @@ const emSymbol = Symbol("em");
  * and are automatically registered with the EntityManager when added via PluginManager.
  */
 export abstract class Plugin {
-  private [emSymbol]: EntityManager | undefined;
-
-  /** Access the EntityManager this plugin is registered with. */
-  get em(): EntityManager {
-    return this[emSymbol]!;
+  get shouldCopy() {
+    return true;
   }
 }
 
@@ -78,8 +75,6 @@ export class PluginManager implements Required<PluginMethods> {
    * @throws Error if the plugin is already registered with another EntityManager
    */
   addPlugin(plugin: Plugin) {
-    if (plugin[emSymbol] !== undefined) fail("Cannot add plugin to multiple entity managers");
-    plugin[emSymbol] = this.em;
     this.#plugins.push(plugin);
     for (const method of pluginMethods) {
       if (method in plugin) {
@@ -102,6 +97,14 @@ export class PluginManager implements Required<PluginMethods> {
     return this.#plugins;
   }
 
+  copyTo(em: EntityManager): PluginManager {
+    const pm = new PluginManager(em);
+    for (const plugin of this.#plugins) {
+      if (plugin.shouldCopy) pm.addPlugin(plugin);
+    }
+    return pm;
+  }
+
   /** Defined as no-op functions initially instead of using optional chaining for performance reasons.  see:
    * https://adventures.nodeland.dev/archive/noop-functions-vs-optional-chaining-a-performance/ */
   beforeSetField(entity: Entity, field: string, newValue: any): void {}
@@ -112,4 +115,5 @@ export class PluginManager implements Required<PluginMethods> {
     settings: { limit?: number; offset?: number },
   ): void {}
   afterFind(meta: EntityMetadata, operation: FindOperation, rows: any[]) {}
+  beforeWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void {}
 }

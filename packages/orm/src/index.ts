@@ -80,7 +80,9 @@ export {
   testIndex,
 } from "./newTestInstance";
 export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
+export { ImmutableEntitiesPlugin } from "./plugins/ImmutableEntitiesPlugin";
 export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
+export { RunRefreshPlugin } from "./plugins/RunRefreshPlugin";
 export { JsonAggregatePreloader } from "./preloading/JsonAggregatePreloader";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";

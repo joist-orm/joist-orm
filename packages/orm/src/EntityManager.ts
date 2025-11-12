@@ -283,6 +283,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     this.driver = opts.driver ?? opts.em!.driver;
     this.#preloader = opts.preloadPlugin ?? (opts.em ? opts.em.#preloader : this.driver.defaultPlugins.preloadPlugin);
 
+    let pluginManager = new PluginManager(this);
+
     if (opts.em) {
       this.#hooks = {
         beforeBegin: [...opts.em.#hooks.beforeBegin],
@@ -290,6 +292,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         beforeCommit: [...opts.em.#hooks.beforeCommit],
         afterCommit: [...opts.em.#hooks.afterCommit],
       };
+      pluginManager = opts.em.__api.pluginManager.copyTo(this);
     }
 
     // Expose some of our private fields as the EntityManagerInternalApi
@@ -303,7 +306,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       rm: this.#rm,
       indexManager: this.#indexManager,
       isLoadedCache: this.#isLoadedCache,
-      pluginManager: new PluginManager(this),
+      pluginManager,
 
       isMerging(entity: EntityW): boolean {
         return em.#merging?.has(entity) ?? false;
@@ -339,6 +342,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       get fieldLogger() {
         return em.#fieldLogger;
+      },
+
+      clearDataloaders() {
+        em.#dataloaders = {};
+      },
+
+      clearPreloadedRelations() {
+        em.#preloadedRelations = new Map();
+      },
+
+      setIsRefreshing(isRefreshing: boolean) {
+        em.#isRefreshing = isRefreshing;
       },
     };
   }
@@ -1595,10 +1610,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       this.#rm.throwIfAnySuppressedTypeErrors();
       if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
 
+      const { pluginManager } = getEmInternalApi(this);
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
           do {
+            pluginManager.beforeWrite(entityTodos, joinRowTodos);
             if (Object.keys(entityTodos).length > 0) {
               await this.driver.flushEntities(this, entityTodos);
             }
@@ -2376,6 +2393,9 @@ export interface EntityManagerInternalApi {
   get fieldLogger(): FieldLogger | undefined;
   get isLoadedCache(): IsLoadedCache;
   pluginManager: PluginManager;
+  clearDataloaders(): void;
+  clearPreloadedRelations(): void;
+  setIsRefreshing(isRefreshing: boolean): void;
 }
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {

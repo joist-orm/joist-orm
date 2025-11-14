@@ -112,12 +112,11 @@ export class PluginManager implements Required<PluginMethods> {
     return [...this.#plugins];
   }
 
-  copyTo(em: EntityManager): PluginManager {
-    const pm = new PluginManager(em);
-    for (const plugin of this.#plugins) {
-      if (plugin.shouldCopy) pm.addPlugin(plugin);
-    }
-    return pm;
+  copyTo(other: PluginManager) {
+    this.#plugins
+      .values()
+      .filter((plugin) => plugin.shouldCopy)
+      .forEach((plugin) => other.addPlugin(plugin));
   }
 
   /** Defined as no-op functions initially instead of using optional chaining for performance reasons.  see:

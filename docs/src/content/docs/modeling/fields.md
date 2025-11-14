@@ -52,6 +52,19 @@ Joist uses `undefined` to represent nullable columns, i.e. in the `Author` examp
 
 The rationale for this is simplicity, and Joist's preference for "idiomatic TypeScript", which for the most part has eschewed the "when to use `undefined` vs. `null` in JavaScript?" decision by going with "just use `undefined`."
 
+### String Trimming and Coercion
+
+Joist applies reasonable/opinionated defaults to handling string values, specifically:
+
+- Leading/trailing spaces are trimmed
+- Empty string `""` is replaced with `undefined` (becomes `null` in the db)
+
+This is to avoid "silly mistakes" like a `first_name=""` or `first_name=' bob'` getting into the database, and throwing off business logic, i.e. that might otherwise have detected `first_name=bob` as a duplicate (but missed `" bob"`), or `first_name=""` as a missing required field.
+
+If you want to disable this behavior, setting `DEFAULT=''` on the database column will give Joist the hint that, for this column, it's actually desired to let the empty string value be saved to the database, so we will keep empty strings, and also disable the leading/trailing space trimming.
+
+If you need finer-grained control over this behavior, it could be configurable via the `joist-config.json` file, we just have not implemented that yet.
+
 ### Type Checked Construction
 
 The non-null `Author.firstName` field is enforced as required on construction:

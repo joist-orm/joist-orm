@@ -723,7 +723,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ): Promise<T> {
     const { softDeletes = "exclude", populate } = options ?? {};
     const entity = await findOrCreateDataLoader(this, type, where, softDeletes)
-      .load({ where, ifNew: ifNew as OptsOf<T>, upsert })
+      .load({ ifNew: ifNew as OptsOf<T>, upsert })
       .catch(function findOrCreate(err) {
         throw appendStack(err, new Error());
       });

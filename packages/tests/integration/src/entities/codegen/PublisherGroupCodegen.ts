@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -180,7 +179,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   set name(name: string | undefined) {
-    setField(this, "name", cleanStringValue(name));
+    setField(this, "name", name);
   }
 
   abstract readonly numberOfBookReviews: ReactiveField<PublisherGroup, number>;

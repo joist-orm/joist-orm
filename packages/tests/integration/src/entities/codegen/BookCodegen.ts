@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -271,7 +270,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   set title(title: string) {
-    setField(this, "title", cleanStringValue(title));
+    setField(this, "title", title);
   }
 
   get order(): number {
@@ -287,7 +286,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   set notes(notes: string) {
-    setField(this, "notes", cleanStringValue(notes));
+    setField(this, "notes", notes);
   }
 
   get acknowledgements(): string | undefined {
@@ -295,7 +294,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   set acknowledgements(acknowledgements: string | undefined) {
-    setField(this, "acknowledgements", cleanStringValue(acknowledgements));
+    setField(this, "acknowledgements", acknowledgements);
   }
 
   get authorsNickNames(): string | undefined {
@@ -303,7 +302,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   set authorsNickNames(authorsNickNames: string | undefined) {
-    setField(this, "authorsNickNames", cleanStringValue(authorsNickNames));
+    setField(this, "authorsNickNames", authorsNickNames);
   }
 
   abstract readonly search: ReactiveField<Book, string | undefined>;

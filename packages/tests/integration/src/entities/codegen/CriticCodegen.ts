@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -190,7 +189,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   }
 
   set name(name: string) {
-    setField(this, "name", cleanStringValue(name));
+    setField(this, "name", name);
   }
 
   get createdAt(): Date {

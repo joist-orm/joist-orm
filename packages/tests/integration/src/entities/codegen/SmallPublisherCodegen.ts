@@ -1,6 +1,5 @@
 import {
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -201,7 +200,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   }
 
   set city(city: string) {
-    setField(this, "city", cleanStringValue(city));
+    setField(this, "city", city);
   }
 
   get sharedColumn(): string | undefined {
@@ -209,7 +208,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   }
 
   set sharedColumn(sharedColumn: string | undefined) {
-    setField(this, "sharedColumn", cleanStringValue(sharedColumn));
+    setField(this, "sharedColumn", sharedColumn);
   }
 
   abstract readonly allAuthorNames: ReactiveField<SmallPublisher, string | undefined>;

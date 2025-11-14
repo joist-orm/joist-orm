@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   ConfigApi,
   type DeepPartialOrNull,
   type EntityFilter,
@@ -144,7 +143,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   set overview(overview: string | undefined) {
-    setField(this, "overview", cleanStringValue(overview));
+    setField(this, "overview", overview);
   }
 
   get createdAt(): Date {

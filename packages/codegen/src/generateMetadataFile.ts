@@ -1,7 +1,6 @@
-import { DbMetadata } from "index";
 import { Code, code, imp, Import } from "ts-poet";
 import { Config } from "./config";
-import { EntityDbMetadata } from "./EntityDbMetadata";
+import { DatabaseColumnType, DbMetadata, EntityDbMetadata } from "./EntityDbMetadata";
 import {
   BigIntSerde,
   CustomSerdeAdapter,
@@ -21,7 +20,7 @@ import {
   ZodSerde,
   ZonedDateTimeSerde,
 } from "./symbols";
-import { q } from "./utils";
+import { mapSimpleDbTypeToTypescriptType, q } from "./utils";
 
 export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
   const { entity, createdAt, updatedAt, deletedAt } = meta;
@@ -133,6 +132,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         immutable: false,
         ${extras}
         ${maybeDefault(p)}
+        ${maybeSanitize(config, p)}
       }`;
   });
 
@@ -285,4 +285,19 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
 
 function maybeDefault(f: { hasConfigDefault: boolean; columnDefault?: any }): Code | "" {
   return f.hasConfigDefault ? code`default: "config",` : f.columnDefault ? code`default: "schema",` : "";
+}
+
+/** We sanitize/cleanStringValue all varchars, unless opted out by the column default/arrays/custom serdes. */
+function maybeSanitize(
+  config: Config,
+  f: { columnType: DatabaseColumnType; columnDefault?: any; isArray: boolean; customSerde: any },
+): Code | "" {
+  // Only strings need to maybe turn off their cleanStringValue sanitization, if the default="" or its an array
+  return isString(config, f.columnType) && (f.columnDefault === "''" || f.isArray || f.customSerde)
+    ? code`sanitize: false,`
+    : "";
+}
+
+function isString(config: Config, columnType: DatabaseColumnType): boolean {
+  return mapSimpleDbTypeToTypescriptType(config, columnType) === "string";
 }

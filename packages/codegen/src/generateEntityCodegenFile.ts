@@ -56,7 +56,6 @@ import {
   ValueGraphQLFilter,
   Zod,
   cannotBeUpdated,
-  cleanStringValue,
   failNoIdYet,
   getField,
   hasLargeMany,
@@ -738,10 +737,6 @@ function createPrimitives(meta: EntityDbMetadata, entity: Entity) {
     let setter: Code | string;
     // ...technically we should be checking a list of JS keywords
     const paramName = keywords.includes(fieldName) ? "value" : fieldName;
-    const setterValue =
-      p.fieldType === "string" && p.columnDefault !== "''"
-        ? code`${cleanStringValue}(${paramName})`
-        : code`${paramName}`;
     if (p.protected) {
       // TODO Allow making the getter to be protected as well. And so probably remove it
       // from the Opts as well. Wonder how that works for required protected fields?
@@ -750,7 +745,7 @@ function createPrimitives(meta: EntityDbMetadata, entity: Entity) {
       // same access level and currently we're leaving the getter as public.
       setter = code`
         protected set${pascalCase(fieldName)}(${paramName}: ${fieldType}${maybeOptional}) {
-          ${setField}(this, "${fieldName}", ${setterValue});
+          ${setField}(this, "${fieldName}", ${paramName});
         }
       `;
     } else if (p.derived) {
@@ -781,7 +776,7 @@ function createPrimitives(meta: EntityDbMetadata, entity: Entity) {
     } else {
       setter = code`
         set ${fieldName}(${paramName}: ${fieldType}${maybeOptional}) {
-          ${setField}(this, "${fieldName}", ${setterValue});
+          ${setField}(this, "${fieldName}", ${paramName});
         }
       `;
     }

@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -257,7 +256,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   set name(name: string) {
-    setField(this, "name", cleanStringValue(name));
+    setField(this, "name", name);
   }
 
   get email(): string {
@@ -265,7 +264,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   set email(email: string) {
-    setField(this, "email", cleanStringValue(email));
+    setField(this, "email", email);
   }
 
   get ipAddress(): IpAddress | undefined {
@@ -297,7 +296,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   set originalEmail(originalEmail: string) {
-    setField(this, "originalEmail", cleanStringValue(originalEmail));
+    setField(this, "originalEmail", originalEmail);
   }
 
   get trialPeriod(): string | undefined {
@@ -305,7 +304,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   set trialPeriod(trialPeriod: string | undefined) {
-    setField(this, "trialPeriod", cleanStringValue(trialPeriod));
+    setField(this, "trialPeriod", trialPeriod);
   }
 
   get createdAt(): Date {

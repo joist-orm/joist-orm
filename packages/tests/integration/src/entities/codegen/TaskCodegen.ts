@@ -2,7 +2,6 @@ import {
   BaseEntity,
   cannotBeUpdated,
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -243,7 +242,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   set syncDefault(syncDefault: string | undefined) {
-    setField(this, "syncDefault", cleanStringValue(syncDefault));
+    setField(this, "syncDefault", syncDefault);
   }
 
   get asyncDefault_1(): string | undefined {
@@ -251,7 +250,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   set asyncDefault_1(asyncDefault_1: string | undefined) {
-    setField(this, "asyncDefault_1", cleanStringValue(asyncDefault_1));
+    setField(this, "asyncDefault_1", asyncDefault_1);
   }
 
   get asyncDefault_2(): string | undefined {
@@ -259,7 +258,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   set asyncDefault_2(asyncDefault_2: string | undefined) {
-    setField(this, "asyncDefault_2", cleanStringValue(asyncDefault_2));
+    setField(this, "asyncDefault_2", asyncDefault_2);
   }
 
   abstract get syncDerived(): string | undefined;

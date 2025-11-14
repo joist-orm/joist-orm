@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -155,7 +154,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   set title(title: string) {
-    setField(this, "title", cleanStringValue(title));
+    setField(this, "title", title);
   }
 
   get createdAt(): Date {

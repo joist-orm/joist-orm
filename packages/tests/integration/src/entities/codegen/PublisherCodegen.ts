@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -323,7 +322,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   set name(name: string) {
-    setField(this, "name", cleanStringValue(name));
+    setField(this, "name", name);
   }
 
   get latitude(): number | undefined {
@@ -371,7 +370,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   set baseSyncDefault(baseSyncDefault: string) {
-    setField(this, "baseSyncDefault", cleanStringValue(baseSyncDefault));
+    setField(this, "baseSyncDefault", baseSyncDefault);
   }
 
   get baseAsyncDefault(): string {
@@ -379,7 +378,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   set baseAsyncDefault(baseAsyncDefault: string) {
-    setField(this, "baseAsyncDefault", cleanStringValue(baseAsyncDefault));
+    setField(this, "baseAsyncDefault", baseAsyncDefault);
   }
 
   get createdAt(): Date {

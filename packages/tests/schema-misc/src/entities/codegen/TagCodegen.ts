@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -124,7 +123,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   set title(title: string) {
-    setField(this, "title", cleanStringValue(title));
+    setField(this, "title", title);
   }
 
   /**

@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   ConfigApi,
   type DeepPartialOrNull,
   type EntityFilter,
@@ -135,7 +134,7 @@ export abstract class T1BookCodegen extends BaseEntity<EntityManager, number> im
   }
 
   set title(title: string) {
-    setField(this, "title", cleanStringValue(title));
+    setField(this, "title", title);
   }
 
   /**

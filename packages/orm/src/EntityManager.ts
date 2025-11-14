@@ -283,7 +283,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     this.driver = opts.driver ?? opts.em!.driver;
     this.#preloader = opts.preloadPlugin ?? (opts.em ? opts.em.#preloader : this.driver.defaultPlugins.preloadPlugin);
 
-    let pluginManager = new PluginManager(this);
+    const pluginManager = new PluginManager(this);
 
     if (opts.em) {
       this.#hooks = {
@@ -292,7 +292,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         beforeCommit: [...opts.em.#hooks.beforeCommit],
         afterCommit: [...opts.em.#hooks.afterCommit],
       };
-      pluginManager = opts.em.__api.pluginManager.copyTo(this);
+      opts.em.__api.pluginManager.copyTo(pluginManager);
     }
 
     // Expose some of our private fields as the EntityManagerInternalApi

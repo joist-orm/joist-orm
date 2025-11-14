@@ -137,6 +137,11 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     this._isLoaded = true;
   }
 
+  private unload(): void {
+    this.loaded = undefined;
+    this._isLoaded = false;
+  }
+
   import(other: ManyToOneReferenceImpl<T, U, N>, findEntity: (e: U) => U): void {
     const loaded = other.loaded ?? other.maybeFindEntity();
     this.loaded = loaded ? findEntity(loaded) : undefined;

@@ -11,9 +11,9 @@ workflows:
           matrix:
             parameters:
               node-version:
-                - "20" # EOL 30 Apr 2026
                 - "22" # EOL 30 Apr 2027
-                - "24" # Current
+                - "24" # EOL 30 Apr 2028
+                - "25" # Current
                 - "bun"
 
 jobs:

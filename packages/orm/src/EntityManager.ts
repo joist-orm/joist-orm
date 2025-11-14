@@ -1621,7 +1621,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             if (Object.keys(joinRowTodos).length > 0) {
               await this.driver.flushJoinTables(this, joinRowTodos);
             }
-            // Now that we've flushed, we can let plugins know that we've done.
+            // Now that we've flushed, we can let plugins know what we've done.
             pluginManager.afterWrite(entityTodos, joinRowTodos);
             // And we can look for ReactiveQueries that need to be recalculated
             if (this.#rm.hasPendingReactiveQueries()) {

@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -140,7 +139,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   }
 
   set firstName(firstName: string) {
-    setField(this, "firstName", cleanStringValue(firstName));
+    setField(this, "firstName", firstName);
   }
 
   get lastName(): string {
@@ -148,7 +147,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   }
 
   set lastName(lastName: string) {
-    setField(this, "lastName", cleanStringValue(lastName));
+    setField(this, "lastName", lastName);
   }
 
   get createdAt(): Date {

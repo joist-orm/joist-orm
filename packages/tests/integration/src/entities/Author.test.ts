@@ -435,6 +435,29 @@ describe("Author", () => {
     await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
+  it("trims strings", async () => {
+    const em = newEntityManager();
+    const a = em.create(Author, { firstName: " foo " });
+    expect(a.firstName).toBe("foo");
+  });
+
+  it("coerces strings", async () => {
+    const em = newEntityManager();
+    const a = em.create(Author, { firstName: 1 as any });
+    expect(a.firstName).toBe("1");
+  });
+
+  it("does not clean string arrays", async () => {
+    const em = newEntityManager();
+    const a = em.create(Author, {
+      firstName: "a1",
+      nickNames: ["", " foo ", "bar"],
+    });
+    // This test is more documenting current behavior than desired; i.e. we should probably trim & compact these?
+    // So the value would be `["foo", "bar"]`?
+    expect(a.nickNames).toEqual(["", " foo ", "bar"]);
+  });
+
   it("has strongly typed reference ids", () => {
     const author: Author = null!;
     let bookId: BookId = "1";

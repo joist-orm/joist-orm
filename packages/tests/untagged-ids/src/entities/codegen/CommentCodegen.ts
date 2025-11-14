@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   ConfigApi,
   type DeepPartialOrNull,
   type EntityFilter,
@@ -149,7 +148,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   set text(text: string) {
-    setField(this, "text", cleanStringValue(text));
+    setField(this, "text", text);
   }
 
   get createdAt(): Date {

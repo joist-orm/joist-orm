@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -133,7 +132,7 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   set name(name: string | undefined) {
-    setField(this, "name", cleanStringValue(name));
+    setField(this, "name", name);
   }
 
   get createdAt(): Date {

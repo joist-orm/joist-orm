@@ -2,7 +2,7 @@ import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
-import { ensureNotDeleted, maybeResolveReferenceToId } from "./index";
+import { cleanStringValue, ensureNotDeleted, maybeResolveReferenceToId } from "./index";
 import { maybeRequireTemporal } from "./temporal";
 import { fail } from "./utils";
 
@@ -55,14 +55,21 @@ export function isFieldSet(entity: Entity, fieldName: string): boolean {
 export function setField(entity: Entity, fieldName: string, newValue: any): boolean {
   ensureNotDeleted(entity, "pending");
   const { em } = entity;
+  const api = getEmInternalApi(em);
+  const { rm, pluginManager, indexManager, fieldLogger, isLoadedCache } = api;
 
-  getEmInternalApi(em).checkWritesAllowed();
+  api.checkWritesAllowed();
 
   // Tell any `#isLoaded` or `#value` caches that they might be stale
-  getEmInternalApi(em).isLoadedCache.resetIsLoaded(entity, fieldName);
+  isLoadedCache.resetIsLoaded(entity, fieldName);
 
-  const { rm, pluginManager, indexManager, fieldLogger } = getEmInternalApi(em);
   const { data, originalData, flushedData } = getInstanceData(entity);
+
+  // Do string sanitization
+  const field = getMetadata(entity).allFields[fieldName];
+  if (field.kind === "primitive" && field.type === "string" && field.sanitize !== false) {
+    newValue = cleanStringValue(newValue);
+  }
 
   // If a `set` occurs during the ReactiveQueryField-loop, copy the last-flushed value to flushedData.
   // Then our `pendingOperation` logic can tell "do we need another micro-flush?" separately

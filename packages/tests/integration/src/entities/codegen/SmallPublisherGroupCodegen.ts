@@ -1,6 +1,5 @@
 import {
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -131,7 +130,7 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
   }
 
   set smallName(smallName: string | undefined) {
-    setField(this, "smallName", cleanStringValue(smallName));
+    setField(this, "smallName", smallName);
   }
 
   /**

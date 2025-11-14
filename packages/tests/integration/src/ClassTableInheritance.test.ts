@@ -377,7 +377,7 @@ describe("ClassTableInheritance", () => {
     newSmallPublisher(em, { name: "sp1" });
     await em.flush();
     // Then the field was initialized
-    expect(await select("small_publishers")).toMatchObject([{ all_author_names: "" }]);
+    expect(await select("small_publishers")).toMatchObject([{ all_author_names: null }]);
   });
 
   it("can ignore persisted fields from a different subtype", async () => {

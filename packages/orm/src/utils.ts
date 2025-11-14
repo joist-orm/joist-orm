@@ -207,8 +207,13 @@ export function mergeNormalizedHints(target: any, source: any): void {
 const newLine = /\n/g;
 const doubleSpace = /  +/g;
 
-export function cleanStringValue(value: unknown) {
-  return typeof value === "string" && value.trim() === "" ? undefined : value;
+export function cleanStringValue(value: unknown): string | undefined {
+  // If this is not a string, coerce it -- or maybe fail?
+  let s = typeof value !== "string" && value !== undefined && value !== null ? String(value) : value;
+  // We always trim to remove leading/trailing spaces
+  s = typeof s === "string" ? s.trim() : s;
+  // And if it's empty string, we swap to undefined (null in the db)
+  return s === "" || s === null ? undefined : s;
 }
 
 /** Strips new lines/indentation from our `UPDATE` string; doesn't do any actual SQL param escaping/etc. */

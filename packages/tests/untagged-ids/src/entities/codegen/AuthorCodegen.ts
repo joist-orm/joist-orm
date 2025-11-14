@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -163,7 +162,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   set firstName(firstName: string) {
-    setField(this, "firstName", cleanStringValue(firstName));
+    setField(this, "firstName", firstName);
   }
 
   get lastName(): string | undefined {
@@ -171,7 +170,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   set lastName(lastName: string | undefined) {
-    setField(this, "lastName", cleanStringValue(lastName));
+    setField(this, "lastName", lastName);
   }
 
   get createdAt(): Date {

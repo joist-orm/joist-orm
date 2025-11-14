@@ -58,7 +58,10 @@ export interface Column {
   dbType: string;
   /** From the given `__orm.data` hash, return this columns value, i.e. for putting in `UPDATE` params. */
   dbValue(data: any, entity: Entity, tableName: string, fixups: InsertFixup[] | undefined): any;
-  /** Used by em.fork to create an __orm.row from an __orm.data. Should output what we would expect from a db query **/
+  /**
+   * Used by `fork`, `importEntity`, and `run` to create an __orm.row from an __orm.data. Should output what we would
+   * expect from a db query
+   */
   rowValue(data: any): any;
   /** For a given domain value, return the database value, i.e. for putting `em.find` params into a db WHERE clause. */
   mapToDb(value: any): any;

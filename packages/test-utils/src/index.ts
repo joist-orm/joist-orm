@@ -2,6 +2,7 @@ import { BaseEntity } from "joist-orm";
 import { MatchedEntity } from "./toMatchEntity";
 export { Context } from "./context";
 export { ContextFn, makeRun, makeRunEach, newContext, run, runEach } from "./run";
+export { RunPlugin } from "./RunPlugin";
 export { seed } from "./seed";
 export { toMatchEntity } from "./toMatchEntity";
 

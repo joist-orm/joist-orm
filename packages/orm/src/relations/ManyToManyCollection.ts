@@ -198,7 +198,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     ensureNotDeleted(this.entity, "pending");
     if (this.#loaded === undefined) {
       // This should only be callable in the type system if we've already resolved this to an instance
-      throw new Error("get was called when not loaded");
+      throw new Error(`${this.entity}.${this.fieldName}.get was called when not loaded`);
     }
     return this.#loaded;
   }

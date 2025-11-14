@@ -142,6 +142,11 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     this._isLoaded = true;
   }
 
+  private unload(): void {
+    this.loaded = undefined;
+    this._isLoaded = false;
+  }
+
   import(other: PolymorphicReferenceImpl<T, U, N>, findEntity: (e: U) => U): void {
     this.loaded = other.loaded ? findEntity(other.loaded) : undefined;
     this._isLoaded = true;

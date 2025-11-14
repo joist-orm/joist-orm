@@ -1615,14 +1615,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
           do {
-            pluginManager.beforeWrite(entityTodos, joinRowTodos);
             if (Object.keys(entityTodos).length > 0) {
               await this.driver.flushEntities(this, entityTodos);
             }
             if (Object.keys(joinRowTodos).length > 0) {
               await this.driver.flushJoinTables(this, joinRowTodos);
             }
-            // Now that we've flushed, look for ReactiveQueries that need to be recalculated
+            // Now that we've flushed, we can let plugins know that we've done.
+            pluginManager.afterWrite(entityTodos, joinRowTodos);
+            // And we can look for ReactiveQueries that need to be recalculated
             if (this.#rm.hasPendingReactiveQueries()) {
               // Reset all flushed entities to we only flush net-new changes
               for (const e of entitiesToFlush) {
@@ -2231,11 +2232,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   importEntity<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
     source: L,
     hint?: H,
-    normalizedHint?: H,
+    opts?: { normalizedHint?: H; allowDirty?: boolean },
+  ): L;
+  importEntity<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
+    source: L,
+    hint: H | undefined = undefined,
+    opts: { normalizedHint?: H; allowDirty?: boolean } = {},
   ): L {
-    if (source.isNewEntity) fail("cannot import new entities");
+    let { normalizedHint, allowDirty = false } = opts;
+
+    if (!source.idMaybe) fail("cannot import new entities");
     if (source.isDeletedEntity) fail("cannot import deleted entities");
-    if (source.isDirtyEntity) fail("cannot import dirty entities");
+    if (!allowDirty && source.isDirtyEntity) fail("cannot import dirty entities");
 
     hint ??= {} as H;
     if (!normalizedHint) {
@@ -2251,7 +2259,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     if (!result) {
       const meta = getMetadata(source);
-      const row = createRowFromEntityData(source);
+      const row = createRowFromEntityData(source, !allowDirty);
       result = this.hydrate(getBaseMeta(meta).cstr, [row])[0]!;
     }
 
@@ -2261,11 +2269,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       if (!field) {
         let loadHint: H =
           (relationOrProp as any).loadHint ?? fail(`${source}.${fieldName} cannot be imported as it has no loadHint`);
-        this.importEntity<T, H, L>(source, loadHint);
+        this.importEntity<T, H, L>(source, loadHint, opts);
       } else if ("import" in relationOrProp) {
         relationOrProp.import(
           (source as any)[fieldName],
-          (e: Entity) => (this.importEntity as any)(e, subHint, subHint) as Entity,
+          (e: Entity) => (this.importEntity as any)(e, subHint, { ...opts, normalizedHint: subHint }) as Entity,
         );
       }
     }
@@ -2903,7 +2911,7 @@ function getDefaultWriteFn(ctx: unknown): WriteFn {
 
 const fieldMap: Record<string, [Field, Column][]> = {};
 // Generates what a row from the db would look like for a given entity
-function createRowFromEntityData(e: Entity) {
+function createRowFromEntityData(e: Entity, preferOriginalData: boolean = true) {
   const { row: oldRow, data, originalData } = (e as any).__data as InstanceData;
   const __class = e.constructor.name;
   const { metadata: meta } = (e as any).__data as InstanceData;
@@ -2928,7 +2936,7 @@ function createRowFromEntityData(e: Entity) {
       field.fieldName in originalData || field.fieldName in data
         ? // If our field is in originalData, then the field has been changed since flush. Our `row` should
           // reflect what would come from the db if we queried it right now, so use originalData when present
-          column.rowValue(field.fieldName in originalData ? originalData : data)
+          column.rowValue(preferOriginalData && field.fieldName in originalData ? originalData : data)
         : // `data` is lazy and isn't set until it's accessed, so if the field isn't present there, then we should
           // be safe to pull the raw data out of `row`
           oldRow[column.columnName];

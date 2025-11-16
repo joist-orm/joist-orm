@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   ConfigApi,
   type DeepPartialOrNull,
   type EntityMetadata,
@@ -264,7 +263,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   set nullableText(nullableText: string | undefined) {
-    setField(this, "nullableText", cleanStringValue(nullableText));
+    setField(this, "nullableText", nullableText);
   }
 
   get json(): Object | undefined {

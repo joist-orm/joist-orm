@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   ConfigApi,
   type DeepPartialOrNull,
   type EntityFilter,
@@ -155,7 +154,7 @@ export abstract class ChildItemCodegen extends BaseEntity<EntityManager, string>
   }
 
   set name(name: string | undefined) {
-    setField(this, "name", cleanStringValue(name));
+    setField(this, "name", name);
   }
 
   get createdAt(): Date {

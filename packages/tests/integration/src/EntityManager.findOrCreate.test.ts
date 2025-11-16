@@ -334,6 +334,22 @@ describe("EntityManager.findOrCreate", () => {
     const authors = em.getEntities(Author);
     expect(authors.length).toBe(n);
   });
+
+  it("trims string values", async () => {
+    const em = newEntityManager();
+    const a1 = em.create(Author, { firstName: "a1" });
+    await em.flush();
+    const a2 = await em.findOrCreate(Author, { firstName: " a1 " }, {});
+    expect(a2).toMatchEntity(a1);
+  });
+
+  it("coalesces empty string", async () => {
+    const em = newEntityManager();
+    const a1 = em.create(Author, { firstName: "a1" });
+    await em.flush();
+    const a2 = await em.findOrCreate(Author, { firstName: "a1", lastName: "" }, {});
+    expect(a2).toMatchEntity(a1);
+  });
 });
 
 function delay(ms: number): Promise<void> {

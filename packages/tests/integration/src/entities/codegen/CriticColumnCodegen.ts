@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   ConfigApi,
   type DeepPartialOrNull,
   type EntityFilter,
@@ -145,7 +144,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   }
 
   set name(name: string) {
-    setField(this, "name", cleanStringValue(name));
+    setField(this, "name", name);
   }
 
   get createdAt(): Date {

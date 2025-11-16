@@ -1,6 +1,5 @@
 import {
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -189,7 +188,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   set sharedColumn(sharedColumn: string | undefined) {
-    setField(this, "sharedColumn", cleanStringValue(sharedColumn));
+    setField(this, "sharedColumn", sharedColumn);
   }
 
   get country(): string | undefined {
@@ -197,7 +196,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   set country(country: string | undefined) {
-    setField(this, "country", cleanStringValue(country));
+    setField(this, "country", country);
   }
 
   get rating(): number {

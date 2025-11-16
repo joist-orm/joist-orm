@@ -1,6 +1,5 @@
 import {
   type Changes,
-  cleanStringValue,
   type Collection,
   ConfigApi,
   type DeepPartialOrNull,
@@ -129,7 +128,7 @@ export abstract class AdminUserCodegen extends User implements Entity {
   }
 
   set role(role: string) {
-    setField(this, "role", cleanStringValue(role));
+    setField(this, "role", role);
   }
 
   /**

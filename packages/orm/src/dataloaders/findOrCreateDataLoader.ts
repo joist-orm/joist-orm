@@ -4,10 +4,10 @@ import { EntityConstructor, EntityManager, TooManyError, sameEntity } from "../E
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { ManyToOneReference, PolymorphicReference, isLoadedReference } from "../relations";
 import { OptsOf } from "../typeMap";
+import { cleanStringValue } from "../utils";
 import { whereFilterHash } from "./findDataLoader";
 
 interface FindOrCreateKey<T extends Entity> {
-  where: Partial<OptsOf<T>>;
   ifNew: OptsOf<T>;
   upsert: Partial<OptsOf<T>> | undefined;
 }
@@ -20,25 +20,14 @@ export function findOrCreateDataLoader<T extends Entity>(
 ): DataLoader<FindOrCreateKey<T>, T> {
   const meta = getMetadata(type);
 
-  // Do some extra logic to make citext not create duplicate entities
-  const hasAnyCitext = Object.values(meta.allFields).some((f) => f.kind === "primitive" && f.citext);
-
-  const cacheKeyFn: (key: FindOrCreateKey<T>) => FindOrCreateKey<T> =
-    // If no citext, we can use our regular `whereFilterHash` that replaces `Author(...)` with `id=1`
-    !hasAnyCitext
-      ? whereFilterHash
-      : // Otherwise rewrite each of the `{ firstName: "AaA" }` values in each of where/ifNew/upsert hashes
-        (key) =>
-          whereFilterHash({
-            where: maybeLower(meta, key.where),
-            ifNew: maybeLower(meta, key.ifNew as any),
-            upsert: maybeLower(meta, key.upsert),
-          } as any) as FindOrCreateKey<T>;
+  // Do some extra logic to make unclean strings/citext not create duplicate entities
+  const hasAnyStrings = Object.values(meta.allFields).some((f) => f.kind === "primitive" && f.type === "string");
 
   // Use `whereFilterHash` to batch the same `findOrCreate` `where: { firstName: "a1" }` calls together
   // to avoid creating duplicates. Also use `whereFilterHash` b/c if a new entity is included in `where`,
   // it will use `entity.toString()` to keep it unique from other new entities.
-  const whereValue = whereFilterHash(!hasAnyCitext ? (where as any) : (maybeLower(meta, where) as any));
+  where = !hasAnyStrings ? where : maybeCleanOrLower(meta, where);
+  const whereValue = whereFilterHash(where as any);
   const batchKey = `${type.name}-${whereValue}-${softDeletes}`;
 
   const invalidKeys = Object.keys(where).filter((key) => {
@@ -66,7 +55,7 @@ export function findOrCreateDataLoader<T extends Entity>(
       // This is fundamentally asking to create the same entity, but with different ifNew/upsert
       // conditions, which we could fail on, but for now just take the first tuple of
       // {where/ifNew/upsert} and assume it wins
-      const [{ where, ifNew, upsert }] = keys;
+      const [{ ifNew, upsert }] = keys;
 
       // Before we find/create an entity, see if we have a maybe-new one in the EM already.
       // This will also use any WIP changes we've made to the found entity, which ideally is
@@ -116,7 +105,7 @@ export function findOrCreateDataLoader<T extends Entity>(
       return keys.map(() => entity);
     },
     // Our filter tuple is a complex object, so object-hash it to ensure caching works
-    { cacheKeyFn },
+    { cacheKeyFn: whereFilterHash as any },
   );
 }
 
@@ -171,13 +160,15 @@ function compareCaseInsensitive(str1: any, str2: any): boolean {
 }
 
 /** Returns a copy of `opts` with any `citext` values turned to lower case. */
-function maybeLower(meta: EntityMetadata, opts: object | undefined) {
+function maybeCleanOrLower<T extends object | undefined>(meta: EntityMetadata, opts: T): T {
   if (!opts) return opts;
   return Object.fromEntries(
     Object.entries(opts).map(([k, v]) => {
       const field = meta.allFields[k];
       // Use `?.kind` b/c if the user is typo-ing a findOrCreate field, we don't want to throw an error here
-      return [k, field?.kind === "primitive" && field.citext ? v?.toLowerCase() : v];
+      const isString = field && field.kind === "primitive" && field.type === "string";
+      if (!isString) return [k, v];
+      return [k, field.citext ? v?.toLowerCase() : field.sanitize !== false ? cleanStringValue(v) : v];
     }),
-  );
+  ) as T;
 }

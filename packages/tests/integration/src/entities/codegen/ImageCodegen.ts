@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   type Changes,
-  cleanStringValue,
   ConfigApi,
   type DeepPartialOrNull,
   type EntityFilter,
@@ -191,7 +190,7 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   set fileName(fileName: string) {
-    setField(this, "fileName", cleanStringValue(fileName));
+    setField(this, "fileName", fileName);
   }
 
   get createdAt(): Date {

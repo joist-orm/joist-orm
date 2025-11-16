@@ -6,7 +6,10 @@ export class Comment extends CommentCodegen {
     "parentTags",
     { parent: { commentParentInfo: {}, tags: "name" } },
     (c) => {
-      return [c.parent.get?.commentParentInfo.get, ...(c.parent.get?.tags.get.map((t) => t.name) ?? [])].join("-");
+      return (
+        // Use `|| "-"` because the db field is required, and empty string will be coerced to null
+        [c.parent.get?.commentParentInfo.get, ...(c.parent.get?.tags.get.map((t) => t.name) ?? [])].join("-") || "-"
+      );
     },
   );
 

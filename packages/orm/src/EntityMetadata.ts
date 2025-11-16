@@ -98,6 +98,7 @@ export type PrimitiveField = {
   immutable: boolean;
   citext?: boolean;
   default?: "schema" | "config";
+  sanitize?: boolean;
 };
 
 export type EnumField = {

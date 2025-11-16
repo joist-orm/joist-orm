@@ -1,3 +1,10 @@
+# [1.283.0](https://github.com/joist-orm/joist-orm/compare/v1.282.1...v1.283.0) (2025-11-16)
+
+
+### Features
+
+* Trim string values. ([#1664](https://github.com/joist-orm/joist-orm/issues/1664)) ([71ebc79](https://github.com/joist-orm/joist-orm/commit/71ebc79ddc8b82c64044fe87ddc10b1840f48a6a))
+
 ## [1.282.1](https://github.com/joist-orm/joist-orm/compare/v1.282.0...v1.282.1) (2025-10-29)
 
 

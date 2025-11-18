@@ -1,3 +1,10 @@
+## [1.284.1](https://github.com/joist-orm/joist-orm/compare/v1.284.0...v1.284.1) (2025-11-18)
+
+
+### Bug Fixes
+
+* fix run plugin imports ([#1668](https://github.com/joist-orm/joist-orm/issues/1668)) ([293c891](https://github.com/joist-orm/joist-orm/commit/293c8917ed78f5d814c889ddb571244d1cbf293b))
+
 # [1.284.0](https://github.com/joist-orm/joist-orm/compare/v1.283.1...v1.284.0) (2025-11-18)
 
 

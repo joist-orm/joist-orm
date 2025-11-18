@@ -22,12 +22,15 @@ export function findOrCreateDataLoader<T extends Entity>(
 
   // Do some extra logic to make unclean strings/citext not create duplicate entities
   const hasAnyStrings = Object.values(meta.allFields).some((f) => f.kind === "primitive" && f.type === "string");
+  const hasAnyCitext = Object.values(meta.allFields).some((f) => f.kind === "primitive" && f.citext);
 
-  // Use `whereFilterHash` to batch the same `findOrCreate` `where: { firstName: "a1" }` calls together
-  // to avoid creating duplicates. Also use `whereFilterHash` b/c if a new entity is included in `where`,
-  // it will use `entity.toString()` to keep it unique from other new entities.
-  where = !hasAnyStrings ? where : maybeCleanOrLower(meta, where);
-  const whereValue = whereFilterHash(where as any);
+  // The `where` here will be later used to `em.create`, so we only clean (not lower for citext)
+  where = hasAnyStrings ? maybeClean(meta, where) : where;
+  // Use `whereFilterHash` to batch the same `findOrCreate` `where: { firstName: "a1" }` calls together to avoid duplicates
+  const whereValue = whereFilterHash(
+    // Only maybeLower for the purposes of batching, not the later em.create
+    hasAnyCitext ? maybeLower(meta, where) : (where as any),
+  );
   const batchKey = `${type.name}-${whereValue}-${softDeletes}`;
 
   const invalidKeys = Object.keys(where).filter((key) => {
@@ -160,15 +163,39 @@ function compareCaseInsensitive(str1: any, str2: any): boolean {
 }
 
 /** Returns a copy of `opts` with any `citext` values turned to lower case. */
-function maybeCleanOrLower<T extends object | undefined>(meta: EntityMetadata, opts: T): T {
+function maybeLower<T extends object | undefined>(meta: EntityMetadata, opts: T): T {
   if (!opts) return opts;
-  return Object.fromEntries(
-    Object.entries(opts).map(([k, v]) => {
-      const field = meta.allFields[k];
-      // Use `?.kind` b/c if the user is typo-ing a findOrCreate field, we don't want to throw an error here
-      const isString = field && field.kind === "primitive" && field.type === "string";
-      if (!isString) return [k, v];
-      return [k, field.citext ? v?.toLowerCase() : field.sanitize !== false ? cleanStringValue(v) : v];
-    }),
-  ) as T;
+  let result: T | undefined = undefined;
+  for (const k in opts) {
+    const v = (opts as any)[k];
+    const field = meta.allFields[k];
+    const isString = field && field.kind === "primitive" && field.type === "string";
+    if (isString && field.citext) {
+      const lowered = v?.toLowerCase();
+      if (lowered !== v) {
+        result ??= { ...opts };
+        (result as any)[k] = lowered as any;
+      }
+    }
+  }
+  return result ?? opts;
+}
+
+/** Returns a copy of `opts` with any string values trimmed/coalesced. */
+function maybeClean<T extends object | undefined>(meta: EntityMetadata, opts: T): T {
+  if (!opts) return opts;
+  let result: T | undefined = undefined;
+  for (const k in opts) {
+    const v = (opts as any)[k];
+    const field = meta.allFields[k];
+    const isString = field && field.kind === "primitive" && field.type === "string";
+    if (isString && field.sanitize !== false) {
+      const cleaned = cleanStringValue(v);
+      if (cleaned !== v) {
+        result ??= { ...opts }; // Only create copy on first change
+        (result as any)[k] = cleaned;
+      }
+    }
+  }
+  return result ?? opts;
 }

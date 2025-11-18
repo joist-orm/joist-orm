@@ -350,6 +350,12 @@ describe("EntityManager.findOrCreate", () => {
     const a2 = await em.findOrCreate(Author, { firstName: "a1", lastName: "" }, {});
     expect(a2).toMatchEntity(a1);
   });
+
+  it("uses trimmed but not lowered value", async () => {
+    const em = newEntityManager();
+    const t1 = await em.findOrCreate(Tag, { name: " First " }, {});
+    expect(t1.name).toBe("First");
+  });
 });
 
 function delay(ms: number): Promise<void> {

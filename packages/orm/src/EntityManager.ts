@@ -283,6 +283,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     this.driver = opts.driver ?? opts.em!.driver;
     this.#preloader = opts.preloadPlugin ?? (opts.em ? opts.em.#preloader : this.driver.defaultPlugins.preloadPlugin);
 
+    const pluginManager = new PluginManager(this);
+
     if (opts.em) {
       this.#hooks = {
         beforeBegin: [...opts.em.#hooks.beforeBegin],
@@ -290,6 +292,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         beforeCommit: [...opts.em.#hooks.beforeCommit],
         afterCommit: [...opts.em.#hooks.afterCommit],
       };
+      opts.em.__api.pluginManager.cloneTo(pluginManager);
     }
 
     // Expose some of our private fields as the EntityManagerInternalApi
@@ -303,7 +306,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       rm: this.#rm,
       indexManager: this.#indexManager,
       isLoadedCache: this.#isLoadedCache,
-      pluginManager: new PluginManager(this),
+      pluginManager,
 
       isMerging(entity: EntityW): boolean {
         return em.#merging?.has(entity) ?? false;
@@ -339,6 +342,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       get fieldLogger() {
         return em.#fieldLogger;
+      },
+
+      clearDataloaders() {
+        em.#dataloaders = {};
+      },
+
+      clearPreloadedRelations() {
+        em.#preloadedRelations = new Map();
+      },
+
+      setIsRefreshing(isRefreshing: boolean) {
+        em.#isRefreshing = isRefreshing;
       },
     };
   }
@@ -1595,6 +1610,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       this.#rm.throwIfAnySuppressedTypeErrors();
       if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
 
+      const { pluginManager } = getEmInternalApi(this);
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
@@ -1605,7 +1621,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             if (Object.keys(joinRowTodos).length > 0) {
               await this.driver.flushJoinTables(this, joinRowTodos);
             }
-            // Now that we've flushed, look for ReactiveQueries that need to be recalculated
+            // Now that we've flushed, we can let plugins know what we've done.
+            pluginManager.afterWrite(entityTodos, joinRowTodos);
+            // And we can look for ReactiveQueries that need to be recalculated
             if (this.#rm.hasPendingReactiveQueries()) {
               // Reset all flushed entities to we only flush net-new changes
               for (const e of entitiesToFlush) {
@@ -2376,6 +2394,9 @@ export interface EntityManagerInternalApi {
   get fieldLogger(): FieldLogger | undefined;
   get isLoadedCache(): IsLoadedCache;
   pluginManager: PluginManager;
+  clearDataloaders(): void;
+  clearPreloadedRelations(): void;
+  setIsRefreshing(isRefreshing: boolean): void;
 }
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {
@@ -2883,7 +2904,8 @@ function getDefaultWriteFn(ctx: unknown): WriteFn {
 
 const fieldMap: Record<string, [Field, Column][]> = {};
 // Generates what a row from the db would look like for a given entity
-function createRowFromEntityData(e: Entity) {
+export function createRowFromEntityData(e: Entity, opts: { preferOriginalData?: boolean } = {}) {
+  const { preferOriginalData = true } = opts;
   const { row: oldRow, data, originalData } = (e as any).__data as InstanceData;
   const __class = e.constructor.name;
   const { metadata: meta } = (e as any).__data as InstanceData;
@@ -2908,7 +2930,7 @@ function createRowFromEntityData(e: Entity) {
       field.fieldName in originalData || field.fieldName in data
         ? // If our field is in originalData, then the field has been changed since flush. Our `row` should
           // reflect what would come from the db if we queried it right now, so use originalData when present
-          column.rowValue(field.fieldName in originalData ? originalData : data)
+          column.rowValue(preferOriginalData && field.fieldName in originalData ? originalData : data)
         : // `data` is lazy and isn't set until it's accessed, so if the field isn't present there, then we should
           // be safe to pull the raw data out of `row`
           oldRow[column.columnName];

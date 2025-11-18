@@ -1,8 +1,8 @@
 import { Entity } from "./Entity";
-import { EntityManager, FindOperation } from "./EntityManager";
+import { EntityManager, FindOperation, isDefined } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 import { ParsedFindQuery } from "./QueryParser";
-import { fail } from "./utils";
+import { JoinRowTodo, Todo } from "./Todo";
 
 interface PluginMethods {
   /**
@@ -35,11 +35,12 @@ interface PluginMethods {
    * @param rows The raw database rows returned from the query
    */
   afterFind?(meta: EntityMetadata, operation: FindOperation, rows: any[]): void;
+
+  afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void;
 }
 
-const pluginMethods = ["beforeSetField", "beforeFind", "afterFind"] as (keyof PluginMethods)[];
-
-const emSymbol = Symbol("em");
+const pluginMethods = ["beforeSetField", "beforeFind", "afterFind", "afterWrite"] as (keyof PluginMethods)[];
+const emsSymbol = Symbol("ems");
 /**
  * Base class for plugins that hook into entity lifecycle events.
  *
@@ -47,11 +48,20 @@ const emSymbol = Symbol("em");
  * and are automatically registered with the EntityManager when added via PluginManager.
  */
 export abstract class Plugin {
-  private [emSymbol]: EntityManager | undefined;
+  // We need to store the EntityManager references in a WeakRef array so that they can be garbage collected.  If we
+  // didn't do this, then multiple EMs with the same plugin instance could keep each other from being garbage collected.
+  [emsSymbol]: WeakRef<EntityManager>[] = [];
 
-  /** Access the EntityManager this plugin is registered with. */
-  get em(): EntityManager {
-    return this[emSymbol]!;
+  maybeCloneForNewEm(): this | undefined {
+    return undefined;
+  }
+
+  get ems(): readonly EntityManager[] {
+    return this[emsSymbol]
+      .values()
+      .map((wr) => wr.deref())
+      .filter(isDefined)
+      .toArray();
   }
 }
 
@@ -65,7 +75,7 @@ export interface Plugin extends PluginMethods {}
  * zero-cost at runtime.
  */
 export class PluginManager implements Required<PluginMethods> {
-  #plugins: Plugin[] = [];
+  #plugins = new Set<Plugin>();
   readonly #pluginsByCallback: Partial<Record<keyof Plugin, Plugin[]>> = {};
   constructor(public readonly em: EntityManager) {}
 
@@ -78,13 +88,13 @@ export class PluginManager implements Required<PluginMethods> {
    * @throws Error if the plugin is already registered with another EntityManager
    */
   addPlugin(plugin: Plugin) {
-    if (plugin[emSymbol] !== undefined) fail("Cannot add plugin to multiple entity managers");
-    plugin[emSymbol] = this.em;
-    this.#plugins.push(plugin);
+    if (this.#plugins.has(plugin)) return; // if we're already added, then we can just early exit
+    this.#plugins.add(plugin);
+    plugin[emsSymbol].push(new WeakRef(this.em));
     for (const method of pluginMethods) {
       if (method in plugin) {
         (this.#pluginsByCallback[method] ??= []).push(plugin);
-        // As a performance optimization, we only create the actual implmentation for each method on the plugin manager
+        // As a performance optimization, we only create the actual implementation for each method on the plugin manager
         // once we have at least one plugin using that method. This is to make it so any unused plugin methods are
         // effectively no-ops when called from within the em.
         if (!Object.hasOwn(this, method)) {
@@ -99,7 +109,15 @@ export class PluginManager implements Required<PluginMethods> {
   }
 
   get plugins(): readonly Plugin[] {
-    return this.#plugins;
+    return [...this.#plugins];
+  }
+
+  cloneTo(other: PluginManager) {
+    this.#plugins
+      .values()
+      .map((plugin) => plugin.maybeCloneForNewEm())
+      .filter(isDefined)
+      .forEach((plugin) => other.addPlugin(plugin));
   }
 
   /** Defined as no-op functions initially instead of using optional chaining for performance reasons.  see:
@@ -112,4 +130,5 @@ export class PluginManager implements Required<PluginMethods> {
     settings: { limit?: number; offset?: number },
   ): void {}
   afterFind(meta: EntityMetadata, operation: FindOperation, rows: any[]) {}
+  afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void {}
 }

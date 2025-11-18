@@ -289,6 +289,13 @@ export class ReactiveReferenceImpl<
     this.#isCached = true;
   }
 
+  private unload(): void {
+    this.#loaded = undefined;
+    this.#loadedMode = undefined;
+    this.#isLoaded = false;
+    this.#isCached = false;
+  }
+
   import(other: ReactiveReferenceImpl<T, U, H, N>, findEntity: (e: U) => U): void {
     this.#loaded = other.#loaded ? findEntity(other.#loaded) : undefined;
     this.#loadedMode = "ref";

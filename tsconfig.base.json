@@ -2,8 +2,8 @@
   "extends": "@tsconfig/node20/tsconfig.json",
   "compilerOptions": {
     "types": ["jest", "node"],
-    /** Add esnext.disposable for `using` support. */
-    "lib": ["es2022", "esnext.disposable"],
+    /** Add esnext.disposable for `using` support. Also add esnext.iterator for iterator methods.*/
+    "lib": ["es2022", "esnext.disposable", "esnext.iterator"],
     "composite": true,
     "sourceMap": true,
     "declaration": true,

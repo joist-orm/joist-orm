@@ -1,6 +1,7 @@
 import { Entity, EntityManager, isEntity } from "joist-orm";
 import { fail } from "joist-utils";
 import { Context } from "./context";
+import { RunPlugin } from "./RunPlugin";
 
 type MaybePromise<T> = T | Promise<T>;
 
@@ -15,9 +16,11 @@ export async function run<C extends Context, T>(
   const { em } = ctx;
   // Ensure any test data we've setup is flushed
   await em.flush();
-  const result = await fn(await contextFn(ctx));
+  const newCtx = await contextFn(ctx);
+  const plugin = new RunPlugin(em);
+  newCtx.em.addPlugin(plugin);
+  const result = await fn(newCtx);
   // We expect `fn` (i.e. a resolver) to do its own UoW management, so don't flush.
-  await em.refresh({ deepLoad: true });
   return mapResultToOriginalEm(em, result);
 }
 
@@ -38,9 +41,14 @@ export async function runEach<C extends Context, T, U>(
   const { em } = ctx;
   // Ensure any test data we've setup is flushed
   await em.flush();
-  const results = await Promise.all(valuesFn().map(async (value) => fn(await contextFn(ctx), value)));
-  // We expect `fn` (i.e. a resolver) to do its own UoW management, so don't flush.
-  await em.refresh({ deepLoad: true });
+  const plugin = new RunPlugin(em);
+  const results = await Promise.all(
+    valuesFn().map(async (value) => {
+      const newCtx = await contextFn(ctx);
+      newCtx.em.addPlugin(plugin);
+      return fn(newCtx, value);
+    }),
+  );
   return mapResultToOriginalEm(em, results);
 }
 

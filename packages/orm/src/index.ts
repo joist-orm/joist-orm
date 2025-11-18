@@ -33,8 +33,10 @@ export * from "./EntityMetadata";
 export { EnumMetadata } from "./EnumMetadata";
 export { EntityOrId, HintNode } from "./HintTree";
 export { InstanceData } from "./InstanceData";
+export { JoinRow } from "./JoinRows";
 export { Plugin } from "./PluginManager";
 export * from "./QueryParser";
+export { JoinRowTodo, Todo } from "./Todo";
 export * from "./changes";
 export { ConfigApi, EntityHook, resetBootFlag } from "./config";
 export { configureMetadata, getConstructorFromTaggedId, maybeGetConstructorFromReference } from "./configure";
@@ -80,6 +82,7 @@ export {
   testIndex,
 } from "./newTestInstance";
 export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
+export { ImmutableEntitiesPlugin } from "./plugins/ImmutableEntitiesPlugin";
 export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
 export { JsonAggregatePreloader } from "./preloading/JsonAggregatePreloader";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";

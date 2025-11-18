@@ -5,6 +5,7 @@ import {
   Entity,
   EntityMetadata,
   getConstructorFromTaggedId,
+  isDefined,
   isEntity,
   keyToNumber,
   keyToTaggedId,
@@ -57,7 +58,10 @@ export interface Column {
   dbType: string;
   /** From the given `__orm.data` hash, return this columns value, i.e. for putting in `UPDATE` params. */
   dbValue(data: any, entity: Entity, tableName: string, fixups: InsertFixup[] | undefined): any;
-  /** Used by em.fork to create an __orm.row from an __orm.data. Should output what we would expect from a db query **/
+  /**
+   * Used by `fork`, `importEntity`, and `run` to create an __orm.row from an __orm.data. Should output what we would
+   * expect from a db query
+   */
   rowValue(data: any): any;
   /** For a given domain value, return the database value, i.e. for putting `em.find` params into a db WHERE clause. */
   mapToDb(value: any): any;
@@ -526,7 +530,9 @@ export class SuperstructSerde implements FieldSerde {
     return JSON.stringify(data[this.fieldName]);
   }
 
-  // JSON is returned by postgres already parsed, so if we are trying to recreate that we don't need to stringify
+  // JSON is returned by postgres already parsed, so we should just be able to return our data directly. Unlike with
+  // JsonSerde, we can assume that superstruct would have parsed any complex types in the json correctly so we don't
+  // need to do a round trip through JSON.stringify.
   rowValue(data: any): any {
     return data[this.fieldName];
   }
@@ -558,9 +564,12 @@ export class JsonSerde implements FieldSerde {
     return JSON.stringify(data[this.fieldName]);
   }
 
-  // JSON is returned by postgres already parsed, so if we are trying to recreate that we don't need to stringify
+  // JSON is returned by postgres already parsed, so if we are trying to recreate then we need to stringify, then parse.
+  // It's necessary to do this instead of just returning the object directly because any complex types in the json need
+  // to be stringified to correctly reflect the db value.
   rowValue(data: any): any {
-    return data[this.fieldName];
+    const json = JSON.stringify(data[this.fieldName]);
+    return isDefined(json) ? JSON.parse(json) : undefined;
   }
 
   mapToDb(value: any) {
@@ -598,7 +607,9 @@ export class ZodSerde implements FieldSerde {
     return JSON.stringify(data[this.fieldName]);
   }
 
-  // JSON is returned by postgres already parsed, so if we are trying to recreate that we don't need to stringify
+  // JSON is returned by postgres already parsed, so we should just be able to return our data directly. Unlike with
+  // JsonSerde, we can assume that zod would have parsed any complex types in the json correctly so we don't need to
+  // do a round trip through JSON.stringify.
   rowValue(data: any): any {
     return data[this.fieldName];
   }

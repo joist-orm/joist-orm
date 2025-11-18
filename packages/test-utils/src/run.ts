@@ -1,4 +1,4 @@
-import { Entity, EntityManager, isEntity } from "joist-orm";
+import { EntityManager, isEntity } from "joist-orm";
 import { fail } from "joist-utils";
 import { Context } from "./context";
 import { RunPlugin } from "./RunPlugin";
@@ -68,47 +68,27 @@ export function newContext<C extends Context>(ctx: C): C {
   return newCtx;
 }
 
-function gatherEntities(result: any): Entity[] {
-  if (isEntity(result)) {
-    return [result];
-  } else if (Array.isArray(result)) {
-    return result.flatMap(gatherEntities);
-  } else if (result instanceof Map) {
-    return [...result.values(), ...result.keys()].flatMap(gatherEntities);
-  } else if (result !== null && typeof result === "object" && result?.constructor === Object) {
-    return Object.values(result).flatMap(gatherEntities);
-  } else {
-    return [];
-  }
-}
-
-async function mapResultToOriginalEm<R>(em: EntityManager, result: R): Promise<R> {
-  const newEmEntities = gatherEntities(result);
-  // load any entities that don't exist in the original em
-  await Promise.all(
-    newEmEntities
-      .filter(
-        (e) =>
-          !em.findExistingInstance(
-            e.idTaggedMaybe ?? fail("Joist 'run' returned an unsaved entity; are you missing an em.flush?"),
-          ),
-      )
-      .map((e) => em.load(e.idTagged)),
-  );
+function mapResultToOriginalEm<R>(em: EntityManager, result: R): R {
   // generate a cache of id -> entity in original em
-  const cache = Object.fromEntries(newEmEntities.map((e) => [e.id, em.findExistingInstance(e.idTagged) as Entity]));
-  function doMap(value: any): any {
-    if (isEntity(value)) {
-      return cache[value.id];
-    } else if (Array.isArray(value)) {
-      return value.map(doMap) as any;
-    } else if (value instanceof Map) {
-      return new Map<any, any>([...value.entries()].map(([key, value]) => [doMap(key), doMap(value)]));
-    } else if (typeof value === "object" && value?.constructor === Object) {
-      return Object.fromEntries(Object.entries(value).map(([key, value]: [string, any]) => [key, doMap(value)]));
-    } else {
-      return value;
-    }
+  if (isEntity(result)) {
+    return (em.findExistingInstance(result.idTagged) ?? fail(`Could not find entity ${result.idTagged}`)) as R;
+  } else if (Array.isArray(result)) {
+    return result.map((r) => mapResultToOriginalEm(em, r)) as any;
+  } else if (result instanceof Map) {
+    const map = new Map<any, any>();
+    result
+      .entries()
+      .forEach(([key, value]) => map.set(mapResultToOriginalEm(em, key), mapResultToOriginalEm(em, value)));
+    return map as R;
+  } else if (result instanceof Set) {
+    const set = new Set<any>();
+    result.forEach((r) => set.add(mapResultToOriginalEm(em, r)));
+    return set as R;
+  } else if (typeof result === "object" && result?.constructor === Object) {
+    const obj = {} as any;
+    Object.entries(result).forEach(([key, value]: [string, any]) => (obj[key] = mapResultToOriginalEm(em, value)));
+    return obj;
+  } else {
+    return result;
   }
-  return doMap(result);
 }

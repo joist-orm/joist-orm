@@ -292,7 +292,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         beforeCommit: [...opts.em.#hooks.beforeCommit],
         afterCommit: [...opts.em.#hooks.afterCommit],
       };
-      opts.em.__api.pluginManager.copyTo(pluginManager);
+      opts.em.__api.pluginManager.cloneTo(pluginManager);
     }
 
     // Expose some of our private fields as the EntityManagerInternalApi
@@ -2232,18 +2232,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   importEntity<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
     source: L,
     hint?: H,
-    opts?: { normalizedHint?: H; allowDirty?: boolean },
-  ): L;
-  importEntity<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
-    source: L,
-    hint: H | undefined = undefined,
-    opts: { normalizedHint?: H; allowDirty?: boolean } = {},
+    normalizedHint?: H,
   ): L {
-    let { normalizedHint, allowDirty = false } = opts;
-
-    if (!source.idMaybe) fail("cannot import new entities");
+    if (source.isNewEntity) fail("cannot import new entities");
     if (source.isDeletedEntity) fail("cannot import deleted entities");
-    if (!allowDirty && source.isDirtyEntity) fail("cannot import dirty entities");
+    if (source.isDirtyEntity) fail("cannot import dirty entities");
 
     hint ??= {} as H;
     if (!normalizedHint) {
@@ -2259,7 +2252,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     if (!result) {
       const meta = getMetadata(source);
-      const row = createRowFromEntityData(source, !allowDirty);
+      const row = createRowFromEntityData(source);
       result = this.hydrate(getBaseMeta(meta).cstr, [row])[0]!;
     }
 
@@ -2269,11 +2262,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       if (!field) {
         let loadHint: H =
           (relationOrProp as any).loadHint ?? fail(`${source}.${fieldName} cannot be imported as it has no loadHint`);
-        this.importEntity<T, H, L>(source, loadHint, opts);
+        this.importEntity<T, H, L>(source, loadHint);
       } else if ("import" in relationOrProp) {
         relationOrProp.import(
           (source as any)[fieldName],
-          (e: Entity) => (this.importEntity as any)(e, subHint, { ...opts, normalizedHint: subHint }) as Entity,
+          (e: Entity) => (this.importEntity as any)(e, subHint, subHint) as Entity,
         );
       }
     }
@@ -2911,7 +2904,8 @@ function getDefaultWriteFn(ctx: unknown): WriteFn {
 
 const fieldMap: Record<string, [Field, Column][]> = {};
 // Generates what a row from the db would look like for a given entity
-function createRowFromEntityData(e: Entity, preferOriginalData: boolean = true) {
+export function createRowFromEntityData(e: Entity, opts: { preferOriginalData?: boolean } = {}) {
+  const { preferOriginalData = true } = opts;
   const { row: oldRow, data, originalData } = (e as any).__data as InstanceData;
   const __class = e.constructor.name;
   const { metadata: meta } = (e as any).__data as InstanceData;

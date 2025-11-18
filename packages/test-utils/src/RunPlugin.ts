@@ -1,22 +1,26 @@
 import {
+  assertNever,
   Column,
+  createRowFromEntityData,
   Entity,
   getInstanceData,
   getMetadata,
   getRelations,
   isEntity,
+  JoinRow,
+  JoinRowTodo,
   ManyToManyCollection,
   ManyToOneReferenceImpl,
+  MaybeAbstractEntityConstructor,
   OneToManyCollection,
   OneToOneReferenceImpl,
+  Plugin,
   PolymorphicKeySerde,
   PolymorphicReferenceImpl,
   ReactiveReferenceImpl,
+  Todo,
 } from "joist-orm";
 import { EntityManager, getEmInternalApi } from "joist-orm/build/EntityManager";
-import { JoinRow } from "joist-orm/build/JoinRows";
-import { Plugin } from "joist-orm/build/PluginManager";
-import { JoinRowTodo, Todo } from "joist-orm/build/Todo";
 
 /*
  * `run...` helpers use this plugin to mirror any changes made to their isolated entity manager inside to the original
@@ -28,6 +32,10 @@ export class RunPlugin extends Plugin {
   // to the new em `run..` helpers create or by downstream ems created by implementation code
   constructor(public readonly em: EntityManager) {
     super();
+  }
+
+  maybeCloneForNewEm() {
+    return this;
   }
 
   afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>) {
@@ -45,7 +53,10 @@ export class RunPlugin extends Plugin {
   #syncEntityData(entityTodos: Record<string, Todo>) {
     const { em } = this;
     Object.values(entityTodos).forEach((todo) => {
-      todo.inserts.forEach((newEntity) => em.importEntity(newEntity, {}, { allowDirty: true }));
+      todo.inserts.forEach((newEntity) => {
+        const row = createRowFromEntityData(newEntity, { preferOriginalData: false });
+        em.hydrate(newEntity.constructor as MaybeAbstractEntityConstructor<any>, [row]);
+      });
       todo.updates.forEach((newEntity) => {
         const oldEntity = em.findExistingInstance(newEntity.idTagged);
         // This fail shouldn't really be possible, since any entity should either have been created:
@@ -226,17 +237,20 @@ function maybePreloadOtherSide(
   // Since our preload scans the entire em, we only need to run it once per collection/o2o.  We clear out preloads
   // when we start the afterWrite, so if anything is preloaded we know we put it there.
   if (otherSide.isPreloaded) return;
-  const otherEntities =
-    otherSide instanceof OneToManyCollection
-      ? em
-          .getEntities(meta.cstr)
-          .values()
-          .filter((e) => !e.isDeletedEntity)
-          .filter((e) => ((e as any)[otherSide.otherFieldName] as ConcreteReference).idTaggedMaybe === other.idTagged)
-          .toArray()
-      : remove
-        ? []
-        : [entity];
+  let otherEntities: Entity[];
+  if (otherSide instanceof OneToOneReferenceImpl) {
+    otherEntities = remove ? [] : [entity];
+  } else if (otherSide instanceof OneToManyCollection) {
+    // Scan the entire em for (non-deleted) entities of our type that reference the other side
+    otherEntities = em
+      .getEntities(meta.cstr)
+      .values()
+      .filter((e) => !e.isDeletedEntity)
+      .filter((e) => ((e as any)[otherSide.otherFieldName] as ConcreteReference).idTaggedMaybe === other.idTagged)
+      .toArray();
+  } else {
+    assertNever(otherSide);
+  }
   // We don't need to worry about order here because o2ms do their own sorting internally and o2os are inherently
   // unordered (since it's just a single entity)
   getEmInternalApi(em).setPreloadedRelation(other.idTagged, otherSide.fieldName, otherEntities);

@@ -52,8 +52,8 @@ export abstract class Plugin {
   // didn't do this, then multiple EMs with the same plugin instance could keep each other from being garbage collected.
   [emsSymbol]: WeakRef<EntityManager>[] = [];
 
-  get shouldCopy() {
-    return true;
+  maybeCloneForNewEm(): this | undefined {
+    return undefined;
   }
 
   get ems(): readonly EntityManager[] {
@@ -112,10 +112,11 @@ export class PluginManager implements Required<PluginMethods> {
     return [...this.#plugins];
   }
 
-  copyTo(other: PluginManager) {
+  cloneTo(other: PluginManager) {
     this.#plugins
       .values()
-      .filter((plugin) => plugin.shouldCopy)
+      .map((plugin) => plugin.maybeCloneForNewEm())
+      .filter(isDefined)
       .forEach((plugin) => other.addPlugin(plugin));
   }
 

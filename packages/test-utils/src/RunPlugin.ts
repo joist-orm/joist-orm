@@ -3,6 +3,8 @@ import {
   Column,
   createRowFromEntityData,
   Entity,
+  EntityManager,
+  getEmInternalApi,
   getInstanceData,
   getMetadata,
   getRelations,
@@ -20,7 +22,6 @@ import {
   ReactiveReferenceImpl,
   Todo,
 } from "joist-orm";
-import { EntityManager, getEmInternalApi } from "joist-orm/build/EntityManager";
 
 /*
  * `run...` helpers use this plugin to mirror any changes made to their isolated entity manager inside to the original

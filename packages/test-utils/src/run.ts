@@ -68,6 +68,8 @@ export function newContext<C extends Context>(ctx: C): C {
   return newCtx;
 }
 
+/* Returns a copy of `result` with all entities replaced with their instance from the original `em`.  We assume that
+ * RunPlugin has been installed prior to this call, so any entities we encounter should be present in both ems. */
 function mapResultToOriginalEm<R>(em: EntityManager, result: R): R {
   if (isEntity(result)) {
     return (em.findExistingInstance(result.idTagged) ?? fail(`Could not find entity ${result.idTagged}`)) as R;

@@ -1,3 +1,10 @@
+# [1.284.0](https://github.com/joist-orm/joist-orm/compare/v1.283.1...v1.284.0) (2025-11-18)
+
+
+### Features
+
+* add plugin to sync data between ems during run invocations ([#1665](https://github.com/joist-orm/joist-orm/issues/1665)) ([b6131e8](https://github.com/joist-orm/joist-orm/commit/b6131e84a632f8948ad2540fc2fa42e6c2e85eaf))
+
 ## [1.283.1](https://github.com/joist-orm/joist-orm/compare/v1.283.0...v1.283.1) (2025-11-18)
 
 

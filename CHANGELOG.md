@@ -1,3 +1,10 @@
+## [1.283.1](https://github.com/joist-orm/joist-orm/compare/v1.283.0...v1.283.1) (2025-11-18)
+
+
+### Bug Fixes
+
+* Fix findOrCreate lowered values used for em.create. ([#1666](https://github.com/joist-orm/joist-orm/issues/1666)) ([d9b121b](https://github.com/joist-orm/joist-orm/commit/d9b121bfba80f7b87eb6a27af46672a65e10544d))
+
 # [1.283.0](https://github.com/joist-orm/joist-orm/compare/v1.282.1...v1.283.0) (2025-11-16)
 
 

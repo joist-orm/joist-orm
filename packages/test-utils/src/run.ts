@@ -69,7 +69,6 @@ export function newContext<C extends Context>(ctx: C): C {
 }
 
 function mapResultToOriginalEm<R>(em: EntityManager, result: R): R {
-  // generate a cache of id -> entity in original em
   if (isEntity(result)) {
     return (em.findExistingInstance(result.idTagged) ?? fail(`Could not find entity ${result.idTagged}`)) as R;
   } else if (Array.isArray(result)) {

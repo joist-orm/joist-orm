@@ -1,3 +1,10 @@
+# [1.285.0](https://github.com/joist-orm/joist-orm/compare/v1.284.1...v1.285.0) (2025-11-18)
+
+
+### Features
+
+* make mapResultToOriginalEm synchronous ([#1669](https://github.com/joist-orm/joist-orm/issues/1669)) ([5ae74bf](https://github.com/joist-orm/joist-orm/commit/5ae74bf3742b3fa16189af43fc5908307f459e4d))
+
 ## [1.284.1](https://github.com/joist-orm/joist-orm/compare/v1.284.0...v1.284.1) (2025-11-18)
 
 

@@ -81,10 +81,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/internal-helpers@npm:0.7.4":
-  version: 0.7.4
-  resolution: "@astrojs/internal-helpers@npm:0.7.4"
-  checksum: 10/eb3f6087e087d4697cfcf17bd5e4bffc7c6183171a66b7348532a50bc8393caae2c471d15a88e0590176e5e0145b1ba1c1f319f44801deb5a25b778c229ae62e
+"@astrojs/internal-helpers@npm:0.7.5":
+  version: 0.7.5
+  resolution: "@astrojs/internal-helpers@npm:0.7.5"
+  checksum: 10/cf1fb33d3b356684540a03e26bbecd59098f71237094e2c89b61fa96fe9de9ea8d16692ba8bf060f3e4a78c0eb0d906018b921c68c7287540990b7881f8522f0
   languageName: node
   linkType: hard
 
@@ -153,11 +153,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/markdown-remark@npm:6.3.8":
-  version: 6.3.8
-  resolution: "@astrojs/markdown-remark@npm:6.3.8"
+"@astrojs/markdown-remark@npm:6.3.9":
+  version: 6.3.9
+  resolution: "@astrojs/markdown-remark@npm:6.3.9"
   dependencies:
-    "@astrojs/internal-helpers": "npm:0.7.4"
+    "@astrojs/internal-helpers": "npm:0.7.5"
     "@astrojs/prism": "npm:3.3.0"
     github-slugger: "npm:^2.0.0"
     hast-util-from-html: "npm:^2.0.3"
@@ -176,9 +176,9 @@ __metadata:
     unified: "npm:^11.0.5"
     unist-util-remove-position: "npm:^5.0.0"
     unist-util-visit: "npm:^5.0.0"
-    unist-util-visit-parents: "npm:^6.0.1"
+    unist-util-visit-parents: "npm:^6.0.2"
     vfile: "npm:^6.0.3"
-  checksum: 10/e204a38d9cd09481c87528ac4c5685defb5712b327f0ef7475532b831ea4893a15ec248ce1412c3c3cb3e940435b1c47bba24ef55bc2092330fcaa5f0eaebd2f
+  checksum: 10/047d8aca20e86a16bd4afe99e324b9124159f3677f19f0eb8bbc8472950f5ee98a590750d625396cb1151d56a3aec8d256512e1518882987753453abc51d6008
   languageName: node
   linkType: hard
 
@@ -1069,7 +1069,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@capsizecss/unpack@npm:^3.0.0":
+"@capsizecss/unpack@npm:^3.0.1":
   version: 3.0.1
   resolution: "@capsizecss/unpack@npm:3.0.1"
   dependencies:
@@ -5378,15 +5378,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"astro@npm:5.15.6":
-  version: 5.15.6
-  resolution: "astro@npm:5.15.6"
+"astro@npm:5.15.9":
+  version: 5.15.9
+  resolution: "astro@npm:5.15.9"
   dependencies:
     "@astrojs/compiler": "npm:^2.13.0"
-    "@astrojs/internal-helpers": "npm:0.7.4"
-    "@astrojs/markdown-remark": "npm:6.3.8"
+    "@astrojs/internal-helpers": "npm:0.7.5"
+    "@astrojs/markdown-remark": "npm:6.3.9"
     "@astrojs/telemetry": "npm:3.3.0"
-    "@capsizecss/unpack": "npm:^3.0.0"
+    "@capsizecss/unpack": "npm:^3.0.1"
     "@oslojs/encoding": "npm:^1.1.0"
     "@rollup/pluginutils": "npm:^5.3.0"
     acorn: "npm:^8.15.0"
@@ -5400,7 +5400,7 @@ __metadata:
     cssesc: "npm:^3.0.0"
     debug: "npm:^4.4.3"
     deterministic-object-hash: "npm:^2.0.2"
-    devalue: "npm:^5.4.2"
+    devalue: "npm:^5.5.0"
     diff: "npm:^5.2.0"
     dlv: "npm:^1.1.3"
     dset: "npm:^3.1.4"
@@ -5413,7 +5413,7 @@ __metadata:
     html-escaper: "npm:3.0.3"
     http-cache-semantics: "npm:^4.2.0"
     import-meta-resolve: "npm:^4.2.0"
-    js-yaml: "npm:^4.1.0"
+    js-yaml: "npm:^4.1.1"
     magic-string: "npm:^0.30.21"
     magicast: "npm:^0.5.1"
     mrmime: "npm:^2.0.1"
@@ -5428,7 +5428,7 @@ __metadata:
     semver: "npm:^7.7.3"
     sharp: "npm:^0.34.0"
     shiki: "npm:^3.15.0"
-    smol-toml: "npm:^1.4.2"
+    smol-toml: "npm:^1.5.0"
     tinyexec: "npm:^1.0.2"
     tinyglobby: "npm:^0.2.15"
     tsconfck: "npm:^3.1.6"
@@ -5450,7 +5450,7 @@ __metadata:
       optional: true
   bin:
     astro: astro.js
-  checksum: 10/301bd874ceab110f838cf1279ec21526d0a176abf5c67b054f21fe42bac57eff0b1ced7f9c8098cfc206494a895e60b90ed548675fe8fee15533c60e536cdaa2
+  checksum: 10/3403f19fc2ea9e9497fdab1806fcd63040305d2e835e1654cc5910a78c15d3eb14d05f5dcd34b5eae1e6011c4288f1d6a2becee7f55e98ec52124288f54189be
   languageName: node
   linkType: hard
 
@@ -6719,7 +6719,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"devalue@npm:^5.4.2":
+"devalue@npm:^5.5.0":
   version: 5.5.0
   resolution: "devalue@npm:5.5.0"
   checksum: 10/05f6c58b7044d665f1bd7998033354960cc746690998d6f66855d1a29a57b9a686e9b973980d552bcbf6ab4cad13114763cc4ffbe950c2c46b3d9ac39f694d7d
@@ -9706,7 +9706,7 @@ __metadata:
     "@astrojs/starlight": "npm:^0.36.0"
     "@astrojs/starlight-tailwind": "npm:^4.0.1"
     "@tailwindcss/vite": "npm:^4.1.13"
-    astro: "npm:5.15.6"
+    astro: "npm:5.15.9"
     sharp: "npm:^0.34.4"
     starlight-blog: "npm:^0.24.1"
     starlight-llms-txt: "npm:^0.6.0"
@@ -10173,6 +10173,17 @@ __metadata:
   bin:
     js-yaml: bin/js-yaml.js
   checksum: 10/c138a34a3fd0d08ebaf71273ad4465569a483b8a639e0b118ff65698d257c2791d3199e3f303631f2cb98213fa7b5f5d6a4621fd0fff819421b990d30d967140
+  languageName: node
+  linkType: hard
+
+"js-yaml@npm:^4.1.1":
+  version: 4.1.1
+  resolution: "js-yaml@npm:4.1.1"
+  dependencies:
+    argparse: "npm:^2.0.1"
+  bin:
+    js-yaml: bin/js-yaml.js
+  checksum: 10/a52d0519f0f4ef5b4adc1cde466cb54c50d56e2b4a983b9d5c9c0f2f99462047007a6274d7e95617a21d3c91fde3ee6115536ed70991cd645ba8521058b78f77
   languageName: node
   linkType: hard
 
@@ -14812,6 +14823,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"smol-toml@npm:^1.5.0":
+  version: 1.5.2
+  resolution: "smol-toml@npm:1.5.2"
+  checksum: 10/0a7e9192d1cbd04c3122224306de33962f4f5ac7e78a48b7c3795a675683b6efeb8f73ad3fabda7635926a510948cb4654a729d17b35ec43d56d35a71cf906f4
+  languageName: node
+  linkType: hard
+
 "snake-case@npm:^3.0.4":
   version: 3.0.4
   resolution: "snake-case@npm:3.0.4"
@@ -16222,6 +16240,16 @@ __metadata:
     "@types/unist": "npm:^3.0.0"
     unist-util-is: "npm:^6.0.0"
   checksum: 10/645b3cbc5e923bc692b1eb1a9ca17bffc5aabc25e6090ff3f1489bff8effd1890b28f7a09dc853cb6a7fa0da8581bfebc9b670a68b53c4c086cb9610dfd37701
+  languageName: node
+  linkType: hard
+
+"unist-util-visit-parents@npm:^6.0.2":
+  version: 6.0.2
+  resolution: "unist-util-visit-parents@npm:6.0.2"
+  dependencies:
+    "@types/unist": "npm:^3.0.0"
+    unist-util-is: "npm:^6.0.0"
+  checksum: 10/aa16e97e45bd1d641e1f933d2fb3bf0800865350eaeb5cc0317ab511075480fb4ac5e2a55f57dd72d27311e8ba29fd23908848bd83479849c626be1f7dabcae5
   languageName: node
   linkType: hard
 

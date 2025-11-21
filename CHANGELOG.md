@@ -1,3 +1,10 @@
+## [1.285.1](https://github.com/joist-orm/joist-orm/compare/v1.285.0...v1.285.1) (2025-11-21)
+
+
+### Bug Fixes
+
+* Use more type imports. ([#1672](https://github.com/joist-orm/joist-orm/issues/1672)) ([4ade0ab](https://github.com/joist-orm/joist-orm/commit/4ade0ab2e3275950f49b44b9a6e0c6b5cf24a143))
+
 # [1.285.0](https://github.com/joist-orm/joist-orm/compare/v1.284.1...v1.285.0) (2025-11-18)
 
 

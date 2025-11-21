@@ -1,5 +1,4 @@
-import { getMetadata, Plugin } from "joist-orm";
-import { ImmutableEntitiesPlugin } from "joist-orm/build/plugins/ImmutableEntitiesPlugin";
+import { getMetadata, ImmutableEntitiesPlugin, Plugin } from "joist-orm";
 import { describe } from "node:test";
 import { Author, Image, newAuthor } from "src/entities";
 import { insertAuthor } from "src/entities/inserts";

@@ -41,10 +41,10 @@ import {
   type Entity,
   EntityManager,
   newT3Book,
-  T3Author,
+  type T3Author,
   type T3AuthorId,
   type T3AuthorOrder,
-  T3Book,
+  type T3Book,
   t3BookMeta,
 } from "../entities";
 

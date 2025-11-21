@@ -39,9 +39,9 @@ import {
 import { Temporal } from "temporal-polyfill";
 import type { Context } from "../../context.js";
 import {
-  Author,
+  type Author,
   authorMeta,
-  Book,
+  type Book,
   type BookId,
   Color,
   ColorDetails,

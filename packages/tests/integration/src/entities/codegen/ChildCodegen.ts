@@ -35,7 +35,15 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Child, ChildGroup, type ChildGroupId, childMeta, type Entity, EntityManager, newChild } from "../entities";
+import {
+  type Child,
+  type ChildGroup,
+  type ChildGroupId,
+  childMeta,
+  type Entity,
+  EntityManager,
+  newChild,
+} from "../entities";
 
 export type ChildId = Flavor<string, "Child">;
 

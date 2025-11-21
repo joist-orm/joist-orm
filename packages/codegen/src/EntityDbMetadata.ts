@@ -45,8 +45,10 @@ export interface DbMetadata {
 /** Codegen-time metadata about a given domain entity. */
 export type Entity = {
   name: string;
-  /** The symbol pointing to the entity itself. */
+  /** The _type_ symbol pointing to the entity itself. */
   type: Import;
+  /** The symbol pointing to the entity itself. */
+  typeSymbol: Import;
   /** The symbol pointing to the entity itself, directly rather than via entities.ts */
   typeForMetadataFile: Import;
   /** The name of the entity's runtime metadata const. */
@@ -826,6 +828,7 @@ export function makeEntity(entityName: string): Entity {
   return {
     name: entityName,
     type: entityType(entityName),
+    typeSymbol: entityTypeSymbol(entityName),
     typeForMetadataFile: entityTypeForMetadataFile(entityName),
     metaName: metaName(entityName),
     metaType: metaType(entityName),
@@ -847,6 +850,10 @@ function metaType(entityName: string): Import {
 }
 
 function entityType(entityName: string): Import {
+  return imp(`t:${entityName}@./entities.ts`);
+}
+
+function entityTypeSymbol(entityName: string): Import {
   return imp(`${entityName}@./entities.ts`);
 }
 

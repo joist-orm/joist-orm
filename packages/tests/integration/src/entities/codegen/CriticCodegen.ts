@@ -40,22 +40,22 @@ import {
 } from "joist-orm";
 import type { Context } from "src/context";
 import {
-  BookReview,
+  type BookReview,
   type BookReviewId,
-  Critic,
-  CriticColumn,
+  type Critic,
+  type CriticColumn,
   type CriticColumnId,
   criticMeta,
   type Entity,
   EntityManager,
-  LargePublisher,
+  type LargePublisher,
   type LargePublisherId,
   type LargePublisherOrder,
   newCritic,
-  PublisherGroup,
+  type PublisherGroup,
   type PublisherGroupId,
   type PublisherGroupOrder,
-  SmallPublisherGroup,
+  type SmallPublisherGroup,
   type SmallPublisherGroupId,
 } from "../entities";
 

@@ -36,8 +36,8 @@ import {
 } from "joist-orm";
 import type { Context } from "src/context";
 import {
-  Critic,
-  CriticColumn,
+  type Critic,
+  type CriticColumn,
   criticColumnMeta,
   type CriticId,
   type CriticOrder,

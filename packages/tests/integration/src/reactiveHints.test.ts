@@ -6,10 +6,11 @@ import {
   MaybeAbstractEntityConstructor,
   Reacted,
   ReactiveHint,
+  ReactiveTarget,
+  convertToLoadHint,
   getMetadata,
   reverseReactiveHint,
 } from "joist-orm";
-import { ReactiveTarget, convertToLoadHint } from "joist-orm/build/reactiveHints";
 
 const am = getMetadata(Author);
 

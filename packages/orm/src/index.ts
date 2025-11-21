@@ -36,10 +36,18 @@ export { InstanceData } from "./InstanceData";
 export { JoinRow } from "./JoinRows";
 export { Plugin } from "./PluginManager";
 export * from "./QueryParser";
+export { visitConditions } from "./QueryVisitor";
 export { JoinRowTodo, Todo } from "./Todo";
 export * from "./changes";
 export { ConfigApi, EntityHook, resetBootFlag } from "./config";
-export { configureMetadata, getConstructorFromTaggedId, maybeGetConstructorFromReference } from "./configure";
+export {
+  configureMetadata,
+  getConstructorFromTaggedId,
+  getMetadataForTable,
+  getMetadataForType,
+  maybeGetConstructorFromReference,
+} from "./configure";
+export { driverApi } from "./driverApi";
 export * from "./drivers";
 export { getField, isChangeableField, isFieldSet, setField } from "./fields";
 export * from "./getProperties";
@@ -85,7 +93,14 @@ export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
 export { ImmutableEntitiesPlugin } from "./plugins/ImmutableEntitiesPlugin";
 export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
 export { JsonAggregatePreloader } from "./preloading/JsonAggregatePreloader";
-export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
+export {
+  convertToLoadHint,
+  Reactable,
+  Reacted,
+  ReactiveHint,
+  ReactiveTarget,
+  reverseReactiveHint,
+} from "./reactiveHints";
 export * from "./relations";
 export {
   cannotBeChanged,
@@ -107,7 +122,7 @@ export * from "./serde";
 export * from "./temporalMappers";
 export * from "./typeMap";
 export { DeepPartialOrNull, updatePartial, upsert } from "./upsert";
-export { asNew, assertNever, cleanStringValue, fail, indexBy } from "./utils";
+export { abbreviation, asNew, assertNever, cleanStringValue, fail, failIfAnyRejected, indexBy } from "./utils";
 export { ensureWithLoaded, StubbedRelation, WithLoaded, withLoaded } from "./withLoaded";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/

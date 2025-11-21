@@ -3,22 +3,24 @@ import {
   Driver,
   driverAfterBegin,
   driverAfterCommit,
+  driverApi,
   driverBeforeBegin,
   driverBeforeCommit,
   EntityManager,
   fail,
   IdAssigner,
+  JoinRowTodo,
   kq,
   kqDot,
   ParsedFindQuery,
   SequenceIdAssigner,
+  Todo,
 } from "joist-orm";
-import { JoinRowTodo, Todo } from "joist-orm/build/Todo";
-import { buildValuesCte } from "joist-orm/build/dataloaders/findDataLoader";
-import { DeleteOp, generateOps, InsertOp, UpdateOp } from "joist-orm/build/drivers/EntityWriter";
-import { buildCteSql } from "joist-orm/build/drivers/buildRawQuery";
-import { getRuntimeConfig } from "joist-orm/build/runtimeConfig";
-import { batched, cleanSql } from "joist-orm/build/utils";
+
+const { buildValuesCte, buildCteSql, getRuntimeConfig, batched, cleanSql, generateOps } = driverApi;
+type DeleteOp = any;
+type InsertOp = any;
+type UpdateOp = any;
 
 export class BunPgDriver implements Driver<TransactionSQL> {
   readonly #idAssigner: IdAssigner;
@@ -114,8 +116,8 @@ export class BunPgDriver implements Driver<TransactionSQL> {
 function batchInsert(txn: TransactionSQL, op: InsertOp): Promise<unknown> {
   const { tableName, columns, rows } = op;
   const sql = cleanSql(`
-    INSERT INTO ${kq(tableName)} (${columns.map((c) => kq(c.columnName)).join(", ")})
-    VALUES ${rows.map((_, i) => `(${columns.map((_, j) => `\$${i * columns.length + j + 1}`).join(", ")})`).join(",")}
+    INSERT INTO ${kq(tableName)} (${columns.map((c: any) => kq(c.columnName)).join(", ")})
+    VALUES ${rows.map((_: any, i: any) => `(${columns.map((_: any, j: any) => `\$${i * columns.length + j + 1}`).join(", ")})`).join(",")}
   `);
   const params = rows.flat();
   return txn.unsafe(sql, params);
@@ -147,8 +149,8 @@ async function batchUpdate(txn: TransactionSQL, op: UpdateOp): Promise<void> {
     ${cteSql}
     UPDATE ${kq(tableName)}
     SET ${columns
-      .filter((c) => c.columnName !== "id" && c.columnName !== "__original_updated_at")
-      .map((c) => `${kq(c.columnName)} = data.${kq(c.columnName)}`)
+      .filter((c: any) => c.columnName !== "id" && c.columnName !== "__original_updated_at")
+      .map((c: any) => `${kq(c.columnName)} = data.${kq(c.columnName)}`)
       .join(", ")}
     FROM data
     WHERE ${kq(tableName)}.id = data.id ${maybeUpdatedAt}
@@ -159,7 +161,7 @@ async function batchUpdate(txn: TransactionSQL, op: UpdateOp): Promise<void> {
 
   if (result.rows.length !== rows.length) {
     const updated = new Set(result.rows.map((r: any) => r.id));
-    const missing = rows.map((r) => r[0]).filter((id) => !updated.has(id));
+    const missing = rows.map((r: any) => r[0]).filter((id: any) => !updated.has(id));
     throw new Error(`Oplock failure for ${tableName} rows ${missing.join(", ")}`);
   }
 }

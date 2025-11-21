@@ -37,7 +37,12 @@ export {
 export { ReactiveField, hasReactiveField, isReactiveField } from "./ReactiveField";
 export { ReactiveGetter, hasReactiveGetter, isReactiveGetter } from "./ReactiveGetter";
 export { hasReactiveQueryField, isReactiveQueryField } from "./ReactiveQueryField";
-export { ReactiveReference, ReactiveReferenceImpl, hasReactiveReference } from "./ReactiveReference";
+export {
+  ReactiveReference,
+  ReactiveReferenceImpl,
+  hasReactiveReference,
+  isReactiveReference,
+} from "./ReactiveReference";
 export {
   LoadedReadOnlyCollection,
   ReadOnlyCollection,

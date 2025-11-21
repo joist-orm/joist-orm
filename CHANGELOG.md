@@ -1,3 +1,10 @@
+## [1.285.2](https://github.com/joist-orm/joist-orm/compare/v1.285.1...v1.285.2) (2025-11-21)
+
+
+### Bug Fixes
+
+* Import/export fixes. ([#1673](https://github.com/joist-orm/joist-orm/issues/1673)) ([c0c907c](https://github.com/joist-orm/joist-orm/commit/c0c907c1ff4181730f3e733f9c95e6dc0e760356))
+
 ## [1.285.1](https://github.com/joist-orm/joist-orm/compare/v1.285.0...v1.285.1) (2025-11-21)
 
 

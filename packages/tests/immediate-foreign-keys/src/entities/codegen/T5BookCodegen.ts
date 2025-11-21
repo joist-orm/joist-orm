@@ -41,12 +41,12 @@ import {
   type Entity,
   EntityManager,
   newT5Book,
-  T5Author,
+  type T5Author,
   type T5AuthorId,
   type T5AuthorOrder,
-  T5Book,
+  type T5Book,
   t5BookMeta,
-  T5BookReview,
+  type T5BookReview,
   type T5BookReviewId,
 } from "../entities";
 

@@ -41,9 +41,9 @@ import {
   type Entity,
   EntityManager,
   newT4Author,
-  T4Author,
+  type T4Author,
   t4AuthorMeta,
-  T4Book,
+  type T4Book,
   type T4BookId,
   type T4BookOrder,
 } from "../entities";

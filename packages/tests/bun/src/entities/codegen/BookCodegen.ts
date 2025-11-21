@@ -36,10 +36,10 @@ import {
 } from "joist-orm";
 import type { Context } from "../../context.js";
 import {
-  Author,
+  type Author,
   type AuthorId,
   type AuthorOrder,
-  Book,
+  type Book,
   bookMeta,
   type Entity,
   EntityManager,

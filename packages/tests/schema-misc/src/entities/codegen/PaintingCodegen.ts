@@ -36,13 +36,13 @@ import {
 } from "joist-orm";
 import type { Context } from "src/context";
 import {
-  Artist,
+  type Artist,
   type ArtistId,
   type ArtistOrder,
   type Entity,
   EntityManager,
   newPainting,
-  Painting,
+  type Painting,
   paintingMeta,
 } from "../entities";
 

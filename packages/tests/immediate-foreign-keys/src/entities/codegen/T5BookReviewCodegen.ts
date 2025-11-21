@@ -39,10 +39,10 @@ import {
   type Entity,
   EntityManager,
   newT5BookReview,
-  T5Book,
+  type T5Book,
   type T5BookId,
   type T5BookOrder,
-  T5BookReview,
+  type T5BookReview,
   t5BookReviewMeta,
 } from "../entities";
 

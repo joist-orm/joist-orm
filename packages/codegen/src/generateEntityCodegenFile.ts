@@ -134,7 +134,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   // Set up the codegen artifacts to extend from the base type if necessary
   const baseEntity = dbMeta.entities.find((e) => e.name === meta.baseClassName);
   const subEntities = dbMeta.entities.filter((e) => e.baseClassName === meta.name);
-  const base = baseEntity?.entity.type ?? code`${BaseEntity}<${EntityManager}, ${idType}>`;
+  const base = baseEntity?.entity.typeSymbol ?? code`${BaseEntity}<${EntityManager}, ${idType}>`;
   const maybeBaseFields = baseEntity ? code`extends ${imp("t:" + baseEntity.name + "Fields@./entities.ts")}` : "";
   const maybeBaseOpts = baseEntity ? code`extends ${baseEntity.entity.optsType}` : "";
   const maybeBaseIdOpts = baseEntity ? code`extends ${imp("t:" + baseEntity.name + "IdsOpts@./entities.ts")}` : "";
@@ -350,7 +350,7 @@ function generatePolymorphicTypes(meta: EntityDbMetadata) {
   return meta.polymorphics.flatMap((pf) => [
     code`export type ${pf.fieldType} = ${pf.components.map((c) => code`| ${c.otherEntity.type}`)};`,
     code`export function get${pf.fieldType}Constructors(): ${MaybeAbstractEntityConstructor}<${pf.fieldType}>[] {
-      return [${pf.components.map((c) => code`${c.otherEntity.type},`)}];
+      return [${pf.components.map((c) => code`${c.otherEntity.typeSymbol},`)}];
     }`,
     code`export function is${pf.fieldType}(maybeEntity: unknown): maybeEntity is ${pf.fieldType} {
       return ${isEntity}(maybeEntity) && get${pf.fieldType}Constructors().some((type) => maybeEntity instanceof type);

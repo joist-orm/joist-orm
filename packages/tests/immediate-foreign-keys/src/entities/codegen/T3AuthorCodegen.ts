@@ -41,9 +41,9 @@ import {
   type Entity,
   EntityManager,
   newT3Author,
-  T3Author,
+  type T3Author,
   t3AuthorMeta,
-  T3Book,
+  type T3Book,
   type T3BookId,
   type T3BookOrder,
 } from "../entities";

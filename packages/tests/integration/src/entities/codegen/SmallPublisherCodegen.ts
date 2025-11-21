@@ -39,13 +39,13 @@ import {
 } from "joist-orm";
 import type { Context } from "src/context";
 import {
-  AdminUser,
+  type AdminUser,
   type AdminUserId,
-  Author,
-  BookAdvance,
-  Comment,
+  type Author,
+  type BookAdvance,
+  type Comment,
   type Entity,
-  Image,
+  type Image,
   newSmallPublisher,
   Publisher,
   type PublisherFields,
@@ -54,14 +54,14 @@ import {
   type PublisherIdsOpts,
   type PublisherOpts,
   type PublisherOrder,
-  SmallPublisher,
-  SmallPublisherGroup,
+  type SmallPublisher,
+  type SmallPublisherGroup,
   type SmallPublisherGroupId,
   type SmallPublisherGroupOrder,
   smallPublisherMeta,
-  Tag,
-  TaskOld,
-  User,
+  type Tag,
+  type TaskOld,
+  type User,
   type UserId,
 } from "../entities";
 

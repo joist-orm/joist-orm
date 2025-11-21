@@ -37,7 +37,7 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "../../context.ts";
-import { Author, authorMeta, Book, type BookId, type Entity, EntityManager, newAuthor } from "../entities.ts";
+import { type Author, authorMeta, type Book, type BookId, type Entity, EntityManager, newAuthor } from "../entities.ts";
 
 export type AuthorId = Flavor<string, "Author">;
 

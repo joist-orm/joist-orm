@@ -35,7 +35,15 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { type Entity, EntityManager, newT5Author, T5Author, t5AuthorMeta, T5Book, type T5BookId } from "../entities";
+import {
+  type Entity,
+  EntityManager,
+  newT5Author,
+  type T5Author,
+  t5AuthorMeta,
+  type T5Book,
+  type T5BookId,
+} from "../entities";
 
 export type T5AuthorId = Flavor<number, "T5Author">;
 

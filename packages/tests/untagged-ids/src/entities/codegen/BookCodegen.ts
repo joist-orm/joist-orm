@@ -38,12 +38,12 @@ import {
 } from "joist-orm";
 import type { Context } from "src/context";
 import {
-  Author,
+  type Author,
   type AuthorId,
   type AuthorOrder,
-  Book,
+  type Book,
   bookMeta,
-  Comment,
+  type Comment,
   type CommentId,
   type Entity,
   EntityManager,

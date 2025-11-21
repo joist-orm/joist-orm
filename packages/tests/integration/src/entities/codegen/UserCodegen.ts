@@ -47,19 +47,19 @@ import {
 import type { Context } from "src/context";
 import type { IpAddress, PasswordValue } from "src/entities/types";
 import {
-  AdminUser,
+  type AdminUser,
   type AdminUserId,
-  Author,
+  type Author,
   type AuthorId,
   type AuthorOrder,
-  Comment,
+  type Comment,
   type CommentId,
   type Entity,
   EntityManager,
   LargePublisher,
   newUser,
   SmallPublisher,
-  User,
+  type User,
   userMeta,
 } from "../entities";
 

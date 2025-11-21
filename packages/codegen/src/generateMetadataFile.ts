@@ -68,7 +68,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       ${maybeInsertionOrder}
     };
 
-    (${entity.name} as any).metadata = ${entity.metaName};
+    (${entity.typeForMetadataFile} as any).metadata = ${entity.metaName};
   `;
 }
 

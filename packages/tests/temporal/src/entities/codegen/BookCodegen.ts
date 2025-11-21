@@ -37,10 +37,10 @@ import {
 import type { Context } from "src/context";
 import { Temporal } from "temporal-polyfill";
 import {
-  Author,
+  type Author,
   type AuthorId,
   type AuthorOrder,
-  Book,
+  type Book,
   bookMeta,
   type Entity,
   EntityManager,

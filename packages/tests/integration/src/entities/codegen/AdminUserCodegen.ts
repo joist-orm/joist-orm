@@ -31,10 +31,10 @@ import {
 } from "joist-orm";
 import type { Context } from "src/context";
 import {
-  AdminUser,
+  type AdminUser,
   adminUserMeta,
-  Author,
-  Comment,
+  type Author,
+  type Comment,
   type Entity,
   newAdminUser,
   User,

@@ -41,18 +41,18 @@ import {
 } from "joist-orm";
 import type { Context } from "src/context";
 import {
-  Critic,
+  type Critic,
   type Entity,
   EntityManager,
-  LargePublisher,
+  type LargePublisher,
   type LargePublisherId,
   newPublisherGroup,
-  Publisher,
-  PublisherGroup,
+  type Publisher,
+  type PublisherGroup,
   publisherGroupMeta,
   type PublisherId,
-  SmallPublisher,
-  SmallPublisherGroup,
+  type SmallPublisher,
+  type SmallPublisherGroup,
   type SmallPublisherId,
 } from "../entities";
 

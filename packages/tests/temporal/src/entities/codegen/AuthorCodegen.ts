@@ -36,7 +36,7 @@ import {
 } from "joist-orm";
 import type { Context } from "src/context";
 import { Temporal } from "temporal-polyfill";
-import { Author, authorMeta, Book, type BookId, type Entity, EntityManager, newAuthor } from "../entities";
+import { type Author, authorMeta, type Book, type BookId, type Entity, EntityManager, newAuthor } from "../entities";
 
 export type AuthorId = Flavor<string, "Author">;
 

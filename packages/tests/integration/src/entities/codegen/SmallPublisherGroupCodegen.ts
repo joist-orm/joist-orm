@@ -43,8 +43,8 @@ import {
   type PublisherGroupIdsOpts,
   type PublisherGroupOpts,
   type PublisherGroupOrder,
-  SmallPublisher,
-  SmallPublisherGroup,
+  type SmallPublisher,
+  type SmallPublisherGroup,
   smallPublisherGroupMeta,
   type SmallPublisherId,
 } from "../entities";

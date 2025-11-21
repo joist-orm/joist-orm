@@ -45,20 +45,20 @@ import {
 } from "joist-orm";
 import type { Context } from "src/context";
 import {
-  AdminUser,
+  type AdminUser,
   type AdminUserId,
   Author,
   Book,
   type BookId,
   BookReview,
-  Comment,
+  type Comment,
   commentMeta,
   type Entity,
   EntityManager,
   newComment,
   Publisher,
   TaskOld,
-  User,
+  type User,
   type UserId,
   type UserOrder,
 } from "../entities";

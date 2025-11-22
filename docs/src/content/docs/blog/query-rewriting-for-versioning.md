@@ -8,16 +8,21 @@ tags: []
 
 Joist is an ORM primarily developed for Homebound's GraphQL majestic monolith, and we recently shipped a long-awaited Joist feature, **SQL query rewriting via a plugin API**, to deliver a key component of our domain model: _aggregate level versioning_.
 
-We'll get into all the nuanced details below, but it basically means providing this minor "it's just a dropdown, right?" feature of a version selector:
+We'll get into the nuanced details below, but it basically means providing this _minor_ "it's just a dropdown, right?" feature of a version selector:
 
 <img src="/src/assets/version-dropdown.png" alt="Version dropdown" width="500" style="display: block; margin: 20px auto;" />
 
 Where the user can:
 
 - "Time travel" back to a previous version of what they're working on,
-- Draft new changes (collaboratively with other users) that are not seen until "Published"
+- Draft new changes (collaboratively with other users) that are not seen until they click "Publish" to make those changes active
 
-And, during all this, the whole UI still "just works".
+And have the whole UI "just work" while they flip between the two.
+
+As a teaser, after some fits & painful spurts, we achieved having our entire UI (and background processes) load historical "as of" values with just a few lines of setup/config per endpoint--and literally no other code changes.
+
+Read on to learn about our approach!
+
 
 ## Aggregate What Now?
 
@@ -213,77 +218,92 @@ await em.flush();
 
 We wanted to avoid making the same mistake twice, and just "hot potatoing" the write path disaster over to the read path.
 
-## The Aha! Query Rewriting
+## Making Reads not Suck
 
 We spent awhile brainstorming "how to make our reads not suck".
 
 If you remember back to that screenshot from the beginning, we need our whole app/UI, at the flip of a dropdown, to automatically change every `SELECT` query from:
 
-- `SELECT * FROM authors WHERE ...`, to:
-- `SELECT * FROM author_versions WHERE ... AND (version matches)`
-
-And not only for top-level `SELECT` but anytime `authors` is used in a query, i.e. in `JOIN`s:
-
-- `JOIN authors a ON b.author_id = a.id` to:
-- `JOIN author_versions av ON b.author_id = av.id AND (version matches)`
-
-When it's articulated like "we want _every table access to be versioned_", a potential solution starts to emerge...
-
-Let's start with the simplest query, reading an author:
-
 ```sql
-SELECT * FROM authors WHERE id IN (?);
+SELECT * FROM authors WHERE id IN (?) -- or whatever WHERE clause
 ```
 
-We know the "version-aware replacement" for that is:
+To a "version-aware replacement":
 
 ```sql
 SELECT * FROM author_versions av
-WHERE av.id in (?) AND av.first <= v10 AND (a.final IS NULL or a.final > v10)
+WHERE av.author_id in (?) -- same WHERE clause
+  AND av.first <= v10 -- and versioning
+  AND (a.final IS NULL or a.final > v10)
 ```
 
-This seems like a fairly mechanical translation--**what if we could automate that?**
-
-Ideally without either: a) our application code, or b) the rest of the surrounding SQL query (like `JOIN`s and `WHERE` clauses), even knowing/caring that we've done the rewrite.
-
-It's almost like we want a "virtual `author`s" table--maybe something like:
+And not only for top-level `SELECT`s but anytime `authors` is used in a query, i.e. in `JOIN`s:
 
 ```sql
--- create a version aware authors table
+-- if `authors` is used in some query...
+JOIN authors a ON b.author_id = a.id
+-- it should instead be
+JOIN author_versions av ON b.author_id = av.id AND (version matches)
+```
+
+### 1. Initial Idea: Using CTEs
+
+When it's articulated like "we want _every table access to routed to the versions table_", a potential solution starts to emerge...
+
+We want to "swap out" `authors` with "a virtual `authors` table" that automatically has the right version-aware values. How could we do this, as easily as possible?
+
+It turns out a CTE is a great way of structuring this:
+
+```sql
+-- create the fake/version-aware authors table
 WITH _authors (
   SELECT
-    -- make the version look exactly like the regular table
+    -- make the columns look exactly like the regular table
     av.author_id as id,
     av.first_name as first_name
   FROM author_versions
   WHERE (...version matches...)
 )
--- the rest of the application's SQL query as normal, but we swap out
--- `FROM authors` for `FROM _authors`
+-- now the rest of the application's SQL query as normal, but we swap out
+-- any `authors` table with our `_authors` CTE
 SELECT * FROM _authors a
 WHERE a.first_name = 'bob'
 ```
 
-And then anytime our app wants "to read `authors`", we quickly swap it out to "oh you actually want to read from  `_authors`".
+And that's (almost) it!
 
-## Adding More CTEs
+Now anytime our app wants to "read authors", regardless of the SQL query it's making, it will get the right version-aware values.
 
-This is a good start! But how do we get that `...version matches...` working? We need to inject the versioning data into the query, particularly in a way that lets multiple aggregates be pinned to their own respective versions (i.e. `PlanPackage` is on v10 but the `DesignPackage` is on its v15).
+We technically have three things left to do:
 
-We'll add another CTE for this:
+1. Add the versioning config into the query
+2. Inject this rewriting as seamlessly as possible
+3. Evaluate the performance impact
+
+### 2. Adding Config via More CTEs
+
+This is a good start! But now we need to get the `...version matches...` pseudo code in the previous SQL snippet actually working.
+
+We need to inject the request-specific versioning data into the query, in a way that lets multiple aggregates be pinned to their own respective versions (i.e. the user is looking at `PlanPackage` v10 but `DesignPackage` v15).
+
+CTEs are our new hammer--let's add another for this:
 
 ```sql
 WITH _pins (
   SELECT plan_id, version_id FROM
   VALUES (?, ?), (?, ?) -- parameters added to the query
 ), _authors (
-  -- the CTE from above but know joining into _pins to get
+  -- the CTE from previous section but now joining into _pins to get
   -- the versioning info
   SELECT
     av.author_id as id,
     av.first_name as first_name
   FROM authors a
   JOIN _pins p ON a.plan_id = p.id
+  -- now we know:
+  -- a) what plan the author belongs to (a.plan_id, i.e. its aggregate root)
+  -- b) what version of the plan we're pinned to (p.version_id)
+  -- so we can use them in our JOIN clause
   JOIN author_versions av ON (
     av.author_id = a.id AND
     av.first_id >= p.version_id AND (
@@ -291,23 +311,67 @@ WITH _pins (
     )
   )
 )
-
+SELECT * FROM _authors a WHERE a.first_name = 'bob'
 ```
 
-And then our query adds `[plan:1, v10, plan:2, v15]` as extra parameters for the `_pins` table to read as config data.
+Now our application can "pass in the config" (of `plan:1` uses `v10`, `plan:2` uses `v15`) as extra query parameters into the query, they'll be added as rows to the `_pins` CTE table, and then the rest of the query can resolve versions using that data.
 
+It works!
 
-## Joist Integration
+One wrinkle is that the query so far requires us to "pin" every plan we want to read, b/c if a plan doesn't have a row in `_pins`, then the `INNER JOIN`s will not find any `p.version_id` available, and none of its data will match.
 
-We already, of course, use Joist to do all our reads, so what the API/UI code actually does is a "logical" read like:
+Ideally any plan that is not explicitly pinned should default to its active data; which we can do with (...wait for it...) another CTE:
+
+```sql
+WITH _pins (
+  -- the injected config _pins stays the same as before
+  SELECT plan_id, version_id FROM
+  VALUES (?, ?), (?, ?)
+), _plan_versions (
+   -- we add an additional CTE that defaults all plans to active unless pinned
+  SELECT
+    plans.id as plan_id,
+    COALESCE(p.version_id, plans.active_version_id) as version_id,
+  FROM plans
+  LEFT OUTER JOIN _pins p ON p.plan_id = plans.id
+)
+_authors (
+  -- this is basically the same, but now joins on _plan_versions
+  -- instead _pins directly
+  SELECT
+    av.author_id as id,
+    av.first_name as first_name
+  FROM authors a
+  JOIN _plan_versions p ON a.plan_id = p.id
+  JOIN author_versions av ON (
+    av.author_id = a.id AND
+    av.first_id >= p.version_id AND (
+      av.final_id IS NULL OR av.final_id < p.version_id 
+    )
+  )
+)
+SELECT * FROM _authors a WHERE a.first_name = 'bob'
+```
+
+### 3. Injecting the Rewrite Automatically
+
+We've discovered a scheme to reads _automatically version-aware_--now we want our application to use it, basically all the time, without us messing up or forgetting the rewrite incantation.
+
+Given this seems like a very mechanical translation, **what if we could automate it?** For every read?
+
+Our application already does all reads through Joist (of course :sweat:), as `em.load` or `em.find` calls:
+>>>>>>> Conflict 1 of 1 ends
 
 ```ts
-const a = await em.load(Author, "a:1");
+// Becomes `SELECT * FROM authors`
+const a = em.load(Author, "a:1");
+// Becomes `SELECT * FROM authors WHERE ...`
+const as = em.find(Author, { firstName: "bob" });
 ```
 
-And then Joist "generates the boilerplate SQL"...what if we could have Joist generate "slightly different SQL"?
+It would be really great if these `em.load` and `em.find` queries were all magically rewritten--so that's what we did.
 
-That's what we did--we built a Joist plugin that intercepts all `em.load` or `em.find` queries (in a hook called `beforeFindQuery`), and "injects" versioning joins into them, before they are turned into SQL and sent to the database.
+We built a Joist plugin that intercepts all `em.load` or `em.find` queries (in a plugin hook called `beforeFindQuery`), and "injects" versioning joins into them, before they are turned into SQL and sent to the database.
 
 So now what our UI code does is:
 

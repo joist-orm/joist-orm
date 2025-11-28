@@ -220,17 +220,19 @@ We wanted to avoid making the same mistake twice, and just "hot potatoing" the w
 
 ## Making Reads not Suck
 
-We spent awhile brainstorming "how to make our reads not suck".
+We spent awhile brainstorming "how to make our reads not suck"--i.e. avoid the tedious "remember to do version-aware reads" we'd been doing by hand for writes.
 
 If you remember back to that screenshot from the beginning, we need our whole app/UI, at the flip of a dropdown, to automatically change every `SELECT` query from:
 
 ```sql
+-- simple CRUD query
 SELECT * FROM authors WHERE id IN (?) -- or whatever WHERE clause
 ```
 
 To a "version-aware replacement":
 
 ```sql
+-- find the right version row
 SELECT * FROM author_versions av
 WHERE av.author_id in (?) -- same WHERE clause
   AND av.first <= v10 -- and versioning
@@ -240,17 +242,27 @@ WHERE av.author_id in (?) -- same WHERE clause
 And not only for top-level `SELECT`s but anytime `authors` is used in a query, i.e. in `JOIN`s:
 
 ```sql
--- if `authors` is used in some query...
-JOIN authors a ON b.author_id = a.id
--- it should instead be
-JOIN author_versions av ON b.author_id = av.id AND (version matches)
+-- simple CRUD query
+SELECT b.* FROM books
+  JOIN authors a on b.author_id = a.id
+  WHERE a.first_name = 'bob';
+
+-- use books_versions for the join *and* author_versions for the where
+SELECT bv.* FROM book_versions bv
+  -- get the right author version
+  JOIN author_versions av ON
+    bv.author_id = av.id AND (av.first <= v10 AND (av.final IS NULL or a.final > v10))
+  -- get the right book version
+  WHERE bv.first <= v10 AND (bv.final IS NULL or a.final > v10)
+  -- predicate should use the version table
+  WHERE av.first_name = 'bob';
 ```
 
 ### 1. Initial Idea: Using CTEs
 
 When it's articulated like "we want _every table access to routed to the versions table_", a potential solution starts to emerge...
 
-We want to "swap out" `authors` with "a virtual `authors` table" that automatically has the right version-aware values. How could we do this, as easily as possible?
+Ideally we want to magically "swap out" `authors` with "a virtual `authors` table" that automatically has the right version-aware values. How could we do this, as easily as possible?
 
 It turns out a CTE is a great way of structuring this:
 
@@ -276,22 +288,26 @@ Now anytime our app wants to "read authors", regardless of the SQL query it's ma
 
 We technically have three things left to do:
 
-1. Add the versioning config into the query
+1. Add the request-specific versioning config to the query
 2. Inject this rewriting as seamlessly as possible
 3. Evaluate the performance impact
 
-### 2. Adding Config via More CTEs
+### 2. Adding Request Config via CTEs
 
-This is a good start! But now we need to get the `...version matches...` pseudo code in the previous SQL snippet actually working.
+We have a good start, in terms of a hard-coded prototype SQL query, but now we need to get the `first <= v10 AND ...` pseudo code in the previous SQL snippets actually working.
 
-We need to inject the request-specific versioning data into the query, in a way that lets multiple aggregates be pinned to their own respective versions (i.e. the user is looking at `PlanPackage` v10 but `DesignPackage` v15).
+Instead of a hard-coded `v10`, we need queries to use:
 
-CTEs are our new hammer--let's add another for this:
+- Request-specific versioning (i.e. looking at, or "pinning", to `PlanPackage` v10), but also
+- Pinning multiple different aggregate roots (i.e. the user is looking at `PlanPackage` v10 but `DesignPackage` v15, in the same request, or background job).
+
+CTEs are our new hammer--let's add another for this, calling it `_pins` that uses the `VALUES` syntax to synthesize a table:
 
 ```sql
 WITH _pins (
   SELECT plan_id, version_id FROM
-  VALUES (?, ?), (?, ?) -- parameters added to the query
+   -- parameters added to the query, one "row" per pinned aggregate
+  VALUES (?, ?), (?, ?)
 ), _authors (
   -- the CTE from previous section but now joining into _pins to get
   -- the versioning info
@@ -314,13 +330,13 @@ WITH _pins (
 SELECT * FROM _authors a WHERE a.first_name = 'bob'
 ```
 
-Now our application can "pass in the config" (of `plan:1` uses `v10`, `plan:2` uses `v15`) as extra query parameters into the query, they'll be added as rows to the `_pins` CTE table, and then the rest of the query can resolve versions using that data.
+Now our application can "pass in the config" (i.e. for this request, `plan:1` uses `v10`, `plan:2` uses `v15`) as extra query parameters into the query, they'll be added as rows to the `_pins` CTE table, and then the rest of the query will resolve versions using that data.
 
-It works!
+Getting closer!
 
-One wrinkle is that the query so far requires us to "pin" every plan we want to read, b/c if a plan doesn't have a row in `_pins`, then the `INNER JOIN`s will not find any `p.version_id` available, and none of its data will match.
+One wrinkle is that the query so far requires us to "pin" every plan we want to read, b/c if a plan doesn't have a row in the `_pins` CTE, then the `INNER JOIN`s will not find any `p.version_id` available, and none of its data will match.
 
-Ideally any plan that is not explicitly pinned should default to its active data; which we can do with (...wait for it...) another CTE:
+Ideally any plan (aggregate root) that is not explicitly pinned should default to its active data; which we can do with (...wait for it...) another CTE:
 
 ```sql
 WITH _pins (
@@ -331,13 +347,13 @@ WITH _pins (
    -- we add an additional CTE that defaults all plans to active unless pinned
   SELECT
     plans.id as plan_id,
-    COALESCE(p.version_id, plans.active_version_id) as version_id,
+    -- prefer `pins.version_id` but fallback on `active_versionn_id`
+    COALESCE(pins.version_id, plans.active_version_id) as version_id,
   FROM plans
-  LEFT OUTER JOIN _pins p ON p.plan_id = plans.id
+  LEFT OUTER JOIN _pins pins ON pins.plan_id = plans.id
 )
 _authors (
-  -- this is basically the same, but now joins on _plan_versions
-  -- instead _pins directly
+  -- this now joins on _plan_versions instead _pins directly
   SELECT
     av.author_id as id,
     av.first_name as first_name
@@ -353,14 +369,15 @@ _authors (
 SELECT * FROM _authors a WHERE a.first_name = 'bob'
 ```
 
+We've basically got it, in terms of a working prototype--now we just need to drop it into our application code, ideally as easily as possible.
+
 ### 3. Injecting the Rewrite Automatically
 
-We've discovered a scheme to reads _automatically version-aware_--now we want our application to use it, basically all the time, without us messing up or forgetting the rewrite incantation.
+We've discovered a scheme to make reads _automatically version-aware_--now we want our application to use it, basically all the time, without us messing up or forgetting the rewrite incantation.
 
-Given this seems like a very mechanical translation, **what if we could automate it?** For every read?
+Given that a) we completely messed this up the 1st time around, and b) this seems like a very mechanical translation, **what if we could automate it?** For every read?
 
 Our application already does all reads through Joist (of course :sweat:), as `em.load` or `em.find` calls:
->>>>>>> Conflict 1 of 1 ends
 
 ```ts
 // Becomes `SELECT * FROM authors`
@@ -371,17 +388,19 @@ const as = em.find(Author, { firstName: "bob" });
 
 It would be really great if these `em.load` and `em.find` queries were all magically rewritten--so that's what we did.
 
-We built a Joist plugin that intercepts all `em.load` or `em.find` queries (in a plugin hook called `beforeFindQuery`), and "injects" versioning joins into them, before they are turned into SQL and sent to the database.
+We built a Joist plugin that intercepts all `em.load` or `em.find` queries (in a plugin hook called `beforeFindQuery`), and rewrites the query's ASTs to be version-aware, before they are turned into SQL and sent to the database.
 
 So now what our UI code does is:
 
 ```ts
+// At the start of a version-aware endpoint...
 const plugin = new VersioningPlugin();
+// Read REST/GQL params to know which versions to pin
 plugin.pin(PlanPackage, v10);
 plugin.pin(DesignPackage, v18);
 em.addPlugin(plugin);
 
-// Now just use the em as normal and this will be the
-// `...from author_versions..` SQL
+// Now just use the em as normal and all operations will automatically
+// be tranlated into the `...from author_versions..` SQL
 const a = await em.load(Author, "a:1");
 ```

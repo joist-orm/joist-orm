@@ -513,3 +513,88 @@ This is very high-level pseudo-code but the gist is:
 After the plugin's `beforeFind` is finished, Joist takes the updated `query` and turns it into SQL, just like it would any `em.find` query, but now the SQL it generates automatically reads the right versioned values.
 
 ### 4. Performance Evaluation
+
+Now that we have everything working, how was the performance?
+
+It was surprisingly good, but not perfect--we saw a regression from our reads "going through the CTE", particularly when doing filtering, like:
+
+```sql
+WITH _versions (...),
+ _plan_versions (...),
+ _authors (...),
+)
+-- this first_name is evaluating against the CTE results
+SELECT * FROM _authors a WHERE a.first_name = 'bob'
+```
+
+We were disappointed b/c according to LLMs because our `_authors` CTE is "only used once" in the query, ideally the PG query planner would "inline" the CTE and pretend it was not even there.
+
+I.e. if a CTE is used twice, Postgres will execute it once, and materialize in memory--which would be for our smaller CTEs like `_versions` or `_plan_versions`, but on a potentially huge table like `authors` or `plan_package_scope_lines`, we definitely don't want those entire tables sequentially scanned and materialized in-memory before any `WHERE` clauses were applied.
+
+Our `_authors` CTE is definitely only used once, but even then it's columns are built out of non-trivial expressions, because after handling boundary cases with drafts & various columns, our `SELECT`s end up looking like:
+
+```sql 
+-- example of the rewritten select clauses in the `_authors` CTE
+SELECT
+  a.id as id,
+  a.created_at as created_at,
+  -- immutable columns
+  a.type_id as type_id,
+  -- versioned columns
+  (CASE WHEN _a_version.id IS NULL THEN a.first_name) ELSE _a_version.first_name) as first_name,
+  (CASE WHEN _a_version.id IS NULL THEN a.last_name) ELSE _a_version.last_name) as last_name,
+```
+
+And we suspected these `CASE` statements were not easy/possible for the query planner to "see through" and push filtering & indexing statistics through the top-level `WHERE` clause.
+
+So, while so far our approach has been "add yet another CTE", for this last stretch, we had to remove the `_authors` CTE and start "hard mode" rewriting the query by adding `JOIN`s directly to the query itself, i.e. we'd go from a non-versioned query like:
+
+```sql 
+SELECT b.* FROM books
+  JOIN authors a ON b.author_id = a.id
+  WHERE a.first_name = 'bob';
+```
+
+To:
+
+```sql
+SELECT
+  -- rewrite the top-level select
+  b.id as id,
+  -- any versioned columns need `CASE` statements
+  (CASE WHEN bv.id IS NULL THEN b.title ELSE bv.title) AS title,
+  -- also special updated_at/other handling...
+FROM books
+  -- add a book_versions join directly to the query
+  JOIN book_versions bv ON (bv.book_id = b.id AND bv.first_id >= pv.version_id AND ...)
+  -- rewrite the `ON` to use `bv.author_id`
+  JOIN authors a ON bv.author_id = a.id
+  -- add a author_version join directly to the query
+  JOIN author_versions av ON (av.author_id = a.id AND av.first_id >= pv.version_id AND ...)
+  -- rewrite the condition from `a.first_name` to `av.first_name`
+  WHERE av.first_name = 'bob';
+```
+
+This is a lot more rewriting!
+
+While the CTE approach let us just "swap the table", and leave the rest of the query "reading from the alias `a`", now we have to find every `b` alias usage or `a` alias usage, and evaulate if the `SELECT` or `JOIN ON` or `WHERE` is touching a versioned column, and if so rewrite that usage to the `bv` or `av` respective versioned column.
+
+There are pros/cons to this approach:
+
+* Con: Obviously the query is much trickier to rewrite
+* Pro: But since our rewriting algorithm is isolated to the `VersioningPlugin` file, we were able to "refactor our version rewrites" and have it _apply everywhere_ which was amazing
+* Pro: The "more complicated to us" CTE-less query is actually "simpler to the Postgres query planner" b/c there isn't a CTE "sitting in the way" and so all the usual indexing/filtering performance optimizations kicked in, and got us back to baseline performance
+
+## Wrapping Up
+
+This was definitely a long-form post, as we explored the Homebound problem space that drove our solution, rather than just an shorter announcement post of "btw Joist now has a plugin API".
+
+Which, yes, Joist does now have a plugin api 🎉, but we think it's important to show how/why it was useful to us, and potentially inspire ideas for how it might be useful to others as well (i.e. an auth plugin that does ORM/data layer auth is also on our todo list 🔑).
+
+That said, we anticipate readers wondering "wow this solution is too complex" (and, yes, our production `VersionPlugin` code is much more complicated than the pseudo code we've used in this post), "why didn't you hand-write the queries", and ofc the usual "lol ORMs suck" 😰.
+
+Besides the usual disclaimer that personal preference will always be the biggest factor, we can only report that we tried "just hand-write your versioning queries", in the spirit of "KISS" & moving quickly during our early deliveries, for about 6 months, and it was terrible. 👎
+
+Today, we have versioning implemented as "a cross-cutting concern" (does anyone remember [Aspect Oriented Programming](https://en.wikipedia.org/wiki/Aspect-oriented_programming) 👴), largely isolated to a single (albeit complicated) file/plugin, and so much of our code went back to "boring CRUD" with "boring reads" and "boring writes".
+
+Our velocity has increased, bugs have decreased, and overall DX/developer happiness is back to our usual "this is a pleasant codebase" levels.

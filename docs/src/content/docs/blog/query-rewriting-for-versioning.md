@@ -6,37 +6,36 @@ authors: shaberman
 tags: []
 ---
 
-Joist is an ORM primarily developed for Homebound's GraphQL majestic monolith, and we recently shipped a long-awaited Joist feature, **SQL query rewriting via a plugin API**, to deliver a key component of our domain model: _aggregate level versioning_.
+Joist is an ORM primarily developed for [Homebound](https://homebound.com/)'s GraphQL majestic monolith, and we recently shipped a long-awaited Joist feature, **SQL query rewriting via a plugin API**, to deliver a key component of our domain model: _aggregate level versioning_.
 
-We'll get into the nuanced details below, but it basically means providing this _minor_ "it's just a dropdown, right?" feature of a version selector:
+We'll get into the nuanced details below, but "aggregate level versioning" is a fancy name for providing this _minor_ "it's just a dropdown, right? 😰" feature of a version selector across several major subcomponents of our application:
 
 <img src="/src/assets/version-dropdown.png" alt="Version dropdown" width="500" style="display: block; margin: 20px auto;" />
 
 Where the user can:
 
-- "Time travel" back to a previous version of what they're working on,
-- Draft new changes (collaboratively with other users) that are not seen until they click "Publish" to make those changes active
+- "Time travel" back to a previous version of what they're working on ⌛,
+- Draft new changes (collaboratively with other users) that are not seen until they click "Publish" to make those changes active ✅
 
 And have the whole UI "just work" while they flip between the two.
 
-As a teaser, after some fits & painful spurts, we achieved having our entire UI (and background processes) load historical "as of" values with just a few lines of setup/config per endpoint--and literally no other code changes.
+As a teaser, after some fits & painful spurts, we achieved having our entire UI (and background processes) load historical "as of" values with just a few lines of setup/config per endpoint--and literally no other code changes. 🎉
 
 Read on to learn about our approach!
-
 
 ## Aggregate What Now?
 
 Besides just "versioning", I called this "aggregate versioning"--what is that?
 
-It's different from traditional database-wide, time-based versioning, that auditing solutions like [cyanaudit](https://pgxn.org/dist/cyanaudit/) or temporal `FOR SYSTEM_TIME AS OF` queries provide (although we do use cyanaudit for our audit trail & really like it!).
+It's different from traditional database-wide, system time-based versioning, that auditing solutions like [cyanaudit](https://pgxn.org/dist/cyanaudit/) or temporal `FOR SYSTEM_TIME AS OF` queries provide (although we do use cyanaudit for our audit trail & really like it!).
 
-Let's back up and start with "aggregate". An aggregate is a cluster of ~2-10+ "related entities" in your domain model (or "related tables" in your database schema). The cluster of course depends on your specific domain--examples might be "an author & their books", or "a customer & their bank accounts & profile information".
+Let's back up and start with the term "aggregate". An aggregate is a cluster of ~2-10+ "related entities" in your domain model (or "related tables" in your database schema). The cluster of course depends on your specific domain--examples might be "an author & their books", or "a customer & their bank accounts & profile information".
 
 Typically there is "an aggregate parent" (called the "aggregate root", since it sits at the root of the aggregate's subgraph) that naturally "owns" the related children within the aggregate; i.e. the `Author` aggregate root owns the `Book` and `BookReview` children; the `Customer` aggregate root owns the `CustomerBankAccount` and `CustomerProfile` entities.
 
 :::tip
 
-If you see a naming pattern of `Customer`, and then lots of `CustomerFoo`, `CustomerBar`, `CustomerZaz` entities, occuring in your domain model, where you're just naturally using the `Customer...` prefix to group entities together, that is a hint that `Customer` is the aggregate root for that cluster of entities.
+In your own domain model, if you see a naming pattern of `Customer`, and then lots of `CustomerFoo`, `CustomerBar`, `CustomerZaz` entities, all starting with a `Customer...` prefix, that is a hint that `Customer` is the aggregate root for that cluster of entities.
 
 :::
 
@@ -56,35 +55,35 @@ At Homebound, we're a construction company that builds residential homes; our pr
 
 The domain model is large (currently 500+ tables), but two key components are:
 
-* The archiectural plans for a specific model of home (called a `PlanPackage`), and
-* The design scheme for products that go into a group of similar plans (called a `DesignPackage`)
+- The archiectural plans for a specific model of home (called a `PlanPackage`), and
+- The design scheme for products that go into a group of similar plans (called a `DesignPackage`)
 
-Both of these `PlanPackage`s and `DesignPackage`s are aggregate roots that encompass many child entities within them:
+Both of these `PlanPackage`s and `DesignPackage`s are aggregate roots that encompass many child `PlanPackage...` or `DesignPackage...` entities within them:
 
 - What rooms are in the plan? `PlanPackageRoom`s
 - What materials & labor are required (bricks, lumber, quantities)? `PlanPackageScopeLine`s
-- What options do we offer to customers? `PlanPackageOption`s
+- What structural/floor plan options do we offer to customers? `PlanPackageOption`s
   - How do these options change the plan's materials & labor? A m2m between `PlanPackageScopeLine`s and `PlanPackageOption`s
 - What are the appliances in the kitchen? `DesignPackageProduct`s
-- What spec levels, of Essential/Premium/etc, do we offer? `DesignPackageOption`s 
+- What spec levels, of Essential/Premium/etc, do we offer? `DesignPackageOption`s
   - How do these spec levels change the home's products? A m2m between `DesignPackageProduct`s and `DesignPackageOption`s
 
-This web of interconnected data can all be modeled (albeit somewhat tediously)--but we also want it versioned!
+This web of interconnected data can all be modeled successfully (albeit somewhat tediously)--but we also want it versioned!
 
 Change management is extremely important in construction--what was v10 of the `PlanPackage` last week? What is v15 of the `PlanPackage` this week? What changed in each version between v10 and v15? Are there new options available to homebuyers? What scope changed? Do we need new bids? Etc.
 
-And, pertitent to this blog post, we want each of the `PlanPackage`s and `DesignPackage`s respective "web of interconnected data" (the aggregate root & its children) _versioned together as a group_ with *application-level* versioning: multiple users collaborate on the data (making simulatenous edits across the `PlanPackage` or `DesignPackage`), co-creating the next draft, and then we "Publish" the next active version with a changelog of changes.
+And, pertitent to this blog post, we want each of the `PlanPackage`s and `DesignPackage`s respective "web of interconnected data" (the aggregate root & its children) _versioned together as a group_ with _application-level_ versioning: multiple users collaborate on the data (making simulatenous edits across the `PlanPackage` or `DesignPackage`), co-creating the next draft, and then we "Publish" the next active version with a changelog of changes.
 
-After users draft & publish the plans, and potentially start working on the next draft, our application needs to be able to load a  complete "aggregate-wide snapshot" for "The Cabin Plan" `PlanPackage v10` (that was maybe published yesterday) and a complete "aggregate-wide snapshot" of "Modern Design Scheme" `DesignPackage v8` (that was maybe published a few days earlier), and glue them together in a complete home.
+After users draft & publish the plans, and potentially start working on the next draft, our application needs to be able to load a complete "aggregate-wide snapshot" for "The Cabin Plan" `PlanPackage v10` (that was maybe published yesterday) and a complete "aggregate-wide snapshot" of "Modern Design Scheme" `DesignPackage v8` (that was maybe published a few days earlier), and glue them together in a complete home.
 
-Hopefully this gives you an idea of the problem--it's basically like users are all collaborating on "the next version of the plan document", but instead of it being a Google Doc that gets copy/pasted to create "v1" then "v2" then "v3", the collaborative/versioned artifact is our deep, rich domain model of construction data.
+Hopefully this gives you an idea of the problem--it's basically like users are all collaborating on "the next version of the plan document", but instead of it being a single Google Doc-type artifact that gets copy/pasted to create "v1" then "v2" then "v3", the collaborative/versioned artifact is our deep, rich domain model (relational database tables) of construction data.
 
 ## Schema Approach
 
 After a few _cough_ "prototypes" _cough_ of database schemas for versioning in the earlier days of our app, we settled on a database schema we like: two tables per entity, a main "identity" table, and a "versions" table to store snapshots, i.e. something like:
 
-* `authors` table: stores the "current" author data (`first_name`, `last_name`, etc), with 1 row per author (we call this the "identity" table)
-* `author_versions`  table: stores snapshots of the author over time (`author_id`, `first_name`, `last_name`), with 1 row per *version* of each author (we call this the "version" table)
+- `authors` table: stores the "current" author data (`first_name`, `last_name`, etc), with 1 row per author (we call this the "identity" table)
+- `author_versions` table: stores snapshots of the author over time (`author_id`, `version_id`, `first_name`, `last_name`), with 1 row _per version_ of each author (we call this the "version" table)
 
 This is an extremely common approach for versioning schemas, i.e. it's effectively the same schema suggested by PostgreQL's [SQL2011Temporal](https://wiki.postgresql.org/wiki/SQL2011Temporal#System_Time) docs, albeit technically they're tracking system time, like an audit trail, and not our user-driven versioning.
 
@@ -92,20 +91,20 @@ This leads to a few differences: the `SQL2011Temporal` history tables use a `_sy
 
 So if we had three versions of an `Author` in our `author_versions` table, it would look like:
 
-* `id=10 author_id=1 first_id=v10 final_id=v15 first_name=bob last_name=smith`
-   * From versions `v10` to `v15`, the `author:1` had a `firstName=bob`
-* `id=11 author_id=1 first_id=v15 final_id=v20 first_name=fred last_name=smith`
-   * From versions `v10` to `v20`, the `author:1` had a `firstName=fred`
-* `id=11 author_id=1 first_id=v20 final_id=null first_name=fred last_name=brown`
-   * From versions `v20` to now, the `author:1` had a `lastName=brown`
+- `id=10 author_id=1 first_id=v10 final_id=v15 first_name=bob last_name=smith`
+  - From versions `v10` to `v15`, the `author:1` had a `firstName=bob`
+- `id=11 author_id=1 first_id=v15 final_id=v20 first_name=fred last_name=smith`
+  - From versions `v10` to `v20`, the `author:1` had a `firstName=fred`
+- `id=11 author_id=1 first_id=v20 final_id=null first_name=fred last_name=brown`
+  - From versions `v20` to now, the `author:1` had a `lastName=brown`
 
 We found this `_versions` table strikes a good balance of tradeoffs:
 
-* It only stores changed rows--if `v20` of the aggregate root (i.e. our `PlanPackage`) only changed the `Author`s and two of its `Book`s, there will only be 1 `author_versions` and two `book_versions`, even if the Author has 100s of books (i.e. we avoid making full copies of the aggregate root on every version)
-* When a row does change, we snapshot the entire row, instead of tracking only specific columns changes (storing the whole row takes more space, but makes historical/versioned queries much easier)
-  * Technically we only include mutable columns in the `_versions` table, i.e. our entities often have immutable columns (like `type` flags or `parent` references) and we don't bother copying these into the `_versions` tables.
-* We only store 1 version row "per version"--i.e. if, while making `PlanPackage` `v20`, an `Author`s first name changes multiple times, we only keep the latest value in the draft `author_versions`s row.
-  * This is different from auditing systems like SQL2011Temporal `_history` rows are immutable, and every change must create a new row--we did not need/want this level of granularity for application-level versioning.
+- It only stores changed rows--if `v20` of the aggregate root (i.e. our `PlanPackage`) only changed the `Author`s and two of its `Book`s, there will only be 1 `author_versions` and two `book_versions`, even if the Author has 100s of books (i.e. we avoid making full copies of the aggregate root on every version)
+- When a row does change, we snapshot the entire row, instead of tracking only specific columns changes (storing the whole row takes more space, but makes historical/versioned queries much easier)
+  - Technically we only include mutable columns in the `_versions` table, i.e. our entities often have immutable columns (like `type` flags or `parent` references) and we don't bother copying these into the `_versions` tables.
+- We only store 1 version row "per version"--i.e. if, while making `PlanPackage` `v20`, an `Author`s first name changes multiple times, we only keep the latest value in the draft `author_versions`s row.
+  - This is different from auditing systems like SQL2011Temporal `_history` rows are immutable, and every change must create a new row--we did not need/want this level of granularity for application-level versioning.
 
 With this approach, we can reconstruct historical versions by only querying the singular "effective version" for each entity, with queries like:
 
@@ -140,13 +139,13 @@ So we considered the two options:
 
 We sussed out pros/cons in a design doc:
 
-* Option 1. Store "latest draft" data in `authors`
-  * Pro: Writes with business logic "just read the Author and other entities" for validation
-  * Con: All readers, _even those that just want the published data_, must use the `_versions` table to "reconstruct the published/active author"
-* Option 2. Store the "latest published" data in `authors`
-  * Pro: The safest b/c readers that "just read from `authors`" will not accidentally read draft/unpublished data (a big concern for us)
-  * Pro: Any reader that wants to "read latest" doesn't have to know about versioning at all, and can just read the `authors` table as-is (also a big win)
-  * Con: Writes that have business logic must first "reconstruct the draft author" (and its books and it book reviews) from the `_versions` tables
+- Option 1. Store "latest draft" data in `authors`
+  - Pro: Writes with business logic "just read the Author and other entities" for validation
+  - Con: All readers, _even those that just want the published data_, must use the `_versions` table to "reconstruct the published/active author"
+- Option 2. Store the "latest published" data in `authors`
+  - Pro: The safest b/c readers that "just read from `authors`" will not accidentally read draft/unpublished data (a big concern for us)
+  - Pro: Any reader that wants to "read latest" doesn't have to know about versioning at all, and can just read the `authors` table as-is (also a big win)
+  - Con: Writes that have business logic must first "reconstruct the draft author" (and its books and it book reviews) from the `_versions` tables
 
 :::tip
 
@@ -160,7 +159,7 @@ By "reconstruct the [published or draft] author", what we mean is that instead o
 
 :::
 
-This "reconstruction" problem seemed very intricate/complicated, and we did not want to update our legacy callers (**mostly reads**) to "do all this crazy version resolution", so after the usual design doc review, group comments, etc., we decide to __store latest published in `authors`__.
+This "reconstruction" problem seemed very intricate/complicated, and we did not want to update our legacy callers (**mostly reads**) to "do all this crazy version resolution", so after the usual design doc review, group comments, etc., we decide to **store latest published in `authors`**.
 
 The key decisions being:
 
@@ -173,7 +172,7 @@ The key decisions being:
 
 With our versioning scheme in place, we started a large project for our first versioning-based feature: allowing home buyers to deeply personalize the products (sinks, cabinet hardware, wall paint colors, etc) in the home their buying (i.e. in v10 of Plan 1, we offered sinks 1/2/3, but in v11 of Plan 1, we now offer sinks 3/4/5).
 
-And it was a disaster. 
+And it was a disaster.
 
 This new feature set was legitimately complicated, but "modeling complicated domain models" is _supposed to be Joist's sweet spot_--what was happening?
 
@@ -301,68 +300,68 @@ Instead of a hard-coded `v10`, we need queries to use:
 - Request-specific versioning (i.e. looking at, or "pinning", to `PlanPackage` v10), but also
 - Pinning multiple different aggregate roots (i.e. the user is looking at `PlanPackage` v10 but `DesignPackage` v15, in the same request, or background job).
 
-CTEs are our new hammer--let's add another for this, calling it `_pins` that uses the `VALUES` syntax to synthesize a table:
+CTEs are our new hammer--let's add another for this, calling it `_versions` that uses the `VALUES` syntax to synthesize a table:
 
 ```sql
-WITH _pins (
+WITH _versions (
   SELECT plan_id, version_id FROM
    -- parameters added to the query, one "row" per pinned aggregate
   VALUES (?, ?), (?, ?)
 ), _authors (
-  -- the CTE from previous section but now joining into _pins to get
+  -- the CTE from previous section but now joining into _versions to get
   -- the versioning info
   SELECT
     av.author_id as id,
     av.first_name as first_name
   FROM authors a
-  JOIN _pins p ON a.plan_id = p.id
+  JOIN _versions v ON a.plan_id = v.plan_id
   -- now we know:
   -- a) what plan the author belongs to (a.plan_id, i.e. its aggregate root)
-  -- b) what version of the plan we're pinned to (p.version_id)
+  -- b) what version of the plan we're pinned to (v.version_id)
   -- so we can use them in our JOIN clause
   JOIN author_versions av ON (
     av.author_id = a.id AND
-    av.first_id >= p.version_id AND (
-      av.final_id IS NULL OR av.final_id < p.version_id 
+    av.first_id >= v.version_id AND (
+      av.final_id IS NULL OR av.final_id < v.version_id
     )
   )
 )
 SELECT * FROM _authors a WHERE a.first_name = 'bob'
 ```
 
-Now our application can "pass in the config" (i.e. for this request, `plan:1` uses `v10`, `plan:2` uses `v15`) as extra query parameters into the query, they'll be added as rows to the `_pins` CTE table, and then the rest of the query will resolve versions using that data.
+Now our application can "pass in the config" (i.e. for this request, `plan:1` uses `v10`, `plan:2` uses `v15`) as extra query parameters into the query, they'll be added as rows to the `_versions` CTE table, and then the rest of the query will resolve versions using that data.
 
 Getting closer!
 
-One wrinkle is that the query so far requires us to "pin" every plan we want to read, b/c if a plan doesn't have a row in the `_pins` CTE, then the `INNER JOIN`s will not find any `p.version_id` available, and none of its data will match.
+One wrinkle is that the query so far requires us to "pin" every plan we want to read, b/c if a plan doesn't have a row in the `_versions` CTE, then the `INNER JOIN`s will not find any `p.version_id` available, and none of its data will match.
 
 Ideally any plan (aggregate root) that is not explicitly pinned should default to its active data; which we can do with (...wait for it...) another CTE:
 
 ```sql
-WITH _pins (
-  -- the injected config _pins stays the same as before
+WITH _versions (
+  -- the injected config _versions stays the same as before
   SELECT plan_id, version_id FROM
   VALUES (?, ?), (?, ?)
 ), _plan_versions (
-   -- we add an additional CTE that defaults all plans to active unless pinned
+   -- we add an additional CTE that defaults all plans to active unless pinned in _versions
   SELECT
     plans.id as plan_id,
-    -- prefer `pins.version_id` but fallback on `active_versionn_id`
-    COALESCE(pins.version_id, plans.active_version_id) as version_id,
+    -- prefer `v.version_id` but fallback on `active_version_id`
+    COALESCE(v.version_id, plans.active_version_id) as version_id,
   FROM plans
-  LEFT OUTER JOIN _pins pins ON pins.plan_id = plans.id
+  LEFT OUTER JOIN _versions v ON v.plan_id = plans.id
 )
 _authors (
-  -- this now joins on _plan_versions instead _pins directly
+  -- this now joins on _plan_versions instead _versions directly
   SELECT
     av.author_id as id,
     av.first_name as first_name
   FROM authors a
-  JOIN _plan_versions p ON a.plan_id = p.id
+  JOIN _plan_versions pv ON a.plan_id = pv.id
   JOIN author_versions av ON (
     av.author_id = a.id AND
-    av.first_id >= p.version_id AND (
-      av.final_id IS NULL OR av.final_id < p.version_id 
+    av.first_id >= pv.version_id AND (
+      av.final_id IS NULL OR av.final_id < pv.version_id
     )
   )
 )
@@ -375,9 +374,9 @@ We've basically got it, in terms of a working prototype--now we just need to dro
 
 We've discovered a scheme to make reads _automatically version-aware_--now we want our application to use it, basically all the time, without us messing up or forgetting the rewrite incantation.
 
-Given that a) we completely messed this up the 1st time around, and b) this seems like a very mechanical translation, **what if we could automate it?** For every read?
+Given that a) we completely messed this up the 1st time around 😕, and b) this seems like a very mechanical translation 🤖, **what if we could automate it?** For every read?
 
-Our application already does all reads through Joist (of course :sweat:), as `em.load` or `em.find` calls:
+Our application already does all reads through Joist (of course 😅), as `EntityManager` calls:
 
 ```ts
 // Becomes `SELECT * FROM authors`
@@ -386,21 +385,131 @@ const a = em.load(Author, "a:1");
 const as = em.find(Author, { firstName: "bob" });
 ```
 
-It would be really great if these `em.load` and `em.find` queries were all magically rewritten--so that's what we did.
+It would be really great if these `em.load` and `em.find` SQL queries were all magically rewritten--so that's what we did.
 
 We built a Joist plugin that intercepts all `em.load` or `em.find` queries (in a plugin hook called `beforeFindQuery`), and rewrites the query's ASTs to be version-aware, before they are turned into SQL and sent to the database.
 
 So now what our UI code does is:
 
 ```ts
-// At the start of a version-aware endpoint...
-const plugin = new VersioningPlugin();
-// Read REST/GQL params to know which versions to pin
-plugin.pin(PlanPackage, v10);
-plugin.pin(DesignPackage, v18);
-em.addPlugin(plugin);
+function planPackageScopeLinesQuery(args) {
+  // At the start of a version-aware endpoint...
+  const plugin = new VersioningPlugin();
+  // Read REST/GQL params to know which versions to pin
+  const { packageId, versionId } = args;
+  plugin.pin(packageId, versionId);
+  em.addPlugin(plugin);
 
-// Now just use the em as normal and all operations will automatically
-// be tranlated into the `...from author_versions..` SQL
-const a = await em.load(Author, "a:1");
+  // Now just use the em as normal and all operations will automatically
+  // be tranlated into the `...from scope_line_versions...` SQL
+  const { filter } = args;
+  return em.find(PlanPackageScopeLine, {
+    // apply filter logic as normal, pseudo-code...
+    quantity: filter.quantity,
+  });
+}
 ```
+
+How does this work?
+
+Internally, Joist parses the arguments of `em.find` into an AST, `ParsedFindQuery`, that is a very simplified AST/ADT version of a SQL query, i.e. the shape looks like:
+
+```ts
+// An AST/ADT for an `em.find` call that will become a SQL `SELECT`
+type ParsedFindQuery = {
+  // I.e. arrays of `a.*` or `a.first_name`
+  selects: ParsedSelect[];
+  // I.e. the `authors` table, with its alias, & any inner/outer joins
+  tables: ParsedTable[];
+  // I.e. `WHERE` clauses
+  condition?: ParsedExpressionFilter;
+  groupBys?: ParsedGroupBy[];
+  orderBys: ParsedOrderBy[];
+  ctes?: ParsedCteClause[];
+};
+```
+
+After Joist takes the user's "fluent DSL" input to `em.find` and parses it into this `ParsedFindQuery` AST, plugins can inspect & modify the query:
+
+```ts
+class VersioningPlugin {
+  // List of pinned plan -> version tuples, populated per request
+  #versions = []
+  
+  beforeFind(meta: EntityMetadata, query: ParsedFindQuery): void {
+    let didRewrite = false;
+    for (const table of [...query.tables]) {
+      // Only rewrite tables that are versioned
+      if (hasVersionsTable(table)) {
+        this.#rewriteTable(query, table);
+        didRewrite = true;
+      }
+    }
+    // Only need to add these once/query
+    if (didRewrite) {
+      this.#addCTEs(query);
+    }
+  }
+  
+  #rewriteTable(query, table) {
+    // table will be the `FROM authors AS a` part of a query; leave the alias as-is,
+    // but swap the table // from "just `authors`" to the `_authors` CTE we'll add later
+    table.table = `_${table.table}`; 
+    
+    // If `table.table=author`, get the AuthorMetadata that knows the columns
+    const meta = getMetadatFromTableName(table.table);
+    
+    // Now inject the `_authors` CTE that to be our virtual table
+    query.ctes.push({
+      alias: `_${table.table}`,
+      columns: [...],
+      query: {
+        kind: "raw",
+        // put our transformed query here; this is hard-coded to `authors`
+        // but in the real code would get the columns from metadata
+        sql: `
+          SELECT
+            av.author_id as id,
+            av.first_name as first_name
+          FROM authors a
+          JOIN _plan_versions pv ON a.plan_id = pv.id
+          JOIN author_versions av ON (
+            av.author_id = a.id AND
+            av.first_id >= pv.version_id AND (
+              av.final_id IS NULL OR av.final_id < pv.version_id
+            )
+          )
+        `
+      }
+    })
+  }
+  
+  // Inject the _versions and _plan_versions CTEs
+  #addCTEs(query) {
+    query.ctes.push( {
+      alias: "_versions",
+      columns: [
+        { columnName: "plan_id", dbType: "int" },
+        { columnName: "version_id", dbType: "int" },
+      ],
+      query: {
+        kind: "raw",
+        bindings: this.#versions.flatMap(([pId, versionId]) => unsafeDeTagIds([pId, versionId])),
+        sql: `SELECT * FROM (VALUES ${this.#versions.map(() => "(?::int,?::int)").join(",")}) AS t (plan_id, version_id)`,
+      },
+    },
+    // Do the same thing for _plan_versions
+    query.ctes.push(...);
+  }
+}
+```
+
+This is very high-level pseudo-code but the gist is:
+
+* We've mutated the query to use our `_authors` CTE instead of the `authors` table
+* We've injected the `_authors` CTE, creating it dynamically based on the `AuthorMetadata`
+* We've injected our `_versions` and `_plan_versions` config tables
+
+After the plugin's `beforeFind` is finished, Joist takes the updated `query` and turns it into SQL, just like it would any `em.find` query, but now the SQL it generates automatically reads the right versioned values.
+
+### 4. Performance Evaluation

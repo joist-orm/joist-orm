@@ -219,7 +219,7 @@ We wanted to avoid making the same mistake twice, and just "hot potatoing" the w
 
 ## Making Reads not Suck
 
-We spent awhile brainstorming "how to make our reads not suck"--i.e. avoid the tedious "remember to do version-aware reads" we'd been doing by hand for writes.
+We spent awhile brainstorming "how to make our reads not suck", specifically avoiding manually updating all our endpoints' SQL queries/business logic to do tedious/error-prone "remember to (maybe) do version-aware reads".
 
 If you remember back to that screenshot from the beginning, we need our whole app/UI, at the flip of a dropdown, to automatically change every `SELECT` query from:
 
@@ -241,12 +241,12 @@ WHERE av.author_id in (?) -- same WHERE clause
 And not only for top-level `SELECT`s but anytime `authors` is used in a query, i.e. in `JOIN`s:
 
 ```sql
--- simple CRUD query
+-- simple CRUD query that joins into `authors`
 SELECT b.* FROM books
   JOIN authors a on b.author_id = a.id
   WHERE a.first_name = 'bob';
 
--- use books_versions for the join *and* author_versions for the where
+-- use books_versions *and* author_versions for the join & where clause
 SELECT bv.* FROM book_versions bv
   -- get the right author version
   JOIN author_versions av ON
@@ -283,9 +283,9 @@ WHERE a.first_name = 'bob'
 
 And that's (almost) it!
 
-Now anytime our app wants to "read authors", regardless of the SQL query it's making, it will get the right version-aware values.
+If anytime our app wants to "read authors", regardless of the SQL query it's making, we swapped `authors`-the-table to `_authors`-the-CTE, the SQL query would "for free" be using/returning the right version-aware values.
 
-We technically have three things left to do:
+So far this is just a prototype; we have three things left to do:
 
 1. Add the request-specific versioning config to the query
 2. Inject this rewriting as seamlessly as possible
@@ -297,19 +297,19 @@ We have a good start, in terms of a hard-coded prototype SQL query, but now we n
 
 Instead of a hard-coded `v10`, we need queries to use:
 
-- Request-specific versioning (i.e. looking at, or "pinning", to `PlanPackage` v10), but also
-- Pinning multiple different aggregate roots (i.e. the user is looking at `PlanPackage` v10 but `DesignPackage` v15, in the same request, or background job).
+- Dynamic request-specific versioning (i.e. the user is currently looking at, or "pinning to ", `PlanPackage` v10), and
+- Supporting pinning multiple different aggregate roots (i.e. the user is looking at `PlanPackage` v10 but `DesignPackage` v15, in the same request, or background job).
 
-CTEs are our new hammer--let's add another for this, calling it `_versions` that uses the `VALUES` syntax to synthesize a table:
+CTEs are our new hammer 🔨--let's add another for this, calling it `_versions` and using the `VALUES` syntax to synthesize a table:
 
 ```sql
 WITH _versions (
   SELECT plan_id, version_id FROM
    -- parameters added to the query, one "row" per pinned aggregate
+   -- i.e. `[1, 10, 2, 15]` means this request wants `plan1=v10,plan2=v15`
   VALUES (?, ?), (?, ?)
 ), _authors (
-  -- the CTE from previous section but now joining into _versions to get
-  -- the versioning info
+  -- the CTE from before but joins into _versions for versioning config
   SELECT
     av.author_id as id,
     av.first_name as first_name
@@ -333,15 +333,16 @@ Now our application can "pass in the config" (i.e. for this request, `plan:1` us
 
 Getting closer!
 
-One wrinkle is that the query so far requires us to "pin" every plan we want to read, b/c if a plan doesn't have a row in the `_versions` CTE, then the `INNER JOIN`s will not find any `p.version_id` available, and none of its data will match.
+It's easy to miss, but a core aspect of our approach is that each row in the database "knows its parent aggregate root". Because the core version config is "per package" (the aggregate root), but there are many child tables that we'll be reading from, we use a strong/required convention that every child table must have a `plan_id` (or `parent_id`) foreign key that lets us join directly from the child to the parent's version config.
 
-Ideally any plan (aggregate root) that is not explicitly pinned should default to its active data; which we can do with (...wait for it...) another CTE:
+One issue with the query so far is that we must ahead-of-time "pin" every plan we want to read (by adding it to our `_versions` config table), b/c if a plan doesn't have a row in the `_versions` CTE, then the `INNER JOIN`s will not find any `p.version_id` available, and none of its data will match.
+
+Ideally any plan that is not explicitly pinned should default to its active data; which we can do with (...wait for it...) another CTE:
 
 ```sql
 WITH _versions (
   -- the injected config _versions stays the same as before
-  SELECT plan_id, version_id FROM
-  VALUES (?, ?), (?, ?)
+  SELECT plan_id, version_id FROM VALUES (?, ?), (?, ?)
 ), _plan_versions (
    -- we add an additional CTE that defaults all plans to active unless pinned in _versions
   SELECT
@@ -365,6 +366,7 @@ _authors (
     )
   )
 )
+-- automatically returns & filters against the versioned data
 SELECT * FROM _authors a WHERE a.first_name = 'bob'
 ```
 
@@ -383,13 +385,15 @@ Our application already does all reads through Joist (of course 😅), as `Entit
 const a = em.load(Author, "a:1");
 // Becomes `SELECT * FROM authors WHERE ...`
 const as = em.find(Author, { firstName: "bob" });
+// Also comes `SELECT * FROM authors WHERE ...`
+const a = await book.author.load();
 ```
 
-It would be really great if these `em.load` and `em.find` SQL queries were all magically rewritten--so that's what we did.
+It would be really great if these `em.load` and `em.find` SQL queries were all magically rewritten--so that's what we did. 🪄
 
-We built a Joist plugin that intercepts all `em.load` or `em.find` queries (in a plugin hook called `beforeFindQuery`), and rewrites the query's ASTs to be version-aware, before they are turned into SQL and sent to the database.
+We built a Joist plugin that intercepts all `em.load` or `em.find` queries (in a new plugin hook called `beforeFind`), and rewrites the query's ASTs to be version-aware, before they are turned into SQL and sent to the database.
 
-So now what our UI code does is:
+So now what our endpoint/GraphQL query code does is:
 
 ```ts
 function planPackageScopeLinesQuery(args) {
@@ -398,10 +402,11 @@ function planPackageScopeLinesQuery(args) {
   // Read REST/GQL params to know which versions to pin
   const { packageId, versionId } = args;
   plugin.pin(packageId, versionId);
+  // Install the plugin into the EM, for all future em.load/find calls
   em.addPlugin(plugin);
 
   // Now just use the em as normal and all operations will automatically
-  // be tranlated into the `...from scope_line_versions...` SQL
+  // be tranlated into the `...from _versions...` SQL
   const { filter } = args;
   return em.find(PlanPackageScopeLine, {
     // apply filter logic as normal, pseudo-code...
@@ -516,7 +521,7 @@ After the plugin's `beforeFind` is finished, Joist takes the updated `query` and
 
 Now that we have everything working, how was the performance?
 
-It was surprisingly good, but not perfect--we saw a regression from our reads "going through the CTE", particularly when doing filtering, like:
+It was surprisingly good, but not perfect--we unfortunately saw a regression for reads "going through the CTE", particularly when doing filtering, like:
 
 ```sql
 WITH _versions (...),
@@ -527,11 +532,11 @@ WITH _versions (...),
 SELECT * FROM _authors a WHERE a.first_name = 'bob'
 ```
 
-We were disappointed b/c according to LLMs because our `_authors` CTE is "only used once" in the query, ideally the PG query planner would "inline" the CTE and pretend it was not even there.
+We were disappointed b/c we thought since our `_authors` CTE is "only used once" in the SQL query, that ideally the PG query planner would essentially "inline" the CTE and pretend it was not even there, for planning & indexing purposes.
 
-I.e. if a CTE is used twice, Postgres will execute it once, and materialize in memory--which would be for our smaller CTEs like `_versions` or `_plan_versions`, but on a potentially huge table like `authors` or `plan_package_scope_lines`, we definitely don't want those entire tables sequentially scanned and materialized in-memory before any `WHERE` clauses were applied.
+Contrast this with a CTE that is "used twice" in a SQL query, which our understanding is that then Postgres executes it once, and materializes it in memory (basically caches it, instead of executing it twice). This materialization would be fine for smaller CTEs like `_versions` or `_plan_versions`, but on a potentially huge table like `authors` or `plan_package_scope_lines`, we definitely don't want those entire tables sequentially scanned and creating "versioned copies" materialized in-memory before any `WHERE` clauses were applied.
 
-Our `_authors` CTE is definitely only used once, but even then it's columns are built out of non-trivial expressions, because after handling boundary cases with drafts & various columns, our `SELECT`s end up looking like:
+So we thought our "only used once" `_authors` CTE rewrite would be performance neutral, but it was not--we assume because many of the CTE's columns are not straight mappings, but due to some nuances with handling drafts, ended up being non-trivial `CASE` statements that look like:
 
 ```sql 
 -- example of the rewritten select clauses in the `_authors` CTE
@@ -550,6 +555,8 @@ And we suspected these `CASE` statements were not easy/possible for the query pl
 So, while so far our approach has been "add yet another CTE", for this last stretch, we had to remove the `_authors` CTE and start "hard mode" rewriting the query by adding `JOIN`s directly to the query itself, i.e. we'd go from a non-versioned query like:
 
 ```sql 
+-- previously we'd "just swap" the books & authors tables to
+-- versioned _books & _authors CTEs
 SELECT b.* FROM books
   JOIN authors a ON b.author_id = a.id
   WHERE a.first_name = 'bob';
@@ -563,11 +570,13 @@ SELECT
   b.id as id,
   -- any versioned columns need `CASE` statements
   (CASE WHEN bv.id IS NULL THEN b.title ELSE bv.title) AS title,
-  -- also special updated_at/other handling...
+  (CASE WHEN bv.id IS NULL THEN b.notes ELSE bv.notes) AS notes,
+  -- ...repeat for each versioned column...
+  -- ...also special for updated_at...
 FROM books
-  -- add a book_versions join directly to the query
+  -- keep the `books` table & add a `book_versions` JOIN directly to the query
   JOIN book_versions bv ON (bv.book_id = b.id AND bv.first_id >= pv.version_id AND ...)
-  -- rewrite the `ON` to use `bv.author_id`
+  -- rewrite the `ON` to use `bv.author_id` (b/c books can change authors)
   JOIN authors a ON bv.author_id = a.id
   -- add a author_version join directly to the query
   JOIN author_versions av ON (av.author_id = a.id AND av.first_id >= pv.version_id AND ...)
@@ -577,24 +586,41 @@ FROM books
 
 This is a lot more rewriting!
 
-While the CTE approach let us just "swap the table", and leave the rest of the query "reading from the alias `a`", now we have to find every `b` alias usage or `a` alias usage, and evaulate if the `SELECT` or `JOIN ON` or `WHERE` is touching a versioned column, and if so rewrite that usage to the `bv` or `av` respective versioned column.
+While the CTE approach let us just "swap the table", and leave the rest of the query "reading from the alias `a`" & generally being none-the-wiser, now we have to find every `b` alias usage or `a` alias usage, and evaulate if the `SELECT` or `JOIN ON` or `WHERE` clause is touching a versioned column, and if so rewrite that usage to the `bv` or `av` respective versioned column.
 
 There are pros/cons to this approach:
 
 * Con: Obviously the query is much trickier to rewrite
-* Pro: But since our rewriting algorithm is isolated to the `VersioningPlugin` file, we were able to "refactor our version rewrites" and have it _apply everywhere_ which was amazing
+* Pro: But since our rewriting algorithm is isolated to the `VersioningPlugin` file, we were able to "refactor our versioned query logic" just once and have it _apply everywhere_ which was amazing 🎉
 * Pro: The "more complicated to us" CTE-less query is actually "simpler to the Postgres query planner" b/c there isn't a CTE "sitting in the way" and so all the usual indexing/filtering performance optimizations kicked in, and got us back to baseline performance
+
+Removing the `_authors` / `_books` CTEs and doing "inline rewriting" (basically what we'd hoped Postgres would do for us with the "used once" CTEs, but now we're doing by hand) gave us a ~10x performance increase, and returned us to baseline performance, actually beating the performance of our original "write to drafts" approach. 🏃
+
+### Skipping Some Details
+
+It would make the post even longer, so I'm skipping some of the nitty-gritty details like:
+
+- Soft deletions--should entities "disappear" if they were added in v10 and the user pins to v8? Or "disappear" if they were deleted in v15 and the user is looking at v20?
+  - Initially we had our `VersionPlugin` plugin auto-filter these rows, but in practice this was too strict for some of our legacy code paths, so in both "not yet added" and "previously deleted" scenarios, we return rows anyway & then defer to application-level filtering
+- Versioning `m2m` collections, both in the database (store full copies or incremental diffs?), and teaching the plugin to rewrite m2m joins/filters accordingly.
+- Reading `updated_at` from the right identity table vs. the versions table to avoid oplock errors when drafts issue `UPDATE`s using plugin-loaded data
+- Ensuring endpoints make the `pin` and `addPlugin` calls before accidentally loading "not versioned" copies of the data they want to read into the `EntityManager`, which would cache the non-versioned data, & prevent future "should be versioned" reads for working as expected.
+- Migrating our codebase from the previous "by hand" / "write to drafts" initial versioning approach, to the new plugin + "write to identities" approach, which honestly was a lot of fun--lots of red code that was deleted & simplified by the new approach. 🔪
+
+Thankfully we were able to solve each of these, and none turned into deal breakers that compromised the overall approach. 😅
 
 ## Wrapping Up
 
 This was definitely a long-form post, as we explored the Homebound problem space that drove our solution, rather than just an shorter announcement post of "btw Joist now has a plugin API".
 
-Which, yes, Joist does now have a plugin api 🎉, but we think it's important to show how/why it was useful to us, and potentially inspire ideas for how it might be useful to others as well (i.e. an auth plugin that does ORM/data layer auth is also on our todo list 🔑).
+Which, yes, Joist does now have a plugin API  for query rewriting 🎉, but we think it's important to show how/why it was useful to us, and potentially inspire ideas for how it might be useful to others as well (i.e. an auth plugin that does ORM/data layer auth 🔑 is also on our todo list).
 
-That said, we anticipate readers wondering "wow this solution is too complex" (and, yes, our production `VersionPlugin` code is much more complicated than the pseudo code we've used in this post), "why didn't you hand-write the queries", and ofc the usual "lol ORMs suck" 😰.
+That said, we anticipate readers wondering "wow this solution seems too complex" (and, yes, our production `VersionPlugin` code is much more complicated than the pseudo code we've used in this post), "why didn't you hand-write the queries", etc 😰.
 
-Besides the usual disclaimer that personal preference will always be the biggest factor, we can only report that we tried "just hand-write your versioning queries", in the spirit of "KISS" & moving quickly during our early deliveries, for about 6 months, and it was terrible. 👎
+We can only report that we tried "just hand-write your versioning queries", in the spirit of KISS & moving quickly while building our initial set of version-aware features, for about 6-9 months, and it was terrible. 😢
 
-Today, we have versioning implemented as "a cross-cutting concern" (does anyone remember [Aspect Oriented Programming](https://en.wikipedia.org/wiki/Aspect-oriented_programming) 👴), largely isolated to a single (albeit complicated) file/plugin, and so much of our code went back to "boring CRUD" with "boring reads" and "boring writes".
+Today, we have versioning implemented as "a cross-cutting concern" (anyone remember [Aspect Oriented Programming](https://en.wikipedia.org/wiki/Aspect-oriented_programming)? 👴), primarily isolated to a single file/plugin, and the rest of our code went back to "boring CRUD" with "boring reads" and "boring writes".
 
-Our velocity has increased, bugs have decreased, and overall DX/developer happiness is back to our usual "this is a pleasant codebase" levels.
+Our velocity has increased, bugs have decreased, and overall DX/developer happiness is back to our usual "this is a pleasant codebase" levels. 🎉
+
+If you have any questions, feel free to drop by our Discord to chat.

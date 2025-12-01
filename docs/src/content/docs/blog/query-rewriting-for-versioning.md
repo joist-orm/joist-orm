@@ -161,9 +161,9 @@ By "reconstruct the [published or draft] author", what we mean is that instead o
 
 This "reconstruction" problem seemed very intricate/complicated, and we did not want to update our legacy callers (**mostly reads**) to "do all this crazy version resolution", so after the usual design doc review, group comments, etc., we decide to **store latest published in `authors`**.
 
-The key decisions being:
+The key rationale being:
 
-- We really did not want to instrument our legacy readers know about `_versions` tables to avoid seeing draft data
+- We really did not want to instrument our legacy readers know about `_versions` tables to avoid seeing draft data (we were worried about draft data leaking into existing UIs/reporting)
 - We thought "teaching the writes to 'reconstruct' the draft subgraph" when applying validation rules would be the lesser evil.
 
 (You can tell I'm foreshadowing this was maybe not the best choice.)
@@ -194,15 +194,15 @@ After a few months of this, we were commisterating about "why does this suck so 
 
 We had chosen to "optimize reads" (they could "just read from `authors`" table).
 
-But, in dong so, we threw writes under the bus--they needed to "read & write from drafts"--and it was **actually our write paths that are the most complicated part of our application**--validation rules, side-effects, business process, all happen on the write path.
+But, in doing so, we threw writes under the bus--they needed to "read & write from drafts"--and it was **actually our write paths that are the most complicated part of our application**--validation rules, side-effects, business process, all happen on the write path.
 
 We needed the write path to be easy.
 
 ### New Approach: Write to Identities
 
-We were fairly ecastic about reversing direction, and storing drafts/writes directly in `authors`, `books`, etc.
+We were fairly ecstatic about reversing direction, and storing drafts/writes directly in `authors`, `books`, etc.
 
-This would drastically simplify all of our write paths (GraphQL mutations) based to "boring CRUD" code:
+This would drastically simplify all of our write paths (GraphQL mutations) back to "boring CRUD" code:
 
 ```ts
 // Look, no versioning code!
@@ -213,7 +213,7 @@ if (author.shouldBeAllowedToUpdateFoo) {
 await em.flush();
 ```
 
-...but what about those reads? Wouldn't moving the super-complicated "reconstruct the draft" code out of the writes (yay!), over into "reconstruct the published" reads (oh wait), be just as bad, or worse?
+...but what about those reads? Wouldn't moving the super-complicated "reconstruct the draft" code out of the writes (yay!), over into "reconstruct the published" reads (oh wait), be just as bad, or worse (which was the rationale for our original decision)?
 
 We wanted to avoid making the same mistake twice, and just "hot potatoing" the write path disaster over to the read path.
 
@@ -297,8 +297,8 @@ We have a good start, in terms of a hard-coded prototype SQL query, but now we n
 
 Instead of a hard-coded `v10`, we need queries to use:
 
-- Dynamic request-specific versioning (i.e. the user is currently looking at, or "pinning to ", `PlanPackage` v10), and
-- Supporting pinning multiple different aggregate roots (i.e. the user is looking at `PlanPackage` v10 but `DesignPackage` v15, in the same request, or background job).
+- Dynamic request-specific versioning (i.e. the user is currently looking at, or "pinning to", `PlanPackage` v10), and
+- Supporting pinning multiple different aggregate roots in the same request (i.e. the user is looking at `PlanPackage` v10 but `DesignPackage` v15)
 
 CTEs are our new hammer 🔨--let's add another for this, calling it `_versions` and using the `VALUES` syntax to synthesize a table:
 
@@ -337,7 +337,7 @@ It's easy to miss, but a core aspect of our approach is that each row in the dat
 
 One issue with the query so far is that we must ahead-of-time "pin" every plan we want to read (by adding it to our `_versions` config table), b/c if a plan doesn't have a row in the `_versions` CTE, then the `INNER JOIN`s will not find any `p.version_id` available, and none of its data will match.
 
-Ideally any plan that is not explicitly pinned should default to its active data; which we can do with (...wait for it...) another CTE:
+Ideally any plan that is not explicitly pinned should default to its active/published data; which we can do with (...wait for it...) another CTE:
 
 ```sql
 WITH _versions (

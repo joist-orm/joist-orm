@@ -72,7 +72,7 @@ This web of interconnected data can all be modeled successfully (albeit somewhat
 
 Change management is extremely important in construction--what was v10 of the `PlanPackage` last week? What is v15 of the `PlanPackage` this week? What changed in each version between v10 and v15? Are there new options available to homebuyers? What scope changed? Do we need new bids? Etc.
 
-And, pertitent to this blog post, we want each of the `PlanPackage`s and `DesignPackage`s respective "web of interconnected data" (the aggregate root & its children) _versioned together as a group_ with _application-level_ versioning: multiple users collaborate on the data (making simulatenous edits across the `PlanPackage` or `DesignPackage`), co-creating the next draft, and then we "Publish" the next active version with a changelog of changes.
+And, pertintent to this blog post, we want each of the `PlanPackage`s and `DesignPackage`s respective "web of interconnected data" (the aggregate root & its children) _versioned together as a group_ with _application-level_ versioning: multiple users collaborate on the data (making simultaneous edits across the `PlanPackage` or `DesignPackage`), co-creating the next draft, and then we "Publish" the next active version with a changelog of changes.
 
 After users draft & publish the plans, and potentially start working on the next draft, our application needs to be able to load a complete "aggregate-wide snapshot" for "The Cabin Plan" `PlanPackage v10` (that was maybe published yesterday) and a complete "aggregate-wide snapshot" of "Modern Design Scheme" `DesignPackage v8` (that was maybe published a few days earlier), and glue them together in a complete home.
 
@@ -235,7 +235,7 @@ To a "version-aware replacement":
 SELECT * FROM author_versions av
 WHERE av.author_id in (?) -- same WHERE clause
   AND av.first <= v10 -- and versioning
-  AND (a.final IS NULL or a.final > v10)
+  AND (av.final IS NULL or av.final > v10)
 ```
 
 And not only for top-level `SELECT`s but anytime `authors` is used in a query, i.e. in `JOIN`s:
@@ -252,9 +252,9 @@ SELECT bv.* FROM book_versions bv
   JOIN author_versions av ON
     bv.author_id = av.id AND (av.first <= v10 AND (av.final IS NULL or a.final > v10))
   -- get the right book version
-  WHERE bv.first <= v10 AND (bv.final IS NULL or a.final > v10)
+  WHERE bv.first <= v10 AND (bv.final IS NULL or bv.final > v10)
   -- predicate should use the version table
-  WHERE av.first_name = 'bob';
+  AND av.first_name = 'bob';
 ```
 
 ### 1. Initial Idea: Using CTEs
@@ -546,8 +546,8 @@ SELECT
   -- immutable columns
   a.type_id as type_id,
   -- versioned columns
-  (CASE WHEN _a_version.id IS NULL THEN a.first_name) ELSE _a_version.first_name) as first_name,
-  (CASE WHEN _a_version.id IS NULL THEN a.last_name) ELSE _a_version.last_name) as last_name,
+  (CASE WHEN _a_version.id IS NULL THEN a.first_name) ELSE _a_version.first_name END) as first_name,
+  (CASE WHEN _a_version.id IS NULL THEN a.last_name) ELSE _a_version.last_name END) as last_name,
 ```
 
 And we suspected these `CASE` statements were not easy/possible for the query planner to "see through" and push filtering & indexing statistics through the top-level `WHERE` clause.

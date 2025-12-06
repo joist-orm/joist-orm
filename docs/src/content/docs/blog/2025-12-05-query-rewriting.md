@@ -246,7 +246,8 @@ SELECT b.* FROM books
   JOIN authors a on b.author_id = a.id
   WHERE a.first_name = 'bob';
 
--- use books_versions *and* author_versions for the join & where clause
+-- version-aware replacement, uses books_versions *and* author_versions
+-- for the join & where clause
 SELECT bv.* FROM book_versions bv
   -- get the right author version
   JOIN author_versions av ON
@@ -272,11 +273,12 @@ WITH _authors (
     -- make the columns look exactly like the regular table
     av.author_id as id,
     av.first_name as first_name
+    -- but read the data from author_versions behind the scenes
   FROM author_versions
   WHERE (...version matches...)
 )
 -- now the rest of the application's SQL query as normal, but we swap out
--- any `authors` table with our `_authors` CTE
+-- the `authors` table with our `_authors` CTE
 SELECT * FROM _authors a
 WHERE a.first_name = 'bob'
 ```
@@ -298,7 +300,7 @@ We have a good start, in terms of a hard-coded prototype SQL query, but now we n
 Instead of a hard-coded `v10`, we need queries to use:
 
 - Dynamic request-specific versioning (i.e. the user is currently looking at, or "pinning to", `PlanPackage` v10), and
-- Supporting pinning multiple different aggregate roots in the same request (i.e. the user is looking at `PlanPackage` v10 but `DesignPackage` v15)
+- Support pinning multiple different aggregate roots in the same request (i.e. the user is looking at `PlanPackage` v10 but `DesignPackage` v15)
 
 CTEs are our new hammer 🔨--let's add another for this, calling it `_versions` and using the `VALUES` syntax to synthesize a table:
 
@@ -381,11 +383,11 @@ Given that a) we completely messed this up the 1st time around 😕, and b) this
 Our application already does all reads through Joist (of course 😅), as `EntityManager` calls:
 
 ```ts
-// Becomes `SELECT * FROM authors`
+// Becomes SELECT * FROM authors
 const a = em.load(Author, "a:1");
-// Becomes `SELECT * FROM authors WHERE ...`
+// Becomes SELECT * FROM authors WHERE ...
 const as = em.find(Author, { firstName: "bob" });
-// Also comes `SELECT * FROM authors WHERE ...`
+// Also comes SELECT * FROM authors WHERE ...
 const a = await book.author.load();
 ```
 
@@ -604,7 +606,7 @@ It would make the post even longer, so I'm skipping some of the nitty-gritty det
   - Initially we had our `VersionPlugin` plugin auto-filter these rows, but in practice this was too strict for some of our legacy code paths, so in both "not yet added" and "previously deleted" scenarios, we return rows anyway & then defer to application-level filtering
 - Versioning `m2m` collections, both in the database (store full copies or incremental diffs?), and teaching the plugin to rewrite m2m joins/filters accordingly.
 - Reading `updated_at` from the right identity table vs. the versions table to avoid oplock errors when drafts issue `UPDATE`s using plugin-loaded data
-- Ensuring endpoints make the `pin` and `addPlugin` calls before accidentally loading "not versioned" copies of the data they want to read into the `EntityManager`, which would cache the non-versioned data, & prevent future "should be versioned" reads for working as expected.
+- Ensuring endpoints make the `pin` and `addPlugin` calls without accidentally loading "not versioned" copies of the data they want to read into the `EntityManager`, which would cache the non-versioned data, & prevent future "should be versioned" reads for working as expected.
 - Migrating our codebase from the previous "by hand" / "write to drafts" initial versioning approach, to the new plugin + "write to identities" approach, which honestly was a lot of fun--lots of red code that was deleted & simplified by the new approach. 🔪
 
 Thankfully we were able to solve each of these, and none turned into deal breakers that compromised the overall approach. 😅
@@ -627,4 +629,4 @@ If you have any questions, feel free to drop by our Discord to chat.
 
 ## Thanks
 
-Thanks to the Homebound engineers who worked on this project: Arvin, for bearing the brunt of the tears & suffering, fixing bugs during our pre-plugin/rewriting approach (mea cupla! 😅), ZachG for owning the rewriting plugin, both Joist's new plugin API & our internal implementation 🚀, and Roberth, Allan, and ZachO for all pitching in to get our refactoring landed in the limited, time-boxed window we had for the initiative ⏰🎉.
+Thanks to the Homebound engineers who worked on this project: Arvin, for bearing the brunt of the tears & suffering, fixing bugs during our pre-plugin "write to drafts" approach (mea cupla! 😅), ZachG for owning the rewriting plugin, both Joist's new plugin API & our internal implementation 🚀, and Roberth, Allan, and ZachO for all pitching in to get our refactoring landed in the limited, time-boxed window we had for the initiative ⏰🎉.

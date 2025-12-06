@@ -1,6 +1,6 @@
 ---
 title: Using CTEs and Query Rewriting to Solve Versioning
-slug: blog/query-rewriing-versioning
+slug: blog/query-rewriting-versioning
 date: 2025-10-06
 authors: shaberman
 tags: []
@@ -624,3 +624,7 @@ Today, we have versioning implemented as "a cross-cutting concern" (anyone remem
 Our velocity has increased, bugs have decreased, and overall DX/developer happiness is back to our usual "this is a pleasant codebase" levels. 🎉
 
 If you have any questions, feel free to drop by our Discord to chat.
+
+## Thanks
+
+Thanks to the Homebound engineers who worked on this project: Arvin, for bearing the brunt of the tears & suffering, fixing bugs during our pre-plugin/rewriting approach (mea cupla! 😅), ZachG for owning the rewriting plugin, both Joist's new plugin API & our internal implementation 🚀, and Roberth, Allan, and ZachO for all pitching in to get our refactoring landed in the limited, time-boxed window we had for the initiative ⏰🎉.

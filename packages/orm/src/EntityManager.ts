@@ -10,6 +10,7 @@ import { getConstructorFromTag, getMetadataForType } from "./configure";
 import { findByUniqueDataLoader, findByUniqueOperation } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader, findCountOperation } from "./dataloaders/findCountDataLoader";
 import { findDataLoader, findOperation } from "./dataloaders/findDataLoader";
+import { findIdsDataLoader, findIdsOperation } from "./dataloaders/findIdsDataLoader";
 import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
 import { lensOperation } from "./dataloaders/lensDataLoader";
 import { loadDataLoader, loadOperation } from "./dataloaders/loadDataLoader";
@@ -196,6 +197,7 @@ export type FindOperation =
   | "findPaginated"
   | typeof findByUniqueOperation
   | typeof findCountOperation
+  | typeof findIdsOperation
   | typeof lensOperation
   | typeof loadOperation
   | typeof manyToManyLoadOperation
@@ -638,6 +640,25 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     }
 
     return count;
+  }
+
+  /**
+   * Returns the IDs of entities that match the `where` clause.
+   *
+   * The `where` clause, and any options.conditions, matches the same syntax
+   * as `em.find`.
+   */
+  async findIds<T extends EntityW>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: FilterWithAlias<T>,
+    options: FindCountFilterOptions<T> = {},
+  ): Promise<string[]> {
+    const settings = { where, ...options };
+    return findIdsDataLoader(this, type, settings)
+      .load(settings)
+      .catch(function findIds(err) {
+        throw appendStack(err, new Error());
+      });
   }
 
   /**

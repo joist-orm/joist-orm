@@ -10,7 +10,7 @@ Joist is an ORM primarily developed for [Homebound](https://homebound.com/)'s Gr
 
 We'll get into the nuanced details below, but "aggregate level versioning" is a fancy name for providing this _minor_ "it's just a dropdown, right? 😰" feature of a version selector across several major subcomponents of our application:
 
-<img src="/src/assets/version-dropdown.png" alt="Version dropdown" width="500" style="display: block; margin: 20px auto;" />
+<img src="/images/version-dropdown.png" alt="Version dropdown" width="500" style="display: block; margin: 20px auto;" />
 
 Where the user can:
 

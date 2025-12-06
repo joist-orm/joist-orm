@@ -95,7 +95,7 @@ So if we had three versions of an `Author` in our `author_versions` table, it wo
   - From versions `v10` to `v15`, the `author:1` had a `firstName=bob`
 - `id=11 author_id=1 first_id=v15 final_id=v20 first_name=fred last_name=smith`
   - From versions `v10` to `v20`, the `author:1` had a `firstName=fred`
-- `id=11 author_id=1 first_id=v20 final_id=null first_name=fred last_name=brown`
+- `id=12 author_id=1 first_id=v20 final_id=null first_name=fred last_name=brown`
   - From versions `v20` to now, the `author:1` had a `lastName=brown`
 
 We found this `_versions` table strikes a good balance of tradeoffs:
@@ -163,7 +163,7 @@ This "reconstruction" problem seemed very intricate/complicated, and we did not 
 
 The key rationale being:
 
-- We really did not want to instrument our legacy readers know about `_versions` tables to avoid seeing draft data (we were worried about draft data leaking into existing UIs/reporting)
+- We really did not want to instrument our legacy readers to know about `_versions` tables to avoid seeing draft data (we were worried about draft data leaking into existing UIs/reporting)
 - We thought "teaching the writes to 'reconstruct' the draft subgraph" when applying validation rules would be the lesser evil.
 
 (You can tell I'm foreshadowing this was maybe not the best choice.)
@@ -251,7 +251,7 @@ SELECT b.* FROM books
 SELECT bv.* FROM book_versions bv
   -- get the right author version
   JOIN author_versions av ON
-    bv.author_id = av.id AND (av.first <= v10 AND (av.final IS NULL or a.final > v10))
+    bv.author_id = av.author_id AND (av.first <= v10 AND (av.final IS NULL or a.final > v10))
   -- get the right book version
   WHERE bv.first <= v10 AND (bv.final IS NULL or bv.final > v10)
   -- predicate should use the version table
@@ -383,11 +383,11 @@ Given that a) we completely messed this up the 1st time around 😕, and b) this
 Our application already does all reads through Joist (of course 😅), as `EntityManager` calls:
 
 ```ts
-// Becomes SELECT * FROM authors
+// Becomes SELECT * FROM authors WHERE id = 1
 const a = em.load(Author, "a:1");
 // Becomes SELECT * FROM authors WHERE ...
 const as = em.find(Author, { firstName: "bob" });
-// Also comes SELECT * FROM authors WHERE ...
+// Also becomes SELECT * FROM authors WHERE ...
 const a = await book.author.load();
 ```
 
@@ -442,7 +442,7 @@ After Joist takes the user's "fluent DSL" input to `em.find` and parses it into 
 class VersioningPlugin {
   // List of pinned plan -> version tuples, populated per request
   #versions = []
-  
+
   beforeFind(meta: EntityMetadata, query: ParsedFindQuery): void {
     let didRewrite = false;
     for (const table of [...query.tables]) {
@@ -457,15 +457,15 @@ class VersioningPlugin {
       this.#addCTEs(query);
     }
   }
-  
+
   #rewriteTable(query, table) {
     // table will be the `FROM authors AS a` part of a query; leave the alias as-is,
     // but swap the table // from "just `authors`" to the `_authors` CTE we'll add later
-    table.table = `_${table.table}`; 
-    
+    table.table = `_${table.table}`;
+
     // If `table.table=author`, get the AuthorMetadata that knows the columns
     const meta = getMetadatFromTableName(table.table);
-    
+
     // Now inject the `_authors` CTE that to be our virtual table
     query.ctes.push({
       alias: `_${table.table}`,
@@ -490,7 +490,7 @@ class VersioningPlugin {
       }
     })
   }
-  
+
   // Inject the _versions and _plan_versions CTEs
   #addCTEs(query) {
     query.ctes.push( {
@@ -540,7 +540,7 @@ Contrast this with a CTE that is "used twice" in a SQL query, which our understa
 
 So we thought our "only used once" `_authors` CTE rewrite would be performance neutral, but it was not--we assume because many of the CTE's columns are not straight mappings, but due to some nuances with handling drafts, ended up being non-trivial `CASE` statements that look like:
 
-```sql 
+```sql
 -- example of the rewritten select clauses in the `_authors` CTE
 SELECT
   a.id as id,
@@ -556,7 +556,7 @@ And we suspected these `CASE` statements were not easy/possible for the query pl
 
 So, while so far our approach has been "add yet another CTE", for this last stretch, we had to remove the `_authors` CTE and start "hard mode" rewriting the query by adding `JOIN`s directly to the query itself, i.e. we'd go from a non-versioned query like:
 
-```sql 
+```sql
 -- previously we'd "just swap" the books & authors tables to
 -- versioned _books & _authors CTEs
 SELECT b.* FROM books

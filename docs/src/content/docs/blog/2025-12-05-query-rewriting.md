@@ -1,5 +1,5 @@
 ---
-title: Using CTEs and Query Rewriting to Solve Versioning
+title: Using CTEs and Query Rewriting for Versioning
 slug: blog/query-rewriting-versioning
 date: 2025-12-05
 authors: shaberman

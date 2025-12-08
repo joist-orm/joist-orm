@@ -1,3 +1,10 @@
+# [1.286.0](https://github.com/joist-orm/joist-orm/compare/v1.285.2...v1.286.0) (2025-12-08)
+
+
+### Features
+
+* Add EntityManager.findIds. ([#1677](https://github.com/joist-orm/joist-orm/issues/1677)) ([d28136c](https://github.com/joist-orm/joist-orm/commit/d28136c0d5721cba83376a51462738ef3fd651d9))
+
 ## [1.285.2](https://github.com/joist-orm/joist-orm/compare/v1.285.1...v1.285.2) (2025-11-21)
 
 

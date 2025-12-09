@@ -206,6 +206,24 @@ const books = await em.find(Book, {}, { populate: overviewHint });
 
 This dries up our `em.find` call, and makes it much more declarative about who/why we're populating this data. And it helps `populate` hints from accumulating cruft over time, where their data was initially used, but now no longer necessary in the actual codepaths.
 
+And because these `const`s and `type`s are "just regular TypeScript", we can compose them, i.e.:
+
+```ts
+// Defined by `BookView`
+const bookViewHint = "author" satisfies LoadHint<Book>;
+
+// Defined by `AuthorView` that wants to also call `BookView`
+// but also render its own per-book data
+const authorHint = {
+  firstName: {},
+  books: { ...bookViewHint, "title": {} },
+} satisifes LoadHint<Author>;
+
+type LoadedAuthor = LoadHint<Author, authorHint>;
+```
+
+Granted, you might have to deep merge sufficiently-complicated type hints--we don't yet have a utility method to do that, but probably should!
+
 ## Best of Both Worlds
 
 This combination of "async by default" and "populate hint mapped types" brings the best of both worlds:

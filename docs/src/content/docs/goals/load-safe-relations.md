@@ -9,19 +9,22 @@ Joist models all relations as async-by-default, i.e. you must access them via `a
 
 ```ts
 const author = await em.load(Author, "a:1");
-// Returns the publisher if already fetched, otherwise makes a (batched) SQL call 
+// Returns the publisher if already fetched, otherwise makes a (N+1 safe) SQL call 
 const publisher = await author.publisher.load();
+// Now the comments...
 const publisherComments = await publisher.comments.load();
+// Now the books...
 const books = await author.books.load();
 ```
 
-We call this "load safe", because you can't accidentally access unloaded data, which results in a runtime error.
+We call this "load safe", because the type system prevents you from accidentally accessing unloaded data, i.e. invoking `publisher.comments.length` before the `comments` are loaded, which in ORMs like TypeORM result in annoyingly-frequent runtime errors.
 
-Which is great, but then to improve ergonomics and avoid tedious `await Promise.all` calls, Joist also supports marking relations as explicitly loaded, to enable synchronous `.get`, non-`await`-d access:
+Joist's "async by default" / "load safe" approach solves this, but then to improve ergonomics and avoid tedious `await` or `Promise.all` calls, Joist also supports marking relations as explicitly loaded, to enable synchronous `.get`, non-`await`-d access:
 
 ```ts
 // Preload publisher, it's comments, and books
 const author = await em.load(Author, "a:1", { publisher: "comments", books: {} });
+// Now these can all be syncronous--no awaits!
 const publisher = author.publisher.get;
 const publisherComments = publisher.comments.get;
 const books = author.books.get;
@@ -29,7 +32,7 @@ const books = author.books.get;
 
 ## Background
 
-One of the main affordances of ORMs is that relationships (relations) between tables in the database (i.e. foreign keys) are modelled as references & collections on the classes/entities in the domain model.
+One of the main DX affordances of ORMs is that relationships (relations) between tables in the database (i.e. foreign keys) are modelled as references & collections on the classes/entities in the domain model.
 
 For example, in most ORMs a `books.author_id` foreign key column means the `Author` entity will have an `author.books` collection (which loads all books for that author), and the `Book` entity will have a `book.author` reference (which loads the book's author).
 
@@ -138,6 +141,70 @@ author.books.get.forEach((book) => {
   });
 })
 ```
+
+## Load Hints as Backend Fragments
+
+Joist's load hints can provide "GraphQL fragment like" encapsulation for helper methods that are invoked in one place, but have their data loaded in another.
+
+For example, let's define a helper method that generates `Book` overviews, from a subgraph (fragment) of data:
+
+```ts
+function generateOverview(
+  // define the subgraph of data we need
+  book: Loaded<Book, { author: "publisher" }>   
+): string {
+  const { author } = withLoaded(book); 
+  // Whatever the business logic is..., note we're allowed to synchronously
+  // access anything in our Loaded subgraph
+  return [
+    book.title,
+    author.firstName,
+    author.publisher.get.name,
+  ].join(",")
+}
+```
+
+However, often times we end up having to "load the book data" far away from when `generateOverview` is actually invoked, like:
+
+```ts
+const books = await em.find(
+  Book,
+  { ...someConditions... },
+  // remember to make the load hint here match `generateOverview`  
+  { populate: { author: "publisher" } },
+);
+
+// ...
+// a lot of code/business logic...
+// ...
+
+for (const book of books) {
+  // Finally we call generateOverview
+  generateOverview(book);
+}
+```
+
+Note that Joist's type-safety will make sure the `generateOverview` call fails to type-check 💪, if the `em.find`'s `populate` type-hint drifts/does not overlap with the type declared by `generateOverview`.
+
+Which is great, but in larger/more complex scenarios it can be tedious to keep these two in sync--the `generateOverview`'s type, and the `populate` load hint; when this happens, we can lean into TypeScript:
+
+```ts
+// Declare a const of the load type
+const overviewHint = { author: "publisher" } satisifies LoadHint<Book>;
+// And a type that uses the load hint, basically our fragment type
+const OverviewBook = Loaded<Book, typeof overviewHint>;
+
+// now generateOverview uses the type
+function generateOverview(book: OverviewBook): string {
+  // We can still access book.author/book.author.publisher synchronously
+  return "...business logic...";
+}
+
+// And we reference the const in find our:
+const books = await em.find(Book, {}, { populate: overviewHint });
+```
+
+This dries up our `em.find` call, and makes it much more declarative about who/why we're populating this data. And it helps `populate` hints from accumulating cruft over time, where their data was initially used, but now no longer necessary in the actual codepaths.
 
 ## Best of Both Worlds
 

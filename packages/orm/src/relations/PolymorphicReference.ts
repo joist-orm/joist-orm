@@ -258,8 +258,24 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
 
     ensureNotDeleted(this.entity, "pending");
 
-    // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    const changed = setField(this.entity, this.fieldName, isEntity(other) ? (other?.idTaggedMaybe ?? other) : other);
+    // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself.
+    // We also need to keep the entity itself if we have other components with the same base type.  This is due to
+    // subtypes sharing the same tag as their base type, so we cannot tell which subtype an id belongs to
+    if (isEntity(other)) {
+      const otherMeta = getMetadata(other);
+      const hasComponentsWithSameBaseType =
+        otherMeta.baseType &&
+        this.field.components.some(
+          (c) => c.otherMetadata().baseType === otherMeta.baseType && !(other instanceof c.otherMetadata().cstr),
+        );
+      setField(
+        this.entity,
+        this.fieldName,
+        other.isNewEntity || hasComponentsWithSameBaseType ? other : other.idTagged,
+      );
+    } else {
+      setField(this.entity, this.fieldName, other);
+    }
 
     if (typeof other === "string") {
       this.loaded = undefined;

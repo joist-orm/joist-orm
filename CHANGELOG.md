@@ -1,3 +1,10 @@
+## [1.286.1](https://github.com/joist-orm/joist-orm/compare/v1.286.0...v1.286.1) (2025-12-16)
+
+
+### Bug Fixes
+
+* expose lastNow for tests that do manual time management ([#1678](https://github.com/joist-orm/joist-orm/issues/1678)) ([32f3b67](https://github.com/joist-orm/joist-orm/commit/32f3b67f2f2bed86fbabb72e4a491950067254d1))
+
 # [1.286.0](https://github.com/joist-orm/joist-orm/compare/v1.285.2...v1.286.0) (2025-12-08)
 
 

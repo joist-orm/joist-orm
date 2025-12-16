@@ -2799,7 +2799,12 @@ function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Date): void {
   }
 }
 
-let lastNow = new Date();
+let lastNow = undefined as Date | undefined;
+
+// exposed so tests that do their own time management can override lastNow to get correct updatedAt values
+export function setLastNow(now: Date | undefined) {
+  lastNow = now;
+}
 
 function getNow(): Date {
   let now = new Date();
@@ -2808,7 +2813,7 @@ function getNow(): Date {
   // with exactly the same `updated_at`, the `updated_at` SQL trigger fallback will think "the caller
   // didn't self-manage `updated_at`" and so bump it for them. Which is fine, but now
   // Joist doesn't know about the bumped time, and the 2nd `UPDATE` will fail.
-  if (lastNow.getTime() === now.getTime() || now.getTime() < lastNow.getTime()) {
+  if (lastNow && (lastNow.getTime() === now.getTime() || now.getTime() < lastNow.getTime())) {
     now = new Date(lastNow.getTime() + 1);
   }
   lastNow = now;

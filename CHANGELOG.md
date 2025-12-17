@@ -1,3 +1,10 @@
+## [1.286.2](https://github.com/joist-orm/joist-orm/compare/v1.286.1...v1.286.2) (2025-12-17)
+
+
+### Bug Fixes
+
+* Bump to release. ([#1679](https://github.com/joist-orm/joist-orm/issues/1679)) ([e161269](https://github.com/joist-orm/joist-orm/commit/e16126914617cd7f723f516c620eff821e4f1086))
+
 ## [1.286.1](https://github.com/joist-orm/joist-orm/compare/v1.286.0...v1.286.1) (2025-12-16)
 
 

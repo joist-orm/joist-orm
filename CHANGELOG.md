@@ -1,3 +1,10 @@
+## [1.286.3](https://github.com/joist-orm/joist-orm/compare/v1.286.2...v1.286.3) (2025-12-18)
+
+
+### Bug Fixes
+
+* corrected handling of STI in getMaybeCtiAlias ([#1680](https://github.com/joist-orm/joist-orm/issues/1680)) ([109edf1](https://github.com/joist-orm/joist-orm/commit/109edf1f779239359ca434ad648beea04773dd78))
+
 ## [1.286.2](https://github.com/joist-orm/joist-orm/compare/v1.286.1...v1.286.2) (2025-12-17)
 
 

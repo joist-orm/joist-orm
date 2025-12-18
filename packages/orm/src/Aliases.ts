@@ -535,12 +535,10 @@ function getMaybeCtiAlias(
 ): string {
   // Do we have mismatched `em.find(ChildMeta)` with a `alias(BaseMeta)`? If so, the
   // usual `${field.aliasSuffix}` won't know it should have a suffix, so we need to calc it.
-  if (newMeta !== meta) {
+  if (newMeta !== meta && newMeta.inheritanceType === "cti") {
     const bases = getBaseAndSelfMetas(newMeta);
     const fieldIsFromBase = bases.includes(newMeta);
-    if (fieldIsFromBase) {
-      return `${newAlias}_b0`;
-    }
+    if (fieldIsFromBase) return `${newAlias}_b0`;
   }
   return `${newAlias}${field.aliasSuffix}`;
 }

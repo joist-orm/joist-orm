@@ -18,7 +18,7 @@
     "bun-types": "^1.2.23",
     "joist-driver-bun-pg": "workspace:*",
     "joist-orm": "workspace:*",
-    "node-pg-migrate": "^8.0.3"
+    "node-pg-migrate": "^8.0.4"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
@@ -26,9 +26,9 @@
     "joist-codegen": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
-    "prettier": "^3.6.2",
+    "prettier": "^3.7.4",
     "prettier-plugin-organize-imports": "^4.3.0",
-    "typescript": "5.9.2"
+    "typescript": "5.9.3"
   },
   "imports": {
     "src/": "src/*"

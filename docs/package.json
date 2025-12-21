@@ -14,14 +14,14 @@
     "@astrojs/starlight": "0.37.1",
     "@astrojs/starlight-tailwind": "4.0.2",
     "astro": "5.16.6",
-    "sharp": "^0.34.4",
-    "starlight-blog": "^0.24.1"
+    "sharp": "^0.34.5",
+    "starlight-blog": "^0.25.2"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.6",
     "@tailwindcss/vite": "^4.1.13",
     "starlight-llms-txt": "^0.6.0",
-    "tailwindcss": "^4.1.13",
-    "typescript": "^5.9.2"
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3"
   }
 }

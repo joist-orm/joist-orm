@@ -18,7 +18,7 @@
   "dependencies": {
     "bun-types": "^1.2.23",
     "joist-orm": "workspace:*",
-    "node-pg-migrate": "^8.0.3"
+    "node-pg-migrate": "^8.0.4"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",

@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "joist-orm": "workspace:*",
-    "node-pg-migrate": "^8.0.3",
+    "node-pg-migrate": "^8.0.4",
     "temporal-polyfill": "^0.3.0"
   },
   "devDependencies": {

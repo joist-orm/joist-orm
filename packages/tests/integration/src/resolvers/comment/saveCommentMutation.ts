@@ -1,10 +1,9 @@
 import { Comment } from "src/entities";
 import { MutationResolvers } from "src/generated/graphql-types";
-import { saveEntities } from "src/resolvers/mutations/utils";
+import { saveEntity } from "src/resolvers/utils";
 
 export const saveComment: Pick<MutationResolvers, "saveComment"> = {
-  async saveComment(root, args, ctx) {
-    const [id] = await saveEntities(ctx, Comment, [args.input]);
-    return { comment: id };
+  async saveComment(_, args, ctx) {
+    return { comment: await saveEntity(ctx, Comment, args.input) };
   },
 };

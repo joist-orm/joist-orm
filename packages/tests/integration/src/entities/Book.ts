@@ -4,6 +4,7 @@ import { Author, BookCodegen, bookReviewBeforeFlushRan, bookConfig as config } f
 export class Book extends BookCodegen {
   transientFields = {
     rulesInvoked: 0,
+    hooksInvoked: 0,
     firstNameRuleInvoked: 0,
     favoriteColorsRuleInvoked: 0,
     reviewsRuleInvoked: 0,
@@ -122,11 +123,17 @@ config.addReaction("notes", (b) => {
 // Example of a trigger for a many-to-many field
 config.touchOnChange("tags");
 
+// Example of a trigger for a one-to-many field
+config.touchOnChange("reviews");
+
 config.beforeFlush((book) => {
   // Arbitrary logic to show this hook fired, the relevant logic here is the `book.changes.fields.includes("tags")`
   if (book.changes.fields.includes("tags") && book.title.includes("To be changed by hook")) {
     book.title = "Tags Changed";
   }
+  // For testing touchOnChange(reviews); we can't use changes.fields.includes("reviews") because we want
+  // any review change (i.e. ratings changing) to trigger this, not just adding/removing reviews.
+  book.transientFields.hooksInvoked++;
 });
 
 // For testing cross-entity hook ordering

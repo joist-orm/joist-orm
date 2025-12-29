@@ -1,7 +1,18 @@
 import { expect } from "@jest/globals";
 import { insertAuthor, insertBook, insertBookReview, insertPublisher, select } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
-import { Author, Book, Publisher, newAuthor, newBook, newCritic, newPublisher, newUser } from "../entities";
+import {
+  Author,
+  Book,
+  BookReview,
+  Publisher,
+  newAuthor,
+  newBook,
+  newBookReview,
+  newCritic,
+  newPublisher,
+  newUser,
+} from "../entities";
 
 describe("OneToManyCollection", () => {
   it("loads collections", async () => {
@@ -681,5 +692,51 @@ describe("OneToManyCollection", () => {
     const authors1 = p.authors.get;
     const authors2 = p.authors.get;
     expect(authors1 === authors2).toEqual(true);
+  });
+
+  describe("touchOnChange", () => {
+    it("detects adds o2m - using factories", async () => {
+      const em = newEntityManager();
+      const book = newBook(em, {});
+      await em.flush();
+      book.transientFields.hooksInvoked = 0;
+      newBookReview(em, { book, rating: 5 });
+      await em.flush();
+      expect(book.transientFields.hooksInvoked).toBe(1);
+    });
+
+    it("detects adds o2m - using insert and loads", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ id: 2, title: "To be changed by hook", author_id: 1 });
+      const em = newEntityManager();
+      const book = await em.load(Book, "2");
+      newBookReview(em, { book, rating: 5 });
+      await em.flush();
+      expect(book.transientFields.hooksInvoked).toBe(1);
+    });
+
+    it("detects remove o2m - using insert and loads", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ id: 2, title: "To be changed by hook", author_id: 1 });
+      await insertBookReview({ id: 3, book_id: 2, rating: 5 });
+      const em = newEntityManager();
+      const book = await em.load(Book, "2", "reviews");
+      const review = book.reviews.get[0];
+      em.delete(review);
+      await em.flush();
+      expect(book.transientFields.hooksInvoked).toBe(1);
+    });
+
+    it("detects changed fields within o2m child", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "To be changed by hook", author_id: 1 });
+      await insertBookReview({ book_id: 1, rating: 5 });
+      const em = newEntityManager();
+      const br = await em.load(BookReview, "br:1");
+      br.rating = 6;
+      await em.flush();
+      const book = em.getEntity("b:1") as Book;
+      expect(book.transientFields.hooksInvoked).toBe(1);
+    });
   });
 });

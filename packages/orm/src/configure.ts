@@ -1,6 +1,7 @@
 import { Entity } from "./Entity";
 import { MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
-import { EntityMetadata, ManyToOneField, OneToManyField, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getMetadata, ManyToOneField, OneToManyField } from "./EntityMetadata";
+import { ManyToOneFieldStatus } from "./changes";
 import { setAfterMetadataLocked, setBooted } from "./config";
 import { AsyncDefault } from "./defaults";
 import { getProperties } from "./getProperties";
@@ -40,6 +41,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
     // Do these after `fireAfterMetadatas`, in case afterMetadata callbacks added more defaults/rules
     copyAsyncDefaults(metas);
     reverseIndexReactivity(metas);
+    setupTouchOnChange(metas);
     copyRunBeforeBooksToBaseType(metas);
   } catch (e) {
     previousBootError = e;
@@ -335,6 +337,47 @@ function populatePolyComponentFields(metas: EntityMetadata[]): void {
             fieldIdName: `${fieldName}Id`,
             otherMetadata: () => st,
           } satisfies OneToManyField & { aliasSuffix: string };
+        });
+      }
+    }
+  }
+}
+
+/**
+ * Sets up touchOnChange for o2m relations by adding hooks to child entities.
+ *
+ * When a parent entity (e.g., Book) has `config.touchOnChange("reviews")`, this adds
+ * a beforeFlush hook to the child entity (e.g., BookReview) that touches the parent
+ * when the FK changes.
+ */
+function setupTouchOnChange(metas: EntityMetadata[]): void {
+  for (const meta of metas) {
+    for (const fieldName of meta.config.__data.touchOnChange) {
+      const field = meta.allFields[fieldName];
+      // Validate that the field exists and is a supported type
+      if (!field) {
+        throw new Error(`touchOnChange could not find ${meta.type}.${fieldName}`);
+      }
+      if (field.kind !== "o2m" && field.kind !== "lo2m" && field.kind !== "m2m") {
+        throw new Error(`touchOnChange field ${meta.type}.${fieldName} must be a o2m, lo2m, or m2m, not ${field.kind}`);
+      }
+      // Only o2m/lo2m need hook setup here; m2m is handled in JoinRows
+      if (field.kind === "o2m" || field.kind === "lo2m") {
+        const otherFieldName = field.otherFieldName;
+        // Add a beforeFlush hook to the child entity that touches the parent when the FK changes
+        field.otherMetadata().config.__data.hooks.beforeFlush.push(async (entity: any) => {
+          const changes = entity.changes[otherFieldName] as ManyToOneFieldStatus<any>;
+          // Touch the old parent
+          if (changes?.hasChanged) {
+            const originalParent = await changes.originalEntity;
+            if (originalParent) {
+              entity.em.touch(originalParent);
+            }
+          }
+          const currentParent = await entity[otherFieldName].load();
+          if (currentParent) {
+            entity.em.touch(currentParent);
+          }
         });
       }
     }

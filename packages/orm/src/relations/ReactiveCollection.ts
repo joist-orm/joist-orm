@@ -85,9 +85,6 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   #isCached: boolean = false;
   #loadPromise: Promise<ReadonlyArray<U>> | undefined;
 
-  // Track the materialized DB state for change detection
-  #fieldValueEntities: U[] = [];
-
   constructor(
     joinTableName: string,
     entity: T,
@@ -140,7 +137,6 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
           this.#loadedMode = "ref";
           this.#isLoaded = true;
           this.#loaded = loaded;
-          this.#fieldValueEntities = [...loaded];
           getEmInternalApi(this.entity.em).isLoadedCache.add(this);
           return this.filterDeleted(loaded, opts);
         }));
@@ -217,7 +213,8 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   private syncJoinTableRows(newValue: U[]): void {
     const joinRows = getEmInternalApi(this.entity.em).joinRows(this as unknown as ManyToManyCollection<any, any>);
     const newSet = new Set(newValue);
-    const oldSet = new Set(this.#fieldValueEntities);
+    const oldEntities = joinRows.getOthers(this.#columnName, this.entity) as U[];
+    const oldSet = new Set(oldEntities);
 
     // Find entities to add (in new but not in old)
     for (const entity of newValue) {
@@ -232,12 +229,6 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
         joinRows.addRemove(this as unknown as ManyToManyCollection<any, any>, this.entity, entity);
       }
     }
-
-    this.#fieldValueEntities = [...newValue];
-  }
-
-  get fieldValue(): readonly U[] {
-    return this.#fieldValueEntities;
   }
 
   get getWithDeleted(): U[] {
@@ -246,10 +237,6 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
 
   get get(): U[] {
     return this.doGet({ withDeleted: false });
-  }
-
-  get isSet(): boolean {
-    return this.#fieldValueEntities.length > 0 || (this.#loaded !== undefined && this.#loaded.length > 0);
   }
 
   // Read-only - these throw errors
@@ -294,7 +281,6 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
 
   async cleanupOnEntityDeleted(): Promise<void> {
     this.#loaded = [];
-    this.#fieldValueEntities = [];
     this.#isLoaded = false;
   }
 

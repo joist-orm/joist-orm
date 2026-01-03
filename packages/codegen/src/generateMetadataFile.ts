@@ -232,7 +232,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         fieldName: "${fieldName}",
         fieldIdName: "${singularName}Ids",
         required: false,
-        derived: ${derived === "async" ? `"async"` : "false"},
+        derived: ${derived === "async" ? `"async"` : derived === "otherSide" ? `"otherSide"` : "false"},
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
         serde: undefined,

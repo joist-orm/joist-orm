@@ -46,9 +46,11 @@ import {
   PolymorphicReference,
   ProjectEntity,
   ReactiveCollection,
+  ReactiveCollectionOtherSide,
   ReactiveField,
   ReactiveReference,
   ReadOnlyCollection,
+  hasReactiveCollectionOtherSide,
   RelationsOf,
   SSAssert,
   TaggedId,
@@ -1025,6 +1027,17 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
       const line = code`abstract readonly ${fieldName}: ${ReactiveCollection}<${entity.name}, ${otherEntity.type}>;`;
       return { kind: "abstract", line } as const;
     }
+    if (m2m.derived === "otherSide") {
+      const decl = code`${ReactiveCollectionOtherSide}<${entity.type}, ${otherEntity.type}>`;
+      const init = code`
+        ${hasReactiveCollectionOtherSide}(
+          "${joinTableName}",
+          "${columnName}",
+          "${otherFieldName}",
+          "${otherColumnName}",
+        )`;
+      return { kind: "concrete", fieldName, decl, init };
+    }
     const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
     const init = code`
       ${hasManyToMany}(
@@ -1038,8 +1051,8 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
   // Specialize
   const m2mBase: Relation[] =
     meta.baseType?.manyToManys
-      // Don't specialize hasReactiveReferences b/c they're fields, not getters
-      .filter((m2m) => m2m.derived !== "async")
+      // Don't specialize hasReactiveCollection or hasReactiveCollectionOtherSide b/c they're fields, not getters
+      .filter((m2m) => !m2m.derived)
       .map((m2m) => {
         const { fieldName, otherEntity } = m2m;
         const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;

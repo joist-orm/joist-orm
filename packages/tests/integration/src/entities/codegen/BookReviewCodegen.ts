@@ -17,6 +17,7 @@ import {
   hasManyToMany,
   hasOne,
   hasOneToOne,
+  hasReactiveCollectionOtherSide,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -30,6 +31,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type ReactiveCollectionOtherSide,
   type ReactiveField,
   setField,
   setOpts,
@@ -84,7 +86,6 @@ export interface BookReviewOpts {
   critic?: Critic | CriticId | null;
   comment?: Comment | null;
   tags?: Tag[];
-  bestReviewAuthors?: Author[];
 }
 
 export interface BookReviewIdsOpts {
@@ -92,7 +93,6 @@ export interface BookReviewIdsOpts {
   criticId?: CriticId | null;
   commentId?: CommentId | null;
   tagIds?: TagId[] | null;
-  bestReviewAuthorIds?: AuthorId[] | null;
 }
 
 export interface BookReviewFilter {
@@ -184,7 +184,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     "bookReviews",
     "tag_id",
   );
-  readonly bestReviewAuthors: Collection<BookReview, Author> = hasManyToMany(
+  readonly bestReviewAuthors: ReactiveCollectionOtherSide<BookReview, Author> = hasReactiveCollectionOtherSide(
     "authors_to_best_reviews",
     "book_review_id",
     "bestReviews",

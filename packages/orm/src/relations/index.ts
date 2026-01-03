@@ -50,6 +50,12 @@ export {
   isReactiveCollection,
 } from "./ReactiveCollection";
 export {
+  ReactiveCollectionOtherSide,
+  ReactiveCollectionOtherSideImpl,
+  hasReactiveCollectionOtherSide,
+  isReactiveCollectionOtherSide,
+} from "./ReactiveCollectionOtherSide";
+export {
   LoadedReadOnlyCollection,
   ReadOnlyCollection,
   isLoadedReadOnlyCollection,

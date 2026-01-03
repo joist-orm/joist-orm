@@ -1,0 +1,238 @@
+import {
+  Entity,
+  EntityMetadata,
+  ensureNotDeleted,
+  fail,
+  getEmInternalApi,
+  getInstanceData,
+  getMetadata,
+  IdOf,
+} from "..";
+import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
+import { lazyField, resolveOtherMeta } from "../newEntity";
+import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { RelationT, RelationU } from "./Relation";
+
+/**
+ * A read-only collection representing the "other side" of a ReactiveCollection.
+ *
+ * When Author.bestReviews is a ReactiveCollection (controlling side),
+ * BookReview.bestReviewAuthors is a ReactiveCollectionOtherSide (read-only view).
+ */
+export interface ReactiveCollectionOtherSide<T extends Entity, U extends Entity> {
+  readonly isLoaded: boolean;
+  load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]>;
+  readonly get: U[];
+  readonly getWithDeleted: U[];
+  includes(other: U): Promise<boolean>;
+  find(id: IdOf<U>): Promise<U | undefined>;
+  current(opts?: { withDeleted?: boolean }): U[];
+}
+
+/** Creates a ReactiveCollectionOtherSide - the read-only other side of a ReactiveCollection. */
+export function hasReactiveCollectionOtherSide<T extends Entity, U extends Entity>(
+  joinTableName: string,
+  columnName: string,
+  otherFieldName: string,
+  otherColumnName: string,
+): ReactiveCollectionOtherSide<T, U> {
+  let otherMeta: EntityMetadata<U>;
+  return lazyField((entity: T, fieldName) => {
+    otherMeta ??= resolveOtherMeta(entity, fieldName);
+    return new ReactiveCollectionOtherSideImpl<T, U>(
+      joinTableName,
+      entity,
+      fieldName as keyof T & string,
+      columnName,
+      otherMeta,
+      otherFieldName,
+      otherColumnName,
+    );
+  });
+}
+
+export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
+  extends AbstractRelationImpl<T, U[]>
+  implements ReactiveCollectionOtherSide<T, U>
+{
+  readonly #otherMeta: EntityMetadata;
+
+  // M2M join table metadata
+  readonly #joinTableName: string;
+  readonly #columnName: string;
+  readonly #otherFieldName: string;
+  readonly #otherColumnName: string;
+
+  // Loading state
+  #loaded: U[] | undefined;
+  #isLoaded: boolean = false;
+  #loadPromise: Promise<readonly U[]> | undefined;
+
+  constructor(
+    joinTableName: string,
+    entity: T,
+    public fieldName: keyof T & string,
+    columnName: string,
+    otherMeta: EntityMetadata,
+    otherFieldName: string,
+    otherColumnName: string,
+  ) {
+    super(entity);
+    this.#otherMeta = otherMeta;
+    this.#joinTableName = joinTableName;
+    this.#columnName = columnName;
+    this.#otherFieldName = otherFieldName;
+    this.#otherColumnName = otherColumnName;
+
+    if (entity.isNewEntity) {
+      this.#loaded = [];
+      this.#isLoaded = true;
+    }
+    getInstanceData(entity).relations[fieldName] = this;
+  }
+
+  async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {
+    ensureNotDeleted(this.entity, "pending");
+
+    if (!this.#isLoaded || opts?.forceReload) {
+      return (this.#loadPromise ??= this.loadFromJoinTable().then((loaded) => {
+        this.#loadPromise = undefined;
+        this.#loaded = loaded;
+        this.#isLoaded = true;
+        return this.filterDeleted(loaded, opts);
+      }));
+    }
+    return this.filterDeleted(this.#loaded ?? [], opts);
+  }
+
+  private async loadFromJoinTable(): Promise<U[]> {
+    const { em } = this.entity;
+    const key = `${this.#columnName}=${this.entity.id}`;
+    const result = await manyToManyDataLoader(em, this as any).load(key);
+    return result as U[];
+  }
+
+  get isLoaded(): boolean {
+    return this.#isLoaded;
+  }
+
+  get get(): U[] {
+    return this.doGet({ withDeleted: false });
+  }
+
+  get getWithDeleted(): U[] {
+    return this.doGet({ withDeleted: true });
+  }
+
+  private doGet(opts?: { withDeleted?: boolean }): U[] {
+    ensureNotDeleted(this.entity, "pending");
+    if (!this.#isLoaded) {
+      throw new Error(`${this.entity}.${this.fieldName} has not been loaded yet`);
+    }
+    return this.filterDeleted(this.#loaded ?? [], opts);
+  }
+
+  private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
+    return opts?.withDeleted === true
+      ? [...entities]
+      : entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+  }
+
+  // Read-only - these throw errors
+  add(_other: U): void {
+    fail(`Cannot add to ${this.entity}.${this.fieldName} - it is the read-only other side of a ReactiveCollection.`);
+  }
+
+  remove(_other: U): void {
+    fail(
+      `Cannot remove from ${this.entity}.${this.fieldName} - it is the read-only other side of a ReactiveCollection.`,
+    );
+  }
+
+  set(_values: readonly U[]): void {
+    fail(`Cannot set ${this.entity}.${this.fieldName} - it is the read-only other side of a ReactiveCollection.`);
+  }
+
+  removeAll(): void {
+    fail(
+      `Cannot removeAll on ${this.entity}.${this.fieldName} - it is the read-only other side of a ReactiveCollection.`,
+    );
+  }
+
+  async includes(other: U): Promise<boolean> {
+    const loaded = await this.load();
+    return loaded.includes(other);
+  }
+
+  async find(id: IdOf<U>): Promise<U | undefined> {
+    const loaded = await this.load();
+    return loaded.find((e) => e.id === id);
+  }
+
+  setFromOpts(_others: U[]): void {
+    throw new Error(`ReactiveCollectionOtherSide ${this.entity}.${this.fieldName} cannot be set via opts`);
+  }
+
+  maybeCascadeDelete(): void {
+    // Don't cascade - the controlling side handles this
+  }
+
+  async cleanupOnEntityDeleted(): Promise<void> {
+    this.#loaded = [];
+    this.#isLoaded = false;
+  }
+
+  current(opts?: { withDeleted?: boolean }): U[] {
+    return this.filterDeleted(this.#loaded ?? [], opts);
+  }
+
+  // Properties for JoinRows/ManyToManyCollection compatibility
+  public get meta(): EntityMetadata {
+    return getMetadata(this.entity);
+  }
+
+  public get otherMeta(): EntityMetadata {
+    return this.#otherMeta;
+  }
+
+  public get joinTableName(): string {
+    return this.#joinTableName;
+  }
+
+  public get columnName(): string {
+    return this.#columnName;
+  }
+
+  public get otherColumnName(): string {
+    return this.#otherColumnName;
+  }
+
+  public get otherFieldName(): string {
+    return this.#otherFieldName;
+  }
+
+  public get hasBeenSet(): boolean {
+    return false;
+  }
+
+  get isPreloaded(): boolean {
+    return false;
+  }
+
+  preload(): void {
+    // No-op for reactive collection other side
+  }
+
+  public toString(): string {
+    return `ReactiveCollectionOtherSide(entity: ${this.entity}, fieldName: ${this.fieldName}, otherMeta: ${this.#otherMeta.type})`;
+  }
+
+  [RelationT]: T = null!;
+  [RelationU]: U = null!;
+}
+
+export function isReactiveCollectionOtherSide(
+  maybeCollection: any,
+): maybeCollection is ReactiveCollectionOtherSide<any, any> {
+  return maybeCollection instanceof ReactiveCollectionOtherSideImpl;
+}

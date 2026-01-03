@@ -57,8 +57,16 @@ Joist ORM has `ReactiveField` for derived primitive values and `ReactiveReferenc
   - Reactive hint: `{ books: { reviews: "rating" } }`
   - Function: filters reviews by rating threshold
 
+### In Scope (Phase 3 - Other Side Handling)
+- **ReactiveCollectionOtherSide class** - Read-only collection for the non-controlling side
+- Auto-detection of "other side" when one side is `derived: "async"`
+- `derived: "otherSide"` metadata flag for the non-controlling side
+- **Codegen integration**: Auto-generate `hasReactiveCollectionOtherSide()` in Codegen files
+- **Pending changes visibility**: Other side reflects unflushed changes from controlling side
+- **Changes API**: Other side participates in `entity.changes.fieldName` tracking
+- Update `configure.ts` to recognize `derived: "otherSide"` for reactive tracking
+
 ### Out of Scope
-- Codegen changes (manual declaration only for now)
 - Schema migration tooling
 - Documentation updates
 - Mutable reactive collections (add/remove with reactive defaults)

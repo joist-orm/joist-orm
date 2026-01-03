@@ -341,7 +341,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     "book": { kind: "m2o", fieldName: "book", fieldIdName: "bookId", derived: false, required: true, otherMetadata: () => bookMeta, otherFieldName: "reviews", serde: new KeySerde("b", "book", "book_id", "int"), immutable: false },
     "critic": { kind: "m2o", fieldName: "critic", fieldIdName: "criticId", derived: false, required: false, otherMetadata: () => criticMeta, otherFieldName: "bookReviews", serde: new KeySerde("c", "critic", "critic_id", "int"), immutable: false },
     "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, derived: false, otherMetadata: () => tagMeta, otherFieldName: "bookReviews", serde: undefined, immutable: false, joinTableName: "book_reviews_to_tags", columnNames: ["book_review_id", "tag_id"] },
-    "bestReviewAuthors": { kind: "m2m", fieldName: "bestReviewAuthors", fieldIdName: "bestReviewAuthorIds", required: false, derived: false, otherMetadata: () => authorMeta, otherFieldName: "bestReviews", serde: undefined, immutable: false, joinTableName: "authors_to_best_reviews", columnNames: ["book_review_id", "author_id"] },
+    "bestReviewAuthors": { kind: "m2m", fieldName: "bestReviewAuthors", fieldIdName: "bestReviewAuthorIds", required: false, derived: "otherSide", otherMetadata: () => authorMeta, otherFieldName: "bestReviews", serde: undefined, immutable: false, joinTableName: "authors_to_best_reviews", columnNames: ["book_review_id", "author_id"] },
     "comment": { kind: "o2o", fieldName: "comment", fieldIdName: "commentId", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined, immutable: false },
   },
   allFields: {},

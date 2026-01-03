@@ -1,4 +1,4 @@
-import { Author, newAuthor, newBook, newBookReview } from "@src/entities";
+import { Author, BookReview, newAuthor, newBook, newBookReview } from "@src/entities";
 import { insertAuthor, insertAuthorToBestReview, insertBook, insertBookReview, select } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 
@@ -47,26 +47,26 @@ describe("ReactiveCollection", () => {
       await insertBookReview({ book_id: 1, rating: 4 });
       await insertBookReview({ book_id: 1, rating: 5 });
       // And only one of them has been derived as a best review
-      await insertAuthorToBestReview({ author_id: 1, book_review_id: 1 });
+      await insertAuthorToBestReview({ author_id: 1, book_review_id: 2 });
       const em = newEntityManager();
       // When we populate bestReviews
       const a = await em.load(Author, "a:1", "bestReviews");
       // Then it has only the 1 book review
       expect(a.bestReviews.get.length).toBe(1);
       // And we only have 1 BookReview in memory
-      expect(em.entities).toMatchEntity(["a:1", "br:1"]);
+      expect(em.entities).toMatchEntity(["a:1", "br:2"]);
       // And we did not invoke the calculation
       expect(a.transientFields.bestReviewsCalcInvoked).toBe(0);
     });
 
-    it("load populates the reactive hint with forceReload", async () => {
+    it("load fully populates forceReload", async () => {
       // Given an author with two reviews
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
       await insertBookReview({ book_id: 1, rating: 4 });
       await insertBookReview({ book_id: 1, rating: 5 });
       // And only one of them has been derived as a best review
-      await insertAuthorToBestReview({ author_id: 1, book_review_id: 1 });
+      await insertAuthorToBestReview({ author_id: 1, book_review_id: 2 });
       const em = newEntityManager();
       const a = await em.load(Author, "a:1");
       // When we call forceReload
@@ -76,6 +76,26 @@ describe("ReactiveCollection", () => {
       // And we pulled both into memory
       expect(em.entities).toMatchEntity(["a:1", "b:1", "br:1", "br:2"]);
       // And we recalc
+      expect(a.transientFields.bestReviewsCalcInvoked).toBe(1);
+    });
+
+    it("load fully populates when dirty", async () => {
+      // Given an author with two reviews
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBookReview({ book_id: 1, rating: 4 });
+      await insertBookReview({ book_id: 1, rating: 5 });
+      // And only one of them has been derived as a best review
+      await insertAuthorToBestReview({ author_id: 1, book_review_id: 2 });
+      const em = newEntityManager();
+      // When we first load the 1st review, and change its rating
+      const br1 = await em.load(BookReview, "br:1");
+      br1.rating = 6;
+      // Then we populate bestReviews
+      const a = await em.load(Author, "a:1", "bestReviews");
+      // It knows it needs to do a full populate & recalc
+      expect(a.bestReviews.get).toMatchEntity([br1, "br:2"]);
+      expect(em.entities).toMatchEntity(["br:1", "a:1", "br:2", "b:1"]);
       expect(a.transientFields.bestReviewsCalcInvoked).toBe(1);
     });
   });
@@ -140,6 +160,36 @@ describe("ReactiveCollection", () => {
       // Move book to different author
       b.author.set(a2);
       expect(a1.bestReviews.get).toEqual([]);
+    });
+
+    it("other side reflects changes in real-time as ratings change", async () => {
+      // Given an author with two reviews
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBookReview({ book_id: 1, rating: 4 });
+      await insertBookReview({ book_id: 1, rating: 5 });
+      await insertAuthorToBestReview({ author_id: 1, book_review_id: 2 });
+      const em = newEntityManager();
+      // When we load the author & review
+      const a = await em.load(Author, "a:1", "bestReviews");
+      const br1 = await em.load(BookReview, "br:1", "bestReviewAuthors");
+      // Initially br1 is not a "best review" so the other side is empty
+      expect(br1.bestReviewAuthors.get).toEqual([]);
+      // When the rating changes to 5 (above threshold)
+      br1.rating = 5;
+      // Then the controlling side (Author.bestReviews) is initially stale
+      expect(a.bestReviews.get).toMatchEntity(["br:2"]);
+      // But when we reload it
+      await a.bestReviews.load();
+      // Then it knows it needs to recalc
+      expect(a.bestReviews.get).toMatchEntity([br1, "br:2"]);
+      // And the other side (BookReview.bestReviewAuthors) reflects this in real-time
+      expect(br1.bestReviewAuthors.get).toMatchEntity([a]);
+      // When the rating drops back below threshold
+      br1.rating = 3;
+      // Then both sides reflect the change
+      expect(a.bestReviews.get).toMatchEntity(["br:2"]);
+      expect(br1.bestReviewAuthors.get).toMatchEntity([]);
     });
   });
 

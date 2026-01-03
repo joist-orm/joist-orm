@@ -108,6 +108,37 @@ export class JoinRows {
     return addedRows.map((r) => r.columns[otherColumnName]);
   }
 
+  /**
+   * Like `addedFor`, but for querying from the "other side" of a reactive m2m.
+   *
+   * When the controlling side does `author.bestReviews`, the JoinRows stores rows with `author_id=author`.
+   * The other side `bookReview.bestReviewAuthors` needs to find rows where `book_review_id=bookReview`.
+   */
+  addedForOtherSide(columnName: string, entity: Entity): Entity[] {
+    const addedRows = this.index
+      .getOthers(columnName, entity)
+      .filter(
+        (r) =>
+          ((r.id === undefined && r.op === JoinRowOperation.Pending) || r.op === JoinRowOperation.Flushed) &&
+          r.deleted !== true,
+      );
+    // Return the "other" column's entity (not the one we're querying by)
+    return addedRows.map((r) => {
+      const [c1, c2] = Object.keys(r.columns);
+      return r.columns[c1] === entity ? r.columns[c2] : r.columns[c1];
+    });
+  }
+
+  /** Like `removedFor`, but for querying from the "other side" of a reactive m2m. */
+  removedForOtherSide(columnName: string, entity: Entity): Entity[] {
+    const removedRows = this.index.getOthers(columnName, entity).filter((r) => r.deleted);
+    // Return the "other" column's entity (not the one we're querying by)
+    return removedRows.map((r) => {
+      const [c1, c2] = Object.keys(r.columns);
+      return r.columns[c1] === entity ? r.columns[c2] : r.columns[c1];
+    });
+  }
+
   /** Adds an existing join row to this table. */
   addPreloadedRow(m2m: ManyToManyCollection<any, any>, id: number, e1: Entity, e2: Entity): void {
     const existing = this.index.get(m2m, e1, e2);

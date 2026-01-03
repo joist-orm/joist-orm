@@ -99,10 +99,10 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
         this.#loadPromise = undefined;
         this.#loaded = loaded;
         this.#isLoaded = true;
-        return this.filterDeleted(loaded, opts);
+        return this.applyPendingChangesAndFilter(loaded, opts);
       }));
     }
-    return this.filterDeleted(this.#loaded ?? [], opts);
+    return this.applyPendingChangesAndFilter(this.#loaded ?? [], opts);
   }
 
   private async loadFromJoinTable(): Promise<U[]> {
@@ -129,13 +129,42 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
     if (!this.#isLoaded) {
       throw new Error(`${this.entity}.${this.fieldName} has not been loaded yet`);
     }
-    return this.filterDeleted(this.#loaded ?? [], opts);
+    return this.applyPendingChangesAndFilter(this.#loaded ?? [], opts);
   }
 
-  private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
-    return opts?.withDeleted === true
-      ? [...entities]
-      : entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+  /**
+   * Apply pending changes from the controlling side and filter deleted entities.
+   *
+   * The controlling side stores join rows via JoinRows. We query the same JoinRows
+   * instance but from our perspective (column names are swapped).
+   */
+  private applyPendingChangesAndFilter(baseEntities: U[], opts?: { withDeleted?: boolean }): U[] {
+    const em = this.entity.em;
+    const result = new Set(baseEntities);
+
+    // Get the JoinRows instance for our join table (if it exists)
+    const joinRows = getEmInternalApi(em).joinRowsIfPresent(this.#joinTableName);
+    if (joinRows) {
+      // Get pending adds: rows where our entity is involved and they're new (no id, not deleted)
+      const added = joinRows.addedForOtherSide(this.#columnName, this.entity);
+      for (const other of added) {
+        result.add(other as U);
+      }
+
+      // Get pending removes: rows where our entity is involved and they're deleted
+      const removed = joinRows.removedForOtherSide(this.#columnName, this.entity);
+      for (const other of removed) {
+        result.delete(other as U);
+      }
+    }
+
+    // Filter deleted unless withDeleted
+    let entities = [...result];
+    if (opts?.withDeleted !== true) {
+      entities = entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+    }
+
+    return entities;
   }
 
   // Read-only - these throw errors
@@ -183,7 +212,11 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
   }
 
   current(opts?: { withDeleted?: boolean }): U[] {
-    return this.filterDeleted(this.#loaded ?? [], opts);
+    const entities = this.#loaded ?? [];
+    if (opts?.withDeleted === true) {
+      return [...entities];
+    }
+    return entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
   }
 
   // Properties for JoinRows/ManyToManyCollection compatibility

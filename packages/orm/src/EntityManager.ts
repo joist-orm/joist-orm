@@ -318,6 +318,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         return getOrSet(em.#joinRows, m2m.joinTableName, () => new JoinRows(m2m, em.#rm));
       },
 
+      joinRowsIfPresent(joinTableName: string): JoinRows | undefined {
+        return em.#joinRows[joinTableName];
+      },
+
       /** Returns `a:1.books` if it's in our preload cache. */
       getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined {
         return em.#preloadedRelations.get(taggedId)?.get(fieldName) as U[] | undefined;
@@ -2394,6 +2398,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 /** Provides an internal API to the `EntityManager`. */
 export interface EntityManagerInternalApi {
   joinRows: (m2m: ManyToManyCollection<any, any>) => JoinRows;
+  joinRowsIfPresent: (joinTableName: string) => JoinRows | undefined;
 
   /** Map of taggedId -> fieldName -> pending children. */
   pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>>;

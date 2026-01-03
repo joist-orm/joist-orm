@@ -9,6 +9,7 @@ import {
   ReadOnlyCollection,
 } from "..";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
+import { ManyToManyLike } from "../JoinRows";
 import { lazyField, resolveOtherMeta } from "../newEntity";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
@@ -45,7 +46,7 @@ export function hasReactiveCollectionOtherSide<T extends Entity, U extends Entit
 
 export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<T, U[]>
-  implements ReactiveCollectionOtherSide<T, U>
+  implements ReactiveCollectionOtherSide<T, U>, ManyToManyLike
 {
   readonly #otherMeta: EntityMetadata;
 
@@ -135,7 +136,7 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
     const result = new Set(baseEntities);
 
     // Get the JoinRows instance for our join table (if it exists)
-    const joinRows = getEmInternalApi(em).joinRowsIfPresent(this.#joinTableName);
+    const joinRows = getEmInternalApi(em).joinRows(this);
     if (joinRows) {
       // Get pending adds: rows where our entity is involved and they're new (no id, not deleted)
       const added = joinRows.addedForOtherSide(this.#columnName, this.entity);

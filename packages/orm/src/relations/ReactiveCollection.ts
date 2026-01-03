@@ -15,7 +15,6 @@ import { IsLoadedCachable } from "../IsLoadedCache";
 import { lazyField, resolveOtherMeta } from "../newEntity";
 import { convertToLoadHint, MaybeReactedEntity, Reacted, ReactiveHint } from "../reactiveHints";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
-import { ManyToManyCollection } from "./ManyToManyCollection";
 import { RelationT, RelationU } from "./Relation";
 
 /**
@@ -211,22 +210,20 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   }
 
   private syncJoinTableRows(newValue: U[]): void {
-    const joinRows = getEmInternalApi(this.entity.em).joinRows(this as unknown as ManyToManyCollection<any, any>);
+    const joinRows = getEmInternalApi(this.entity.em).joinRows(this);
     const newSet = new Set(newValue);
     const oldEntities = joinRows.getOthers(this.#columnName, this.entity) as U[];
     const oldSet = new Set(oldEntities);
-
     // Find entities to add (in new but not in old)
     for (const entity of newValue) {
       if (!oldSet.has(entity)) {
-        joinRows.addNew(this as unknown as ManyToManyCollection<any, any>, this.entity, entity);
+        joinRows.addNew(this, this.entity, entity);
       }
     }
-
     // Find entities to remove (in old but not in new)
     for (const entity of oldSet) {
       if (!newSet.has(entity)) {
-        joinRows.addRemove(this as unknown as ManyToManyCollection<any, any>, this.entity, entity);
+        joinRows.addRemove(this, this.entity, entity);
       }
     }
   }

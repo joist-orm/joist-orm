@@ -1,11 +1,27 @@
 import { Entity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
-import { getBaseAndSelfMetas } from "./EntityMetadata";
+import { EntityMetadata, getBaseAndSelfMetas } from "./EntityMetadata";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo } from "./Todo";
 import { keyToTaggedId } from "./keys";
-import { ManyToManyCollection } from "./relations/ManyToManyCollection";
 import { remove } from "./utils";
+
+/**
+ * A simplified interface for ManyToManyCollection-like relations.
+ *
+ * Specifically lets ReactiveCollection & ReactiveCollectionOtherSide use JoinRows
+ * as if they were full-fledged m2m relations.
+ */
+export type ManyToManyLike = {
+  entity: Entity;
+  joinTableName: string;
+  columnName: string;
+  otherColumnName: string;
+  fieldName: string;
+  otherFieldName: string;
+  meta: EntityMetadata;
+  otherMeta: EntityMetadata;
+};
 
 /** A small holder around m2m join rows, which we treat as psuedo-entities. */
 export class JoinRows {
@@ -16,14 +32,14 @@ export class JoinRows {
   constructor(
     // This could be either side of the m2m relation, depending on which is accessed first.
     // Regardless of which m2m side, we still have a single `JoinRows` instance in memory per m2m table.
-    readonly m2m: ManyToManyCollection<any, any>,
+    readonly m2m: ManyToManyLike,
     private rm: ReactionsManager,
   ) {
     this.index = new ManyToManyIndex(m2m);
   }
 
   /** Adds a new join row to this table. */
-  addNew(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity): void {
+  addNew(m2m: ManyToManyLike, e1: Entity, e2: Entity): void {
     if (!e1) throw new Error(`Cannot add a m2m row with an entity that is ${e1}`);
     if (!e2) throw new Error(`Cannot add a m2m row with an entity that is ${e2}`);
     const { em } = this.m2m.entity;
@@ -53,7 +69,7 @@ export class JoinRows {
   }
 
   /** Adds a new remove to this table. */
-  addRemove(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity): void {
+  addRemove(m2m: ManyToManyLike, e1: Entity, e2: Entity): void {
     const { em } = this.m2m.entity;
     const existing = this.index.get(m2m, e1, e2);
     if (existing) {
@@ -88,7 +104,7 @@ export class JoinRows {
   }
 
   /** Return any "old values" for a m2m collection that might need reactivity checks. */
-  removedFor(m2m: ManyToManyCollection<any, any>, e1: Entity): Entity[] {
+  removedFor(m2m: ManyToManyLike, e1: Entity): Entity[] {
     const { columnName, otherColumnName } = m2m;
     // I.e. if we did `t1.books.remove(b1)` find all join rows that have
     // `tag_id=t1`, are marked for deletion, and then `.map` them to the removed book.
@@ -96,7 +112,7 @@ export class JoinRows {
     return removedRows.map((r) => r.columns[otherColumnName]);
   }
 
-  addedFor(m2m: ManyToManyCollection<any, any>, e1: Entity): Entity[] {
+  addedFor(m2m: ManyToManyLike, e1: Entity): Entity[] {
     const { columnName, otherColumnName } = m2m;
     const addedRows = this.index
       .getOthers(m2m.columnName, e1)
@@ -140,7 +156,7 @@ export class JoinRows {
   }
 
   /** Adds an existing join row to this table. */
-  addPreloadedRow(m2m: ManyToManyCollection<any, any>, id: number, e1: Entity, e2: Entity): void {
+  addPreloadedRow(m2m: ManyToManyLike, id: number, e1: Entity, e2: Entity): void {
     const existing = this.index.get(m2m, e1, e2);
     if (existing) {
       // Treat any existing WIP change as source-of-truth, so leave it alone
@@ -161,11 +177,11 @@ export class JoinRows {
     const { columnName: column1, otherColumnName: column2 } = this.m2m;
     const { meta: meta1, otherMeta: meta2 } = this.m2m;
 
-    const oneIds = [];
-    const twoIds = [];
+    const oneIds: string[] = [];
+    const twoIds: string[] = [];
     for (const dbRow of dbRows) {
-      oneIds.push(keyToTaggedId(meta1, dbRow[column1]));
-      twoIds.push(keyToTaggedId(meta2, dbRow[column2]));
+      oneIds.push(keyToTaggedId(meta1, dbRow[column1])!);
+      twoIds.push(keyToTaggedId(meta2, dbRow[column2])!);
     }
 
     // Make sure we have entities in memory for all the joined-to tables
@@ -277,12 +293,12 @@ export enum JoinRowOperation {
 class ManyToManyIndex {
   private indexes: Record<string, Map<Entity, Map<Entity, JoinRow>>> = {};
 
-  constructor(m2m: ManyToManyCollection<any, any>) {
+  constructor(m2m: ManyToManyLike) {
     this.indexes[m2m.columnName] = new Map();
     this.indexes[m2m.otherColumnName] = new Map();
   }
 
-  add(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity, value: JoinRow): void {
+  add(m2m: ManyToManyLike, e1: Entity, e2: Entity, value: JoinRow): void {
     // Store both e1+e2 => value and e2+e1 => value so we can do lookups from either side
     this.#doAdd(this.indexes[m2m.columnName], e1, e2, value);
     this.#doAdd(this.indexes[m2m.otherColumnName], e2, e1, value);
@@ -294,7 +310,7 @@ class ManyToManyIndex {
     this.#doRemove(this.indexes[column2], e2, e1);
   }
 
-  get(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity): JoinRow | undefined {
+  get(m2m: ManyToManyLike, e1: Entity, e2: Entity): JoinRow | undefined {
     return this.indexes[m2m.columnName].get(e1)?.get(e2);
   }
 

@@ -13,7 +13,7 @@ import {
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { IsLoadedCachable } from "../IsLoadedCache";
 import { lazyField, resolveOtherMeta } from "../newEntity";
-import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
+import { MaybeReactedEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToManyCollection } from "./ManyToManyCollection";
 import { RelationT, RelationU } from "./Relation";
@@ -40,11 +40,11 @@ export function hasReactiveCollection<T extends Entity, U extends Entity, const 
   joinTableName: string,
   columnName: string,
   otherMeta: EntityMetadata<U>,
-  otherFieldName: keyof U & string,
+  otherFieldName: string,
   otherColumnName: string,
   fieldName: keyof T & string,
   hint: H,
-  fn: (entity: Reacted<T, H>) => readonly U[],
+  fn: (entity: Reacted<T, H>) => readonly MaybeReactedEntity<U>[],
 ): ReactiveCollection<T, U> {
   return lazyField((entity: T, fieldName) => {
     otherMeta ??= resolveOtherMeta(entity, fieldName);
@@ -82,7 +82,7 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   // M2M join table metadata - needed for JoinRows compatibility
   readonly #joinTableName: string;
   readonly #columnName: string;
-  readonly #otherFieldName: keyof U & string;
+  readonly #otherFieldName: string;
   readonly #otherColumnName: string;
 
   // Loading state
@@ -101,10 +101,10 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
     public fieldName: keyof T & string,
     columnName: string,
     otherMeta: EntityMetadata,
-    otherFieldName: keyof U & string,
+    otherFieldName: string,
     otherColumnName: string,
     public reactiveHint: H,
-    private fn: (entity: Reacted<T, H>) => readonly U[],
+    private fn: (entity: Reacted<T, H>) => readonly MaybeReactedEntity<U>[],
   ) {
     super(entity);
     this.#fieldName = fieldName;
@@ -194,7 +194,7 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
     }
 
     if (this.isLoaded && this.#loadedMode === "full") {
-      const newValue = [...(fn(this.entity as any) as U[])];
+      const newValue = [...(fn(this.entity as any) as unknown as U[])];
 
       // Preserve deleted entities that were in the previous loaded value
       const previousDeleted = (this.#loaded ?? []).filter((e) => e.isDeletedEntity);
@@ -331,7 +331,7 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
     return this.#otherColumnName;
   }
 
-  public get otherFieldName(): keyof U & string {
+  public get otherFieldName(): string {
     return this.#otherFieldName;
   }
 

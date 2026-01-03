@@ -60,7 +60,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "createdAt", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updatedAt", "timestamp with time zone"), immutable: false },
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", serde: undefined, immutable: false },
-    "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, otherMetadata: () => tagMeta, otherFieldName: "authors", serde: undefined, immutable: false, joinTableName: "author_to_tags", columnNames: ["authorId", "tagId"] },
+    "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, derived: false, otherMetadata: () => tagMeta, otherFieldName: "authors", serde: undefined, immutable: false, joinTableName: "author_to_tags", columnNames: ["authorId", "tagId"] },
   },
   allFields: {},
   orderBy: undefined,
@@ -154,7 +154,7 @@ export const tagMeta: EntityMetadata<Tag> = {
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("t", "id", "id", "int"), immutable: true },
     "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying"), immutable: false },
-    "authors": { kind: "m2m", fieldName: "authors", fieldIdName: "authorIds", required: false, otherMetadata: () => authorMeta, otherFieldName: "tags", serde: undefined, immutable: false, joinTableName: "author_to_tags", columnNames: ["tagId", "authorId"] },
+    "authors": { kind: "m2m", fieldName: "authors", fieldIdName: "authorIds", required: false, derived: false, otherMetadata: () => authorMeta, otherFieldName: "tags", serde: undefined, immutable: false, joinTableName: "author_to_tags", columnNames: ["tagId", "authorId"] },
   },
   allFields: {},
   orderBy: undefined,

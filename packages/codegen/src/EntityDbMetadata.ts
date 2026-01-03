@@ -12,6 +12,7 @@ import {
   isGetterField,
   isLargeCollection,
   isProtected,
+  isReactiveCollection,
   isReactiveField,
   isReactiveReference,
   ormMaintainedFields,
@@ -198,6 +199,7 @@ export type ManyToManyField = Field & {
   otherColumnName: string;
   isLargeCollection: boolean;
   isDeferredAndDeferrable: boolean;
+  derived: "async" | false;
 };
 
 /** I.e. a `Comment.parent` reference that groups `comments.parent_book_id` and `comments.parent_book_review_id`. */
@@ -648,6 +650,7 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
     ignore: isFieldIgnored(config, entity, fieldName) || isFieldIgnored(config, otherEntity, otherFieldName),
     isLargeCollection: isLargeCollection(config, entity, fieldName),
     isDeferredAndDeferrable,
+    derived: isReactiveCollection(config, entity, fieldName) ? "async" : false,
   };
 }
 

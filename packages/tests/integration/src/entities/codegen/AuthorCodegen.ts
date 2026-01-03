@@ -174,7 +174,6 @@ export interface AuthorOpts {
   spotlightAuthorPublishers?: Publisher[];
   tasks?: TaskNew[];
   tags?: Tag[];
-  bestReviews?: BookReview[];
 }
 
 export interface AuthorIdsOpts {
@@ -191,7 +190,6 @@ export interface AuthorIdsOpts {
   spotlightAuthorPublisherIds?: PublisherId[] | null;
   taskIds?: TaskNewId[] | null;
   tagIds?: TagId[] | null;
-  bestReviewIds?: BookReviewId[] | null;
 }
 
 export interface AuthorFilter {
@@ -414,6 +412,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   abstract readonly rootMentor: ReactiveReference<Author, Author, undefined>;
   abstract readonly favoriteBook: ReactiveReference<Author, Book, undefined>;
+  abstract readonly bestReviews: ReactiveCollection<Author, BookReview>;
   readonly mentees: Collection<Author, Author> = hasMany("mentor", "mentor_id", undefined);
   readonly books: Collection<Author, Book> = hasMany("author", "author_id", { "field": "order", "direction": "ASC" });
   readonly reviewerBooks: Collection<Author, Book> = hasMany("reviewer", "reviewer_id", {
@@ -436,7 +435,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   readonly image: OneToOneReference<Author, Image> = hasOneToOne("author", "author_id");
   readonly userOneToOne: OneToOneReference<Author, User> = hasOneToOne("authorManyToOne", "author_id");
   readonly tags: Collection<Author, Tag> = hasManyToMany("authors_to_tags", "author_id", "authors", "tag_id");
-  abstract readonly bestReviews: ReactiveCollection<Author, BookReview>;
 
   get id(): AuthorId {
     return this.idMaybe || failNoIdYet("Author");

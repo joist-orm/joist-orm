@@ -1,5 +1,5 @@
-import { Author, Book, BookReview, newAuthor, newBook, newBookReview } from "@src/entities";
-import { insertAuthor, insertBook, insertBookReview, insertAuthorToBestReview, select } from "@src/entities/inserts";
+import { Author, newAuthor, newBook, newBookReview } from "@src/entities";
+import { insertAuthor, insertAuthorToBestReview, insertBook, insertBookReview, select } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 
 describe("ReactiveCollection", () => {
@@ -8,11 +8,7 @@ describe("ReactiveCollection", () => {
       const em = newEntityManager();
       // Given a new author with a book that has a 5-star review
       const a = newAuthor(em, {
-        books: [
-          {
-            reviews: [{ rating: 5 }],
-          },
-        ],
+        books: [{ reviews: [{ rating: 5 }] }],
       });
       const [b] = a.books.get;
       const [r] = b.reviews.get;
@@ -68,11 +64,7 @@ describe("ReactiveCollection", () => {
     it("recalculates when rating changes across threshold", async () => {
       const em = newEntityManager();
       const a = newAuthor(em, {
-        books: [
-          {
-            reviews: [{ rating: 4 }],
-          },
-        ],
+        books: [{ reviews: [{ rating: 4 }] }],
       });
       await em.flush();
 
@@ -105,11 +97,7 @@ describe("ReactiveCollection", () => {
     it("recalculates when review is removed", async () => {
       const em = newEntityManager();
       const a = newAuthor(em, {
-        books: [
-          {
-            reviews: [{ rating: 5 }],
-          },
-        ],
+        books: [{ reviews: [{ rating: 5 }] }],
       });
       await em.flush();
 
@@ -135,11 +123,7 @@ describe("ReactiveCollection", () => {
     it("recalculates when book is removed from author", async () => {
       const em = newEntityManager();
       const a1 = newAuthor(em, {
-        books: [
-          {
-            reviews: [{ rating: 5 }],
-          },
-        ],
+        books: [{ reviews: [{ rating: 5 }] }],
       });
       const a2 = newAuthor(em, {});
       await em.flush();
@@ -235,11 +219,7 @@ describe("ReactiveCollection", () => {
     it("filters deleted entities by default", async () => {
       const em = newEntityManager();
       const a = newAuthor(em, {
-        books: [
-          {
-            reviews: [{ rating: 5 }],
-          },
-        ],
+        books: [{ reviews: [{ rating: 5 }] }],
       });
       await em.flush();
 
@@ -256,11 +236,7 @@ describe("ReactiveCollection", () => {
     it("includes deleted with getWithDeleted", async () => {
       const em = newEntityManager();
       const a = newAuthor(em, {
-        books: [
-          {
-            reviews: [{ rating: 5 }],
-          },
-        ],
+        books: [{ reviews: [{ rating: 5 }] }],
       });
       await em.flush();
 
@@ -276,37 +252,29 @@ describe("ReactiveCollection", () => {
     it("throws on add()", async () => {
       const em = newEntityManager();
       const a = newAuthor(em, {});
-      const r = newBookReview(em, { rating: 5 });
-
+      const r = newBookReview(em);
       expect(() => (a.bestReviews as any).add(r)).toThrow("Cannot add");
     });
 
     it("throws on remove()", async () => {
       const em = newEntityManager();
       const a = newAuthor(em, {
-        books: [
-          {
-            reviews: [{ rating: 5 }],
-          },
-        ],
+        books: [{ reviews: [{ rating: 5 }] }],
       });
       const [b] = a.books.get;
       const [r] = b.reviews.get;
-
       expect(() => (a.bestReviews as any).remove(r)).toThrow("Cannot remove");
     });
 
     it("throws on set()", async () => {
       const em = newEntityManager();
       const a = newAuthor(em, {});
-
       expect(() => (a.bestReviews as any).set([])).toThrow("Cannot set");
     });
 
     it("throws on removeAll()", async () => {
       const em = newEntityManager();
       const a = newAuthor(em, {});
-
       expect(() => (a.bestReviews as any).removeAll()).toThrow("Cannot removeAll");
     });
   });
@@ -315,20 +283,13 @@ describe("ReactiveCollection", () => {
     it("caches calculation result", async () => {
       const em = newEntityManager();
       const a = newAuthor(em, {
-        books: [
-          {
-            reviews: [{ rating: 5 }],
-          },
-        ],
+        books: [{ reviews: [{ rating: 5 }] }],
       });
-
       // Reset counter
       a.transientFields.bestReviewsCalcInvoked = 0;
-
       // First access
       a.bestReviews.get;
       expect(a.transientFields.bestReviewsCalcInvoked).toBe(1);
-
       // Second access should use cache
       a.bestReviews.get;
       expect(a.transientFields.bestReviewsCalcInvoked).toBe(1);
@@ -337,22 +298,15 @@ describe("ReactiveCollection", () => {
     it("invalidates cache on dependency mutation", async () => {
       const em = newEntityManager();
       const a = newAuthor(em, {
-        books: [
-          {
-            reviews: [{ rating: 5 }],
-          },
-        ],
+        books: [{ reviews: [{ rating: 5 }] }],
       });
-
       a.transientFields.bestReviewsCalcInvoked = 0;
       a.bestReviews.get;
       expect(a.transientFields.bestReviewsCalcInvoked).toBe(1);
-
       // Mutate a dependency
       const [b] = a.books.get;
       const [r] = b.reviews.get;
       r.rating = 4;
-
       // Should recalculate
       a.bestReviews.get;
       expect(a.transientFields.bestReviewsCalcInvoked).toBe(2);

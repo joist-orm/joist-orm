@@ -37,7 +37,7 @@ describe("ReactiveCollection", () => {
       await insertAuthor({ first_name: "a1" });
       const em = newEntityManager();
       const a = await em.load(Author, "a:1");
-      expect(() => a.bestReviews.get).toThrow("Author:1.bestReviews has not been loaded yet");
+      expect(() => (a.bestReviews as any).get).toThrow("Author:1.bestReviews has not been loaded yet");
     });
 
     it("load shallow populates the relation", async () => {

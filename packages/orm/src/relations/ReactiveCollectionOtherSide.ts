@@ -1,12 +1,12 @@
 import {
+  ensureNotDeleted,
   Entity,
   EntityMetadata,
-  ensureNotDeleted,
   fail,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
-  IdOf,
+  ReadOnlyCollection,
 } from "..";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { lazyField, resolveOtherMeta } from "../newEntity";
@@ -19,15 +19,7 @@ import { RelationT, RelationU } from "./Relation";
  * When Author.bestReviews is a ReactiveCollection (controlling side),
  * BookReview.bestReviewAuthors is a ReactiveCollectionOtherSide (read-only view).
  */
-export interface ReactiveCollectionOtherSide<T extends Entity, U extends Entity> {
-  readonly isLoaded: boolean;
-  load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]>;
-  readonly get: U[];
-  readonly getWithDeleted: U[];
-  includes(other: U): Promise<boolean>;
-  find(id: IdOf<U>): Promise<U | undefined>;
-  current(opts?: { withDeleted?: boolean }): U[];
-}
+export interface ReactiveCollectionOtherSide<T extends Entity, U extends Entity> extends ReadOnlyCollection<T, U> {}
 
 /** Creates a ReactiveCollectionOtherSide - the read-only other side of a ReactiveCollection. */
 export function hasReactiveCollectionOtherSide<T extends Entity, U extends Entity>(
@@ -186,16 +178,6 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
     fail(
       `Cannot removeAll on ${this.entity}.${this.fieldName} - it is the read-only other side of a ReactiveCollection.`,
     );
-  }
-
-  async includes(other: U): Promise<boolean> {
-    const loaded = await this.load();
-    return loaded.includes(other);
-  }
-
-  async find(id: IdOf<U>): Promise<U | undefined> {
-    const loaded = await this.load();
-    return loaded.find((e) => e.id === id);
   }
 
   setFromOpts(_others: U[]): void {

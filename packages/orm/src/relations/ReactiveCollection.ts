@@ -1,19 +1,19 @@
 import {
-  Collection,
+  ensureNotDeleted,
   Entity,
   EntityMetadata,
-  ensureNotDeleted,
   fail,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
   IdOf,
   isLoaded,
+  ReadOnlyCollection,
 } from "..";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { IsLoadedCachable } from "../IsLoadedCache";
 import { lazyField, resolveOtherMeta } from "../newEntity";
-import { MaybeReactedEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
+import { convertToLoadHint, MaybeReactedEntity, Reacted, ReactiveHint } from "../reactiveHints";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToManyCollection } from "./ManyToManyCollection";
 import { RelationT, RelationU } from "./Relation";
@@ -24,15 +24,8 @@ import { RelationT, RelationU } from "./Relation";
  * Similar to `ReactiveReference` but for collections - the membership is calculated
  * from a reactive hint function and persisted to a join table.
  */
-export interface ReactiveCollection<T extends Entity, U extends Entity>
-  extends Omit<Collection<T, U>, "add" | "remove" | "set" | "removeAll"> {
-  readonly isLoaded: boolean;
-  readonly isSet: boolean;
+export interface ReactiveCollection<T extends Entity, U extends Entity> extends ReadOnlyCollection<T, U> {
   load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]>;
-  readonly get: U[];
-  readonly getWithDeleted: U[];
-  /** Returns the as-of-last-flush previously-calculated collection (materialized DB value). */
-  readonly fieldValue: readonly U[];
 }
 
 /** Creates a `ReactiveCollection`. */
@@ -129,8 +122,7 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
 
     if (!this.isLoaded || opts?.forceReload) {
       const { em } = this.entity;
-      const maybeDirty =
-        opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
+      const maybeDirty = opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
 
       if (maybeDirty) {
         this.#isCached = false;
@@ -362,6 +354,8 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
 }
 
 /** Type guard utility for determining if an entity field is a ReactiveCollection. */
-export function isReactiveCollection(maybeReactiveCollection: any): maybeReactiveCollection is ReactiveCollection<any, any> {
+export function isReactiveCollection(
+  maybeReactiveCollection: any,
+): maybeReactiveCollection is ReactiveCollection<any, any> {
   return maybeReactiveCollection instanceof ReactiveCollectionImpl;
 }

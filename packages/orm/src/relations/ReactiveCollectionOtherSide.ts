@@ -9,6 +9,7 @@ import {
   ReadOnlyCollection,
 } from "..";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
+import { IsLoadedCachable } from "../IsLoadedCache";
 import { ManyToManyLike } from "../JoinRows";
 import { lazyField, resolveOtherMeta } from "../newEntity";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
@@ -46,7 +47,7 @@ export function hasReactiveCollectionOtherSide<T extends Entity, U extends Entit
 
 export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<T, U[]>
-  implements ReactiveCollectionOtherSide<T, U>, ManyToManyLike
+  implements ReactiveCollectionOtherSide<T, U>, ManyToManyLike, IsLoadedCachable
 {
   readonly #otherMeta: EntityMetadata;
 
@@ -60,6 +61,9 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
   #loaded: U[] | undefined;
   #isLoaded: boolean = false;
   #loadPromise: Promise<readonly U[]> | undefined;
+  // Cached result of applyPendingChanges (without deleted filtering)
+  #cached: U[] | undefined;
+  #isCached: boolean = false;
 
   constructor(
     joinTableName: string,
@@ -86,16 +90,17 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
 
   async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
-
     if (!this.#isLoaded || opts?.forceReload) {
+      this.#isCached = false;
       return (this.#loadPromise ??= this.loadFromJoinTable().then((loaded) => {
         this.#loadPromise = undefined;
         this.#loaded = loaded;
         this.#isLoaded = true;
-        return this.applyPendingChangesAndFilter(loaded, opts);
+        getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
+        return this.doGet(opts);
       }));
     }
-    return this.applyPendingChangesAndFilter(this.#loaded ?? [], opts);
+    return this.doGet(opts);
   }
 
   private async loadFromJoinTable(): Promise<U[]> {
@@ -107,6 +112,10 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
 
   get isLoaded(): boolean {
     return this.#isLoaded;
+  }
+
+  resetIsLoaded(): void {
+    this.#isCached = false;
   }
 
   get get(): U[] {
@@ -122,42 +131,32 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
     if (!this.#isLoaded) {
       throw new Error(`${this.entity}.${this.fieldName} has not been loaded yet`);
     }
-    return this.applyPendingChangesAndFilter(this.#loaded ?? [], opts);
+
+    if (!this.#isCached) {
+      this.#cached = this.applyPendingChanges(this.#loaded ?? []);
+      this.#isCached = true;
+      getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
+    }
+
+    return this.filterDeleted(this.#cached!, opts);
   }
 
-  /**
-   * Apply pending changes from the controlling side and filter deleted entities.
-   *
-   * The controlling side stores join rows via JoinRows. We query the same JoinRows
-   * instance but from our perspective (column names are swapped).
-   */
-  private applyPendingChangesAndFilter(baseEntities: U[], opts?: { withDeleted?: boolean }): U[] {
-    const em = this.entity.em;
+  /** Apply pending changes from the controlling side. */
+  private applyPendingChanges(baseEntities: U[]): U[] {
     const result = new Set(baseEntities);
+    const joinRows = getEmInternalApi(this.entity.em).joinRows(this);
+    const added = joinRows.addedForOtherSide(this.#columnName, this.entity);
+    for (const other of added) result.add(other as U);
+    const removed = joinRows.removedForOtherSide(this.#columnName, this.entity);
+    for (const other of removed) result.delete(other as U);
+    return [...result];
+  }
 
-    // Get the JoinRows instance for our join table (if it exists)
-    const joinRows = getEmInternalApi(em).joinRows(this);
-    if (joinRows) {
-      // Get pending adds: rows where our entity is involved and they're new (no id, not deleted)
-      const added = joinRows.addedForOtherSide(this.#columnName, this.entity);
-      for (const other of added) {
-        result.add(other as U);
-      }
-
-      // Get pending removes: rows where our entity is involved and they're deleted
-      const removed = joinRows.removedForOtherSide(this.#columnName, this.entity);
-      for (const other of removed) {
-        result.delete(other as U);
-      }
+  private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
+    if (opts?.withDeleted === true) {
+      return entities;
     }
-
-    // Filter deleted unless withDeleted
-    let entities = [...result];
-    if (opts?.withDeleted !== true) {
-      entities = entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
-    }
-
-    return entities;
+    return entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
   }
 
   // Read-only - these throw errors
@@ -191,15 +190,13 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
 
   async cleanupOnEntityDeleted(): Promise<void> {
     this.#loaded = [];
+    this.#cached = undefined;
+    this.#isCached = false;
     this.#isLoaded = false;
   }
 
   current(opts?: { withDeleted?: boolean }): U[] {
-    const entities = this.#loaded ?? [];
-    if (opts?.withDeleted === true) {
-      return [...entities];
-    }
-    return entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+    return this.filterDeleted(this.#loaded ?? [], opts);
   }
 
   // Properties for JoinRows/ManyToManyCollection compatibility

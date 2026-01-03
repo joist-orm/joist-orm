@@ -95,7 +95,7 @@ describe("ReactiveCollection", () => {
       const a = await em.load(Author, "a:1", "bestReviews");
       // It knows it needs to do a full populate & recalc
       expect(a.bestReviews.get).toMatchEntity([br1, "br:2"]);
-      expect([...em.entities].sort((a, b) => a.id.localeCompare(b.id))).toMatchEntity(["a:1", "b:1", "br:1", "br:2"]);
+      expect(em.entities).toMatchEntity(["br:1", "a:1", "br:2", "b:1"]);
       expect(a.transientFields.bestReviewsCalcInvoked).toBe(1);
     });
   });

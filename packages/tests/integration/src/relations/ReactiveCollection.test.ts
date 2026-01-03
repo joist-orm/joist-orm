@@ -25,57 +25,72 @@ describe("ReactiveCollection", () => {
     it("filters reviews below threshold", async () => {
       const em = newEntityManager();
       const a = newAuthor(em, {
-        books: [
-          {
-            reviews: [
-              { rating: 5 }, // included
-              { rating: 4 }, // excluded
-              { rating: 3 }, // excluded
-            ],
-          },
-        ],
+        // 1 included, 2 excluded
+        books: [{ reviews: [{ rating: 5 }, { rating: 4 }, { rating: 3 }] }],
       });
       const [b] = a.books.get;
-      const reviews = b.reviews.get;
-      expect(a.bestReviews.get).toMatchEntity([reviews[0]]);
+      const [br1] = b.reviews.get;
+      expect(a.bestReviews.get).toMatchEntity([br1]);
     });
 
     it("throws when accessing get before loading", async () => {
       await insertAuthor({ first_name: "a1" });
       const em = newEntityManager();
       const a = await em.load(Author, "a:1");
-      expect(() => a.bestReviews.get).toThrow("has not been loaded yet");
+      expect(() => a.bestReviews.get).toThrow("Author:1.bestReviews has not been loaded yet");
+    });
+
+    it("load shallow populates the relation", async () => {
+      // Given an author with two reviews
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBookReview({ book_id: 1, rating: 4 });
+      await insertBookReview({ book_id: 1, rating: 5 });
+      // And only one of them has been derived as a best review
+      await insertAuthorToBestReview({ author_id: 1, book_review_id: 1 });
+      const em = newEntityManager();
+      // When we populate bestReviews
+      const a = await em.load(Author, "a:1", "bestReviews");
+      // Then it has only the 1 book review
+      expect(a.bestReviews.get.length).toBe(1);
+      // And we only have 1 BookReview in memory
+      expect(em.entities).toMatchEntity(["a:1", "br:1"]);
+      // And we did not invoke the calculation
+      expect(a.transientFields.bestReviewsCalcInvoked).toBe(0);
     });
 
     it("load populates the reactive hint with forceReload", async () => {
+      // Given an author with two reviews
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
+      await insertBookReview({ book_id: 1, rating: 4 });
       await insertBookReview({ book_id: 1, rating: 5 });
+      // And only one of them has been derived as a best review
+      await insertAuthorToBestReview({ author_id: 1, book_review_id: 1 });
       const em = newEntityManager();
       const a = await em.load(Author, "a:1");
-      // forceReload ensures we populate the hint rather than just load from join table
+      // When we call forceReload
       const reviews = await a.bestReviews.load({ forceReload: true });
+      // Then only the best review is returned
       expect(reviews.length).toBe(1);
-      expect(a.bestReviews.isLoaded).toBe(true);
+      // And we pulled both into memory
+      expect(em.entities).toMatchEntity(["a:1", "b:1", "br:1", "br:2"]);
+      // And we recalc
+      expect(a.transientFields.bestReviewsCalcInvoked).toBe(1);
     });
   });
 
   describe("reactive recalculation", () => {
     it("recalculates when rating changes across threshold", async () => {
       const em = newEntityManager();
-      const a = newAuthor(em, {
-        books: [{ reviews: [{ rating: 4 }] }],
-      });
+      const a = newAuthor(em, { books: [{ reviews: [{ rating: 4 }] }] });
       await em.flush();
-
       // Initially not in bestReviews
       expect(a.bestReviews.get).toEqual([]);
-
       // Change rating to 5
       const [b] = a.books.get;
       const [r] = b.reviews.get;
       r.rating = 5;
-
       // Now should be included
       expect(a.bestReviews.get).toMatchEntity([r]);
     });
@@ -84,13 +99,10 @@ describe("ReactiveCollection", () => {
       const em = newEntityManager();
       const a = newAuthor(em, { books: [{}] });
       await em.flush();
-
       expect(a.bestReviews.get).toEqual([]);
-
       // Add a 5-star review
       const [b] = a.books.get;
       const r = newBookReview(em, { book: b, rating: 5 });
-
       expect(a.bestReviews.get).toMatchEntity([r]);
     });
 
@@ -100,14 +112,11 @@ describe("ReactiveCollection", () => {
         books: [{ reviews: [{ rating: 5 }] }],
       });
       await em.flush();
-
       const [b] = a.books.get;
       const [r] = b.reviews.get;
       expect(a.bestReviews.get).toMatchEntity([r]);
-
       // Delete the review
       em.delete(r);
-
       expect(a.bestReviews.get).toEqual([]);
     });
 
@@ -116,7 +125,6 @@ describe("ReactiveCollection", () => {
       const a = newAuthor(em, {});
       const b = newBook(em, { title: "b1", author: a, reviews: [{ rating: 5 }] });
       await em.flush();
-
       expect(a.bestReviews.get).toMatchEntity([b.reviews.get[0]]);
     });
 
@@ -127,13 +135,10 @@ describe("ReactiveCollection", () => {
       });
       const a2 = newAuthor(em, {});
       await em.flush();
-
       const [b] = a1.books.get;
       expect(a1.bestReviews.get.length).toBe(1);
-
       // Move book to different author
       b.author.set(a2);
-
       expect(a1.bestReviews.get).toEqual([]);
     });
   });
@@ -141,109 +146,55 @@ describe("ReactiveCollection", () => {
   describe("persistence", () => {
     it("persists new join table rows on flush", async () => {
       const em = newEntityManager();
-      const a = newAuthor(em, {
-        books: [
-          {
-            reviews: [{ rating: 5 }],
-          },
-        ],
-      });
+      newAuthor(em, { books: [{ reviews: [{ rating: 5 }] }] });
       await em.flush();
-
       // Check join table has the row
       const rows = await select("authors_to_best_reviews");
-      expect(rows.length).toBe(1);
-      expect(rows[0]).toMatchObject({
-        author_id: 1,
-        book_review_id: 1,
-      });
+      expect(rows).toMatchObject([{ author_id: 1, book_review_id: 1 }]);
     });
 
     it("deletes join table rows on flush when review drops below threshold", async () => {
       const em = newEntityManager();
-      const a = newAuthor(em, {
-        books: [
-          {
-            reviews: [{ rating: 5 }],
-          },
-        ],
-      });
+      const a = newAuthor(em, { books: [{ reviews: [{ rating: 5 }] }] });
       await em.flush();
-
       // Verify row exists
       let rows = await select("authors_to_best_reviews");
       expect(rows.length).toBe(1);
-
       // Drop rating below threshold
       const [b] = a.books.get;
       const [r] = b.reviews.get;
       r.rating = 4;
       await em.flush();
-
       // Verify row deleted
       rows = await select("authors_to_best_reviews");
       expect(rows.length).toBe(0);
     });
-
-    it("loads correctly from fresh EntityManager", async () => {
-      // Setup data directly in DB
-      await insertAuthor({ first_name: "a1" });
-      await insertBook({ title: "b1", author_id: 1 });
-      await insertBookReview({ book_id: 1, rating: 5 });
-      // Insert join table row
-      await insertAuthorToBestReview({
-        author_id: 1,
-        book_review_id: 1,
-      });
-
-      const em = newEntityManager();
-      const a = await em.load(Author, "a:1");
-      const reviews = await a.bestReviews.load();
-
-      expect(reviews.length).toBe(1);
-    });
   });
 
-  describe("edge cases", () => {
-    it("handles empty collection correctly", async () => {
-      const em = newEntityManager();
-      const a = newAuthor(em, {});
-      expect(a.bestReviews.get).toEqual([]);
-      expect(a.bestReviews.isLoaded).toBe(true);
-      await em.flush();
-
-      const rows = await select("authors_to_best_reviews");
-      expect(rows.length).toBe(0);
-    });
-
-    it("filters deleted entities by default", async () => {
+  describe("deleted entities", () => {
+    it("filters by default", async () => {
       const em = newEntityManager();
       const a = newAuthor(em, {
         books: [{ reviews: [{ rating: 5 }] }],
       });
       await em.flush();
-
       const [b] = a.books.get;
       const [r] = b.reviews.get;
       expect(a.bestReviews.get).toMatchEntity([r]);
-
       // Delete the review
       em.delete(r);
-
       expect(a.bestReviews.get).toEqual([]);
     });
 
-    it("includes deleted with getWithDeleted", async () => {
+    it("included by getWithDeleted", async () => {
       const em = newEntityManager();
       const a = newAuthor(em, {
         books: [{ reviews: [{ rating: 5 }] }],
       });
       await em.flush();
-
       const [b] = a.books.get;
       const [r] = b.reviews.get;
       em.delete(r);
-
       expect(a.bestReviews.getWithDeleted).toMatchEntity([r]);
     });
   });

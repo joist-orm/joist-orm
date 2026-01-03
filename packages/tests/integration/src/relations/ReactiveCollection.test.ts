@@ -1,4 +1,4 @@
-import { Author, BookReview, newAuthor, newBook, newBookReview } from "@src/entities";
+import { Author, BookReview, Entity, EntityManager, newAuthor, newBook, newBookReview } from "@src/entities";
 import { insertAuthor, insertAuthorToBestReview, insertBook, insertBookReview, select } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 
@@ -74,7 +74,7 @@ describe("ReactiveCollection", () => {
       // Then only the best review is returned
       expect(reviews.length).toBe(1);
       // And we pulled both into memory
-      expect(em.entities).toMatchEntity(["a:1", "b:1", "br:1", "br:2"]);
+      expect(entitiesSorted(em)).toMatchEntity(["a:1", "b:1", "br:1", "br:2"]);
       // And we recalc
       expect(a.transientFields.bestReviewsCalcInvoked).toBe(1);
     });
@@ -95,7 +95,7 @@ describe("ReactiveCollection", () => {
       const a = await em.load(Author, "a:1", "bestReviews");
       // It knows it needs to do a full populate & recalc
       expect(a.bestReviews.get).toMatchEntity([br1, "br:2"]);
-      expect(em.entities).toMatchEntity(["br:1", "a:1", "br:2", "b:1"]);
+      expect(entitiesSorted(em)).toMatchEntity(["a:1", "b:1", "br:1", "br:2"]);
       expect(a.transientFields.bestReviewsCalcInvoked).toBe(1);
     });
   });
@@ -314,3 +314,7 @@ describe("ReactiveCollection", () => {
     });
   });
 });
+
+function entitiesSorted(em: EntityManager): Entity[] {
+  return [...em.entities].sort((a, b) => a.toTaggedString().localeCompare(b.toTaggedString()));
+}

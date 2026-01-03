@@ -11,9 +11,6 @@ type BookReview {
   isTest: Boolean!
   tags: [Tag!]!
   isTestChain: Boolean!
-  authors: [Author!]!
-  bestReviews: [Author!]!
-  bestReviewAuthors: [Author!]!
 }
 
 input SaveBookReviewInput {

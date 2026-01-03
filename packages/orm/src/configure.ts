@@ -6,8 +6,7 @@ import { AsyncDefault } from "./defaults";
 import { getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { reverseReactiveHint } from "./reactiveHints";
-import { ReactiveReferenceImpl, Reference } from "./relations";
-import { ReactiveCollectionImpl } from "./relations/ReactiveCollection";
+import { ReactiveCollectionImpl, ReactiveReferenceImpl, Reference } from "./relations";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
 import { isCannotBeUpdatedRule } from "./rules";
@@ -246,15 +245,15 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
       }
     }
 
-    // Look for ReactiveFields to reverse
-    const reactiveFields = Object.values(meta.allFields).filter(
+    // Look for ReactiveFields, ReactiveReferences, & ReactiveCollections to reverse
+    const reactiveRelations = Object.values(meta.allFields).filter(
       (f) =>
         f.kind === "primitive" ||
         (f.kind === "m2o" && f.derived === "async") ||
         (f.kind === "enum" && f.derived === "async") ||
         (f.kind === "m2m" && f.derived === "async"),
     );
-    for (const field of reactiveFields) {
+    for (const field of reactiveRelations) {
       const ap = (getProperties(meta) as any)[field.fieldName] as
         | ReactiveFieldImpl<any, any, any>
         | ReactiveQueryFieldImpl<any, any, any, any>

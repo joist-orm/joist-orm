@@ -428,4 +428,12 @@ export function up(b: MigrationBuilder): void {
     { table: "users", column: "liked_by_user_id" },
     { table: "comments", collectionName: "likedComments" },
   );
+
+  // for testing ReactiveCollection (derived m2m)
+  createManyToManyTable(
+    b,
+    "authors_to_best_reviews",
+    { table: "authors", collectionName: "bestReviewAuthors" },
+    { table: "book_reviews", collectionName: "bestReviews" },
+  );
 }

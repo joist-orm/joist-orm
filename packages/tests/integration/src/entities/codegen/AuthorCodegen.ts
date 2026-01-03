@@ -33,6 +33,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type ReactiveCollection,
   type ReactiveField,
   type ReactiveReference,
   type ReadOnlyCollection,
@@ -59,6 +60,8 @@ import {
   type BookId,
   type BookOrder,
   BookRange,
+  type BookReview,
+  type BookReviewId,
   Color,
   ColorDetails,
   Colors,
@@ -130,6 +133,7 @@ export interface AuthorFields {
   favoriteBook: { kind: "m2o"; type: Book; nullable: undefined; derived: true };
   publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
   tags: { kind: "m2m"; type: Tag };
+  bestReviews: { kind: "m2m"; type: BookReview };
   mentees: { kind: "o2m"; type: Author };
   books: { kind: "o2m"; type: Book };
   reviewerBooks: { kind: "o2m"; type: Book };
@@ -170,6 +174,7 @@ export interface AuthorOpts {
   spotlightAuthorPublishers?: Publisher[];
   tasks?: TaskNew[];
   tags?: Tag[];
+  bestReviews?: BookReview[];
 }
 
 export interface AuthorIdsOpts {
@@ -186,6 +191,7 @@ export interface AuthorIdsOpts {
   spotlightAuthorPublisherIds?: PublisherId[] | null;
   taskIds?: TaskNewId[] | null;
   tagIds?: TagId[] | null;
+  bestReviewIds?: BookReviewId[] | null;
 }
 
 export interface AuthorFilter {
@@ -248,6 +254,7 @@ export interface AuthorFilter {
   >;
   tasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
+  bestReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
 }
 
 export interface AuthorGraphQLFilter {
@@ -320,6 +327,7 @@ export interface AuthorGraphQLFilter {
   >;
   tasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
+  bestReviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
 }
 
 export interface AuthorOrder {
@@ -428,6 +436,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   readonly image: OneToOneReference<Author, Image> = hasOneToOne("author", "author_id");
   readonly userOneToOne: OneToOneReference<Author, User> = hasOneToOne("authorManyToOne", "author_id");
   readonly tags: Collection<Author, Tag> = hasManyToMany("authors_to_tags", "author_id", "authors", "tag_id");
+  abstract readonly bestReviews: ReactiveCollection<Author, BookReview>;
 
   get id(): AuthorId {
     return this.idMaybe || failNoIdYet("Author");

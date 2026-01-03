@@ -44,6 +44,12 @@ export {
   isReactiveReference,
 } from "./ReactiveReference";
 export {
+  ReactiveCollection,
+  ReactiveCollectionImpl,
+  hasReactiveCollection,
+  isReactiveCollection,
+} from "./ReactiveCollection";
+export {
   LoadedReadOnlyCollection,
   ReadOnlyCollection,
   isLoadedReadOnlyCollection,

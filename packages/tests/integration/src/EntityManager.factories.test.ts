@@ -826,7 +826,8 @@ describe("EntityManager.factories", () => {
     expect(a.books.get[0].reviews.get[0].rating).toBe(1);
     expect(a.books.get[1].reviews.get[0].rating).toBe(2);
     // And it took only 9 (plus 7 recursive) queries (vs. 29 without join preloading)
-    expect(queries.length).toBe(isPreloadingEnabled ? 16 : 41);
+    // (43 because of the new bestReviews m2m table)
+    expect(queries.length).toBe(isPreloadingEnabled ? 16 : 43);
   });
 
   it("uniquely assigns name fields", async () => {
@@ -901,7 +902,7 @@ describe("EntityManager.factories", () => {
       await em.flush();
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new ChildGroup at EntityManager.factories.test.ts:892↩",
+         "Creating new ChildGroup at EntityManager.factories.test.ts:893↩",
          "  childGroup = creating new Child↩",
          "    created Child#1 added to scope↩",
          "  parentGroup = creating new ParentGroup↩",

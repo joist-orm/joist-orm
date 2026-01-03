@@ -236,6 +236,11 @@ export function isReactiveReference(config: Config, entity: Entity, fieldName: s
   return config.entities[entity.name]?.relations?.[fieldName]?.derived === "async";
 }
 
+/** Returns true if this m2m relation is configured as a ReactiveCollection (derived: async). */
+export function isReactiveCollection(config: Config, entity: Entity, fieldName: string): boolean {
+  return config.entities[entity.name]?.relations?.[fieldName]?.derived === "async";
+}
+
 export function isProtected(config: Config, entity: Entity, fieldName: string): boolean {
   return config.entities[entity.name]?.fields?.[fieldName]?.protected === true;
 }

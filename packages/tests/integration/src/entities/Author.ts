@@ -3,6 +3,7 @@ import {
   AsyncProperty,
   Collection,
   Loaded,
+  ReactiveCollection,
   ReactiveField,
   ReactiveGetter,
   ReactiveReference,
@@ -14,6 +15,7 @@ import {
   hasManyThrough,
   hasOneDerived,
   hasReactiveAsyncProperty,
+  hasReactiveCollection,
   hasReactiveField,
   hasReactiveGetter,
   hasReactiveReference,
@@ -28,6 +30,7 @@ import {
   Comment,
   authorMeta,
   bookMeta,
+  bookReviewMeta,
   authorConfig as config,
 } from "./entities";
 
@@ -135,6 +138,7 @@ export class Author extends AuthorCodegen {
     mentorNamesCalcInvoked: 0,
     bookCommentsCalcInvoked: 0,
     favoriteBookCalcInvoked: 0,
+    bestReviewsCalcInvoked: 0,
     graduatedRuleInvoked: 0,
     deleteDuringFlush: false,
     reactions: {
@@ -271,6 +275,21 @@ export class Author extends AuthorCodegen {
     (a) => {
       const value = a.mentorsRecursive.get[a.mentorsRecursive.get.length - 1];
       return value;
+    },
+  );
+
+  /** Example of a ReactiveCollection - a derived m2m that auto-calculates its membership. */
+  readonly bestReviews: ReactiveCollection<Author, BookReview> = hasReactiveCollection(
+    "authors_to_best_reviews",
+    "author_id",
+    bookReviewMeta,
+    "bestReviewAuthors",
+    "book_review_id",
+    "bestReviews",
+    { books: { reviews: "rating" } },
+    (a) => {
+      a.transientFields.bestReviewsCalcInvoked++;
+      return a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.rating >= 5);
     },
   );
 

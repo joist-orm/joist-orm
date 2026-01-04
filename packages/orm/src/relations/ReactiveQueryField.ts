@@ -22,12 +22,7 @@ export function hasReactiveQueryField<
   const H1 extends ReactiveHint<T>,
   const H2 extends ReactiveHint<T>,
   V,
->(
-  fieldName: keyof T & string,
-  paramHint: H1,
-  dbHint: H2,
-  fn: (entity: Reacted<T, H1>) => Promise<V>,
-): ReactiveField<T, V> {
+>(paramHint: H1, dbHint: H2, fn: (entity: Reacted<T, H1>) => Promise<V>): ReactiveField<T, V> {
   return lazyField((entity: T, fieldName) => {
     return new ReactiveQueryFieldImpl(entity, fieldName as keyof T & string, paramHint, dbHint, fn);
   });

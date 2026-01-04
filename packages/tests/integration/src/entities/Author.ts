@@ -70,7 +70,6 @@ export class Author extends AuthorCodegen {
   // Example of persisted property depending on another persisted property (isPublic) that is triggered off of this entity
   // as well as a non-persisted property (isPublic2) and a regular primitive (rating)
   readonly numberOfPublicReviews: ReactiveField<Author, number> = hasReactiveField(
-    "numberOfPublicReviews",
     { books: { reviews: ["isPublic", "isPublic2", "rating"] } },
     (a) => {
       const reviews = a.books.get.flatMap((b) => b.reviews.get);
@@ -83,14 +82,12 @@ export class Author extends AuthorCodegen {
   // another persisted property (isTest) that is triggered off of a related entity (Review.comment.text)
   // as well as a regular primitive (rating)
   readonly numberOfPublicReviews2: ReactiveField<Author, number> = hasReactiveField(
-    "numberOfPublicReviews2",
     { books: { reviews: ["isPublic", "isTest", "rating"] } },
     (a) =>
       a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.isPublic.get && !r.isTest.get && r.rating > 0).length,
   );
 
   readonly tagsOfAllBooks: ReactiveField<Author, string> = hasReactiveField(
-    "tagsOfAllBooks",
     // Including age (as a "tag" :shrug:) to test IsLoadedCache invalidation of an immutable field, during the 1st em
     { books: { tags: "name" }, age: {} },
     (a) =>
@@ -101,16 +98,12 @@ export class Author extends AuthorCodegen {
       ].join(", "),
   );
 
-  readonly search: ReactiveField<Author, string> = hasReactiveField(
-    "search",
-    { books: "title", firstName: {} },
-    (a) => {
-      const { books } = withLoaded(a);
-      return [a.id, a.firstName, ...books.map((b) => b.title)].filter(isDefined).join(" ");
-    },
-  );
+  readonly search: ReactiveField<Author, string> = hasReactiveField({ books: "title", firstName: {} }, (a) => {
+    const { books } = withLoaded(a);
+    return [a.id, a.firstName, ...books.map((b) => b.title)].filter(isDefined).join(" ");
+  });
 
-  readonly nickNamesUpper: ReactiveField<Author, string[]> = hasReactiveField("nickNamesUpper", "nickNames", (a) =>
+  readonly nickNamesUpper: ReactiveField<Author, string[]> = hasReactiveField("nickNames", (a) =>
     (a.nickNames ?? []).map((n) => n.toUpperCase()),
   );
 
@@ -205,7 +198,6 @@ export class Author extends AuthorCodegen {
 
   /** Example of a derived async property that can be calculated via a populate hint. */
   readonly numberOfBooks: ReactiveField<Author, number> = hasReactiveField(
-    "numberOfBooks",
     // Include firstName to ensure `.get` uses the load hint (and not the full reactive hint)
     // when evaluating whether to eval our lambda during pre-flush calls.
     ["books", "firstName"],
@@ -217,7 +209,6 @@ export class Author extends AuthorCodegen {
 
   /** Example of a ReactiveField that uses a recursive parent relation. */
   readonly mentorNames: ReactiveField<Author, string | undefined> = hasReactiveField(
-    "mentorNames",
     { mentorsRecursive: "firstName" },
     (a) => {
       a.transientFields.mentorNamesCalcInvoked++;
@@ -236,13 +227,12 @@ export class Author extends AuthorCodegen {
   );
 
   /** Example of a derived async enum. */
-  readonly rangeOfBooks: ReactiveField<Author, BookRange> = hasReactiveField("rangeOfBooks", ["books"], (a) => {
+  readonly rangeOfBooks: ReactiveField<Author, BookRange> = hasReactiveField(["books"], (a) => {
     return a.books.get.length > 10 ? BookRange.Lot : BookRange.Few;
   });
 
   /** Example of a derived async property that can be calculated via a populate hint through a polymorphic reference. */
   readonly bookComments: ReactiveField<Author, string> = hasReactiveField(
-    "bookComments",
     // ...and throw in hasLowerCaseFirstName to test ReactiveGetters
     { books: { comments: "text" }, hasLowerCaseFirstName: {} },
     (a) => {

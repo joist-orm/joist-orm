@@ -38,10 +38,8 @@ export class SmallPublisher extends SmallPublisherCodegen implements HasGroup<Sm
   };
 
   // Used for testing a derived property that only exists on a subtype
-  readonly allAuthorNames: ReactiveField<SmallPublisher, string> = hasReactiveField(
-    "allAuthorNames",
-    { authors: ["firstName"] },
-    (sp) => sp.authors.get.map((a) => a.firstName).join(", "),
+  readonly allAuthorNames: ReactiveField<SmallPublisher, string> = hasReactiveField({ authors: ["firstName"] }, (sp) =>
+    sp.authors.get.map((a) => a.firstName).join(", "),
   );
 
   /** Example of a ReactiveReference in an entity with subtypes. */

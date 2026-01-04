@@ -22,16 +22,7 @@ import {
   isDefined,
   withLoaded,
 } from "joist-orm";
-import {
-  AuthorCodegen,
-  Book,
-  BookRange,
-  BookReview,
-  Comment,
-  authorMeta,
-  bookMeta,
-  authorConfig as config,
-} from "./entities";
+import { AuthorCodegen, Book, BookRange, BookReview, Comment, authorConfig as config } from "./entities";
 
 export class Author extends AuthorCodegen {
   readonly reviews: Collection<Author, BookReview> = hasManyThrough((author) => author.books.reviews);
@@ -245,8 +236,6 @@ export class Author extends AuthorCodegen {
   );
 
   readonly favoriteBook: ReactiveReference<Author, Book, undefined> = hasReactiveReference(
-    bookMeta,
-    "favoriteBook",
     // The 'cache invalidates transitive RFs' test in ReactiveField.test.ts relies on BookReview.rating
     // changes triggering a `favoriteBook` to recalc, to exercise transitive RF recalcs. This is fine,
     // but we've thought about `reviews_ro` short-circuiting the reactivity, so we might have to update
@@ -268,14 +257,9 @@ export class Author extends AuthorCodegen {
   // should add two RFs for favoriteBookTagNames & rootMentorNumberOfBooks to show reactivity across RRs
 
   // For testing ReactiveReferences in entities with recursive relations
-  readonly rootMentor: ReactiveReference<Author, Author, undefined> = hasReactiveReference(
-    authorMeta,
-    "rootMentor",
-    "mentorsRecursive",
-    (a) => {
-      return a.mentorsRecursive.get[a.mentorsRecursive.get.length - 1];
-    },
-  );
+  readonly rootMentor: ReactiveReference<Author, Author, undefined> = hasReactiveReference("mentorsRecursive", (a) => {
+    return a.mentorsRecursive.get[a.mentorsRecursive.get.length - 1];
+  });
 
   /** Example of a ReactiveManyToMany - a derived m2m that auto-calculates its membership. */
   readonly bestReviews: ReactiveManyToMany<Author, BookReview> = hasReactiveManyToMany(

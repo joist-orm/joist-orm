@@ -14,7 +14,6 @@ import {
 } from "joist-orm";
 import {
   Author,
-  authorMeta,
   BookReview,
   publisherConfig as config,
   Image,
@@ -70,8 +69,6 @@ export abstract class Publisher extends PublisherCodegen {
 
   /** Example of a ReactiveReference in an entity with subtypes. */
   readonly favoriteAuthor: ReactiveReference<Publisher, Author, undefined> = hasReactiveReference(
-    authorMeta,
-    "favoriteAuthor",
     { authors: "books" },
     (p) => {
       // Prefer authors with the most books

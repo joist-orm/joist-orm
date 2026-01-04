@@ -1022,7 +1022,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
 
   // Add ManyToMany
   const m2m: Relation[] = meta.manyToManys.map((m2m) => {
-    const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
+    const { fieldName, otherEntity } = m2m;
     if (m2m.derived === "async") {
       const line = code`abstract readonly ${fieldName}: ${ReactiveManyToMany}<${entity.name}, ${otherEntity.type}>;`;
       return { kind: "abstract", line } as const;
@@ -1033,12 +1033,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     } else if (!m2m.derived) {
       const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
       const init = code`
-      ${hasManyToMany}(
-        "${joinTableName}",
-        "${columnName}",
-        "${otherFieldName}",
-        "${otherColumnName}",
-      )`;
+      ${hasManyToMany}()`;
       return { kind: "concrete", fieldName, decl, init };
     } else {
       assertNever(m2m.derived);

@@ -442,7 +442,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   readonly image: OneToOneReference<Author, Image> = hasOneToOne("author", "author_id");
   readonly userOneToOne: OneToOneReference<Author, User> = hasOneToOne("authorManyToOne", "author_id");
   readonly mentorsClosure: ReactiveManyToManyOtherSide<Author, Author> = hasReactiveManyToManyOtherSide();
-  readonly tags: Collection<Author, Tag> = hasManyToMany("authors_to_tags", "author_id", "authors", "tag_id");
+  readonly tags: Collection<Author, Tag> = hasManyToMany();
 
   get id(): AuthorId {
     return this.idMaybe || failNoIdYet("Author");

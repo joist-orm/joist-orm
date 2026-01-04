@@ -244,7 +244,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   );
   readonly favoriteAuthor: OneToOneReference<Book, Author> = hasOneToOne("favoriteBook", "favorite_book_id");
   readonly image: OneToOneReference<Book, Image> = hasOneToOne("book", "book_id");
-  readonly tags: Collection<Book, Tag> = hasManyToMany("books_to_tags", "book_id", "books", "tag_id");
+  readonly tags: Collection<Book, Tag> = hasManyToMany();
 
   get id(): BookId {
     return this.idMaybe || failNoIdYet("Book");

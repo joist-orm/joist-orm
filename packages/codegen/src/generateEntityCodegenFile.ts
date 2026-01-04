@@ -999,9 +999,9 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
 
   // Add large OneToMany
   const lo2m: Relation[] = meta.largeOneToManys.map((o2m) => {
-    const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
+    const { fieldName, otherEntity } = o2m;
     const decl = code`${LargeCollection}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`${hasLargeMany}("${otherFieldName}", "${otherColumnName}")`;
+    const init = code`${hasLargeMany}()`;
     return { kind: "concrete", fieldName, decl, init };
   });
 

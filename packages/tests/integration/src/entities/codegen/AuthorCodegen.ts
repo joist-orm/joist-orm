@@ -18,6 +18,7 @@ import {
   hasManyToMany,
   hasOne,
   hasOneToOne,
+  hasReactiveManyToManyOtherSide,
   hasRecursiveChildren,
   hasRecursiveParents,
   isLoaded,
@@ -35,6 +36,7 @@ import {
   type PartialOrNull,
   type ReactiveField,
   type ReactiveManyToMany,
+  type ReactiveManyToManyOtherSide,
   type ReactiveReference,
   type ReadOnlyCollection,
   setField,
@@ -106,6 +108,7 @@ export interface AuthorFields {
   wasEverPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
   isFunny: { kind: "primitive"; type: boolean; unique: false; nullable: never; derived: false };
   mentorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  menteeNames: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   address: { kind: "primitive"; type: Address; unique: false; nullable: undefined; derived: false };
   businessAddress: {
     kind: "primitive";
@@ -132,6 +135,8 @@ export interface AuthorFields {
   currentDraftBook: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
   favoriteBook: { kind: "m2o"; type: Book; nullable: undefined; derived: true };
   publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
+  mentorsClosure: { kind: "m2m"; type: Author };
+  menteesClosure: { kind: "m2m"; type: Author };
   tags: { kind: "m2m"; type: Tag };
   bestReviews: { kind: "m2m"; type: BookReview };
   mentees: { kind: "o2m"; type: Author };
@@ -208,6 +213,7 @@ export interface AuthorFilter {
   wasEverPopular?: BooleanFilter<null>;
   isFunny?: BooleanFilter<never>;
   mentorNames?: ValueFilter<string, null>;
+  menteeNames?: ValueFilter<string, null>;
   address?: ValueFilter<Address, null>;
   businessAddress?: ValueFilter<z.input<typeof AddressSchema>, null>;
   quotes?: ValueFilter<Quotes, null>;
@@ -251,6 +257,8 @@ export interface AuthorFilter {
     null
   >;
   tasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
+  mentorsClosure?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
+  menteesClosure?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
   bestReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
 }
@@ -271,6 +279,7 @@ export interface AuthorGraphQLFilter {
   wasEverPopular?: BooleanGraphQLFilter;
   isFunny?: BooleanGraphQLFilter;
   mentorNames?: ValueGraphQLFilter<string>;
+  menteeNames?: ValueGraphQLFilter<string>;
   address?: ValueGraphQLFilter<Address>;
   businessAddress?: ValueGraphQLFilter<z.input<typeof AddressSchema>>;
   quotes?: ValueGraphQLFilter<Quotes>;
@@ -324,6 +333,8 @@ export interface AuthorGraphQLFilter {
     null
   >;
   tasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
+  mentorsClosure?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  menteesClosure?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
   bestReviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
 }
@@ -344,6 +355,7 @@ export interface AuthorOrder {
   wasEverPopular?: OrderBy;
   isFunny?: OrderBy;
   mentorNames?: OrderBy;
+  menteeNames?: OrderBy;
   address?: OrderBy;
   businessAddress?: OrderBy;
   quotes?: OrderBy;
@@ -371,6 +383,7 @@ export interface AuthorFactoryExtras {
   withBookComments?: string | null;
   withNickNamesUpper?: string[] | null;
   withMentorNames?: string | null;
+  withMenteeNames?: string | null;
   withNumberOfPublicReviews?: number | null;
   withNumberOfPublicReviews2?: number | null;
   withTagsOfAllBooks?: string | null;
@@ -412,6 +425,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   abstract readonly rootMentor: ReactiveReference<Author, Author, undefined>;
   abstract readonly favoriteBook: ReactiveReference<Author, Book, undefined>;
+  abstract readonly menteesClosure: ReactiveManyToMany<Author, Author>;
   abstract readonly bestReviews: ReactiveManyToMany<Author, BookReview>;
   readonly mentees: Collection<Author, Author> = hasMany("mentor", "mentor_id", undefined);
   readonly books: Collection<Author, Book> = hasMany("author", "author_id", { "field": "order", "direction": "ASC" });
@@ -434,6 +448,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   readonly menteesRecursive: ReadOnlyCollection<Author, Author> = hasRecursiveChildren("mentees", "mentorsRecursive");
   readonly image: OneToOneReference<Author, Image> = hasOneToOne("author", "author_id");
   readonly userOneToOne: OneToOneReference<Author, User> = hasOneToOne("authorManyToOne", "author_id");
+  readonly mentorsClosure: ReactiveManyToManyOtherSide<Author, Author> = hasReactiveManyToManyOtherSide();
   readonly tags: Collection<Author, Tag> = hasManyToMany("authors_to_tags", "author_id", "authors", "tag_id");
 
   get id(): AuthorId {
@@ -533,6 +548,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   abstract readonly mentorNames: ReactiveField<Author, string | undefined>;
+
+  abstract readonly menteeNames: ReactiveField<Author, string | undefined>;
 
   get address(): Address | undefined {
     return getField(this, "address");

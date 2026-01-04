@@ -149,6 +149,8 @@ export function up(b: MigrationBuilder): void {
     root_mentor_id: foreignKey("authors", { notNull: false }),
     // for testing ReactiveFields against recursive relations
     mentor_names: { type: "text", notNull: false },
+    // for testing ReactiveFields against recursive relations
+    mentee_names: { type: "text", notNull: false },
     // for testing jsonb columns
     address: { type: "jsonb", notNull: false },
     business_address: { type: "jsonb", notNull: false },
@@ -168,6 +170,14 @@ export function up(b: MigrationBuilder): void {
     // for testing bytea fields
     certificate: { type: "bytea", notNull: false },
   });
+
+  // For testing closure table derived m2m
+  createManyToManyTable(
+    b,
+    "author_to_mentees_closure",
+    { table: "authors", column: "mentor_id", collectionName: "mentorsClosure" },
+    { table: "authors", column: "mentee_id", collectionName: "menteesClosure" },
+  );
 
   // For testing full-text-search
   b.sql(`

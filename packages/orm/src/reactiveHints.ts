@@ -34,7 +34,7 @@ import {
 } from "./relations";
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
 import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
-import { RecursiveParentsCollectionImpl } from "./relations/RecursiveCollection";
+import { RecursiveChildrenCollectionImpl, RecursiveParentsCollectionImpl } from "./relations/RecursiveCollection";
 import { FieldsOf, RelationsOf } from "./typeMap";
 import { fail, flatAndUnique, mergeNormalizedHints } from "./utils";
 
@@ -147,7 +147,7 @@ export type MaybeTransientFields<T> = "transientFields" extends keyof T
 
 /**
  * Takes a reactive hint and returns the `ReactiveTarget`s that, should they change, need to
- * walk back to the reactive hint's
+ * walk back to this watching reactable.
  *
  * @param rootType The original type that contained the reactive rule/field, used for helpful error messages
  * @param entityType The current entity of the step we're walking
@@ -190,7 +190,7 @@ export function reverseReactiveHint<T extends Entity>(
       fields,
       readOnlyFields,
       maybeRecursive,
-      keyMaybeSuffix,
+      keyMaybeSuffix, // maybeSuffix = might end with `_ro` like `name_ro`
       subHint,
     );
   });
@@ -257,7 +257,8 @@ function reverseSubHint(
       case "m2m": {
         // While o2m and o2o can watch for just FK changes by passing `reactForOtherSide` (the FK lives in the other
         // table), for m2m reactivity we push the collection name into the reactive hint, because it's effectively
-        // "the other/reverse side", and JoinRows will trigger it explicitly instead of `setField` for non-m2m keys.
+        // "the other/reverse side", and JoinRows will trigger `queueDownstreamReactables` explicitly, instead of
+        // `setField` which handles regular/non-m2m mutations.
         fields.push(field.fieldName);
         const otherFieldName = maybeAddTypeFilterSuffix(meta, field);
         return reverseReactiveHint(
@@ -325,14 +326,27 @@ function reverseSubHint(
       if (isReadOnly) return [];
       return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false, false);
     } else if (p instanceof RecursiveParentsCollectionImpl) {
-      const { otherFieldName, m2oFieldName } = p;
-      // I.e. this is `Author.mentorsRecursive`
-      // When our mentor changes, tell our immediate; but we ourselves are also "a new mentee"
-      // of the mentor, so do `fields.push(m2oFieldName)` to notify our immediate books.
+      // I.e. if this is `Author.mentorsRecursive`:
+      // - fieldName=mentorsRecursive (being watched by the caller)
+      // - otherFieldName=menteesRecursive (our reversal for walking down)
+      // - m2oFieldName = mentor
       //
-      // We could technically do "when our mentor changes, it means his list of mentees has changed,
-      // so go up to him, and then back down to his mentees", but this would load more mentees than
-      // just "us + our children".
+      // Note that "reversing parents" is generally easier, b/c when the tree changes, any given node can
+      // still "walk down" to find its children w/the "current value" childrenRecursive; and any just-now
+      // orphaned parents will themselves trigger their own childrenRecursive changes (i.e. we do not need
+      // any "old reference value" / "new reference value" handling).
+      //
+      // I.e. given a tree of `A is mentor of B is mentor of C`, when B changes mentors, and we need to
+      // "walk to all affected/children mentees, so they can observe their new mentorsRecursive", merely
+      // walking down from (b itself & it's mentees) will find all affected mentees.
+      const { otherFieldName, m2oFieldName } = p;
+      // When a mentor.firstName/etc field changes, walk to its transitive children (through otherFieldName)
+      // via the `return reverseReactiveHint` line below.
+      //
+      // But if the `author.mentor` field itself changes, we ourselves are also "a new mentee" of the mentor, so
+      // do `fields.push(m2oFieldName)` to notify our direct reactable (a new mentee), and then our transitive
+      // children/mentees. This avoids going "up to the mentor, and walking down all of his mentees", which would go
+      // through our siblings, which would not have changed/need reactivity.
       _fields.push(m2oFieldName);
       maybeRecursive.push({
         kind: isReadOnly ? "read-only" : "update",
@@ -340,6 +354,27 @@ function reverseSubHint(
         fields: [m2oFieldName],
         path: [otherFieldName],
       });
+      // Any reactables who were watching `parentsRecursive`, we'll back down to by going through `childrenRecursive`
+      return reverseReactiveHint(rootType, entityType, subHint, undefined, false).map(appendPath(otherFieldName));
+    } else if (p instanceof RecursiveChildrenCollectionImpl) {
+      const { otherFieldName, o2mFieldName } = p;
+      // I.e. this is `Author.menteesRecursive`
+      // - fieldName=menteesRecursive` (being watched by the caller)
+      // - otherFieldName=mentorsRecursive` (our reversal for walking up)
+      // - The o2m's otherFieldName gives us the FK field (e.g., "mentor") on the child entity.
+      //
+      // Note that "reversing children" is trickier than reversing parents, b/c when the tree changes,
+      // we need to consider both "old reference value" and "new reference value" scenarios.
+      const o2mField = meta.allFields[o2mFieldName] as OneToManyField | OneToOneField;
+      const m2oFieldName = o2mField.otherFieldName;
+      _fields.push(m2oFieldName);
+      maybeRecursive.push({
+        kind: isReadOnly ? "read-only" : "update",
+        entity: entityType,
+        fields: [m2oFieldName], // i.e. parent
+        path: [otherFieldName], // i.e. parentsRecursive to tell them "observe your new childrenRecursive"
+      });
+      // Any reactables who were watching `childrenRecursive`, we'll up to by going through `parentsRecursive`
       return reverseReactiveHint(rootType, entityType, subHint, undefined, false).map(appendPath(otherFieldName));
     } else {
       throw new Error(`Invalid hint in ${rootType.name}.ts ${JSON.stringify(hint)}`);
@@ -381,16 +416,16 @@ function maybeAddTypeFilterSuffix(
  *
  * For example, with reversals walking through collections:
  *
- * - Given a hint `book: author`
- * - Which reverses to `author.books`
- * - When we traverse through `a1.books`, we use only the current value, which might have only `[b2]` in it.
+ * - Given a hint `book: { author: firstName }`
+ * - Which reverses to `author[firstName] -> books`
+ * - When we walk through `a1.books`, we use only the current value, which might have only `[b2]` in it.
  * - We don't need to worry about "the old a1.books" value, which might have previously had `[b1]` in it,
  *   because the `b1.author` changing authors (from `a1` to `a2`) will trigger its own reactivity.
  *
- * Which we can see with reversals walking through references:
+ * Contrast with reversals walking through references:
  *
- * - Given a hint `author: books`
- * - Which reverses to `book: author`
+ * - Given a hint `author: { books: "title" }`
+ * - Which reverses to `book[title] -> author`
  * - When we traverse through `b1.author`, we use both the current value and original value, so that both
  *   "our prior author" and "our new author" see their latest `author.books` collection values.
  */
@@ -441,6 +476,23 @@ export async function followReverseHint(
         const joinRows = getEmInternalApi(m2m.entity.em).joinRows(m2m);
         // Return a tuple of [currentRows, removedRows]
         promises.push(joinRows.removedFor(m2m, c));
+      }
+      // Walk up the old parents
+      if (relation instanceof RecursiveParentsCollectionImpl) {
+        const { m2oFieldName } = relation;
+        const changed = isChangeableField(c, m2oFieldName) ? (c.changes[m2oFieldName] as FieldStatus<any>) : undefined;
+        if (changed && changed.hasUpdated && changed.originalValue) {
+          promises.push(
+            // First load the original parent itself
+            (changed as ManyToOneFieldStatus<any>).originalEntity.then((oldParent) => {
+              // And then resolve its fieldName=parentsRecursive
+              const oldParentRecursiveParents = (oldParent as any)[fieldName];
+              return oldParentRecursiveParents.load().then((parents: any) => {
+                return [oldParent, ...parents];
+              });
+            }),
+          );
+        }
       }
     }
     const nextLevel = await Promise.all(promises);
@@ -508,6 +560,8 @@ export function convertToLoadHint<T extends Entity>(
     } else {
       const p = getProperties(meta)[key];
       if (p instanceof RecursiveParentsCollectionImpl) {
+        mergeNormalizedHints(loadHint, { [p.fieldName]: convertToLoadHint(meta, subHint, allowCustomKeys) });
+      } else if (p instanceof RecursiveChildrenCollectionImpl) {
         mergeNormalizedHints(loadHint, { [p.fieldName]: convertToLoadHint(meta, subHint, allowCustomKeys) });
       } else if (p && p.reactiveHint) {
         mergeNormalizedHints(loadHint, convertToLoadHint(meta, p.reactiveHint, allowCustomKeys));

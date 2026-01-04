@@ -3,9 +3,9 @@ import {
   AsyncProperty,
   Collection,
   Loaded,
-  ReactiveManyToMany,
   ReactiveField,
   ReactiveGetter,
+  ReactiveManyToMany,
   ReactiveReference,
   Reference,
   cannotBeUpdated,
@@ -15,9 +15,9 @@ import {
   hasManyThrough,
   hasOneDerived,
   hasReactiveAsyncProperty,
-  hasReactiveManyToMany,
   hasReactiveField,
   hasReactiveGetter,
+  hasReactiveManyToMany,
   hasReactiveReference,
   isDefined,
   withLoaded,
@@ -135,6 +135,7 @@ export class Author extends AuthorCodegen {
     ageRuleInvoked: 0,
     numberOfBooksCalcInvoked: 0,
     mentorNamesCalcInvoked: 0,
+    menteeNamesCalcInvoked: 0,
     bookCommentsCalcInvoked: 0,
     favoriteBookCalcInvoked: 0,
     bestReviewsCalcInvoked: 0,
@@ -214,13 +215,23 @@ export class Author extends AuthorCodegen {
     },
   );
 
-  /** Example of a ReactiveField that uses recursive relations. */
+  /** Example of a ReactiveField that uses a recursive parent relation. */
   readonly mentorNames: ReactiveField<Author, string | undefined> = hasReactiveField(
     "mentorNames",
     { mentorsRecursive: "firstName" },
     (a) => {
       a.transientFields.mentorNamesCalcInvoked++;
       return a.mentorsRecursive.get.flatMap((m) => m.firstName).join(", ");
+    },
+  );
+
+  /** Example of a ReactiveField that uses a recursive child relation. */
+  readonly menteeNames: ReactiveField<Author, string | undefined> = hasReactiveField(
+    "menteeNames",
+    { menteesRecursive: "firstName" },
+    (a) => {
+      a.transientFields.menteeNamesCalcInvoked++;
+      return a.menteesRecursive.get.flatMap((m) => m.firstName).join(", ");
     },
   );
 
@@ -272,8 +283,7 @@ export class Author extends AuthorCodegen {
     "rootMentor",
     "mentorsRecursive",
     (a) => {
-      const value = a.mentorsRecursive.get[a.mentorsRecursive.get.length - 1];
-      return value;
+      return a.mentorsRecursive.get[a.mentorsRecursive.get.length - 1];
     },
   );
 
@@ -285,6 +295,11 @@ export class Author extends AuthorCodegen {
       return a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.rating >= 5);
     },
   );
+
+  /** Example of a closure table. */
+  readonly menteesClosure: ReactiveManyToMany<Author, Author> = hasReactiveManyToMany("menteesRecursive", (a) => {
+    return [a, ...a.menteesRecursive.get];
+  });
 
   /** Example of an async property that can be loaded via a populate hint. */
   readonly numberOfBooks2: AsyncProperty<Author, number> = hasReactiveAsyncProperty({ books: "title" }, (a) => {
@@ -478,7 +493,7 @@ config.addReaction({ name: "runOnce", runOnce: true }, "nickNames", (a) => {
 });
 
 // Example accessing ctx from beforeFlush
-config.beforeFlush(async (author, ctx) => {
+config.beforeFlush(async (_, ctx) => {
   await ctx.makeApiCall("Author.beforeFlush");
 });
 

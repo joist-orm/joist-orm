@@ -1,5 +1,12 @@
 import { Author, Book, BookReview, Entity, EntityManager, newAuthor, newBook, newBookReview } from "@src/entities";
-import { insertAuthor, insertAuthorToBestReview, insertBook, insertBookReview, select } from "@src/entities/inserts";
+import {
+  insertAuthor,
+  insertAuthorToBestReview,
+  insertAuthorToMenteesClosure,
+  insertBook,
+  insertBookReview,
+  select,
+} from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 
 describe("ReactiveManyToMany", () => {
@@ -299,6 +306,92 @@ describe("ReactiveManyToMany", () => {
       // Should recalculate
       a.bestReviews.get;
       expect(a.transientFields.bestReviewsCalcInvoked).toBe(2);
+    });
+  });
+
+  describe("recursive collections", () => {
+    it("menteesClosure includes self and all recursive children", async () => {
+      const em = newEntityManager();
+      // Given a mentor chain: a1 -> a2 -> a3
+      const a1 = newAuthor(em);
+      const a2 = newAuthor(em, { mentor: a1 });
+      const a3 = newAuthor(em, { mentor: a2 });
+      await em.flush();
+      // Then a1's menteesClosure includes a1, a2, and a3
+      expect(a1.menteesClosure.get).toMatchEntity([a1, a2, a3]);
+      // And a2's menteesClosure includes a2 and a3
+      expect(a2.menteesClosure.get).toMatchEntity([a2, a3]);
+      // And a3's menteesClosure includes only a3
+      expect(a3.menteesClosure.get).toMatchEntity([a3]);
+    });
+
+    it("menteesClosure recalculates when mentee is added", async () => {
+      const em = newEntityManager();
+      const a1 = newAuthor(em);
+      await em.flush();
+      expect(a1.menteesClosure.get).toMatchEntity([a1]);
+      // When we add a mentee
+      const a2 = newAuthor(em, { mentor: a1 });
+      // Then the closure updates
+      expect(a1.menteesClosure.get).toMatchEntity([a1, a2]);
+    });
+
+    it("menteesClosure recalculates when mentee is removed", async () => {
+      const em = newEntityManager();
+      const a1 = newAuthor(em);
+      const a2 = newAuthor(em, { mentor: a1 });
+      await em.flush();
+      expect(a1.menteesClosure.get).toMatchEntity([a1, a2]);
+      // When we remove the mentee
+      a2.mentor.set(undefined);
+      // Then the closure updates
+      expect(a1.menteesClosure.get).toMatchEntity([a1]);
+    });
+
+    it("menteesClosure recalculates when nested mentee changes", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertAuthor({ first_name: "a3", mentor_id: 2 });
+      await insertAuthor({ first_name: "a4", mentor_id: 3 });
+      // a1 closure
+      await insertAuthorToMenteesClosure({ mentor_id: 1, mentee_id: 1 });
+      await insertAuthorToMenteesClosure({ mentor_id: 1, mentee_id: 2 });
+      await insertAuthorToMenteesClosure({ mentor_id: 1, mentee_id: 3 });
+      await insertAuthorToMenteesClosure({ mentor_id: 1, mentee_id: 4 });
+      // a2 closure
+      await insertAuthorToMenteesClosure({ mentor_id: 2, mentee_id: 2 });
+      await insertAuthorToMenteesClosure({ mentor_id: 2, mentee_id: 3 });
+      await insertAuthorToMenteesClosure({ mentor_id: 2, mentee_id: 4 });
+      // a3 closure
+      await insertAuthorToMenteesClosure({ mentor_id: 3, mentee_id: 3 });
+      await insertAuthorToMenteesClosure({ mentor_id: 3, mentee_id: 4 });
+      // a4 closure
+      await insertAuthorToMenteesClosure({ mentor_id: 4, mentee_id: 4 });
+      const em = newEntityManager();
+      // When a3 moves from a2 to directly under a1
+      const [a1, a2, a3, a4] = await em.find(Author, {}, { populate: "menteesClosure" });
+      expect(a1.menteesClosure.get).toMatchEntity([a1, a2, a3, a4]);
+      a3.mentor.set(a1);
+      await em.flush();
+      // Then a1 still has all three
+      expect(a1.menteesClosure.get).toMatchEntity([a1, a2, a3, a4]);
+      // And a2 no longer has a3
+      expect(a2.menteesClosure.get).toMatchEntity([a2]);
+      // And a3 still has itself & a4
+      expect(a3.menteesClosure.get).toMatchEntity([a3, a4]);
+      const rows = await select("author_to_mentees_closure");
+      // a1 rows are unchanged
+      expect(rows[0]).toMatchObject({ mentor_id: 1, mentee_id: 1 });
+      expect(rows[1]).toMatchObject({ mentor_id: 1, mentee_id: 2 });
+      expect(rows[2]).toMatchObject({ mentor_id: 1, mentee_id: 3 });
+      expect(rows[3]).toMatchObject({ mentor_id: 1, mentee_id: 4 });
+      // a2 closure
+      expect(rows[4]).toMatchObject({ mentor_id: 2, mentee_id: 2 });
+      // a3 closure
+      expect(rows[5]).toMatchObject({ mentor_id: 3, mentee_id: 3 });
+      expect(rows[6]).toMatchObject({ mentor_id: 3, mentee_id: 4 });
+      // a4 closure
+      expect(rows[7]).toMatchObject({ mentor_id: 4, mentee_id: 4 });
     });
   });
 });

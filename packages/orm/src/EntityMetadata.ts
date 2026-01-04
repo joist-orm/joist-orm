@@ -122,6 +122,7 @@ export type OneToManyField = {
   otherFieldName: string;
   serde: undefined;
   immutable: false;
+  orderBy?: { field: string; direction: "ASC" | "DESC" };
 };
 
 export type LargeOneToManyField = {

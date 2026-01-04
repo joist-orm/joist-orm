@@ -223,10 +223,10 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
 
   declare readonly __type: { 0: "User" };
 
-  readonly createdComments: Collection<User, Comment> = hasMany("user", "user_id", undefined);
-  readonly directs: Collection<User, User> = hasMany("manager", "manager_id", undefined);
-  readonly manager: ManyToOneReference<User, User, undefined> = hasOne("directs");
-  readonly authorManyToOne: ManyToOneReference<User, Author, undefined> = hasOne("userOneToOne");
+  readonly createdComments: Collection<User, Comment> = hasMany();
+  readonly directs: Collection<User, User> = hasMany();
+  readonly manager: ManyToOneReference<User, User, undefined> = hasOne();
+  readonly authorManyToOne: ManyToOneReference<User, Author, undefined> = hasOne();
   readonly likedComments: Collection<User, Comment> = hasManyToMany(
     "users_to_comments",
     "liked_by_user_id",

@@ -195,9 +195,9 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
 
   declare readonly __type: { 0: "Task" };
 
-  readonly copiedTo: Collection<Task, Task> = hasMany("copiedFrom", "copied_from_id", undefined);
-  readonly taskTaskItems: Collection<Task, TaskItem> = hasMany("task", "task_id", undefined);
-  readonly copiedFrom: ManyToOneReference<Task, Task, undefined> = hasOne("copiedTo");
+  readonly copiedTo: Collection<Task, Task> = hasMany();
+  readonly taskTaskItems: Collection<Task, TaskItem> = hasMany();
+  readonly copiedFrom: ManyToOneReference<Task, Task, undefined> = hasOne();
   readonly copiedFromsRecursive: ReadOnlyCollection<Task, Task> = hasRecursiveParents(
     "copiedFrom",
     "copiedToRecursive",

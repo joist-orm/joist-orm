@@ -120,7 +120,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
 
   declare readonly __type: { 0: "AuthorSchedule" };
 
-  readonly author: ManyToOneReference<AuthorSchedule, Author, never> = hasOne("schedules");
+  readonly author: ManyToOneReference<AuthorSchedule, Author, never> = hasOne();
 
   get id(): AuthorScheduleId {
     return this.idMaybe || failNoIdYet("AuthorSchedule");

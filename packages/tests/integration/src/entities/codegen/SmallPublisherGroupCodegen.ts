@@ -107,7 +107,7 @@ export abstract class SmallPublisherGroupCodegen extends PublisherGroup implemen
 
   declare readonly __type: { 0: "PublisherGroup"; 1: "SmallPublisherGroup" };
 
-  readonly publishers: Collection<SmallPublisherGroup, SmallPublisher> = hasMany("group", "group_id", undefined);
+  readonly publishers: Collection<SmallPublisherGroup, SmallPublisher> = hasMany();
 
   get id(): SmallPublisherGroupId {
     return this.idMaybe || failNoIdYet("SmallPublisherGroup");

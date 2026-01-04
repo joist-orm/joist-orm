@@ -183,11 +183,8 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
 
   declare readonly __type: { 0: "Comment" };
 
-  readonly books: Collection<Comment, Book> = hasMany("randomComment", "random_comment_id", {
-    "field": "title",
-    "direction": "ASC",
-  });
-  readonly user: ManyToOneReference<Comment, User, undefined> = hasOne("createdComments");
+  readonly books: Collection<Comment, Book> = hasMany();
+  readonly user: ManyToOneReference<Comment, User, undefined> = hasOne();
   readonly likedByUsers: Collection<Comment, User> = hasManyToMany(
     "users_to_comments",
     "comment_id",

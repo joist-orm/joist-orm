@@ -228,16 +228,13 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   declare readonly __type: { 0: "Book" };
 
-  readonly advances: Collection<Book, BookAdvance> = hasMany("book", "book_id", undefined);
-  readonly reviews: Collection<Book, BookReview> = hasMany("book", "book_id", {
-    "field": "critic",
-    "direction": "ASC",
-  });
-  readonly comments: Collection<Book, Comment> = hasMany("parent", "parent_book_id", undefined);
-  readonly prequel: ManyToOneReference<Book, Book, undefined> = hasOne("sequel");
-  readonly author: ManyToOneReference<Book, Author, never> = hasOne("books");
-  readonly reviewer: ManyToOneReference<Book, Author, undefined> = hasOne("reviewerBooks");
-  readonly randomComment: ManyToOneReference<Book, Comment, undefined> = hasOne("books");
+  readonly advances: Collection<Book, BookAdvance> = hasMany();
+  readonly reviews: Collection<Book, BookReview> = hasMany();
+  readonly comments: Collection<Book, Comment> = hasMany();
+  readonly prequel: ManyToOneReference<Book, Book, undefined> = hasOne();
+  readonly author: ManyToOneReference<Book, Author, never> = hasOne();
+  readonly reviewer: ManyToOneReference<Book, Author, undefined> = hasOne();
+  readonly randomComment: ManyToOneReference<Book, Comment, undefined> = hasOne();
   readonly prequelsRecursive: ReadOnlyCollection<Book, Book> = hasRecursiveParents("prequel", "sequelsRecursive");
   readonly sequelsRecursive: ReadOnlyCollection<Book, Book> = hasRecursiveChildren("sequel", "prequelsRecursive");
   readonly sequel: OneToOneReference<Book, Book> = hasOneToOne("prequel", "prequel_id");

@@ -160,12 +160,9 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
 
   declare readonly __type: { 0: "Critic" };
 
-  readonly bookReviews: Collection<Critic, BookReview> = hasMany("critic", "critic_id", {
-    "field": "critic",
-    "direction": "ASC",
-  });
-  readonly favoriteLargePublisher: ManyToOneReference<Critic, LargePublisher, undefined> = hasOne("critics");
-  readonly group: ManyToOneReference<Critic, PublisherGroup, undefined> = hasOne("critics");
+  readonly bookReviews: Collection<Critic, BookReview> = hasMany();
+  readonly favoriteLargePublisher: ManyToOneReference<Critic, LargePublisher, undefined> = hasOne();
+  readonly group: ManyToOneReference<Critic, PublisherGroup, undefined> = hasOne();
   readonly criticColumn: OneToOneReference<Critic, CriticColumn> = hasOneToOne("critic", "critic_id");
 
   get id(): CriticId {

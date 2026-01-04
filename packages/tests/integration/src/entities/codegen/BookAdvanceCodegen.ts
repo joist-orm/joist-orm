@@ -152,8 +152,8 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
 
   declare readonly __type: { 0: "BookAdvance" };
 
-  readonly book: ManyToOneReference<BookAdvance, Book, never> = hasOne("advances");
-  readonly publisher: ManyToOneReference<BookAdvance, Publisher, never> = hasOne("bookAdvances");
+  readonly book: ManyToOneReference<BookAdvance, Book, never> = hasOne();
+  readonly publisher: ManyToOneReference<BookAdvance, Publisher, never> = hasOne();
 
   get id(): BookAdvanceId {
     return this.idMaybe || failNoIdYet("BookAdvance");

@@ -129,8 +129,8 @@ export abstract class ParentItemCodegen extends BaseEntity<EntityManager, string
 
   declare readonly __type: { 0: "ParentItem" };
 
-  readonly childItems: Collection<ParentItem, ChildItem> = hasMany("parentItem", "parent_item_id", undefined);
-  readonly parentGroup: ManyToOneReference<ParentItem, ParentGroup, never> = hasOne("parentItems");
+  readonly childItems: Collection<ParentItem, ChildItem> = hasMany();
+  readonly parentGroup: ManyToOneReference<ParentItem, ParentGroup, never> = hasOne();
 
   get id(): ParentItemId {
     return this.idMaybe || failNoIdYet("ParentItem");

@@ -117,7 +117,7 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
 
   declare readonly __type: { 0: "Child" };
 
-  readonly groups: Collection<Child, ChildGroup> = hasMany("childGroup", "child_group_id", undefined);
+  readonly groups: Collection<Child, ChildGroup> = hasMany();
 
   get id(): ChildId {
     return this.idMaybe || failNoIdYet("Child");

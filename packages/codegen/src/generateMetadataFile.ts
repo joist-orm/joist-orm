@@ -1,6 +1,6 @@
 import { Code, code, imp, Import } from "ts-poet";
 import { Config } from "./config";
-import { DatabaseColumnType, DbMetadata, EntityDbMetadata } from "./EntityDbMetadata";
+import { DatabaseColumnType, DbMetadata, EntityDbMetadata, OneToManyField } from "./EntityDbMetadata";
 import {
   BigIntSerde,
   CustomSerdeAdapter,
@@ -192,8 +192,8 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
     `;
   });
 
-  dbMetadata.oneToManys.forEach((m2o) => {
-    const { fieldName, singularName, otherEntity, otherFieldName } = m2o;
+  dbMetadata.oneToManys.forEach((o2m) => {
+    const { fieldName, singularName, otherEntity, otherFieldName } = o2m;
     fields[fieldName] = code`
       {
         kind: "o2m",
@@ -204,6 +204,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         otherFieldName: "${otherFieldName}",
         serde: undefined,
         immutable: false,
+        ${maybeOrderBy(o2m)}
       }
     `;
   });
@@ -286,6 +287,10 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
 
 function maybeDefault(f: { hasConfigDefault: boolean; columnDefault?: any }): Code | "" {
   return f.hasConfigDefault ? code`default: "config",` : f.columnDefault ? code`default: "schema",` : "";
+}
+
+function maybeOrderBy(f: OneToManyField): Code | "" {
+  return f.orderBy ? code`orderBy: { field: "${f.orderBy.field}", direction: "${f.orderBy.direction}" },` : "";
 }
 
 /** We sanitize/cleanStringValue all varchars, unless opted out by the column default/arrays/custom serdes. */

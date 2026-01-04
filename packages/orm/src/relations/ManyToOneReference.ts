@@ -17,7 +17,7 @@ import {
   toIdOf,
   toTaggedId,
 } from "../index";
-import { lazyField, resolveOtherMeta } from "../newEntity";
+import { lazyField } from "../newEntity";
 import { maybeAdd, maybeRemove } from "../utils";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
@@ -25,13 +25,10 @@ import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `ManyToOneReference`s. */
-export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(
-  otherFieldName: keyof U & string,
-): ManyToOneReference<T, U, N> {
-  let otherMeta: EntityMetadata<U>;
+export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(): ManyToOneReference<T, U, N> {
   return lazyField((entity: T, fieldName) => {
-    otherMeta ??= resolveOtherMeta(entity, fieldName);
-    return new ManyToOneReferenceImpl<T, U, N>(entity, otherMeta, fieldName as keyof T & string, otherFieldName);
+    const m2o = getMetadata(entity).allFields[fieldName] as ManyToOneField;
+    return new ManyToOneReferenceImpl<T, U, N>(entity, m2o);
   });
 }
 
@@ -40,8 +37,11 @@ export function isManyToOneReference(maybeReference: any): maybeReference is Man
   return maybeReference instanceof ManyToOneReferenceImpl;
 }
 
-export interface ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
-  extends Reference<T, U, N> {
+export interface ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined> extends Reference<
+  T,
+  U,
+  N
+> {
   /** Returns the id of the current assigned entity, or a runtime error if either 1) unset or 2) set to a new entity that doesn't have an `id` yet. */
   id: IdOf<U>;
 
@@ -74,21 +74,16 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   extends AbstractRelationImpl<T, U>
   implements ManyToOneReference<T, U, N>
 {
-  readonly #fieldName: keyof T & string;
+  readonly #field: ManyToOneField;
   // Either the loaded entity, or N/undefined if we're allowed to be null
   private loaded!: U | N | undefined;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
   private _isLoaded = false;
   #hasBeenSet = false;
 
-  constructor(
-    entity: T,
-    otherMeta: EntityMetadata,
-    fieldName: keyof T & string,
-    public otherFieldName: keyof U & string,
-  ) {
+  constructor(entity: T, field: ManyToOneField) {
     super(entity);
-    this.#fieldName = fieldName;
+    this.#field = field;
     if (getInstanceData(entity).isOrWasNew) {
       this._isLoaded = true;
     }
@@ -225,7 +220,11 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   get fieldName(): string {
-    return this.#fieldName;
+    return this.#field.fieldName;
+  }
+
+  get otherFieldName(): keyof U & string {
+    return this.#field.otherFieldName as keyof U & string;
   }
 
   private get idUntaggedMaybe(): string | undefined {
@@ -368,8 +367,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     return current;
   }
 
-  public get otherMeta(): EntityMetadata<U> {
-    return (getMetadata(this.entity).allFields[this.#fieldName] as ManyToOneField).otherMetadata();
+  get otherMeta(): EntityMetadata<U> {
+    return this.#field.otherMetadata();
   }
 
   public get hasBeenSet(): boolean {
@@ -404,7 +403,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   private get isCascadeDelete(): boolean {
-    return isCascadeDelete(this, this.#fieldName);
+    return isCascadeDelete(this, this.fieldName);
   }
 
   /**

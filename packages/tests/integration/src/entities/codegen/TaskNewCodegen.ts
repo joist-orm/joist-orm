@@ -148,16 +148,12 @@ export abstract class TaskNewCodegen extends Task implements Entity {
 
   declare readonly __type: { 0: "Task"; 1: "TaskNew" };
 
-  readonly newTaskTaskItems: Collection<TaskNew, TaskItem> = hasMany("newTask", "new_task_id", undefined);
-  readonly selfReferentialTasks: Collection<TaskNew, TaskNew> = hasMany(
-    "selfReferential",
-    "self_referential_id",
-    undefined,
-  );
-  readonly copiedTo: Collection<TaskNew, TaskNew> = hasMany("copiedFrom", "copied_from_id", undefined);
-  readonly selfReferential: ManyToOneReference<TaskNew, TaskNew, undefined> = hasOne("selfReferentialTasks");
-  readonly specialNewAuthor: ManyToOneReference<TaskNew, Author, undefined> = hasOne("tasks");
-  readonly copiedFrom: ManyToOneReference<TaskNew, TaskNew, undefined> = hasOne("copiedTo");
+  readonly newTaskTaskItems: Collection<TaskNew, TaskItem> = hasMany();
+  readonly selfReferentialTasks: Collection<TaskNew, TaskNew> = hasMany();
+  readonly copiedTo: Collection<TaskNew, TaskNew> = hasMany();
+  readonly selfReferential: ManyToOneReference<TaskNew, TaskNew, undefined> = hasOne();
+  readonly specialNewAuthor: ManyToOneReference<TaskNew, Author, undefined> = hasOne();
+  readonly copiedFrom: ManyToOneReference<TaskNew, TaskNew, undefined> = hasOne();
   readonly copiedFromsRecursive: ReadOnlyCollection<TaskNew, TaskNew> = hasRecursiveParents(
     "copiedFrom",
     "copiedToRecursive",

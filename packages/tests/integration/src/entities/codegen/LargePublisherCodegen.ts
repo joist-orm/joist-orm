@@ -148,17 +148,9 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
 
   declare readonly __type: { 0: "Publisher"; 1: "LargePublisher" };
 
-  readonly critics: Collection<LargePublisher, Critic> = hasMany(
-    "favoriteLargePublisher",
-    "favorite_large_publisher_id",
-    undefined,
-  );
-  readonly users: Collection<LargePublisher, User> = hasMany(
-    "favoritePublisher",
-    "favorite_publisher_large_id",
-    undefined,
-  );
-  readonly spotlightAuthor: ManyToOneReference<LargePublisher, Author, never> = hasOne("spotlightAuthorPublishers");
+  readonly critics: Collection<LargePublisher, Critic> = hasMany();
+  readonly users: Collection<LargePublisher, User> = hasMany();
+  readonly spotlightAuthor: ManyToOneReference<LargePublisher, Author, never> = hasOne();
   declare readonly authors: Collection<LargePublisher, Author>;
   declare readonly bookAdvances: Collection<LargePublisher, BookAdvance>;
   declare readonly comments: Collection<LargePublisher, Comment>;

@@ -130,8 +130,8 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   declare readonly __type: { 0: "Book" };
 
-  readonly comments: Collection<Book, Comment> = hasMany("parent", "parent_book_id", undefined);
-  readonly author: ManyToOneReference<Book, Author, never> = hasOne("books");
+  readonly comments: Collection<Book, Comment> = hasMany();
+  readonly author: ManyToOneReference<Book, Author, never> = hasOne();
 
   get id(): BookId {
     return this.idMaybe || failNoIdYet("Book");

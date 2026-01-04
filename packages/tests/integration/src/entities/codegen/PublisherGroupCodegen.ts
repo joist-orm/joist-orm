@@ -155,7 +155,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
 
   declare readonly __type: { 0: "PublisherGroup" };
 
-  readonly publishers: Collection<PublisherGroup, Publisher> = hasMany("group", "group_id", undefined);
+  readonly publishers: Collection<PublisherGroup, Publisher> = hasMany();
   readonly critics: LargeCollection<PublisherGroup, Critic> = hasLargeMany("group", "group_id");
 
   get id(): PublisherGroupId {

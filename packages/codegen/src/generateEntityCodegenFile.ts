@@ -927,7 +927,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
       return { kind: "abstract", line } as const;
     }
     const decl = code`${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>`;
-    const init = code`${hasOne}("${otherFieldName}")`;
+    const init = code`${hasOne}()`;
     return { kind: "concrete", fieldName, decl, init };
   });
   // Specialize
@@ -981,9 +981,9 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
 
   // Add OneToMany
   const o2m: Relation[] = meta.oneToManys.map((o2m) => {
-    const { fieldName, otherFieldName, otherColumnName, otherEntity, orderBy } = o2m;
+    const { fieldName, otherEntity } = o2m;
     const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`${hasMany}("${otherFieldName}", "${otherColumnName}", ${orderBy})`;
+    const init = code`${hasMany}()`;
     return { kind: "concrete", fieldName, decl, init };
   });
   // Specialize

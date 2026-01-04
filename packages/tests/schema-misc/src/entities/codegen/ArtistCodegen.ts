@@ -124,7 +124,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
 
   declare readonly __type: { 0: "Artist" };
 
-  readonly paintings: Collection<Artist, Painting> = hasMany("artist", "artistId", undefined);
+  readonly paintings: Collection<Artist, Painting> = hasMany();
 
   get id(): ArtistId {
     return this.idMaybe || failNoIdYet("Artist");

@@ -165,9 +165,9 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
 
   declare readonly __type: { 0: "Image" };
 
-  readonly author: ManyToOneReference<Image, Author, undefined> = hasOne("image");
-  readonly book: ManyToOneReference<Image, Book, undefined> = hasOne("image");
-  readonly publisher: ManyToOneReference<Image, Publisher, undefined> = hasOne("images");
+  readonly author: ManyToOneReference<Image, Author, undefined> = hasOne();
+  readonly book: ManyToOneReference<Image, Book, undefined> = hasOne();
+  readonly publisher: ManyToOneReference<Image, Publisher, undefined> = hasOne();
 
   get id(): ImageId {
     return this.idMaybe || failNoIdYet("Image");

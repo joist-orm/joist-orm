@@ -1,7 +1,7 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
-import { getMetadata, ManyToOneField } from "../EntityMetadata";
+import { getMetadata } from "../EntityMetadata";
 import { getField } from "../fields";
 import {
   addTablePerClassJoinsAndClassTag,
@@ -30,7 +30,8 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
     const keys = deTagIds(meta, _keys);
 
     const alias = abbreviation(otherMeta.tableName);
-    const m2o = reference.otherMeta.allFields[reference.otherFieldName] as ManyToOneField & { aliasSuffix: string };
+    const m2o = reference.otherMeta.allFields[reference.otherFieldName];
+    if (m2o.kind !== "m2o") fail(`Unexpected field ${m2o}`);
     const query: ParsedFindQuery = {
       selects: [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: otherMeta.tableName }],

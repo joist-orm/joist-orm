@@ -6,11 +6,9 @@ import {
   addTablePerClassJoinsAndClassTag,
   assertIdsAreTagged,
   deTagIds,
-  ManyToOneField,
   maybeResolveReferenceToId,
   OneToManyCollection,
   ParsedFindQuery,
-  PolymorphicField,
 } from "../index";
 import { abbreviation, groupBy } from "../utils";
 
@@ -31,9 +29,7 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
     const keys = deTagIds(oneMeta, _keys);
 
     const alias = abbreviation(meta.tableName);
-    const field = meta.allFields[collection.otherFieldName] as (ManyToOneField | PolymorphicField) & {
-      aliasSuffix: string;
-    };
+    const field = meta.allFields[collection.otherFieldName];
     const columnName =
       field.kind === "m2o"
         ? field.serde.columns[0].columnName

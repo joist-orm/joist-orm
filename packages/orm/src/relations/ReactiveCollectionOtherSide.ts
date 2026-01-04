@@ -6,12 +6,13 @@ import {
   getEmInternalApi,
   getInstanceData,
   getMetadata,
+  ManyToManyField,
   ReadOnlyCollection,
 } from "..";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { IsLoadedCachable } from "../IsLoadedCache";
 import { ManyToManyLike } from "../JoinRows";
-import { lazyField, resolveOtherMeta } from "../newEntity";
+import { lazyField } from "../newEntity";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 
@@ -23,25 +24,14 @@ import { RelationT, RelationU } from "./Relation";
  */
 export interface ReactiveCollectionOtherSide<T extends Entity, U extends Entity> extends ReadOnlyCollection<T, U> {}
 
-/** Creates a ReactiveCollectionOtherSide - the read-only other side of a ReactiveCollection. */
-export function hasReactiveCollectionOtherSide<T extends Entity, U extends Entity>(
-  joinTableName: string,
-  columnName: string,
-  otherFieldName: string,
-  otherColumnName: string,
-): ReactiveCollectionOtherSide<T, U> {
-  let otherMeta: EntityMetadata<U>;
+/** Creates a ReactiveCollectionOtherSide, the read-only other side of a ReactiveCollection. */
+export function hasReactiveCollectionOtherSide<T extends Entity, U extends Entity>(): ReactiveCollectionOtherSide<
+  T,
+  U
+> {
   return lazyField((entity: T, fieldName) => {
-    otherMeta ??= resolveOtherMeta(entity, fieldName);
-    return new ReactiveCollectionOtherSideImpl<T, U>(
-      joinTableName,
-      entity,
-      fieldName as keyof T & string,
-      columnName,
-      otherMeta,
-      otherFieldName,
-      otherColumnName,
-    );
+    const m2m = getMetadata(entity).allFields[fieldName] as ManyToManyField;
+    return new ReactiveCollectionOtherSideImpl<T, U>(entity, m2m);
   });
 }
 
@@ -49,14 +39,7 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<T, U[]>
   implements ReactiveCollectionOtherSide<T, U>, ManyToManyLike, IsLoadedCachable
 {
-  readonly #otherMeta: EntityMetadata;
-
-  // M2M join table metadata
-  readonly #joinTableName: string;
-  readonly #columnName: string;
-  readonly #otherFieldName: string;
-  readonly #otherColumnName: string;
-
+  #field: ManyToManyField;
   // Loading state
   #loaded: U[] | undefined;
   #isLoaded: boolean = false;
@@ -65,27 +48,10 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
   #cached: U[] | undefined;
   #isCached: boolean = false;
 
-  constructor(
-    joinTableName: string,
-    entity: T,
-    public fieldName: keyof T & string,
-    columnName: string,
-    otherMeta: EntityMetadata,
-    otherFieldName: string,
-    otherColumnName: string,
-  ) {
+  constructor(entity: T, field: ManyToManyField) {
     super(entity);
-    this.#otherMeta = otherMeta;
-    this.#joinTableName = joinTableName;
-    this.#columnName = columnName;
-    this.#otherFieldName = otherFieldName;
-    this.#otherColumnName = otherColumnName;
-
-    if (entity.isNewEntity) {
-      this.#loaded = [];
-      this.#isLoaded = true;
-    }
-    getInstanceData(entity).relations[fieldName] = this;
+    this.#field = field;
+    getInstanceData(entity).relations[field.fieldName] = this;
   }
 
   async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]> {
@@ -105,7 +71,7 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
 
   private async loadFromJoinTable(): Promise<U[]> {
     const { em } = this.entity;
-    const key = `${this.#columnName}=${this.entity.id}`;
+    const key = `${this.columnName}=${this.entity.id}`;
     const result = await manyToManyDataLoader(em, this as any).load(key);
     return result as U[];
   }
@@ -145,9 +111,9 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
   private applyPendingChanges(baseEntities: U[]): U[] {
     const result = new Set(baseEntities);
     const joinRows = getEmInternalApi(this.entity.em).joinRows(this);
-    const added = joinRows.addedForOtherSide(this.#columnName, this.entity);
+    const added = joinRows.addedForOtherSide(this.columnName, this.entity);
     for (const other of added) result.add(other as U);
-    const removed = joinRows.removedForOtherSide(this.#columnName, this.entity);
+    const removed = joinRows.removedForOtherSide(this.columnName, this.entity);
     for (const other of removed) result.delete(other as U);
     return [...result];
   }
@@ -159,25 +125,8 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
     return entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
   }
 
-  // Read-only - these throw errors
-  add(_other: U): void {
-    fail(`Cannot add to ${this.entity}.${this.fieldName} - it is the read-only other side of a ReactiveCollection.`);
-  }
-
-  remove(_other: U): void {
-    fail(
-      `Cannot remove from ${this.entity}.${this.fieldName} - it is the read-only other side of a ReactiveCollection.`,
-    );
-  }
-
-  set(_values: readonly U[]): void {
+  set(): void {
     fail(`Cannot set ${this.entity}.${this.fieldName} - it is the read-only other side of a ReactiveCollection.`);
-  }
-
-  removeAll(): void {
-    fail(
-      `Cannot removeAll on ${this.entity}.${this.fieldName} - it is the read-only other side of a ReactiveCollection.`,
-    );
   }
 
   setFromOpts(_others: U[]): void {
@@ -199,29 +148,33 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
     return this.filterDeleted(this.#loaded ?? [], opts);
   }
 
+  public get fieldName(): string {
+    return this.#field.fieldName;
+  }
+
   // Properties for JoinRows/ManyToManyCollection compatibility
   public get meta(): EntityMetadata {
     return getMetadata(this.entity);
   }
 
   public get otherMeta(): EntityMetadata {
-    return this.#otherMeta;
+    return this.#field.otherMetadata();
   }
 
   public get joinTableName(): string {
-    return this.#joinTableName;
+    return this.#field.joinTableName;
   }
 
   public get columnName(): string {
-    return this.#columnName;
+    return this.#field.columnNames[0];
   }
 
   public get otherColumnName(): string {
-    return this.#otherColumnName;
+    return this.#field.columnNames[1];
   }
 
   public get otherFieldName(): string {
-    return this.#otherFieldName;
+    return this.#field.otherFieldName;
   }
 
   public get hasBeenSet(): boolean {
@@ -237,7 +190,7 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
   }
 
   public toString(): string {
-    return `ReactiveCollectionOtherSide(entity: ${this.entity}, fieldName: ${this.fieldName}, otherMeta: ${this.#otherMeta.type})`;
+    return `ReactiveCollectionOtherSide(entity: ${this.entity}, fieldName: ${this.fieldName}, otherMeta: ${this.otherMeta.type})`;
   }
 
   [RelationT]: T = null!;

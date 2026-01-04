@@ -7,11 +7,12 @@ import {
   getInstanceData,
   getMetadata,
   isLoaded,
+  ManyToManyField,
   ReadOnlyCollection,
 } from "..";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { IsLoadedCachable } from "../IsLoadedCache";
-import { lazyField, resolveOtherMeta } from "../newEntity";
+import { lazyField } from "../newEntity";
 import { convertToLoadHint, MaybeReactedEntity, Reacted, ReactiveHint } from "../reactiveHints";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
@@ -28,27 +29,12 @@ export interface ReactiveCollection<T extends Entity, U extends Entity> extends 
 
 /** Creates a `ReactiveCollection`. */
 export function hasReactiveCollection<T extends Entity, U extends Entity, const H extends ReactiveHint<T>>(
-  joinTableName: string,
-  columnName: string,
-  otherMeta: EntityMetadata<U>,
-  otherFieldName: string,
-  otherColumnName: string,
   hint: H,
   fn: (entity: Reacted<T, H>) => readonly MaybeReactedEntity<U>[],
 ): ReactiveCollection<T, U> {
   return lazyField((entity: T, fieldName) => {
-    otherMeta ??= resolveOtherMeta(entity, fieldName);
-    return new ReactiveCollectionImpl<T, U, H>(
-      joinTableName,
-      entity,
-      fieldName as keyof T & string,
-      columnName,
-      otherMeta,
-      otherFieldName,
-      otherColumnName,
-      hint,
-      fn,
-    );
+    const m2m = getMetadata(entity).allFields[fieldName] as ManyToManyField;
+    return new ReactiveCollectionImpl<T, U, H>(entity, m2m, hint, fn);
   });
 }
 
@@ -57,11 +43,7 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   extends AbstractRelationImpl<T, U[]>
   implements ReactiveCollection<T, U>, IsLoadedCachable
 {
-  readonly #joinTableName: string;
-  readonly #columnName: string;
-  readonly #otherFieldName: string;
-  readonly #otherColumnName: string;
-  readonly #otherMeta: EntityMetadata;
+  readonly #field: ManyToManyField;
 
   // Could be either the ref-loaded stored array, or full-loaded calculated array
   #loaded: U[] | undefined;
@@ -75,23 +57,14 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   #loadPromise: Promise<ReadonlyArray<U>> | undefined;
 
   constructor(
-    joinTableName: string,
     entity: T,
-    public fieldName: keyof T & string,
-    columnName: string,
-    otherMeta: EntityMetadata,
-    otherFieldName: string,
-    otherColumnName: string,
+    field: ManyToManyField,
     public reactiveHint: H,
     private fn: (entity: Reacted<T, H>) => readonly MaybeReactedEntity<U>[],
   ) {
     super(entity);
-    this.#otherMeta = otherMeta;
-    this.#joinTableName = joinTableName;
-    this.#columnName = columnName;
-    this.#otherFieldName = otherFieldName;
-    this.#otherColumnName = otherColumnName;
-    getInstanceData(entity).relations[fieldName] = this;
+    this.#field = field;
+    getInstanceData(entity).relations[this.fieldName] = this;
   }
 
   async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<ReadonlyArray<U>> {
@@ -129,7 +102,7 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   private async loadFromJoinTable(): Promise<U[]> {
     const { em } = this.entity;
     // Use the existing m2m dataloader by creating a compatible collection-like object
-    const key = `${this.#columnName}=${this.entity.id}`;
+    const key = `${this.columnName}=${this.entity.id}`;
     const result = await manyToManyDataLoader(em, this as any).load(key);
     return result as U[];
   }
@@ -196,7 +169,7 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   private syncJoinTableRows(newValue: U[]): void {
     const jr = getEmInternalApi(this.entity.em).joinRows(this);
     const newSet = new Set(newValue);
-    const oldSet = new Set(jr.getOthers(this.#columnName, this.entity) as U[]);
+    const oldSet = new Set(jr.getOthers(this.columnName, this.entity) as U[]);
     // Find entities to add (in new but not in old)
     for (const entity of newValue) {
       if (!oldSet.has(entity)) {
@@ -250,24 +223,28 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
     return getMetadata(this.entity);
   }
 
+  get fieldName(): string {
+    return this.#field.fieldName;
+  }
+
   get otherMeta(): EntityMetadata {
-    return this.#otherMeta;
+    return this.#field.otherMetadata();
   }
 
   get joinTableName(): string {
-    return this.#joinTableName;
+    return this.#field.joinTableName;
   }
 
   get columnName(): string {
-    return this.#columnName;
+    return this.#field.columnNames[0];
   }
 
   get otherColumnName(): string {
-    return this.#otherColumnName;
+    return this.#field.columnNames[1];
   }
 
   get otherFieldName(): string {
-    return this.#otherFieldName;
+    return this.#field.otherFieldName;
   }
 
   public get hasBeenSet(): boolean {
@@ -289,7 +266,7 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   }
 
   public toString(): string {
-    return `ReactiveCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherMeta: ${this.#otherMeta.type})`;
+    return `ReactiveCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherMeta: ${this.otherMeta.type})`;
   }
 
   [RelationT]: T = null!;

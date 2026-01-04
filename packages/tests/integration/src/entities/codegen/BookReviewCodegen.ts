@@ -184,12 +184,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     "bookReviews",
     "tag_id",
   );
-  readonly bestReviewAuthors: ReactiveCollectionOtherSide<BookReview, Author> = hasReactiveCollectionOtherSide(
-    "authors_to_best_reviews",
-    "book_review_id",
-    "bestReviews",
-    "author_id",
-  );
+  readonly bestReviewAuthors: ReactiveCollectionOtherSide<BookReview, Author> = hasReactiveCollectionOtherSide();
 
   get id(): BookReviewId {
     return this.idMaybe || failNoIdYet("BookReview");

@@ -30,7 +30,6 @@ import {
   Comment,
   authorMeta,
   bookMeta,
-  bookReviewMeta,
   authorConfig as config,
 } from "./entities";
 
@@ -280,11 +279,6 @@ export class Author extends AuthorCodegen {
 
   /** Example of a ReactiveCollection - a derived m2m that auto-calculates its membership. */
   readonly bestReviews: ReactiveCollection<Author, BookReview> = hasReactiveCollection(
-    "authors_to_best_reviews",
-    "author_id",
-    bookReviewMeta,
-    "bestReviewAuthors",
-    "book_review_id",
     { books: { reviews: "rating" } },
     (a) => {
       a.transientFields.bestReviewsCalcInvoked++;

@@ -50,7 +50,6 @@ import {
   ReactiveField,
   ReactiveReference,
   ReadOnlyCollection,
-  hasReactiveCollectionOtherSide,
   RelationsOf,
   SSAssert,
   TaggedId,
@@ -68,6 +67,7 @@ import {
   hasOne,
   hasOnePolymorphic,
   hasOneToOne,
+  hasReactiveCollectionOtherSide,
   hasRecursiveChildren,
   hasRecursiveParents,
   isEntity,
@@ -1029,13 +1029,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     }
     if (m2m.derived === "otherSide") {
       const decl = code`${ReactiveCollectionOtherSide}<${entity.type}, ${otherEntity.type}>`;
-      const init = code`
-        ${hasReactiveCollectionOtherSide}(
-          "${joinTableName}",
-          "${columnName}",
-          "${otherFieldName}",
-          "${otherColumnName}",
-        )`;
+      const init = code`${hasReactiveCollectionOtherSide}()`;
       return { kind: "concrete", fieldName, decl, init };
     }
     const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;

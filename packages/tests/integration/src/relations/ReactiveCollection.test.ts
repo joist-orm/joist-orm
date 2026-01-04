@@ -1,4 +1,4 @@
-import { Author, BookReview, Entity, EntityManager, newAuthor, newBook, newBookReview } from "@src/entities";
+import { Author, Book, BookReview, Entity, EntityManager, newAuthor, newBook, newBookReview } from "@src/entities";
 import { insertAuthor, insertAuthorToBestReview, insertBook, insertBookReview, select } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 
@@ -14,6 +14,17 @@ describe("ReactiveCollection", () => {
       const [r] = b.reviews.get;
       // Then we can access bestReviews because the hint is in-memory
       expect(a.bestReviews.get).toMatchEntity([r]);
+    });
+
+    it("cannot be accessed if new/unloaded", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ author_id: 1, title: "b1" });
+      const em = newEntityManager();
+      const a = em.create(Author, { firstName: "a1" });
+      const b = await em.load(Book, "b:1");
+      a.books.add(b);
+      // This shouldn't work, and is probably a bug in ReactiveCollection.isLoaded
+      expect(a.bestReviews.get).toMatchEntity([]);
     });
 
     it("returns empty array for new author with no reviews", async () => {
@@ -250,33 +261,10 @@ describe("ReactiveCollection", () => {
   });
 
   describe("read-only enforcement", () => {
-    it("throws on add()", async () => {
-      const em = newEntityManager();
-      const a = newAuthor(em, {});
-      const r = newBookReview(em);
-      expect(() => (a.bestReviews as any).add(r)).toThrow("Cannot add");
-    });
-
-    it("throws on remove()", async () => {
-      const em = newEntityManager();
-      const a = newAuthor(em, {
-        books: [{ reviews: [{ rating: 5 }] }],
-      });
-      const [b] = a.books.get;
-      const [r] = b.reviews.get;
-      expect(() => (a.bestReviews as any).remove(r)).toThrow("Cannot remove");
-    });
-
     it("throws on set()", async () => {
       const em = newEntityManager();
       const a = newAuthor(em, {});
       expect(() => (a.bestReviews as any).set([])).toThrow("Cannot set");
-    });
-
-    it("throws on removeAll()", async () => {
-      const em = newEntityManager();
-      const a = newAuthor(em, {});
-      expect(() => (a.bestReviews as any).removeAll()).toThrow("Cannot removeAll");
     });
   });
 

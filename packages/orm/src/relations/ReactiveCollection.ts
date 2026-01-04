@@ -6,7 +6,6 @@ import {
   getEmInternalApi,
   getInstanceData,
   getMetadata,
-  IdOf,
   isLoaded,
   ReadOnlyCollection,
 } from "..";
@@ -20,8 +19,8 @@ import { RelationT, RelationU } from "./Relation";
 /**
  * A reactive, derived many-to-many collection.
  *
- * Similar to `ReactiveReference` but for collections - the membership is calculated
- * from a reactive hint function and persisted to a join table.
+ * Similar to `ReactiveReference` but for collections--membership is calculated from a reactive
+ * function and persisted to the underlying join table.
  */
 export interface ReactiveCollection<T extends Entity, U extends Entity> extends ReadOnlyCollection<T, U> {
   load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]>;
@@ -34,7 +33,6 @@ export function hasReactiveCollection<T extends Entity, U extends Entity, const 
   otherMeta: EntityMetadata<U>,
   otherFieldName: string,
   otherColumnName: string,
-  fieldName: keyof T & string,
   hint: H,
   fn: (entity: Reacted<T, H>) => readonly MaybeReactedEntity<U>[],
 ): ReactiveCollection<T, U> {
@@ -54,32 +52,24 @@ export function hasReactiveCollection<T extends Entity, U extends Entity, const 
   });
 }
 
-/**
- * Implements ReactiveCollection.
- *
- * Similar to ReactiveReference but for m2m collections:
- * - Takes a reactive hint to specify dependencies
- * - Calculates collection membership via a function
- * - Persists to a join table
- * - Recalculates when dependencies change
- */
+/** Implements ReactiveCollection, initially a copy/paste of ReactiveReference but for m2m. */
 export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extends ReactiveHint<T>>
   extends AbstractRelationImpl<T, U[]>
   implements ReactiveCollection<T, U>, IsLoadedCachable
 {
-  readonly #fieldName: keyof T & string;
-  readonly #otherMeta: EntityMetadata;
-  readonly #reactiveHint: H;
-
-  // M2M join table metadata - needed for JoinRows compatibility
   readonly #joinTableName: string;
   readonly #columnName: string;
   readonly #otherFieldName: string;
   readonly #otherColumnName: string;
+  readonly #otherMeta: EntityMetadata;
 
-  // Loading state
+  // Could be either the ref-loaded stored array, or full-loaded calculated array
   #loaded: U[] | undefined;
+  // In ref-mode, we use our materialized FK value (which might be undefined)
+  // If full-mode, we calculate the FK value from the subgraph
   #loadedMode: "ref" | "full" | undefined = undefined;
+  // #isLoaded doesn't necessary care if we're ref-mode or full-mode, it's just
+  // whether a caller can call `.get` and not have it blow up.
   #isLoaded: boolean | undefined = undefined;
   #isCached: boolean = false;
   #loadPromise: Promise<ReadonlyArray<U>> | undefined;
@@ -96,19 +86,11 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
     private fn: (entity: Reacted<T, H>) => readonly MaybeReactedEntity<U>[],
   ) {
     super(entity);
-    this.#fieldName = fieldName;
     this.#otherMeta = otherMeta;
-    this.#reactiveHint = reactiveHint;
     this.#joinTableName = joinTableName;
     this.#columnName = columnName;
     this.#otherFieldName = otherFieldName;
     this.#otherColumnName = otherColumnName;
-
-    if (entity.isNewEntity) {
-      this.#loaded = [];
-      this.#loadedMode = "full";
-      this.#isLoaded = true;
-    }
     getInstanceData(entity).relations[fieldName] = this;
   }
 
@@ -155,13 +137,15 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   get isLoaded(): boolean {
     if (this.#isLoaded !== undefined) return this.#isLoaded;
     getEmInternalApi(this.entity.em).isLoadedCache.add(this);
-
+    // If a WIP mutation has marked our field as potentially dirty, we need to be "full" loaded
     const maybeDirty = getEmInternalApi(this.entity.em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
     if (maybeDirty) {
+      // If we're dirty, only being "full" loaded is good enough to recalc
       this.#loadedMode = "full";
       this.#isLoaded = isLoaded(this.entity, this.loadHint);
       this.#isCached = false;
     } else {
+      // If we've had `.load` called before, assume we're still loaded
       this.#isLoaded = !!this.#loadedMode;
     }
     return this.#isLoaded;
@@ -175,55 +159,54 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   private doGet(opts?: { withDeleted?: boolean }): U[] {
     const { fn } = this;
     ensureNotDeleted(this.entity, "pending");
-
+    // Fast pass if we've already calculated this (cache invalidation will happen on
+    // any mutation via #resetIsLoaded)..
     if (this.#isCached) {
       return this.filterDeleted(this.#loaded ?? [], opts) as U[];
     }
-
+    // Call isLoaded to probe the load hint, and get `#isLoaded` set, but still have
+    // our `if` check the raw `#isLoaded` to know if we should eval-latest or return `loaded`.
     if (this.isLoaded && this.#loadedMode === "full") {
-      const newValue = [...(fn(this.entity as any) as unknown as U[])];
-
+      const newValue = fn(this.entity as any) as unknown as U[];
       // Preserve deleted entities that were in the previous loaded value
       const previousDeleted = (this.#loaded ?? []).filter((e) => e.isDeletedEntity);
       for (const entity of previousDeleted) {
-        if (!newValue.includes(entity)) {
-          newValue.push(entity);
-        }
+        if (!newValue.includes(entity)) newValue.push(entity);
       }
-
       if (!getEmInternalApi(this.entity.em).isValidating) {
         this.syncJoinTableRows(newValue);
       }
-
       this.#loaded = newValue;
       this.#isCached = true;
       getEmInternalApi(this.entity.em).isLoadedCache.add(this);
     } else if (!!this.#loadedMode) {
+      // We're either loadedMode=ref, or loadedMode=full (but not actually fully loaded),
+      // but in theory loadedMode only gets set in `.load()`, so we should have #loaded
+      // set to some value, even if it's not fully up-to-date.
       this.#isCached = true;
       getEmInternalApi(this.entity.em).isLoadedCache.add(this);
     } else {
       const noun = this.entity.isNewEntity ? "derived" : "loaded";
       throw new Error(`${this.entity}.${this.fieldName} has not been ${noun} yet`);
     }
-
     return this.filterDeleted(this.#loaded ?? [], opts) as U[];
   }
 
+  // This is like calling `setField` but for a m2m relation...
   private syncJoinTableRows(newValue: U[]): void {
-    const joinRows = getEmInternalApi(this.entity.em).joinRows(this);
+    const jr = getEmInternalApi(this.entity.em).joinRows(this);
     const newSet = new Set(newValue);
-    const oldEntities = joinRows.getOthers(this.#columnName, this.entity) as U[];
-    const oldSet = new Set(oldEntities);
+    const oldSet = new Set(jr.getOthers(this.#columnName, this.entity) as U[]);
     // Find entities to add (in new but not in old)
     for (const entity of newValue) {
       if (!oldSet.has(entity)) {
-        joinRows.addNew(this, this.entity, entity);
+        jr.addNew(this, this.entity, entity);
       }
     }
     // Find entities to remove (in old but not in new)
     for (const entity of oldSet) {
       if (!newSet.has(entity)) {
-        joinRows.addRemove(this, this.entity, entity);
+        jr.addRemove(this, this.entity, entity);
       }
     }
   }
@@ -236,31 +219,8 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
     return this.doGet({ withDeleted: false });
   }
 
-  // Read-only - these throw errors
-  add(_other: U): void {
-    fail(`Cannot add to ${this.entity}.${this.fieldName} ReactiveCollection directly.`);
-  }
-
-  remove(_other: U): void {
-    fail(`Cannot remove from ${this.entity}.${this.fieldName} ReactiveCollection directly.`);
-  }
-
-  set(_values: readonly U[]): void {
+  set(): void {
     fail(`Cannot set ${this.entity}.${this.fieldName} ReactiveCollection directly.`);
-  }
-
-  removeAll(): void {
-    fail(`Cannot removeAll on ${this.entity}.${this.fieldName} ReactiveCollection directly.`);
-  }
-
-  async includes(other: U): Promise<boolean> {
-    const loaded = await this.load();
-    return loaded.includes(other);
-  }
-
-  async find(id: IdOf<U>): Promise<U | undefined> {
-    const loaded = await this.load();
-    return loaded.find((e) => e.id === id);
   }
 
   get loadHint(): any {
@@ -286,32 +246,32 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   }
 
   // Properties needed for JoinRows/ManyToManyCollection compatibility
-  public get meta(): EntityMetadata {
+  get meta(): EntityMetadata {
     return getMetadata(this.entity);
   }
 
-  public get otherMeta(): EntityMetadata {
+  get otherMeta(): EntityMetadata {
     return this.#otherMeta;
   }
 
-  public get joinTableName(): string {
+  get joinTableName(): string {
     return this.#joinTableName;
   }
 
-  public get columnName(): string {
+  get columnName(): string {
     return this.#columnName;
   }
 
-  public get otherColumnName(): string {
+  get otherColumnName(): string {
     return this.#otherColumnName;
   }
 
-  public get otherFieldName(): string {
+  get otherFieldName(): string {
     return this.#otherFieldName;
   }
 
   public get hasBeenSet(): boolean {
-    return false;
+    return true;
   }
 
   get isPreloaded(): boolean {

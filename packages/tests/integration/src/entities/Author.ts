@@ -285,7 +285,6 @@ export class Author extends AuthorCodegen {
     bookReviewMeta,
     "bestReviewAuthors",
     "book_review_id",
-    "bestReviews",
     { books: { reviews: "rating" } },
     (a) => {
       a.transientFields.bestReviewsCalcInvoked++;

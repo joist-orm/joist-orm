@@ -25,8 +25,11 @@ import { failIfNewEntity, failNoId } from "./ManyToOneReference";
 import { Reference, ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
 
-export interface ReactiveReference<T extends Entity, U extends Entity, N extends never | undefined>
-  extends Reference<T, U, N> {
+export interface ReactiveReference<T extends Entity, U extends Entity, N extends never | undefined> extends Reference<
+  T,
+  U,
+  N
+> {
   isLoaded: boolean;
   isSet: boolean;
 
@@ -105,11 +108,11 @@ export function hasReactiveReference<
  *   `load` / `populate` should load the graph & recalculate the value.
  */
 export class ReactiveReferenceImpl<
-    T extends Entity,
-    U extends Entity,
-    H extends ReactiveHint<T>,
-    N extends never | undefined,
-  >
+  T extends Entity,
+  U extends Entity,
+  H extends ReactiveHint<T>,
+  N extends never | undefined,
+>
   extends AbstractRelationImpl<T, U>
   implements ReactiveReference<T, U, N>, IsLoadedCachable
 {
@@ -121,6 +124,8 @@ export class ReactiveReferenceImpl<
   // In ref-mode, we use our materialized FK value (which might be undefined)
   // If full-mode, we calculate the FK value from the subgraph
   #loadedMode: "ref" | "full" | undefined = undefined;
+  // #isLoaded doesn't necessary care if we're ref-mode or full-mode, it's just
+  // whether a caller can call `.get` and not have it blow up.
   #isLoaded: boolean | undefined = undefined;
   #isCached: boolean = false;
   #loadPromise: any;
@@ -224,7 +229,6 @@ export class ReactiveReferenceImpl<
     // Call isLoaded to probe the load hint, and get `#isLoaded` set, but still have
     // our `if` check the raw `#isLoaded` to know if we should eval-latest or return `loaded`.
     if (this.isLoaded && this.#loadedMode === "full") {
-      // console.log(`Evaling ${this.entity.toString()}.${this.fieldName}...)`);
       const newValue = this.filterDeleted(fn(this.entity as any) as any, opts);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update (...unless we're accessing it
@@ -237,8 +241,9 @@ export class ReactiveReferenceImpl<
       this.#isCached = true;
       getEmInternalApi(this.entity.em).isLoadedCache.add(this);
     } else if (!!this.#loadedMode) {
-      // We're either full-not-loaded, or ref-loaded, which either way we should have
-      // a cached #loaded value to use.
+      // We're either loadedMode=ref, or loadedMode=full (but not actually fully loaded),
+      // but in theory loadedMode only gets set in `.load()`, so we should have #loaded
+      // set to some value, even if it's not fully up-to-date.
       this.#isCached = true;
       getEmInternalApi(this.entity.em).isLoadedCache.add(this);
     } else {
@@ -377,11 +382,11 @@ export class ReactiveReferenceImpl<
   }
 
   public get hasBeenSet(): boolean {
-    return false;
+    return true;
   }
 
   public toString(): string {
-    return `PersistedAsyncReference(entity: ${this.entity}, hint: ${this.loadHint}, fieldName: ${this.fieldName}, otherMeta: {
+    return `ReactiveReference(entity: ${this.entity}, hint: ${this.loadHint}, fieldName: ${this.fieldName}, otherMeta: {
       this.otherMeta.type
     }, id: ${this.id})`;
   }

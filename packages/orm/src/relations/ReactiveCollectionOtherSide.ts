@@ -18,8 +18,8 @@ import { RelationT, RelationU } from "./Relation";
 /**
  * A read-only collection representing the "other side" of a ReactiveCollection.
  *
- * When Author.bestReviews is a ReactiveCollection (controlling side),
- * BookReview.bestReviewAuthors is a ReactiveCollectionOtherSide (read-only view).
+ * I.e. when `Author.bestReviews` is a `ReactiveCollection` (controlling side), `BookReview.bestReviewAuthors`
+ * the `ReactiveCollectionOtherSide` (read-only view).
  */
 export interface ReactiveCollectionOtherSide<T extends Entity, U extends Entity> extends ReadOnlyCollection<T, U> {}
 

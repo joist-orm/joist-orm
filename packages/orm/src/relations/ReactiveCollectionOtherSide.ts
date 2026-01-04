@@ -110,10 +110,10 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
   /** Apply pending changes from the controlling side. */
   private applyPendingChanges(baseEntities: U[]): U[] {
     const result = new Set(baseEntities);
-    const joinRows = getEmInternalApi(this.entity.em).joinRows(this);
-    const added = joinRows.addedForOtherSide(this.columnName, this.entity);
+    const jr = getEmInternalApi(this.entity.em).joinRows(this);
+    const added = jr.addedFor(this, this.entity);
     for (const other of added) result.add(other as U);
-    const removed = joinRows.removedForOtherSide(this.columnName, this.entity);
+    const removed = jr.removedFor(this, this.entity);
     for (const other of removed) result.delete(other as U);
     return [...result];
   }

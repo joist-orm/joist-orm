@@ -19,6 +19,8 @@ import {
   Plugin,
   PolymorphicKeySerde,
   PolymorphicReferenceImpl,
+  ReactiveManyToManyImpl,
+  ReactiveManyToManyOtherSideImpl,
   ReactiveReferenceImpl,
   Todo,
 } from "joist-orm";
@@ -325,10 +327,21 @@ function getReferences(entity: Entity): IteratorObject<ConcreteReference> {
     );
 }
 
-function getManyToManys(entity: Entity): IteratorObject<ManyToManyCollection<Entity, Entity>> {
+function getManyToManys(
+  entity: Entity,
+): IteratorObject<
+  | ManyToManyCollection<Entity, Entity>
+  | ReactiveManyToManyImpl<any, any, any>
+  | ReactiveManyToManyOtherSideImpl<any, any>
+> {
   return getRelations(entity)
     .values()
-    .filter((r) => r instanceof ManyToManyCollection);
+    .filter(
+      (r) =>
+        r instanceof ManyToManyCollection ||
+        r instanceof ReactiveManyToManyImpl ||
+        r instanceof ReactiveManyToManyOtherSideImpl,
+    );
 }
 
 function getCollections(entity: Entity) {
@@ -336,6 +349,10 @@ function getCollections(entity: Entity) {
     .values()
     .filter(
       (r) =>
-        r instanceof ManyToManyCollection || r instanceof OneToManyCollection || r instanceof OneToOneReferenceImpl,
+        r instanceof ManyToManyCollection ||
+        r instanceof OneToManyCollection ||
+        r instanceof OneToOneReferenceImpl ||
+        r instanceof ReactiveManyToManyImpl ||
+        r instanceof ReactiveManyToManyOtherSideImpl,
     );
 }

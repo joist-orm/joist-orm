@@ -58,22 +58,15 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
     ensureNotDeleted(this.entity, "pending");
     if (!this.#isLoaded || opts?.forceReload) {
       this.#isCached = false;
-      return (this.#loadPromise ??= this.loadFromJoinTable().then((loaded) => {
+      return (this.#loadPromise ??= this.#loadFromJoinTable().then((loaded) => {
         this.#loadPromise = undefined;
         this.#loaded = loaded;
         this.#isLoaded = true;
         getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
-        return this.doGet(opts);
+        return this.#doGet(opts);
       }));
     }
-    return this.doGet(opts);
-  }
-
-  private async loadFromJoinTable(): Promise<U[]> {
-    const { em } = this.entity;
-    const key = `${this.columnName}=${this.entity.id}`;
-    const result = await manyToManyDataLoader(em, this as any).load(key);
-    return result as U[];
+    return this.#doGet(opts);
   }
 
   get isLoaded(): boolean {
@@ -85,44 +78,11 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
   }
 
   get get(): U[] {
-    return this.doGet({ withDeleted: false });
+    return this.#doGet({ withDeleted: false });
   }
 
   get getWithDeleted(): U[] {
-    return this.doGet({ withDeleted: true });
-  }
-
-  private doGet(opts?: { withDeleted?: boolean }): U[] {
-    ensureNotDeleted(this.entity, "pending");
-    if (!this.#isLoaded) {
-      throw new Error(`${this.entity}.${this.fieldName} has not been loaded yet`);
-    }
-
-    if (!this.#isCached) {
-      this.#cached = this.applyPendingChanges(this.#loaded ?? []);
-      this.#isCached = true;
-      getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
-    }
-
-    return this.filterDeleted(this.#cached!, opts);
-  }
-
-  /** Apply pending changes from the controlling side. */
-  private applyPendingChanges(baseEntities: U[]): U[] {
-    const result = new Set(baseEntities);
-    const jr = getEmInternalApi(this.entity.em).joinRows(this);
-    const added = jr.addedFor(this, this.entity);
-    for (const other of added) result.add(other as U);
-    const removed = jr.removedFor(this, this.entity);
-    for (const other of removed) result.delete(other as U);
-    return [...result];
-  }
-
-  private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
-    if (opts?.withDeleted === true) {
-      return entities;
-    }
-    return entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+    return this.#doGet({ withDeleted: true });
   }
 
   set(): void {
@@ -144,40 +104,36 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
     this.#isLoaded = false;
   }
 
-  current(opts?: { withDeleted?: boolean }): U[] {
-    return this.filterDeleted(this.#loaded ?? [], opts);
-  }
-
-  public get fieldName(): string {
+  get fieldName(): string {
     return this.#field.fieldName;
   }
 
   // Properties for JoinRows/ManyToManyCollection compatibility
-  public get meta(): EntityMetadata {
+  get meta(): EntityMetadata {
     return getMetadata(this.entity);
   }
 
-  public get otherMeta(): EntityMetadata {
+  get otherMeta(): EntityMetadata {
     return this.#field.otherMetadata();
   }
 
-  public get joinTableName(): string {
+  get joinTableName(): string {
     return this.#field.joinTableName;
   }
 
-  public get columnName(): string {
+  get columnName(): string {
     return this.#field.columnNames[0];
   }
 
-  public get otherColumnName(): string {
+  get otherColumnName(): string {
     return this.#field.columnNames[1];
   }
 
-  public get otherFieldName(): string {
+  get otherFieldName(): string {
     return this.#field.otherFieldName;
   }
 
-  public get hasBeenSet(): boolean {
+  get hasBeenSet(): boolean {
     return false;
   }
 
@@ -191,6 +147,44 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
 
   public toString(): string {
     return `ReactiveCollectionOtherSide(entity: ${this.entity}, fieldName: ${this.fieldName}, otherMeta: ${this.otherMeta.type})`;
+  }
+
+  #doGet(opts?: { withDeleted?: boolean }): U[] {
+    ensureNotDeleted(this.entity, "pending");
+    if (!this.#isLoaded) {
+      throw new Error(`${this.entity}.${this.fieldName} has not been loaded yet`);
+    }
+    if (!this.#isCached) {
+      this.#cached = this.#applyPendingChanges(this.#loaded ?? []);
+      this.#isCached = true;
+      getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
+    }
+    return this.#filterDeleted(this.#cached!, opts);
+  }
+
+  async #loadFromJoinTable(): Promise<U[]> {
+    const { em } = this.entity;
+    const key = `${this.columnName}=${this.entity.id}`;
+    const result = await manyToManyDataLoader(em, this as any).load(key);
+    return result as U[];
+  }
+
+  /** Apply pending changes from the controlling side. */
+  #applyPendingChanges(baseEntities: U[]): U[] {
+    const result = new Set(baseEntities);
+    const jr = getEmInternalApi(this.entity.em).joinRows(this);
+    const added = jr.addedFor(this, this.entity);
+    for (const other of added) result.add(other as U);
+    const removed = jr.removedFor(this, this.entity);
+    for (const other of removed) result.delete(other as U);
+    return [...result];
+  }
+
+  #filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
+    if (opts?.withDeleted === true) {
+      return entities;
+    }
+    return entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
   }
 
   [RelationT]: T = null!;

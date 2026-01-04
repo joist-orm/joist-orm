@@ -82,29 +82,21 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
           this.#loadedMode = "full";
           this.#isLoaded = true;
           getEmInternalApi(this.entity.em).isLoadedCache.add(this);
-          return this.doGet(opts);
+          return this.#doGet(opts);
         }));
       } else {
         // Load from join table (existing materialized state)
-        return (this.#loadPromise ??= this.loadFromJoinTable().then((loaded) => {
+        return (this.#loadPromise ??= this.#loadFromJoinTable().then((loaded) => {
           this.#loadPromise = undefined;
           this.#loadedMode = "ref";
           this.#isLoaded = true;
           this.#loaded = loaded;
           getEmInternalApi(this.entity.em).isLoadedCache.add(this);
-          return this.filterDeleted(loaded, opts);
+          return this.#filterDeleted(loaded, opts);
         }));
       }
     }
-    return this.doGet(opts);
-  }
-
-  private async loadFromJoinTable(): Promise<U[]> {
-    const { em } = this.entity;
-    // Use the existing m2m dataloader by creating a compatible collection-like object
-    const key = `${this.columnName}=${this.entity.id}`;
-    const result = await manyToManyDataLoader(em, this as any).load(key);
-    return result as U[];
+    return this.#doGet(opts);
   }
 
   get isLoaded(): boolean {
@@ -129,13 +121,13 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
     this.#isCached = false;
   }
 
-  private doGet(opts?: { withDeleted?: boolean }): U[] {
+  #doGet(opts?: { withDeleted?: boolean }): U[] {
     const { fn } = this;
     ensureNotDeleted(this.entity, "pending");
     // Fast pass if we've already calculated this (cache invalidation will happen on
     // any mutation via #resetIsLoaded)..
     if (this.#isCached) {
-      return this.filterDeleted(this.#loaded ?? [], opts) as U[];
+      return this.#filterDeleted(this.#loaded ?? [], opts) as U[];
     }
     // Call isLoaded to probe the load hint, and get `#isLoaded` set, but still have
     // our `if` check the raw `#isLoaded` to know if we should eval-latest or return `loaded`.
@@ -147,7 +139,7 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
         if (!newValue.includes(entity)) newValue.push(entity);
       }
       if (!getEmInternalApi(this.entity.em).isValidating) {
-        this.syncJoinTableRows(newValue);
+        this.#syncJoinTableRows(newValue);
       }
       this.#loaded = newValue;
       this.#isCached = true;
@@ -162,34 +154,15 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
       const noun = this.entity.isNewEntity ? "derived" : "loaded";
       throw new Error(`${this.entity}.${this.fieldName} has not been ${noun} yet`);
     }
-    return this.filterDeleted(this.#loaded ?? [], opts) as U[];
-  }
-
-  // This is like calling `setField` but for a m2m relation...
-  private syncJoinTableRows(newValue: U[]): void {
-    const jr = getEmInternalApi(this.entity.em).joinRows(this);
-    const newSet = new Set(newValue);
-    const oldSet = new Set(jr.getOthers(this.columnName, this.entity) as U[]);
-    // Find entities to add (in new but not in old)
-    for (const entity of newValue) {
-      if (!oldSet.has(entity)) {
-        jr.addNew(this, this.entity, entity);
-      }
-    }
-    // Find entities to remove (in old but not in new)
-    for (const entity of oldSet) {
-      if (!newSet.has(entity)) {
-        jr.addRemove(this, this.entity, entity);
-      }
-    }
+    return this.#filterDeleted(this.#loaded ?? [], opts) as U[];
   }
 
   get getWithDeleted(): U[] {
-    return this.doGet({ withDeleted: true });
+    return this.#doGet({ withDeleted: true });
   }
 
   get get(): U[] {
-    return this.doGet({ withDeleted: false });
+    return this.#doGet({ withDeleted: false });
   }
 
   set(): void {
@@ -212,10 +185,6 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   async cleanupOnEntityDeleted(): Promise<void> {
     this.#loaded = [];
     this.#isLoaded = false;
-  }
-
-  current(opts?: { withDeleted?: boolean }): U[] {
-    return this.filterDeleted(this.#loaded ?? [], opts) as U[];
   }
 
   // Properties needed for JoinRows/ManyToManyCollection compatibility
@@ -259,14 +228,41 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
     // No-op for now - could implement if needed
   }
 
-  private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
+  public toString(): string {
+    return `ReactiveCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherMeta: ${this.otherMeta.type})`;
+  }
+
+  async #loadFromJoinTable(): Promise<U[]> {
+    const { em } = this.entity;
+    // Use the existing m2m dataloader by creating a compatible collection-like object
+    const key = `${this.columnName}=${this.entity.id}`;
+    const result = await manyToManyDataLoader(em, this as any).load(key);
+    return result as U[];
+  }
+
+  // This is like calling `setField` but for a m2m relation...
+  #syncJoinTableRows(newValue: U[]): void {
+    const jr = getEmInternalApi(this.entity.em).joinRows(this);
+    const newSet = new Set(newValue);
+    const oldSet = new Set(jr.getOthers(this.columnName, this.entity) as U[]);
+    // Find entities to add (in new but not in old)
+    for (const entity of newValue) {
+      if (!oldSet.has(entity)) {
+        jr.addNew(this, this.entity, entity);
+      }
+    }
+    // Find entities to remove (in old but not in new)
+    for (const entity of oldSet) {
+      if (!newSet.has(entity)) {
+        jr.addRemove(this, this.entity, entity);
+      }
+    }
+  }
+
+  #filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
     return opts?.withDeleted === true
       ? [...entities]
       : entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
-  }
-
-  public toString(): string {
-    return `ReactiveCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherMeta: ${this.otherMeta.type})`;
   }
 
   [RelationT]: T = null!;

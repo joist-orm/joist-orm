@@ -237,13 +237,10 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   readonly randomComment: ManyToOneReference<Book, Comment, undefined> = hasOne();
   readonly prequelsRecursive: ReadOnlyCollection<Book, Book> = hasRecursiveParents("prequel", "sequelsRecursive");
   readonly sequelsRecursive: ReadOnlyCollection<Book, Book> = hasRecursiveChildren("sequel", "prequelsRecursive");
-  readonly sequel: OneToOneReference<Book, Book> = hasOneToOne("prequel", "prequel_id");
-  readonly currentDraftAuthor: OneToOneReference<Book, Author> = hasOneToOne(
-    "currentDraftBook",
-    "current_draft_book_id",
-  );
-  readonly favoriteAuthor: OneToOneReference<Book, Author> = hasOneToOne("favoriteBook", "favorite_book_id");
-  readonly image: OneToOneReference<Book, Image> = hasOneToOne("book", "book_id");
+  readonly sequel: OneToOneReference<Book, Book> = hasOneToOne();
+  readonly currentDraftAuthor: OneToOneReference<Book, Author> = hasOneToOne();
+  readonly favoriteAuthor: OneToOneReference<Book, Author> = hasOneToOne();
+  readonly image: OneToOneReference<Book, Image> = hasOneToOne();
   readonly tags: Collection<Book, Tag> = hasManyToMany();
 
   get id(): BookId {

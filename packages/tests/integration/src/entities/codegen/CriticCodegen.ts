@@ -163,7 +163,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
   readonly bookReviews: Collection<Critic, BookReview> = hasMany();
   readonly favoriteLargePublisher: ManyToOneReference<Critic, LargePublisher, undefined> = hasOne();
   readonly group: ManyToOneReference<Critic, PublisherGroup, undefined> = hasOne();
-  readonly criticColumn: OneToOneReference<Critic, CriticColumn> = hasOneToOne("critic", "critic_id");
+  readonly criticColumn: OneToOneReference<Critic, CriticColumn> = hasOneToOne();
 
   get id(): CriticId {
     return this.idMaybe || failNoIdYet("Critic");

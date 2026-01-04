@@ -1007,9 +1007,9 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
 
   // Add OneToOne
   const o2o: Relation[] = meta.oneToOnes.map((o2o) => {
-    const { fieldName, otherEntity, otherFieldName, otherColumnName } = o2o;
+    const { fieldName, otherEntity } = o2o;
     const decl = code`${OneToOneReference}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`${hasOneToOne}("${otherFieldName}", "${otherColumnName}")`;
+    const init = code`${hasOneToOne}()`;
     return { kind: "concrete", fieldName, decl, init };
   });
   // Specialize

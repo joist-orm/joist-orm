@@ -439,8 +439,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne();
   readonly mentorsRecursive: ReadOnlyCollection<Author, Author> = hasRecursiveParents("mentor", "menteesRecursive");
   readonly menteesRecursive: ReadOnlyCollection<Author, Author> = hasRecursiveChildren("mentees", "mentorsRecursive");
-  readonly image: OneToOneReference<Author, Image> = hasOneToOne("author", "author_id");
-  readonly userOneToOne: OneToOneReference<Author, User> = hasOneToOne("authorManyToOne", "author_id");
+  readonly image: OneToOneReference<Author, Image> = hasOneToOne();
+  readonly userOneToOne: OneToOneReference<Author, User> = hasOneToOne();
   readonly mentorsClosure: ReactiveManyToManyOtherSide<Author, Author> = hasReactiveManyToManyOtherSide();
   readonly tags: Collection<Author, Tag> = hasManyToMany();
 

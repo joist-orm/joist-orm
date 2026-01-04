@@ -94,7 +94,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       const added = this.#added?.find((u) => !u.isNewEntity && u.id === id);
       if (added) return added;
       // Make a cacheable tuple to look up this specific o2m row
-      const key = `id=${id},${this.otherFieldName}=${this.entity.id}`;
+      const key = `id=${id},${this.#field.otherColumnName}=${this.entity.id}`;
       return oneToManyFindDataLoader(this.entity.em, this)
         .load(key)
         .catch(function find(err) {

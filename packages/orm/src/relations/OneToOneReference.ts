@@ -106,9 +106,6 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   // These are public to our internal implementation but not exposed in the Collection API
-  // public fieldName: keyof T & string,
-  // public otherFieldName: keyof U & string,
-  // public otherColumnName: string,
   get fieldName(): keyof T & string {
     return this.#field.fieldName as keyof T & string;
   }

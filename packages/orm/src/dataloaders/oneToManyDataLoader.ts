@@ -8,6 +8,7 @@ import {
   deTagIds,
   maybeResolveReferenceToId,
   OneToManyCollection,
+  OneToManyField,
   ParsedFindQuery,
 } from "../index";
 import { abbreviation, groupBy } from "../utils";
@@ -29,13 +30,8 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
     const keys = deTagIds(oneMeta, _keys);
 
     const alias = abbreviation(meta.tableName);
-    const field = meta.allFields[collection.otherFieldName];
-    const columnName =
-      field.kind === "m2o"
-        ? field.serde.columns[0].columnName
-        : field.kind === "poly"
-          ? field.components.find((c) => c.otherMetadata() === oneMeta)!.columnName
-          : fail(`Unexpected field ${field}`);
+    const o2m = oneMeta.allFields[collection.fieldName] as OneToManyField;
+    const other = meta.allFields[collection.otherFieldName];
     const query: ParsedFindQuery = {
       selects: [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
@@ -45,8 +41,8 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
         conditions: [
           {
             kind: "column",
-            alias: `${alias}${field.aliasSuffix}`,
-            column: columnName,
+            alias: `${alias}${other.aliasSuffix}`,
+            column: o2m.otherColumnName,
             dbType: meta.idDbType,
             cond: { kind: "in", value: keys },
           },

@@ -1,7 +1,7 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
-import { getMetadata } from "../EntityMetadata";
+import { getMetadata, OneToOneField } from "../EntityMetadata";
 import { getField } from "../fields";
 import {
   addTablePerClassJoinsAndClassTag,
@@ -11,7 +11,7 @@ import {
   ParsedFindQuery,
 } from "../index";
 import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
-import { abbreviation, fail, groupBy } from "../utils";
+import { abbreviation, groupBy } from "../utils";
 
 export const oneToOneLoadOperation = "o2o-load";
 
@@ -30,13 +30,8 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
     const keys = deTagIds(meta, _keys);
 
     const alias = abbreviation(otherMeta.tableName);
-    const field = reference.otherMeta.allFields[reference.otherFieldName];
-    const columnName =
-      field.kind === "m2o"
-        ? field.serde.columns[0].columnName
-        : field.kind === "poly"
-          ? field.components.find((c) => c.otherMetadata() === meta)!.columnName
-          : fail(`Unexpected field ${field}`);
+    const o2o = meta.allFields[reference.fieldName] as OneToOneField;
+    const other = otherMeta.allFields[reference.otherFieldName];
     const query: ParsedFindQuery = {
       selects: [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: otherMeta.tableName }],
@@ -46,8 +41,8 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
         conditions: [
           {
             kind: "column",
-            alias,
-            column: columnName,
+            alias: `${alias}${other.aliasSuffix}`,
+            column: o2o.otherColumnName,
             dbType: meta.idDbType,
             cond: { kind: "in", value: keys },
           },

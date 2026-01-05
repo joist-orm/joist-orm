@@ -1,3 +1,10 @@
+# [1.287.0](https://github.com/joist-orm/joist-orm/compare/v1.286.4...v1.287.0) (2026-01-05)
+
+
+### Features
+
+* Reactive m2m collections. ([#1687](https://github.com/joist-orm/joist-orm/issues/1687)) ([b4259e1](https://github.com/joist-orm/joist-orm/commit/b4259e1539b748b043857fcabe24cdad633eb1d4))
+
 ## [1.286.4](https://github.com/joist-orm/joist-orm/compare/v1.286.3...v1.286.4) (2025-12-25)
 
 

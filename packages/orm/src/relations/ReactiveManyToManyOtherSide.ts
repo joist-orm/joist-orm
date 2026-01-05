@@ -17,27 +17,27 @@ import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 
 /**
- * A read-only collection representing the "other side" of a ReactiveCollection.
+ * A read-only collection representing the "other side" of a ReactiveManyToMany.
  *
- * I.e. when `Author.bestReviews` is a `ReactiveCollection` (controlling side), `BookReview.bestReviewAuthors`
- * the `ReactiveCollectionOtherSide` (read-only view).
+ * I.e. when `Author.bestReviews` is a `ReactiveManyToMany` (controlling side), `BookReview.bestReviewAuthors`
+ * the `ReactiveManyToManyOtherSide` (read-only view).
  */
-export interface ReactiveCollectionOtherSide<T extends Entity, U extends Entity> extends ReadOnlyCollection<T, U> {}
+export interface ReactiveManyToManyOtherSide<T extends Entity, U extends Entity> extends ReadOnlyCollection<T, U> {}
 
-/** Creates a ReactiveCollectionOtherSide, the read-only other side of a ReactiveCollection. */
-export function hasReactiveCollectionOtherSide<T extends Entity, U extends Entity>(): ReactiveCollectionOtherSide<
+/** Creates a ReactiveManyToManyOtherSide, the read-only other side of a ReactiveManyToMany. */
+export function hasReactiveManyToManyOtherSide<T extends Entity, U extends Entity>(): ReactiveManyToManyOtherSide<
   T,
   U
 > {
   return lazyField((entity: T, fieldName) => {
     const m2m = getMetadata(entity).allFields[fieldName] as ManyToManyField;
-    return new ReactiveCollectionOtherSideImpl<T, U>(entity, m2m);
+    return new ReactiveManyToManyOtherSideImpl<T, U>(entity, m2m);
   });
 }
 
-export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
+export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<T, U[]>
-  implements ReactiveCollectionOtherSide<T, U>, ManyToManyLike, IsLoadedCachable
+  implements ReactiveManyToManyOtherSide<T, U>, ManyToManyLike, IsLoadedCachable
 {
   #field: ManyToManyField;
   // Loading state
@@ -86,11 +86,11 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
   }
 
   set(): void {
-    fail(`Cannot set ${this.entity}.${this.fieldName} - it is the read-only other side of a ReactiveCollection.`);
+    fail(`Cannot set ${this.entity}.${this.fieldName} - it is the read-only other side of a ReactiveManyToMany.`);
   }
 
   setFromOpts(_others: U[]): void {
-    throw new Error(`ReactiveCollectionOtherSide ${this.entity}.${this.fieldName} cannot be set via opts`);
+    throw new Error(`ReactiveManyToManyOtherSide ${this.entity}.${this.fieldName} cannot be set via opts`);
   }
 
   maybeCascadeDelete(): void {
@@ -142,11 +142,11 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
   }
 
   preload(): void {
-    // No-op for reactive collection other side
+    // No-op for reactive m2m other side
   }
 
   public toString(): string {
-    return `ReactiveCollectionOtherSide(entity: ${this.entity}, fieldName: ${this.fieldName}, otherMeta: ${this.otherMeta.type})`;
+    return `ReactiveManyToManyOtherSide(entity: ${this.entity}, fieldName: ${this.fieldName}, otherMeta: ${this.otherMeta.type})`;
   }
 
   #doGet(opts?: { withDeleted?: boolean }): U[] {
@@ -191,8 +191,8 @@ export class ReactiveCollectionOtherSideImpl<T extends Entity, U extends Entity>
   [RelationU]: U = null!;
 }
 
-export function isReactiveCollectionOtherSide(
+export function isReactiveManyToManyOtherSide(
   maybeCollection: any,
-): maybeCollection is ReactiveCollectionOtherSide<any, any> {
-  return maybeCollection instanceof ReactiveCollectionOtherSideImpl;
+): maybeCollection is ReactiveManyToManyOtherSide<any, any> {
+  return maybeCollection instanceof ReactiveManyToManyOtherSideImpl;
 }

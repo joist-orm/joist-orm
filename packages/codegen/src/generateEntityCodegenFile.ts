@@ -45,8 +45,8 @@ import {
   PartialOrNull,
   PolymorphicReference,
   ProjectEntity,
-  ReactiveCollection,
-  ReactiveCollectionOtherSide,
+  ReactiveManyToMany,
+  ReactiveManyToManyOtherSide,
   ReactiveField,
   ReactiveReference,
   ReadOnlyCollection,
@@ -67,7 +67,7 @@ import {
   hasOne,
   hasOnePolymorphic,
   hasOneToOne,
-  hasReactiveCollectionOtherSide,
+  hasReactiveManyToManyOtherSide,
   hasRecursiveChildren,
   hasRecursiveParents,
   isEntity,
@@ -460,7 +460,7 @@ function generateOptsFields(meta: EntityDbMetadata): Code[] {
     return code`${fieldName}${maybeOptionalOrDefault(field)}: ${enumType}${maybeUnionNull(notNull)};`;
   });
   const m2o = meta.manyToOnes
-    .filter(({ derived }) => !derived) // Skip ReactiveReferences
+    .filter(({ derived }) => !derived) // Skip ReactiveReferences (derived m2o)
     // If a `group: { subType: SmallPublisherGroup }` is specializing this relation, that's
     // fine for most things, but not the `SmallPublisherOpts`, b/c it will break the contravariance
     // of `Publisher.setOpts` and `SmallPublisher.setOpts`
@@ -477,7 +477,7 @@ function generateOptsFields(meta: EntityDbMetadata): Code[] {
     return code`${fieldName}?: ${otherEntity.type}[];`;
   });
   const m2m = meta.manyToManys
-    .filter(({ derived }) => !derived) // Skip ReactiveCollections
+    .filter(({ derived }) => !derived) // Skip ReactiveManyToManys
     .map(({ fieldName, otherEntity }) => {
       return code`${fieldName}?: ${otherEntity.type}[];`;
     });
@@ -535,7 +535,7 @@ function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number")
 // in the partial type and of course the caller will only be setting one.
 function generateOptIdsFields(meta: EntityDbMetadata): Code[] {
   const m2o = meta.manyToOnes
-    .filter(({ derived }) => !derived) // Skip ReactiveCollections
+    .filter(({ derived }) => !derived) // Skip ReactiveReferences
     .map(({ fieldName, otherEntity }) => {
       return code`${fieldName}Id?: ${otherEntity.idType} | null;`;
     });
@@ -546,7 +546,7 @@ function generateOptIdsFields(meta: EntityDbMetadata): Code[] {
     return code`${singularName}Ids?: ${otherEntity.idType}[] | null;`;
   });
   const m2m = meta.manyToManys
-    .filter(({ derived }) => !derived) // Skip ReactiveCollections
+    .filter(({ derived }) => !derived) // Skip ReactiveManyToManys
     .map(({ singularName, otherEntity }) => {
       return code`${singularName}Ids?: ${otherEntity.idType}[] | null;`;
     });
@@ -1024,12 +1024,12 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
   const m2m: Relation[] = meta.manyToManys.map((m2m) => {
     const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
     if (m2m.derived === "async") {
-      const line = code`abstract readonly ${fieldName}: ${ReactiveCollection}<${entity.name}, ${otherEntity.type}>;`;
+      const line = code`abstract readonly ${fieldName}: ${ReactiveManyToMany}<${entity.name}, ${otherEntity.type}>;`;
       return { kind: "abstract", line } as const;
     }
     if (m2m.derived === "otherSide") {
-      const decl = code`${ReactiveCollectionOtherSide}<${entity.type}, ${otherEntity.type}>`;
-      const init = code`${hasReactiveCollectionOtherSide}()`;
+      const decl = code`${ReactiveManyToManyOtherSide}<${entity.type}, ${otherEntity.type}>`;
+      const init = code`${hasReactiveManyToManyOtherSide}()`;
       return { kind: "concrete", fieldName, decl, init };
     }
     const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
@@ -1045,7 +1045,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
   // Specialize
   const m2mBase: Relation[] =
     meta.baseType?.manyToManys
-      // Don't specialize hasReactiveCollection or hasReactiveCollectionOtherSide b/c they're fields, not getters
+      // Don't specialize hasReactiveManyToMany or hasReactiveManyToManyOtherSide b/c they're fields, not getters
       .filter((m2m) => !m2m.derived)
       .map((m2m) => {
         const { fieldName, otherEntity } = m2m;

@@ -429,7 +429,7 @@ export function up(b: MigrationBuilder): void {
     { table: "comments", collectionName: "likedComments" },
   );
 
-  // for testing ReactiveCollection (derived m2m)
+  // for testing ReactiveManyToMany (derived m2m)
   createManyToManyTable(
     b,
     "authors_to_best_reviews",

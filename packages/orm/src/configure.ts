@@ -6,7 +6,7 @@ import { AsyncDefault } from "./defaults";
 import { getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { reverseReactiveHint } from "./reactiveHints";
-import { ReactiveCollectionImpl, ReactiveReferenceImpl, Reference } from "./relations";
+import { ReactiveManyToManyImpl, ReactiveReferenceImpl, Reference } from "./relations";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
 import { isCannotBeUpdatedRule } from "./rules";
@@ -245,7 +245,7 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
       }
     }
 
-    // Look for ReactiveFields, ReactiveReferences, & ReactiveCollections to reverse
+    // Look for ReactiveFields, ReactiveReferences, & ReactiveManyToManys to reverse
     const reactiveRelations = Object.values(meta.allFields).filter(
       (f) =>
         f.kind === "primitive" ||
@@ -258,7 +258,7 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
         | ReactiveFieldImpl<any, any, any>
         | ReactiveQueryFieldImpl<any, any, any, any>
         | ReactiveReferenceImpl<any, any, any, any>
-        | ReactiveCollectionImpl<any, any, any>
+        | ReactiveManyToManyImpl<any, any, any>
         | undefined;
       // We might have an async property configured in joist-config.json that has not yet
       // been made a `hasReactiveField` in the entity file, so avoid continuing

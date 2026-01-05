@@ -2,7 +2,7 @@ import { Author, Book, BookReview, Entity, EntityManager, newAuthor, newBook, ne
 import { insertAuthor, insertAuthorToBestReview, insertBook, insertBookReview, select } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 
-describe("ReactiveCollection", () => {
+describe("ReactiveManyToMany", () => {
   describe("loading behavior", () => {
     it("can be accessed if implicitly loaded", async () => {
       const em = newEntityManager();
@@ -23,7 +23,7 @@ describe("ReactiveCollection", () => {
       const a = em.create(Author, { firstName: "a1" });
       const b = await em.load(Book, "b:1");
       a.books.add(b);
-      // This shouldn't work, and is probably a bug in ReactiveCollection.isLoaded
+      // This shouldn't work, and is probably a bug in ReactiveManyToMany.isLoaded
       expect(a.bestReviews.get).toMatchEntity([]);
     });
 

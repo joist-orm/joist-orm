@@ -3,7 +3,7 @@ import {
   AsyncProperty,
   Collection,
   Loaded,
-  ReactiveCollection,
+  ReactiveManyToMany,
   ReactiveField,
   ReactiveGetter,
   ReactiveReference,
@@ -15,7 +15,7 @@ import {
   hasManyThrough,
   hasOneDerived,
   hasReactiveAsyncProperty,
-  hasReactiveCollection,
+  hasReactiveManyToMany,
   hasReactiveField,
   hasReactiveGetter,
   hasReactiveReference,
@@ -277,8 +277,8 @@ export class Author extends AuthorCodegen {
     },
   );
 
-  /** Example of a ReactiveCollection - a derived m2m that auto-calculates its membership. */
-  readonly bestReviews: ReactiveCollection<Author, BookReview> = hasReactiveCollection(
+  /** Example of a ReactiveManyToMany - a derived m2m that auto-calculates its membership. */
+  readonly bestReviews: ReactiveManyToMany<Author, BookReview> = hasReactiveManyToMany(
     { books: { reviews: "rating" } },
     (a) => {
       a.transientFields.bestReviewsCalcInvoked++;

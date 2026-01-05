@@ -23,25 +23,25 @@ import { RelationT, RelationU } from "./Relation";
  * Similar to `ReactiveReference` but for collections--membership is calculated from a reactive
  * function and persisted to the underlying join table.
  */
-export interface ReactiveCollection<T extends Entity, U extends Entity> extends ReadOnlyCollection<T, U> {
+export interface ReactiveManyToMany<T extends Entity, U extends Entity> extends ReadOnlyCollection<T, U> {
   load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<readonly U[]>;
 }
 
-/** Creates a `ReactiveCollection`. */
-export function hasReactiveCollection<T extends Entity, U extends Entity, const H extends ReactiveHint<T>>(
+/** Creates a `ReactiveManyToMany`. */
+export function hasReactiveManyToMany<T extends Entity, U extends Entity, const H extends ReactiveHint<T>>(
   hint: H,
   fn: (entity: Reacted<T, H>) => readonly MaybeReactedEntity<U>[],
-): ReactiveCollection<T, U> {
+): ReactiveManyToMany<T, U> {
   return lazyField((entity: T, fieldName) => {
     const m2m = getMetadata(entity).allFields[fieldName] as ManyToManyField;
-    return new ReactiveCollectionImpl<T, U, H>(entity, m2m, hint, fn);
+    return new ReactiveManyToManyImpl<T, U, H>(entity, m2m, hint, fn);
   });
 }
 
-/** Implements ReactiveCollection, initially a copy/paste of ReactiveReference but for m2m. */
-export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extends ReactiveHint<T>>
+/** Implements ReactiveManyToMany, initially a copy/paste of ReactiveReference but for m2m. */
+export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extends ReactiveHint<T>>
   extends AbstractRelationImpl<T, U[]>
-  implements ReactiveCollection<T, U>, IsLoadedCachable
+  implements ReactiveManyToMany<T, U>, IsLoadedCachable
 {
   readonly #field: ManyToManyField;
 
@@ -166,7 +166,7 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   }
 
   set(): void {
-    fail(`Cannot set ${this.entity}.${this.fieldName} ReactiveCollection directly.`);
+    fail(`Cannot set ${this.entity}.${this.fieldName} ReactiveManyToMany directly.`);
   }
 
   get loadHint(): any {
@@ -175,11 +175,11 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   }
 
   setFromOpts(_others: U[]): void {
-    throw new Error(`ReactiveCollection ${this.entity}.${this.fieldName} cannot be set via opts`);
+    throw new Error(`ReactiveManyToMany ${this.entity}.${this.fieldName} cannot be set via opts`);
   }
 
   maybeCascadeDelete(): void {
-    // ReactiveCollections don't cascade delete
+    // ReactiveManyToManys don't cascade delete
   }
 
   async cleanupOnEntityDeleted(): Promise<void> {
@@ -229,7 +229,7 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   }
 
   public toString(): string {
-    return `ReactiveCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherMeta: ${this.otherMeta.type})`;
+    return `ReactiveManyToMany(entity: ${this.entity}, fieldName: ${this.fieldName}, otherMeta: ${this.otherMeta.type})`;
   }
 
   async #loadFromJoinTable(): Promise<U[]> {
@@ -269,9 +269,9 @@ export class ReactiveCollectionImpl<T extends Entity, U extends Entity, H extend
   [RelationU]: U = null!;
 }
 
-/** Type guard utility for determining if an entity field is a ReactiveCollection. */
-export function isReactiveCollection(
-  maybeReactiveCollection: any,
-): maybeReactiveCollection is ReactiveCollection<any, any> {
-  return maybeReactiveCollection instanceof ReactiveCollectionImpl;
+/** Type guard utility for determining if an entity field is a ReactiveManyToMany. */
+export function isReactiveManyToMany(
+  maybeReactiveManyToMany: any,
+): maybeReactiveManyToMany is ReactiveManyToMany<any, any> {
+  return maybeReactiveManyToMany instanceof ReactiveManyToManyImpl;
 }

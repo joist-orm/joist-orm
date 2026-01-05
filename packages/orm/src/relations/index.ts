@@ -44,17 +44,17 @@ export {
   isReactiveReference,
 } from "./ReactiveReference";
 export {
-  ReactiveCollection,
-  ReactiveCollectionImpl,
-  hasReactiveCollection,
-  isReactiveCollection,
-} from "./ReactiveCollection";
+  ReactiveManyToMany,
+  ReactiveManyToManyImpl,
+  hasReactiveManyToMany,
+  isReactiveManyToMany,
+} from "./ReactiveManyToMany";
 export {
-  ReactiveCollectionOtherSide,
-  ReactiveCollectionOtherSideImpl,
-  hasReactiveCollectionOtherSide,
-  isReactiveCollectionOtherSide,
-} from "./ReactiveCollectionOtherSide";
+  ReactiveManyToManyOtherSide,
+  ReactiveManyToManyOtherSideImpl,
+  hasReactiveManyToManyOtherSide,
+  isReactiveManyToManyOtherSide,
+} from "./ReactiveManyToManyOtherSide";
 export {
   LoadedReadOnlyCollection,
   ReadOnlyCollection,

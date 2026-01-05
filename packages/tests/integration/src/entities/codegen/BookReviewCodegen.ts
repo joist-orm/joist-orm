@@ -17,7 +17,7 @@ import {
   hasManyToMany,
   hasOne,
   hasOneToOne,
-  hasReactiveCollectionOtherSide,
+  hasReactiveManyToManyOtherSide,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -31,8 +31,8 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
-  type ReactiveCollectionOtherSide,
   type ReactiveField,
+  type ReactiveManyToManyOtherSide,
   setField,
   setOpts,
   type TaggedId,
@@ -184,7 +184,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     "bookReviews",
     "tag_id",
   );
-  readonly bestReviewAuthors: ReactiveCollectionOtherSide<BookReview, Author> = hasReactiveCollectionOtherSide();
+  readonly bestReviewAuthors: ReactiveManyToManyOtherSide<BookReview, Author> = hasReactiveManyToManyOtherSide();
 
   get id(): BookReviewId {
     return this.idMaybe || failNoIdYet("BookReview");

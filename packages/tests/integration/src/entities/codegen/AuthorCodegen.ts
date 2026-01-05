@@ -33,8 +33,8 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
-  type ReactiveCollection,
   type ReactiveField,
+  type ReactiveManyToMany,
   type ReactiveReference,
   type ReadOnlyCollection,
   setField,
@@ -412,7 +412,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   abstract readonly rootMentor: ReactiveReference<Author, Author, undefined>;
   abstract readonly favoriteBook: ReactiveReference<Author, Book, undefined>;
-  abstract readonly bestReviews: ReactiveCollection<Author, BookReview>;
+  abstract readonly bestReviews: ReactiveManyToMany<Author, BookReview>;
   readonly mentees: Collection<Author, Author> = hasMany("mentor", "mentor_id", undefined);
   readonly books: Collection<Author, Book> = hasMany("author", "author_id", { "field": "order", "direction": "ASC" });
   readonly reviewerBooks: Collection<Author, Book> = hasMany("reviewer", "reviewer_id", {

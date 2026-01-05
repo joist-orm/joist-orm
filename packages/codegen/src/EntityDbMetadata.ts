@@ -12,7 +12,7 @@ import {
   isGetterField,
   isLargeCollection,
   isProtected,
-  isReactiveCollection,
+  isReactiveManyToMany,
   isReactiveField,
   isReactiveReference,
   ormMaintainedFields,
@@ -640,11 +640,11 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
   const isDeferredAndDeferrable = targetForeignKey.isDeferred && targetForeignKey.isDeferrable;
 
   // Determine if this m2m is derived:
-  // - "async" if this side is explicitly marked as a ReactiveCollection
-  // - "otherSide" if the OTHER side is marked as a ReactiveCollection (making this the read-only other side)
+  // - "async" if this side is explicitly marked as a ReactiveManyToMany
+  // - "otherSide" if the OTHER side is marked as a ReactiveManyToMany (making this the read-only other side)
   // - false otherwise (regular m2m)
-  const isThisSideDerived = isReactiveCollection(config, entity, fieldName);
-  const isOtherSideDerived = isReactiveCollection(config, otherEntity, otherFieldName);
+  const isThisSideDerived = isReactiveManyToMany(config, entity, fieldName);
+  const isOtherSideDerived = isReactiveManyToMany(config, otherEntity, otherFieldName);
   const derived = isThisSideDerived ? "async" : isOtherSideDerived ? "otherSide" : false;
 
   return {

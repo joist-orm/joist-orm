@@ -9,7 +9,7 @@ import { remove } from "./utils";
 /**
  * A simplified interface for ManyToManyCollection-like relations.
  *
- * Specifically lets ReactiveCollection & ReactiveCollectionOtherSide use JoinRows
+ * Specifically lets ReactiveManyToMany & ReactiveManyToManyOtherSide use JoinRows
  * as if they were full-fledged m2m relations.
  */
 export type ManyToManyLike = {

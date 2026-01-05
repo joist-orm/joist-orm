@@ -3,6 +3,7 @@ import {
   AsyncProperty,
   Collection,
   Loaded,
+  ReactiveManyToMany,
   ReactiveField,
   ReactiveGetter,
   ReactiveReference,
@@ -14,6 +15,7 @@ import {
   hasManyThrough,
   hasOneDerived,
   hasReactiveAsyncProperty,
+  hasReactiveManyToMany,
   hasReactiveField,
   hasReactiveGetter,
   hasReactiveReference,
@@ -135,6 +137,7 @@ export class Author extends AuthorCodegen {
     mentorNamesCalcInvoked: 0,
     bookCommentsCalcInvoked: 0,
     favoriteBookCalcInvoked: 0,
+    bestReviewsCalcInvoked: 0,
     graduatedRuleInvoked: 0,
     deleteDuringFlush: false,
     reactions: {
@@ -271,6 +274,15 @@ export class Author extends AuthorCodegen {
     (a) => {
       const value = a.mentorsRecursive.get[a.mentorsRecursive.get.length - 1];
       return value;
+    },
+  );
+
+  /** Example of a ReactiveManyToMany - a derived m2m that auto-calculates its membership. */
+  readonly bestReviews: ReactiveManyToMany<Author, BookReview> = hasReactiveManyToMany(
+    { books: { reviews: "rating" } },
+    (a) => {
+      a.transientFields.bestReviewsCalcInvoked++;
+      return a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.rating >= 5);
     },
   );
 

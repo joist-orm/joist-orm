@@ -26,15 +26,17 @@ export interface IsLoadedCachable {
 }
 
 export class IsLoadedCache {
-  // Cache of `{ tag -> { fieldName -> Set<IsLoadedCachable> } }` for relations we
-  // can intelligently/selectively invalidate.
+  // Cache of `{ tag -> { fieldName -> Set<IsLoadedCachable> } }` to hold derived relations
+  // we can selectively invalidate by walking from the mutated field to any downstream
+  // cacheables.
   #smartCache: Record<string, Record<string, Set<IsLoadedCachable>>> = {};
-  // A dumber cache for things that are harder to invalidate/not yet selective,
-  // like o2m.get, recursive collections, and custom references/collections.
+  // A dumb cache for things that are hard selectively invalidate (o2m.get, recursive collections,
+  // and custom references/collections), so any mutation resets these.
   #naiveCache = new Set<IsLoadedCachable>();
   // Counter to try and fast-path resetIsLoaded
   #dirtySets = 0;
 
+  /** Adds a ReactiveField/Relation/Collection to be invalidated when its dependencies change. */
   add(target: IsLoadedCachable): void {
     const meta = getMetadata(target.entity);
     const set = ((this.#smartCache[meta.tagName] ??= {})[target.fieldName] ??= new Set());
@@ -47,12 +49,11 @@ export class IsLoadedCache {
     this.#naiveCache.add(target);
   }
 
+  /** Resets any isLoaded caches that depend on `entity.fieldName`. */
   resetIsLoaded(entity: Entity, fieldName: string): void {
     if (this.#dirtySets === 0) return;
-
-    // Reset caches that we can deterministically "smart" invalidate via reactivity hints
-    this.resetSmartCache(getMetadata(entity), fieldName);
-
+    // Reset caches that we can deterministically find by walking the reactivity hints
+    this.#resetDownstreamReactables(getMetadata(entity), fieldName);
     // We could use this to invalidate m2o.get, but it doesn't work for collections
     // with an orderBy, when the orderBy changes, so for now we use the blunt naiveCache.
     // const field = meta.allFields[fieldName];
@@ -64,7 +65,6 @@ export class IsLoadedCache {
     //     set.clear();
     //   }
     // }
-
     if (this.#naiveCache.size > 0) {
       for (const target of this.#naiveCache.values()) target.resetIsLoaded();
       this.#naiveCache.clear();
@@ -72,7 +72,7 @@ export class IsLoadedCache {
     }
   }
 
-  resetSmartCache(meta: EntityMetadata, fieldName: string): void {
+  #resetDownstreamReactables(meta: EntityMetadata, fieldName: string): void {
     // These are reactables in other entities that are watching/reacting to this entity/fieldName
     const reactables = getReactablesIncludingReadOnly(meta);
     for (const r of reactables) {
@@ -88,7 +88,7 @@ export class IsLoadedCache {
             const otherMeta = getMetadata(target.entity);
             const otherField = otherMeta.allFields[target.fieldName];
             if ("derived" in otherField && otherField.derived) {
-              this.resetSmartCache(otherMeta, otherField.fieldName);
+              this.#resetDownstreamReactables(otherMeta, otherField.fieldName);
             }
           }
           set.clear();

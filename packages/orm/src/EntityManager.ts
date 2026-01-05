@@ -55,7 +55,6 @@ import {
   keyToTaggedId,
   Lens,
   loadLens,
-  ManyToManyCollection,
   OneToManyCollection,
   ParsedFindQuery,
   parseFindQuery,
@@ -76,7 +75,7 @@ import {
   ValidationRuleResult,
 } from "./index";
 import { IsLoadedCache } from "./IsLoadedCache";
-import { JoinRows } from "./JoinRows";
+import { JoinRows, ManyToManyLike } from "./JoinRows";
 import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { WriteFn } from "./logging/FactoryLogger";
 import { newEntity } from "./newEntity";
@@ -314,7 +313,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         return em.#merging?.has(entity) ?? false;
       },
 
-      joinRows(m2m: ManyToManyCollection<any, any>): JoinRows {
+      joinRows(m2m: ManyToManyLike): JoinRows {
         return getOrSet(em.#joinRows, m2m.joinTableName, () => new JoinRows(m2m, em.#rm));
       },
 
@@ -2393,7 +2392,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
 /** Provides an internal API to the `EntityManager`. */
 export interface EntityManagerInternalApi {
-  joinRows: (m2m: ManyToManyCollection<any, any>) => JoinRows;
+  joinRows: (m2m: ManyToManyLike) => JoinRows;
 
   /** Map of taggedId -> fieldName -> pending children. */
   pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>>;

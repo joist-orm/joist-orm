@@ -225,13 +225,14 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
   });
 
   dbMetadata.manyToManys.forEach((m2m) => {
-    const { fieldName, singularName, otherEntity, otherFieldName } = m2m;
+    const { fieldName, singularName, otherEntity, otherFieldName, derived } = m2m;
     fields[fieldName] = code`
       {
         kind: "m2m",
         fieldName: "${fieldName}",
         fieldIdName: "${singularName}Ids",
         required: false,
+        derived: ${derived === "async" ? `"async"` : derived === "otherSide" ? `"otherSide"` : "false"},
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
         serde: undefined,

@@ -17,6 +17,7 @@ import {
   hasManyToMany,
   hasOne,
   hasOneToOne,
+  hasReactiveManyToManyOtherSide,
   isLoaded,
   type JsonPayload,
   type Lens,
@@ -31,6 +32,7 @@ import {
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
+  type ReactiveManyToManyOtherSide,
   setField,
   setOpts,
   type TaggedId,
@@ -43,6 +45,8 @@ import {
 } from "joist-orm";
 import type { Context } from "src/context";
 import {
+  type Author,
+  type AuthorId,
   type Book,
   type BookId,
   type BookOrder,
@@ -73,6 +77,7 @@ export interface BookReviewFields {
   book: { kind: "m2o"; type: Book; nullable: never; derived: false };
   critic: { kind: "m2o"; type: Critic; nullable: undefined; derived: false };
   tags: { kind: "m2m"; type: Tag };
+  bestReviewAuthors: { kind: "m2m"; type: Author };
 }
 
 export interface BookReviewOpts {
@@ -102,6 +107,7 @@ export interface BookReviewFilter {
   critic?: EntityFilter<Critic, CriticId, FilterOf<Critic>, null>;
   comment?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
+  bestReviewAuthors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
 }
 
 export interface BookReviewGraphQLFilter {
@@ -116,6 +122,7 @@ export interface BookReviewGraphQLFilter {
   critic?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, null>;
   comment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
+  bestReviewAuthors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
 }
 
 export interface BookReviewOrder {
@@ -177,6 +184,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     "bookReviews",
     "tag_id",
   );
+  readonly bestReviewAuthors: ReactiveManyToManyOtherSide<BookReview, Author> = hasReactiveManyToManyOtherSide();
 
   get id(): BookReviewId {
     return this.idMaybe || failNoIdYet("BookReview");

@@ -153,6 +153,7 @@ export type ManyToManyField = {
   fieldName: string;
   fieldIdName: string;
   required: boolean;
+  derived: "async" | "otherSide" | false;
   otherMetadata: () => EntityMetadata;
   otherFieldName: string;
   serde: undefined;

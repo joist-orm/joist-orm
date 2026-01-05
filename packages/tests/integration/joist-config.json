@@ -26,6 +26,7 @@
         "wasEverPopular": { "protected": true }
       },
       "relations": {
+        "bestReviews": { "derived": "async" },
         "books": { "orderBy": "order" },
         "favoriteBook": { "derived": "async" },
         "rootMentor": { "derived": "async" }

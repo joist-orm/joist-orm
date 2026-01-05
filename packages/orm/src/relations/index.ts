@@ -44,6 +44,18 @@ export {
   isReactiveReference,
 } from "./ReactiveReference";
 export {
+  ReactiveManyToMany,
+  ReactiveManyToManyImpl,
+  hasReactiveManyToMany,
+  isReactiveManyToMany,
+} from "./ReactiveManyToMany";
+export {
+  ReactiveManyToManyOtherSide,
+  ReactiveManyToManyOtherSideImpl,
+  hasReactiveManyToManyOtherSide,
+  isReactiveManyToManyOtherSide,
+} from "./ReactiveManyToManyOtherSide";
+export {
   LoadedReadOnlyCollection,
   ReadOnlyCollection,
   isLoadedReadOnlyCollection,

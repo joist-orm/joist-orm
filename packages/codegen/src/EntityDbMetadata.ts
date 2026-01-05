@@ -12,6 +12,7 @@ import {
   isGetterField,
   isLargeCollection,
   isProtected,
+  isReactiveManyToMany,
   isReactiveField,
   isReactiveReference,
   ormMaintainedFields,
@@ -198,6 +199,7 @@ export type ManyToManyField = Field & {
   otherColumnName: string;
   isLargeCollection: boolean;
   isDeferredAndDeferrable: boolean;
+  derived: "async" | "otherSide" | false;
 };
 
 /** I.e. a `Comment.parent` reference that groups `comments.parent_book_id` and `comments.parent_book_review_id`. */
@@ -636,6 +638,15 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
   const fieldName = manyToManyName(targetForeignKey.columns[0]);
   const otherFieldName = manyToManyName(foreignKey.columns[0]);
   const isDeferredAndDeferrable = targetForeignKey.isDeferred && targetForeignKey.isDeferrable;
+
+  // Determine if this m2m is derived:
+  // - "async" if this side is explicitly marked as a ReactiveManyToMany
+  // - "otherSide" if the OTHER side is marked as a ReactiveManyToMany (making this the read-only other side)
+  // - false otherwise (regular m2m)
+  const isThisSideDerived = isReactiveManyToMany(config, entity, fieldName);
+  const isOtherSideDerived = isReactiveManyToMany(config, otherEntity, otherFieldName);
+  const derived = isThisSideDerived ? "async" : isOtherSideDerived ? "otherSide" : false;
+
   return {
     kind: "m2m",
     joinTableName: r.joinTable.name,
@@ -648,6 +659,7 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
     ignore: isFieldIgnored(config, entity, fieldName) || isFieldIgnored(config, otherEntity, otherFieldName),
     isLargeCollection: isLargeCollection(config, entity, fieldName),
     isDeferredAndDeferrable,
+    derived,
   };
 }
 

@@ -34,6 +34,7 @@ import {
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
+  type ReactiveManyToMany,
   type ReactiveReference,
   type ReadOnlyCollection,
   setField,
@@ -59,6 +60,8 @@ import {
   type BookId,
   type BookOrder,
   BookRange,
+  type BookReview,
+  type BookReviewId,
   Color,
   ColorDetails,
   Colors,
@@ -130,6 +133,7 @@ export interface AuthorFields {
   favoriteBook: { kind: "m2o"; type: Book; nullable: undefined; derived: true };
   publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
   tags: { kind: "m2m"; type: Tag };
+  bestReviews: { kind: "m2m"; type: BookReview };
   mentees: { kind: "o2m"; type: Author };
   books: { kind: "o2m"; type: Book };
   reviewerBooks: { kind: "o2m"; type: Book };
@@ -248,6 +252,7 @@ export interface AuthorFilter {
   >;
   tasks?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
+  bestReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
 }
 
 export interface AuthorGraphQLFilter {
@@ -320,6 +325,7 @@ export interface AuthorGraphQLFilter {
   >;
   tasks?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
+  bestReviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
 }
 
 export interface AuthorOrder {
@@ -406,6 +412,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   abstract readonly rootMentor: ReactiveReference<Author, Author, undefined>;
   abstract readonly favoriteBook: ReactiveReference<Author, Book, undefined>;
+  abstract readonly bestReviews: ReactiveManyToMany<Author, BookReview>;
   readonly mentees: Collection<Author, Author> = hasMany("mentor", "mentor_id", undefined);
   readonly books: Collection<Author, Book> = hasMany("author", "author_id", { "field": "order", "direction": "ASC" });
   readonly reviewerBooks: Collection<Author, Book> = hasMany("reviewer", "reviewer_id", {

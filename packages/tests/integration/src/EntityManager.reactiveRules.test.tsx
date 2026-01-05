@@ -450,6 +450,14 @@ describe("EntityManager.reactiveRules", () => {
       runOnce: false,
     });
     expect(bRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "bestReviews",
+      fields: ["author", "deletedAt"],
+      path: ["author"],
+      runOnce: false,
+    });
+    expect(bRfs[i++]).toEqual({
       kind: "reaction",
       cstr: "Book",
       name: "Book.ts:118",
@@ -586,6 +594,14 @@ describe("EntityManager.reactiveRules", () => {
       kind: "populate",
       cstr: "Author",
       name: "favoriteBook",
+      fields: ["rating"],
+      path: ["book", "author"],
+      runOnce: false,
+    });
+    expect(brRfs[i++]).toEqual({
+      kind: "populate",
+      cstr: "Author",
+      name: "bestReviews",
       fields: ["rating"],
       path: ["book", "author"],
       runOnce: false,

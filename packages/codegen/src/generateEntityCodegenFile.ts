@@ -46,6 +46,8 @@ import {
   PolymorphicReference,
   ProjectEntity,
   ReactiveField,
+  ReactiveManyToMany,
+  ReactiveManyToManyOtherSide,
   ReactiveReference,
   ReadOnlyCollection,
   RelationsOf,
@@ -65,6 +67,7 @@ import {
   hasOne,
   hasOnePolymorphic,
   hasOneToOne,
+  hasReactiveManyToManyOtherSide,
   hasRecursiveChildren,
   hasRecursiveParents,
   isEntity,
@@ -457,7 +460,7 @@ function generateOptsFields(meta: EntityDbMetadata): Code[] {
     return code`${fieldName}${maybeOptionalOrDefault(field)}: ${enumType}${maybeUnionNull(notNull)};`;
   });
   const m2o = meta.manyToOnes
-    .filter(({ derived }) => !derived)
+    .filter(({ derived }) => !derived) // Skip ReactiveReferences (derived m2o)
     // If a `group: { subType: SmallPublisherGroup }` is specializing this relation, that's
     // fine for most things, but not the `SmallPublisherOpts`, b/c it will break the contravariance
     // of `Publisher.setOpts` and `SmallPublisher.setOpts`
@@ -473,9 +476,11 @@ function generateOptsFields(meta: EntityDbMetadata): Code[] {
   const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${otherEntity.type}[];`;
   });
-  const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
-    return code`${fieldName}?: ${otherEntity.type}[];`;
-  });
+  const m2m = meta.manyToManys
+    .filter(({ derived }) => !derived) // Skip ReactiveManyToManys
+    .map(({ fieldName, otherEntity }) => {
+      return code`${fieldName}?: ${otherEntity.type}[];`;
+    });
   const polys = meta.polymorphics.map((field) => {
     const { fieldName, notNull, fieldType } = field;
     return code`${fieldName}${maybeOptionalOrDefault(field)}: ${fieldType};`;
@@ -530,7 +535,7 @@ function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number")
 // in the partial type and of course the caller will only be setting one.
 function generateOptIdsFields(meta: EntityDbMetadata): Code[] {
   const m2o = meta.manyToOnes
-    .filter(({ derived }) => !derived)
+    .filter(({ derived }) => !derived) // Skip ReactiveReferences
     .map(({ fieldName, otherEntity }) => {
       return code`${fieldName}Id?: ${otherEntity.idType} | null;`;
     });
@@ -540,9 +545,11 @@ function generateOptIdsFields(meta: EntityDbMetadata): Code[] {
   const o2m = meta.oneToManys.map(({ singularName, otherEntity }) => {
     return code`${singularName}Ids?: ${otherEntity.idType}[] | null;`;
   });
-  const m2m = meta.manyToManys.map(({ singularName, otherEntity }) => {
-    return code`${singularName}Ids?: ${otherEntity.idType}[] | null;`;
-  });
+  const m2m = meta.manyToManys
+    .filter(({ derived }) => !derived) // Skip ReactiveManyToManys
+    .map(({ singularName, otherEntity }) => {
+      return code`${singularName}Ids?: ${otherEntity.idType}[] | null;`;
+    });
   const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
     return code`${fieldName}Id?:  ${IdOf}<${fieldType}> | null;`;
   });
@@ -1016,23 +1023,37 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
   // Add ManyToMany
   const m2m: Relation[] = meta.manyToManys.map((m2m) => {
     const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
-    const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`
+    if (m2m.derived === "async") {
+      const line = code`abstract readonly ${fieldName}: ${ReactiveManyToMany}<${entity.name}, ${otherEntity.type}>;`;
+      return { kind: "abstract", line } as const;
+    } else if (m2m.derived === "otherSide") {
+      const decl = code`${ReactiveManyToManyOtherSide}<${entity.type}, ${otherEntity.type}>`;
+      const init = code`${hasReactiveManyToManyOtherSide}()`;
+      return { kind: "concrete", fieldName, decl, init };
+    } else if (!m2m.derived) {
+      const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
+      const init = code`
       ${hasManyToMany}(
         "${joinTableName}",
         "${columnName}",
         "${otherFieldName}",
         "${otherColumnName}",
       )`;
-    return { kind: "concrete", fieldName, decl, init };
+      return { kind: "concrete", fieldName, decl, init };
+    } else {
+      assertNever(m2m.derived);
+    }
   });
   // Specialize
   const m2mBase: Relation[] =
-    meta.baseType?.manyToManys.map((m2m) => {
-      const { fieldName, otherEntity } = m2m;
-      const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
-      return { kind: "super", fieldName, decl };
-    }) ?? [];
+    meta.baseType?.manyToManys
+      // Don't specialize hasReactiveManyToMany or hasReactiveManyToManyOtherSide b/c they're fields, not getters
+      .filter((m2m) => !m2m.derived)
+      .map((m2m) => {
+        const { fieldName, otherEntity } = m2m;
+        const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
+        return { kind: "super", fieldName, decl };
+      }) ?? [];
 
   // Add large ManyToMany
   const lm2m: Relation[] = meta.largeManyToManys.map((m2m) => {
@@ -1059,10 +1080,6 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
   });
 
   return [o2m, o2mBase, lo2m, m2o, m2oBase, m2oRecursive, o2o, o2oBase, m2m, m2mBase, lm2m, polymorphic].flat();
-}
-
-function maybeOptional(notNull: boolean): string {
-  return notNull ? "" : "?";
 }
 
 /** Makes the field required if there is a `NOT NULL` and no db-or-config default. */

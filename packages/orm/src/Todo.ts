@@ -2,8 +2,7 @@
 import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { JoinRow, JoinRows } from "./JoinRows";
-import { ManyToManyCollection } from "./relations";
+import { JoinRow, JoinRows, ManyToManyLike } from "./JoinRows";
 import { groupBy } from "./utils";
 
 /** A group of insert/update/delete operations for a given entity. */
@@ -64,7 +63,7 @@ export function getTodo(todos: Record<string, Todo>, entity: Entity): Todo {
 
 export interface JoinRowTodo {
   // Store the m2m reference (either side of the m2m, it doesn't matter which) to help tag/untag the foreign keys
-  m2m: ManyToManyCollection<any, any>;
+  m2m: ManyToManyLike;
   newRows: JoinRow[];
   deletedRows: JoinRow[];
   resetAfterFlushed: () => void;

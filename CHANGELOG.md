@@ -1,3 +1,10 @@
+# [1.289.0](https://github.com/joist-orm/joist-orm/compare/v1.288.0...v1.289.0) (2026-01-05)
+
+
+### Features
+
+* Simplify hasMany, hasReactiveField, etc ([#1688](https://github.com/joist-orm/joist-orm/issues/1688)) ([a476669](https://github.com/joist-orm/joist-orm/commit/a47666938c2b21a0b4ea3d5645c1a12a870ccd37))
+
 # [1.288.0](https://github.com/joist-orm/joist-orm/compare/v1.287.0...v1.288.0) (2026-01-05)
 
 

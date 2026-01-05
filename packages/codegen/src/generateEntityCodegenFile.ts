@@ -45,9 +45,9 @@ import {
   PartialOrNull,
   PolymorphicReference,
   ProjectEntity,
+  ReactiveField,
   ReactiveManyToMany,
   ReactiveManyToManyOtherSide,
-  ReactiveField,
   ReactiveReference,
   ReadOnlyCollection,
   RelationsOf,
@@ -1026,21 +1026,23 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     if (m2m.derived === "async") {
       const line = code`abstract readonly ${fieldName}: ${ReactiveManyToMany}<${entity.name}, ${otherEntity.type}>;`;
       return { kind: "abstract", line } as const;
-    }
-    if (m2m.derived === "otherSide") {
+    } else if (m2m.derived === "otherSide") {
       const decl = code`${ReactiveManyToManyOtherSide}<${entity.type}, ${otherEntity.type}>`;
       const init = code`${hasReactiveManyToManyOtherSide}()`;
       return { kind: "concrete", fieldName, decl, init };
-    }
-    const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
-    const init = code`
+    } else if (!m2m.derived) {
+      const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
+      const init = code`
       ${hasManyToMany}(
         "${joinTableName}",
         "${columnName}",
         "${otherFieldName}",
         "${otherColumnName}",
       )`;
-    return { kind: "concrete", fieldName, decl, init };
+      return { kind: "concrete", fieldName, decl, init };
+    } else {
+      assertNever(m2m.derived);
+    }
   });
   // Specialize
   const m2mBase: Relation[] =

@@ -483,6 +483,60 @@ describe("ReactiveField", () => {
     expect(rows[0]).toMatchObject({ parent_tags: "reviews=1-t11-t2" });
   });
 
+  it("can react through recursive parents", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2", mentor_id: 1 });
+    await insertAuthor({ first_name: "a3", mentor_id: 2 });
+    await insertAuthor({ first_name: "a4", mentor_id: 3 });
+    {
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1");
+      a1.firstName = "a1++";
+      await em.flush();
+      const rows = await select("authors");
+      expect(rows[3]).toMatchObject({ mentor_names: "a3, a2, a1++" });
+    }
+    // Same but unhook the mentor
+    {
+      const em = newEntityManager();
+      const a3 = await em.load(Author, "a:3");
+      a3.mentor.set(undefined);
+      await em.flush();
+      const rows = await select("authors");
+      expect(rows[0]).toMatchObject({ mentor_names: null });
+      expect(rows[1]).toMatchObject({ mentor_names: "a1++" });
+      expect(rows[2]).toMatchObject({ mentor_names: null });
+      expect(rows[3]).toMatchObject({ mentor_names: "a3" });
+    }
+  });
+
+  it("can react through recursive children", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2", mentor_id: 1 });
+    await insertAuthor({ first_name: "a3", mentor_id: 2 });
+    await insertAuthor({ first_name: "a4", mentor_id: 3 });
+    {
+      const em = newEntityManager();
+      const a4 = await em.load(Author, "a:4");
+      a4.firstName = "a4++";
+      await em.flush();
+      let rows = await select("authors");
+      expect(rows[0]).toMatchObject({ mentee_names: "a2, a3, a4++" });
+    }
+    // Same but unhook the mentor
+    {
+      const em = newEntityManager();
+      const a3 = await em.load(Author, "a:3");
+      a3.mentor.set(undefined);
+      await em.flush();
+      let rows = await select("authors");
+      expect(rows[0]).toMatchObject({ id: 1, mentee_names: "a2" });
+      expect(rows[1]).toMatchObject({ id: 2, mentor_id: 1, mentee_names: null });
+      expect(rows[2]).toMatchObject({ id: 3, mentor_id: null, mentee_names: "a4++" });
+      expect(rows[3]).toMatchObject({ id: 4, mentor_id: 3, mentee_names: null });
+    }
+  });
+
   it("throws validation rules instead of NPEs in lambdas accessing unset required relations", async () => {
     const em = newEntityManager();
     newBook(em, { author: noValue() });

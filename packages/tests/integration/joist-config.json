@@ -13,6 +13,7 @@
         "ignoreUsedToBeUseful": { "ignore": true },
         "ignoreUsedToBeUsefulRequiredWithDefault": { "ignore": true },
         "initials": { "derived": "sync" },
+        "menteeNames": { "derived": "async" },
         "mentorNames": { "derived": "async" },
         "nickNamesUpper": { "derived": "async" },
         "numberOfBooks": { "derived": "async" },
@@ -29,6 +30,7 @@
         "bestReviews": { "derived": "async" },
         "books": { "orderBy": "order" },
         "favoriteBook": { "derived": "async" },
+        "menteesClosure": { "derived": "async" },
         "rootMentor": { "derived": "async" }
       },
       "tag": "a"

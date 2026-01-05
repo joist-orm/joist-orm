@@ -189,16 +189,20 @@ type ManyToManyColumn = {
   column?: string;
   /**
    * The name of the collection that *points to* these rows, i.e. for `books_to_tags` and the `book_id`
-   * column, this might be `taggedBooks`, i.e. the name of the collection within `Tag` that loads these
-   * books.
+   * column, `collectionName=taggedBooks` b/c `t1.taggedBooks` does a `SELECT book_id WHERE tag_id=t:1`.
    *
-   * For self-referential m2m tables, i.e. `author_to_mentors` m2m table, these names can be confusing, i.e.
-   * an `author_to_mentors.author_id` with a `collectionName=mentors` does not mean "my mentors are all rows
-   * where author_id=me", it means "the author_id entities are members of the `mentors` collection of other
-   * authors".
+   * For self-referential m2m tables, i.e. `author_to_mentors`, these names can be confusing, i.e.:
    *
-   * Granted, using `mentor_id` / `mentee_id` columns names is the best approach here, but in general it
-   * can get confusing if you don't have obvious noun names for each column.
+   * ```
+   * createManyToManyTable(
+   *   b,
+   *   "author_to_mentors",
+   *   // column=mentor_id, collectionName=mentors ==> `a.mentors` does `select mentor_id WHERE mentee_id=a:1`
+   *   { table: "authors", column: "mentor_id", collectionName: "mentors" },
+   *   // column=mentee_id, collectionName=mentees ==> `a.mentees` does `select mentee_id WHERE mentor_id=a:1`
+   *   { table: "authors", column: "mentee_id", collectionName: "mentees" },
+   * );
+   * ````
    */
   collectionName?: string;
 };

@@ -166,8 +166,8 @@ describe("EntityManager", () => {
     em.create(Author, { firstName: "a1" });
     em.create(Author, { firstName: "a2" });
     await em.flush();
-    // 4 = begin, assign ids, insert, commit
-    expect(numberOfQueries).toEqual(2 + maybeBeginAndCommit());
+    // 5 = begin, assign ids, insert authors, insert author_to_mentees_closure, commit
+    expect(numberOfQueries).toEqual(3 + maybeBeginAndCommit());
     const rows = await select("authors");
     expect(rows.length).toEqual(2);
   });

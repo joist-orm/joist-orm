@@ -272,8 +272,12 @@ export function insertAuthorToTag(row: { id?: number; author_id: number; tag_id:
   return testDriver.insert("authors_to_tags", row);
 }
 
-export function insertAuthorToBestReview(row: { id?: number; author_id: number; book_review_id: number }) {
+export function insertAuthorToBestReview(row: { author_id: number; book_review_id: number }) {
   return testDriver.insert("authors_to_best_reviews", row);
+}
+
+export function insertAuthorToMenteesClosure(row: { mentor_id: number; mentee_id: number }) {
+  return testDriver.insert("author_to_mentees_closure", row);
 }
 
 export function insertBookReview(row: {

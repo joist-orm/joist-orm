@@ -825,8 +825,8 @@ describe("EntityManager.factories", () => {
     // Then both books are deeply loaded
     expect(a.books.get[0].reviews.get[0].rating).toBe(1);
     expect(a.books.get[1].reviews.get[0].rating).toBe(2);
-    // And it took only 9 (plus 7 recursive) queries (vs. 43 without join preloading)
-    expect(queries.length).toBe(isPreloadingEnabled ? 17 : 43);
+    // And it took only 9 (plus 9 recursive?) queries (vs. 44 without join preloading)
+    expect(queries.length).toBe(isPreloadingEnabled ? 18 : 44);
   });
 
   it("uniquely assigns name fields", async () => {

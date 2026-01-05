@@ -175,7 +175,9 @@ export function up(b: MigrationBuilder): void {
   createManyToManyTable(
     b,
     "author_to_mentees_closure",
+    // mentors => select `mentor_id` from m2m rows where I'm the mentee
     { table: "authors", column: "mentor_id", collectionName: "mentorsClosure" },
+    // mentees => select `mentee_id` from m2m rows where I'm the mentor
     { table: "authors", column: "mentee_id", collectionName: "menteesClosure" },
   );
 

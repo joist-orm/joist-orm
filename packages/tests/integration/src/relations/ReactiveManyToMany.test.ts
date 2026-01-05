@@ -393,6 +393,31 @@ describe("ReactiveManyToMany", () => {
       // a4 closure
       expect(rows[7]).toMatchObject({ mentor_id: 4, mentee_id: 4 });
     });
+
+    it("menteesClosure can find all books with one join", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+      await insertAuthor({ first_name: "a3", mentor_id: 2 });
+      await insertBook({ title: "b3", author_id: 3 });
+      // a1 closure
+      await insertAuthorToMenteesClosure({ mentor_id: 1, mentee_id: 1 });
+      await insertAuthorToMenteesClosure({ mentor_id: 1, mentee_id: 2 });
+      await insertAuthorToMenteesClosure({ mentor_id: 1, mentee_id: 3 });
+      // a2 closure
+      await insertAuthorToMenteesClosure({ mentor_id: 2, mentee_id: 2 });
+      await insertAuthorToMenteesClosure({ mentor_id: 2, mentee_id: 3 });
+      // a3 closure
+      await insertAuthorToMenteesClosure({ mentor_id: 3, mentee_id: 3 });
+      const em = newEntityManager();
+      // Find all books of the mentor a1 & its mentees
+      const books1 = await em.find(Book, { author: { mentorsClosure: "a:1" } });
+      expect(books1).toMatchEntity([{ title: "b1" }, { title: "b2" }, { title: "b3" }]);
+      // Find all books of the mentee a2 & its mentors
+      const books2 = await em.find(Book, { author: { menteesClosure: "a:2" } });
+      expect(books2).toMatchEntity([{ title: "b1" }, { title: "b2" }]);
+    });
   });
 });
 

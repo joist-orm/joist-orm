@@ -4,15 +4,17 @@ import {
   ensureNotDeleted,
   getEmInternalApi,
   getInstanceData,
+  getMetadata,
   IdOf,
   LoadedReference,
+  OneToOneField,
   TaggedId,
 } from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity } from "../Entity";
 import { EntityMetadata } from "../EntityMetadata";
 import { setField } from "../fields";
-import { lazyField, resolveOtherMeta } from "../newEntity";
+import { lazyField } from "../newEntity";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId, ManyToOneReference } from "./ManyToOneReference";
 import { isReactiveReference } from "./ReactiveReference";
@@ -22,20 +24,10 @@ import { RelationT, RelationU } from "./Relation";
 const OneToOne = Symbol();
 
 /** An alias for creating `OneToOneReference`s. */
-export function hasOneToOne<T extends Entity, U extends Entity>(
-  otherFieldName: string,
-  otherColumnName: string,
-): OneToOneReference<T, U> {
-  let otherMeta: EntityMetadata<U>;
+export function hasOneToOne<T extends Entity, U extends Entity>(): OneToOneReference<T, U> {
   return lazyField((entity: T, fieldName) => {
-    otherMeta ??= resolveOtherMeta(entity, fieldName);
-    return new OneToOneReferenceImpl<T, U>(
-      entity,
-      otherMeta,
-      fieldName as keyof T & string,
-      otherFieldName as keyof U & string,
-      otherColumnName,
-    );
+    const o2o = getMetadata(entity).allFields[fieldName] as OneToOneField;
+    return new OneToOneReferenceImpl<T, U>(entity, o2o);
   });
 }
 
@@ -100,24 +92,26 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<T, U>
   implements OneToOneReference<T, U>
 {
+  #field: OneToOneField;
   private loaded: U | undefined;
   private _isLoaded: boolean = false;
-  readonly #otherMeta: EntityMetadata;
   #hasBeenSet = false;
 
-  constructor(
-    // These are public to our internal implementation but not exposed in the Collection API
-    entity: T,
-    otherMeta: EntityMetadata,
-    public fieldName: keyof T & string,
-    public otherFieldName: keyof U & string,
-    public otherColumnName: string,
-  ) {
+  constructor(entity: T, field: OneToOneField) {
     super(entity);
-    this.#otherMeta = otherMeta;
+    this.#field = field;
     if (getInstanceData(entity).isOrWasNew) {
       this._isLoaded = true;
     }
+  }
+
+  // These are public to our internal implementation but not exposed in the Collection API
+  get fieldName(): keyof T & string {
+    return this.#field.fieldName as keyof T & string;
+  }
+
+  get otherFieldName(): keyof U & string {
+    return this.#field.otherFieldName as keyof U & string;
   }
 
   get id(): IdOf<U> {
@@ -156,7 +150,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   private get idUntaggedMaybe(): string | undefined {
-    return deTagId(this.#otherMeta, this.idMaybe);
+    return deTagId(this.otherMeta, this.idMaybe);
   }
 
   get isSet(): boolean {
@@ -234,7 +228,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   get otherMeta(): EntityMetadata {
-    return this.#otherMeta;
+    return this.#field.otherMetadata();
   }
 
   private doGet(): U | undefined {

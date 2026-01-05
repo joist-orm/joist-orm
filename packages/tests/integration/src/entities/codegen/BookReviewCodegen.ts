@@ -175,16 +175,11 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
 
   declare readonly __type: { 0: "BookReview" };
 
-  readonly book: ManyToOneReference<BookReview, Book, never> = hasOne("reviews");
-  readonly critic: ManyToOneReference<BookReview, Critic, undefined> = hasOne("bookReviews");
-  readonly comment: OneToOneReference<BookReview, Comment> = hasOneToOne("parent", "parent_book_review_id");
-  readonly tags: Collection<BookReview, Tag> = hasManyToMany(
-    "book_reviews_to_tags",
-    "book_review_id",
-    "bookReviews",
-    "tag_id",
-  );
-  readonly bestReviewAuthors: ReactiveManyToManyOtherSide<BookReview, Author> = hasReactiveManyToManyOtherSide();
+  readonly book: ManyToOneReference<BookReview, Book, never> = hasOne();
+  readonly critic: ManyToOneReference<BookReview, Critic, undefined> = hasOne();
+  readonly comment: OneToOneReference<BookReview, Comment> = hasOneToOne();
+  readonly tags: Collection<BookReview, Tag> = hasManyToMany(); // book_reviews_to_tags book_review_id tag_id
+  readonly bestReviewAuthors: ReactiveManyToManyOtherSide<BookReview, Author> = hasReactiveManyToManyOtherSide(); // authors_to_best_reviews book_review_id author_id
 
   get id(): BookReviewId {
     return this.idMaybe || failNoIdYet("BookReview");

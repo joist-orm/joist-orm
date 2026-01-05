@@ -121,7 +121,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
 
   declare readonly __type: { 0: "CriticColumn" };
 
-  readonly critic: ManyToOneReference<CriticColumn, Critic, never> = hasOne("criticColumn");
+  readonly critic: ManyToOneReference<CriticColumn, Critic, never> = hasOne();
 
   get id(): CriticColumnId {
     return this.idMaybe || failNoIdYet("CriticColumn");

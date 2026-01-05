@@ -425,31 +425,25 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   abstract readonly rootMentor: ReactiveReference<Author, Author, undefined>;
   abstract readonly favoriteBook: ReactiveReference<Author, Book, undefined>;
-  abstract readonly menteesClosure: ReactiveManyToMany<Author, Author>;
-  abstract readonly bestReviews: ReactiveManyToMany<Author, BookReview>;
-  readonly mentees: Collection<Author, Author> = hasMany("mentor", "mentor_id", undefined);
-  readonly books: Collection<Author, Book> = hasMany("author", "author_id", { "field": "order", "direction": "ASC" });
-  readonly reviewerBooks: Collection<Author, Book> = hasMany("reviewer", "reviewer_id", {
-    "field": "title",
-    "direction": "ASC",
-  });
-  readonly schedules: Collection<Author, AuthorSchedule> = hasMany("author", "author_id", undefined);
-  readonly comments: Collection<Author, Comment> = hasMany("parent", "parent_author_id", undefined);
-  readonly spotlightAuthorPublishers: Collection<Author, Publisher> = hasMany(
-    "spotlightAuthor",
-    "spotlight_author_id",
-    undefined,
-  );
-  readonly tasks: Collection<Author, TaskNew> = hasMany("specialNewAuthor", "special_new_author_id", undefined);
-  readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne("mentees");
-  readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne("currentDraftAuthor");
-  readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne("authors");
+  abstract readonly menteesClosure: ReactiveManyToMany<Author, Author>; // author_to_mentees_closure mentor_id mentee_id
+  abstract readonly bestReviews: ReactiveManyToMany<Author, BookReview>; // authors_to_best_reviews author_id book_review_id
+
+  readonly mentees: Collection<Author, Author> = hasMany();
+  readonly books: Collection<Author, Book> = hasMany();
+  readonly reviewerBooks: Collection<Author, Book> = hasMany();
+  readonly schedules: Collection<Author, AuthorSchedule> = hasMany();
+  readonly comments: Collection<Author, Comment> = hasMany();
+  readonly spotlightAuthorPublishers: Collection<Author, Publisher> = hasMany();
+  readonly tasks: Collection<Author, TaskNew> = hasMany();
+  readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne();
+  readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne();
+  readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne();
   readonly mentorsRecursive: ReadOnlyCollection<Author, Author> = hasRecursiveParents("mentor", "menteesRecursive");
   readonly menteesRecursive: ReadOnlyCollection<Author, Author> = hasRecursiveChildren("mentees", "mentorsRecursive");
-  readonly image: OneToOneReference<Author, Image> = hasOneToOne("author", "author_id");
-  readonly userOneToOne: OneToOneReference<Author, User> = hasOneToOne("authorManyToOne", "author_id");
-  readonly mentorsClosure: ReactiveManyToManyOtherSide<Author, Author> = hasReactiveManyToManyOtherSide();
-  readonly tags: Collection<Author, Tag> = hasManyToMany("authors_to_tags", "author_id", "authors", "tag_id");
+  readonly image: OneToOneReference<Author, Image> = hasOneToOne();
+  readonly userOneToOne: OneToOneReference<Author, User> = hasOneToOne();
+  readonly mentorsClosure: ReactiveManyToManyOtherSide<Author, Author> = hasReactiveManyToManyOtherSide(); // author_to_mentees_closure mentee_id mentor_id
+  readonly tags: Collection<Author, Tag> = hasManyToMany(); // authors_to_tags author_id tag_id
 
   get id(): AuthorId {
     return this.idMaybe || failNoIdYet("Author");

@@ -7,13 +7,11 @@ export class PublisherGroup extends PublisherGroupCodegen {
   transientFields = { smallPublisherBeforeFlushRan: false };
 
   readonly numberOfBookReviews: ReactiveField<PublisherGroup, number> = hasReactiveField(
-    "numberOfBookReviews",
     { publishers: "numberOfBookReviews" },
     (p) => p.publishers.get.map((p) => p.numberOfBookReviews.get).reduce((a, b) => a + b, 0),
   );
 
   readonly numberOfBookReviewsFormatted: ReactiveField<PublisherGroup, string> = hasReactiveQueryField(
-    "numberOfBookReviewsFormatted",
     {},
     { publishers: { authors: { books: "reviews" } } },
     async (pg) => {

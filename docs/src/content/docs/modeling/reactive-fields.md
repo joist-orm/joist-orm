@@ -26,7 +26,6 @@ For example, given a Reactive Field `totalReviewRatings` on `Author`:
 ```ts
 class Author extends AuthorCodegen {
   readonly totalReviewRatings: ReactiveField<Author, number> = hasReactiveField(
-    "totalReviewRatings",
     // Our "reactive hint", which both:
     // - populates the `a` instance passed to our lambda, and
     // - declaratively tells Joist what data we need to react to
@@ -111,11 +110,7 @@ And then implement the `numberOfFields` field in the `Author` domain model with 
 import { ReactiveField, hasReactiveField } from "joist-orm";
 
 class Author extends AuthorCodegen {
-  readonly numberOfBooks: ReactiveField<Author, number> = hasReactiveField(
-    "numberOfBooks",
-    "books",
-    (a) => a.books.get.length,
-  );
+  readonly numberOfBooks: ReactiveField<Author, number> = hasReactiveField("books", (a) => a.books.get.length);
 }
 ```
 
@@ -148,7 +143,6 @@ In these situations, you can use a `ReactiveQueryField`, which calculates its va
 ```typescript
 class Publisher {
   readonly numberOfBookReviews: ReactiveField<Publisher, number> = hasReactiveQueryField(
-    "numberOfBookReviews",
     // this hint will recalc + be available on `p`
     "id",
     // this hint will recalc + not be available on `p`

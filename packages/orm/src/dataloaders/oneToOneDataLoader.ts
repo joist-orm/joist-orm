@@ -1,7 +1,7 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
-import { getMetadata } from "../EntityMetadata";
+import { getMetadata, OneToOneField } from "../EntityMetadata";
 import { getField } from "../fields";
 import {
   addTablePerClassJoinsAndClassTag,
@@ -19,7 +19,8 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
   reference: OneToOneReferenceImpl<T, U>,
 ): DataLoader<string, U | undefined> {
-  // The metadata for the entity that contains the reference
+  // The metadata for the entity that contains the reference, i.e. Author.image is the o2o,
+  // and (otherMeta/otherFieldName) Image.author is the physical m2o/FK column.
   const meta = getMetadata(reference.entity);
   const batchKey = `${meta.tableName}-${reference.fieldName}`;
   return em.getLoader(oneToOneLoadOperation, batchKey, async (_keys) => {
@@ -28,9 +29,9 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
     assertIdsAreTagged(_keys);
     const keys = deTagIds(meta, _keys);
 
-    const { em } = reference.entity;
-
     const alias = abbreviation(otherMeta.tableName);
+    const o2o = meta.allFields[reference.fieldName] as OneToOneField;
+    const other = otherMeta.allFields[reference.otherFieldName];
     const query: ParsedFindQuery = {
       selects: [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: otherMeta.tableName }],
@@ -40,8 +41,8 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
         conditions: [
           {
             kind: "column",
-            alias,
-            column: reference.otherColumnName,
+            alias: `${alias}${other.aliasSuffix}`,
+            column: o2o.otherColumnName,
             dbType: meta.idDbType,
             cond: { kind: "in", value: keys },
           },
@@ -51,6 +52,7 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
     };
     addTablePerClassJoinsAndClassTag(query, otherMeta, alias, true);
 
+    const { em } = reference.entity;
     const rows = await em["executeFind"](otherMeta, oneToOneLoadOperation, query, {});
     const entities = em.hydrate(otherMeta.cstr, rows);
 

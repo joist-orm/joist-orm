@@ -121,7 +121,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
 
   declare readonly __type: { 0: "Painting" };
 
-  readonly artist: ManyToOneReference<Painting, Artist, never> = hasOne("paintings");
+  readonly artist: ManyToOneReference<Painting, Artist, never> = hasOne();
 
   get id(): PaintingId {
     return this.idMaybe || failNoIdYet("Painting");

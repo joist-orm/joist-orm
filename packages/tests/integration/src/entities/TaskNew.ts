@@ -12,7 +12,6 @@ export class TaskNew extends TaskNewCodegen {
   }
 
   readonly asyncDerived: ReactiveField<TaskNew, string | undefined> = hasReactiveField(
-    "asyncDerived",
     { syncDerived: [], newTaskTaskItems: "oldTask" },
     (tn) => `${tn.syncDerived} AsyncDerived`,
   );

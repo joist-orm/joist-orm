@@ -1,67 +1,51 @@
 import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
 import { Entity } from "../Entity";
 import { appendStack, IdOf, sameEntity } from "../EntityManager";
-import { EntityMetadata } from "../EntityMetadata";
+import { EntityMetadata, LargeOneToManyField } from "../EntityMetadata";
 import { ensureNotDeleted, getMetadata, ManyToOneReferenceImpl } from "../index";
-import { lazyField, resolveOtherMeta } from "../newEntity";
+import { lazyField } from "../newEntity";
 import { remove } from "../utils";
 import { LargeCollection } from "./LargeCollection";
 import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `OneToManyLargeCollection`s. */
-export function hasLargeMany<T extends Entity, U extends Entity>(
-  otherFieldName: string,
-  otherColumnName: string,
-): LargeCollection<T, U> {
-  let otherMeta: EntityMetadata<U>;
+export function hasLargeMany<T extends Entity, U extends Entity>(): LargeCollection<T, U> {
   return lazyField((entity: T, fieldName) => {
-    otherMeta ??= resolveOtherMeta(entity, fieldName);
-    return new OneToManyLargeCollection(
-      entity,
-      otherMeta,
-      fieldName as keyof T & string,
-      otherFieldName as keyof U & string,
-      otherColumnName,
-    );
+    const lo2m = getMetadata(entity).allFields[fieldName] as LargeOneToManyField;
+    return new OneToManyLargeCollection(entity, lo2m);
   });
 }
 
 export class OneToManyLargeCollection<T extends Entity, U extends Entity> implements LargeCollection<T, U> {
+  readonly #entity: T;
+  readonly #field: LargeOneToManyField;
   // Even though a large collection can never be loaded, we do track local
   // mutations so that `find` can be accurate.
-  private locallyAdded: U[] = [];
-  private locallyRemoved: U[] = [];
+  #locallyAdded: U[] = [];
+  #locallyRemoved: U[] = [];
 
-  constructor(
-    // These are public to our internal implementation but not exposed in the Collection API
-    public entity: T,
-    public otherMeta: EntityMetadata,
-    public fieldName: keyof T & string,
-    public otherFieldName: keyof U & string,
-    public otherColumnName: string,
-  ) {}
+  constructor(entity: T, field: LargeOneToManyField) {
+    this.#entity = entity;
+    this.#field = field;
+  }
 
   async find(id: IdOf<U>): Promise<U | undefined> {
     ensureNotDeleted(this.entity, "pending");
-
     // locallyAdded is never authoritative b/c we never become fully loaded (unlike OneToManyCollection),
     // so we can probe our local collection, but if we don't find anything, we still have to query
-    const localAdd = this.locallyAdded.find((u) => u.id === id);
+    const localAdd = this.#locallyAdded.find((u) => u.id === id);
     if (localAdd) {
       return localAdd;
     }
-
-    const localRemove = this.locallyRemoved.find((u) => u.id === id);
+    const localRemove = this.#locallyRemoved.find((u) => u.id === id);
     if (localRemove) {
       return undefined;
     }
-
     if (this.entity.isNewEntity) {
       return undefined;
     }
-
     // Make a cacheable tuple to look up this specific o2m row
-    const key = `id=${id},${this.otherColumnName}=${this.entity.id}`;
+    const key = `id=${id},${this.#field.otherColumnName}=${this.entity.id}`;
     return oneToManyFindDataLoader(this.entity.em, this)
       .load(key)
       .catch(function find(err) {
@@ -70,41 +54,58 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
   }
 
   async includes(other: U): Promise<boolean> {
-    return sameEntity(this.entity, this.getOtherRelation(other).current());
+    return sameEntity(this.entity, this.#getOtherRelation(other).current());
   }
 
   add(other: U): void {
-    remove(this.locallyRemoved, other);
-    if (!this.locallyAdded.includes(other)) {
-      this.locallyAdded.push(other);
+    remove(this.#locallyRemoved, other);
+    if (!this.#locallyAdded.includes(other)) {
+      this.#locallyAdded.push(other);
     }
     // This will no-op and mark other dirty if necessary
-    this.getOtherRelation(other).set(this.entity);
+    this.#getOtherRelation(other).set(this.entity);
   }
 
   remove(other: U): void {
-    remove(this.locallyAdded, other);
-    if (!this.locallyRemoved.includes(other)) {
-      this.locallyRemoved.push(other);
+    remove(this.#locallyAdded, other);
+    if (!this.#locallyRemoved.includes(other)) {
+      this.#locallyRemoved.push(other);
     }
     // This will no-op and mark other dirty if necessary
-    this.getOtherRelation(other).set(undefined);
+    this.#getOtherRelation(other).set(undefined);
   }
 
   get hasBeenSet() {
     return false;
   }
 
-  public get meta(): EntityMetadata {
+  get entity(): Entity {
+    return this.#entity;
+  }
+
+  get meta(): EntityMetadata {
     return getMetadata(this.entity);
   }
 
-  public toString(): string {
+  // These are public to our internal implementation but not exposed in the Collection API
+  get otherMeta(): EntityMetadata<U> {
+    return this.#field.otherMetadata();
+  }
+
+  get fieldName(): keyof T & string {
+    return this.#field.fieldName as keyof T & string;
+  }
+
+  get otherFieldName(): keyof U & string {
+    return this.#field.otherFieldName as keyof U & string;
+  }
+
+  toString(): string {
     return `OneToManyLargeCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
   }
 
   /** Returns the other relation that points back at us, i.e. we're `Author.image` and this is `Image.author_id`. */
-  private getOtherRelation(other: U): ManyToOneReferenceImpl<U, T, any> {
+  #getOtherRelation(other: U): ManyToOneReferenceImpl<U, T, any> {
     return (other as U)[this.otherFieldName] as any;
   }
 

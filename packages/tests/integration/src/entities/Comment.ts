@@ -3,7 +3,6 @@ import { CommentCodegen } from "./entities";
 
 export class Comment extends CommentCodegen {
   readonly parentTags: ReactiveField<Comment, string> = hasReactiveField(
-    "parentTags",
     { parent: { commentParentInfo: {}, tags: "name" } },
     (c) => {
       return (
@@ -14,7 +13,6 @@ export class Comment extends CommentCodegen {
   );
 
   readonly parentTaggedId: ReactiveField<Comment, string | undefined> = hasReactiveField(
-    "parentTaggedId",
     "parent",
     // Use idIfSet because parent is allowed to be null, both to not breaking existing
     // tests, including one PolymorphicReference test that explicitly tests deleting the

@@ -1,11 +1,11 @@
 import { Entity } from "../Entity";
 import { getEmInternalApi } from "../EntityManager";
-import { getMetadata } from "../EntityMetadata";
+import { getMetadata, PrimitiveField } from "../EntityMetadata";
 import { getField, isFieldSet, setField } from "../fields";
 import { isLoaded } from "../index";
 import { IsLoadedCachable } from "../IsLoadedCache";
 import { lazyField } from "../newEntity";
-import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
+import { convertToLoadHint, Reacted, ReactiveHint } from "../reactiveHints";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
 import { AsyncPropertyT } from "./hasAsyncProperty";
 
@@ -67,12 +67,12 @@ export interface ReactiveField<T extends Entity, V> {
  * with `someProperty.get`.
  */
 export function hasReactiveField<T extends Entity, const H extends ReactiveHint<T>, V>(
-  fieldName: keyof T & string,
   hint: H,
   fn: (entity: Reacted<T, H>) => V,
 ): ReactiveField<T, V> {
   return lazyField((entity: T, fieldName) => {
-    return new ReactiveFieldImpl(entity, fieldName as keyof T & string, hint, fn);
+    const field = getMetadata(entity).allFields[fieldName] as PrimitiveField;
+    return new ReactiveFieldImpl(entity, field, hint, fn);
   });
 }
 
@@ -80,18 +80,21 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   extends AbstractPropertyImpl<T>
   implements ReactiveField<T, V>, IsLoadedCachable
 {
+  readonly #field: PrimitiveField;
   readonly #reactiveHint: H;
   #loadPromise: any;
   // Initially undefined, then cached as true/false
   #isLoaded: boolean | undefined;
   #isCached: boolean | "factory-value" = false;
+
   constructor(
     entity: T,
-    public fieldName: keyof T & string,
-    public reactiveHint: H,
+    field: PrimitiveField,
+    reactiveHint: H,
     private fn: (entity: Reacted<T, H>) => V,
   ) {
     super(entity);
+    this.#field = field;
     this.#reactiveHint = reactiveHint;
   }
 
@@ -147,6 +150,14 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     } else {
       throw new Error(`${this.fieldName} has not been derived yet`);
     }
+  }
+
+  get fieldName(): keyof T & string {
+    return this.#field.fieldName as keyof T & string;
+  }
+
+  get reactiveHint(): H {
+    return this.#reactiveHint;
   }
 
   get fieldValue(): V {

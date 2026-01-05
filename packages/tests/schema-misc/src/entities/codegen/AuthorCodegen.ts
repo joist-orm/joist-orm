@@ -138,8 +138,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   declare readonly __type: { 0: "Author" };
 
-  readonly books: Collection<Author, Book> = hasMany("author", "authorId", undefined);
-  readonly tags: Collection<Author, Tag> = hasManyToMany("author_to_tags", "authorId", "authors", "tagId");
+  readonly books: Collection<Author, Book> = hasMany();
+  readonly tags: Collection<Author, Tag> = hasManyToMany(); // author_to_tags authorId tagId
 
   get id(): AuthorId {
     return this.idMaybe || failNoIdYet("Author");

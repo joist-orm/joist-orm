@@ -118,8 +118,8 @@ export abstract class T2BookCodegen extends BaseEntity<EntityManager, number> im
 
   declare readonly __type: { 0: "T2Book" };
 
-  readonly t2Authors: Collection<T2Book, T2Author> = hasMany("favoriteBook", "favorite_book_id", undefined);
-  readonly author: ManyToOneReference<T2Book, T2Author, never> = hasOne("t2Books");
+  readonly t2Authors: Collection<T2Book, T2Author> = hasMany();
+  readonly author: ManyToOneReference<T2Book, T2Author, never> = hasOne();
 
   get id(): T2BookId {
     return this.idMaybe || failNoIdYet("T2Book");

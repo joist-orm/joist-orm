@@ -120,8 +120,11 @@ export type OneToManyField = {
   required: boolean;
   otherMetadata: () => EntityMetadata;
   otherFieldName: string;
+  /** Useful when our other side is a poly, to find which component points back to us. */
+  otherColumnName: string;
   serde: undefined;
   immutable: false;
+  orderBy?: { field: string; direction: "ASC" | "DESC" };
 };
 
 export type LargeOneToManyField = {
@@ -131,6 +134,8 @@ export type LargeOneToManyField = {
   required: boolean;
   otherMetadata: () => EntityMetadata;
   otherFieldName: string;
+  /** Useful when our other side is a poly, to find which component points back to us. */
+  otherColumnName: string;
   serde: undefined;
   immutable: false;
 };
@@ -169,6 +174,8 @@ export type OneToOneField = {
   required: boolean;
   otherMetadata: () => EntityMetadata;
   otherFieldName: string;
+  /** Useful when our other side is a poly, to find which component points back to us. */
+  otherColumnName: string;
   serde: undefined;
   immutable: false;
 };

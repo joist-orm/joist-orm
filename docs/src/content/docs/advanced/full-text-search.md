@@ -68,7 +68,6 @@ And then implement our logic in the `Book` domain model. This will keep the valu
 import { ReactiveField, hasReactiveField } from "joist-orm";
 
 readonly search: ReactiveField<Book, string> = hasReactiveField(
-  "search",
   { author: ["firstName", "lastName"], title: {} },
   (book) => {
     const author = book.author.get;

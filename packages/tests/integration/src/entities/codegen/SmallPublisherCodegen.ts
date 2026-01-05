@@ -159,18 +159,10 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
 
   declare readonly __type: { 0: "Publisher"; 1: "SmallPublisher" };
 
-  readonly smallPublishers: Collection<SmallPublisher, SmallPublisher> = hasMany(
-    "selfReferential",
-    "self_referential_id",
-    undefined,
-  );
-  readonly users: Collection<SmallPublisher, User> = hasMany(
-    "favoritePublisher",
-    "favorite_publisher_small_id",
-    undefined,
-  );
-  readonly selfReferential: ManyToOneReference<SmallPublisher, SmallPublisher, undefined> = hasOne("smallPublishers");
-  readonly group: ManyToOneReference<SmallPublisher, SmallPublisherGroup, undefined> = hasOne("publishers");
+  readonly smallPublishers: Collection<SmallPublisher, SmallPublisher> = hasMany();
+  readonly users: Collection<SmallPublisher, User> = hasMany();
+  readonly selfReferential: ManyToOneReference<SmallPublisher, SmallPublisher, undefined> = hasOne();
+  readonly group: ManyToOneReference<SmallPublisher, SmallPublisherGroup, undefined> = hasOne();
   declare readonly authors: Collection<SmallPublisher, Author>;
   declare readonly bookAdvances: Collection<SmallPublisher, BookAdvance>;
   declare readonly comments: Collection<SmallPublisher, Comment>;

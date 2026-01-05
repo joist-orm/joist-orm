@@ -139,9 +139,9 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
 
   declare readonly __type: { 0: "ChildGroup" };
 
-  readonly childItems: Collection<ChildGroup, ChildItem> = hasMany("childGroup", "child_group_id", undefined);
-  readonly childGroup: ManyToOneReference<ChildGroup, Child, never> = hasOne("groups");
-  readonly parentGroup: ManyToOneReference<ChildGroup, ParentGroup, never> = hasOne("childGroups");
+  readonly childItems: Collection<ChildGroup, ChildItem> = hasMany();
+  readonly childGroup: ManyToOneReference<ChildGroup, Child, never> = hasOne();
+  readonly parentGroup: ManyToOneReference<ChildGroup, ParentGroup, never> = hasOne();
 
   get id(): ChildGroupId {
     return this.idMaybe || failNoIdYet("ChildGroup");

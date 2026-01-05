@@ -13,30 +13,16 @@ import {
 } from "../";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
-import { lazyField, resolveOtherMeta } from "../newEntity";
+import { lazyField } from "../newEntity";
 import { maybeAdd, maybeRemove, remove } from "../utils";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `ManyToManyCollections`s. */
-export function hasManyToMany<T extends Entity, U extends Entity>(
-  joinTableName: string,
-  columnName: string,
-  otherFieldName: keyof U & string,
-  otherColumnName: string,
-): Collection<T, U> {
-  let otherMeta: EntityMetadata<U>;
+export function hasManyToMany<T extends Entity, U extends Entity>(): Collection<T, U> {
   return lazyField((entity: T, fieldName) => {
-    otherMeta ??= resolveOtherMeta(entity, fieldName);
-    return new ManyToManyCollection<T, U>(
-      joinTableName,
-      entity,
-      fieldName as keyof T & string,
-      columnName,
-      otherMeta,
-      otherFieldName,
-      otherColumnName,
-    );
+    const m2m = getMetadata(entity).allFields[fieldName] as ManyToManyField;
+    return new ManyToManyCollection<T, U>(entity, m2m);
   });
 }
 
@@ -44,28 +30,20 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<T, U[]>
   implements Collection<T, U>
 {
-  readonly #fieldName: keyof T & string;
+  readonly #field: ManyToManyField;
   #loaded: U[] | undefined;
   #addedBeforeLoaded: U[] | undefined;
   #removedBeforeLoaded: U[] | undefined;
   #hasBeenSet = false;
 
-  constructor(
-    public joinTableName: string,
-    // I.e. when entity = Book:
-    // fieldName == tags, because it's our collection to tags
-    // columnName = book_id, what we use as the `where book_id = us` to find our join table rows
-    // otherFieldName = books, how tags points to us
-    // otherColumnName = tag_id, how the other side finds its join table rows
-    entity: T,
-    public fieldName: keyof T & string,
-    public columnName: string,
-    otherMeta: EntityMetadata,
-    public otherFieldName: keyof U & string,
-    public otherColumnName: string,
-  ) {
+  // I.e. when entity = Book:
+  // fieldName == tags, because it's our collection to tags
+  // columnName = book_id, what we use as the `where book_id = us` to find our join table rows
+  // otherFieldName = books, how tags points to us
+  // otherColumnName = tag_id, how the other side finds its join table rows
+  constructor(entity: T, field: ManyToManyField) {
     super(entity);
-    this.#fieldName = fieldName;
+    this.#field = field;
     if (getInstanceData(entity).isOrWasNew) {
       this.#loaded = [];
     }
@@ -289,11 +267,31 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   get otherMeta(): EntityMetadata {
-    return (getMetadata(this.entity).allFields[this.#fieldName] as ManyToManyField).otherMetadata();
+    return (getMetadata(this.entity).allFields[this.fieldName] as ManyToManyField).otherMetadata();
+  }
+
+  get joinTableName(): string {
+    return this.#field.joinTableName;
+  }
+
+  get fieldName(): string {
+    return this.#field.fieldName;
+  }
+
+  get otherFieldName(): string & keyof U {
+    return this.#field.otherFieldName as string & keyof U;
+  }
+
+  get columnName(): string {
+    return this.#field.columnNames[0];
+  }
+
+  get otherColumnName(): string {
+    return this.#field.columnNames[1];
   }
 
   get #isCascadeDelete(): boolean {
-    return isCascadeDelete(this, this.#fieldName);
+    return isCascadeDelete(this, this.fieldName);
   }
 
   get hasBeenSet(): boolean {

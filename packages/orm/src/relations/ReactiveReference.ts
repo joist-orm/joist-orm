@@ -18,7 +18,7 @@ import { Entity } from "../Entity";
 import { IdOf } from "../EntityManager";
 import { getField, setField } from "../fields";
 import { IsLoadedCachable } from "../IsLoadedCache";
-import { lazyField, resolveOtherMeta } from "../newEntity";
+import { lazyField } from "../newEntity";
 import { MaybeReactedEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";
@@ -56,14 +56,10 @@ export interface ReactiveReference<T extends Entity, U extends Entity, N extends
 }
 
 export function hasReactiveReference<T extends Entity, U extends Entity, const H extends ReactiveHint<T>>(
-  otherMeta: EntityMetadata<U>,
-  fieldName: keyof T & string,
   hint: H,
   fn: (entity: Reacted<T, H>) => MaybeReactedEntity<U>,
 ): ReactiveReference<T, U, never>;
 export function hasReactiveReference<T extends Entity, U extends Entity, const H extends ReactiveHint<T>>(
-  otherMeta: EntityMetadata<U>,
-  fieldName: keyof T & string,
   hint: H,
   fn: (entity: Reacted<T, H>) => MaybeReactedEntity<U> | undefined,
 ): ReactiveReference<T, U, undefined>;
@@ -73,15 +69,10 @@ export function hasReactiveReference<
   U extends Entity,
   const H extends ReactiveHint<T>,
   N extends never | undefined,
->(
-  otherMeta: EntityMetadata<U>,
-  fieldName: keyof T & string,
-  hint: H,
-  fn: (entity: Reacted<T, H>) => MaybeReactedEntity<U> | N,
-): ReactiveReference<T, U, N> {
+>(hint: H, fn: (entity: Reacted<T, H>) => MaybeReactedEntity<U> | N): ReactiveReference<T, U, N> {
   return lazyField((entity: T, fieldName) => {
-    otherMeta ??= resolveOtherMeta(entity, fieldName);
-    return new ReactiveReferenceImpl<T, U, H, N>(entity, fieldName as keyof T & string, otherMeta, hint, fn);
+    const m2o = getMetadata(entity).allFields[fieldName] as ManyToOneField;
+    return new ReactiveReferenceImpl<T, U, H, N>(entity, m2o, hint, fn);
   });
 }
 
@@ -132,14 +123,14 @@ export class ReactiveReferenceImpl<
 
   constructor(
     entity: T,
-    public fieldName: keyof T & string,
-    otherMeta: EntityMetadata,
+    field: ManyToOneField,
     public reactiveHint: H,
     private fn: (entity: Reacted<T, H>) => MaybeReactedEntity<U> | N,
   ) {
     super(entity);
-    this.#fieldName = fieldName;
-    this.#otherMeta = otherMeta;
+    // Minimizing changes until the other PR lands...
+    this.#fieldName = field.fieldName as keyof T & string;
+    this.#otherMeta = field.otherMetadata();
     this.#reactiveHint = reactiveHint;
     // We can be initialized with [entity | id | undefined], and if it's entity or id, then setImpl
     // will set loaded appropriately; but if we're initialized undefined, then mark loaded here
@@ -148,7 +139,7 @@ export class ReactiveReferenceImpl<
     }
     // If the property transformer is not enabled, then the RR will not be in the relations map because they are
     // defined in the implementation file and not the codegen file.  So we should insert ourselves regardless.
-    getInstanceData(entity).relations[fieldName] = this;
+    getInstanceData(entity).relations[field.fieldName] = this;
   }
 
   async load(opts?: { withDeleted?: true; forceReload?: true }): Promise<U | N> {
@@ -375,6 +366,10 @@ export class ReactiveReferenceImpl<
       return this.filterDeleted(current as U, opts);
     }
     return current;
+  }
+
+  get fieldName(): string {
+    return this.#fieldName;
   }
 
   public get otherMeta(): EntityMetadata<U> {

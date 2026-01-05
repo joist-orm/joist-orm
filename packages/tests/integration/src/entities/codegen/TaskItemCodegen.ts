@@ -138,9 +138,9 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
 
   declare readonly __type: { 0: "TaskItem" };
 
-  readonly newTask: ManyToOneReference<TaskItem, TaskNew, undefined> = hasOne("newTaskTaskItems");
-  readonly oldTask: ManyToOneReference<TaskItem, TaskOld, undefined> = hasOne("oldTaskTaskItems");
-  readonly task: ManyToOneReference<TaskItem, Task, undefined> = hasOne("taskTaskItems");
+  readonly newTask: ManyToOneReference<TaskItem, TaskNew, undefined> = hasOne();
+  readonly oldTask: ManyToOneReference<TaskItem, TaskOld, undefined> = hasOne();
+  readonly task: ManyToOneReference<TaskItem, Task, undefined> = hasOne();
 
   get id(): TaskItemId {
     return this.idMaybe || failNoIdYet("TaskItem");

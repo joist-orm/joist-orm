@@ -39,7 +39,6 @@ export class BookReview extends BookReviewCodegen {
   //   implicitly/hint loaded merely from having its author & book in-memory, which makes it harder to
   //   use isPublic as a test case reactivity caching).
   readonly isPublic: ReactiveField<BookReview, boolean> = hasReactiveField(
-    "isPublic",
     { book: { author: ["age", "graduated"] }, comment: "text" },
     (review) => {
       review.transientFields.numberOfIsPublicCalcs++;
@@ -55,12 +54,12 @@ export class BookReview extends BookReviewCodegen {
   );
 
   // Used to test dependent reactivity
-  readonly isTest: ReactiveField<BookReview, boolean> = hasReactiveField("isTest", { comment: "text" }, (review) => {
+  readonly isTest: ReactiveField<BookReview, boolean> = hasReactiveField({ comment: "text" }, (review) => {
     return !!review.comment.get?.text?.includes("Test");
   });
 
   // Used to test dependent reactivity
-  readonly isTestChain: ReactiveField<BookReview, boolean> = hasReactiveField("isTestChain", "isTest", (review) => {
+  readonly isTestChain: ReactiveField<BookReview, boolean> = hasReactiveField("isTest", (review) => {
     return review.isTest.get;
   });
 

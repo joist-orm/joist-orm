@@ -279,27 +279,14 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   declare readonly __type: { 0: "Publisher" };
 
   abstract readonly favoriteAuthor: ReactiveReference<Publisher, Author, undefined>;
-  readonly authors: Collection<Publisher, Author> = hasMany("publisher", "publisher_id", {
-    "field": "numberOfBooks",
-    "direction": "ASC",
-  });
-  readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany("publisher", "publisher_id", undefined);
-  readonly comments: Collection<Publisher, Comment> = hasMany("parent", "parent_publisher_id", undefined);
-  readonly images: Collection<Publisher, Image> = hasMany("publisher", "publisher_id", undefined);
-  readonly group: ManyToOneReference<Publisher, PublisherGroup, undefined> = hasOne("publishers");
-  readonly spotlightAuthor: ManyToOneReference<Publisher, Author, undefined> = hasOne("spotlightAuthorPublishers");
-  readonly tags: Collection<Publisher, Tag> = hasManyToMany(
-    "publishers_to_tags",
-    "publisher_id",
-    "publishers",
-    "tag_id",
-  );
-  readonly tasks: Collection<Publisher, TaskOld> = hasManyToMany(
-    "tasks_to_publishers",
-    "publisher_id",
-    "publishers",
-    "task_id",
-  );
+  readonly authors: Collection<Publisher, Author> = hasMany();
+  readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany();
+  readonly comments: Collection<Publisher, Comment> = hasMany();
+  readonly images: Collection<Publisher, Image> = hasMany();
+  readonly group: ManyToOneReference<Publisher, PublisherGroup, undefined> = hasOne();
+  readonly spotlightAuthor: ManyToOneReference<Publisher, Author, undefined> = hasOne();
+  readonly tags: Collection<Publisher, Tag> = hasManyToMany(); // publishers_to_tags publisher_id tag_id
+  readonly tasks: Collection<Publisher, TaskOld> = hasManyToMany(); // tasks_to_publishers publisher_id task_id
 
   get id(): PublisherId {
     return this.idMaybe || failNoIdYet("Publisher");

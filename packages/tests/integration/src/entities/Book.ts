@@ -23,7 +23,6 @@ export class Book extends BookCodegen {
 
   /** For testing accessing `book.author.get` when it's undefined. */
   readonly search: ReactiveField<Book, string> = hasReactiveField(
-    "search",
     { author: "firstName", title: {}, reviews: "rating" },
     (b) => {
       // Ensure that NPEs that aren't from validation errors aren't suppressed

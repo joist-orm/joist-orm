@@ -35,7 +35,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "timeToMicros": { kind: "primitive", fieldName: "timeToMicros", fieldIdName: undefined, derived: false, required: false, protected: false, type: Temporal.PlainTime, serde: new PlainTimeSerde("timeToMicros", "time_to_micros", "time without time zone"), immutable: false, default: "schema" },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Temporal.ZonedDateTime, serde: new ZonedDateTimeSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
-    "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", serde: undefined, immutable: false },
+    "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", otherColumnName: "author_id", serde: undefined, immutable: false },
   },
   allFields: {},
   orderBy: undefined,

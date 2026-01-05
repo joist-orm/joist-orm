@@ -12,33 +12,20 @@ import {
   IdOf,
   maybeResolveReferenceToId,
   OneToManyField,
-  OrderBy,
   sameEntity,
 } from "../index";
 import { IsLoadedCachable } from "../IsLoadedCache";
-import { lazyField, resolveOtherMeta } from "../newEntity";
+import { lazyField } from "../newEntity";
 import { clear, compareValues, maybeAdd, maybeRemove, remove } from "../utils";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
 import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `OneToManyCollection`s. */
-export function hasMany<T extends Entity, U extends Entity>(
-  otherFieldName: string,
-  otherColumnName: string,
-  orderBy: { field: string; direction: OrderBy } | undefined,
-): Collection<T, U> {
-  let otherMeta: EntityMetadata<U>;
+export function hasMany<T extends Entity, U extends Entity>(): Collection<T, U> {
   return lazyField((entity: T, fieldName) => {
-    otherMeta ??= resolveOtherMeta(entity, fieldName);
-    return new OneToManyCollection(
-      entity,
-      otherMeta,
-      fieldName as keyof T & string,
-      otherFieldName as keyof U & string,
-      otherColumnName,
-      orderBy as any,
-    );
+    const field = getMetadata(entity).allFields[fieldName] as OneToManyField;
+    return new OneToManyCollection(entity, field);
   });
 }
 
@@ -46,8 +33,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<T, U[]>
   implements Collection<T, U>, IsLoadedCachable
 {
-  readonly #fieldName: keyof T & string;
-  readonly #orderBy: { field: keyof U; direction: OrderBy } | undefined;
+  readonly #field: OneToManyField;
   // We can track both value-and-isLoaded with a single `#loaded` b/c `[]` is always our empty value
   #loaded: U[] | undefined;
   // Constantly filtering+sorting our `.get` values can be surprisingly expensive if called
@@ -64,18 +50,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   #removed: U[] | undefined;
   #hasBeenSet = false;
 
-  constructor(
-    // These are public to our internal implementation but not exposed in the Collection API
-    entity: T,
-    otherMeta: EntityMetadata,
-    public fieldName: keyof T & string,
-    public otherFieldName: keyof U & string,
-    public otherColumnName: string,
-    orderBy: { field: keyof U; direction: OrderBy } | undefined,
-  ) {
+  constructor(entity: T, field: OneToManyField) {
     super(entity);
-    this.#fieldName = fieldName;
-    this.#orderBy = orderBy;
+    this.#field = field;
     if (getInstanceData(entity).isOrWasNew) {
       this.#loaded = [];
     }
@@ -117,7 +94,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       const added = this.#added?.find((u) => !u.isNewEntity && u.id === id);
       if (added) return added;
       // Make a cacheable tuple to look up this specific o2m row
-      const key = `id=${id},${this.otherColumnName}=${this.entity.id}`;
+      const key = `id=${id},${this.#field.otherColumnName}=${this.entity.id}`;
       return oneToManyFindDataLoader(this.entity.em, this)
         .load(key)
         .catch(function find(err) {
@@ -338,6 +315,15 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     }
   }
 
+  // These are public to our internal implementation but not exposed in the Collection API
+  public get fieldName(): keyof T & string {
+    return this.#field.fieldName as keyof T & string;
+  }
+
+  public get otherFieldName(): keyof U & string {
+    return this.#field.otherFieldName as keyof U & string;
+  }
+
   current(opts?: { withDeleted?: boolean }): U[] {
     return this.filterDeleted(this.#loaded ?? this.#added ?? [], opts);
   }
@@ -347,7 +333,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   public get otherMeta(): EntityMetadata {
-    return (getMetadata(this.entity).allFields[this.#fieldName] as OneToManyField).otherMetadata();
+    return (getMetadata(this.entity).allFields[this.fieldName] as OneToManyField).otherMetadata();
   }
 
   public get hasBeenSet(): boolean {
@@ -370,9 +356,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       opts?.withDeleted === true
         ? [...entities]
         : entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
-    if (this.#orderBy) {
-      const { field, direction } = this.#orderBy;
-      list.sort((a, b) => compareValues(a[field], b[field], direction));
+    if (this.#field.orderBy) {
+      const { field, direction } = this.#field.orderBy;
+      list.sort((a, b) => compareValues((a as any)[field], (b as any)[field], direction));
     }
     return list;
   }
@@ -383,7 +369,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   private get isCascadeDelete(): boolean {
-    return isCascadeDelete(this, this.#fieldName);
+    return isCascadeDelete(this, this.fieldName);
   }
 
   private getPreloaded(): U[] | undefined {

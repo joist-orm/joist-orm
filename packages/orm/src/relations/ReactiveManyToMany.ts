@@ -14,7 +14,7 @@ import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { IsLoadedCachable } from "../IsLoadedCache";
 import { lazyField } from "../newEntity";
 import { convertToLoadHint, MaybeReactedEntity, Reacted, ReactiveHint } from "../reactiveHints";
-import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 
 /**
@@ -179,10 +179,16 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
   }
 
   maybeCascadeDelete(): void {
-    // ReactiveManyToManys don't cascade delete
+    if (this.#isCascadeDelete) {
+      const jr = getEmInternalApi(this.entity.em).joinRows(this);
+      jr.getOthers(this.columnName, this.entity).forEach((e) => this.entity.em.delete(e));
+    }
   }
 
   async cleanupOnEntityDeleted(): Promise<void> {
+    const existing = await this.load({ withDeleted: true });
+    const jr = getEmInternalApi(this.entity.em).joinRows(this);
+    for (const entity of existing) jr.addRemove(this, this.entity, entity);
     this.#loaded = [];
     this.#isLoaded = false;
   }
@@ -216,7 +222,7 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
     return this.#field.otherFieldName;
   }
 
-  public get hasBeenSet(): boolean {
+  get hasBeenSet(): boolean {
     return true;
   }
 
@@ -230,6 +236,10 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
 
   public toString(): string {
     return `ReactiveManyToMany(entity: ${this.entity}, fieldName: ${this.fieldName}, otherMeta: ${this.otherMeta.type})`;
+  }
+
+  get #isCascadeDelete(): boolean {
+    return isCascadeDelete(this, this.#field.fieldName);
   }
 
   async #loadFromJoinTable(): Promise<U[]> {

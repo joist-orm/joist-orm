@@ -83,7 +83,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     if (this.#loaded === undefined || (opts.forceReload && !this.entity.isNewEntity)) {
       const key = `${this.columnName}=${this.entity.id}`;
       this.#loaded =
-        this.getPreloaded() ??
+        this.#getPreloaded() ??
         (await manyToManyDataLoader(this.entity.em, this)
           .load(key)
           .catch(function load(err) {
@@ -173,11 +173,11 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   get isPreloaded(): boolean {
-    return !!this.getPreloaded();
+    return !!this.#getPreloaded();
   }
 
   preload(): void {
-    this.#loaded = this.getPreloaded();
+    this.#loaded = this.#getPreloaded();
     this.maybeApplyAddedAndRemovedBeforeLoaded();
   }
 
@@ -247,14 +247,14 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   maybeCascadeDelete() {
-    if (this.isCascadeDelete) {
-      this.current({ withDeleted: true }).forEach((e) => this.entity.em.delete(e));
+    if (this.#isCascadeDelete) {
+      this.#current({ withDeleted: true }).forEach((e) => this.entity.em.delete(e));
     }
   }
 
   async cleanupOnEntityDeleted(): Promise<void> {
     // if we are going to delete this relation as well, then we don't need to clean it up
-    if (this.isCascadeDelete) return;
+    if (this.#isCascadeDelete) return;
     const entities = await this.load({ withDeleted: true });
     entities.forEach((other) => {
       const m2m = other[this.otherFieldName] as any as ManyToManyCollection<U, T>;
@@ -280,31 +280,31 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     }
   }
 
-  current(opts?: { withDeleted?: boolean }): U[] {
+  #current(opts?: { withDeleted?: boolean }): U[] {
     return this.filterDeleted(this.#loaded ?? this.#addedBeforeLoaded ?? [], opts);
   }
 
-  public get meta(): EntityMetadata {
+  get meta(): EntityMetadata {
     return getMetadata(this.entity);
   }
 
-  public get otherMeta(): EntityMetadata {
+  get otherMeta(): EntityMetadata {
     return (getMetadata(this.entity).allFields[this.#fieldName] as ManyToManyField).otherMetadata();
   }
 
-  private get isCascadeDelete(): boolean {
+  get #isCascadeDelete(): boolean {
     return isCascadeDelete(this, this.#fieldName);
   }
 
-  public get hasBeenSet(): boolean {
+  get hasBeenSet(): boolean {
     return this.#hasBeenSet;
   }
 
-  public toString(): string {
+  toString(): string {
     return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
   }
 
-  private getPreloaded(): U[] | undefined {
+  #getPreloaded(): U[] | undefined {
     if (this.entity.isNewEntity) return undefined;
     return getEmInternalApi(this.entity.em).getPreloadedRelation<U>(this.entity.idTagged, this.fieldName);
   }

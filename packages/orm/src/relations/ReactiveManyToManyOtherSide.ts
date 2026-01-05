@@ -2,7 +2,6 @@ import {
   ensureNotDeleted,
   Entity,
   EntityMetadata,
-  fail,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
@@ -86,7 +85,7 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
   }
 
   set(): void {
-    fail(`Cannot set ${this.entity}.${this.fieldName} - it is the read-only other side of a ReactiveManyToMany.`);
+    throw new Error(`ReactiveManyToManyOtherSide ${this.entity}.${this.fieldName} cannot be set`);
   }
 
   setFromOpts(_others: U[]): void {

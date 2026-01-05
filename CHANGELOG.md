@@ -1,3 +1,10 @@
+# [1.288.0](https://github.com/joist-orm/joist-orm/compare/v1.287.0...v1.288.0) (2026-01-05)
+
+
+### Features
+
+* Closure table example. ([#1689](https://github.com/joist-orm/joist-orm/issues/1689)) ([0ce175c](https://github.com/joist-orm/joist-orm/commit/0ce175c9f4da9072e709bf2726e14c67416baeee))
+
 # [1.287.0](https://github.com/joist-orm/joist-orm/compare/v1.286.4...v1.287.0) (2026-01-05)
 
 

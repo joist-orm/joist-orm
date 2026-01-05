@@ -1,6 +1,13 @@
 import { Entity } from "../Entity";
 import { IdOf } from "../EntityManager";
-import { CustomCollection, ManyToManyCollection, OneToManyCollection, Relation } from "./index";
+import {
+  CustomCollection,
+  ManyToManyCollection,
+  OneToManyCollection,
+  ReactiveManyToManyImpl,
+  ReactiveManyToManyOtherSideImpl,
+  Relation,
+} from "./index";
 
 /** A collection of `U` within `T`, either one-to-many or many-to-many. */
 export interface Collection<T extends Entity, U extends Entity> extends Relation<T, U> {
@@ -35,6 +42,8 @@ export function isCollection(maybeCollection: any): maybeCollection is Collectio
   return (
     maybeCollection instanceof OneToManyCollection ||
     maybeCollection instanceof ManyToManyCollection ||
+    maybeCollection instanceof ReactiveManyToManyImpl ||
+    maybeCollection instanceof ReactiveManyToManyOtherSideImpl ||
     maybeCollection instanceof CustomCollection
   );
 }

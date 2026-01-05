@@ -185,7 +185,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
 
   readonly books: Collection<Comment, Book> = hasMany();
   readonly user: ManyToOneReference<Comment, User, undefined> = hasOne();
-  readonly likedByUsers: Collection<Comment, User> = hasManyToMany();
+  readonly likedByUsers: Collection<Comment, User> = hasManyToMany(); // users_to_comments comment_id liked_by_user_id
   readonly parent: PolymorphicReference<Comment, CommentParent, never> = hasOnePolymorphic();
 
   get id(): CommentId {

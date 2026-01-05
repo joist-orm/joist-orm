@@ -92,11 +92,11 @@ export interface ColumnMetaData {
 // A local type just for tracking abstract vs. concrete relations
 type Relation =
   // I.e. `abstract ReactiveReference` that the user must implement
-  | { kind: "abstract"; line: Code }
+  | { kind: "abstract"; line: Code; comment?: string }
   // I.e. a `get author(): ManyToOne<...>`
-  | { kind: "concrete"; fieldName: string; decl: Code; init: Code }
+  | { kind: "concrete"; fieldName: string; decl: Code; init: Code; comment?: string }
   // I.e. a `get author(): { super.author as ... }`
-  | { kind: "super"; fieldName: string; decl: Code };
+  | { kind: "super"; fieldName: string; decl: Code; comment?: string };
 
 /** Creates the base class with the boilerplate annotations. */
 export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
@@ -249,16 +249,20 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         ${baseEntity ? 1 : 0}: "${entityName}", 
       };
 
-      ${relations.filter((r) => r.kind === "abstract").map((r) => r.line)}
+      ${relations
+        .filter((r) => r.kind === "abstract")
+        .map((r) => {
+          return code`${r.line}${maybeComment(r.comment)}`;
+        })}
       ${relations
         .filter((r) => r.kind === "concrete")
         .map((r) => {
-          return code`readonly ${r.fieldName}: ${r.decl} = ${r.init};`;
+          return code`readonly ${r.fieldName}: ${r.decl} = ${r.init};${maybeComment(r.comment)}`;
         })}
       ${relations
         .filter((r) => r.kind === "super")
         .map((r) => {
-          return code`declare readonly ${r.fieldName}: ${r.decl};`;
+          return code`declare readonly ${r.fieldName}: ${r.decl};${maybeComment(r.comment)}`;
         })}
 
       get id(): ${entityName}Id {
@@ -1023,18 +1027,18 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
   // Add ManyToMany
   const m2m: Relation[] = meta.manyToManys.map((m2m) => {
     const { fieldName, otherEntity } = m2m;
+    const comment = `// ${m2m.joinTableName} ${m2m.columnName} ${m2m.otherColumnName}`;
     if (m2m.derived === "async") {
       const line = code`abstract readonly ${fieldName}: ${ReactiveManyToMany}<${entity.name}, ${otherEntity.type}>;`;
-      return { kind: "abstract", line } as const;
+      return { kind: "abstract", line, comment } as const;
     } else if (m2m.derived === "otherSide") {
       const decl = code`${ReactiveManyToManyOtherSide}<${entity.type}, ${otherEntity.type}>`;
       const init = code`${hasReactiveManyToManyOtherSide}()`;
-      return { kind: "concrete", fieldName, decl, init };
+      return { kind: "concrete", fieldName, decl, init, comment };
     } else if (!m2m.derived) {
       const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
-      const init = code`
-      ${hasManyToMany}()`;
-      return { kind: "concrete", fieldName, decl, init };
+      const init = code`${hasManyToMany}()`;
+      return { kind: "concrete", fieldName, decl, init, comment };
     } else {
       assertNever(m2m.derived);
     }
@@ -1100,6 +1104,11 @@ function undefinedOrNever(notNull: boolean): string {
 
 function nullOrNever(notNull: boolean): string {
   return notNull ? "never" : "null";
+}
+
+/** Prefixes the comment with a newline, so it gets its own line. */
+function maybeComment(comment: string | undefined): string {
+  return comment ? ` ${comment}\n` : "";
 }
 
 export function getIdType(config: Config) {

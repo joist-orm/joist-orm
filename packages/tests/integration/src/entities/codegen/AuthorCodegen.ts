@@ -425,8 +425,9 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   abstract readonly rootMentor: ReactiveReference<Author, Author, undefined>;
   abstract readonly favoriteBook: ReactiveReference<Author, Book, undefined>;
-  abstract readonly menteesClosure: ReactiveManyToMany<Author, Author>;
-  abstract readonly bestReviews: ReactiveManyToMany<Author, BookReview>;
+  abstract readonly menteesClosure: ReactiveManyToMany<Author, Author>; // author_to_mentees_closure mentor_id mentee_id
+  abstract readonly bestReviews: ReactiveManyToMany<Author, BookReview>; // authors_to_best_reviews author_id book_review_id
+
   readonly mentees: Collection<Author, Author> = hasMany();
   readonly books: Collection<Author, Book> = hasMany();
   readonly reviewerBooks: Collection<Author, Book> = hasMany();
@@ -441,8 +442,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   readonly menteesRecursive: ReadOnlyCollection<Author, Author> = hasRecursiveChildren("mentees", "mentorsRecursive");
   readonly image: OneToOneReference<Author, Image> = hasOneToOne();
   readonly userOneToOne: OneToOneReference<Author, User> = hasOneToOne();
-  readonly mentorsClosure: ReactiveManyToManyOtherSide<Author, Author> = hasReactiveManyToManyOtherSide();
-  readonly tags: Collection<Author, Tag> = hasManyToMany();
+  readonly mentorsClosure: ReactiveManyToManyOtherSide<Author, Author> = hasReactiveManyToManyOtherSide(); // author_to_mentees_closure mentee_id mentor_id
+  readonly tags: Collection<Author, Tag> = hasManyToMany(); // authors_to_tags author_id tag_id
 
   get id(): AuthorId {
     return this.idMaybe || failNoIdYet("Author");

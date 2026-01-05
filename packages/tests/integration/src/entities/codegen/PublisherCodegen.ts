@@ -285,8 +285,8 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   readonly images: Collection<Publisher, Image> = hasMany();
   readonly group: ManyToOneReference<Publisher, PublisherGroup, undefined> = hasOne();
   readonly spotlightAuthor: ManyToOneReference<Publisher, Author, undefined> = hasOne();
-  readonly tags: Collection<Publisher, Tag> = hasManyToMany();
-  readonly tasks: Collection<Publisher, TaskOld> = hasManyToMany();
+  readonly tags: Collection<Publisher, Tag> = hasManyToMany(); // publishers_to_tags publisher_id tag_id
+  readonly tasks: Collection<Publisher, TaskOld> = hasManyToMany(); // tasks_to_publishers publisher_id task_id
 
   get id(): PublisherId {
     return this.idMaybe || failNoIdYet("Publisher");

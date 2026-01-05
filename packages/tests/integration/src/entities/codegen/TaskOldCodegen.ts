@@ -178,7 +178,8 @@ export abstract class TaskOldCodegen extends Task implements Entity {
     "copiedTo",
     "copiedFromsRecursive",
   );
-  readonly publishers: Collection<TaskOld, Publisher> = hasManyToMany();
+  readonly publishers: Collection<TaskOld, Publisher> = hasManyToMany(); // tasks_to_publishers task_id publisher_id
+
   declare readonly taskTaskItems: Collection<TaskOld, TaskItem>;
   declare readonly tags: Collection<TaskOld, Tag>;
 

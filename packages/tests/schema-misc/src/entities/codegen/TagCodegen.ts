@@ -100,7 +100,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
 
   declare readonly __type: { 0: "Tag" };
 
-  readonly authors: Collection<Tag, Author> = hasManyToMany();
+  readonly authors: Collection<Tag, Author> = hasManyToMany(); // author_to_tags tagId authorId
 
   get id(): TagId {
     return this.idMaybe || failNoIdYet("Tag");

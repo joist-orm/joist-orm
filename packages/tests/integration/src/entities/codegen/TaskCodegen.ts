@@ -203,7 +203,7 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
     "copiedToRecursive",
   );
   readonly copiedToRecursive: ReadOnlyCollection<Task, Task> = hasRecursiveChildren("copiedTo", "copiedFromsRecursive");
-  readonly tags: Collection<Task, Tag> = hasManyToMany();
+  readonly tags: Collection<Task, Tag> = hasManyToMany(); // task_to_tags task_id tag_id
 
   get id(): TaskId {
     return this.idMaybe || failNoIdYet("Task");

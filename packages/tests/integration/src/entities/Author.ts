@@ -209,7 +209,6 @@ export class Author extends AuthorCodegen {
 
   /** Example of a ReactiveField that uses a recursive child relation. */
   readonly menteeNames: ReactiveField<Author, string | undefined> = hasReactiveField(
-    "menteeNames",
     { menteesRecursive: "firstName" },
     (a) => {
       a.transientFields.menteeNamesCalcInvoked++;

@@ -227,7 +227,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   readonly directs: Collection<User, User> = hasMany();
   readonly manager: ManyToOneReference<User, User, undefined> = hasOne();
   readonly authorManyToOne: ManyToOneReference<User, Author, undefined> = hasOne();
-  readonly likedComments: Collection<User, Comment> = hasManyToMany();
+  readonly likedComments: Collection<User, Comment> = hasManyToMany(); // users_to_comments liked_by_user_id comment_id
   readonly favoritePublisher: PolymorphicReference<User, UserFavoritePublisher, undefined> = hasOnePolymorphic();
 
   get id(): UserId {

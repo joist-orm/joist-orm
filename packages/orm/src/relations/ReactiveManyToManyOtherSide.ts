@@ -144,6 +144,16 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
     // No-op for reactive m2m other side
   }
 
+  import(
+    other: ReactiveManyToManyOtherSideImpl<T, U>,
+    _: unknown,
+    mapEntities: (e: U[] | undefined) => U[] | undefined,
+  ): void {
+    this.#loaded = mapEntities(other.#loaded);
+    this.#isLoaded = other.#isLoaded;
+    // Don't copy #cached/#isCached since it assumes we're registered in `isLoaded`, let #doGet do that
+  }
+
   public toString(): string {
     return `ReactiveManyToManyOtherSide(entity: ${this.entity}, fieldName: ${this.fieldName}, otherMeta: ${this.otherMeta.type})`;
   }

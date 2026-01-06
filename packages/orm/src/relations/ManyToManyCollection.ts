@@ -159,17 +159,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     this.maybeApplyAddedAndRemovedBeforeLoaded();
   }
 
-  import(other: ManyToManyCollection<T, U>, findEntity: (e: U) => U): void {
-    function map(v: U[] | undefined): U[] | undefined {
-      if (v === undefined) return undefined;
-      const result = new Array<U>(v.length);
-      for (let i = 0; i < v.length; i++) result[i] = findEntity(v[i]);
-      return result;
-    }
-
-    this.#loaded = map(other.#loaded);
-    this.#addedBeforeLoaded = map(other.#addedBeforeLoaded);
-    this.#removedBeforeLoaded = map(other.#removedBeforeLoaded);
+  import(other: ManyToManyCollection<T, U>, _: unknown, mapEntities: (e: U[] | undefined) => U[] | undefined): void {
+    this.#loaded = mapEntities(other.#loaded);
+    this.#addedBeforeLoaded = mapEntities(other.#addedBeforeLoaded);
+    this.#removedBeforeLoaded = mapEntities(other.#removedBeforeLoaded);
   }
 
   private doGet(): U[] {

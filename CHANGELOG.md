@@ -1,3 +1,10 @@
+## [1.289.1](https://github.com/joist-orm/joist-orm/compare/v1.289.0...v1.289.1) (2026-01-07)
+
+
+### Bug Fixes
+
+* Implement ReactiveManyToMany.import. ([#1690](https://github.com/joist-orm/joist-orm/issues/1690)) ([46cf29b](https://github.com/joist-orm/joist-orm/commit/46cf29b901d96a394a33e2a143fc8b21da28d319))
+
 # [1.289.0](https://github.com/joist-orm/joist-orm/compare/v1.288.0...v1.289.0) (2026-01-05)
 
 

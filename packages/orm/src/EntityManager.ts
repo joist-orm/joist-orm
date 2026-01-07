@@ -27,7 +27,6 @@ import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
 import {
   asConcreteCstr,
-  assertIdIsTagged,
   assertLoaded,
   Column,
   CustomCollection,
@@ -234,8 +233,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   public txn: TX | undefined;
   public entityLimit: number = defaultEntityLimit;
   readonly #entitiesArray: Entity[] = [];
-  // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
-  // performance issue where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
+  // Indexes the currently loaded entities by their tagged ids and `toTaggedString` ids (i.e. `a#`). This fixes
+  // real-world performance issues where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
   readonly #entitiesById: Map<string, Entity> = new Map();
   readonly #entitiesByTag: Map<string, Entity[]> = new Map();
   // Provides field-based indexing for entity types with >1000 entities to optimize findWithNewOrChanged
@@ -376,7 +375,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   getEntity<T extends Entity & { id: string }>(id: IdOf<T>): T | undefined;
   getEntity(id: TaggedId): Entity | undefined;
   getEntity(id: TaggedId): Entity | undefined {
-    assertIdIsTagged(id);
+    // Skip this both for performance + we allow toTaggedString-style `a#1` ids
+    // assertIdIsTagged(id);
     return this.#entitiesById.get(id);
   }
 
@@ -2140,6 +2140,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         } else if (instanceData.isNewEntity) {
           // Create blank entities in newEm for each unpersisted entity from oldEm.  They will be populated later in the
           // allowPendingChanges step as they should not be present otherwise.
+          // (I'd thought we should copy over `InstanceData.createId`, but since we're iterating over `oldEm.#entitiesByTag`
+          // in stable as-created order, the `newEm.create` will assign the same/incrementing `createId`s as in oldEm.)
           newEm.create(entity.constructor as EntityConstructor<Entity>, {} as any);
         } else {
           // We copy the raw row data for each entity to avoid any potential conflict. Then we ensure the correct concrete
@@ -2152,13 +2154,19 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       newEm.hydrate(baseCstr, rows);
     }
 
-    function findEntity(oldEntity: Entity): Entity {
+    function mapEntity(oldEntity: Entity): Entity {
       if (oldEntity.isNewEntity) {
-        const index = parseInt(oldEntity.toString().split("#").pop()!) - 1;
-        return newEm.getEntities(oldEntity.constructor as EntityConstructor<Entity>)[index];
+        return newEm.#entitiesById.get(oldEntity.toTaggedString())!;
       } else {
         return newEm.#entitiesById.get(oldEntity.idTagged)!;
       }
+    }
+
+    function mapEntities<U extends Entity>(v: U[] | undefined): U[] | undefined {
+      if (v === undefined) return undefined;
+      const result = new Array<U>(v.length);
+      for (let i = 0; i < v.length; i++) result[i] = mapEntity(v[i]) as U;
+      return result;
     }
 
     // If we are allowing pending changes, then we need to copy any changes across to newEm
@@ -2167,12 +2175,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         const oldInstanceData = (oldEntity as any).__data as InstanceData;
         if (!(oldInstanceData.isNewEntity || oldInstanceData.isDirtyEntity)) continue;
         const { originalData: oldOriginalData, data: oldData } = oldInstanceData;
-        const newEntity = findEntity(oldEntity);
+        const newEntity = mapEntity(oldEntity);
         const { originalData: newOriginalData, data: newData } = (newEntity as any).__data as InstanceData;
         // for new entities, anything in `data` is changed and should be copied across. for existing entities, we
         // only care about changed fields, which are enumerated by originalData
-        const maybeEntity = (value: any) => (isEntity(value) ? findEntity(value as Entity) : value);
-
+        const maybeEntity = (value: any) => (isEntity(value) ? mapEntity(value as Entity) : value);
         const fields = Object.keys(oldEntity.isNewEntity ? oldData : oldOriginalData);
         for (const field of fields) {
           // copy over originalData so .changes is consistent across ems
@@ -2181,9 +2188,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         }
       }
     }
+
     // import every loaded concrete (ie, not custom) relation into the new em
     for (const oldEntity of oldEm.entities) {
-      const newEntity = findEntity(oldEntity);
+      const newEntity = mapEntity(oldEntity);
       if (oldEntity.isDeletedEntity) {
         // If the old entity was deleted, that should be persisted in the new em
         ((newEntity as any).__data as InstanceData).markDeleted(newEntity);
@@ -2203,14 +2211,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           const oldValue = relation.get;
           if (oldValue === undefined) continue;
           if (Array.isArray(oldValue) && oldValue.length === 0) continue;
-          const newValue = Array.isArray(oldValue) ? oldValue.map((e) => findEntity(e)) : findEntity(oldValue);
+          const newValue = Array.isArray(oldValue) ? mapEntities(oldValue) : mapEntity(oldValue);
           // we may have already copied over the instance data, in which case `setFromOpts` would detect this as
           // the same entity that's already set in data and early exit, so delete ourselves from data first
           delete ((newEntity as any).__data as InstanceData).data[field];
           (newEntity as any)[field].setFromOpts(newValue);
         } else {
           const isLoaded = "_isLoaded" in relation ? relation._isLoaded : relation.isLoaded;
-          if (isLoaded) (newEntity as any)[field].import(relation, findEntity);
+          if (isLoaded) (newEntity as any)[field].import(relation, mapEntity, mapEntities);
         }
       }
     }
@@ -2219,7 +2227,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // context, then `ctx.user.em === newEm`).
     for (const [key, value] of Object.entries(ctx)) {
       if (isEntity(value) && value.em === oldEm) {
-        ctx[key] = findEntity(value as Entity);
+        ctx[key] = mapEntity(value as Entity);
       } else if (value === oldEm) {
         ctx[key] = newEm;
       }
@@ -2287,6 +2295,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         relationOrProp.import(
           (source as any)[fieldName],
           (e: Entity) => (this.importEntity as any)(e, subHint, subHint) as Entity,
+          (entities: Entity[]) => {
+            if (entities === undefined) return undefined;
+            const result = new Array(entities.length);
+            for (let i = 0; i < entities.length; i++) {
+              result[i] = (this.importEntity as any)(entities[i], subHint, subHint) as Entity;
+            }
+            return result;
+          },
         );
       }
     }
@@ -2374,6 +2390,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
       }
       this.#entitiesById.set(maybeId, entity);
+    } else {
+      // Also register by the `a#1` style tagged string for new entities
+      this.#entitiesById.set(entity.toTaggedString(), entity);
     }
     this.#entitiesArray.push(entity);
 

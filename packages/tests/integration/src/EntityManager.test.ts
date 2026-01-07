@@ -5,6 +5,7 @@ import {
   del,
   deleteBookToTag,
   insertAuthor,
+  insertAuthorToBestReview,
   insertAuthorToTag,
   insertBook,
   insertBookReview,
@@ -89,14 +90,12 @@ describe("EntityManager", () => {
 
   it("fails to load all entities by id when any of the ids do not exist", async () => {
     await insertAuthor({ first_name: "a1" });
-
     const em = newEntityManager();
     await expect(em.loadAll(Author, ["a:1", "a:2"])).rejects.toThrow("a:2 were not found");
   });
 
   it("can load all entities by id without throwing an error when any of the ids do not exist", async () => {
     await insertAuthor({ first_name: "a1" });
-
     const em = newEntityManager();
     const authors = await em.loadAllIfExists(Author, ["a:1", "a:2"]);
     expect(authors).toHaveLength(1);
@@ -124,7 +123,6 @@ describe("EntityManager", () => {
   it("can load multiple entities in the right order", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });
-
     const em = newEntityManager();
     const [author2, author1] = await Promise.all([em.load(Author, "2"), em.load(Author, "1")]);
     expect(author1.firstName).toEqual("a1");
@@ -1142,6 +1140,12 @@ describe("EntityManager", () => {
     expect(rows[0].favorite_colors).toEqual([2]);
   });
 
+  it("can getEntity on new entities", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em);
+    expect(em.getEntity("a#1") as Author).toMatchEntity({ firstName: a.firstName });
+  });
+
   it("can create with an explicit primary key", async () => {
     const em = newEntityManager();
     const a10 = em.create(Author, { id: "a:10", firstName: "a1" });
@@ -1563,6 +1567,21 @@ describe("EntityManager", () => {
       expect(a.publisher.isLoaded).toBe(false);
     });
 
+    it("creates a new EntityManager with the same loaded relations with new entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ author_id: 1, title: "b1" });
+      const em = newEntityManager();
+      // Move the book to a2
+      const a1 = await em.findOneOrFail(Author, {}, { populate: "books" });
+      const [b1] = a1.books.get;
+      const [a2, a3] = twoOf(() => newAuthor(em));
+      b1.author.set(a3);
+      const result = em.fork({ allowPendingChanges: true });
+      const b = result.getEntity("b:1") as Loaded<Book, "author">;
+      expect(b.author.get.toTaggedString()).toBe("a#2");
+      expect(result.entities).toMatchEntity(["a#1", "a#2", "a:1", "b:1"]);
+    });
+
     it("fails when the em has pending changes", async () => {
       const em = newEntityManager();
       newAuthor(em);
@@ -1708,6 +1727,34 @@ describe("EntityManager", () => {
         const result = em.fork({ allowPendingChanges: true });
         expect(result.mode).toEqual("in-memory-writes");
       });
+    });
+
+    it("works across a loaded reactive m2m (controlling side)", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ author_id: 1, title: "b1" });
+      await insertBookReview({ book_id: 1, rating: 5 });
+      await insertAuthorToBestReview({ author_id: 1, book_review_id: 1 });
+      const em = newEntityManager();
+      const author = await em.findOneOrFail(Author, {}, { populate: "bestReviews" });
+      expect(author.bestReviews.isLoaded).toBe(true);
+      const result = em.fork();
+      const a = result.entities[0] as Author;
+      expect(a.bestReviews.isLoaded).toBe(true);
+      expect(a).toMatchEntity({ bestReviews: [{ id: "br:1" }] });
+    });
+
+    it("works across a loaded reactive m2m (other side)", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ author_id: 1, title: "b1" });
+      await insertBookReview({ book_id: 1, rating: 5 });
+      await insertAuthorToBestReview({ author_id: 1, book_review_id: 1 });
+      const em = newEntityManager();
+      const review = await em.findOneOrFail(BookReview, {}, { populate: "bestReviewAuthors" });
+      expect(review.bestReviewAuthors.isLoaded).toBe(true);
+      const result = em.fork();
+      const r = result.entities[0] as BookReview;
+      expect(r.bestReviewAuthors.isLoaded).toBe(true);
+      expect(r).toMatchEntity({ bestReviewAuthors: [{ id: "a:1" }] });
     });
   });
 
@@ -1875,6 +1922,30 @@ describe("EntityManager", () => {
       const i1 = await em1.findOneOrFail(Image, {}, { populate: "owner" });
       const result = () => em2.importEntity(i1 as any, "owner");
       expect(result).toThrow("Image:1.owner cannot be imported as it has no loadHint");
+    });
+
+    it("can import an entity with a loaded reactive m2m (controlling side)", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ author_id: 1, title: "b1" });
+      await insertBookReview({ book_id: 1, rating: 5 });
+      await insertAuthorToBestReview({ author_id: 1, book_review_id: 1 });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const a1 = await em1.findOneOrFail(Author, {}, { populate: "bestReviews" });
+      const a2 = em2.importEntity(a1, "bestReviews");
+      expect(a2.bestReviews.isLoaded).toBe(true);
+      expect((a2 as any).bestReviews.get).toMatchEntity([{ id: "br:1" }]);
+    });
+
+    it("can import an entity with a loaded reactive m2m (other side)", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ author_id: 1, title: "b1" });
+      await insertBookReview({ book_id: 1, rating: 5 });
+      await insertAuthorToBestReview({ author_id: 1, book_review_id: 1 });
+      const [em1, em2] = twoOf(() => newEntityManager());
+      const br1 = await em1.findOneOrFail(BookReview, {}, { populate: "bestReviewAuthors" });
+      const br2 = em2.importEntity(br1, "bestReviewAuthors");
+      expect(br2.bestReviewAuthors.isLoaded).toBe(true);
+      expect((br2 as any).bestReviewAuthors.get).toMatchEntity([{ id: "a:1" }]);
     });
   });
 });

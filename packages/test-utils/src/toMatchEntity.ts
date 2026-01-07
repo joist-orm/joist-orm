@@ -1,7 +1,6 @@
 import {
   AsyncProperty,
   BaseEntity,
-  Collection,
   Entity,
   EntityManager,
   isAsyncProperty,
@@ -10,6 +9,7 @@ import {
   isEntity,
   isReactiveField,
   isReference,
+  ReadOnlyCollection,
   Reference,
 } from "joist-orm";
 import { isPlainObject } from "joist-utils";
@@ -88,7 +88,7 @@ export type MatchedEntity<T> =
         | {
             [K in keyof T]?: T[K] extends Reference<any, infer U, any>
               ? MatchedEntity<U> | U
-              : T[K] extends Collection<any, infer U>
+              : T[K] extends ReadOnlyCollection<any, infer U>
                 ? Array<MatchedEntity<U> | U>
                 : T[K] extends AsyncProperty<any, infer V>
                   ? V

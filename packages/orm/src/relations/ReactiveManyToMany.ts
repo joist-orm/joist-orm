@@ -234,6 +234,18 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
     // No-op for now - could implement if needed
   }
 
+  import(
+    other: ReactiveManyToManyImpl<T, U, H>,
+    _: unknown,
+    mapEntities: (e: U[] | undefined) => U[] | undefined,
+  ): void {
+    this.#loaded = mapEntities(other.#loaded);
+    this.#loadedMode = other.#loadedMode;
+    this.#isLoaded = other.#isLoaded ?? false;
+    // Don't set `#isCached b/c we're not registering ourselves with `isLoadedCache` yet; let
+    // the first caller to `#doGet` do that if needed.
+  }
+
   public toString(): string {
     return `ReactiveManyToMany(entity: ${this.entity}, fieldName: ${this.fieldName}, otherMeta: ${this.otherMeta.type})`;
   }

@@ -1,3 +1,10 @@
+## [1.289.2](https://github.com/joist-orm/joist-orm/compare/v1.289.1...v1.289.2) (2026-01-09)
+
+
+### Bug Fixes
+
+* Pass the symbol to newTestInstance. ([#1691](https://github.com/joist-orm/joist-orm/issues/1691)) ([67eec9c](https://github.com/joist-orm/joist-orm/commit/67eec9c92cec93fd1e61bf0cf1ee26fef496142e))
+
 ## [1.289.1](https://github.com/joist-orm/joist-orm/compare/v1.289.0...v1.289.1) (2026-01-07)
 
 

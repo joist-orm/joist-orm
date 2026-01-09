@@ -14,7 +14,7 @@ export function generateFactoriesFiles(entities: EntityDbMetadata[]): CodegenFil
         em: ${EntityManager},
         opts: ${FactoryOpts}<${entity.type}> = {},
       ): ${DeepNew}<${entity.type}> {
-        return ${newTestInstance}(em, ${entity.type}, opts, {});
+        return ${newTestInstance}(em, ${entity.typeSymbol}, opts, {});
       }`;
     return { name: `./factories/new${entity.name}.ts`, contents, overwrite: false };
   });

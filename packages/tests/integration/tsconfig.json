@@ -9,7 +9,7 @@
       "src/*": ["src/*"]
     }
   },
-  "include": ["./src", "./migrations"],
+  "include": ["./src", "./migrations", "./benchmark.ts"],
   "references": [
     { "path": "../../codegen" },
     { "path": "../../graphql-codegen" },

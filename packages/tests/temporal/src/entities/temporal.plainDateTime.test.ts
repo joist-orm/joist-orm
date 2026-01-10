@@ -1,4 +1,4 @@
-import { knex, newEntityManager } from "@src/setupDbTests";
+import { newEntityManager, sql } from "@src/setupDbTests";
 import { jan1at10am, jan1at11am, jan1at12pm } from "@src/utils";
 import { PrimitiveField, alias, getMetadata } from "joist-orm";
 import { Temporal } from "temporal-polyfill";
@@ -29,21 +29,17 @@ describe("plainDateTime", () => {
   });
 
   it("can load a plain date time", async () => {
-    await knex.insert({ firstName: "a1", birthday: "2018-01-01", timestamp: jan1at10am }).into("authors");
+    await sql`INSERT INTO authors ("firstName", "birthday", "timestamp") VALUES ('a1', '2018-01-01', ${jan1at10am})`;
     const em = newEntityManager();
     const a = await em.load(Author, "a:1");
     expect(a.timestamp).toEqual(jan1at10am);
   });
 
   it("can load a plain time time array", async () => {
-    await knex
-      .insert({
-        firstName: "a1",
-        birthday: "2018-01-01",
-        timestamp: jan1at10am,
-        timestamps: [jan1at10am, jan1at11am],
-      })
-      .into("authors");
+    await sql`
+      INSERT INTO authors ("firstName", "birthday", "timestamp", "timestamps")
+      VALUES ('a1', '2018-01-01', ${jan1at10am}, ${[jan1at10am, jan1at11am]})
+    `;
     const em = newEntityManager();
     const a = await em.load(Author, "a:1");
     expect(a.timestamps).toEqual([jan1at10am, jan1at11am]);

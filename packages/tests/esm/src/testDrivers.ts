@@ -1,8 +1,18 @@
-import { type Driver, JsonAggregatePreloader, PostgresDriver } from "joist-orm";
+import {
+  type Driver,
+  JsonAggregatePreloader,
+  plainDateMapper,
+  plainDateTimeMapper,
+  plainTimeMapper,
+  PostgresDriver,
+  zonedDateTimeMapper,
+} from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
-import type { Knex } from "knex";
-import createKnex from "knex";
+import { builtins } from "pg-types";
+import postgres, { type Sql } from "postgres";
+import array from "postgres-array";
 import { recordQuery } from "src/testEm.js";
+import { Temporal } from "temporal-polyfill";
 
 /**
  * Small abstraction to create a given driver for testing.
@@ -14,9 +24,9 @@ import { recordQuery } from "src/testEm.js";
 export interface TestDriver {
   driver: Driver;
   isInMemory: boolean;
-  // The InMemoryDriver does not have a knex instance, but we have some tests
+  // The InMemoryDriver does not have a sql instance, but we have some tests
   // that require it and skip themselves if running against the InMemoryDriver
-  knex: Knex;
+  sql: Sql;
   beforeEach(): Promise<void>;
   destroy(): Promise<void>;
   select(tableName: string): Promise<readonly any[]>;
@@ -28,52 +38,112 @@ export interface TestDriver {
 
 export class PostgresTestDriver implements TestDriver {
   public driver: Driver;
-  public knex: Knex;
+  public sql: Sql;
   public isInMemory = false;
 
   constructor(isPreloadingEnabled: boolean) {
-    this.knex = createKnex({
-      client: "pg",
-      connection: newPgConnectionConfig() as any,
-      debug: false,
-      asyncStackTraces: true,
-    }).on("query", (e: any) => {
-      recordQuery(e.sql);
-    });
+    // Don't eagerly parse the strings, instead defer to the serde logic
+    const noop = (s: string) => s;
+    const noopArray = (s: string) => array.parse(s, noop);
+
+    const { TIMESTAMP, TIMESTAMPTZ, DATE, TIME } = builtins;
+    const [TIMESTAMP_ARRAY, TIMESTAMPTZ_ARRAY, DATE_ARRAY] = [1182, 1115, 1185];
+    this.sql = postgres({
+      // transform: { undefined: null },
+      ...newPgConnectionConfig(),
+      types: {
+        // why did we need this?
+        // jsonb: {
+        //   to: builtins.JSONB,
+        //   from: [builtins.JSONB],
+        //   serialize: (s: any) => JSON.stringify(s),
+        //   parse: (s: any) => JSON.parse(s),
+        // },
+        // jsonb[] were serialized as `{{1,2},{3,4}}` but we need `{"[1,2]","[3,4]"}`
+        _jsonb: {
+          to: 3807,
+          from: [3807],
+          serialize: (s: any) =>
+            `{${(s as any[]).map((s) => `"${JSON.stringify(s).replace(/"/g, '\\"')}"`).join(",")}}`,
+          parse: (s: any) => {
+            throw new Error("Not implemented");
+          },
+        },
+        timestamp: {
+          to: TIMESTAMP,
+          from: [TIMESTAMP],
+          serialize: plainDateTimeMapper.toDb,
+          parse: noop as any,
+        } as postgres.PostgresType<Temporal.PlainDateTime>,
+        timestamptz: {
+          to: TIMESTAMPTZ,
+          from: [TIMESTAMPTZ],
+          serialize: zonedDateTimeMapper.toDb,
+          parse: noop as any,
+        } as postgres.PostgresType<Temporal.ZonedDateTime>,
+        date: {
+          to: DATE,
+          from: [DATE],
+          serialize: plainDateMapper.toDb,
+          parse: noop as any,
+        } as postgres.PostgresType<Temporal.PlainDate>,
+        time: {
+          to: TIME,
+          from: [TIME],
+          serialize: plainTimeMapper.toDb,
+          parse: noop as any,
+        } as postgres.PostgresType<Temporal.PlainTime>,
+      },
+      // debug: true,
+      onquery: () => {
+        // queued
+        return (q: any) => {
+          // sent
+          recordQuery(
+            q.query ?? // q might be a PostgresError
+              q.statement?.string,
+          );
+          return () => {
+            // finished
+          };
+        };
+      },
+    } as any);
     const preloadPlugin = isPreloadingEnabled ? new JsonAggregatePreloader() : undefined;
-    this.driver = new PostgresDriver(this.knex, { preloadPlugin });
+    this.driver = new PostgresDriver(this.sql, { preloadPlugin });
   }
 
   async beforeEach() {
-    await this.knex.select(this.knex.raw("flush_database()"));
+    await this.sql`select flush_database()`;
   }
 
   async destroy() {
-    await this.knex.destroy();
+    await this.sql.end();
   }
 
   select(tableName: string): Promise<readonly any[]> {
-    return this.knex.select("*").from(tableName).orderBy("id");
+    return this.sql`select * from ${this.sql(tableName)} order by id`;
   }
 
   async insert(tableName: string, row: Record<string, any>, subclassTable = false): Promise<void> {
     if (row.id && !subclassTable) {
       // Manually specifying ids can help test readability, but ensure the sequence is updated,
       // particularly if we're using the "only delete from touched sequences" flush_database.
-      await this.knex.raw(`SELECT setval('${tableName}_id_seq', ${row.id}, true)`);
+      await this.sql`SELECT setval('${this.sql(`${tableName}_id_seq`)}', ${row.id}, true)`;
     }
-    await this.knex.insert(row).into(tableName);
+    await this.sql`insert into ${this.sql(tableName)} ${this.sql(row)}`;
   }
 
   async update(tableName: string, row: Record<string, any>): Promise<void> {
-    await this.knex(tableName).update(row).where({ id: row.id });
+    const columns = Object.keys(row).filter((k) => k !== "id");
+    await this.sql`update ${this.sql(tableName)} set ${this.sql(row, columns)} where id = ${row.id}`;
   }
 
   async delete(tableName: string, id: number): Promise<void> {
-    await this.knex(tableName).where("id", id).del();
+    await this.sql`delete from ${this.sql(tableName)} where id = ${id}`;
   }
 
   async count(tableName: string): Promise<number> {
-    return (await this.knex.select("*").from(tableName)).length;
+    return Number((await this.sql`select count(*) as count from ${this.sql(tableName)}`)[0].count);
   }
 }

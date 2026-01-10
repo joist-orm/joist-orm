@@ -13,7 +13,7 @@ describe("Driver", () => {
       setField(author, "initials", "a");
       setField(author, "numberOfBooks", 0);
       setField(author, "tagsOfAllBooks", "");
-      await em.ctx.knex.transaction(async (txn) => {
+      await em.ctx.sql.begin(async (txn) => {
         em.txn = txn;
         await em.driver.flush(
           em,

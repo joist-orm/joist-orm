@@ -1249,7 +1249,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    *
    * This overload is synchronous since there is no population/querying to do.
    */
-  public loadFromQuery<T extends EntityW>(type: MaybeAbstractEntityConstructor<T>, rows: unknown[]): T[];
+  public loadFromQuery<T extends EntityW>(type: MaybeAbstractEntityConstructor<T>, rows: readonly unknown[]): T[];
   /**
    * Loads entities from database rows from a Knex-ish query builder that needs an `await`.
    *
@@ -1257,14 +1257,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   public loadFromQuery<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    rows: PromiseLike<unknown[]>,
+    rows: PromiseLike<readonly unknown[]>,
   ): Promise<T[]>;
   /**
    * Loads & populates entities from database rows that were queried directly using a query builder.
    */
   public loadFromQuery<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    rows: unknown[],
+    rows: readonly unknown[],
     populate: H,
   ): Promise<Loaded<T, H>[]>;
   /**
@@ -1272,12 +1272,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   public loadFromQuery<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    rows: PromiseLike<unknown[]>,
+    rows: PromiseLike<readonly unknown[]>,
     populate: H,
   ): Promise<Loaded<T, H>[]>;
   public loadFromQuery<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    rows: unknown[] | PromiseLike<unknown[]>,
+    rows: readonly unknown[] | PromiseLike<readonly unknown[]>,
     populate?: any,
   ): PromiseLike<T[]> | T[] {
     if (Array.isArray(rows)) {
@@ -1285,7 +1285,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       if (populate) return this.populate(entities, populate);
       return entities;
     } else {
-      return rows.then((rows) => {
+      return (rows as Promise<unknown[]>).then((rows) => {
         const entities = this.hydrate(type, rows);
         if (populate) return this.populate(entities, populate);
         return entities;
@@ -1635,11 +1635,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
           do {
-            if (Object.keys(entityTodos).length > 0) {
-              await this.driver.flushEntities(this, entityTodos);
-            }
-            if (Object.keys(joinRowTodos).length > 0) {
-              await this.driver.flushJoinTables(this, joinRowTodos);
+            if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos)) {
+              await this.driver.flush(this, entityTodos, joinRowTodos);
             }
             // Now that we've flushed, we can let plugins know what we've done.
             pluginManager.afterWrite(entityTodos, joinRowTodos);
@@ -1710,6 +1707,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       return [...allFlushedEntities];
     } catch (e) {
       if (e && typeof e === "object" && "constraint" in e && typeof e.constraint === "string") {
+        // node-pg errors use `constraint` to indicate the constraint name
         const message = constraintNameToValidationError[e.constraint];
         if (message) {
           throw new ValidationErrors(message);
@@ -1853,7 +1851,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   public hydrate<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    rows: any[],
+    rows: readonly any[],
     options?: { overwriteExisting?: boolean },
   ): T[] {
     const maybeBaseMeta = getMetadata(type);

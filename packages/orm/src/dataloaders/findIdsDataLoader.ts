@@ -6,11 +6,11 @@ import { getMetadata } from "../EntityMetadata";
 import { keyToTaggedId } from "../keys";
 import { kq } from "../keywords";
 import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
+import { buildUnnestCte } from "../unnest";
 import { fail } from "../utils";
 import {
-  buildValuesCte,
   collectAndReplaceArgs,
-  createBindings,
+  createColumnValues,
   getBatchKeyFromGenericStructure,
   whereFilterHash,
 } from "./findDataLoader";
@@ -49,10 +49,8 @@ export function findIdsDataLoader<T extends Entity>(
         return [rows.map((row: any) => keyToTaggedId(meta, row.id)!)];
       }
 
-      // WITH _find (tag, arg1, arg2) AS (VALUES
-      //   (0::int, 'a'::varchar, 'a'::varchar),
-      //   (1, 'b', 'b'),
-      //   (2, 'c', 'c')
+      // WITH _find (tag, arg1, arg2) AS (
+      //   SELECT unnest($0::int[]) unnest($0::varchar[]), unnest($0::varchar[])
       // )
       // SELECT _find.tag, _data.id
       // FROM _find
@@ -64,8 +62,8 @@ export function findIdsDataLoader<T extends Entity>(
       // Build the list of 'arg1', 'arg2', ... strings
       const { where, ...options } = queries[0];
       const query = parseFindQuery(getMetadata(type), where, options);
-      const args = collectAndReplaceArgs(query);
-      args.unshift({ columnName: "tag", dbType: "int" });
+      const argsColumns = collectAndReplaceArgs(query);
+      argsColumns.unshift({ columnName: "tag", dbType: "int" });
 
       // We're not returning the entities, just selecting their IDs
       const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");
@@ -79,7 +77,7 @@ export function findIdsDataLoader<T extends Entity>(
           { join: "lateral", query, table: meta.tableName, alias: "_data", fromAlias: "_f" },
         ],
         // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
-        ctes: [buildValuesCte("_find", args, queries, createBindings(meta, queries))],
+        ctes: [buildUnnestCte("_find", argsColumns, createColumnValues(meta, argsColumns, queries))],
         orderBys: [],
       };
 

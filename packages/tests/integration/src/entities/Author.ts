@@ -125,6 +125,7 @@ export class Author extends AuthorCodegen {
     bestReviewsCalcInvoked: 0,
     graduatedRuleInvoked: 0,
     deleteDuringFlush: false,
+    reactToNickNames: true, // some tests want this reaction, some don't
     reactions: {
       direct: 0,
       m2o: 0,
@@ -461,6 +462,7 @@ config.addReaction({ name: "observeNickNames" }, "nickNames", (a) => {
 });
 
 config.addReaction({ name: "runOnce", runOnce: true }, "nickNames", (a) => {
+  if (!a.transientFields.reactToNickNames) return;
   if (a.nickNames !== undefined && a.nickNames.length === 0) a.nickNames = [a.firstName + "ster"];
   a.transientFields.reactions.runOnce += 1;
 });

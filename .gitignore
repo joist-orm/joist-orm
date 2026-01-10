@@ -22,5 +22,6 @@ junit*.xml
 .idea/**/dictionaries
 .idea/**/shelf
 .idea/material_*.xml
+.idea/copilot*.xml
 
 **/.claude/settings.local.json

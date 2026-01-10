@@ -5,11 +5,11 @@ import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager"
 import { getMetadata } from "../EntityMetadata";
 import { kq } from "../keywords";
 import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
+import { buildUnnestCte } from "../unnest";
 import { fail } from "../utils";
 import {
-  buildValuesCte,
   collectAndReplaceArgs,
-  createBindings,
+  createColumnValues,
   getBatchKeyFromGenericStructure,
   whereFilterHash,
 } from "./findDataLoader";
@@ -48,10 +48,8 @@ export function findCountDataLoader<T extends Entity>(
         return [Number(rows[0].count)];
       }
 
-      // WITH _find (tag, arg1, arg2) AS (VALUES
-      //   (0::int, 'a'::varchar, 'a'::varchar),
-      //   (1, 'b', 'b'),
-      //   (2, 'c', 'c')
+      // WITH _find (tag, arg1, arg2) AS (
+      //  SELECT unnest($0::int[]), unnest($0::varchar[]), unnest($0::varchar[])
       // )
       // SELECT _find.tag, _data.count
       // FROM _find
@@ -63,8 +61,8 @@ export function findCountDataLoader<T extends Entity>(
       // Build the list of 'arg1', 'arg2', ... strings
       const { where, ...options } = queries[0];
       const query = parseFindQuery(getMetadata(type), where, options);
-      const args = collectAndReplaceArgs(query);
-      args.unshift({ columnName: "tag", dbType: "int" });
+      const argsColumns = collectAndReplaceArgs(query);
+      argsColumns.unshift({ columnName: "tag", dbType: "int" });
 
       // We're not returning the entities, just counting them...
       const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");
@@ -79,7 +77,7 @@ export function findCountDataLoader<T extends Entity>(
           { join: "lateral", query: query, table: meta.tableName, alias: "_data", fromAlias: "_f" },
         ],
         // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
-        ctes: [buildValuesCte("_find", args, queries, createBindings(meta, queries))],
+        ctes: [buildUnnestCte("_find", argsColumns, createColumnValues(meta, argsColumns, queries))],
         orderBys: [],
       };
 

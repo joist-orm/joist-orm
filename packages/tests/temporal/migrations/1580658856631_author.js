@@ -1,7 +1,13 @@
-const { createEntityTable, createUpdatedAtFunction, createCreatedAtFunction } = require("joist-migration-utils");
+const {
+  createEntityTable,
+  createUpdatedAtFunction,
+  createCreatedAtFunction,
+  createUnnestArraysFunction,
+} = require("joist-migration-utils");
 exports.up = (b) => {
   createUpdatedAtFunction(b);
   createCreatedAtFunction(b);
+  createUnnestArraysFunction(b);
 
   createEntityTable(b, "authors", {
     firstName: { type: "varchar(255)", notNull: true },

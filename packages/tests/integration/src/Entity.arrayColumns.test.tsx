@@ -78,6 +78,17 @@ describe("Entity.arrayColumns", () => {
     expect(rows[0].nick_names).toEqual(null);
   });
 
+  it("can update string[] columns to empty", async () => {
+    await insertAuthor({ first_name: "a1", nick_names: ["a", "b"] });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1");
+    a.transientFields.reactToNickNames = false;
+    a.nickNames = [];
+    await em.flush();
+    const rows = await select("authors");
+    expect(rows[0].nick_names).toEqual([]);
+  });
+
   it("can find contains on string[] columns", async () => {
     await insertAuthor({ first_name: "a1", nick_names: ["a", "b"] });
     await insertAuthor({ first_name: "a2", nick_names: ["b", "c"] });

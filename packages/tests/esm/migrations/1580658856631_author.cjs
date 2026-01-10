@@ -1,6 +1,8 @@
-const { createEnumTable, enumArrayColumn } = require("joist-migration-utils");
+const { createEnumTable, enumArrayColumn, createUnnestArraysFunction } = require("joist-migration-utils");
 
 exports.up = (b) => {
+  createUnnestArraysFunction(b);
+
   createEnumTable(b, "color", [
     ["RED", "Red"],
     ["GREEN", "Green"],

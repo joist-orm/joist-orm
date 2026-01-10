@@ -122,6 +122,56 @@ export function createUpdatedAtFunction(b: MigrationBuilder): void {
   );
 }
 
+/**
+ * Unnests a 2d array like `[[a, b], [c, d]]` into two rows of `[a, b]` and `[c, d]`.
+ *
+ * This custom function is a key part of Joist's bulk INSERT/UPDATE that sends "all firstNames as
+ * a single param", because it lets us support array columns as a single parameter (i.e. an array
+ * of arrays).
+ *
+ * Postgres's built-in `unnest` is too aggressive when flattening, and will unnest the 2d array
+ * of `[[a, b], [c, d]]` into four rows of `a`, `b`, `c`, and `d`, which is not what we want.
+ *
+ * Additionally, Postgres does not support "jagged arrays", i.e. 2D arrays where some
+ * sub-arrays are longer than others, e.g. `[[a, b], [c, d, e]]`. Instead, it treats arrays
+ * more as the mathematical concept of a matrix, than "a list of lists".
+ *
+ * To work around this, our PostgresDriver auto-pads all 2D arrays to the same length, by
+ * appending `NULL`, and then `unnest_arrays` prunes all `NULL`s from the resulting 1D arrays.
+ * See `fillArrayWithNulls`.
+ *
+ *
+ * This means we purposefully do not/cannot support `NULL` values _within_ array columns,
+ * i.e. `nick_names=[a, NULL, b]` (without some additional heuristics).
+ *
+ * That said, we do need to support nullable array columns, i.e. `nick_names=NULL`, which we
+ * detect by prefixing an additional marker element to each sub-array that indicates whether the
+ * array column is null or not, and then conditionally enabling this with the `nullable=true`
+ * param to `unnest_arrays`.
+ */
+export const unnest_arrays = `
+CREATE OR REPLACE FUNCTION unnest_arrays(arr ANYARRAY, nullable BOOLEAN = false, OUT a ANYARRAY)
+  RETURNS SETOF ANYARRAY
+  LANGUAGE plpgsql IMMUTABLE STRICT AS
+$func$
+BEGIN
+  FOREACH a SLICE 1 IN ARRAY arr LOOP
+    IF nullable THEN
+      IF a[1] IS NULL THEN a := NULL;
+      ELSE a := a[2:array_length(a, 1)];
+      END IF;
+    END IF;
+    a := array_remove(a, NULL);
+    RETURN NEXT;
+  END LOOP;
+END
+$func$;
+`;
+
+export function createUnnestArraysFunction(b: MigrationBuilder): void {
+  b.sql(unnest_arrays);
+}
+
 export function createCreatedAtFunction(b: MigrationBuilder): void {
   b.createFunction(
     "trigger_maybe_set_created_at",

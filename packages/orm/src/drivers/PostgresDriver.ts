@@ -2,7 +2,6 @@ import { Knex } from "knex";
 import { types } from "pg";
 import { builtins, getTypeParser } from "pg-types";
 import array from "postgres-array";
-import { buildValuesCte } from "../dataloaders/findDataLoader";
 import {
   driverAfterBegin,
   driverAfterCommit,
@@ -16,14 +15,15 @@ import {
   PreloadPlugin,
   RuntimeConfig,
 } from "../index";
-import { JoinRowOperation } from "../JoinRows";
+import { JoinRow, JoinRowOperation, ManyToManyLike } from "../JoinRows";
 import { kq, kqDot } from "../keywords";
 import { getRuntimeConfig } from "../runtimeConfig";
 import { JoinRowTodo, Todo } from "../Todo";
-import { batched, cleanSql, partition, zeroTo } from "../utils";
-import { buildCteSql, buildRawQuery } from "./buildRawQuery";
+import { ensureRectangularArraySizes } from "../unnest";
+import { cleanSql, partition, zeroTo } from "../utils";
+import { buildRawQuery } from "./buildRawQuery";
 import { Driver } from "./Driver";
-import { DeleteOp, generateOps, InsertOp, UpdateOp } from "./EntityWriter";
+import { DeleteOp, generateOps, InsertOp, OpColumn, UpdateOp } from "./EntityWriter";
 import { IdAssigner, SequenceIdAssigner } from "./IdAssigner";
 
 export interface PostgresDriverOpts {
@@ -96,114 +96,28 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
     return result;
   }
 
-  async assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
+  async assignNewIds(_: EntityManager, todos: Record<string, Todo>): Promise<void> {
     return this.#idAssigner.assignNewIds(todos);
   }
 
-  async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
-    const knex = (em.txn ?? fail("Expected EntityManager.txn to be set")) as Knex.Transaction;
-    await this.#idAssigner.assignNewIds(todos);
-
-    const ops = generateOps(todos);
-
+  async flush(
+    em: EntityManager,
+    entityTodos: Record<string, Todo>,
+    joinRows: Record<string, JoinRowTodo>,
+  ): Promise<void> {
+    const txn = (em.txn ?? fail("Expected EntityManager.txn to be set")) as Knex.Transaction;
+    await this.#idAssigner.assignNewIds(entityTodos);
+    const ops = generateOps(entityTodos);
     // Do INSERTs+UPDATEs first so that we avoid DELETE cascades invalidating oplocks
     // See https://github.com/joist-orm/joist-orm/issues/591
-    // We want 10k params maximum per batch insert
-    const parameterLimit = 10_000;
-    for (const insert of ops.inserts) {
-      const parameterTotal = insert.columns.length * insert.rows.length;
-      if (parameterTotal > parameterLimit) {
-        const batchSize = Math.floor(parameterLimit / insert.columns.length);
-        await Promise.all(
-          batched(insert.rows, batchSize).map((batch) => batchInsert(knex, { ...insert, rows: batch })),
-        );
-      } else {
-        await batchInsert(knex, insert);
-      }
-    }
-
-    for (const update of ops.updates) {
-      const parameterTotal = update.columns.length * update.rows.length;
-      if (parameterTotal > parameterLimit) {
-        const batchSize = Math.floor(parameterLimit / update.columns.length);
-        await Promise.all(
-          batched(update.rows, batchSize).map((batch) => batchUpdate(knex, { ...update, rows: batch })),
-        );
-      } else {
-        await batchUpdate(knex, update);
-      }
-    }
-
-    for (const del of ops.deletes) {
-      await batchDelete(knex, del);
-    }
-  }
-
-  async flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void> {
-    const knex = (em.txn ?? fail("Expected EntityManager.txn to be set")) as Knex.Transaction;
-    for (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
-      if (newRows.length > 0) {
-        // We use a `DO UPDATE SET id` so that our `RETURNING id` returns the ids of conflicted rows,
-        // which we use in the post-processing to see that the "new-to-us" rows already existed, and
-        // save their PK into our in-memory `newRows`.
-        //
-        // If we have just `DO NOTHING`, then the `RETURNING id` will not return anything for those rows.
-        const sql = cleanSql(`
-          INSERT INTO ${joinTableName} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
-          VALUES ${zeroTo(newRows.length)
-            .map(() => "(?, ?) ")
-            .join(", ")}
-          ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO UPDATE SET id = ${joinTableName}.id
-          RETURNING id;
-        `);
-        const meta1 = getMetadata(m2m.entity);
-        const meta2 = m2m.otherMeta;
-        const bindings = newRows.flatMap((row) => {
-          return [
-            keyToNumber(meta1, row.columns[m2m.columnName].idTagged),
-            keyToNumber(meta2, row.columns[m2m.otherColumnName].idTagged),
-          ];
-        });
-        const { rows } = await knex.raw(sql, bindings);
-        for (let i = 0; i < rows.length; i++) {
-          newRows[i].id = rows[i].id;
-          newRows[i].op = JoinRowOperation.Flushed;
-        }
-      }
-      if (deletedRows.length > 0) {
-        // `remove`s that were done against unloaded ManyToManyCollections will not have row ids
-        const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== -1);
-        if (haveIds.length > 0) {
-          await knex(joinTableName)
-            .del()
-            .whereIn(
-              "id",
-              haveIds.map((e) => e.id!),
-            );
-        }
-        if (noIds.length > 0) {
-          const data = noIds
-            // Watch for m2m rows that got added-then-removed to entities that were themselves added-then-removed,
-            // as the idTagged will be undefined for those, as we're skipping adding them to the database.
-            .filter((row) => {
-              const e1 = row.columns[m2m.columnName];
-              const e2 = row.columns[m2m.columnName];
-              return !e1.isNewEntity && !e2.isNewEntity;
-            })
-            .map((e) => [
-              keyToNumber(m2m.meta, e.columns[m2m.columnName].idTagged),
-              keyToNumber(m2m.otherMeta, e.columns[m2m.otherColumnName].idTagged),
-            ]);
-          if (data.length > 0) {
-            await knex(joinTableName).del().whereIn([m2m.columnName, m2m.otherColumnName], data);
-          }
-        }
-        deletedRows.forEach((row) => {
-          row.id = undefined;
-          row.op = JoinRowOperation.Flushed;
-        });
-      }
-    }
+    await Promise.all([
+      ...ops.inserts.map((op) => batchInsert(txn, op)),
+      ...ops.updates.map((op) => batchUpdate(txn, op)),
+      ...ops.deletes.map((op) => batchDelete(txn, op)),
+      ...Object.entries(joinRows).flatMap(([joinTableName, { m2m, newRows, deletedRows }]) => {
+        return [m2mBatchInsert(txn, joinTableName, m2m, newRows), m2mBatchDelete(txn, joinTableName, m2m, deletedRows)];
+      }),
+    ]);
   }
 
   get defaultPlugins() {
@@ -215,22 +129,21 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
   }
 }
 
-// Issue 1 INSERT statement with N `VALUES (..., ...), (..., ...), ...`
-function batchInsert(knex: Knex, op: InsertOp): Promise<unknown> {
-  const { tableName, columns, rows } = op;
+async function batchInsert(txn: Knex.Transaction, op: InsertOp): Promise<unknown> {
+  const { tableName, columns, columnValues } = op;
+  const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
   const sql = cleanSql(`
-    INSERT INTO "${tableName}" (${columns.map((c) => `"${c.columnName}"`).join(", ")})
-    VALUES ${rows.map(() => `(${columns.map(() => `?`).join(", ")})`).join(",")}
+    ${cte}
+    INSERT INTO ${kq(tableName)} (${columns.map((c) => kq(c.columnName)).join(", ")})
+    SELECT * FROM data
   `);
-  const bindings = rows.flat();
-  return knex.raw(sql, bindings);
+  return txn.raw(sql, bindings);
 }
 
-// Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...`
-async function batchUpdate(knex: Knex, op: UpdateOp): Promise<void> {
-  const { tableName, columns, rows, updatedAt } = op;
+async function batchUpdate(txn: Knex.Transaction, op: UpdateOp): Promise<void> {
+  const { tableName, columns, columnValues, updatedAt } = op;
 
-  const cte = buildValuesCte("data", columns, rows, rows.flat());
+  const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
 
   // JS Dates only have millisecond-level precision, so we may have dropped/lost accuracy when
   // reading Postgres's microsecond-level `timestamptz` values; using `date_trunc` "downgrades"
@@ -245,11 +158,8 @@ async function batchUpdate(knex: Knex, op: UpdateOp): Promise<void> {
         ? ` AND ${kqDot(tableName, updatedAt)} = data.__original_updated_at`
         : "";
 
-  // Use the `buildCteSql` helper to format the `buildValuesCte`
-  const { sql: cteSql, bindings: cteBindings } = buildCteSql(cte);
-
   const sql = `
-    ${cteSql}
+    ${cte}
     UPDATE ${kq(tableName)}
     SET ${columns
       .filter((c) => c.columnName !== "id" && c.columnName !== "__original_updated_at")
@@ -260,18 +170,109 @@ async function batchUpdate(knex: Knex, op: UpdateOp): Promise<void> {
     RETURNING ${kq(tableName)}.id
   `;
 
-  const result = await knex.raw(cleanSql(sql), cteBindings);
+  const result = await txn.raw(cleanSql(sql), bindings);
+  const results = result.rows;
 
-  if (result.rows.length !== rows.length) {
-    const updated = new Set(result.rows.map((r: any) => r.id));
-    const missing = rows.map((r) => r[0]).filter((id) => !updated.has(id));
+  const ids = columnValues[0]; // assume id is the 1st column
+  if (results.length !== ids.length) {
+    const updated = new Set(results.map((r: any) => r.id));
+    const missing = ids.filter((id) => !updated.has(id));
     throw new Error(`Oplock failure for ${tableName} rows ${missing.join(", ")}`);
   }
 }
 
-async function batchDelete(knex: Knex, op: DeleteOp): Promise<void> {
+async function batchDelete(txn: Knex.Transaction, op: DeleteOp): Promise<void> {
   const { tableName, ids } = op;
-  await knex(tableName).del().whereIn("id", ids);
+  await txn.raw(`DELETE FROM ${kq(tableName)} WHERE id = ANY(?)`, [ids]);
+}
+
+/** Creates a CTE named `tableName` that bulk-injects the `columnValues` into a SQL query. */
+function buildUnnestCte(tableName: string, columns: OpColumn[], columnValues: any[][]): [string, any[][]] {
+  ensureRectangularArraySizes(columns, columnValues);
+  const selects = columns.map((c) => {
+    if (c.dbType.endsWith("[]")) {
+      if (c.isNullableArray) {
+        return `unnest_arrays(?::${c.dbType}[], true) as ${kq(c.columnName)}`;
+      } else {
+        return `unnest_arrays(?::${c.dbType}[]) as ${kq(c.columnName)}`;
+      }
+    } else {
+      return `unnest(?::${c.dbType}[]) as ${kq(c.columnName)}`;
+    }
+  });
+  const sql = `WITH ${tableName} AS (SELECT ${selects.join(", ")})`;
+  return [sql, columnValues];
+}
+
+async function m2mBatchInsert(txn: Knex.Transaction, joinTableName: string, m2m: ManyToManyLike, newRows: JoinRow[]) {
+  if (newRows.length === 0) return;
+  // const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
+  const sql = cleanSql(`
+    INSERT INTO ${kq(joinTableName)} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
+    VALUES ${zeroTo(newRows.length)
+      .map(() => "(?, ?) ")
+      .join(", ")}
+    ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO UPDATE SET id = ${kq(joinTableName)}.id
+    RETURNING id;
+  `);
+  const meta1 = getMetadata(m2m.entity);
+  const meta2 = m2m.otherMeta;
+  const bindings = newRows.flatMap((row) => {
+    return [
+      keyToNumber(meta1, row.columns[m2m.columnName].idTagged),
+      keyToNumber(meta2, row.columns[m2m.otherColumnName].idTagged),
+    ];
+  });
+  const { rows } = await txn.raw(sql, bindings);
+  for (let i = 0; i < rows.length; i++) {
+    newRows[i].id = rows[i].id;
+    newRows[i].op = JoinRowOperation.Flushed;
+  }
+}
+
+async function m2mBatchDelete(
+  txn: Knex.Transaction,
+  joinTableName: string,
+  m2m: ManyToManyLike,
+  deletedRows: JoinRow[],
+) {
+  if (deletedRows.length === 0) return;
+  // `remove`s that were done against unloaded ManyToManyCollections will not have row ids
+  const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== -1);
+  if (haveIds.length > 0) {
+    await txn.raw(`DELETE FROM ${kq(joinTableName)} WHERE id = ANY(?)`, [haveIds.map((r) => r.id!)]);
+  }
+  if (noIds.length > 0) {
+    const data = noIds
+      // Watch for m2m rows that got added-then-removed to entities that were themselves added-then-removed,
+      // as the deTagId will be undefined for those, as we're skipping adding them to the database.
+      .filter((row) => {
+        const e1 = row.columns[m2m.columnName];
+        const e2 = row.columns[m2m.columnName];
+        return !e1.isNewEntity && !e2.isNewEntity;
+      })
+      .map(
+        (e) =>
+          [
+            keyToNumber(m2m.meta, e.columns[m2m.columnName].idTagged),
+            keyToNumber(m2m.otherMeta, e.columns[m2m.otherColumnName].idTagged),
+          ] as any,
+      );
+    if (data.length > 0) {
+      await txn.raw(
+        `
+        DELETE FROM ${kq(joinTableName)}
+        WHERE (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) IN (
+          SELECT (data->>0)::int, (data->>1)::int FROM jsonb_array_elements(?) data
+        )`,
+        [JSON.stringify(data)],
+      );
+    }
+  }
+  deletedRows.forEach((row) => {
+    row.id = undefined;
+    row.op = JoinRowOperation.Flushed;
+  });
 }
 
 /**

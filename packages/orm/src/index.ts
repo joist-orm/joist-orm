@@ -121,6 +121,7 @@ export { setRuntimeConfig, type RuntimeConfig } from "./runtimeConfig";
 export * from "./serde";
 export * from "./temporalMappers";
 export * from "./typeMap";
+export { buildUnnestCte } from "./unnest";
 export { DeepPartialOrNull, updatePartial, upsert } from "./upsert";
 export { abbreviation, asNew, assertNever, cleanStringValue, fail, failIfAnyRejected, indexBy } from "./utils";
 export { ensureWithLoaded, StubbedRelation, WithLoaded, withLoaded } from "./withLoaded";

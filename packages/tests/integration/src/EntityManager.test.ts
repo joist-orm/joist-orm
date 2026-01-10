@@ -1189,7 +1189,19 @@ describe("EntityManager", () => {
     expect(rows[0].favorite_colors).toEqual([]);
   });
 
-  it("can update multiple enum array", async () => {
+  it("can insert jagged enum array", async () => {
+    const em = newEntityManager();
+    newAuthor(em, { firstName: "a1", favoriteColors: [Color.Red, Color.Green] });
+    newAuthor(em, { firstName: "a2", favoriteColors: [Color.Red, Color.Blue, Color.Green] });
+    newAuthor(em, { firstName: "a3", favoriteColors: [] });
+    await em.flush();
+    const rows = await select("authors");
+    expect(rows[0].favorite_colors).toEqual([1, 2]);
+    expect(rows[1].favorite_colors).toEqual([1, 3, 2]);
+    expect(rows[2].favorite_colors).toEqual([]);
+  });
+
+  it("can update jagged enum array", async () => {
     await insertAuthor({ first_name: "f", favorite_colors: [1] });
     await insertAuthor({ first_name: "f", favorite_colors: [2] });
     const em = newEntityManager();

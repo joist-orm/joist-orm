@@ -8,13 +8,15 @@ describe("T2Author", () => {
     const b = newT2Book(em);
     expect(b.author.get.favoriteBook.get).toBeUndefined();
     await em.flush();
-    expect(queries).toEqual([
-      `BEGIN;`,
-      `select nextval('t2_authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('t2_books_id_seq') from generate_series(1, 1)`,
-      `INSERT INTO "t2_authors" ("id", "first_name", \"favorite_book_id") VALUES ($1, $2, $3)`,
-      `INSERT INTO "t2_books" ("id", "title", "author_id") VALUES ($1, $2, $3)`,
-      `COMMIT;`,
-    ]);
+    expect(queries).toMatchInlineSnapshot(`
+     [
+       "BEGIN;",
+       "select nextval('t2_authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('t2_books_id_seq') from generate_series(1, 1)",
+       "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::character varying[]) as first_name, unnest($3::int[]) as favorite_book_id) INSERT INTO t2_authors (id, first_name, favorite_book_id) SELECT * FROM data",
+       "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::character varying[]) as title, unnest($3::int[]) as author_id) INSERT INTO t2_books (id, title, author_id) SELECT * FROM data",
+       "COMMIT;",
+     ]
+    `);
   });
 
   it("can insert author with a favorite book and issue fixup UPDATEs", async () => {
@@ -26,14 +28,16 @@ describe("T2Author", () => {
     a2.favoriteBook.set(b2);
 
     await em.flush();
-    expect(queries).toEqual([
-      `BEGIN;`,
-      `select nextval('t2_authors_id_seq') from generate_series(1, 2) UNION ALL select nextval('t2_books_id_seq') from generate_series(1, 2)`,
-      `INSERT INTO "t2_authors" ("id", "first_name", \"favorite_book_id") VALUES ($1, $2, $3),($4, $5, $6)`,
-      `INSERT INTO "t2_books" ("id", "title", "author_id") VALUES ($1, $2, $3),($4, $5, $6)`,
-      `WITH data (id, favorite_book_id) AS (VALUES ($1::int, $2::int), ($3, $4) ) UPDATE t2_authors SET favorite_book_id = data.favorite_book_id FROM data WHERE t2_authors.id = data.id RETURNING t2_authors.id`,
-      `COMMIT;`,
-    ]);
+    expect(queries).toMatchInlineSnapshot(`
+     [
+       "BEGIN;",
+       "select nextval('t2_authors_id_seq') from generate_series(1, 2) UNION ALL select nextval('t2_books_id_seq') from generate_series(1, 2)",
+       "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::character varying[]) as first_name, unnest($3::int[]) as favorite_book_id) INSERT INTO t2_authors (id, first_name, favorite_book_id) SELECT * FROM data",
+       "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::character varying[]) as title, unnest($3::int[]) as author_id) INSERT INTO t2_books (id, title, author_id) SELECT * FROM data",
+       "WITH data AS (SELECT unnest($1::int[]) as id, unnest($2::int[]) as favorite_book_id) UPDATE t2_authors SET favorite_book_id = data.favorite_book_id FROM data WHERE t2_authors.id = data.id RETURNING t2_authors.id",
+       "COMMIT;",
+     ]
+    `);
     const rows = await select("t2_authors");
     expect(rows[0].favorite_book_id).toBe(1);
     expect(rows[1].favorite_book_id).toBe(2);

@@ -18,10 +18,12 @@ import {
   parseFindQuery,
 } from "../QueryParser";
 import { visitConditions } from "../QueryVisitor";
+import { OpColumn } from "../drivers/EntityWriter";
 import { kqDot } from "../keywords";
 import { LoadHint } from "../loadHints";
 import { maybeRequireTemporal } from "../temporal";
 import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "../temporalMappers";
+import { buildUnnestCte } from "../unnest";
 import { assertNever } from "../utils";
 
 export const findOperation = "find";
@@ -68,10 +70,8 @@ export function findDataLoader<T extends Entity>(
         return [entities];
       }
 
-      // WITH _find (tag, arg1, arg2) AS (VALUES
-      //   (0::int, 'a'::varchar, 'a'::varchar),
-      //   (1, 'b', 'b'),
-      //   (2, 'c', 'c')
+      // WITH _find (tag, arg1, arg2) AS (
+      //   SELECT unnest($0::int[]), unnest($0::varchar[]), unnest($0::varchar[])
       // )
       // SELECT a.*, array_agg(_find.tag) AS _tags
       // FROM authors a
@@ -82,13 +82,13 @@ export function findDataLoader<T extends Entity>(
       // Build the list of 'arg1', 'arg2', ... strings
       const { where, ...options } = queries[0];
       const query = parseFindQuery(getMetadata(type), where, options);
-      const args = collectAndReplaceArgs(query);
-      args.unshift({ columnName: "tag", dbType: "int" });
+      const argsColumns = collectAndReplaceArgs(query);
+      argsColumns.unshift({ columnName: "tag", dbType: "int" });
 
       query.selects.unshift("array_agg(_find.tag) as _tags");
       // Inject a cross join into the query
       query.tables.unshift({ join: "cross", table: "_find", alias: "_find" });
-      query.ctes = [buildValuesCte("_find", args, queries, createBindings(meta, queries))];
+      query.ctes = [buildUnnestCte("_find", argsColumns, createColumnValues(meta, argsColumns, queries))];
       // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
       query.groupBys = query.selects
         .filter((s) => typeof s === "string")
@@ -227,17 +227,24 @@ function rewriteToRawCondition(c: ColumnCondition, argsIndex: ArgCounter): RawCo
   };
 }
 
-// Given the `N` queries that we're batching, create a single bindings array that will
-// have `[t0, ...q0 bindings, t1, ...q1 bindings, t2, ...q2 bindings, ...]`.
-export function createBindings(meta: EntityMetadata, queries: readonly FilterAndSettings<any>[]): any[] {
-  const bindings: any[] = [];
+export function createColumnValues(
+  meta: EntityMetadata,
+  columns: OpColumn[],
+  queries: readonly FilterAndSettings<any>[],
+): any[][] {
+  const columnValues: any[][] = Array(columns.length);
+  for (let i = 0; i < columns.length; i++) columnValues[i] = [];
   queries.forEach((query, i) => {
     const { where, ...opts } = query;
     // add this query's `tag` value
-    bindings.push(i);
+    columnValues[0].push(i);
+    const bindings: any[] = [];
     collectValues(bindings, parseFindQuery(meta, where, opts));
+    for (let j = 0; j < bindings.length; j++) {
+      columnValues[j + 1].push(bindings[j]);
+    }
   });
-  return bindings;
+  return columnValues;
 }
 
 /** Pushes the arg values of a given query in the cross-query `bindings` array. */
@@ -320,6 +327,8 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: ArgCounter): [string, b
  *
  * The caller is responsible for filling in the `bindings`, which should have 1
  * entry for each `rows x columns` cell.
+ *
+ * @deprecated Use newUnnestCte instead because it uses arrays to have a bounded number of parameters.
  */
 export function buildValuesCte(
   alias: string,

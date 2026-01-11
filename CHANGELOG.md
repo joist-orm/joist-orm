@@ -1,3 +1,10 @@
+# [1.290.0](https://github.com/joist-orm/joist-orm/compare/v1.289.2...v1.290.0) (2026-01-11)
+
+
+### Features
+
+* Use unnest for batched SQL. ([#1692](https://github.com/joist-orm/joist-orm/issues/1692)) ([1ee403c](https://github.com/joist-orm/joist-orm/commit/1ee403c7e41b440b07cd67e81aa14e6ec9056027))
+
 ## [1.289.2](https://github.com/joist-orm/joist-orm/compare/v1.289.1...v1.289.2) (2026-01-09)
 
 

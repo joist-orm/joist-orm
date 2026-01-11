@@ -18,13 +18,10 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
 ## Key Features
 
 <CardGrid>
-  <Card title="Type-safe Domain Models" icon="seti:typescript">
-    <p>
-      Robust [Domain Modeling](/modeling/why-entities/) that leverages TypeScript for compile-time safety.
-    </p>
-    <p>
-      I.e. tracking [relation loaded-ness](/goals/load-safe-relations) in the type system.
-    </p>
+  <Card title="Best-in-class Performance" icon="rocket">
+    All queries are optimized for Postgres, bulk `INSERT` and `UPDATE` for all writes, and batched `SELECT` for reads.
+
+    See [performance](/goals/performance) for our high-level philosophy, and [benchmarks](https://github.com/joist-orm/joist-benchmarks) for details.
   </Card>
   <Card title="N+1 Safe by Default" icon="rocket">
     [Bulletproof N+1 Preventation](/goals/avoiding-n-plus-1s/) avoids N+1 query performance problems through batched loading and pre-loading.
@@ -34,7 +31,15 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
   <Card title="Backend Reactivity" icon="laptop">
     [Reactive Fields](/modeling/reactive-fields) and [validation rules](/modeling/validation-rules) bring the ergonomics of declarative business logic to the backend.
   </Card>
+    <Card title="Type-safe Domain Models" icon="seti:typescript">
+        <p>
+            Robust [Domain Modeling](/modeling/why-entities/) that leverages TypeScript for compile-time safety.
+        </p>
+        <p>
+            I.e. tracking [relation loaded-ness](/goals/load-safe-relations) in the type system.
+        </p>
+    </Card>
   <Card title="Rich Test Support" icon="test-tube">
-    Out-of-the-box [test factories](/testing/test-factories) and [fast test database resets](/testing/fast-database-resets) make testing your code a breeze.
+    Out-of-the-box [test factories](/testing/test-factories) and [fast test database resets](/testing/fast-database-resets) make your tests succinct & resilient to change, even as your domain model evolves.
   </Card>
 </CardGrid>

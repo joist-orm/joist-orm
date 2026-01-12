@@ -1,3 +1,10 @@
+## [1.290.1](https://github.com/joist-orm/joist-orm/compare/v1.290.0...v1.290.1) (2026-01-12)
+
+
+### Bug Fixes
+
+* Fix nullable date array columns. ([#1696](https://github.com/joist-orm/joist-orm/issues/1696)) ([30cf6f3](https://github.com/joist-orm/joist-orm/commit/30cf6f327072c9f369363ca4ae2f5c524887451b))
+
 # [1.290.0](https://github.com/joist-orm/joist-orm/compare/v1.289.2...v1.290.0) (2026-01-11)
 
 

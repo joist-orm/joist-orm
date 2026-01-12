@@ -960,7 +960,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         ) {
           // What's the existing entity? Have we cloned it?
           const existingIdOrEntity = getField(clone, fieldName);
-          const existing = this.entities.find((e) => sameEntity(e, existingIdOrEntity));
+          // Use O(1) lookup via #entitiesById Map instead of O(N) .find() scan
+          let existing: Entity | undefined;
+          if (isEntity(existingIdOrEntity)) {
+            existing = existingIdOrEntity as Entity;
+          } else if (existingIdOrEntity) {
+            existing = this.findExistingInstance(existingIdOrEntity as string);
+          }
           // If we didn't find a loaded entity for this value, assume that it a) itself is not being cloned,
           // and b) we don't need to bother telling it about the newly cloned entity
           if (existing) {

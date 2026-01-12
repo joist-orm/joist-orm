@@ -14,10 +14,13 @@ exports.up = (b) => {
     lastName: { type: "varchar(255)", notNull: false },
     birthday: { type: "date", notNull: true },
     children_birthdays: { type: "date[]", notNull: true, default: "{}" },
+    maybe_birthdays: { type: "date[]", notNull: false, default: "{}" },
     timestamp: { type: "timestamp", notNull: true, default: "NOW()" },
     timestamps: { type: "timestamp[]", notNull: true, default: "{}" },
+    maybe_timestamps: { type: "timestamp[]", notNull: false, default: "{}" },
     time: { type: "time without time zone", notNull: false, default: "00:00:00" },
     times: { type: "time without time zone[]", notNull: true, default: "{}" },
+    maybe_times: { type: "time without time zone[]", notNull: false, default: "{}" },
     time_to_micros: { type: "time(6)", notNull: false, default: "00:00:00" },
   });
 
@@ -25,6 +28,7 @@ exports.up = (b) => {
     title: { type: "varchar(255)", notNull: true },
     author_id: { type: "int", references: "authors", notNull: true, deferrable: true, deferred: true },
     published_at: { type: "timestamptz", notNull: true },
-    timestampTzs: { type: "timestamptz[]", notNull: true, default: "{}" },
+    timestamp_tzs: { type: "timestamptz[]", notNull: true, default: "{}" },
+    maybe_timestamp_tzs: { type: "timestamptz[]", notNull: false, default: "{}" },
   });
 };

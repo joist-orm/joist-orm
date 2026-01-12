@@ -35,7 +35,7 @@ describe("plainDateTime", () => {
     expect(a.timestamp).toEqual(jan1at10am);
   });
 
-  it("can load a plain time time array", async () => {
+  it("can load a plain date time array", async () => {
     await knex
       .insert({
         firstName: "a1",
@@ -47,6 +47,18 @@ describe("plainDateTime", () => {
     const em = newEntityManager();
     const a = await em.load(Author, "a:1");
     expect(a.timestamps).toEqual([jan1at10am, jan1at11am]);
+  });
+
+  it("can update a nullable plain date time array", async () => {
+    await knex
+      .insert({ firstName: "a1", birthday: "2018-01-01", maybe_timestamps: [jan1at10am, jan1at11am] })
+      .into("authors");
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    author.maybeTimestamps = undefined;
+    await em.flush();
+    const rows = await knex.select("*").from("authors");
+    expect(rows[0].maybe_timestamps).toBeNull();
   });
 
   it("can no-op when data is reverted before flush", async () => {

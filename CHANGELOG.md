@@ -1,3 +1,10 @@
+## [1.290.2](https://github.com/joist-orm/joist-orm/compare/v1.290.1...v1.290.2) (2026-01-12)
+
+
+### Bug Fixes
+
+* Fix notNullMarker for date/varchar array columns. ([#1698](https://github.com/joist-orm/joist-orm/issues/1698)) ([556bb4b](https://github.com/joist-orm/joist-orm/commit/556bb4b118cd5780ef5906ab47d2333be9e55ac0))
+
 ## [1.290.1](https://github.com/joist-orm/joist-orm/compare/v1.290.0...v1.290.1) (2026-01-12)
 
 

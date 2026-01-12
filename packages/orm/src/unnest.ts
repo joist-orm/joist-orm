@@ -58,6 +58,21 @@ function fillArrayWithNulls(c: OpColumn, array: any[] | null, maxSize: number): 
   const nullsToAdd = Math.max(0, maxSize - (array?.length ?? 0));
   for (let i = 0; i < nullsToAdd; i++) result.push(null);
   // Add our unset marker
-  if (c.isNullableArray) result.unshift(wasNull ? null : 1);
+  if (c.isNullableArray) result.unshift(wasNull ? null : notNullMarker(c));
   return result;
+}
+
+function notNullMarker(c: OpColumn): any {
+  // Should probably push this into an OpColumn.notNullMarker value
+  if (c.dbType.startsWith("varchar") || c.dbType.startsWith("character")) {
+    return "";
+  } else if (c.dbType.startsWith("int")) {
+    return 1;
+  } else if (c.dbType.startsWith("date")) {
+    return new Date(); // maybe something temporal?
+  } else if (c.dbType.startsWith("timestamp")) {
+    return new Date(); // maybe something temporal?
+  } else {
+    throw new Error("Unhandled nullable array column type " + c.dbType);
+  }
 }

@@ -64,7 +64,7 @@ function fillArrayWithNulls(c: OpColumn, array: any[] | null, maxSize: number): 
 
 function notNullMarker(c: OpColumn): any {
   // Should probably push this into an OpColumn.notNullMarker value
-  if (c.dbType.startsWith("varchar") || c.dbType.startsWith("character")) {
+  if (c.dbType.startsWith("varchar") || c.dbType.startsWith("character") || c.dbType.startsWith("text")) {
     return "";
   } else if (c.dbType.startsWith("int")) {
     return 1;

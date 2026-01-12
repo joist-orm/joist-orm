@@ -54,6 +54,13 @@ export interface BookFields {
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   publishedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: false };
   timestampTzs: { kind: "primitive"; type: Temporal.ZonedDateTime[]; unique: false; nullable: never; derived: false };
+  maybeTimestampTzs: {
+    kind: "primitive";
+    type: Temporal.ZonedDateTime[];
+    unique: false;
+    nullable: undefined;
+    derived: false;
+  };
   createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   author: { kind: "m2o"; type: Author; nullable: never; derived: false };
@@ -63,6 +70,7 @@ export interface BookOpts {
   title: string;
   publishedAt: Temporal.ZonedDateTime;
   timestampTzs: Temporal.ZonedDateTime[];
+  maybeTimestampTzs?: Temporal.ZonedDateTime[] | null;
   author: Author | AuthorId;
 }
 
@@ -75,6 +83,7 @@ export interface BookFilter {
   title?: ValueFilter<string, never>;
   publishedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   timestampTzs?: ValueFilter<Temporal.ZonedDateTime[], never>;
+  maybeTimestampTzs?: ValueFilter<Temporal.ZonedDateTime[], null>;
   createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
@@ -85,6 +94,7 @@ export interface BookGraphQLFilter {
   title?: ValueGraphQLFilter<string>;
   publishedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   timestampTzs?: ValueGraphQLFilter<Temporal.ZonedDateTime[]>;
+  maybeTimestampTzs?: ValueGraphQLFilter<Temporal.ZonedDateTime[]>;
   createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
@@ -95,6 +105,7 @@ export interface BookOrder {
   title?: OrderBy;
   publishedAt?: OrderBy;
   timestampTzs?: OrderBy;
+  maybeTimestampTzs?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   author?: AuthorOrder;
@@ -174,6 +185,14 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   set timestampTzs(timestampTzs: Temporal.ZonedDateTime[]) {
     setField(this, "timestampTzs", timestampTzs);
+  }
+
+  get maybeTimestampTzs(): Temporal.ZonedDateTime[] | undefined {
+    return getField(this, "maybeTimestampTzs");
+  }
+
+  set maybeTimestampTzs(maybeTimestampTzs: Temporal.ZonedDateTime[] | undefined) {
+    setField(this, "maybeTimestampTzs", maybeTimestampTzs);
   }
 
   get createdAt(): Temporal.ZonedDateTime {

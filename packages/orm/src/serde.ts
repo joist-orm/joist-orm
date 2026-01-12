@@ -80,6 +80,8 @@ export interface Column {
    */
   mapFromJsonAgg(value: any): any;
   isArray: boolean;
+  /** Used by `unnest_arrays`. */
+  isNullableArray: boolean;
 }
 
 /**
@@ -96,6 +98,7 @@ export interface CustomSerde<DomainType, DbType> {
 export class CustomSerdeAdapter implements FieldSerde {
   columns = [this];
   isArray: boolean = false;
+  isNullableArray: boolean = false;
 
   public constructor(
     protected fieldName: string,
@@ -104,8 +107,10 @@ export class CustomSerdeAdapter implements FieldSerde {
     private mapper: CustomSerde<any, any>,
     // Allow subtypes to override isArray
     isArray?: boolean,
+    isNullableArray = false, // only set for nullable arrays
   ) {
     if (isArray !== undefined) this.isArray = isArray;
+    this.isNullableArray = isNullableArray;
   }
 
   setOnEntity(data: any, row: any): void {
@@ -204,22 +209,22 @@ export class DateSerde extends PrimitiveSerde implements TimestampSerde<Date> {
 
 /** Converts `DATE`s `Temporal.PlainDate`s. */
 export class PlainDateSerde extends CustomSerdeAdapter {
-  constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
-    super(fieldName, columnName, dbType, plainDateMapper, isArray);
+  constructor(fieldName: string, columnName: string, dbType: string, isArray = false, isNullableArray = false) {
+    super(fieldName, columnName, dbType, plainDateMapper, isArray, isNullableArray);
   }
 }
 
 /** Converts `TIME`s to `Temporal.PlainTime`s. */
 export class PlainTimeSerde extends CustomSerdeAdapter {
-  constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
-    super(fieldName, columnName, dbType, plainTimeMapper, isArray);
+  constructor(fieldName: string, columnName: string, dbType: string, isArray = false, isNullableArray = false) {
+    super(fieldName, columnName, dbType, plainTimeMapper, isArray, isNullableArray);
   }
 }
 
 /** Converts `TIMESTAMP`s to `Temporal.PlainDateTime`s. */
 export class PlainDateTimeSerde extends CustomSerdeAdapter implements TimestampSerde<Temporal.PlainDateTime> {
-  constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
-    super(fieldName, columnName, dbType, plainDateTimeMapper, isArray);
+  constructor(fieldName: string, columnName: string, dbType: string, isArray = false, isNullableArray = false) {
+    super(fieldName, columnName, dbType, plainDateTimeMapper, isArray, isNullableArray);
   }
 
   mapFromNow(now: Date): Temporal.PlainDateTime {
@@ -230,8 +235,8 @@ export class PlainDateTimeSerde extends CustomSerdeAdapter implements TimestampS
 
 /** Converts `TIMESTAMP WITH TIME ZONE`s to `Temporal.ZonedDateTime`s. */
 export class ZonedDateTimeSerde extends CustomSerdeAdapter implements TimestampSerde<Temporal.ZonedDateTime> {
-  constructor(fieldName: string, columnName: string, dbType: string, isArray = false) {
-    super(fieldName, columnName, dbType, zonedDateTimeMapper, isArray);
+  constructor(fieldName: string, columnName: string, dbType: string, isArray = false, isNullableArray = false) {
+    super(fieldName, columnName, dbType, zonedDateTimeMapper, isArray, isNullableArray);
   }
 
   mapFromNow(now: Date): Temporal.ZonedDateTime {
@@ -242,6 +247,7 @@ export class ZonedDateTimeSerde extends CustomSerdeAdapter implements TimestampS
 
 export class BigIntSerde implements FieldSerde {
   isArray = false;
+  isNullableArray = false;
   columns = [this];
   dbType = "bigint";
 
@@ -284,6 +290,7 @@ export class BigIntSerde implements FieldSerde {
 export class DecimalToNumberSerde implements FieldSerde {
   dbType = "decimal";
   isArray = false;
+  isNullableArray = false;
   columns = [this];
 
   constructor(
@@ -316,6 +323,7 @@ export class DecimalToNumberSerde implements FieldSerde {
 /** Maps physical integer keys to logical string IDs "because GraphQL". */
 export class KeySerde implements FieldSerde {
   isArray = false;
+  isNullableArray = false;
   columns = [this];
   private meta: { tagName: string; idDbType: "bigint" | "int" | "uuid" | "text" };
 
@@ -401,6 +409,7 @@ export class PolymorphicKeySerde implements FieldSerde {
       columnName: comp.columnName,
       dbType: comp.otherMetadata().idDbType,
       isArray: false,
+      isNullableArray: false,
       otherMetadata: comp.otherMetadata,
       dbValue(data: any): any {
         const id = maybeResolveReferenceToId(data[fieldName]);
@@ -437,6 +446,7 @@ export class PolymorphicKeySerde implements FieldSerde {
 
 export class EnumFieldSerde implements FieldSerde {
   isArray = false;
+  isNullableArray = false;
   columns = [this];
 
   constructor(
@@ -508,6 +518,7 @@ function maybeNullToUndefined(value: any): any {
 export class SuperstructSerde implements FieldSerde {
   dbType = "jsonb";
   isArray = false;
+  isNullableArray = false;
   columns = [this];
 
   // Use a dynamic require so that downstream projects don't have to depend on superstruct
@@ -551,6 +562,7 @@ export class SuperstructSerde implements FieldSerde {
 export class JsonSerde implements FieldSerde {
   dbType = "jsonb";
   isArray = false;
+  isNullableArray = false;
   columns = [this];
 
   constructor(
@@ -587,6 +599,7 @@ export class JsonSerde implements FieldSerde {
 export class ZodSerde implements FieldSerde {
   dbType = "jsonb";
   isArray = false;
+  isNullableArray = false;
   columns = [this];
 
   constructor(

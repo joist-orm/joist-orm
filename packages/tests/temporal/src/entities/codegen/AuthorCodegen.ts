@@ -46,10 +46,19 @@ export interface AuthorFields {
   lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
   birthday: { kind: "primitive"; type: Temporal.PlainDate; unique: false; nullable: never; derived: false };
   childrenBirthdays: { kind: "primitive"; type: Temporal.PlainDate[]; unique: false; nullable: never; derived: false };
+  maybeBirthdays: { kind: "primitive"; type: Temporal.PlainDate[]; unique: false; nullable: undefined; derived: false };
   timestamp: { kind: "primitive"; type: Temporal.PlainDateTime; unique: false; nullable: never; derived: false };
   timestamps: { kind: "primitive"; type: Temporal.PlainDateTime[]; unique: false; nullable: never; derived: false };
+  maybeTimestamps: {
+    kind: "primitive";
+    type: Temporal.PlainDateTime[];
+    unique: false;
+    nullable: undefined;
+    derived: false;
+  };
   time: { kind: "primitive"; type: Temporal.PlainTime; unique: false; nullable: undefined; derived: false };
   times: { kind: "primitive"; type: Temporal.PlainTime[]; unique: false; nullable: never; derived: false };
+  maybeTimes: { kind: "primitive"; type: Temporal.PlainTime[]; unique: false; nullable: undefined; derived: false };
   timeToMicros: { kind: "primitive"; type: Temporal.PlainTime; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Temporal.ZonedDateTime; unique: false; nullable: never; derived: true };
@@ -61,10 +70,13 @@ export interface AuthorOpts {
   lastName?: string | null;
   birthday: Temporal.PlainDate;
   childrenBirthdays: Temporal.PlainDate[];
+  maybeBirthdays?: Temporal.PlainDate[] | null;
   timestamp: Temporal.PlainDateTime;
   timestamps: Temporal.PlainDateTime[];
+  maybeTimestamps?: Temporal.PlainDateTime[] | null;
   time?: Temporal.PlainTime | null;
   times: Temporal.PlainTime[];
+  maybeTimes?: Temporal.PlainTime[] | null;
   timeToMicros?: Temporal.PlainTime | null;
   books?: Book[];
 }
@@ -79,10 +91,13 @@ export interface AuthorFilter {
   lastName?: ValueFilter<string, null>;
   birthday?: ValueFilter<Temporal.PlainDate, never>;
   childrenBirthdays?: ValueFilter<Temporal.PlainDate[], never>;
+  maybeBirthdays?: ValueFilter<Temporal.PlainDate[], null>;
   timestamp?: ValueFilter<Temporal.PlainDateTime, never>;
   timestamps?: ValueFilter<Temporal.PlainDateTime[], never>;
+  maybeTimestamps?: ValueFilter<Temporal.PlainDateTime[], null>;
   time?: ValueFilter<Temporal.PlainTime, null>;
   times?: ValueFilter<Temporal.PlainTime[], never>;
+  maybeTimes?: ValueFilter<Temporal.PlainTime[], null>;
   timeToMicros?: ValueFilter<Temporal.PlainTime, null>;
   createdAt?: ValueFilter<Temporal.ZonedDateTime, never>;
   updatedAt?: ValueFilter<Temporal.ZonedDateTime, never>;
@@ -95,10 +110,13 @@ export interface AuthorGraphQLFilter {
   lastName?: ValueGraphQLFilter<string>;
   birthday?: ValueGraphQLFilter<Temporal.PlainDate>;
   childrenBirthdays?: ValueGraphQLFilter<Temporal.PlainDate[]>;
+  maybeBirthdays?: ValueGraphQLFilter<Temporal.PlainDate[]>;
   timestamp?: ValueGraphQLFilter<Temporal.PlainDateTime>;
   timestamps?: ValueGraphQLFilter<Temporal.PlainDateTime[]>;
+  maybeTimestamps?: ValueGraphQLFilter<Temporal.PlainDateTime[]>;
   time?: ValueGraphQLFilter<Temporal.PlainTime>;
   times?: ValueGraphQLFilter<Temporal.PlainTime[]>;
+  maybeTimes?: ValueGraphQLFilter<Temporal.PlainTime[]>;
   timeToMicros?: ValueGraphQLFilter<Temporal.PlainTime>;
   createdAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
   updatedAt?: ValueGraphQLFilter<Temporal.ZonedDateTime>;
@@ -111,10 +129,13 @@ export interface AuthorOrder {
   lastName?: OrderBy;
   birthday?: OrderBy;
   childrenBirthdays?: OrderBy;
+  maybeBirthdays?: OrderBy;
   timestamp?: OrderBy;
   timestamps?: OrderBy;
+  maybeTimestamps?: OrderBy;
   time?: OrderBy;
   times?: OrderBy;
+  maybeTimes?: OrderBy;
   timeToMicros?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
@@ -206,6 +227,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     setField(this, "childrenBirthdays", childrenBirthdays);
   }
 
+  get maybeBirthdays(): Temporal.PlainDate[] | undefined {
+    return getField(this, "maybeBirthdays");
+  }
+
+  set maybeBirthdays(maybeBirthdays: Temporal.PlainDate[] | undefined) {
+    setField(this, "maybeBirthdays", maybeBirthdays);
+  }
+
   get timestamp(): Temporal.PlainDateTime {
     return getField(this, "timestamp");
   }
@@ -222,6 +251,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     setField(this, "timestamps", timestamps);
   }
 
+  get maybeTimestamps(): Temporal.PlainDateTime[] | undefined {
+    return getField(this, "maybeTimestamps");
+  }
+
+  set maybeTimestamps(maybeTimestamps: Temporal.PlainDateTime[] | undefined) {
+    setField(this, "maybeTimestamps", maybeTimestamps);
+  }
+
   get time(): Temporal.PlainTime | undefined {
     return getField(this, "time");
   }
@@ -236,6 +273,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   set times(times: Temporal.PlainTime[]) {
     setField(this, "times", times);
+  }
+
+  get maybeTimes(): Temporal.PlainTime[] | undefined {
+    return getField(this, "maybeTimes");
+  }
+
+  set maybeTimes(maybeTimes: Temporal.PlainTime[] | undefined) {
+    setField(this, "maybeTimes", maybeTimes);
   }
 
   get timeToMicros(): Temporal.PlainTime | undefined {

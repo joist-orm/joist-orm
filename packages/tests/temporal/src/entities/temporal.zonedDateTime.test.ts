@@ -43,12 +43,30 @@ describe("zonedDateTime", () => {
         author_id: 1,
         title: "b1",
         published_at: toTimestampTzString(jan1DateTime),
-        timestampTzs: [toTimestampTzString(jan1DateTime), toTimestampTzString(jan2DateTime)],
+        timestamp_tzs: [toTimestampTzString(jan1DateTime), toTimestampTzString(jan2DateTime)],
       })
       .into("book");
     const em = newEntityManager();
     const book = await em.load(Book, "b:1");
     expect(book.timestampTzs).toEqual([jan1DateTime, jan2DateTime]);
+  });
+
+  it("can update a nullable zoned date time array", async () => {
+    await knex.insert({ firstName: "a1", birthday: "2020-01-01", timestamp: jan1at10am }).into("authors");
+    await knex
+      .insert({
+        author_id: 1,
+        title: "b1",
+        published_at: toTimestampTzString(jan1DateTime),
+        maybe_timestamp_tzs: [toTimestampTzString(jan1DateTime), toTimestampTzString(jan2DateTime)],
+      })
+      .into("book");
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:1");
+    book.maybeTimestampTzs = undefined;
+    await em.flush();
+    const rows = await knex.select("*").from("book");
+    expect(rows[0].maybe_timestamp_tzs).toBeNull();
   });
 
   it("can no-op when data is reverted before flush", async () => {

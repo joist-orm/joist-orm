@@ -45,7 +45,7 @@ describe("plainDate", () => {
     expect(a.childrenBirthdays).toEqual([jan1, jan2]);
   });
 
-  it("can update a nullable plain date array", async () => {
+  it("can update a nullable plain date array to null", async () => {
     await knex
       .insert({ firstName: "a1", birthday: "2018-01-01", maybe_birthdays: ["2018-01-01", "2018-01-02"] })
       .into("authors");
@@ -55,6 +55,18 @@ describe("plainDate", () => {
     await em.flush();
     const rows = await knex.select("*").from("authors");
     expect(rows[0].maybe_birthdays).toBeNull();
+  });
+
+  it("can update a nullable plain date array to new date", async () => {
+    await knex
+      .insert({ firstName: "a1", birthday: "2018-01-01", maybe_birthdays: ["2018-01-01", "2018-01-02"] })
+      .into("authors");
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    author.maybeBirthdays = [jan1];
+    await em.flush();
+    const rows = await knex.select("*").from("authors");
+    expect(rows[0].maybe_birthdays).toEqual(["2018-01-01"]);
   });
 
   it("can no-op when data is reverted before flush", async () => {

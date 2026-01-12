@@ -947,7 +947,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       return [entity, clone] as const;
     });
-    const entityToClone = new Map(clones);
+    const entityToClone: Map<EntityW, EntityW> = new Map(clones);
 
     // 3. Now mutate the m2o relations. We focus on only m2o's because they "own" the field/column,
     // and will drive percolation to keep the other-side o2m & o2o updated.
@@ -960,7 +960,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         ) {
           // What's the existing entity? Have we cloned it?
           const existingIdOrEntity = getField(clone, fieldName);
-          const existing = this.entities.find((e) => sameEntity(e, existingIdOrEntity));
+          // Use O(1) lookup via #entitiesById Map instead of O(N) .find() scan
+          const existing = isEntity(existingIdOrEntity) ? existingIdOrEntity : this.getEntity(existingIdOrEntity);
           // If we didn't find a loaded entity for this value, assume that it a) itself is not being cloned,
           // and b) we don't need to bother telling it about the newly cloned entity
           if (existing) {

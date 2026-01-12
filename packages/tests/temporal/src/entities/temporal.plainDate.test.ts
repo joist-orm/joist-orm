@@ -1,4 +1,4 @@
-import { knex, newEntityManager } from "@src/setupDbTests";
+import { newEntityManager, sql } from "@src/setupDbTests";
 import { jan1, jan2, jan3 } from "@src/utils";
 import { JsonAggregatePreloader, PrimitiveField, alias, getMetadata } from "joist-orm";
 import { Temporal } from "temporal-polyfill";
@@ -29,16 +29,14 @@ describe("plainDate", () => {
   });
 
   it("can load a plain date", async () => {
-    await knex.insert({ firstName: "a1", birthday: "2018-01-01" }).into("authors");
+    await sql`INSERT INTO authors ("firstName", "birthday") VALUES ('a1', ${jan1})`;
     const em = newEntityManager();
     const a = await em.load(Author, "a:1");
     expect(a.birthday).toEqual(jan1);
   });
 
   it("can load a plain date array", async () => {
-    await knex
-      .insert({ firstName: "a1", birthday: "2018-01-01", children_birthdays: ["2018-01-01", "2018-01-02"] })
-      .into("authors");
+    await sql`INSERT INTO authors ("firstName", "birthday", "children_birthdays") VALUES ('a1', ${jan1}, ${[jan1, jan2]})`;
     const em = newEntityManager();
     const a = await em.load(Author, "a:1");
     expect(a.birthday).toEqual(jan1);

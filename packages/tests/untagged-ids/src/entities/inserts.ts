@@ -1,4 +1,4 @@
-import { knex } from "@src/setupDbTests";
+import { sql } from "@src/setupDbTests";
 
 // Note this test infrastructure exist solely to test Joist itself, i.e. to use
 // the low-level driver infra to setup/assert against data. Downstream applications
@@ -21,12 +21,5 @@ beforeEach(() => (_nextId = 0));
 
 // Only meant for testing Joist's internals; in real apps use factories instead.
 export async function insertAuthor(row: { first_name: string; last_name?: string | null }) {
-  await knex
-    .insert({
-      id: nextId(),
-      created_at: new Date(),
-      updated_at: new Date(),
-      ...row,
-    })
-    .into("authors");
+  await sql`INSERT INTO authors ${sql({ id: nextId(), created_at: new Date(), updated_at: new Date(), ...row })}`;
 }

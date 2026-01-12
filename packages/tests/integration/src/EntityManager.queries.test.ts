@@ -2838,7 +2838,7 @@ describe("EntityManager.queries", () => {
       const authors = await em.find(
         Author,
         { as: a },
-        { conditions: { and: [a.address.raw("@\\? ?", ['$.street ? (@ == "rr2")'])] } },
+        { conditions: { and: [a.address.raw("@? $0", ['$.street ? (@ == "rr2")'])] } },
       );
       expect(authors.length).toEqual(1);
     });
@@ -2848,7 +2848,7 @@ describe("EntityManager.queries", () => {
       const [book1, book2] = twoOf((i) => newBook(em, { tags: [{ name: `t${i + 1}` }] }));
       await em.flush();
       const t = alias(Tag);
-      const result = await em.find(Book, { tags: { as: t } }, { conditions: { and: [t.name.raw("in (?)", ["t2"])] } });
+      const result = await em.find(Book, { tags: { as: t } }, { conditions: { and: [t.name.raw("in ($0)", ["t2"])] } });
       expect(result).toMatchEntity([book2]);
     });
 
@@ -2860,7 +2860,7 @@ describe("EntityManager.queries", () => {
       const authors = await em.find(
         Author,
         { as: a },
-        { conditions: { and: [a.address.contains(`{"street": "rr2"}`)] } },
+        { conditions: { and: [a.address.contains({ street: "rr2" })] } },
       );
       expect(authors.length).toEqual(1);
     });
@@ -3485,7 +3485,7 @@ describe("EntityManager.queries", () => {
       await insertAuthor({ first_name: "a1", graduated: jan1 });
       await insertAuthor({ first_name: "a2", graduated: jan2 });
       await insertAuthor({ first_name: "a3", graduated: jan3 });
-      await insertAuthor({ first_name: "a4", graduated: undefined });
+      await insertAuthor({ first_name: "a4", graduated: null });
       const em = newEntityManager();
       const q1 = await em.findCount(Author, { graduated: { between: [jan2, jan3] } });
       expect(q1).toBe(2);

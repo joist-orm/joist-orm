@@ -29,7 +29,7 @@ function buildRawCondition(raw: RawCondition): [string, readonly any[]] {
   return [raw.condition, raw.bindings];
 }
 
-/** Returns a tuple of `["column op ?"`, bindings]`. */
+/** Returns a tuple of `["column op $0"`, bindings]`. */
 function buildCondition(cc: ColumnCondition): [string, any[]] {
   const { alias, column, cond } = cc;
   const columnName = kqDot(alias, column);
@@ -54,23 +54,23 @@ function buildCondition(cc: ColumnCondition): [string, any[]] {
     case "containedBy":
     case "overlaps": {
       const fn = opToFn[cond.kind] ?? fail(`Invalid operator ${cond.kind}`);
-      return [`${columnName} ${fn} ?`, [cond.value]];
+      return [`${columnName} ${fn} $0`, [cond.value]];
     }
     case "noverlaps":
     case "ncontains": {
       const fn = (opToFn as any)[cond.kind.substring(1)] ?? fail(`Invalid operator ${cond.kind}`);
-      return [`NOT (${columnName} ${fn} ?)`, [cond.value]];
+      return [`NOT (${columnName} ${fn} $0)`, [cond.value]];
     }
     case "is-null":
       return [`${columnName} IS NULL`, []];
     case "not-null":
       return [`${columnName} IS NOT NULL`, []];
     case "in":
-      return [`${columnName} = ANY(?)`, [cond.value]];
+      return [`${columnName} = ANY($0)`, [cond.value]];
     case "nin":
-      return [`${columnName} != ALL(?)`, [cond.value]];
+      return [`${columnName} != ALL($0)`, [cond.value]];
     case "between":
-      return [`${columnName} BETWEEN ? AND ?`, cond.value];
+      return [`${columnName} BETWEEN $0 AND $0`, cond.value];
     default:
       assertNever(cond);
   }

@@ -1,7 +1,7 @@
 import { EntityManager } from "joist-orm";
-import { Knex } from "knex";
+import { Sql } from "postgres";
 
 export interface Context {
-  knex: Knex;
+  sql: Sql;
   em: EntityManager;
 }

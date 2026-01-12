@@ -21,6 +21,7 @@
     "@dprint/json": "0.15.6",
     "@inquirer/prompts": "^7.8.6",
     "@types/jscodeshift": "^17.3.0",
+    "@types/pg": "^8.11.11",
     "@types/pluralize": "^0.0.33",
     "@types/semver": "^7.7.1",
     "change-case": "^4.1.2",

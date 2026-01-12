@@ -1,5 +1,5 @@
 import { BigIntSerde, configureMetadata, CustomSerdeAdapter, DateSerde, DecimalToNumberSerde, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, EnumArrayFieldSerde, EnumFieldSerde, JsonSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, setRuntimeConfig, SuperstructSerde, ZodSerde } from "joist-orm";
-import type { Knex } from "knex";
+import type { TransactionSql } from "postgres";
 import type { Context } from "src/context";
 import { address, AddressSchema, PasswordValueSerde, quotes } from "src/entities/types";
 import { AdminUser } from "../AdminUser";
@@ -95,7 +95,7 @@ import {
 
 setRuntimeConfig({ temporal: false });
 
-export class EntityManager extends EntityManager1<Context, Entity, Knex.Transaction> {}
+export class EntityManager extends EntityManager1<Context, Entity, TransactionSql> {}
 
 export interface Entity extends Entity2 {
   id: string;

@@ -1,4 +1,4 @@
-import { ConnectionConfig as PgConnectionConfig } from "pg";
+import tls from "node:tls";
 import { parse } from "pg-connection-string";
 
 type DatabaseUrlEnv = { DATABASE_URL: string };
@@ -14,16 +14,22 @@ type DbSettingsEnv = {
 export type ConnectionEnv = DatabaseUrlEnv | DbSettingsEnv;
 
 /**
- * A connection config with a simpler password field type.
+ * A simpler connection config.
  *
- * The `PgConnectionConfig` has a fancy password that can be a function/async, i.e. to like dynamically
- * load it somehow; that's fine, but is more complex than knex expects, so we simplify it to "just a string",
- * which is what we provide anyway.
- *
- * We also omit `types` and `stream` b/c Knex's `PgConnectionConfig` doesn't exactly match pg's.
+ * The `pg-connection-string` uses `string | null | undefined` types, and we omit the nulls.
  */
-export type ConnectionConfig = Omit<PgConnectionConfig, "password" | "types" | "stream"> & {
-  password: string | undefined;
+export type ConnectionConfig = {
+  host?: string;
+  password?: string;
+  user?: string;
+  port?: number;
+  database?: string;
+  // pg's ClientConfig uses a definition like:
+  //   ssl?: boolean | ConnectionOptions | undefined;
+  // postgres's definition is:
+  //   ssl?: boolean | "require" | "allow" | "prefer" | "verify-full" | object;
+  // It seems like the boolean | ConnectionOptions is the best overlap common
+  ssl?: boolean | tls.ConnectionOptions;
 };
 
 /**
@@ -43,14 +49,14 @@ export function newPgConnectionConfig(env?: ConnectionEnv): ConnectionConfig {
     const url = process.env.DATABASE_URL ?? (env as DatabaseUrlEnv).DATABASE_URL;
     // It'd be great if `parse` returned ConnectionConfig directly
     const options = parse(url);
-    const { database, port, host, user, password } = options;
+    const { database, port, host, user, password, ssl } = options;
     return {
       user,
       password,
       database: database ?? undefined,
       host: host ?? undefined,
       port: port ? Number(port) : undefined,
-      ssl: options.ssl === true,
+      ssl: ssl as any, // skip verifying the string -> type literal checking...
     };
   } else if (process.env.DB_DATABASE || (env && "DB_DATABASE" in env)) {
     const e = process.env.DB_DATABASE ? process.env : (env as DbSettingsEnv);

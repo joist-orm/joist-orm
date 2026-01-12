@@ -18,12 +18,12 @@ describe("PostgresDriver.cte", () => {
         {
           alias: "cte1",
           columns: [{ columnName: "min_age", dbType: "int" }],
-          query: { kind: "raw", sql: "SELECT ?::int as min_age", bindings: [35] },
+          query: { kind: "raw", sql: "SELECT $0::int as min_age", bindings: [35] },
         },
         {
           alias: "cte2",
           columns: [{ columnName: "max_age", dbType: "int" }],
-          query: { kind: "raw", sql: "SELECT ?::int as max_age", bindings: [55] },
+          query: { kind: "raw", sql: "SELECT $0::int as max_age", bindings: [55] },
         },
       ],
       condition: {

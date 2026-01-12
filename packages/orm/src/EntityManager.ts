@@ -1712,6 +1712,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         if (message) {
           throw new ValidationErrors(message);
         }
+      } else if (e && typeof e === "object" && "constraint_name" in e && typeof e.constraint_name === "string") {
+        // postgres.js errors use `constraint_name` to indicate the constraint name
+        const message = constraintNameToValidationError[e.constraint_name];
+        if (message) {
+          throw new ValidationErrors(message);
+        }
       }
       if (e instanceof InMemoryRollbackError) return [...allFlushedEntities];
       throw e;
@@ -2925,8 +2931,26 @@ function maybeSetupHookOrdering(todos: Record<string, Todo>): Record<string, Tod
  * See https://github.com/brianc/node-postgres/pull/2983
  */
 export function appendStack(err: unknown, dummy: Error): unknown {
-  if (err && typeof err === "object" && "stack" in err) {
-    err.stack += dummy.stack!.replace(/.*\n/, "\n");
+  if (err && typeof err === "object" && "stack" in err && dummy.stack) {
+    try {
+      err.stack += dummy.stack.replace(/.*\n/, "\n");
+    } catch (e: any) {
+      // postgres.js's PostgresError.stack is readonly, so we have to make our own new one
+      const originalStack = String(err.stack);
+      const dummyStackWithoutFirstLine = dummy.stack?.replace(/.*\n/, "\n") || "";
+      // Create a new error object with the same properties
+      const newErr = Object.create(Object.getPrototypeOf(err));
+      // Copy all enumerable properties from the original error
+      Object.assign(newErr, err);
+      // Define a new stack property with the combined stack
+      Object.defineProperty(newErr, "stack", {
+        value: originalStack + dummyStackWithoutFirstLine,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
+      return newErr;
+    }
   }
   return err;
 }

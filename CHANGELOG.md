@@ -1,3 +1,10 @@
+## [1.290.4](https://github.com/joist-orm/joist-orm/compare/v1.290.3...v1.290.4) (2026-01-12)
+
+
+### Bug Fixes
+
+* o(n^2) on clone complexity ([#1697](https://github.com/joist-orm/joist-orm/issues/1697)) ([8f2d2d0](https://github.com/joist-orm/joist-orm/commit/8f2d2d0cffedae421588f8de9552467b3f823e8c))
+
 ## [1.290.3](https://github.com/joist-orm/joist-orm/compare/v1.290.2...v1.290.3) (2026-01-12)
 
 

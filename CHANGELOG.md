@@ -1,3 +1,10 @@
+## [1.290.3](https://github.com/joist-orm/joist-orm/compare/v1.290.2...v1.290.3) (2026-01-12)
+
+
+### Bug Fixes
+
+* Fix nullable text[] arrays. ([#1699](https://github.com/joist-orm/joist-orm/issues/1699)) ([469bc94](https://github.com/joist-orm/joist-orm/commit/469bc94a304ab205e584bc87b7aca34b6e6a46c4))
+
 ## [1.290.2](https://github.com/joist-orm/joist-orm/compare/v1.290.1...v1.290.2) (2026-01-12)
 
 

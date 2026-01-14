@@ -1,3 +1,10 @@
+## [1.290.5](https://github.com/joist-orm/joist-orm/compare/v1.290.4...v1.290.5) (2026-01-14)
+
+
+### Bug Fixes
+
+* Include top tags in entity limit error. ([#1700](https://github.com/joist-orm/joist-orm/issues/1700)) ([bc9f4c6](https://github.com/joist-orm/joist-orm/commit/bc9f4c6ecd51556a8196ecda9740593998281d6a))
+
 ## [1.290.4](https://github.com/joist-orm/joist-orm/compare/v1.290.3...v1.290.4) (2026-01-12)
 
 

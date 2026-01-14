@@ -2400,7 +2400,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     if (set.length === 0) this.#entitiesByTag.set(meta.tagName, set);
     set.push(entity);
     if (this.#entitiesArray.length >= this.entityLimit) {
-      throw new Error(`More than ${this.entityLimit} entities have been instantiated`);
+      const topTypes = [...this.#entitiesByTag.entries()]
+        .map(([tag, entities]) => ({ tag, count: entities.length }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 3)
+        .map(({ tag, count }) => `${tag}=${count}`)
+        .join(", ");
+      throw new Error(`More than ${this.entityLimit} entities have been instantiated (top entities: ${topTypes})`);
     }
 
     // If indexing is enabled for this type, add it...

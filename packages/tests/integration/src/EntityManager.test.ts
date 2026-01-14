@@ -923,7 +923,9 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     em.entityLimit = 3;
     await em.find(Author, {});
-    await expect(em.find(Publisher, {})).rejects.toThrow("More than 3 entities have been instantiated");
+    await expect(em.find(Publisher, {})).rejects.toThrow(
+      "More than 3 entities have been instantiated (top entities: a=2, p=1)",
+    );
   });
 
   it("doesnt allow unknown fields to create", async () => {

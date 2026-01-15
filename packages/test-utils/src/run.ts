@@ -7,6 +7,10 @@ type MaybePromise<T> = T | Promise<T>;
 
 export type ContextFn<C> = (ctx: C) => MaybePromise<C>;
 
+// Used to allow non-mutating run... calls to be run in parallel.
+let flushPromise: Promise<any> | undefined;
+let flushEm: EntityManager | undefined;
+
 /** Runs the `fn` in a dedicated / non-test Unit of Work . */
 export async function run<C extends Context, T>(
   ctx: C,
@@ -14,8 +18,17 @@ export async function run<C extends Context, T>(
   contextFn: ContextFn<C> = newContext,
 ): Promise<T> {
   const { em } = ctx;
-  // Ensure any test data we've setup is flushed
-  await em.flush();
+  // Ensure any test data we've set up is flushed.  If another invocation of `run` is already flushing, then we can just
+  // wait on its promise.  Otherwise, we will get flushLock errors.
+  try {
+    flushPromise ??= em.flush();
+    flushEm ??= em;
+    if (flushEm !== em) fail("cannot use run in parallel with multiple entity managers");
+    await flushPromise;
+  } finally {
+    flushPromise = undefined;
+    flushEm = undefined;
+  }
   const newCtx = await contextFn(ctx);
   const plugin = new RunPlugin(em);
   newCtx.em.addPlugin(plugin);

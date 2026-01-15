@@ -1500,13 +1500,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    *
    * It returns entities that have changed (an entity is considered changed if it has been deleted, inserted, or updated)
    */
-  async flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
-    const flushPromise = this.#flush(flushOptions);
+  flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
     const api = getEmInternalApi(this);
-    api.flushPromise = flushPromise;
-    const result = await flushPromise;
-    api.flushPromise = undefined;
-    return result;
+    api.flushPromise = this.#flush(flushOptions).then((result) => {
+      api.flushPromise = undefined;
+      return result;
+    });
+    return api.flushPromise;
   }
 
   async #flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
@@ -2451,7 +2451,7 @@ export interface EntityManagerInternalApi {
   clearDataloaders(): void;
   clearPreloadedRelations(): void;
   setIsRefreshing(isRefreshing: boolean): void;
-  flushPromise: Promise<Entity[]> | undefined;
+  flushPromise: Promise<any> | undefined;
 }
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {

@@ -1,3 +1,10 @@
+# [1.291.0](https://github.com/joist-orm/joist-orm/compare/v1.290.5...v1.291.0) (2026-01-15)
+
+
+### Features
+
+* allow run calls to execute in parallel ([#1701](https://github.com/joist-orm/joist-orm/issues/1701)) ([9e0e4ea](https://github.com/joist-orm/joist-orm/commit/9e0e4ea0eda9ed8338923ad1b8a38725ae42bf00))
+
 ## [1.290.5](https://github.com/joist-orm/joist-orm/compare/v1.290.4...v1.290.5) (2026-01-14)
 
 

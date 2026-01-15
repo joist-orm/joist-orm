@@ -306,6 +306,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       rm: this.#rm,
       indexManager: this.#indexManager,
       isLoadedCache: this.#isLoadedCache,
+      flushPromise: undefined,
       pluginManager,
 
       isMerging(entity: EntityW): boolean {
@@ -1500,6 +1501,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * It returns entities that have changed (an entity is considered changed if it has been deleted, inserted, or updated)
    */
   async flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
+    const flushPromise = this.#flush(flushOptions);
+    const api = getEmInternalApi(this);
+    api.flushPromise = flushPromise;
+    const result = await flushPromise;
+    api.flushPromise = undefined;
+    return result;
+  }
+
+  async #flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
     if (this.mode === "read-only") throw new ReadOnlyError();
 
     const { skipValidation = false } = flushOptions;
@@ -2441,6 +2451,7 @@ export interface EntityManagerInternalApi {
   clearDataloaders(): void;
   clearPreloadedRelations(): void;
   setIsRefreshing(isRefreshing: boolean): void;
+  flushPromise: Promise<Entity[]> | undefined;
 }
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {

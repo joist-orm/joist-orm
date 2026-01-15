@@ -1,4 +1,4 @@
-import { EntityManager, isEntity } from "joist-orm";
+import { EntityManager, getEmInternalApi, isEntity } from "joist-orm";
 import { fail } from "joist-utils";
 import { Context } from "./context";
 import { RunPlugin } from "./RunPlugin";
@@ -14,8 +14,8 @@ export async function run<C extends Context, T>(
   contextFn: ContextFn<C> = newContext,
 ): Promise<T> {
   const { em } = ctx;
-  // Ensure any test data we've setup is flushed
-  await em.flush();
+  // Ensure any test data we've setup is flushed.  If the em is already flushing, just wait on that promise.
+  await (getEmInternalApi(em).flushPromise ?? em.flush());
   const newCtx = await contextFn(ctx);
   const plugin = new RunPlugin(em);
   newCtx.em.addPlugin(plugin);

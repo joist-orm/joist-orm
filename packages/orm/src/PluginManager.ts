@@ -6,6 +6,13 @@ import { JoinRowTodo, Todo } from "./Todo";
 
 interface PluginMethods {
   /**
+   * Called before a field value is retrieved from an entity via getField.
+   *
+   * @param entity The entity instance being accessed
+   * @param field The field name being retrieved
+   */
+  beforeGetField?(entity: Entity, field: string): void;
+  /**
    * Called before a field value is set on an entity via setField.
    *
    * @param entity The entity instance being modified
@@ -39,7 +46,13 @@ interface PluginMethods {
   afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void;
 }
 
-const pluginMethods = ["beforeSetField", "beforeFind", "afterFind", "afterWrite"] as (keyof PluginMethods)[];
+const pluginMethods = [
+  "beforeGetField",
+  "beforeSetField",
+  "beforeFind",
+  "afterFind",
+  "afterWrite",
+] as (keyof PluginMethods)[];
 const emsSymbol = Symbol("ems");
 /**
  * Base class for plugins that hook into entity lifecycle events.
@@ -120,8 +133,10 @@ export class PluginManager implements Required<PluginMethods> {
       .forEach((plugin) => other.addPlugin(plugin));
   }
 
-  /** Defined as no-op functions initially instead of using optional chaining for performance reasons.  see:
-   * https://adventures.nodeland.dev/archive/noop-functions-vs-optional-chaining-a-performance/ */
+  // Defined as no-op functions initially instead of using optional chaining for performance reasons, see:
+  // https://adventures.nodeland.dev/archive/noop-functions-vs-optional-chaining-a-performance/
+
+  beforeGetField(entity: Entity, field: string): void {}
   beforeSetField(entity: Entity, field: string, newValue: any): void {}
   beforeFind(
     meta: EntityMetadata,

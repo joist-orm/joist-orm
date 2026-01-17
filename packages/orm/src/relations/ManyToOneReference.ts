@@ -160,7 +160,6 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       }
       this._isLoaded = true;
     }
-
     return this.filterDeleted(this.loaded!, opts);
   }
 

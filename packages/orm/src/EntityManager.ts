@@ -87,6 +87,7 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } 
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
+import { runInTrustedContext } from "./trusted";
 import { OptsOf, OrderOf } from "./typeMap";
 import { upsert } from "./upsert";
 import { assertNever, fail, failIfAnyRejected, getOrSet, groupBy, MaybePromise, partition, toArray } from "./utils";
@@ -1478,12 +1479,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * any default logic against the `entities`.
    */
   async setDefaults(entities: Entity[]): Promise<void> {
-    const suppressedTypeErrors: Error[] = [];
-    const entitiesByType = groupBy(
-      entities.filter((e) => e.isNewEntity),
-      (e) => getMetadata(e),
-    );
-    await setAsyncDefaults(suppressedTypeErrors, this.ctx, entitiesByType);
+    return runInTrustedContext(async () => {
+      const suppressedTypeErrors: Error[] = [];
+      const entitiesByType = groupBy(
+        entities.filter((e) => e.isNewEntity),
+        (e) => getMetadata(e),
+      );
+      await setAsyncDefaults(suppressedTypeErrors, this.ctx, entitiesByType);
+    });
   }
 
   /**
@@ -1500,6 +1503,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * It returns entities that have changed (an entity is considered changed if it has been deleted, inserted, or updated)
    */
   async flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
+    return runInTrustedContext(() => this.#flush(flushOptions));
+  }
+
+  async #flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
     if (this.mode === "read-only") throw new ReadOnlyError();
 
     const { skipValidation = false } = flushOptions;

@@ -1,4 +1,4 @@
-import { getMetadata, ImmutableEntitiesPlugin, Plugin } from "joist-orm";
+import { getMetadata, ImmutableEntitiesPlugin, isInTrustedContext, Plugin } from "joist-orm";
 import { Author, Book, Image, newAuthor, newBook, newImage } from "src/entities";
 import { insertAuthor, insertBook } from "src/entities/inserts";
 import { isPreloadingEnabled, newEntityManager } from "src/testEm";
@@ -24,7 +24,7 @@ describe("EntityManger.plugins", () => {
       em2.addPlugin(plugin);
       const author = await em2.load(Author, "a:1");
       plugin.addEntity(author);
-      // This .load should call setField internally, but it shouldn't throw because beforeSetField isn't called.
+      // This .load should call setField trustedly, but it shouldn't throw because beforeSetField isn't called.
       // Unfortunately, I'm not sure if there's a way to assert that `setField` is actually called here
       await expect(() => author.search.load()).resolves.not.toThrow();
     });
@@ -186,7 +186,81 @@ describe("EntityManger.plugins", () => {
       await em.find(Author, {});
       expect(plugin.calls).toEqual([[getMetadata(Author), "find", [expect.objectContaining({})]]]);
     });
+  });
 
-    // TODO: do we want to test every operation here?
+  describe("trusted parameter", () => {
+    class InternalTrackingPlugin extends Plugin {
+      setFieldCalls: { entity: string; field: string; value: any; trusted: boolean }[] = [];
+      getFieldCalls: { entity: string; field: string; trusted: boolean }[] = [];
+
+      beforeSetField(entity: any, field: string, value: any) {
+        this.setFieldCalls.push({ entity: entity.toTaggedString(), field, value, trusted: isInTrustedContext() });
+      }
+
+      beforeGetField(entity: any, field: string) {
+        if (field === "id") return;
+        this.getFieldCalls.push({ entity: entity.toTaggedString(), field, trusted: isInTrustedContext() });
+      }
+    }
+
+    it.withCtx("passes trusted=false for external field access", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new InternalTrackingPlugin();
+      const image = newImage(em);
+      // Add plugin after create to only track our explicit external calls
+      em.addPlugin(plugin);
+      // Given we make both an external read & write
+      const _ = image.fileName;
+      image.fileName = "external_test";
+      // Then we had two getField calls (once for equality check in setField, once for explicit read)
+      const getFileNameCalls = plugin.getFieldCalls.filter((c) => c.field === "fileName");
+      expect(getFileNameCalls).toMatchObject([{ trusted: false }, { trusted: false }]);
+      // And one setField call
+      const setFileNameCalls = plugin.setFieldCalls.filter((c) => c.field === "fileName");
+      expect(setFileNameCalls).toMatchObject([{ value: "external_test", trusted: false }]);
+    });
+
+    it.withCtx("passes trusted=true for setField from lifecycle hooks", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new InternalTrackingPlugin();
+      em.addPlugin(plugin);
+      // Given author has a beforeFlush hook sets `graduated` when setGraduatedInFlush is true
+      const a1 = newAuthor(em);
+      a1.transientFields.setGraduatedInFlush = true;
+      await em.flush();
+      // Then we recorded setField call as trusted
+      const graduatedCalls = plugin.setFieldCalls.filter((c) => c.field === "graduated");
+      expect(graduatedCalls).toMatchObject([{ trusted: true }]);
+    });
+
+    it.withCtx("passes trusted=true for setField from reactive field recalculation", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new InternalTrackingPlugin();
+      em.addPlugin(plugin);
+      // Given Author.numberOfBooks is a reactive field that gets recalculated
+      const a1 = newAuthor(em);
+      newBook(em, { author: a1 });
+      await em.flush();
+      // Then we recorded setField call as trusted
+      const numberOfBooksCalls = plugin.setFieldCalls.filter((c) => c.field === "numberOfBooks");
+      expect(numberOfBooksCalls).toMatchObject([{ trusted: true }]);
+    });
+
+    it.withCtx("passes trusted=true for getField from reactive field recalculation", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new InternalTrackingPlugin();
+      // Given Author.numberOfPublicReviews accesses the BookReview.rating value
+      const a1 = newAuthor(em, { books: [{ reviews: [{ rating: 5 }] }] });
+      newBook(em, { author: a1 });
+      // And we don't add the plugin until before flush
+      em.addPlugin(plugin);
+      await em.flush();
+      // Then we have ~4-5 trusted get calls
+      const trustedGetCalls = plugin.getFieldCalls.filter((c) => c.field === "rating" && c.trusted);
+      expect(trustedGetCalls.length).toBeGreaterThan(0);
+      // And no untrusted get calls
+      const untrustedGetCalls = plugin.getFieldCalls.filter((c) => c.field === "rating" && !c.trusted);
+      expect(untrustedGetCalls.length).toBe(0);
+    });
   });
 });

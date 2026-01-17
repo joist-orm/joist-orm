@@ -1,3 +1,10 @@
+# [1.292.0](https://github.com/joist-orm/joist-orm/compare/v1.291.0...v1.292.0) (2026-01-17)
+
+
+### Features
+
+* Add lensToPath. ([#1704](https://github.com/joist-orm/joist-orm/issues/1704)) ([498a14c](https://github.com/joist-orm/joist-orm/commit/498a14cd77cdef90fe57ac519a78359f4d02344d))
+
 # [1.291.0](https://github.com/joist-orm/joist-orm/compare/v1.290.5...v1.291.0) (2026-01-15)
 
 

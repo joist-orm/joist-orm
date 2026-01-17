@@ -298,6 +298,7 @@ export function isLensLoaded<T, U, V>(start: T | readonly T[], fn: (lens: Lens<T
   return true;
 }
 
+/** Accepts a lens like `a => a.books.reviews` and returns a hint like `{ books: { reviews: {} } }`. */
 export function lensToLoadHint<T extends Entity, U, V>(fn: (lens: Lens<T>) => Lens<U, V>): LoadHint<T> {
   const paths = collectPaths(fn);
   let current = {};
@@ -305,6 +306,11 @@ export function lensToLoadHint<T extends Entity, U, V>(fn: (lens: Lens<T>) => Le
     current = { [path]: current };
   }
   return current as LoadHint<T>;
+}
+
+/** Accepts a lens like `a => a.books.reviews` and returns the paths like `[books, reviews]`. */
+export function lensToPath<T extends Entity, U, V>(fn: (lens: Lens<T>) => Lens<U, V>): string[] {
+  return collectPaths(fn);
 }
 
 function isNotLoaded(object: any, path: string): boolean {

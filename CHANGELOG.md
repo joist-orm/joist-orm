@@ -1,3 +1,10 @@
+# [1.293.0](https://github.com/joist-orm/joist-orm/compare/v1.292.0...v1.293.0) (2026-01-18)
+
+
+### Features
+
+* Add Plugin.beforeGetField. ([#1705](https://github.com/joist-orm/joist-orm/issues/1705)) ([2dc1407](https://github.com/joist-orm/joist-orm/commit/2dc1407bc056aeadfb3998ffa97ff69138e85d50))
+
 # [1.292.0](https://github.com/joist-orm/joist-orm/compare/v1.291.0...v1.292.0) (2026-01-17)
 
 

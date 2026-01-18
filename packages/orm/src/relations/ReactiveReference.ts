@@ -135,7 +135,7 @@ export class ReactiveReferenceImpl<
     // We can be initialized with [entity | id | undefined], and if it's entity or id, then setImpl
     // will set loaded appropriately; but if we're initialized undefined, then mark loaded here
     if (entity.isNewEntity) {
-      const isLoaded = isEntity(this.current()) ? true : undefined;
+      // const isLoaded = isEntity(this.current()) ? true : undefined;
     }
     // If the property transformer is not enabled, then the RR will not be in the relations map because they are
     // defined in the implementation file and not the codegen file.  So we should insert ourselves regardless.

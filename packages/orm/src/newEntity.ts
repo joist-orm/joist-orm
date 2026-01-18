@@ -12,7 +12,7 @@ const lazySymbol = Symbol("lazy");
  * Constructs an instance of `cstr` but with relations all made lazy.
  *
  * Specifically we avoid going through `new` b/c that invokes the `constructor` which instantiates
- * the instance-level class fields/relations like `hooks = hasMany`.
+ * the instance-level class fields/relations like `books = hasMany`.
  *
  * Instead, we just call `Object.create`, which does not make any constructor/super calls, and instead
  * let any `this.books` accesses resolve to the getters we've installed on the prototype.

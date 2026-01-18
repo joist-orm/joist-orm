@@ -1,8 +1,7 @@
 import { getMetadata, ImmutableEntitiesPlugin, Plugin } from "joist-orm";
-import { describe } from "node:test";
-import { Author, Image, newAuthor } from "src/entities";
-import { insertAuthor } from "src/entities/inserts";
-import { newEntityManager } from "src/testEm";
+import { Author, Book, Image, newAuthor, newBook, newImage } from "src/entities";
+import { insertAuthor, insertBook } from "src/entities/inserts";
+import { isPreloadingEnabled, newEntityManager } from "src/testEm";
 import { twoOf } from "src/utils";
 
 describe("EntityManger.plugins", () => {
@@ -81,6 +80,70 @@ describe("EntityManger.plugins", () => {
       expect(plugin.calls).toHaveLength(2);
       expect(plugin.calls[1]).toEqual([image, "fileName", "original name"]);
       expect(plugin.originalValue[1]).toEqual("new name");
+    });
+
+    it.withCtx("is called when setting a m2o relation", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new BeforeSetFieldPlugin();
+      const a1 = newAuthor(em);
+      const a2 = newAuthor(em);
+      const b1 = newBook(em, { author: a1 });
+      em.addPlugin(plugin);
+      b1.author.set(a2);
+      expect(plugin.calls).toMatchEntity([[b1, "author", a2]]);
+    });
+  });
+
+  describe("beforeGetField", () => {
+    class BeforeGetFieldPlugin extends Plugin {
+      calls: Parameters<Required<Plugin>["beforeGetField"]>[] = [];
+
+      beforeGetField(...args: Parameters<Required<Plugin>["beforeGetField"]>) {
+        this.calls.push(args);
+      }
+    }
+
+    it.withCtx("is called before an entity's field is retrieved", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new BeforeGetFieldPlugin();
+      const image = newImage(em);
+      em.addPlugin(plugin);
+      expect(plugin.calls).toHaveLength(0);
+      const _ = image.fileName;
+      expect(plugin.calls).toEqual([[image, "fileName"]]);
+    });
+
+    it.withCtx("is called each time a field is accessed", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new BeforeGetFieldPlugin();
+      const image = newImage(em);
+      em.addPlugin(plugin);
+      const _ = image.fileName;
+      const _2 = image.fileName;
+      expect(plugin.calls).toEqual([
+        [image, "fileName"],
+        [image, "fileName"],
+      ]);
+    });
+
+    it.withCtx("is called when accessing a m2o relation", async (ctx) => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const { em } = ctx;
+      const plugin = new BeforeGetFieldPlugin();
+      // Add the plugin before, b/c if join-preloading is enabled, we'll `getField` the value during
+      // populate, and then m2o.get will be cached and not hit `getField`.
+      // ...maybe ManyToOneReferenceImpl.doGet should also call beforeGetField on every invocation?
+      em.addPlugin(plugin);
+      const b1 = await em.load(Book, "b:1", "author");
+      const _ = b1.author.get;
+      if (isPreloadingEnabled) {
+        expect(plugin.calls[plugin.calls.length - 1]).toMatchEntity([b1, "author"]);
+      } else {
+        // If we're not preloaded, then the `m2o.load` checks if the value changed while in-flight,
+        // which accesses `author.id`, so look at the 2nd to last call to find `book.author`.
+        expect(plugin.calls[plugin.calls.length - 2]).toMatchEntity([b1, "author"]);
+      }
     });
   });
 

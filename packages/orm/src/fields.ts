@@ -14,6 +14,9 @@ import { fail } from "./utils";
  * called by trusted codegen anyway.
  */
 export function getField(entity: Entity, fieldName: string): any {
+  const { em } = entity;
+  // Need to know if we're an "internal" call (from hooks, RFs)...
+  getEmInternalApi(em).pluginManager.beforeGetField(entity, fieldName);
   // We may not have converted the database column value into domain values yet
   const { data, row } = getInstanceData(entity);
   if (fieldName in data) {

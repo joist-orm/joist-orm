@@ -1,7 +1,3 @@
-import { Knex } from "knex";
-import { types } from "pg";
-import { builtins, getTypeParser } from "pg-types";
-import array from "postgres-array";
 import {
   buildRawQuery,
   cleanSql,
@@ -36,6 +32,10 @@ import {
   UpdateOp,
   zeroTo,
 } from "joist-core";
+import { Knex } from "knex";
+import { types } from "pg";
+import { builtins, getTypeParser } from "pg-types";
+import array from "postgres-array";
 
 export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;

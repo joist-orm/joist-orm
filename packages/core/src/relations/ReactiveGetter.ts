@@ -30,9 +30,10 @@ export function hasReactiveGetter<T extends Entity, const H extends ShallowReact
   });
 }
 
-export class ReactiveGetterImpl<T extends Entity, const H extends ShallowReactiveHint<T>, V>
-  implements ReactiveGetter<T, V>
-{
+export class ReactiveGetterImpl<T extends Entity, const H extends ShallowReactiveHint<T>, V> implements ReactiveGetter<
+  T,
+  V
+> {
   readonly #entity: T;
   readonly #fieldName: keyof T & string;
   readonly #hint: H;

@@ -36,13 +36,6 @@ export {
 } from "./PolymorphicReference";
 export { ReactiveField, hasReactiveField, isReactiveField } from "./ReactiveField";
 export { ReactiveGetter, hasReactiveGetter, isReactiveGetter } from "./ReactiveGetter";
-export { hasReactiveQueryField, isReactiveQueryField } from "./ReactiveQueryField";
-export {
-  ReactiveReference,
-  ReactiveReferenceImpl,
-  hasReactiveReference,
-  isReactiveReference,
-} from "./ReactiveReference";
 export {
   ReactiveManyToMany,
   ReactiveManyToManyImpl,
@@ -55,6 +48,13 @@ export {
   hasReactiveManyToManyOtherSide,
   isReactiveManyToManyOtherSide,
 } from "./ReactiveManyToManyOtherSide";
+export { hasReactiveQueryField, isReactiveQueryField } from "./ReactiveQueryField";
+export {
+  ReactiveReference,
+  ReactiveReferenceImpl,
+  hasReactiveReference,
+  isReactiveReference,
+} from "./ReactiveReference";
 export {
   LoadedReadOnlyCollection,
   ReadOnlyCollection,

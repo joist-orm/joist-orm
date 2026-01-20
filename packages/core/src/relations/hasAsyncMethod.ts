@@ -25,9 +25,11 @@ export function hasAsyncMethod<T extends Entity, const H extends LoadHint<T>, A 
   });
 }
 
-export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends unknown[], V>
-  implements AsyncMethod<T, A, V>
-{
+export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends unknown[], V> implements AsyncMethod<
+  T,
+  A,
+  V
+> {
   private loaded = false;
   private loadPromise: Promise<any> | undefined;
 

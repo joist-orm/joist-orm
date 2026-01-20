@@ -1,7 +1,7 @@
-import { Temporal } from "temporal-polyfill"
 import { type GraphQLResolveInfo, GraphQLScalarType } from "graphql";
 import type { Context } from "src/context.js";
 import { Author, Book, Color } from "src/entities/index.js";
+import { Temporal } from "temporal-polyfill";
 
 export interface Resolvers {
   Author: AuthorResolvers;

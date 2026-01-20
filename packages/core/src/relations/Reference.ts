@@ -35,8 +35,11 @@ export interface Reference<T extends Entity, U extends Entity, N extends never |
 }
 
 /** Adds a known-safe `get` accessor. */
-export interface LoadedReference<T extends Entity, U extends Entity, N extends never | undefined>
-  extends Reference<T, U, N> {
+export interface LoadedReference<T extends Entity, U extends Entity, N extends never | undefined> extends Reference<
+  T,
+  U,
+  N
+> {
   // Since we've fetched the entity from the db, we're going to omit out the "| undefined" from Reference.id
   // which handles "this reference is set to a new entity" and just assume the id is there (or else N which
   // is for nullable references, which will just always be potentially `undefined`).

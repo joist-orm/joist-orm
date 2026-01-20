@@ -42,8 +42,11 @@ export function isPolymorphicReference(maybeReference: any): maybeReference is P
  *
  * The `U` generic will be the type union of `Author | Book`.
  */
-export interface PolymorphicReference<T extends Entity, U extends Entity, N extends never | undefined>
-  extends Reference<T, U, N> {
+export interface PolymorphicReference<
+  T extends Entity,
+  U extends Entity,
+  N extends never | undefined,
+> extends Reference<T, U, N> {
   /** Returns the id of the current assigned entity, or a runtime error if either 1) unset or 2) set to a new entity that doesn't have an `id` yet. */
   id: IdOf<U>;
 

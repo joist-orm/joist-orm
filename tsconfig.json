@@ -1,6 +1,7 @@
 {
   "references": [
     { "path": "./packages/codegen" },
+    { "path": "./packages/core" },
     { "path": "./packages/drivers/bun-pg" },
     { "path": "./packages/graphql-codegen" },
     { "path": "./packages/graphql-resolver-utils" },

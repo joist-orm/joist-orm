@@ -3,28 +3,39 @@ import { types } from "pg";
 import { builtins, getTypeParser } from "pg-types";
 import array from "postgres-array";
 import {
+  buildRawQuery,
+  cleanSql,
+  DeleteOp,
+  Driver,
   driverAfterBegin,
   driverAfterCommit,
   driverBeforeBegin,
   driverBeforeCommit,
+  ensureRectangularArraySizes,
   EntityManager,
   fail,
+  generateOps,
   getMetadata,
+  getRuntimeConfig,
+  IdAssigner,
+  InsertOp,
+  JoinRow,
+  JoinRowOperation,
+  JoinRowTodo,
   keyToNumber,
+  kq,
+  kqDot,
+  ManyToManyLike,
+  OpColumn,
   ParsedFindQuery,
+  partition,
   PreloadPlugin,
   RuntimeConfig,
-} from "../index";
-import { JoinRow, JoinRowOperation, ManyToManyLike } from "../JoinRows";
-import { kq, kqDot } from "../keywords";
-import { getRuntimeConfig } from "../runtimeConfig";
-import { JoinRowTodo, Todo } from "../Todo";
-import { ensureRectangularArraySizes } from "../unnest";
-import { cleanSql, partition, zeroTo } from "../utils";
-import { buildRawQuery } from "./buildRawQuery";
-import { Driver } from "./Driver";
-import { DeleteOp, generateOps, InsertOp, OpColumn, UpdateOp } from "./EntityWriter";
-import { IdAssigner, SequenceIdAssigner } from "./IdAssigner";
+  SequenceIdAssigner,
+  Todo,
+  UpdateOp,
+  zeroTo,
+} from "joist-core";
 
 export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;
@@ -206,7 +217,6 @@ function buildUnnestCte(tableName: string, columns: OpColumn[], columnValues: an
 
 async function m2mBatchInsert(txn: Knex.Transaction, joinTableName: string, m2m: ManyToManyLike, newRows: JoinRow[]) {
   if (newRows.length === 0) return;
-  // const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
   const sql = cleanSql(`
     INSERT INTO ${kq(joinTableName)} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
     VALUES ${zeroTo(newRows.length)

@@ -6,9 +6,5 @@
     "baseUrl": "./src"
   },
   "include": ["./src"],
-  "references": [
-    { "path": "../core" },
-    { "path": "../codegen" },
-    { "path": "../migration-utils" }
-  ]
+  "references": [{ "path": "../utils" }]
 }

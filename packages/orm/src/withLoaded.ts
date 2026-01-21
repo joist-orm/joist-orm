@@ -1,5 +1,6 @@
 import { Entity } from "./Entity";
 import { assertLoaded, Loaded, LoadHint } from "./loadHints";
+import { NormalizeHint } from "./normalizeHints";
 import {
   isAsyncProperty,
   isLoadedAsyncProperty,
@@ -20,8 +21,16 @@ import { fail, MaybePromise, maybePromiseThen } from "./utils";
 
 // This type seems is overly complex for references, but it's necessary in order to ensure that potential
 // undefined references are properly propagated and that polymorphic references don't overwhelm the type system.
-export type WithLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>> = T & {
-  [K in keyof L]: L[K] extends PolymorphicReference<T, infer U, infer N>
+export type WithLoaded<
+  T extends Entity,
+  H /* extends LoadedHint<T> | ReactiveHint<T> is implied but enforced by callers */,
+  L = Loaded<T, H>,
+> = {
+  [K in keyof L as K extends IsWithLoadedKey<T, H, K> ? K : never]: L[K] extends PolymorphicReference<
+    T,
+    infer U,
+    infer N
+  >
     ? L[K] extends LoadedReference<T, U, N>
       ? U | N
       : L[K]
@@ -38,6 +47,8 @@ export type WithLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded
               ? V
               : L[K];
 };
+
+type IsWithLoadedKey<T extends Entity, H, K> = K extends keyof NormalizeHint<H> ? true : false;
 
 /**
  * Allows destructuring against entities to more succinctly access loaded relations.
@@ -59,17 +70,15 @@ export type WithLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded
  * This is also why the function is not recursive, as returning nested proxies could result in
  * them inadvertently being stored and passed to code that expects a real entity.
  */
-export function withLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
-  promise: Promise<L>,
-): Promise<WithLoaded<T, H, L>>;
-export function withLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
-  loaded: L,
-): WithLoaded<T, H, L>;
-export function withLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
-  loadedOrPromise: MaybePromise<L> | L,
-): MaybePromise<WithLoaded<T, H, L>> {
+export function withLoaded<T extends Entity, const H extends LoadHint<T>>(
+  promise: Promise<Loaded<T, H>>,
+): Promise<WithLoaded<T, H>>;
+export function withLoaded<T extends Entity, const H extends LoadHint<T>>(loaded: Loaded<T, H>): WithLoaded<T, H>;
+export function withLoaded<T extends Entity, const H extends LoadHint<T>>(
+  maybePromise: MaybePromise<Loaded<T, H>>,
+): MaybePromise<WithLoaded<T, H>> {
   return maybePromiseThen(
-    loadedOrPromise,
+    maybePromise,
     (loaded) =>
       new Proxy(loaded, {
         get: (target, prop) => {
@@ -95,7 +104,7 @@ export function withLoaded<T extends Entity, H extends LoadHint<T>, L extends Lo
             return value;
           }
         },
-      }) as WithLoaded<T, H, L>,
+      }) as WithLoaded<T, H>,
   );
 }
 

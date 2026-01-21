@@ -9681,6 +9681,8 @@ __metadata:
   peerDependenciesMeta:
     node-pg-migrate:
       optional: true
+  bin:
+    joist-codegen: ./build/codegen.js
   languageName: unknown
   linkType: soft
 

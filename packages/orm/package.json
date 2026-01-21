@@ -12,6 +12,9 @@
   },
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "bin": {
+    "joist-codegen": "./build/codegen.js"
+  },
   "exports": {
     ".": {
       "types": "./build/index.d.ts",

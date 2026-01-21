@@ -9,7 +9,7 @@ import { EntityManager } from "./EntityManager";
  * snippet in each entity's `...Codegen` file.
  *
  * ```ts
- * declare module "joist-orm" {
+ * declare module "joist-core" {
  *   interface TypeMap {
  *     Author: { optsType: AuthorOpts; fieldsType: AuthorFields; filterType: AuthorFilter };
  *   }

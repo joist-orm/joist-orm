@@ -13,7 +13,8 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "bin": {
-    "joist-codegen": "./build/codegen.js"
+    "joist-codegen": "./build/codegen.js",
+    "joist-pg-migrate": "./build/pg-migrate.js"
   },
   "exports": {
     ".": {
@@ -24,9 +25,9 @@
       "types": "./build/codegen.d.ts",
       "default": "./build/codegen.js"
     },
-    "./migration-utils": {
-      "types": "./build/migration-utils.d.ts",
-      "default": "./build/migration-utils.js"
+    "./pg-migrate": {
+      "types": "./build/pg-migrate.d.ts",
+      "default": "./build/pg-migrate.js"
     },
     "./graphql": {
       "types": "./build/graphql-export.d.ts",

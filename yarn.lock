@@ -9683,6 +9683,7 @@ __metadata:
       optional: true
   bin:
     joist-codegen: ./build/codegen.js
+    joist-pg-migrate: ./build/pg-migrate.js
   languageName: unknown
   linkType: soft
 

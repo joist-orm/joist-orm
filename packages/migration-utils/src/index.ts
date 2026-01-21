@@ -5,7 +5,7 @@ import { runMigrationsIfNeeded } from "./migrate";
 export * from "./migrate";
 export * from "./utils";
 
-async function main(): Promise<void> {
+export async function joistMigrate(): Promise<void> {
   const client = new Client(newPgConnectionConfig());
   await client.connect();
   try {
@@ -20,7 +20,7 @@ if (require.main === module) {
   if (Object.fromEntries === undefined) {
     throw new Error("Joist requires Node v12.4.0+");
   }
-  main().catch((err) => {
+  joistMigrate().catch((err) => {
     console.error(err);
     process.exit(1);
   });

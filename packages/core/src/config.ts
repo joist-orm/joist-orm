@@ -487,9 +487,10 @@ export function findUserCodeLine(lines: string[]): string {
     lines.find((line) => {
       // When running Joist's own integration tests, if we ignore `/joist-orm/`, we'll end up ignoring
       // everything because `joist-orm` is the name of the repository/working copy itself.
-      const withinWorkingCopyJoist = line.includes("/packages/orm/");
+      const withinWorkingCopyJoist = line.includes("/packages/orm/") || line.includes("/packages/core");
       // But once we're not in a working copy, assume any `/joist-orm/` in the path === internal orm stack frames
-      const withinProductionJoist = !withinWorkingCopyJoist && line.includes("/joist-orm/src/");
+      const withinProductionJoist =
+        !withinWorkingCopyJoist && (line.includes("/joist-orm/src/") || line.includes("/joist-core/src"));
       const nodeInternals = line.includes("node:internal/") || line.includes("Promise.all");
       const isUserCode = !withinWorkingCopyJoist && !withinProductionJoist && !nodeInternals;
       // const isRecalc = line.includes(".recalcPending");

@@ -14,13 +14,27 @@
   "types": "build/index.d.ts",
   "typesVersions": {
     "*": {
-      "pg": ["build/postgres-driver.d.ts"],
-      "codegen": ["build/codegen.d.ts"],
-      "pg-migrate": ["build/pg-migrate.d.ts"],
-      "graphql": ["build/graphql-export.d.ts"],
-      "graphql-codegen": ["build/graphql-codegen-export.d.ts"],
-      "tests": ["build/tests-export.d.ts"],
-      "knex": ["build/knex-export.d.ts"]
+      "pg": [
+        "build/postgres-driver.d.ts"
+      ],
+      "codegen": [
+        "build/codegen.d.ts"
+      ],
+      "pg-migrate": [
+        "build/pg-migrate.d.ts"
+      ],
+      "graphql": [
+        "build/graphql-export.d.ts"
+      ],
+      "graphql-codegen": [
+        "build/graphql-codegen-export.d.ts"
+      ],
+      "tests": [
+        "build/tests-export.d.ts"
+      ],
+      "knex": [
+        "build/knex-export.d.ts"
+      ]
     }
   },
   "bin": {

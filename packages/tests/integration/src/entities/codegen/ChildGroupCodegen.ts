@@ -117,7 +117,7 @@ childGroupConfig.addRule(newRequiredRule("updatedAt"));
 childGroupConfig.addRule(newRequiredRule("childGroup"));
 childGroupConfig.addRule(newRequiredRule("parentGroup"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     ChildGroup: {
       entityType: ChildGroup;

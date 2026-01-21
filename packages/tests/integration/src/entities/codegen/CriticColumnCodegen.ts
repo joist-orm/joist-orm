@@ -99,7 +99,7 @@ criticColumnConfig.addRule(newRequiredRule("createdAt"));
 criticColumnConfig.addRule(newRequiredRule("updatedAt"));
 criticColumnConfig.addRule(newRequiredRule("critic"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     CriticColumn: {
       entityType: CriticColumn;

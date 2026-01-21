@@ -85,7 +85,7 @@ export interface SmallPublisherGroupFactoryExtras {
 
 export const smallPublisherGroupConfig = new ConfigApi<SmallPublisherGroup, Context>();
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     SmallPublisherGroup: {
       entityType: SmallPublisherGroup;

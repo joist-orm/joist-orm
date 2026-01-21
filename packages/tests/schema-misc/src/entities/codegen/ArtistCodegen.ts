@@ -102,7 +102,7 @@ artistConfig.addRule(newRequiredRule("lastName"));
 artistConfig.addRule(newRequiredRule("createdAt"));
 artistConfig.addRule(newRequiredRule("updatedAt"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     Artist: {
       entityType: Artist;

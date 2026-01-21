@@ -116,7 +116,7 @@ taskItemConfig.addRule(newRequiredRule("updatedAt"));
 taskItemConfig.addRule("newTask", mustBeSubType("newTask"));
 taskItemConfig.addRule("oldTask", mustBeSubType("oldTask"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     TaskItem: {
       entityType: TaskItem;

@@ -401,7 +401,7 @@ authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
 authorConfig.setDefault("isFunny", false);
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     Author: {
       entityType: Author;

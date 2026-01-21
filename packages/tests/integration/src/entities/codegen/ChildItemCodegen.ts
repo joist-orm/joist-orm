@@ -108,7 +108,7 @@ childItemConfig.addRule(newRequiredRule("updatedAt"));
 childItemConfig.addRule(newRequiredRule("childGroup"));
 childItemConfig.addRule(newRequiredRule("parentItem"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     ChildItem: {
       entityType: ChildItem;

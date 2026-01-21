@@ -133,7 +133,7 @@ publisherGroupConfig.addRule("numberOfBookReviewsFormatted", newRequiredRule("nu
 publisherGroupConfig.addRule(newRequiredRule("createdAt"));
 publisherGroupConfig.addRule(newRequiredRule("updatedAt"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     PublisherGroup: {
       entityType: PublisherGroup;

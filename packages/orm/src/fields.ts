@@ -15,8 +15,8 @@ import { fail } from "./utils";
  */
 export function getField(entity: Entity, fieldName: string): any {
   const { em } = entity;
-  // Need to know if we're an "internal" call (from hooks, RFs)...
-  getEmInternalApi(em).pluginManager.beforeGetField(entity, fieldName);
+  const api = getEmInternalApi(em);
+  api.pluginManager.beforeGetField(entity, fieldName);
   // We may not have converted the database column value into domain values yet
   const { data, row } = getInstanceData(entity);
   if (fieldName in data) {
@@ -61,6 +61,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   const api = getEmInternalApi(em);
   const { rm, pluginManager, indexManager, fieldLogger, isLoadedCache } = api;
 
+  // If we're flushing, only allow writes from hooks
   api.checkWritesAllowed();
 
   // Tell any `#isLoaded` or `#value` caches that they might be stale

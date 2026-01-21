@@ -5,6 +5,7 @@ import { Reactable } from "./config";
 import { EntityManager, getEmInternalApi, NoIdError } from "./index";
 import { globalLogger, ReactionLogger } from "./logging/ReactionLogger";
 import { followReverseHint } from "./reactiveHints";
+import { runInTrustedContext } from "./trusted";
 
 export type ReactiveAction = { key: string; r: Reactable; entity: Entity };
 /**
@@ -179,7 +180,9 @@ export class ReactionsManager {
       // Use allSettled so that we can watch for derived values that want to use an entity's id
       // i.e. they can fail, but we'll queue them from later.
       const startTime = this.logger?.now() ?? 0;
-      const results = await Promise.allSettled(actions.map((a) => this.#doAction(a)));
+      const results = await runInTrustedContext(() =>
+        Promise.allSettled(actions.map((a) => this.#doAction(a))),
+      );
       const endTime = this.logger?.now() ?? 0;
       this.logger?.logLoadingTime(this.em, endTime - startTime);
 
@@ -206,7 +209,9 @@ export class ReactionsManager {
         await this.em.assignNewIds();
         const actions = [...actionsPendingAssignedIds.values()];
         const startTime = this.logger?.now() ?? 0;
-        const results = await Promise.allSettled(actions.map((a) => this.#doAction(a)));
+        const results = await runInTrustedContext(() =>
+          Promise.allSettled(actions.map((a) => this.#doAction(a))),
+        );
         const endTime = this.logger?.now() ?? 0;
         this.logger?.logLoadingTime(this.em, endTime - startTime);
         results.forEach((result, i) => {
@@ -240,8 +245,8 @@ export class ReactionsManager {
     this.actionsPendingTypeErrors.clear();
 
     const startTime = this.logger?.now() ?? 0;
-    const results = await Promise.allSettled(
-      actions.filter((a) => !a.entity.isDeletedEntity).map((a) => this.#doAction(a)),
+    const results = await runInTrustedContext(() =>
+      Promise.allSettled(actions.filter((a) => !a.entity.isDeletedEntity).map((a) => this.#doAction(a))),
     );
     const endTime = this.logger?.now() ?? 0;
     this.logger?.logLoadingTime(this.em, endTime - startTime);

@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, expect } from "bun:test";
-import { newPgConnectionConfig, PostgresDriver } from "joist-orm";
+import { newPgConnectionConfig } from "joist-orm";
+import { PostgresDriver } from "joist-orm/pg";
 import { toMatchEntity } from "joist-test-utils";
 import { knex as createKnex, Knex } from "knex";
 import { EntityManager } from "src/entities";

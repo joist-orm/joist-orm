@@ -1,4 +1,5 @@
-import { type Driver, JsonAggregatePreloader, PostgresDriver } from "joist-orm";
+import { type Driver, JsonAggregatePreloader } from "joist-orm";
+import { PostgresDriver } from "joist-orm/pg";
 import { newPgConnectionConfig } from "joist-utils";
 import type { Knex } from "knex";
 import createKnex from "knex";

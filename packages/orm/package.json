@@ -12,6 +12,17 @@
   },
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "pg": ["build/postgres-driver.d.ts"],
+      "codegen": ["build/codegen.d.ts"],
+      "pg-migrate": ["build/pg-migrate.d.ts"],
+      "graphql": ["build/graphql-export.d.ts"],
+      "graphql-codegen": ["build/graphql-codegen-export.d.ts"],
+      "tests": ["build/tests-export.d.ts"],
+      "knex": ["build/knex-export.d.ts"]
+    }
+  },
   "bin": {
     "joist-codegen": "./build/codegen.js",
     "joist-pg-migrate": "./build/pg-migrate.js"
@@ -46,8 +57,8 @@
       "default": "./build/knex-export.js"
     },
     "./pg": {
-      "types": "./build/pg.d.ts",
-      "default": "./build/pg.js"
+      "types": "./build/postgres-driver.d.ts",
+      "default": "./build/postgres-driver.js"
     }
   },
   "scripts": {

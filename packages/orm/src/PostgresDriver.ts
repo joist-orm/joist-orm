@@ -33,7 +33,7 @@ import {
   zeroTo,
 } from "joist-core";
 import { Knex } from "knex";
-import { types } from "pg";
+import pg from "pg";
 import { builtins, getTypeParser } from "pg-types";
 import array from "postgres-array";
 
@@ -298,16 +298,16 @@ export function setupLatestPgTypes(temporal: RuntimeConfig["temporal"]): void {
     const noop = (s: string) => s;
     const noopArray = (s: string) => array.parse(s, noop);
 
-    const { TIMESTAMP, TIMESTAMPTZ, DATE } = types.builtins;
-    types.setTypeParser(DATE, noop);
-    types.setTypeParser(TIMESTAMP, noop);
-    types.setTypeParser(TIMESTAMPTZ, noop);
+    const { TIMESTAMP, TIMESTAMPTZ, DATE } = pg.types.builtins;
+    pg.types.setTypeParser(DATE, noop);
+    pg.types.setTypeParser(TIMESTAMP, noop);
+    pg.types.setTypeParser(TIMESTAMPTZ, noop);
 
     // Use `as number` b/c the typings of shadowed pg-types from `pg` and `pg-types` top-level don't line up
-    types.setTypeParser(1182 as number, noopArray); // date[]
-    types.setTypeParser(1115 as number, noopArray); // timestamp[]
-    types.setTypeParser(1185 as number, noopArray); // timestamptz[]
+    pg.types.setTypeParser(1182 as number, noopArray); // date[]
+    pg.types.setTypeParser(1115 as number, noopArray); // timestamp[]
+    pg.types.setTypeParser(1185 as number, noopArray); // timestamptz[]
   } else {
-    types.setTypeParser(types.builtins.TIMESTAMPTZ, getTypeParser(builtins.TIMESTAMPTZ));
+    pg.types.setTypeParser(pg.types.builtins.TIMESTAMPTZ, getTypeParser(builtins.TIMESTAMPTZ));
   }
 }

@@ -24,6 +24,22 @@
     "./migration-utils": {
       "types": "./build/migration-utils.d.ts",
       "default": "./build/migration-utils.js"
+    },
+    "./graphql": {
+      "types": "./build/graphql-export.d.ts",
+      "default": "./build/graphql-export.js"
+    },
+    "./graphql-codegen": {
+      "types": "./build/graphql-codegen-export.d.ts",
+      "default": "./build/graphql-codegen-export.js"
+    },
+    "./tests": {
+      "types": "./build/tests-export.d.ts",
+      "default": "./build/tests-export.js"
+    },
+    "./knex": {
+      "types": "./build/knex-export.d.ts",
+      "default": "./build/knex-export.js"
     }
   },
   "scripts": {
@@ -36,7 +52,12 @@
   "dependencies": {
     "joist-codegen": "workspace:*",
     "joist-core": "workspace:*",
+    "joist-graphql-codegen": "workspace:*",
+    "joist-graphql-resolver-utils": "workspace:*",
+    "joist-knex": "workspace:*",
     "joist-migration-utils": "workspace:*",
+    "joist-test-utils": "workspace:*",
+    "joist-utils": "workspace:*",
     "knex": "^3.1.0",
     "pg": "^8.16.3",
     "pg-types": "^4.1.0",

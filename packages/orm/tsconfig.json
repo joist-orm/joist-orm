@@ -9,6 +9,9 @@
   "references": [
     { "path": "../core" },
     { "path": "../codegen" },
-    { "path": "../migration-utils" }
+    { "path": "../graphql-codegen" },
+    { "path": "../knex" },
+    { "path": "../migration-utils" },
+    { "path": "../utils" }
   ]
 }

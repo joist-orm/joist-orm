@@ -120,6 +120,7 @@ export {
 export { getRuntimeConfig, setRuntimeConfig, type RuntimeConfig } from "./runtimeConfig";
 export * from "./serde";
 export * from "./temporalMappers";
+export { isInTrustedContext, runInTrustedContext } from "./trusted";
 export * from "./typeMap";
 export { buildUnnestCte, ensureRectangularArraySizes } from "./unnest";
 export { DeepPartialOrNull, updatePartial, upsert } from "./upsert";

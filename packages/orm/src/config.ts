@@ -261,6 +261,10 @@ export class ConfigApi<T extends Entity, C> {
       }
       return fn(entity as Loaded<T, H>, ctx);
     };
+    const setExplicitName = "name" in opts;
+    if (!setExplicitName && this.__data.reactions.find((r) => r.name === name)) {
+      throw new Error(`addReaction already exists for ${name}, use an explicit name to override`);
+    }
     this.__data.reactions.push({ name, fn: wrappedFn, hint, runOnce });
   }
 

@@ -1,3 +1,10 @@
+# [1.294.0](https://github.com/joist-orm/joist-orm/compare/v1.293.0...v1.294.0) (2026-01-21)
+
+
+### Features
+
+* Track internal calls ([#1707](https://github.com/joist-orm/joist-orm/issues/1707)) ([f1e98f9](https://github.com/joist-orm/joist-orm/commit/f1e98f96a965d9431130d2951d4e6b6fdb5943a3))
+
 # [1.293.0](https://github.com/joist-orm/joist-orm/compare/v1.292.0...v1.293.0) (2026-01-18)
 
 

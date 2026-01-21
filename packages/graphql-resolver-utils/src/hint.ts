@@ -7,7 +7,7 @@ import {
   GraphQLResolveInfo,
   isObjectType,
 } from "graphql/type";
-import { Entity, EntityMetadata, LoadHint } from "joist-orm";
+import { Entity, EntityMetadata, LoadHint } from "joist-core";
 
 /** Returns a load hint for the given `meta` entity at the `info` node.populate`. */
 export function convertInfoToLoadHint<T extends Entity>(

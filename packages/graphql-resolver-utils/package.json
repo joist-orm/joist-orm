@@ -21,7 +21,7 @@
   ],
   "dependencies": {
     "graphql": "^16.11.0",
-    "joist-orm": "workspace:*",
+    "joist-core": "workspace:*",
     "joist-test-utils": "workspace:*"
   },
   "devDependencies": {

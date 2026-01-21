@@ -412,14 +412,18 @@ export class PolymorphicKeySerde implements FieldSerde {
       isNullableArray: false,
       otherMetadata: comp.otherMetadata,
       dbValue(data: any): any {
-        const id = maybeResolveReferenceToId(data[fieldName]);
-        const cstr = id ? getConstructorFromTaggedId(id) : undefined;
+        const value = data[fieldName];
+        const id = maybeResolveReferenceToId(value);
+        const cstr = isEntity(value) ? value.constructor : id ? getConstructorFromTaggedId(id) : undefined;
         // We'll have multiple columns, i.e. [parent_author_id, parent_book_id], and each column
         // will only return a value if the `id` matches its type, i.e. `parent_author_id=a:1` will
         // return 1, but `parent_book_id` will return null.
+        const otherMeta = comp.otherMetadata();
         const idAppliesToThisColumn = hasMultipleComponentsWithSameBaseType
-          ? cstr === comp.otherMetadata().cstr
-          : cstr === getBaseMeta(comp.otherMetadata()).cstr;
+          ? cstr === otherMeta.cstr
+          : cstr === otherMeta.cstr ||
+            cstr === getBaseMeta(otherMeta).cstr ||
+            otherMeta.subTypes.some((subTypeMeta) => cstr === subTypeMeta.cstr);
         return idAppliesToThisColumn ? keyToNumber(comp.otherMetadata(), id) : undefined;
       },
       mapToDb(value: any): any {

@@ -99,7 +99,7 @@ paintingConfig.addRule(newRequiredRule("createdAt"));
 paintingConfig.addRule(newRequiredRule("updatedAt"));
 paintingConfig.addRule(newRequiredRule("artist"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     Painting: {
       entityType: Painting;

@@ -6,5 +6,12 @@
     "baseUrl": "./src"
   },
   "include": ["./src"],
-  "references": [{ "path": "../utils" }]
+  "references": [
+    { "path": "../core" },
+    { "path": "../codegen" },
+    { "path": "../graphql-codegen" },
+    { "path": "../knex" },
+    { "path": "../migration-utils" },
+    { "path": "../utils" }
+  ]
 }

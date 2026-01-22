@@ -201,7 +201,7 @@ userConfig.addRule(newRequiredRule("createdAt"));
 userConfig.addRule(newRequiredRule("updatedAt"));
 userConfig.setDefault("bio", "");
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     User: {
       entityType: User;

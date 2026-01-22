@@ -30,7 +30,7 @@ export {
 export { EnumMetadata, EnumRow, EnumTableData, PgEnumData, PgEnumMetadata } from "./loadMetadata";
 export { Config, EntityDbMetadata, mapSimpleDbTypeToTypescriptType };
 
-async function main() {
+export async function joistCodegen() {
   const config = await loadConfig();
 
   maybeSetDatabaseUrl(config);
@@ -139,22 +139,21 @@ function maybeSetDatabaseUrl(config: Config): void {
   }
 }
 
-if (require.main === module) {
-  if (Object.fromEntries === undefined) {
-    throw new Error("Joist requires Node v12.4.0+");
+export function maybeSetExitCode(): void {
+  if (
+    !process.argv.includes("--always-exit-code-zero") &&
+    // strict mode + warnings or greater
+    ((process.argv.includes("--strict") && loggerMaxWarningLevelHit >= LOG_LEVELS.warn) ||
+      // otherwise errors or greater
+      loggerMaxWarningLevelHit >= LOG_LEVELS.error)
+  ) {
+    process.exitCode = 1;
   }
-  main()
-    .then(() => {
-      if (
-        !process.argv.includes("--always-exit-code-zero") &&
-        // strict mode + warnings or greater
-        ((process.argv.includes("--strict") && loggerMaxWarningLevelHit >= LOG_LEVELS.warn) ||
-          // otherwise errors or greater
-          loggerMaxWarningLevelHit >= LOG_LEVELS.error)
-      ) {
-        process.exitCode = 1;
-      }
-    })
+}
+
+if (require.main === module) {
+  joistCodegen()
+    .then(() => maybeSetExitCode())
     .catch((err) => {
       console.error(err);
       process.exit(1);

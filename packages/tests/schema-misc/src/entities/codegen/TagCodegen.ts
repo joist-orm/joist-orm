@@ -78,7 +78,7 @@ export const tagConfig = new ConfigApi<Tag, Context>();
 
 tagConfig.addRule(newRequiredRule("title"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     Tag: {
       entityType: Tag;

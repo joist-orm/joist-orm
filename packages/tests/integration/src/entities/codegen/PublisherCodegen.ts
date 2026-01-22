@@ -256,7 +256,7 @@ publisherConfig.addRule(newRequiredRule("type"));
 publisherConfig.setDefault("numberOfBookReviews", 0);
 publisherConfig.setDefault("type", PublisherType.Big);
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     Publisher: {
       entityType: Publisher;

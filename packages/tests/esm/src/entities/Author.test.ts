@@ -1,5 +1,6 @@
 import { afterAll, describe, it } from "@jest/globals";
-import { type EntityManagerOpts, PostgresDriver } from "joist-orm";
+import { type EntityManagerOpts } from "joist-orm";
+import { PostgresDriver } from "joist-orm/pg";
 import { newPgConnectionConfig } from "joist-utils";
 import knexModule from "knex";
 import { EntityManager, newAuthor } from "./entities.js";

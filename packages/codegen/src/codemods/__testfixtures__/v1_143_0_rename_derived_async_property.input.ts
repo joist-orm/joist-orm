@@ -1,4 +1,4 @@
-import { hasPersistedAsyncProperty, PersistedAsyncProperty } from "joist-orm";
+import { hasPersistedAsyncProperty, PersistedAsyncProperty } from "joist-core";
 
 class Author {
   count: PersistedAsyncProperty<Author, void> = hasPersistedAsyncProperty({ books: "reviews" }, () => {});

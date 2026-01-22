@@ -79,7 +79,7 @@ export const adminUserConfig = new ConfigApi<AdminUser, Context>();
 
 adminUserConfig.addRule(newRequiredRule("role"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     AdminUser: {
       entityType: AdminUser;

@@ -1,5 +1,5 @@
 import { EntityManager } from "@src/entities";
-import { PostgresDriver, PostgresDriverOpts } from "joist-orm";
+import { PostgresDriver, PostgresDriverOpts } from "joist-orm/pg";
 import { toMatchEntity } from "joist-test-utils";
 import { newPgConnectionConfig } from "joist-utils";
 import { Knex, knex as createKnex } from "knex";

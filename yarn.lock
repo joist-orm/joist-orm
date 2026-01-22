@@ -8650,7 +8650,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"is-core-module@npm:^2.16.0, is-core-module@npm:^2.8.1":
+"is-core-module@npm:^2.16.0, is-core-module@npm:^2.16.1, is-core-module@npm:^2.8.1":
   version: 2.16.1
   resolution: "is-core-module@npm:2.16.1"
   dependencies:
@@ -9478,10 +9478,7 @@ __metadata:
     change-case: "npm:^4.1.2"
     fast-glob: "npm:^3.3.3"
     jest: "npm:30.2.0"
-    joist-utils: "workspace:*"
     jscodeshift: "npm:^17.3.0"
-    knex: "npm:^3.1.0"
-    pg: "npm:^8.16.3"
     pg-structure: "npm:^7.15.3"
     pluralize: "npm:^8.0.0"
     prettier: "npm:^3.6.2"
@@ -9494,8 +9491,36 @@ __metadata:
     typescript: "npm:5.9.2"
     zod: "npm:^3.25.76"
     zod-to-json-schema: "npm:^3.24.6"
+  peerDependencies:
+    joist-utils: "workspace:*"
+    knex: ^3.1.0
+    pg: ^8.16.3
   bin:
     joist-codegen: build/index.js
+  languageName: unknown
+  linkType: soft
+
+"joist-core@workspace:*, joist-core@workspace:packages/core":
+  version: 0.0.0-use.local
+  resolution: "joist-core@workspace:packages/core"
+  dependencies:
+    "@swc/core": "npm:^1.13.20"
+    "@swc/jest": "npm:^0.2.39"
+    "@types/jest": "npm:^30.0.0"
+    "@types/node": "npm:^24.6.0"
+    "@types/object-hash": "npm:^3.0.6"
+    ansis: "npm:^3.17.0"
+    dataloader: "npm:^2.2.3"
+    jest: "npm:30.2.0"
+    object-hash: "npm:^3.0.0"
+    prettier: "npm:^3.6.2"
+    prettier-plugin-organize-imports: "npm:^4.3.0"
+    temporal-polyfill: "npm:^0.3.0"
+    ts-node-dev: "npm:^2.0.0"
+    tsconfig-paths: "npm:^4.2.0"
+    typescript: "npm:5.9.2"
+  peerDependencies:
+    joist-utils: "workspace:*"
   languageName: unknown
   linkType: soft
 
@@ -9521,11 +9546,12 @@ __metadata:
   resolution: "joist-driver-bun-pg@workspace:packages/drivers/bun-pg"
   dependencies:
     bun-types: "npm:^1.2.23"
-    joist-orm: "workspace:*"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
+  peerDependencies:
+    joist-core: "workspace:*"
   languageName: unknown
   linkType: soft
 
@@ -9543,14 +9569,16 @@ __metadata:
     change-case: "npm:^4.1.2"
     graphql: "npm:^16.11.0"
     jest: "npm:30.2.0"
-    joist-codegen: "workspace:*"
-    joist-utils: "workspace:*"
     pluralize: "npm:^8.0.0"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     ts-poet: "npm:^6.12.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
+  peerDependencies:
+    joist-core: "workspace:*"
+    joist-utils: "workspace:*"
+    pg-types: ^4.1.0
   languageName: unknown
   linkType: soft
 
@@ -9564,12 +9592,13 @@ __metadata:
     "@types/node": "npm:^24.6.0"
     graphql: "npm:^16.11.0"
     jest: "npm:30.2.0"
-    joist-orm: "workspace:*"
-    joist-test-utils: "workspace:*"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
+  peerDependencies:
+    joist-core: "workspace:*"
+    joist-test-utils: "workspace:*"
   languageName: unknown
   linkType: soft
 
@@ -9582,13 +9611,15 @@ __metadata:
     "@types/jest": "npm:^30.0.0"
     "@types/node": "npm:^24.6.0"
     jest: "npm:30.2.0"
-    knex: "npm:^3.1.0"
-    pg: "npm:^8.16.3"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     ts-node-dev: "npm:^2.0.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
+  peerDependencies:
+    joist-core: "workspace:*"
+    knex: ^3.1.0
+    pg: ^8.16.3
   languageName: unknown
   linkType: soft
 
@@ -9602,9 +9633,7 @@ __metadata:
     "@types/node": "npm:^24.6.0"
     "@types/pluralize": "npm:^0.0.33"
     jest: "npm:30.2.0"
-    joist-utils: "workspace:*"
     node-pg-migrate: "npm:^8.0.4"
-    pg: "npm:^8.16.3"
     pg-structure: "npm:^7.15.3"
     pluralize: "npm:^8.0.0"
     prettier: "npm:^3.6.2"
@@ -9612,6 +9641,9 @@ __metadata:
     ts-node-dev: "npm:^2.0.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
+  peerDependencies:
+    joist-utils: "workspace:*"
+    pg: ^8.16.3
   languageName: unknown
   linkType: soft
 
@@ -9619,26 +9651,38 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-orm@workspace:packages/orm"
   dependencies:
-    "@swc/core": "npm:^1.13.20"
-    "@swc/jest": "npm:^0.2.39"
-    "@types/jest": "npm:^30.0.0"
     "@types/node": "npm:^24.6.0"
-    "@types/object-hash": "npm:^3.0.6"
     "@types/pg": "npm:^8.15.5"
-    ansis: "npm:^3.17.0"
-    dataloader: "npm:^2.2.3"
-    jest: "npm:30.2.0"
+    joist-codegen: "workspace:*"
+    joist-core: "workspace:*"
+    joist-graphql-codegen: "workspace:*"
+    joist-graphql-resolver-utils: "workspace:*"
+    joist-knex: "workspace:*"
+    joist-migration-utils: "workspace:*"
+    joist-test-utils: "workspace:*"
     joist-utils: "workspace:*"
-    knex: "npm:^3.1.0"
-    object-hash: "npm:^3.0.0"
-    pg: "npm:^8.16.3"
-    pg-types: "npm:^4.1.0"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
-    temporal-polyfill: "npm:^0.3.0"
-    ts-node-dev: "npm:^2.0.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
+  peerDependencies:
+    knex: ^3.1.0
+    node-pg-migrate: ^8.0.4
+    pg: ^8.16.3
+    pg-types: ^4.1.0
+    postgres-array: ^3.0.4
+  peerDependenciesMeta:
+    knex:
+      optional: true
+    node-pg-migrate:
+      optional: true
+    pg:
+      optional: true
+    postgres-array:
+      optional: true
+  bin:
+    joist-codegen: ./build/codegen.js
+    joist-pg-migrate: ./build/pg-migrate.js
   languageName: unknown
   linkType: soft
 
@@ -9650,13 +9694,15 @@ __metadata:
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
     jest: "npm:30.2.0"
-    joist-orm: "workspace:*"
-    joist-utils: "workspace:*"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     ts-node-dev: "npm:^2.0.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
+  peerDependencies:
+    joist-core: "workspace:*"
+    joist-utils: "workspace:*"
+    knex: ^3.1.0
   languageName: unknown
   linkType: soft
 
@@ -9737,10 +9783,7 @@ __metadata:
     env-cmd: "npm:^11.0.0"
     jest: "npm:30.2.0"
     jest-junit: "npm:^16.0.0"
-    joist-codegen: "workspace:*"
-    joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
-    joist-test-utils: "workspace:*"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     superstruct: "npm:0.15.5"
@@ -9764,14 +9807,9 @@ __metadata:
     env-cmd: "npm:^11.0.0"
     jest: "npm:30.2.0"
     jest-junit: "npm:^16.0.0"
-    joist-codegen: "workspace:*"
-    joist-graphql-codegen: "workspace:*"
-    joist-graphql-resolver-utils: "workspace:*"
-    joist-knex: "workspace:*"
-    joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
-    joist-test-utils: "workspace:*"
     kelonio: "npm:^0.11.0"
+    knex: "npm:3.1.0"
     mitata: "npm:^1.0.34"
     postgres: "npm:^3.4.7"
     prettier: "npm:^3.6.2"
@@ -9797,10 +9835,7 @@ __metadata:
     env-cmd: "npm:^11.0.0"
     jest: "npm:30.2.0"
     jest-junit: "npm:^16.0.0"
-    joist-codegen: "workspace:*"
-    joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
-    joist-test-utils: "workspace:*"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     superstruct: "npm:0.15.5"
@@ -9820,10 +9855,7 @@ __metadata:
     "@types/node": "npm:^24.6.0"
     jest: "npm:30.2.0"
     jest-junit: "npm:^16.0.0"
-    joist-codegen: "workspace:*"
-    joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
-    joist-test-utils: "workspace:*"
     node-pg-migrate: "npm:^8.0.4"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
@@ -9894,10 +9926,7 @@ __metadata:
     env-cmd: "npm:^11.0.0"
     jest: "npm:30.2.0"
     jest-junit: "npm:^16.0.0"
-    joist-codegen: "workspace:*"
-    joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
-    joist-test-utils: "workspace:*"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     superstruct: "npm:0.15.5"
@@ -9916,13 +9945,14 @@ __metadata:
     "@types/jest": "npm:^30.0.0"
     "@types/node": "npm:^24.6.0"
     jest: "npm:30.2.0"
-    pg: "npm:^8.16.3"
-    pg-connection-string: "npm:^2.9.1"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     ts-node-dev: "npm:^2.0.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
+  peerDependencies:
+    pg: ^8.16.3
+    pg-connection-string: ^2.9.1
   languageName: unknown
   linkType: soft
 
@@ -10167,7 +10197,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knex@npm:^3.1.0":
+"knex@npm:3.1.0":
   version: 3.1.0
   resolution: "knex@npm:3.1.0"
   dependencies:
@@ -10581,10 +10611,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lodash@npm:4.17.21, lodash@npm:^4.17.21, lodash@npm:^4.17.4, lodash@npm:~4.17.0":
+"lodash@npm:4.17.21, lodash@npm:^4.17.4, lodash@npm:~4.17.0":
   version: 4.17.21
   resolution: "lodash@npm:4.17.21"
   checksum: 10/c08619c038846ea6ac754abd6dd29d2568aa705feb69339e836dfa8d8b09abbb2f859371e86863eda41848221f9af43714491467b5b0299122431e202bb0c532
+  languageName: node
+  linkType: hard
+
+"lodash@npm:^4.17.21":
+  version: 4.17.23
+  resolution: "lodash@npm:4.17.23"
+  checksum: 10/82504c88250f58da7a5a4289f57a4f759c44946c005dd232821c7688b5fcfbf4a6268f6a6cdde4b792c91edd2f3b5398c1d2a0998274432cff76def48735e233
   languageName: node
   linkType: hard
 
@@ -12406,13 +12443,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"obuf@npm:~1.1.2":
-  version: 1.1.2
-  resolution: "obuf@npm:1.1.2"
-  checksum: 10/53ff4ab3a13cc33ba6c856cf281f2965c0aec9720967af450e8fd06cfd50aceeefc791986a16bcefa14e7898b3ca9acdfcf15b9d9a1b9c7e1366581a8ad6e65e
-  languageName: node
-  linkType: hard
-
 "ofetch@npm:^1.4.1, ofetch@npm:^1.5.1":
   version: 1.5.1
   resolution: "ofetch@npm:1.5.1"
@@ -13016,13 +13046,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg-numeric@npm:1.0.2":
-  version: 1.0.2
-  resolution: "pg-numeric@npm:1.0.2"
-  checksum: 10/8899f8200caa1744439a8778a9eb3ceefb599d893e40a09eef84ee0d4c151319fd416634a6c0fc7b7db4ac268710042da5be700b80ef0de716fe089b8652c84f
-  languageName: node
-  linkType: hard
-
 "pg-pool@npm:^3.10.1":
   version: 3.10.1
   resolution: "pg-pool@npm:3.10.1"
@@ -13069,22 +13092,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg-types@npm:^4.1.0":
-  version: 4.1.0
-  resolution: "pg-types@npm:4.1.0"
-  dependencies:
-    pg-int8: "npm:1.0.1"
-    pg-numeric: "npm:1.0.2"
-    postgres-array: "npm:~3.0.1"
-    postgres-bytea: "npm:~3.0.0"
-    postgres-date: "npm:~2.1.0"
-    postgres-interval: "npm:^3.0.0"
-    postgres-range: "npm:^1.1.1"
-  checksum: 10/49401d2384dbc7591659154b406ddabcf36db9572ae6ffa9575af53092084ed5040e30e67462bb8ea11aa06eef18aa56ffe93ea71f04801737488ffb06ee7686
-  languageName: node
-  linkType: hard
-
-"pg@npm:^8.0.3, pg@npm:^8.16.3":
+"pg@npm:^8.0.3":
   version: 8.16.3
   resolution: "pg@npm:8.16.3"
   dependencies:
@@ -13248,26 +13256,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postgres-array@npm:~3.0.1":
-  version: 3.0.2
-  resolution: "postgres-array@npm:3.0.2"
-  checksum: 10/0159517e4e5f263bf9e324f0c4d3c10244a294021f2b5980abc8c23afdb965370a7fc0c82012fce4d28e83186ad089b6476b05fcef6c88f8e43e37a3a2fa0ad5
-  languageName: node
-  linkType: hard
-
 "postgres-bytea@npm:~1.0.0":
   version: 1.0.0
   resolution: "postgres-bytea@npm:1.0.0"
   checksum: 10/d844ae4ca7a941b70e45cac1261a73ee8ed39d72d3d74ab1d645248185a1b7f0ac91a3c63d6159441020f4e1f7fe64689ac56536a307b31cef361e5187335090
-  languageName: node
-  linkType: hard
-
-"postgres-bytea@npm:~3.0.0":
-  version: 3.0.0
-  resolution: "postgres-bytea@npm:3.0.0"
-  dependencies:
-    obuf: "npm:~1.1.2"
-  checksum: 10/f5c01758fd2fa807afbd34e1ba2146f683818ebc2d23f4a62f0fd627c0b1126fc543cab1b63925f97ce6c7d8f5f316043218619c447445210ea82f10411efb1b
   languageName: node
   linkType: hard
 
@@ -13278,33 +13270,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postgres-date@npm:~2.1.0":
-  version: 2.1.0
-  resolution: "postgres-date@npm:2.1.0"
-  checksum: 10/faa1c70dfad0e35bd4aa7cb6088fcd4e4f039aa25dc42150129178fc2a0baa7e37eca0bf18e4142a40dea18d1955459b08783f78ec487ef27b4b93ab5e854597
-  languageName: node
-  linkType: hard
-
 "postgres-interval@npm:^1.1.0":
   version: 1.2.0
   resolution: "postgres-interval@npm:1.2.0"
   dependencies:
     xtend: "npm:^4.0.0"
   checksum: 10/746b71f93805ae33b03528e429dc624706d1f9b20ee81bf743263efb6a0cd79ae02a642a8a480dbc0f09547b4315ab7df6ce5ec0be77ed700bac42730f5c76b2
-  languageName: node
-  linkType: hard
-
-"postgres-interval@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "postgres-interval@npm:3.0.0"
-  checksum: 10/c7a1cf006de97de663b6b8c4d2b167aa9909a238c4866a94b15d303762f5ac884ff4796cd6e2111b7f0a91302b83c570453aa8506fd005b5a5d5dfa87441bebc
-  languageName: node
-  linkType: hard
-
-"postgres-range@npm:^1.1.1":
-  version: 1.1.3
-  resolution: "postgres-range@npm:1.1.3"
-  checksum: 10/356a46d97eab301cca0dbf7a65be6f68c4a7e33d304909e5ca840038b1210390e1d33fcc3b566c42020f7b97e9de189bc5286d1ec8d7ba2445ed3377c576ce9e
   languageName: node
   linkType: hard
 
@@ -13974,7 +13945,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"resolve@npm:^1.0.0, resolve@npm:^1.20.0, resolve@npm:^1.22.2":
+"resolve@npm:^1.0.0, resolve@npm:^1.22.2":
   version: 1.22.10
   resolution: "resolve@npm:1.22.10"
   dependencies:
@@ -13987,7 +13958,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"resolve@patch:resolve@npm%3A^1.0.0#optional!builtin<compat/resolve>, resolve@patch:resolve@npm%3A^1.20.0#optional!builtin<compat/resolve>, resolve@patch:resolve@npm%3A^1.22.2#optional!builtin<compat/resolve>":
+"resolve@npm:^1.20.0":
+  version: 1.22.11
+  resolution: "resolve@npm:1.22.11"
+  dependencies:
+    is-core-module: "npm:^2.16.1"
+    path-parse: "npm:^1.0.7"
+    supports-preserve-symlinks-flag: "npm:^1.0.0"
+  bin:
+    resolve: bin/resolve
+  checksum: 10/e1b2e738884a08de03f97ee71494335eba8c2b0feb1de9ae065e82c48997f349f77a2b10e8817e147cf610bfabc4b1cb7891ee8eaf5bf80d4ad514a34c4fab0a
+  languageName: node
+  linkType: hard
+
+"resolve@patch:resolve@npm%3A^1.0.0#optional!builtin<compat/resolve>, resolve@patch:resolve@npm%3A^1.22.2#optional!builtin<compat/resolve>":
   version: 1.22.10
   resolution: "resolve@patch:resolve@npm%3A1.22.10#optional!builtin<compat/resolve>::version=1.22.10&hash=c3c19d"
   dependencies:
@@ -13997,6 +13981,19 @@ __metadata:
   bin:
     resolve: bin/resolve
   checksum: 10/d4d878bfe3702d215ea23e75e0e9caf99468e3db76f5ca100d27ebdc527366fee3877e54bce7d47cc72ca8952fc2782a070d238bfa79a550eeb0082384c3b81a
+  languageName: node
+  linkType: hard
+
+"resolve@patch:resolve@npm%3A^1.20.0#optional!builtin<compat/resolve>":
+  version: 1.22.11
+  resolution: "resolve@patch:resolve@npm%3A1.22.11#optional!builtin<compat/resolve>::version=1.22.11&hash=c3c19d"
+  dependencies:
+    is-core-module: "npm:^2.16.1"
+    path-parse: "npm:^1.0.7"
+    supports-preserve-symlinks-flag: "npm:^1.0.0"
+  bin:
+    resolve: bin/resolve
+  checksum: 10/fd342cad25e52cd6f4f3d1716e189717f2522bfd6641109fe7aa372f32b5714a296ed7c238ddbe7ebb0c1ddfe0b7f71c9984171024c97cf1b2073e3e40ff71a8
   languageName: node
   linkType: hard
 

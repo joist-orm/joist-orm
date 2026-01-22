@@ -17,6 +17,7 @@
   "workspaces": [
     "docs",
     "packages/codegen",
+    "packages/core",
     "packages/drivers/bun-pg",
     "packages/graphql-codegen",
     "packages/graphql-resolver-utils",

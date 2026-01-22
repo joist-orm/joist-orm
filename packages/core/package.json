@@ -1,0 +1,44 @@
+{
+  "name": "joist-core",
+  "version": "1.293.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joist-orm/joist-orm.git",
+    "directory": "packages/core"
+  },
+  "engines": {
+    "node": "^12.17.0 || ^13.10.0 || ^14 || >= 16.0.0 < 16.2.0 || >= 16.3.0"
+  },
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "scripts": {
+    "test": "jest",
+    "format": "prettier --ignore-path ../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
+  },
+  "files": [
+    "build"
+  ],
+  "peerDependencies": {
+    "joist-utils": "workspace:*"
+  },
+  "dependencies": {
+    "@types/object-hash": "^3.0.6",
+    "ansis": "^3.17.0",
+    "dataloader": "^2.2.3",
+    "object-hash": "^3.0.0"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.13.20",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.6.0",
+    "jest": "30.2.0",
+    "prettier": "^3.6.2",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "temporal-polyfill": "^0.3.0",
+    "ts-node-dev": "^2.0.0",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "5.9.2"
+  }
+}

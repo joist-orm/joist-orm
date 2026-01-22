@@ -1,4 +1,4 @@
-import { isEntity } from "joist-orm";
+import { isEntity } from "joist-core";
 import { ResolverArgs, ResolverResult, ResolverRoot, RunFn } from "./typeUtils";
 
 /**

@@ -126,7 +126,7 @@ export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
 largePublisherConfig.addRule(newRequiredRule("rating"));
 largePublisherConfig.addRule(newRequiredRule("spotlightAuthor"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     LargePublisher: {
       entityType: LargePublisher;

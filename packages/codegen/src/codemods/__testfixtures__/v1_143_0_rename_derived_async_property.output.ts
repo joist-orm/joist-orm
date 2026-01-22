@@ -1,4 +1,4 @@
-import { hasReactiveField, ReactiveField } from "joist-orm";
+import { hasReactiveField, ReactiveField } from "joist-core";
 
 class Author {
   count: ReactiveField<Author, void> = hasReactiveField({ books: "reviews" }, () => {});

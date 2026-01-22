@@ -1,7 +1,7 @@
 import { Context } from "src/context";
 import { SaveUserInput } from "src/generated/graphql-types";
-import { saveUser } from "src/resolvers/user/saveUserMutation";
 import { run } from "src/resolvers/testUtils";
+import { saveUser } from "src/resolvers/user/saveUserMutation";
 
 describe("saveUser", () => {
   it.withCtx("can create", async (ctx) => {

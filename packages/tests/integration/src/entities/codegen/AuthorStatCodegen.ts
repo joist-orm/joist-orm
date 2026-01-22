@@ -140,7 +140,7 @@ authorStatConfig.addRule(newRequiredRule("doublePrecision"));
 authorStatConfig.addRule(newRequiredRule("createdAt"));
 authorStatConfig.addRule(newRequiredRule("updatedAt"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     AuthorStat: {
       entityType: AuthorStat;

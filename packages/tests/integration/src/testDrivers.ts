@@ -1,5 +1,6 @@
 import { recordQuery } from "@src/testEm";
-import { Driver, JsonAggregatePreloader, PostgresDriver } from "joist-orm";
+import { Driver, JsonAggregatePreloader } from "joist-orm";
+import { PostgresDriver } from "joist-orm/pg";
 import { newPgConnectionConfig } from "joist-utils";
 import { Knex, knex as createKnex } from "knex";
 

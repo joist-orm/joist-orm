@@ -1,30 +1,41 @@
-import { Knex } from "knex";
-import { types } from "pg";
-import { builtins, getTypeParser } from "pg-types";
-import array from "postgres-array";
 import {
+  buildRawQuery,
+  cleanSql,
+  DeleteOp,
+  Driver,
   driverAfterBegin,
   driverAfterCommit,
   driverBeforeBegin,
   driverBeforeCommit,
+  ensureRectangularArraySizes,
   EntityManager,
   fail,
+  generateOps,
   getMetadata,
+  getRuntimeConfig,
+  IdAssigner,
+  InsertOp,
+  JoinRow,
+  JoinRowOperation,
+  JoinRowTodo,
   keyToNumber,
+  kq,
+  kqDot,
+  ManyToManyLike,
+  OpColumn,
   ParsedFindQuery,
+  partition,
   PreloadPlugin,
   RuntimeConfig,
-} from "../index";
-import { JoinRow, JoinRowOperation, ManyToManyLike } from "../JoinRows";
-import { kq, kqDot } from "../keywords";
-import { getRuntimeConfig } from "../runtimeConfig";
-import { JoinRowTodo, Todo } from "../Todo";
-import { ensureRectangularArraySizes } from "../unnest";
-import { cleanSql, partition, zeroTo } from "../utils";
-import { buildRawQuery } from "./buildRawQuery";
-import { Driver } from "./Driver";
-import { DeleteOp, generateOps, InsertOp, OpColumn, UpdateOp } from "./EntityWriter";
-import { IdAssigner, SequenceIdAssigner } from "./IdAssigner";
+  SequenceIdAssigner,
+  Todo,
+  UpdateOp,
+  zeroTo,
+} from "joist-core";
+import { Knex } from "knex";
+import pg from "pg";
+import { builtins, getTypeParser } from "pg-types";
+import array from "postgres-array";
 
 export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;
@@ -54,7 +65,7 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
     private readonly knex: Knex,
     opts?: PostgresDriverOpts,
   ) {
-    this.#idAssigner = opts?.idAssigner ?? new SequenceIdAssigner(knex);
+    this.#idAssigner = opts?.idAssigner ?? new SequenceIdAssigner(async (sql: string) => (await knex.raw(sql)).rows);
     this.#preloadPlugin = opts?.preloadPlugin;
     setupLatestPgTypes(getRuntimeConfig().temporal);
   }
@@ -206,7 +217,6 @@ function buildUnnestCte(tableName: string, columns: OpColumn[], columnValues: an
 
 async function m2mBatchInsert(txn: Knex.Transaction, joinTableName: string, m2m: ManyToManyLike, newRows: JoinRow[]) {
   if (newRows.length === 0) return;
-  // const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
   const sql = cleanSql(`
     INSERT INTO ${kq(joinTableName)} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
     VALUES ${zeroTo(newRows.length)
@@ -288,16 +298,16 @@ export function setupLatestPgTypes(temporal: RuntimeConfig["temporal"]): void {
     const noop = (s: string) => s;
     const noopArray = (s: string) => array.parse(s, noop);
 
-    const { TIMESTAMP, TIMESTAMPTZ, DATE } = types.builtins;
-    types.setTypeParser(DATE, noop);
-    types.setTypeParser(TIMESTAMP, noop);
-    types.setTypeParser(TIMESTAMPTZ, noop);
+    const { TIMESTAMP, TIMESTAMPTZ, DATE } = pg.types.builtins;
+    pg.types.setTypeParser(DATE, noop);
+    pg.types.setTypeParser(TIMESTAMP, noop);
+    pg.types.setTypeParser(TIMESTAMPTZ, noop);
 
     // Use `as number` b/c the typings of shadowed pg-types from `pg` and `pg-types` top-level don't line up
-    types.setTypeParser(1182 as number, noopArray); // date[]
-    types.setTypeParser(1115 as number, noopArray); // timestamp[]
-    types.setTypeParser(1185 as number, noopArray); // timestamptz[]
+    pg.types.setTypeParser(1182 as number, noopArray); // date[]
+    pg.types.setTypeParser(1115 as number, noopArray); // timestamp[]
+    pg.types.setTypeParser(1185 as number, noopArray); // timestamptz[]
   } else {
-    types.setTypeParser(types.builtins.TIMESTAMPTZ, getTypeParser(builtins.TIMESTAMPTZ));
+    pg.types.setTypeParser(pg.types.builtins.TIMESTAMPTZ, getTypeParser(builtins.TIMESTAMPTZ));
   }
 }

@@ -1,5 +1,4 @@
 import * as crypto from "crypto";
-import { Knex } from "knex";
 import { getInstanceData } from "../BaseEntity";
 import { Todo } from "../Todo";
 import { keyToTaggedId } from "../keys";
@@ -20,14 +19,8 @@ type QueryRunner = (sql: string) => Promise<any[]>;
 export class SequenceIdAssigner implements IdAssigner {
   #runner: QueryRunner;
 
-  public constructor(knex: Knex);
-  public constructor(runner: QueryRunner);
-  public constructor(runner: Knex | QueryRunner) {
-    if ("raw" in runner) {
-      this.#runner = async (sql: string) => (await runner.raw(sql)).rows;
-    } else {
-      this.#runner = runner;
-    }
+  public constructor(runner: QueryRunner) {
+    this.#runner = runner;
   }
 
   async assignNewIds(todos: Record<string, Todo>): Promise<void> {

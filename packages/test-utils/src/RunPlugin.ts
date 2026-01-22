@@ -23,7 +23,7 @@ import {
   ReactiveManyToManyOtherSideImpl,
   ReactiveReferenceImpl,
   Todo,
-} from "joist-orm";
+} from "joist-core";
 
 /*
  * `run...` helpers use this plugin to mirror any changes made to their isolated entity manager inside to the original

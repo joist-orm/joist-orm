@@ -161,7 +161,7 @@ commentConfig.addRule(newRequiredRule("createdAt"));
 commentConfig.addRule(newRequiredRule("updatedAt"));
 commentConfig.addRule(newRequiredRule("parent"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     Comment: {
       entityType: Comment;

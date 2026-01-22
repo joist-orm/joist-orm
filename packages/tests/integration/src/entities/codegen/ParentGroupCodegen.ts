@@ -102,7 +102,7 @@ export const parentGroupConfig = new ConfigApi<ParentGroup, Context>();
 parentGroupConfig.addRule(newRequiredRule("createdAt"));
 parentGroupConfig.addRule(newRequiredRule("updatedAt"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     ParentGroup: {
       entityType: ParentGroup;

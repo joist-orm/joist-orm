@@ -1,6 +1,11 @@
 import "dotenv/config";
-import { EntityManager, newPgConnectionConfig, PostgresDriver } from "joist-orm";
-import { knex as createKnex } from "knex";
+import { Driver, EntityManager, newPgConnectionConfig } from "joist-core";
+import { knex as createKnex, Knex } from "knex";
+
+export interface SeedConfig {
+  /** A factory function to create a Driver from a Knex instance. */
+  createDriver: (knex: Knex) => Driver;
+}
 
 /**
  * Allows easily seeding your local database with test data from the factories.
@@ -15,8 +20,18 @@ import { knex as createKnex } from "knex";
  * - That the project does not have a context, or at least does not require a context to seed
  *
  * If any of these assumptions are not true, you can copy this code into your project.
+ *
+ * @example
+ * ```ts
+ * import { seed } from "joist-test-utils";
+ * import { PostgresDriver } from "joist-orm";
+ *
+ * seed({ createDriver: (knex) => new PostgresDriver(knex) }, async (em) => {
+ *   // seed your data here
+ * });
+ * ```
  */
-export function seed<E extends EntityManager = EntityManager>(fn: (em: E) => Promise<void>): void {
+export function seed<E extends EntityManager = EntityManager>(config: SeedConfig, fn: (em: E) => Promise<void>): void {
   const env = process.env.NODE_ENV;
   if (env !== "local" && env !== "test") {
     throw new Error("seed will only run with NODE_ENV=local or NODE_ENV=test because it resets the database");
@@ -29,7 +44,7 @@ export function seed<E extends EntityManager = EntityManager>(fn: (em: E) => Pro
 
   async function seed() {
     await knex.select(knex.raw("flush_database()"));
-    const driver = new PostgresDriver(knex);
+    const driver = config.createDriver(knex);
     const em = new EntityManager({}, { driver }) as E;
     await fn(em);
     await em.flush();

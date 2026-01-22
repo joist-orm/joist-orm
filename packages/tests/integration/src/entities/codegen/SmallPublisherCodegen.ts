@@ -137,7 +137,7 @@ export const smallPublisherConfig = new ConfigApi<SmallPublisher, Context>();
 smallPublisherConfig.addRule(newRequiredRule("city"));
 smallPublisherConfig.addRule("group", mustBeSubType("group"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     SmallPublisher: {
       entityType: SmallPublisher;

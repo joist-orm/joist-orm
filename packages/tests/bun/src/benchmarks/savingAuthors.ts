@@ -1,4 +1,4 @@
-import { PostgresDriver } from "joist-orm";
+import { PostgresDriver } from "joist-orm/pg";
 import { newPgConnectionConfig } from "joist-utils";
 import createKnex from "knex";
 import { Author, EntityManager } from "src/entities";

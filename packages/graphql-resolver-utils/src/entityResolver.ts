@@ -30,7 +30,7 @@ import {
   ReactiveGetter,
   ReadOnlyCollection,
   Reference,
-} from "joist-orm";
+} from "joist-core";
 import { Resolver } from "./context";
 import { convertInfoToLoadHint } from "./hint";
 

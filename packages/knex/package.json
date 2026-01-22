@@ -15,7 +15,8 @@
   "files": [
     "build"
   ],
-  "dependencies": {
+  "peerDependencies": {
+    "joist-core": "workspace:*",
     "knex": "^3.1.0",
     "pg": "^8.16.3"
   },

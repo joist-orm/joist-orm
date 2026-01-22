@@ -95,7 +95,7 @@ export const childConfig = new ConfigApi<Child, Context>();
 childConfig.addRule(newRequiredRule("createdAt"));
 childConfig.addRule(newRequiredRule("updatedAt"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     Child: {
       entityType: Child;

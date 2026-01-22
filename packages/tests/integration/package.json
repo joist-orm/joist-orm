@@ -22,8 +22,8 @@
   },
   "dependencies": {
     "ansi-regex": "^5.0.1",
-    "joist-graphql-resolver-utils": "workspace:*",
     "joist-orm": "workspace:*",
+    "knex": "3.1.0",
     "mitata": "^1.0.34"
   },
   "devDependencies": {
@@ -36,11 +36,6 @@
     "env-cmd": "^11.0.0",
     "jest": "30.2.0",
     "jest-junit": "^16.0.0",
-    "joist-codegen": "workspace:*",
-    "joist-graphql-codegen": "workspace:*",
-    "joist-knex": "workspace:*",
-    "joist-migration-utils": "workspace:*",
-    "joist-test-utils": "workspace:*",
     "kelonio": "^0.11.0",
     "postgres": "^3.4.7",
     "prettier": "^3.6.2",

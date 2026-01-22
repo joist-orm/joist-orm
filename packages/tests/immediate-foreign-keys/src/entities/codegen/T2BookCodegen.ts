@@ -96,7 +96,7 @@ export const t2BookConfig = new ConfigApi<T2Book, Context>();
 t2BookConfig.addRule(newRequiredRule("title"));
 t2BookConfig.addRule(newRequiredRule("author"));
 
-declare module "joist-orm" {
+declare module "joist-core" {
   interface TypeMap {
     T2Book: {
       entityType: T2Book;

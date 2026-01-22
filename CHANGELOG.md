@@ -1,3 +1,10 @@
+## [2.0.2](https://github.com/joist-orm/joist-orm/compare/v2.0.1...v2.0.2) (2026-01-22)
+
+
+### Bug Fixes
+
+* Use fixed number of params in m2m inserts. ([#1714](https://github.com/joist-orm/joist-orm/issues/1714)) ([5df552a](https://github.com/joist-orm/joist-orm/commit/5df552a4307ef1abe6e38df81cf322370550a146))
+
 ## [2.0.1](https://github.com/joist-orm/joist-orm/compare/v2.0.0...v2.0.1) (2026-01-22)
 
 

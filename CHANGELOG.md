@@ -1,3 +1,10 @@
+## [2.0.1](https://github.com/joist-orm/joist-orm/compare/v2.0.0...v2.0.1) (2026-01-22)
+
+
+### Bug Fixes
+
+* Release with peer dependencies fixed. ([32dcd0b](https://github.com/joist-orm/joist-orm/commit/32dcd0b3e39fd928a554641f66633dde903f6177))
+
 # [2.0.0](https://github.com/joist-orm/joist-orm/compare/v1.294.0...v2.0.0) (2026-01-22)
 
 

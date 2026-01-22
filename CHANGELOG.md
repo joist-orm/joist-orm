@@ -1,3 +1,82 @@
+# [2.0.0](https://github.com/joist-orm/joist-orm/compare/v1.294.0...v2.0.0) (2026-01-22)
+
+
+* feat!: Refactor joist-orm into a meta package.  ([#1713](https://github.com/joist-orm/joist-orm/issues/1713)) ([c102aa1](https://github.com/joist-orm/joist-orm/commit/c102aa1b9d4269c7fd2fc3a9bcbbb1b42fa74504))
+
+
+### BREAKING CHANGES
+
+* Package structure has changed. `joist-orm` is now the umbrella
+package that re-exports `joist-core`. Most existing code should continue to work
+unchanged, but direct imports from internal paths may need adjustment.
+
+* style: Fix formatting issues
+
+* fix: Add packages/core to root tsconfig references
+
+* fix: Add trusted.ts from main and fix formatting
+
+* Fix getFuzzyCallerName.
+
+* Fix prettier error.
+
+* feat: Add sub-path exports for graphql, tests, graphql-codegen, knex and re-export joist-utils
+
+- Add joist-orm/graphql (re-exports joist-graphql-resolver-utils)
+- Add joist-orm/tests (re-exports joist-test-utils)
+- Add joist-orm/graphql-codegen (re-exports joist-graphql-codegen)
+- Add joist-orm/knex (re-exports joist-knex)
+- Re-export joist-utils from top-level joist-orm (excluding 'fail' to avoid conflict with joist-core)
+- Renamed export files to avoid conflicts with npm package names (e.g., knex-export.ts instead of knex.ts)
+
+* refactor: Update re-exported packages to import from joist-core instead of joist-orm
+
+Packages that are re-exported from joist-orm (via sub-path exports) now import
+from joist-core to avoid circular dependencies:
+
+- joist-knex: Updated imports and added joist-core dependency
+- joist-graphql-resolver-utils: Updated imports and changed dependency to joist-core
+- joist-test-utils: Updated imports, changed dependency to joist-core, and refactored
+  seed() function to accept a createDriver config instead of directly using PostgresDriver
+- joist-codegen: Updated test fixture imports
+* The seed() function signature changed from `seed(fn)` to
+`seed(config, fn)` where config must provide a createDriver factory function.
+
+* Prettier fix.
+
+* Add joist-codegen command.
+
+* Add require.main check.
+
+* Rename joist-orm/migration-utils to joist-orm/pg-migrate.
+
+* refactor: Move PostgresDriver to joist-orm/pg subpath and use joist-core for module augmentation
+
+- Update codegen to generate `declare module "joist-core"` instead of `declare module "joist-orm"`
+- Move PostgresDriver export from main joist-orm entry to joist-orm/pg subpath
+- Add ./pg export to joist-orm package.json
+* PostgresDriver is now exported from "joist-orm/pg" instead of "joist-orm".
+Import it as: `import { PostgresDriver } from "joist-orm/pg"`
+
+* fix: Update PostgresDriver imports to use joist-orm/pg subpath
+
+- Rename pg.ts to postgres-driver.ts to avoid conflict with pg npm package
+- Update all test files to import PostgresDriver from joist-orm/pg
+- Add typesVersions to package.json for backwards compatibility with older moduleResolution
+- Fix pg import in PostgresDriver.ts to use default import
+
+* Re-codegen.
+
+* Use more peerDependencies.
+
+* Remove duplicate file.
+
+* Remove knex/pg-types from core devDependencies.
+
+* Move PosgresDriver back.
+
+* Use tsconfig.base.json.
+
 # [1.294.0](https://github.com/joist-orm/joist-orm/compare/v1.293.0...v1.294.0) (2026-01-21)
 
 

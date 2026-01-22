@@ -30,7 +30,6 @@ import {
   SequenceIdAssigner,
   Todo,
   UpdateOp,
-  zeroTo,
 } from "joist-core";
 import { Knex } from "knex";
 import pg from "pg";
@@ -217,23 +216,18 @@ function buildUnnestCte(tableName: string, columns: OpColumn[], columnValues: an
 
 async function m2mBatchInsert(txn: Knex.Transaction, joinTableName: string, m2m: ManyToManyLike, newRows: JoinRow[]) {
   if (newRows.length === 0) return;
+  const meta1 = getMetadata(m2m.entity);
+  const meta2 = m2m.otherMeta;
+  const col1Values = newRows.map((row) => keyToNumber(meta1, row.columns[m2m.columnName].idTagged));
+  const col2Values = newRows.map((row) => keyToNumber(meta2, row.columns[m2m.otherColumnName].idTagged));
   const sql = cleanSql(`
+    WITH data AS (SELECT unnest(?::int[]) as ${kq(m2m.columnName)}, unnest(?::int[]) as ${kq(m2m.otherColumnName)})
     INSERT INTO ${kq(joinTableName)} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
-    VALUES ${zeroTo(newRows.length)
-      .map(() => "(?, ?) ")
-      .join(", ")}
+    SELECT * FROM data
     ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO UPDATE SET id = ${kq(joinTableName)}.id
     RETURNING id;
   `);
-  const meta1 = getMetadata(m2m.entity);
-  const meta2 = m2m.otherMeta;
-  const bindings = newRows.flatMap((row) => {
-    return [
-      keyToNumber(meta1, row.columns[m2m.columnName].idTagged),
-      keyToNumber(meta2, row.columns[m2m.otherColumnName].idTagged),
-    ];
-  });
-  const { rows } = await txn.raw(sql, bindings);
+  const { rows } = await txn.raw(sql, [col1Values, col2Values]);
   for (let i = 0; i < rows.length; i++) {
     newRows[i].id = rows[i].id;
     newRows[i].op = JoinRowOperation.Flushed;

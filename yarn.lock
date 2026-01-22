@@ -9478,10 +9478,7 @@ __metadata:
     change-case: "npm:^4.1.2"
     fast-glob: "npm:^3.3.3"
     jest: "npm:30.2.0"
-    joist-utils: "workspace:*"
     jscodeshift: "npm:^17.3.0"
-    knex: "npm:^3.1.0"
-    pg: "npm:^8.16.3"
     pg-structure: "npm:^7.15.3"
     pluralize: "npm:^8.0.0"
     prettier: "npm:^3.6.2"
@@ -9494,6 +9491,10 @@ __metadata:
     typescript: "npm:5.9.2"
     zod: "npm:^3.25.76"
     zod-to-json-schema: "npm:^3.24.6"
+  peerDependencies:
+    joist-utils: "workspace:*"
+    knex: ^3.1.0
+    pg: ^8.16.3
   bin:
     joist-codegen: build/index.js
   languageName: unknown
@@ -9512,7 +9513,6 @@ __metadata:
     ansis: "npm:^3.17.0"
     dataloader: "npm:^2.2.3"
     jest: "npm:30.2.0"
-    joist-utils: "workspace:*"
     knex: "npm:^3.1.0"
     object-hash: "npm:^3.0.0"
     pg: "npm:^8.16.3"
@@ -9524,14 +9524,9 @@ __metadata:
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
   peerDependencies:
-    knex: ^3.1.0
-    pg: ^8.16.3
+    joist-utils: "workspace:*"
     pg-types: ^4.1.0
   peerDependenciesMeta:
-    knex:
-      optional: true
-    pg:
-      optional: true
     pg-types:
       optional: true
   languageName: unknown
@@ -9559,11 +9554,12 @@ __metadata:
   resolution: "joist-driver-bun-pg@workspace:packages/drivers/bun-pg"
   dependencies:
     bun-types: "npm:^1.2.23"
-    joist-core: "workspace:*"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
+  peerDependencies:
+    joist-core: "workspace:*"
   languageName: unknown
   linkType: soft
 
@@ -9581,14 +9577,16 @@ __metadata:
     change-case: "npm:^4.1.2"
     graphql: "npm:^16.11.0"
     jest: "npm:30.2.0"
-    joist-codegen: "workspace:*"
-    joist-utils: "workspace:*"
     pluralize: "npm:^8.0.0"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     ts-poet: "npm:^6.12.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
+  peerDependencies:
+    joist-core: "workspace:*"
+    joist-utils: "workspace:*"
+    pg-types: ^4.1.0
   languageName: unknown
   linkType: soft
 
@@ -9602,12 +9600,13 @@ __metadata:
     "@types/node": "npm:^24.6.0"
     graphql: "npm:^16.11.0"
     jest: "npm:30.2.0"
-    joist-core: "workspace:*"
-    joist-test-utils: "workspace:*"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
+  peerDependencies:
+    joist-core: "workspace:*"
+    joist-test-utils: "workspace:*"
   languageName: unknown
   linkType: soft
 
@@ -9620,14 +9619,15 @@ __metadata:
     "@types/jest": "npm:^30.0.0"
     "@types/node": "npm:^24.6.0"
     jest: "npm:30.2.0"
-    joist-core: "workspace:*"
-    knex: "npm:^3.1.0"
-    pg: "npm:^8.16.3"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     ts-node-dev: "npm:^2.0.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
+  peerDependencies:
+    joist-core: "workspace:*"
+    knex: ^3.1.0
+    pg: ^8.16.3
   languageName: unknown
   linkType: soft
 
@@ -9641,9 +9641,7 @@ __metadata:
     "@types/node": "npm:^24.6.0"
     "@types/pluralize": "npm:^0.0.33"
     jest: "npm:30.2.0"
-    joist-utils: "workspace:*"
     node-pg-migrate: "npm:^8.0.4"
-    pg: "npm:^8.16.3"
     pg-structure: "npm:^7.15.3"
     pluralize: "npm:^8.0.0"
     prettier: "npm:^3.6.2"
@@ -9651,6 +9649,9 @@ __metadata:
     ts-node-dev: "npm:^2.0.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
+  peerDependencies:
+    joist-utils: "workspace:*"
+    pg: ^8.16.3
   languageName: unknown
   linkType: soft
 
@@ -9668,18 +9669,24 @@ __metadata:
     joist-migration-utils: "workspace:*"
     joist-test-utils: "workspace:*"
     joist-utils: "workspace:*"
-    knex: "npm:^3.1.0"
-    pg: "npm:^8.16.3"
-    pg-types: "npm:^4.1.0"
-    postgres-array: "npm:^3.0.4"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
   peerDependencies:
+    knex: ^3.1.0
     node-pg-migrate: ^8.0.4
+    pg: ^8.16.3
+    pg-types: ^4.1.0
+    postgres-array: ^3.0.4
   peerDependenciesMeta:
+    knex:
+      optional: true
     node-pg-migrate:
+      optional: true
+    pg:
+      optional: true
+    postgres-array:
       optional: true
   bin:
     joist-codegen: ./build/codegen.js
@@ -9695,14 +9702,15 @@ __metadata:
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
     jest: "npm:30.2.0"
-    joist-core: "workspace:*"
-    joist-utils: "workspace:*"
-    knex: "npm:^3.1.0"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     ts-node-dev: "npm:^2.0.0"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:5.9.2"
+  peerDependencies:
+    joist-core: "workspace:*"
+    joist-utils: "workspace:*"
+    knex: ^3.1.0
   languageName: unknown
   linkType: soft
 
@@ -9783,10 +9791,7 @@ __metadata:
     env-cmd: "npm:^11.0.0"
     jest: "npm:30.2.0"
     jest-junit: "npm:^16.0.0"
-    joist-codegen: "workspace:*"
-    joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
-    joist-test-utils: "workspace:*"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     superstruct: "npm:0.15.5"
@@ -9810,13 +9815,7 @@ __metadata:
     env-cmd: "npm:^11.0.0"
     jest: "npm:30.2.0"
     jest-junit: "npm:^16.0.0"
-    joist-codegen: "workspace:*"
-    joist-graphql-codegen: "workspace:*"
-    joist-graphql-resolver-utils: "workspace:*"
-    joist-knex: "workspace:*"
-    joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
-    joist-test-utils: "workspace:*"
     kelonio: "npm:^0.11.0"
     mitata: "npm:^1.0.34"
     postgres: "npm:^3.4.7"
@@ -9843,10 +9842,7 @@ __metadata:
     env-cmd: "npm:^11.0.0"
     jest: "npm:30.2.0"
     jest-junit: "npm:^16.0.0"
-    joist-codegen: "workspace:*"
-    joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
-    joist-test-utils: "workspace:*"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     superstruct: "npm:0.15.5"
@@ -9866,10 +9862,7 @@ __metadata:
     "@types/node": "npm:^24.6.0"
     jest: "npm:30.2.0"
     jest-junit: "npm:^16.0.0"
-    joist-codegen: "workspace:*"
-    joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
-    joist-test-utils: "workspace:*"
     node-pg-migrate: "npm:^8.0.4"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
@@ -9940,10 +9933,7 @@ __metadata:
     env-cmd: "npm:^11.0.0"
     jest: "npm:30.2.0"
     jest-junit: "npm:^16.0.0"
-    joist-codegen: "workspace:*"
-    joist-migration-utils: "workspace:*"
     joist-orm: "workspace:*"
-    joist-test-utils: "workspace:*"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     superstruct: "npm:0.15.5"
@@ -13287,17 +13277,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postgres-array@npm:^3.0.4, postgres-array@npm:~3.0.1":
-  version: 3.0.4
-  resolution: "postgres-array@npm:3.0.4"
-  checksum: 10/9d0fed9f8a4674cbc31a4e568dc5d068f6e32b4b5c62deae2c4908c75303be0c5aef023fc04dfb8feaf6d63af1a17257e528ef606e8128bffe1f9d6844ad8ffa
-  languageName: node
-  linkType: hard
-
 "postgres-array@npm:~2.0.0":
   version: 2.0.0
   resolution: "postgres-array@npm:2.0.0"
   checksum: 10/aff99e79714d1271fe942fec4ffa2007b755e7e7dc3d2feecae3f1ceecb86fd3637c8138037fc3d9e7ec369231eeb136843c0b25927bf1ce295245a40ef849b4
+  languageName: node
+  linkType: hard
+
+"postgres-array@npm:~3.0.1":
+  version: 3.0.4
+  resolution: "postgres-array@npm:3.0.4"
+  checksum: 10/9d0fed9f8a4674cbc31a4e568dc5d068f6e32b4b5c62deae2c4908c75303be0c5aef023fc04dfb8feaf6d63af1a17257e528ef606e8128bffe1f9d6844ad8ffa
   languageName: node
   linkType: hard
 

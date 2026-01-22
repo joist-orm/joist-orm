@@ -19,10 +19,12 @@
   "files": [
     "build"
   ],
-  "dependencies": {
-    "graphql": "^16.11.0",
+  "peerDependencies": {
     "joist-core": "workspace:*",
     "joist-test-utils": "workspace:*"
+  },
+  "dependencies": {
+    "graphql": "^16.11.0"
   },
   "devDependencies": {
     "@swc/core": "^1.13.20",

@@ -15,11 +15,13 @@
   "files": [
     "build"
   ],
+  "peerDependencies": {
+    "joist-utils": "workspace:*",
+    "pg": "^8.16.3"
+  },
   "dependencies": {
     "@types/pluralize": "^0.0.33",
-    "joist-utils": "workspace:*",
     "node-pg-migrate": "^8.0.4",
-    "pg": "^8.16.3",
     "pg-structure": "^7.15.3",
     "pluralize": "^8.0.0"
   },

@@ -18,9 +18,11 @@
   "files": [
     "build"
   ],
-  "dependencies": {
-    "bun-types": "^1.2.23",
+  "peerDependencies": {
     "joist-core": "workspace:*"
+  },
+  "dependencies": {
+    "bun-types": "^1.2.23"
   },
   "devDependencies": {
     "prettier": "^3.6.2",

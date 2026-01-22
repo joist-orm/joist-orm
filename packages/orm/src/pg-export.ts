@@ -1,1 +1,1 @@
-export { PostgresDriver, PostgresDriverOpts, setupLatestPgTypes } from "./drivers/PostgresDriver";
+export { PostgresDriver, PostgresDriverOpts, setupLatestPgTypes } from "./drivers/PostgresDriver.js";

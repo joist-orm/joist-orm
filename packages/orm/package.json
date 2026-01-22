@@ -15,7 +15,7 @@
   "typesVersions": {
     "*": {
       "pg": [
-        "build/postgres-driver.d.ts"
+        "build/pg-export.d.ts"
       ],
       "codegen": [
         "build/codegen.d.ts"
@@ -71,8 +71,8 @@
       "default": "./build/knex-export.js"
     },
     "./pg": {
-      "types": "./build/pg.d.ts",
-      "default": "./build/pg.js"
+      "types": "./build/pg-export.d.ts",
+      "default": "./build/pg-export.js"
     }
   },
   "scripts": {

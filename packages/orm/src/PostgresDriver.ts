@@ -65,7 +65,7 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
     private readonly knex: Knex,
     opts?: PostgresDriverOpts,
   ) {
-    this.#idAssigner = opts?.idAssigner ?? new SequenceIdAssigner(knex);
+    this.#idAssigner = opts?.idAssigner ?? new SequenceIdAssigner(async (sql: string) => (await knex.raw(sql)).rows);
     this.#preloadPlugin = opts?.preloadPlugin;
     setupLatestPgTypes(getRuntimeConfig().temporal);
   }

@@ -23,6 +23,7 @@
   "dependencies": {
     "ansi-regex": "^5.0.1",
     "joist-orm": "workspace:*",
+    "knex": "3.1.0",
     "mitata": "^1.0.34"
   },
   "devDependencies": {

@@ -20,8 +20,7 @@
     "build"
   ],
   "peerDependencies": {
-    "joist-utils": "workspace:*",
-    "pg-types": "^4.1.0"
+    "joist-utils": "workspace:*"
   },
   "dependencies": {
     "@types/object-hash": "^3.0.6",
@@ -29,21 +28,12 @@
     "dataloader": "^2.2.3",
     "object-hash": "^3.0.0"
   },
-  "peerDependenciesMeta": {
-    "pg-types": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "@swc/core": "^1.13.20",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.6.0",
-    "@types/pg": "^8.15.5",
     "jest": "30.2.0",
-    "knex": "^3.1.0",
-    "pg": "^8.16.3",
-    "pg-types": "^4.1.0",
     "prettier": "^3.6.2",
     "prettier-plugin-organize-imports": "^4.3.0",
     "temporal-polyfill": "^0.3.0",

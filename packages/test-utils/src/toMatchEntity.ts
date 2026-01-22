@@ -11,7 +11,7 @@ import {
   isReference,
   ReadOnlyCollection,
   Reference,
-} from "joist-core";
+} from "joist-orm";
 import { isPlainObject } from "joist-utils";
 import { CustomMatcherResult } from "./index";
 

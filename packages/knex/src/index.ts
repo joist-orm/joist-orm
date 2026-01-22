@@ -1,4 +1,4 @@
-import { Entity, FilterAndSettings, getMetadata, MaybeAbstractEntityConstructor, parseFindQuery } from "joist-core";
+import { Entity, FilterAndSettings, getMetadata, MaybeAbstractEntityConstructor, parseFindQuery } from "joist-orm";
 import { Knex } from "knex";
 import { buildKnexQuery } from "./buildKnexQuery";
 

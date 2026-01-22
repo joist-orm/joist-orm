@@ -1,4 +1,4 @@
-import { EntityManager, isEntity } from "joist-core";
+import { EntityManager, isEntity } from "joist-orm";
 import { fail } from "joist-utils";
 import { Context } from "./context";
 import { RunPlugin } from "./RunPlugin";

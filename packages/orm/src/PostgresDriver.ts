@@ -31,7 +31,7 @@ import {
   Todo,
   UpdateOp,
   zeroTo,
-} from "joist-core";
+} from "joist-orm";
 import { Knex } from "knex";
 import pg from "pg";
 import { builtins, getTypeParser } from "pg-types";

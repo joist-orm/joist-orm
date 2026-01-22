@@ -17,7 +17,7 @@ import {
   ParsedFindQuery,
   SequenceIdAssigner,
   Todo,
-} from "joist-core";
+} from "joist-orm";
 
 const { getRuntimeConfig, cleanSql, generateOps } = driverApi;
 type DeleteOp = any;

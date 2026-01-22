@@ -1,4 +1,4 @@
-import { BaseEntity } from "joist-core";
+import { BaseEntity } from "joist-orm";
 import { MatchedEntity } from "./toMatchEntity";
 export { Context } from "./context";
 export { ContextFn, makeRun, makeRunEach, newContext, run, runEach } from "./run";

@@ -1,4 +1,4 @@
-import { DeepPartialOrNull, Entity, EntityConstructor, failIfAnyRejected, OptsOf } from "joist-core";
+import { DeepPartialOrNull, Entity, EntityConstructor, failIfAnyRejected, OptsOf } from "joist-orm";
 import { Context } from "joist-test-utils";
 
 /** Given an GraphQL input, creates-or-updates an entity of `type`. */

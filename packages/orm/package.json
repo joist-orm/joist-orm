@@ -77,14 +77,17 @@
   },
   "scripts": {
     "build": "tsc",
+    "test": "jest",
     "format": "prettier --ignore-path ../../.prettierignore  --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
   },
   "files": [
     "build"
   ],
   "dependencies": {
+    "@types/object-hash": "^3.0.6",
+    "ansis": "^3.17.0",
+    "dataloader": "^2.2.3",
     "joist-codegen": "workspace:*",
-    "joist-core": "workspace:*",
     "joist-graphql-codegen": "workspace:*",
     "joist-graphql-resolver-utils": "workspace:*",
     "joist-knex": "workspace:*",
@@ -92,6 +95,7 @@
     "joist-test-utils": "workspace:*",
     "joist-utils": "workspace:*",
     "knex": "^3.1.0",
+    "object-hash": "^3.0.0",
     "pg": "^8.16.3",
     "pg-types": "^4.1.0",
     "postgres-array": "^3.0.4"
@@ -105,10 +109,16 @@
     }
   },
   "devDependencies": {
+    "@swc/core": "^1.13.20",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.6.0",
     "@types/pg": "^8.15.5",
+    "jest": "30.2.0",
     "prettier": "^3.6.2",
     "prettier-plugin-organize-imports": "^4.3.0",
+    "temporal-polyfill": "^0.3.0",
+    "ts-node-dev": "^2.0.0",
     "tsconfig-paths": "^4.2.0",
     "typescript": "5.9.2"
   }

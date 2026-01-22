@@ -224,7 +224,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     ${generateDefaultValidationRules(dbMeta, meta, configName)}
     ${generateDefaultValues(config, meta, configName)};
 
-    declare module "joist-core" {
+    declare module "joist-orm" {
       interface TypeMap {
         ${entityName}: {
           entityType: ${entityName};

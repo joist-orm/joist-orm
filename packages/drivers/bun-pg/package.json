@@ -20,7 +20,7 @@
   ],
   "dependencies": {
     "bun-types": "^1.2.23",
-    "joist-core": "workspace:*"
+    "joist-orm": "workspace:*"
   },
   "devDependencies": {
     "prettier": "^3.6.2",

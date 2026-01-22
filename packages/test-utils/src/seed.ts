@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { Driver, EntityManager, newPgConnectionConfig } from "joist-core";
+import { Driver, EntityManager, newPgConnectionConfig } from "joist-orm";
 import { knex as createKnex, Knex } from "knex";
 
 export interface SeedConfig {

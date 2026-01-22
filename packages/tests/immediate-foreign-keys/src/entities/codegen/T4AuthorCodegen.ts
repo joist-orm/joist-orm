@@ -96,7 +96,7 @@ export const t4AuthorConfig = new ConfigApi<T4Author, Context>();
 t4AuthorConfig.addRule(newRequiredRule("firstName"));
 t4AuthorConfig.addRule(newRequiredRule("favoriteBook"));
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     T4Author: {
       entityType: T4Author;

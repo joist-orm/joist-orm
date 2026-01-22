@@ -173,7 +173,7 @@ taskConfig.addRule(newRequiredRule("createdAt"));
 taskConfig.addRule(newRequiredRule("updatedAt"));
 taskConfig.addRule(cannotBeUpdated("type"));
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     Task: {
       entityType: Task;

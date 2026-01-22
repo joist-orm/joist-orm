@@ -67,7 +67,7 @@ export const databaseOwnerConfig = new ConfigApi<DatabaseOwner, Context>();
 
 databaseOwnerConfig.addRule(newRequiredRule("name"));
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     DatabaseOwner: {
       entityType: DatabaseOwner;

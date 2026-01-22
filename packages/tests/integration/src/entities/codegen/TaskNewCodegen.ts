@@ -126,7 +126,7 @@ taskNewConfig.addRule("selfReferential", mustBeSubType("selfReferential"));
 taskNewConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));
 taskNewConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     TaskNew: {
       entityType: TaskNew;

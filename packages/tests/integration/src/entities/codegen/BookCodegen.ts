@@ -206,7 +206,7 @@ bookConfig.addRule(newRequiredRule("updatedAt"));
 bookConfig.addRule(newRequiredRule("author"));
 bookConfig.setDefault("order", 1);
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     Book: {
       entityType: Book;

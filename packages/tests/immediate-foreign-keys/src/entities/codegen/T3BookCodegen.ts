@@ -96,7 +96,7 @@ export const t3BookConfig = new ConfigApi<T3Book, Context>();
 t3BookConfig.addRule(newRequiredRule("title"));
 t3BookConfig.addRule(newRequiredRule("author"));
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     T3Book: {
       entityType: T3Book;

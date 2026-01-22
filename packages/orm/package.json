@@ -71,8 +71,8 @@
       "default": "./build/knex-export.js"
     },
     "./pg": {
-      "types": "./build/postgres-driver.d.ts",
-      "default": "./build/postgres-driver.js"
+      "types": "./build/pg.d.ts",
+      "default": "./build/pg.js"
     }
   },
   "scripts": {

@@ -89,7 +89,7 @@ export const bookConfig = new ConfigApi<Book, Context>();
 bookConfig.addRule(newRequiredRule("title"));
 bookConfig.addRule(newRequiredRule("author"));
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     Book: {
       entityType: Book;

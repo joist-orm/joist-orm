@@ -130,7 +130,7 @@ bookAdvanceConfig.addRule(newRequiredRule("status"));
 bookAdvanceConfig.addRule(newRequiredRule("book"));
 bookAdvanceConfig.addRule(newRequiredRule("publisher"));
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     BookAdvance: {
       entityType: BookAdvance;

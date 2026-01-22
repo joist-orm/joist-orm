@@ -143,7 +143,7 @@ imageConfig.addRule(newRequiredRule("createdAt"));
 imageConfig.addRule(newRequiredRule("updatedAt"));
 imageConfig.addRule(newRequiredRule("type"));
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     Image: {
       entityType: Image;

@@ -98,7 +98,7 @@ authorScheduleConfig.addRule(newRequiredRule("createdAt"));
 authorScheduleConfig.addRule(newRequiredRule("updatedAt"));
 authorScheduleConfig.addRule(newRequiredRule("author"));
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     AuthorSchedule: {
       entityType: AuthorSchedule;

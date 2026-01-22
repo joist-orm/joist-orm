@@ -153,7 +153,7 @@ bookReviewConfig.addRule(newRequiredRule("createdAt"));
 bookReviewConfig.addRule(newRequiredRule("updatedAt"));
 bookReviewConfig.addRule(newRequiredRule("book"));
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     BookReview: {
       entityType: BookReview;

@@ -124,7 +124,7 @@ tagConfig.addRule(newRequiredRule("name"));
 tagConfig.addRule(newRequiredRule("createdAt"));
 tagConfig.addRule(newRequiredRule("updatedAt"));
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     Tag: {
       entityType: Tag;

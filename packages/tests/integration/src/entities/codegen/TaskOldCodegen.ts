@@ -134,7 +134,7 @@ taskOldConfig.addRule("parentOldTask", mustBeSubType("parentOldTask"));
 taskOldConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));
 taskOldConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     TaskOld: {
       entityType: TaskOld;

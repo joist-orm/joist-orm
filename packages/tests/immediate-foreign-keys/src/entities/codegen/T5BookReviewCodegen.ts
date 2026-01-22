@@ -88,7 +88,7 @@ export const t5BookReviewConfig = new ConfigApi<T5BookReview, Context>();
 
 t5BookReviewConfig.addRule(newRequiredRule("title"));
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     T5BookReview: {
       entityType: T5BookReview;

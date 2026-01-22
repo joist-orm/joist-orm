@@ -138,7 +138,7 @@ criticConfig.addRule(newRequiredRule("name"));
 criticConfig.addRule(newRequiredRule("createdAt"));
 criticConfig.addRule(newRequiredRule("updatedAt"));
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     Critic: {
       entityType: Critic;

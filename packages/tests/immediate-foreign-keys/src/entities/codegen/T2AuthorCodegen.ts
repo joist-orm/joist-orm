@@ -95,7 +95,7 @@ export const t2AuthorConfig = new ConfigApi<T2Author, Context>();
 
 t2AuthorConfig.addRule(newRequiredRule("firstName"));
 
-declare module "joist-core" {
+declare module "joist-orm" {
   interface TypeMap {
     T2Author: {
       entityType: T2Author;

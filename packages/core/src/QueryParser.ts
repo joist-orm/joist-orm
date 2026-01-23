@@ -508,6 +508,7 @@ export function parseFindQuery(
         // Do we already this table joined in?
         let table = tables.find((t) => t.table === field.otherMetadata().tableName);
         if (table) {
+          addTablePerClassJoinsAndClassTag(query, field.otherMetadata(), table.alias, false);
           addOrderBy(field.otherMetadata(), table.alias, value);
         } else {
           const table = field.otherMetadata().tableName;
@@ -522,6 +523,7 @@ export function parseFindQuery(
             col2: kqDot(a, "id"),
             distinct: false,
           });
+          addTablePerClassJoinsAndClassTag(query, field.otherMetadata(), a, false);
           addOrderBy(field.otherMetadata(), a, value);
         }
       } else {

@@ -298,6 +298,19 @@ describe("ClassTableInheritance", () => {
     expect(b as SmallPublisher).toMatchEntity({ name: "b" });
   });
 
+  it("can order by a base field through a m2o to a CTI subtype", async () => {
+    await insertLargePublisher({ id: 1, name: "beta" });
+    await insertLargePublisher({ id: 2, name: "alpha" });
+    await insertCritic({ name: "c1", favorite_large_publisher_id: 1 });
+    await insertCritic({ name: "c2", favorite_large_publisher_id: 2 });
+
+    const em = newEntityManager();
+    const [c2, c1] = await em.find(Critic, {}, { orderBy: { favoriteLargePublisher: { name: "ASC" } } });
+
+    expect(c2).toMatchEntity({ name: "c2" });
+    expect(c1).toMatchEntity({ name: "c1" });
+  });
+
   it("can find entities from the base type", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertPublisher({ name: "sp1" });

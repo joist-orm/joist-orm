@@ -527,7 +527,7 @@ class PolyReferenceAlias<T extends Entity> {
  * Given an alias created for `meta`, adjusts the alias if it's bound to a potentially
  * different parent-/sub-meta in the join tree.
  */
-function getMaybeCtiAlias(
+export function getMaybeCtiAlias(
   meta: EntityMetadata,
   field: Field & { aliasSuffix: string },
   newMeta: EntityMetadata,

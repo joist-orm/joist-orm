@@ -1,5 +1,5 @@
 import { groupBy, isPlainObject } from "joist-utils";
-import { getAliasMgmt, isAlias } from "./Aliases";
+import { getAliasMgmt, getMaybeCtiAlias, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
@@ -514,12 +514,13 @@ export function parseFindQuery(
           const table = field.otherMetadata().tableName;
           const a = getAlias(table);
           const column = field.serde.columns[0].columnName;
+          const fa = getMaybeCtiAlias(meta, field, meta, alias);
           // If we don't have a join, don't force this to be an inner join
           tables.push({
             alias: a,
             table,
             join: "outer",
-            col1: kqDot(alias, column),
+            col1: kqDot(fa, column),
             col2: kqDot(a, "id"),
             distinct: false,
           });

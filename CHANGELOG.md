@@ -1,3 +1,10 @@
+## [2.0.3](https://github.com/joist-orm/joist-orm/compare/v2.0.2...v2.0.3) (2026-01-23)
+
+
+### Bug Fixes
+
+* Add CTI table joins within orderBy ([#1715](https://github.com/joist-orm/joist-orm/issues/1715)) ([682bf32](https://github.com/joist-orm/joist-orm/commit/682bf32890d17a25301f67a70fbf53099304a34f))
+
 ## [2.0.2](https://github.com/joist-orm/joist-orm/compare/v2.0.1...v2.0.2) (2026-01-22)
 
 

@@ -34,6 +34,24 @@ describe("EntityManager.findOrCreate", () => {
     await em.findOrCreate(Author, { publisher: undefined }, { firstName: "a2" });
   });
 
+  it("can find by null unloaded m2o field with findOrCreate", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1");
+    // Using null instead of undefined should also find the existing author
+    const a2 = await em.findOrCreate(Author, { publisher: null }, { firstName: "a2" });
+    expect(a2).toMatchEntity(a1);
+  });
+
+  it("can find in-memory entity by null m2o field with findOrCreate", async () => {
+    const em = newEntityManager();
+    // Create an author with no publisher
+    const a1 = em.create(Author, { firstName: "a1" });
+    // Using null should find the in-memory entity
+    const a2 = await em.findOrCreate(Author, { publisher: null }, { firstName: "a2" });
+    expect(a2).toMatchEntity(a1);
+  });
+
   it("can create with findOrCreate", async () => {
     const em = newEntityManager();
     em.create(Author, { firstName: "a1" });

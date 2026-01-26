@@ -1,0 +1,54 @@
+{
+  "name": "create-joist-app",
+  "version": "2.0.3",
+  "description": "Create a new Joist ORM project with a single command",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joist-orm/joist-orm.git",
+    "directory": "packages/create-joist-app"
+  },
+  "keywords": [
+    "joist",
+    "orm",
+    "typescript",
+    "postgresql",
+    "scaffolding",
+    "cli"
+  ],
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "bin": "./build/index.js",
+  "files": [
+    "build",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:scaffolded": "./scripts/test-scaffolded-project.sh",
+    "test:scaffolded:full": "FULL_TEST=true ./scripts/test-scaffolded-project.sh",
+    "format": "prettier --ignore-path ../../.prettierignore --write 'src/**/*.{ts,js}'"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "picocolors": "^1.1.1",
+    "prompts": "^2.4.2",
+    "validate-npm-package-name": "^6.0.0"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.13.0",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.6.0",
+    "@types/prompts": "^2.4.9",
+    "@types/validate-npm-package-name": "^4.0.2",
+    "jest": "30.2.0",
+    "prettier": "^3.6.2",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "typescript": "5.9.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

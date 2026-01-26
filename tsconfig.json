@@ -2,6 +2,7 @@
   "references": [
     { "path": "./packages/codegen" },
     { "path": "./packages/core" },
+    { "path": "./packages/create-joist-app" },
     { "path": "./packages/drivers/bun-pg" },
     { "path": "./packages/graphql-codegen" },
     { "path": "./packages/graphql-resolver-utils" },

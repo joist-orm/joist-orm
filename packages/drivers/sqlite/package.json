@@ -1,0 +1,33 @@
+{
+  "name": "joist-driver-sqlite",
+  "version": "1.224.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/joist-orm/joist-orm.git",
+    "directory": "packages/drivers/sqlite"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "scripts": {
+    "format": "prettier --ignore-path ../../../.prettierignore --write 'src/**/*.{ts,js,tsx,jsx}'"
+  },
+  "files": [
+    "build"
+  ],
+  "peerDependencies": {
+    "better-sqlite3": "^11.0.0 || ^10.0.0 || ^9.0.0",
+    "joist-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "better-sqlite3": "^11.8.1",
+    "prettier": "^3.6.2",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "5.9.2"
+  }
+}

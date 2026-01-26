@@ -1,0 +1,33 @@
+{
+  "name": "{{PROJECT_NAME}}",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "test": "jest --runInBand",
+    "db": "docker compose up -d db && yarn db-wait && yarn migrate && yarn codegen",
+    "redb": "docker compose exec db ./reset.sh && yarn migrate && yarn codegen",
+    "db-wait": "node -e \"const { execSync } = require('child_process'); let i = 0; while (i++ < 30) { try { execSync('docker compose exec db pg_isready -U {{DB_USER}}', { stdio: 'ignore' }); process.exit(0); } catch { require('child_process').execSync('sleep 1'); } } process.exit(1);\"",
+    "migrate": "env-cmd joist-pg-migrate",
+    "migrate:new": "env-cmd joist-pg-migrate create",
+    "codegen": "joist-codegen",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\""
+  },
+  "dependencies": {
+    "joist-orm": "^2.0.3",
+    "knex": "^3.1.0",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.13.0",
+    "@swc/jest": "^0.2.39",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.0",
+    "env-cmd": "^11.0.0",
+    "jest": "^30.0.0",
+    "joist-migration-utils": "^2.0.3",
+    "prettier": "^3.6.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  }
+}

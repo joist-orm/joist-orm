@@ -1,0 +1,11 @@
+schema: "./src/**/*.graphql"
+generates:
+  ./src/generated/graphql-types.ts:
+    plugins:
+      - typescript
+      - typescript-resolvers
+    config:
+      contextType: "../context#Context"
+      mappers:
+        Author: ../entities#Author
+        Book: ../entities#Book

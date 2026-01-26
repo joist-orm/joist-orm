@@ -1,0 +1,10 @@
+{
+  "entitiesDirectory": "./src/entities",
+  "contextType": "src/context.ts#Context",
+  "idType": "tagged-string",
+  "codegenPlugins": ["joist-graphql-codegen"],
+  "entities": {
+    "Author": { "tag": "a" },
+    "Book": { "tag": "b" }
+  }
+}

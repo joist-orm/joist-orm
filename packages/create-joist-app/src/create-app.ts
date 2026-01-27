@@ -3,7 +3,6 @@ import path from "path";
 import pc from "picocolors";
 import { copyDirectory } from "./helpers/copy";
 import type { PackageManager } from "./helpers/get-package-manager";
-import { tryGitCommit, tryGitInit } from "./helpers/git";
 import { install } from "./helpers/install";
 
 export interface DbConfig {
@@ -88,15 +87,6 @@ export async function createApp(options: CreateAppOptions): Promise<void> {
     console.log("Installing dependencies...");
     console.log();
     await install(packageManager, projectPath);
-  }
-
-  // Initialize git repository
-  console.log();
-  if (tryGitInit(projectPath)) {
-    console.log("Initialized a git repository.");
-    if (tryGitCommit(projectPath)) {
-      console.log("Created initial commit.");
-    }
   }
 }
 

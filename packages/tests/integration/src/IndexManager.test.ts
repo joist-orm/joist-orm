@@ -1,6 +1,7 @@
 import { newEntityManager } from "@src/testEm";
+import { indexThreshold } from "joist-core/build/IndexManager";
 import { getEmInternalApi } from "joist-orm";
-import { Author, newPublisher } from "./entities";
+import { Author, newAuthor, newPublisher } from "./entities";
 import { zeroTo } from "./utils";
 
 describe("IndexManager", () => {
@@ -14,12 +15,10 @@ describe("IndexManager", () => {
     expect(getEmInternalApi(em).indexManager.isIndexed("a")).toBe(false);
   });
 
-  it("should enable indexing when entity count reaches 1000", async () => {
+  it("should enable indexing when entity count reaches 500", async () => {
     const em = newEntityManager();
-    // Create 1000 authors
-    for (let i = 0; i < 1000; i++) {
-      em.create(Author, { firstName: `Author${i}` });
-    }
+    // Create 500 authors
+    for (let i = 0; i < indexThreshold; i++) em.create(Author, { firstName: `Author${i}` });
     // And `find...` to potentially trigger index creation
     await em.findWithNewOrChanged(Author, { firstName: "..." });
     // IndexManager should now be enabled for Author type
@@ -28,8 +27,8 @@ describe("IndexManager", () => {
 
   it("should find entities using indexes when enabled", async () => {
     const em = newEntityManager();
-    // Create 1100 authors to trigger indexing
-    const authors = zeroTo(1100).map((i) => em.create(Author, { firstName: `Author${i}` }));
+    // Create 1000 authors to trigger indexing
+    const authors = zeroTo(indexThreshold + 10).map((i) => em.create(Author, { firstName: `Author${i}` }));
     // Should use indexed search
     const found = await em.findWithNewOrChanged(Author, { firstName: "Author500" });
     expect(found).toMatchEntity([authors[500]]);
@@ -45,8 +44,8 @@ describe("IndexManager", () => {
       (publisher as any).spotlightAuthor.set(spotlightAuthor);
     }
     await em.flush();
-    // Create 1000+ authors to trigger indexing
-    const authors = zeroTo(1100).map((i) =>
+    // Create 500+ authors to trigger indexing
+    const authors = zeroTo(indexThreshold + 10).map((i) =>
       em.create(Author, {
         firstName: `Author${i}`,
         publisher: i < 500 ? publisher : undefined,
@@ -62,8 +61,8 @@ describe("IndexManager", () => {
     const em = newEntityManager();
     // Create unsaved publisher
     const publisher = newPublisher(em, { name: "Unsaved Publisher" });
-    // Create 1000+ authors to trigger indexing
-    const authors = zeroTo(1100).map((i) =>
+    // Create 500+ authors to trigger indexing
+    const authors = zeroTo(indexThreshold + 10).map((i) =>
       em.create(Author, {
         firstName: `Author${i}`,
         publisher: i < 300 ? publisher : undefined,
@@ -77,16 +76,24 @@ describe("IndexManager", () => {
 
   it("should handle null/undefined m2o fields", async () => {
     const em = newEntityManager();
-    // Create 1000+ authors to trigger indexing
-    const authors = zeroTo(1100).map((i) =>
+    // Create 500+ authors to trigger indexing
+    zeroTo(indexThreshold + 10).map((i) =>
       em.create(Author, {
         firstName: `NullAuthor${i}`,
-        // Don't set publisher to leave it undefined
       }),
     );
     // Should find authors with null publisher
     const found = await em.findWithNewOrChanged(Author, { publisher: undefined });
-    expect(found.length).toBe(1100);
+    expect(found.length).toBe(510);
+  });
+
+  it("should find entities with unset m2o when querying with null", async () => {
+    const em = newEntityManager();
+    // Create 500+ authors to trigger indexing - none have a publisher set
+    zeroTo(indexThreshold + 10).map((i) => newAuthor(em, {}));
+    // Querying with null (not undefined) should still find entities indexed under undefined
+    const found = await em.findWithNewOrChanged(Author, { publisher: null });
+    expect(found.length).toBe(510);
   });
 
   it("should update indexes when field values change", async () => {
@@ -151,12 +158,7 @@ describe("IndexManager", () => {
     const publisher1 = newPublisher(em, { name: "Publisher 1" });
     const publisher2 = newPublisher(em, { name: "Publisher 2" });
     // Create 1000+ authors to trigger indexing
-    const authors = zeroTo(1100).map((i) =>
-      em.create(Author, {
-        firstName: `Author${i}`,
-        publisher: publisher1,
-      }),
-    );
+    const authors = zeroTo(1100).map((i) => em.create(Author, { firstName: `Author${i}`, publisher: publisher1 }));
     // Do an initial search to trigger indexing of authors
     await em.findWithNewOrChanged(Author, { publisher: publisher1 });
     // Then change publisher for some authors

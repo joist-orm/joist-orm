@@ -138,7 +138,8 @@ export function entityMatches<T extends Entity>(entity: T, opts: Partial<OptsOf<
           // Otherwise use ids
           return sameEntity(relation.id as any, value as any);
         } else {
-          return value === undefined;
+          // Relation is not set, match if value is null-ish (null or undefined)
+          return value === undefined || value === null;
         }
       default:
         throw new Error(`Unsupported field ${fieldName}`);

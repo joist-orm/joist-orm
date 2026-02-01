@@ -21,7 +21,6 @@ import {
   kq,
   kqDot,
   ManyToManyLike,
-  OpColumn,
   ParsedFindQuery,
   partition,
   PreloadPlugin,
@@ -160,27 +159,31 @@ export class SqliteDriver implements Driver<SqliteTransaction> {
 }
 
 /**
- * Batch insert using SQLite's multi-row VALUES syntax.
+ * Batch insert using json_each to pass columnar data.
  *
- * SQLite supports: INSERT INTO table (cols) VALUES (row1), (row2), ...
- * Limited to SQLITE_MAX_VARIABLE_NUMBER (default 999, can be up to 32766)
+ * INSERT INTO table (col1, col2) SELECT c1.value, c2.value
+ * FROM json_each(?1) c1 JOIN json_each(?2) c2 ON c2.key = c1.key
  */
 function batchInsert(db: Database.Database, op: InsertOp): void {
   const { tableName, columns, columnValues } = op;
   if (columnValues.length === 0 || columnValues[0].length === 0) return;
 
-  const rowCount = columnValues[0].length;
   const colNames = columns.map((c) => kq(c.columnName)).join(", ");
+  const selects = columns.map((c) => `${kq(c.columnName)}.value`).join(", ");
+  const baseTable = `json_each(?) ${kq(columns[0].columnName)}`;
+  const joins = columns
+    .slice(1)
+    .map((c) => `JOIN json_each(?) ${kq(c.columnName)} ON ${kq(c.columnName)}.key = ${kq(columns[0].columnName)}.key`)
+    .join("\n    ");
 
-  // Build VALUES clause with placeholders
-  const rowPlaceholders = `(${columns.map(() => "?").join(", ")})`;
-  const allPlaceholders = Array(rowCount).fill(rowPlaceholders).join(", ");
+  const sql = cleanSql(`
+    INSERT INTO ${kq(tableName)} (${colNames})
+    SELECT ${selects}
+    FROM ${baseTable}
+    ${joins}
+  `);
 
-  const sql = `INSERT INTO ${kq(tableName)} (${colNames}) VALUES ${allPlaceholders}`;
-
-  // Flatten column-wise data to row-wise for SQLite
-  const bindings = flattenColumnValuesToRows(columns, columnValues);
-
+  const bindings = columnValues.map((col) => JSON.stringify(col.map(adaptBinding)));
   db.prepare(sql).run(...bindings);
 }
 
@@ -328,24 +331,6 @@ function m2mBatchDelete(
   }
 }
 
-/**
- * Convert columnar data to row-wise bindings for SQLite's VALUES clause.
- *
- * Input: [[id1, id2], [name1, name2]] (column-wise)
- * Output: [id1, name1, id2, name2] (row-wise for VALUES (?,?),(?,?))
- */
-function flattenColumnValuesToRows(columns: OpColumn[], columnValues: any[][]): any[] {
-  const rowCount = columnValues[0]?.length ?? 0;
-  const bindings: any[] = [];
-
-  for (let row = 0; row < rowCount; row++) {
-    for (let col = 0; col < columns.length; col++) {
-      bindings.push(adaptBinding(columnValues[col][row]));
-    }
-  }
-
-  return bindings;
-}
 
 /**
  * Adapt JavaScript values for SQLite binding.

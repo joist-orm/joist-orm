@@ -12,6 +12,7 @@ import { getInstanceData, IdAssigner, keyToTaggedId, Todo } from "joist-core";
  */
 export class SqliteAutoIncrementIdAssigner implements IdAssigner {
   #db: Database.Database;
+  #knownTables = new Set<string>();
 
   constructor(db: Database.Database) {
     this.#db = db;
@@ -29,11 +30,16 @@ export class SqliteAutoIncrementIdAssigner implements IdAssigner {
     if (needed.length === 0) return;
 
     // Ensure all tables have a sqlite_sequence entry (they might not if no rows have been inserted yet)
-    const insertPlaceholders = needed.map(() => "(?, 0)").join(", ");
-    const insertBindings = needed.map((n) => n.tableName);
-    this.#db.prepare(`INSERT OR IGNORE INTO sqlite_sequence (name, seq) VALUES ${insertPlaceholders}`).run(
-      ...insertBindings,
-    );
+    const unknown = needed.filter((n) => !this.#knownTables.has(n.tableName));
+    if (unknown.length > 0) {
+      const insertPlaceholders = unknown.map(() => "(?, 0)").join(", ");
+      this.#db.prepare(`INSERT OR IGNORE INTO sqlite_sequence (name, seq) VALUES ${insertPlaceholders}`).run(
+        ...unknown.map((n) => n.tableName),
+      );
+      for (const n of unknown) {
+        this.#knownTables.add(n.tableName);
+      }
+    }
 
     // Build a single UPDATE...RETURNING to reserve all ID ranges at once
     // SET seq = CASE name WHEN 'authors' THEN seq + 3 WHEN 'books' THEN seq + 5 END

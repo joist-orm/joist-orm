@@ -28,7 +28,7 @@ import {
   Todo,
   UpdateOp,
 } from "joist-core";
-import { SqliteSequenceIdAssigner } from "./SqliteIdAssigner";
+import { SqliteAutoIncrementIdAssigner } from "./SqliteIdAssigner";
 
 export interface SqliteDriverOpts {
   idAssigner?: IdAssigner;
@@ -63,7 +63,7 @@ export class SqliteDriver implements Driver<SqliteTransaction> {
 
   constructor(db: Database.Database, opts?: SqliteDriverOpts) {
     this.#db = db;
-    this.#idAssigner = opts?.idAssigner ?? new SqliteSequenceIdAssigner(db);
+    this.#idAssigner = opts?.idAssigner ?? new SqliteAutoIncrementIdAssigner(db);
     this.#preloadPlugin = opts?.preloadPlugin;
 
     // Enable foreign key constraints

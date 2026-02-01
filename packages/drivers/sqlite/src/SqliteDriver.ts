@@ -185,47 +185,54 @@ function batchInsert(db: Database.Database, op: InsertOp): void {
 }
 
 /**
- * Batch update using a CTE with VALUES.
+ * Batch update using json_each to pass columnar data.
  *
- * SQLite 3.33+ supports UPDATE FROM, so we can use:
- * WITH data(col1, col2) AS (VALUES (?, ?), (?, ?))
- * UPDATE table SET col1 = data.col1 FROM data WHERE table.id = data.id
+ * Each column's values are passed as a JSON array, then joined by key index:
+ * UPDATE table SET col = data.col FROM (
+ *   SELECT ids.value AS id, c1.value AS col1, ...
+ *   FROM json_each(?1) ids
+ *   JOIN json_each(?2) c1 ON c1.key = ids.key
+ *   ...
+ * ) AS data WHERE table.id = data.id
  */
 function batchUpdate(db: Database.Database, op: UpdateOp): void {
   const { tableName, columns, columnValues, updatedAt } = op;
   if (columnValues.length === 0 || columnValues[0].length === 0) return;
 
-  const rowCount = columnValues[0].length;
-  const colNames = columns.map((c) => kq(c.columnName)).join(", ");
+  // Build the FROM subquery with json_each joins
+  // First column (id) is the base; remaining columns join on key
+  const selects = columns.map((c) => `${kq(c.columnName)}.value AS ${kq(c.columnName)}`).join(", ");
+  const baseTable = `json_each(?) ${kq(columns[0].columnName)}`;
+  const joins = columns
+    .slice(1)
+    .map((c) => `JOIN json_each(?) ${kq(c.columnName)} ON ${kq(c.columnName)}.key = ${kq(columns[0].columnName)}.key`)
+    .join("\n    ");
 
-  // Build VALUES clause
-  const rowPlaceholders = `(${columns.map(() => "?").join(", ")})`;
-  const valuesRows = Array(rowCount).fill(rowPlaceholders).join(", ");
-
-  // Build SET clause (exclude id and __original_updated_at)
   const setClause = columns
     .filter((c) => c.columnName !== "id" && c.columnName !== "__original_updated_at")
     .map((c) => `${kq(c.columnName)} = data.${kq(c.columnName)}`)
     .join(", ");
 
-  // Build WHERE clause with optional oplock check
   let whereClause = `${kq(tableName)}.id = data.id`;
   if (updatedAt) {
     whereClause += ` AND ${kqDot(tableName, updatedAt)} = data.__original_updated_at`;
   }
 
   const sql = cleanSql(`
-    WITH data(${colNames}) AS (VALUES ${valuesRows})
     UPDATE ${kq(tableName)}
     SET ${setClause}
-    FROM data
+    FROM (
+      SELECT ${selects}
+      FROM ${baseTable}
+      ${joins}
+    ) AS data
     WHERE ${whereClause}
   `);
 
-  const bindings = flattenColumnValuesToRows(columns, columnValues);
+  // Bindings are the column arrays as JSON
+  const bindings = columnValues.map((col) => JSON.stringify(col.map(adaptBinding)));
   const result = db.prepare(sql).run(...bindings);
 
-  // Check for oplock failures
   const ids = columnValues[0];
   if (result.changes !== ids.length) {
     throw new Error(`Oplock failure for ${tableName}: expected ${ids.length} updates, got ${result.changes}`);

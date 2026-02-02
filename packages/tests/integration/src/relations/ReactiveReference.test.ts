@@ -207,7 +207,7 @@ describe("ReactiveReference", () => {
        "b:1.title changed, queuing b:1.favoriteAuthor.publisher@LargePublisher.titlesOfFavoriteBooks↩",
        "b:1.title changed, queuing b:1.favoriteAuthor.publisher@SmallPublisher.titlesOfFavoriteBooks↩",
        "Recalculating reactive fields values... (em.entities=1)↩",
-       "  Walked 1 Book. paths, found 1 Book.search to recalc↩",
+       "  Walked 1 Book.(self) paths, found 1 Book.search to recalc↩",
        "    [ b:1 ] -> [ b:1 ]↩",
        "  Walked 1 Book.author paths, found 1 Author.search to recalc↩",
        "    [ b:1 ] -> [ a:1 ]↩",
@@ -222,11 +222,18 @@ describe("ReactiveReference", () => {
        "    SmallPublisher.titlesOfFavoriteBooks -> [ p:1 ]↩",
        "a:1.search changed, queuing a:1.rf↩",
        "    took 0 millis (em.entities=3)↩",
-       "  Walked 1 Author. paths, found 1 Author.rf to recalc↩",
+       "  Walked 1 Author.(self) paths, found 1 Author.rf to recalc↩",
        "    [ a:1 ] -> [ a:1 ]↩",
        "  Loading 1 actions... (em.entities=3)↩",
        "    Author.rf -> [ a:1 ]↩",
        "    took 0 millis (em.entities=3)↩",
+       "Validating from 3 changed entities... (em.entities=3)↩",
+       "  Walked 1 Book.author paths, found 1 Author.addRule(Author.ts:368) to validate↩",
+       "    [ b:1 ] -> [ a:1 ]↩",
+       "  Walked 1 Book.author.books paths, found 1 Book.addRule(Book.ts:69) to validate↩",
+       "    [ b:1 ] -> [ b:1 ]↩",
+       "  Walked 1 Book.author.publisher paths, found 1 Publisher.addRule(Publisher.ts:177) to validate↩",
+       "    [ b:1 ] -> [ p:1 ]↩",
      ]
     `);
   });

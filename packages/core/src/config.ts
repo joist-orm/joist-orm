@@ -85,7 +85,7 @@ export class ConfigApi<T extends Entity, C> {
   addRule(rule: ValidationRule<T>): void;
   addRule(ruleOrHint: ValidationRule<T> | any, maybeRule?: ValidationRule<any>): void {
     // Keep the name for easy debugging/tracing later
-    const name = getCallerName();
+    const name = `addRule(${getCallerName()})`;
     this.ensurePreBoot(name, "addRule");
     if (typeof ruleOrHint === "function") {
       const fn = ruleOrHint;

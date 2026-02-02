@@ -29,6 +29,7 @@ export {
 } from "./EntityDbMetadata";
 export { EnumMetadata, EnumRow, EnumTableData, PgEnumData, PgEnumMetadata } from "./loadMetadata";
 export { Config, EntityDbMetadata, mapSimpleDbTypeToTypescriptType };
+export { sqliteCodegen, SqliteCodegenOptions } from "./sqliteCodegen";
 
 export async function joistCodegen() {
   const config = await loadConfig();

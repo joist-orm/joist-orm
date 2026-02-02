@@ -5353,14 +5353,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"better-sqlite3@npm:^11.8.1":
-  version: 11.10.0
-  resolution: "better-sqlite3@npm:11.10.0"
+"better-sqlite3@npm:^12.6.2":
+  version: 12.6.2
+  resolution: "better-sqlite3@npm:12.6.2"
   dependencies:
     bindings: "npm:^1.5.0"
     node-gyp: "npm:latest"
     prebuild-install: "npm:^7.1.1"
-  checksum: 10/5e4c7437c4fe6033335a79c82974d7ab29f33c51c36f48b73e87e087d21578468575de1c56a7badd4f76f17255e25abefddaeacf018e5eeb9e0cb8d6e3e4a5e1
+  checksum: 10/28600c06c03c33b027717f48d7208561d4a51d1fab48b4efb9041cafb9ca79568bc3a702835ad3bdd2b17189942745df22ed827be220254dd2a3928e257c138f
   languageName: node
   linkType: hard
 
@@ -9672,12 +9672,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"joist-driver-sqlite@workspace:packages/drivers/sqlite":
+"joist-driver-sqlite@workspace:*, joist-driver-sqlite@workspace:packages/drivers/sqlite":
   version: 0.0.0-use.local
   resolution: "joist-driver-sqlite@workspace:packages/drivers/sqlite"
   dependencies:
     "@types/better-sqlite3": "npm:^7.6.11"
-    better-sqlite3: "npm:^11.8.1"
+    better-sqlite3: "npm:^12.6.2"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     tsconfig-paths: "npm:^4.2.0"
@@ -9995,6 +9995,28 @@ __metadata:
     superstruct: "npm:0.15.5"
     ts-node: "npm:^10.9.2"
     tsconfig-paths: "npm:^4.2.0"
+    typescript: "npm:5.9.2"
+  languageName: unknown
+  linkType: soft
+
+"joist-tests-sqlite@workspace:packages/tests/sqlite":
+  version: 0.0.0-use.local
+  resolution: "joist-tests-sqlite@workspace:packages/tests/sqlite"
+  dependencies:
+    "@swc/core": "npm:^1.13.20"
+    "@swc/jest": "npm:^0.2.39"
+    "@types/better-sqlite3": "npm:^7.6.11"
+    "@types/jest": "npm:^30.0.0"
+    "@types/node": "npm:^24.6.0"
+    better-sqlite3: "npm:^12.6.2"
+    jest: "npm:30.2.0"
+    jest-junit: "npm:^16.0.0"
+    joist-codegen: "workspace:*"
+    joist-driver-sqlite: "workspace:*"
+    joist-orm: "workspace:*"
+    joist-test-utils: "workspace:*"
+    prettier: "npm:^3.6.2"
+    prettier-plugin-organize-imports: "npm:^4.3.0"
     typescript: "npm:5.9.2"
   languageName: unknown
   linkType: soft

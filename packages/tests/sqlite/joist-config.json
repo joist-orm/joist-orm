@@ -1,0 +1,14 @@
+{
+  "codegenPlugins": [],
+  "contextType": "Context@src/context",
+  "driver": "sqlite",
+  "databaseUrl": "./test.db",
+  "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
+  "entitiesDirectory": "./src/entities",
+  "ignoredTables": [],
+  "timestampColumns": {
+    "createdAt": { "names": ["created_at", "createdAt"], "required": false },
+    "updatedAt": { "names": ["updated_at", "updatedAt"], "required": false }
+  },
+  "version": "0.0.1"
+}

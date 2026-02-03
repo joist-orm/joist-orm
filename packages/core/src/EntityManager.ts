@@ -1613,7 +1613,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
         // that the user should see.
         if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
-        await validateReactiveRules(entityTodos, joinRowTodos);
+        await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
       } finally {
         this.#isValidating = false;
       }
@@ -2512,9 +2512,13 @@ export class TooManyError extends Error {
  * and ensure those entities are added to `todos`.
  */
 async function validateReactiveRules(
+  em: EntityManager,
+  logger: ReactionLogger | undefined,
   todos: Record<string, Todo>,
   joinRowTodos: Record<string, JoinRowTodo>,
 ): Promise<void> {
+  logger?.logStartingValidate(em, todos);
+
   // Use a map of rule -> Set<Entity> so that we only invoke a rule once per entity,
   // even if it was triggered by multiple changed fields.
   const fns: Map<ValidationRule<any>, Set<Entity>> = new Map();
@@ -2522,17 +2526,19 @@ async function validateReactiveRules(
   // From the given triggered entities, follow the entity's ReactiveRule back
   // to the reactive rules that need ran, and queue them in the `fn` map
   async function followAndQueue(triggered: Entity[], rule: ReactiveRule): Promise<void> {
-    (await followReverseHint(rule.name, triggered, rule.path))
+    if (triggered.length === 0) return;
+    const found = (await followReverseHint(rule.name, triggered, rule.path))
       .filter((entity) => !entity.isDeletedEntity)
-      .filter((e) => e instanceof rule.cstr)
-      .forEach((entity) => {
-        let entities = fns.get(rule.fn);
-        if (!entities) {
-          entities = new Set();
-          fns.set(rule.fn, entities);
-        }
-        entities.add(entity);
-      });
+      .filter((e) => e instanceof rule.cstr);
+    let entities = fns.get(rule.fn);
+    if (!entities) {
+      entities = new Set();
+      fns.set(rule.fn, entities);
+    }
+    logger?.logWalked(triggered, rule, found, "validate");
+    found.forEach((entity) => {
+      entities.add(entity);
+    });
   }
 
   const p1 = Object.values(todos).flatMap((todo) => {

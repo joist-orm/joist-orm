@@ -34,10 +34,7 @@ VERSION="${STABLE}-next.${NEXT_NUM}"
 echo "Publishing version: $VERSION"
 
 # Update all package versions
-yarn workspaces foreach -v --all version "$VERSION"
-
-# Update lockfile so workspace:* resolves to new versions
-yarn install
+yarn workspaces foreach -v --all exec npm pkg set version="$VERSION"
 
 # Publish all packages with the 'next' tag
 yarn workspaces foreach -v --all --no-private npm publish --tag next --tolerate-republish

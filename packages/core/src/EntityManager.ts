@@ -1534,6 +1534,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // Make a lambda that we can invoke multiple times, if we loop for ReactiveQueryFields
     const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
       if (hookLoops++ >= 10) throw new Error("runHooksOnPendingEntities has ran 10 iterations, aborting");
+
+      // Resolve any pending m2m sets before finding pending entities
+      // (m2ms can flush incremental .adds/.removes to the db, only .sets need to load to know the full added/removed diff.)
+      const pendingSets = Object.values(this.#joinRows).filter((jr) => jr.hasPendingSets);
+      if (pendingSets) await Promise.all(pendingSets.map((jr) => jr.resolvePendingSets()));
+
       // Any dirty entities we find, even if we skipped firing their hooks on this loop
       const pendingFlush: Set<Entity> = new Set();
       // Subset of pendingFlush entities that we will run hooks on
@@ -1553,12 +1559,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // Run hooks in a series of loops until things "settle down"
       while (pendingHooks.size > 0) {
         await this.#fl.allowWrites(async () => {
-          // Run our hooks
           let todos = createTodos([...pendingHooks]);
 
           await setAsyncDefaults(suppressedDefaultTypeErrors, this.ctx, Todo.groupInsertsByTypeAndSubType(todos));
           maybeBumpUpdatedAt(todos, now);
 
+          // Run our hooks
           for (const group of maybeSetupHookOrdering(todos)) {
             await beforeCreate(this.ctx, group);
             await beforeUpdate(this.ctx, group);

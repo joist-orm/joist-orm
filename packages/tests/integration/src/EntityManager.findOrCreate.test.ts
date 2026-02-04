@@ -337,6 +337,13 @@ describe("EntityManager.findOrCreate", () => {
     await expect(promise).rejects.toThrow("findOrCreate only supports");
   });
 
+  it("cannot findOrCreate with m2ms", async () => {
+    const em = newEntityManager();
+    const t1 = newTag(em, 1);
+    const promise = em.findOrCreate(Author, { firstName: "a2", tags: [t1] }, {}, {});
+    await expect(promise).rejects.toThrow("findOrCreate only supports");
+  });
+
   it("should handle large datasets efficiently", async () => {
     const em = newEntityManager();
     const n = 5_000;

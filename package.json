@@ -19,6 +19,7 @@
     "docs",
     "packages/codegen",
     "packages/core",
+    "packages/create-joist-app",
     "packages/drivers/bun-pg",
     "packages/graphql-codegen",
     "packages/graphql-resolver-utils",

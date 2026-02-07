@@ -41,7 +41,7 @@ export function findOrCreateDataLoader<T extends Entity>(
   });
   if (invalidKeys.length > 0) {
     throw new Error(
-      "findOrCreate only supports primitive, enum, o2m, or poly fields in the where clause. Invalid keys: " +
+      "findOrCreate only supports primitive, enum, m2o, or poly fields in the where clause. Invalid keys: " +
         invalidKeys.join(", "),
     );
   }

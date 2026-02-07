@@ -44,7 +44,7 @@ export function findIdsDataLoader<T extends Entity>(
         const query = parseFindQuery(meta, where, options);
         const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");
         query.selects = [`distinct ${kq(primary.alias)}.id as id`];
-        query.orderBys = [];
+        query.orderBys = [{ alias: primary.alias, column: "id", order: "ASC" }];
         const rows = await em["executeFind"](meta, findIdsOperation, query, {});
         return [rows.map((row: any) => keyToTaggedId(meta, row.id)!)];
       }
@@ -68,7 +68,7 @@ export function findIdsDataLoader<T extends Entity>(
       // We're not returning the entities, just selecting their IDs
       const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");
       query.selects = [`${kq(primary.alias)}.id as id`];
-      query.orderBys = [];
+      query.orderBys = [{ alias: primary.alias, column: "id", order: "ASC" }];
 
       const query2: ParsedFindQuery = {
         selects: ["_find.tag as tag", "_data.id as id"],

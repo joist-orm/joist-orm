@@ -303,6 +303,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       preloader: this.#preloader,
       pendingChildren: this.#pendingChildren,
       mutatedCollections: new Set(),
+      pendingO2mSets: new Set(),
       hooks: this.#hooks,
       rm: this.#rm,
       indexManager: this.#indexManager,
@@ -1540,6 +1541,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const pendingSets = Object.values(this.#joinRows).filter((jr) => jr.hasPendingSets);
       if (pendingSets) await Promise.all(pendingSets.map((jr) => jr.resolvePendingSets()));
 
+      // Resolve any pending o2m sets (set() called before load — need to load from DB to diff)
+      const pendingO2mSets = [...getEmInternalApi(this).pendingO2mSets];
+      if (pendingO2mSets.length > 0) {
+        getEmInternalApi(this).pendingO2mSets.clear();
+        await Promise.all(pendingO2mSets.map((o2m) => o2m.load()));
+      }
+
       // Any dirty entities we find, even if we skipped firing their hooks on this loop
       const pendingFlush: Set<Entity> = new Set();
       // Subset of pendingFlush entities that we will run hooks on
@@ -2431,11 +2439,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 export interface EntityManagerInternalApi {
   joinRows: (m2m: ManyToManyLike) => JoinRows;
 
-  /** Map of taggedId -> fieldName -> pending children. */
+  /** Map of taggedId -> fieldName -> pending children, i.e. when `a1.books` later loads, add/remove b1. */
   pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>>;
 
   /** List of mutated o2m collections to reset added/removed post-flush. */
   mutatedCollections: Set<OneToManyCollection<any, any>>;
+
+  /** O2M collections with pending set() calls that need resolution before flush. */
+  pendingO2mSets: Set<OneToManyCollection<any, any>>;
 
   /** Map of taggedId -> fieldName -> join-loaded data. */
   getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined;

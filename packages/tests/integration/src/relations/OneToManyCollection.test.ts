@@ -473,14 +473,10 @@ describe("OneToManyCollection", () => {
     await em.flush();
 
     // Then we removed a1, left a2, and added a3
-    const rows = await select("authors");
-    expect(rows.length).toEqual(3);
-    expect(rows[0]).toEqual(expect.objectContaining({ publisher_id: null }));
-    expect(rows[1]).toEqual(expect.objectContaining({ publisher_id: 1 }));
-    expect(rows[2]).toEqual(expect.objectContaining({ publisher_id: 1 }));
+    expect(await select("authors")).toMatchObject([{ publisher_id: null }, { publisher_id: 1 }, { publisher_id: 1 }]);
   });
 
-  it("can set and deleted owned children", async () => {
+  it("can set and delete owned children", async () => {
     // Given a book with two reviews
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
@@ -502,20 +498,145 @@ describe("OneToManyCollection", () => {
     expect(rows.length).toEqual(1);
   });
 
+  it("can set when unloaded and flush without loading", async () => {
+    // Given the publisher already has a1 and a2
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ id: 2, first_name: "a2", publisher_id: 1 });
+    await insertAuthor({ id: 3, first_name: "a3" });
+    const em = newEntityManager();
+    const p1 = await em.load(Publisher, "p:1");
+    const [a2, a3] = await em.loadAll(Author, ["a:2", "a:3"]);
+    // When we set authors without loading first
+    p1.authors.set([a2, a3]);
+    // And we immediately flush
+    await em.flush();
+    // Then a1 was removed and a3 was added (a2 stayed)
+    expect(await select("authors")).toMatchObject([{ publisher_id: null }, { publisher_id: 1 }, { publisher_id: 1 }]);
+  });
+
+  it("can set when unloaded and load before flush", async () => {
+    // Given the publisher already has a1 and a2
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ id: 2, first_name: "a2", publisher_id: 1 });
+    await insertAuthor({ id: 3, first_name: "a3" });
+    const em = newEntityManager();
+    const p1 = await em.load(Publisher, "p:1");
+    const [a2, a3] = await em.loadAll(Author, ["a:2", "a:3"]);
+    // When we set authors without loading first
+    p1.authors.set([a2, a3]);
+    // And then load before flush
+    expect(await p1.authors.load()).toMatchEntity([a2, a3]);
+    expect(p1.changes.authors.added).toMatchEntity([a3]);
+    expect(p1.changes.authors.removed).toMatchEntity([{ id: "a:1" }]);
+    // And when we flush
+    await em.flush();
+    // Then a1 was removed and a3 was added
+    expect(await select("authors")).toMatchObject([{ publisher_id: null }, { publisher_id: 1 }, { publisher_id: 1 }]);
+  });
+
+  it("can add/remove after unloaded set", async () => {
+    // Given the publisher already has a1 and a2
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ id: 2, first_name: "a2", publisher_id: 1 });
+    await insertAuthor({ id: 3, first_name: "a3" });
+    await insertAuthor({ id: 4, first_name: "a4" });
+    const em = newEntityManager();
+    const p1 = await em.load(Publisher, "p:1");
+    const [a2, a3, a4] = await em.loadAll(Author, ["a:2", "a:3", "a:4"]);
+    // When we set authors without loading, to [a2,a3] (remove a1, add a3)
+    p1.authors.set([a2, a3]);
+    // And then an additional add a4, remove a2
+    p1.authors.add(a4);
+    p1.authors.remove(a2);
+    await em.flush();
+    // Then the final state is [a3, a4]
+    expect(await select("authors")).toMatchObject([
+      { publisher_id: null },
+      { publisher_id: null },
+      { publisher_id: 1 },
+      { publisher_id: 1 },
+    ]);
+  });
+
+  it("last unloaded set wins", async () => {
+    // Given the publisher already has a1 and a2
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ id: 2, first_name: "a2", publisher_id: 1 });
+    await insertAuthor({ id: 3, first_name: "a3" });
+    const em = newEntityManager();
+    const p1 = await em.load(Publisher, "p:1");
+    const [a1, a3] = await em.loadAll(Author, ["a:1", "a:3"]);
+    // When we set twice without loading
+    p1.authors.set([a1]);
+    p1.authors.set([a3]);
+    await em.flush();
+    // Then the last set wins
+    expect(await select("authors")).toMatchObject([
+      { publisher_id: null },
+      { publisher_id: null },
+      { publisher_id: 1 },
+    ]);
+  });
+
+  it("unloaded set immediately percolates m2o on new values", async () => {
+    // Given the publisher already has a1
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ id: 2, first_name: "a2" });
+    const em = newEntityManager();
+    const p1 = await em.load(Publisher, "p:1");
+    const a2 = await em.load(Author, "a:2");
+    // When we set authors without loading
+    p1.authors.set([a2]);
+    // Then a2's m2o is immediately updated
+    expect(a2.publisher.id).toMatchEntity("p:1");
+  });
+
+  it("unloaded set immediately unsets loaded old children", async () => {
+    // Given the publisher already has a1 and a2
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ id: 2, first_name: "a2", publisher_id: 1 });
+    const em = newEntityManager();
+    const p1 = await em.load(Publisher, "p:1");
+    const [a1, a2] = await em.loadAll(Author, ["a:1", "a:2"]);
+    // When we set authors to only a2 without loading
+    p1.authors.set([a2]);
+    // Then a1's m2o is immediately unset
+    expect(a1.publisher.isSet).toBe(false);
+    // And a2's m2o still points to p1
+    expect(a2.publisher.id).toMatchEntity("p:1");
+  });
+
+  it("can get after unloaded set", async () => {
+    // Given the publisher already has a1
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ id: 2, first_name: "a2" });
+    const em = newEntityManager();
+    const p1 = await em.load(Publisher, "p:1");
+    const a2 = await em.load(Author, "a:2");
+    // When we set authors without loading
+    p1.authors.set([a2]);
+    // Then get returns the pending values
+    expect((p1.authors as any).get).toMatchEntity([a2]);
+  });
+
   it("does not duplicate items", async () => {
     // Given the publisher p1 already has an author a1
     await insertPublisher({ name: "p1" });
     await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
-
     // And we re-add a1 to the unloaded publisher collection
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     const a1 = await em.load(Author, "1");
     p1.authors.add(a1);
-
     // When we load authors
     const authors = await p1.authors.load();
-
     // Then we still only have one entry
     expect(authors.length).toEqual(1);
   });

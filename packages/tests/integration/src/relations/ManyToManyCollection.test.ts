@@ -452,24 +452,131 @@ describe("ManyToManyCollection", () => {
     expect(rows[1]).toEqual(expect.objectContaining({ book_id: 2, tag_id: 5 }));
   });
 
-  it("can setPartial when initially unloaded", async () => {
-    // Given the book already has t3 and t4 on it
+  it("can set when unloaded and flush without loading", async () => {
+    // Given a book
     await insertAuthor({ first_name: "a1" });
     await insertBook({ id: 2, title: "b1", author_id: 1 });
     await insertTag({ id: 3, name: `t3` });
     await insertTag({ id: 4, name: `t4` });
     await insertTag({ id: 5, name: `t5` });
+    // And it initially has book.tags=[t3,t4]
     await insertBookToTag({ book_id: 2, tag_id: 3 });
     await insertBookToTag({ book_id: 2, tag_id: 4 });
-
-    // When we setPartial t4 and t5
     const em = newEntityManager();
     const book = await em.load(Book, "b:2");
     const [t4, t5] = await em.loadAll(Tag, ["t:4", "t:5"]);
-    await em.upsert(Book, { id: book.id, tags: [t4, t5] });
+    // When we set tags without loading first
+    book.tags.set([t4, t5]);
+    // And we immediately flush, without any other .load/.add/etc
     await em.flush();
+    // Then t3 was removed and t5 was added (t4 stayed)
+    const rows = await select("books_to_tags");
+    expect(rows.length).toEqual(2);
+    expect(rows).toMatchObject([
+      { book_id: 2, tag_id: 4 },
+      { book_id: 2, tag_id: 5 },
+    ]);
+  });
 
-    // We could recognize when M2M.set is called w/o a load, and issue a DELETE + INSERTs.
+  it("can set when unloaded and load before flush", async () => {
+    // Given a book
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t3` });
+    await insertTag({ id: 4, name: `t4` });
+    await insertTag({ id: 5, name: `t5` });
+    // And it initially has book.tags=[t3,t4]
+    await insertBookToTag({ book_id: 2, tag_id: 3 });
+    await insertBookToTag({ book_id: 2, tag_id: 4 });
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:2");
+    const [t4, t5] = await em.loadAll(Tag, ["t:4", "t:5"]);
+    // When we set tags without loading first
+    book.tags.set([t4, t5]);
+    // And then load the collection before flush
+    const tags = await book.tags.load();
+    // Then the pending set was applied during load
+    expect(tags).toMatchEntity([t4, t5]);
+    // And when we flush
+    await em.flush();
+    // Then t3 was removed and t5 was added (t4 stayed)
+    const rows = await select("books_to_tags");
+    expect(rows).toMatchObject([
+      { book_id: 2, tag_id: 4 },
+      { book_id: 2, tag_id: 5 },
+    ]);
+  });
+
+  it("can add/remove after unloaded set", async () => {
+    // Given a book
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t3` });
+    await insertTag({ id: 4, name: `t4` });
+    await insertTag({ id: 5, name: `t5` });
+    await insertTag({ id: 6, name: `t6` });
+    // And it initially has book.tags=[t3,t4]
+    await insertBookToTag({ book_id: 2, tag_id: 3 });
+    await insertBookToTag({ book_id: 2, tag_id: 4 });
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:2");
+    const [t4, t5, t6] = await em.loadAll(Tag, ["t:4", "t:5", "t:6"]);
+    // When we set tags without loading, to [t4,t5] (remove t3, add t5)
+    book.tags.set([t4, t5]);
+    // And then an additional add t3, remove t4
+    book.tags.add(t6);
+    book.tags.remove(t4);
+    await em.flush();
+    // Then the final state is [t5, t6]
+    const rows = await select("books_to_tags");
+    expect(rows).toMatchObject([
+      { book_id: 2, tag_id: 6 },
+      { book_id: 2, tag_id: 5 },
+    ]);
+  });
+
+  it("last unloaded set wins", async () => {
+    // Given a book
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t3` });
+    await insertTag({ id: 4, name: `t4` });
+    await insertTag({ id: 5, name: `t5` });
+    // And it initially has book.tags=[t3,t4]
+    await insertBookToTag({ book_id: 2, tag_id: 3 });
+    await insertBookToTag({ book_id: 2, tag_id: 4 });
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:2");
+    const [t3, t5] = await em.loadAll(Tag, ["t:3", "t:5"]);
+    // When we set twice without loading
+    book.tags.set([t3]);
+    book.tags.set([t5]);
+    await em.flush();
+    // Then the last set wins (cast since we know there's a pending set)
+    const rows = await select("books_to_tags");
+    expect(rows.length).toEqual(1);
+    expect(rows[0]).toMatchObject({ book_id: 2, tag_id: 5 });
+  });
+
+  it("unloaded sets trigger reactive validation rules", async () => {
+    // Given a book
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t3` });
+    await insertTag({ id: 4, name: `t4` });
+    await insertTag({ id: 5, name: `t5` });
+    await insertTag({ id: 6, name: `t6` });
+    // And it initially has book.tags=[t3,t4,t5,t6]
+    await insertBookToTag({ book_id: 2, tag_id: 3 });
+    await insertBookToTag({ book_id: 2, tag_id: 4 });
+    await insertBookToTag({ book_id: 2, tag_id: 5 });
+    await insertBookToTag({ book_id: 2, tag_id: 6 });
+    const em = newEntityManager();
+    // When we load only t6 and set its books=[]
+    const t6 = await em.load(Tag, "t:6");
+    t6.books.set([]);
+    // Then the Book is invalid because it cannot have three tags
+    await expect(em.flush()).rejects.toThrow("Cannot have exactly three tags");
   });
 
   it("can include on a new entity", async () => {

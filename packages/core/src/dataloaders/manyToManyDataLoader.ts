@@ -68,9 +68,6 @@ async function load<T extends Entity, U extends Entity>(
   // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
   const rows = await em["executeFind"](collection.otherMeta, manyToManyLoadOperation, query, {});
 
-  // The order of column1/column2 doesn't really matter, i.e. if the opposite-side collection is later used
-  const { columnName: column1, otherColumnName: column2 } = collection;
-
   // For each join table row, we use `EntityManager.load` to get both entities loaded.
   // This will be another 1 or 2 queries (depending on whether we're loading just
   // `book.getTags` (1 query to load new tags) or both `book.getTags` and `tag.getBooks

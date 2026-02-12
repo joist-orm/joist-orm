@@ -34,6 +34,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   #loaded: U[] | undefined;
   #addedBeforeLoaded: U[] | undefined;
   #removedBeforeLoaded: U[] | undefined;
+  #pendingSet: U[] | undefined;
   #hasBeenSet = false;
 
   // I.e. when entity = Book:
@@ -115,15 +116,15 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   add(other: U, percolated = false): void {
     ensureNotDeleted(this.entity);
-
     if (this.#loaded !== undefined) {
       if (this.#loaded.includes(other)) return;
       this.#loaded.push(other);
+    } else if (this.#pendingSet !== undefined) {
+      if (!this.#pendingSet.includes(other)) this.#pendingSet.push(other);
     } else {
       if (this.#removedBeforeLoaded) remove(this.#removedBeforeLoaded, other);
       if (!(this.#addedBeforeLoaded ??= []).includes(other)) this.#addedBeforeLoaded.push(other);
     }
-
     if (!percolated) {
       getEmInternalApi(this.entity.em).joinRows(this).addNew(this, this.entity, other);
       (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).add(this.entity, true);
@@ -132,13 +133,13 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   remove(other: U, percolated = false): void {
     ensureNotDeleted(this.entity, "pending");
-
     if (!percolated) {
       getEmInternalApi(this.entity.em).joinRows(this).addRemove(this, this.entity, other);
       (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).remove(this.entity, true);
     }
-
-    if (this.#loaded !== undefined) {
+    if (this.#pendingSet !== undefined) {
+      remove(this.#pendingSet, other);
+    } else if (this.#loaded !== undefined) {
       remove(this.#loaded, other);
     } else {
       maybeRemove(this.#addedBeforeLoaded, other);
@@ -163,10 +164,14 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     this.#loaded = mapEntities(other.#loaded);
     this.#addedBeforeLoaded = mapEntities(other.#addedBeforeLoaded);
     this.#removedBeforeLoaded = mapEntities(other.#removedBeforeLoaded);
+    this.#pendingSet = mapEntities(other.#pendingSet);
   }
 
   private doGet(): U[] {
     ensureNotDeleted(this.entity, "pending");
+    if (this.#pendingSet !== undefined) {
+      return this.#pendingSet;
+    }
     if (this.#loaded === undefined) {
       // This should only be callable in the type system if we've already resolved this to an instance
       throw new Error(`${this.entity}.${this.fieldName}.get was called when not loaded`);
@@ -184,19 +189,27 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   set(values: readonly U[]): void {
     ensureNotDeleted(this.entity);
-    if (this.#loaded === undefined) {
-      throw new Error("set was called when not loaded");
-    }
     this.#hasBeenSet = true;
-    // Make a copy for safe iteration
-    const loaded = [...this.#loaded];
-    // Remove old values
-    for (const other of loaded) {
-      if (!values.includes(other)) this.remove(other);
-    }
-    // Add new values
-    for (const other of values) {
-      if (!loaded.includes(other)) this.add(other);
+    if (this.#loaded === undefined) {
+      // Store the pending set for later resolution at flush or load time
+      this.#pendingSet = [...values];
+      // Clear any prior add/remove tracking since set supersedes them
+      this.#addedBeforeLoaded = undefined;
+      this.#removedBeforeLoaded = undefined;
+      // Mark our JoinRows as needing to load this m2m before flush
+      getEmInternalApi(this.entity.em).joinRows(this).markPendingSet(this);
+    } else {
+      // Make a copy for safe iteration
+      const loaded = new Set([...this.#loaded]);
+      // Remove old values
+      const valuesSet = new Set(values);
+      for (const other of loaded) {
+        if (!valuesSet.has(other)) this.remove(other);
+      }
+      // Add new values
+      for (const other of values) {
+        if (!loaded.has(other)) this.add(other);
+      }
     }
   }
 
@@ -236,6 +249,20 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   private maybeApplyAddedAndRemovedBeforeLoaded(): void {
     if (this.#loaded) {
+      // If there's a pending set, apply it now that we're loaded
+      if (this.#pendingSet !== undefined) {
+        const pending = this.#pendingSet;
+        this.#pendingSet = undefined;
+        // Remove entities not in the pending set
+        for (const other of [...this.#loaded]) {
+          if (!pending.includes(other)) this.remove(other);
+        }
+        // Add entities from the pending set not already loaded
+        for (const other of pending) {
+          if (!this.#loaded.includes(other)) this.add(other);
+        }
+        return;
+      }
       this.#addedBeforeLoaded?.forEach((e) => {
         if (!this.#loaded?.includes(e)) {
           // Push on the end to better match the db order of "newer things come last"
@@ -252,7 +279,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   #current(opts?: { withDeleted?: boolean }): U[] {
-    return this.filterDeleted(this.#loaded ?? this.#addedBeforeLoaded ?? [], opts);
+    return this.filterDeleted(this.#loaded ?? this.#pendingSet ?? this.#addedBeforeLoaded ?? [], opts);
   }
 
   get meta(): EntityMetadata {

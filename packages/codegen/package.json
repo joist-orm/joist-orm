@@ -19,7 +19,16 @@
   "peerDependencies": {
     "joist-utils": "workspace:*",
     "knex": "^3.1.0",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "better-sqlite3": "^11.0.0"
+  },
+  "peerDependenciesMeta": {
+    "pg": {
+      "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@dprint/formatter": "^0.2.1",
@@ -39,6 +48,7 @@
   },
   "devDependencies": {
     "@swc/jest": "^0.2.39",
+    "@types/better-sqlite3": "^7.6.11",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.6.0",
     "jest": "30.2.0",

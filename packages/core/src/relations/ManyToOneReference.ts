@@ -308,10 +308,10 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     } else if (prevId) {
       // prevEntity is not loaded in memory, but cache it in case our other side is later loaded
       const { em } = this.entity;
-      let map = getEmInternalApi(em).pendingChildren.get(prevId);
+      let map = getEmInternalApi(em).pendingPercolate.get(prevId);
       if (!map) {
         map = new Map();
-        getEmInternalApi(em).pendingChildren.set(prevId, map);
+        getEmInternalApi(em).pendingPercolate.set(prevId, map);
       }
       let pending = map.get(this.otherFieldName);
       if (!pending) {
@@ -343,10 +343,10 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     } else if (typeof id === "string") {
       // Other is not loaded in memory, but cache it in case our other side is later loaded
       const { em } = this.entity;
-      let map = getEmInternalApi(em).pendingChildren.get(id);
+      let map = getEmInternalApi(em).pendingPercolate.get(id);
       if (!map) {
         map = new Map();
-        getEmInternalApi(em).pendingChildren.set(id, map);
+        getEmInternalApi(em).pendingPercolate.set(id, map);
       }
       let pending = map.get(this.otherFieldName);
       if (!pending) {

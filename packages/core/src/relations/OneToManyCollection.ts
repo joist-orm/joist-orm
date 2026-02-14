@@ -16,7 +16,7 @@ import {
 } from "../index";
 import { IsLoadedCachable } from "../IsLoadedCache";
 import { lazyField } from "../newEntity";
-import { clear, compareValues, maybeAdd, maybeRemove, remove } from "../utils";
+import { compareValues, maybeAdd, maybeRemove, remove } from "../utils";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
 import { RelationT, RelationU } from "./Relation";
@@ -48,7 +48,15 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     if (getInstanceData(entity).isOrWasNew) {
       this.#state = new O2MLoadedState<T, U>(this, [], false);
     } else {
-      this.#state = new O2MUnloadedPristineState<T, U>(this);
+      const { em } = entity;
+      // If any m2o.set(ourId) were made before our entity was loaded, pull in those changes
+      const pending = getEmInternalApi(em).pendingChildren.get(entity.idTagged!)?.get(this.fieldName);
+      if (pending) {
+        this.#state = new O2MUnloadedAddedRemovedState<T, U>(this, pending.adds as U[], pending.removes as U[]);
+        getEmInternalApi(em).pendingChildren.get(entity.idTagged!)?.delete(this.fieldName);
+      } else {
+        this.#state = new O2MUnloadedPristineState<T, U>(this);
+      }
     }
   }
 
@@ -141,6 +149,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   set(values: readonly U[]): void {
     ensureNotDeleted(this.entity);
     this.#state = this.#state.set(values);
+    this.registerAsMutated();
     this.#getSorted = undefined;
     this.#allSorted = undefined;
   }
@@ -310,9 +319,15 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
  * Constructor (existing entity) → UnloadedPristine
  *
  * UnloadedPristine + add/remove    → UnloadedAddedRemoved
+ * UnloadedPristine + set           → PendingSet
  * UnloadedPristine + load/preload  → Loaded
  *
+ * UnloadedAddedRemoved + set          → PendingSet
  * UnloadedAddedRemoved + load/preload → Loaded (merges adds/removes)
+ *
+ * PendingSet + add/remove  → PendingSet (self)
+ * PendingSet + set          → PendingSet (self, replace)
+ * PendingSet + load/preload → Loaded (diffs pending vs DB)
  *
  * Loaded + forceReload → Loaded (refreshed, re-merges pending)
  * ```
@@ -359,8 +374,8 @@ class O2MUnloadedPristineState<T extends Entity, U extends Entity> implements O2
     return new O2MUnloadedAddedRemovedState<T, U>(this.#o2m, [], [other]);
   }
 
-  set(_values: readonly U[]): O2MState<T, U> {
-    throw new Error("set was called when not loaded");
+  set(values: readonly U[]): O2MState<T, U> {
+    return new O2MPendingSetState<T, U>(this.#o2m, values);
   }
 
   doGet(): U[] {
@@ -372,8 +387,7 @@ class O2MUnloadedPristineState<T extends Entity, U extends Entity> implements O2
   }
 
   applyLoad(dbEntities: U[]): O2MLoadedState<T, U> {
-    const loaded = applyLoad(this.#o2m, dbEntities, [], []);
-    return new O2MLoadedState<T, U>(this.#o2m, loaded, false);
+    return new O2MLoadedState<T, U>(this.#o2m, dbEntities, false);
   }
 
   current(): U[] {
@@ -430,8 +444,10 @@ class O2MUnloadedAddedRemovedState<T extends Entity, U extends Entity> implement
     return this;
   }
 
-  set(_values: readonly U[]): O2MState<T, U> {
-    throw new Error("set was called when not loaded");
+  set(values: readonly U[]): O2MState<T, U> {
+    // We should do the implicit deletion check?
+    // Should we keep #added/#removed?
+    return new O2MPendingSetState<T, U>(this.#o2m, values);
   }
 
   doGet(): U[] {
@@ -443,8 +459,11 @@ class O2MUnloadedAddedRemovedState<T extends Entity, U extends Entity> implement
   }
 
   applyLoad(dbEntities: U[]): O2MLoadedState<T, U> {
-    const loaded = applyLoad(this.#o2m, dbEntities, this.#added, this.#removed);
-    return new O2MLoadedState<T, U>(this.#o2m, loaded, false, this.#added, this.#removed);
+    // Push added entities on the end to better match the db order of "newer things come last"
+    const loaded = new Set([...dbEntities]);
+    for (const e of this.#added) loaded.add(e);
+    for (const e of this.#removed) loaded.delete(e);
+    return new O2MLoadedState<T, U>(this.#o2m, [...loaded], false, this.#added, this.#removed);
   }
 
   current(): U[] {
@@ -468,8 +487,123 @@ class O2MUnloadedAddedRemovedState<T extends Entity, U extends Entity> implement
   }
 
   resetAddedRemoved(): void {
+    // This is called after em.flush, so these changes have been pushed into the db; we don't
+    // need to track them anymore b/c any future `o2m.load` will see up.
     this.#added = [];
     this.#removed = [];
+  }
+}
+
+/** State when set() called before load - holds pending values to diff on load. */
+class O2MPendingSetState<T extends Entity, U extends Entity> implements O2MState<T, U> {
+  readonly isLoaded = false;
+  readonly hasBeenSet = true;
+  #o2m: OneToManyCollection<T, U>;
+  #pendingValues: Set<U>;
+
+  constructor(o2m: OneToManyCollection<T, U>, pendingValues: readonly U[], skipPercolate = false) {
+    this.#o2m = o2m;
+    this.#pendingValues = new Set(pendingValues);
+    // We percolate on normal set() calls to immediately update the other side's m2o references.
+    // We skip percolation on import() because those entities already have correct references
+    // in the cloned EntityManager.
+    if (!skipPercolate) this.#percolate();
+    getEmInternalApi(o2m.entity.em).pendingO2mSets.add(o2m);
+  }
+
+  add(other: U): O2MState<T, U> {
+    this.#pendingValues.add(other);
+    return this;
+  }
+
+  remove(other: U, _opts: { requireLoaded: boolean }): O2MState<T, U> {
+    this.#pendingValues.delete(other);
+    return this;
+  }
+
+  removeIfLoaded(other: U): O2MState<T, U> {
+    this.#pendingValues.delete(other);
+    return this;
+  }
+
+  set(values: readonly U[]): O2MState<T, U> {
+    this.#pendingValues = new Set(values);
+    this.#percolate();
+    return this;
+  }
+
+  doGet(): U[] {
+    return [...this.#pendingValues];
+  }
+
+  find(id: IdOf<U>): U | undefined {
+    for (const u of this.#pendingValues) {
+      if (!u.isNewEntity && u.id === id) return u;
+    }
+    return undefined;
+  }
+
+  applyLoad(dbEntities: U[]): O2MLoadedState<T, U> {
+    const o2m = this.#o2m;
+    const entity = o2m.entity;
+    // Handle cascade delete + immutable: entities removed from the collection that
+    // cannot have their FK changed should be deleted instead
+    const otherCannotChange = o2m.otherMeta.allFields[o2m.otherFieldName].immutable;
+    const isCascade = isCascadeDelete(o2m, o2m.fieldName);
+    // Calc our added/removed so that `.changes` in the new loaded state are correct
+    const dbSet = new Set(dbEntities);
+    const added: U[] = [];
+    for (const other of this.#pendingValues) {
+      if (!dbSet.has(other)) added.push(other);
+    }
+    const removed: U[] = [];
+    for (const other of dbEntities) {
+      if (!this.#pendingValues.has(other)) {
+        removed.push(other);
+        if (isCascade && otherCannotChange) {
+          entity.em.delete(other);
+        } else {
+          o2m.percolateRemove(other);
+        }
+      }
+    }
+    return new O2MLoadedState<T, U>(o2m, [...this.#pendingValues], true, added, removed);
+  }
+
+  current(): U[] {
+    return [...this.#pendingValues];
+  }
+
+  import(o2m: OneToManyCollection<T, U>, findEntity: (e: U) => U): O2MState<T, U> {
+    return new O2MPendingSetState<T, U>(o2m, mapEntities([...this.#pendingValues], findEntity), true);
+  }
+
+  added(): U[] {
+    return [...this.#pendingValues];
+  }
+
+  removed(): U[] {
+    return [];
+  }
+
+  resetAddedRemoved(): void {}
+
+  #percolate(): void {
+    const o2m = this.#o2m;
+    // All new values, we immediately tell them we're their new parent
+    for (const other of this.#pendingValues) {
+      o2m.percolateAdd(other);
+    }
+    // If we're an existing entity, we can scan for any in-memory entities that were previously
+    // pointing to us, but now should not
+    if (!o2m.entity.isNewEntity) {
+      for (const other of o2m.entity.em.getEntities(o2m.otherMeta.cstr) as Iterable<U>) {
+        if (this.#pendingValues.has(other)) continue;
+        if (sameEntity((other as any)[o2m.otherFieldName].current(), o2m.entity)) {
+          o2m.percolateRemove(other);
+        }
+      }
+    }
   }
 }
 
@@ -517,18 +651,20 @@ class O2MLoadedState<T extends Entity, U extends Entity> implements O2MState<T, 
 
   set(values: readonly U[]): O2MState<T, U> {
     this.#hasBeenSet = true;
+    let valuesSet = new Set(values);
 
     const o2m = this.#o2m;
     const otherCannotChange = o2m.otherMeta.allFields[o2m.otherFieldName].immutable;
     const isCascade = isCascadeDelete(o2m, o2m.fieldName);
     if (isCascade && otherCannotChange) {
-      const implicitlyDeleted = this.#loaded.filter((e) => !values.includes(e));
+      const implicitlyDeleted = this.#loaded.filter((e) => !valuesSet.has(e));
       implicitlyDeleted.forEach((e) => o2m.entity.em.delete(e));
+      // ...we restore the implicitlyDeleted for getWithDeleted
       values = [...values, ...implicitlyDeleted];
+      valuesSet = new Set(values);
     }
 
     const loaded = new Set([...this.#loaded]);
-    const valuesSet = new Set(values);
     for (const other of loaded) {
       if (!valuesSet.has(other)) o2m.remove(other);
     }
@@ -587,36 +723,4 @@ function mapEntities<U extends Entity>(entities: U[], findEntity: (e: U) => U): 
   const result = new Array<U>(entities.length);
   for (let i = 0; i < entities.length; i++) result[i] = findEntity(entities[i]);
   return result;
-}
-
-/**
- * Creates the new loaded array by merging:
- *
- * - the loaded entities from the database (dbEntities)
- * - any o2m-side preload changes (added/removed to our o2m),
- * - any m2o-side preload changes (sets to the other side m2o)
- */
-function applyLoad<T extends Entity, U extends Entity>(
-  o2m: OneToManyCollection<T, U>,
-  dbEntities: U[],
-  added: U[],
-  removed: U[],
-): U[] {
-  const entity = o2m.entity;
-  // Merge pending children from m2o mutations
-  if (!entity.isNewEntity) {
-    const { em } = entity;
-    const pending = getEmInternalApi(em).pendingChildren.get(entity.idTagged!)?.get(o2m.fieldName);
-    if (pending) {
-      added = [...added, ...(pending.adds as U[])];
-      removed = [...removed, ...(pending.removes as U[])];
-      clear(pending.adds);
-      clear(pending.removes);
-    }
-  }
-  // Push added entities on the end to better match the db order of "newer things come last"
-  const loaded = new Set([...dbEntities]);
-  for (const e of added) loaded.add(e);
-  for (const e of removed) loaded.delete(e);
-  return [...loaded];
 }

@@ -69,11 +69,6 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     getEmInternalApi(this.entity.em).joinRows(this).addRemove(this, this.entity, other);
   }
 
-  /** @internal */
-  markPendingSet(): void {
-    getEmInternalApi(this.entity.em).joinRows(this).markPendingSet(this);
-  }
-
   /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
   private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
     return opts?.withDeleted === true
@@ -335,7 +330,6 @@ class UnloadedPristineState<T extends Entity, U extends Entity> implements M2MSt
   }
 
   set(values: readonly U[]): M2MState<T, U> {
-    this.#m2m.markPendingSet();
     return new PendingSetState<T, U>(this.#m2m, [...values]);
   }
 
@@ -401,7 +395,6 @@ class UnloadedAddedRemovedState<T extends Entity, U extends Entity> implements M
   }
 
   set(values: readonly U[]): M2MState<T, U> {
-    this.#m2m.markPendingSet();
     return new PendingSetState<T, U>(this.#m2m, [...values]);
   }
 
@@ -454,6 +447,7 @@ class PendingSetState<T extends Entity, U extends Entity> implements M2MState<T,
   constructor(m2m: ManyToManyCollection<T, U>, pendingSet: U[]) {
     this.#m2m = m2m;
     this.#pendingSet = pendingSet;
+    getEmInternalApi(m2m.entity.em).joinRows(m2m).markPendingSet(m2m);
   }
 
   add(other: U, percolated: boolean): M2MState<T, U> {

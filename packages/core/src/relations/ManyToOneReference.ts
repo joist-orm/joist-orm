@@ -190,8 +190,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
     this.loaded = newId ? (this.entity.em.getEntity(newId) as U) : undefined;
     this._isLoaded = !!this.loaded;
-    this.maybeRemove(previousId, previous);
-    this.maybeAdd();
+    this.#percolateRemove(previousId, previous);
+    this.#percolateAdd();
   }
 
   get idIfSet(): IdOf<U> | N | undefined {
@@ -254,8 +254,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       this.loaded = other as U | N;
       this._isLoaded = true;
     }
-    this.maybeRemove(previousId, previous);
-    this.maybeAdd();
+    this.#percolateRemove(previousId, previous);
+    this.#percolateAdd();
   }
 
   // private impl
@@ -294,9 +294,10 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     this._isLoaded = true;
   }
 
-  maybeRemove(otherId: string | undefined, other: U | undefined) {
-    if (other) {
-      const prevRelation = this.getOtherRelation(other);
+  // Called on `book.author.set(...)` with our previous value, to percolate a `author.books.remove`. */
+  #percolateRemove(prevId: string | undefined, prevEntity: U | undefined) {
+    if (prevEntity) {
+      const prevRelation = this.getOtherRelation(prevEntity);
       if (prevRelation instanceof OneToManyCollection) {
         prevRelation.removeIfLoaded(this.entity);
       } else if (prevRelation instanceof OneToManyLargeCollection) {
@@ -304,13 +305,13 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       } else {
         prevRelation.set(undefined as any, { percolating: true });
       }
-    } else if (otherId) {
-      // Other is not loaded in memory, but cache it in case our other side is later loaded
+    } else if (prevId) {
+      // prevEntity is not loaded in memory, but cache it in case our other side is later loaded
       const { em } = this.entity;
-      let map = getEmInternalApi(em).pendingChildren.get(otherId);
+      let map = getEmInternalApi(em).pendingChildren.get(prevId);
       if (!map) {
         map = new Map();
-        getEmInternalApi(em).pendingChildren.set(otherId, map);
+        getEmInternalApi(em).pendingChildren.set(prevId, map);
       }
       let pending = map.get(this.otherFieldName);
       if (!pending) {
@@ -322,7 +323,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     }
   }
 
-  maybeAdd() {
+  #percolateAdd() {
     const id = this.current();
     const other = this.maybeFindEntity();
     if (other) {

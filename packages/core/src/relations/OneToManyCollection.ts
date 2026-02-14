@@ -50,10 +50,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     } else {
       const { em } = entity;
       // If any m2o.set(ourId) were made before our entity was loaded, pull in those changes
-      const pending = getEmInternalApi(em).pendingChildren.get(entity.idTagged!)?.get(this.fieldName);
+      const pending = getEmInternalApi(em).pendingPercolate.get(entity.idTagged!)?.get(this.fieldName);
       if (pending) {
         this.#state = new O2MUnloadedAddedRemovedState<T, U>(this, pending.adds as U[], pending.removes as U[]);
-        getEmInternalApi(em).pendingChildren.get(entity.idTagged!)?.delete(this.fieldName);
+        getEmInternalApi(em).pendingPercolate.get(entity.idTagged!)?.delete(this.fieldName);
       } else {
         this.#state = new O2MUnloadedPristineState<T, U>(this);
       }

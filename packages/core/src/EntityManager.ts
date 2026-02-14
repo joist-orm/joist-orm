@@ -241,7 +241,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   // Provides field-based indexing for entity types with >1000 entities to optimize findWithNewOrChanged
   readonly #indexManager = new IndexManager();
   #isValidating: boolean = false;
-  readonly #pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
+  readonly #pendingPercolate: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
   #preloadedRelations: Map<string, Map<string, Entity[]>> = new Map();
   /**
    * Tracks cascade deletes.
@@ -301,7 +301,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     this.__api = {
       preloader: this.#preloader,
-      pendingChildren: this.#pendingChildren,
+      pendingPercolate: this.#pendingPercolate,
       mutatedCollections: new Set(),
       pendingO2mSets: new Set(),
       hooks: this.#hooks,
@@ -2440,7 +2440,7 @@ export interface EntityManagerInternalApi {
   joinRows: (m2m: ManyToManyLike) => JoinRows;
 
   /** Map of taggedId -> fieldName -> pending children, i.e. when `a1.books` later loads, add/remove b1. */
-  pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>>;
+  pendingPercolate: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>>;
 
   /** List of mutated o2m collections to reset added/removed post-flush. */
   mutatedCollections: Set<OneToManyCollection<any, any>>;

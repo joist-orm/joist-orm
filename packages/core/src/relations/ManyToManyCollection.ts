@@ -447,7 +447,7 @@ class PendingSetState<T extends Entity, U extends Entity> implements M2MState<T,
   constructor(m2m: ManyToManyCollection<T, U>, pendingSet: U[]) {
     this.#m2m = m2m;
     this.#pendingSet = pendingSet;
-    getEmInternalApi(m2m.entity.em).joinRows(m2m).markPendingSet(m2m);
+    getEmInternalApi(m2m.entity.em).pendingLoads.add(m2m);
   }
 
   add(other: U, percolated: boolean): M2MState<T, U> {

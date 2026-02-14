@@ -4,7 +4,6 @@ import { EntityMetadata, getBaseAndSelfMetas } from "./EntityMetadata";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo } from "./Todo";
 import { keyToTaggedId } from "./keys";
-import { ManyToManyCollection } from "./relations";
 import { remove } from "./utils";
 
 /**
@@ -29,8 +28,6 @@ export class JoinRows {
   // The in-memory rows for our m2m table.
   private readonly rows: JoinRow[] = [];
   private readonly index: ManyToManyIndex;
-  // Track m2m collections that have pending sets needing resolution before flush
-  private readonly pendingSets: Set<ManyToManyCollection<any, any>> = new Set();
 
   constructor(
     // This could be either side of the m2m relation, depending on which is accessed first.
@@ -39,23 +36,6 @@ export class JoinRows {
     private rm: ReactionsManager,
   ) {
     this.index = new ManyToManyIndex(m2m);
-  }
-
-  /** Mark a m2m collection as having a pending set that needs resolution before flush. */
-  markPendingSet(m2m: ManyToManyCollection<any, any>): void {
-    this.pendingSets.add(m2m);
-  }
-
-  /** Returns true if there are any pending sets that need resolution. */
-  get hasPendingSets(): boolean {
-    return this.pendingSets.size > 0;
-  }
-
-  /** Resolve all pending sets by loading and diffing. */
-  async resolvePendingSets(): Promise<void> {
-    const pending = [...this.pendingSets];
-    this.pendingSets.clear();
-    await Promise.all(pending.map((m2m) => m2m.load()));
   }
 
   /** Adds a new join row to this table. */

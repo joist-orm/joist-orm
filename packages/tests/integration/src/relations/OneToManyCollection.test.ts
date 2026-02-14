@@ -268,6 +268,28 @@ describe("OneToManyCollection", () => {
     expect(a1.books.get).toContain(b1);
   });
 
+  it("can add with load in-flight", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "1");
+    // Given we load but don't await it
+    const p1 = a.books.load();
+    await new Promise((r) => process.nextTick(r));
+    const p2 = a.books.load();
+    await new Promise((r) => process.nextTick(r));
+    const p3 = a.books.load();
+    // And add a new book while in-flight
+    const b2 = em.create(Book, { title: "b2" });
+    a.books.add(b2);
+    // When the promise resolves
+    const [books1, books2, books3] = await Promise.all([p1, p2, p3]);
+    // Then we see both books
+    expect(books1).toMatchEntity([{ title: "b1" }, b2]);
+    expect(books2).toMatchEntity([{ title: "b1" }, b2]);
+    expect(books3).toMatchEntity([{ title: "b1" }, b2]);
+  });
+
   it.skip("works with forceReload", async () => {
     // Given an author
     await insertAuthor({ first_name: "a1" });

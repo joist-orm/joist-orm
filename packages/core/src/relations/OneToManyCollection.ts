@@ -34,73 +34,59 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   implements Collection<T, U>, IsLoadedCachable
 {
   readonly #field: OneToManyField;
-  // We can track both value-and-isLoaded with a single `#loaded` b/c `[]` is always our empty value
-  #loaded: U[] | undefined;
+  #state: O2MState<T, U>;
+  #loadPromise: any;
   // Constantly filtering+sorting our `.get` values can be surprisingly expensive if called
   // when processing many entities/writing code that calls it repeatedly, so we cache it
   // both the "without deleted" default (`getSorted`) and "all deleted" (`allSorted`).
   #getSorted: U[] | undefined;
   #allSorted: U[] | undefined;
-  // We _used_ to not track `#removed`, because if a child is removed in our unloaded state,
-  // when we load and get back the `child X has parent_id = our id` rows from the db, `loaderForCollection`
-  // groups the hydrated rows by their _current parent m2o field value_, which for a removed child will no
-  // longer be us, so it will effectively not show up in our post-load `loaded` array.
-  // However, now with join preloading, the getPreloadedRelation might still have pre-load removed children.
-  #added: U[] | undefined;
-  #removed: U[] | undefined;
-  #hasBeenSet = false;
 
   constructor(entity: T, field: OneToManyField) {
     super(entity);
     this.#field = field;
     if (getInstanceData(entity).isOrWasNew) {
-      this.#loaded = [];
+      this.#state = new O2MLoadedState<T, U>(this, [], false);
+    } else {
+      this.#state = new O2MUnloadedPristineState<T, U>(this);
     }
   }
 
   // opts is an internal parameter
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
-    if (this.#loaded === undefined || (opts.forceReload && !this.entity.isNewEntity)) {
-      // If forceReload=true, the `.load` might return a cached array, which one would think is stale
-      // (i.e. it doesn't have our WIP adds & removes applied to it), _but_ because we've been mutating
-      // our `this.loaded`, really `.load` is a noop, and just gives us back the same list we had before.
-      //
-      // ...although if we'd:
-      // a) created an array in the DL cache
-      // b) em.flushed & reset the dataloaders
-      // c) make WIP changes to our existing array
-      // d) called `forceReload: true`
-      // e) we'll ask the dataloader for a new array, and will be missing our WIP changes
-      const dl = oneToManyDataLoader(this.entity.em, this);
-      this.#loaded =
-        this.getPreloaded() ??
-        (await dl.load(this.entity.idTagged!).catch(function load(err) {
-          throw appendStack(err, new Error());
-        }));
-      // If we're reloading (i.e. `forceReload: true`), then we need to clear our caches
+    if (!this.#state.isLoaded || (opts.forceReload && !this.entity.isNewEntity)) {
+      const maybePreloaded = this.getPreloaded();
+      if (maybePreloaded) {
+        this.#state = this.#state.applyLoad(maybePreloaded);
+      } else {
+        await (this.#loadPromise ??= oneToManyDataLoader(this.entity.em, this)
+          .load(this.entity.idTagged!)
+          .then((dbEntities) => {
+            this.#state = this.#state.applyLoad(dbEntities);
+            this.#loadPromise = undefined;
+          })
+          .catch(function load(err) {
+            throw appendStack(err, new Error());
+          }));
+      }
       this.#getSorted = undefined;
       this.#allSorted = undefined;
-      this.maybeAppendAddedBeforeLoaded();
     }
     return opts?.withDeleted ? this.getWithDeleted : this.get;
   }
 
   async find(id: IdOf<U>): Promise<U | undefined> {
     ensureNotDeleted(this.entity, "pending");
-    if (this.#loaded !== undefined) {
-      return this.#loaded.find((other) => !other.isNewEntity && other.id === id);
-    } else {
-      const added = this.#added?.find((u) => !u.isNewEntity && u.id === id);
-      if (added) return added;
-      // Make a cacheable tuple to look up this specific o2m row
-      const key = `id=${id},${this.#field.otherColumnName}=${this.entity.id}`;
-      return oneToManyFindDataLoader(this.entity.em, this)
-        .load(key)
-        .catch(function find(err) {
-          throw appendStack(err, new Error());
-        });
-    }
+    const inMemory = this.#state.find(id);
+    if (inMemory) return inMemory;
+    if (this.#state.isLoaded) return undefined;
+    const key = `id=${id},${this.#field.otherColumnName}=${this.entity.id}`;
+    return oneToManyFindDataLoader(this.entity.em, this)
+      .load(key)
+      .catch(function find(err) {
+        throw appendStack(err, new Error());
+      });
   }
 
   async includes(other: U): Promise<boolean> {
@@ -108,13 +94,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   get isLoaded(): boolean {
-    return this.#loaded !== undefined;
+    return this.#state.isLoaded;
   }
 
   resetIsLoaded(): void {
-    // Invalidate our .get cache on any mutation; in theory we could do this only if this
-    // mutation was from an `other`, i.e. when entities are deleted or something in our
-    // `orderBy` changes (although we some RF `orderBy`s, which might be a pain to track).
     this.#getSorted = undefined;
     this.#allSorted = undefined;
   }
@@ -124,21 +107,16 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   preload(): void {
-    this.#loaded = this.getPreloaded();
-    this.maybeAppendAddedBeforeLoaded();
+    const preloaded = this.getPreloaded();
+    if (preloaded) {
+      this.#state = this.#state.applyLoad(preloaded);
+      this.#getSorted = undefined;
+      this.#allSorted = undefined;
+    }
   }
 
   import(other: OneToManyCollection<T, U>, findEntity: (e: U) => U): void {
-    function map(v: U[] | undefined): U[] | undefined {
-      if (v === undefined) return undefined;
-      const result = new Array<U>(v.length);
-      for (let i = 0; i < v.length; i++) result[i] = findEntity(v[i]);
-      return result;
-    }
-
-    this.#loaded = map(other.#loaded);
-    this.#added = map(other.#added);
-    this.#removed = map(other.#removed);
+    this.#state = other.#state.import(this, findEntity);
     this.#getSorted = undefined;
     this.#allSorted = undefined;
   }
@@ -147,7 +125,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   get get(): U[] {
     ensureNotDeleted(this.entity, "pending");
     if (this.#getSorted !== undefined) return this.#getSorted;
-    this.#getSorted = Object.freeze(this.filterDeleted(this.doGet(), { withDeleted: false })) as U[];
+    this.#getSorted = Object.freeze(this.filterDeleted(this.#state.doGet(), { withDeleted: false })) as U[];
     getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
     return this.#getSorted;
   }
@@ -155,111 +133,73 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   get getWithDeleted(): U[] {
     ensureNotDeleted(this.entity, "pending");
     if (this.#allSorted !== undefined) return this.#allSorted;
-    this.#allSorted = Object.freeze(this.filterDeleted(this.doGet(), { withDeleted: true })) as U[];
+    this.#allSorted = Object.freeze(this.filterDeleted(this.#state.doGet(), { withDeleted: true })) as U[];
     getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
     return this.#allSorted;
   }
 
-  private doGet(): U[] {
-    // This should only be callable in the type system if we've already resolved this to an instance
-    if (this.#loaded === undefined) {
-      throw new Error("get was called when not loaded");
-    }
-    return this.#loaded;
-  }
-
   set(values: readonly U[]): void {
     ensureNotDeleted(this.entity);
-    if (this.#loaded === undefined) {
-      throw new Error("set was called when not loaded");
-    }
-    this.#hasBeenSet = true;
-
-    // If we're changing `a1.books = [b1, b2]` to `a1.books = [b2]`, then implicitly delete the old book
-    const otherCannotChange = this.otherMeta.allFields[this.otherFieldName].immutable;
-    if (this.isCascadeDelete && otherCannotChange) {
-      const implicitlyDeleted = this.#loaded.filter((e) => !values.includes(e));
-      // The `em.delete` will internally invalidate our `#getSorted` / `#allSorted` caches, which will be dirty now
-      implicitlyDeleted.forEach((e) => this.entity.em.delete(e));
-      // Keep the implicitlyDeleted values for `getWithDeleted` to return
-      values = [...values, ...implicitlyDeleted];
-    }
-
-    // Make a copy for safe iteration
-    const loaded = [...this.#loaded];
-    // Remove old values
-    for (const other of loaded) {
-      if (!values.includes(other)) {
-        this.remove(other);
-      }
-    }
-    for (const other of values) {
-      if (!loaded.includes(other)) {
-        this.add(other);
-      }
-    }
+    this.#state = this.#state.set(values);
+    this.#getSorted = undefined;
+    this.#allSorted = undefined;
   }
 
   add(other: U): void {
     ensureNotDeleted(this.entity);
-    this.#added ??= [];
-    maybeAdd(this.#added, other);
-    maybeRemove(this.#removed, other);
-    if (this.#loaded !== undefined) {
-      maybeAdd(this.#loaded, other);
-      this.#getSorted = undefined;
-      this.#allSorted = undefined;
-    }
+    this.#state = this.#state.add(other);
+    this.percolateAdd(other);
     this.registerAsMutated();
-    // This will no-op and mark other dirty if necessary
-    this.getOtherRelation(other).set(this.entity);
+    this.#getSorted = undefined;
+    this.#allSorted = undefined;
   }
 
-  // We're not supported remove(other) because that might leave other.otherFieldName as undefined,
-  // which we don't know if that's valid or not, i.e. depending on whether the field is nullable.
   remove(other: U, opts: { requireLoaded: boolean } = { requireLoaded: true }) {
     ensureNotDeleted(this.entity, "pending");
-    if (this.#loaded === undefined && opts.requireLoaded) {
-      throw new Error("remove was called when not loaded");
-    }
-    this.#removed ??= [];
-    maybeAdd(this.#removed, other);
-    maybeRemove(this.#added, other);
-    if (this.#loaded !== undefined) {
-      remove(this.#loaded, other);
-      this.#getSorted = undefined;
-      this.#allSorted = undefined;
-    }
+    this.#state = this.#state.remove(other, opts);
+    this.percolateRemove(other);
     this.registerAsMutated();
-    // This will no-op and mark other dirty if necessary
-    this.getOtherRelation(other).set(undefined);
+    this.#getSorted = undefined;
+    this.#allSorted = undefined;
   }
 
   removeAll(): void {
     ensureNotDeleted(this.entity);
-    if (this.#loaded === undefined) {
+    if (!this.#state.isLoaded) {
       throw new Error("removeAll was called when not loaded");
     }
-    for (const other of [...this.#loaded]) {
+    for (const other of [...this.#state.doGet()]) {
       this.remove(other);
     }
   }
 
   // internal impl
 
+  /** @internal */
+  percolateAdd(other: U): void {
+    this.getOtherRelation(other).set(this.entity);
+  }
+
+  /** @internal */
+  percolateRemove(other: U): void {
+    this.getOtherRelation(other).set(undefined);
+  }
+
+  /** @internal */
+  registerAsMutated(): void {
+    getEmInternalApi(this.entity.em).mutatedCollections.add(this);
+  }
+
   setFromOpts(others: U[]): void {
-    this.#loaded = [];
+    this.#state = new O2MLoadedState<T, U>(this, [], false);
     others.forEach((o) => this.add(o));
   }
 
   removeIfLoaded(other: U) {
-    this.#removed ??= [];
-    maybeRemove(this.#added, other);
-    maybeAdd(this.#removed, other);
-    if (this.#loaded !== undefined) {
-      remove(this.#loaded, other);
-    }
+    this.#state = this.#state.removeIfLoaded(other);
     this.registerAsMutated();
+    this.#getSorted = undefined;
+    this.#allSorted = undefined;
   }
 
   maybeCascadeDelete(): void {
@@ -276,43 +216,12 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     current.forEach((other) => {
       const m2o = this.getOtherRelation(other);
       if (maybeResolveReferenceToId(m2o.current({ withDeleted: true })) === this.entity.idMaybe) {
-        // TODO What if other.otherFieldName is required/not-null?
         m2o.set(undefined);
       }
     });
-    this.#loaded = [];
-    this.#added = [];
-    this.#removed = [];
+    this.#state = new O2MLoadedState<T, U>(this, [], false);
     this.#getSorted = undefined;
     this.#allSorted = undefined;
-  }
-
-  private maybeAppendAddedBeforeLoaded(): void {
-    // If our entity is not new, then entities in the EM might have been mutated to point
-    // to our foreign key (instead of our loaded instance), which means they should be in
-    // `addedBeforeLoaded` but are not.
-    //
-    // (Note that we don't have to handle the case for "removed before loaded" here because
-    // the oneToManyDataLoader already handles that; although maybe arguably that logic should
-    // be handled here?)
-    if (!this.entity.isNewEntity) {
-      const { em } = this.entity;
-      const pending = getEmInternalApi(em).pendingChildren.get(this.entity.idTagged!)?.get(this.fieldName);
-      if (pending) {
-        (this.#added ??= []).push(...(pending.adds as U[]));
-        (this.#removed ??= []).push(...(pending.removes as U[]));
-        clear(pending.adds);
-        clear(pending.removes);
-      }
-    }
-    if (this.#added) {
-      const newEntities = this.#added.filter((e) => !this.#loaded?.includes(e));
-      // Push on the end to better match the db order of "newer things come last"
-      this.#loaded!.push(...newEntities);
-    }
-    if (this.#removed) {
-      this.#removed.forEach((e) => remove(this.#loaded!, e));
-    }
   }
 
   // These are public to our internal implementation but not exposed in the Collection API
@@ -325,7 +234,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   current(opts?: { withDeleted?: boolean }): U[] {
-    return this.filterDeleted(this.#loaded ?? this.#added ?? [], opts);
+    return this.filterDeleted(this.#state.current(), opts);
   }
 
   public get meta(): EntityMetadata {
@@ -337,7 +246,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   public get hasBeenSet(): boolean {
-    return this.#hasBeenSet;
+    return this.#state.hasBeenSet;
   }
 
   public toString(): string {
@@ -346,8 +255,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   /** Called after `em.flush` to reset our dirty tracking. */
   public resetAddedRemoved(): void {
-    this.#added = undefined;
-    this.#removed = undefined;
+    this.#state.resetAddedRemoved();
   }
 
   /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
@@ -377,19 +285,338 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     return getEmInternalApi(this.entity.em).getPreloadedRelation<U>(this.entity.idTagged, this.fieldName);
   }
 
-  private registerAsMutated(): void {
-    getEmInternalApi(this.entity.em).mutatedCollections.add(this);
-  }
-
   // Exposed for changes
   added(): U[] {
-    return this.#added ?? [];
+    return this.#state.added();
   }
 
   removed(): U[] {
-    return this.#removed ?? [];
+    return this.#state.removed();
   }
 
   [RelationT]: T = null!;
   [RelationU]: U = null!;
+}
+
+/**
+ * State interface for OneToManyCollection state machine.
+ *
+ * States handle only data tracking — side effects (percolation, mutation registration)
+ * are handled by the collection methods that call into these states.
+ *
+ * State transitions:
+ * ```
+ * Constructor (new entity)      → Loaded (empty [])
+ * Constructor (existing entity) → UnloadedPristine
+ *
+ * UnloadedPristine + add/remove    → UnloadedAddedRemoved
+ * UnloadedPristine + load/preload  → Loaded
+ *
+ * UnloadedAddedRemoved + load/preload → Loaded (merges adds/removes)
+ *
+ * Loaded + forceReload → Loaded (refreshed, re-merges pending)
+ * ```
+ */
+interface O2MState<T extends Entity, U extends Entity> {
+  add(other: U): O2MState<T, U>;
+  remove(other: U, opts: { requireLoaded: boolean }): O2MState<T, U>;
+  removeIfLoaded(other: U): O2MState<T, U>;
+  set(values: readonly U[]): O2MState<T, U>;
+  doGet(): U[];
+  find(id: IdOf<U>): U | undefined;
+  applyLoad(dbEntities: U[]): O2MLoadedState<T, U>;
+  current(): U[];
+  import(o2m: OneToManyCollection<T, U>, findEntity: (e: U) => U): O2MState<T, U>;
+  readonly isLoaded: boolean;
+  readonly hasBeenSet: boolean;
+  added(): U[];
+  removed(): U[];
+  resetAddedRemoved(): void;
+}
+
+/** Initial state for existing entities - no data loaded yet. */
+class O2MUnloadedPristineState<T extends Entity, U extends Entity> implements O2MState<T, U> {
+  readonly isLoaded = false;
+  readonly hasBeenSet = false;
+  #o2m: OneToManyCollection<T, U>;
+
+  constructor(o2m: OneToManyCollection<T, U>) {
+    this.#o2m = o2m;
+  }
+
+  add(other: U): O2MState<T, U> {
+    return new O2MUnloadedAddedRemovedState<T, U>(this.#o2m, [other], []);
+  }
+
+  remove(_other: U, opts: { requireLoaded: boolean }): O2MState<T, U> {
+    if (opts.requireLoaded) {
+      throw new Error("remove was called when not loaded");
+    }
+    return new O2MUnloadedAddedRemovedState<T, U>(this.#o2m, [], [_other]);
+  }
+
+  removeIfLoaded(other: U): O2MState<T, U> {
+    return new O2MUnloadedAddedRemovedState<T, U>(this.#o2m, [], [other]);
+  }
+
+  set(_values: readonly U[]): O2MState<T, U> {
+    throw new Error("set was called when not loaded");
+  }
+
+  doGet(): U[] {
+    throw new Error("get was called when not loaded");
+  }
+
+  find(_id: IdOf<U>): U | undefined {
+    return undefined;
+  }
+
+  applyLoad(dbEntities: U[]): O2MLoadedState<T, U> {
+    const loaded = applyLoad(this.#o2m, dbEntities, [], []);
+    return new O2MLoadedState<T, U>(this.#o2m, loaded, false);
+  }
+
+  current(): U[] {
+    return [];
+  }
+
+  import(o2m: OneToManyCollection<T, U>, _findEntity: (e: U) => U): O2MState<T, U> {
+    return new O2MUnloadedPristineState<T, U>(o2m);
+  }
+
+  added(): U[] {
+    return [];
+  }
+
+  removed(): U[] {
+    return [];
+  }
+
+  resetAddedRemoved(): void {}
+}
+
+/** State when add/remove called before load - tracks changes to merge later. */
+class O2MUnloadedAddedRemovedState<T extends Entity, U extends Entity> implements O2MState<T, U> {
+  readonly isLoaded = false;
+  readonly hasBeenSet = false;
+  #o2m: OneToManyCollection<T, U>;
+  #added: U[];
+  #removed: U[];
+
+  constructor(o2m: OneToManyCollection<T, U>, added: U[], removed: U[]) {
+    this.#o2m = o2m;
+    this.#added = added;
+    this.#removed = removed;
+  }
+
+  add(other: U): O2MState<T, U> {
+    maybeAdd(this.#added, other);
+    maybeRemove(this.#removed, other);
+    return this;
+  }
+
+  remove(other: U, opts: { requireLoaded: boolean }): O2MState<T, U> {
+    if (opts.requireLoaded) {
+      throw new Error("remove was called when not loaded");
+    }
+    maybeAdd(this.#removed, other);
+    maybeRemove(this.#added, other);
+    return this;
+  }
+
+  removeIfLoaded(other: U): O2MState<T, U> {
+    maybeRemove(this.#added, other);
+    maybeAdd(this.#removed, other);
+    return this;
+  }
+
+  set(_values: readonly U[]): O2MState<T, U> {
+    throw new Error("set was called when not loaded");
+  }
+
+  doGet(): U[] {
+    throw new Error("get was called when not loaded");
+  }
+
+  find(id: IdOf<U>): U | undefined {
+    return this.#added.find((u) => !u.isNewEntity && u.id === id);
+  }
+
+  applyLoad(dbEntities: U[]): O2MLoadedState<T, U> {
+    const loaded = applyLoad(this.#o2m, dbEntities, this.#added, this.#removed);
+    return new O2MLoadedState<T, U>(this.#o2m, loaded, false, this.#added, this.#removed);
+  }
+
+  current(): U[] {
+    return this.#added;
+  }
+
+  import(o2m: OneToManyCollection<T, U>, findEntity: (e: U) => U): O2MState<T, U> {
+    return new O2MUnloadedAddedRemovedState<T, U>(
+      o2m,
+      mapEntities(this.#added, findEntity),
+      mapEntities(this.#removed, findEntity),
+    );
+  }
+
+  added(): U[] {
+    return this.#added;
+  }
+
+  removed(): U[] {
+    return this.#removed;
+  }
+
+  resetAddedRemoved(): void {
+    this.#added = [];
+    this.#removed = [];
+  }
+}
+
+/** State when collection is loaded - all operations work directly on loaded array. */
+class O2MLoadedState<T extends Entity, U extends Entity> implements O2MState<T, U> {
+  readonly isLoaded = true;
+  #o2m: OneToManyCollection<T, U>;
+  #loaded: U[];
+  #added: U[];
+  #removed: U[];
+  #hasBeenSet: boolean;
+
+  constructor(o2m: OneToManyCollection<T, U>, loaded: U[], hasBeenSet: boolean, added: U[] = [], removed: U[] = []) {
+    this.#o2m = o2m;
+    this.#loaded = loaded;
+    this.#added = added;
+    this.#removed = removed;
+    this.#hasBeenSet = hasBeenSet;
+  }
+
+  get hasBeenSet(): boolean {
+    return this.#hasBeenSet;
+  }
+
+  add(other: U): O2MState<T, U> {
+    maybeAdd(this.#added, other);
+    maybeRemove(this.#removed, other);
+    maybeAdd(this.#loaded, other);
+    return this;
+  }
+
+  remove(other: U, _opts: { requireLoaded: boolean }): O2MState<T, U> {
+    maybeAdd(this.#removed, other);
+    maybeRemove(this.#added, other);
+    remove(this.#loaded, other);
+    return this;
+  }
+
+  removeIfLoaded(other: U): O2MState<T, U> {
+    maybeRemove(this.#added, other);
+    maybeAdd(this.#removed, other);
+    remove(this.#loaded, other);
+    return this;
+  }
+
+  set(values: readonly U[]): O2MState<T, U> {
+    this.#hasBeenSet = true;
+
+    const o2m = this.#o2m;
+    const otherCannotChange = o2m.otherMeta.allFields[o2m.otherFieldName].immutable;
+    const isCascade = isCascadeDelete(o2m, o2m.fieldName);
+    if (isCascade && otherCannotChange) {
+      const implicitlyDeleted = this.#loaded.filter((e) => !values.includes(e));
+      implicitlyDeleted.forEach((e) => o2m.entity.em.delete(e));
+      values = [...values, ...implicitlyDeleted];
+    }
+
+    const loaded = new Set([...this.#loaded]);
+    const valuesSet = new Set(values);
+    for (const other of loaded) {
+      if (!valuesSet.has(other)) o2m.remove(other);
+    }
+    for (const other of values) {
+      if (!loaded.has(other)) o2m.add(other);
+    }
+    return this;
+  }
+
+  doGet(): U[] {
+    return this.#loaded;
+  }
+
+  find(id: IdOf<U>): U | undefined {
+    return this.#loaded.find((other) => !other.isNewEntity && other.id === id);
+  }
+
+  applyLoad(dbEntities: U[]): O2MLoadedState<T, U> {
+    // On forceReload, replace loaded but preserve pending adds/removes
+    const loaded = new Set([...dbEntities]);
+    for (const e of this.#added) loaded.add(e);
+    for (const e of this.#removed) loaded.delete(e);
+    this.#loaded = [...loaded];
+    return this;
+  }
+
+  current(): U[] {
+    return this.#loaded;
+  }
+
+  import(o2m: OneToManyCollection<T, U>, findEntity: (e: U) => U): O2MState<T, U> {
+    return new O2MLoadedState<T, U>(
+      o2m,
+      mapEntities(this.#loaded, findEntity),
+      this.#hasBeenSet,
+      mapEntities(this.#added, findEntity),
+      mapEntities(this.#removed, findEntity),
+    );
+  }
+
+  added(): U[] {
+    return this.#added;
+  }
+
+  removed(): U[] {
+    return this.#removed;
+  }
+
+  resetAddedRemoved(): void {
+    this.#added = [];
+    this.#removed = [];
+  }
+}
+
+function mapEntities<U extends Entity>(entities: U[], findEntity: (e: U) => U): U[] {
+  const result = new Array<U>(entities.length);
+  for (let i = 0; i < entities.length; i++) result[i] = findEntity(entities[i]);
+  return result;
+}
+
+/**
+ * Creates the new loaded array by merging:
+ *
+ * - the loaded entities from the database (dbEntities)
+ * - any o2m-side preload changes (added/removed to our o2m),
+ * - any m2o-side preload changes (sets to the other side m2o)
+ */
+function applyLoad<T extends Entity, U extends Entity>(
+  o2m: OneToManyCollection<T, U>,
+  dbEntities: U[],
+  added: U[],
+  removed: U[],
+): U[] {
+  const entity = o2m.entity;
+  // Merge pending children from m2o mutations
+  if (!entity.isNewEntity) {
+    const { em } = entity;
+    const pending = getEmInternalApi(em).pendingChildren.get(entity.idTagged!)?.get(o2m.fieldName);
+    if (pending) {
+      added = [...added, ...(pending.adds as U[])];
+      removed = [...removed, ...(pending.removes as U[])];
+      clear(pending.adds);
+      clear(pending.removes);
+    }
+  }
+  // Push added entities on the end to better match the db order of "newer things come last"
+  const loaded = new Set([...dbEntities]);
+  for (const e of added) loaded.add(e);
+  for (const e of removed) loaded.delete(e);
+  return [...loaded];
 }

@@ -16,7 +16,7 @@ import {
 } from "../index";
 import { IsLoadedCachable } from "../IsLoadedCache";
 import { lazyField } from "../newEntity";
-import { compareValues, maybeAdd, maybeRemove, remove } from "../utils";
+import { compareValues } from "../utils";
 import { AbstractRelationImpl, isCascadeDelete } from "./AbstractRelationImpl";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
 import { RelationT, RelationU } from "./Relation";
@@ -414,18 +414,18 @@ class O2MUnloadedAddedRemovedState<T extends Entity, U extends Entity> implement
   readonly isLoaded = false;
   readonly hasBeenSet = false;
   #o2m: OneToManyCollection<T, U>;
-  #added: U[];
-  #removed: U[];
+  #added: Set<U>;
+  #removed: Set<U>;
 
   constructor(o2m: OneToManyCollection<T, U>, added: U[], removed: U[]) {
     this.#o2m = o2m;
-    this.#added = added;
-    this.#removed = removed;
+    this.#added = new Set(added);
+    this.#removed = new Set(removed);
   }
 
   add(other: U): O2MState<T, U> {
-    maybeAdd(this.#added, other);
-    maybeRemove(this.#removed, other);
+    this.#added.add(other);
+    this.#removed.delete(other);
     return this;
   }
 
@@ -433,14 +433,14 @@ class O2MUnloadedAddedRemovedState<T extends Entity, U extends Entity> implement
     if (opts.requireLoaded) {
       throw new Error("remove was called when not loaded");
     }
-    maybeAdd(this.#removed, other);
-    maybeRemove(this.#added, other);
+    this.#removed.add(other);
+    this.#added.delete(other);
     return this;
   }
 
   removeIfLoaded(other: U): O2MState<T, U> {
-    maybeRemove(this.#added, other);
-    maybeAdd(this.#removed, other);
+    this.#added.delete(other);
+    this.#removed.add(other);
     return this;
   }
 
@@ -455,7 +455,10 @@ class O2MUnloadedAddedRemovedState<T extends Entity, U extends Entity> implement
   }
 
   find(id: IdOf<U>): U | undefined {
-    return this.#added.find((u) => !u.isNewEntity && u.id === id);
+    for (const u of this.#added) {
+      if (!u.isNewEntity && u.id === id) return u;
+    }
+    return undefined;
   }
 
   applyLoad(dbEntities: U[]): O2MLoadedState<T, U> {
@@ -463,34 +466,34 @@ class O2MUnloadedAddedRemovedState<T extends Entity, U extends Entity> implement
     const loaded = new Set([...dbEntities]);
     for (const e of this.#added) loaded.add(e);
     for (const e of this.#removed) loaded.delete(e);
-    return new O2MLoadedState<T, U>(this.#o2m, [...loaded], false, this.#added, this.#removed);
+    return new O2MLoadedState<T, U>(this.#o2m, [...loaded], false, [...this.#added], [...this.#removed]);
   }
 
   current(): U[] {
-    return this.#added;
+    return [...this.#added];
   }
 
   import(o2m: OneToManyCollection<T, U>, findEntity: (e: U) => U): O2MState<T, U> {
     return new O2MUnloadedAddedRemovedState<T, U>(
       o2m,
-      mapEntities(this.#added, findEntity),
-      mapEntities(this.#removed, findEntity),
+      mapEntities([...this.#added], findEntity),
+      mapEntities([...this.#removed], findEntity),
     );
   }
 
   added(): U[] {
-    return this.#added;
+    return [...this.#added];
   }
 
   removed(): U[] {
-    return this.#removed;
+    return [...this.#removed];
   }
 
   resetAddedRemoved(): void {
     // This is called after em.flush, so these changes have been pushed into the db; we don't
     // need to track them anymore b/c any future `o2m.load` will see up.
-    this.#added = [];
-    this.#removed = [];
+    this.#added = new Set();
+    this.#removed = new Set();
   }
 }
 
@@ -611,16 +614,16 @@ class O2MPendingSetState<T extends Entity, U extends Entity> implements O2MState
 class O2MLoadedState<T extends Entity, U extends Entity> implements O2MState<T, U> {
   readonly isLoaded = true;
   #o2m: OneToManyCollection<T, U>;
-  #loaded: U[];
-  #added: U[];
-  #removed: U[];
+  #loaded: Set<U>;
+  #added: Set<U>;
+  #removed: Set<U>;
   #hasBeenSet: boolean;
 
   constructor(o2m: OneToManyCollection<T, U>, loaded: U[], hasBeenSet: boolean, added: U[] = [], removed: U[] = []) {
     this.#o2m = o2m;
-    this.#loaded = loaded;
-    this.#added = added;
-    this.#removed = removed;
+    this.#loaded = new Set(loaded);
+    this.#added = new Set(added);
+    this.#removed = new Set(removed);
     this.#hasBeenSet = hasBeenSet;
   }
 
@@ -629,23 +632,23 @@ class O2MLoadedState<T extends Entity, U extends Entity> implements O2MState<T, 
   }
 
   add(other: U): O2MState<T, U> {
-    maybeAdd(this.#added, other);
-    maybeRemove(this.#removed, other);
-    maybeAdd(this.#loaded, other);
+    this.#added.add(other);
+    this.#removed.delete(other);
+    this.#loaded.add(other);
     return this;
   }
 
   remove(other: U, _opts: { requireLoaded: boolean }): O2MState<T, U> {
-    maybeAdd(this.#removed, other);
-    maybeRemove(this.#added, other);
-    remove(this.#loaded, other);
+    this.#removed.add(other);
+    this.#added.delete(other);
+    this.#loaded.delete(other);
     return this;
   }
 
   removeIfLoaded(other: U): O2MState<T, U> {
-    maybeRemove(this.#added, other);
-    maybeAdd(this.#removed, other);
-    remove(this.#loaded, other);
+    this.#added.delete(other);
+    this.#removed.add(other);
+    this.#loaded.delete(other);
     return this;
   }
 
@@ -657,14 +660,14 @@ class O2MLoadedState<T extends Entity, U extends Entity> implements O2MState<T, 
     const otherCannotChange = o2m.otherMeta.allFields[o2m.otherFieldName].immutable;
     const isCascade = isCascadeDelete(o2m, o2m.fieldName);
     if (isCascade && otherCannotChange) {
-      const implicitlyDeleted = this.#loaded.filter((e) => !valuesSet.has(e));
+      const implicitlyDeleted = [...this.#loaded].filter((e) => !valuesSet.has(e));
       implicitlyDeleted.forEach((e) => o2m.entity.em.delete(e));
       // ...we restore the implicitlyDeleted for getWithDeleted
       values = [...values, ...implicitlyDeleted];
       valuesSet = new Set(values);
     }
 
-    const loaded = new Set([...this.#loaded]);
+    const loaded = new Set(this.#loaded);
     for (const other of loaded) {
       if (!valuesSet.has(other)) o2m.remove(other);
     }
@@ -675,47 +678,50 @@ class O2MLoadedState<T extends Entity, U extends Entity> implements O2MState<T, 
   }
 
   doGet(): U[] {
-    return this.#loaded;
+    return [...this.#loaded];
   }
 
   find(id: IdOf<U>): U | undefined {
-    return this.#loaded.find((other) => !other.isNewEntity && other.id === id);
+    for (const other of this.#loaded) {
+      if (!other.isNewEntity && other.id === id) return other;
+    }
+    return undefined;
   }
 
   applyLoad(dbEntities: U[]): O2MLoadedState<T, U> {
     // On forceReload, replace loaded but preserve pending adds/removes
-    const loaded = new Set([...dbEntities]);
+    const loaded = new Set(dbEntities);
     for (const e of this.#added) loaded.add(e);
     for (const e of this.#removed) loaded.delete(e);
-    this.#loaded = [...loaded];
+    this.#loaded = loaded;
     return this;
   }
 
   current(): U[] {
-    return this.#loaded;
+    return [...this.#loaded];
   }
 
   import(o2m: OneToManyCollection<T, U>, findEntity: (e: U) => U): O2MState<T, U> {
     return new O2MLoadedState<T, U>(
       o2m,
-      mapEntities(this.#loaded, findEntity),
+      mapEntities([...this.#loaded], findEntity),
       this.#hasBeenSet,
-      mapEntities(this.#added, findEntity),
-      mapEntities(this.#removed, findEntity),
+      mapEntities([...this.#added], findEntity),
+      mapEntities([...this.#removed], findEntity),
     );
   }
 
   added(): U[] {
-    return this.#added;
+    return [...this.#added];
   }
 
   removed(): U[] {
-    return this.#removed;
+    return [...this.#removed];
   }
 
   resetAddedRemoved(): void {
-    this.#added = [];
-    this.#removed = [];
+    this.#added = new Set();
+    this.#removed = new Set();
   }
 }
 

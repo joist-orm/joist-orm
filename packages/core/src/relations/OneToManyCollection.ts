@@ -511,7 +511,7 @@ class O2MPendingSetState<T extends Entity, U extends Entity> implements O2MState
     // We skip percolation on import() because those entities already have correct references
     // in the cloned EntityManager.
     if (!skipPercolate) this.#percolate();
-    getEmInternalApi(o2m.entity.em).pendingO2mSets.add(o2m);
+    getEmInternalApi(o2m.entity.em).pendingLoads.add(o2m);
   }
 
   add(other: U): O2MState<T, U> {

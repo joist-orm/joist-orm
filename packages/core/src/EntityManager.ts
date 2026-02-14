@@ -86,6 +86,7 @@ import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
+import { Collection } from "./relations/Collection";
 import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
 import { OptsOf, OrderOf } from "./typeMap";
@@ -303,7 +304,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       preloader: this.#preloader,
       pendingPercolate: this.#pendingPercolate,
       mutatedCollections: new Set(),
-      pendingO2mSets: new Set(),
+      pendingLoads: new Set(),
       hooks: this.#hooks,
       rm: this.#rm,
       indexManager: this.#indexManager,
@@ -1536,16 +1537,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
       if (hookLoops++ >= 10) throw new Error("runHooksOnPendingEntities has ran 10 iterations, aborting");
 
-      // Resolve any pending m2m sets before finding pending entities
-      // (m2ms can flush incremental .adds/.removes to the db, only .sets need to load to know the full added/removed diff.)
-      const pendingSets = Object.values(this.#joinRows).filter((jr) => jr.hasPendingSets);
-      if (pendingSets) await Promise.all(pendingSets.map((jr) => jr.resolvePendingSets()));
-
-      // Resolve any pending o2m sets (set() called before load — need to load from DB to diff)
-      const pendingO2mSets = [...getEmInternalApi(this).pendingO2mSets];
-      if (pendingO2mSets.length > 0) {
-        getEmInternalApi(this).pendingO2mSets.clear();
-        await Promise.all(pendingO2mSets.map((o2m) => o2m.load()));
+      // Resolve any pending o2m/m2m sets (set() called before load — need to load from DB to diff)
+      const pendingLoads = [...getEmInternalApi(this).pendingLoads];
+      if (pendingLoads.length > 0) {
+        getEmInternalApi(this).pendingLoads.clear();
+        await Promise.all(pendingLoads.map((collection) => collection.load()));
       }
 
       // Any dirty entities we find, even if we skipped firing their hooks on this loop
@@ -2445,8 +2441,8 @@ export interface EntityManagerInternalApi {
   /** List of mutated o2m collections to reset added/removed post-flush. */
   mutatedCollections: Set<OneToManyCollection<any, any>>;
 
-  /** O2M collections with pending set() calls that need resolution before flush. */
-  pendingO2mSets: Set<OneToManyCollection<any, any>>;
+  /** O2M/M2M collections with pending set() calls that need resolution before flush. */
+  pendingLoads: Set<Collection<any, any>>;
 
   /** Map of taggedId -> fieldName -> join-loaded data. */
   getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined;

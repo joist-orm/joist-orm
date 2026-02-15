@@ -11,7 +11,7 @@ import {
   ManyToManyField,
   toTaggedId,
 } from "../";
-import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
+import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader";
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
 import { lazyField } from "../newEntity";
 import { maybeAdd, maybeRemove, remove } from "../utils";
@@ -84,15 +84,14 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       if (maybePreloaded) {
         this.#state = this.#state.applyLoad(maybePreloaded);
       } else {
-        await (this.#loadPromise ??= manyToManyDataLoader(this.entity.em, this)
-          .load(key)
-          .then((dbEntities) => {
-            this.#state = this.#state.applyLoad(dbEntities);
-            this.#loadPromise = undefined;
-          })
-          .catch(function load(err) {
+        await (this.#loadPromise ??= manyToManyBatchLoader(this.entity.em, this).load(key))
+          .then(() => this.preload())
+          .catch(function load(err: any) {
             throw appendStack(err, new Error());
-          }));
+          })
+          .finally(() => {
+            this.#loadPromise = undefined;
+          });
       }
     }
     return this.filterDeleted(this.#state.doGet(), opts) as ReadonlyArray<U>;

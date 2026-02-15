@@ -1,4 +1,4 @@
-import { oneToManyDataLoader } from "../dataloaders/oneToManyDataLoader";
+import { oneToManyBatchLoader } from "../batchloaders/oneToManyBatchLoader";
 import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
 import {
   appendStack,
@@ -68,15 +68,14 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       if (maybePreloaded) {
         this.#state = this.#state.applyLoad(maybePreloaded);
       } else {
-        await (this.#loadPromise ??= oneToManyDataLoader(this.entity.em, this)
-          .load(this.entity.idTagged!)
-          .then((dbEntities) => {
-            this.#state = this.#state.applyLoad(dbEntities);
-            this.#loadPromise = undefined;
+        await (this.#loadPromise ??= oneToManyBatchLoader(this.entity.em, this).load(this.entity.idTagged!))
+          .then(() => this.preload())
+          .catch(function load(err: any) {
+            throw appendStack(err as Error, new Error());
           })
-          .catch(function load(err) {
-            throw appendStack(err, new Error());
-          }));
+          .finally(() => {
+            this.#loadPromise = undefined;
+          });
       }
       this.#getSorted = undefined;
       this.#allSorted = undefined;

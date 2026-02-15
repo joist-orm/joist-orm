@@ -26,6 +26,11 @@ To run tests in this project:
 - `/packages/graphql-codegen/` - GraphQL code generation
 - `/docs/` - Documentation site
 
+## Debugging
+
+- `packages/tests/integration/src/testEm.ts` has a `console.log(sql)` in `recordQuery` that can be uncommented to log all SQL queries during tests
+- Use `PLUGINS=` (empty) to disable the join-preloading plugin when running tests
+
 ## Important Notes
 
 - Always use `yarn test` instead of `npm test`

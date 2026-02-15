@@ -11,11 +11,10 @@ import {
   insertTag,
   update,
 } from "@src/entities/inserts";
+import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import { testing } from "joist-orm";
 import { jan1, jan2 } from "src/testDates";
 import { Author, Book, Critic, LargePublisher, Publisher } from "./entities";
-
-import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
 
 const { partitionHint } = testing;
 

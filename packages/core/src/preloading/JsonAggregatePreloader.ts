@@ -29,18 +29,18 @@ export class JsonAggregatePreloader implements PreloadPlugin {
     root: HintNode<T>,
     query: ParsedFindQuery,
   ): PreloadHydrator | undefined {
-    const { getAlias } = new AliasAssigner(query);
+    const assigner = new AliasAssigner(query);
 
     // Get the existing primary alias
     const alias = getTables(query)[0].alias;
-    const joins = calcLateralJoins(getAlias, { tree: root, alias, meta }, root, alias, meta);
+    const joins = calcLateralJoins(assigner, { tree: root, alias, meta }, root, alias, meta);
     // If there are no sql-based preload in the hints, just return
     if (joins.length === 0) return undefined;
 
-    // Include the aggregate `books._ as books`, `comments._ as comments`
-    for (const { alias, join } of joins) {
+    // Include the aggregate `_b1._ as _prequel`, `_c._ as _randomComment`
+    for (const { alias, relationAlias, join } of joins) {
       query.selects.push({
-        sql: `${kqDot(alias, "_")} as ${kq(alias)}`,
+        sql: `${kqDot(alias, "_")} as ${kq(relationAlias)}`,
         aliases: [alias],
         bindings: [],
       });
@@ -50,30 +50,30 @@ export class JsonAggregatePreloader implements PreloadPlugin {
     return (rows, entities) => {
       rows.forEach((row, i) => {
         const parent = entities[i];
-        for (const { alias, hydrator } of joins) {
-          hydrator(parent, parent, row[alias] ?? []);
+        for (const { relationAlias, hydrator } of joins) {
+          hydrator(parent, parent, row[relationAlias] ?? []);
         }
       });
     };
   }
 
   getPreloadJoins<T extends Entity>(meta: EntityMetadata, root: HintNode<T>, query: ParsedFindQuery): JoinResult[] {
-    const { getAlias } = new AliasAssigner(query);
+    const assigner = new AliasAssigner(query);
 
     // Get the existing primary alias
     const alias = getTables(query)[0].alias;
-    const joins = calcLateralJoins(getAlias, { tree: root, alias, meta }, root, alias, meta);
+    const joins = calcLateralJoins(assigner, { tree: root, alias, meta }, root, alias, meta);
     // If there are no sql-based preload in the hints, just return
 
     // Adapt our json aggregate joins to the higher-level JoinResult
     return joins.map((join) => {
       return {
-        selects: [{ value: kqDot(join.alias, "_"), as: join.alias }],
+        selects: [{ value: kqDot(join.alias, "_"), as: join.relationAlias }],
         join: join.join,
         hydrator: (rows, entities) => {
           rows.forEach((row, i) => {
             const parent = entities[i];
-            join.hydrator(parent, parent, row[join.alias] ?? []);
+            join.hydrator(parent, parent, row[join.relationAlias] ?? []);
           });
         },
       };
@@ -100,11 +100,12 @@ type AggregateJsonHydrator = (root: Entity, parent: Entity, arrays: unknown[][])
  * that will pull in the `books` & `comments` children.
  */
 function calcLateralJoins<I extends EntityOrId>(
-  getAlias: (tableName: string) => string,
+  assigner: AliasAssigner,
   root: { tree: HintNode<I>; alias: string; meta: EntityMetadata },
   tree: HintNode<I>,
   parentAlias: string,
   parentMeta: EntityMetadata,
+  pathPrefix: string = "",
 ): AggregateJoinResult[] {
   const results: AggregateJoinResult[] = [];
 
@@ -116,11 +117,14 @@ function calcLateralJoins<I extends EntityOrId>(
       const otherMeta = field.otherMetadata();
       const otherField = otherMeta.allFields[field.otherFieldName];
 
-      // Use a prefix like `_` to avoid collisions like `InvoiceDocument` -> alias `id` -> collides with the `id` column
-      const otherAlias = `_${getAlias(otherMeta.tableName)}`;
+      // Short table alias for column refs inside the subquery, e.g. `_b1`
+      const otherAlias = `_${assigner.getAlias(otherMeta.tableName)}`;
+      // Readable path-based column alias for the outer AS clause, e.g. `_books_reviews`
+      const pathKey = key.toLowerCase();
+      const relationAlias = `_${assigner.getLiteralAlias(`${pathPrefix}${pathKey}`)}`;
 
       // Do the recursion up-front, so we can work it into our own join/hydrator
-      const subJoins = calcLateralJoins(getAlias, root, subTree, otherAlias, otherMeta);
+      const subJoins = calcLateralJoins(assigner, root, subTree, otherAlias, otherMeta, `${pathPrefix}${pathKey}_`);
 
       // Get all fields with serdes and flatten out the columns
       const columns = Object.values(otherMeta.allFields)
@@ -167,7 +171,7 @@ function calcLateralJoins<I extends EntityOrId>(
           pruneable: true,
         });
       } else if (otherField.kind === "m2m") {
-        const m2mAlias = getAlias(otherField.joinTableName);
+        const m2mAlias = assigner.getAlias(otherField.joinTableName);
         // Get the m2m row's id to track in JoinRows
         selects.unshift(kqDot(m2mAlias, "id"));
         m2mTable = {
@@ -267,7 +271,7 @@ function calcLateralJoins<I extends EntityOrId>(
         getEmInternalApi(em).setPreloadedRelation(parent.idTagged, key, children);
       };
 
-      results.push({ alias: otherAlias, join, hydrator });
+      results.push({ alias: otherAlias, relationAlias, join, hydrator });
     }
   });
 
@@ -276,8 +280,10 @@ function calcLateralJoins<I extends EntityOrId>(
 
 /** A preload-loadable join for a given child, with potentially grand-child joins contained within it. */
 type AggregateJoinResult = {
-  /** The alias for this child's single json-array-d column, i.e. `b._` or `c._`. */
+  /** The short table alias used for column references inside the subquery, e.g. `_b1`. */
   alias: string;
+  /** The readable relation-name alias used in the outer `AS` clause, e.g. `_prequel`. */
+  relationAlias: string;
   /** The SQL for this child's lateral join, which itself might have recursive lateral joins. */
   join: LateralJoinTable;
   /** The hydrator for this child's lateral join, which itself might recursively hydrator subjoins. */

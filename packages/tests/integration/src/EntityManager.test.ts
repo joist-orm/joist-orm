@@ -547,8 +547,8 @@ describe("EntityManager", () => {
     await em.refresh(b1);
     // Then we have the new data
     expect(b1).toMatchEntity({ tags: [{ name: "t1" }, { name: "t3" }] });
-    // 2 because of Book.author + Book.prequel
-    expect(queries.length).toBe(isPreloadingEnabled ? 2 : 4);
+    // 1 because preloading fetch Book.author + Book.prequel + Book.tags all at once
+    expect(queries.length).toBe(isPreloadingEnabled ? 1 : 3);
   });
 
   it("refresh an entity with a loaded PersistedAsyncReference", async () => {
@@ -1007,13 +1007,10 @@ describe("EntityManager", () => {
 
   it("returns newly created entities from flush()", async () => {
     const em = newEntityManager();
-
     // Given a newly created entity
     const a1 = em.create(Author, { firstName: "a1" });
-
     // When we flush the entity manager
     const [result] = await em.flush();
-
     // Then the entity was returned from the flush
     expect(result).toEqual(a1);
   });

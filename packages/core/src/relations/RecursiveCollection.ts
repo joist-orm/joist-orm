@@ -1,5 +1,5 @@
-import { recursiveChildrenDataLoader } from "../dataloaders/recursiveChildrenDataLoader";
-import { recursiveParentsDataLoader } from "../dataloaders/recursiveParentsDataLoader";
+import { recursiveChildrenBatchLoader } from "../batchloaders/recursiveChildrenBatchLoader";
+import { recursiveParentsBatchLoader } from "../batchloaders/recursiveParentsBatchLoader";
 import {
   appendStack,
   ensureNotDeleted,
@@ -117,6 +117,7 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
   readonly #m2oName: keyof T & string;
   readonly #otherFieldName: keyof T & string;
   #loaded: boolean | undefined = undefined;
+  #loadPromise: Promise<void> | undefined;
 
   constructor(entity: T, fieldName: keyof T & string, m2oName: keyof T & string, otherFieldName: keyof T & string) {
     super(entity);
@@ -129,27 +130,36 @@ export class RecursiveParentsCollectionImpl<T extends Entity, U extends Entity>
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
     if (!this.isLoaded || opts.forceReload) {
-      // If we have `[grandchild, newlyCreatedParent, existingGrandparent, ...more...]`, skip up to the
-      // `existingGrandparent`, because if we `.load(entity)` (i.e. where we are the `grandchild`) then
-      // recursiveParentsDataLoader will try CTE query up from `grandchild[parent]`, but since that will
-      // be `newlyCreatedParent`, it doesn't have an id yet.
-      const entityToLoad = opts.forceReload ? this.entity : this.findUnloadedReference()?.entity;
-      if (entityToLoad && !entityToLoad.isNewEntity) {
-        await recursiveParentsDataLoader(this.entity.em, this)
-          .load(entityToLoad)
-          .catch(function load(err) {
-            throw appendStack(err, new Error());
-          });
-        // See if there are any WIP changes, i.e. new parents, that the ^ SQL query didn't know to load.
-        // We don't have to `while` loop this, because if parent itself has WIP changes above it, then
-        // its own `RecursiveParentsCollectionImpl.load` will load it, before returning to this method.
-        const unloadedParent = this.findUnloadedReference();
-        if (unloadedParent) {
-          await recursiveParentsDataLoader(this.entity.em, this)
-            .load(unloadedParent.entity)
+      // When force-reloading an already-loaded collection (e.g. em.refresh), the underlying m2o
+      // references are refreshed separately, so we can skip the CTE query and just re-walk the tree.
+      if (opts.forceReload && this.#loaded) {
+        this.#loaded = undefined;
+      } else {
+        // If we have `[grandchild, newlyCreatedParent, existingGrandparent, ...more...]`, skip up to the
+        // `existingGrandparent`, because if we `.load(entity)` (i.e. where we are the `grandchild`) then
+        // recursiveParentsBatchLoader will try CTE query up from `grandchild[parent]`, but since that will
+        // be `newlyCreatedParent`, it doesn't have an id yet.
+        const entityToLoad = opts.forceReload ? this.entity : this.findUnloadedReference()?.entity;
+        if (entityToLoad && !entityToLoad.isNewEntity) {
+          await (this.#loadPromise ??= recursiveParentsBatchLoader(this.entity.em, this)
+            .load(entityToLoad)
             .catch(function load(err) {
               throw appendStack(err, new Error());
-            });
+            })
+            .finally(() => {
+              this.#loadPromise = undefined;
+            }));
+          // See if there are any WIP changes, i.e. new parents, that the ^ SQL query didn't know to load.
+          // We don't have to `while` loop this, because if parent itself has WIP changes above it, then
+          // its own `RecursiveParentsCollectionImpl.load` will load it, before returning to this method.
+          const unloadedParent = this.findUnloadedReference();
+          if (unloadedParent) {
+            await recursiveParentsBatchLoader(this.entity.em, this)
+              .load(unloadedParent.entity)
+              .catch(function load(err) {
+                throw appendStack(err, new Error());
+              });
+          }
         }
       }
       this.#loaded = true;
@@ -228,6 +238,7 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
   readonly #o2mName: keyof T & string;
   readonly #otherFieldName: keyof T & string;
   #loaded: boolean | undefined = undefined;
+  #loadPromise: Promise<void> | undefined;
 
   constructor(entity: T, fieldName: keyof T & string, o2mName: keyof T & string, otherFieldName: keyof T & string) {
     super(entity);
@@ -240,19 +251,28 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, "pending");
     if (!this.isLoaded || opts.forceReload) {
-      if (!this.entity.isNewEntity) {
-        await recursiveChildrenDataLoader(this.entity.em, this)
-          .load(this.entity)
-          .catch(function load(err) {
-            throw appendStack(err, new Error());
-          });
-      }
-      const unloaded = this.findUnloadedCollections();
-      if (unloaded.length > 0) {
-        // Go through the entities own `fooRecursive` collection so that it's marked as loaded.
-        // We don't have to `while` loop this, because if they children themselves have any WIP
-        // changes, then their own `RecursiveChildrenCollectionImpl.load` will load them.
-        await Promise.all(unloaded.map((r) => (r.entity as any)[this.fieldName].load(opts)));
+      // When force-reloading an already-loaded collection (e.g. em.refresh), the underlying o2m
+      // collections are refreshed separately, so we can skip the CTE query and just re-walk the tree.
+      if (opts.forceReload && this.#loaded) {
+        this.#loaded = undefined;
+      } else {
+        if (!this.entity.isNewEntity) {
+          await (this.#loadPromise ??= recursiveChildrenBatchLoader(this.entity.em, this)
+            .load(this.entity)
+            .catch(function load(err) {
+              throw appendStack(err, new Error());
+            })
+            .finally(() => {
+              this.#loadPromise = undefined;
+            }));
+        }
+        const unloaded = this.findUnloadedCollections();
+        if (unloaded.length > 0) {
+          // Go through the entities own `fooRecursive` collection so that it's marked as loaded.
+          // We don't have to `while` loop this, because if they children themselves have any WIP
+          // changes, then their own `RecursiveChildrenCollectionImpl.load` will load them.
+          await Promise.all(unloaded.map((r) => (r.entity as any)[this.fieldName].load(opts)));
+        }
       }
       this.#loaded = true;
     }

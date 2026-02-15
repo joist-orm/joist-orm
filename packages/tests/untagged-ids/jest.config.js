@@ -14,7 +14,11 @@ module.exports = {
     "default",
     [
       "jest-junit",
-      { outputDirectory: "../../../artifacts", outputName: "junit-untagged-ids.xml", usePathForSuiteName: "true" },
+      {
+        outputDirectory: "../../../artifacts",
+        outputName: "junit-tests-untagged-ids.xml",
+        usePathForSuiteName: "true",
+      },
     ],
   ],
 };

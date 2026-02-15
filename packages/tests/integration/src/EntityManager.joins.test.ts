@@ -8,13 +8,14 @@ import {
   insertLargePublisher,
   insertPublisher,
   insertPublisherGroup,
+  insertSmallPublisher,
   insertTag,
   update,
 } from "@src/entities/inserts";
 import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import { testing } from "joist-orm";
 import { jan1, jan2 } from "src/testDates";
-import { Author, Book, Critic, LargePublisher, Publisher } from "./entities";
+import { Author, Book, Critic, LargePublisher, Publisher, SmallPublisher } from "./entities";
 
 const { partitionHint } = testing;
 
@@ -156,6 +157,17 @@ describe("EntityManager.joins", () => {
     expect(queries.length).toBe(2);
   });
 
+  it("preloads m2o to CTI base type", async () => {
+    await insertSmallPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    const em = newEntityManager();
+    resetQueryCount();
+    const a = await em.load(Author, "a:1", "publisher");
+    expect(queries.length).toBe(isPreloadingEnabled ? 1 : 2);
+    expect(a.publisher.get).toBeInstanceOf(SmallPublisher);
+    expect(a.publisher.get?.name).toBe("p1");
+  });
+
   // TODO Something about the `SmallPublisher.group: SmallPublisherGroup` broke this preloading
   it.skip("preloads m2o that are opposite of a lo2m relation", async () => {
     await insertPublisherGroup({ name: "pg1" });
@@ -271,9 +283,14 @@ describe("EntityManager.joins", () => {
 
     it("partitions a non-sql hint", () => {
       const [a, b] = partitionHint(Author.metadata, { latestComments: {} });
-      // We can't preload publisher b/c it's a CTI
       expect(a).toEqual(undefined);
       expect(b).toEqual({ latestComments: {} });
+    });
+
+    it("partitions a CTI m2o into sql", () => {
+      const [a, b] = partitionHint(Author.metadata, "publisher");
+      expect(a).toEqual({ publisher: {} });
+      expect(b).toEqual(undefined);
     });
 
     it("partitions a derived fk with no subhint", () => {

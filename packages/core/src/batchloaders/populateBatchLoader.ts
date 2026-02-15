@@ -1,4 +1,3 @@
-import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityMetadata } from "../EntityMetadata";
 import { HintNode, buildHintTree } from "../HintTree";
@@ -16,16 +15,20 @@ import { LoadHint } from "../loadHints";
 import { getRelationFromMaybePolyKey, isPolyHint } from "../reactiveHints";
 import { ReactiveFieldImpl } from "../relations/ReactiveField";
 import { toArray } from "../utils";
+import { BatchLoader } from "./BatchLoader";
+import { manyToManyBatchLoader } from "./manyToManyBatchLoader";
+import { oneToManyBatchLoader } from "./oneToManyBatchLoader";
+import { oneToOneBatchLoader } from "./oneToOneBatchLoader";
 
 export const populateOperation = "populate";
 
-export function populateDataLoader(
+export function populateBatchLoader(
   em: EntityManager,
   meta: EntityMetadata,
   hint: LoadHint<any>,
   mode: "preload" | "intermixed",
   opts: { forceReload?: boolean } = {},
-): DataLoader<{ entity: Entity; hint: LoadHint<any> }, any> {
+): BatchLoader<{ entity: Entity; hint: LoadHint<any> }> {
   // For batching populates, we want different levels of course-ness:
   // - preloading populates that are only SQL should be batched together as much as possible, but
   // - intermixed populates (some with custom relations) should be batched as separately as possible
@@ -42,11 +45,11 @@ export function populateDataLoader(
     mode === "preload"
       ? `${meta.tagName}:${opts.forceReload}`
       : `${meta.tagName}:${JSON.stringify(hint)}:${opts.forceReload}`;
-  return em.getLoader(
+  return em.getBatchLoader(
     populateOperation,
     batchKey,
     async (populates) => {
-      async function populateLayer(layerMeta: EntityMetadata | undefined, layerNode: HintNode<Entity>): Promise<any[]> {
+      async function populateLayer(layerMeta: EntityMetadata | undefined, layerNode: HintNode<Entity>): Promise<void> {
         // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
         // needs loading, just load everything
         const { preloader } = getEmInternalApi(em);
@@ -91,86 +94,94 @@ export function populateDataLoader(
           }
         }
 
-        // One breadth-width pass (only 1 level deep, our 2nd pass recurses) to ensure each relation is loaded
-        const loadPromises = Object.entries(layerNode.hints).flatMap(([key, tree]) => {
-          return [...tree.entities].map((entity) => {
+        // First pass: batch SQL relations directly, fall back to relation.load() for non-SQL
+        const batchPromises = new Set<Promise<void>>();
+        const relationsToPreload: { preload(): void }[] = [];
+        const fallbackPromises: (Promise<any> | undefined)[] = [];
+
+        for (const [key, tree] of Object.entries(layerNode.hints)) {
+          const field = layerMeta?.allFields[key];
+          for (const entity of tree.entities) {
             const relation = getRelationFromMaybePolyKey(entity, key);
 
-            // This happens to let through non-relation hints like 'name' on user, which wasn't intentional,
-            // but currently doesn't blow up (somehow), and is not depended on by internal tests.
             if (!relation || typeof relation.load !== "function") {
-              // We don't want to throw on poly hints, because they're not actually loaded on the entity
-              if (isPolyHint(key)) return;
+              if (isPolyHint(key)) continue;
               throw new Error(`Invalid load hint '${key}' on ${entity}`);
             }
 
-            // If we're populating a hasReactiveField, don't bother loading it
-            // if it's already been calculated (i.e. we have no reason to believe its value
-            // is stale, so we should avoid pulling all of its data into memory).
-            //
-            // (Note that we can't do this same optimization for ReactiveReferenceImpl, because
-            // as a FK, it will always need at least some `.load()` to fetch its entity from the database.
-            // So we go ahead and call `.load()`, assuming it will just load its cached value, but it
-            // will also check internally if it's marked for recalc, and load its load hint if necessary.
-            if (relation instanceof ReactiveFieldImpl && relation.isSet) return;
-            if (relation.isLoaded && !opts.forceReload) return undefined;
-            // Avoid creating a promise for preloaded relations
+            if (relation instanceof ReactiveFieldImpl && relation.isSet) continue;
+            if (relation.isLoaded && !opts.forceReload) continue;
             if (relation.isPreloaded) {
               relation.preload();
-              return undefined;
+              continue;
             }
-            return relation.load(opts) as Promise<any>;
-          });
-        });
+
+            // For non-derived SQL relations on existing entities, use batch loaders directly
+            // (1 shared promise per batch instead of per-entity async overhead).
+            // Skip new entities (no id) and derived relations (reactive m2m/m2o have extra logic in load).
+            if (!entity.isNewEntity && field) {
+              if (field.kind === "o2m") {
+                batchPromises.add(oneToManyBatchLoader(em, relation as any).load(entity.idTagged!));
+                relationsToPreload.push(relation);
+                continue;
+              } else if (field.kind === "m2m" && !field.derived) {
+                const col = relation as any;
+                batchPromises.add(manyToManyBatchLoader(em, col).load(`${col.columnName}=${entity.id}`));
+                relationsToPreload.push(relation);
+                continue;
+              } else if (field.kind === "o2o") {
+                batchPromises.add(oneToOneBatchLoader(em, relation as any).load(entity.idTagged!));
+                relationsToPreload.push(relation);
+                continue;
+              }
+              // For m2o, fall through to relation.load() which uses em.load() internally
+              // and batches better since em.load() shares the loadBatchLoader with other callers.
+            }
+            fallbackPromises.push(relation.load(opts) as Promise<any>);
+          }
+        }
+
+        await Promise.all([...batchPromises, ...fallbackPromises]);
+        for (const relation of relationsToPreload) {
+          relation.preload();
+        }
 
         // 2nd breadth-width pass to do nested load hints, this will fan out at the sibling level.
         // i.e. populateLayer(...reviews...) & populateLayer(...comments...)
-        return Promise.all(loadPromises).then(() => {
-          // Each of these keys will be fanning out to a new entity, like book -> reviews or book -> comments
-          const nestedLoadPromises = Object.entries(layerNode.hints).map(([key, tree]) => {
-            if (Object.keys(tree.hints).length === 0) return;
+        const nestedLoadPromises = Object.entries(layerNode.hints).map(([key, tree]) => {
+          if (Object.keys(tree.hints).length === 0) return;
 
-            // Get the children we found, i.e. [a1, a2, a3] -> all of their books
-            const childrenByParent = new Map(
-              [...tree.entities].map((entity) => {
-                const relation = getRelationFromMaybePolyKey(entity, key);
-                return [entity, relation ? toArray(getEvenDeleted(relation)) : []];
-              }),
+          // Get the children we found, i.e. [a1, a2, a3] -> all of their books
+          const childrenByParent = new Map(
+            [...tree.entities].map((entity) => {
+              const relation = getRelationFromMaybePolyKey(entity, key);
+              return [entity, relation ? toArray(getEvenDeleted(relation)) : []];
+            }),
+          );
+          if (childrenByParent.size === 0) return;
+
+          // Rewrite our node.entities to be the next layer of children, i.e. children will be all books, for all of
+          // `[a1, a2, a3]`, but only the books of `a2` need to recurse into `book: reviews` and only the books of
+          // `a3` need to recurse into `book: comments`, so swap `node.entities` (which is currently authors)
+          // with the books. This is what prevents our dataloader-merged TreeHint from over-fetching and loading
+          // the superset load hint for all entities.
+          function rewrite(node: HintNode<Entity>) {
+            node.entities = new Set(
+              Array.from(node.entities).flatMap((entity) => childrenByParent.get(entity) ?? []),
             );
-            if (childrenByParent.size === 0) return;
+            Object.values(node.hints).forEach((node) => rewrite(node));
+          }
 
-            // Rewrite our node.entities to be the next layer of children, i.e. children will be all books, for all of
-            // `[a1, a2, a3]`, but only the books of `a2` need to recurse into `book: reviews` and only the books of
-            // `a3` need to recurse into `book: comments`, so swap `node.entities` (which is currently authors)
-            // with the books. This is what prevents our dataloader-merged TreeHint from over-fetching and loading
-            // the superset load hint for all entities.
-            function rewrite(node: HintNode<Entity>) {
-              node.entities = new Set(
-                Array.from(node.entities).flatMap((entity) => childrenByParent.get(entity) ?? []),
-              );
-              Object.values(node.hints).forEach((node) => rewrite(node));
-            }
+          rewrite(tree);
 
-            rewrite(tree);
-
-            const nextMeta = (layerMeta?.allFields[key] as any)?.otherMetadata?.();
-            return populateLayer(nextMeta, tree);
-          });
-          return Promise.all(nestedLoadPromises);
+          const nextMeta = (layerMeta?.allFields[key] as any)?.otherMetadata?.();
+          return populateLayer(nextMeta, tree);
         });
+        await Promise.all(nestedLoadPromises);
       }
 
-      return populateLayer(meta, buildHintTree(populates)).then(() => populates);
+      await populateLayer(meta, buildHintTree(populates));
     },
-    // We always disable caching, because during a UoW, having called `populate(author, nestedHint1)`
-    // once doesn't mean that, on the 2nd call to `populate(author, nestedHint1)`, we can completely
-    // skip it b/c author's relations may have been changed/mutated to different not-yet-loaded
-    // entities.
-    //
-    // Even though having `{ cache: false }` looks weird here, i.e. why use dataloader at all?, it
-    // still helps us fan-in resolvers callers that are happening ~simultaneously into the same
-    // effort.
-    { cache: false },
   );
 }
 

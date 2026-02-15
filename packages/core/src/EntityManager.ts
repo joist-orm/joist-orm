@@ -85,8 +85,8 @@ import { ReactionsManager } from "./ReactionsManager";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { Collection } from "./relations/Collection";
+import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
 import { OptsOf, OrderOf } from "./typeMap";
@@ -2308,6 +2308,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           (relationOrProp as any).loadHint ?? fail(`${source}.${fieldName} cannot be imported as it has no loadHint`);
         this.importEntity<T, H, L>(source, loadHint);
       } else if ("import" in relationOrProp) {
+        // Tell our version of the entity (result) to accept/copy the relation state of the source
         relationOrProp.import(
           (source as any)[fieldName],
           (e: Entity) => (this.importEntity as any)(e, subHint, subHint) as Entity,

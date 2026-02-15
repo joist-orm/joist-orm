@@ -123,8 +123,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     }
   }
 
-  import(other: OneToManyCollection<T, U>, findEntity: (e: U) => U): void {
-    this.#state = other.#state.import(this, findEntity);
+  /** Copy another em's `source` collection into our state. */
+  import(source: OneToManyCollection<T, U>, findEntity: (e: U) => U): void {
+    this.#state = source.#state.import(this, findEntity);
     this.#getSorted = undefined;
     this.#allSorted = undefined;
   }
@@ -341,7 +342,7 @@ interface O2MState<T extends Entity, U extends Entity> {
   find(id: IdOf<U>): U | undefined;
   applyLoad(dbEntities: U[]): O2MLoadedState<T, U>;
   current(): U[];
-  import(o2m: OneToManyCollection<T, U>, findEntity: (e: U) => U): O2MState<T, U>;
+  import(target: OneToManyCollection<T, U>, findEntity: (e: U) => U): O2MState<T, U>;
   readonly isLoaded: boolean;
   readonly hasBeenSet: boolean;
   added(): U[];
@@ -394,8 +395,8 @@ class O2MUnloadedPristineState<T extends Entity, U extends Entity> implements O2
     return [];
   }
 
-  import(o2m: OneToManyCollection<T, U>, _findEntity: (e: U) => U): O2MState<T, U> {
-    return new O2MUnloadedPristineState<T, U>(o2m);
+  import(target: OneToManyCollection<T, U>, _findEntity: (e: U) => U): O2MState<T, U> {
+    return new O2MUnloadedPristineState<T, U>(target);
   }
 
   added(): U[] {
@@ -473,9 +474,9 @@ class O2MUnloadedAddedRemovedState<T extends Entity, U extends Entity> implement
     return [...this.#added];
   }
 
-  import(o2m: OneToManyCollection<T, U>, findEntity: (e: U) => U): O2MState<T, U> {
+  import(target: OneToManyCollection<T, U>, findEntity: (e: U) => U): O2MState<T, U> {
     return new O2MUnloadedAddedRemovedState<T, U>(
-      o2m,
+      target,
       mapEntities([...this.#added], findEntity),
       mapEntities([...this.#removed], findEntity),
     );
@@ -577,8 +578,8 @@ class O2MPendingSetState<T extends Entity, U extends Entity> implements O2MState
     return [...this.#pendingValues];
   }
 
-  import(o2m: OneToManyCollection<T, U>, findEntity: (e: U) => U): O2MState<T, U> {
-    return new O2MPendingSetState<T, U>(o2m, mapEntities([...this.#pendingValues], findEntity), true);
+  import(target: OneToManyCollection<T, U>, findEntity: (e: U) => U): O2MState<T, U> {
+    return new O2MPendingSetState<T, U>(target, mapEntities([...this.#pendingValues], findEntity), true);
   }
 
   added(): U[] {
@@ -701,9 +702,9 @@ class O2MLoadedState<T extends Entity, U extends Entity> implements O2MState<T, 
     return [...this.#loaded];
   }
 
-  import(o2m: OneToManyCollection<T, U>, findEntity: (e: U) => U): O2MState<T, U> {
+  import(target: OneToManyCollection<T, U>, findEntity: (e: U) => U): O2MState<T, U> {
     return new O2MLoadedState<T, U>(
-      o2m,
+      target,
       mapEntities([...this.#loaded], findEntity),
       this.#hasBeenSet,
       mapEntities([...this.#added], findEntity),

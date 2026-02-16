@@ -223,6 +223,11 @@ function calcLateralJoins<I extends EntityOrId>(
         },
       };
 
+      // Pre-compute column names so we don't re-read them per entity
+      const columnNames = columns.map((c) => c.columnName);
+      // If we've snuck the m2m row id into the json array, ignore it
+      const m2mOffset = field.kind === "m2m" ? 1 : 0;
+
       const hydrator: AggregateJsonHydrator = (root, parent, arrays) => {
         const { em } = root;
 
@@ -234,20 +239,14 @@ function calcLateralJoins<I extends EntityOrId>(
 
         // We get back an array of [[1, title], [2, title], [3, title]]
         const children = arrays.map((array) => {
-          // If we've snuck the m2m row id into the json array, ignore it
-          const m2mOffset = field.kind === "m2m" ? 1 : 0;
           const taggedId = keyToTaggedId(otherMeta, array[m2mOffset] as any)!;
+          const row: Record<string, any> = {};
+          for (let i = 0; i < columns.length; i++) {
+            row[columnNames[i]] = columns[i].mapFromJsonAgg(array[m2mOffset + i]);
+          }
           const entity =
             em.findExistingInstance<Entity>(taggedId) ??
-            (
-              em.hydrate(
-                otherMeta.cstr,
-                // Turn the array into a hash for em.hydrate
-                [Object.fromEntries(columns.map((c, i) => [c.columnName, c.mapFromJsonAgg(array[m2mOffset + i])]))],
-                // When em.refreshing this should be true?
-                { overwriteExisting: false },
-              ) as Entity[]
-            )[0];
+            (em.hydrate(otherMeta.cstr, [row], { overwriteExisting: false }) as Entity[])[0];
           // Tell the internal JoinRow booking-keeping about this m2m row
           if (field.kind === "m2m") {
             // TODO This `addExisting` needs to be pulled up, out of the `arrays.map`, so we can do a `loadRows`-ish

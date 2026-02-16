@@ -10,7 +10,7 @@ import {
   ManyToManyField,
   ReadOnlyCollection,
 } from "..";
-import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
+import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader";
 import { IsLoadedCachable } from "../IsLoadedCache";
 import { lazyField } from "../newEntity";
 import { convertToLoadHint, MaybeReactedEntity, Reacted, ReactiveHint } from "../reactiveHints";
@@ -256,10 +256,10 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
 
   async #loadFromJoinTable(): Promise<U[]> {
     const { em } = this.entity;
-    // Use the existing m2m dataloader by creating a compatible collection-like object
     const key = `${this.columnName}=${this.entity.id}`;
-    const result = await manyToManyDataLoader(em, this as any).load(key);
-    return result as U[];
+    // Use the existing m2m loader by creating a compatible collection-like object
+    await manyToManyBatchLoader(em, this).load(key);
+    return getEmInternalApi(em).joinRows(this).getOthers(this.columnName, this.entity) as U[];
   }
 
   // This is like calling `setField` but for a m2m relation...

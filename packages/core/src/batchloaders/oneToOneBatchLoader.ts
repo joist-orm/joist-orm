@@ -1,6 +1,5 @@
-import DataLoader from "dataloader";
 import { Entity } from "../Entity";
-import { EntityManager } from "../EntityManager";
+import { EntityManager, getEmInternalApi } from "../EntityManager";
 import { getMetadata, OneToOneField } from "../EntityMetadata";
 import { getField } from "../fields";
 import {
@@ -12,18 +11,17 @@ import {
 } from "../index";
 import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
 import { abbreviation, groupBy } from "../utils";
+import { BatchLoader } from "./BatchLoader";
 
 export const oneToOneLoadOperation = "o2o-load";
 
-export function oneToOneDataLoader<T extends Entity, U extends Entity>(
+export function oneToOneBatchLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
   reference: OneToOneReferenceImpl<T, U>,
-): DataLoader<string, U | undefined> {
-  // The metadata for the entity that contains the reference, i.e. Author.image is the o2o,
-  // and (otherMeta/otherFieldName) Image.author is the physical m2o/FK column.
+): BatchLoader<string> {
   const meta = getMetadata(reference.entity);
   const batchKey = `${meta.tableName}-${reference.fieldName}`;
-  return em.getLoader(oneToOneLoadOperation, batchKey, async (_keys) => {
+  return em.getBatchLoader(oneToOneLoadOperation, batchKey, async (_keys) => {
     const { otherMeta, otherFieldName } = reference;
 
     assertIdsAreTagged(_keys);
@@ -52,22 +50,18 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
     };
     addTablePerClassJoinsAndClassTag(query, otherMeta, alias, true);
 
-    const { em } = reference.entity;
     const rows = await em["executeFind"](otherMeta, oneToOneLoadOperation, query, {});
     const entities = em.hydrate(otherMeta.cstr, rows);
 
     const entitiesByOtherId = groupBy(entities, (entity) => {
-      // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.
       const ownerId = maybeResolveReferenceToId(getField(entity, otherFieldName));
-      // We almost always expect ownerId to be found, b/c normally we just hydrated this entity
-      // directly from a SQL row with owner_id=X, however we might be loading this reference
-      // (i.e. find all children where owner_id=X) when the SQL thinks a child is still pointing
-      // at the parent (i.e. owner_id=X in the db), but our already-loaded child has had its
-      // `child.owner` field either changed to some other owner, or set to undefined. In either,
-      // that child should no longer be parent of this owner's collection, so just return a
-      // dummy value.
       return ownerId ?? "dummyNoLongerOwned";
     });
-    return _keys.map((k) => entitiesByOtherId.get(k)?.[0] as U | undefined);
+
+    const api = getEmInternalApi(em);
+    for (const key of _keys) {
+      const found = entitiesByOtherId.get(key);
+      api.setPreloadedRelation(key, reference.fieldName as string, found ? [found[0]] : []);
+    }
   });
 }

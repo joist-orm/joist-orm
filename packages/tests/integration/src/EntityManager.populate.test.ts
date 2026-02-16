@@ -1,6 +1,7 @@
 import { insertAuthor, insertBook, insertPublisher, update } from "@src/entities/inserts";
 import { isPreloadingEnabled, newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 import { setDefaultEntityLimit } from "joist-orm";
+import { promiseHooks } from "node:v8";
 import { Author, Book, newAuthor, newBook, newPublisher, Publisher, SmallPublisher } from "./entities";
 
 describe("EntityManager.populate", () => {
@@ -190,8 +191,17 @@ describe("EntityManager.populate", () => {
     // Now call a single populate
     const em2 = newEntityManager();
     const publishers = await em2.find(Publisher, {});
+    // Count promises created during populate
+    let promiseCount = 0;
+    // This is a v8-specific hook that is supposedly very lightweight, i.e. better than async_hooks
+    const handle = promiseHooks.onInit(() => {
+      promiseCount++;
+    });
+    const start = performance.now();
     await em2.populate(publishers, { authors: { books: { author: "publisher" } } });
-    // console.log({ em2: em2.populates });
+    const elapsed = performance.now() - start;
+    handle();
+    console.log(`populate: ${promiseCount} promises, ${elapsed.toFixed(0)}ms`);
   });
 
   it("can re-populate nested keys after changes", async () => {

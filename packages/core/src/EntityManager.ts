@@ -1,9 +1,18 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { getInstanceData } from "./BaseEntity";
+import { BatchLoader } from "./batchloaders/BatchLoader";
+import { loadOperation } from "./batchloaders/loadBatchLoader";
+import { manyToManyLoadOperation } from "./batchloaders/manyToManyBatchLoader";
+import { oneToManyLoadOperation } from "./batchloaders/oneToManyBatchLoader";
+import { oneToOneLoadOperation } from "./batchloaders/oneToOneBatchLoader";
 import { setAsyncDefaults, setSyncDefaults } from "./defaults";
 import { getField, setField } from "./fields";
 import { IndexManager } from "./IndexManager";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
+import { loadBatchLoader } from "./batchloaders/loadBatchLoader";
+import { populateBatchLoader, populateOperation } from "./batchloaders/populateBatchLoader";
+import { recursiveChildrenOperation } from "./batchloaders/recursiveChildrenBatchLoader";
+import { recursiveParentsOperation } from "./batchloaders/recursiveParentsBatchLoader";
 import { getReactiveRules } from "./caches";
 import { constraintNameToValidationError, ReactiveRule } from "./config";
 import { getConstructorFromTag, getMetadataForType } from "./configure";
@@ -13,15 +22,8 @@ import { findDataLoader, findOperation } from "./dataloaders/findDataLoader";
 import { findIdsDataLoader, findIdsOperation } from "./dataloaders/findIdsDataLoader";
 import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
 import { lensOperation } from "./dataloaders/lensDataLoader";
-import { loadDataLoader, loadOperation } from "./dataloaders/loadDataLoader";
-import { manyToManyLoadOperation } from "./dataloaders/manyToManyDataLoader";
 import { manyToManyFindOperation } from "./dataloaders/manyToManyFindDataLoader";
-import { oneToManyLoadOperation } from "./dataloaders/oneToManyDataLoader";
 import { oneToManyFindOperation } from "./dataloaders/oneToManyFindDataLoader";
-import { oneToOneLoadOperation } from "./dataloaders/oneToOneDataLoader";
-import { populateDataLoader, populateOperation } from "./dataloaders/populateDataLoader";
-import { recursiveChildrenOperation } from "./dataloaders/recursiveChildrenDataLoader";
-import { recursiveParentsOperation } from "./dataloaders/recursiveParentsDataLoader";
 import { Driver } from "./drivers";
 import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
@@ -208,6 +210,7 @@ export type FindOperation =
   | typeof populateOperation
   | typeof recursiveChildrenOperation
   | typeof recursiveParentsOperation;
+
 /**
  * The EntityManager is the primary way nearly all code, i.e. anything that finds/creates/updates/deletes entities,
  * will interact with the database.
@@ -254,6 +257,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   #pendingDeletes: Entity[] = [];
   #dataloaders: Record<string, LoaderCache> = {};
+  #batchLoaders: Record<string, Record<string, BatchLoader<any>>> = {};
   readonly #joinRows: Record<string, JoinRows> = {};
   /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
   readonly #rm = new ReactionsManager(this);
@@ -349,6 +353,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       clearDataloaders() {
         em.#dataloaders = {};
+        em.#batchLoaders = {};
       },
 
       clearPreloadedRelations() {
@@ -1119,16 +1124,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       id = id || fail(`Invalid ${typeOrId.name} id: ${id}`);
     }
     const meta = getMetadata(type);
-    const tagged = toTaggedId(meta, id);
-    const entity =
-      this.findExistingInstance<T>(tagged) ||
-      (await loadDataLoader(this, meta)
-        .load({ entity: tagged, hint })
+    const taggedId = toTaggedId(meta, id);
+    let entity = this.findExistingInstance<T>(taggedId);
+    if (!entity) {
+      await loadBatchLoader(this, meta)
+        .load({ taggedId, hint })
         .catch(function load(err) {
           throw appendStack(err, new Error());
-        }));
+        });
+      entity = this.findExistingInstance<T>(taggedId);
+    }
     if (!entity) {
-      throw new NotFoundError(`${tagged} was not found`);
+      throw new NotFoundError(`${taggedId} was not found`);
     }
     if (hint) {
       await this.populate(entity, hint);
@@ -1156,20 +1163,21 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ): Promise<T[]> {
     const meta = getMetadata(type);
     const ids = _ids.map((id) => tagId(meta, id));
-    const entities = await Promise.all(
-      ids.map((id) => {
-        return (
-          this.findExistingInstance(id) ||
-          loadDataLoader(this, meta)
-            .load({ entity: id, hint })
-            .catch(function loadAll(err) {
-              throw appendStack(err, new Error());
-            })
-        );
-      }),
-    );
-    const idsNotFound = ids.filter((_, i) => entities[i] === undefined);
-    if (idsNotFound.length > 0) {
+    const idsToLoad = ids.filter((id) => !this.findExistingInstance(id));
+    if (idsToLoad.length > 0) {
+      await loadBatchLoader(this, meta)
+        .loadAll(idsToLoad.map((id) => ({ taggedId: id, hint })))
+        .catch(function loadAll(err) {
+          throw appendStack(err, new Error());
+        });
+    }
+    const entities: T[] = [];
+    for (const id of ids) {
+      const entity = this.findExistingInstance(id);
+      if (entity) entities.push(entity as T);
+    }
+    if (entities.length !== ids.length) {
+      const idsNotFound = ids.filter((_, i) => entities[i] === undefined);
       throw new NotFoundError(`${idsNotFound.join(",")} were not found`);
     }
     if (hint) {
@@ -1201,20 +1209,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ): Promise<T[]> {
     const meta = getMetadata(type);
     const ids = _ids.map((id) => tagId(meta, id));
-    const entities = (
-      await Promise.all(
-        ids.map((id) => {
-          return (
-            this.findExistingInstance(id) ||
-            loadDataLoader(this, meta)
-              .load({ entity: id, hint })
-              .catch(function loadAllIfExists(err) {
-                throw appendStack(err, new Error());
-              })
-          );
-        }),
-      )
-    ).filter(Boolean);
+    const idsToLoad = ids.filter((id) => !this.findExistingInstance(id));
+    if (idsToLoad.length > 0) {
+      await loadBatchLoader(this, meta)
+        .loadAll(idsToLoad.map((id) => ({ taggedId: id, hint })))
+        .catch(function loadAllIfExists(err) {
+          throw appendStack(err, new Error());
+        });
+    }
+    const entities = ids.map((id) => this.findExistingInstance(id)).filter(Boolean);
     if (hint) {
       await this.populate(entities as T[], hint);
     }
@@ -1365,34 +1368,22 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // intra dependencies), then a 2nd small-batch non-preload populate.
       const [preload, non] = this.#preloader.partitionHint(meta, hintOpt);
       if (preload) {
-        const loader = populateDataLoader(this, meta, preload, "preload", opts);
-        await Promise.all(
-          list.map((entity) =>
-            loader.load({ entity, hint: preload }).catch(function populate(err: any) {
-              throw appendStack(err, new Error());
-            }),
-          ),
-        );
+        const loader = populateBatchLoader(this, meta, preload, "preload", opts);
+        await loader.loadAll(list.map((entity) => ({ entity, hint: preload }))).catch(function populate(err: any) {
+          throw appendStack(err, new Error());
+        });
       }
       if (non) {
-        const loader = populateDataLoader(this, meta, non, "intermixed", opts);
-        await Promise.all(
-          list.map((entity) =>
-            loader.load({ entity, hint: non }).catch(function populate(err: any) {
-              throw appendStack(err, new Error());
-            }),
-          ),
-        );
+        const loader = populateBatchLoader(this, meta, non, "intermixed", opts);
+        await loader.loadAll(list.map((entity) => ({ entity, hint: non }))).catch(function populate(err: any) {
+          throw appendStack(err, new Error());
+        });
       }
     } else {
-      const loader = populateDataLoader(this, meta, hintOpt, "intermixed", opts);
-      await Promise.all(
-        list.map((entity) =>
-          loader.load({ entity, hint: hintOpt }).catch(function populate(err: any) {
-            throw appendStack(err, new Error());
-          }),
-        ),
-      );
+      const loader = populateBatchLoader(this, meta, hintOpt, "intermixed", opts);
+      await loader.loadAll(list.map((entity) => ({ entity, hint: hintOpt }))).catch(function populate(err: any) {
+        throw appendStack(err, new Error());
+      });
     }
 
     return fn ? fn(entityOrList as any) : (entityOrList as any);
@@ -1715,6 +1706,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
         // Reset the find caches b/c data will have changed in the db
         this.#dataloaders = {};
+        this.#batchLoaders = {};
         this.#rm.clear();
       }
 
@@ -1769,6 +1761,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   async refresh(param?: EntityW | ReadonlyArray<EntityW> | { deepLoad?: boolean }): Promise<void> {
     this.#isRefreshing = true;
     this.#dataloaders = {};
+    this.#batchLoaders = {};
     this.#preloadedRelations = new Map();
     const deepLoad = param && "deepLoad" in param && param.deepLoad;
     let todo =
@@ -1786,28 +1779,27 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       todo = [];
 
       // For any non-deleted entity with an id, get its latest data + relations from the database
-      const entities = await Promise.all(
-        copy
-          .filter((e) => e.idTaggedMaybe && !e.isDeletedEntity)
-          .map((entity) => {
-            // Pass these as a hint to potentially preload them
-            const hint = getRelationEntries(entity)
-              .filter(([_, r]) => deepLoad || r.isLoaded)
-              .map(([k]) => k);
-            return loadDataLoader(this, getMetadata(entity), true)
-              .load({ entity: entity.idTagged, hint })
-              .catch(function refresh(err) {
-                throw appendStack(err, new Error());
-              });
-          }),
+      const entitiesToRefresh = copy.filter((e) => e.idTaggedMaybe && !e.isDeletedEntity);
+      await Promise.all(
+        entitiesToRefresh.map((entity) => {
+          // Pass loaded/all relation names as a hint so the preloader can inject JOINs
+          const hint = getRelationEntries(entity)
+            .filter(([_, r]) => deepLoad || r.isLoaded)
+            .map(([k]) => k);
+          return loadBatchLoader(this, getMetadata(entity), true)
+            .load({ taggedId: entity.idTagged, hint })
+            .catch(function refresh(err) {
+              throw appendStack(err, new Error());
+            });
+        }),
       );
 
-      // Then refresh any loaded relations (the `loadDataLoader.load` only populates the
-      // preloader cache, if in use, it doesn't actually get each relation into a loaded state.)
+      // Then refresh any loaded relations (the loadBatchLoader only hydrates the entity
+      // data, it doesn't get each relation into a loaded state.)
       const [custom, builtin] = partition(
-        entities
-          .filter((e) => e && !getInstanceData(e).isDeletedEntity)
-          .flatMap((entity) => getRelations(entity!).filter((r) => deepLoad || r.isLoaded)),
+        entitiesToRefresh
+          .filter((e) => !getInstanceData(e).isDeletedEntity)
+          .flatMap((entity) => getRelations(entity).filter((r) => deepLoad || r.isLoaded)),
         isCustomRelation,
       );
       // Call `.load` on builtin relations first, because if we hit an already-loaded custom relation
@@ -2001,6 +1993,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // https://github.com/joist-orm/joist-orm/issues/629
     const loadersForKind = (this.#dataloaders[operation] ??= {});
     return getOrSet(loadersForKind, batchKey, () => new DataLoader(fn, opts));
+  }
+
+  /**
+   * Like `getLoader`, but returns a `BatchLoader` where all callers in the same tick
+   * share a single `Promise<void>` instead of getting per-key promises.
+   *
+   * The batch function should write results via side channels (e.g. `setPreloadedRelation`).
+   */
+  public getBatchLoader<K>(operation: string, batchKey: string, fn: (keys: K[]) => Promise<void>): BatchLoader<K> {
+    const loadersForKind = (this.#batchLoaders[operation] ??= {});
+    return getOrSet(loadersForKind, batchKey, () => new BatchLoader(fn));
   }
 
   public toString(): string {

@@ -17,12 +17,9 @@ export type ConnectionEnv = DatabaseUrlEnv | DbSettingsEnv;
  * A connection config with a simpler password field type.
  *
  * The `PgConnectionConfig` has a fancy password that can be a function/async, i.e. to like dynamically
- * load it somehow; that's fine, but is more complex than knex expects, so we simplify it to "just a string",
- * which is what we provide anyway.
- *
- * We also omit `types` and `stream` b/c Knex's `PgConnectionConfig` doesn't exactly match pg's.
+ * load it somehow; we simplify it to "just a string", which is what we provide anyway.
  */
-export type ConnectionConfig = Omit<PgConnectionConfig, "password" | "types" | "stream"> & {
+export type ConnectionConfig = Omit<PgConnectionConfig, "password"> & {
   password: string | undefined;
 };
 

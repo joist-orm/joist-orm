@@ -5,7 +5,7 @@ import { newPgConnectionConfig } from "joist-utils";
 import pg from "pg";
 import { EntityManager, newAuthor } from "./entities.js";
 
-const pool = new pg.Pool(newPgConnectionConfig() as any);
+const pool = new pg.Pool(newPgConnectionConfig());
 
 describe("Author", () => {
   it("works", async () => {

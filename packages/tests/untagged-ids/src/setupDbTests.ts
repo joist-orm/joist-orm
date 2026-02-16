@@ -35,7 +35,7 @@ expect.extend({ toMatchEntity });
 
 beforeAll(async () => {
   const connectionConfig = newPgConnectionConfig();
-  pool = new pg.Pool(connectionConfig as any);
+  pool = new pg.Pool(connectionConfig);
   knex = createKnex({
     client: "pg",
     connection: connectionConfig,

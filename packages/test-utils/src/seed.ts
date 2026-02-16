@@ -38,7 +38,7 @@ export function seed<E extends EntityManager = EntityManager>(config: SeedConfig
   }
 
   const connectionConfig = newPgConnectionConfig();
-  const pool = new pg.Pool(connectionConfig as any);
+  const pool = new pg.Pool(connectionConfig);
   // Knex is still used for flush_database() since it's a convenient utility
   const knex = createKnex({ client: "pg", connection: connectionConfig });
 

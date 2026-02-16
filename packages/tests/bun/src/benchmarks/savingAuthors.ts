@@ -4,7 +4,7 @@ import pg from "pg";
 import { Author, EntityManager } from "src/entities";
 import type { Context } from "../context";
 
-const pool = new pg.Pool(newPgConnectionConfig() as any);
+const pool = new pg.Pool(newPgConnectionConfig());
 const driver = new PostgresDriver(pool);
 
 async function main() {

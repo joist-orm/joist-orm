@@ -136,6 +136,6 @@
     }
   },
   "entitiesDirectory": "./src/entities",
-  "transactionType": "Knex.Transaction@knex",
+  "transactionType": "PoolClient@pg",
   "version": "0.0.1"
 }

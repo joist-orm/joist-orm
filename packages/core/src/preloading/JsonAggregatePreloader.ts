@@ -130,10 +130,46 @@ function calcLateralJoins<I extends EntityOrId>(
       const columns = Object.values(otherMeta.allFields)
         .filter((f) => f.serde)
         .flatMap((f) => f.serde!.columns);
+
+      // Handle CTI subtypes: collect subtype-specific columns and build join info
+      const stData = otherMeta.subTypes.map((st, i) => ({
+        st,
+        stAlias: `${otherAlias}_s${i}`,
+        cols: Object.values(st.fields)
+          .filter((f) => f.fieldName !== "id" && f.serde)
+          .flatMap((f) => f.serde!.columns),
+      }));
+
+      // Deduplicate shared subtype columns with COALESCE
+      const stColumnEntries: { columnName: string; select: string; mapFromJsonAgg: (v: any) => any }[] = [];
+      if (stData.length > 0) {
+        const byName: Record<string, { stAlias: string; mapFromJsonAgg: (v: any) => any }[]> = {};
+        for (const { stAlias, cols } of stData) {
+          for (const col of cols) {
+            (byName[col.columnName] ??= []).push({ stAlias, mapFromJsonAgg: col.mapFromJsonAgg });
+          }
+        }
+        for (const [columnName, entries] of Object.entries(byName)) {
+          stColumnEntries.push({
+            columnName,
+            select:
+              entries.length > 1
+                ? `COALESCE(${entries.map((e) => kqDot(e.stAlias, columnName)).join(", ")})`
+                : kqDot(entries[0].stAlias, columnName),
+            mapFromJsonAgg: entries[0].mapFromJsonAgg,
+          });
+        }
+      }
+      const hasCti = stData.length > 0;
+
       const selects = [
         ...columns.map((c) => kqDot(otherAlias, c.columnName)),
-        // We eventually need to handle parent types/subtypes here...
-        // Combine any grandchilden
+        ...stColumnEntries.map((e) => e.select),
+        ...(hasCti
+          ? [
+              `CASE ${stData.map(({ st, stAlias }) => `WHEN ${kqDot(stAlias, "id")} IS NOT NULL THEN '${st.type}'`).join(" ")} ELSE '_' END`,
+            ]
+          : []),
         ...subJoins.map((sb) => kqDot(sb.alias, "_")),
       ];
 
@@ -216,6 +252,14 @@ function calcLateralJoins<I extends EntityOrId>(
           tables: [
             { join: "primary", table: otherMeta.tableName, alias: otherAlias },
             ...(m2mTable ? [m2mTable] : []),
+            ...stData.map(({ st, stAlias }) => ({
+              join: "outer" as const,
+              alias: stAlias,
+              table: st.tableName,
+              col1: kqDot(otherAlias, "id"),
+              col2: `${stAlias}.id`,
+              distinct: false,
+            })),
             ...subJoins.map((sj) => sj.join),
           ],
           condition: cb.toExpressionFilter(),
@@ -233,21 +277,28 @@ function calcLateralJoins<I extends EntityOrId>(
         if (subTree.entitiesKind === "ids" && !subTree.entities.has(root.idTagged as any)) return;
 
         // We get back an array of [[1, title], [2, title], [3, title]]
+        const ctiOffset = hasCti ? stColumnEntries.length + 1 : 0;
         const children = arrays.map((array) => {
           // If we've snuck the m2m row id into the json array, ignore it
           const m2mOffset = field.kind === "m2m" ? 1 : 0;
           const taggedId = keyToTaggedId(otherMeta, array[m2mOffset] as any)!;
           const entity =
             em.findExistingInstance<Entity>(taggedId) ??
-            (
-              em.hydrate(
-                otherMeta.cstr,
-                // Turn the array into a hash for em.hydrate
-                [Object.fromEntries(columns.map((c, i) => [c.columnName, c.mapFromJsonAgg(array[m2mOffset + i])]))],
-                // When em.refreshing this should be true?
-                { overwriteExisting: false },
-              ) as Entity[]
-            )[0];
+            (() => {
+              // Turn the array into a hash for em.hydrate
+              const row: Record<string, any> = Object.fromEntries(
+                columns.map((c, i) => [c.columnName, c.mapFromJsonAgg(array[m2mOffset + i])]),
+              );
+              // Add CTI subtype columns (skip nulls from non-matching subtypes)
+              for (let i = 0; i < stColumnEntries.length; i++) {
+                const val = array[m2mOffset + columns.length + i];
+                if (val !== null) row[stColumnEntries[i].columnName] = stColumnEntries[i].mapFromJsonAgg(val);
+              }
+              if (hasCti) {
+                row.__class = array[m2mOffset + columns.length + stColumnEntries.length];
+              }
+              return (em.hydrate(otherMeta.cstr, [row], { overwriteExisting: false }) as Entity[])[0];
+            })();
           // Tell the internal JoinRow booking-keeping about this m2m row
           if (field.kind === "m2m") {
             // TODO This `addExisting` needs to be pulled up, out of the `arrays.map`, so we can do a `loadRows`-ish
@@ -263,7 +314,7 @@ function calcLateralJoins<I extends EntityOrId>(
             // array[i] could be null if there are no grandchildren, but still call `sub` to
             // process it so that we store the empty array into the em.joinLoadedRelations, to
             // avoid the relation.load method later doing a SQL for rows we know are not there.
-            sub.hydrator(root, entity, (array[m2mOffset + columns.length + i] as any) ?? []);
+            sub.hydrator(root, entity, (array[m2mOffset + columns.length + ctiOffset + i] as any) ?? []);
           });
           return entity;
         });

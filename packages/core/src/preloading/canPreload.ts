@@ -13,8 +13,8 @@ export function canPreload(
 ): field is OneToManyField | ManyToOneField | ManyToManyField | OneToOneField {
   if (field.kind === "o2m" || field.kind === "o2o" || field.kind === "m2o" || field.kind === "m2m") {
     const otherMeta = field.otherMetadata();
-    // We don't support preloading tables with inheritance yet
-    if (!!otherMeta.baseType || otherMeta.subTypes.length > 0) return false;
+    // We don't support preloading subtypes (base table columns need aliasing)
+    if (!!otherMeta.baseType) return false;
     // If `otherField` is missing, this could be a large collection which currently can't be loaded...
     const otherField = otherMeta.allFields[field.otherFieldName];
     if (!otherField) return false;

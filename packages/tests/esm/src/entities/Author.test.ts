@@ -2,15 +2,10 @@ import { afterAll, describe, it } from "@jest/globals";
 import { type EntityManagerOpts } from "joist-orm";
 import { PostgresDriver } from "joist-orm/pg";
 import { newPgConnectionConfig } from "joist-utils";
-import knexModule from "knex";
+import pg from "pg";
 import { EntityManager, newAuthor } from "./entities.js";
 
-const knex = knexModule({
-  client: "pg",
-  connection: newPgConnectionConfig() as any,
-  debug: false,
-  asyncStackTraces: true,
-});
+const pool = new pg.Pool(newPgConnectionConfig() as any);
 
 describe("Author", () => {
   it("works", async () => {
@@ -21,13 +16,13 @@ describe("Author", () => {
 });
 
 afterAll(() => {
-  return knex.destroy();
+  return pool.end();
 });
 
 export function newEntityManager(): EntityManager {
-  const ctx = { knex };
+  const ctx = {};
   const opts: EntityManagerOpts = {
-    driver: new PostgresDriver(knex),
+    driver: new PostgresDriver(pool),
   };
   const em = new EntityManager(ctx as any, opts);
   return em;

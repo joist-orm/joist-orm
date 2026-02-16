@@ -1,22 +1,17 @@
 import { PostgresDriver } from "joist-orm/pg";
 import { newPgConnectionConfig } from "joist-utils";
-import { knex as createKnex } from "knex";
+import pg from "pg";
 import { Context } from "src/context";
 import { Author, EntityManager } from "src/entities";
 
-const knex = createKnex({
-  client: "pg",
-  connection: newPgConnectionConfig() as any,
-  debug: false,
-  asyncStackTraces: true,
-});
-const driver = new PostgresDriver(knex);
+const pool = new pg.Pool(newPgConnectionConfig() as any);
+const driver = new PostgresDriver(pool);
 
 async function main() {
   const mitata = await import("mitata");
   const { run, bench, group } = mitata;
 
-  group("integration-knex", () => {
+  group("integration-pg", () => {
     bench("saving 1 author", async () => {
       const em = new EntityManager({} as Context, { driver });
       const a = em.create(Author, { firstName: "a" });
@@ -33,7 +28,7 @@ async function main() {
   });
 
   await run({});
-  await knex.destroy();
+  await pool.end();
 }
 
 // yarn clinic flame -- node --env-file .env --import=tsx ./src/benchmarks/loading-authors.ts

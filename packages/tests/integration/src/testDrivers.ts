@@ -3,6 +3,7 @@ import { Driver, JsonAggregatePreloader } from "joist-orm";
 import { PostgresDriver } from "joist-orm/pg";
 import { newPgConnectionConfig } from "joist-utils";
 import { Knex, knex as createKnex } from "knex";
+import pg from "pg";
 
 /**
  * Small abstraction to create a given driver for testing.
@@ -14,8 +15,8 @@ import { Knex, knex as createKnex } from "knex";
 export interface TestDriver {
   driver: Driver;
   isInMemory: boolean;
-  // The InMemoryDriver does not have a knex instance, but we have some tests
-  // that require it and skip themselves if running against the InMemoryDriver
+  pool: pg.Pool;
+  // Knex is kept for test helper methods (select, insert, etc.)
   knex: Knex;
   beforeEach(): Promise<void>;
   destroy(): Promise<void>;
@@ -29,19 +30,22 @@ export interface TestDriver {
 export class PostgresTestDriver implements TestDriver {
   public driver: Driver;
   public knex: Knex;
+  public pool: pg.Pool;
   public isInMemory = false;
 
   constructor(isPreloadingEnabled: boolean) {
+    const connectionConfig = newPgConnectionConfig() as any;
+    this.pool = new pg.Pool(connectionConfig);
     this.knex = createKnex({
       client: "pg",
-      connection: newPgConnectionConfig() as any,
+      connection: connectionConfig,
       debug: false,
       asyncStackTraces: true,
     }).on("query", (e: any) => {
       recordQuery(e.sql);
     });
     const preloadPlugin = isPreloadingEnabled ? new JsonAggregatePreloader() : undefined;
-    this.driver = new PostgresDriver(this.knex, { preloadPlugin });
+    this.driver = new PostgresDriver(this.pool, { preloadPlugin });
   }
 
   async beforeEach() {
@@ -49,6 +53,7 @@ export class PostgresTestDriver implements TestDriver {
   }
 
   async destroy() {
+    await this.pool.end();
     await this.knex.destroy();
   }
 

@@ -31,7 +31,6 @@ import {
   Todo,
   UpdateOp,
 } from "joist-core";
-import { Knex } from "knex";
 import pg from "pg";
 import { builtins, getTypeParser } from "pg-types";
 import array from "postgres-array";
@@ -40,6 +39,12 @@ export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;
   /** Sets a default `PreloadPlugin` for any `EntityManager` that uses this driver. */
   preloadPlugin?: PreloadPlugin;
+}
+
+/** Converts `?` placeholders to pg-native `$1, $2, ...` numbered parameters. */
+function toPgParams(sql: string): string {
+  let i = 0;
+  return sql.replace(/\?/g, () => `$${++i}`);
 }
 
 /**
@@ -56,15 +61,16 @@ export interface PostgresDriverOpts {
  *
  * - We use a pg-specific bulk update syntax.
  */
-export class PostgresDriver implements Driver<Knex.Transaction> {
+export class PostgresDriver implements Driver<pg.PoolClient> {
   readonly #idAssigner: IdAssigner;
   readonly #preloadPlugin: PreloadPlugin | undefined;
 
   constructor(
-    private readonly knex: Knex,
+    readonly pool: pg.Pool,
     opts?: PostgresDriverOpts,
   ) {
-    this.#idAssigner = opts?.idAssigner ?? new SequenceIdAssigner(async (sql: string) => (await knex.raw(sql)).rows);
+    this.#idAssigner =
+      opts?.idAssigner ?? new SequenceIdAssigner(async (sql: string) => (await pool.query(sql)).rows);
     this.#preloadPlugin = opts?.preloadPlugin;
     setupLatestPgTypes(getRuntimeConfig().temporal);
   }
@@ -79,30 +85,35 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
   }
 
   async executeQuery(em: EntityManager, sql: string, bindings: readonly any[]): Promise<any[]> {
-    // Still go through knex to use the connection pool
-    return this.getMaybeInTxnKnex(em)
-      .raw(sql, bindings)
-      .then((result) => result.rows);
+    const client = this.getMaybeInTxnClient(em);
+    return client.query(toPgParams(sql), bindings as any[]).then((result) => result.rows);
   }
 
-  async transaction<T>(em: EntityManager, fn: (txn: Knex.Transaction) => Promise<T>): Promise<T> {
-    // `em.transaction` might have already opened a transaction
+  async transaction<T>(em: EntityManager, fn: (txn: pg.PoolClient) => Promise<T>): Promise<T> {
     if (em.txn) {
-      return fn(em.txn as Knex.Transaction);
+      return fn(em.txn as pg.PoolClient);
     }
-    await driverBeforeBegin(em, this.knex);
-    const result = await this.knex.transaction(async (txn) => {
-      em.txn = txn;
+    await driverBeforeBegin(em, this.pool as any);
+    const client = await this.pool.connect();
+    let result: T;
+    try {
+      await client.query("BEGIN");
+      em.txn = client;
       try {
-        await driverAfterBegin(em, txn);
-        const result = await fn(txn);
-        await driverBeforeCommit(em, txn);
-        return result;
+        await driverAfterBegin(em, client);
+        result = await fn(client);
+        await driverBeforeCommit(em, client);
+        await client.query("COMMIT");
+      } catch (e) {
+        await client.query("ROLLBACK");
+        throw e;
       } finally {
         em.txn = undefined;
       }
-    });
-    await driverAfterCommit(em, this.knex);
+    } finally {
+      client.release();
+    }
+    await driverAfterCommit(em, this.pool as any);
     return result;
   }
 
@@ -115,17 +126,20 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
     entityTodos: Record<string, Todo>,
     joinRows: Record<string, JoinRowTodo>,
   ): Promise<void> {
-    const txn = (em.txn ?? fail("Expected EntityManager.txn to be set")) as Knex.Transaction;
+    const client = (em.txn ?? fail("Expected EntityManager.txn to be set")) as pg.PoolClient;
     await this.#idAssigner.assignNewIds(entityTodos);
     const ops = generateOps(entityTodos);
     // Do INSERTs+UPDATEs first so that we avoid DELETE cascades invalidating oplocks
     // See https://github.com/joist-orm/joist-orm/issues/591
     await Promise.all([
-      ...ops.inserts.map((op) => batchInsert(txn, op)),
-      ...ops.updates.map((op) => batchUpdate(txn, op)),
-      ...ops.deletes.map((op) => batchDelete(txn, op)),
+      ...ops.inserts.map((op) => batchInsert(client, op)),
+      ...ops.updates.map((op) => batchUpdate(client, op)),
+      ...ops.deletes.map((op) => batchDelete(client, op)),
       ...Object.entries(joinRows).flatMap(([joinTableName, { m2m, newRows, deletedRows }]) => {
-        return [m2mBatchInsert(txn, joinTableName, m2m, newRows), m2mBatchDelete(txn, joinTableName, m2m, deletedRows)];
+        return [
+          m2mBatchInsert(client, joinTableName, m2m, newRows),
+          m2mBatchDelete(client, joinTableName, m2m, deletedRows),
+        ];
       }),
     ]);
   }
@@ -134,12 +148,12 @@ export class PostgresDriver implements Driver<Knex.Transaction> {
     return { preloadPlugin: this.#preloadPlugin };
   }
 
-  private getMaybeInTxnKnex(em: EntityManager): Knex {
-    return (em.txn || this.knex) as Knex.Transaction;
+  private getMaybeInTxnClient(em: EntityManager): pg.PoolClient | pg.Pool {
+    return (em.txn as pg.PoolClient) || this.pool;
   }
 }
 
-async function batchInsert(txn: Knex.Transaction, op: InsertOp): Promise<unknown> {
+async function batchInsert(client: pg.PoolClient, op: InsertOp): Promise<unknown> {
   const { tableName, columns, columnValues } = op;
   const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
   const sql = cleanSql(`
@@ -147,10 +161,10 @@ async function batchInsert(txn: Knex.Transaction, op: InsertOp): Promise<unknown
     INSERT INTO ${kq(tableName)} (${columns.map((c) => kq(c.columnName)).join(", ")})
     SELECT * FROM data
   `);
-  return txn.raw(sql, bindings);
+  return client.query(toPgParams(sql), bindings);
 }
 
-async function batchUpdate(txn: Knex.Transaction, op: UpdateOp): Promise<void> {
+async function batchUpdate(client: pg.PoolClient, op: UpdateOp): Promise<void> {
   const { tableName, columns, columnValues, updatedAt } = op;
 
   const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
@@ -180,7 +194,7 @@ async function batchUpdate(txn: Knex.Transaction, op: UpdateOp): Promise<void> {
     RETURNING ${kq(tableName)}.id
   `;
 
-  const result = await txn.raw(cleanSql(sql), bindings);
+  const result = await client.query(toPgParams(cleanSql(sql)), bindings);
   const results = result.rows;
 
   const ids = columnValues[0]; // assume id is the 1st column
@@ -191,9 +205,9 @@ async function batchUpdate(txn: Knex.Transaction, op: UpdateOp): Promise<void> {
   }
 }
 
-async function batchDelete(txn: Knex.Transaction, op: DeleteOp): Promise<void> {
+async function batchDelete(client: pg.PoolClient, op: DeleteOp): Promise<void> {
   const { tableName, ids } = op;
-  await txn.raw(`DELETE FROM ${kq(tableName)} WHERE id = ANY(?)`, [ids]);
+  await client.query(toPgParams(`DELETE FROM ${kq(tableName)} WHERE id = ANY(?)`), [ids]);
 }
 
 /** Creates a CTE named `tableName` that bulk-injects the `columnValues` into a SQL query. */
@@ -214,7 +228,7 @@ function buildUnnestCte(tableName: string, columns: OpColumn[], columnValues: an
   return [sql, columnValues];
 }
 
-async function m2mBatchInsert(txn: Knex.Transaction, joinTableName: string, m2m: ManyToManyLike, newRows: JoinRow[]) {
+async function m2mBatchInsert(client: pg.PoolClient, joinTableName: string, m2m: ManyToManyLike, newRows: JoinRow[]) {
   if (newRows.length === 0) return;
   const meta1 = getMetadata(m2m.entity);
   const meta2 = m2m.otherMeta;
@@ -227,7 +241,7 @@ async function m2mBatchInsert(txn: Knex.Transaction, joinTableName: string, m2m:
     ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO UPDATE SET id = ${kq(joinTableName)}.id
     RETURNING id;
   `);
-  const { rows } = await txn.raw(sql, [col1Values, col2Values]);
+  const { rows } = await client.query(toPgParams(sql), [col1Values, col2Values]);
   for (let i = 0; i < rows.length; i++) {
     newRows[i].id = rows[i].id;
     newRows[i].op = JoinRowOperation.Flushed;
@@ -235,7 +249,7 @@ async function m2mBatchInsert(txn: Knex.Transaction, joinTableName: string, m2m:
 }
 
 async function m2mBatchDelete(
-  txn: Knex.Transaction,
+  client: pg.PoolClient,
   joinTableName: string,
   m2m: ManyToManyLike,
   deletedRows: JoinRow[],
@@ -244,7 +258,9 @@ async function m2mBatchDelete(
   // `remove`s that were done against unloaded ManyToManyCollections will not have row ids
   const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== -1);
   if (haveIds.length > 0) {
-    await txn.raw(`DELETE FROM ${kq(joinTableName)} WHERE id = ANY(?)`, [haveIds.map((r) => r.id!)]);
+    await client.query(toPgParams(`DELETE FROM ${kq(joinTableName)} WHERE id = ANY(?)`), [
+      haveIds.map((r) => r.id!),
+    ]);
   }
   if (noIds.length > 0) {
     const data = noIds
@@ -263,12 +279,12 @@ async function m2mBatchDelete(
           ] as any,
       );
     if (data.length > 0) {
-      await txn.raw(
-        `
+      await client.query(
+        toPgParams(`
         DELETE FROM ${kq(joinTableName)}
         WHERE (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) IN (
           SELECT (data->>0)::int, (data->>1)::int FROM jsonb_array_elements(?) data
-        )`,
+        )`),
         [JSON.stringify(data)],
       );
     }

@@ -45,7 +45,7 @@ export class PostgresTestDriver implements TestDriver {
       recordQuery(e.sql);
     });
     const preloadPlugin = isPreloadingEnabled ? new JsonAggregatePreloader() : undefined;
-    this.driver = new PostgresDriver(this.pool, { preloadPlugin });
+    this.driver = new PostgresDriver(this.pool, { preloadPlugin, onQuery: (sql) => recordQuery(sql) });
   }
 
   async beforeEach() {

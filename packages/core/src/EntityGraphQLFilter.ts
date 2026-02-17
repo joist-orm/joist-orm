@@ -97,8 +97,7 @@ export const opToFn: Record<Exclude<Operator, "in" | "nin" | "between">, string>
   containedBy: "<@",
   // containsSome / hasSome
   overlaps: "&&",
-  // Kinda weird, but escape the operator for knex
-  jsonPathExists: "@\\?",
+  jsonPathExists: "@?",
   jsonPathPredicate: "@@",
 };
 

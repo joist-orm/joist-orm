@@ -39,13 +39,17 @@ export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;
   /** Sets a default `PreloadPlugin` for any `EntityManager` that uses this driver. */
   preloadPlugin?: PreloadPlugin;
+  /** Called after each query is executed, useful for testing/debugging. */
+  onQuery?: (sql: string) => void;
 }
 
-/** Converts `?` placeholders to pg-native `$1, $2, ...` numbered parameters. */
+/** Converts `?` placeholders to pg-native `$1, $2, ...` numbered parameters, skipping postgres operators like `@?`. */
 function toPgParams(sql: string): string {
   let i = 0;
-  return sql.replace(/\?/g, () => `$${++i}`);
+  return sql.replace(/(?<!@)\?/g, () => `$${++i}`);
 }
+
+type OnQuery = ((sql: string) => void) | undefined;
 
 /**
  * Implements the `Driver` interface for Postgres.
@@ -64,14 +68,19 @@ function toPgParams(sql: string): string {
 export class PostgresDriver implements Driver<pg.PoolClient> {
   readonly #idAssigner: IdAssigner;
   readonly #preloadPlugin: PreloadPlugin | undefined;
+  readonly #onQuery: OnQuery;
 
   constructor(
     readonly pool: pg.Pool,
     opts?: PostgresDriverOpts,
   ) {
     this.#idAssigner =
-      opts?.idAssigner ?? new SequenceIdAssigner(async (sql: string) => (await pool.query(sql)).rows);
+      opts?.idAssigner ?? new SequenceIdAssigner(async (sql: string) => {
+        this.#onQuery?.(sql);
+        return (await pool.query(sql)).rows;
+      });
     this.#preloadPlugin = opts?.preloadPlugin;
+    this.#onQuery = opts?.onQuery;
     setupLatestPgTypes(getRuntimeConfig().temporal);
   }
 
@@ -85,8 +94,10 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
   }
 
   async executeQuery(em: EntityManager, sql: string, bindings: readonly any[]): Promise<any[]> {
+    const pgSql = toPgParams(sql);
+    this.#onQuery?.(pgSql);
     const client = this.getMaybeInTxnClient(em);
-    return client.query(toPgParams(sql), bindings as any[]).then((result) => result.rows);
+    return client.query(pgSql, bindings as any[]).then((result) => result.rows);
   }
 
   async transaction<T>(em: EntityManager, fn: (txn: pg.PoolClient) => Promise<T>): Promise<T> {
@@ -97,12 +108,14 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     const client = await this.pool.connect();
     let result: T;
     try {
+      this.#onQuery?.("BEGIN;");
       await client.query("BEGIN");
       em.txn = client;
       try {
         await driverAfterBegin(em, client);
         result = await fn(client);
         await driverBeforeCommit(em, client);
+        this.#onQuery?.("COMMIT;");
         await client.query("COMMIT");
       } catch (e) {
         await client.query("ROLLBACK");
@@ -129,16 +142,17 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     const client = (em.txn ?? fail("Expected EntityManager.txn to be set")) as pg.PoolClient;
     await this.#idAssigner.assignNewIds(entityTodos);
     const ops = generateOps(entityTodos);
+    const onQuery = this.#onQuery;
     // Do INSERTs+UPDATEs first so that we avoid DELETE cascades invalidating oplocks
     // See https://github.com/joist-orm/joist-orm/issues/591
     await Promise.all([
-      ...ops.inserts.map((op) => batchInsert(client, op)),
-      ...ops.updates.map((op) => batchUpdate(client, op)),
-      ...ops.deletes.map((op) => batchDelete(client, op)),
+      ...ops.inserts.map((op) => batchInsert(client, op, onQuery)),
+      ...ops.updates.map((op) => batchUpdate(client, op, onQuery)),
+      ...ops.deletes.map((op) => batchDelete(client, op, onQuery)),
       ...Object.entries(joinRows).flatMap(([joinTableName, { m2m, newRows, deletedRows }]) => {
         return [
-          m2mBatchInsert(client, joinTableName, m2m, newRows),
-          m2mBatchDelete(client, joinTableName, m2m, deletedRows),
+          m2mBatchInsert(client, joinTableName, m2m, newRows, onQuery),
+          m2mBatchDelete(client, joinTableName, m2m, deletedRows, onQuery),
         ];
       }),
     ]);
@@ -153,7 +167,7 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
   }
 }
 
-async function batchInsert(client: pg.PoolClient, op: InsertOp): Promise<unknown> {
+async function batchInsert(client: pg.PoolClient, op: InsertOp, onQuery: OnQuery): Promise<unknown> {
   const { tableName, columns, columnValues } = op;
   const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
   const sql = cleanSql(`
@@ -161,10 +175,12 @@ async function batchInsert(client: pg.PoolClient, op: InsertOp): Promise<unknown
     INSERT INTO ${kq(tableName)} (${columns.map((c) => kq(c.columnName)).join(", ")})
     SELECT * FROM data
   `);
-  return client.query(toPgParams(sql), bindings);
+  const pgSql = toPgParams(sql);
+  onQuery?.(pgSql);
+  return client.query(pgSql, bindings);
 }
 
-async function batchUpdate(client: pg.PoolClient, op: UpdateOp): Promise<void> {
+async function batchUpdate(client: pg.PoolClient, op: UpdateOp, onQuery: OnQuery): Promise<void> {
   const { tableName, columns, columnValues, updatedAt } = op;
 
   const [cte, bindings] = buildUnnestCte("data", columns, columnValues);
@@ -194,7 +210,9 @@ async function batchUpdate(client: pg.PoolClient, op: UpdateOp): Promise<void> {
     RETURNING ${kq(tableName)}.id
   `;
 
-  const result = await client.query(toPgParams(cleanSql(sql)), bindings);
+  const pgSql = toPgParams(cleanSql(sql));
+  onQuery?.(pgSql);
+  const result = await client.query(pgSql, bindings);
   const results = result.rows;
 
   const ids = columnValues[0]; // assume id is the 1st column
@@ -205,9 +223,11 @@ async function batchUpdate(client: pg.PoolClient, op: UpdateOp): Promise<void> {
   }
 }
 
-async function batchDelete(client: pg.PoolClient, op: DeleteOp): Promise<void> {
+async function batchDelete(client: pg.PoolClient, op: DeleteOp, onQuery: OnQuery): Promise<void> {
   const { tableName, ids } = op;
-  await client.query(toPgParams(`DELETE FROM ${kq(tableName)} WHERE id = ANY(?)`), [ids]);
+  const pgSql = toPgParams(`DELETE FROM ${kq(tableName)} WHERE id = ANY(?)`);
+  onQuery?.(pgSql);
+  await client.query(pgSql, [ids]);
 }
 
 /** Creates a CTE named `tableName` that bulk-injects the `columnValues` into a SQL query. */
@@ -228,7 +248,7 @@ function buildUnnestCte(tableName: string, columns: OpColumn[], columnValues: an
   return [sql, columnValues];
 }
 
-async function m2mBatchInsert(client: pg.PoolClient, joinTableName: string, m2m: ManyToManyLike, newRows: JoinRow[]) {
+async function m2mBatchInsert(client: pg.PoolClient, joinTableName: string, m2m: ManyToManyLike, newRows: JoinRow[], onQuery: OnQuery) {
   if (newRows.length === 0) return;
   const meta1 = getMetadata(m2m.entity);
   const meta2 = m2m.otherMeta;
@@ -241,7 +261,9 @@ async function m2mBatchInsert(client: pg.PoolClient, joinTableName: string, m2m:
     ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO UPDATE SET id = ${kq(joinTableName)}.id
     RETURNING id;
   `);
-  const { rows } = await client.query(toPgParams(sql), [col1Values, col2Values]);
+  const pgSql = toPgParams(sql);
+  onQuery?.(pgSql);
+  const { rows } = await client.query(pgSql, [col1Values, col2Values]);
   for (let i = 0; i < rows.length; i++) {
     newRows[i].id = rows[i].id;
     newRows[i].op = JoinRowOperation.Flushed;
@@ -253,12 +275,15 @@ async function m2mBatchDelete(
   joinTableName: string,
   m2m: ManyToManyLike,
   deletedRows: JoinRow[],
+  onQuery: OnQuery,
 ) {
   if (deletedRows.length === 0) return;
   // `remove`s that were done against unloaded ManyToManyCollections will not have row ids
   const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== -1);
   if (haveIds.length > 0) {
-    await client.query(toPgParams(`DELETE FROM ${kq(joinTableName)} WHERE id = ANY(?)`), [
+    const pgSql = toPgParams(`DELETE FROM ${kq(joinTableName)} WHERE id = ANY(?)`);
+    onQuery?.(pgSql);
+    await client.query(pgSql, [
       haveIds.map((r) => r.id!),
     ]);
   }
@@ -279,14 +304,13 @@ async function m2mBatchDelete(
           ] as any,
       );
     if (data.length > 0) {
-      await client.query(
-        toPgParams(`
+      const pgSql = toPgParams(`
         DELETE FROM ${kq(joinTableName)}
         WHERE (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) IN (
           SELECT (data->>0)::int, (data->>1)::int FROM jsonb_array_elements(?) data
-        )`),
-        [JSON.stringify(data)],
-      );
+        )`);
+      onQuery?.(pgSql);
+      await client.query(pgSql, [JSON.stringify(data)]);
     }
   }
   deletedRows.forEach((row) => {

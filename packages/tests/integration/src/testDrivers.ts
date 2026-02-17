@@ -1,8 +1,9 @@
 import { recordQuery } from "@src/testEm";
 import { Driver, JsonAggregatePreloader } from "joist-orm";
+import { createKnex } from "joist-orm/knex";
 import { PostgresDriver } from "joist-orm/pg";
 import { newPgConnectionConfig } from "joist-utils";
-import { Knex, knex as createKnex } from "knex";
+import { Knex } from "knex";
 import pg from "pg";
 
 /**
@@ -34,16 +35,8 @@ export class PostgresTestDriver implements TestDriver {
   public isInMemory = false;
 
   constructor(isPreloadingEnabled: boolean) {
-    const connectionConfig = newPgConnectionConfig() as any;
-    this.pool = new pg.Pool(connectionConfig);
-    this.knex = createKnex({
-      client: "pg",
-      connection: connectionConfig,
-      debug: false,
-      asyncStackTraces: true,
-    }).on("query", (e: any) => {
-      recordQuery(e.sql);
-    });
+    this.pool = new pg.Pool(newPgConnectionConfig());
+    this.knex = createKnex(this.pool).on("query", (e: any) => recordQuery(e.sql));
     const preloadPlugin = isPreloadingEnabled ? new JsonAggregatePreloader() : undefined;
     this.driver = new PostgresDriver(this.pool, { preloadPlugin, onQuery: (sql) => recordQuery(sql) });
   }
@@ -54,7 +47,6 @@ export class PostgresTestDriver implements TestDriver {
 
   async destroy() {
     await this.pool.end();
-    await this.knex.destroy();
   }
 
   select(tableName: string): Promise<readonly any[]> {

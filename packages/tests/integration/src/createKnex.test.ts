@@ -17,7 +17,7 @@ type DisposablePoolClient = pg.PoolClient & AsyncDisposable;
 let pool: pg.Pool;
 
 beforeAll(() => {
-  pool = new pg.Pool(newPgConnectionConfig() as any);
+  pool = new pg.Pool(newPgConnectionConfig());
 });
 
 afterAll(async () => {

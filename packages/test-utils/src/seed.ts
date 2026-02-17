@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { Driver, EntityManager, newPgConnectionConfig } from "joist-core";
-import { knex as createKnex } from "knex";
+import { createKnex } from "joist-knex";
 import pg from "pg";
 
 export interface SeedConfig {
@@ -37,10 +37,8 @@ export function seed<E extends EntityManager = EntityManager>(config: SeedConfig
     throw new Error("seed will only run with NODE_ENV=local or NODE_ENV=test because it resets the database");
   }
 
-  const connectionConfig = newPgConnectionConfig();
-  const pool = new pg.Pool(connectionConfig);
-  // Knex is still used for flush_database() since it's a convenient utility
-  const knex = createKnex({ client: "pg", connection: connectionConfig });
+  const pool = new pg.Pool(newPgConnectionConfig());
+  const knex = createKnex(pool);
 
   async function seed() {
     await knex.select(knex.raw("flush_database()"));
@@ -54,12 +52,10 @@ export function seed<E extends EntityManager = EntityManager>(config: SeedConfig
     .then(async () => {
       console.log("Seeded!");
       await pool.end();
-      await knex.destroy();
     })
     .catch(async (err) => {
       console.error(err);
       await pool.end();
-      await knex.destroy();
       process.exit(1);
     });
 }

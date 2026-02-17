@@ -16,6 +16,10 @@ export function newEntityManager(opts?: PostgresDriverOpts) {
     ctx as any,
     new PostgresDriver(pool, {
       ...opts,
+      onQuery: (sql) => {
+        numberOfQueries++;
+        queries.push(sql);
+      },
     }),
   );
   Object.assign(ctx, { em });

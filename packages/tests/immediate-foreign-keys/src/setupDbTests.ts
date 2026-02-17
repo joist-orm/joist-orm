@@ -11,7 +11,16 @@ let pool: pg.Pool;
 
 export function newEntityManager(opts?: PostgresDriverOpts): EntityManager {
   const ctx = { knex };
-  const em = new EntityManager(ctx as any, new PostgresDriver(pool, opts));
+  const em = new EntityManager(
+    ctx as any,
+    new PostgresDriver(pool, {
+      ...opts,
+      onQuery: (sql) => {
+        numberOfQueries++;
+        queries.push(sql);
+      },
+    }),
+  );
   Object.assign(ctx, { em });
   return em;
 }

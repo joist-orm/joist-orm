@@ -104,10 +104,10 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     if (em.txn) {
       return fn(em.txn as pg.PoolClient);
     }
-    await driverBeforeBegin(em, this.pool as any);
     const client = await this.pool.connect();
     let result: T;
     try {
+      await driverBeforeBegin(em, client);
       this.#onQuery?.("BEGIN;");
       await client.query("BEGIN");
       em.txn = client;
@@ -123,10 +123,10 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
       } finally {
         em.txn = undefined;
       }
+      await driverAfterCommit(em, client);
     } finally {
       client.release();
     }
-    await driverAfterCommit(em, this.pool as any);
     return result;
   }
 

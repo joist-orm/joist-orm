@@ -25,7 +25,6 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
-  // Reset the publishers table before each test
   await pool.query("DELETE FROM publishers");
 });
 
@@ -36,29 +35,35 @@ async function connect(pgPool: pg.Pool): Promise<DisposablePoolClient> {
   return client as DisposablePoolClient;
 }
 
-/** Create a Knex instance that delegates connection acquisition to a pg Pool. */
-function knexForPool(pgPool: pg.Pool): Knex & AsyncDisposable {
-  const knex = createKnex({ client: "pg", connection: {} });
+/**
+ * Create a Knex query builder that delegates to a pg Pool for connections.
+ *
+ * No built-in knex API exists for replacing its internal tarn.js pool with an
+ * external pg.Pool, so we disable the internal pool and override acquire/release.
+ */
+function knexForPool(pgPool: pg.Pool): Knex {
+  const knex = createKnex({ client: "pg", connection: {}, pool: { max: 0 } });
   knex.client.acquireConnection = async () => pgPool.connect();
   knex.client.releaseConnection = async (conn: pg.PoolClient) => conn.release();
-  (knex as any)[Symbol.asyncDispose] = () => knex.destroy();
-  return knex as Knex & AsyncDisposable;
+  return knex;
 }
 
-/** Create a Knex instance that always uses a specific pg PoolClient. */
-function knexForClient(client: pg.PoolClient): Knex & AsyncDisposable {
-  const knex = createKnex({ client: "pg", connection: {} });
-  // Always hand back the same client; never release it (the caller owns the lifecycle).
+/**
+ * Create a Knex query builder that always uses a specific pg PoolClient.
+ *
+ * The caller owns the PoolClient lifecycle — knex will neither acquire nor release it.
+ */
+function knexForClient(client: pg.PoolClient): Knex {
+  const knex = createKnex({ client: "pg", connection: {}, pool: { max: 0 } });
   knex.client.acquireConnection = async () => client;
   knex.client.releaseConnection = async () => {};
-  (knex as any)[Symbol.asyncDispose] = () => knex.destroy();
-  return knex as Knex & AsyncDisposable;
+  return knex;
 }
 
 describe("KnexPgWrapping", () => {
   describe("wrapping a pg.Pool", () => {
     it("executes queries using connections from the pool", async () => {
-      await using knex = knexForPool(pool);
+      const knex = knexForPool(pool);
 
       await knex("publishers").insert({
         name: "p1",
@@ -75,7 +80,7 @@ describe("KnexPgWrapping", () => {
     });
 
     it("uses different connections for concurrent queries", async () => {
-      await using knex = knexForPool(pool);
+      const knex = knexForPool(pool);
 
       const [r1, r2] = await Promise.all([
         knex.raw("SELECT pg_backend_pid() as pid"),
@@ -93,7 +98,7 @@ describe("KnexPgWrapping", () => {
   describe("wrapping a pg.PoolClient", () => {
     it("executes queries on the specific PoolClient", async () => {
       await using client = await connect(pool);
-      await using knex = knexForClient(client);
+      const knex = knexForClient(client);
 
       const { rows: directRows } = await client.query("SELECT pg_backend_pid() as pid");
       const knexResult = await knex.raw("SELECT pg_backend_pid() as pid");
@@ -111,7 +116,7 @@ describe("KnexPgWrapping", () => {
         await using client = await connect(pool);
         await client.query("BEGIN");
 
-        await using knex = knexForClient(client);
+        const knex = knexForClient(client);
         // Insert via knex — this should use the same PoolClient and thus be inside the txn
         await knex("publishers").insert({
           name: "will-be-rolled-back",
@@ -136,7 +141,7 @@ describe("KnexPgWrapping", () => {
         await using client = await connect(pool);
         await client.query("BEGIN");
 
-        await using knex = knexForClient(client);
+        const knex = knexForClient(client);
         await knex("publishers").insert({
           name: "will-be-committed",
           base_sync_default: "bsd",
@@ -155,7 +160,7 @@ describe("KnexPgWrapping", () => {
         await using client = await connect(pool);
         await client.query("BEGIN");
 
-        await using knex = knexForClient(client);
+        const knex = knexForClient(client);
 
         // Insert via raw PoolClient
         await client.query(

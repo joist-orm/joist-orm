@@ -43,12 +43,11 @@ export interface PostgresDriverOpts {
   onQuery?: (sql: string) => void;
 }
 
-/** Converts `?` placeholders to pg-native `$1, $2, ...` numbered parameters, skipping postgres operators like `@?`. */
-function toPgParams(sql: string): string {
-  let i = 0;
-  return sql.replace(/(?<!@)\?/g, () => `$${++i}`);
-}
-
+/**
+ * Provides a callback for tests/debugging.
+ *
+ * We used to get this for-free from knex, but node-pg does not have a `query` event.
+ */
 type OnQuery = ((sql: string) => void) | undefined;
 
 /**
@@ -75,7 +74,8 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     opts?: PostgresDriverOpts,
   ) {
     this.#idAssigner =
-      opts?.idAssigner ?? new SequenceIdAssigner(async (sql: string) => {
+      opts?.idAssigner ??
+      new SequenceIdAssigner(async (sql: string) => {
         this.#onQuery?.(sql);
         return (await pool.query(sql)).rows;
       });
@@ -248,7 +248,13 @@ function buildUnnestCte(tableName: string, columns: OpColumn[], columnValues: an
   return [sql, columnValues];
 }
 
-async function m2mBatchInsert(client: pg.PoolClient, joinTableName: string, m2m: ManyToManyLike, newRows: JoinRow[], onQuery: OnQuery) {
+async function m2mBatchInsert(
+  client: pg.PoolClient,
+  joinTableName: string,
+  m2m: ManyToManyLike,
+  newRows: JoinRow[],
+  onQuery: OnQuery,
+) {
   if (newRows.length === 0) return;
   const meta1 = getMetadata(m2m.entity);
   const meta2 = m2m.otherMeta;
@@ -283,9 +289,7 @@ async function m2mBatchDelete(
   if (haveIds.length > 0) {
     const pgSql = toPgParams(`DELETE FROM ${kq(joinTableName)} WHERE id = ANY(?)`);
     onQuery?.(pgSql);
-    await client.query(pgSql, [
-      haveIds.map((r) => r.id!),
-    ]);
+    await client.query(pgSql, [haveIds.map((r) => r.id!)]);
   }
   if (noIds.length > 0) {
     const data = noIds
@@ -344,4 +348,15 @@ export function setupLatestPgTypes(temporal: RuntimeConfig["temporal"]): void {
   } else {
     pg.types.setTypeParser(pg.types.builtins.TIMESTAMPTZ, getTypeParser(builtins.TIMESTAMPTZ));
   }
+}
+
+const questionMarks = /(?<!@)\?/g;
+
+/**
+ * Converts our knex-style `?` placeholders to pg-native `$1, $2, ...` numbered parameters.
+ *
+ * We skipping postgres operators like `@?`. */
+function toPgParams(sql: string): string {
+  let i = 0;
+  return sql.replace(questionMarks, () => `$${++i}`);
 }

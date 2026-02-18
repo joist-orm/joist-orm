@@ -113,6 +113,27 @@ describe("RecursiveCollection", () => {
       const { mentorsRecursive } = withLoaded(a);
       expect(mentorsRecursive).toMatchEntity([]);
     });
+
+    it("can refresh after new parents are inserted in the chain", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertAuthor({ first_name: "a3", mentor_id: 2 });
+      const em = newEntityManager();
+      const a3 = await em.load(Author, "a:3", "mentorsRecursive");
+      expect(a3.mentorsRecursive.get).toMatchEntity([{ firstName: "a2" }, { firstName: "a1" }]);
+      // Insert two new ancestors above a1 via raw SQL (simulating external changes)
+      await insertAuthor({ first_name: "a0" });
+      await insertAuthor({ first_name: "a00", mentor_id: undefined });
+      await update("authors", { id: 4, mentor_id: 5 });
+      await update("authors", { id: 1, mentor_id: 4 });
+      await em.refresh();
+      expect(a3.mentorsRecursive.get).toMatchEntity([
+        { firstName: "a2" },
+        { firstName: "a1" },
+        { firstName: "a0" },
+        { firstName: "a00" },
+      ]);
+    });
   });
 
   describe("children", () => {
@@ -223,6 +244,25 @@ describe("RecursiveCollection", () => {
       await em.refresh();
       const rows = await select("authors");
       expect(rows.length).toBe(2);
+    });
+
+    it("can refresh after new children are inserted in the middle of the chain", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertAuthor({ first_name: "a3", mentor_id: 2 });
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1", "menteesRecursive");
+      expect(a1.menteesRecursive.get).toMatchEntity([{ firstName: "a2" }, { firstName: "a3" }]);
+      // Insert new children below a3 via raw SQL (simulating external changes)
+      await insertAuthor({ first_name: "a4", mentor_id: 3 });
+      await insertAuthor({ first_name: "a5", mentor_id: 4 });
+      await em.refresh();
+      expect(a1.menteesRecursive.get).toMatchEntity([
+        { firstName: "a2" },
+        { firstName: "a3" },
+        { firstName: "a4" },
+        { firstName: "a5" },
+      ]);
     });
   });
 

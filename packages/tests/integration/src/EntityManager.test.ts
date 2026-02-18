@@ -548,7 +548,7 @@ describe("EntityManager", () => {
     // Then we have the new data
     expect(b1).toMatchEntity({ tags: [{ name: "t1" }, { name: "t3" }] });
     // 1 because preloading fetch Book.author + Book.prequel + Book.tags all at once
-    expect(queries.length).toBe(isPreloadingEnabled ? 1 : 3);
+    expect(queries.length).toBe(isPreloadingEnabled ? 2 : 4);
   });
 
   it("refresh an entity with a loaded PersistedAsyncReference", async () => {

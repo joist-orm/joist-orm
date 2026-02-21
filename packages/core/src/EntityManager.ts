@@ -12,6 +12,7 @@ import { IndexManager } from "./IndexManager";
 import { loadBatchLoader } from "./batchloaders/loadBatchLoader";
 import { populateBatchLoader, populateOperation } from "./batchloaders/populateBatchLoader";
 import { recursiveChildrenOperation } from "./batchloaders/recursiveChildrenBatchLoader";
+import { recursiveM2mOperation } from "./batchloaders/recursiveM2mBatchLoader";
 import { recursiveParentsOperation } from "./batchloaders/recursiveParentsBatchLoader";
 import { getReactiveRules } from "./caches";
 import { constraintNameToValidationError, ReactiveRule } from "./config";
@@ -209,6 +210,7 @@ export type FindOperation =
   | typeof oneToOneLoadOperation
   | typeof populateOperation
   | typeof recursiveChildrenOperation
+  | typeof recursiveM2mOperation
   | typeof recursiveParentsOperation;
 
 /**

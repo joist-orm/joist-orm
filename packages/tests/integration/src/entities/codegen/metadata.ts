@@ -904,6 +904,8 @@ export const userMeta: EntityMetadata<User> = {
     "createdComments": { kind: "o2m", fieldName: "createdComments", fieldIdName: "createdCommentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "user", otherColumnName: "user_id", serde: undefined, immutable: false },
     "directs": { kind: "o2m", fieldName: "directs", fieldIdName: "directIds", required: false, otherMetadata: () => userMeta, otherFieldName: "manager", otherColumnName: "manager_id", serde: undefined, immutable: false },
     "likedComments": { kind: "m2m", fieldName: "likedComments", fieldIdName: "likedCommentIds", required: false, derived: false, otherMetadata: () => commentMeta, otherFieldName: "likedByUsers", serde: undefined, immutable: false, joinTableName: "users_to_comments", columnNames: ["liked_by_user_id", "comment_id"] },
+    "parents": { kind: "m2m", fieldName: "parents", fieldIdName: "parentIds", required: false, derived: false, otherMetadata: () => userMeta, otherFieldName: "children", serde: undefined, immutable: false, joinTableName: "users_to_parents", columnNames: ["child_id", "parent_id"] },
+    "children": { kind: "m2m", fieldName: "children", fieldIdName: "childIds", required: false, derived: false, otherMetadata: () => userMeta, otherFieldName: "parents", serde: undefined, immutable: false, joinTableName: "users_to_parents", columnNames: ["parent_id", "child_id"] },
     "favoritePublisher": {
       kind: "poly",
       fieldName: "favoritePublisher",

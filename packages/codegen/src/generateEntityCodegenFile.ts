@@ -69,6 +69,7 @@ import {
   hasOneToOne,
   hasReactiveManyToManyOtherSide,
   hasRecursiveChildren,
+  hasRecursiveM2m,
   hasRecursiveParents,
   isEntity,
   isLoaded,
@@ -954,7 +955,8 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     // Allow disabling recursive relations
     .filter(
       (m2o) =>
-        // For STI - look at the baseClassName, since there is actually no configuration for the subtype currently
+        // STI subtypes don't have their own key in config.entities (stripped by stripStiPlaceholders),
+        // so look up the base class name to find skipRecursiveRelations config
         !(
           config.entities[meta.inheritanceType == "sti" && meta.baseClassName ? meta.baseClassName : meta.name]
             ?.relations?.[m2o.fieldName]?.skipRecursiveRelations === true
@@ -981,6 +983,29 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
           init: code`${hasRecursiveChildren}("${otherFieldName}", "${parentsField}")`,
         },
       ];
+    });
+
+  // Add any recursive ManyToMany entities (self-referential m2m)
+  const m2mRecursive: Relation[] = meta.manyToManys
+    .filter((m2m) => m2m.otherEntity.name === meta.name)
+    .filter((m2m) => !m2m.derived)
+    // STI subtypes don't have their own key in config.entities (stripped by stripStiPlaceholders),
+    // so look up the base class name to find skipRecursiveRelations config
+    .filter(
+      (m2m) =>
+        !(
+          config.entities[meta.inheritanceType == "sti" && meta.baseClassName ? meta.baseClassName : meta.name]
+            ?.relations?.[m2m.fieldName]?.skipRecursiveRelations === true
+        ),
+    )
+    .map((m2m) => {
+      const { fieldName, otherFieldName, otherEntity } = m2m;
+      return {
+        kind: "concrete",
+        fieldName: `${fieldName}Recursive`,
+        decl: code`${ReadOnlyCollection}<${entity.type}, ${otherEntity.type}>`,
+        init: code`${hasRecursiveM2m}("${fieldName}", "${otherFieldName}Recursive")`,
+      };
     });
 
   // Add OneToMany
@@ -1078,7 +1103,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     return { kind: "concrete", fieldName, decl, init };
   });
 
-  return [o2m, o2mBase, lo2m, m2o, m2oBase, m2oRecursive, o2o, o2oBase, m2m, m2mBase, lm2m, polymorphic].flat();
+  return [o2m, o2mBase, lo2m, m2o, m2oBase, m2oRecursive, m2mRecursive, o2o, o2oBase, m2m, m2mBase, lm2m, polymorphic].flat();
 }
 
 /** Makes the field required if there is a `NOT NULL` and no db-or-config default. */

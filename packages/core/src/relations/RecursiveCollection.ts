@@ -1,4 +1,5 @@
 import { recursiveChildrenBatchLoader } from "../batchloaders/recursiveChildrenBatchLoader";
+import { recursiveM2mBatchLoader } from "../batchloaders/recursiveM2mBatchLoader";
 import { recursiveParentsBatchLoader } from "../batchloaders/recursiveParentsBatchLoader";
 import {
   appendStack,
@@ -14,6 +15,7 @@ import {
   isLoadedReference,
   isOneToOneReference,
   isReference,
+  ManyToManyField,
   Reference,
   Relation,
 } from "../index";
@@ -48,6 +50,21 @@ export function hasRecursiveChildren<T extends Entity, U extends Entity>(
 ): ReadOnlyCollection<T, U> {
   return lazyField((entity: T, fieldName) => {
     return new RecursiveChildrenCollectionImpl(entity, fieldName as keyof T & string, o2mName, otherFieldName);
+  });
+}
+
+/**
+ * An alias for creating `RecursiveM2mCollectionImpl`s.
+ *
+ * I.e. for `User.parents` (m2m), we can return `User.parentsRecursive` recursively looking up through the m2m.
+ * Or for `User.children` (m2m), we can return `User.childrenRecursive` recursively looking down.
+ */
+export function hasRecursiveM2m<T extends Entity, U extends Entity>(
+  m2mName: keyof T & string, // i.e. `user.parents` or `user.children`
+  otherFieldName: keyof T & string, // i.e. `user.childrenRecursive` or `user.parentsRecursive`
+): ReadOnlyCollection<T, U> {
+  return lazyField((entity: T, fieldName) => {
+    return new RecursiveM2mCollectionImpl(entity, fieldName as keyof T & string, m2mName, otherFieldName);
   });
 }
 
@@ -341,6 +358,138 @@ export class RecursiveChildrenCollectionImpl<T extends Entity, U extends Entity>
       } else {
         for (const child of getLoadedCollection(relation)) {
           todo.push({ relation: child[this.#o2mName], path: [...path, child] });
+        }
+      }
+    }
+    return unloaded;
+  }
+}
+
+export class RecursiveM2mCollectionImpl<T extends Entity, U extends Entity>
+  extends AbstractRecursiveCollectionImpl<T, U>
+  implements ReadOnlyCollection<T, U>, IsLoadedCachable
+{
+  readonly #fieldName: keyof T & string;
+  readonly #m2mName: keyof T & string;
+  readonly #otherFieldName: keyof T & string;
+  #loaded: boolean | undefined = undefined;
+  #loadPromise: Promise<void> | undefined;
+
+  constructor(entity: T, fieldName: keyof T & string, m2mName: keyof T & string, otherFieldName: keyof T & string) {
+    super(entity);
+    this.#fieldName = fieldName;
+    this.#m2mName = m2mName;
+    this.#otherFieldName = otherFieldName;
+  }
+
+  // opts is an internal parameter
+  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
+    ensureNotDeleted(this.entity, "pending");
+    if (!this.isLoaded || opts.forceReload) {
+      if (opts.forceReload) {
+        this.#loaded = undefined;
+      }
+      if (!this.entity.isNewEntity) {
+        await (this.#loadPromise ??= recursiveM2mBatchLoader(this.entity.em, this)
+          .load(this.entity)
+          .catch(function load(err: any) {
+            throw appendStack(err, new Error());
+          })
+          .finally(() => {
+            this.#loadPromise = undefined;
+          }));
+      }
+      const unloaded = this.findUnloadedCollections();
+      if (unloaded.length > 0) {
+        // Go through the entity's own `fooRecursive` collection so that it's marked as loaded.
+        await Promise.all(unloaded.map((r) => (r.entity as any)[this.fieldName].load(opts)));
+      }
+      this.#loaded = true;
+    }
+    return this.filterDeleted(this.doGet(), opts);
+  }
+
+  get isLoaded(): boolean {
+    if (this.#loaded !== undefined) return this.#loaded;
+    this.#loaded = this.findUnloadedCollections().length === 0;
+    getEmInternalApi(this.entity.em).isLoadedCache.addNaive(this);
+    return this.#loaded;
+  }
+
+  resetIsLoaded(): void {
+    this.#loaded = undefined;
+  }
+
+  get fieldName(): string {
+    return this.#fieldName;
+  }
+
+  get m2mFieldName(): string {
+    return this.#m2mName;
+  }
+
+  get otherFieldName(): string {
+    return this.#otherFieldName;
+  }
+
+  get m2mField(): ManyToManyField {
+    return this.meta.allFields[this.#m2mName] as ManyToManyField;
+  }
+
+  get hasBeenSet(): boolean {
+    return false;
+  }
+
+  toString(): string {
+    return `RecursiveM2mCollectionImpl(entity: ${this.entity}, fieldName: ${this.fieldName})`;
+  }
+
+  doGet(): U[] {
+    ensureNotDeleted(this.entity, "pending");
+    if (!this.isLoaded) {
+      throw new Error(this.toString() + `.get was called but when not loaded`);
+    }
+    const results: U[] = [];
+    // Track by entity to handle diamonds (same entity reachable via multiple paths)
+    const visited = new Set<any>();
+    visited.add(this.entity);
+    const todo: { entity: any; path: U[] }[] = [{ entity: this.entity, path: [this.entity as any] }];
+    while (todo.length > 0) {
+      const { entity: current, path } = todo.pop()!;
+      for (const other of getLoadedCollection(current[this.#m2mName])) {
+        if (visited.has(other)) {
+          // If we're reaching an entity we've already visited, and it's this.entity, that's a cycle
+          if (other === this.entity) throw new RecursiveCycleError(this, [...path, other]);
+          // Otherwise it's a diamond (reachable via multiple paths) — skip
+          continue;
+        }
+        visited.add(other);
+        results.push(other);
+        todo.push({ entity: other, path: [...path, other] });
+      }
+    }
+    return results;
+  }
+
+  /** Finds any m2m collections that are not yet loaded in the recursive tree. */
+  private findUnloadedCollections(): Relation<any, any>[] {
+    const visited = new Set<any>();
+    visited.add(this.entity);
+    const unloaded: Relation<any, any>[] = [];
+    const todo: { entity: any; path: U[] }[] = [{ entity: this.entity, path: [this.entity as any] }];
+    while (todo.length > 0) {
+      const { entity: current, path } = todo.pop()!;
+      const relation = current[this.#m2mName];
+      if (isCollection(relation) && !isLoadedCollection(relation)) {
+        unloaded.push(relation);
+      } else {
+        for (const other of getLoadedCollection(relation)) {
+          if (visited.has(other)) {
+            if (other === this.entity) throw new RecursiveCycleError(this, [...path, other]);
+            continue;
+          }
+          visited.add(other);
+          todo.push({ entity: other, path: [...path, other] });
         }
       }
     }

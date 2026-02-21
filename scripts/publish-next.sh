@@ -39,4 +39,8 @@ yarn workspaces foreach -v --all exec npm pkg set version="$VERSION"
 # Publish all packages with the 'next' tag
 yarn workspaces foreach -v --all --no-private npm publish --tag next --tolerate-republish
 
-echo "Successfully published $VERSION to the 'next' channel"
+TAG="v${VERSION}"
+git tag "$TAG"
+git push origin "$TAG"
+
+echo "Successfully published $VERSION to the 'next' channel (tagged as $TAG)"

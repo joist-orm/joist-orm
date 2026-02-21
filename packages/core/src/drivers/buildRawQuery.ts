@@ -57,17 +57,13 @@ export function buildRawQuery(
   }
 
   sql += "SELECT ";
+  const subqueryRenderer = (q: ParsedFindQuery) => buildRawQuery(q, {});
+
   parsed.selects.forEach((s, i) => {
     const maybeDistinct = i === 0 && needsDistinct ? buildDistinctOn(parsed, primary) : "";
     const maybeComma = i === parsed.selects.length - 1 ? "" : ", ";
     if (typeof s === "string") {
       sql += maybeDistinct + s + maybeComma;
-    } else if ("kind" in s && s.kind === "bool_or") {
-      const inner = buildWhereClause(s.condition, true);
-      if (inner) {
-        sql += `${maybeDistinct}BOOL_OR(${inner[0]}) AS ${kq(s.as)}${maybeComma}`;
-        bindings.push(...inner[1]);
-      }
     } else if ("sql" in s) {
       sql += maybeDistinct + s.sql + maybeComma;
       bindings.push(...s.bindings);
@@ -104,7 +100,7 @@ export function buildRawQuery(
   }
 
   if (parsed.condition) {
-    const where = buildWhereClause(parsed.condition, true);
+    const where = buildWhereClause(parsed.condition, true, subqueryRenderer);
     if (where) {
       sql += " WHERE " + where[0];
       bindings.push(...where[1]);

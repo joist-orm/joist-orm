@@ -13,8 +13,6 @@ export type GraphQLFilterAndSettings<T extends Entity> = {
   limit?: number | null;
   offset?: number | null;
   softDeletes?: "exclude" | "include";
-  /** Force all collection joins to use LATERAL + BOOL_OR instead of LEFT JOIN + DISTINCT ON. */
-  lateralJoins?: boolean;
 };
 
 /**

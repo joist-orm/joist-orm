@@ -1,4 +1,11 @@
-import { ColumnCondition, ParsedExpressionFilter, ParsedFindQuery, RawCondition, parseAlias } from "./QueryParser";
+import {
+  ColumnCondition,
+  ExistsCondition,
+  ParsedExpressionFilter,
+  ParsedFindQuery,
+  RawCondition,
+  parseAlias,
+} from "./QueryParser";
 import { assertNever } from "./utils";
 
 // Remove any joins that are not used in the select or conditions
@@ -24,15 +31,6 @@ export function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[])
   parsed.selects.forEach((s) => {
     if (typeof s === "string") {
       if (!s.includes("count(")) dt.markRequired(parseAlias(s));
-    } else if ("kind" in s && s.kind === "bool_or") {
-      // BoolOrSelect: mark aliases used inside the BOOL_OR condition
-      deepFindConditions({ kind: "exp", op: "and", conditions: [s.condition] }, true).forEach((c) => {
-        if (c.kind === "column") {
-          dt.markRequired(c.alias);
-        } else if (c.kind === "raw") {
-          for (const alias of c.aliases) dt.markRequired(alias);
-        }
-      });
     } else if ("aliases" in s) {
       for (const a of s.aliases) dt.markRequired(a);
     }
@@ -48,6 +46,8 @@ export function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[])
         dt.markRequired(c.alias);
       } else if (c.kind === "raw") {
         for (const alias of c.aliases) dt.markRequired(alias);
+      } else if (c.kind === "exists") {
+        for (const alias of c.outerAliases) dt.markRequired(alias);
       } else {
         assertNever(c);
       }
@@ -81,9 +81,9 @@ export function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[])
 export function deepFindConditions(
   condition: ParsedExpressionFilter | undefined,
   filterPruneable: boolean,
-): (ColumnCondition | RawCondition)[] {
+): (ColumnCondition | RawCondition | ExistsCondition)[] {
   const todo = condition ? [condition] : [];
-  const result: (ColumnCondition | RawCondition)[] = [];
+  const result: (ColumnCondition | RawCondition | ExistsCondition)[] = [];
   while (todo.length !== 0) {
     const cc = todo.pop()!;
     for (const c of cc.conditions) {
@@ -91,6 +91,8 @@ export function deepFindConditions(
         todo.push(c);
       } else if (c.kind === "column" || c.kind === "raw") {
         if (!filterPruneable || !c.pruneable) result.push(c);
+      } else if (c.kind === "exists") {
+        result.push(c);
       } else {
         assertNever(c);
       }

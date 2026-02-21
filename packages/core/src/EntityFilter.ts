@@ -12,8 +12,6 @@ export type FilterAndSettings<T extends Entity> = {
   limit?: number;
   offset?: number;
   softDeletes?: "exclude" | "include";
-  /** Force all collection joins to use LATERAL + BOOL_OR instead of LEFT JOIN + DISTINCT ON. */
-  lateralJoins?: boolean;
 };
 
 export type OrderBy = "ASC" | "DESC";

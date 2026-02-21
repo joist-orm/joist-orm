@@ -54,7 +54,11 @@ export function buildKnexQuery(
   });
 
   if (parsed.condition) {
-    const where = internals.buildWhereClause(parsed.condition, true);
+    const subqueryRenderer = (q: ParsedFindQuery) => {
+      const { sql, bindings } = buildKnexQuery(knex, q, {}).toSQL();
+      return { sql, bindings };
+    };
+    const where = internals.buildWhereClause(parsed.condition, true, subqueryRenderer);
     if (where) {
       const [sql, bindings] = where;
       query.whereRaw(sql, bindings);

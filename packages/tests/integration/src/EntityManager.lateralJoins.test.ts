@@ -16,14 +16,14 @@ const opts = { softDeletes: "include" } as const;
 describe("EntityManager.lateralJoins", () => {
   // -----------------------------------------------------------------------
   // These "approach" tests use pure SQL to demonstrate the before/after of the
-  // lateral rewrite. Each test first runs the naive multi-JOIN query that
-  // produces a cross-product, then runs the equivalent LATERAL + BOOL_OR
-  // query that avoids the cross-product, and asserts both return the same
+  // EXISTS rewrite. Each test first runs the naive multi-JOIN query that
+  // produces a cross-product, then runs the equivalent EXISTS subquery
+  // that avoids the cross-product, and asserts both return the same
   // correct results. This helps maintainers understand the high-level SQL
   // transformation without needing to understand the Joist query parser.
   // -----------------------------------------------------------------------
   describe("approach", () => {
-    it("two o2m collections: JOIN cross-product vs LATERAL", async () => {
+    it("two o2m collections: JOIN cross-product vs EXISTS", async () => {
       // a1 has book "b1" and comment "c1" — should match
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
@@ -43,25 +43,22 @@ describe("EntityManager.lateralJoins", () => {
       `);
       expect(before).toMatchObject([{ first_name: "a1" }]);
 
-      // After: LATERAL + BOOL_OR — one row per parent, no DISTINCT needed
+      // After: EXISTS — one row per parent, no DISTINCT needed
       const { rows: after } = await knex.raw(`
         SELECT a.id, a.first_name
         FROM authors a
-        CROSS JOIN LATERAL (
-          SELECT BOOL_OR(b.title = 'b1') AS has_match
-          FROM books b WHERE b.author_id = a.id
-        ) _books
-        CROSS JOIN LATERAL (
-          SELECT BOOL_OR(c.text = 'c1') AS has_match
-          FROM comments c WHERE c.parent_author_id = a.id
-        ) _comments
-        WHERE _books.has_match AND _comments.has_match
+        WHERE EXISTS (
+          SELECT 1 FROM books b WHERE b.author_id = a.id AND b.title = 'b1'
+        )
+        AND EXISTS (
+          SELECT 1 FROM comments c WHERE c.parent_author_id = a.id AND c.text = 'c1'
+        )
         ORDER BY a.id
       `);
       expect(after).toMatchObject([{ first_name: "a1" }]);
     });
 
-    it("m2m + o2m: junction table inside LATERAL", async () => {
+    it("m2m + o2m: junction table inside EXISTS", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertTag({ name: "t1" });
       await insertAuthorToTag({ author_id: 1, tag_id: 1 });
@@ -83,27 +80,25 @@ describe("EntityManager.lateralJoins", () => {
       `);
       expect(before).toMatchObject([{ first_name: "a1" }]);
 
-      // After: m2m junction + target go inside one LATERAL
+      // After: m2m junction + target go inside one EXISTS
       const { rows: after } = await knex.raw(`
         SELECT a.id, a.first_name
         FROM authors a
-        CROSS JOIN LATERAL (
-          SELECT BOOL_OR(t.name = 't1') AS has_match
+        WHERE EXISTS (
+          SELECT 1
           FROM authors_to_tags att
           JOIN tags t ON att.tag_id = t.id
-          WHERE att.author_id = a.id
-        ) _tags
-        CROSS JOIN LATERAL (
-          SELECT BOOL_OR(b.title = 'b1') AS has_match
-          FROM books b WHERE b.author_id = a.id
-        ) _books
-        WHERE _tags.has_match AND _books.has_match
+          WHERE att.author_id = a.id AND t.name = 't1'
+        )
+        AND EXISTS (
+          SELECT 1 FROM books b WHERE b.author_id = a.id AND b.title = 'b1'
+        )
         ORDER BY a.id
       `);
       expect(after).toMatchObject([{ first_name: "a1" }]);
     });
 
-    it("same-row AND: BOOL_OR(c1 AND c2) preserves row-level semantics", async () => {
+    it("same-row AND: EXISTS preserves row-level semantics", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1, order: 1 }); // title AND order match
       await insertComment({ text: "c1", parent_author_id: 1 });
@@ -122,25 +117,22 @@ describe("EntityManager.lateralJoins", () => {
       `);
       expect(before).toMatchObject([{ first_name: "a1" }]);
 
-      // After: both conditions inside a single BOOL_OR preserves same-row semantics
+      // After: both conditions inside a single EXISTS preserves same-row semantics
       const { rows: after } = await knex.raw(`
         SELECT a.id, a.first_name
         FROM authors a
-        CROSS JOIN LATERAL (
-          SELECT BOOL_OR(b.title = 'b1' AND b."order" = 1) AS has_match
-          FROM books b WHERE b.author_id = a.id
-        ) _books
-        CROSS JOIN LATERAL (
-          SELECT BOOL_OR(c.text = 'c1') AS has_match
-          FROM comments c WHERE c.parent_author_id = a.id
-        ) _comments
-        WHERE _books.has_match AND _comments.has_match
+        WHERE EXISTS (
+          SELECT 1 FROM books b WHERE b.author_id = a.id AND b.title = 'b1' AND b."order" = 1
+        )
+        AND EXISTS (
+          SELECT 1 FROM comments c WHERE c.parent_author_id = a.id AND c.text = 'c1'
+        )
         ORDER BY a.id
       `);
       expect(after).toMatchObject([{ first_name: "a1" }]);
     });
 
-    it("cross-product explosion: JOINs produce N*M rows, LATERAL produces 1", async () => {
+    it("cross-product explosion: JOINs produce N*M rows, EXISTS produces 1", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
       await insertBook({ title: "b2", author_id: 1 });
@@ -159,25 +151,22 @@ describe("EntityManager.lateralJoins", () => {
       `);
       expect(crossProduct).toHaveLength(9); // 3 * 3 cross-product!
 
-      // After: LATERAL avoids the cross-product entirely — exactly 1 row
-      const { rows: lateral } = await knex.raw(`
+      // After: EXISTS avoids the cross-product entirely — exactly 1 row
+      const { rows: exists } = await knex.raw(`
         SELECT a.id, a.first_name
         FROM authors a
-        CROSS JOIN LATERAL (
-          SELECT BOOL_OR(b.title LIKE 'b%') AS has_match
-          FROM books b WHERE b.author_id = a.id
-        ) _books
-        CROSS JOIN LATERAL (
-          SELECT BOOL_OR(c.text LIKE 'c%') AS has_match
-          FROM comments c WHERE c.parent_author_id = a.id
-        ) _comments
-        WHERE _books.has_match AND _comments.has_match
+        WHERE EXISTS (
+          SELECT 1 FROM books b WHERE b.author_id = a.id AND b.title LIKE 'b%'
+        )
+        AND EXISTS (
+          SELECT 1 FROM comments c WHERE c.parent_author_id = a.id AND c.text LIKE 'c%'
+        )
       `);
-      expect(lateral).toHaveLength(1);
-      expect(lateral).toMatchObject([{ first_name: "a1" }]);
+      expect(exists).toHaveLength(1);
+      expect(exists).toMatchObject([{ first_name: "a1" }]);
     });
 
-    it("nested o2m: reviews nested inside books LATERAL", async () => {
+    it("nested o2m: reviews nested inside books EXISTS", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
       await insertBookReview({ book_id: 1, rating: 5 });
@@ -200,27 +189,24 @@ describe("EntityManager.lateralJoins", () => {
       `);
       expect(before).toMatchObject([{ first_name: "a1" }]);
 
-      // After: reviews join stays inside the books LATERAL
+      // After: reviews as nested EXISTS inside the books EXISTS
       const { rows: after } = await knex.raw(`
         SELECT a.id, a.first_name
         FROM authors a
-        CROSS JOIN LATERAL (
-          SELECT BOOL_OR(br.rating >= 4) AS has_match
-          FROM books b
-          JOIN book_reviews br ON b.id = br.book_id
+        WHERE EXISTS (
+          SELECT 1 FROM books b
           WHERE b.author_id = a.id
-        ) _books
-        CROSS JOIN LATERAL (
-          SELECT BOOL_OR(c.text = 'c1') AS has_match
-          FROM comments c WHERE c.parent_author_id = a.id
-        ) _comments
-        WHERE _books.has_match AND _comments.has_match
+          AND EXISTS (SELECT 1 FROM book_reviews br WHERE br.book_id = b.id AND br.rating >= 4)
+        )
+        AND EXISTS (
+          SELECT 1 FROM comments c WHERE c.parent_author_id = a.id AND c.text = 'c1'
+        )
         ORDER BY a.id
       `);
       expect(after).toMatchObject([{ first_name: "a1" }]);
     });
 
-    it("anti-join: 'no children' uses count(*) = 0 instead of BOOL_OR", async () => {
+    it("anti-join: 'no children' uses NOT EXISTS", async () => {
       // a1 has NO books but has a comment
       await insertAuthor({ first_name: "a1" });
       await insertComment({ text: "c1", parent_author_id: 1 });
@@ -240,27 +226,24 @@ describe("EntityManager.lateralJoins", () => {
       `);
       expect(before).toMatchObject([{ first_name: "a1" }]);
 
-      // After: count(*) = 0 in the LATERAL detects no children
+      // After: NOT EXISTS detects no children
       const { rows: after } = await knex.raw(`
         SELECT a.id, a.first_name
         FROM authors a
-        CROSS JOIN LATERAL (
-          SELECT count(*) = 0 AS has_no_books
-          FROM books b WHERE b.author_id = a.id
-        ) _books
-        CROSS JOIN LATERAL (
-          SELECT BOOL_OR(c.text = 'c1') AS has_match
-          FROM comments c WHERE c.parent_author_id = a.id
-        ) _comments
-        WHERE _books.has_no_books AND _comments.has_match
+        WHERE NOT EXISTS (
+          SELECT 1 FROM books b WHERE b.author_id = a.id
+        )
+        AND EXISTS (
+          SELECT 1 FROM comments c WHERE c.parent_author_id = a.id AND c.text = 'c1'
+        )
         ORDER BY a.id
       `);
       expect(after).toMatchObject([{ first_name: "a1" }]);
     });
   });
 
-  describe("multi-collection rewrite", () => {
-    it("rewrites two o2m collections to lateral joins", async () => {
+  describe("collection rewrite", () => {
+    it("rewrites two o2m collections to EXISTS", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
       await insertComment({ text: "c1", parent_author_id: 1 });
@@ -274,16 +257,15 @@ describe("EntityManager.lateralJoins", () => {
       expect(queries).toEqual([
         [
           `SELECT a.* FROM authors AS a`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(b.title = $1) AS _cond0 FROM books AS b WHERE a.id = b.author_id) AS _lat_b`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(c.text = $2) AS _cond1 FROM comments AS c WHERE a.id = c.parent_author_id) AS _lat_c`,
-          ` WHERE _lat_b._cond0 AND _lat_c._cond1`,
+          ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1)`,
+          ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text = $2)`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $3`,
         ].join(""),
       ]);
     });
 
-    it("does not rewrite single collection queries", async () => {
+    it("rewrites single collection queries to EXISTS", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
 
@@ -293,10 +275,8 @@ describe("EntityManager.lateralJoins", () => {
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
       expect(queries).toEqual([
         [
-          `SELECT DISTINCT ON (a.id, a.id) a.*, a.id`,
-          ` FROM authors AS a`,
-          ` LEFT OUTER JOIN books AS b ON a.id = b.author_id`,
-          ` WHERE b.title = $1`,
+          `SELECT a.* FROM authors AS a`,
+          ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1)`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $2`,
         ].join(""),
@@ -321,12 +301,8 @@ describe("EntityManager.lateralJoins", () => {
       expect(queries).toEqual([
         [
           `SELECT a.* FROM authors AS a`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(t.name = $1) AS _cond0`,
-          ` FROM authors_to_tags AS att`,
-          ` JOIN tags AS t ON att.tag_id = t.id`,
-          ` WHERE a.id = att.author_id) AS _lat_att`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(b.title = $2) AS _cond1 FROM books AS b WHERE a.id = b.author_id) AS _lat_b`,
-          ` WHERE _lat_att._cond0 AND _lat_b._cond1`,
+          ` WHERE EXISTS (SELECT 1 FROM authors_to_tags AS att JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.name = $1)`,
+          ` AND EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $2)`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $3`,
         ].join(""),
@@ -351,9 +327,8 @@ describe("EntityManager.lateralJoins", () => {
       expect(queries).toEqual([
         [
           `SELECT a.* FROM authors AS a`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(b.title = $1 AND b."order" = $2) AS _cond0 FROM books AS b WHERE a.id = b.author_id) AS _lat_b`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(c.text = $3) AS _cond1 FROM comments AS c WHERE a.id = c.parent_author_id) AS _lat_c`,
-          ` WHERE _lat_b._cond0 AND _lat_c._cond1`,
+          ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1 AND b."order" = $2)`,
+          ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text = $3)`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $4`,
         ].join(""),
@@ -380,9 +355,8 @@ describe("EntityManager.lateralJoins", () => {
       expect(queries).toEqual([
         [
           `SELECT a.* FROM authors AS a`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(b.title LIKE $1) AS _cond0 FROM books AS b WHERE a.id = b.author_id) AS _lat_b`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(c.text LIKE $2) AS _cond1 FROM comments AS c WHERE a.id = c.parent_author_id) AS _lat_c`,
-          ` WHERE _lat_b._cond0 AND _lat_c._cond1`,
+          ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title LIKE $1)`,
+          ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text LIKE $2)`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $3`,
         ].join(""),
@@ -410,12 +384,11 @@ describe("EntityManager.lateralJoins", () => {
       expect(queries).toEqual([
         [
           `SELECT a.* FROM authors AS a`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(br.rating >= $1) AS _cond0`,
-          ` FROM books AS b`,
+          ` WHERE EXISTS (SELECT 1 FROM books AS b`,
           ` JOIN book_reviews AS br ON b.id = br.book_id`,
-          ` WHERE a.id = b.author_id) AS _lat_b`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(c.text = $2) AS _cond1 FROM comments AS c WHERE a.id = c.parent_author_id) AS _lat_c`,
-          ` WHERE _lat_b._cond0 AND _lat_c._cond1`,
+          ` WHERE a.id = b.author_id`,
+          ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1))`,
+          ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text = $2)`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $3`,
         ].join(""),
@@ -436,9 +409,8 @@ describe("EntityManager.lateralJoins", () => {
       expect(queries).toEqual([
         [
           `SELECT a.* FROM authors AS a`,
-          ` CROSS JOIN LATERAL (SELECT count(*) = 0 AS _cond0 FROM books AS b WHERE a.id = b.author_id) AS _lat_b`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(c.text = $1) AS _cond1 FROM comments AS c WHERE a.id = c.parent_author_id) AS _lat_c`,
-          ` WHERE _lat_b._cond0 AND _lat_c._cond1`,
+          ` WHERE NOT EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id)`,
+          ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text = $1)`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $2`,
         ].join(""),
@@ -500,18 +472,20 @@ describe("EntityManager.lateralJoins", () => {
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
       expect(queries).toEqual([
         [
-          `SELECT DISTINCT ON (a.id, a.id) a.*, a.id FROM authors AS a`,
-          ` LEFT OUTER JOIN books AS b ON a.id = b.author_id`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(br.rating >= $1) AS _cond0 FROM book_reviews AS br WHERE b.id = br.book_id) AS _lat_br`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(ba.status_id = $2) AS _cond1 FROM book_advances AS ba WHERE b.id = ba.book_id) AS _lat_ba`,
-          ` WHERE _lat_br._cond0 AND _lat_ba._cond1`,
+          `SELECT a.* FROM authors AS a`,
+          ` WHERE EXISTS (SELECT 1 FROM books AS b`,
+          ` JOIN book_reviews AS br ON b.id = br.book_id`,
+          ` JOIN book_advances AS ba ON b.id = ba.book_id`,
+          ` WHERE a.id = b.author_id`,
+          ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1)`,
+          ` AND EXISTS (SELECT 1 FROM book_advances AS ba WHERE b.id = ba.book_id AND ba.status_id = $2))`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $3`,
         ].join(""),
       ]);
     });
 
-    it("generates correct SQL for deep sibling laterals", async () => {
+    it("generates correct SQL for deep sibling EXISTS", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
       await insertBookReview({ book_id: 1, rating: 5 });
@@ -527,18 +501,20 @@ describe("EntityManager.lateralJoins", () => {
       );
       expect(queries).toEqual([
         [
-          `SELECT DISTINCT ON (a.id, a.id) a.*, a.id FROM authors AS a`,
-          ` LEFT OUTER JOIN books AS b ON a.id = b.author_id`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(br.rating >= $1) AS _cond0 FROM book_reviews AS br WHERE b.id = br.book_id) AS _lat_br`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(ba.status_id = $2) AS _cond1 FROM book_advances AS ba WHERE b.id = ba.book_id) AS _lat_ba`,
-          ` WHERE _lat_br._cond0 AND _lat_ba._cond1`,
+          `SELECT a.* FROM authors AS a`,
+          ` WHERE EXISTS (SELECT 1 FROM books AS b`,
+          ` JOIN book_reviews AS br ON b.id = br.book_id`,
+          ` JOIN book_advances AS ba ON b.id = ba.book_id`,
+          ` WHERE a.id = b.author_id`,
+          ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1)`,
+          ` AND EXISTS (SELECT 1 FROM book_advances AS ba WHERE b.id = ba.book_id AND ba.status_id = $2))`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $3`,
         ].join(""),
       ]);
     });
 
-    it("keeps books as regular join when its siblings are at the deeper level", async () => {
+    it("absorbs books into EXISTS when its siblings are at the deeper level", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
       await insertBookReview({ book_id: 1, rating: 5 });
@@ -554,79 +530,15 @@ describe("EntityManager.lateralJoins", () => {
       );
       expect(queries).toEqual([
         [
-          `SELECT DISTINCT ON (a.id, a.id) a.*, a.id FROM authors AS a`,
-          ` LEFT OUTER JOIN books AS b ON a.id = b.author_id`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(br.rating >= $1) AS _cond0 FROM book_reviews AS br WHERE b.id = br.book_id) AS _lat_br`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(ba.status_id = $2) AS _cond1 FROM book_advances AS ba WHERE b.id = ba.book_id) AS _lat_ba`,
-          ` WHERE _lat_br._cond0 AND _lat_ba._cond1`,
+          `SELECT a.* FROM authors AS a`,
+          ` WHERE EXISTS (SELECT 1 FROM books AS b`,
+          ` JOIN book_reviews AS br ON b.id = br.book_id`,
+          ` JOIN book_advances AS ba ON b.id = ba.book_id`,
+          ` WHERE a.id = b.author_id`,
+          ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1)`,
+          ` AND EXISTS (SELECT 1 FROM book_advances AS ba WHERE b.id = ba.book_id AND ba.status_id = $2))`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $3`,
-        ].join(""),
-      ]);
-    });
-  });
-
-  describe("lateralJoins opt-in", () => {
-    it("forces lateral rewrite on a single collection when lateralJoins=true", async () => {
-      await insertAuthor({ first_name: "a1" });
-      await insertBook({ title: "b1", author_id: 1 });
-
-      const em = newEntityManager();
-      resetQueryCount();
-      const authors = await em.find(
-        Author,
-        { books: { title: "b1" } },
-        { ...opts, lateralJoins: true },
-      );
-      expect(authors).toMatchEntity([{ firstName: "a1" }]);
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(b.title = $1) AS _cond0 FROM books AS b WHERE a.id = b.author_id) AS _lat_b`,
-          ` WHERE _lat_b._cond0`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $2`,
-        ].join(""),
-      ]);
-    });
-
-    it("does not force lateral rewrite when lateralJoins is not set", async () => {
-      await insertAuthor({ first_name: "a1" });
-      await insertBook({ title: "b1", author_id: 1 });
-
-      const em = newEntityManager();
-      resetQueryCount();
-      await em.find(Author, { books: { title: "b1" } }, opts);
-      expect(queries).toEqual([
-        [
-          `SELECT DISTINCT ON (a.id, a.id) a.*, a.id`,
-          ` FROM authors AS a`,
-          ` LEFT OUTER JOIN books AS b ON a.id = b.author_id`,
-          ` WHERE b.title = $1`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $2`,
-        ].join(""),
-      ]);
-    });
-
-    it("generates correct SQL for forced single-collection lateral", async () => {
-      await insertAuthor({ first_name: "a1" });
-      await insertBook({ title: "b1", author_id: 1 });
-
-      const em = newEntityManager();
-      resetQueryCount();
-      await em.find(
-        Author,
-        { books: { title: "b1" } },
-        { ...opts, lateralJoins: true },
-      );
-      expect(queries).toEqual([
-        [
-          `SELECT a.* FROM authors AS a`,
-          ` CROSS JOIN LATERAL (SELECT BOOL_OR(b.title = $1) AS _cond0 FROM books AS b WHERE a.id = b.author_id) AS _lat_b`,
-          ` WHERE _lat_b._cond0`,
-          ` ORDER BY a.id ASC`,
-          ` LIMIT $2`,
         ].join(""),
       ]);
     });
@@ -634,36 +546,8 @@ describe("EntityManager.lateralJoins", () => {
 
   // -----------------------------------------------------------------------
   // Performance benchmarks — normally skipped. Remove `.skip` to run manually.
-  // These use raw SQL via knex.raw to compare JOIN+DISTINCT vs LATERAL+BOOL_OR
+  // These use raw SQL via knex.raw to compare JOIN+DISTINCT vs EXISTS
   // at scale, demonstrating the cross-product explosion problem.
-  //
-  // Results (1K authors × 50 books × 50 comments × 20 tags, 5 tags/author):
-  //
-  // Timing (median of 10 runs, 3 warmup):
-  //   ┌──────────────────────────┬───────────────┬─────────────────┬─────────┐
-  //   │ Test                     │ JOIN+DISTINCT │ LATERAL+BOOL_OR │ Speedup │
-  //   ├──────────────────────────┼───────────────┼─────────────────┼─────────┤
-  //   │ Broad o2m×o2m            │ 40.8ms        │ 33.5ms          │ 1.22x   │
-  //   │ Selective o2m×o2m        │ 3.5ms         │ 43.0ms          │ 0.08x * │
-  //   │ m2m + o2m                │ 29.4ms        │ 38.4ms          │ 0.77x   │
-  //   └──────────────────────────┴───────────────┴─────────────────┴─────────┘
-  //   * Known tradeoff: selective queries match few parents, so JOIN narrows
-  //     early via index. LATERAL scans all parents' children regardless.
-  //
-  // EXPLAIN ANALYZE (intermediate rows processed):
-  //   ┌──────────────────────────┬───────────────┬─────────────────┬───────┐
-  //   │ Test                     │ JOIN rows     │ LATERAL rows    │ Ratio │
-  //   ├──────────────────────────┼───────────────┼─────────────────┼───────┤
-  //   │ Broad match              │ 853,424       │ 226,536         │ 3.8x  │
-  //   │ Selective match          │ 7,651         │ 265,103         │ 0.03x │
-  //   │ Match-all (worst case)   │ 113ms exec    │ 189ms exec      │ 0.6x  │
-  //   └──────────────────────────┴───────────────┴─────────────────┴───────┘
-  //
-  // Key findings:
-  // - LATERAL wins on broad queries where cross-product explosion is the problem
-  // - LATERAL loses on selective queries where few parents match (JOINs narrow early)
-  // - No seq scans inside laterals — predicate pushdown works correctly
-  // - Match-all worst case: LATERAL is ~1.7x slower (within tolerance)
   // -----------------------------------------------------------------------
   describe.skip("benchmarks", () => {
     const NUM_AUTHORS = 1_000;
@@ -674,44 +558,37 @@ describe("EntityManager.lateralJoins", () => {
 
     beforeEach(async () => {
       const now = "now()";
-      // Bulk insert authors
       await knex.raw(`
         INSERT INTO authors (first_name, initials, number_of_books, created_at, updated_at)
         SELECT 'author_' || i::text, '', ${BOOKS_PER_AUTHOR}, ${now}, ${now}
         FROM generate_series(1, ${NUM_AUTHORS}) AS t(i)
       `);
-      // Bulk insert books (BOOKS_PER_AUTHOR per author)
       await knex.raw(`
         INSERT INTO books (title, author_id, notes, created_at, updated_at)
         SELECT 'book_' || a.id || '_' || j::text, a.id, '', ${now}, ${now}
         FROM authors a, generate_series(1, ${BOOKS_PER_AUTHOR}) AS t(j)
       `);
-      // Bulk insert comments (COMMENTS_PER_AUTHOR per author)
       await knex.raw(`
         INSERT INTO comments (parent_author_id, parent_tags, text, created_at, updated_at)
         SELECT a.id, '', 'comment_' || a.id || '_' || j::text, ${now}, ${now}
         FROM authors a, generate_series(1, ${COMMENTS_PER_AUTHOR}) AS t(j)
       `);
-      // Bulk insert tags
       await knex.raw(`
         INSERT INTO tags (name, created_at, updated_at)
         SELECT 'tag_' || i::text, ${now}, ${now}
         FROM generate_series(1, ${NUM_TAGS}) AS t(i)
       `);
-      // Bulk insert author-to-tag associations (TAGS_PER_AUTHOR per author)
-      // Use j directly as tag_id (1..5) so each author gets a unique set of tags
       await knex.raw(`
         INSERT INTO authors_to_tags (author_id, tag_id)
         SELECT a.id, j
         FROM authors a, generate_series(1, ${TAGS_PER_AUTHOR}) AS t(j)
       `);
-      // Create indexes that match what Joist would use
       await knex.raw(`ANALYZE authors; ANALYZE books; ANALYZE comments; ANALYZE tags; ANALYZE authors_to_tags`);
     });
 
-    // ---- Queries under test ----
+    // ---- Queries under test (three approaches) ----
 
-    // The "before" query: JOIN + DISTINCT with two o2m collections
+    // 1. JOIN + DISTINCT: naive multi-JOIN
     const joinDistinctSQL = `
       SELECT DISTINCT a.id, a.first_name
       FROM authors a
@@ -721,8 +598,8 @@ describe("EntityManager.lateralJoins", () => {
       ORDER BY a.id
     `;
 
-    // The "after" query: LATERAL + BOOL_OR with two o2m collections
-    const lateralBoolOrSQL = `
+    // 2. LATERAL + BOOL_OR: previous approach
+    const lateralSQL = `
       SELECT a.id, a.first_name
       FROM authors a
       CROSS JOIN LATERAL (
@@ -737,7 +614,20 @@ describe("EntityManager.lateralJoins", () => {
       ORDER BY a.id
     `;
 
-    // m2m variant: JOIN + DISTINCT with m2m + o2m
+    // 3. EXISTS: current approach
+    const existsSQL = `
+      SELECT a.id, a.first_name
+      FROM authors a
+      WHERE EXISTS (
+        SELECT 1 FROM books b WHERE b.author_id = a.id AND b.title LIKE ?
+      )
+      AND EXISTS (
+        SELECT 1 FROM comments c WHERE c.parent_author_id = a.id AND c.text LIKE ?
+      )
+      ORDER BY a.id
+    `;
+
+    // m2m variants
     const joinDistinctM2mSQL = `
       SELECT DISTINCT a.id, a.first_name
       FROM authors a
@@ -748,8 +638,7 @@ describe("EntityManager.lateralJoins", () => {
       ORDER BY a.id
     `;
 
-    // m2m variant: LATERAL + BOOL_OR
-    const lateralBoolOrM2mSQL = `
+    const lateralM2mSQL = `
       SELECT a.id, a.first_name
       FROM authors a
       CROSS JOIN LATERAL (
@@ -766,12 +655,25 @@ describe("EntityManager.lateralJoins", () => {
       ORDER BY a.id
     `;
 
+    const existsM2mSQL = `
+      SELECT a.id, a.first_name
+      FROM authors a
+      WHERE EXISTS (
+        SELECT 1
+        FROM authors_to_tags att
+        JOIN tags t ON att.tag_id = t.id
+        WHERE att.author_id = a.id AND t.name = ?
+      )
+      AND EXISTS (
+        SELECT 1 FROM books b WHERE b.author_id = a.id AND b.title LIKE ?
+      )
+      ORDER BY a.id
+    `;
+
     async function timeQuery(sql: string, bindings: any[], warmup = 3, iterations = 10): Promise<number[]> {
-      // Warmup runs
       for (let i = 0; i < warmup; i++) {
         await knex.raw(sql, bindings);
       }
-      // Timed runs
       const times: number[] = [];
       for (let i = 0; i < iterations; i++) {
         const start = performance.now();
@@ -790,72 +692,68 @@ describe("EntityManager.lateralJoins", () => {
       return { median, mean, min, max };
     }
 
+    function fmtStats(s: ReturnType<typeof stats>): string {
+      return `median=${s.median.toFixed(1)}ms  mean=${s.mean.toFixed(1)}ms  min=${s.min.toFixed(1)}ms  max=${s.max.toFixed(1)}ms`;
+    }
+
     // ---- Timing benchmarks ----
 
-    it("o2m x o2m: LATERAL is faster than JOIN+DISTINCT (broad match)", async () => {
-      // Broad match — matches many authors
+    it("o2m x o2m: broad match", async () => {
       const bindings = ["book_1_%", "comment_1_%"];
 
       const joinTimes = await timeQuery(joinDistinctSQL, bindings);
-      const lateralTimes = await timeQuery(lateralBoolOrSQL, bindings);
-      const joinStats = stats(joinTimes);
-      const lateralStats = stats(lateralTimes);
+      const lateralTimes = await timeQuery(lateralSQL, bindings);
+      const existsTimes = await timeQuery(existsSQL, bindings);
+      const jS = stats(joinTimes);
+      const lS = stats(lateralTimes);
+      const eS = stats(existsTimes);
 
       console.log("\n=== o2m x o2m: Broad match ===");
-      console.log(
-        `  JOIN+DISTINCT:  median=${joinStats.median.toFixed(1)}ms  mean=${joinStats.mean.toFixed(1)}ms  min=${joinStats.min.toFixed(1)}ms  max=${joinStats.max.toFixed(1)}ms`,
-      );
-      console.log(
-        `  LATERAL+BOOL_OR: median=${lateralStats.median.toFixed(1)}ms  mean=${lateralStats.mean.toFixed(1)}ms  min=${lateralStats.min.toFixed(1)}ms  max=${lateralStats.max.toFixed(1)}ms`,
-      );
-      console.log(`  Speedup: ${(joinStats.median / lateralStats.median).toFixed(2)}x`);
+      console.log(`  JOIN+DISTINCT:    ${fmtStats(jS)}`);
+      console.log(`  LATERAL+BOOL_OR:  ${fmtStats(lS)}`);
+      console.log(`  EXISTS:           ${fmtStats(eS)}`);
+      console.log(`  EXISTS vs JOIN:    ${(jS.median / eS.median).toFixed(2)}x faster`);
+      console.log(`  EXISTS vs LATERAL: ${(lS.median / eS.median).toFixed(2)}x faster`);
 
-      // The lateral should be meaningfully faster (or at worst comparable)
-      expect(lateralStats.median).toBeLessThan(joinStats.median * 1.5);
+      expect(eS.median).toBeLessThan(jS.median * 1.5);
     });
 
-    it("o2m x o2m: selective match — LATERAL scans all parents (known tradeoff)", async () => {
-      // Selective predicates match only 1 author. JOIN+DISTINCT can be faster here
-      // because PG narrows to matching rows via index before joining. LATERAL scans
-      // all parents' children regardless. This is an accepted tradeoff — the rewrite
-      // optimizes for broad matches where cross-product explosion is the real problem.
+    it("o2m x o2m: selective match", async () => {
       const bindings = ["book_500_%", "comment_500_%"];
 
       const joinTimes = await timeQuery(joinDistinctSQL, bindings);
-      const lateralTimes = await timeQuery(lateralBoolOrSQL, bindings);
-      const joinStats = stats(joinTimes);
-      const lateralStats = stats(lateralTimes);
+      const lateralTimes = await timeQuery(lateralSQL, bindings);
+      const existsTimes = await timeQuery(existsSQL, bindings);
+      const jS = stats(joinTimes);
+      const lS = stats(lateralTimes);
+      const eS = stats(existsTimes);
 
-      console.log("\n=== o2m x o2m: Selective match (known tradeoff) ===");
-      console.log(
-        `  JOIN+DISTINCT:  median=${joinStats.median.toFixed(1)}ms  mean=${joinStats.mean.toFixed(1)}ms  min=${joinStats.min.toFixed(1)}ms  max=${joinStats.max.toFixed(1)}ms`,
-      );
-      console.log(
-        `  LATERAL+BOOL_OR: median=${lateralStats.median.toFixed(1)}ms  mean=${lateralStats.mean.toFixed(1)}ms  min=${lateralStats.min.toFixed(1)}ms  max=${lateralStats.max.toFixed(1)}ms`,
-      );
-      console.log(`  Ratio: ${(lateralStats.median / joinStats.median).toFixed(2)}x (>1 means LATERAL is slower)`);
-
-      // No assertion on which is faster — this documents the tradeoff
+      console.log("\n=== o2m x o2m: Selective match ===");
+      console.log(`  JOIN+DISTINCT:    ${fmtStats(jS)}`);
+      console.log(`  LATERAL+BOOL_OR:  ${fmtStats(lS)}`);
+      console.log(`  EXISTS:           ${fmtStats(eS)}`);
+      console.log(`  EXISTS vs JOIN:    ${(jS.median / eS.median).toFixed(2)}x faster`);
+      console.log(`  EXISTS vs LATERAL: ${(lS.median / eS.median).toFixed(2)}x faster`);
     });
 
-    it("m2m + o2m: LATERAL is faster than JOIN+DISTINCT", async () => {
+    it("m2m + o2m", async () => {
       const bindings = ["tag_1", "book_%"];
 
       const joinTimes = await timeQuery(joinDistinctM2mSQL, bindings);
-      const lateralTimes = await timeQuery(lateralBoolOrM2mSQL, bindings);
-      const joinStats = stats(joinTimes);
-      const lateralStats = stats(lateralTimes);
+      const lateralTimes = await timeQuery(lateralM2mSQL, bindings);
+      const existsTimes = await timeQuery(existsM2mSQL, bindings);
+      const jS = stats(joinTimes);
+      const lS = stats(lateralTimes);
+      const eS = stats(existsTimes);
 
       console.log("\n=== m2m + o2m ===");
-      console.log(
-        `  JOIN+DISTINCT:  median=${joinStats.median.toFixed(1)}ms  mean=${joinStats.mean.toFixed(1)}ms  min=${joinStats.min.toFixed(1)}ms  max=${joinStats.max.toFixed(1)}ms`,
-      );
-      console.log(
-        `  LATERAL+BOOL_OR: median=${lateralStats.median.toFixed(1)}ms  mean=${lateralStats.mean.toFixed(1)}ms  min=${lateralStats.min.toFixed(1)}ms  max=${lateralStats.max.toFixed(1)}ms`,
-      );
-      console.log(`  Speedup: ${(joinStats.median / lateralStats.median).toFixed(2)}x`);
+      console.log(`  JOIN+DISTINCT:    ${fmtStats(jS)}`);
+      console.log(`  LATERAL+BOOL_OR:  ${fmtStats(lS)}`);
+      console.log(`  EXISTS:           ${fmtStats(eS)}`);
+      console.log(`  EXISTS vs JOIN:    ${(jS.median / eS.median).toFixed(2)}x faster`);
+      console.log(`  EXISTS vs LATERAL: ${(lS.median / eS.median).toFixed(2)}x faster`);
 
-      expect(lateralStats.median).toBeLessThan(joinStats.median * 1.5);
+      expect(eS.median).toBeLessThan(jS.median * 1.5);
     });
 
     // ---- EXPLAIN ANALYZE tests ----
@@ -870,7 +768,6 @@ describe("EntityManager.lateralJoins", () => {
       const executionTime = plan["Execution Time"];
       const planningTime = plan["Planning Time"];
 
-      // Recursively find all node types and their actual rows
       function walkNodes(
         node: any,
         depth = 0,
@@ -895,126 +792,79 @@ describe("EntityManager.lateralJoins", () => {
       return { executionTime, planningTime, nodes, totalActualRows, hasSeqScan };
     }
 
-    it("EXPLAIN: LATERAL produces fewer intermediate rows than JOIN (broad)", async () => {
+    function fmtPlan(label: string, info: ReturnType<typeof extractPlanInfo>): string {
+      return `${label} exec=${info.executionTime.toFixed(1)}ms  plan=${info.planningTime.toFixed(1)}ms  totalRows=${info.totalActualRows}`;
+    }
+
+    function logNodes(label: string, info: ReturnType<typeof extractPlanInfo>): void {
+      console.log(`\n  ${label} nodes:`);
+      for (const n of info.nodes) {
+        console.log(`    ${"  ".repeat(n.depth)}${n.type}: rows=${n.actualRows} loops=${n.loops}`);
+      }
+    }
+
+    it("EXPLAIN: broad match — three-way comparison", async () => {
       const bindings = ["book_1_%", "comment_1_%"];
 
       const joinPlan = await explainAnalyze(joinDistinctSQL, bindings);
-      const lateralPlan = await explainAnalyze(lateralBoolOrSQL, bindings);
-      const joinInfo = extractPlanInfo(joinPlan);
-      const lateralInfo = extractPlanInfo(lateralPlan);
+      const lateralPlan = await explainAnalyze(lateralSQL, bindings);
+      const existsPlan = await explainAnalyze(existsSQL, bindings);
+      const jI = extractPlanInfo(joinPlan);
+      const lI = extractPlanInfo(lateralPlan);
+      const eI = extractPlanInfo(existsPlan);
 
       console.log("\n=== EXPLAIN: Broad match ===");
-      console.log(
-        `  JOIN+DISTINCT:   exec=${joinInfo.executionTime.toFixed(1)}ms  plan=${joinInfo.planningTime.toFixed(1)}ms  totalRows=${joinInfo.totalActualRows}`,
-      );
-      console.log(
-        `  LATERAL+BOOL_OR: exec=${lateralInfo.executionTime.toFixed(1)}ms  plan=${lateralInfo.planningTime.toFixed(1)}ms  totalRows=${lateralInfo.totalActualRows}`,
-      );
+      console.log(`  ${fmtPlan("JOIN+DISTINCT:  ", jI)}`);
+      console.log(`  ${fmtPlan("LATERAL+BOOL_OR:", lI)}`);
+      console.log(`  ${fmtPlan("EXISTS:         ", eI)}`);
+      logNodes("JOIN", jI);
+      logNodes("LATERAL", lI);
+      logNodes("EXISTS", eI);
 
-      console.log("\n  JOIN nodes:");
-      for (const n of joinInfo.nodes) {
-        console.log(`    ${"  ".repeat(n.depth)}${n.type}: rows=${n.actualRows} loops=${n.loops}`);
-      }
-      console.log("\n  LATERAL nodes:");
-      for (const n of lateralInfo.nodes) {
-        console.log(`    ${"  ".repeat(n.depth)}${n.type}: rows=${n.actualRows} loops=${n.loops}`);
-      }
-
-      // The lateral plan should process fewer total intermediate rows
-      expect(lateralInfo.totalActualRows).toBeLessThan(joinInfo.totalActualRows);
+      expect(eI.totalActualRows).toBeLessThan(jI.totalActualRows);
     });
 
-    it("EXPLAIN: selective match — LATERAL processes more rows (known tradeoff)", async () => {
-      // When predicates are selective, JOIN can narrow rows early via index, producing
-      // fewer intermediate rows. LATERAL scans all parents' children. Documents tradeoff.
+    it("EXPLAIN: selective match — three-way comparison", async () => {
       const bindings = ["book_500_%", "comment_500_%"];
 
       const joinPlan = await explainAnalyze(joinDistinctSQL, bindings);
-      const lateralPlan = await explainAnalyze(lateralBoolOrSQL, bindings);
-      const joinInfo = extractPlanInfo(joinPlan);
-      const lateralInfo = extractPlanInfo(lateralPlan);
+      const lateralPlan = await explainAnalyze(lateralSQL, bindings);
+      const existsPlan = await explainAnalyze(existsSQL, bindings);
+      const jI = extractPlanInfo(joinPlan);
+      const lI = extractPlanInfo(lateralPlan);
+      const eI = extractPlanInfo(existsPlan);
 
-      console.log("\n=== EXPLAIN: Selective match (known tradeoff) ===");
-      console.log(
-        `  JOIN+DISTINCT:   exec=${joinInfo.executionTime.toFixed(1)}ms  plan=${joinInfo.planningTime.toFixed(1)}ms  totalRows=${joinInfo.totalActualRows}`,
-      );
-      console.log(
-        `  LATERAL+BOOL_OR: exec=${lateralInfo.executionTime.toFixed(1)}ms  plan=${lateralInfo.planningTime.toFixed(1)}ms  totalRows=${lateralInfo.totalActualRows}`,
-      );
+      console.log("\n=== EXPLAIN: Selective match ===");
+      console.log(`  ${fmtPlan("JOIN+DISTINCT:  ", jI)}`);
+      console.log(`  ${fmtPlan("LATERAL+BOOL_OR:", lI)}`);
+      console.log(`  ${fmtPlan("EXISTS:         ", eI)}`);
+      logNodes("JOIN", jI);
+      logNodes("LATERAL", lI);
+      logNodes("EXISTS", eI);
 
-      console.log("\n  JOIN nodes:");
-      for (const n of joinInfo.nodes) {
-        console.log(`    ${"  ".repeat(n.depth)}${n.type}: rows=${n.actualRows} loops=${n.loops}`);
-      }
-      console.log("\n  LATERAL nodes:");
-      for (const n of lateralInfo.nodes) {
-        console.log(`    ${"  ".repeat(n.depth)}${n.type}: rows=${n.actualRows} loops=${n.loops}`);
-      }
-
-      // No assertion — this documents that LATERAL processes more rows for selective queries
-      console.log(
-        `\n  Row ratio: LATERAL/JOIN = ${(lateralInfo.totalActualRows / joinInfo.totalActualRows).toFixed(1)}x`,
-      );
+      console.log(`\n  Row ratio: EXISTS/JOIN = ${(eI.totalActualRows / jI.totalActualRows).toFixed(2)}x`);
+      console.log(`  Row ratio: EXISTS/LATERAL = ${(eI.totalActualRows / lI.totalActualRows).toFixed(2)}x`);
     });
 
-    it("EXPLAIN: predicate pushdown — selective predicates use index scans in laterals", async () => {
-      // Very selective — single author
-      const bindings = ["book_500_1", "comment_500_1"];
-
-      const lateralPlan = await explainAnalyze(lateralBoolOrSQL, bindings);
-      const lateralInfo = extractPlanInfo(lateralPlan);
-
-      console.log("\n=== EXPLAIN: Predicate pushdown (selective) ===");
-      console.log(
-        `  LATERAL exec=${lateralInfo.executionTime.toFixed(1)}ms  plan=${lateralInfo.planningTime.toFixed(1)}ms`,
-      );
-      for (const n of lateralInfo.nodes) {
-        console.log(`    ${"  ".repeat(n.depth)}${n.type}: rows=${n.actualRows} loops=${n.loops}`);
-      }
-
-      // With proper indexes, the lateral subqueries should use index scans
-      // (this checks that PG doesn't fall back to seq scans within the laterals)
-      const innerNodes = lateralInfo.nodes.filter((n) => n.depth >= 2);
-      const seqScansInLateral = innerNodes.filter((n) => n.type === "Seq Scan");
-      console.log(`\n  Seq scans inside laterals: ${seqScansInLateral.length}`);
-      // We expect index scans on the FK columns (author_id) inside laterals
-      // If this fails, it means PG isn't pushing predicates into the lateral
-      // which would indicate a query planning issue worth investigating
-      if (seqScansInLateral.length > 0) {
-        console.log("  WARNING: Seq scans found inside lateral subqueries — predicate pushdown may not be working");
-      }
-    });
-
-    it("EXPLAIN: broad predicates do not cause worse plans in laterals vs joins", async () => {
-      // Very broad — matches all authors
+    it("EXPLAIN: broad predicates (match-all) — three-way comparison", async () => {
       const bindings = ["book_%", "comment_%"];
 
       const joinPlan = await explainAnalyze(joinDistinctSQL, bindings);
-      const lateralPlan = await explainAnalyze(lateralBoolOrSQL, bindings);
-      const joinInfo = extractPlanInfo(joinPlan);
-      const lateralInfo = extractPlanInfo(lateralPlan);
+      const lateralPlan = await explainAnalyze(lateralSQL, bindings);
+      const existsPlan = await explainAnalyze(existsSQL, bindings);
+      const jI = extractPlanInfo(joinPlan);
+      const lI = extractPlanInfo(lateralPlan);
+      const eI = extractPlanInfo(existsPlan);
 
       console.log("\n=== EXPLAIN: Broad predicates (match-all) ===");
-      console.log(
-        `  JOIN+DISTINCT:   exec=${joinInfo.executionTime.toFixed(1)}ms  plan=${joinInfo.planningTime.toFixed(1)}ms`,
-      );
-      console.log(
-        `  LATERAL+BOOL_OR: exec=${lateralInfo.executionTime.toFixed(1)}ms  plan=${lateralInfo.planningTime.toFixed(1)}ms`,
-      );
+      console.log(`  ${fmtPlan("JOIN+DISTINCT:  ", jI)}`);
+      console.log(`  ${fmtPlan("LATERAL+BOOL_OR:", lI)}`);
+      console.log(`  ${fmtPlan("EXISTS:         ", eI)}`);
+      logNodes("JOIN", jI);
+      logNodes("LATERAL", lI);
+      logNodes("EXISTS", eI);
 
-      console.log("\n  JOIN nodes:");
-      for (const n of joinInfo.nodes) {
-        console.log(`    ${"  ".repeat(n.depth)}${n.type}: rows=${n.actualRows} loops=${n.loops}`);
-      }
-      console.log("\n  LATERAL nodes:");
-      for (const n of lateralInfo.nodes) {
-        console.log(`    ${"  ".repeat(n.depth)}${n.type}: rows=${n.actualRows} loops=${n.loops}`);
-      }
-
-      // Even with broad predicates, lateral execution time should not be dramatically worse
-      // Allow up to 3x slower since the worst case for laterals is scanning all children
-      // for all parents (which is what JOINs do anyway, just without the aggregation overhead)
-      expect(lateralInfo.executionTime).toBeLessThan(joinInfo.executionTime * 3);
+      expect(eI.executionTime).toBeLessThan(jI.executionTime * 3);
     });
   });
 });

@@ -123,8 +123,6 @@ export interface FindFilterOptions<T extends Entity> {
   conditions?: ExpressionFilter;
   orderBy?: OrderOf<T> | OrderOf<T>[];
   softDeletes?: "include" | "exclude";
-  /** Force all collection joins to use LATERAL + BOOL_OR instead of LEFT JOIN + DISTINCT ON. */
-  lateralJoins?: boolean;
 }
 
 /**
@@ -147,8 +145,6 @@ export interface FindGqlPaginatedFilterOptions<T extends Entity> extends FindFil
 export interface FindCountFilterOptions<T extends Entity> {
   conditions?: ExpressionFilter;
   softDeletes?: "include" | "exclude";
-  /** Force all collection joins to use LATERAL + BOOL_OR instead of LEFT JOIN + DISTINCT ON. */
-  lateralJoins?: boolean;
 }
 
 /**

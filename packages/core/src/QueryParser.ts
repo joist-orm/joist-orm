@@ -3,7 +3,7 @@ import { getAliasMgmt, getMaybeCtiAlias, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
-import { rewriteCollectionJoinsToLateral } from "./QueryParser.lateralRewrite";
+import { rewriteCollectionJoinsToExists } from "./QueryParser.existsRewrite";
 import { pruneUnusedJoins } from "./QueryParser.pruning";
 import { visitConditions } from "./QueryVisitor";
 import { getMetadataForTable } from "./configure";
@@ -26,7 +26,7 @@ export interface ParsedExpressionFilter {
 }
 
 /** A condition or nested condition in a `ParsedExpressionFilter`. */
-export type ParsedExpressionCondition = ParsedExpressionFilter | ColumnCondition | RawCondition;
+export type ParsedExpressionCondition = ParsedExpressionFilter | ColumnCondition | RawCondition | ExistsCondition;
 
 export interface ColumnCondition {
   kind: "column";
@@ -52,6 +52,17 @@ export interface RawCondition {
   bindings: readonly any[];
   /** Used to mark system-added conditions (like `LATERAL JOIN` conditions), which can be ignored when pruning unused joins. */
   pruneable: boolean;
+}
+
+/** An EXISTS or NOT EXISTS subquery condition. */
+export interface ExistsCondition {
+  kind: "exists";
+  /** When true, renders as NOT EXISTS. */
+  negate: boolean;
+  /** The subquery: SELECT 1 FROM child WHERE correlation AND filter. */
+  subquery: ParsedFindQuery;
+  /** Outer aliases referenced by the correlation predicate, for join pruning. */
+  outerAliases: string[];
 }
 
 /** A marker condition for alias methods to indicate they should be skipped/pruned. */
@@ -153,16 +164,7 @@ export interface ParsedGroupBy {
   column: string;
 }
 
-/** A select that renders as `BOOL_OR(condition) AS alias` inside a lateral subquery. */
-export interface BoolOrSelect {
-  kind: "bool_or";
-  /** Column alias, e.g. "_cond0". */
-  as: string;
-  /** Structured AST inside the BOOL_OR(...), so visitors can rewrite inner ColumnConditions. */
-  condition: ParsedExpressionFilter;
-}
-
-export type ParsedSelect = string | ParsedSelectWithBindings | BoolOrSelect;
+export type ParsedSelect = string | ParsedSelectWithBindings;
 type ParsedSelectWithBindings = { sql: string; bindings: any[]; aliases: string[] };
 
 /** The result of parsing an `em.find` filter. */
@@ -170,8 +172,6 @@ export interface ParsedFindQuery {
   selects: ParsedSelect[];
   /** The primary table plus any joins. */
   tables: ParsedTable[];
-  /** Any cross lateral joins, where the `joins: string[]` has the full join as raw SQL; currently only for preloading. */
-  lateralJoins?: { joins: string[]; bindings: any[] };
   /** The query's conditions. */
   condition?: ParsedExpressionFilter;
   /** Extremely optional group bys; we generally don't support adhoc/aggregate queries, but the auto-batching infra uses these. */
@@ -192,7 +192,6 @@ export function parseFindQuery(
     pruneJoins?: boolean;
     keepAliases?: string[];
     softDeletes?: "include" | "exclude";
-    lateralJoins?: boolean;
   } = {},
 ): ParsedFindQuery {
   const selects: string[] = [];
@@ -205,12 +204,11 @@ export function parseFindQuery(
     softDeletes = "exclude",
     pruneJoins = true,
     keepAliases = [],
-    lateralJoins = false,
   } = opts;
   const cb = new ConditionBuilder();
 
   // Track collection joins (o2m/m2m) as they're added, grouped by parent alias.
-  // Passed to the lateral rewrite so it doesn't have to re-derive collection structure.
+  // Passed to the EXISTS rewrite so it doesn't have to re-derive collection structure.
   const collectionJoins: { parentAlias: string; join: JoinTable }[] = [];
 
   const aliases: Record<string, number> = {};
@@ -569,7 +567,7 @@ export function parseFindQuery(
     condition: cb.toExpressionFilter(),
   });
 
-  rewriteCollectionJoinsToLateral(query, lateralJoins, collectionJoins);
+  rewriteCollectionJoinsToExists(query, collectionJoins);
 
   if (query.tables.some((t) => t.join === "outer")) {
     maybeAddIdNotNulls(query);

@@ -1704,9 +1704,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         }
         mutatedCollections.clear();
 
-        // Reset the find caches b/c data will have changed in the db
+        // Reset the find/preload caches b/c data will have changed in the db
         this.#dataloaders = {};
         this.#batchLoaders = {};
+        this.#preloadedRelations = new Map();
         this.#rm.clear();
       }
 

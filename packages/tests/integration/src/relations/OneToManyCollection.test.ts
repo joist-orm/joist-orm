@@ -756,6 +756,45 @@ describe("OneToManyCollection", () => {
     expect(loaded.books.get.length).toBe(1);
   });
 
+  it("does not lose o2m entities when stale preload cache + forceReload after flush", async () => {
+    const em = newEntityManager();
+    // Given a new author flushed without books
+    const a1 = newAuthor(em);
+    await em.flush();
+    // And a book is added (not yet flushed)
+    const b1 = newBook(em, { author: a1 });
+    expect(a1.books.get).toMatchEntity([b1]);
+    // And a forceReload populate runs (caching [] for books since b1 isn't in the DB yet)
+    await a1.populate({ hint: "books", forceReload: true });
+    expect(a1.books.get).toMatchEntity([b1]);
+    // And we flush (b1 is now in DB, #added is cleared by resetAddedRemoved)
+    await em.flush();
+    expect(a1.books.get).toMatchEntity([b1]);
+    // When we forceReload again, the stale preload cache should not cause b1 to be dropped
+    await a1.populate({ hint: "books", forceReload: true });
+    // Then the books collection still has b1
+    expect(a1.books.get).toMatchEntity([b1]);
+  });
+
+  it("does not lose o2m entities when recalc after flush with stale preload cache", async () => {
+    const em = newEntityManager();
+    // Given a new author flushed without books
+    const a1 = newAuthor(em);
+    await em.flush();
+    // And a book is added (not yet flushed)
+    const b1 = newBook(em, { author: a1 });
+    // And recalc runs (populates books, caching [] since b1 isn't in the DB yet)
+    await em.recalc(a1);
+    expect(a1.books.get).toMatchEntity([b1]);
+    // And we flush (b1 is now in DB, #added is cleared)
+    await em.flush();
+    expect(a1.books.get).toMatchEntity([b1]);
+    // When recalc runs again, the stale preload cache should not cause b1 to be dropped
+    await em.recalc(a1);
+    // Then the books collection still has b1
+    expect(a1.books.get).toMatchEntity([b1]);
+  });
+
   it("can be renamed", () => {
     // see createTable("comments",...) in 1580658856631_author.ts for the actual rename
     const em = newEntityManager();

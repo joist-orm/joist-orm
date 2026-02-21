@@ -24,7 +24,16 @@ export function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[])
   parsed.selects.forEach((s) => {
     if (typeof s === "string") {
       if (!s.includes("count(")) dt.markRequired(parseAlias(s));
-    } else {
+    } else if ("kind" in s && s.kind === "bool_or") {
+      // BoolOrSelect: mark aliases used inside the BOOL_OR condition
+      deepFindConditions({ kind: "exp", op: "and", conditions: [s.condition] }, true).forEach((c) => {
+        if (c.kind === "column") {
+          dt.markRequired(c.alias);
+        } else if (c.kind === "raw") {
+          for (const alias of c.aliases) dt.markRequired(alias);
+        }
+      });
+    } else if ("aliases" in s) {
       for (const a of s.aliases) dt.markRequired(a);
     }
   });

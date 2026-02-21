@@ -3,6 +3,7 @@ import { getAliasMgmt, getMaybeCtiAlias, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
+import { rewriteCollectionJoinsToLateral } from "./QueryParser.lateralRewrite";
 import { pruneUnusedJoins } from "./QueryParser.pruning";
 import { visitConditions } from "./QueryVisitor";
 import { getMetadataForTable } from "./configure";
@@ -152,7 +153,16 @@ export interface ParsedGroupBy {
   column: string;
 }
 
-type ParsedSelect = string | ParsedSelectWithBindings;
+/** A select that renders as `BOOL_OR(condition) AS alias` inside a lateral subquery. */
+export interface BoolOrSelect {
+  kind: "bool_or";
+  /** Column alias, e.g. "_cond0". */
+  as: string;
+  /** Structured AST inside the BOOL_OR(...), so visitors can rewrite inner ColumnConditions. */
+  condition: ParsedExpressionFilter;
+}
+
+export type ParsedSelect = string | ParsedSelectWithBindings | BoolOrSelect;
 type ParsedSelectWithBindings = { sql: string; bindings: any[]; aliases: string[] };
 
 /** The result of parsing an `em.find` filter. */
@@ -182,6 +192,7 @@ export function parseFindQuery(
     pruneJoins?: boolean;
     keepAliases?: string[];
     softDeletes?: "include" | "exclude";
+    lateralJoins?: boolean;
   } = {},
 ): ParsedFindQuery {
   const selects: string[] = [];
@@ -194,8 +205,13 @@ export function parseFindQuery(
     softDeletes = "exclude",
     pruneJoins = true,
     keepAliases = [],
+    lateralJoins = false,
   } = opts;
   const cb = new ConditionBuilder();
+
+  // Track collection joins (o2m/m2m) as they're added, grouped by parent alias.
+  // Passed to the lateral rewrite so it doesn't have to re-derive collection structure.
+  const collectionJoins: { parentAlias: string; join: JoinTable }[] = [];
 
   const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
@@ -429,6 +445,9 @@ export function parseFindQuery(
             (ef.subFilter as any)[key],
             field.otherFieldName,
           );
+          // Record after addTable so the JoinTable is in `tables`
+          const o2mJoin = tables.find((t) => t.alias === a) as JoinTable;
+          if (o2mJoin) collectionJoins.push({ parentAlias: alias, join: o2mJoin });
         } else if (field.kind === "m2m") {
           // Always join into the m2m table
           const ja = getAlias(field.joinTableName);
@@ -439,6 +458,9 @@ export function parseFindQuery(
             col1: kqDot(alias, "id"),
             col2: kqDot(ja, field.columnNames[0]),
           });
+          // Record the junction table as a collection join
+          const m2mJoin = tables[tables.length - 1] as JoinTable;
+          collectionJoins.push({ parentAlias: alias, join: m2mJoin });
           // But conditionally join into the alias table
           const sub = (ef.subFilter as any)[key];
           if (isAlias(sub)) {
@@ -546,6 +568,8 @@ export function parseFindQuery(
   Object.assign(query, {
     condition: cb.toExpressionFilter(),
   });
+
+  rewriteCollectionJoinsToLateral(query, lateralJoins, collectionJoins);
 
   if (query.tables.some((t) => t.join === "outer")) {
     maybeAddIdNotNulls(query);

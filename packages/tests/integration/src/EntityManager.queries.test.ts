@@ -25,6 +25,7 @@ import {
   aliases,
   getAliasMetadata,
   getMetadata,
+  optimizeCollectionJoins,
   parseFindQuery,
 } from "joist-orm";
 import { PasswordValue } from "src/entities/types";
@@ -74,6 +75,12 @@ const criticMeta = getMetadata(Critic);
 const taskItemMeta = getMetadata(TaskItem);
 const opts = { softDeletes: "include" } as const;
 
+function parseAndOptimizeFindQuery(...args: Parameters<typeof parseFindQuery>): ReturnType<typeof parseFindQuery> {
+  const query = parseFindQuery(...args);
+  optimizeCollectionJoins(query, args[2]);
+  return query;
+}
+
 describe("EntityManager.queries", () => {
   it("can find all", async () => {
     await insertAuthor({ first_name: "a1" });
@@ -103,7 +110,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -126,7 +133,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -163,7 +170,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a1");
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -285,7 +292,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a1");
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -346,7 +353,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(0);
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -368,7 +375,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -409,7 +416,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -432,7 +439,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -454,7 +461,7 @@ describe("EntityManager.queries", () => {
     expect(authors[0].firstName).toEqual("a1");
     expect(authors[1].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -532,7 +539,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.findGql(Author, where);
     expect(authors.length).toEqual(0);
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       orderBys: [expect.anything()],
@@ -556,7 +563,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -597,7 +604,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -620,7 +627,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -2169,15 +2176,27 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(1);
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
-      ],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
-        conditions: [{ alias: "att", column: "tag_id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "att", table: "authors_to_tags", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = att.author_id" },
+                  { alias: "att", column: "tag_id", dbType: "int", cond: { kind: "eq", value: 1 } },
+                ],
+              },
+            },
+          },
+        ],
       },
       orderBys: [expect.anything()],
     });
@@ -2192,15 +2211,27 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(0);
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
-      ],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
-        conditions: [{ alias: "att", column: "tag_id", dbType: "int", cond: { kind: "in", value: [-1] } }],
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "att", table: "authors_to_tags", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = att.author_id" },
+                  { alias: "att", column: "tag_id", dbType: "int", cond: { kind: "in", value: [-1] } },
+                ],
+              },
+            },
+          },
+        ],
       },
       orderBys: [expect.anything()],
     });
@@ -2217,16 +2248,30 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(1);
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
-        { alias: "t", table: "tags", join: "outer", col1: "att.tag_id", col2: "t.id" },
-      ],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
-        conditions: [{ alias: "t", column: "name", dbType: "citext", cond: { kind: "eq", value: "t1" } }],
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [
+                { alias: "att", table: "authors_to_tags", join: "primary" },
+                { alias: "t", table: "tags", join: "inner", col1: "att.tag_id", col2: "t.id" },
+              ],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = att.author_id" },
+                  { alias: "t", column: "name", dbType: "citext", cond: { kind: "eq", value: "t1" } },
+                ],
+              },
+            },
+          },
+        ],
       },
       orderBys: [expect.anything()],
     });
@@ -2256,16 +2301,26 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a1");
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-      ],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
         conditions: [
-          { alias: "b", column: "title", dbType: "character varying", cond: { kind: "like", value: "b1%" } },
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = b.author_id" },
+                  { alias: "b", column: "title", dbType: "character varying", cond: { kind: "like", value: "b1%" } },
+                ],
+              },
+            },
+          },
         ],
       },
       orderBys: [expect.anything()],
@@ -2284,15 +2339,27 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(0);
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-      ],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
-        conditions: [{ alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b3" } }],
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = b.author_id" },
+                  { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b3" } },
+                ],
+              },
+            },
+          },
+        ],
       },
       orderBys: [expect.anything()],
     });
@@ -2308,15 +2375,27 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(1);
 
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-      ],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
-        conditions: [{ alias: "b", column: "id", dbType: "int", cond: { kind: "eq", value: 2 } }],
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = b.author_id" },
+                  { alias: "b", column: "id", dbType: "int", cond: { kind: "eq", value: 2 } },
+                ],
+              },
+            },
+          },
+        ],
       },
       orderBys: [expect.anything()],
     });
@@ -2334,12 +2413,9 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     // Then we only get back the 1st author
     expect(authors).toMatchEntity([{ firstName: "a1" }]);
-    expect(parseFindQuery(am, where)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-      ],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
         conditions: [
@@ -2351,18 +2427,26 @@ describe("EntityManager.queries", () => {
             pruneable: true,
           },
           {
-            alias: "b",
-            column: "deleted_at",
-            dbType: "timestamp with time zone",
-            cond: { kind: "is-null" },
-            pruneable: true,
-          },
-          {
-            op: "and",
-            conditions: [
-              { alias: "b", column: "acknowledgements", dbType: "text", cond: { kind: "is-null" } },
-              { alias: "b", column: "id", dbType: "int", cond: { kind: "not-null" } },
-            ],
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = b.author_id" },
+                  {
+                    alias: "b",
+                    column: "deleted_at",
+                    dbType: "timestamp with time zone",
+                    cond: { kind: "is-null" },
+                    pruneable: true,
+                  },
+                  { alias: "b", column: "acknowledgements", dbType: "text", cond: { kind: "is-null" } },
+                  { alias: "b", column: "id", dbType: "int", cond: { kind: "not-null" } },
+                ],
+              },
+            },
           },
         ],
       },
@@ -2382,13 +2466,25 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     // Then we only get back 2nd author
     expect(authors).toMatchEntity([{ firstName: "a2" }]);
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-      ],
-      condition: { op: "and", conditions: [{ alias: "b", column: "id", dbType: "int", cond: { kind: "is-null" } }] },
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          {
+            kind: "exists",
+            negate: true,
+            subquery: {
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [{ kind: "raw", condition: "a.id = b.author_id" }],
+              },
+            },
+          },
+        ],
+      },
       orderBys: [expect.anything()],
     });
   });
@@ -2403,18 +2499,29 @@ describe("EntityManager.queries", () => {
     const critics = await em.find(Critic, where);
     expect(critics.length).toEqual(1);
 
-    expect(parseFindQuery(criticMeta, where, opts)).toMatchObject({
+    expect(parseAndOptimizeFindQuery(criticMeta, where, opts)).toMatchObject({
       selects: [`c.*`],
       tables: [
         { alias: "c", table: "critics", join: "primary" },
         { alias: "lp", table: "large_publishers", join: "outer", col1: "c.favorite_large_publisher_id", col2: "lp.id" },
-        // Perhaps ideally the `col1` would be `lp_b0.id` but it doesn't matter
-        { alias: "a", table: "authors", join: "outer", col1: "lp.id", col2: "a.publisher_id" },
       ],
       condition: {
         op: "and",
         conditions: [
-          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "a", table: "authors", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "lp.id = a.publisher_id" },
+                  { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
+                ],
+              },
+            },
+          },
         ],
       },
       orderBys: [expect.anything()],
@@ -2455,7 +2562,7 @@ describe("EntityManager.queries", () => {
 
   it("can prune m2o STI subtype only fields", async () => {
     const where = { copiedToTaskNew: { specialNewField: undefined } } satisfies TaskFilter;
-    expect(parseFindQuery(tm, where, opts)).toMatchObject({
+    expect(parseFindQuery(tm, where, { ...opts, pruneJoins: true })).toMatchObject({
       selects: [`t.*`],
       tables: [{ alias: "t", table: "tasks", join: "primary" }],
       condition: undefined,
@@ -2464,7 +2571,7 @@ describe("EntityManager.queries", () => {
 
   it("can prune m2o CTI subtype only fields", async () => {
     const where = { publisherLargePublisher: { country: undefined } } satisfies AuthorFilter;
-    expect(parseFindQuery(am, where, opts)).toMatchObject({
+    expect(parseFindQuery(am, where, { ...opts, pruneJoins: true })).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: undefined,
@@ -2833,18 +2940,37 @@ describe("EntityManager.queries", () => {
       expect(books.length).toEqual(1);
 
       expect(
-        parseFindQuery(bm, { author: { tags: t } }, { conditions: { or: [t.id.eq("t:1")] }, ...opts }),
+        parseAndOptimizeFindQuery(bm, { author: { tags: t } }, { conditions: { or: [t.id.eq("t:1")] }, ...opts }),
       ).toMatchObject({
         selects: [`b.*`],
         tables: [
           { alias: "b", table: "books", join: "primary" },
           { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
-          { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
-          { alias: "t", table: "tags", join: "outer", col1: "att.tag_id", col2: "t.id" },
         ],
         condition: {
           op: "or",
-          conditions: [{ alias: "t", column: "id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+          conditions: [
+            {
+              kind: "exists",
+              negate: false,
+              subquery: {
+                tables: [
+                  { alias: "att", table: "authors_to_tags", join: "primary" },
+                  { alias: "t", table: "tags", join: "inner", col1: "att.tag_id", col2: "t.id" },
+                ],
+                condition: {
+                  op: "and",
+                  conditions: [
+                    { kind: "raw", condition: "a.id = att.author_id" },
+                    {
+                      op: "or",
+                      conditions: [{ alias: "t", column: "id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+                    },
+                  ],
+                },
+              },
+            },
+          ],
         },
         orderBys: expect.anything(),
       });
@@ -2931,16 +3057,182 @@ describe("EntityManager.queries", () => {
 
     it("prunes unused joins", async () => {
       const [a, p, b] = aliases(Author, Publisher, Book);
-      expect(parseFindQuery(am, { as: a, publisher: { as: p }, books: { as: b } }, opts)).toEqual({
+      expect(
+        parseFindQuery(am, { as: a, publisher: { as: p }, books: { as: b } }, { ...opts, pruneJoins: true }),
+      ).toEqual({
         selects: [`a.*`],
         tables: [{ alias: "a", table: "authors", join: "primary" }],
         orderBys: [expect.anything()],
       });
     });
 
-    it("keeps all joins if pruneJoins is false", async () => {
+    it("prunes nested unused collection aliases", async () => {
+      const [b, br] = aliases(Book, BookReview);
+      expect(parseFindQuery(am, { books: { as: b, reviews: { as: br } } }, { ...opts, pruneJoins: true })).toEqual({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+      });
+    });
+
+    it("removes nested collection aliases not referenced by conditions", async () => {
+      const [a, br] = aliases(Author, BookReview);
+      const conditions = { and: [a.firstName.eq("a1")] };
+      expect(
+        parseFindQuery(am, { as: a, books: { reviews: { as: br } } }, { ...opts, conditions, pruneJoins: true }),
+      ).toEqual({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          kind: "exp",
+          op: "and",
+          conditions: [
+            {
+              kind: "column",
+              alias: "a",
+              column: "first_name",
+              dbType: "character varying",
+              cond: { kind: "eq", value: "a1" },
+            },
+          ],
+        },
+        orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+      });
+    });
+
+    it("keeps pure collection alias id IS NULL conditions as NOT EXISTS", async () => {
+      const [a, b] = aliases(Author, Book);
+      const conditions = { and: [b.id.eq(null as never)] };
+      expect(parseAndOptimizeFindQuery(am, { as: a, books: { as: b } }, { ...opts, conditions })).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          kind: "exp",
+          op: "and",
+          conditions: [
+            {
+              kind: "exists",
+              negate: true,
+              subquery: {
+                tables: [{ alias: "b", table: "books", join: "primary" }],
+                condition: { conditions: [{ kind: "raw", condition: "a.id = b.author_id" }] },
+              },
+            },
+          ],
+        },
+        orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+      });
+    });
+
+    it("keeps multiple pure collection alias id IS NULL conditions as NOT EXISTS", async () => {
+      const [a, b, c] = aliases(Author, Book, Comment);
+      const conditions = { and: [b.id.eq(null as never), c.id.eq(null as never)] };
+      expect(
+        parseAndOptimizeFindQuery(am, { as: a, books: { as: b }, comments: { as: c } }, { ...opts, conditions }),
+      ).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          kind: "exp",
+          op: "and",
+          conditions: [
+            {
+              kind: "exists",
+              negate: true,
+              subquery: {
+                tables: [{ alias: "b", table: "books", join: "primary" }],
+                condition: { conditions: [{ kind: "raw", condition: "a.id = b.author_id" }] },
+              },
+            },
+            {
+              kind: "exists",
+              negate: true,
+              subquery: {
+                tables: [{ alias: "c", table: "comments", join: "primary" }],
+                condition: { conditions: [{ kind: "raw", condition: "a.id = c.parent_author_id" }] },
+              },
+            },
+          ],
+        },
+        orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+      });
+    });
+
+    it("unwraps collection alias id IS NULL conditions inside OR to left joins", async () => {
+      const [a, b] = aliases(Author, Book);
+      const conditions = { or: [b.id.eq(null as never), a.firstName.eq("a1")] };
+      expect(parseAndOptimizeFindQuery(am, { as: a, books: { as: b } }, { ...opts, conditions })).toMatchObject({
+        selects: [`a.*`],
+        tables: [
+          { alias: "a", table: "authors", join: "primary" },
+          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+        ],
+        condition: {
+          kind: "exp",
+          op: "or",
+          conditions: [
+            { kind: "column", alias: "b", column: "id", dbType: "int", cond: { kind: "is-null" } },
+            {
+              kind: "column",
+              alias: "a",
+              column: "first_name",
+              dbType: "character varying",
+              cond: { kind: "eq", value: "a1" },
+            },
+          ],
+        },
+        orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+      });
+    });
+
+    it("fails multiple collection left joins by default after optimization", async () => {
+      const [a, b, c] = aliases(Author, Book, Comment);
+      const conditions = { or: [b.title.eq("b1"), c.text.eq("c1")] };
+      expect(() => {
+        const query = parseFindQuery(am, { as: a, books: { as: b }, comments: { as: c } }, { ...opts, conditions });
+        optimizeCollectionJoins(query);
+      }).toThrow("allowMultipleLeftJoins");
+    });
+
+    it("fails em.find calls with multiple collection left joins by default", async () => {
+      const em = newEntityManager();
+      const [a, b, c] = aliases(Author, Book, Comment);
+      const conditions = { or: [b.title.eq("b1"), c.text.eq("c1")] };
+      await expect(
+        em.find(Author, { as: a, books: { as: b }, comments: { as: c } }, { ...opts, conditions }),
+      ).rejects.toThrow("allowMultipleLeftJoins");
+    });
+
+    it("allows multiple collection left joins with allowMultipleLeftJoins", async () => {
+      const [a, b, c] = aliases(Author, Book, Comment);
+      const conditions = { or: [b.title.eq("b1"), c.text.eq("c1")] };
+      expect(
+        parseAndOptimizeFindQuery(
+          am,
+          { as: a, books: { as: b }, comments: { as: c } },
+          { ...opts, conditions, allowMultipleLeftJoins: true },
+        ),
+      ).toMatchObject({
+        selects: [`a.*`],
+        tables: [
+          { alias: "a", table: "authors", join: "primary" },
+          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+          { alias: "c", table: "comments", join: "outer", col1: "a.id", col2: "c.parent_author_id" },
+        ],
+        condition: {
+          kind: "exp",
+          op: "or",
+          conditions: [
+            { kind: "column", alias: "b", column: "title", cond: { kind: "eq", value: "b1" } },
+            { kind: "column", alias: "c", column: "text", cond: { kind: "eq", value: "c1" } },
+          ],
+        },
+      });
+    });
+
+    it("keeps all joins by default", async () => {
       const filter = { publisher: {}, books: {} } satisfies AuthorFilter;
-      expect(parseFindQuery(am, filter, { ...opts, pruneJoins: false })).toEqual({
+      expect(parseFindQuery(am, filter, opts)).toMatchObject({
         selects: [`a.*`],
         tables: [
           { alias: "a", table: "authors", join: "primary" },
@@ -2953,7 +3245,7 @@ describe("EntityManager.queries", () => {
 
     it("keeps marked aliases", async () => {
       const filter = { publisher: {}, books: {} } satisfies AuthorFilter;
-      expect(parseFindQuery(am, filter, { ...opts, keepAliases: ["b"] })).toEqual({
+      expect(parseFindQuery(am, filter, { ...opts, keepAliases: ["b"], pruneJoins: true })).toMatchObject({
         selects: [`a.*`],
         tables: [
           { alias: "a", table: "authors", join: "primary" },
@@ -2966,22 +3258,33 @@ describe("EntityManager.queries", () => {
     it("does not prune joins from complex conditions", async () => {
       const [p, b] = aliases(Publisher, Book);
       expect(
-        parseFindQuery(
+        parseAndOptimizeFindQuery(
           am,
           { publisher: { as: p }, books: { as: b } },
           { ...opts, conditions: { and: [b.title.eq("b1")] } },
         ),
       ).toMatchObject({
         selects: [`a.*`],
-        tables: [
-          { alias: "a", table: "authors", join: "primary" },
-          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-        ],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
         condition: {
           op: "and",
-          conditions: [{ alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b1" } }],
+          conditions: [
+            {
+              kind: "exists",
+              negate: false,
+              subquery: {
+                tables: [{ alias: "b", table: "books", join: "primary" }],
+                condition: {
+                  op: "and",
+                  conditions: [
+                    { kind: "raw", condition: "a.id = b.author_id" },
+                    { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b1" } },
+                  ],
+                },
+              },
+            },
+          ],
         },
-
         orderBys: [expect.anything()],
       });
     });
@@ -3119,7 +3422,7 @@ describe("EntityManager.queries", () => {
       const authors = await em.find(Author, where);
       expect(authors.length).toEqual(1);
 
-      expect(parseFindQuery(am, where, { softDeletes: "exclude" })).toMatchObject({
+      expect(parseFindQuery(am, where, { softDeletes: "exclude", pruneJoins: true })).toMatchObject({
         selects: [`a.*`],
         tables: [{ alias: "a", table: "authors", join: "primary" }],
         condition: {
@@ -3176,6 +3479,7 @@ describe("EntityManager.queries", () => {
         { as: c, user: { authorManyToOne: { books: { advances: { publisher: p } } } } },
         {
           conditions: { or: [p.name.eq("test"), c.text.eq("test")] },
+          allowMultipleLeftJoins: true,
         },
       );
 

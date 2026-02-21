@@ -58,6 +58,7 @@ import {
   Lens,
   loadLens,
   OneToManyCollection,
+  optimizeCollectionJoins,
   ParsedFindQuery,
   parseFindQuery,
   PartialOrNull,
@@ -127,6 +128,7 @@ export interface FindFilterOptions<T extends Entity> {
   conditions?: ExpressionFilter;
   orderBy?: OrderOf<T> | OrderOf<T>[];
   softDeletes?: "include" | "exclude";
+  allowMultipleLeftJoins?: boolean;
 }
 
 /**
@@ -149,6 +151,7 @@ export interface FindGqlPaginatedFilterOptions<T extends Entity> extends FindFil
 export interface FindCountFilterOptions<T extends Entity> {
   conditions?: ExpressionFilter;
   softDeletes?: "include" | "exclude";
+  allowMultipleLeftJoins?: boolean;
 }
 
 /**
@@ -494,7 +497,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const { populate, limit, offset, ...rest } = options || {};
     const meta = getMetadata(type);
     const query = parseFindQuery(meta, where, rest);
-    const rows = await this.executeFind(meta, "findPaginated", query, { limit, offset, checkLimit: false });
+    const rows = await this.executeFind(meta, "findPaginated", query, { ...rest, limit, offset, checkLimit: false });
     const result = this.hydrate(type, rows);
     if (populate) {
       await this.populate(result, populate);
@@ -502,15 +505,24 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     return result;
   }
 
+  /** Runs the post-parse find pipeline: plugins mutate the logical AST, then Joist optimizes/prunes before SQL. */
   private async executeFind(
     meta: EntityMetadata,
     operation: FindOperation,
     parsed: ParsedFindQuery,
-    settings: { limit?: number; offset?: number; checkLimit?: boolean },
+    settings: {
+      limit?: number;
+      offset?: number;
+      checkLimit?: boolean;
+      allowMultipleLeftJoins?: boolean;
+      pruneJoins?: boolean;
+      keepAliases?: string[];
+    },
   ) {
     const { checkLimit, ...driverSettings } = settings;
     const { pluginManager } = getEmInternalApi(this);
     pluginManager.beforeFind(meta, operation, parsed, driverSettings);
+    optimizeCollectionJoins(parsed, settings);
     const rows = await this.driver.executeFind(this, parsed, driverSettings);
     // Check by default unless explicitly disabled or the caller removed the LIMIT via `limit: undefined`
     const shouldCheck = checkLimit ?? !("limit" in settings && settings.limit === undefined);

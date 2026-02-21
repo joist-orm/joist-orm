@@ -37,6 +37,7 @@ export { JoinRow, JoinRowOperation, ManyToManyLike } from "./JoinRows";
 export * from "./PendingChanges";
 export { Plugin } from "./PluginManager";
 export * from "./QueryParser";
+export * from "./QueryParser.collectionJoins";
 export { visitConditions } from "./QueryVisitor";
 export { JoinRowTodo, Todo } from "./Todo";
 export * from "./changes";

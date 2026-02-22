@@ -114,7 +114,7 @@ describe("RecursiveCollection", () => {
       expect(mentorsRecursive).toMatchEntity([]);
     });
 
-    it("converts cycle errors to validation errors via addCycleMessage", async () => {
+    it("converts cycle errors to validation errors via addCycleRule", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2", mentor_id: 1 });
       await insertAuthor({ first_name: "a3", mentor_id: 2 });
@@ -547,7 +547,7 @@ describe("RecursiveCollection", () => {
       expect(u2.parentsRecursive.get).toMatchEntity([{ name: "u1" }]);
     });
 
-    it("converts cycle errors to validation errors via addCycleMessage", async () => {
+    it("converts cycle errors to validation errors via addCycleRule", async () => {
       await insertUser({ name: "u1" });
       await insertUser({ name: "u2" });
       await insertUser({ name: "u3" });

@@ -59,10 +59,10 @@ This ensures your code can rely on the recursive relations to be up-to-date, and
 
 Recursive relations always fail (throw a `RecursiveCycleError` exception) when they detect cycles during `.get` calls.
 
-We do not automatically add validation rules to enforce no cycles, but you can opt-in to cycle detection during validation by using `addCycleMessage`:
+We do not automatically add validation rules to enforce no cycles, but you can opt-in to cycle detection during validation by using `addCycleRule`:
 
 ```ts title=Employee.ts
-config.addCycleMessage(
+config.addCycleRule(
   "reportsRecursive",
   (e) => `Manager ${e.name} has a cycle in their direct reports`,
 );

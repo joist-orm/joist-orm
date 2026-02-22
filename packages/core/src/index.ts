@@ -34,6 +34,7 @@ export { EnumMetadata } from "./EnumMetadata";
 export { EntityOrId, HintNode } from "./HintTree";
 export { InstanceData } from "./InstanceData";
 export { JoinRow, JoinRowOperation, ManyToManyLike } from "./JoinRows";
+export * from "./PendingChanges";
 export { Plugin } from "./PluginManager";
 export * from "./QueryParser";
 export { visitConditions } from "./QueryVisitor";

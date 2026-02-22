@@ -82,6 +82,7 @@ import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints"
 import { WriteFn } from "./logging/FactoryLogger";
 import { newEntity } from "./newEntity";
 import { resetFactoryCreated } from "./newTestInstance";
+import { PendingChange } from "./PendingChanges";
 import { PluginManager } from "./PluginManager";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";
 import { ReactionsManager } from "./ReactionsManager";
@@ -372,6 +373,39 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   /** Returns a read-only shallow copy of the currently-loaded entities. */
   get entities(): ReadonlyArray<Entity> {
     return [...this.#entitiesArray];
+  }
+
+  /** Returns a list of all pending creates, updates, deletes, and m2m changes that would be flushed. */
+  get pendingChanges(): PendingChange[] {
+    const changes: PendingChange[] = [];
+    for (const entity of this.#entitiesArray) {
+      const op = getInstanceData(entity).pendingOperation;
+      switch (op) {
+        case "insert":
+          changes.push({ kind: "create", entity });
+          break;
+        case "update":
+          changes.push({ kind: "update", entity });
+          break;
+        case "delete":
+          changes.push({ kind: "delete", entity });
+          break;
+      }
+    }
+    for (const joinRows of Object.values(this.#joinRows)) {
+      const todo = joinRows.toTodo();
+      if (todo) {
+        for (const row of todo.newRows) {
+          const entities = Object.values(row.columns) as [Entity, Entity];
+          changes.push({ kind: "m2m", op: "add", joinTableName: todo.m2m.joinTableName, entities });
+        }
+        for (const row of todo.deletedRows) {
+          const entities = Object.values(row.columns) as [Entity, Entity];
+          changes.push({ kind: "m2m", op: "remove", joinTableName: todo.m2m.joinTableName, entities });
+        }
+      }
+    }
+    return changes;
   }
 
   /** Returns a read-only list of the currently-loaded entities of `type`. */

@@ -114,6 +114,18 @@ describe("RecursiveCollection", () => {
       expect(mentorsRecursive).toMatchEntity([]);
     });
 
+    it("converts cycle errors to validation errors via addCycleMessage", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertAuthor({ first_name: "a3", mentor_id: 2 });
+      const em = newEntityManager();
+      // Given we make a3 a mentor of a1 (creating a cycle)
+      const [a1, a3] = await em.loadAll(Author, ["a:1", "a:3"]);
+      a1.mentor.set(a3);
+      // When we flush, the cycle is caught and converted to a ValidationErrors
+      await expect(em.flush()).rejects.toThrow("Author a1 has a cycle in their mentor chain");
+    });
+
     it("can refresh after new parents are inserted in the chain", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2", mentor_id: 1 });

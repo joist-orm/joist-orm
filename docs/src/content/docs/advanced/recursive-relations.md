@@ -7,63 +7,66 @@ sidebar:
 
 ### Overview
 
-A common pattern in domain modeling is nested parent/child relationships, i.e. a parent that has multiple children, which themselves can have multiple grand children.
+A common pattern in domain models is nested parent/child relationships, i.e. a parent (a manager `Employee`) that has multiple children (their direct reports `Employee`s), which themselves can have multiple children (their own direct report `Employee`s).
 
-For example an `employees.manager_id` FK that generates normal many-to-one and one-to-many relations:
+These relationships are modeled by self-referential FKs or m2m tables, i.e.:
 
-```ts
-class Employee {
-  manager: Reference<Employee, Employee>;
-  reports: Collection<Employee, Employee[]>;
-}
-```
+- A `employees.manager_id` FK for the manager/reports example, or
+- A `task_to_task_dependencies` m2m table that tracks a task having other tasks as dependencies
 
-These relations fetch "the immediate manager" and "the immediate reports", but often you want to fetch "the whole tree", i.e. a manager and all of their reports recursively.
-
-This has historically been difficult in relational databases (requiring approaches like `lpath` and closure tables, see [this blog post](https://www.ackee.agency/blog/hierarchical-models-in-postgresql)), but now can be done in Postgres using recursive CTEs.
-
-### Recursive Relations
-
-Whenever Joist sees a foreign key that is self-referential, Joist will automatically create recursive relations, in addition to the "immediate" o2m and m2o, i.e. for a `employees.manager_id` FK, you'll get:
+When Joist sees self-referential relations, it automatically creates both the "immediate" relations, and "recursive" relations that will fetch the whole tree of parents/children in a single SQL call:
 
 ```ts
 class Employee {
-  // immediate relations
+  // standard "immediate" relations
   manager: Reference<Employee, Employee>;
   reports: Collection<Employee, Employee[]>;
-  // recursive relations
+  // additional "recursive" relations
   managersRecursive: Reference<Employee, Employee>;
   reportsRecursive: Collection<Employee, Employee[]>;
 }
 ```
 
-And if you call:
+Such that we can use `reportsRecursive` to fetch all of a manager's reports, and all their reports, etc. in a single method call _and single SQL query_:
 
 ```ts
 await m1.reportsRecursive.load();
 ```
 
-Joist will issue a single SQL call to fetch all `m1`'s reports, and all their reports, etc. in a single query.
+Joist uses Postgres's recursive CTE support to implement the recursive relations, so the above code will result in a single SQL query that fetches all of `m1`'s reports, and all their reports, etc.
 
-This method is also automatically batched, so if you invoke it in a loop, or a validation rule, or other business logic, for multiple managers at once, it will still create a single SQL call.
+:::tip
+
+The `reportsRecursive.load()` method is also automatically batched, so if you invoke it in a loop, or a validation rule, or other business logic, it will still create a single SQL call. 🚀
+
+:::
+
+:::tip
+
+Modeling Trees in relational database has historically been a challenge, requiring more complex approaches like `lpath` and closure tables, see [this blog post](https://www.ackee.agency/blog/hierarchical-models-in-postgresql)), but now can be done in Postgres using recursive CTEs. 🎉 
+
+:::
 
 ### Consistent View
 
-As with other Joist relations, the recursive relations provide a "consistent view" of the entity graph.
+As with all Joist relations, recursive relations provide a "consistent view" of the entity graph that is always in sync with any WIP/un-flushed mutations you've made.
 
-For example, if you've modified the employee/manager relationship for any employees in the current `EntityManager` unit of work, and then later call either `managersRecursive` or `reportsRecursive`, we will load the recursive data from the database (if not already loaded), and also apply any WIP, uncommitted changes to the hierarchy.
+For example, if you've modified the employee/manager relationship for any employees in the current `EntityManager`, and then later call either `managersRecursive` or `reportsRecursive`, we will load the recursive data from the database (if not already loaded), and also apply any WIP, uncommitted changes to the hierarchy.
 
 This ensures your code can rely on the recursive relations to be up-to-date, and should dramatically simplify reasoning about/enforcing rules while persisting changes.
 
 ### Cycle Detection
 
-Joist's recursive relations currently always reject cycles.
+Recursive relations always fail (throw a `RecursiveCycleError` exception) when they detect cycles during `.get` calls.
 
-Note that we do not automatically add an "enforce no cycles" validation rule to recursive relations by default, but if you do access any relation (either recursive parents or recursive children) that does have a cycle, we'll throw an error.
+We do not automatically add validation rules to enforce no cycles, but you can opt-in to cycle detection during validation by using `addCycleMessage`:
 
-Given this, it's advised to add your own cycle-preventing validation rules.
-
-This behavior should likely be configurable (i.e. to allow cycles), but has not been implemented yet.
+```ts title=Employee.ts
+config.addCycleMessage(
+  "reportsRecursive",
+  (e) => `Manager ${e.name} has a cycle in their direct reports`,
+);
+```
 
 ### Disabling Recursive Relations
 

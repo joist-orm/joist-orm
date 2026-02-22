@@ -253,7 +253,7 @@ describe("EntityManager.reactiveRules", () => {
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["graduated"], path: [], fn },
       // Author's immutable age rule (w/o age listed b/c it is immutable, but still needs to fire on create)
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: [], path: [], fn },
-      // Author's addCycleMessage for mentorsRecursive
+      // Author's addCycleRule for mentorsRecursive
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["mentor"], path: [], fn },
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["mentor"], path: ["menteesRecursive"], fn },
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: [], path: ["menteesRecursive"], fn },

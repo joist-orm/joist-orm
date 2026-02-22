@@ -80,8 +80,8 @@ export class ConfigApi<T extends Entity, C> {
    * The `messageFn` receives the entity that detected the cycle and the cycle path (array of
    * entities forming the cycle), and should return a validation error string.
    */
-  addCycleMessage(fieldName: string & keyof T, messageFn: (entity: T, cyclePath: Entity[]) => string) {
-    this.ensurePreBoot(getCallerName(), "addCycleMessage");
+  addCycleRule(fieldName: string & keyof T, messageFn: (entity: T, cyclePath: Entity[]) => string) {
+    this.ensurePreBoot(getCallerName(), "addCycleRule");
     this.__data.cycleMessages[fieldName] = messageFn;
     // Register a reactive rule that loads the recursive collection and catches cycle errors.
     // The rule uses the recursive collection's underlying relation as a reactive hint so it
@@ -91,7 +91,7 @@ export class ConfigApi<T extends Entity, C> {
       // We don't actually need a try/catch/anything here, b/c if there is a cycle, it
       // will cause a CycleError during followReverseHint, and never even get to calling this fn.
     };
-    this.__data.rules.push({ name: `addCycleMessage(${getCallerName()})`, fn, hint });
+    this.__data.rules.push({ name: `addCycleRule(${getCallerName()})`, fn, hint });
   }
 
   /**

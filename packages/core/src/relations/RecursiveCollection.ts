@@ -512,9 +512,11 @@ function getLoadedCollection(relation: any): any {
 }
 
 export class RecursiveCycleError extends Error {
+  readonly fieldName: string;
   entities: Entity[] = [];
   constructor(relation: AbstractRecursiveCollectionImpl<any, any>, entities: Entity[]) {
     super(`Cycle detected in ${relation.entity.toString()}.${relation.fieldName}`);
+    this.fieldName = relation.fieldName;
     this.entities = entities;
   }
 }

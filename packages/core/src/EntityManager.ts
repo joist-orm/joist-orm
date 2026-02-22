@@ -90,6 +90,7 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } 
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
+import { RecursiveCycleError } from "./relations/RecursiveCollection";
 import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
 import { OptsOf, OrderOf } from "./typeMap";
@@ -1719,6 +1720,20 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       return [...allFlushedEntities];
     } catch (e) {
+      if (e instanceof RecursiveCycleError) {
+        const entity = e.entities[0];
+        // Look up a custom cycle message — check both the exact field name and its opposite
+        // direction, since the cycle may be detected from either side (e.g. walking
+        // childrenRecursive during reactive hint reversal when parentsRecursive was configured).
+        for (const meta of getBaseAndSelfMetas(getMetadata(entity))) {
+          const messageFn =
+            meta.config.__data.cycleMessages[e.fieldName] ??
+            meta.config.__data.cycleMessages[((entity as any)[e.fieldName] as any)?.otherFieldName];
+          if (messageFn) {
+            throw new ValidationErrors([{ entity, message: messageFn(entity, e.entities) }]);
+          }
+        }
+      }
       if (e && typeof e === "object" && "constraint" in e && typeof e.constraint === "string") {
         // node-pg errors use `constraint` to indicate the constraint name
         const message = constraintNameToValidationError[e.constraint];

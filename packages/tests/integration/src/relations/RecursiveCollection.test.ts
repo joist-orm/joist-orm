@@ -534,6 +534,20 @@ describe("RecursiveCollection", () => {
       const u2 = await em.load(User, "u:2", "parentsRecursive");
       expect(u2.parentsRecursive.get).toMatchEntity([{ name: "u1" }]);
     });
+
+    it("converts cycle errors to validation errors via addCycleMessage", async () => {
+      await insertUser({ name: "u1" });
+      await insertUser({ name: "u2" });
+      await insertUser({ name: "u3" });
+      await insertUserToParent({ child_id: 2, parent_id: 1 });
+      await insertUserToParent({ child_id: 3, parent_id: 2 });
+      const em = newEntityManager();
+      // Given we make u3 a parent of u1 (creating a cycle)
+      const [u1, u3] = await em.loadAll(User, ["u:1", "u:3"]);
+      u1.parents.add(u3);
+      // When we flush, the cycle is caught and converted to a ValidationErrors
+      await expect(em.flush()).rejects.toThrow("User u1 has a cycle in their parent hierarchy");
+    });
   });
 
   describe("m2m children", () => {

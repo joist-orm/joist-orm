@@ -1509,6 +1509,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     this.#fl.startLock();
 
+    const allFlushedEntities: Set<Entity> = new Set();
+
+    try {
+
     await this.#fl.allowWrites(async () => {
       // Cascade deletes now that we're async (i.e. to keep `em.delete` synchronous).
       // Also do this before calling `recalcPendingReactables` to avoid recalculating
@@ -1624,9 +1628,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       await afterValidation(this.ctx, entityTodos);
     };
 
-    const allFlushedEntities: Set<Entity> = new Set();
-
-    try {
       // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
       let entitiesToFlush = await runHooksOnPendingEntities();
       for (const e of entitiesToFlush) allFlushedEntities.add(e);

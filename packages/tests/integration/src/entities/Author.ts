@@ -398,6 +398,8 @@ config.addRule("age", (a) => {
 
 config.cascadeDelete("books");
 
+config.addCycleMessage("mentorsRecursive", (a) => `Author ${a.firstName} has a cycle in their mentor chain`);
+
 // For testing cross-entity default dependencies, i.e. for Book.notes
 // And for testing reactions observing async defaults
 config.setDefault(

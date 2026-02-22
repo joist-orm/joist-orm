@@ -9,7 +9,10 @@ import {
   insertTag,
 } from "@src/entities/inserts";
 import { knex, newEntityManager, queries, resetQueryCount } from "@src/testEm";
-import { AdvanceStatus, Author } from "./entities";
+import { alias, aliases, getMetadata, parseFindQuery } from "joist-orm";
+import { AdvanceStatus, Author, Book, Tag } from "./entities";
+
+const am = getMetadata(Author);
 
 const opts = { softDeletes: "include" } as const;
 
@@ -385,7 +388,6 @@ describe("EntityManager.lateralJoins", () => {
         [
           `SELECT a.* FROM authors AS a`,
           ` WHERE EXISTS (SELECT 1 FROM books AS b`,
-          ` JOIN book_reviews AS br ON b.id = br.book_id`,
           ` WHERE a.id = b.author_id`,
           ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1))`,
           ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text = $2)`,
@@ -474,8 +476,6 @@ describe("EntityManager.lateralJoins", () => {
         [
           `SELECT a.* FROM authors AS a`,
           ` WHERE EXISTS (SELECT 1 FROM books AS b`,
-          ` JOIN book_reviews AS br ON b.id = br.book_id`,
-          ` JOIN book_advances AS ba ON b.id = ba.book_id`,
           ` WHERE a.id = b.author_id`,
           ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1)`,
           ` AND EXISTS (SELECT 1 FROM book_advances AS ba WHERE b.id = ba.book_id AND ba.status_id = $2))`,
@@ -503,8 +503,6 @@ describe("EntityManager.lateralJoins", () => {
         [
           `SELECT a.* FROM authors AS a`,
           ` WHERE EXISTS (SELECT 1 FROM books AS b`,
-          ` JOIN book_reviews AS br ON b.id = br.book_id`,
-          ` JOIN book_advances AS ba ON b.id = ba.book_id`,
           ` WHERE a.id = b.author_id`,
           ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1)`,
           ` AND EXISTS (SELECT 1 FROM book_advances AS ba WHERE b.id = ba.book_id AND ba.status_id = $2))`,
@@ -532,8 +530,6 @@ describe("EntityManager.lateralJoins", () => {
         [
           `SELECT a.* FROM authors AS a`,
           ` WHERE EXISTS (SELECT 1 FROM books AS b`,
-          ` JOIN book_reviews AS br ON b.id = br.book_id`,
-          ` JOIN book_advances AS ba ON b.id = ba.book_id`,
           ` WHERE a.id = b.author_id`,
           ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating >= $1)`,
           ` AND EXISTS (SELECT 1 FROM book_advances AS ba WHERE b.id = ba.book_id AND ba.status_id = $2))`,
@@ -541,6 +537,302 @@ describe("EntityManager.lateralJoins", () => {
           ` LIMIT $3`,
         ].join(""),
       ]);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Cross-scope alias conditions: when `conditions: { or/and: [...] }` references
+  // aliases from BOTH the outer entity AND a collection (o2m/m2m) path.
+  //
+  // The key challenge: collection fields become EXISTS subqueries, so the collection's
+  // alias lives inside the EXISTS. If an outer `conditions` expression references that
+  // alias alongside the outer entity's alias, the scopes conflict.
+  //
+  // Resolution depends on the expression operator:
+  //   - AND: each branch can be evaluated independently, so the collection branch
+  //     moves into the EXISTS while the outer branch stays outside. No unwrap needed.
+  //   - OR: all branches must be visible in the same scope (you can't split an OR
+  //     across an EXISTS boundary), so the EXISTS is unwrapped back to a regular
+  //     LEFT OUTER JOIN + DISTINCT ON.
+  // -----------------------------------------------------------------------
+  describe("cross-scope alias conditions", () => {
+    describe("approach", () => {
+      it("OR across scopes: must unwrap EXISTS to JOIN because both sides of OR need same scope", async () => {
+        // a1 has book "b1" — matches via b.title
+        await insertAuthor({ first_name: "a1" });
+        await insertBook({ title: "match", author_id: 1 });
+        // a2 has first_name "match" — matches via a.first_name
+        await insertAuthor({ first_name: "match" });
+        await insertBook({ title: "other", author_id: 2 });
+        // a3 matches neither
+        await insertAuthor({ first_name: "a3" });
+        await insertBook({ title: "other", author_id: 3 });
+
+        // With EXISTS: can't express `WHERE (EXISTS(... b.title='match') OR a.first_name='match')`
+        // because OR requires both sides visible in the same FROM. Must fall back to JOIN:
+        const { rows } = await knex.raw(`
+          SELECT DISTINCT ON (a.id) a.id, a.first_name
+          FROM authors a
+          LEFT OUTER JOIN books b ON a.id = b.author_id
+          WHERE (b.title = 'match' OR a.first_name = 'match')
+          ORDER BY a.id
+        `);
+        expect(rows).toMatchObject([{ first_name: "a1" }, { first_name: "match" }]);
+      });
+
+      it("AND across scopes: each branch evaluates independently, EXISTS stays intact", async () => {
+        // a1 has first_name "a1" AND book "match" — matches both
+        await insertAuthor({ first_name: "a1" });
+        await insertBook({ title: "match", author_id: 1 });
+        // a2 has first_name "a2" AND book "match" — outer condition fails
+        await insertAuthor({ first_name: "a2" });
+        await insertBook({ title: "match", author_id: 2 });
+        // a3 has first_name "a1" but no matching book — EXISTS fails
+        await insertAuthor({ first_name: "a3" });
+        await insertBook({ title: "other", author_id: 3 });
+
+        // AND can keep EXISTS: outer condition goes on the outer WHERE,
+        // collection condition goes inside the EXISTS subquery.
+        const { rows } = await knex.raw(`
+          SELECT a.id, a.first_name
+          FROM authors a
+          WHERE a.first_name = 'a1'
+          AND EXISTS (SELECT 1 FROM books b WHERE b.author_id = a.id AND b.title = 'match')
+          ORDER BY a.id
+        `);
+        expect(rows).toMatchObject([{ first_name: "a1" }]);
+      });
+    });
+
+    // ---- Simple OR: o2m alias + outer alias ----
+    // The OR references `b` (inside books EXISTS) and `a` (outer Author).
+    // Since OR requires both aliases in the same scope, the books EXISTS is
+    // unwrapped to a LEFT OUTER JOIN, and DISTINCT ON is added.
+    it("OR with o2m alias + outer alias unwraps EXISTS to JOIN", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "match", author_id: 1 });
+      await insertAuthor({ first_name: "match" });
+      await insertBook({ title: "other", author_id: 2 });
+      await insertAuthor({ first_name: "a3" });
+      await insertBook({ title: "other", author_id: 3 });
+
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      resetQueryCount();
+      const authors = await em.find(
+        Author,
+        { as: a, books: b },
+        { ...opts, conditions: { or: [b.title.eq("match"), a.firstName.eq("match")] } },
+      );
+      // a1 matches via b.title, a2 matches via a.firstName
+      expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "match" }]);
+      // The EXISTS for books was unwrapped to a JOIN — look for LEFT OUTER JOIN + DISTINCT ON
+      expect(queries).toEqual([
+        expect.stringContaining("DISTINCT ON"),
+      ]);
+      expect(queries).toEqual([
+        expect.stringContaining("LEFT OUTER JOIN books"),
+      ]);
+    });
+
+    // ---- Simple AND: o2m alias + outer alias ----
+    // The AND references `b` (inside books EXISTS) and `a` (outer Author).
+    // Since AND branches are independent, `b.title` moves into the EXISTS
+    // while `a.firstName` stays on the outer WHERE. No unwrap needed.
+    it("AND with o2m alias + outer alias keeps EXISTS intact", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "match", author_id: 1 });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "match", author_id: 2 });
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "other", author_id: 3 });
+
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      resetQueryCount();
+      const authors = await em.find(
+        Author,
+        { as: a, books: b },
+        { ...opts, conditions: { and: [b.title.eq("match"), a.firstName.eq("a1")] } },
+      );
+      // Only a1 matches both: firstName="a1" AND has book with title="match"
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+      // The EXISTS stays intact — `b.title` moved inside, `a.firstName` stays outside
+      expect(queries).toEqual([
+        [
+          `SELECT a.* FROM authors AS a`,
+          ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1)`,
+          ` AND a.first_name = $2`,
+          ` ORDER BY a.id ASC`,
+          ` LIMIT $3`,
+        ].join(""),
+      ]);
+    });
+
+    // ---- Nested: cross-scope OR inside an AND ----
+    // The outer AND has `a.age > 20` (outer) plus an inner OR that mixes
+    // `b.title` (inside books EXISTS) with `a.firstName` (outer).
+    // The OR forces the books EXISTS to unwrap, but the outer `a.age` condition
+    // stays as a regular WHERE clause.
+    it("OR inside AND: cross-scope OR forces unwrap even within outer AND", async () => {
+      await insertAuthor({ first_name: "match", age: 30 });
+      await insertBook({ title: "other", author_id: 1 });
+      await insertAuthor({ first_name: "a2", age: 30 });
+      await insertBook({ title: "match", author_id: 2 });
+      // a3 matches OR but not age
+      await insertAuthor({ first_name: "match", age: 10 });
+      await insertBook({ title: "other", author_id: 3 });
+
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      resetQueryCount();
+      const authors = await em.find(
+        Author,
+        { as: a, books: b },
+        {
+          ...opts,
+          conditions: {
+            and: [a.age.gt(20), { or: [b.title.eq("match"), a.firstName.eq("match")] }],
+          },
+        },
+      );
+      // a1: age=30 ✓, firstName="match" ✓ (via OR) → matches
+      // a2: age=30 ✓, book title="match" ✓ (via OR) → matches
+      // a3: age=10 ✗ → excluded by AND
+      expect(authors).toMatchEntity([{ firstName: "match" }, { firstName: "a2" }]);
+      // The OR forced unwrap — should have LEFT OUTER JOIN + DISTINCT ON
+      expect(queries).toEqual([
+        expect.stringContaining("DISTINCT ON"),
+      ]);
+    });
+
+    // ---- AND with m2m alias + outer alias ----
+    // Same as the o2m case but through a many-to-many (tags).
+    // `t.name` moves into the m2m EXISTS, `a.firstName` stays outside.
+    it("AND with m2m alias + outer alias keeps EXISTS intact", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertTag({ name: "match" });
+      await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthorToTag({ author_id: 2, tag_id: 1 });
+      await insertAuthor({ first_name: "a1" });
+
+      const em = newEntityManager();
+      const [a, t] = aliases(Author, Tag);
+      resetQueryCount();
+      const authors = await em.find(
+        Author,
+        { as: a, tags: t },
+        { ...opts, conditions: { and: [t.name.eq("match"), a.firstName.eq("a1")] } },
+      );
+      // Only a1 matches both: firstName="a1" AND has tag "match"
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+      // m2m EXISTS stays intact — `t.name` moved inside
+      expect(queries).toEqual([
+        [
+          `SELECT a.* FROM authors AS a`,
+          ` WHERE EXISTS (SELECT 1 FROM authors_to_tags AS att JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.name = $1)`,
+          ` AND a.first_name = $2`,
+          ` ORDER BY a.id ASC`,
+          ` LIMIT $3`,
+        ].join(""),
+      ]);
+    });
+
+    // ---- OR with m2m alias + outer alias ----
+    // The OR forces the m2m EXISTS to unwrap to regular JOINs.
+    it("OR with m2m alias + outer alias unwraps EXISTS to JOIN", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertTag({ name: "match" });
+      await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+      await insertAuthor({ first_name: "match" });
+      await insertTag({ name: "other" });
+      await insertAuthorToTag({ author_id: 2, tag_id: 2 });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const [a, t] = aliases(Author, Tag);
+      resetQueryCount();
+      const authors = await em.find(
+        Author,
+        { as: a, tags: t },
+        { ...opts, conditions: { or: [t.name.eq("match"), a.firstName.eq("match")] } },
+      );
+      // a1 matches via t.name, a2 matches via a.firstName
+      expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "match" }]);
+      // m2m EXISTS unwrapped to JOINs
+      expect(queries).toEqual([
+        expect.stringContaining("DISTINCT ON"),
+      ]);
+    });
+
+    // ---- Verify the parseFindQuery AST for AND cross-scope ----
+    // This shows the structural result: the AND splits cleanly, with
+    // `a.firstName` as an outer column condition and `b.title` inside EXISTS.
+    it("parseFindQuery: AND splits outer vs collection conditions correctly", async () => {
+      const [a, b] = aliases(Author, Book);
+      const filter = { as: a, books: b };
+      const conditions = { and: [b.title.eq("match"), a.firstName.eq("a1")] };
+      const result = parseFindQuery(am, filter, { ...opts, conditions });
+      expect(result).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          op: "and",
+          conditions: [
+            // Collection condition: b.title = 'match' was moved inside the EXISTS
+            {
+              kind: "exists",
+              negate: false,
+              subquery: {
+                tables: [{ alias: "b", table: "books", join: "primary" }],
+                condition: {
+                  op: "and",
+                  conditions: [
+                    { kind: "raw", condition: "a.id = b.author_id" },
+                    { kind: "column", alias: "b", column: "title", cond: { kind: "eq", value: "match" } },
+                  ],
+                },
+              },
+            },
+            // Outer condition: a.first_name = 'a1' stays on the outer query
+            { kind: "column", alias: "a", column: "first_name", cond: { kind: "eq", value: "a1" } },
+          ],
+        },
+      });
+    });
+
+    // ---- Verify the parseFindQuery AST for OR cross-scope ----
+    // This shows the structural result: the OR cannot be split, so the EXISTS
+    // is unwrapped and books becomes a regular LEFT OUTER JOIN.
+    it("parseFindQuery: OR forces EXISTS unwrap to outer JOIN", async () => {
+      const [a, b] = aliases(Author, Book);
+      const filter = { as: a, books: b };
+      const conditions = { or: [b.title.eq("match"), a.firstName.eq("a1")] };
+      const result = parseFindQuery(am, filter, { ...opts, conditions });
+      // After unwrap: books is a regular outer join, no EXISTS
+      expect(result).toMatchObject({
+        selects: [`a.*`],
+        tables: [
+          { alias: "a", table: "authors", join: "primary" },
+          // books was unwrapped from EXISTS back to a regular outer join
+          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+        ],
+        condition: {
+          op: "and",
+          conditions: [
+            // The OR stays intact on the outer query — both aliases now visible
+            {
+              kind: "exp",
+              op: "or",
+              conditions: [
+                { kind: "column", alias: "b", column: "title", cond: { kind: "eq", value: "match" } },
+                { kind: "column", alias: "a", column: "first_name", cond: { kind: "eq", value: "a1" } },
+              ],
+            },
+          ],
+        },
+      });
     });
   });
 

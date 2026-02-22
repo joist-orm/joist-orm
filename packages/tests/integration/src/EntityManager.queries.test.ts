@@ -2428,8 +2428,8 @@ describe("EntityManager.queries", () => {
                 op: "and",
                 conditions: [
                   { kind: "raw", condition: "a.id = b.author_id" },
-                  { alias: "b", column: "acknowledgements", dbType: "text", cond: { kind: "is-null" } },
                   { alias: "b", column: "deleted_at", dbType: "timestamp with time zone", cond: { kind: "is-null" }, pruneable: true },
+                  { alias: "b", column: "acknowledgements", dbType: "text", cond: { kind: "is-null" } },
                 ],
               },
             },
@@ -3028,26 +3028,26 @@ describe("EntityManager.queries", () => {
     });
 
     it("keeps all joins if pruneJoins is false", async () => {
+      // books: {} (o2m with no conditions) no longer creates a join — it's simply absent.
+      // Only the m2o publisher join is kept by pruneJoins: false.
       const filter = { publisher: {}, books: {} } satisfies AuthorFilter;
       expect(parseFindQuery(am, filter, { ...opts, pruneJoins: false })).toEqual({
         selects: [`a.*`],
         tables: [
           { alias: "a", table: "authors", join: "primary" },
           { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id" },
-          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
         ],
         orderBys: [expect.anything()],
       });
     });
 
     it("keeps marked aliases", async () => {
+      // books: {} (o2m with no conditions) no longer creates a join — keepAliases has no effect.
+      // publisher: {} is pruned normally (keepAliases only keeps "b", not "p").
       const filter = { publisher: {}, books: {} } satisfies AuthorFilter;
       expect(parseFindQuery(am, filter, { ...opts, keepAliases: ["b"] })).toEqual({
         selects: [`a.*`],
-        tables: [
-          { alias: "a", table: "authors", join: "primary" },
-          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-        ],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
         orderBys: [expect.anything()],
       });
     });

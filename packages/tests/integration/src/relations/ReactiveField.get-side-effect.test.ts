@@ -7,36 +7,11 @@ import { BookReview } from "../entities";
  * subgraph happens to be loaded in the EntityManager, `.get` recalculates the value and
  * calls `setField`, making the entity dirty — even though the caller only intended to READ.
  *
- * This causes non-deterministic behavior in read-only scenarios like GraphQL resolvers,
- * where the result of `.get` depends on which other entities were loaded (and in what order)
- * by other resolvers in the same request.
- *
- * The core issue is in ReactiveFieldImpl.get (joist-core/src/relations/ReactiveField.ts):
- *
- *   get get() {
- *     if (this.#isCached) return this.fieldValue;     // cached → return stored value
- *     if (this.isLoaded) {
- *       const newValue = fn(this.entity);             // recalculate
- *       setField(this.entity, this.fieldName, newValue); // SIDE EFFECT: mutates entity
- *       this.#isCached = true;
- *       return newValue;                              // return fresh value
- *     }
- *     else if (this.isSet) {
- *       this.#isCached = true;
- *       return this.fieldValue;                       // return stale DB value
- *     }
- *   }
- *
  * When `isLoaded` is true (deps happen to be in memory), `.get` recalculates AND calls
  * `setField`, which:
  *   1. Marks the entity as dirty
  *   2. Triggers `pluginManager.beforeSetField` (which can throw in plugins like AggregateVersionPlugin)
  *   3. Queues downstream reactables
- *
- * Real-world impact: In our GraphQL checkout pricing query, `ReadyPlanOption.displayName`
- * (a ReactiveField depending on `{ name: [], code: [], location: "name" }`) returns different
- * values depending on whether the `location` entity happened to be loaded by another resolver
- * before `displayName.get` runs. This makes the response non-deterministic across requests.
  */
 describe("ReactiveField.get side effects", () => {
   it("recalculates and dirties entity when deps are loaded before first .get call", async () => {

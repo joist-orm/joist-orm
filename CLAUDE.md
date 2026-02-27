@@ -39,5 +39,7 @@ To run tests in this project:
 - Do not use extraneous local variables
 - Do not use boilerplate comments that describe "what" the code is doing, only use comments to explain "why" or rationale
 - Test assertions should use `toMatchEntity` as much as possible
-- For DB row assertions, use `toMatchObject` on the whole array instead of per-row `objectContaining` or `length` checks, e.g. `expect(rows).toMatchObject([{ publisher_id: null }, { publisher_id: 1 }])`
+- Never use `expect.objectContaining`, `toContain`, or `not.toContain`; use `toMatchObject` instead
+- For DB row assertions, use `toMatchObject` on the whole array instead of per-row `length` checks, e.g. `expect(rows).toMatchObject([{ publisher_id: null }, { publisher_id: 1 }])`
 - Use tagged ids for `em.load`/`em.loadAll` calls, e.g. `em.load(Author, "a:1")` not `em.load(Author, "1")`
+- Put helper/private functions at the bottom of the file, exported/public functions at the top

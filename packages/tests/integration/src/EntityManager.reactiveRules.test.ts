@@ -464,7 +464,7 @@ describe("EntityManager.reactiveRules", () => {
     expect(bRfs[i++]).toEqual({
       kind: "reaction",
       cstr: "Book",
-      name: "Book.ts:117",
+      name: "Book.ts:123",
       fields: ["notes"],
       path: [],
       runOnce: false,

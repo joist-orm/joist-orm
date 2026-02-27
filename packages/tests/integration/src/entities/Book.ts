@@ -15,13 +15,19 @@ export class Book extends BookCodegen {
     reactions: { observedNotes: [] as string[] },
   };
 
-  /** For testing reacting to poly CommentParent properties. */
+  /**
+   * For testing reacting to poly CommentParent properties.
+   * @generated Book.md
+   */
   readonly commentParentInfo: AsyncProperty<Book, string> = hasReactiveAsyncProperty(
     { reviews: "isPublic" },
     (b) => `reviews=${b.reviews.get.filter((r) => r.isPublic.get).length}`,
   );
 
-  /** For testing accessing `book.author.get` when it's undefined. */
+  /**
+   * For testing accessing `book.author.get` when it's undefined.
+   * @generated Book.md
+   */
   readonly search: ReactiveField<Book, string> = hasReactiveField(
     { author: "firstName", title: {}, reviews: "rating" },
     (b) => {

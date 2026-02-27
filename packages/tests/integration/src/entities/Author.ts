@@ -22,7 +22,7 @@ import {
   isDefined,
   withLoaded,
 } from "joist-orm";
-import { AuthorCodegen, Book, BookRange, BookReview, Comment, authorConfig as config } from "./entities";
+import { AuthorCodegen, Book, BookRange, BookReview, Comment, Publisher, authorConfig as config } from "./entities";
 
 export class Author extends AuthorCodegen {
   readonly reviews: Collection<Author, BookReview> = hasManyThrough((author) => author.books.reviews);
@@ -114,6 +114,7 @@ export class Author extends AuthorCodegen {
     afterCommitIsNewEntity: false,
     afterCommitIsDeletedEntity: false,
     setGraduatedInFlush: false,
+    setPublisherInFlush: undefined as Publisher | undefined,
     firstIsNotLastNameRuleInvoked: 0,
     mentorRuleInvoked: 0,
     ageRuleInvoked: 0,
@@ -138,6 +139,7 @@ export class Author extends AuthorCodegen {
       afterMetadata: 0,
       runOnce: 0,
       observedNickNames: [] as string[],
+      observedPublishers: [] as any[],
     },
   };
 
@@ -419,6 +421,7 @@ config.addReaction("direct", "firstName", (a) => {
 // m2o reaction
 config.addReaction("m2o", { publisher: "name" }, (a) => {
   a.transientFields.reactions.m2o += 1;
+  a.transientFields.reactions.observedPublishers.push(a.publisher.get);
 });
 
 // o2m reaction
@@ -479,6 +482,14 @@ config.beforeFlush(async (author) => {
   author.transientFields.beforeFlushRan = true;
   if (author.transientFields.setGraduatedInFlush) {
     author.graduated = new Date();
+  }
+});
+
+// Example setting publisher during flush (to test mid-flush m2o reaction dequeue bug)
+config.beforeFlush(async (author) => {
+  if (author.transientFields.setPublisherInFlush) {
+    author.publisher.set(author.transientFields.setPublisherInFlush);
+    author.transientFields.setPublisherInFlush = undefined;
   }
 });
 

@@ -197,7 +197,6 @@ async function main() {
 
   console.log(benchmark.report());
 
-  await knex.destroy();
   await sql.end();
 }
 

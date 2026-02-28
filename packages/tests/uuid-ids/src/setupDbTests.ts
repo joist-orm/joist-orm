@@ -54,7 +54,6 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await pool.end();
-  await knex.destroy();
 });
 
 export function select(tableName: string): Promise<readonly any[]> {

@@ -4,7 +4,8 @@ import { EntityManager } from "@src/entities";
 import { PostgresDriver, PostgresDriverOpts } from "joist-orm/pg";
 import { toMatchEntity } from "joist-test-utils";
 import { newPgConnectionConfig } from "joist-utils";
-import { Knex, knex as createKnex } from "knex";
+import { createKnex } from "joist-orm/knex";
+import { Knex } from "knex";
 import pg from "pg";
 import { Temporal } from "temporal-polyfill";
 
@@ -30,14 +31,8 @@ export let queries: string[] = [];
 expect.extend({ toMatchEntity });
 
 beforeAll(async () => {
-  const connectionConfig = newPgConnectionConfig();
-  pool = new pg.Pool(connectionConfig);
-  knex = createKnex({
-    client: "pg",
-    connection: connectionConfig,
-    debug: false,
-    asyncStackTraces: true,
-  }).on("query", (e: any) => {
+  pool = new pg.Pool(newPgConnectionConfig());
+  knex = createKnex(pool).on("query", (e: any) => {
     numberOfQueries++;
     queries.push(e.sql);
   });

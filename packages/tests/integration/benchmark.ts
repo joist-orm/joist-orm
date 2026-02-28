@@ -1,15 +1,15 @@
 import * as console from "console";
 import { Benchmark } from "kelonio";
-import { knex as createKnex } from "knex";
+import { createKnex } from "joist-orm/knex";
+import { Knex } from "knex";
+import pg from "pg";
 import postgres from "postgres";
 
-const knex = createKnex({
-  client: "pg",
-  connection: "postgres://joist:local@localhost:5435/joist",
-  debug: false,
-  asyncStackTraces: false,
-  pool: { max: 4 },
+const pool = new pg.Pool({
+  connectionString: "postgres://joist:local@localhost:5435/joist",
+  max: 4,
 });
+const knex: Knex = createKnex(pool);
 
 const sql = postgres("postgres://joist:local@localhost:5435/joist", { max: 4 });
 
@@ -197,6 +197,7 @@ async function main() {
 
   console.log(benchmark.report());
 
+  await pool.end();
   await sql.end();
 }
 

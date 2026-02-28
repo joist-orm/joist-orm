@@ -39,4 +39,10 @@ yarn workspaces foreach -v --all exec npm pkg set version="$VERSION"
 # Publish all packages with the 'next' tag
 yarn workspaces foreach -v --all --no-private npm publish --tag next --tolerate-republish
 
-echo "Successfully published $VERSION to the 'next' channel"
+# Push a git tag using GITHUB_TOKEN over HTTPS (the default SSH deploy key is read-only)
+TAG="v${VERSION}"
+git tag "$TAG"
+REPO_SLUG="${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}"
+git push "https://${GITHUB_TOKEN}@github.com/${REPO_SLUG}.git" "$TAG"
+
+echo "Successfully published $VERSION to the 'next' channel (tagged as $TAG)"

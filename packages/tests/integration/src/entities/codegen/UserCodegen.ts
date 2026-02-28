@@ -17,6 +17,7 @@ import {
   hasManyToMany,
   hasOne,
   hasOnePolymorphic,
+  hasRecursiveM2m,
   type IdOf,
   isEntity,
   isLoaded,
@@ -33,6 +34,7 @@ import {
   type OrderBy,
   type PartialOrNull,
   type PolymorphicReference,
+  type ReadOnlyCollection,
   type RelationsOf,
   setField,
   setOpts,
@@ -88,6 +90,8 @@ export interface UserFields {
   authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: undefined };
   likedComments: { kind: "m2m"; type: Comment };
+  parents: { kind: "m2m"; type: User };
+  children: { kind: "m2m"; type: User };
   createdComments: { kind: "o2m"; type: Comment };
   directs: { kind: "o2m"; type: User };
 }
@@ -106,6 +110,8 @@ export interface UserOpts {
   createdComments?: Comment[];
   directs?: User[];
   likedComments?: Comment[];
+  parents?: User[];
+  children?: User[];
 }
 
 export interface UserIdsOpts {
@@ -115,6 +121,8 @@ export interface UserIdsOpts {
   createdCommentIds?: CommentId[] | null;
   directIds?: UserId[] | null;
   likedCommentIds?: CommentId[] | null;
+  parentIds?: UserId[] | null;
+  childIds?: UserId[] | null;
 }
 
 export interface UserFilter {
@@ -135,6 +143,8 @@ export interface UserFilter {
   directs?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   directsAdminUser?: EntityFilter<AdminUser, AdminUserId, FilterOf<AdminUser>, null>;
   likedComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  parents?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
+  children?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   favoritePublisher?: EntityFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
   favoritePublisherLargePublisher?: EntityFilter<LargePublisher, IdOf<LargePublisher>, FilterOf<LargePublisher>, null>;
   favoritePublisherSmallPublisher?: EntityFilter<SmallPublisher, IdOf<SmallPublisher>, FilterOf<SmallPublisher>, null>;
@@ -158,6 +168,8 @@ export interface UserGraphQLFilter {
   directs?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   directsAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
   likedComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  parents?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
+  children?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   favoritePublisher?: EntityGraphQLFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
   favoritePublisherLargePublisher?: EntityGraphQLFilter<
     LargePublisher,
@@ -227,7 +239,11 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   readonly directs: Collection<User, User> = hasMany();
   readonly manager: ManyToOneReference<User, User, undefined> = hasOne();
   readonly authorManyToOne: ManyToOneReference<User, Author, undefined> = hasOne();
+  readonly parentsRecursive: ReadOnlyCollection<User, User> = hasRecursiveM2m("parents", "childrenRecursive");
+  readonly childrenRecursive: ReadOnlyCollection<User, User> = hasRecursiveM2m("children", "parentsRecursive");
   readonly likedComments: Collection<User, Comment> = hasManyToMany(); // users_to_comments liked_by_user_id comment_id
+  readonly parents: Collection<User, User> = hasManyToMany(); // users_to_parents child_id parent_id
+  readonly children: Collection<User, User> = hasManyToMany(); // users_to_parents parent_id child_id
   readonly favoritePublisher: PolymorphicReference<User, UserFavoritePublisher, undefined> = hasOnePolymorphic();
 
   get id(): UserId {

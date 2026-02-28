@@ -12,6 +12,7 @@ import { IndexManager } from "./IndexManager";
 import { loadBatchLoader } from "./batchloaders/loadBatchLoader";
 import { populateBatchLoader, populateOperation } from "./batchloaders/populateBatchLoader";
 import { recursiveChildrenOperation } from "./batchloaders/recursiveChildrenBatchLoader";
+import { recursiveM2mOperation } from "./batchloaders/recursiveM2mBatchLoader";
 import { recursiveParentsOperation } from "./batchloaders/recursiveParentsBatchLoader";
 import { getReactiveRules } from "./caches";
 import { constraintNameToValidationError, ReactiveRule } from "./config";
@@ -81,6 +82,7 @@ import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints"
 import { WriteFn } from "./logging/FactoryLogger";
 import { newEntity } from "./newEntity";
 import { resetFactoryCreated } from "./newTestInstance";
+import { PendingChange } from "./PendingChanges";
 import { PluginManager } from "./PluginManager";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";
 import { ReactionsManager } from "./ReactionsManager";
@@ -89,6 +91,7 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } 
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
+import { RecursiveCycleError } from "./relations/RecursiveCollection";
 import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
 import { OptsOf, OrderOf } from "./typeMap";
@@ -209,6 +212,7 @@ export type FindOperation =
   | typeof oneToOneLoadOperation
   | typeof populateOperation
   | typeof recursiveChildrenOperation
+  | typeof recursiveM2mOperation
   | typeof recursiveParentsOperation;
 
 /**
@@ -369,6 +373,39 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   /** Returns a read-only shallow copy of the currently-loaded entities. */
   get entities(): ReadonlyArray<Entity> {
     return [...this.#entitiesArray];
+  }
+
+  /** Returns a list of all pending creates, updates, deletes, and m2m changes that would be flushed. */
+  get pendingChanges(): PendingChange[] {
+    const changes: PendingChange[] = [];
+    for (const entity of this.#entitiesArray) {
+      const op = getInstanceData(entity).pendingOperation;
+      switch (op) {
+        case "insert":
+          changes.push({ kind: "create", entity });
+          break;
+        case "update":
+          changes.push({ kind: "update", entity });
+          break;
+        case "delete":
+          changes.push({ kind: "delete", entity });
+          break;
+      }
+    }
+    for (const joinRows of Object.values(this.#joinRows)) {
+      const todo = joinRows.toTodo();
+      if (todo) {
+        for (const row of todo.newRows) {
+          const entities = Object.values(row.columns) as [Entity, Entity];
+          changes.push({ kind: "m2m", op: "add", joinTableName: todo.m2m.joinTableName, entities });
+        }
+        for (const row of todo.deletedRows) {
+          const entities = Object.values(row.columns) as [Entity, Entity];
+          changes.push({ kind: "m2m", op: "remove", joinTableName: todo.m2m.joinTableName, entities });
+        }
+      }
+    }
+    return changes;
   }
 
   /** Returns a read-only list of the currently-loaded entities of `type`. */
@@ -1506,6 +1543,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     this.#fl.startLock();
 
+    const allFlushedEntities: Set<Entity> = new Set();
+
+    try {
+
     await this.#fl.allowWrites(async () => {
       // Cascade deletes now that we're async (i.e. to keep `em.delete` synchronous).
       // Also do this before calling `recalcPendingReactables` to avoid recalculating
@@ -1621,9 +1662,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       await afterValidation(this.ctx, entityTodos);
     };
 
-    const allFlushedEntities: Set<Entity> = new Set();
-
-    try {
       // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
       let entitiesToFlush = await runHooksOnPendingEntities();
       for (const e of entitiesToFlush) allFlushedEntities.add(e);
@@ -1704,9 +1742,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         }
         mutatedCollections.clear();
 
-        // Reset the find caches b/c data will have changed in the db
+        // Reset the find/preload caches b/c data will have changed in the db
         this.#dataloaders = {};
         this.#batchLoaders = {};
+        this.#preloadedRelations = new Map();
         this.#rm.clear();
       }
 
@@ -1716,6 +1755,20 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       return [...allFlushedEntities];
     } catch (e) {
+      if (e instanceof RecursiveCycleError) {
+        const entity = e.entities[0];
+        // Look up a custom cycle message — check both the exact field name and its opposite
+        // direction, since the cycle may be detected from either side (e.g. walking
+        // childrenRecursive during reactive hint reversal when parentsRecursive was configured).
+        for (const meta of getBaseAndSelfMetas(getMetadata(entity))) {
+          const messageFn =
+            meta.config.__data.cycleMessages[e.fieldName] ??
+            meta.config.__data.cycleMessages[((entity as any)[e.fieldName] as any)?.otherFieldName];
+          if (messageFn) {
+            throw new ValidationErrors([{ entity, message: messageFn(entity, e.entities) }]);
+          }
+        }
+      }
       if (e && typeof e === "object" && "constraint" in e && typeof e.constraint === "string") {
         // node-pg errors use `constraint` to indicate the constraint name
         const message = constraintNameToValidationError[e.constraint];

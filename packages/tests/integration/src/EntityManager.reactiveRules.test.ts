@@ -253,6 +253,10 @@ describe("EntityManager.reactiveRules", () => {
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["graduated"], path: [], fn },
       // Author's immutable age rule (w/o age listed b/c it is immutable, but still needs to fire on create)
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: [], path: [], fn },
+      // Author's addCycleRule for mentorsRecursive
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["mentor"], path: [], fn },
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["mentor"], path: ["menteesRecursive"], fn },
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: [], path: ["menteesRecursive"], fn },
       // Book's noop author.firstName rule, only depends on firstName
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["firstName"], path: ["books"], fn },
       // Book's "too many colors" rule, only depends on favoriteColors, not firstName:ro
@@ -460,7 +464,7 @@ describe("EntityManager.reactiveRules", () => {
     expect(bRfs[i++]).toEqual({
       kind: "reaction",
       cstr: "Book",
-      name: "Book.ts:117",
+      name: "Book.ts:123",
       fields: ["notes"],
       path: [],
       runOnce: false,

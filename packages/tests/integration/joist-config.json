@@ -1,6 +1,7 @@
 {
   "codegenPlugins": ["joist-graphql-codegen"],
   "contextType": "Context@src/context",
+  "docs": true,
   "entities": {
     "AdminUser": { "tag": "u" },
     "Author": {
@@ -137,5 +138,6 @@
   },
   "entitiesDirectory": "./src/entities",
   "transactionType": "PoolClient@pg",
+  "outputDocs": true,
   "version": "0.0.1"
 }

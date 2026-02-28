@@ -83,6 +83,7 @@ export class ReactionsManager {
           //   thinks we can dequeue the reactable
           // - but actually our reactable needs to be re-run with the restored value
           pending.todo.add(entity);
+          this.#needsRecalc[r.kind] = true;
         } else if (r.fields.length === 1) {
           // We can only delete/dequeue a reaction if `fieldName` is the only or last field
           // that had triggered `r` to run. Since we don't track that currently, i.e. we'd

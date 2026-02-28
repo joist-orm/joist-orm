@@ -40,7 +40,10 @@ export abstract class Publisher extends PublisherCodegen {
     ...publisherTransientFields,
   };
 
-  /** Example of a reactive query. */
+  /**
+   * Example of a reactive query.
+   * @generated Publisher.md
+   */
   readonly numberOfBookReviews: ReactiveField<Publisher, number> = hasReactiveQueryField(
     // this hint will recalc + be available on `p`
     "id",
@@ -53,7 +56,10 @@ export abstract class Publisher extends PublisherCodegen {
     },
   );
 
-  /** Example of a ReactiveField reacting to ReactiveReferences (where a.favoriteBook is a unique). */
+  /**
+   * Example of a ReactiveField reacting to ReactiveReferences (where a.favoriteBook is a unique).
+   * @generated Publisher.md
+   */
   readonly titlesOfFavoriteBooks: ReactiveField<Publisher, string | undefined> = hasReactiveField(
     { authors: { favoriteBook: "title" } },
     (p) => {
@@ -67,7 +73,10 @@ export abstract class Publisher extends PublisherCodegen {
     },
   );
 
-  /** Example of a ReactiveReference in an entity with subtypes. */
+  /**
+   * Example of a ReactiveReference in an entity with subtypes.
+   * @generated Publisher.md
+   */
   readonly favoriteAuthor: ReactiveReference<Publisher, Author, undefined> = hasReactiveReference(
     { authors: "books" },
     (p) => {
@@ -76,7 +85,10 @@ export abstract class Publisher extends PublisherCodegen {
     },
   );
 
-  /** Example of a ReactiveField reacting to ReactiveReferences (where p.favoriteAuthor is not unique) . */
+  /**
+   * Example of a ReactiveField reacting to ReactiveReferences (where p.favoriteAuthor is not unique) .
+   * @generated Publisher.md
+   */
   readonly favoriteAuthorName: ReactiveField<Publisher, string> = hasReactiveField(
     // _ro suffixes work around this for now
     { favoriteAuthor_ro: "firstName:ro" },
@@ -85,7 +97,10 @@ export abstract class Publisher extends PublisherCodegen {
     },
   );
 
-  /** Example of a RF that uses a lot of read-only hints, it should recalc only when p.name itself changes. */
+  /**
+   * Example of a RF that uses a lot of read-only hints, it should recalc only when p.name itself changes.
+   * @generated Publisher.md
+   */
   readonly bookAdvanceTitlesSnapshot: ReactiveField<Publisher, string> = hasReactiveField(
     { name: {}, bookAdvances_ro: "status_ro" },
     (p) => {
@@ -94,7 +109,10 @@ export abstract class Publisher extends PublisherCodegen {
     },
   );
 
-  /** Example of a RF that uses solely a o2m read-only hints, it should recalc only when p.name itself changes. */
+  /**
+   * Example of a RF that uses solely a o2m read-only hints, it should recalc only when p.name itself changes.
+   * @generated Publisher.md
+   */
   readonly numberOfBookAdvancesSnapshot: ReactiveField<Publisher, string> = hasReactiveField(
     { bookAdvances_ro: {} },
     (p) => {
@@ -138,7 +156,10 @@ export abstract class Publisher extends PublisherCodegen {
     isLoaded: (entity) => isLoaded(entity, allImagesHint as any),
   });
 
-  /** For testing reacting to poly CommentParent properties. */
+  /**
+   * For testing reacting to poly CommentParent properties.
+   * @generated Publisher.md
+   */
   readonly commentParentInfo: AsyncProperty<Publisher, string> = hasReactiveAsyncProperty([], () => ``);
 }
 

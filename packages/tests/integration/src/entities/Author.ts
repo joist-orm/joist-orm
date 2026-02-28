@@ -22,9 +22,19 @@ import {
   isDefined,
   withLoaded,
 } from "joist-orm";
-import { AuthorCodegen, Book, BookRange, BookReview, Comment, authorConfig as config } from "./entities";
+import { AuthorCodegen, Book, BookRange, BookReview, Comment, Publisher, authorConfig as config } from "./entities";
 
+/**
+ * The Author entity represents a writer who can publish books.
+ *
+ * Authors can have mentors (other authors) forming a recursive tree.
+ * @generated Author.md
+ */
 export class Author extends AuthorCodegen {
+  /**
+   * All reviews across all of this author's books.
+   * @generated Author.md
+   */
   readonly reviews: Collection<Author, BookReview> = hasManyThrough((author) => author.books.reviews);
   readonly reviewedBooks: Collection<Author, Book> = hasManyDerived(
     { books: "reviews" },
@@ -114,6 +124,7 @@ export class Author extends AuthorCodegen {
     afterCommitIsNewEntity: false,
     afterCommitIsDeletedEntity: false,
     setGraduatedInFlush: false,
+    setPublisherInFlush: undefined as Publisher | undefined,
     firstIsNotLastNameRuleInvoked: 0,
     mentorRuleInvoked: 0,
     ageRuleInvoked: 0,
@@ -138,43 +149,66 @@ export class Author extends AuthorCodegen {
       afterMetadata: 0,
       runOnce: 0,
       observedNickNames: [] as string[],
+      observedPublishers: [] as any[],
     },
   };
 
-  /** Example of using populate within an entity on itself. */
+  /**
+   * Example of using populate within an entity on itself.
+   * @generated Author.md
+   */
   get withLoadedBooks(): Promise<Loaded<Author, "books">> {
     return this.populate("books");
   }
 
-  /** Implements the business logic for a (synchronous) persisted derived value. */
+  /**
+   * Implements the business logic for a (synchronous) persisted derived value.
+   * @generated Author.md
+   */
   get initials(): string {
     return (this.firstName || "")[0] + (this.lastName !== undefined ? this.lastName[0] : "");
   }
 
-  /** Implements the business logic for an unpersisted derived value. */
+  /**
+   * Implements the business logic for an unpersisted derived value.
+   * @generated Author.md
+   */
   get fullName(): string {
     return this.firstName + (this.lastName ? ` ${this.lastName}` : "");
   }
 
-  /** For testing `upsert` with non-field properties. */
+  /**
+   * Implements the business logic for an unpersisted derived value.
+   * @generated Author.md
+   */
   set fullName(fullName: string) {
     const [firstName, lastName] = fullName.split(" ");
     this.firstName = firstName;
     this.lastName = lastName;
   }
 
-  /** For testing `upsert` with setter-only properties. */
+  /**
+   * For testing `upsert` with setter-only properties.
+   * @generated Author.md
+   */
   set fullName2(fullName: string) {
     const [firstName, lastName] = fullName.split(" ");
     this.firstName = firstName;
     this.lastName = lastName;
   }
 
+  /**
+   * Implements a public API for controlling access to a protected field (`wasEverPopular`).
+   * @generated Author.md
+   */
   get isPopular(): boolean | undefined {
     return super.isPopular;
   }
 
-  /** Implements a public API for controlling access to a protected field (`wasEverPopular`). */
+  /**
+   * Implements a public API for controlling access to a protected field (`wasEverPopular`).
+   * @generated Author.md
+   */
   set isPopular(isPopular: boolean | undefined) {
     super.isPopular = isPopular;
     // Testing protected fields
@@ -188,7 +222,10 @@ export class Author extends AuthorCodegen {
     return (await this.books.load()).length > 0;
   }
 
-  /** Example of a derived async property that can be calculated via a populate hint. */
+  /**
+   * Example of a derived async property that can be calculated via a populate hint.
+   * @generated Author.md
+   */
   readonly numberOfBooks: ReactiveField<Author, number> = hasReactiveField(
     // Include firstName to ensure `.get` uses the load hint (and not the full reactive hint)
     // when evaluating whether to eval our lambda during pre-flush calls.
@@ -199,7 +236,10 @@ export class Author extends AuthorCodegen {
     },
   );
 
-  /** Example of a ReactiveField that uses a recursive parent relation. */
+  /**
+   * Example of a ReactiveField that uses a recursive parent relation.
+   * @generated Author.md
+   */
   readonly mentorNames: ReactiveField<Author, string | undefined> = hasReactiveField(
     { mentorsRecursive: "firstName" },
     (a) => {
@@ -208,7 +248,10 @@ export class Author extends AuthorCodegen {
     },
   );
 
-  /** Example of a ReactiveField that uses a recursive child relation. */
+  /**
+   * Example of a ReactiveField that uses a recursive child relation.
+   * @generated Author.md
+   */
   readonly menteeNames: ReactiveField<Author, string | undefined> = hasReactiveField(
     { menteesRecursive: "firstName" },
     (a) => {
@@ -217,12 +260,18 @@ export class Author extends AuthorCodegen {
     },
   );
 
-  /** Example of a derived async enum. */
+  /**
+   * Example of a derived async enum.
+   * @generated Author.md
+   */
   readonly rangeOfBooks: ReactiveField<Author, BookRange> = hasReactiveField(["books"], (a) => {
     return a.books.get.length > 10 ? BookRange.Lot : BookRange.Few;
   });
 
-  /** Example of a derived async property that can be calculated via a populate hint through a polymorphic reference. */
+  /**
+   * Example of a derived async property that can be calculated via a populate hint through a polymorphic reference.
+   * @generated Author.md
+   */
   readonly bookComments: ReactiveField<Author, string> = hasReactiveField(
     // ...and throw in hasLowerCaseFirstName to test ReactiveGetters
     { books: { comments: "text" }, hasLowerCaseFirstName: {} },
@@ -261,7 +310,10 @@ export class Author extends AuthorCodegen {
     return a.mentorsRecursive.get[a.mentorsRecursive.get.length - 1];
   });
 
-  /** Example of a ReactiveManyToMany - a derived m2m that auto-calculates its membership. */
+  /**
+   * Example of a ReactiveManyToMany - a derived m2m that auto-calculates its membership.
+   * @generated Author.md
+   */
   readonly bestReviews: ReactiveManyToMany<Author, BookReview> = hasReactiveManyToMany(
     { books: { reviews: "rating" } },
     (a) => {
@@ -270,36 +322,54 @@ export class Author extends AuthorCodegen {
     },
   );
 
-  /** Example of a closure table. */
+  /**
+   * Example of a closure table.
+   * @generated Author.md
+   */
   readonly menteesClosure: ReactiveManyToMany<Author, Author> = hasReactiveManyToMany("menteesRecursive", (a) => {
     return [a, ...a.menteesRecursive.get];
   });
 
-  /** Example of an async property that can be loaded via a populate hint. */
+  /**
+   * Example of an async property that can be loaded via a populate hint.
+   * @generated Author.md
+   */
   readonly numberOfBooks2: AsyncProperty<Author, number> = hasReactiveAsyncProperty({ books: "title" }, (a) => {
     // Use the title to test reactivity to an hasReactiveAsyncProperty calc changing
     return a.books.get.filter((b) => b.title !== "Ignore").length;
   });
 
-  /** Example of an async property that returns an entity. */
+  /**
+   * Example of an async property that returns an entity.
+   * @generated Author.md
+   */
   readonly latestComment2: AsyncProperty<Author, Comment | undefined> = hasReactiveAsyncProperty(
     { publisher: "comments", comments: {} },
     (author) => author.publisher.get?.comments.get[0] ?? author.comments.get[0],
   );
 
-  /** Example of an async property that has a conflicting/overlapping reactive hint with ^. */
+  /**
+   * Example of an async property that has a conflicting/overlapping reactive hint with ^.
+   * @generated Author.md
+   */
   readonly allPublisherAuthorNames: AsyncProperty<Author, string | undefined> = hasReactiveAsyncProperty(
     { publisher: { authors: "firstName" } },
     (author) => author.publisher.get?.authors.get.flatMap((a) => a.firstName).join(),
   );
 
-  /** Example of an async property that returns a list of entities. */
+  /**
+   * Example of an async property that returns a list of entities.
+   * @generated Author.md
+   */
   readonly latestComments: AsyncProperty<Author, Comment[]> = hasAsyncProperty(
     { publisher: "comments", comments: {} },
     (author) => [...(author.publisher.get?.comments.get ?? []), ...author.comments.get],
   );
 
-  /** For testing reacting to poly CommentParent properties. */
+  /**
+   * For testing reacting to poly CommentParent properties.
+   * @generated Author.md
+   */
   readonly commentParentInfo: AsyncProperty<Author, string> = hasReactiveAsyncProperty(
     "numberOfBooks",
     (a) => `books=${a.numberOfBooks.get}`,
@@ -398,6 +468,8 @@ config.addRule("age", (a) => {
 
 config.cascadeDelete("books");
 
+config.addCycleRule("mentorsRecursive", (a) => `Author ${a.firstName} has a cycle in their mentor chain`);
+
 // For testing cross-entity default dependencies, i.e. for Book.notes
 // And for testing reactions observing async defaults
 config.setDefault(
@@ -417,6 +489,7 @@ config.addReaction("direct", "firstName", (a) => {
 // m2o reaction
 config.addReaction("m2o", { publisher: "name" }, (a) => {
   a.transientFields.reactions.m2o += 1;
+  a.transientFields.reactions.observedPublishers.push(a.publisher.get);
 });
 
 // o2m reaction
@@ -477,6 +550,14 @@ config.beforeFlush(async (author) => {
   author.transientFields.beforeFlushRan = true;
   if (author.transientFields.setGraduatedInFlush) {
     author.graduated = new Date();
+  }
+});
+
+// Example setting publisher during flush (to test mid-flush m2o reaction dequeue bug)
+config.beforeFlush(async (author) => {
+  if (author.transientFields.setPublisherInFlush) {
+    author.publisher.set(author.transientFields.setPublisherInFlush);
+    author.transientFields.setPublisherInFlush = undefined;
   }
 });
 

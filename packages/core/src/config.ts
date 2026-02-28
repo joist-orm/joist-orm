@@ -71,6 +71,30 @@ export class ConfigApi<T extends Entity, C> {
   }
 
   /**
+   * Maps a `RecursiveCycleError` on the given recursive collection field to a custom validation error.
+   *
+   * When a cycle is detected in a recursive collection (e.g. `parentsRecursive`), instead of
+   * throwing a raw `RecursiveCycleError`, `em.flush` will convert it into a `ValidationErrors`
+   * using the provided message function.
+   *
+   * The `messageFn` receives the entity that detected the cycle and the cycle path (array of
+   * entities forming the cycle), and should return a validation error string.
+   */
+  addCycleRule(fieldName: string & keyof T, messageFn: (entity: T, cyclePath: Entity[]) => string) {
+    this.ensurePreBoot(getCallerName(), "addCycleRule");
+    this.__data.cycleMessages[fieldName] = messageFn;
+    // Register a reactive rule that loads the recursive collection and catches cycle errors.
+    // The rule uses the recursive collection's underlying relation as a reactive hint so it
+    // triggers when the collection changes.
+    const hint = fieldName as any;
+    const fn = () => {
+      // We don't actually need a try/catch/anything here, b/c if there is a cycle, it
+      // will cause a CycleError during followReverseHint, and never even get to calling this fn.
+    };
+    this.__data.rules.push({ name: `addCycleRule(${getCallerName()})`, fn, hint });
+  }
+
+  /**
    * Adds a validation rule for this entity.
    *
    * If `hint` is passed, then the rule's lambda will be: 1) passed a view of the entity with only
@@ -448,6 +472,8 @@ export class ConfigData<T extends Entity, C> {
   touchOnChange: Set<keyof RelationsIn<T>> = new Set();
   // Constantly converting reactive hints to load hints is expense, so cache them here
   cachedReactiveLoadHints: Record<string, any> = {};
+  /** Maps recursive collection fieldNames to custom cycle error message functions. */
+  cycleMessages: Record<string, (entity: T, cyclePath: Entity[]) => string> = {};
 }
 
 export function getCallerName(extraFrames: number = 0): string {

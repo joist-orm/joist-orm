@@ -450,4 +450,12 @@ export function up(b: MigrationBuilder): void {
     { table: "authors", collectionName: "bestReviewAuthors" },
     { table: "book_reviews", collectionName: "bestReviews" },
   );
+
+  // for testing recursive m2m (a user can have multiple parents)
+  createManyToManyTable(
+    b,
+    "users_to_parents",
+    { table: "users", column: "child_id" },
+    { table: "users", column: "parent_id" },
+  );
 }

@@ -8,14 +8,13 @@ describe("QueryParser", () => {
     const q = buildQuery(knex, Book, { where: { author: { firstName: "jeff", schedules: { id: "4" } } } });
     expect(q.toSQL().sql).toEqual(
       [
-        "select distinct b.*, b.title, b.id",
+        "select b.*",
         " from books as b",
         " inner join authors as a on b.author_id = a.id",
-        ' left outer join author_schedules as "as" on a.id = "as".author_id',
         " where b.deleted_at IS NULL",
         " AND a.deleted_at IS NULL",
         " AND a.first_name = ?",
-        ' AND "as".id = ?',
+        ' AND EXISTS (select 1 from author_schedules as "as" where a.id = "as".author_id AND "as".id = ?)',
         " order by b.title ASC, b.id ASC",
       ].join(""),
     );

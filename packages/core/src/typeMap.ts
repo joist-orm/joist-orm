@@ -28,6 +28,23 @@ export interface TypeMap {}
  */
 type TypeMapKey<T> = T extends { __type: { 1: infer K } } ? K : T extends { __type: { 0: infer K } } ? K : never;
 
+/** The literal type name of an entity, i.e. `"Author"` or `"SmallPublisher"`. */
+export type TypeNameOf<T> = TypeMapKey<T>;
+
+/**
+ * The literal type name of an entity's root type, i.e. `"Publisher"` for both `Publisher` and
+ * `SmallPublisher`.
+ *
+ * `em.query` uses it as an alias's default source key, so that `Alias<SmallPublisher>` stays assignable to
+ * `Alias<Publisher>` (codegen'd subtype filters extend their base filters) and a CTI subtype alias and
+ * its base alias share one nullability identity, which they should, being one table family.
+ *
+ * A type without `__type` (i.e. the bare `Entity` interface in generic code like `Scope<T>`) gets the
+ * untracked key `string`, not `never`: `never` means "source-less" and also broke the comparability of
+ * `Alias<T>` with `Alias<Entity>`.
+ */
+export type RootTypeNameOf<T> = T extends { __type: { 0: infer K extends string } } ? K : string;
+
 /** A helper type to look up `U` in the `TypeMap` for a given entity type `T`. */
 export type TypeMapEntry<T, U extends string> =
   TypeMapKey<T> extends infer K

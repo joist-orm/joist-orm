@@ -66,14 +66,8 @@ export interface ExistsCondition {
   outerAliases: string[];
 }
 
-/** A marker condition for alias methods to indicate they should be skipped/pruned. */
-export const skipCondition: ColumnCondition = {
-  kind: "column",
-  alias: "skip",
-  column: "skip",
-  dbType: "skip",
-  cond: undefined as any,
-};
+// `skipCondition` lives in `Expr.ts` (a runtime leaf) so alias/expression methods can return it
+// without a load-order cycle; `index.ts` re-exports it from there.
 
 export interface PrimaryTable {
   join: "primary";

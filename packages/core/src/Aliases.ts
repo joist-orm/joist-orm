@@ -12,25 +12,41 @@ import {
   getMetadata,
 } from "./EntityMetadata.ts";
 import {
+  BaseExpr,
+  type Expr,
+  type ExprContext,
+  type ExprLike,
+  type SqlFragment,
+  isExpr,
+  skipCondition,
+} from "./Expr.ts";
+import {
   type ExpressionCondition,
   type ExpressionFilter,
   getConstructorFromTaggedId,
   maybeResolveReferenceToId,
 } from "./index.ts";
-import {
-  type ColumnCondition,
-  type ParsedValueFilter,
-  type RawCondition,
-  makeLike,
-  mapToDb,
-  skipCondition,
-} from "./QueryParser.ts";
+import { kqDot } from "./keywords.ts";
+import { type ColumnCondition, type ParsedValueFilter, type RawCondition, makeLike, mapToDb } from "./QueryParser.ts";
+import { PojoRowData } from "./RowData.ts";
 import { type Column } from "./serde.ts";
-import { type FieldsOf } from "./typeMap.ts";
+import { type FieldsOf, type RootTypeNameOf } from "./typeMap.ts";
 import { fail } from "./utils.ts";
 
 /** Creates an alias for complex filtering against `T`. */
-export function alias<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {
+export function alias<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T>;
+/**
+ * Creates an alias with an explicit type-level name, i.e. `alias(Author, "m")` for a self-join.
+ *
+ * The name is the alias's source key in `em.query`: two bare `alias(Author)`s share the key `"Author"`,
+ * so a left-joined mentor would also mark the mentee's columns nullable; a named alias has its own key.
+ */
+export function alias<T extends Entity, Name extends string>(
+  cstr: MaybeAbstractEntityConstructor<T>,
+  name: Name,
+): Alias<T, Name>;
+export function alias<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>, _name?: string): Alias<T, any> {
+  // The name only exists at the type level; the SQL alias is still assigned by the query parser
   return newAliasProxy(cstr);
 }
 
@@ -41,26 +57,47 @@ export function aliases<T extends readonly MaybeAbstractEntityConstructor<any>[]
   return type.map((t) => newAliasProxy(t)) as any;
 }
 
-export type Alias<T extends Entity> = {
+/**
+ * The runtime management interface plus phantom type information for `em.query`.
+ *
+ * `__entity` lets `QueryRow` recover `T` for entity mode (you cannot `infer T` back out of a mapped
+ * type), and `__name` is the alias's source key (see `Expr`).
+ */
+export interface AliasBrand<T, Name extends string> extends AliasMgmt {
+  readonly __entity: T;
+  readonly __name: Name;
+}
+
+/**
+ * An alias for `T`: one expression per field, each usable as a condition builder (`a.age.gte(18)`,
+ * as in `em.find`) and as a selectable, aggregatable expression (`a.age`, `a.age.max()`, in `em.query`).
+ *
+ * `Name` is the alias's type-level source key, defaulting to the entity's root type name (see
+ * `RootTypeNameOf`); `alias(Author, "m")` gives a self-join alias its own key.
+ */
+export type Alias<T extends Entity, Name extends string = RootTypeNameOf<T>> = {
+  readonly [aliasMgmt]: AliasBrand<T, Name>;
+} & {
   [P in keyof FieldsOf<T>]: P extends "id"
-    ? EntityAlias<T>
+    ? EntityAlias<T, never, Name>
     : FieldsOf<T>[P] extends { kind: "primitive" | "enum"; type: infer V; nullable: infer N }
-      ? PrimitiveAlias<V, N extends undefined ? null : never>
-      : FieldsOf<T>[P] extends { kind: "m2o"; type: infer U }
-        ? EntityAlias<U>
+      ? PrimitiveAlias<V, N extends undefined ? null : never, Name>
+      : FieldsOf<T>[P] extends { kind: "m2o"; type: infer U; nullable: infer N }
+        ? EntityAlias<U, N extends undefined ? null : never, Name>
         : FieldsOf<T>[P] extends { kind: "poly"; type: infer U extends Entity }
           ? PolyReferenceAlias<U>
           : never;
 };
 
-export interface PrimitiveAlias<V, N extends null | never> {
-  eq(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
-  ne(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
-  in(values: (V | null)[] | undefined): ExpressionCondition;
-  gt(value: V | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
-  gte(value: V | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
-  lt(value: V | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
-  lte(value: V | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
+export interface PrimitiveAlias<V, N extends null | never, Src extends string = string> extends Expr<V | N, Src> {
+  eq(value: V | N | undefined | ExprLike<V | N>): ExpressionCondition;
+  ne(value: V | N | undefined | ExprLike<V | N>): ExpressionCondition;
+  in(values: readonly (V | null)[] | undefined | ExprLike<V | null>): ExpressionCondition;
+  nin(values: readonly (V | null)[] | undefined | ExprLike<V | null>): ExpressionCondition;
+  gt(value: V | undefined | ExprLike<V | N>): ExpressionCondition;
+  gte(value: V | undefined | ExprLike<V | N>): ExpressionCondition;
+  lt(value: V | undefined | ExprLike<V | N>): ExpressionCondition;
+  lte(value: V | undefined | ExprLike<V | N>): ExpressionCondition;
   like(value: V | undefined): ExpressionCondition;
   ilike(value: V | undefined): ExpressionCondition;
   search(value: V | undefined): ExpressionCondition;
@@ -104,21 +141,25 @@ export interface PrimitiveAlias<V, N extends null | never> {
   raw(exp: string, bindings: readonly any[] | undefined): ExpressionCondition;
 }
 
-export interface EntityAlias<T> {
-  eq(value: T | IdOf<T> | null | undefined): ExpressionCondition;
-  ne(value: T | IdOf<T> | null | undefined): ExpressionCondition;
+export interface EntityAlias<T, N extends null | never = never, Src extends string = string> extends Expr<
+  IdOf<T> | N,
+  Src
+> {
+  eq(value: T | IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
+  ne(value: T | IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
   // Adding `| null` for GraphQL support
-  in(value: Array<T | IdOf<T>> | null | undefined): ExpressionCondition;
-  gt(value: IdOf<T> | null | undefined): ExpressionCondition;
-  gte(value: IdOf<T> | null | undefined): ExpressionCondition;
-  lt(value: IdOf<T> | null | undefined): ExpressionCondition;
-  lte(value: IdOf<T> | null | undefined): ExpressionCondition;
+  in(value: readonly (T | IdOf<T> | null)[] | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
+  nin(value: readonly (T | IdOf<T> | null)[] | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
+  gt(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
+  gte(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
+  lt(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
+  lte(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition;
   raw(exp: string, bindings: readonly any[] | undefined): ExpressionCondition;
 }
 
-const aliasMgmt = Symbol("aliasMgmt");
+export const aliasMgmt = Symbol("aliasMgmt");
 
-export function getAliasMgmt(alias: Alias<any>): AliasMgmt {
+export function getAliasMgmt(alias: Alias<any, any>): AliasMgmt {
   return (alias as any)[aliasMgmt];
 }
 
@@ -133,7 +174,7 @@ export interface AliasMgmt {
 type BindCallback = (newMeta: EntityMetadata, newAlias: string) => void;
 
 /** Returns the metadata for the entity that `alias` is bound to. */
-export function getAliasMetadata<T extends Entity>(alias: Alias<T>): EntityMetadata<T> {
+export function getAliasMetadata<T extends Entity>(alias: Alias<T, any>): EntityMetadata<T> {
   const mgmt = (alias as any)[aliasMgmt];
   return getMetadataForTable(mgmt.tableName);
 }
@@ -165,9 +206,9 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
         case "primaryKey":
         case "primitive":
         case "enum":
-          return new PrimitiveAliasImpl(meta, field, callbacks, field.serde!.columns[0]);
+          return new PrimitiveAliasImpl(meta, field, callbacks, field.serde!.columns[0], mgmt);
         case "m2o":
-          return new EntityAliasImpl(meta, field, callbacks, field.serde!.columns[0]);
+          return new EntityAliasImpl(meta, field, callbacks, field.serde!.columns[0], mgmt);
         case "poly":
           return new PolyReferenceAlias(meta, callbacks, field);
         default:
@@ -181,18 +222,47 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
   }) as any;
 }
 
-export function isAlias(obj: any): obj is Alias<any> & { [aliasMgmt]: AliasMgmt } {
+export function isAlias(obj: any): obj is Alias<any, any> & { [aliasMgmt]: AliasMgmt } {
   // Oddly enough `typeof` will be a function b/c we are proxying the constructors
   return obj && typeof obj === "function" && obj[aliasMgmt] !== undefined;
 }
 
-class AbstractAliasColumn<V> {
+/**
+ * A single column of an alias.
+ *
+ * For `em.find`, its methods create `ColumnCondition`s whose alias is filled in later, when the
+ * parser binds the alias to a join-tree location (`setAlias`). For `em.query`, it is also an `Expr`:
+ * it becomes `alias."column"`, decodes result values through the field's serde, and inherits the
+ * aggregate methods from `BaseExpr`.
+ */
+class AbstractAliasColumn<V> extends BaseExpr {
   public constructor(
-    protected meta: EntityMetadata,
-    protected field: Field & { aliasSuffix: string },
-    protected callbacks: BindCallback[],
-    protected column: Column,
-  ) {}
+    readonly meta: EntityMetadata,
+    readonly field: Field & { aliasSuffix: string },
+    readonly callbacks: BindCallback[],
+    readonly column: Column,
+    readonly mgmt: AliasMgmt,
+  ) {
+    super();
+  }
+
+  toSql(ctx: ExprContext): SqlFragment {
+    const alias = ctx.aliasFor(this.mgmt);
+    const ctiAlias = getMaybeCtiAlias(this.meta, this.field, this.meta, alias);
+    return { sql: kqDot(ctiAlias, this.column.columnName), bindings: [], refs: [alias] };
+  }
+
+  /** Decodes a result-set value the same way `hydrate` would, i.e. an int into a tagged id. */
+  decode(value: unknown): unknown {
+    if (value === null || value === undefined) return value;
+    const data: any = {};
+    this.field.serde!.setOnEntityFromRowData(data, new PojoRowData([{ [this.column.columnName]: value }]), 0);
+    return data[this.field.fieldName];
+  }
+
+  encode(value: unknown): unknown {
+    return this.column.mapToDb(value);
+  }
 
   protected addCondition(value: ParsedValueFilter<V>): ColumnCondition {
     const cond: ColumnCondition = {
@@ -227,7 +297,7 @@ class AbstractAliasColumn<V> {
     return cond;
   }
 
-  protected addCrossColumnRawCondition(otherColumn: AbstractAliasColumn<V>, op: string): RawCondition {
+  protected addCrossColumnRawCondition(otherColumn: AbstractAliasColumn<any>, op: string): RawCondition {
     const cond = {
       kind: "raw",
       aliases: [] as string[],
@@ -252,71 +322,57 @@ class AbstractAliasColumn<V> {
     });
     return cond;
   }
+
+  /**
+   * Compares against another alias column via the `em.find` deferred-binding path, or against any other
+   * expression (an aggregate, a subquery column) via `em.query`'s SQL-generation path.
+   */
+  protected crossCompare(op: string, value: unknown): ExpressionCondition | undefined {
+    if (value instanceof AbstractAliasColumn) return this.addCrossColumnRawCondition(value, op);
+    if (isExpr(value)) return this.compare(op, value);
+    return undefined;
+  }
 }
 
 class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<V> implements PrimitiveAlias<V, N> {
-  eq(value: V | N | PrimitiveAlias<V, any> | undefined): ColumnCondition | RawCondition {
+  eq(value: V | N | ExprLike<V | N> | undefined): ExpressionCondition {
     if (value === undefined) {
       return skipCondition;
-    } else if (value instanceof PrimitiveAliasImpl) {
-      return this.addCrossColumnRawCondition(value, "=");
     } else if (value === null) {
       return this.addCondition({ kind: "is-null" });
     } else {
-      return this.addCondition({ kind: "eq", value: value as any });
+      return this.crossCompare("=", value) ?? this.addCondition({ kind: "eq", value: value as any });
     }
   }
 
-  ne(value: V | N | undefined): ColumnCondition | RawCondition {
+  ne(value: V | N | ExprLike<V | N> | undefined): ExpressionCondition {
     if (value === undefined) {
       return skipCondition;
-    } else if (value instanceof PrimitiveAliasImpl) {
-      return this.addCrossColumnRawCondition(value, "!=");
     } else if (value === null) {
       return this.addCondition({ kind: "not-null" });
     } else {
-      return this.addCondition({ kind: "ne", value });
+      return this.crossCompare("!=", value) ?? this.addCondition({ kind: "ne", value: value as any });
     }
   }
 
-  gt(value: V | undefined): ColumnCondition | RawCondition {
-    if (value === undefined) {
-      return skipCondition;
-    } else if (value instanceof PrimitiveAliasImpl) {
-      return this.addCrossColumnRawCondition(value, ">");
-    } else {
-      return this.addCondition({ kind: "gt", value });
-    }
+  gt(value: V | ExprLike<V | N> | undefined): ExpressionCondition {
+    if (value === undefined) return skipCondition;
+    return this.crossCompare(">", value) ?? this.addCondition({ kind: "gt", value: value as any });
   }
 
-  gte(value: V | undefined): ColumnCondition | RawCondition {
-    if (value === undefined) {
-      return skipCondition;
-    } else if (value instanceof PrimitiveAliasImpl) {
-      return this.addCrossColumnRawCondition(value, ">=");
-    } else {
-      return this.addCondition({ kind: "gte", value });
-    }
+  gte(value: V | ExprLike<V | N> | undefined): ExpressionCondition {
+    if (value === undefined) return skipCondition;
+    return this.crossCompare(">=", value) ?? this.addCondition({ kind: "gte", value: value as any });
   }
 
-  lt(value: V | undefined): ColumnCondition | RawCondition {
-    if (value === undefined) {
-      return skipCondition;
-    } else if (value instanceof PrimitiveAliasImpl) {
-      return this.addCrossColumnRawCondition(value, "<");
-    } else {
-      return this.addCondition({ kind: "lt", value });
-    }
+  lt(value: V | ExprLike<V | N> | undefined): ExpressionCondition {
+    if (value === undefined) return skipCondition;
+    return this.crossCompare("<", value) ?? this.addCondition({ kind: "lt", value: value as any });
   }
 
-  lte(value: V | undefined): ColumnCondition | RawCondition {
-    if (value === undefined) {
-      return skipCondition;
-    } else if (value instanceof PrimitiveAliasImpl) {
-      return this.addCrossColumnRawCondition(value, "<=");
-    } else {
-      return this.addCondition({ kind: "lte", value });
-    }
+  lte(value: V | ExprLike<V | N> | undefined): ExpressionCondition {
+    if (value === undefined) return skipCondition;
+    return this.crossCompare("<=", value) ?? this.addCondition({ kind: "lte", value: value as any });
   }
 
   between(v1: V | undefined, v2: V | undefined): ColumnCondition {
@@ -340,8 +396,9 @@ class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<
     return this.addCondition({ kind: "ilike", value: makeLike(value) });
   }
 
-  in(values: (V | null)[] | undefined): ExpressionCondition {
+  in(values: readonly (V | null)[] | ExprLike<V | null> | undefined): ExpressionCondition {
     if (values === undefined) return skipCondition;
+    if (isExpr(values)) return this.inList("IN", values);
     if (values.includes(null)) {
       const isNull = this.addCondition({ kind: "is-null" });
       const hasValue = this.addCondition({ kind: "in", value: values.filter((v) => v !== null) });
@@ -349,6 +406,12 @@ class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<
     } else {
       return this.addCondition({ kind: "in", value: values as V[] });
     }
+  }
+
+  nin(values: readonly (V | null)[] | ExprLike<V | null> | undefined): ExpressionCondition {
+    if (values === undefined) return skipCondition;
+    if (isExpr(values)) return this.inList("NOT IN", values);
+    return this.addCondition({ kind: "nin", value: values.filter((v) => v !== null) as V[] });
   }
 
   // V will already be an array
@@ -391,79 +454,84 @@ class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<
 }
 
 class EntityAliasImpl<T> extends AbstractAliasColumn<IdType> implements EntityAlias<T> {
-  eq(value: T | IdOf<T> | null | undefined): ColumnCondition {
+  eq(value: T | IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
     if (value === undefined) {
       return skipCondition;
     } else if (value === null) {
       return this.addCondition({ kind: "is-null" });
     } else {
-      return this.addCondition({ kind: "eq", value: value as any });
+      return this.crossCompare("=", value) ?? this.addCondition({ kind: "eq", value: value as any });
     }
   }
 
-  ne(value: T | IdOf<T> | null | undefined): ColumnCondition {
+  ne(value: T | IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
     if (value === undefined) {
       return skipCondition;
     } else if (value === null) {
       return this.addCondition({ kind: "not-null" });
     } else {
-      return this.addCondition({ kind: "ne", value: value as any });
+      return this.crossCompare("!=", value) ?? this.addCondition({ kind: "ne", value: value as any });
     }
   }
 
-  in(values: Array<T | IdOf<T>> | undefined | null): ExpressionCondition {
+  in(values: readonly (T | IdOf<T> | null)[] | undefined | null | ExprLike<IdOf<T> | null>): ExpressionCondition {
     if (values === undefined) {
       return skipCondition;
     } else if (values === null) {
       throw new Error("Unsupported");
+    } else if (isExpr(values)) {
+      return this.inList("IN", values);
+    } else if (values.includes(null)) {
+      // Like `PrimitiveAlias.in`, split `[a1, null]` into `IS NULL OR IN (...)`
+      const isNull = this.addCondition({ kind: "is-null" });
+      const hasValue = this.addCondition({ kind: "in", value: values.filter((v) => v !== null) as any });
+      return { or: [isNull, hasValue] };
     } else {
       return this.addCondition({ kind: "in", value: values as any });
     }
   }
 
-  gt(value: IdOf<T> | null | undefined): ColumnCondition | RawCondition {
-    if (value === undefined) {
+  nin(values: readonly (T | IdOf<T> | null)[] | undefined | null | ExprLike<IdOf<T> | null>): ExpressionCondition {
+    if (values === undefined) {
       return skipCondition;
-    } else if (value === null) {
+    } else if (values === null) {
       throw new Error("Unsupported");
+    } else if (isExpr(values)) {
+      return this.inList("NOT IN", values);
     } else {
-      return this.addCondition({ kind: "gt", value: value as any });
+      return this.addCondition({ kind: "nin", value: values.filter((v) => v !== null) as any });
     }
   }
 
-  gte(value: IdOf<T> | null | undefined): ColumnCondition | RawCondition {
-    if (value === undefined) {
-      return skipCondition;
-    } else if (value === null) {
-      throw new Error("Unsupported");
-    } else {
-      return this.addCondition({ kind: "gte", value: value as any });
-    }
+  gt(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
+    return this.compareId(">", "gt", value);
   }
 
-  lt(value: IdOf<T> | null | undefined): ColumnCondition | RawCondition {
-    if (value === undefined) {
-      return skipCondition;
-    } else if (value === null) {
-      throw new Error("Unsupported");
-    } else {
-      return this.addCondition({ kind: "lt", value: value as any });
-    }
+  gte(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
+    return this.compareId(">=", "gte", value);
   }
 
-  lte(value: IdOf<T> | null | undefined): ColumnCondition | RawCondition {
-    if (value === undefined) {
-      return skipCondition;
-    } else if (value === null) {
-      throw new Error("Unsupported");
-    } else {
-      return this.addCondition({ kind: "lte", value: value as any });
-    }
+  lt(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
+    return this.compareId("<", "lt", value);
+  }
+
+  lte(value: IdOf<T> | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
+    return this.compareId("<=", "lte", value);
   }
 
   raw(exp: string, bindings: readonly any[] | undefined): RawCondition | ColumnCondition {
     if (bindings === undefined) return skipCondition;
     return this.addRawCondition(exp, bindings);
+  }
+
+  private compareId(op: string, kind: "gt" | "gte" | "lt" | "lte", value: unknown): ExpressionCondition {
+    if (value === undefined) {
+      return skipCondition;
+    } else if (value === null) {
+      throw new Error("Unsupported");
+    } else {
+      return this.crossCompare(op, value) ?? this.addCondition({ kind, value: value as any });
+    }
   }
 }
 
@@ -474,11 +542,12 @@ class PolyReferenceAlias<T extends Entity> {
     private field: PolymorphicField & { aliasSuffix: string },
   ) {}
 
-  eq(value: T | TaggedId | null | undefined): ExpressionFilter | ColumnCondition {
+  /** Compares to a tagged id, an entity, or another alias's id column, which picks the component (`c.parent.eq(a.id)`). */
+  eq(value: T | TaggedId | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
     return this.addEqOrNe("eq", value);
   }
 
-  ne(value: T | TaggedId | null | undefined): ExpressionFilter | ColumnCondition {
+  ne(value: T | TaggedId | null | undefined | ExprLike<IdOf<T> | null>): ExpressionCondition {
     return this.addEqOrNe("ne", value);
   }
 
@@ -498,9 +567,20 @@ class PolyReferenceAlias<T extends Entity> {
     };
   }
 
-  private addEqOrNe(kind: "eq" | "ne", value: T | TaggedId | null | undefined): ExpressionFilter | ColumnCondition {
+  private addEqOrNe(kind: "eq" | "ne", value: unknown): ExpressionCondition {
     if (value === undefined) {
       return skipCondition;
+    } else if (value instanceof AbstractAliasColumn) {
+      // Joining through the poly, i.e. `c.parent.eq(a.id)`: the other alias's entity picks the component
+      const otherMeta = value.meta;
+      const comp =
+        this.field.components.find((p) => getBaseAndSelfMetas(otherMeta).includes(p.otherMetadata())) ??
+        fail(`${this.field.fieldName} has no component for ${otherMeta.type}`);
+      return this.addCrossColumnRawCondition(comp, value, kind === "eq" ? "=" : "!=");
+    } else if (isExpr(value)) {
+      return fail(
+        `${this.field.fieldName} is polymorphic, so it can only be compared to tagged ids or entity alias columns`,
+      );
     } else if (value === null) {
       // We can AND each of the components as many conditions
       const value = kind === "eq" ? ({ kind: "is-null" } as const) : ({ kind: "not-null" } as const);
@@ -511,10 +591,37 @@ class PolyReferenceAlias<T extends Entity> {
       // If we have a value, we can find the component
       const comp =
         this.field.components.find(
-          (p) => p.otherMetadata().cstr === getConstructorFromTaggedId(maybeResolveReferenceToId(value) as string),
+          (p) =>
+            p.otherMetadata().cstr === getConstructorFromTaggedId(maybeResolveReferenceToId(value as any) as string),
         ) || fail(`Could not find component for ${value}`);
-      return this.addCondition(comp, { kind, value });
+      return this.addCondition(comp, { kind, value: value as any });
     }
+  }
+
+  /** `unset1.parent_author_id = unset2.id`, bound to real aliases when both sides are bound. */
+  private addCrossColumnRawCondition(
+    comp: PolymorphicFieldComponent,
+    otherColumn: AbstractAliasColumn<any>,
+    op: string,
+  ): RawCondition {
+    const cond = {
+      kind: "raw",
+      aliases: [] as string[],
+      condition: `unset1.${comp.columnName} ${op} unset2.${otherColumn.column.columnName}`,
+      pruneable: false,
+      bindings: [],
+    } satisfies RawCondition;
+    this.callbacks.push((newMeta, newAlias) => {
+      const alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
+      if (!cond.aliases.includes(alias)) cond.aliases.push(alias);
+      cond.condition = cond.condition.replace("unset1", alias);
+    });
+    otherColumn.callbacks.push((newMeta, newAlias) => {
+      const alias = getMaybeCtiAlias(otherColumn.meta, otherColumn.field, newMeta, newAlias);
+      if (!cond.aliases.includes(alias)) cond.aliases.push(alias);
+      cond.condition = cond.condition.replace("unset2", alias);
+    });
+    return cond;
   }
 
   private addCondition(comp: PolymorphicFieldComponent, value: ParsedValueFilter<T | TaggedId>): ColumnCondition {

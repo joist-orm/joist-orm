@@ -38,6 +38,7 @@ export * from "./EntityGraphQLFilter.ts";
 export * from "./EntityManager.ts";
 export * from "./EntityMetadata.ts";
 export type { EnumMetadata } from "./EnumMetadata.ts";
+export * from "./Expr.ts";
 export type { EntityOrId, HintNode } from "./HintTree.ts";
 export { InstanceData } from "./InstanceData.ts";
 export { type JoinColumnValue, type JoinRow, JoinRowOperation, type ManyToManyLike } from "./JoinRows.ts";
@@ -104,6 +105,7 @@ export { deepNormalizeHint, normalizeHint } from "./normalizeHints.ts";
 export { ImmutableEntitiesPlugin } from "./plugins/ImmutableEntitiesPlugin.ts";
 export type { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin.ts";
 export { JsonAggregatePreloader } from "./preloading/JsonAggregatePreloader.ts";
+export * from "./query.ts";
 export {
   convertToLoadHint,
   isTypeOrSubType,

@@ -8,6 +8,7 @@ const plugins = (process.env.PLUGINS ?? "join-preloading").split(",");
 export const isPreloadingEnabled = plugins.includes("join-preloading");
 export let testDriver: TestDriver = new PostgresTestDriver(isPreloadingEnabled);
 export let knex: Knex = testDriver.knex;
+export let pool = testDriver.pool;
 export let numberOfQueries = 0;
 export let queries: string[] = [];
 

@@ -1,10 +1,11 @@
 import "dotenv/config";
 import { Driver, EntityManager, newPgConnectionConfig } from "joist-core";
-import { knex as createKnex, Knex } from "knex";
+import { createKnex } from "joist-knex";
+import pg from "pg";
 
 export interface SeedConfig {
-  /** A factory function to create a Driver from a Knex instance. */
-  createDriver: (knex: Knex) => Driver;
+  /** A factory function to create a Driver from a pg Pool. */
+  createDriver: (pool: pg.Pool) => Driver;
 }
 
 /**
@@ -15,7 +16,6 @@ export interface SeedConfig {
  *
  * We currently make a lot of assumptions:
  *
- * - That the project is using knex (all Joist projects do atm)
  * - That the project is using postgres (all Joist projects do atm)
  * - That the project does not have a context, or at least does not require a context to seed
  *
@@ -26,7 +26,7 @@ export interface SeedConfig {
  * import { seed } from "joist-test-utils";
  * import { PostgresDriver } from "joist-orm";
  *
- * seed({ createDriver: (knex) => new PostgresDriver(knex) }, async (em) => {
+ * seed({ createDriver: (pool) => new PostgresDriver(pool) }, async (em) => {
  *   // seed your data here
  * });
  * ```
@@ -37,14 +37,12 @@ export function seed<E extends EntityManager = EntityManager>(config: SeedConfig
     throw new Error("seed will only run with NODE_ENV=local or NODE_ENV=test because it resets the database");
   }
 
-  // We make a lot of assumptions about the project is surely using
-  // knex & postgres, but at some point these will be configurable...
-  // Maybe we can detect it in the `DATABASE_URL` or what not.
-  const knex = createKnex({ client: "pg", connection: newPgConnectionConfig() });
+  const pool = new pg.Pool(newPgConnectionConfig());
+  const knex = createKnex(pool);
 
   async function seed() {
     await knex.select(knex.raw("flush_database()"));
-    const driver = config.createDriver(knex);
+    const driver = config.createDriver(pool);
     const em = new EntityManager({}, { driver }) as E;
     await fn(em);
     await em.flush();
@@ -53,11 +51,11 @@ export function seed<E extends EntityManager = EntityManager>(config: SeedConfig
   seed()
     .then(async () => {
       console.log("Seeded!");
-      await knex.destroy();
+      await pool.end();
     })
     .catch(async (err) => {
       console.error(err);
-      await knex.destroy();
+      await pool.end();
       process.exit(1);
     });
 }

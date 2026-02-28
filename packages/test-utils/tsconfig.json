@@ -6,5 +6,5 @@
     "baseUrl": "./"
   },
   "include": ["./src"],
-  "references": [{ "path": "../core" }, { "path": "../utils" }]
+  "references": [{ "path": "../core" }, { "path": "../knex" }, { "path": "../utils" }]
 }

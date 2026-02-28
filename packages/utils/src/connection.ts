@@ -1,4 +1,3 @@
-import { ConnectionConfig as PgConnectionConfig } from "pg";
 import { parse } from "pg-connection-string";
 
 type DatabaseUrlEnv = { DATABASE_URL: string };
@@ -14,16 +13,18 @@ type DbSettingsEnv = {
 export type ConnectionEnv = DatabaseUrlEnv | DbSettingsEnv;
 
 /**
- * A connection config with a simpler password field type.
+ * A simple connection config compatible with both `pg.Pool` and knex.
  *
- * The `PgConnectionConfig` has a fancy password that can be a function/async, i.e. to like dynamically
- * load it somehow; that's fine, but is more complex than knex expects, so we simplify it to "just a string",
- * which is what we provide anyway.
- *
- * We also omit `types` and `stream` b/c Knex's `PgConnectionConfig` doesn't exactly match pg's.
+ * We use a plain object type instead of pg's `ConnectionConfig` to avoid
+ * pulling in pg-specific fields (like `types`) that are incompatible with knex.
  */
-export type ConnectionConfig = Omit<PgConnectionConfig, "password" | "types" | "stream"> & {
-  password: string | undefined;
+export type ConnectionConfig = {
+  user?: string;
+  password?: string;
+  database?: string;
+  host?: string;
+  port?: number;
+  ssl?: boolean;
 };
 
 /**
@@ -45,8 +46,8 @@ export function newPgConnectionConfig(env?: ConnectionEnv): ConnectionConfig {
     const options = parse(url);
     const { database, port, host, user, password } = options;
     return {
-      user,
-      password,
+      user: user ?? undefined,
+      password: password ?? undefined,
       database: database ?? undefined,
       host: host ?? undefined,
       port: port ? Number(port) : undefined,

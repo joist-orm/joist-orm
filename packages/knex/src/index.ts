@@ -1,5 +1,6 @@
 import { Entity, FilterAndSettings, getMetadata, MaybeAbstractEntityConstructor, parseFindQuery } from "joist-core";
-import { Knex } from "knex";
+import { knex as baseCreateKnex, Knex } from "knex";
+import pg from "pg";
 import { buildKnexQuery } from "./buildKnexQuery";
 
 /**
@@ -45,4 +46,30 @@ export function buildQuery<T extends Entity>(
   } = filter;
   const parsed = parseFindQuery(meta, where, { conditions, orderBy, pruneJoins, keepAliases, softDeletes });
   return buildKnexQuery(knex, parsed, { limit, offset });
+}
+
+/**
+ * Creates a Knex instance that delegates to an existing pg Pool or PoolClient
+ * instead of managing its own internal connection pool.
+ *
+ * When given a `pg.Pool`, each knex query acquires a connection from the pool and
+ * releases it when the query completes.
+ *
+ * When given a `pg.PoolClient`, all knex queries run on that specific client. This
+ * is useful when the client has an open transaction (via `BEGIN`) — the knex queries
+ * will participate in that transaction and be affected by `COMMIT`/`ROLLBACK`.
+ *
+ * The returned Knex instance has no internal pool, so there is no need to call
+ * `.destroy()` on it — the caller owns the Pool/PoolClient lifecycle.
+ */
+export function createKnex(poolOrClient: pg.Pool | pg.PoolClient): Knex {
+  const knex = baseCreateKnex({ client: "pg", connection: {}, pool: { max: 0 } });
+  if (poolOrClient instanceof pg.Pool) {
+    knex.client.acquireConnection = () => poolOrClient.connect();
+    knex.client.releaseConnection = (conn: pg.PoolClient) => conn.release();
+  } else {
+    knex.client.acquireConnection = () => poolOrClient;
+    knex.client.releaseConnection = () => {};
+  }
+  return knex;
 }

@@ -165,8 +165,8 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  if (knex) {
-    await knex.destroy();
+  if (pool) {
+    await pool.end();
   }
 });
 ```

@@ -1,6 +1,6 @@
 import { Author, Book, newBook, newTag, Tag } from "@src/entities";
 import { insertAuthor, insertBook, insertBookToTag, insertTag, select } from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
+import { newEntityManager, testDriver } from "@src/testEm";
 import { getMetadata, setField } from "joist-orm";
 
 // This will test whatever driver the test suite is currently being run against
@@ -13,8 +13,10 @@ describe("Driver", () => {
       setField(author, "initials", "a");
       setField(author, "numberOfBooks", 0);
       setField(author, "tagsOfAllBooks", "");
-      await em.ctx.knex.transaction(async (txn) => {
-        em.txn = txn;
+      const client = await testDriver.pool.connect();
+      try {
+        await client.query("BEGIN");
+        em.txn = client;
         await em.driver.flush(
           em,
           {
@@ -27,7 +29,14 @@ describe("Driver", () => {
           },
           {},
         );
-      });
+        await client.query("COMMIT");
+      } catch (e) {
+        await client.query("ROLLBACK");
+        throw e;
+      } finally {
+        em.txn = undefined;
+        client.release();
+      }
       const authors = await select("authors");
       expect(authors.length).toEqual(1);
       expect(authors[0].id).toEqual(1);

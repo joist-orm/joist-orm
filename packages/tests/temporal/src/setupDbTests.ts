@@ -4,17 +4,20 @@ import { EntityManager } from "@src/entities";
 import { PostgresDriver, PostgresDriverOpts } from "joist-orm/pg";
 import { toMatchEntity } from "joist-test-utils";
 import { newPgConnectionConfig } from "joist-utils";
-import { Knex, knex as createKnex } from "knex";
+import { createKnex } from "joist-orm/knex";
+import { Knex } from "knex";
+import pg from "pg";
 import { Temporal } from "temporal-polyfill";
 
 // Create a shared test context that tests can use and also we'll use to auto-flush the db between tests.
 export let knex: Knex;
+let pool: pg.Pool;
 
 export function newEntityManager(opts?: PostgresDriverOpts) {
   const ctx = { knex };
   const em = new EntityManager(
     ctx as any,
-    new PostgresDriver(knex, {
+    new PostgresDriver(pool, {
       ...opts,
     }),
   );
@@ -28,12 +31,8 @@ export let queries: string[] = [];
 expect.extend({ toMatchEntity });
 
 beforeAll(async () => {
-  knex = createKnex({
-    client: "pg",
-    connection: newPgConnectionConfig(),
-    debug: false,
-    asyncStackTraces: true,
-  }).on("query", (e: any) => {
+  pool = new pg.Pool(newPgConnectionConfig());
+  knex = createKnex(pool).on("query", (e: any) => {
     numberOfQueries++;
     queries.push(e.sql);
   });
@@ -45,7 +44,7 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await knex.destroy();
+  await pool.end();
 });
 
 export function resetQueryCount() {

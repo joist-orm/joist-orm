@@ -137,7 +137,7 @@
     }
   },
   "entitiesDirectory": "./src/entities",
-  "transactionType": "PoolClient@pg",
   "outputDocs": true,
+  "transactionType": "PoolClient@pg",
   "version": "0.0.1"
 }

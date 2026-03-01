@@ -15,6 +15,8 @@
     { "path": "./packages/tests/number-ids" },
     { "path": "./packages/tests/schema-misc" },
     { "path": "./packages/tests/uuid-ids" },
+    { "path": "./packages/tests/sqlite" },
+    { "path": "./packages/drivers/sqlite" },
     { "path": "./packages/test-utils" },
     { "path": "./packages/utils" }
   ],

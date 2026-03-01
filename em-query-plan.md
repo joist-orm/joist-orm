@@ -355,10 +355,332 @@ custom queries, too unique to batch.
 - Recursive CTEs authored by the user (internal recursive CTE support already exists)
 - Returning entities from JOINed aliases (e.g. select both Author and Book as entities)
 
+### Gaps Found From Real-World Samples
+
+These came from analyzing `em-query-sample-*.ts` files against the proposed API:
+
+**1. `rawCondition()` standalone function** (sample-1, sample-approvals)
+Full-text search (`ts_search @@ plainto_tsquery(?)`) and dynamic poly component NOT NULL
+checks need raw SQL conditions not tied to a specific alias field. Need:
+```ts
+function rawCondition(sql: string, bindings: any[], aliases: Alias<any>[]): ExpressionCondition;
+```
+This is similar to the existing `RawCondition` type but exposed as a user-facing helper.
+
+**2. Non-FK join conditions** (sample-bid-contract-items)
+`bcli.item_template_item_id = iti.bid_item_template_item_id` is not a standard FK→PK join.
+`.on()` and `.leftOn()` must also accept an `ExpressionCondition` for arbitrary ON clauses:
+```ts
+// FK-based (common case)
+a.on(b.author)
+// Arbitrary condition
+bcli.leftOn(bcli.itemTemplateItem.eq(iti.bidItemTemplateItem))
+```
+This also requires extending `EntityAlias.eq()` to accept another `EntityAlias` for
+cross-column FK comparisons.
+
+**3. Entity mode + GROUP BY + aggregate ORDER BY** (sample-bills)
+Entity mode (`select: b`) with `groupBy: [b.id]` and `orderBy: [desc(sum(bli.amountInCents))]`.
+PG allows this since the PK functionally determines all columns. This is a valid combo that
+the API already supports — no changes needed, just confirming it works.
+
+**4. `rawExpr<R>()` in orderBy** (sample-bills)
+Compound expressions like `SUM(bli.amount_in_cents) - b.quickbooks_amount_paid_in_cents`
+can't be built from primitive aggregate helpers. `rawExpr<R>(sql, bindings)` needs to work
+in `orderBy`, not just `select`. Already in the plan but confirming it's needed.
+
+**5. `nin()` on aliases** (sample-bid-contract-items)
+The original uses `.whereNotIn(...)`. Our `PrimitiveAlias` has `in()` but not `nin()`.
+`EntityAlias` needs `nin()` too. (Note: the em.find `ValueFilter` already supports `{ nin: ... }`
+via inline conditions, but the alias condition builder doesn't expose it yet.)
+
+### Test Plan
+
+Tests go in a new `EntityManager.query.test.ts` alongside the existing `EntityManager.queries.test.ts`.
+Use the existing test entities (Author, Book, Publisher, Comment, Tag, etc.).
+
+**Core functionality:**
+
+```ts
+// 1. Entity mode — returns entities via identity map
+it("can query entities with simple where", async () => {
+  await insertAuthor({ first_name: "a1" });
+  await insertAuthor({ first_name: "a2" });
+  const em = newEntityManager();
+  const [a] = aliases(Author);
+  const authors = await em.query({ select: a, from: a, where: { and: [a.firstName.eq("a1")] } });
+  expect(authors).toMatchEntity([{ firstName: "a1" }]);
+});
+
+// 2. POJO mode — returns typed plain objects
+it("can query POJO with selected columns", async () => {
+  await insertAuthor({ first_name: "a1", age: 30 });
+  const em = newEntityManager();
+  const [a] = aliases(Author);
+  const rows = await em.query({ select: { name: a.firstName, age: a.age }, from: a });
+  expect(rows).toMatchObject([{ name: "a1", age: 30 }]);
+});
+
+// 3. Inner join via FK
+it("can join via FK reference", async () => {
+  await insertAuthor({ first_name: "a1" });
+  await insertBook({ title: "b1", author_id: 1 });
+  const em = newEntityManager();
+  const [a, b] = aliases(Author, Book);
+  const rows = await em.query({
+    select: { author: a.firstName, title: b.title },
+    from: a,
+    join: [a.on(b.author)],
+  });
+  expect(rows).toMatchObject([{ author: "a1", title: "b1" }]);
+});
+
+// 4. Left join
+it("can left join", async () => {
+  await insertAuthor({ first_name: "a1" });
+  await insertAuthor({ first_name: "a2" });
+  await insertBook({ title: "b1", author_id: 1 });
+  const em = newEntityManager();
+  const [a, b] = aliases(Author, Book);
+  const rows = await em.query({
+    select: { author: a.firstName, title: b.title },
+    from: a,
+    join: [a.leftOn(b.author)],
+    orderBy: [asc(a.firstName)],
+  });
+  expect(rows).toMatchObject([{ author: "a1", title: "b1" }, { author: "a2", title: null }]);
+});
+
+// 5. GROUP BY + count aggregate
+it("can group by with count", async () => {
+  await insertAuthor({ first_name: "a1" });
+  await insertBook({ title: "b1", author_id: 1 });
+  await insertBook({ title: "b2", author_id: 1 });
+  const em = newEntityManager();
+  const [a, b] = aliases(Author, Book);
+  const rows = await em.query({
+    select: { name: a.firstName, bookCount: count() },
+    from: a,
+    join: [a.on(b.author)],
+    groupBy: [a.firstName],
+  });
+  expect(rows).toMatchObject([{ name: "a1", bookCount: 2 }]);
+});
+
+// 6. Multiple aggregates (sum, avg, min, max)
+it("can select multiple aggregates", async () => {
+  await insertAuthor({ first_name: "a1", age: 20 });
+  await insertAuthor({ first_name: "a2", age: 40 });
+  const em = newEntityManager();
+  const [a] = aliases(Author);
+  const [row] = await em.query({
+    select: { total: count(), avgAge: avg(a.age), minAge: min(a.age), maxAge: max(a.age) },
+    from: a,
+  });
+  expect(row).toMatchObject({ total: 2, avgAge: 30, minAge: 20, maxAge: 40 });
+});
+
+// 7. HAVING
+it("can filter groups with having", async () => {
+  await insertAuthor({ first_name: "a1" });
+  await insertAuthor({ first_name: "a2" });
+  await insertBook({ title: "b1", author_id: 1 });
+  await insertBook({ title: "b2", author_id: 1 });
+  await insertBook({ title: "b3", author_id: 2 });
+  const em = newEntityManager();
+  const [a, b] = aliases(Author, Book);
+  const rows = await em.query({
+    select: { name: a.firstName, bookCount: count() },
+    from: a,
+    join: [a.on(b.author)],
+    groupBy: [a.firstName],
+    having: { and: [count().gt(1)] },
+  });
+  expect(rows).toMatchObject([{ name: "a1", bookCount: 2 }]);
+});
+
+// 8. Condition pruning — undefined values skipped
+it("prunes undefined conditions", async () => {
+  await insertAuthor({ first_name: "a1" });
+  await insertAuthor({ first_name: "a2" });
+  const em = newEntityManager();
+  const [a] = aliases(Author);
+  const nameFilter: string | undefined = undefined;
+  const rows = await em.query({
+    select: { name: a.firstName },
+    from: a,
+    where: { and: [a.firstName.eq(nameFilter)] },
+    orderBy: [asc(a.firstName)],
+  });
+  expect(rows).toMatchObject([{ name: "a1" }, { name: "a2" }]);
+});
+
+// 9. orderBy with asc/desc
+it("can order by asc and desc", async () => {
+  await insertAuthor({ first_name: "a1" });
+  await insertAuthor({ first_name: "a2" });
+  const em = newEntityManager();
+  const [a] = aliases(Author);
+  const rows = await em.query({
+    select: { name: a.firstName },
+    from: a,
+    orderBy: [desc(a.firstName)],
+  });
+  expect(rows).toMatchObject([{ name: "a2" }, { name: "a1" }]);
+});
+
+// 10. limit and offset
+it("can limit and offset", async () => {
+  await insertAuthor({ first_name: "a1" });
+  await insertAuthor({ first_name: "a2" });
+  await insertAuthor({ first_name: "a3" });
+  const em = newEntityManager();
+  const [a] = aliases(Author);
+  const rows = await em.query({
+    select: { name: a.firstName },
+    from: a,
+    orderBy: [asc(a.firstName)],
+    limit: 2,
+    offset: 1,
+  });
+  expect(rows).toMatchObject([{ name: "a2" }, { name: "a3" }]);
+});
+```
+
+**Gap-specific tests:**
+
+```ts
+// 11. rawCondition — standalone raw SQL in WHERE (gap #1)
+it("can use rawCondition for unmodeled columns", async () => {
+  await insertAuthor({ first_name: "a1", age: 30 });
+  await insertAuthor({ first_name: "a2", age: 40 });
+  const em = newEntityManager();
+  const [a] = aliases(Author);
+  const rows = await em.query({
+    select: { name: a.firstName },
+    from: a,
+    where: { and: [rawCondition("a.age > ?", [35], [a])] },
+  });
+  expect(rows).toMatchObject([{ name: "a2" }]);
+});
+
+// 12. Non-FK join condition (gap #2)
+// Author self-join: find authors whose mentor has age > their own age
+it("can join with arbitrary condition", async () => {
+  await insertAuthor({ first_name: "mentor", age: 50 });
+  await insertAuthor({ first_name: "mentee", age: 25, mentor_id: 1 });
+  const em = newEntityManager();
+  const [a, m] = [alias(Author), alias(Author)];
+  const rows = await em.query({
+    select: { mentee: a.firstName, mentor: m.firstName },
+    from: a,
+    join: [a.on(m.mentor.eq(a))],  // non-FK arbitrary condition form
+    where: { and: [m.age.gt(a.age)] },
+  });
+  expect(rows).toMatchObject([{ mentee: "mentor", mentor: "mentee" }]);
+  // Actually: mentee's mentor_id = mentor's id, and mentor.age > mentee.age
+});
+
+// 13. Entity mode + GROUP BY + aggregate ORDER BY (gap #3)
+it("can return entities ordered by aggregate", async () => {
+  await insertAuthor({ first_name: "a1" });
+  await insertAuthor({ first_name: "a2" });
+  await insertBook({ title: "b1", author_id: 1 });
+  await insertBook({ title: "b2", author_id: 2 });
+  await insertBook({ title: "b3", author_id: 2 });
+  const em = newEntityManager();
+  const [a, b] = aliases(Author, Book);
+  const authors = await em.query({
+    select: a,
+    from: a,
+    join: [a.on(b.author)],
+    groupBy: [a.id],
+    orderBy: [desc(count())],
+  });
+  // a2 has 2 books, a1 has 1
+  expect(authors).toMatchEntity([{ firstName: "a2" }, { firstName: "a1" }]);
+});
+
+// 14. rawExpr in orderBy (gap #4)
+it("can order by rawExpr", async () => {
+  await insertAuthor({ first_name: "a1", age: 10 });
+  await insertAuthor({ first_name: "a2", age: 20 });
+  const em = newEntityManager();
+  const [a] = aliases(Author);
+  const rows = await em.query({
+    select: { name: a.firstName },
+    from: a,
+    orderBy: [desc(rawExpr<number>("a.age * 2"))],
+  });
+  expect(rows).toMatchObject([{ name: "a2" }, { name: "a1" }]);
+});
+
+// 15. nin() on aliases (gap #5)
+it("can use nin on alias", async () => {
+  await insertAuthor({ first_name: "a1" });
+  await insertAuthor({ first_name: "a2" });
+  await insertAuthor({ first_name: "a3" });
+  const em = newEntityManager();
+  const [a] = aliases(Author);
+  const rows = await em.query({
+    select: { name: a.firstName },
+    from: a,
+    where: { and: [a.firstName.nin(["a1", "a3"])] },
+  });
+  expect(rows).toMatchObject([{ name: "a2" }]);
+});
+
+// 16. distinct
+it("can select distinct", async () => {
+  await insertAuthor({ first_name: "a1" });
+  await insertBook({ title: "b1", author_id: 1 });
+  await insertBook({ title: "b2", author_id: 1 });
+  const em = newEntityManager();
+  const [a, b] = aliases(Author, Book);
+  const rows = await em.query({
+    select: { name: a.firstName },
+    from: a,
+    join: [a.on(b.author)],
+    distinct: true,
+  });
+  expect(rows).toMatchObject([{ name: "a1" }]);
+});
+
+// 17. arrayAgg aggregate
+it("can use arrayAgg", async () => {
+  await insertAuthor({ first_name: "a1" });
+  await insertBook({ title: "b1", author_id: 1 });
+  await insertBook({ title: "b2", author_id: 1 });
+  const em = newEntityManager();
+  const [a, b] = aliases(Author, Book);
+  const rows = await em.query({
+    select: { name: a.firstName, titles: arrayAgg(b.title) },
+    from: a,
+    join: [a.on(b.author)],
+    groupBy: [a.firstName],
+  });
+  expect(rows).toMatchObject([{ name: "a1", titles: ["b1", "b2"] }]);
+});
+
+// 18. subquery in WHERE
+it("can use subquery in where", async () => {
+  await insertAuthor({ first_name: "a1" });
+  await insertAuthor({ first_name: "a2" });
+  await insertBook({ title: "b1", author_id: 1 });
+  const em = newEntityManager();
+  const [a, b] = aliases(Author, Book);
+  const sq = subquery({ select: b.author, from: b });
+  const authors = await em.query({
+    select: a,
+    from: a,
+    where: { and: [a.id.in(sq)] },
+  });
+  expect(authors).toMatchEntity([{ firstName: "a1" }]);
+});
+```
+
 ### Remaining Open Questions
 
-1. **Alias binding** — keep deferred binding for consistency with existing alias system.
-
-2. **`Expr<R>` reusability** — we'll try making `Expr` a stable reference that can appear in
+1. **`Expr<R>` reusability** — we'll try making `Expr` a stable reference that can appear in
    select, having, and orderBy. If this gets hairy, we can fall back to regenerating the SQL
    fragment at each usage site.

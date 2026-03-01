@@ -62,7 +62,13 @@ export function buildRawQuery(
     const maybeComma = i === parsed.selects.length - 1 ? "" : ", ";
     if (typeof s === "string") {
       sql += maybeDistinct + s + maybeComma;
-    } else {
+    } else if ("kind" in s && s.kind === "bool_or") {
+      const inner = buildWhereClause(s.condition, true);
+      if (inner) {
+        sql += `${maybeDistinct}BOOL_OR(${inner[0]}) AS ${kq(s.as)}${maybeComma}`;
+        bindings.push(...inner[1]);
+      }
+    } else if ("sql" in s) {
       sql += maybeDistinct + s.sql + maybeComma;
       bindings.push(...s.bindings);
     }

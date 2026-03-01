@@ -25,7 +25,7 @@ export function buildKnexQuery(
     const maybeDistinct = i === 0 && needsDistinct ? "distinct " : "";
     if (typeof s === "string") {
       query.select(knex.raw(`${maybeDistinct}${s}`));
-    } else {
+    } else if ("sql" in s) {
       query.select(knex.raw(`${maybeDistinct}${s.sql}`, s.bindings));
     }
   });

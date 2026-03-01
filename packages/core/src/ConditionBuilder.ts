@@ -157,6 +157,9 @@ export class ConditionBuilder {
             if ("rewritten" in cond) return;
             throw new Error("Joist doesn't support raw conditions in lateral joins yet");
           }
+        } else if (cond.kind === "exists") {
+          // EXISTS conditions are produced by the collection-join rewrite and won't
+          // appear in the batching path that calls findAndRewrite — skip them.
         } else {
           assertNever(cond);
         }

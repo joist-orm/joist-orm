@@ -3,6 +3,7 @@ import { getAliasMgmt, getMaybeCtiAlias, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
+import { rewriteCollectionJoinsToExists } from "./QueryParser.existsRewrite";
 import { pruneUnusedJoins } from "./QueryParser.pruning";
 import { visitConditions } from "./QueryVisitor";
 import { getMetadataForTable } from "./configure";
@@ -25,7 +26,7 @@ export interface ParsedExpressionFilter {
 }
 
 /** A condition or nested condition in a `ParsedExpressionFilter`. */
-export type ParsedExpressionCondition = ParsedExpressionFilter | ColumnCondition | RawCondition;
+export type ParsedExpressionCondition = ParsedExpressionFilter | ColumnCondition | RawCondition | ExistsCondition;
 
 export interface ColumnCondition {
   kind: "column";
@@ -51,6 +52,17 @@ export interface RawCondition {
   bindings: readonly any[];
   /** Used to mark system-added conditions (like `LATERAL JOIN` conditions), which can be ignored when pruning unused joins. */
   pruneable: boolean;
+}
+
+/** An EXISTS or NOT EXISTS subquery condition. */
+export interface ExistsCondition {
+  kind: "exists";
+  /** When true, renders as NOT EXISTS. */
+  negate: boolean;
+  /** The subquery: SELECT 1 FROM child WHERE correlation AND filter. */
+  subquery: ParsedFindQuery;
+  /** Outer aliases referenced by the correlation predicate, for join pruning. */
+  outerAliases: string[];
 }
 
 /** A marker condition for alias methods to indicate they should be skipped/pruned. */
@@ -152,7 +164,7 @@ export interface ParsedGroupBy {
   column: string;
 }
 
-type ParsedSelect = string | ParsedSelectWithBindings;
+export type ParsedSelect = string | ParsedSelectWithBindings;
 type ParsedSelectWithBindings = { sql: string; bindings: any[]; aliases: string[] };
 
 /** The result of parsing an `em.find` filter. */
@@ -160,8 +172,6 @@ export interface ParsedFindQuery {
   selects: ParsedSelect[];
   /** The primary table plus any joins. */
   tables: ParsedTable[];
-  /** Any cross lateral joins, where the `joins: string[]` has the full join as raw SQL; currently only for preloading. */
-  lateralJoins?: { joins: string[]; bindings: any[] };
   /** The query's conditions. */
   condition?: ParsedExpressionFilter;
   /** Extremely optional group bys; we generally don't support adhoc/aggregate queries, but the auto-batching infra uses these. */
@@ -196,6 +206,10 @@ export function parseFindQuery(
     keepAliases = [],
   } = opts;
   const cb = new ConditionBuilder();
+
+  // Track collection joins (o2m/m2m) as they're added, grouped by parent alias.
+  // Passed to the EXISTS rewrite so it doesn't have to re-derive collection structure.
+  const collectionJoins: { parentAlias: string; join: JoinTable }[] = [];
 
   const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
@@ -429,6 +443,9 @@ export function parseFindQuery(
             (ef.subFilter as any)[key],
             field.otherFieldName,
           );
+          // Record after addTable so the JoinTable is in `tables`
+          const o2mJoin = tables.find((t) => t.alias === a) as JoinTable;
+          if (o2mJoin) collectionJoins.push({ parentAlias: alias, join: o2mJoin });
         } else if (field.kind === "m2m") {
           // Always join into the m2m table
           const ja = getAlias(field.joinTableName);
@@ -439,6 +456,9 @@ export function parseFindQuery(
             col1: kqDot(alias, "id"),
             col2: kqDot(ja, field.columnNames[0]),
           });
+          // Record the junction table as a collection join
+          const m2mJoin = tables[tables.length - 1] as JoinTable;
+          collectionJoins.push({ parentAlias: alias, join: m2mJoin });
           // But conditionally join into the alias table
           const sub = (ef.subFilter as any)[key];
           if (isAlias(sub)) {
@@ -546,6 +566,8 @@ export function parseFindQuery(
   Object.assign(query, {
     condition: cb.toExpressionFilter(),
   });
+
+  rewriteCollectionJoinsToExists(query, collectionJoins);
 
   if (query.tables.some((t) => t.join === "outer")) {
     maybeAddIdNotNulls(query);

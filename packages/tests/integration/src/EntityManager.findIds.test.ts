@@ -1,5 +1,6 @@
 import { insertAuthor, insertPublisher } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
+import { oneTo } from "src/utils";
 import { Author, Publisher } from "./entities";
 
 describe("EntityManager.findIds.batch", () => {
@@ -81,5 +82,33 @@ describe("EntityManager.findIds.batch", () => {
     expect(numberOfQueries).toEqual(1);
     expect(q1).toEqual(["p:1"]);
     expect(q2).toEqual(["p:2"]);
+  });
+
+  it("does not do its own distinct during joins", async () => {
+    // This is a regression test for a bug where the data loader was doing its own distinct
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    const em = newEntityManager();
+    const ids = await em.findIds(Author, { publisher: { name: "p1" } });
+    expect(ids).toEqual(["a:1"]);
+  });
+
+  it("does not apply entity limit to the query", async () => {
+    await Promise.all(oneTo(10, (i) => insertAuthor({ first_name: `a${i}` })));
+    const em = newEntityManager();
+    em.entityLimit = 5;
+    const ids = await em.findIds(Author, {});
+    expect(ids).toHaveLength(10);
+  });
+
+  it("does not apply entity limit to the query while batching", async () => {
+    await Promise.all(oneTo(10, (i) => insertAuthor({ first_name: `a${i}`, last_name: i % 2 === 0 ? "even" : "odd" })));
+    const em = newEntityManager();
+    em.entityLimit = 3;
+    const oddsPromise = em.findIds(Author, { lastName: "odd" });
+    const evensPromise = em.findIds(Author, { lastName: "even" });
+    const [odds, evens] = await Promise.all([oddsPromise, evensPromise]);
+    expect(odds).toHaveLength(5);
+    expect(evens).toHaveLength(5);
   });
 });

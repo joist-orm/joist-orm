@@ -100,4 +100,15 @@ describe("EntityManager.findIds.batch", () => {
     const ids = await em.findIds(Author, {});
     expect(ids).toHaveLength(10);
   });
+
+  it("does not apply entity limit to the query while batching", async () => {
+    await Promise.all(oneTo(10, (i) => insertAuthor({ first_name: `a${i}`, last_name: i % 2 === 0 ? "even" : "odd" })));
+    const em = newEntityManager();
+    em.entityLimit = 3;
+    const oddsPromise = em.findIds(Author, { lastName: "odd" });
+    const evensPromise = em.findIds(Author, { lastName: "even" });
+    const [odds, evens] = await Promise.all([oddsPromise, evensPromise]);
+    expect(odds).toHaveLength(5);
+    expect(evens).toHaveLength(5);
+  });
 });

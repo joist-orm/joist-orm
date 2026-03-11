@@ -1,6 +1,5 @@
 import "dotenv/config";
 import { Driver, EntityManager, newPgConnectionConfig } from "joist-core";
-import { createKnex } from "joist-knex";
 import pg from "pg";
 
 export interface SeedConfig {
@@ -38,10 +37,9 @@ export function seed<E extends EntityManager = EntityManager>(config: SeedConfig
   }
 
   const pool = new pg.Pool(newPgConnectionConfig());
-  const knex = createKnex(pool);
 
   async function seed() {
-    await knex.select(knex.raw("flush_database()"));
+    await pool.query("SELECT flush_database()");
     const driver = config.createDriver(pool);
     const em = new EntityManager({}, { driver }) as E;
     await fn(em);

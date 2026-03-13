@@ -27,6 +27,12 @@ export function visitConditions(query: ParsedFindQuery, visitor: Visitor): void 
   while (todo.length > 0) {
     const query = todo.pop()!;
     if (query.condition) visitFilter(query.condition, visitor);
+    // Visit BoolOrSelect conditions in selects so batching visitors can rewrite them
+    for (const s of query.selects) {
+      if (typeof s !== "string" && "kind" in s && s.kind === "bool_or") {
+        visitFilter(s.condition, visitor);
+      }
+    }
     for (const table of query.tables) {
       if (table.join === "lateral") {
         todo.push(table.query);

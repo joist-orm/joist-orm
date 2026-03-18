@@ -78,6 +78,7 @@ export { ReactionLogger, setReactionLogging } from "./logging/ReactionLogger";
 export { lazyField } from "./newEntity";
 export {
   defaultValue,
+  factories,
   FactoryEntityOpt,
   FactoryOpts,
   getTestIndex,

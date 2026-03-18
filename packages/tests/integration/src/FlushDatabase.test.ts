@@ -20,7 +20,7 @@ describe("FlushDatabase", () => {
            FOR seq IN
              SELECT sequencename AS name
              FROM pg_sequences
-             WHERE schemaname = 'public' AND last_value IS NOT NULL AND sequencename LIKE '%_id_seq' AND sequencename NOT IN ('advance_status_id_seq', 'book_range_id_seq', 'color_id_seq', 'image_type_id_seq', 'publisher_size_id_seq', 'publisher_type_id_seq', 'task_type_id_seq')
+             WHERE schemaname = 'public' AND last_value IS NOT NULL AND sequencename LIKE '%_id_seq' AND sequencename NOT IN ('advance_status_id_seq', 'book_range_id_seq', 'color_id_seq', 'image_type_id_seq', 'publisher_size_id_seq', 'publisher_type_id_seq', 'task_type_id_seq', 'migrations_id_seq')
            LOOP
              EXECUTE format('DELETE FROM %I', regexp_replace(seq.name, '_id_seq$', ''));
              EXECUTE format('ALTER SEQUENCE %I RESTART WITH 1', seq.name);

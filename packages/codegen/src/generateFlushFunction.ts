@@ -86,19 +86,21 @@ export function generateExplicitFlushFunction(db: DbMetadata): string {
  * and ~5,000 tests, it gave an 8% speed-up vs. the "DELETE every table" approach).
  */
 export function generateSequenceFlushFunction(db: DbMetadata): string {
-  const enumTables = Object.values(db.enums).map((e) => e.table);
-  // We don't currently have a way to filter out the enum sequences in a query
-  const maybeSkipEnums =
-    enumTables.length === 0
+  const stableTables = [
+    ...Object.values(db.enums).map((e) => e.table.name),
+    ...db.otherTables,
+  ];
+  const maybeSkipStable =
+    stableTables.length === 0
       ? ""
-      : `AND sequencename NOT IN (${enumTables.map((t) => `'${t.name}_id_seq'`).join(", ")})`;
+      : `AND sequencename NOT IN (${stableTables.map((t) => `'${t}_id_seq'`).join(", ")})`;
   return `CREATE OR REPLACE FUNCTION flush_database() RETURNS void AS $$
     DECLARE seq RECORD;
     BEGIN
       FOR seq IN
         SELECT sequencename AS name
         FROM pg_sequences
-        WHERE schemaname = 'public' AND last_value IS NOT NULL AND sequencename LIKE '%_id_seq' ${maybeSkipEnums}
+        WHERE schemaname = 'public' AND last_value IS NOT NULL AND sequencename LIKE '%_id_seq' ${maybeSkipStable}
       LOOP
         EXECUTE format('DELETE FROM %I', regexp_replace(seq.name, '_id_seq$', ''));
         EXECUTE format('ALTER SEQUENCE %I RESTART WITH 1', seq.name);

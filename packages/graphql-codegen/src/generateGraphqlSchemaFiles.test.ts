@@ -506,6 +506,7 @@ async function generate(fs: Fs, opt: EntityDbMetadata[] | Partial<DbMetadata>) {
     enums: {},
     pgEnums: {},
     joinTables: [],
+    otherTables: [],
     totalTables: 10,
     entitiesByName,
   } satisfies DbMetadata;

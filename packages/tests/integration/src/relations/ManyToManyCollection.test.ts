@@ -353,7 +353,7 @@ describe("ManyToManyCollection", () => {
     // When the tag is deleted
     em.delete(t1);
     // ...and we also recalc a RFQ
-    newBookReview(em, { book: "b:1" });
+    newBookReview(em, { book: "b:2" });
     await em.flush();
     // Then the deleted tag is removed from the book collection
     expect(b1.tags.get.map((t) => t.id)).toEqual([t2.id]);

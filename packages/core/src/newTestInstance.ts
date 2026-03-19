@@ -1,4 +1,5 @@
 import { isPlainObject } from "joist-utils";
+import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { EntityConstructor, EntityManager, IdOf, isId, MaybeAbstractEntityConstructor } from "./EntityManager";
 import {
@@ -17,7 +18,7 @@ import {
 } from "./EntityMetadata";
 import { hasDefaultValue, setAsyncDefaultsSynchronously } from "./defaults";
 import { DeepNew, FactoryExtrasOf, New } from "./index";
-import { tagId } from "./keys";
+
 import { FactoryLogger } from "./logging/FactoryLogger";
 import { maybeRequireTemporal } from "./temporal";
 import { ActualFactoryOpts, OptsOf } from "./typeMap";
@@ -27,6 +28,38 @@ let logger: FactoryLogger | undefined = undefined;
 
 // Maybe we should scope this per-em, but assuming tests are single-threaded for now
 let factoryCreated = new WeakSet();
+
+// The last EntityManager used in a factory call, for the `factories` proxy to resolve entities
+let lastFactoryEm: EntityManager | undefined;
+
+const factoryKeyRegex = /^([a-zA-Z]+)(\d+)$/;
+
+/**
+ * A proxy that allows accessing factory-created entities by their factory id.
+ *
+ * For example, after creating entities with `as` keys:
+ *
+ * ```ts
+ * newAuthor(em, { books: [{ is: "b#1" }, { is: "b#2", prequel: "b#1" }] });
+ * const { b1, b2 } = factories;
+ * ```
+ *
+ * The proxy parses property names like `b1` into `b#1` and looks up the entity
+ * in the most recently used EntityManager.
+ */
+export const factories: Record<string, any> = new Proxy(Object.create(null), {
+  get(_target, prop) {
+    if (typeof prop !== "string") return undefined;
+    const match = prop.match(factoryKeyRegex);
+    if (!match) throw new Error(`Invalid id '${prop}', expected 'b1' or 'a2'`);
+    const [, tag, id] = match;
+    if (!lastFactoryEm) throw new Error("No EntityManager available; call a factory like newAuthor(em) first");
+    const testId = `${tag}#${id}`;
+    const entity = lastFactoryEm.entities.find((e) => getTestId(lastFactoryEm!, e) === testId);
+    if (!entity) throw new Error(`No factory entity found for '${testId}'`);
+    return entity;
+  },
+});
 
 /**
  * DeepPartial-esque type specific to our `newTestInstance` factory.
@@ -40,6 +73,7 @@ let factoryCreated = new WeakSet();
  * 2. Works specifically against the constructor/entity opts fields.
  */
 export type FactoryOpts<T extends Entity> = DeepPartialOpts<T> & {
+  is?: string;
   use?: Entity | Entity[];
   useFactoryDefaults?: boolean | "none";
   useExistingCheck?: boolean;
@@ -58,7 +92,7 @@ export const testPlainDate = Temporal?.PlainDate.from("2018-01-01");
 export const testPlainDateTime = testPlainDate?.toPlainDateTime("00:00:00");
 export const testZonedDateTime = testPlainDate?.toZonedDateTime("UTC");
 
-const knownUseKeys = ["use", "useLogging", "useExistingCheck", "useFactoryDefaults"];
+const knownUseKeys = ["is", "use", "useLogging", "useExistingCheck", "useFactoryDefaults"];
 
 /**
  * Creates a test instance of `T`.
@@ -78,6 +112,9 @@ export function newTestInstance<T extends Entity>(
     useExisting?: (opts: OptsOf<T>, existing: DeepNew<T>) => boolean;
   } = {},
 ): DeepNew<T> {
+  // Remember the em so the `factories` proxy can look up entities
+  lastFactoryEm = em;
+
   // The first factory that is asked to debug, without one in place, will create+unset the logger.
   let ownsTheLogger = !logger && testOpts.useLogging;
   if (ownsTheLogger) logger = new FactoryLogger();
@@ -200,6 +237,15 @@ export function newTestInstance<T extends Entity>(
   }
 
   const entity = em.create(cstr, createOpts) as New<T>;
+
+  // Verify the `as` assertion if provided
+  if ((opts as any).is) {
+    const expected = (opts as any).is;
+    const actual = getTestId(em, entity);
+    if (actual !== expected) {
+      throw new Error(`Test used 'is: ${expected}' but the entity is actually ${actual}`);
+    }
+  }
 
   // Report this as factory-created until the next em.flush
   factoryCreated.add(entity);
@@ -613,11 +659,11 @@ export function getTestIndex<T extends Entity>(em: EntityManager, type: MaybeAbs
   return existing.length + 1;
 }
 
-/** Fakes a probably-right id for un-persisted entities. Solely used for quick lookups in tests/factories. */
-function getTestId<T extends Entity>(em: EntityManager, entity: T): string {
+/** Returns the stable `a#1` factory id for em.create-d entities, using the createId assigned at creation time. */
+function getTestId<T extends Entity>(em: EntityManager, entity: T): string | undefined {
   const meta = getMetadata(entity);
-  const sameType = em.getEntities(meta.cstr);
-  return tagId(meta, String(sameType.indexOf(entity) + 1));
+  const createId = getInstanceData(entity).createId;
+  return createId ? `${meta.tagName}#${createId}` : undefined;
 }
 
 // We keep a local copy of `global.Date`, in case a faking library

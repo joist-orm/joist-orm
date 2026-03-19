@@ -25,7 +25,7 @@ export interface ParsedExpressionFilter {
 }
 
 /** A condition or nested condition in a `ParsedExpressionFilter`. */
-export type ParsedExpressionCondition = ParsedExpressionFilter | ColumnCondition | RawCondition;
+export type ParsedExpressionCondition = ParsedExpressionFilter | ColumnCondition | RawCondition | ExistsCondition;
 
 export interface ColumnCondition {
   kind: "column";
@@ -51,6 +51,17 @@ export interface RawCondition {
   bindings: readonly any[];
   /** Used to mark system-added conditions (like `LATERAL JOIN` conditions), which can be ignored when pruning unused joins. */
   pruneable: boolean;
+}
+
+/** An EXISTS or NOT EXISTS subquery condition. */
+export interface ExistsCondition {
+  kind: "exists";
+  /** When true, renders as NOT EXISTS. */
+  negate: boolean;
+  /** The subquery: SELECT 1 FROM child WHERE correlation AND filter. */
+  subquery: ParsedFindQuery;
+  /** Outer aliases referenced by the correlation predicate, for join pruning. */
+  outerAliases: string[];
 }
 
 /** A marker condition for alias methods to indicate they should be skipped/pruned. */
@@ -152,7 +163,7 @@ export interface ParsedGroupBy {
   column: string;
 }
 
-type ParsedSelect = string | ParsedSelectWithBindings;
+export type ParsedSelect = string | ParsedSelectWithBindings;
 type ParsedSelectWithBindings = { sql: string; bindings: any[]; aliases: string[] };
 
 /** The result of parsing an `em.find` filter. */
@@ -160,8 +171,6 @@ export interface ParsedFindQuery {
   selects: ParsedSelect[];
   /** The primary table plus any joins. */
   tables: ParsedTable[];
-  /** Any cross lateral joins, where the `joins: string[]` has the full join as raw SQL; currently only for preloading. */
-  lateralJoins?: { joins: string[]; bindings: any[] };
   /** The query's conditions. */
   condition?: ParsedExpressionFilter;
   /** Extremely optional group bys; we generally don't support adhoc/aggregate queries, but the auto-batching infra uses these. */
@@ -170,6 +179,12 @@ export interface ParsedFindQuery {
   orderBys: ParsedOrderBy[];
   /** Optional CTE to prefix to the query, i.e. for recursive relations. */
   ctes?: ParsedCteClause[];
+}
+
+/** A scope holds the tables and condition builder for the current query or subquery level. */
+interface QueryScope {
+  tables: ParsedTable[];
+  cb: ConditionBuilder;
 }
 
 /** Parses an `em.find` filter into a `ParsedFindQuery` AST for simpler execution. */
@@ -187,7 +202,7 @@ export function parseFindQuery(
   const selects: string[] = [];
   const tables: ParsedTable[] = [];
   const orderBys: ParsedOrderBy[] = [];
-  const query = { selects, tables, orderBys };
+  const query: ParsedFindQuery = { selects, tables, orderBys };
   const {
     orderBy = undefined,
     conditions: optsExpression = undefined,
@@ -195,7 +210,14 @@ export function parseFindQuery(
     pruneJoins = true,
     keepAliases = [],
   } = opts;
-  const cb = new ConditionBuilder();
+  const outerCb = new ConditionBuilder();
+  const outerScope: QueryScope = { tables, cb: outerCb };
+
+  // Maps table aliases that live inside EXISTS subqueries → the ExistsCondition that owns them.
+  // Used by `resolveExistsAliasConflicts` to detect when an `optsExpression` condition
+  // references an alias that was placed inside an EXISTS, requiring special handling.
+  // See the doc comment on `resolveExistsAliasConflicts` for details.
+  const absorbedAliases = new Map<string, ExistsCondition>();
 
   const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
@@ -205,10 +227,22 @@ export function parseFindQuery(
     return i === 0 ? abbrev : `${abbrev}${i}`;
   }
 
-  function maybeAddNotSoftDeleted(meta: EntityMetadata, alias: string): void {
+  /** Recursively checks if a filter tree contains any alias binding at any depth. */
+  function containsDeepAlias(filter: any): boolean {
+    if (filter === undefined || filter === null) return false;
+    if (isAlias(filter)) return true;
+    if (typeof filter !== "object") return false;
+    if ("as" in filter) return true;
+    for (const value of Object.values(filter)) {
+      if (containsDeepAlias(value)) return true;
+    }
+    return false;
+  }
+
+  function addSoftDeleteCondition(scope: QueryScope, meta: EntityMetadata, alias: string): void {
     if (filterSoftDeletes(meta, softDeletes)) {
       const column = meta.allFields[getBaseMeta(meta).timestampFields!.deletedAt!].serde?.columns[0]!;
-      cb.addSimpleCondition({
+      scope.cb.addSimpleCondition({
         kind: "column",
         alias,
         column: column.columnName,
@@ -220,6 +254,7 @@ export function parseFindQuery(
   }
 
   function addTable(
+    scope: QueryScope,
     meta: EntityMetadata,
     alias: string,
     join: ParsedTable["join"],
@@ -235,14 +270,14 @@ export function parseFindQuery(
     }
 
     if (join === "primary") {
-      tables.push({ alias, table: meta.tableName, join });
-      addTablePerClassJoinsAndClassTag(query, meta, alias, true);
+      scope.tables.push({ alias, table: meta.tableName, join });
+      addTablePerClassJoinsAndClassTag({ selects, tables: scope.tables, orderBys }, meta, alias, scope === outerScope);
     } else if (meta.inheritanceType === "cti" && fieldName && !(fieldName in meta.fields)) {
       // For cti, our meta might be a subtype while the FK is actually on the base table.  This should only be the case
       // when the fk is on another table (e.g. o2o/o2m).  In these cases, we'll be passed a field name and can verify if
       // its directly in our meta, if not we should assume it's in the base type and join that in first.
       meta.baseTypes.forEach((bt, i) => {
-        tables.push({
+        scope.tables.push({
           alias: `${alias}_b${i}`,
           table: bt.tableName,
           join: "outer",
@@ -251,7 +286,7 @@ export function parseFindQuery(
           distinct: false,
         });
         // and we still need to join in our subtype as well in case its own fields are queried against
-        tables.push({
+        scope.tables.push({
           alias: `${alias}`,
           table: meta.tableName,
           join: "outer",
@@ -263,16 +298,16 @@ export function parseFindQuery(
     } else if (join === "lateral" || join === "cross") {
       fail("Unexpected lateral join");
     } else {
-      tables.push({ alias, table: meta.tableName, join, col1, col2 });
+      scope.tables.push({ alias, table: meta.tableName, join, col1, col2 });
       // Maybe only do this if we're the primary, or have a field that needs it?
-      addTablePerClassJoinsAndClassTag(query, meta, alias, false);
+      addTablePerClassJoinsAndClassTag({ selects, tables: scope.tables, orderBys }, meta, alias, false);
     }
 
     if (needsStiDiscriminator(meta)) {
-      addStiSubtypeFilter(cb, meta, alias);
+      addStiSubtypeFilter(scope.cb, meta, alias);
     }
 
-    maybeAddNotSoftDeleted(meta, alias);
+    addSoftDeleteCondition(scope, meta, alias);
 
     // The user's locally declared aliases, i.e. `const [a, b] = aliases(Author, Book)`,
     // aren't guaranteed to line up with the aliases we've assigned internally, like `a`
@@ -297,7 +332,7 @@ export function parseFindQuery(
         if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
           const column = field.serde.columns[0];
           parseValueFilter((ef.subFilter as any)[key]).forEach((filter) => {
-            cb.addValueFilter(fa, column, filter);
+            scope.cb.addValueFilter(fa, column, filter);
           });
         } else if (field.kind === "m2o") {
           const column = field.serde.columns[0];
@@ -305,7 +340,7 @@ export function parseFindQuery(
           const joinKind = field.required && join !== "outer" ? "inner" : "outer";
           if (isAlias(sub)) {
             const a = getAlias(field.otherMetadata().tableName);
-            addTable(field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
+            addTable(scope, field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
           }
           const f = parseEntityFilter(field.otherMetadata(), sub);
           // Probe the filter and see if it's just an id (...and not soft deleted), if so we can avoid the join
@@ -313,9 +348,9 @@ export function parseFindQuery(
             // skip
           } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata(), softDeletes)) {
             const a = getAlias(field.otherMetadata().tableName);
-            addTable(field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
+            addTable(scope, field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
           } else {
-            cb.addValueFilter(fa, column, f);
+            scope.cb.addValueFilter(fa, column, f);
           }
         } else if (field.kind === "poly") {
           const f = parseEntityFilter(meta, (ef.subFilter as any)[key]);
@@ -336,12 +371,12 @@ export function parseFindQuery(
               });
               if (!comp) fail(`Invalid tagged id passed to ${meta.type}.${key}: ${f.value}`);
               const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
-              cb.addValueFilter(fa, column, f);
+              scope.cb.addValueFilter(fa, column, f);
             } else if (f.kind === "is-null") {
               // Add a condition for every component--these can be AND-d with the rest of the simple/inline conditions
               field.components.forEach((comp) => {
                 const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
-                cb.addSimpleCondition({
+                scope.cb.addSimpleCondition({
                   kind: "column",
                   alias: fa,
                   column: comp.columnName,
@@ -360,7 +395,7 @@ export function parseFindQuery(
                   cond: { kind: "not-null" },
                 };
               }) satisfies ColumnCondition[];
-              cb.addParsedExpression({ kind: "exp", op: "or", conditions });
+              scope.cb.addParsedExpression({ kind: "exp", op: "or", conditions });
             } else if (f.kind === "in") {
               // Split up the ids by constructor
               const idsByConstructor = groupBy(f.value, (id) => getConstructorFromTaggedId(id as string).name);
@@ -381,7 +416,7 @@ export function parseFindQuery(
                 } satisfies ColumnCondition;
               });
               if (conditions.length > 0) {
-                cb.addParsedExpression({ kind: "exp", op: "or", conditions });
+                scope.cb.addParsedExpression({ kind: "exp", op: "or", conditions });
               }
             } else {
               throw new Error(`Filters on polys for ${f.kind} are not supported`);
@@ -400,6 +435,7 @@ export function parseFindQuery(
                 )!.columnName
               : otherField.serde!.columns[0].columnName;
           addTable(
+            scope,
             field.otherMetadata(),
             a,
             "outer",
@@ -409,86 +445,260 @@ export function parseFindQuery(
             field.otherFieldName,
           );
         } else if (field.kind === "o2m") {
-          const a = getAlias(field.otherMetadata().tableName);
-          const otherField = field.otherMetadata().allFields[field.otherFieldName];
-          let otherColumn = otherField.serde!.columns[0].columnName;
-          // If the other field is a poly, we need to find the right column
-          if (otherField.kind === "poly") {
-            // For a subcomponent that matches field's metadata
-            const otherComponent =
-              otherField.components.find((c) => c.otherMetadata() === meta) ??
-              fail(`No poly component found for ${otherField.fieldName}`);
-            otherColumn = otherComponent.columnName;
-          }
-          addTable(
-            field.otherMetadata(),
-            a,
-            "outer",
-            kqDot(alias, "id"),
-            kqDot(a, otherColumn),
-            (ef.subFilter as any)[key],
-            field.otherFieldName,
-          );
+          buildO2mExists(scope, meta, alias, field, (ef.subFilter as any)[key]);
         } else if (field.kind === "m2m") {
-          // Always join into the m2m table
-          const ja = getAlias(field.joinTableName);
-          tables.push({
-            alias: ja,
-            join: "outer",
-            table: field.joinTableName,
-            col1: kqDot(alias, "id"),
-            col2: kqDot(ja, field.columnNames[0]),
-          });
-          // But conditionally join into the alias table
-          const sub = (ef.subFilter as any)[key];
-          if (isAlias(sub)) {
-            const a = getAlias(field.otherMetadata().tableName);
-            addTable(field.otherMetadata(), a, "outer", kqDot(ja, field.columnNames[1]), kqDot(a, "id"), sub);
-          }
-          const f = parseEntityFilter(field.otherMetadata(), sub);
-          // Probe the filter and see if it's just an id, if so we can avoid the join
-          if (!f) {
-            // skip
-          } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata(), softDeletes)) {
-            const a = getAlias(field.otherMetadata().tableName);
-            addTable(
-              field.otherMetadata(),
-              a,
-              "outer",
-              kqDot(ja, field.columnNames[1]),
-              kqDot(a, "id"),
-              (ef.subFilter as any)[key],
-            );
-          } else {
-            const meta = field.otherMetadata();
-            // We normally don't have `columns` for m2m fields, b/c they don't go through normal serde
-            // codepaths, so make one up to leverage the existing `mapToDb` function.
-            const column: any = {
-              columnName: field.columnNames[1],
-              dbType: meta.idDbType,
-              mapToDb(value: any) {
-                // Check for `typeof value === number` in case this is a new entity, and we've been given the nilIdValue
-                return value === null || isNilIdValue(value)
-                  ? value
-                  : keyToNumber(meta, maybeResolveReferenceToId(value));
-              },
-            };
-            cb.addSimpleCondition({
-              kind: "column",
-              alias: ja,
-              column: field.columnNames[1],
-              dbType: meta.idDbType,
-              cond: mapToDb(column, f),
-            });
-          }
+          buildM2mExists(scope, alias, field, (ef.subFilter as any)[key]);
         } else {
           throw new Error(`Unsupported field ${key}`);
         }
       });
     } else if (ef) {
       const column = meta.fields["id"].serde!.columns[0];
-      cb.addValueFilter(alias, column, ef);
+      scope.cb.addValueFilter(alias, column, ef);
     }
+  }
+
+  /**
+   * Builds an EXISTS subquery inline for a one-to-many collection field.
+   * Creates a new inner scope, recurses into it, then produces an ExistsCondition.
+   */
+  function buildO2mExists(
+    parentScope: QueryScope,
+    parentMeta: EntityMetadata,
+    parentAlias: string,
+    field: any,
+    subFilter: any,
+  ): void {
+    const otherMeta = field.otherMetadata();
+    const otherField = otherMeta.allFields[field.otherFieldName];
+    let otherColumn = otherField.serde!.columns[0].columnName;
+    if (otherField.kind === "poly") {
+      const otherComponent =
+        otherField.components.find((c: any) => c.otherMetadata() === parentMeta) ??
+        fail(`No poly component found for ${otherField.fieldName}`);
+      otherColumn = otherComponent.columnName;
+    }
+
+    // CTI where the FK is on a base type can't be cleanly expressed as EXISTS.
+    const isCtiBaseFk =
+      otherMeta.inheritanceType === "cti" &&
+      field.otherFieldName &&
+      !(field.otherFieldName in otherMeta.fields);
+    if (isCtiBaseFk) {
+      const a = getAlias(otherMeta.tableName);
+      addTable(
+        parentScope,
+        otherMeta,
+        a,
+        "outer",
+        kqDot(parentAlias, "id"),
+        kqDot(a, otherColumn),
+        subFilter,
+        field.otherFieldName,
+      );
+      return;
+    }
+
+    const col1 = kqDot(parentAlias, "id");
+    const col2Column = otherColumn;
+    const a = getAlias(otherMeta.tableName);
+
+    const ef = parseEntityFilter(otherMeta, subFilter);
+    const isAntiJoin = ef && ef.kind !== "join" && ef.kind === "is-null";
+
+    // Create inner scope
+    const innerTables: ParsedTable[] = [];
+    const innerCb = new ConditionBuilder();
+    const innerScope: QueryScope = { tables: innerTables, cb: innerCb };
+
+    // Add the child table as primary in the inner scope
+    addTable(innerScope, otherMeta, a, "primary", col1, kqDot(a, col2Column), subFilter, field.otherFieldName);
+
+    // Correlation predicate
+    const correlationCondition: RawCondition = {
+      kind: "raw",
+      aliases: [a],
+      condition: `${col1} = ${kqDot(a, col2Column)}`,
+      bindings: [],
+      pruneable: false,
+    };
+
+    // Build the subquery condition from inner cb
+    const innerCondition = innerCb.toExpressionFilter();
+
+    // Check if there are any non-pruneable conditions (real user filters or nested EXISTS)
+    const hasRealConditions = innerCondition?.conditions.some(
+      (c) => !((c.kind === "column" || c.kind === "raw") && c.pruneable),
+    );
+
+    if (isAntiJoin) {
+      // Anti-join: NOT EXISTS with correlation + pruneable conditions only
+      const subqueryConditions: ParsedExpressionCondition[] = [correlationCondition];
+      if (innerCondition) {
+        for (const c of innerCondition.conditions) {
+          if ((c.kind === "column" || c.kind === "raw") && c.pruneable) {
+            subqueryConditions.push(c);
+          }
+        }
+      }
+      const subquery: ParsedFindQuery = {
+        selects: ["1"],
+        tables: innerTables,
+        condition: { kind: "exp", op: "and", conditions: subqueryConditions },
+        orderBys: [],
+      };
+      const existsCondition: ExistsCondition = {
+        kind: "exists",
+        negate: true,
+        subquery,
+        outerAliases: [parentAlias],
+      };
+      for (const t of innerTables) absorbedAliases.set(t.alias, existsCondition);
+      parentScope.cb.addExistsCondition(existsCondition);
+    } else if (!hasRealConditions) {
+      // No real filter conditions — only create EXISTS if there's an alias binding
+      // anywhere in the subtree (the alias might be referenced by `optsExpression`
+      // conditions that will be moved in later)
+      if (!containsDeepAlias(subFilter)) return;
+      const subqueryConditions: ParsedExpressionCondition[] = [correlationCondition];
+      if (innerCondition) subqueryConditions.push(...innerCondition.conditions);
+      const subquery: ParsedFindQuery = {
+        selects: ["1"],
+        tables: innerTables,
+        condition: { kind: "exp", op: "and", conditions: subqueryConditions },
+        orderBys: [],
+      };
+      const existsCondition: ExistsCondition = {
+        kind: "exists",
+        negate: false,
+        subquery,
+        outerAliases: [parentAlias],
+      };
+      for (const t of innerTables) absorbedAliases.set(t.alias, existsCondition);
+      parentScope.cb.addExistsCondition(existsCondition);
+      return;
+    } else {
+      const subqueryConditions: ParsedExpressionCondition[] = [correlationCondition, ...innerCondition!.conditions];
+      const subquery: ParsedFindQuery = {
+        selects: ["1"],
+        tables: innerTables,
+        condition: { kind: "exp", op: "and", conditions: subqueryConditions },
+        orderBys: [],
+      };
+      const existsCondition: ExistsCondition = {
+        kind: "exists",
+        negate: false,
+        subquery,
+        outerAliases: [parentAlias],
+      };
+      for (const t of innerTables) absorbedAliases.set(t.alias, existsCondition);
+      parentScope.cb.addExistsCondition(existsCondition);
+    }
+  }
+
+  function buildM2mExists(
+    parentScope: QueryScope,
+    parentAlias: string,
+    field: any,
+    subFilter: any,
+  ): void {
+    const ja = getAlias(field.joinTableName);
+    const col1 = kqDot(parentAlias, "id");
+
+    // Create inner scope with junction table as primary
+    const innerTables: ParsedTable[] = [];
+    const innerCb = new ConditionBuilder();
+    const innerScope: QueryScope = { tables: innerTables, cb: innerCb };
+
+    // Add junction table as primary
+    innerTables.push({ join: "primary", alias: ja, table: field.joinTableName });
+
+    // Bind alias if the subFilter is an alias reference
+    if (isAlias(subFilter)) {
+      const a = getAlias(field.otherMetadata().tableName);
+      addTable(innerScope, field.otherMetadata(), a, "inner", kqDot(ja, field.columnNames[1]), kqDot(a, "id"), subFilter);
+    }
+
+    const ef = parseEntityFilter(field.otherMetadata(), subFilter);
+    const isAntiJoin = ef && ef.kind !== "join" && ef.kind === "is-null";
+    const hasAliasBind = containsDeepAlias(subFilter);
+
+    // Probe the filter and conditionally join the target table
+    if (!ef && !hasAliasBind) {
+      // No filter at all and no alias binding — skip creating EXISTS
+      return;
+    } else if (ef && (ef.kind === "join" || filterSoftDeletes(field.otherMetadata(), softDeletes))) {
+      const a = getAlias(field.otherMetadata().tableName);
+      addTable(innerScope, field.otherMetadata(), a, "inner", kqDot(ja, field.columnNames[1]), kqDot(a, "id"), subFilter);
+    } else if (ef && !isAntiJoin) {
+      // Simple id filter on the junction table itself
+      const otherMeta = field.otherMetadata();
+      const column: any = {
+        columnName: field.columnNames[1],
+        dbType: otherMeta.idDbType,
+        mapToDb(value: any) {
+          return value === null || isNilIdValue(value)
+            ? value
+            : keyToNumber(otherMeta, maybeResolveReferenceToId(value));
+        },
+      };
+      innerCb.addSimpleCondition({
+        kind: "column",
+        alias: ja,
+        column: field.columnNames[1],
+        dbType: otherMeta.idDbType,
+        cond: mapToDb(column, ef),
+      });
+    }
+
+    // Correlation predicate
+    const correlationCondition: RawCondition = {
+      kind: "raw",
+      aliases: [ja],
+      condition: `${col1} = ${kqDot(ja, field.columnNames[0])}`,
+      bindings: [],
+      pruneable: false,
+    };
+
+    const innerCondition = innerCb.toExpressionFilter();
+    const subqueryConditions: ParsedExpressionCondition[] = [correlationCondition];
+
+    if (isAntiJoin) {
+      // Anti-join: only pruneable conditions
+      if (innerCondition) {
+        for (const c of innerCondition.conditions) {
+          if ((c.kind === "column" || c.kind === "raw") && c.pruneable) {
+            subqueryConditions.push(c);
+          }
+        }
+      }
+    } else if (innerCondition) {
+      subqueryConditions.push(...innerCondition.conditions);
+    } else if (!hasAliasBind) {
+      // No conditions at all, not anti-join, no alias binding — skip creating EXISTS
+      return;
+    }
+
+    const subquery: ParsedFindQuery = {
+      selects: ["1"],
+      tables: innerTables,
+      condition: { kind: "exp", op: "and", conditions: subqueryConditions },
+      orderBys: [],
+    };
+
+    const existsCondition: ExistsCondition = {
+      kind: "exists",
+      negate: !!isAntiJoin,
+      subquery,
+      outerAliases: [parentAlias],
+    };
+
+    // Track aliases absorbed into this EXISTS for cross-scope conflict detection
+    for (const t of innerTables) {
+      absorbedAliases.set(t.alias, existsCondition);
+    }
+
+    parentScope.cb.addExistsCondition(existsCondition);
   }
 
   function addOrderBy(meta: EntityMetadata, alias: string, orderBy: Record<string, any>): void {
@@ -536,16 +746,28 @@ export function parseFindQuery(
   // always add the main table
   const alias = getAlias(meta.tableName);
   selects.push(`${kq(alias)}.*`);
-  addTable(meta, alias, "primary", "n/a", "n/a", filter);
+  addTable(outerScope, meta, alias, "primary", "n/a", "n/a", filter);
 
   // If they passed extra `conditions: ...`, parse that
   if (optsExpression) {
-    cb.maybeAddExpression(optsExpression);
+    outerCb.maybeAddExpression(optsExpression);
   }
 
   Object.assign(query, {
-    condition: cb.toExpressionFilter(),
+    condition: outerCb.toExpressionFilter(),
   });
+
+  // Resolve alias conflicts: if optsExpression references aliases absorbed into EXISTS
+  // subqueries, either move the conditions into the EXISTS (if all references are inside
+  // the same subtree) or unwrap the EXISTS back to regular joins (mixed scopes).
+  if (absorbedAliases.size > 0 && query.condition) {
+    if (optsExpression) {
+      resolveExistsAliasConflicts(query, absorbedAliases);
+    }
+    // Clean up orphaned EXISTS conditions that have no user conditions
+    // (created speculatively for alias bindings where optsExpression didn't reference them)
+    removeEmptyExists(query);
+  }
 
   if (query.tables.some((t) => t.join === "outer")) {
     maybeAddIdNotNulls(query);
@@ -564,6 +786,313 @@ export function parseFindQuery(
     pruneUnusedJoins(query, keepAliases);
   }
   return query;
+}
+
+/** Removes EXISTS conditions that have no real (non-pruneable) user conditions. */
+function removeEmptyExists(query: ParsedFindQuery): void {
+  if (!query.condition) return;
+  removeEmptyExistsFromExp(query.condition);
+  if (query.condition.conditions.length === 0) {
+    query.condition = undefined;
+  }
+}
+
+function removeEmptyExistsFromExp(exp: ParsedExpressionFilter): void {
+  for (let i = exp.conditions.length - 1; i >= 0; i--) {
+    const c = exp.conditions[i];
+    if (c.kind === "exists" && !c.negate) {
+      // Check if the EXISTS has any real conditions beyond correlation + pruneable
+      const hasRealConds = c.subquery.condition?.conditions.some(
+        (sc) => {
+          if ((sc.kind === "column" || sc.kind === "raw") && sc.pruneable) return false;
+          if (sc.kind === "raw" && sc.condition.includes(" = ") && sc.bindings.length === 0) return false;
+          return true;
+        },
+      );
+      if (!hasRealConds) {
+        exp.conditions.splice(i, 1);
+      }
+    } else if (c.kind === "exp") {
+      removeEmptyExistsFromExp(c);
+      if (c.conditions.length === 0) {
+        exp.conditions.splice(i, 1);
+      }
+    }
+  }
+}
+
+/**
+ * Resolves conflicts between `optsExpression` conditions and EXISTS subqueries.
+ *
+ * When a collection field (o2m/m2m) appears in the filter, its join is wrapped in an EXISTS
+ * subquery. Any alias bindings (e.g. `{ books: b }`) on that path end up "absorbed" inside
+ * the EXISTS — their table alias lives in the subquery, not the outer query.
+ *
+ * If `optsExpression` (the user's `conditions: { ... }`) then references one of those
+ * absorbed aliases, we have a scope conflict. This function resolves it in two ways:
+ *
+ * **Case 1 — condition fits entirely inside one EXISTS (move it in):**
+ *
+ *   ```ts
+ *   em.find(Author, { books: { as: b } }, { conditions: { and: [b.title.eq("x")] } })
+ *   ```
+ *   Here `b` is inside the books EXISTS. The condition `b.title.eq("x")` only references
+ *   `b`, so we move it into the EXISTS subquery. Result:
+ *   `WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = 'x')`
+ *
+ * **Case 2 — condition spans both inner and outer scopes (unwrap EXISTS to joins):**
+ *
+ *   ```ts
+ *   const [c, p] = aliases(Comment, Publisher);
+ *   em.find(Comment,
+ *     { as: c, user: { authorManyToOne: { books: { advances: { publisher: p } } } } },
+ *     { conditions: { or: [p.name.eq("pub1"), c.text.eq("hello")] } },
+ *   )
+ *   ```
+ *   Here `p` lives inside a nested EXISTS (books → advances → publisher), but `c` is the
+ *   outer primary table. The OR requires both aliases to be visible in the same scope — we
+ *   can't split an OR across an EXISTS boundary. So we "unwrap" the affected EXISTS back
+ *   into regular LEFT OUTER JOINs on the outer query, which restores all aliases to the
+ *   same scope. This adds a DISTINCT ON to deduplicate the fanout rows from the join.
+ *
+ *   Unwrapping is transitive: if the innermost EXISTS is unwrapped, any parent EXISTS that
+ *   contained it must also be unwrapped (since the child's tables now need to reference
+ *   the parent's tables, which must also be in the outer scope).
+ */
+function resolveExistsAliasConflicts(
+  query: ParsedFindQuery,
+  absorbedAliases: Map<string, ExistsCondition>,
+): void {
+  if (!query.condition) return;
+
+  // First pass: try to move outer conditions into their matching EXISTS subqueries
+  moveConditionsIntoExists(query.condition, absorbedAliases);
+
+  // Second pass (Case 2): check if any remaining outer conditions still reference absorbed
+  // aliases. If so, the condition spans both inner and outer scopes (e.g. an OR mixing an
+  // alias inside an EXISTS with the outer primary table), and those EXISTS must be unwrapped
+  // back to regular LEFT OUTER JOINs so all aliases are visible in the same scope.
+  const outerAliases = new Set<string>();
+  collectNonExistsAliases(query.condition, outerAliases);
+
+  const existsToUnwrap = new Set<ExistsCondition>();
+  for (const alias of outerAliases) {
+    const exists = absorbedAliases.get(alias);
+    if (exists) existsToUnwrap.add(exists);
+  }
+
+  if (existsToUnwrap.size === 0) return;
+
+  // Transitively expand: if a child EXISTS is being unwrapped, its parent EXISTS must
+  // also be unwrapped, because the child's correlation references the parent's tables.
+  let changed = true;
+  while (changed) {
+    changed = false;
+    findParentExists(query.condition, existsToUnwrap, (parent) => {
+      if (!existsToUnwrap.has(parent)) {
+        existsToUnwrap.add(parent);
+        changed = true;
+      }
+    });
+  }
+
+  // Unwrap each EXISTS, parents before children (so join order is correct)
+  const sortedToUnwrap = [...existsToUnwrap].sort((a, b) => {
+    if (existsContainsNested(a, b)) return -1;
+    if (existsContainsNested(b, a)) return 1;
+    return 0;
+  });
+  for (const exists of sortedToUnwrap) {
+    for (const t of exists.subquery.tables) {
+      if (t.join === "primary") {
+        const correlation = exists.subquery.condition?.conditions.find(
+          (c): c is RawCondition => c.kind === "raw" && c.condition.includes(" = "),
+        );
+        if (correlation) {
+          const [col1, col2] = correlation.condition.split(" = ");
+          query.tables.push({ join: "outer", alias: t.alias, table: t.table, col1, col2 });
+        }
+      } else if (t.join === "inner" || t.join === "outer") {
+        query.tables.push({ ...t, join: "outer" });
+      }
+    }
+
+    if (exists.subquery.condition) {
+      for (const c of exists.subquery.condition.conditions) {
+        if (c.kind === "raw" && c.condition.includes(" = ") && c.bindings.length === 0 && !c.pruneable) {
+          continue;
+        }
+        if (c.kind === "exists" && existsToUnwrap.has(c)) continue;
+        query.condition!.conditions.push(c);
+      }
+    }
+
+    removeExistsFromConditions(query.condition!, exists);
+  }
+}
+
+/**
+ * Scans the outer condition tree for non-EXISTS conditions that reference absorbed aliases.
+ * If ALL aliases in a condition map to the same EXISTS, moves the condition into that EXISTS.
+ */
+function moveConditionsIntoExists(
+  exp: ParsedExpressionFilter,
+  absorbedAliases: Map<string, ExistsCondition>,
+): void {
+  for (let i = exp.conditions.length - 1; i >= 0; i--) {
+    const c = exp.conditions[i];
+    if (c.kind === "exp") {
+      // Check if ALL references in this sub-expression map to a single EXISTS
+      const target = getSingleExistsTarget(c, absorbedAliases);
+      if (target) {
+        // Unwrap single-element expressions before moving
+        if (c.conditions.length === 1) {
+          target.subquery.condition!.conditions.push(c.conditions[0]);
+        } else {
+          target.subquery.condition!.conditions.push(c);
+        }
+        exp.conditions.splice(i, 1);
+      } else if (c.op === "and") {
+        // Only recurse into AND expressions — safe to move individual children.
+        // For OR expressions with mixed scopes, we can't split individual branches
+        // into different EXISTS — that changes semantics. Leave them for the
+        // unwrapping pass in resolveExistsAliasConflicts (Case 2).
+        moveConditionsIntoExists(c, absorbedAliases);
+      }
+    } else if (c.kind === "column" || c.kind === "raw") {
+      const target = getConditionExistsTarget(c, absorbedAliases);
+      if (target) {
+        // Detect anti-join: `id IS NULL` on the EXISTS primary table → NOT EXISTS
+        if (
+          c.kind === "column" &&
+          c.column === "id" &&
+          c.cond.kind === "is-null" &&
+          target.subquery.tables[0]?.alias === c.alias
+        ) {
+          target.negate = true;
+          // Don't add the condition — NOT EXISTS already means "no rows exist"
+        } else {
+          target.subquery.condition!.conditions.push(c);
+        }
+        exp.conditions.splice(i, 1);
+      }
+    }
+  }
+}
+
+/** Returns the single EXISTS that owns ALL aliases in a condition, or undefined if mixed/outer. */
+function getSingleExistsTarget(
+  cond: ParsedExpressionCondition,
+  absorbedAliases: Map<string, ExistsCondition>,
+): ExistsCondition | undefined {
+  const aliases = new Set<string>();
+  collectAllAliases(cond, aliases);
+  let target: ExistsCondition | undefined;
+  for (const alias of aliases) {
+    const exists = absorbedAliases.get(alias);
+    if (!exists) return undefined; // Outer alias — mixed scope
+    if (!target) target = exists;
+    else if (target !== exists) return undefined; // Different EXISTS — mixed
+  }
+  return target;
+}
+
+/** Returns the EXISTS that owns a column/raw condition, or undefined. */
+function getConditionExistsTarget(
+  cond: ColumnCondition | RawCondition,
+  absorbedAliases: Map<string, ExistsCondition>,
+): ExistsCondition | undefined {
+  if (cond.kind === "column") {
+    return absorbedAliases.get(cond.alias);
+  } else {
+    let target: ExistsCondition | undefined;
+    for (const alias of cond.aliases) {
+      const exists = absorbedAliases.get(alias);
+      if (!exists) return undefined;
+      if (!target) target = exists;
+      else if (target !== exists) return undefined;
+    }
+    return target;
+  }
+}
+
+/** Collects all aliases referenced by a condition, including inside nested expressions. */
+function collectAllAliases(cond: ParsedExpressionCondition, out: Set<string>): void {
+  if (cond.kind === "column") {
+    out.add(cond.alias);
+  } else if (cond.kind === "raw") {
+    for (const a of cond.aliases) out.add(a);
+  } else if (cond.kind === "exp") {
+    for (const c of cond.conditions) collectAllAliases(c, out);
+  } else if (cond.kind === "exists") {
+    // EXISTS subqueries are self-contained
+  } else {
+    assertNever(cond);
+  }
+}
+
+/** Collects aliases from conditions that are NOT inside EXISTS subqueries. */
+function collectNonExistsAliases(cond: ParsedExpressionCondition, out: Set<string>): void {
+  if (cond.kind === "column") {
+    out.add(cond.alias);
+  } else if (cond.kind === "raw") {
+    for (const a of cond.aliases) out.add(a);
+  } else if (cond.kind === "exp") {
+    for (const c of cond.conditions) collectNonExistsAliases(c, out);
+  } else if (cond.kind === "exists") {
+    for (const a of cond.outerAliases) out.add(a);
+  } else {
+    assertNever(cond);
+  }
+}
+
+/** Finds EXISTS conditions whose subquery contains any of the target EXISTS as children. */
+function findParentExists(
+  cond: ParsedExpressionCondition,
+  targets: Set<ExistsCondition>,
+  onFound: (parent: ExistsCondition) => void,
+): void {
+  if (cond.kind === "exists") {
+    if (cond.subquery.condition && containsAnyExists(cond.subquery.condition, targets)) {
+      onFound(cond);
+    }
+  } else if (cond.kind === "exp") {
+    for (const c of cond.conditions) findParentExists(c, targets, onFound);
+  }
+}
+
+/** Checks if a condition tree contains any of the target EXISTS conditions. */
+function containsAnyExists(cond: ParsedExpressionCondition, targets: Set<ExistsCondition>): boolean {
+  if (cond.kind === "exists") return targets.has(cond);
+  if (cond.kind === "exp") return cond.conditions.some((c) => containsAnyExists(c, targets));
+  return false;
+}
+
+/** Checks if an EXISTS subquery contains another EXISTS as a nested child (at any depth). */
+function existsContainsNested(parent: ExistsCondition, child: ExistsCondition): boolean {
+  if (!parent.subquery.condition) return false;
+  for (const c of parent.subquery.condition.conditions) {
+    if (c === child) return true;
+    if (c.kind === "exists" && existsContainsNested(c, child)) return true;
+  }
+  return false;
+}
+
+/** Removes a specific ExistsCondition from a condition tree. */
+function removeExistsFromConditions(exp: ParsedExpressionFilter, target: ExistsCondition): void {
+  for (let i = exp.conditions.length - 1; i >= 0; i--) {
+    const c = exp.conditions[i];
+    if (c === target) {
+      exp.conditions.splice(i, 1);
+    } else if (c.kind === "exp") {
+      removeExistsFromConditions(c, target);
+      if (c.conditions.length === 0) {
+        exp.conditions.splice(i, 1);
+      } else if (c.conditions.length === 1) {
+        exp.conditions[i] = c.conditions[0];
+      }
+    }
+  }
 }
 
 /**

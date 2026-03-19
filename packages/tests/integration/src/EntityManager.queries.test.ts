@@ -2171,13 +2171,25 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
-      ],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
-        conditions: [{ alias: "att", column: "tag_id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "att", table: "authors_to_tags", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = att.author_id" },
+                  { alias: "att", column: "tag_id", dbType: "int", cond: { kind: "eq", value: 1 } },
+                ],
+              },
+            },
+          },
+        ],
       },
       orderBys: [expect.anything()],
     });
@@ -2194,13 +2206,25 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
-      ],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
-        conditions: [{ alias: "att", column: "tag_id", dbType: "int", cond: { kind: "in", value: [-1] } }],
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "att", table: "authors_to_tags", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = att.author_id" },
+                  { alias: "att", column: "tag_id", dbType: "int", cond: { kind: "in", value: [-1] } },
+                ],
+              },
+            },
+          },
+        ],
       },
       orderBys: [expect.anything()],
     });
@@ -2219,14 +2243,28 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
-        { alias: "t", table: "tags", join: "outer", col1: "att.tag_id", col2: "t.id" },
-      ],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
-        conditions: [{ alias: "t", column: "name", dbType: "citext", cond: { kind: "eq", value: "t1" } }],
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [
+                { alias: "att", table: "authors_to_tags", join: "primary" },
+                { alias: "t", table: "tags", join: "inner", col1: "att.tag_id", col2: "t.id" },
+              ],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = att.author_id" },
+                  { alias: "t", column: "name", dbType: "citext", cond: { kind: "eq", value: "t1" } },
+                ],
+              },
+            },
+          },
+        ],
       },
       orderBys: [expect.anything()],
     });
@@ -2258,14 +2296,24 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-      ],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
         conditions: [
-          { alias: "b", column: "title", dbType: "character varying", cond: { kind: "like", value: "b1%" } },
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = b.author_id" },
+                  { alias: "b", column: "title", dbType: "character varying", cond: { kind: "like", value: "b1%" } },
+                ],
+              },
+            },
+          },
         ],
       },
       orderBys: [expect.anything()],
@@ -2286,13 +2334,25 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-      ],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
-        conditions: [{ alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b3" } }],
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = b.author_id" },
+                  { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b3" } },
+                ],
+              },
+            },
+          },
+        ],
       },
       orderBys: [expect.anything()],
     });
@@ -2310,13 +2370,25 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-      ],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
-        conditions: [{ alias: "b", column: "id", dbType: "int", cond: { kind: "eq", value: 2 } }],
+        conditions: [
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = b.author_id" },
+                  { alias: "b", column: "id", dbType: "int", cond: { kind: "eq", value: 2 } },
+                ],
+              },
+            },
+          },
+        ],
       },
       orderBys: [expect.anything()],
     });
@@ -2336,10 +2408,7 @@ describe("EntityManager.queries", () => {
     expect(authors).toMatchEntity([{ firstName: "a1" }]);
     expect(parseFindQuery(am, where)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-      ],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
         op: "and",
         conditions: [
@@ -2351,18 +2420,19 @@ describe("EntityManager.queries", () => {
             pruneable: true,
           },
           {
-            alias: "b",
-            column: "deleted_at",
-            dbType: "timestamp with time zone",
-            cond: { kind: "is-null" },
-            pruneable: true,
-          },
-          {
-            op: "and",
-            conditions: [
-              { alias: "b", column: "acknowledgements", dbType: "text", cond: { kind: "is-null" } },
-              { alias: "b", column: "id", dbType: "int", cond: { kind: "not-null" } },
-            ],
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "a.id = b.author_id" },
+                  { alias: "b", column: "deleted_at", dbType: "timestamp with time zone", cond: { kind: "is-null" }, pruneable: true },
+                  { alias: "b", column: "acknowledgements", dbType: "text", cond: { kind: "is-null" } },
+                ],
+              },
+            },
           },
         ],
       },
@@ -2384,11 +2454,23 @@ describe("EntityManager.queries", () => {
     expect(authors).toMatchEntity([{ firstName: "a2" }]);
     expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
-      tables: [
-        { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-      ],
-      condition: { op: "and", conditions: [{ alias: "b", column: "id", dbType: "int", cond: { kind: "is-null" } }] },
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          {
+            kind: "exists",
+            negate: true,
+            subquery: {
+              tables: [{ alias: "b", table: "books", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [{ kind: "raw", condition: "a.id = b.author_id" }],
+              },
+            },
+          },
+        ],
+      },
       orderBys: [expect.anything()],
     });
   });
@@ -2408,13 +2490,24 @@ describe("EntityManager.queries", () => {
       tables: [
         { alias: "c", table: "critics", join: "primary" },
         { alias: "lp", table: "large_publishers", join: "outer", col1: "c.favorite_large_publisher_id", col2: "lp.id" },
-        // Perhaps ideally the `col1` would be `lp_b0.id` but it doesn't matter
-        { alias: "a", table: "authors", join: "outer", col1: "lp.id", col2: "a.publisher_id" },
       ],
       condition: {
         op: "and",
         conditions: [
-          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
+          {
+            kind: "exists",
+            negate: false,
+            subquery: {
+              tables: [{ alias: "a", table: "authors", join: "primary" }],
+              condition: {
+                op: "and",
+                conditions: [
+                  { kind: "raw", condition: "lp.id = a.publisher_id" },
+                  { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
+                ],
+              },
+            },
+          },
         ],
       },
       orderBys: [expect.anything()],
@@ -2819,12 +2912,28 @@ describe("EntityManager.queries", () => {
         tables: [
           { alias: "b", table: "books", join: "primary" },
           { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
-          { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
-          { alias: "t", table: "tags", join: "outer", col1: "att.tag_id", col2: "t.id" },
         ],
         condition: {
-          op: "or",
-          conditions: [{ alias: "t", column: "id", dbType: "int", cond: { kind: "eq", value: 1 } }],
+          op: "and",
+          conditions: [
+            {
+              kind: "exists",
+              negate: false,
+              subquery: {
+                tables: [
+                  { alias: "att", table: "authors_to_tags", join: "primary" },
+                  { alias: "t", table: "tags", join: "inner", col1: "att.tag_id", col2: "t.id" },
+                ],
+                condition: {
+                  op: "and",
+                  conditions: [
+                    { kind: "raw", condition: "a.id = att.author_id" },
+                    { alias: "t", column: "id", dbType: "int", cond: { kind: "eq", value: 1 } },
+                  ],
+                },
+              },
+            },
+          ],
         },
         orderBys: expect.anything(),
       });
@@ -2919,26 +3028,26 @@ describe("EntityManager.queries", () => {
     });
 
     it("keeps all joins if pruneJoins is false", async () => {
+      // books: {} (o2m with no conditions) no longer creates a join — it's simply absent.
+      // Only the m2o publisher join is kept by pruneJoins: false.
       const filter = { publisher: {}, books: {} } satisfies AuthorFilter;
       expect(parseFindQuery(am, filter, { ...opts, pruneJoins: false })).toEqual({
         selects: [`a.*`],
         tables: [
           { alias: "a", table: "authors", join: "primary" },
           { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id" },
-          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
         ],
         orderBys: [expect.anything()],
       });
     });
 
     it("keeps marked aliases", async () => {
+      // books: {} (o2m with no conditions) no longer creates a join — keepAliases has no effect.
+      // publisher: {} is pruned normally (keepAliases only keeps "b", not "p").
       const filter = { publisher: {}, books: {} } satisfies AuthorFilter;
       expect(parseFindQuery(am, filter, { ...opts, keepAliases: ["b"] })).toEqual({
         selects: [`a.*`],
-        tables: [
-          { alias: "a", table: "authors", join: "primary" },
-          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-        ],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
         orderBys: [expect.anything()],
       });
     });
@@ -2953,15 +3062,26 @@ describe("EntityManager.queries", () => {
         ),
       ).toMatchObject({
         selects: [`a.*`],
-        tables: [
-          { alias: "a", table: "authors", join: "primary" },
-          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-        ],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
         condition: {
           op: "and",
-          conditions: [{ alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b1" } }],
+          conditions: [
+            {
+              kind: "exists",
+              negate: false,
+              subquery: {
+                tables: [{ alias: "b", table: "books", join: "primary" }],
+                condition: {
+                  op: "and",
+                  conditions: [
+                    { kind: "raw", condition: "a.id = b.author_id" },
+                    { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b1" } },
+                  ],
+                },
+              },
+            },
+          ],
         },
-
         orderBys: [expect.anything()],
       });
     });

@@ -14,7 +14,7 @@ import { applyInheritanceUpdates } from "./inheritance";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
 import { LOG_LEVELS, loggerMaxWarningLevelHit } from "./logger";
 import { scanEntityFiles } from "./scanEntityFiles";
-import { isEntityTable, isJoinTable, mapSimpleDbTypeToTypescriptType } from "./utils";
+import { isEntityTable, isEnumTable, isJoinTable, mapSimpleDbTypeToTypescriptType } from "./utils";
 
 export {
   DbMetadata,
@@ -129,8 +129,11 @@ async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMet
     .map((table) => new EntityDbMetadata(config, table, enums));
   const totalTables = db.tables.length;
   const joinTables = db.tables.filter((t) => isJoinTable(config, t)).map((t) => t.name);
+  const otherTables = db.tables
+    .filter((t) => !isEntityTable(config, t) && !isEnumTable(config, t) && !isJoinTable(config, t))
+    .map((t) => t.name);
   const entitiesByName = Object.fromEntries(entities.map((e) => [e.name, e]));
-  return { entities, entitiesByName, enums, pgEnums, totalTables, joinTables };
+  return { entities, entitiesByName, enums, pgEnums, totalTables, joinTables, otherTables };
 }
 
 function maybeSetDatabaseUrl(config: Config): void {

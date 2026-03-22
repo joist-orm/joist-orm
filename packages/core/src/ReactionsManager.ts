@@ -31,7 +31,8 @@ export class ReactionsManager {
   private dirtyFields: Map<string, Set<string>> = new Map();
   private processedActions: Set<string> = new Set();
   #needsRecalc = { populate: false, query: false, reaction: false };
-  private logger: ReactionLogger | undefined = globalLogger;
+  // Accessible for EntityManager.runValidation to reuse
+  logger: ReactionLogger | undefined = globalLogger;
   private em: EntityManager;
   /** These are NPEs that *might* have been from invalid m2o fields, so we only throw them after validation. */
   private suppressedTypeErrors: Error[] = [];
@@ -82,6 +83,7 @@ export class ReactionsManager {
           //   thinks we can dequeue the reactable
           // - but actually our reactable needs to be re-run with the restored value
           pending.todo.add(entity);
+          this.#needsRecalc[r.kind] = true;
         } else if (r.fields.length === 1) {
           // We can only delete/dequeue a reaction if `fieldName` is the only or last field
           // that had triggered `r` to run. Since we don't track that currently, i.e. we'd
@@ -162,7 +164,7 @@ export class ReactionsManager {
           const entities = (await followReverseHint(r.name, todo, r.path))
             .filter((entity) => !entity.isDeletedEntity)
             .filter((e) => e instanceof r.cstr);
-          this.logger?.logWalked(todo, r, entities);
+          this.logger?.logWalked(todo, r, entities, "recalc");
           entities.forEach((entity) => {
             const key = `${entity.toTaggedString()}_${r.name}`;
             // We could arrive at the same reactable from multiple paths (eg, 2 dependent fields changed), so we need to
@@ -176,13 +178,13 @@ export class ReactionsManager {
       );
 
       const actions = [...actionsMap.values()];
-      this.logger?.logLoading(this.em, actions);
+      this.logger?.logLoadingStart(this.em, actions);
       // Use allSettled so that we can watch for derived values that want to use an entity's id
       // i.e. they can fail, but we'll queue them from later.
       const startTime = this.logger?.now() ?? 0;
       const results = await runInTrustedContext(() => Promise.allSettled(actions.map((a) => this.#doAction(a))));
       const endTime = this.logger?.now() ?? 0;
-      this.logger?.logLoadingTime(this.em, endTime - startTime);
+      this.logger?.logLoadingEnd(this.em, endTime - startTime);
 
       const actionsPendingAssignedIds: Map<string, ReactiveAction> = new Map();
       const failures: any[] = [];
@@ -206,10 +208,11 @@ export class ReactionsManager {
       if (actionsPendingAssignedIds.size > 0) {
         await this.em.assignNewIds();
         const actions = [...actionsPendingAssignedIds.values()];
+        this.logger?.logLoadingStart(this.em, actions);
         const startTime = this.logger?.now() ?? 0;
         const results = await runInTrustedContext(() => Promise.allSettled(actions.map((a) => this.#doAction(a))));
         const endTime = this.logger?.now() ?? 0;
-        this.logger?.logLoadingTime(this.em, endTime - startTime);
+        this.logger?.logLoadingEnd(this.em, endTime - startTime);
         results.forEach((result, i) => {
           if (result.status === "rejected") {
             if (result.reason instanceof TypeError) {
@@ -245,7 +248,7 @@ export class ReactionsManager {
       Promise.allSettled(actions.filter((a) => !a.entity.isDeletedEntity).map((a) => this.#doAction(a))),
     );
     const endTime = this.logger?.now() ?? 0;
-    this.logger?.logLoadingTime(this.em, endTime - startTime);
+    this.logger?.logLoadingEnd(this.em, endTime - startTime);
 
     const failures: any[] = [];
     results.forEach((result) => {

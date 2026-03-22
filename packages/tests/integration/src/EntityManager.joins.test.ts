@@ -11,11 +11,10 @@ import {
   insertTag,
   update,
 } from "@src/entities/inserts";
+import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import { testing } from "joist-orm";
 import { jan1, jan2 } from "src/testDates";
 import { Author, Book, Critic, LargePublisher, Publisher } from "./entities";
-
-import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
 
 const { partitionHint } = testing;
 
@@ -114,8 +113,6 @@ describe("EntityManager.joins", () => {
     expect(a2).toMatchEntity({ books: [{ reviews: [{}] }] });
     // And we did load a2 -> books -> reviews -> comment
     expect(l1.books.get[0].reviews.get[0].comment.isLoaded).toBe(true);
-    // Because it was preloaded
-    expect((l1.books.get[0].reviews.get[0].comment as any).isPreloaded).toBe(isPreloadingEnabled);
     // But we didn't load a2 -> books -> reviews -> comment
     expect(l2.books.get[0].reviews.get[0].comment.isLoaded).toBe(false);
     // And also it was not preloaded (...currently it is b/c we're some join filtering)

@@ -34,7 +34,11 @@ import {
 } from "./relations";
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
 import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
-import { RecursiveChildrenCollectionImpl, RecursiveParentsCollectionImpl } from "./relations/RecursiveCollection";
+import {
+  RecursiveChildrenCollectionImpl,
+  RecursiveM2mCollectionImpl,
+  RecursiveParentsCollectionImpl,
+} from "./relations/RecursiveCollection";
 import { FieldsOf, RelationsOf } from "./typeMap";
 import { fail, flatAndUnique, mergeNormalizedHints } from "./utils";
 
@@ -376,6 +380,27 @@ function reverseSubHint(
       });
       // Any reactables who were watching `childrenRecursive`, we'll up to by going through `parentsRecursive`
       return reverseReactiveHint(rootType, entityType, subHint, undefined, false).map(appendPath(otherFieldName));
+    } else if (p instanceof RecursiveM2mCollectionImpl) {
+      // I.e. if this is `User.parentsRecursive`:
+      // - fieldName=parentsRecursive (being watched by the caller)
+      // - otherFieldName=childrenRecursive (our reversal for walking down)
+      // - m2mFieldName=parents (the underlying m2m collection)
+      //
+      // For m2m recursive, the "change signal" is when join rows are added/removed, so we push
+      // the m2m collection name into fields (like regular m2m handling). To find affected entities
+      // that are watching `parentsRecursive`, we walk through `childrenRecursive` (the reverse direction).
+      const { otherFieldName, m2mFieldName } = p;
+      // When a join row changes (e.g. parents collection is mutated), notify both this entity
+      // and its transitive children/parents via otherFieldName
+      fields.push(m2mFieldName);
+      maybeRecursive.push({
+        kind: isReadOnly ? "read-only" : "update",
+        entity: entityType,
+        fields: [m2mFieldName],
+        path: [otherFieldName],
+      });
+      // Any reactables who were watching this recursive collection, we'll reach via the other direction
+      return reverseReactiveHint(rootType, entityType, subHint, undefined, false).map(appendPath(otherFieldName));
     } else {
       throw new Error(`Invalid hint in ${rootType.name}.ts ${JSON.stringify(hint)}`);
     }
@@ -562,6 +587,8 @@ export function convertToLoadHint<T extends Entity>(
       if (p instanceof RecursiveParentsCollectionImpl) {
         mergeNormalizedHints(loadHint, { [p.fieldName]: convertToLoadHint(meta, subHint, allowCustomKeys) });
       } else if (p instanceof RecursiveChildrenCollectionImpl) {
+        mergeNormalizedHints(loadHint, { [p.fieldName]: convertToLoadHint(meta, subHint, allowCustomKeys) });
+      } else if (p instanceof RecursiveM2mCollectionImpl) {
         mergeNormalizedHints(loadHint, { [p.fieldName]: convertToLoadHint(meta, subHint, allowCustomKeys) });
       } else if (p && p.reactiveHint) {
         mergeNormalizedHints(loadHint, convertToLoadHint(meta, p.reactiveHint, allowCustomKeys));

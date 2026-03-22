@@ -111,7 +111,7 @@ describe("ManyToOneReference", () => {
     const a1 = em.create(Author, { firstName: "a1" });
     const b1 = em.create(Book, { title: "b1", author: a1 });
     // And the book is initially in the author's loaded collection
-    expect(a1.books.get).toEqual([b1]);
+    expect(a1.books.get).toMatchEntity([b1]);
     // When we make a new author and move to the book to it
     const a2 = em.create(Author, { firstName: "a2" });
     b1.author.set(a2);
@@ -126,14 +126,14 @@ describe("ManyToOneReference", () => {
     const a1 = em.create(Author, { firstName: "a1" });
     const b1 = em.create(Book, { title: "b1", author: a1 });
     // And the book is initially in the author's loaded collection
-    expect(a1.books.get).toEqual([b1]);
+    expect(a1.books.get).toMatchEntity([b1]);
     // When we make a new author and move to the book to it
     const a2 = em.create(Author, { firstName: "a2" });
     await em.flush();
     b1.author.id = "a:2";
     // Then both a1 and a2 book collections are correct
-    expect(a1.books.get).toEqual([]);
-    expect(a2.books.get).toEqual([b1]);
+    expect(a1.books.get).toMatchEntity([]);
+    expect(a2.books.get).toMatchEntity([b1]);
   });
 
   it("can refresh", async () => {

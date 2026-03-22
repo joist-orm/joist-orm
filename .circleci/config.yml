@@ -86,10 +86,21 @@ jobs:
 
       - store_test_results:
           path: ./artifacts
+      # Publish 'next' releases on every merge to main
       - when:
           condition:
             and:
               - equal: [main, << pipeline.git.branch >>]
+              - equal: ["22", << parameters.node-version >>]
+          steps:
+            - run:
+                name: Publish Next Release
+                command: ./scripts/publish-next.sh
+      # Publish stable releases on every merge to release branch
+      - when:
+          condition:
+            and:
+              - equal: [release, << pipeline.git.branch >>]
               - equal: ["22", << parameters.node-version >>]
           steps:
             - run:

@@ -14,7 +14,7 @@ module.exports = {
     "default",
     [
       "jest-junit",
-      { outputDirectory: "../../../artifacts", outputName: "junit-temporal.xml", usePathForSuiteName: "true" },
+      { outputDirectory: "../../../artifacts", outputName: "junit-tests-temporal.xml", usePathForSuiteName: "true" },
     ],
   ],
 };

@@ -11,6 +11,7 @@ import { generatePgEnumFile } from "./generatePgEnumFile";
 import { Config, DbMetadata } from "./index";
 import { configureMetadata, Entity, JoistEntityManager, setRuntimeConfig } from "./symbols";
 import { merge, tableToEntityName } from "./utils";
+import { generateMetadataDocsFile, syncDocs } from "./docs";
 
 export type DPrintOptions = Record<string, unknown>;
 
@@ -29,6 +30,12 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
   // skip making test files except for the _first_ time we create an entity. This achieves
   // `.history`-like "create once" behavior without the need for the `.history` file.
   const files = await readExistingFiles(config);
+
+  // Sync documentation: backfill .md from existing JSDocs, then sync MD -> JSDoc
+  if (config.docs) {
+    const entityNames = entities.map((meta) => meta.entity.name);
+    await syncDocs(config.entitiesDirectory, entityNames);
+  }
 
   const entityFiles = entities
     .map((meta) => {
@@ -130,6 +137,9 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     )
   ).flat();
 
+  // Generate metadata-docs.ts if enabled
+  const docsFile = config.outputDocs ? await generateMetadataDocsFile(config, dbMeta) : undefined;
+
   return [
     ...entityFiles,
     ...enumFiles,
@@ -137,6 +147,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     entitiesFile,
     ...factoriesFiles,
     metadataFile,
+    ...(docsFile ? [docsFile] : []),
     indexFile,
     ...pluginFiles,
   ];

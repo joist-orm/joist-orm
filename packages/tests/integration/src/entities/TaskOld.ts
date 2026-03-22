@@ -7,7 +7,10 @@ export class TaskOld extends TaskOldCodegen {
     oldReactiveRuleRan: false,
   };
 
-  /** For testing reacting to poly CommentParent properties. */
+  /**
+   * For testing reacting to poly CommentParent properties.
+   * @generated TaskOld.md
+   */
   readonly commentParentInfo: AsyncProperty<TaskOld, string> = hasReactiveAsyncProperty(
     { parentOldTask: "id" },
     (t) => `parent=${t.parentOldTask.get?.id}`,

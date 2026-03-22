@@ -15,3 +15,5 @@ config.setDefault(
 config.addReaction("poly", { favoritePublisher: "name" }, (u) => {
   u.transientFields.reactions.poly += 1;
 });
+
+config.addCycleRule("parentsRecursive", (u) => `User ${u.name} has a cycle in their parent hierarchy`);

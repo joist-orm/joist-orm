@@ -1,5 +1,9 @@
 import { Entity } from "../Entity";
-import { RecursiveChildrenCollectionImpl, RecursiveParentsCollectionImpl } from "./RecursiveCollection";
+import {
+  RecursiveChildrenCollectionImpl,
+  RecursiveM2mCollectionImpl,
+  RecursiveParentsCollectionImpl,
+} from "./RecursiveCollection";
 import { Relation } from "./Relation";
 
 /** A collection of `U` within `T`, either one-to-many or many-to-many. */
@@ -20,7 +24,8 @@ export interface LoadedReadOnlyCollection<T extends Entity, U extends Entity> ex
 export function isReadOnlyCollection(maybeCollection: any): maybeCollection is ReadOnlyCollection<any, any> {
   return (
     maybeCollection instanceof RecursiveParentsCollectionImpl ||
-    maybeCollection instanceof RecursiveChildrenCollectionImpl
+    maybeCollection instanceof RecursiveChildrenCollectionImpl ||
+    maybeCollection instanceof RecursiveM2mCollectionImpl
   );
 }
 

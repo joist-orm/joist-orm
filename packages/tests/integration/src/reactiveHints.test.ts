@@ -1,4 +1,4 @@
-import { Author, Book, BookReview, Comment, Critic, Publisher, PublisherGroup } from "@src/entities";
+import { Author, Book, BookReview, Comment, Critic, Publisher, PublisherGroup, User } from "@src/entities";
 import {
   Entity,
   LoadHint,
@@ -154,6 +154,17 @@ describe("reactiveHints", () => {
       // When I am the Publisher, tell my authors, who if they're mentors, will tell their mentees
       // (which will get us to the `author` level in the hint, to invalidate their books.)
       { entity: "Publisher", fields: ["name"], path: ["authors", "menteesRecursive", "books"] },
+    ]);
+  });
+
+  it("can do recursive m2m relations", () => {
+    expect(reverse(User, User, { parentsRecursive: "name" })).toEqual([
+      // When my parents m2m collection changes, recalc me
+      { entity: "User", fields: ["parents"], path: [] },
+      // When a parent's parents m2m changes, walk down through childrenRecursive to find affected users
+      { entity: "User", fields: ["parents"], path: ["childrenRecursive"] },
+      // When a parent's name changes, walk down through childrenRecursive
+      { entity: "User", fields: ["name"], path: ["childrenRecursive"] },
     ]);
   });
 

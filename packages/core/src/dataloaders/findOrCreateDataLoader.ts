@@ -41,7 +41,7 @@ export function findOrCreateDataLoader<T extends Entity>(
   });
   if (invalidKeys.length > 0) {
     throw new Error(
-      "findOrCreate only supports primitive, enum, o2m, or poly fields in the where clause. Invalid keys: " +
+      "findOrCreate only supports primitive, enum, m2o, or poly fields in the where clause. Invalid keys: " +
         invalidKeys.join(", "),
     );
   }
@@ -138,7 +138,8 @@ export function entityMatches<T extends Entity>(entity: T, opts: Partial<OptsOf<
           // Otherwise use ids
           return sameEntity(relation.id as any, value as any);
         } else {
-          return value === undefined;
+          // Relation is not set, match if value is null-ish (null or undefined)
+          return value === undefined || value === null;
         }
       default:
         throw new Error(`Unsupported field ${fieldName}`);

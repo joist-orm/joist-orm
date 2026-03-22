@@ -23,6 +23,13 @@ export interface Collection<T extends Entity, U extends Entity> extends Relation
 
   remove(other: U): void;
 
+  /**
+   * Sets the collection to `values`.
+   *
+   * Can be called on unloaded collections - the diff will be resolved at load or flush time.
+   */
+  set(values: U[]): void;
+
   readonly isLoaded: boolean;
 }
 
@@ -31,8 +38,6 @@ export interface LoadedCollection<T extends Entity, U extends Entity> extends Co
   get: ReadonlyArray<U>;
 
   getWithDeleted: ReadonlyArray<U>;
-
-  set(values: U[]): void;
 
   removeAll(): void;
 }

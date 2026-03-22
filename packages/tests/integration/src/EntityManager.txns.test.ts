@@ -10,7 +10,7 @@ describe("EntityManager", () => {
   it("has a typed txn parameter", async () => {
     const em = newEntityManager();
     await em.transaction(async (txn) => {
-      await txn.raw("select 1");
+      await txn.query("select 1");
     });
   });
 

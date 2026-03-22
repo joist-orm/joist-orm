@@ -31,6 +31,7 @@ import {
 import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import ansiRegex from "ansi-regex";
 import {
+  factories,
   isFactoryCreation,
   maybeNew,
   maybeNewPoly,
@@ -62,7 +63,7 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get.firstName).toEqual("a1");
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book at EntityManager.factories.test.ts:59↩",
+       "Creating new Book at EntityManager.factories.test.ts:60↩",
        "  author = creating new Author↩",
        "    created Author#1 added to scope↩",
        "  created Book#1 added to scope↩",
@@ -157,7 +158,7 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get).not.toMatchEntity(a2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Tag at EntityManager.factories.test.ts:150↩",
+       "Creating new Tag at EntityManager.factories.test.ts:151↩",
        "  created Tag#1 added to scope↩",
        "  books[0] = creating new Book↩",
        "    author = creating new Author↩",
@@ -183,7 +184,7 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get).toEqual(a1);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book at EntityManager.factories.test.ts:180↩",
+       "Creating new Book at EntityManager.factories.test.ts:181↩",
        "  ...adding Author#1 opt to scope↩",
        "  author = Author#1 from scope↩",
        "  created Book#1 added to scope↩",
@@ -413,15 +414,66 @@ describe("EntityManager.factories", () => {
   it("can use tagged ids as shortcuts", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);
-    const b1 = newBook(em, { author: "a:1" });
+    const b1 = newBook(em, { author: "a#1" });
     expect(b1.author.get).toEqual(a1);
   });
 
   it("can use tagged ids as shortcuts in list", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);
-    const p1 = newPublisher(em, { authors: ["a:1"] });
+    const p1 = newPublisher(em, { authors: ["a#1"] });
     expect(p1.authors.get).toEqual([a1]);
+  });
+
+  it("can use is to verify entity ids", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em, { is: "a#1" });
+    expect(a1.toString()).toEqual("Author#1");
+  });
+
+  it("can use is to fail on wrong entity id", async () => {
+    const em = newEntityManager();
+    expect(() => newAuthor(em, { is: "a#5" })).toThrow("Test used 'is: a#5' but the entity is actually a#1");
+  });
+
+  it("can use is with cross-references within a single factory call", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em, {
+      books: [
+        { is: "b#1", title: "First Book" },
+        { is: "b#2", title: "Second Book", prequel: "b#1" },
+      ],
+    });
+    const [b1, b2] = a.books.get;
+    expect(b1.title).toEqual("First Book");
+    expect(b2.title).toEqual("Second Book");
+    expect(b2.prequel.get).toEqual(b1);
+  });
+
+  it("can use factories proxy to access entities by factory id", async () => {
+    const em = newEntityManager();
+    newAuthor(em, {
+      books: [
+        { is: "b#1", title: "First" },
+        { is: "b#2", title: "Second" },
+      ],
+    });
+    const { a1, b1, b2 } = factories;
+    expect(a1.firstName).toEqual("a1");
+    expect(b1.title).toEqual("First");
+    expect(b2.title).toEqual("Second");
+  });
+
+  it("factories proxy throws on missing entity", async () => {
+    const em = newEntityManager();
+    newAuthor(em);
+    expect(() => factories.b1).toThrow("No factory entity found for 'b#1'");
+  });
+
+  it("factories proxy throws on invalid key format", async () => {
+    const em = newEntityManager();
+    newAuthor(em);
+    expect(() => (factories as any)["not-valid"]).toThrow("Invalid id 'not-valid', expected 'b1' or 'a2'");
   });
 
   it("can omit default values for non-required primitive fields", async () => {
@@ -825,8 +877,8 @@ describe("EntityManager.factories", () => {
     // Then both books are deeply loaded
     expect(a.books.get[0].reviews.get[0].rating).toBe(1);
     expect(a.books.get[1].reviews.get[0].rating).toBe(2);
-    // And it took only 9 (plus 9 recursive?) queries (vs. 44 without join preloading)
-    expect(queries.length).toBe(isPreloadingEnabled ? 18 : 44);
+    // And it took only 9 (plus 9 recursive?) queries (vs. 40 without join preloading)
+    expect(queries.length).toBe(isPreloadingEnabled ? 19 : 46);
   });
 
   it("uniquely assigns name fields", async () => {
@@ -901,7 +953,7 @@ describe("EntityManager.factories", () => {
       await em.flush();
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new ChildGroup at EntityManager.factories.test.ts:892↩",
+         "Creating new ChildGroup at EntityManager.factories.test.ts:944↩",
          "  childGroup = creating new Child↩",
          "    created Child#1 added to scope↩",
          "  parentGroup = creating new ParentGroup↩",

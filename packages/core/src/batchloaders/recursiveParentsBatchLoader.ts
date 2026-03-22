@@ -1,4 +1,3 @@
-import DataLoader from "dataloader";
 import { getMetadataForType } from "../configure";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
@@ -12,19 +11,20 @@ import {
 } from "../index";
 import { RecursiveParentsCollectionImpl } from "../relations/RecursiveCollection";
 import { abbreviation } from "../utils";
+import { BatchLoader } from "./BatchLoader";
 
 export const recursiveParentsOperation = "m2o-recursive";
 
-export function recursiveParentsDataLoader<T extends Entity, U extends Entity>(
+export function recursiveParentsBatchLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
   collection: RecursiveParentsCollectionImpl<T, U>,
-): DataLoader<Entity, U[]> {
+): BatchLoader<Entity> {
   let { meta, fieldName } = collection;
   // This could be called from subtypes to get relations defined on the parent. So we need to make sure we are using the
   // correct meta by walking the inheritance tree until we find the meta that actually has the root m2o field
   while (!(collection.m2oFieldName in meta.fields) && meta.baseType) meta = getMetadataForType(meta.baseType);
   const batchKey = `${meta.tableName}-${fieldName}`;
-  return em.getLoader(recursiveParentsOperation, batchKey, async (children) => {
+  return em.getBatchLoader(recursiveParentsOperation, batchKey, async (children) => {
     const m2o = meta.allFields[collection.m2oFieldName] as ManyToOneField;
     // ...can `getField` return a new entity? In theory, we shouldn't see new entities because
     // RecursiveParentsCollectionImpl.load/isLoaded will see the `ManyToOneReferenceImpl` as loaded.
@@ -68,7 +68,5 @@ export function recursiveParentsDataLoader<T extends Entity, U extends Entity>(
     // for the ManyToOneReferenceImpl to find them, so we don't need to map them back to the
     // keys, or push them into the preloader cache.
     em.hydrate(meta.cstr, rows);
-
-    return children.map(() => []);
   });
 }

@@ -41,7 +41,10 @@ export class SmallPublisher extends SmallPublisherCodegen implements HasGroup<Sm
     sp.authors.get.map((a) => a.firstName).join(", "),
   );
 
-  /** Example of a ReactiveReference in an entity with subtypes. */
+  /**
+   * Example of a ReactiveReference in an entity with subtypes.
+   * @generated SmallPublisher.md
+   */
   readonly favoriteAuthor: ReactiveReference<SmallPublisher, Author, undefined> = hasReactiveReference(
     { authors: "books" },
     (p) => {

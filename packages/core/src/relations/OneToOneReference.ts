@@ -10,7 +10,7 @@ import {
   OneToOneField,
   TaggedId,
 } from "../";
-import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
+import { oneToOneBatchLoader } from "../batchloaders/oneToOneBatchLoader";
 import { Entity } from "../Entity";
 import { EntityMetadata } from "../EntityMetadata";
 import { setField } from "../fields";
@@ -166,13 +166,16 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     if (!this._isLoaded || opts.forceReload) {
       if (!this.entity.isNewEntity) {
         const joinLoaded = this.getPreloaded();
-        this.loaded = joinLoaded
-          ? joinLoaded[0]
-          : await oneToOneDataLoader(this.entity.em, this)
-              .load(this.entity.idTagged)
-              .catch(function load(err) {
-                throw appendStack(err, new Error());
-              });
+        if (joinLoaded) {
+          this.loaded = joinLoaded[0];
+        } else {
+          try {
+            await oneToOneBatchLoader(this.entity.em, this).load(this.entity.idTagged);
+          } catch (err) {
+            throw appendStack(err as Error, new Error());
+          }
+          this.preload();
+        }
       }
       this._isLoaded = true;
     }

@@ -69,7 +69,10 @@ export class BookReview extends BookReviewCodegen {
     return !review.comment.get?.text?.includes("Ignore");
   });
 
-  /** For testing reacting to poly CommentParent properties. */
+  /**
+   * For testing reacting to poly CommentParent properties.
+   * @generated BookReview.md
+   */
   readonly commentParentInfo: AsyncProperty<BookReview, string> = hasReactiveAsyncProperty([], () => ``);
 }
 

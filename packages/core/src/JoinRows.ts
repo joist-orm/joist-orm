@@ -187,9 +187,7 @@ export class JoinRows {
     }
 
     // Mark all no-longer-there rows as deleted
-    existingRows.forEach((row) => {
-      row.deleted = true;
-    });
+    for (const row of existingRows) row.deleted = true;
   }
 
   getOthers(columnName: string, entity: Entity): Entity[] {

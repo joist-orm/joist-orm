@@ -8,7 +8,7 @@ import {
   ManyToManyField,
   ReadOnlyCollection,
 } from "..";
-import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
+import { manyToManyBatchLoader } from "../batchloaders/manyToManyBatchLoader";
 import { IsLoadedCachable } from "../IsLoadedCache";
 import { ManyToManyLike } from "../JoinRows";
 import { lazyField } from "../newEntity";
@@ -174,8 +174,8 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
   async #loadFromJoinTable(): Promise<U[]> {
     const { em } = this.entity;
     const key = `${this.columnName}=${this.entity.id}`;
-    const result = await manyToManyDataLoader(em, this as any).load(key);
-    return result as U[];
+    await manyToManyBatchLoader(em, this).load(key);
+    return getEmInternalApi(em).joinRows(this).getOthers(this.columnName, this.entity) as U[];
   }
 
   /** Apply pending changes from the controlling side. */

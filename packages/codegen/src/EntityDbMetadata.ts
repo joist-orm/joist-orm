@@ -40,6 +40,8 @@ export interface DbMetadata {
   enums: EnumMetadata;
   pgEnums: PgEnumMetadata;
   joinTables: string[];
+  /** Other non-joist tables in the schema. */
+  otherTables: string[];
   totalTables: number;
 }
 

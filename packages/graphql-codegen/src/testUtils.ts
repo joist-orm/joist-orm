@@ -39,6 +39,7 @@ export function newDbMeta(opt: EntityDbMetadata[] | Partial<DbMetadata>): DbMeta
     enums: {},
     pgEnums: {},
     joinTables: [],
+    otherTables: [],
     totalTables: 10,
     entitiesByName,
   };

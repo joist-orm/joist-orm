@@ -253,6 +253,10 @@ describe("EntityManager.reactiveRules", () => {
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["graduated"], path: [], fn },
       // Author's immutable age rule (w/o age listed b/c it is immutable, but still needs to fire on create)
       { cstr: "Author", name: sm(/Author.ts:\d+/), fields: [], path: [], fn },
+      // Author's addCycleRule for mentorsRecursive
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["mentor"], path: [], fn },
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: ["mentor"], path: ["menteesRecursive"], fn },
+      { cstr: "Author", name: sm(/Author.ts:\d+/), fields: [], path: ["menteesRecursive"], fn },
       // Book's noop author.firstName rule, only depends on firstName
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["firstName"], path: ["books"], fn },
       // Book's "too many colors" rule, only depends on favoriteColors, not firstName:ro
@@ -460,7 +464,7 @@ describe("EntityManager.reactiveRules", () => {
     expect(bRfs[i++]).toEqual({
       kind: "reaction",
       cstr: "Book",
-      name: "Book.ts:117",
+      name: "Book.ts:123",
       fields: ["notes"],
       path: [],
       runOnce: false,
@@ -895,12 +899,10 @@ describe("EntityManager.reactiveRules", () => {
       });
 
       it.withCtx("calculates on new review", async ({ em }) => {
-        newAuthor(em, { age: 40, graduated: new Date(), books: [{}] });
+        await insertAuthor({ first_name: "a1", age: 40, graduated: new Date() });
+        await insertBook({ author_id: 1, title: "b1" });
+        em.create(BookReview, { book: "b:1", rating: 1 });
         await em.flush();
-        // Use a new em to ensure nothing is cached
-        const em2 = newEntityManager();
-        em2.create(BookReview, { book: "b:1", rating: 1 });
-        await em2.flush();
         expect(await select("authors")).toMatchObject([{ id: 1, number_of_public_reviews: 1 }]);
       });
 

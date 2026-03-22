@@ -255,6 +255,7 @@ describe("EntityManager.reactions", () => {
       afterMetadata: 0,
       runOnce: 0,
       observedNickNames: [],
+      observedPublishers: [],
     });
   });
 
@@ -264,7 +265,7 @@ describe("EntityManager.reactions", () => {
     // When we flush
     await em.flush();
     // Then we run all the reactions
-    expect(a.transientFields.reactions).toEqual({
+    expect(a.transientFields.reactions).toMatchEntity({
       direct: 1,
       immutable: 1,
       m2m: 1,
@@ -276,12 +277,13 @@ describe("EntityManager.reactions", () => {
       afterMetadata: 1,
       runOnce: 1,
       observedNickNames: ["a1"],
+      observedPublishers: [undefined],
     });
     // And when we trigger another flush where the author is no longer new
     em.touch(a);
     await em.flush();
     // Then they shouldn't run again
-    expect(a.transientFields.reactions).toEqual({
+    expect(a.transientFields.reactions).toMatchEntity({
       direct: 1,
       immutable: 1,
       m2m: 1,
@@ -293,6 +295,7 @@ describe("EntityManager.reactions", () => {
       afterMetadata: 1,
       runOnce: 1,
       observedNickNames: ["a1"],
+      observedPublishers: [undefined],
     });
   });
 
@@ -408,6 +411,22 @@ describe("EntityManager.reactions", () => {
       await em.flush();
       // Then the reaction runs
       expect(a.transientFields.reactions.m2o).toBe(1);
+    });
+
+    it.withCtx("run when m2o is set and reverted to original within a hook during flush", async ({ em }) => {
+      // Given an Author with publisher p1
+      await insertPublisher({ name: "p1" });
+      await insertPublisher({ id: 2, name: "p2" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      const [p1, p2] = await em.loadAll(Publisher, ["p:1", "p:2"]);
+      const a = await em.load(Author, "a:1");
+      expect(a.transientFields.reactions.m2o).toBe(0);
+      // When we modify the publisher but then expect it to be reverted
+      a.publisher.set(p2);
+      a.transientFields.setPublisherInFlush = p1;
+      await em.flush();
+      // Then the reaction saw both the changed & restored value
+      expect(a.transientFields.reactions.observedPublishers).toMatchEntity([p2, p1]);
     });
 
     it.withCtx("run on delete", async ({ em }) => {

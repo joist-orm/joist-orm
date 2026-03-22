@@ -239,7 +239,7 @@ class OneToManyFieldStatusImpl<T extends Entity, U extends Entity> implements On
       ...this.#o2m.added(),
       ...(this.#entity.isNewEntity
         ? []
-        : ((getEmInternalApi(this.#entity.em).pendingChildren.get(this.#entity.idTagged)?.get(this.#o2m.fieldName)
+        : ((getEmInternalApi(this.#entity.em).pendingPercolate.get(this.#entity.idTagged)?.get(this.#o2m.fieldName)
             ?.adds as U[]) ?? [])),
     ];
   }
@@ -249,7 +249,7 @@ class OneToManyFieldStatusImpl<T extends Entity, U extends Entity> implements On
       ...this.#o2m.removed(),
       ...(this.#entity.isNewEntity
         ? []
-        : ((getEmInternalApi(this.#entity.em).pendingChildren.get(this.#entity.idTagged)?.get(this.#o2m.fieldName)
+        : ((getEmInternalApi(this.#entity.em).pendingPercolate.get(this.#entity.idTagged)?.get(this.#o2m.fieldName)
             ?.removes as U[]) ?? [])),
     ];
   }

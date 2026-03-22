@@ -4,6 +4,7 @@
   "scripts": {
     "build": "tspc --build",
     "semantic-release": "semantic-release",
+    "publish-next": "./scripts/publish-next.sh",
     "migrate": "yarn workspaces foreach --all run migrate",
     "codegen": "yarn workspaces foreach --all run codegen",
     "format": "yarn workspaces foreach --all run format",

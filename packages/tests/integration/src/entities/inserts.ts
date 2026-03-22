@@ -280,6 +280,10 @@ export function insertAuthorToMenteesClosure(row: { mentor_id: number; mentee_id
   return testDriver.insert("author_to_mentees_closure", row);
 }
 
+export function insertUserToParent(row: { id?: number; child_id: number; parent_id: number }) {
+  return testDriver.insert("users_to_parents", row);
+}
+
 export function insertBookReview(row: {
   id?: number;
   book_id: number;

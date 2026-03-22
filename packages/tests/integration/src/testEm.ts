@@ -5,9 +5,10 @@ import { Knex } from "knex";
 
 // Create a shared test context that tests can use, and also we'll use to auto-flush the db between tests.
 const plugins = (process.env.PLUGINS ?? "join-preloading").split(",");
-export const isPreloadingEnabled = false; // plugins.includes("join-preloading");
+export const isPreloadingEnabled = plugins.includes("join-preloading");
 export let testDriver: TestDriver = new PostgresTestDriver(isPreloadingEnabled);
 export let knex: Knex = testDriver.knex;
+export let pool = testDriver.pool;
 export let numberOfQueries = 0;
 export let queries: string[] = [];
 
@@ -28,6 +29,7 @@ export function resetQueryCount() {
 
 export function recordQuery(sql: string): void {
   numberOfQueries++;
+  // console.log(sql);
   queries.push(sql);
 }
 

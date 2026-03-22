@@ -2838,7 +2838,7 @@ describe("EntityManager.queries", () => {
       const authors = await em.find(
         Author,
         { as: a },
-        { conditions: { and: [a.address.raw("@\\? ?", ['$.street ? (@ == "rr2")'])] } },
+        { conditions: { and: [a.address.raw("@? ?", ['$.street ? (@ == "rr2")'])] } },
       );
       expect(authors.length).toEqual(1);
     });

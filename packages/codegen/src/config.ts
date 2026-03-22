@@ -136,6 +136,10 @@ export const config = z
     nonDeferredForeignKeys: z.optional(z.union([z.literal("error"), z.literal("warn"), z.literal("ignore")])),
     /** Enables esm output. */
     esm: z.optional(z.boolean()),
+    /** Enables documentation syncing between .md files and JSDocs. */
+    docs: z.optional(z.boolean()),
+    /** Output a metadata-docs.ts file with entity/field documentation available at runtime. */
+    outputDocs: z.optional(z.boolean()),
     /** Auto-set by probing the project's `tsconfig.json` file. */
     allowImportingTsExtensions: z.optional(z.boolean()),
     // The version of Joist that generated this config.

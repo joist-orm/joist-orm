@@ -2,6 +2,7 @@
   "AdminUser": [
     "authorManyToOne",
     "bio",
+    "children",
     "createdAt",
     "createdComments",
     "directs",
@@ -12,6 +13,7 @@
     "manager",
     "name",
     "originalEmail",
+    "parents",
     "role",
     "trialPeriod",
     "updatedAt"
@@ -677,6 +679,7 @@
   "User": [
     "authorManyToOne",
     "bio",
+    "children",
     "createdAt",
     "createdComments",
     "directs",
@@ -687,6 +690,7 @@
     "manager",
     "name",
     "originalEmail",
+    "parents",
     "trialPeriod",
     "updatedAt"
   ],

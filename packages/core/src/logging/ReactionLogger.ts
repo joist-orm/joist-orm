@@ -1,8 +1,9 @@
 import ansis from "ansis";
-import { Reactable } from "../config";
+import { Reactable, ReactiveRule } from "../config";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
 import { ReactiveAction } from "../ReactionsManager";
+import { Todo } from "../Todo";
 import { groupBy } from "../utils";
 
 const { gray, green, yellow, white } = ansis;
@@ -45,18 +46,27 @@ export class ReactionLogger {
     );
   }
 
-  logWalked(todo: Entity[], r: Reactable, entities: Entity[]): void {
+  // Both EntityManager.runValidation and RM.recalc use `logWalked`
+  logStartingValidate(em: EntityManager, todos: Record<string, Todo>): void {
+    const count = Object.values(todos).reduce(
+      (sum, t) => sum + t.inserts.length + t.updates.length + t.deletes.length,
+      0,
+    );
+    this.log(white.bold(`Validating from ${count} changed entities...`), this.entityCount(em));
+  }
+
+  logWalked(todo: Entity[], r: Reactable | ReactiveRule, entities: Entity[], action: "recalc" | "validate"): void {
     // Keep for future debugging...
     const from = todo[0].constructor.name;
     this.log(
       " ", // indent
       gray(`Walked`),
       white(`${todo.length}`),
-      green.bold(`${from}`) + green(`.${r.path.join(".")}`),
+      green.bold(`${from}`) + green(`.${r.path.length === 0 ? "(self)" : r.path.join(".")}`),
       gray("paths, found"),
       white(`${entities.length}`),
       green.bold(`${r.cstr.name}`) + green(".") + yellow(r.name),
-      gray("to recalc"),
+      gray(`to ${action}`),
     );
     if (entities.length > 0) {
       this.log(
@@ -70,7 +80,8 @@ export class ReactionLogger {
     }
   }
 
-  logLoading(em: EntityManager, actions: ReactiveAction[]): void {
+  /** After finding the RFs/RQFs/Reactions to recalc, we call their `.load` promise to update. */
+  logLoadingStart(em: EntityManager, actions: ReactiveAction[]): void {
     this.log(" ", gray("Loading"), String(actions.length), gray("actions..."), this.entityCount(em));
     // Group by the action name
     [...groupBy(actions, (a) => `${a.entity.constructor.name},${a.r.name}`).values()].forEach((actions) => {
@@ -85,7 +96,8 @@ export class ReactionLogger {
     });
   }
 
-  logLoadingTime(em: EntityManager, millis: number): void {
+  /** We've completed loading/evaling the reactions. */
+  logLoadingEnd(em: EntityManager, millis: number): void {
     this.log("   ", gray("took"), String(Math.floor(millis)), gray("millis"), this.entityCount(em));
   }
 

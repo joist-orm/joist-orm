@@ -407,6 +407,59 @@ Also see Joist's [toMatchEntity](./entity-matcher.md), which provides another er
 
 :::
 
+## Cross-Referencing Entities with `is`
+
+When creating a subgraph of entities in a single factory call, you sometimes need one entity to reference another entity that is also being created in the same call.
+
+For example, if you're creating an author with two books where the second book is a sequel to the first:
+
+```typescript
+const a = newAuthor(em, {
+  books: [
+    { is: "b#1", title: "First Book" },
+    { is: "b#2", title: "Second Book", prequel: "b#1" },
+  ],
+});
+const [b1, b2] = a.books.get;
+expect(b2.prequel.get).toEqual(b1);
+```
+
+This works by:
+
+1. The `is` key asserts that the entity gets the expected factory id (e.g. `b#1` means "this should be the 1st Book created in this `EntityManager`"). If the id doesn't match, an error is thrown.
+
+2. When a reference like `prequel: "b#1"` is encountered, Joist looks up the entity by its factory id in `em.entities`, resolving it to the already-created book.
+
+The `#` ids (like `b#1`, `a#2`) are the stable factory ids assigned when `em.create` is called — they match the `Author#1`, `Book#2` ids you see in `entity.toString()` output and factory logging. They are separate from the database-assigned `:` ids (like `b:1`) that only exist after `em.flush()`.
+
+:::tip[Tip]
+
+Even without `is`, the `"b#1"` reference syntax works on its own — `is` just adds an assertion that the entity you're creating is the one you think it is, which helps catch mistakes when tests evolve over time.
+
+:::
+
+### Accessing Entities with the `factories` Proxy
+
+Instead of destructuring entities from relation collections, you can use the `factories` proxy to access any factory-created entity by its factory id:
+
+```typescript
+import { factories } from "joist-orm";
+
+// Create an author with two books
+newAuthor(em, {
+  books: [
+    { is: "b#1", title: "First Book" },
+    { is: "b#2", title: "Second Book", prequel: "b#1" },
+  ],
+});
+
+// Access entities directly by factory id
+const { a1, b1, b2 } = factories;
+expect(b2.prequel.get).toEqual(b1);
+```
+
+The proxy converts property names like `b1` into factory ids like `b#1` and looks up the entity in the most recently used `EntityManager`. This works for any entity created via a factory, not just those with an explicit `is` key.
+
 ## Singletons with the `useExisting` option
 
 Sometimes when a test has just called `newAuthor`, we want the factory to realize that, due to unique constraints/business logic specific to `Author`, that the appropriate `Author` instance the test is asking for already exists.

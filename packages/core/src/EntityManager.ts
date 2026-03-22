@@ -1,9 +1,19 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { getInstanceData } from "./BaseEntity";
+import { BatchLoader } from "./batchloaders/BatchLoader";
+import { loadOperation } from "./batchloaders/loadBatchLoader";
+import { manyToManyLoadOperation } from "./batchloaders/manyToManyBatchLoader";
+import { oneToManyLoadOperation } from "./batchloaders/oneToManyBatchLoader";
+import { oneToOneLoadOperation } from "./batchloaders/oneToOneBatchLoader";
 import { setAsyncDefaults, setSyncDefaults } from "./defaults";
 import { getField, setField } from "./fields";
 import { IndexManager } from "./IndexManager";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
+import { loadBatchLoader } from "./batchloaders/loadBatchLoader";
+import { populateBatchLoader, populateOperation } from "./batchloaders/populateBatchLoader";
+import { recursiveChildrenOperation } from "./batchloaders/recursiveChildrenBatchLoader";
+import { recursiveM2mOperation } from "./batchloaders/recursiveM2mBatchLoader";
+import { recursiveParentsOperation } from "./batchloaders/recursiveParentsBatchLoader";
 import { getReactiveRules } from "./caches";
 import { constraintNameToValidationError, ReactiveRule } from "./config";
 import { getConstructorFromTag, getMetadataForType } from "./configure";
@@ -13,15 +23,8 @@ import { findDataLoader, findOperation } from "./dataloaders/findDataLoader";
 import { findIdsDataLoader, findIdsOperation } from "./dataloaders/findIdsDataLoader";
 import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
 import { lensOperation } from "./dataloaders/lensDataLoader";
-import { loadDataLoader, loadOperation } from "./dataloaders/loadDataLoader";
-import { manyToManyLoadOperation } from "./dataloaders/manyToManyDataLoader";
 import { manyToManyFindOperation } from "./dataloaders/manyToManyFindDataLoader";
-import { oneToManyLoadOperation } from "./dataloaders/oneToManyDataLoader";
 import { oneToManyFindOperation } from "./dataloaders/oneToManyFindDataLoader";
-import { oneToOneLoadOperation } from "./dataloaders/oneToOneDataLoader";
-import { populateDataLoader, populateOperation } from "./dataloaders/populateDataLoader";
-import { recursiveChildrenOperation } from "./dataloaders/recursiveChildrenDataLoader";
-import { recursiveParentsOperation } from "./dataloaders/recursiveParentsDataLoader";
 import { Driver } from "./drivers";
 import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
@@ -79,13 +82,16 @@ import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints"
 import { WriteFn } from "./logging/FactoryLogger";
 import { newEntity } from "./newEntity";
 import { resetFactoryCreated } from "./newTestInstance";
+import { PendingChange } from "./PendingChanges";
 import { PluginManager } from "./PluginManager";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";
 import { ReactionsManager } from "./ReactionsManager";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
+import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
+import { RecursiveCycleError } from "./relations/RecursiveCollection";
 import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
 import { OptsOf, OrderOf } from "./typeMap";
@@ -206,7 +212,9 @@ export type FindOperation =
   | typeof oneToOneLoadOperation
   | typeof populateOperation
   | typeof recursiveChildrenOperation
+  | typeof recursiveM2mOperation
   | typeof recursiveParentsOperation;
+
 /**
  * The EntityManager is the primary way nearly all code, i.e. anything that finds/creates/updates/deletes entities,
  * will interact with the database.
@@ -241,7 +249,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   // Provides field-based indexing for entity types with >1000 entities to optimize findWithNewOrChanged
   readonly #indexManager = new IndexManager();
   #isValidating: boolean = false;
-  readonly #pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
+  readonly #pendingPercolate: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
   #preloadedRelations: Map<string, Map<string, Entity[]>> = new Map();
   /**
    * Tracks cascade deletes.
@@ -253,6 +261,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   #pendingDeletes: Entity[] = [];
   #dataloaders: Record<string, LoaderCache> = {};
+  #batchLoaders: Record<string, Record<string, BatchLoader<any>>> = {};
   readonly #joinRows: Record<string, JoinRows> = {};
   /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
   readonly #rm = new ReactionsManager(this);
@@ -301,8 +310,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     this.__api = {
       preloader: this.#preloader,
-      pendingChildren: this.#pendingChildren,
+      pendingPercolate: this.#pendingPercolate,
       mutatedCollections: new Set(),
+      pendingLoads: new Set(),
       hooks: this.#hooks,
       rm: this.#rm,
       indexManager: this.#indexManager,
@@ -347,6 +357,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       clearDataloaders() {
         em.#dataloaders = {};
+        em.#batchLoaders = {};
       },
 
       clearPreloadedRelations() {
@@ -362,6 +373,39 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   /** Returns a read-only shallow copy of the currently-loaded entities. */
   get entities(): ReadonlyArray<Entity> {
     return [...this.#entitiesArray];
+  }
+
+  /** Returns a list of all pending creates, updates, deletes, and m2m changes that would be flushed. */
+  get pendingChanges(): PendingChange[] {
+    const changes: PendingChange[] = [];
+    for (const entity of this.#entitiesArray) {
+      const op = getInstanceData(entity).pendingOperation;
+      switch (op) {
+        case "insert":
+          changes.push({ kind: "create", entity });
+          break;
+        case "update":
+          changes.push({ kind: "update", entity });
+          break;
+        case "delete":
+          changes.push({ kind: "delete", entity });
+          break;
+      }
+    }
+    for (const joinRows of Object.values(this.#joinRows)) {
+      const todo = joinRows.toTodo();
+      if (todo) {
+        for (const row of todo.newRows) {
+          const entities = Object.values(row.columns) as [Entity, Entity];
+          changes.push({ kind: "m2m", op: "add", joinTableName: todo.m2m.joinTableName, entities });
+        }
+        for (const row of todo.deletedRows) {
+          const entities = Object.values(row.columns) as [Entity, Entity];
+          changes.push({ kind: "m2m", op: "remove", joinTableName: todo.m2m.joinTableName, entities });
+        }
+      }
+    }
+    return changes;
   }
 
   /** Returns a read-only list of the currently-loaded entities of `type`. */
@@ -1117,16 +1161,18 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       id = id || fail(`Invalid ${typeOrId.name} id: ${id}`);
     }
     const meta = getMetadata(type);
-    const tagged = toTaggedId(meta, id);
-    const entity =
-      this.findExistingInstance<T>(tagged) ||
-      (await loadDataLoader(this, meta)
-        .load({ entity: tagged, hint })
+    const taggedId = toTaggedId(meta, id);
+    let entity = this.findExistingInstance<T>(taggedId);
+    if (!entity) {
+      await loadBatchLoader(this, meta)
+        .load({ taggedId, hint })
         .catch(function load(err) {
           throw appendStack(err, new Error());
-        }));
+        });
+      entity = this.findExistingInstance<T>(taggedId);
+    }
     if (!entity) {
-      throw new NotFoundError(`${tagged} was not found`);
+      throw new NotFoundError(`${taggedId} was not found`);
     }
     if (hint) {
       await this.populate(entity, hint);
@@ -1154,20 +1200,21 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ): Promise<T[]> {
     const meta = getMetadata(type);
     const ids = _ids.map((id) => tagId(meta, id));
-    const entities = await Promise.all(
-      ids.map((id) => {
-        return (
-          this.findExistingInstance(id) ||
-          loadDataLoader(this, meta)
-            .load({ entity: id, hint })
-            .catch(function loadAll(err) {
-              throw appendStack(err, new Error());
-            })
-        );
-      }),
-    );
-    const idsNotFound = ids.filter((_, i) => entities[i] === undefined);
-    if (idsNotFound.length > 0) {
+    const idsToLoad = ids.filter((id) => !this.findExistingInstance(id));
+    if (idsToLoad.length > 0) {
+      await loadBatchLoader(this, meta)
+        .loadAll(idsToLoad.map((id) => ({ taggedId: id, hint })))
+        .catch(function loadAll(err) {
+          throw appendStack(err, new Error());
+        });
+    }
+    const entities: T[] = [];
+    for (const id of ids) {
+      const entity = this.findExistingInstance(id);
+      if (entity) entities.push(entity as T);
+    }
+    if (entities.length !== ids.length) {
+      const idsNotFound = ids.filter((_, i) => entities[i] === undefined);
       throw new NotFoundError(`${idsNotFound.join(",")} were not found`);
     }
     if (hint) {
@@ -1199,20 +1246,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ): Promise<T[]> {
     const meta = getMetadata(type);
     const ids = _ids.map((id) => tagId(meta, id));
-    const entities = (
-      await Promise.all(
-        ids.map((id) => {
-          return (
-            this.findExistingInstance(id) ||
-            loadDataLoader(this, meta)
-              .load({ entity: id, hint })
-              .catch(function loadAllIfExists(err) {
-                throw appendStack(err, new Error());
-              })
-          );
-        }),
-      )
-    ).filter(Boolean);
+    const idsToLoad = ids.filter((id) => !this.findExistingInstance(id));
+    if (idsToLoad.length > 0) {
+      await loadBatchLoader(this, meta)
+        .loadAll(idsToLoad.map((id) => ({ taggedId: id, hint })))
+        .catch(function loadAllIfExists(err) {
+          throw appendStack(err, new Error());
+        });
+    }
+    const entities = ids.map((id) => this.findExistingInstance(id)).filter(Boolean);
     if (hint) {
       await this.populate(entities as T[], hint);
     }
@@ -1363,34 +1405,22 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // intra dependencies), then a 2nd small-batch non-preload populate.
       const [preload, non] = this.#preloader.partitionHint(meta, hintOpt);
       if (preload) {
-        const loader = populateDataLoader(this, meta, preload, "preload", opts);
-        await Promise.all(
-          list.map((entity) =>
-            loader.load({ entity, hint: preload }).catch(function populate(err: any) {
-              throw appendStack(err, new Error());
-            }),
-          ),
-        );
+        const loader = populateBatchLoader(this, meta, preload, "preload", opts);
+        await loader.loadAll(list.map((entity) => ({ entity, hint: preload }))).catch(function populate(err: any) {
+          throw appendStack(err, new Error());
+        });
       }
       if (non) {
-        const loader = populateDataLoader(this, meta, non, "intermixed", opts);
-        await Promise.all(
-          list.map((entity) =>
-            loader.load({ entity, hint: non }).catch(function populate(err: any) {
-              throw appendStack(err, new Error());
-            }),
-          ),
-        );
+        const loader = populateBatchLoader(this, meta, non, "intermixed", opts);
+        await loader.loadAll(list.map((entity) => ({ entity, hint: non }))).catch(function populate(err: any) {
+          throw appendStack(err, new Error());
+        });
       }
     } else {
-      const loader = populateDataLoader(this, meta, hintOpt, "intermixed", opts);
-      await Promise.all(
-        list.map((entity) =>
-          loader.load({ entity, hint: hintOpt }).catch(function populate(err: any) {
-            throw appendStack(err, new Error());
-          }),
-        ),
-      );
+      const loader = populateBatchLoader(this, meta, hintOpt, "intermixed", opts);
+      await loader.loadAll(list.map((entity) => ({ entity, hint: hintOpt }))).catch(function populate(err: any) {
+        throw appendStack(err, new Error());
+      });
     }
 
     return fn ? fn(entityOrList as any) : (entityOrList as any);
@@ -1513,6 +1543,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
     this.#fl.startLock();
 
+    const allFlushedEntities: Set<Entity> = new Set();
+
+    try {
+
     await this.#fl.allowWrites(async () => {
       // Cascade deletes now that we're async (i.e. to keep `em.delete` synchronous).
       // Also do this before calling `recalcPendingReactables` to avoid recalculating
@@ -1534,6 +1568,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // Make a lambda that we can invoke multiple times, if we loop for ReactiveQueryFields
     const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
       if (hookLoops++ >= 10) throw new Error("runHooksOnPendingEntities has ran 10 iterations, aborting");
+
+      // Resolve any pending o2m/m2m sets (set() called before load — need to load from DB to diff)
+      const pendingLoads = [...getEmInternalApi(this).pendingLoads];
+      if (pendingLoads.length > 0) {
+        getEmInternalApi(this).pendingLoads.clear();
+        await Promise.all(pendingLoads.map((collection) => collection.load()));
+      }
+
       // Any dirty entities we find, even if we skipped firing their hooks on this loop
       const pendingFlush: Set<Entity> = new Set();
       // Subset of pendingFlush entities that we will run hooks on
@@ -1553,12 +1595,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // Run hooks in a series of loops until things "settle down"
       while (pendingHooks.size > 0) {
         await this.#fl.allowWrites(async () => {
-          // Run our hooks
           let todos = createTodos([...pendingHooks]);
 
           await setAsyncDefaults(suppressedDefaultTypeErrors, this.ctx, Todo.groupInsertsByTypeAndSubType(todos));
           maybeBumpUpdatedAt(todos, now);
 
+          // Run our hooks
           for (const group of maybeSetupHookOrdering(todos)) {
             await beforeCreate(this.ctx, group);
             await beforeUpdate(this.ctx, group);
@@ -1613,16 +1655,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
         // that the user should see.
         if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
-        await validateReactiveRules(entityTodos, joinRowTodos);
+        await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
       } finally {
         this.#isValidating = false;
       }
       await afterValidation(this.ctx, entityTodos);
     };
 
-    const allFlushedEntities: Set<Entity> = new Set();
-
-    try {
       // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
       let entitiesToFlush = await runHooksOnPendingEntities();
       for (const e of entitiesToFlush) allFlushedEntities.add(e);
@@ -1703,8 +1742,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         }
         mutatedCollections.clear();
 
-        // Reset the find caches b/c data will have changed in the db
+        // Reset the find/preload caches b/c data will have changed in the db
         this.#dataloaders = {};
+        this.#batchLoaders = {};
+        this.#preloadedRelations = new Map();
         this.#rm.clear();
       }
 
@@ -1714,6 +1755,20 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       return [...allFlushedEntities];
     } catch (e) {
+      if (e instanceof RecursiveCycleError) {
+        const entity = e.entities[0];
+        // Look up a custom cycle message — check both the exact field name and its opposite
+        // direction, since the cycle may be detected from either side (e.g. walking
+        // childrenRecursive during reactive hint reversal when parentsRecursive was configured).
+        for (const meta of getBaseAndSelfMetas(getMetadata(entity))) {
+          const messageFn =
+            meta.config.__data.cycleMessages[e.fieldName] ??
+            meta.config.__data.cycleMessages[((entity as any)[e.fieldName] as any)?.otherFieldName];
+          if (messageFn) {
+            throw new ValidationErrors([{ entity, message: messageFn(entity, e.entities) }]);
+          }
+        }
+      }
       if (e && typeof e === "object" && "constraint" in e && typeof e.constraint === "string") {
         // node-pg errors use `constraint` to indicate the constraint name
         const message = constraintNameToValidationError[e.constraint];
@@ -1759,6 +1814,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   async refresh(param?: EntityW | ReadonlyArray<EntityW> | { deepLoad?: boolean }): Promise<void> {
     this.#isRefreshing = true;
     this.#dataloaders = {};
+    this.#batchLoaders = {};
     this.#preloadedRelations = new Map();
     const deepLoad = param && "deepLoad" in param && param.deepLoad;
     let todo =
@@ -1776,28 +1832,27 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       todo = [];
 
       // For any non-deleted entity with an id, get its latest data + relations from the database
-      const entities = await Promise.all(
-        copy
-          .filter((e) => e.idTaggedMaybe && !e.isDeletedEntity)
-          .map((entity) => {
-            // Pass these as a hint to potentially preload them
-            const hint = getRelationEntries(entity)
-              .filter(([_, r]) => deepLoad || r.isLoaded)
-              .map(([k]) => k);
-            return loadDataLoader(this, getMetadata(entity), true)
-              .load({ entity: entity.idTagged, hint })
-              .catch(function refresh(err) {
-                throw appendStack(err, new Error());
-              });
-          }),
+      const entitiesToRefresh = copy.filter((e) => e.idTaggedMaybe && !e.isDeletedEntity);
+      await Promise.all(
+        entitiesToRefresh.map((entity) => {
+          // Pass loaded/all relation names as a hint so the preloader can inject JOINs
+          const hint = getRelationEntries(entity)
+            .filter(([_, r]) => deepLoad || r.isLoaded)
+            .map(([k]) => k);
+          return loadBatchLoader(this, getMetadata(entity), true)
+            .load({ taggedId: entity.idTagged, hint })
+            .catch(function refresh(err) {
+              throw appendStack(err, new Error());
+            });
+        }),
       );
 
-      // Then refresh any loaded relations (the `loadDataLoader.load` only populates the
-      // preloader cache, if in use, it doesn't actually get each relation into a loaded state.)
+      // Then refresh any loaded relations (the loadBatchLoader only hydrates the entity
+      // data, it doesn't get each relation into a loaded state.)
       const [custom, builtin] = partition(
-        entities
-          .filter((e) => e && !getInstanceData(e).isDeletedEntity)
-          .flatMap((entity) => getRelations(entity!).filter((r) => deepLoad || r.isLoaded)),
+        entitiesToRefresh
+          .filter((e) => !getInstanceData(e).isDeletedEntity)
+          .flatMap((entity) => getRelations(entity).filter((r) => deepLoad || r.isLoaded)),
         isCustomRelation,
       );
       // Call `.load` on builtin relations first, because if we hit an already-loaded custom relation
@@ -1991,6 +2046,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // https://github.com/joist-orm/joist-orm/issues/629
     const loadersForKind = (this.#dataloaders[operation] ??= {});
     return getOrSet(loadersForKind, batchKey, () => new DataLoader(fn, opts));
+  }
+
+  /**
+   * Like `getLoader`, but returns a `BatchLoader` where all callers in the same tick
+   * share a single `Promise<void>` instead of getting per-key promises.
+   *
+   * The batch function should write results via side channels (e.g. `setPreloadedRelation`).
+   */
+  public getBatchLoader<K>(operation: string, batchKey: string, fn: (keys: K[]) => Promise<void>): BatchLoader<K> {
+    const loadersForKind = (this.#batchLoaders[operation] ??= {});
+    return getOrSet(loadersForKind, batchKey, () => new BatchLoader(fn));
   }
 
   public toString(): string {
@@ -2298,6 +2364,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           (relationOrProp as any).loadHint ?? fail(`${source}.${fieldName} cannot be imported as it has no loadHint`);
         this.importEntity<T, H, L>(source, loadHint);
       } else if ("import" in relationOrProp) {
+        // Tell our version of the entity (result) to accept/copy the relation state of the source
         relationOrProp.import(
           (source as any)[fieldName],
           (e: Entity) => (this.importEntity as any)(e, subHint, subHint) as Entity,
@@ -2425,11 +2492,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 export interface EntityManagerInternalApi {
   joinRows: (m2m: ManyToManyLike) => JoinRows;
 
-  /** Map of taggedId -> fieldName -> pending children. */
-  pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>>;
+  /** Map of taggedId -> fieldName -> pending children, i.e. when `a1.books` later loads, add/remove b1. */
+  pendingPercolate: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>>;
 
   /** List of mutated o2m collections to reset added/removed post-flush. */
   mutatedCollections: Set<OneToManyCollection<any, any>>;
+
+  /** O2M/M2M collections with pending set() calls that need resolution before flush. */
+  pendingLoads: Set<Collection<any, any>>;
 
   /** Map of taggedId -> fieldName -> join-loaded data. */
   getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined;
@@ -2512,9 +2582,13 @@ export class TooManyError extends Error {
  * and ensure those entities are added to `todos`.
  */
 async function validateReactiveRules(
+  em: EntityManager,
+  logger: ReactionLogger | undefined,
   todos: Record<string, Todo>,
   joinRowTodos: Record<string, JoinRowTodo>,
 ): Promise<void> {
+  logger?.logStartingValidate(em, todos);
+
   // Use a map of rule -> Set<Entity> so that we only invoke a rule once per entity,
   // even if it was triggered by multiple changed fields.
   const fns: Map<ValidationRule<any>, Set<Entity>> = new Map();
@@ -2522,17 +2596,19 @@ async function validateReactiveRules(
   // From the given triggered entities, follow the entity's ReactiveRule back
   // to the reactive rules that need ran, and queue them in the `fn` map
   async function followAndQueue(triggered: Entity[], rule: ReactiveRule): Promise<void> {
-    (await followReverseHint(rule.name, triggered, rule.path))
+    if (triggered.length === 0) return;
+    const found = (await followReverseHint(rule.name, triggered, rule.path))
       .filter((entity) => !entity.isDeletedEntity)
-      .filter((e) => e instanceof rule.cstr)
-      .forEach((entity) => {
-        let entities = fns.get(rule.fn);
-        if (!entities) {
-          entities = new Set();
-          fns.set(rule.fn, entities);
-        }
-        entities.add(entity);
-      });
+      .filter((e) => e instanceof rule.cstr);
+    let entities = fns.get(rule.fn);
+    if (!entities) {
+      entities = new Set();
+      fns.set(rule.fn, entities);
+    }
+    logger?.logWalked(triggered, rule, found, "validate");
+    found.forEach((entity) => {
+      entities.add(entity);
+    });
   }
 
   const p1 = Object.values(todos).flatMap((todo) => {

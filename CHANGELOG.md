@@ -1,3 +1,34 @@
+# [2.1.0](https://github.com/joist-orm/joist-orm/compare/v2.0.3...v2.1.0) (2026-03-22)
+
+
+### Bug Fixes
+
+* Don't accidentally drop migrations table. ([#1760](https://github.com/joist-orm/joist-orm/issues/1760)) ([3071335](https://github.com/joist-orm/joist-orm/commit/3071335394fc92cd0e25043506f9be277e52fd70))
+* Fix addCycleMessage support for o2m recursive collections. ([#1745](https://github.com/joist-orm/joist-orm/issues/1745)) ([ca5674c](https://github.com/joist-orm/joist-orm/commit/ca5674c44cf04c4da640ad7a33bf698e07dc6a2e))
+* Fix m2o missing reactions. ([#1750](https://github.com/joist-orm/joist-orm/issues/1750)) ([aa0ef06](https://github.com/joist-orm/joist-orm/commit/aa0ef0615e9c5913d15a19d62c8e5edae8f32cdc))
+* Fix publish next script. ([29f77bc](https://github.com/joist-orm/joist-orm/commit/29f77bc4eca56641d69c36e693817ad290c386d9))
+* Fix publish next script. ([d78f8f6](https://github.com/joist-orm/joist-orm/commit/d78f8f613640990af43f286a47bca0bd4ad68674))
+* Fix reloading recursive collections. ([#1735](https://github.com/joist-orm/joist-orm/issues/1735)) ([275bcf3](https://github.com/joist-orm/joist-orm/commit/275bcf334e6e0e0860d1da2b5f1f2fbec4b25964))
+* Fix stale preload cache causing dropped entities. ([#1741](https://github.com/joist-orm/joist-orm/issues/1741)) ([06e44fa](https://github.com/joist-orm/joist-orm/commit/06e44fa1070dda4b4d1d5bdee228701af11ffda2))
+* remove implicit limit and distinct clause from findIds ([#1758](https://github.com/joist-orm/joist-orm/issues/1758)) ([c09abcd](https://github.com/joist-orm/joist-orm/commit/c09abcd0862e5d76b1418536e5fb1c9ee1358009))
+* Remove knex usage from test-utils. ([#1757](https://github.com/joist-orm/joist-orm/issues/1757)) ([f93e739](https://github.com/joist-orm/joist-orm/commit/f93e739d4587ba828e4e8a88c46068390dcbb04c))
+* Rename addCycleMessage to addCycleRule. ([#1747](https://github.com/joist-orm/joist-orm/issues/1747)) ([5a4f13f](https://github.com/joist-orm/joist-orm/commit/5a4f13f90db60f16391126b683a43e77b93582fb))
+* Support null in findOrCreate. ([#1718](https://github.com/joist-orm/joist-orm/issues/1718)) ([1ea9d78](https://github.com/joist-orm/joist-orm/commit/1ea9d78e30275a16e303dbe37afd58a565b1c50e))
+
+
+### Features
+
+* Add 'is' aliases in factories. ([#1762](https://github.com/joist-orm/joist-orm/issues/1762)) ([764e438](https://github.com/joist-orm/joist-orm/commit/764e4388e6a56e771a074313bd4c69e69c80703d))
+* Add EntityManager.pendingChanges. ([#1748](https://github.com/joist-orm/joist-orm/issues/1748)) ([f0d2c6e](https://github.com/joist-orm/joist-orm/commit/f0d2c6eee25ef9798a4f296fd275980d78b8faaf))
+* Add validation walking to reaction logging output. ([#1719](https://github.com/joist-orm/joist-orm/issues/1719)) ([097a8a1](https://github.com/joist-orm/joist-orm/commit/097a8a1f2399ac1cf7339b6c4012a5686c2e66e1)), closes [a#1](https://github.com/a/issues/1) [a#1](https://github.com/a/issues/1) [a#1](https://github.com/a/issues/1) [a#1](https://github.com/a/issues/1) [a#1](https://github.com/a/issues/1) [a#1](https://github.com/a/issues/1) [a#1](https://github.com/a/issues/1) [a#1](https://github.com/a/issues/1) [a#1](https://github.com/a/issues/1) [a#1](https://github.com/a/issues/1) [a#1](https://github.com/a/issues/1) [a#1](https://github.com/a/issues/1) [a#1](https://github.com/a/issues/1) [a#1](https://github.com/a/issues/1)
+* Allow m2m.set when unloaded. ([#1722](https://github.com/joist-orm/joist-orm/issues/1722)) ([0992a3c](https://github.com/joist-orm/joist-orm/commit/0992a3c170fb744dc044c6e0185924319fd059a1))
+* Allow OneToManyCollection.set when unloaded. ([#1725](https://github.com/joist-orm/joist-orm/issues/1725)) ([88caa04](https://github.com/joist-orm/joist-orm/commit/88caa0485929a1c2fcb1fb400c2e60331f516e9b))
+* Allow recursive m2m in reactive hints. ([#1744](https://github.com/joist-orm/joist-orm/issues/1744)) ([0435f2a](https://github.com/joist-orm/joist-orm/commit/0435f2a8a55d1301f24b45ed1a542c3b006d2ded))
+* Generate more readable aliases in preload queries. ([#1731](https://github.com/joist-orm/joist-orm/issues/1731)) ([5dc05b3](https://github.com/joist-orm/joist-orm/commit/5dc05b3732913aedf3b738c0a501e3c26c01558f))
+* Implement recursive m2m collections. ([#1739](https://github.com/joist-orm/joist-orm/issues/1739)) ([fadcb82](https://github.com/joist-orm/joist-orm/commit/fadcb82c14bfc4bd2d5472a591db85fd97f92941))
+* joist-codegen syncs md/js docs. ([#1749](https://github.com/joist-orm/joist-orm/issues/1749)) ([1bad341](https://github.com/joist-orm/joist-orm/commit/1bad34198914c25a4096b3096c930caae05352a3))
+* Less promises. ([#1730](https://github.com/joist-orm/joist-orm/issues/1730)) ([786d1b0](https://github.com/joist-orm/joist-orm/commit/786d1b01c44a42b9f0bb6a554852d91f2a545aae))
+
 ## [2.0.3](https://github.com/joist-orm/joist-orm/compare/v2.0.2...v2.0.3) (2026-01-23)
 
 

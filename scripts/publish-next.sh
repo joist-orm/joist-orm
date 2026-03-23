@@ -36,8 +36,9 @@ echo "Publishing version: $VERSION"
 # Update all package versions
 yarn workspaces foreach -v --all exec npm pkg set version="$VERSION"
 
-# Publish all packages with the 'next' tag
-yarn workspaces foreach -v --all --no-private npm publish --tag next --tolerate-republish
+# Publish all packages with the 'next' tag. Use Yarn's npm plugin so workspace:
+# ranges are rewritten to concrete versions in the packed manifests.
+yarn workspaces foreach -v --all --no-private exec yarn npm publish --tag next --access public --tolerate-republish
 
 # Push a git tag using GITHUB_TOKEN over HTTPS (the default SSH deploy key is read-only)
 TAG="v${VERSION}"

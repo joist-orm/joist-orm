@@ -8,7 +8,7 @@ module.exports = {
       "@semantic-release/exec",
       {
         prepareCmd: "yarn workspaces foreach -v --all version ${nextRelease.version}",
-        publishCmd: "yarn workspaces foreach -v --all --no-private npm publish --tolerate-republish",
+        publishCmd: "yarn workspaces foreach -v --all --no-private exec yarn npm publish --access public --tolerate-republish",
       },
     ],
     "@semantic-release/github",

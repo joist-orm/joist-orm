@@ -430,7 +430,7 @@ This works by:
 
 2. When a reference like `prequel: "b#1"` is encountered, Joist looks up the entity by its factory id in `em.entities`, resolving it to the already-created book.
 
-The `#` ids (like `b#1`, `a#2`) are the stable factory ids assigned when `em.create` is called — they match the `Author#1`, `Book#2` ids you see in `entity.toString()` output and factory logging. They are separate from the database-assigned `:` ids (like `b:1`) that only exist after `em.flush()`.
+The `#` ids (like `b#1`, `a#2`) are the stable factory ids assigned when `em.create` is called — they match the `Author#1`, `Book#2` ids you see in `entity.toString()` output and factory logging. They are separate from the database-assigned `:` ids (like `b:1`) that only exist after `em.flush()`. If you try to use a `:` id to refer to an unsaved factory-created entity, Joist throws and tells you to use the `#` test id instead.
 
 :::tip[Tip]
 
@@ -495,5 +495,4 @@ export function newPublisherType(
 ```
 
 The benefit of using `useExisting` is that the `existing` param will already be typed to your given entity type (i.e. `PublisherType`), and the `opts` param will be the "post-resolution" opts, i.e. instead of "maybe object literals or maybe object instances", they will be object instances (basically `OptsOf<PublisherType>`), which simplifies the lambda's matching logic.
-
 

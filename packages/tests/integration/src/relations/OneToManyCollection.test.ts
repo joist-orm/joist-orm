@@ -855,6 +855,17 @@ describe("OneToManyCollection", () => {
     ]);
   });
 
+  it("fails when o2m load hits the entityLimit", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    await insertBook({ title: "b3", author_id: 1 });
+    const em = newEntityManager();
+    em.entityLimit = 3;
+    const a1 = await em.load(Author, "a:1");
+    await expect(a1.books.load()).rejects.toThrow("Query returned more than 3 rows");
+  });
+
   it("caches get access", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1, number_of_books: 2 });

@@ -350,7 +350,7 @@ export function buildValuesCte(
   };
 }
 
-function ensureUnderLimit(em: EntityManager, rows: unknown[]): void {
+export function ensureUnderLimit(em: EntityManager, rows: unknown[]): void {
   if (rows.length >= em.entityLimit) {
     throw new Error(`Query returned more than ${em.entityLimit} rows`);
   }

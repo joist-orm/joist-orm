@@ -59,7 +59,13 @@ export function recursiveM2mBatchLoader<T extends Entity, U extends Entity>(
       ],
     };
 
-    const joinTableRows = await em["executeFind"](meta, recursiveM2mOperation, query, {});
+    const joinTableRows = await em["executeFind"](
+      meta,
+      recursiveM2mOperation,
+      query,
+      // executeFind uses `LIMIT ${em.entityLimit}` by default, but we don't need that for join rows
+      { limit: undefined },
+    );
 
     // Collect all entity IDs from both sides of the join rows. Entities that only appear
     // on otherColumn (not thisColumn) are leaf nodes with no outgoing connections — since

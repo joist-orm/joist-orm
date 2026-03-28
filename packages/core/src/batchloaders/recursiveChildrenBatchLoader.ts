@@ -1,3 +1,4 @@
+import { ensureUnderLimit } from "../dataloaders/findDataLoader";
 import { getMetadataForType } from "../configure";
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
@@ -67,6 +68,7 @@ export function recursiveChildrenBatchLoader<T extends Entity, U extends Entity>
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
 
     const rows = await em["executeFind"](meta, recursiveChildrenOperation, query, {});
+    ensureUnderLimit(em, rows);
     const entities = em.hydrate(meta.cstr, rows);
 
     // For all the entities we found, group them by their parent (or the root node, which has no parent)

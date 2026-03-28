@@ -1,4 +1,5 @@
 import { getInstanceData } from "../BaseEntity";
+import { ensureUnderLimit } from "../dataloaders/findDataLoader";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { buildHintTree } from "../HintTree";
@@ -42,6 +43,7 @@ export function loadBatchLoader(
       preloader &&
       preloader.addPreloading(meta, buildHintTree(loads.map((l) => ({ entity: l.taggedId, hint: l.hint }))), query);
     const rows = await em["executeFind"](meta, loadOperation, query, {});
+    ensureUnderLimit(em, rows);
     const entities = em.hydrate(meta.cstr, rows, { overwriteExisting });
     preloadHydrator && preloadHydrator(rows, entities);
     // If we're missing any requested rows, mark any requested-but-not-found entities as deleted

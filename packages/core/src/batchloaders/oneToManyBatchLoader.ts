@@ -1,3 +1,4 @@
+import { ensureUnderLimit } from "../dataloaders/findDataLoader";
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import { getField } from "../fields";
@@ -52,6 +53,7 @@ export function oneToManyBatchLoader<T extends Entity, U extends Entity>(
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
 
     const rows = await em["executeFind"](meta, oneToManyLoadOperation, query, {});
+    ensureUnderLimit(em, rows);
     const entities = em.hydrate(meta.cstr, rows);
 
     const entitiesById = groupBy(entities, (entity) => {

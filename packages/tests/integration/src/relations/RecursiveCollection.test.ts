@@ -126,6 +126,17 @@ describe("RecursiveCollection", () => {
       await expect(em.flush()).rejects.toThrow("Author a1 has a cycle in their mentor chain");
     });
 
+    it("fails when recursive parents load hits the entityLimit", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertAuthor({ first_name: "a3", mentor_id: 2 });
+      await insertAuthor({ first_name: "a4", mentor_id: 3 });
+      const em = newEntityManager();
+      em.entityLimit = 3;
+      const a4 = await em.load(Author, "a:4");
+      await expect(a4.mentorsRecursive.load()).rejects.toThrow("Query returned more than 3 rows");
+    });
+
     it("can refresh after new parents are inserted in the chain", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2", mentor_id: 1 });
@@ -256,6 +267,17 @@ describe("RecursiveCollection", () => {
       await em.refresh();
       const rows = await select("authors");
       expect(rows.length).toBe(2);
+    });
+
+    it("fails when recursive children load hits the entityLimit", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", mentor_id: 1 });
+      await insertAuthor({ first_name: "a3", mentor_id: 2 });
+      await insertAuthor({ first_name: "a4", mentor_id: 3 });
+      const em = newEntityManager();
+      em.entityLimit = 3;
+      const a1 = await em.load(Author, "a:1");
+      await expect(a1.menteesRecursive.load()).rejects.toThrow("Query returned more than 3 rows");
     });
 
     it("can refresh after new children are inserted in the middle of the chain", async () => {
@@ -509,7 +531,7 @@ describe("RecursiveCollection", () => {
       await em.load(User, "u:2", "parentsRecursive");
       // queries[0] is the load of u:2, queries[1] is the CTE
       expect(queries[1]).toMatchInlineSnapshot(
-        `"WITH RECURSIVE cte AS (SELECT b.* FROM users_to_parents b WHERE b.child_id = ANY($1) UNION SELECT r.* FROM users_to_parents r JOIN cte ON r.child_id = cte.parent_id) SELECT utp.* FROM cte AS utp ORDER BY utp.id ASC LIMIT $2"`,
+        `"WITH RECURSIVE cte AS (SELECT b.* FROM users_to_parents b WHERE b.child_id = ANY($1) UNION SELECT r.* FROM users_to_parents r JOIN cte ON r.child_id = cte.parent_id) SELECT utp.* FROM cte AS utp ORDER BY utp.id ASC"`,
       );
     });
 

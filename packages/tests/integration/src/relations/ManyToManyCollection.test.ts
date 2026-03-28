@@ -8,7 +8,7 @@ import {
   insertTag,
   select,
 } from "@src/entities/inserts";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
+import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
 import { Author, Book, Tag, newAuthor, newBook, newBookReview, newSmallPublisher, newTag, newUser } from "../entities";
 import { twoOf, zeroTo } from "../utils";
 
@@ -883,5 +883,25 @@ describe("ManyToManyCollection", () => {
       await em.flush();
       expect(sp.transientFields.beforeFlushRan).toBe(true);
     });
+  });
+
+  it("m2m join table query does not use LIMIT", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertTag({ name: "t1" });
+    await insertTag({ name: "t2" });
+    await insertTag({ name: "t3" });
+    await insertBookToTag({ book_id: 1, tag_id: 1 });
+    await insertBookToTag({ book_id: 1, tag_id: 2 });
+    await insertBookToTag({ book_id: 1, tag_id: 3 });
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:1");
+    resetQueryCount();
+    const tags = await book.tags.load();
+    // The m2m join table query should not have a LIMIT clause
+    expect(queries[0]).toEqual(
+      `SELECT "btt".* FROM books_to_tags AS btt WHERE btt.book_id = ANY($1) ORDER BY btt.id ASC`,
+    );
+    expect(tags).toMatchEntity([{ name: "t1" }, { name: "t2" }, { name: "t3" }]);
   });
 });

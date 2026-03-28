@@ -46,7 +46,13 @@ async function loadBatch<U extends Entity>(collection: ManyToManyLike, keys: str
     orderBys: [{ alias, column: "id", order: "ASC" }],
   };
 
-  const rows = await em["executeFind"](collection.otherMeta, manyToManyLoadOperation, query, {});
+  const rows = await em["executeFind"](
+    collection.otherMeta,
+    manyToManyLoadOperation,
+    query,
+    // executeFind uses `LIMIT ${em.entityLimit}` by default, but we don't need that for join rows
+    { limit: undefined },
+  );
   await joinRows.loadRows(tuples, rows);
 
   const api = getEmInternalApi(em);

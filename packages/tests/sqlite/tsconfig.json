@@ -1,0 +1,19 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./build",
+    "rootDir": "./",
+    "baseUrl": "./",
+    "paths": {
+      "@src/*": ["src/*"],
+      "src/*": ["src/*"]
+    }
+  },
+  "include": ["./src", "./migrations"],
+  "references": [
+    { "path": "../../codegen" },
+    { "path": "../../drivers/sqlite" },
+    { "path": "../../orm" },
+    { "path": "../../test-utils" }
+  ]
+}

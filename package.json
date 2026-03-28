@@ -20,6 +20,7 @@
     "packages/codegen",
     "packages/core",
     "packages/drivers/bun-pg",
+    "packages/drivers/sqlite",
     "packages/graphql-codegen",
     "packages/graphql-resolver-utils",
     "packages/knex",
@@ -36,7 +37,8 @@
     "packages/tests/number-ids",
     "packages/tests/untagged-ids",
     "packages/tests/uuid-ids",
-    "packages/tests/temporal"
+    "packages/tests/temporal",
+    "packages/tests/sqlite"
   ],
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",

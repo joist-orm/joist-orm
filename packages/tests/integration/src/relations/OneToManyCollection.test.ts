@@ -863,7 +863,24 @@ describe("OneToManyCollection", () => {
     const em = newEntityManager();
     em.entityLimit = 3;
     const a1 = await em.load(Author, "a:1");
-    await expect(a1.books.load()).rejects.toThrow("Query returned more than 3 rows");
+    await expect(a1.books.load()).rejects.toThrow("Query returned more than 3 entityLimit rows");
+  });
+
+  it("fails when o2m find hits the entityLimit", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    await insertBook({ title: "b3", author_id: 1 });
+    await insertBook({ title: "b4", author_id: 1 });
+    const em = newEntityManager();
+    // Pre-load all books so hydrate won't create new entities
+    await em.loadAll(Book, ["b:1", "b:2", "b:3", "b:4"]);
+    const a1 = await em.load(Author, "a:1");
+    // Set limit so the batched find query (4 concurrent finds = 4 rows) hits it
+    em.entityLimit = 4;
+    await expect(
+      Promise.all([a1.books.find("b:1"), a1.books.find("b:2"), a1.books.find("b:3"), a1.books.find("b:4")]),
+    ).rejects.toThrow("Query returned more than 4 entityLimit rows");
   });
 
   it("caches get access", async () => {

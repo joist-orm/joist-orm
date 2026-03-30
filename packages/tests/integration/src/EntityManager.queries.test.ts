@@ -1879,7 +1879,7 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ first_name: "a3" });
     const em = newEntityManager();
     em.entityLimit = 3;
-    await expect(em.find(Author, {})).rejects.toThrow("Query returned more than 3 rows");
+    await expect(em.find(Author, {})).rejects.toThrow("Query returned more than 3 entityLimit rows");
   });
 
   it("can find in an enum array", async () => {
@@ -2490,6 +2490,27 @@ describe("EntityManager.queries", () => {
     const f1 = { firstName: "a1" } satisfies UniqueFilter<Author>;
     // @ts-expect-error
     const f2 = { publisher: "p:1" } satisfies UniqueFilter<Author>;
+  });
+
+  it("fails when findByUnique hits the entityLimit", async () => {
+    await insertAuthor({ first_name: "a1", ssn: "11" });
+    await insertAuthor({ first_name: "a2", ssn: "12" });
+    await insertAuthor({ first_name: "a3", ssn: "13" });
+    await insertAuthor({ first_name: "a4", ssn: "14" });
+    const em = newEntityManager();
+    // Pre-load all 4 authors so hydrate won't create new entities
+    await em.loadAll(Author, ["a:1", "a:2", "a:3", "a:4"]);
+    // Now lower the limit so the batched SQL query (4 rows matching 4 SSNs) hits the LIMIT,
+    // but since all entities are already in the EM, no new entities are created
+    em.entityLimit = 4;
+    await expect(
+      Promise.all([
+        em.findByUnique(Author, { ssn: "11" }),
+        em.findByUnique(Author, { ssn: "12" }),
+        em.findByUnique(Author, { ssn: "13" }),
+        em.findByUnique(Author, { ssn: "14" }),
+      ]),
+    ).rejects.toThrow("Query returned more than 4 entityLimit rows");
   });
 
   it("can use jsonb path exists", async () => {

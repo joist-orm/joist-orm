@@ -134,7 +134,7 @@ describe("RecursiveCollection", () => {
       const em = newEntityManager();
       em.entityLimit = 3;
       const a4 = await em.load(Author, "a:4");
-      await expect(a4.mentorsRecursive.load()).rejects.toThrow("Query returned more than 3 rows");
+      await expect(a4.mentorsRecursive.load()).rejects.toThrow("Query returned more than 3 entityLimit rows");
     });
 
     it("can refresh after new parents are inserted in the chain", async () => {
@@ -277,7 +277,7 @@ describe("RecursiveCollection", () => {
       const em = newEntityManager();
       em.entityLimit = 3;
       const a1 = await em.load(Author, "a:1");
-      await expect(a1.menteesRecursive.load()).rejects.toThrow("Query returned more than 3 rows");
+      await expect(a1.menteesRecursive.load()).rejects.toThrow("Query returned more than 3 entityLimit rows");
     });
 
     it("can refresh after new children are inserted in the middle of the chain", async () => {

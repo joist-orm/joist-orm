@@ -1,4 +1,3 @@
-import { ensureUnderLimit } from "../dataloaders/findDataLoader";
 import { getMetadataForType } from "../configure";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
@@ -64,7 +63,6 @@ export function recursiveParentsBatchLoader<T extends Entity, U extends Entity>(
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
 
     const rows = await em["executeFind"](meta, recursiveParentsOperation, query, {});
-    ensureUnderLimit(em, rows);
 
     // Since we're preloading m2os up the tree, merely having the entities in the EM is enough
     // for the ManyToOneReferenceImpl to find them, so we don't need to map them back to the

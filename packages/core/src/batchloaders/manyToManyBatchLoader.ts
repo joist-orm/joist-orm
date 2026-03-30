@@ -50,7 +50,7 @@ async function loadBatch<U extends Entity>(collection: ManyToManyLike, keys: str
     collection.otherMeta,
     manyToManyLoadOperation,
     query,
-    // executeFind uses `LIMIT ${em.entityLimit}` by default, but we don't need that for join rows
+    // No LIMIT needed for join rows
     { limit: undefined },
   );
   await joinRows.loadRows(tuples, rows);

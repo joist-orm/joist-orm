@@ -885,6 +885,28 @@ describe("ManyToManyCollection", () => {
     });
   });
 
+  it("fails when m2m includes hits the entityLimit", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    await insertTag({ name: "t1" });
+    await insertTag({ name: "t2" });
+    await insertTag({ name: "t3" });
+    await insertTag({ name: "t4" });
+    await insertBookToTag({ book_id: 1, tag_id: 1 });
+    await insertBookToTag({ book_id: 1, tag_id: 2 });
+    await insertBookToTag({ book_id: 2, tag_id: 3 });
+    await insertBookToTag({ book_id: 2, tag_id: 4 });
+    const em = newEntityManager();
+    const [b1, b2] = await em.loadAll(Book, ["b:1", "b:2"]);
+    const [t1, t2, t3, t4] = await em.loadAll(Tag, ["t:1", "t:2", "t:3", "t:4"]);
+    // Set limit so the batched includes query (4 concurrent checks = 4 join rows) hits it
+    em.entityLimit = 4;
+    await expect(
+      Promise.all([b1.tags.includes(t1), b1.tags.includes(t2), b2.tags.includes(t3), b2.tags.includes(t4)]),
+    ).rejects.toThrow("Query returned more than 4 entityLimit rows");
+  });
+
   it("m2m join table query does not use LIMIT", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });

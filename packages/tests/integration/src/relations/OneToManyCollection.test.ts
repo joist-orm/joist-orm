@@ -878,9 +878,13 @@ describe("OneToManyCollection", () => {
     const a1 = await em.load(Author, "a:1");
     // Set limit so the batched find query (4 concurrent finds = 4 rows) hits it
     em.entityLimit = 4;
-    await expect(
-      Promise.all([a1.books.find("b:1"), a1.books.find("b:2"), a1.books.find("b:3"), a1.books.find("b:4")]),
-    ).rejects.toThrow("Query returned more than 4 entityLimit rows");
+    const result = Promise.all([
+      a1.books.find("b:1"),
+      a1.books.find("b:2"),
+      a1.books.find("b:3"),
+      a1.books.find("b:4"),
+    ]);
+    await expect(result).rejects.toThrow("Query returned more than 4 entityLimit rows");
   });
 
   it("caches get access", async () => {

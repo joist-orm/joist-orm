@@ -902,9 +902,13 @@ describe("ManyToManyCollection", () => {
     const [t1, t2, t3, t4] = await em.loadAll(Tag, ["t:1", "t:2", "t:3", "t:4"]);
     // Set limit so the batched includes query (4 concurrent checks = 4 join rows) hits it
     em.entityLimit = 4;
-    await expect(
-      Promise.all([b1.tags.includes(t1), b1.tags.includes(t2), b2.tags.includes(t3), b2.tags.includes(t4)]),
-    ).rejects.toThrow("Query returned more than 4 entityLimit rows");
+    const result = Promise.all([
+      b1.tags.includes(t1),
+      b1.tags.includes(t2),
+      b2.tags.includes(t3),
+      b2.tags.includes(t4),
+    ]);
+    await expect(result).rejects.toThrow("Query returned more than 4 entityLimit rows");
   });
 
   it("m2m join table query does not use LIMIT", async () => {

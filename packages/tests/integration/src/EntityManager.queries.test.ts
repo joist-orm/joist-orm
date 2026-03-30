@@ -2503,14 +2503,13 @@ describe("EntityManager.queries", () => {
     // Now lower the limit so the batched SQL query (4 rows matching 4 SSNs) hits the LIMIT,
     // but since all entities are already in the EM, no new entities are created
     em.entityLimit = 4;
-    await expect(
-      Promise.all([
-        em.findByUnique(Author, { ssn: "11" }),
-        em.findByUnique(Author, { ssn: "12" }),
-        em.findByUnique(Author, { ssn: "13" }),
-        em.findByUnique(Author, { ssn: "14" }),
-      ]),
-    ).rejects.toThrow("Query returned more than 4 entityLimit rows");
+    const result = Promise.all([
+      em.findByUnique(Author, { ssn: "11" }),
+      em.findByUnique(Author, { ssn: "12" }),
+      em.findByUnique(Author, { ssn: "13" }),
+      em.findByUnique(Author, { ssn: "14" }),
+    ]);
+    await expect(result).rejects.toThrow("Query returned more than 4 entityLimit rows");
   });
 
   it("can use jsonb path exists", async () => {

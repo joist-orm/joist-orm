@@ -358,9 +358,8 @@ describe("EntityManager.lens", () => {
       await em.loadAll(Book, ["b:1", "b:2", "b:3", "b:4"]);
       // Now lower the limit so the multi-step lens SQL query (4 rows) hits the LIMIT
       em.entityLimit = 4;
-      await expect(p1.load((p) => p.authors.books, { sql: true })).rejects.toThrow(
-        "Query returned more than 4 entityLimit rows",
-      );
+      const result = p1.load((p) => p.authors.books, { sql: true });
+      await expect(result).rejects.toThrow("Query returned more than 4 entityLimit rows");
     });
 
     it("has isAllSql", () => {

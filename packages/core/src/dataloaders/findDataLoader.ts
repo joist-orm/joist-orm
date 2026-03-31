@@ -64,7 +64,6 @@ export function findDataLoader<T extends Entity>(
         const { preloader } = getEmInternalApi(em);
         const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
         const rows = await em["executeFind"](meta, findOperation, query, opts);
-        ensureUnderLimit(em, rows);
         const entities = em.hydrate(type, rows);
         preloadHydrator?.(rows, entities);
         return [entities];
@@ -121,7 +120,6 @@ export function findDataLoader<T extends Entity>(
       }
 
       const rows = await em["executeFind"](meta, findOperation, query, { limit: em.entityLimit });
-      ensureUnderLimit(em, rows);
 
       const entities = em.hydrate(type, rows);
       preloadJoins?.forEach((j) => j.hydrator(rows, entities));
@@ -348,12 +346,6 @@ export function buildValuesCte(
       bindings,
     },
   };
-}
-
-export function ensureUnderLimit(em: EntityManager, rows: unknown[]): void {
-  if (rows.length >= em.entityLimit) {
-    throw new Error(`Query returned more than ${em.entityLimit} rows`);
-  }
 }
 
 export function getBatchKeyFromGenericStructure(meta: EntityMetadata, query: ParsedFindQuery): string {

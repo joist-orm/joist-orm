@@ -493,8 +493,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const { populate, limit, offset, ...rest } = options || {};
     const meta = getMetadata(type);
     const query = parseFindQuery(meta, where, rest);
-    const rows = await this.executeFind(meta, "findPaginated", query, { limit, offset });
-    // check row limit
+    const rows = await this.executeFind(meta, "findPaginated", query, { limit, offset, checkLimit: false });
     const result = this.hydrate(type, rows);
     if (populate) {
       await this.populate(result, populate);
@@ -506,11 +505,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     meta: EntityMetadata,
     operation: FindOperation,
     parsed: ParsedFindQuery,
-    settings: { limit?: number; offset?: number },
+    settings: { limit?: number; offset?: number; checkLimit?: boolean },
   ) {
+    const { checkLimit, ...driverSettings } = settings;
     const { pluginManager } = getEmInternalApi(this);
-    pluginManager.beforeFind(meta, operation, parsed, settings);
-    const rows = await this.driver.executeFind(this, parsed, settings);
+    pluginManager.beforeFind(meta, operation, parsed, driverSettings);
+    const rows = await this.driver.executeFind(this, parsed, driverSettings);
+    // Check by default unless explicitly disabled or the caller removed the LIMIT via `limit: undefined`
+    const shouldCheck = checkLimit ?? !("limit" in settings && settings.limit === undefined);
+    if (shouldCheck && rows.length >= this.entityLimit) {
+      throw new Error(`Query returned more than ${this.entityLimit} entityLimit rows`);
+    }
     pluginManager.afterFind(meta, operation, rows);
     return rows;
   }
@@ -1546,121 +1551,120 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     const allFlushedEntities: Set<Entity> = new Set();
 
     try {
-
-    await this.#fl.allowWrites(async () => {
-      // Cascade deletes now that we're async (i.e. to keep `em.delete` synchronous).
-      // Also do this before calling `recalcPendingReactables` to avoid recalculating
-      // fields on entities that will be deleted (and probably have unset/invalid FKs
-      // that would NPE their logic anyway).
-      await this.flushDeletes();
-      // Recalc before we run hooks, so the hooks will see the latest calculated values.
-      await this.#rm.recalcPendingReactables("reactables");
-    });
-
-    const createdThenDeleted: Set<Entity> = new Set();
-    // We'll only invoke hooks once/entity (the 1st time that entity goes through runHooksOnPendingEntities)
-    const hooksInvoked: Set<Entity> = new Set();
-    // Make sure two ReactiveQueryFields don't ping-pong each other forever
-    let hookLoops = 0;
-    let now = getNow();
-    const suppressedDefaultTypeErrors: Error[] = [];
-
-    // Make a lambda that we can invoke multiple times, if we loop for ReactiveQueryFields
-    const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
-      if (hookLoops++ >= 10) throw new Error("runHooksOnPendingEntities has ran 10 iterations, aborting");
-
-      // Resolve any pending o2m/m2m sets (set() called before load — need to load from DB to diff)
-      const pendingLoads = [...getEmInternalApi(this).pendingLoads];
-      if (pendingLoads.length > 0) {
-        getEmInternalApi(this).pendingLoads.clear();
-        await Promise.all(pendingLoads.map((collection) => collection.load()));
-      }
-
-      // Any dirty entities we find, even if we skipped firing their hooks on this loop
-      const pendingFlush: Set<Entity> = new Set();
-      // Subset of pendingFlush entities that we will run hooks on
-      const pendingHooks: Set<Entity> = new Set();
-      // Subset of pendingFlush entities that had hooks invoked in a prior `runHooksOnPendingEntities`
-      const alreadyRanHooks = new Set<Entity>();
-
-      findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
-
-      // If we're re-looping for ReactiveQueryField, make sure to bump updatedAt
-      // each time, so that for an INSERT-then-UPDATE the triggers don't think the
-      // UPDATE forgot to self-bump updatedAt, and then "helpfully" bump it for us.
-      if (alreadyRanHooks.size > 0) {
-        maybeBumpUpdatedAt(createTodos([...alreadyRanHooks]), now);
-      }
-
-      // Run hooks in a series of loops until things "settle down"
-      while (pendingHooks.size > 0) {
-        await this.#fl.allowWrites(async () => {
-          let todos = createTodos([...pendingHooks]);
-
-          await setAsyncDefaults(suppressedDefaultTypeErrors, this.ctx, Todo.groupInsertsByTypeAndSubType(todos));
-          maybeBumpUpdatedAt(todos, now);
-
-          // Run our hooks
-          for (const group of maybeSetupHookOrdering(todos)) {
-            await beforeCreate(this.ctx, group);
-            await beforeUpdate(this.ctx, group);
-            await beforeFlush(this.ctx, group);
-          }
-
-          // Call `setField` just to get the column marked as dirty if needed.
-          // This can come after the hooks, b/c if the hooks read any of these
-          // fields, they'd be via the synchronous getter and would not be stale.
-          recalcSynchronousDerivedFields(todos);
-
-          // The hooks could have deleted this-loop or prior-loop entities, so re-cascade again.
-          await this.flushDeletes();
-          // The hooks could have changed fields, so recalc again.
-          await this.#rm.recalcPendingReactables("reactables");
-          // We may have reactables that failed earlier, but will succeed now that hooks have been run and cascade
-          // deletes have been processed
-          if (this.#rm.hasPendingTypeErrors) {
-            await this.#rm.recalcPendingTypeErrors();
-            // We need to re-run reactables again if we dirtied something while retrying type errors
-            if (this.#rm.needsRecalc("reactables")) await this.#rm.recalcPendingReactables("reactables");
-          }
-
-          for (const e of pendingHooks) hooksInvoked.add(e);
-          pendingHooks.clear();
-          // See if the hooks mutated any new, not-yet-hooksInvoked entities
-          findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
-          // The final run of recalcPendingReactables could have left us with pending type errors and no entities in
-          // pendingHooks.  If so, we need to re-run recalcPendingTypeErrors to get those errors to transition into
-          // suppressed errors so that we will fail after simpleValidation.
-          if (pendingHooks.size === 0 && this.#rm.hasPendingTypeErrors) await this.#rm.recalcPendingTypeErrors();
-        });
-      }
-      // We might have invoked hooks that immediately deleted a new entity (weird but allowed);
-      // if so, filter it out so that we don't flush it, but keep track for later fixing up
-      // it's `#orm.deleted` field.
-      return [...pendingFlush].filter((e) => {
-        const createThenDelete = e.isDeletedEntity && e.isNewEntity;
-        if (createThenDelete) createdThenDeleted.add(e);
-        return !createThenDelete;
+      await this.#fl.allowWrites(async () => {
+        // Cascade deletes now that we're async (i.e. to keep `em.delete` synchronous).
+        // Also do this before calling `recalcPendingReactables` to avoid recalculating
+        // fields on entities that will be deleted (and probably have unset/invalid FKs
+        // that would NPE their logic anyway).
+        await this.flushDeletes();
+        // Recalc before we run hooks, so the hooks will see the latest calculated values.
+        await this.#rm.recalcPendingReactables("reactables");
       });
-    };
 
-    const runValidation = async (entityTodos: Record<string, Todo>, joinRowTodos: any) => {
-      try {
-        this.#isValidating = true;
-        // Run simple rules first b/c it includes not-null/required rules, so that then when we run
-        // `validateReactiveRules` next, the app's lambdas won't see fundamentally invalid entities & NPE.
-        await validateSimpleRules(entityTodos);
-        // After we've let any "author is not set" simple rules fail before prematurely throwing
-        // the "of course that caused an NPE" `TypeError`s, if all the authors *were* valid/set,
-        // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
-        // that the user should see.
-        if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
-        await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
-      } finally {
-        this.#isValidating = false;
-      }
-      await afterValidation(this.ctx, entityTodos);
-    };
+      const createdThenDeleted: Set<Entity> = new Set();
+      // We'll only invoke hooks once/entity (the 1st time that entity goes through runHooksOnPendingEntities)
+      const hooksInvoked: Set<Entity> = new Set();
+      // Make sure two ReactiveQueryFields don't ping-pong each other forever
+      let hookLoops = 0;
+      let now = getNow();
+      const suppressedDefaultTypeErrors: Error[] = [];
+
+      // Make a lambda that we can invoke multiple times, if we loop for ReactiveQueryFields
+      const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
+        if (hookLoops++ >= 10) throw new Error("runHooksOnPendingEntities has ran 10 iterations, aborting");
+
+        // Resolve any pending o2m/m2m sets (set() called before load — need to load from DB to diff)
+        const pendingLoads = [...getEmInternalApi(this).pendingLoads];
+        if (pendingLoads.length > 0) {
+          getEmInternalApi(this).pendingLoads.clear();
+          await Promise.all(pendingLoads.map((collection) => collection.load()));
+        }
+
+        // Any dirty entities we find, even if we skipped firing their hooks on this loop
+        const pendingFlush: Set<Entity> = new Set();
+        // Subset of pendingFlush entities that we will run hooks on
+        const pendingHooks: Set<Entity> = new Set();
+        // Subset of pendingFlush entities that had hooks invoked in a prior `runHooksOnPendingEntities`
+        const alreadyRanHooks = new Set<Entity>();
+
+        findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
+
+        // If we're re-looping for ReactiveQueryField, make sure to bump updatedAt
+        // each time, so that for an INSERT-then-UPDATE the triggers don't think the
+        // UPDATE forgot to self-bump updatedAt, and then "helpfully" bump it for us.
+        if (alreadyRanHooks.size > 0) {
+          maybeBumpUpdatedAt(createTodos([...alreadyRanHooks]), now);
+        }
+
+        // Run hooks in a series of loops until things "settle down"
+        while (pendingHooks.size > 0) {
+          await this.#fl.allowWrites(async () => {
+            let todos = createTodos([...pendingHooks]);
+
+            await setAsyncDefaults(suppressedDefaultTypeErrors, this.ctx, Todo.groupInsertsByTypeAndSubType(todos));
+            maybeBumpUpdatedAt(todos, now);
+
+            // Run our hooks
+            for (const group of maybeSetupHookOrdering(todos)) {
+              await beforeCreate(this.ctx, group);
+              await beforeUpdate(this.ctx, group);
+              await beforeFlush(this.ctx, group);
+            }
+
+            // Call `setField` just to get the column marked as dirty if needed.
+            // This can come after the hooks, b/c if the hooks read any of these
+            // fields, they'd be via the synchronous getter and would not be stale.
+            recalcSynchronousDerivedFields(todos);
+
+            // The hooks could have deleted this-loop or prior-loop entities, so re-cascade again.
+            await this.flushDeletes();
+            // The hooks could have changed fields, so recalc again.
+            await this.#rm.recalcPendingReactables("reactables");
+            // We may have reactables that failed earlier, but will succeed now that hooks have been run and cascade
+            // deletes have been processed
+            if (this.#rm.hasPendingTypeErrors) {
+              await this.#rm.recalcPendingTypeErrors();
+              // We need to re-run reactables again if we dirtied something while retrying type errors
+              if (this.#rm.needsRecalc("reactables")) await this.#rm.recalcPendingReactables("reactables");
+            }
+
+            for (const e of pendingHooks) hooksInvoked.add(e);
+            pendingHooks.clear();
+            // See if the hooks mutated any new, not-yet-hooksInvoked entities
+            findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
+            // The final run of recalcPendingReactables could have left us with pending type errors and no entities in
+            // pendingHooks.  If so, we need to re-run recalcPendingTypeErrors to get those errors to transition into
+            // suppressed errors so that we will fail after simpleValidation.
+            if (pendingHooks.size === 0 && this.#rm.hasPendingTypeErrors) await this.#rm.recalcPendingTypeErrors();
+          });
+        }
+        // We might have invoked hooks that immediately deleted a new entity (weird but allowed);
+        // if so, filter it out so that we don't flush it, but keep track for later fixing up
+        // it's `#orm.deleted` field.
+        return [...pendingFlush].filter((e) => {
+          const createThenDelete = e.isDeletedEntity && e.isNewEntity;
+          if (createThenDelete) createdThenDeleted.add(e);
+          return !createThenDelete;
+        });
+      };
+
+      const runValidation = async (entityTodos: Record<string, Todo>, joinRowTodos: any) => {
+        try {
+          this.#isValidating = true;
+          // Run simple rules first b/c it includes not-null/required rules, so that then when we run
+          // `validateReactiveRules` next, the app's lambdas won't see fundamentally invalid entities & NPE.
+          await validateSimpleRules(entityTodos);
+          // After we've let any "author is not set" simple rules fail before prematurely throwing
+          // the "of course that caused an NPE" `TypeError`s, if all the authors *were* valid/set,
+          // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
+          // that the user should see.
+          if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
+          await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
+        } finally {
+          this.#isValidating = false;
+        }
+        await afterValidation(this.ctx, entityTodos);
+      };
 
       // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
       let entitiesToFlush = await runHooksOnPendingEntities();

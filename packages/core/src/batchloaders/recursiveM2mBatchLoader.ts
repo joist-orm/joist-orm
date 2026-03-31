@@ -63,7 +63,7 @@ export function recursiveM2mBatchLoader<T extends Entity, U extends Entity>(
       meta,
       recursiveM2mOperation,
       query,
-      // executeFind uses `LIMIT ${em.entityLimit}` by default, but we don't need that for join rows
+      // No LIMIT needed for join rows
       { limit: undefined },
     );
 

@@ -44,7 +44,7 @@ export function findCountDataLoader<T extends Entity>(
         const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");
         query.selects = [`count(distinct ${kq(primary.alias)}.id) as count`];
         query.orderBys = [];
-        const rows = await em["executeFind"](meta, findCountOperation, query, {});
+        const rows = await em["executeFind"](meta, findCountOperation, query, { checkLimit: false });
         return [Number(rows[0].count)];
       }
 
@@ -81,7 +81,7 @@ export function findCountDataLoader<T extends Entity>(
         orderBys: [],
       };
 
-      const rows = await em["executeFind"](meta, findCountOperation, query2, {});
+      const rows = await em["executeFind"](meta, findCountOperation, query2, { checkLimit: false });
 
       // Make an empty array for each batched query, per the dataloader contract
       const results = queries.map(() => 0);

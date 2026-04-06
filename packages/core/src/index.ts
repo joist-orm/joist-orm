@@ -10,7 +10,7 @@ import { New } from "./loadHints";
 import { isAllSqlPaths } from "./loadLens";
 import { FactoryInitialValue } from "./newTestInstance";
 import { partitionHint } from "./preloading/partitionHint";
-import { isAsyncProperty, isReactiveField, isReactiveGetter, isReactiveQueryField } from "./relations";
+import { isAsyncProperty, isAsyncQueryProperty, isReactiveField, isReactiveGetter, isReactiveQueryField } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
@@ -219,7 +219,7 @@ export function setOpt<T extends Entity>(
     } else {
       current.set(value);
     }
-  } else if (isAsyncProperty(current) || isReactiveGetter(current)) {
+  } else if (isAsyncProperty(current) || isAsyncQueryProperty(current) || isReactiveGetter(current)) {
     throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
   } else if (isReactiveField(current) || isReactiveQueryField(current)) {
     if (value instanceof FactoryInitialValue) {

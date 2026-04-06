@@ -67,6 +67,7 @@ export const docs = {
       numberOfBookAdvancesSnapshot:
         "Example of a RF that uses solely a o2m read-only hints, it should recalc only when p.name itself changes.",
       commentParentInfo: "For testing reacting to poly CommentParent properties.",
+      numberOfAuthors: "Example of a hasAsyncQueryProperty that counts authors via SQL.",
     },
     operations: undefined,
   },

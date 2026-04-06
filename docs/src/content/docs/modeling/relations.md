@@ -317,6 +317,45 @@ class BookReview extends PublisherCodegen {
 }
 ```
 
+### hasAsyncQueryProperty
+
+`hasAsyncQueryProperty` creates a derived value calculated from a SQL query, rather than from in-memory graph data. This is useful when pulling all the related data into memory would be too expensive, and you'd rather let the database do the work.
+
+Unlike `hasAsyncProperty`, there is no load hint or reactive hint — the lambda receives the entity directly and is expected to perform its own queries:
+
+```typescript
+export class Publisher extends PublisherCodegen {
+  readonly numberOfAuthors: AsyncQueryProperty<Publisher, number> = hasAsyncQueryProperty((p) =>
+    p.em.findCount(Author, { publisher: p.id }),
+  );
+}
+```
+
+The value is cached until the next `em.flush`, at which point it is invalidated because the database state may have changed:
+
+```typescript
+const p = await em.load(Publisher, "p:1");
+
+// Requires an await the first time
+const count = await p.numberOfAuthors.load();
+
+// After loading, .get is available synchronously
+console.log(p.numberOfAuthors.get);
+
+// After em.flush(), the cached value is cleared and must be reloaded
+await em.flush();
+console.log(p.numberOfAuthors.isLoaded); // false
+```
+
+It also works as a populate hint, just like `hasAsyncProperty`:
+
+```typescript
+const p = await em.load(Publisher, "p:1", "numberOfAuthors");
+console.log(p.numberOfAuthors.get);
+```
+
+Calling `load()` on a new (un-flushed) entity will throw, because the entity has no id yet and cannot be queried against.
+
 ## Recursive Relations
 
 We also support recursive relations, see [Recursive Relations](/advanced/recursive-relations.md) for more.

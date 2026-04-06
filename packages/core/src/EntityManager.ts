@@ -91,6 +91,7 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } 
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
+import { AsyncQueryPropertyImpl } from "./relations/hasAsyncQueryProperty";
 import { RecursiveCycleError } from "./relations/RecursiveCollection";
 import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
@@ -1735,6 +1736,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         for (const e of allFlushedEntities) {
           if (e.isNewEntity && !e.isDeletedEntity) this.#entitiesById.set(e.idTagged, e);
           getInstanceData(e).resetAfterFlushed();
+          // Reset AsyncQueryProperties since DB state may have changed
+          for (const rel of Object.values(getInstanceData(e).relations)) {
+            if (rel instanceof AsyncQueryPropertyImpl) rel.resetAfterFlush();
+          }
         }
         // Update the joinRows refs to reflect the new state
         for (const joinRow of Object.values(joinRowTodos)) {

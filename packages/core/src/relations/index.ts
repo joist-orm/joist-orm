@@ -11,6 +11,13 @@ export {
   isAsyncProperty,
   isLoadedAsyncProperty,
 } from "./hasAsyncProperty";
+export {
+  AsyncQueryProperty,
+  AsyncQueryPropertyImpl,
+  hasAsyncQueryProperty,
+  isAsyncQueryProperty,
+  isLoadedAsyncQueryProperty,
+} from "./hasAsyncQueryProperty";
 export { hasManyDerived } from "./hasManyDerived";
 export { hasManyThrough } from "./hasManyThrough";
 export { hasOneDerived } from "./hasOneDerived";

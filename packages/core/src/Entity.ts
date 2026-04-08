@@ -16,6 +16,8 @@ export interface Entity {
   /** The entity id that is always tagged, regardless of the idType config. */
   idTagged: TaggedId;
   idTaggedMaybe: TaggedId | undefined;
+  /** @returns the entity's id, always untagged, or a runtime error if it's unassigned. */
+  idUntagged: IdType;
   readonly em: EntityManager;
   readonly isNewEntity: boolean;
   readonly isDeletedEntity: boolean;

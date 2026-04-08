@@ -1,5 +1,6 @@
 import { readdir } from "fs/promises";
 import { code, CodegenFile, def, imp } from "ts-poet";
+import { generateMetadataDocsFile, syncDocs } from "./docs";
 import { generateEntitiesFile } from "./generateEntitiesFile";
 import { generateEntityCodegenFile, getIdType } from "./generateEntityCodegenFile";
 import { generateEntityFile } from "./generateEntityFile";
@@ -11,7 +12,6 @@ import { generatePgEnumFile } from "./generatePgEnumFile";
 import { Config, DbMetadata } from "./index";
 import { configureMetadata, Entity, JoistEntityManager, setRuntimeConfig } from "./symbols";
 import { merge, tableToEntityName } from "./utils";
-import { generateMetadataDocsFile, syncDocs } from "./docs";
 
 export type DPrintOptions = Record<string, unknown>;
 
@@ -95,6 +95,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
 
       export interface ${def("Entity")} extends ${Entity} {
         id: ${getIdType(config)};
+        idUntagged: ${getIdType(config)};
         em: EntityManager;
       }
 

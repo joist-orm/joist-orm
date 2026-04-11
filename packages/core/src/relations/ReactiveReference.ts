@@ -109,17 +109,12 @@ export class ReactiveReferenceImpl<
 {
   readonly #fieldName: keyof T & string;
   readonly #otherMeta: EntityMetadata;
-  readonly #reactiveHint: H;
-  // Either the loaded entity, or N/undefined if we're allowed to be null
-  #loaded!: U | N | undefined;
-  // In ref-mode, we use our materialized FK value (which might be undefined)
-  // If full-mode, we calculate the FK value from the subgraph
-  #loadedMode: "ref" | "full" | undefined = undefined;
+  #state: RRState<U, N>;
   // #isLoaded doesn't necessary care if we're ref-mode or full-mode, it's just
   // whether a caller can call `.get` and not have it blow up.
   #isLoaded: boolean | undefined = undefined;
   #isCached: boolean = false;
-  #loadPromise: any;
+  #loadPromise: Promise<U | N> | undefined;
 
   constructor(
     entity: T,
@@ -131,7 +126,7 @@ export class ReactiveReferenceImpl<
     // Minimizing changes until the other PR lands...
     this.#fieldName = field.fieldName as keyof T & string;
     this.#otherMeta = field.otherMetadata();
-    this.#reactiveHint = reactiveHint;
+    this.#state = new RRUnloadedState<U, N>(this);
     // We can be initialized with [entity | id | undefined], and if it's entity or id, then setImpl
     // will set loaded appropriately; but if we're initialized undefined, then mark loaded here
     if (entity.isNewEntity) {
@@ -142,7 +137,7 @@ export class ReactiveReferenceImpl<
     getInstanceData(entity).relations[field.fieldName] = this;
   }
 
-  async load(opts?: { withDeleted?: true; forceReload?: true }): Promise<U | N> {
+  async load(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N> {
     ensureNotDeleted(this.entity, "pending");
     const { loadHint } = this;
     if (!this.isLoaded || opts?.forceReload) {
@@ -153,33 +148,39 @@ export class ReactiveReferenceImpl<
       const maybeDirty = opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
       if (maybeDirty) {
         this.#isCached = false;
-        return (this.#loadPromise ??= em.populate(this.entity, { hint: loadHint, ...opts }).then(() => {
-          this.#loadPromise = undefined;
-          this.#loadedMode = "full";
-          this.#isLoaded = true;
-          getEmInternalApi(this.entity.em).isLoadedCache.add(this);
-          // Go through `this.get` so that `setField` is called to set our latest value
-          return this.doGet(opts);
-        }));
+        return (this.#loadPromise ??= em
+          .populate(this.entity, { hint: loadHint, ...opts })
+          .then(() => {
+            this.#state = this.#state.enterRecalcMode(this);
+            this.#isLoaded = true;
+            getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+            // Go through `this.get` so that `setField` is called to set our latest value
+            return this.doGet(opts);
+          })
+          .finally(() => {
+            this.#loadPromise = undefined;
+          }));
       } else {
         // If we don't need a full recalc, just make sure we have the entity in memory
         // ...ideally we would check `isSet` and whether the key was in the `instanceData`
         const current = this.current();
         if (isEntity(current) || current === undefined) {
-          this.#loadedMode = "ref";
+          this.#state = new RRRefState<U, N>(this, current as U | N | undefined);
           this.#isLoaded = true;
-          this.#loaded = current;
           getEmInternalApi(this.entity.em).isLoadedCache.add(this);
-          return current;
+          return current as U | N;
         } else {
-          return (this.#loadPromise ??= em.load(this.#otherMeta.cstr, current).then((loaded) => {
-            this.#loadPromise = undefined;
-            this.#loadedMode = "ref";
-            this.#isLoaded = true;
-            this.#loaded = loaded;
-            getEmInternalApi(this.entity.em).isLoadedCache.add(this);
-            return loaded;
-          }));
+          return (this.#loadPromise ??= em
+            .load(this.#otherMeta.cstr, current)
+            .then((loaded) => {
+              this.#state = new RRRefState<U, N>(this, loaded);
+              this.#isLoaded = true;
+              getEmInternalApi(this.entity.em).isLoadedCache.add(this);
+              return loaded;
+            })
+            .finally(() => {
+              this.#loadPromise = undefined;
+            }));
         }
       }
     }
@@ -194,12 +195,12 @@ export class ReactiveReferenceImpl<
     const maybeDirty = getEmInternalApi(this.entity.em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
     if (maybeDirty) {
       // If we're dirty, only being "full" loaded is good enough to recalc
-      this.#loadedMode = "full";
+      this.#state = this.#state.enterRecalcMode(this);
       this.#isLoaded = isLoaded(this.entity, this.loadHint);
       this.#isCached = false;
     } else {
       // If we've had `.load` called before, assume we're still loaded
-      this.#isLoaded = !!this.#loadedMode;
+      this.#isLoaded = this.#state.canReturnValue;
     }
     return this.#isLoaded;
   }
@@ -215,11 +216,11 @@ export class ReactiveReferenceImpl<
     // Fast pass if we've already calculated this (cache invalidation will happen on
     // any mutation via #resetIsLoaded)..
     if (this.#isCached) {
-      return this.#loaded ? this.filterDeleted(this.#loaded, opts) : (undefined as N);
+      return this.filterDeleted(this.#state.doGet() as U | N, opts);
     }
     // Call isLoaded to probe the load hint, and get `#isLoaded` set, but still have
     // our `if` check the raw `#isLoaded` to know if we should eval-latest or return `loaded`.
-    if (this.isLoaded && this.#loadedMode === "full") {
+    if (this.isLoaded && this.#state.kind === "full") {
       const newValue = this.filterDeleted(fn(this.entity as any) as any, opts);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update (...unless we're accessing it
@@ -228,23 +229,23 @@ export class ReactiveReferenceImpl<
       if (!getEmInternalApi(this.entity.em).isValidating) {
         this.setImpl(newValue);
       }
-      this.#loaded = newValue;
+      this.#state = new RRFullState<U, N>(this, newValue);
       this.#isCached = true;
       getEmInternalApi(this.entity.em).isLoadedCache.add(this);
-    } else if (!!this.#loadedMode) {
-      // We're either loadedMode=ref, or loadedMode=full (but not actually fully loaded),
-      // but in theory loadedMode only gets set in `.load()`, so we should have #loaded
-      // set to some value, even if it's not fully up-to-date.
+    } else if (this.#state.canReturnValue) {
+      // We're either in ref mode, or in full mode but not actually fully loaded,
+      // but in theory those states only get set after `.load()` / `.preload()` / import,
+      // so we should have some stored value, even if it's not fully up-to-date.
       this.#isCached = true;
       getEmInternalApi(this.entity.em).isLoadedCache.add(this);
     } else {
       const noun = this.entity.isNewEntity ? "derived" : "loaded";
       throw new Error(`${this.entity}.${this.fieldName} has not been ${noun} yet`);
     }
-    return this.#loaded ? this.filterDeleted(this.#loaded, opts) : (undefined as N);
+    return this.filterDeleted(this.#state.doGet() as U | N, opts);
   }
 
-  get fieldValue(): U {
+  get fieldValue(): U | N {
     return getField(this.entity, this.fieldName);
   }
 
@@ -279,22 +280,20 @@ export class ReactiveReferenceImpl<
   }
 
   preload(): void {
-    this.#loaded = this.maybeFindEntity();
-    this.#loadedMode = "ref";
+    this.#state = new RRRefState<U, N>(this, this.maybeFindEntity());
     this.#isLoaded = true;
     this.#isCached = true;
   }
 
   private unload(): void {
-    this.#loaded = undefined;
-    this.#loadedMode = undefined;
+    this.#state = new RRUnloadedState<U, N>(this);
     this.#isLoaded = false;
     this.#isCached = false;
+    this.#loadPromise = undefined;
   }
 
   import(other: ReactiveReferenceImpl<T, U, H, N>, findEntity: (e: U) => U): void {
-    this.#loaded = other.#loaded ? findEntity(other.#loaded) : undefined;
-    this.#loadedMode = "ref";
+    this.#state = other.#state.import(this, findEntity);
     this.#isLoaded = true;
     this.#isCached = true;
   }
@@ -355,8 +354,10 @@ export class ReactiveReferenceImpl<
     // if we are going to delete this relation as well, then we don't need to clean it up
     if (this.isCascadeDelete) return;
     setField(this.entity, this.fieldName, undefined);
-    this.#loaded = undefined as any;
+    this.#state = new RRRefState<U, N>(this, undefined as N);
     this.#isLoaded = false;
+    this.#isCached = false;
+    this.#loadPromise = undefined;
   }
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
@@ -412,9 +413,14 @@ export class ReactiveReferenceImpl<
    */
   maybeFindEntity(): U | N {
     // Check this.loaded first b/c a new entity won't have an id yet
+    if (this.#state.canReturnValue) {
+      const loaded = this.#state.doGet();
+      if (loaded !== undefined) {
+        return loaded;
+      }
+    }
     const { idTaggedMaybe } = this;
     return (
-      this.#loaded ??
       (idTaggedMaybe !== undefined ? (this.entity.em.getEntity(idTaggedMaybe) as U | N) : (undefined as N))
     );
   }
@@ -427,4 +433,93 @@ export class ReactiveReferenceImpl<
 /** Type guard utility for determining if an entity field is a ReactiveReference. */
 export function isReactiveReference(maybeReactiveRef: any): maybeReactiveRef is ReactiveReference<any, any, any> {
   return maybeReactiveRef instanceof ReactiveReferenceImpl;
+}
+
+interface RRState<U extends Entity, N extends never | undefined> {
+  readonly kind: "unloaded" | "ref" | "full";
+  readonly canReturnValue: boolean;
+  doGet(): U | N | undefined;
+  /**
+   * Switches from "materialized ref value" semantics to "recalc from reactive graph when available" semantics.
+   *
+   * This is synchronous because it does not mean the load hint is fully loaded yet. It only means this
+   * reference should now behave as recalc-capable: if `isLoaded(loadHint)` later reports true, `doGet`
+   * will recalculate from `fn(...)`; otherwise we keep returning the last known/stale value until `load()`
+   * populates the graph.
+   */
+  enterRecalcMode(target: ReactiveReferenceImpl<any, any, any, any>): RRFullState<U, N>;
+  import(target: ReactiveReferenceImpl<any, any, any, any>, findEntity: (e: U) => U): RRState<U, N>;
+}
+
+class RRUnloadedState<U extends Entity, N extends never | undefined> implements RRState<U, N> {
+  readonly kind = "unloaded";
+  readonly canReturnValue = false;
+  #rr: ReactiveReferenceImpl<any, any, any, any>;
+
+  constructor(rr: ReactiveReferenceImpl<any, any, any, any>) {
+    this.#rr = rr;
+  }
+
+  doGet(): U | N | undefined {
+    throw new Error(`${this.#rr.entity}.${this.#rr.fieldName} was not loaded`);
+  }
+
+  enterRecalcMode(target: ReactiveReferenceImpl<any, any, any, any>): RRFullState<U, N> {
+    return new RRFullState<U, N>(target, undefined);
+  }
+
+  import(target: ReactiveReferenceImpl<any, any, any, any>, _findEntity: (e: U) => U): RRState<U, N> {
+    return new RRUnloadedState<U, N>(target);
+  }
+}
+
+class RRRefState<U extends Entity, N extends never | undefined> implements RRState<U, N> {
+  readonly kind = "ref";
+  readonly canReturnValue = true;
+  #loaded: U | N | undefined;
+
+  constructor(_rr: ReactiveReferenceImpl<any, any, any, any>, loaded: U | N | undefined) {
+    this.#loaded = loaded;
+  }
+
+  doGet(): U | N | undefined {
+    return this.#loaded;
+  }
+
+  enterRecalcMode(target: ReactiveReferenceImpl<any, any, any, any>): RRFullState<U, N> {
+    return new RRFullState<U, N>(target, this.#loaded);
+  }
+
+  import(target: ReactiveReferenceImpl<any, any, any, any>, findEntity: (e: U) => U): RRState<U, N> {
+    return new RRRefState<U, N>(target, mapReactiveReferenceEntity(this.#loaded, findEntity));
+  }
+}
+
+class RRFullState<U extends Entity, N extends never | undefined> implements RRState<U, N> {
+  readonly kind = "full";
+  readonly canReturnValue = true;
+  #loaded: U | N | undefined;
+
+  constructor(_rr: ReactiveReferenceImpl<any, any, any, any>, loaded: U | N | undefined) {
+    this.#loaded = loaded;
+  }
+
+  doGet(): U | N | undefined {
+    return this.#loaded;
+  }
+
+  enterRecalcMode(_target: ReactiveReferenceImpl<any, any, any, any>): RRFullState<U, N> {
+    return this;
+  }
+
+  import(target: ReactiveReferenceImpl<any, any, any, any>, findEntity: (e: U) => U): RRState<U, N> {
+    return new RRRefState<U, N>(target, mapReactiveReferenceEntity(this.#loaded, findEntity));
+  }
+}
+
+function mapReactiveReferenceEntity<U extends Entity, N extends never | undefined>(
+  entity: U | N | undefined,
+  findEntity: (e: U) => U,
+): U | N | undefined {
+  return isEntity(entity) ? findEntity(entity) : entity;
 }

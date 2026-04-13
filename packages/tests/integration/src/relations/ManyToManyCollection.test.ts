@@ -930,4 +930,35 @@ describe("ManyToManyCollection", () => {
     );
     expect(tags).toMatchEntity([{ name: "t1" }, { name: "t2" }, { name: "t3" }]);
   });
+
+  it("returns m2m items in the same order whether loaded lazily or via a populate hint", async () => {
+    // Given a book and three tags, with the join rows inserted in a different
+    // order than the tag ids — so "ORDER BY join-row.id" vs "ORDER BY tag.id"
+    // would produce visibly different orderings.
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ id: 1, title: "b1", author_id: 1 });
+    await insertTag({ id: 1, name: "t1" });
+    await insertTag({ id: 2, name: "t2" });
+    await insertTag({ id: 3, name: "t3" });
+    // Insert m2m rows in reverse tag order: btt:1 -> t3, btt:2 -> t1, btt:3 -> t2
+    await insertBookToTag({ id: 1, book_id: 1, tag_id: 3 });
+    await insertBookToTag({ id: 2, book_id: 1, tag_id: 1 });
+    await insertBookToTag({ id: 3, book_id: 1, tag_id: 2 });
+
+    // When we load the tags via the lazy (batch-loader) path
+    const em1 = newEntityManager();
+    const book1 = await em1.load(Book, "b:1");
+    const lazyTags = await book1.tags.load();
+
+    // And separately via the populate-hint (JSON-aggregate preloader) path
+    const em2 = newEntityManager();
+    const book2 = await em2.load(Book, "b:1", "tags");
+    const populatedTags = book2.tags.get;
+
+    // Then both paths agree on the ordering — join-row id order
+    const lazyNames = lazyTags.map((t) => t.name);
+    const populatedNames = populatedTags.map((t) => t.name);
+    expect(lazyNames).toEqual(["t3", "t1", "t2"]);
+    expect(populatedNames).toEqual(["t3", "t1", "t2"]);
+  });
 });

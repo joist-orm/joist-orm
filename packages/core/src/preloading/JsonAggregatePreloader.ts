@@ -141,6 +141,7 @@ function calcLateralJoins<I extends EntityOrId>(
 
       const cb = new ConditionBuilder();
       let m2mTable: JoinTable | undefined;
+      let m2mAlias: string | undefined;
       if (otherField.kind === "m2o") {
         cb.addRawCondition({
           aliases: [otherAlias, parentAlias],
@@ -171,7 +172,7 @@ function calcLateralJoins<I extends EntityOrId>(
           pruneable: true,
         });
       } else if (otherField.kind === "m2m") {
-        const m2mAlias = assigner.getAlias(otherField.joinTableName);
+        m2mAlias = assigner.getAlias(otherField.joinTableName);
         // Get the m2m row's id to track in JoinRows
         selects.unshift(kqDot(m2mAlias, "id"));
         m2mTable = {
@@ -212,7 +213,12 @@ function calcLateralJoins<I extends EntityOrId>(
         fromAlias: "unset",
         table: otherMeta.tableName,
         query: {
-          selects: [`json_agg(json_build_array(${selects.join(", ")}) order by ${kq(otherAlias)}.id) as _`],
+          // For m2m, order by the join-row's id so preloaded results match the
+          // order the lazy batch loader returns (which orders by join-row id).
+          // Otherwise, order by the target entity's id.
+          selects: [
+            `json_agg(json_build_array(${selects.join(", ")}) order by ${kq(m2mAlias ?? otherAlias)}.id) as _`,
+          ],
           tables: [
             { join: "primary", table: otherMeta.tableName, alias: otherAlias },
             ...(m2mTable ? [m2mTable] : []),

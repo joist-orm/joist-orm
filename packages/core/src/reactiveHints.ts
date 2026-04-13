@@ -4,7 +4,6 @@ import {
   EntityMetadata,
   getBaseAndSelfMetas,
   getMetadata,
-  getSubMetas,
   ManyToManyField,
   ManyToOneField,
   OneToManyField,
@@ -12,7 +11,6 @@ import {
   PolymorphicFieldComponent,
 } from "./EntityMetadata";
 import { Changes, FieldStatus, ManyToOneFieldStatus } from "./changes";
-import { getMetadataForType } from "./configure";
 import { isChangeableField } from "./fields";
 import { getProperties } from "./getProperties";
 import { Loadable, Loaded, LoadHint } from "./loadHints";
@@ -627,16 +625,11 @@ function maybeApplyTypeFilter(loadPromise: Promise<Entity | Entity[]>, viaType: 
 }
 
 /** Handle `viaType` filtering with subtype awareness. */
-function isTypeOrSubType(entity: Entity, typeName: string): boolean {
+export function isTypeOrSubType(entity: Entity, typeName: string): boolean {
   const meta = getMetadata(entity);
-  // Easy check for the name is the same
-  if (meta.type === typeName) return true;
   // Otherwise see if the entity is a subtype of the typeName, i.e. if our poly/type
-  // filter is `@Publisher`, and we're a `SmallPublisher`, that's valid to traverse.
-  for (const other of getSubMetas(getMetadataForType(typeName))) {
-    if (other.type === typeName) return true;
-  }
-  return false;
+  // filter is `@Publisher`, and we're a `SmallPublisher`, walk up our base types.
+  return meta.type == typeName || meta.baseTypes.some((b) => b.type === typeName);
 }
 
 export function isPolyHint(key: string): boolean {

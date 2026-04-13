@@ -97,6 +97,7 @@ export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlu
 export { JsonAggregatePreloader } from "./preloading/JsonAggregatePreloader";
 export {
   convertToLoadHint,
+  isTypeOrSubType,
   Reactable,
   Reacted,
   ReactiveHint,

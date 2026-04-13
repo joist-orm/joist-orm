@@ -624,12 +624,15 @@ function maybeApplyTypeFilter(loadPromise: Promise<Entity | Entity[]>, viaType: 
   return loadPromise;
 }
 
-/** Handle `viaType` filtering with subtype awareness. */
+/** Returns true if `entity` is exactly `typeName` or a subtype of `typeName`.
+ *
+ * Used to honor poly/type filters like `@Publisher` during reverse-hint walks:
+ * a `SmallPublisher` entity should pass an `@Publisher` filter because it is
+ * a Publisher via inheritance.
+ */
 export function isTypeOrSubType(entity: Entity, typeName: string): boolean {
   const meta = getMetadata(entity);
-  // Otherwise see if the entity is a subtype of the typeName, i.e. if our poly/type
-  // filter is `@Publisher`, and we're a `SmallPublisher`, walk up our base types.
-  return meta.type == typeName || meta.baseTypes.some((b) => b.type === typeName);
+  return meta.type === typeName || meta.baseTypes.some((b) => b.type === typeName);
 }
 
 export function isPolyHint(key: string): boolean {

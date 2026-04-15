@@ -213,12 +213,10 @@ function calcLateralJoins<I extends EntityOrId>(
         fromAlias: "unset",
         table: otherMeta.tableName,
         query: {
-          // For m2m, order by the join-row's id so preloaded results match the
-          // order the lazy batch loader returns (which orders by join-row id).
-          // Otherwise, order by the target entity's id.
-          selects: [
-            `json_agg(json_build_array(${selects.join(", ")}) order by ${kq(m2mAlias ?? otherAlias)}.id) as _`,
-          ],
+          // Order by the target entity's id so preloaded results match the lazy batch
+          // loader's post-sort (see `manyToManyBatchLoader` which sorts `getOthers(...)`
+          // by target id to keep order stable across multi-batch populations of JoinRows).
+          selects: [`json_agg(json_build_array(${selects.join(", ")}) order by ${kq(otherAlias)}.id) as _`],
           tables: [
             { join: "primary", table: otherMeta.tableName, alias: otherAlias },
             ...(m2mTable ? [m2mTable] : []),

@@ -944,21 +944,42 @@ describe("ManyToManyCollection", () => {
     await insertBookToTag({ id: 1, book_id: 1, tag_id: 3 });
     await insertBookToTag({ id: 2, book_id: 1, tag_id: 1 });
     await insertBookToTag({ id: 3, book_id: 1, tag_id: 2 });
-
     // When we load the tags via the lazy (batch-loader) path
     const em1 = newEntityManager();
     const book1 = await em1.load(Book, "b:1");
     const lazyTags = await book1.tags.load();
-
     // And separately via the populate-hint (JSON-aggregate preloader) path
     const em2 = newEntityManager();
     const book2 = await em2.load(Book, "b:1", "tags");
     const populatedTags = book2.tags.get;
-
-    // Then both paths agree on the ordering — join-row id order
+    // Then both paths agree on the ordering — target entity (tag) id order
     const lazyNames = lazyTags.map((t) => t.name);
     const populatedNames = populatedTags.map((t) => t.name);
-    expect(lazyNames).toEqual(["t3", "t1", "t2"]);
-    expect(populatedNames).toEqual(["t3", "t1", "t2"]);
+    expect(lazyNames).toEqual(["t1", "t2", "t3"]);
+    expect(populatedNames).toEqual(["t1", "t2", "t3"]);
+  });
+
+  it("returns m2m items in target-id order even when populated across multiple batches", async () => {
+    // Given a book with three tags
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ id: 1, title: "b1", author_id: 1 });
+    await insertTag({ id: 1, name: "t1" });
+    await insertTag({ id: 2, name: "t2" });
+    await insertTag({ id: 3, name: "t3" });
+    await insertBookToTag({ id: 1, book_id: 1, tag_id: 1 });
+    await insertBookToTag({ id: 2, book_id: 1, tag_id: 2 });
+    await insertBookToTag({ id: 3, book_id: 1, tag_id: 3 });
+    const em = newEntityManager();
+    const [book, tag3] = await Promise.all([em.load(Book, "b:1"), em.load(Tag, "t:3")]);
+    // When we first load from the *other side* (tag3.books) — this runs one m2m batch
+    // and inserts the (book:1, tag:3) row into JoinRows's shared index first.
+    await tag3.books.load();
+    // Then we load book.tags in a later tick — this runs a second batch that finds
+    // (book:1, tag:3) already in the index and only appends the other rows. Without
+    // a post-sort, Map iteration would reflect insertion order: [t3, t1, t2].
+    const tags = await book.tags.load();
+    // Instead, the collection should come back in target-id order, regardless of
+    // which batch contributed which rows.
+    expect(tags.map((t) => t.name)).toEqual(["t1", "t2", "t3"]);
   });
 });

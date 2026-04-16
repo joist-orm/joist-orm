@@ -59,21 +59,9 @@ async function loadBatch<U extends Entity>(collection: ManyToManyLike, keys: str
   for (const [column, id] of tuples) {
     const entity = em.getEntity(id);
     if (!entity) continue;
-    // Sort by target-entity id so that callers see a stable order regardless of how many
-    // batches contributed rows to `JoinRows`. The underlying `Map` preserves insertion
-    // order, which reflects the sequence of batches — and that sequence depends on
-    // DataLoader timing, which is non-deterministic across processes. Using the target
-    // entity's id gives a stable, plan-independent order.
-    const others = (joinRows.getOthers(column, entity) as U[]).slice().sort(byIdMaybe);
+    const others = joinRows.getOthers(column, entity) as U[];
     // Determine the field name from the column
     const fieldName = column === collection.columnName ? collection.fieldName : collection.otherFieldName;
     api.setPreloadedRelation(entity.idTagged!, fieldName, others);
   }
-}
-
-/** Sorts entities by their tagged id with natural/numeric ordering (e.g. `t:2` before `t:10`). */
-function byIdMaybe(a: Entity, b: Entity): number {
-  const aId = String(a.idMaybe ?? "");
-  const bId = String(b.idMaybe ?? "");
-  return aId.localeCompare(bId, undefined, { numeric: true });
 }

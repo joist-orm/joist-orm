@@ -216,9 +216,7 @@ function calcLateralJoins<I extends EntityOrId>(
           // For m2m, order by the join-row's id so preloaded results match the
           // order the lazy batch loader returns (which orders by join-row id).
           // Otherwise, order by the target entity's id.
-          selects: [
-            `json_agg(json_build_array(${selects.join(", ")}) order by ${kq(m2mAlias ?? otherAlias)}.id) as _`,
-          ],
+          selects: [`json_agg(json_build_array(${selects.join(", ")}) order by ${kq(m2mAlias ?? otherAlias)}.id) as _`],
           tables: [
             { join: "primary", table: otherMeta.tableName, alias: otherAlias },
             ...(m2mTable ? [m2mTable] : []),

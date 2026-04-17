@@ -1,7 +1,9 @@
 import {
   AsyncProperty,
+  AsyncQueryProperty,
   cannotBeUpdated,
   Collection,
+  hasAsyncQueryProperty,
   hasCustomCollection,
   hasReactiveAsyncProperty,
   hasReactiveField,
@@ -155,6 +157,14 @@ export abstract class Publisher extends PublisherCodegen {
     },
     isLoaded: (entity) => isLoaded(entity, allImagesHint as any),
   });
+
+  /**
+   * Example of a hasAsyncQueryProperty that counts authors via SQL.
+   * @generated Publisher.md
+   */
+  readonly numberOfAuthors: AsyncQueryProperty<Publisher, number> = hasAsyncQueryProperty((p) =>
+    p.em.findCount(Author, { publisher: p.id }),
+  );
 
   /**
    * For testing reacting to poly CommentParent properties.

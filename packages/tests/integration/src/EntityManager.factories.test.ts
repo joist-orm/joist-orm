@@ -40,6 +40,7 @@ import {
   setFactoryWriter,
   testIndex,
 } from "joist-orm";
+import { insertAuthor, select } from "src/entities/inserts";
 
 let factoryOutput: string[] = [];
 
@@ -63,7 +64,7 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get.firstName).toEqual("a1");
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book at EntityManager.factories.test.ts:60↩",
+       "Creating new Book at EntityManager.factories.test.ts:61↩",
        "  author = creating new Author↩",
        "    created Author#1 added to scope↩",
        "  created Book#1 added to scope↩",
@@ -158,7 +159,7 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get).not.toMatchEntity(a2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Tag at EntityManager.factories.test.ts:151↩",
+       "Creating new Tag at EntityManager.factories.test.ts:152↩",
        "  created Tag#1 added to scope↩",
        "  books[0] = creating new Book↩",
        "    author = creating new Author↩",
@@ -184,7 +185,7 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get).toEqual(a1);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book at EntityManager.factories.test.ts:181↩",
+       "Creating new Book at EntityManager.factories.test.ts:182↩",
        "  ...adding Author#1 opt to scope↩",
        "  author = Author#1 from scope↩",
        "  created Book#1 added to scope↩",
@@ -416,6 +417,15 @@ describe("EntityManager.factories", () => {
     const a1 = newAuthor(em);
     const b1 = newBook(em, { author: "a#1" });
     expect(b1.author.get).toEqual(a1);
+  });
+
+  it("accepts tagged ids for unsaved m2o shortcuts", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    newBook(em, { author: "a:1" });
+    await em.flush();
+    const rows = await select("books");
+    expect(rows[0].author_id).toEqual(1);
   });
 
   it("can use tagged ids as shortcuts in list", async () => {
@@ -953,7 +963,7 @@ describe("EntityManager.factories", () => {
       await em.flush();
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new ChildGroup at EntityManager.factories.test.ts:944↩",
+         "Creating new ChildGroup at EntityManager.factories.test.ts:954↩",
          "  childGroup = creating new Child↩",
          "    created Child#1 added to scope↩",
          "  parentGroup = creating new ParentGroup↩",

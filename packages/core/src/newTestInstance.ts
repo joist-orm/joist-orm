@@ -55,7 +55,7 @@ export const factories: Record<string, any> = new Proxy(Object.create(null), {
     const [, tag, id] = match;
     if (!lastFactoryEm) throw new Error("No EntityManager available; call a factory like newAuthor(em) first");
     const testId = `${tag}#${id}`;
-    const entity = lastFactoryEm.entities.find((e) => getTestId(lastFactoryEm!, e) === testId);
+    const entity = findFactoryEntity(lastFactoryEm, testId);
     if (!entity) throw new Error(`No factory entity found for '${testId}'`);
     return entity;
   },
@@ -357,7 +357,7 @@ function resolveFactoryOpt<T extends Entity>(
     return opt as T;
   } else if (isId(opt)) {
     // Try finding the entity in the UoW, otherwise fallback on just setting it as the id (which we support that now)
-    const found = (em.entities.find((e) => e.idTaggedMaybe === opt || getTestId(em, e) === opt) as T) || opt;
+    const found = findFactoryEntity<T>(em, opt) || opt;
     logger?.logFoundOpt(fieldWithIndex, found);
     return found;
   } else if (opt && !isPlainObject(opt) && !(opt instanceof MaybeNew)) {
@@ -664,6 +664,11 @@ function getTestId<T extends Entity>(em: EntityManager, entity: T): string | und
   const meta = getMetadata(entity);
   const createId = getInstanceData(entity).createId;
   return createId ? `${meta.tagName}#${createId}` : undefined;
+}
+
+function findFactoryEntity<T extends Entity>(em: EntityManager, id: string): T | undefined {
+  // We support both testId/createId like `a#1` (preferred) and also `a:1` tagged ids
+  return em.entities.find((e) => e.idTaggedMaybe === id || getTestId(em, e) === id) as T | undefined;
 }
 
 // We keep a local copy of `global.Date`, in case a faking library

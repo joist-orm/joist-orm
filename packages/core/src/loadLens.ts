@@ -12,7 +12,7 @@ import {
 } from "./EntityMetadata";
 import { lensDataLoader } from "./dataloaders/lensDataLoader";
 import { LoadHint } from "./loadHints";
-import { isAsyncProperty } from "./relations";
+import { isProperty } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 
 /** Generically matches on a Reference/Collection's load method. */
@@ -315,7 +315,7 @@ export function lensToPath<T extends Entity, U, V>(fn: (lens: Lens<T>) => Lens<U
 
 function isNotLoaded(object: any, path: string): boolean {
   const value = object && object[path];
-  if (value instanceof AbstractRelationImpl || isAsyncProperty(value)) {
+  if (value instanceof AbstractRelationImpl || isProperty(value)) {
     return !value.isLoaded;
   }
   return false;

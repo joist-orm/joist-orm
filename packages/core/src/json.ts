@@ -3,12 +3,12 @@ import { IdOf } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
 import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint } from "./reactiveHints";
-import { AsyncMethod, AsyncProperty, Collection, ReactiveGetter, Reference } from "./relations";
+import { AsyncMethod, Collection, Property, ReactiveGetter, Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
 import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
-import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
+import { PropertyImpl } from "./relations/hasProperty";
 
 /**
  * A JSON hint of a single key, multiple keys, or nested keys and sub-hints.
@@ -61,7 +61,7 @@ export type JsonableValue<V> =
       ? U
       : V extends AsyncMethod<any, any, any>
         ? never
-        : V extends AsyncProperty<any, infer P>
+        : V extends Property<any, infer P>
           ? DropUndefined<P>
           : V extends ReactiveGetter<any, infer P>
             ? P
@@ -147,7 +147,7 @@ type JsonPayloadKey<T, H, TK extends keyof T, HK extends keyof NormalizeHint<H>>
     ? JsonPayloadReference<U, NormalizeHint<H>[HK]>
     : T[TK] extends Collection<any, infer U>
       ? JsonPayloadCollection<U, NormalizeHint<H>[HK]>
-      : T[TK] extends AsyncProperty<any, infer U>
+      : T[TK] extends Property<any, infer U>
         ? JsonPayloadProperty<U, NormalizeHint<H>[HK]>
         : T[TK] extends ReactiveGetter<any, infer V>
           ? V
@@ -208,7 +208,7 @@ async function copyToPayload(payload: Record<string, {}>, entity: any, hint: obj
         value instanceof ReactiveFieldImpl ||
         value instanceof ReactiveGetterImpl ||
         value instanceof ReactiveQueryFieldImpl ||
-        value instanceof AsyncPropertyImpl
+        value instanceof PropertyImpl
       ) {
         await copyToPayloadValue(payload, payloadKey, value.get, nextHint);
       } else {

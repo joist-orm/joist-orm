@@ -343,12 +343,12 @@ describe("reactiveHints", () => {
     });
 
     it("does not squash multiple expanded hints", () => {
-      // Given one Author hasReactiveAsyncProperty that goes through publisher -> comments
+      // Given one Author hasReactiveProperty that goes through publisher -> comments
       expect(convertToLoadHint(am, ["latestComment2"])).toEqual({
         publisher: { comments: {} },
         comments: {},
       });
-      // And another Author hasReactiveAsyncProperty that goes through publisher -> authors
+      // And another Author hasReactiveProperty that goes through publisher -> authors
       expect(convertToLoadHint(am, ["allPublisherAuthorNames"])).toEqual({
         publisher: { authors: {} },
       });

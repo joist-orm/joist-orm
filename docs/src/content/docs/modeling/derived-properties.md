@@ -28,11 +28,11 @@ class Author {
 
 Asynchronous Properties calculate their value from the entity and other related child/parent entities.
 
-For example, to implement an `Author`'s `numberOfBooks` property that requires counting the Author's `books` collection, use `hasAsyncProperty` with a populate hint stating it depends on the `books` collection:
+For example, to implement an `Author`'s `numberOfBooks` property that requires counting the Author's `books` collection, use `hasProperty` with a populate hint stating it depends on the `books` collection:
 
 ```typescript
 export class Author {
-  readonly numberOfBooks: AsyncProperty<Author, number> = hasAsyncProperty(
+  readonly numberOfBooks: Property<Author, number> = hasProperty(
     // Declare the relations to load
     "books",
     // Only `a.books` will be marked as loaded
@@ -55,11 +55,11 @@ const a2 = await em.load(Author, "a:1", "numberOfBooks");
 const num2 = a2.numberOfBooks.get;
 ```
 
-Like populate hints, `hasAsyncProperty`s can used nested hints:
+Like populate hints, `hasProperty`s can used nested hints:
 
 ```typescript
 export class Author {
-  readonly latestComments: AsyncProperty<Author, Comment[]> = hasAsyncProperty(
+  readonly latestComments: Property<Author, Comment[]> = hasProperty(
     // Pass a nested load hint
     { publisher: "comments", comments: {} },
     // `a` will have the deep relations loaded
@@ -99,12 +99,12 @@ console.log(a.fullName.get);
 
 ## Reactive Async Properties
 
-Similar to Reactive Getters, if you have a [Reactive Field](./reactive-fields) that wants to depend on an Async Property, you need to declare the property's **field-level** dependencies by using `hasReactiveAsyncProperty`:
+Similar to Reactive Getters, if you have a [Reactive Field](./reactive-fields) that wants to depend on an Async Property, you need to declare the property's **field-level** dependencies by using `hasReactiveProperty`:
 
 ```typescript
 export class Author {
-  readonly numberOfBooks: AsyncProperty<Author, number> =
-   hasReactiveAsyncProperty(
+  readonly numberOfBooks: Property<Author, number> =
+   hasReactiveProperty(
      // Now this is a field-level reactive hint
      { books: "title" },
      // `a` can only access fields declared by the hint
@@ -113,5 +113,5 @@ export class Author {
 }
 ```
 
-This is similar to regular `hasAsyncProperty`s, except that the hint declares the specific fields that the lambda uses, and the lambda will be restricted from using any field not declared in the hint. 
+This is similar to regular `hasProperty`s, except that the hint declares the specific fields that the lambda uses, and the lambda will be restricted from using any field not declared in the hint. 
 

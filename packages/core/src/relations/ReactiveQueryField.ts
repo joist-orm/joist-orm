@@ -6,7 +6,7 @@ import { lazyField } from "../newEntity";
 import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { mergeNormalizedHints } from "../utils";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
-import { AsyncPropertyT } from "./hasAsyncProperty";
+import { PropertyT } from "./hasProperty";
 
 /**
  * A `ReactiveQueryField` is a value that is derived from a SQL query, similar to
@@ -123,7 +123,7 @@ export class ReactiveQueryFieldImpl<T extends Entity, H1 extends ReactiveHint<T>
     setField(this.entity, this.fieldName, newValue);
   }
 
-  [AsyncPropertyT] = undefined as any as T;
+  [PropertyT] = undefined as any as T;
 }
 
 /** Type guard utility for determining if an entity field is an ReactiveQueryField. */

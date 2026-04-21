@@ -1,10 +1,10 @@
 import { Entity } from "./Entity";
 import { assertLoaded, Loaded, LoadHint } from "./loadHints";
 import {
-  isAsyncProperty,
-  isLoadedAsyncProperty,
   isLoadedCollection,
+  isLoadedProperty,
   isLoadedReference,
+  isProperty,
   isReactiveField,
   isReactiveGetter,
   isReactiveQueryField,
@@ -76,14 +76,14 @@ export function withLoaded<T extends Entity, H extends LoadHint<T>, L extends Lo
           const value: any = (target as any)[prop];
           if (
             isRelation(value) ||
-            isAsyncProperty(value) ||
+            isProperty(value) ||
             isReactiveField(value) ||
             isReactiveGetter(value) ||
             isReactiveQueryField(value)
           ) {
             return isLoadedReference(value) ||
               isLoadedCollection(value) ||
-              isLoadedAsyncProperty(value) ||
+              isLoadedProperty(value) ||
               isReactiveField(value) ||
               isLoadedReactiveQueryField(value) ||
               isReactiveGetter(value)

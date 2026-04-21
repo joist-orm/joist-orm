@@ -1,0 +1,89 @@
+:root {
+  --joist-orange: #fc8a22;
+  --joist-bg: oklch(21% 0.006 285.885);
+  --joist-bg-lift: oklch(26% 0.006 285.885);
+  --slidev-theme-primary: #fc8a22;
+}
+
+.slidev-layout {
+  background: var(--joist-bg);
+  color: #f3f4f6;
+  font-family: "Inter", sans-serif;
+}
+
+.slidev-layout h1 {
+  color: var(--joist-orange);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.slidev-layout h2,
+.slidev-layout h3 {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.slidev-layout a {
+  color: var(--joist-orange);
+  text-decoration: none;
+}
+
+.slidev-layout code {
+  font-family: "JetBrains Mono", monospace;
+}
+
+.slidev-layout pre,
+.slidev-layout .slidev-code {
+  font-family: "JetBrains Mono", monospace;
+  background: rgba(255, 255, 255, 0.035) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  font-size: 0.82em;
+  line-height: 1.5;
+}
+
+.slidev-layout .slidev-code .line.highlighted {
+  background-color: rgba(252, 138, 34, 0.14) !important;
+}
+
+.text-joist {
+  color: var(--joist-orange);
+}
+
+.bg-joist {
+  background-color: var(--joist-orange);
+}
+
+.slidev-layout strong {
+  color: var(--joist-orange);
+  font-weight: 600;
+}
+
+/* Slight polish for bullet lists */
+.slidev-layout ul li {
+  margin: 0.35em 0;
+}
+
+/* Cover slide: tighter */
+.slidev-layout.cover {
+  background: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(252, 138, 34, 0.10),
+    transparent 60%
+  ),
+  var(--joist-bg);
+}
+
+/* Two-cols-header: give the heading some breathing room */
+.slidev-layout.two-cols-header {
+  gap: 1.2rem;
+}
+
+/* Title slide */
+.title-line {
+  font-size: 3.25rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  max-width: 22ch;
+  text-align: center;
+}

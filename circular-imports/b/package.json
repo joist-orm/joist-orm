@@ -1,0 +1,15 @@
+{
+  "name": "circular-imports-b",
+  "private": true,
+  "version": "0.0.0",
+  "description": "CommonJS fix for the circular-import problem using the 'internal module' pattern.",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "run-repro": "tsc -p tsconfig.json && node dist/index.js"
+  },
+  "devDependencies": {
+    "typescript": "5.9.2"
+  }
+}

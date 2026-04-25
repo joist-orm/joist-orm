@@ -1,5 +1,6 @@
 {
   "codegenPlugins": ["joist-graphql-codegen"],
+  "codemodVersion": 1,
   "contextType": "Context@src/context",
   "docs": true,
   "entities": {
@@ -138,6 +139,5 @@
   },
   "entitiesDirectory": "./src/entities",
   "outputDocs": true,
-  "transactionType": "PoolClient@pg",
-  "version": "0.0.1"
+  "transactionType": "PoolClient@pg"
 }

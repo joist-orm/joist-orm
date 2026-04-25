@@ -1,5 +1,6 @@
 {
   "codegenPlugins": [],
+  "codemodVersion": 1,
   "contextType": "Context@src/context",
   "entities": {
     "T1Author": { "tag": "ta" },
@@ -15,6 +16,5 @@
     "T5BookReview": { "tag": "tbr" }
   },
   "entitiesDirectory": "./src/entities",
-  "idType": "number",
-  "version": "0.0.1"
+  "idType": "number"
 }

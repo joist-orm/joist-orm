@@ -11,7 +11,7 @@ class Author {
   reactive: AsyncProperty<Author, number> = hasReactiveAsyncProperty({ books: "title" }, (a) => a.books.get.length);
 }
 
-function check(maybe: any) {
+function check(maybe: unknown) {
   if (isAsyncProperty(maybe) && isLoadedAsyncProperty(maybe)) {
     return maybe.get;
   }

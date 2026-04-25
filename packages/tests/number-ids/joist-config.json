@@ -1,8 +1,8 @@
 {
   "codegenPlugins": [],
+  "codemodVersion": 1,
   "contextType": "Context@src/context",
   "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
   "entitiesDirectory": "./src/entities",
-  "idType": "number",
-  "version": "0.0.1"
+  "idType": "number"
 }

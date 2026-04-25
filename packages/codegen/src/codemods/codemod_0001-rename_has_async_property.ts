@@ -1,9 +1,9 @@
-import { Transform } from "jscodeshift";
+import { type Transform } from "jscodeshift";
 import { JscodeshiftMod } from "./JscodeshiftMod";
 
-export const v2_1_0_rename_has_async_property = new JscodeshiftMod(
-  "2.1.0",
-  "v2_1_0_rename_has_async_property",
+export const codemod_0001_rename_has_async_property = new JscodeshiftMod(
+  1,
+  "codemod_0001-rename_has_async_property",
   "Rename `hasAsyncProperty` to `hasProperty`",
   (config) => `${config.entitiesDirectory}/*.ts`,
 );
@@ -22,7 +22,7 @@ const transform: Transform = (file, api) => {
   const j = api.jscodeshift;
   return j(file.source)
     .find(j.Identifier)
-    .filter(({ node }) => node.name in renames)
+    .filter((path) => path.node.name in renames)
     .forEach((path) => {
       j(path).replaceWith(j.identifier(renames[path.node.name]));
     })

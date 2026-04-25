@@ -7,6 +7,8 @@ import {
 } from "joist-core";
 
 class Author {
+  constructor() {}
+
   count: AsyncProperty<Author, number> = hasAsyncProperty({ books: "title" }, (a) => a.books.get.length);
   reactive: AsyncProperty<Author, number> = hasReactiveAsyncProperty({ books: "title" }, (a) => a.books.get.length);
 }

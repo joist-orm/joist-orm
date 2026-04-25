@@ -1,12 +1,12 @@
 import fastglob from "fast-glob";
 import { run as jscodeshift } from "jscodeshift/src/Runner";
 import path from "path";
-import { Config } from "../config";
-import { Codemod } from "./Codemod";
+import { type Config } from "../config";
+import { type Codemod } from "./Codemod";
 
 export class JscodeshiftMod implements Codemod {
   constructor(
-    public version: string,
+    public codemodVersion: number,
     public name: string,
     public description: string,
     private glob: (config: Config) => string,

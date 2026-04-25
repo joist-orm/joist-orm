@@ -4718,7 +4718,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/semver@npm:^7.5.5, @types/semver@npm:^7.7.1":
+"@types/semver@npm:^7.5.5":
   version: 7.7.1
   resolution: "@types/semver@npm:7.7.1"
   checksum: 10/8f09e7e6ca3ded67d78ba7a8f7535c8d9cf8ced83c52e7f3ac3c281fe8c689c3fe475d199d94390dc04fc681d51f2358b430bb7b2e21c62de24f2bee2c719068
@@ -9853,7 +9853,6 @@ __metadata:
     "@types/jscodeshift": "npm:^17.3.0"
     "@types/node": "npm:^24.6.0"
     "@types/pluralize": "npm:^0.0.33"
-    "@types/semver": "npm:^7.7.1"
     change-case: "npm:^4.1.2"
     fast-glob: "npm:^3.3.3"
     jest: "npm:30.2.0"
@@ -9862,7 +9861,6 @@ __metadata:
     pluralize: "npm:^8.0.0"
     prettier: "npm:^3.6.2"
     prettier-plugin-organize-imports: "npm:^4.3.0"
-    semver: "npm:^7.7.2"
     ts-node-dev: "npm:^2.0.0"
     ts-poet: "npm:^6.12.0"
     tsconfig-paths: "npm:^4.2.0"

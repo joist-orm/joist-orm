@@ -11,7 +11,7 @@ class Author {
   reactive: Property<Author, number> = hasReactiveProperty({ books: "title" }, (a) => a.books.get.length);
 }
 
-function check(maybe: any) {
+function check(maybe: unknown) {
   if (isProperty(maybe) && isLoadedProperty(maybe)) {
     return maybe.get;
   }

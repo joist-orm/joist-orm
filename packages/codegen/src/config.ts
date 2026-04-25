@@ -5,7 +5,7 @@ import { promises as fs } from "fs";
 import { groupBy } from "joist-utils";
 import ts from "typescript";
 import { z } from "zod";
-import { getThisVersion } from "./codemods";
+import { getLatestCodemodVersion } from "./codemods";
 import { getStiEntities } from "./inheritance";
 import { logger } from "./logger";
 import { fail, sortKeys, trueIfResolved } from "./utils";
@@ -142,8 +142,8 @@ export const config = z
     outputDocs: z.optional(z.boolean()),
     /** Auto-set by probing the project's `tsconfig.json` file. */
     allowImportingTsExtensions: z.optional(z.boolean()),
-    // The version of Joist that generated this config.
-    version: z.string().default("0.0.0"),
+    /** The latest Joist codemod counter that has been applied to this project. */
+    codemodVersion: z.number().int().min(0).default(0),
 
     /** A list of postgres schemas to use for finding tables */
     schemas: z.optional(z.array(z.string())),
@@ -297,7 +297,7 @@ export async function loadConfig(): Promise<Config> {
   const exists = await trueIfResolved(fs.access(configPath));
   if (exists) {
     const content = await fs.readFile(configPath);
-    const result = config.safeParse(JSON.parse(content.toString()));
+    const result = config.safeParse(stripLegacyConfigKeys(JSON.parse(content.toString())));
     if (!result.success) {
       throw new Error(
         `Invalid joist-config.json: ${result.error.errors
@@ -308,25 +308,10 @@ export async function loadConfig(): Promise<Config> {
     result.data.allowImportingTsExtensions ??= projectIsUsingEsmWithImports();
     return result.data;
   }
-  // This will create the initial `joist-config.json` on the first run, and
-  // initialize it with our current Joist version, so that they're not prompted
-  // to run any historical codemods.
-  const initial = config.parse({ version: getThisVersion() });
+  // Brand-new projects should not be prompted to run historical codemods.
+  const initial = config.parse({ codemodVersion: getLatestCodemodVersion() });
   initial.allowImportingTsExtensions ??= projectIsUsingEsmWithImports();
   return initial;
-}
-
-function projectIsUsingEsmWithImports(): boolean {
-  // Attempt to find the project's tsconfig.json in the current directory or up the directory hierarchy
-  const configPath = ts.findConfigFile("./", ts.sys.fileExists, "tsconfig.json");
-  if (!configPath) {
-    return false;
-  }
-  const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
-  if (configFile.error) {
-    return false;
-  }
-  return configFile.config?.compilerOptions?.allowImportingTsExtensions === true;
 }
 
 /**
@@ -378,4 +363,27 @@ export function getTimestampConfig(config: Config): {
       ...config?.timestampColumns?.deletedAt,
     },
   };
+}
+
+function projectIsUsingEsmWithImports(): boolean {
+  // Attempt to find the project's tsconfig.json in the current directory or up the directory hierarchy
+  const configPath = ts.findConfigFile("./", ts.sys.fileExists, "tsconfig.json");
+  if (!configPath) {
+    return false;
+  }
+  const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
+  if (configFile.error) {
+    return false;
+  }
+  return configFile.config?.compilerOptions?.allowImportingTsExtensions === true;
+}
+
+function stripLegacyConfigKeys(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return raw;
+  }
+  // Accept old configs so the deprecated key disappears on the next write.
+  const parsed = { ...(raw as Record<string, unknown>) };
+  delete parsed.version;
+  return parsed;
 }

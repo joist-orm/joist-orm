@@ -1,5 +1,6 @@
 {
   "codegenPlugins": [],
+  "codemodVersion": 1,
   "contextType": "Context@src/context",
   "databaseUrl": "postgres://joist:local@localhost:5435/schema_misc",
   "entities": {
@@ -15,6 +16,5 @@
   "timestampColumns": {
     "createdAt": { "names": ["created_at", "createdAt"], "required": false },
     "updatedAt": { "names": ["updated_at", "updatedAt"], "required": false }
-  },
-  "version": "0.0.1"
+  }
 }

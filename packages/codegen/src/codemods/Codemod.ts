@@ -1,4 +1,4 @@
-import { Config } from "../config";
+import { type Config } from "../config";
 
 /**
  * A generic interface for Joist codemods.
@@ -7,7 +7,7 @@ import { Config } from "../config";
  * also "dumber" mods that `mv` files around.
  */
 export type Codemod = {
-  version: string;
+  codemodVersion: number;
   name: string;
   description: string;
   run(config: Config): Promise<void>;

@@ -1,10 +1,10 @@
 import { Entity } from "../Entity";
 import { lazyField } from "../newEntity";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
-import { AsyncPropertyT } from "./hasAsyncProperty";
+import { PropertyT } from "./hasProperty";
 
 export interface AsyncQueryProperty<T extends Entity, V> {
-  [AsyncPropertyT]: T;
+  [PropertyT]: T;
   isLoaded: boolean;
   load(opts?: { forceReload?: boolean }): Promise<V>;
 }
@@ -12,7 +12,7 @@ export interface AsyncQueryProperty<T extends Entity, V> {
 /**
  * Creates a derived value calculated from a SQL query.
  *
- * Unlike `hasAsyncProperty`, the lambda receives the entity and is expected
+ * Unlike `hasProperty`, the lambda receives the entity and is expected
  * to perform its own SQL queries rather than relying on in-memory graph data.
  *
  * - For new (un-flushed) entities, `load` throws because the entity has no id yet.
@@ -79,7 +79,7 @@ export class AsyncQueryPropertyImpl<T extends Entity, V>
     this.#value = undefined;
   }
 
-  [AsyncPropertyT] = undefined as any as T;
+  [PropertyT] = undefined as any as T;
 }
 
 /** Type guard utility for determining if an entity field is an AsyncQueryProperty. */

@@ -3,14 +3,14 @@ export { CustomCollection, hasCustomCollection } from "./CustomCollection";
 export { CustomReference, hasCustomReference } from "./CustomReference";
 export { AsyncMethod, LoadedMethod, hasAsyncMethod } from "./hasAsyncMethod";
 export {
-  AsyncProperty,
-  AsyncPropertyImpl,
   LoadedProperty,
-  hasAsyncProperty,
-  hasReactiveAsyncProperty,
-  isAsyncProperty,
-  isLoadedAsyncProperty,
-} from "./hasAsyncProperty";
+  Property,
+  PropertyImpl,
+  hasProperty,
+  hasReactiveProperty,
+  isLoadedProperty,
+  isProperty,
+} from "./hasProperty";
 export {
   AsyncQueryProperty,
   AsyncQueryPropertyImpl,

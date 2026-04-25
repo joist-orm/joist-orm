@@ -321,7 +321,7 @@ class BookReview extends PublisherCodegen {
 
 `hasAsyncQueryProperty` creates a derived value calculated from a SQL query, rather than from in-memory graph data. This is useful when pulling all the related data into memory would be too expensive, and you'd rather let the database do the work.
 
-Unlike `hasAsyncProperty`, there is no load hint or reactive hint — the lambda receives the entity directly and is expected to perform its own queries:
+Unlike `hasProperty`, there is no load hint or reactive hint — the lambda receives the entity directly and is expected to perform its own queries:
 
 ```typescript
 export class Publisher extends PublisherCodegen {
@@ -347,7 +347,7 @@ await em.flush();
 console.log(p.numberOfAuthors.isLoaded); // false
 ```
 
-It also works as a populate hint, just like `hasAsyncProperty`:
+It also works as a populate hint, just like `hasProperty`:
 
 ```typescript
 const p = await em.load(Publisher, "p:1", "numberOfAuthors");

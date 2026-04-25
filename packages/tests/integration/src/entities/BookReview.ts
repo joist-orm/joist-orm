@@ -1,10 +1,10 @@
 import {
-  AsyncProperty,
   cannotBeUpdated,
   hasOneDerived,
   hasOneThrough,
-  hasReactiveAsyncProperty,
   hasReactiveField,
+  hasReactiveProperty,
+  Property,
   ReactiveField,
   Reference,
   withLoaded,
@@ -63,8 +63,8 @@ export class BookReview extends BookReviewCodegen {
     return review.isTest.get;
   });
 
-  // Used to test reactivity to hasReactiveAsyncProperty results changing.
-  readonly isPublic2: AsyncProperty<BookReview, boolean> = hasReactiveAsyncProperty({ comment: "text" }, (review) => {
+  // Used to test reactivity to hasReactiveProperty results changing.
+  readonly isPublic2: Property<BookReview, boolean> = hasReactiveProperty({ comment: "text" }, (review) => {
     review.transientFields.numberOfIsPublic2Calcs++;
     return !review.comment.get?.text?.includes("Ignore");
   });
@@ -73,7 +73,7 @@ export class BookReview extends BookReviewCodegen {
    * For testing reacting to poly CommentParent properties.
    * @generated BookReview.md
    */
-  readonly commentParentInfo: AsyncProperty<BookReview, string> = hasReactiveAsyncProperty([], () => ``);
+  readonly commentParentInfo: Property<BookReview, string> = hasReactiveProperty([], () => ``);
 }
 
 // Example of cannotBeUpdated on a m2o so "it won't be reactive" (but really is b/c of creates & deletes)

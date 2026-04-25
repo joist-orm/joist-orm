@@ -3,7 +3,6 @@ import { NormalizeHint } from "./normalizeHints";
 import { getRelationFromMaybePolyKey } from "./reactiveHints";
 import {
   AsyncMethod,
-  AsyncProperty,
   Collection,
   LoadedCollection,
   LoadedMethod,
@@ -11,6 +10,7 @@ import {
   LoadedReadOnlyCollection,
   LoadedReference,
   OneToOneReference,
+  Property,
   ReadOnlyCollection,
   Reference,
   Relation,
@@ -42,7 +42,7 @@ export type MarkLoaded<T extends Entity, P, UH = {}> =
         ? LoadedCollection<T, Loaded<U, UH>>
         : P extends ReadOnlyCollection<MaybeBaseType, infer U>
           ? LoadedReadOnlyCollection<T, Loaded<U, UH>>
-          : P extends AsyncProperty<MaybeBaseType, infer V>
+          : P extends Property<MaybeBaseType, infer V>
             ? // prettier-ignore
               [V] extends [(infer U extends Entity) | undefined]
     ? LoadedProperty<T, Loaded<U, UH> | Exclude<V, U>>
@@ -63,7 +63,7 @@ type MarkDeepLoaded<T extends Entity, P> =
         ? LoadedCollection<T, Loaded<U, DeepLoadHint<U>>>
         : P extends ReadOnlyCollection<MaybeBaseType, infer U>
           ? LoadedReadOnlyCollection<T, Loaded<U, DeepLoadHint<U>>>
-          : P extends AsyncProperty<MaybeBaseType, infer V>
+          : P extends Property<MaybeBaseType, infer V>
             ? // prettier-ignore
               [V] extends [(infer U extends Entity) | undefined]
     ? LoadedProperty<T, Loaded<U, DeepLoadHint<U>> | Exclude<V, U>>
@@ -162,8 +162,8 @@ export type LoadableValue<V> =
         ? U
         : V extends AsyncMethod<any, any, infer V>
           ? V
-          : V extends AsyncProperty<any, infer P>
-            ? // If the AsyncProperty returns `Comment | undefined`, then we want to return `Comment`
+          : V extends Property<any, infer P>
+            ? // If the Property returns `Comment | undefined`, then we want to return `Comment`
               // prettier-ignore
               P extends (infer U extends Entity) | undefined ? U : P
             : never;

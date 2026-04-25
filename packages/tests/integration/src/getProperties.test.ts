@@ -34,7 +34,7 @@ describe("getProperties", () => {
      {
        "advances": "OneToManyCollection",
        "author": "ManyToOneReferenceImpl",
-       "commentParentInfo": "AsyncPropertyImpl",
+       "commentParentInfo": "PropertyImpl",
        "comments": "OneToManyCollection",
        "currentDraftAuthor": "OneToOneReferenceImpl",
        "favoriteAuthor": "OneToOneReferenceImpl",

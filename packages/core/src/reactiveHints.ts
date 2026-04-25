@@ -16,8 +16,6 @@ import { getProperties } from "./getProperties";
 import { Loadable, Loaded, LoadHint } from "./loadHints";
 import { NormalizeHint, normalizeHint, suffixRe, SuffixSeperator } from "./normalizeHints";
 import {
-  AsyncProperty,
-  AsyncPropertyImpl,
   Collection,
   LoadedCollection,
   LoadedProperty,
@@ -26,6 +24,8 @@ import {
   ManyToManyCollection,
   OneToOneReference,
   PolymorphicReference,
+  Property,
+  PropertyImpl,
   ReactiveGetter,
   ReadOnlyCollection,
   Reference,
@@ -44,7 +44,7 @@ import { fail, flatAndUnique, mergeNormalizedHints } from "./utils";
 export type Reactable<T extends Entity> =
   // This will be primitives + enums + m2os
   FieldsOf<T> &
-    // We include `Loadable` so that we include hasReactiveAsyncProperties,
+    // We include `Loadable` so that we include hasReactiveProperties,
     // which are reversable but won't be in any of our codegen types.
     Loadable<T> &
     Gettable<T> &
@@ -102,7 +102,7 @@ export type Reacted<T extends Entity, H> = Entity & {
           ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
           : T[K] extends ReadOnlyCollection<any, infer U>
             ? LoadedReadOnlyCollection<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
-            : T[K] extends AsyncProperty<any, infer V>
+            : T[K] extends Property<any, infer V>
               ? LoadedProperty<any, V>
               : T[K];
 } & {
@@ -122,10 +122,10 @@ export type Reacted<T extends Entity, H> = Entity & {
 export type MaybeReactedEntity<V> = V extends Entity ? { fullNonReactiveAccess: V } : V;
 
 /**
- * Allow returning reacted entities from `hasReactiveAsyncProperty`.
+ * Allow returning reacted entities from `hasReactiveProperty`.
  *
  * The `MaybeReactedEntity` is used by `hasReactiveReference` which already has `undefined | never`
- * broken out as a separate generic; `hasReactiveAsyncProperty` does not, and so this type conditionally
+ * broken out as a separate generic; `hasReactiveProperty` does not, and so this type conditionally
  * pulls `undefined` out first, and then defers to `MaybeReactedEntity`.
  */
 export type MaybeReactedPropertyEntity<V> = V extends (infer V1 extends Entity) | undefined
@@ -303,22 +303,22 @@ function reverseSubHint(
         throw new Error(`Invalid hint in ${rootType.name}.ts hint ${JSON.stringify(hint)}`);
     }
   } else {
-    // We only need to look for ReactiveAsyncProperties here, because ReactiveFields & ReactiveReferences
+    // We only need to look for ReactiveProperties here, because ReactiveFields & ReactiveReferences
     // have underlying primitive fields that, when/if they change, will be handled in the ^ code.
     //
     // I.e. we specifically don't need to handle RFs & RRs ^, because the EntityManager.flush loop will
     // notice their primitive values changing, and kicking off any downstream reactive fields as necessary.
     const p = getProperties(meta)[key];
-    if (p instanceof AsyncPropertyImpl) {
+    if (p instanceof PropertyImpl) {
       // If the field is marked as readonly (i.e. using the `_ro` suffix), then we can assume that applies to its
       // entire hint as well and can simply omit it. This also allows us to use non-reactive async props as long as
       // they are readonly.
       if (isReadOnly) return [];
       if (!p.reactiveHint) {
         throw new Error(
-          `AsyncProperty ${key} cannot be used in reactive hints in ${rootType.name}.ts hint ${JSON.stringify(
+          `Property ${key} cannot be used in reactive hints in ${rootType.name}.ts hint ${JSON.stringify(
             hint,
-          )}, please use hasReactiveAsyncProperty instead`,
+          )}, please use hasReactiveProperty instead`,
         );
       }
       return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false, false);

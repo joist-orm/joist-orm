@@ -5,11 +5,11 @@ import { lazyField } from "../newEntity";
 import { MaybeReactedPropertyEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { tryResolve } from "../utils";
 
-export const AsyncPropertyT = Symbol();
+export const PropertyT = Symbol();
 
-export interface AsyncProperty<T extends Entity, V> {
+export interface Property<T extends Entity, V> {
   // Differentiate from AsyncMethod
-  [AsyncPropertyT]: T;
+  [PropertyT]: T;
   isLoaded: boolean;
   load(): Promise<V>;
 }
@@ -26,12 +26,12 @@ export interface LoadedProperty<T extends Entity, V> {
  * But if `someProperty` is used as a populate hint, then it can be accessed synchronously,
  * with `someProperty.get`.
  */
-export function hasAsyncProperty<T extends Entity, const H extends LoadHint<T>, V>(
+export function hasProperty<T extends Entity, const H extends LoadHint<T>, V>(
   loadHint: H,
   fn: (entity: Loaded<T, H>) => V,
-): AsyncProperty<T, V> {
+): Property<T, V> {
   return lazyField((entity: T) => {
-    return new AsyncPropertyImpl(entity, loadHint, fn);
+    return new PropertyImpl(entity, loadHint, fn);
   });
 }
 
@@ -43,16 +43,16 @@ export function hasAsyncProperty<T extends Entity, const H extends LoadHint<T>, 
  * But if `someProperty` is used as a populate hint, then it can be accessed synchronously,
  * with `someProperty.get`.
  */
-export function hasReactiveAsyncProperty<T extends Entity, const H extends ReactiveHint<T>, V>(
+export function hasReactiveProperty<T extends Entity, const H extends ReactiveHint<T>, V>(
   reactiveHint: H,
   fn: (entity: Reacted<T, H>) => MaybeReactedPropertyEntity<V>,
-): AsyncProperty<T, V> {
+): Property<T, V> {
   return lazyField((entity: T) => {
-    return new AsyncPropertyImpl(entity, reactiveHint as any, fn as any, { isReactive: true });
+    return new PropertyImpl(entity, reactiveHint as any, fn as any, { isReactive: true });
   });
 }
 
-export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> implements AsyncProperty<T, V> {
+export class PropertyImpl<T extends Entity, H extends LoadHint<T>, V> implements Property<T, V> {
   // We'll probe for loaded if undefined
   #loaded: boolean | undefined = undefined;
   #loadPromise: any;
@@ -107,17 +107,17 @@ export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> imple
     return !!this.#loaded;
   }
 
-  [AsyncPropertyT] = undefined as any as T;
+  [PropertyT] = undefined as any as T;
 }
 
-/** Type guard utility for determining if an entity field is an AsyncProperty. */
-export function isAsyncProperty(maybeAsyncProperty: any): maybeAsyncProperty is AsyncProperty<any, any> {
-  return maybeAsyncProperty instanceof AsyncPropertyImpl;
+/** Type guard utility for determining if an entity field is a Property. */
+export function isProperty(maybeProperty: any): maybeProperty is Property<any, any> {
+  return maybeProperty instanceof PropertyImpl;
 }
 
-/** Type guard utility for determining if an entity field is a loaded AsyncProperty. */
-export function isLoadedAsyncProperty(
-  maybeAsyncProperty: any,
-): maybeAsyncProperty is AsyncProperty<any, any> & LoadedProperty<any, any> {
-  return isAsyncProperty(maybeAsyncProperty) && maybeAsyncProperty.isLoaded;
+/** Type guard utility for determining if an entity field is a loaded Property. */
+export function isLoadedProperty(
+  maybeProperty: any,
+): maybeProperty is Property<any, any> & LoadedProperty<any, any> {
+  return isProperty(maybeProperty) && maybeProperty.isLoaded;
 }

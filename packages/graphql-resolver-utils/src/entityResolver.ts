@@ -1,6 +1,5 @@
 import { GraphQLResolveInfo } from "graphql/type";
 import {
-  AsyncProperty,
   Collection,
   Entity,
   EntityMetadata,
@@ -8,14 +7,14 @@ import {
   getMetadata,
   getProperties,
   IdOf,
-  isAsyncProperty,
   isCollection,
-  isLoadedAsyncProperty,
   isLoadedCollection,
+  isLoadedProperty,
   isLoadedReadOnlyCollection,
   isLoadedReference,
   isManyToOneField,
   isOneToManyField,
+  isProperty,
   isReactiveGetter,
   isReadOnlyCollection,
   isReference,
@@ -23,6 +22,7 @@ import {
   ManyToManyField,
   ManyToOneField,
   MaybeAbstractEntityConstructor,
+  Property,
   OneToManyField,
   OneToOneField,
   PolymorphicField,
@@ -58,7 +58,7 @@ export type EntityResolver<T extends Entity> = {
           ? Resolver<T, Record<string, any>, U[]>
           : T[P] extends Reference<any, infer U, infer N>
             ? Resolver<T, Record<string, any>, U>
-            : T[P] extends AsyncProperty<any, infer V>
+            : T[P] extends Property<any, infer V>
               ? Resolver<T, Record<string, any>, V>
               : T[P] extends ReactiveGetter<any, infer V>
                 ? Resolver<T, Record<string, any>, V>
@@ -176,8 +176,8 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
         return (property as Function).apply(entity);
       } else if (isReactiveGetter(property)) {
         return property.get;
-      } else if (isReference(property) || isCollection(property) || isAsyncProperty(property)) {
-        if (isLoadedReference(property) || isLoadedCollection(property) || isLoadedAsyncProperty(property)) {
+      } else if (isReference(property) || isCollection(property) || isProperty(property)) {
+        if (isLoadedReference(property) || isLoadedCollection(property) || isLoadedProperty(property)) {
           return property.get;
         }
         // ...we need to know the `property.otherMetadata()` return type, which isn't available right now

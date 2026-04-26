@@ -47,6 +47,7 @@ export class SmallPublisher extends SmallPublisherCodegen implements HasGroup<Sm
    * Subtype-specific override of `commentParentInfo` whose hint mentions SP-only relations.
    * Used to catch CTI-subtype reactive-hint contamination in `addRule`/`addReaction`'s
    * closure-cached `loadHint`.
+   * @generated SmallPublisher.md
    */
   readonly commentParentInfo: Property<SmallPublisher, string> = hasReactiveProperty(
     { selfReferential: [] },

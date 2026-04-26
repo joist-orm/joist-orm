@@ -3,8 +3,8 @@
 
 ## Fields
 
-### favoriteAuthor
+### commentParentInfo
 
-Subtype-specific override of `favoriteAuthor` that uses LargePublisher-only relations
-(`critics`) in its reactive hint. This catches cross-CTI-subtype hint contamination,
-since `critics` does not exist on `SmallPublisher` or the abstract `Publisher`.
+Subtype-specific override of `commentParentInfo` whose hint mentions LP-only relations.
+Used to catch CTI-subtype reactive-hint contamination in `addRule`/`addReaction`'s
+closure-cached `loadHint`.

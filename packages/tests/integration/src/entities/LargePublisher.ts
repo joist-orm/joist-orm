@@ -1,4 +1,4 @@
-import { AsyncProperty, hasReactiveAsyncProperty } from "joist-orm";
+import { hasReactiveProperty, Property } from "joist-orm";
 import { LargePublisherCodegen } from "./entities";
 
 import { largePublisherConfig as config } from "./entities";
@@ -9,10 +9,7 @@ export class LargePublisher extends LargePublisherCodegen {
    * Used to catch CTI-subtype reactive-hint contamination in `addRule`/`addReaction`'s
    * closure-cached `loadHint`.
    */
-  readonly commentParentInfo: AsyncProperty<LargePublisher, string> = hasReactiveAsyncProperty(
-    { critics: [] },
-    () => "lp",
-  );
+  readonly commentParentInfo: Property<LargePublisher, string> = hasReactiveProperty({ critics: [] }, () => "lp");
 }
 
 /** Test that subtype defaults can override base class defaults and are processed and persisted */

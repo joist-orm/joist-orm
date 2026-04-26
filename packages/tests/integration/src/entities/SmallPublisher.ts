@@ -1,11 +1,11 @@
 import {
-  AsyncProperty,
   cannotBeUpdated,
   ConfigApi,
-  hasReactiveAsyncProperty,
   hasReactiveField,
+  hasReactiveProperty,
   hasReactiveReference,
   ManyToOneReference,
+  Property,
   ReactiveField,
   ReactiveReference,
 } from "joist-orm";
@@ -48,7 +48,7 @@ export class SmallPublisher extends SmallPublisherCodegen implements HasGroup<Sm
    * Used to catch CTI-subtype reactive-hint contamination in `addRule`/`addReaction`'s
    * closure-cached `loadHint`.
    */
-  readonly commentParentInfo: AsyncProperty<SmallPublisher, string> = hasReactiveAsyncProperty(
+  readonly commentParentInfo: Property<SmallPublisher, string> = hasReactiveProperty(
     { selfReferential: [] },
     () => "sp",
   );

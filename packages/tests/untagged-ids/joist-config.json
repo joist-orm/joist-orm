@@ -1,5 +1,6 @@
 {
   "codegenPlugins": [],
+  "codemodVersion": 1,
   "contextType": "Context@src/context",
   "entities": {
     "Author": { "tag": "a" },
@@ -8,6 +9,5 @@
     "Comment": { "relations": { "parent": { "polymorphic": "notNull" } }, "tag": "c" }
   },
   "entitiesDirectory": "./src/entities",
-  "idType": "untagged-string",
-  "version": "0.0.1"
+  "idType": "untagged-string"
 }

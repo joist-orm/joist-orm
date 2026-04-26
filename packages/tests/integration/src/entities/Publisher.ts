@@ -1,16 +1,16 @@
 import {
-  AsyncProperty,
   AsyncQueryProperty,
   cannotBeUpdated,
   Collection,
   hasAsyncQueryProperty,
   hasCustomCollection,
-  hasReactiveAsyncProperty,
   hasReactiveField,
+  hasReactiveProperty,
   hasReactiveQueryField,
   hasReactiveReference,
   isLoaded,
   Loaded,
+  Property,
   ReactiveField,
   ReactiveReference,
 } from "joist-orm";
@@ -170,7 +170,7 @@ export abstract class Publisher extends PublisherCodegen {
    * For testing reacting to poly CommentParent properties.
    * @generated Publisher.md
    */
-  readonly commentParentInfo: AsyncProperty<Publisher, string> = hasReactiveAsyncProperty([], () => ``);
+  readonly commentParentInfo: Property<Publisher, string> = hasReactiveProperty([], () => ``);
 }
 
 config.afterMetadata((meta) => {

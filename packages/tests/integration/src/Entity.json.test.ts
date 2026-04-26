@@ -48,7 +48,7 @@ describe("Entity.json", () => {
       numberOfPublicReviews: {}, // ReactiveField
       initials: {}, // getter
       favoriteBook: "title", // ReactiveReference
-      numberOfBooks2: {}, // hasReactiveAsyncProperty
+      numberOfBooks2: {}, // hasReactiveProperty
       hasLowerCaseFirstName: {}, // ReactiveGetter
     });
     expect(payload).toEqual({

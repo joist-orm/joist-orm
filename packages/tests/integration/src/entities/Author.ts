@@ -1,8 +1,8 @@
 import {
   AsyncMethod,
-  AsyncProperty,
   Collection,
   Loaded,
+  Property,
   ReactiveField,
   ReactiveGetter,
   ReactiveManyToMany,
@@ -10,14 +10,14 @@ import {
   Reference,
   cannotBeUpdated,
   hasAsyncMethod,
-  hasAsyncProperty,
   hasManyDerived,
   hasManyThrough,
   hasOneDerived,
-  hasReactiveAsyncProperty,
+  hasProperty,
   hasReactiveField,
   hasReactiveGetter,
   hasReactiveManyToMany,
+  hasReactiveProperty,
   hasReactiveReference,
   isDefined,
   withLoaded,
@@ -109,7 +109,7 @@ export class Author extends AuthorCodegen {
   );
 
   // this prop should fail if loaded to test preventing `this` usage in props/relations/fields
-  readonly thisTestProp: AsyncProperty<Author, any> = hasAsyncProperty({}, () => this.search);
+  readonly thisTestProp: Property<Author, any> = hasProperty({}, () => this.search);
 
   public transientFields = {
     beforeFlushRan: false,
@@ -334,8 +334,8 @@ export class Author extends AuthorCodegen {
    * Example of an async property that can be loaded via a populate hint.
    * @generated Author.md
    */
-  readonly numberOfBooks2: AsyncProperty<Author, number> = hasReactiveAsyncProperty({ books: "title" }, (a) => {
-    // Use the title to test reactivity to an hasReactiveAsyncProperty calc changing
+  readonly numberOfBooks2: Property<Author, number> = hasReactiveProperty({ books: "title" }, (a) => {
+    // Use the title to test reactivity to a hasReactiveProperty calc changing
     return a.books.get.filter((b) => b.title !== "Ignore").length;
   });
 
@@ -343,7 +343,7 @@ export class Author extends AuthorCodegen {
    * Example of an async property that returns an entity.
    * @generated Author.md
    */
-  readonly latestComment2: AsyncProperty<Author, Comment | undefined> = hasReactiveAsyncProperty(
+  readonly latestComment2: Property<Author, Comment | undefined> = hasReactiveProperty(
     { publisher: "comments", comments: {} },
     (author) => author.publisher.get?.comments.get[0] ?? author.comments.get[0],
   );
@@ -352,7 +352,7 @@ export class Author extends AuthorCodegen {
    * Example of an async property that has a conflicting/overlapping reactive hint with ^.
    * @generated Author.md
    */
-  readonly allPublisherAuthorNames: AsyncProperty<Author, string | undefined> = hasReactiveAsyncProperty(
+  readonly allPublisherAuthorNames: Property<Author, string | undefined> = hasReactiveProperty(
     { publisher: { authors: "firstName" } },
     (author) => author.publisher.get?.authors.get.flatMap((a) => a.firstName).join(),
   );
@@ -361,7 +361,7 @@ export class Author extends AuthorCodegen {
    * Example of an async property that returns a list of entities.
    * @generated Author.md
    */
-  readonly latestComments: AsyncProperty<Author, Comment[]> = hasAsyncProperty(
+  readonly latestComments: Property<Author, Comment[]> = hasProperty(
     { publisher: "comments", comments: {} },
     (author) => [...(author.publisher.get?.comments.get ?? []), ...author.comments.get],
   );
@@ -370,7 +370,7 @@ export class Author extends AuthorCodegen {
    * For testing reacting to poly CommentParent properties.
    * @generated Author.md
    */
-  readonly commentParentInfo: AsyncProperty<Author, string> = hasReactiveAsyncProperty(
+  readonly commentParentInfo: Property<Author, string> = hasReactiveProperty(
     "numberOfBooks",
     (a) => `books=${a.numberOfBooks.get}`,
   );

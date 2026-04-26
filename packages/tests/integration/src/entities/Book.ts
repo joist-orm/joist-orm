@@ -1,4 +1,4 @@
-import { AsyncProperty, hasReactiveAsyncProperty, hasReactiveField, ReactiveField } from "joist-orm";
+import { hasReactiveField, hasReactiveProperty, Property, ReactiveField } from "joist-orm";
 import { Author, BookCodegen, bookReviewBeforeFlushRan, bookConfig as config } from "./entities";
 
 export class Book extends BookCodegen {
@@ -19,7 +19,7 @@ export class Book extends BookCodegen {
    * For testing reacting to poly CommentParent properties.
    * @generated Book.md
    */
-  readonly commentParentInfo: AsyncProperty<Book, string> = hasReactiveAsyncProperty(
+  readonly commentParentInfo: Property<Book, string> = hasReactiveProperty(
     { reviews: "isPublic" },
     (b) => `reviews=${b.reviews.get.filter((r) => r.isPublic.get).length}`,
   );

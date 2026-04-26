@@ -13,6 +13,7 @@ import {
 import {
   insertAuthor,
   insertAuthorToTag,
+  insertLargePublisher,
   insertPublisher,
   insertSmallPublisher,
   insertTag,
@@ -60,6 +61,16 @@ describe("EntityManager.reactions", () => {
         source: Publisher,
         isReadOnly: true,
         name: "immutable",
+        fn,
+      },
+      {
+        kind: "reaction",
+        cstr: Publisher,
+        fields: ["name"],
+        path: [],
+        source: Publisher,
+        isReadOnly: false,
+        name: "ctiHintIsolation",
         fn,
       },
     ]);
@@ -760,6 +771,27 @@ describe("EntityManager.reactions", () => {
       expect(a.nickNames).toEqual(["a1ster"]);
       expect(a.transientFields.reactions.runOnce).toBe(2);
     });
+  });
+
+  describe("CTI subtype hint isolation", () => {
+    it.withCtx(
+      "computes load hints per subtype when a base reaction's hint resolves through subtype-overridden async properties",
+      async ({ em }) => {
+        // Given a Publisher reaction whose hint resolves through `commentParentInfo`, which is
+        // overridden in SmallPublisher with `selfReferential: []` and in LargePublisher with
+        // `critics: []` (each subtype-only). When `name` changes on both subtypes in the same
+        // flush, the reaction's wrappedFn fires for each entity. Pre-fix, a single closure-cached
+        // `loadHint` was computed from the first entity's meta and reused for the sibling subtype,
+        // causing `Invalid load hint 'critics' on SmallPublisher` (or vice versa).
+        await insertAuthor({ first_name: "spotlight" });
+        await insertLargePublisher({ id: 1, name: "lp", spotlight_author_id: 1 });
+        await insertSmallPublisher({ id: 2, name: "sp" });
+        const [lp, sp] = await Promise.all([em.load(LargePublisher, "p:1"), em.load(SmallPublisher, "p:2")]);
+        lp.name = "lp!";
+        sp.name = "sp!";
+        await em.flush();
+      },
+    );
   });
 });
 

@@ -116,12 +116,16 @@ export class ConfigApi<T extends Entity, C> {
       this.__data.rules.push({ name, fn, hint: undefined });
     } else {
       const hint = ruleOrHint;
-      let loadHint: LoadHint<T>;
-      // Create a wrapper around the user's function to populate
+      // Cache load hints per-meta because CTI subtypes may resolve `hint` to different
+      // load hints (e.g. an AsyncProperty overridden in the subtype with subtype-only relations).
+      const loadHints = new Map<EntityMetadata, LoadHint<T>>();
       const fn = (entity: T) => {
-        // Ideally, we'd convert this outside `wrappedFn`, but we don't have `metadata` yet. So we do it lazily on the
-        // first call.
-        loadHint ??= convertToLoadHint<T>(getMetadata(entity), hint);
+        const meta = getMetadata(entity);
+        let loadHint = loadHints.get(meta);
+        if (loadHint === undefined) {
+          loadHint = convertToLoadHint<T>(meta, hint);
+          loadHints.set(meta, loadHint);
+        }
         if (Object.keys(loadHint).length > 0) {
           return entity.em.populate(entity, loadHint).then(maybeRule!);
         }
@@ -274,12 +278,16 @@ export class ConfigApi<T extends Entity, C> {
       : {};
     const { name = getCallerName(), runOnce = false } = opts;
     this.ensurePreBoot(name, "addReaction");
-    let loadHint: LoadHint<T>;
-    // Create a wrapper around the user's function to populate
+    // Cache load hints per-meta because CTI subtypes may resolve `hint` to different
+    // load hints (e.g. an AsyncProperty overridden in the subtype with subtype-only relations).
+    const loadHints = new Map<EntityMetadata, LoadHint<T>>();
     const wrappedFn = (entity: T, ctx: C) => {
-      // Ideally, we'd convert this outside `wrappedFn`, but we don't have `metadata` yet. So we do it lazily on the
-      // first call.
-      loadHint ??= convertToLoadHint<T>(getMetadata(entity), hint);
+      const meta = getMetadata(entity);
+      let loadHint = loadHints.get(meta);
+      if (loadHint === undefined) {
+        loadHint = convertToLoadHint<T>(meta, hint);
+        loadHints.set(meta, loadHint);
+      }
       if (Object.keys(loadHint).length > 0) {
         return entity.em.populate(entity, loadHint).then((loaded) => fn(loaded as Loaded<T, H>, ctx));
       }

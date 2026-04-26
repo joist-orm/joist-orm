@@ -50,7 +50,14 @@ export const docs = {
   Critic: { comment: "", fields: {}, operations: undefined },
   CriticColumn: { comment: "", fields: {}, operations: undefined },
   Image: { comment: "", fields: {}, operations: undefined },
-  LargePublisher: { comment: "", fields: {}, operations: undefined },
+  LargePublisher: {
+    comment: "",
+    fields: {
+      favoriteAuthor:
+        "Subtype-specific override of `favoriteAuthor` that uses LargePublisher-only relations\n(`critics`) in its reactive hint. This catches cross-CTI-subtype hint contamination,\nsince `critics` does not exist on `SmallPublisher` or the abstract `Publisher`.",
+    },
+    operations: undefined,
+  },
   ParentGroup: { comment: "", fields: {}, operations: undefined },
   ParentItem: { comment: "", fields: {}, operations: undefined },
   Publisher: {

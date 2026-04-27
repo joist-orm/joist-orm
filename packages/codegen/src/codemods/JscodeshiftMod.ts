@@ -9,7 +9,7 @@ export class JscodeshiftMod implements Codemod {
     public codemodVersion: number,
     public name: string,
     public description: string,
-    private glob: (config: Config) => string,
+    private glob: (config: Config) => string = defaultGlob,
   ) {}
 
   async run(config: Config): Promise<void> {
@@ -23,4 +23,9 @@ export class JscodeshiftMod implements Codemod {
       parser: "ts",
     });
   }
+}
+
+/** Returns the default source tree for project-wide codemods. */
+function defaultGlob(config: Config): string {
+  return `${path.dirname(config.entitiesDirectory)}/**/*.ts`;
 }

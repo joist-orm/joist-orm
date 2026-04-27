@@ -5,7 +5,6 @@ export const codemod_0001_rename_has_async_property = new JscodeshiftMod(
   1,
   "codemod_0001-rename_has_async_property",
   "Rename `hasAsyncProperty` to `hasProperty`",
-  (config) => `${config.entitiesDirectory}/*.ts`,
 );
 
 const renames = new Map<string, string>([

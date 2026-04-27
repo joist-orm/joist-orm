@@ -211,7 +211,7 @@ describe("ReactionLogging", () => {
          "  Walked 1 Author.publisher paths, found 0 Publisher.addRule(Publisher.ts:201) to validate↩",
          "  Walked 1 Author.publisher paths, found 0 Publisher.addRule(Publisher.ts:208) to validate↩",
          "  Walked 1 Author.publisher paths, found 0 Publisher.addRule(Publisher.ts:216) to validate↩",
-         "  Walked 1 Author.publisher@SmallPublisher paths, found 0 SmallPublisher.addRule(SmallPublisher.ts:73) to validate↩",
+         "  Walked 1 Author.publisher@SmallPublisher paths, found 0 SmallPublisher.addRule(SmallPublisher.ts:86) to validate↩",
          "Recalculating reactive queries values... (em.entities=1)↩",
          "  Walked 1 Author.publisher paths, found 0 Publisher.numberOfBookReviews to recalc↩",
          "  Walked 1 Author.publisher.group paths, found 0 PublisherGroup.numberOfBookReviewsFormatted to recalc↩",

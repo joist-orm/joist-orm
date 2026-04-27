@@ -50,7 +50,14 @@ export const docs = {
   Critic: { comment: "", fields: {}, operations: undefined },
   CriticColumn: { comment: "", fields: {}, operations: undefined },
   Image: { comment: "", fields: {}, operations: undefined },
-  LargePublisher: { comment: "", fields: {}, operations: undefined },
+  LargePublisher: {
+    comment: "",
+    fields: {
+      commentParentInfo:
+        "Subtype-specific override of `commentParentInfo` whose hint mentions LP-only relations.\nUsed to catch CTI-subtype reactive-hint contamination in `addRule`/`addReaction`'s\nclosure-cached `loadHint`.",
+    },
+    operations: undefined,
+  },
   ParentGroup: { comment: "", fields: {}, operations: undefined },
   ParentItem: { comment: "", fields: {}, operations: undefined },
   Publisher: {
@@ -74,7 +81,11 @@ export const docs = {
   PublisherGroup: { comment: "", fields: {}, operations: undefined },
   SmallPublisher: {
     comment: "",
-    fields: { favoriteAuthor: "Example of a ReactiveReference in an entity with subtypes." },
+    fields: {
+      favoriteAuthor: "Example of a ReactiveReference in an entity with subtypes.",
+      commentParentInfo:
+        "Subtype-specific override of `commentParentInfo` whose hint mentions SP-only relations.\nUsed to catch CTI-subtype reactive-hint contamination in `addRule`/`addReaction`'s\nclosure-cached `loadHint`.",
+    },
     operations: undefined,
   },
   SmallPublisherGroup: { comment: "", fields: {}, operations: undefined },

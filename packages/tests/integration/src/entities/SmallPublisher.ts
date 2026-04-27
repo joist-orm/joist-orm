@@ -2,8 +2,10 @@ import {
   cannotBeUpdated,
   ConfigApi,
   hasReactiveField,
+  hasReactiveProperty,
   hasReactiveReference,
   ManyToOneReference,
+  Property,
   ReactiveField,
   ReactiveReference,
 } from "joist-orm";
@@ -39,6 +41,17 @@ export class SmallPublisher extends SmallPublisherCodegen implements HasGroup<Sm
   // Used for testing a derived property that only exists on a subtype
   readonly allAuthorNames: ReactiveField<SmallPublisher, string> = hasReactiveField({ authors: ["firstName"] }, (sp) =>
     sp.authors.get.map((a) => a.firstName).join(", "),
+  );
+
+  /**
+   * Subtype-specific override of `commentParentInfo` whose hint mentions SP-only relations.
+   * Used to catch CTI-subtype reactive-hint contamination in `addRule`/`addReaction`'s
+   * closure-cached `loadHint`.
+   * @generated SmallPublisher.md
+   */
+  readonly commentParentInfo: Property<SmallPublisher, string> = hasReactiveProperty(
+    { selfReferential: [] },
+    () => "sp",
   );
 
   /**

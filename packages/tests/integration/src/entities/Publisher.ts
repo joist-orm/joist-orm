@@ -247,6 +247,12 @@ config.addRule({ authors_ro: { books_ro: { randomComment_ro: "text_ro" } }, name
   }
 });
 
+// Reactive reaction on the CTI base whose `commentParentInfo_ro` hint recurses through a
+// subtype-overridden AsyncProperty whose own hint references subtype-only relations.
+// Used to verify `addRule`/`addReaction`'s wrappedFn does not leak a CTI subtype's load
+// hint into a sibling subtype's `em.populate` (issue: closure-cached `loadHint`).
+config.addReaction("ctiHintIsolation", { commentParentInfo_ro: {}, name: {} }, () => {});
+
 // For testing touchOnChange from base types
 config.touchOnChange("tags");
 

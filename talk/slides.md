@@ -27,13 +27,24 @@ fonts:
       <span v-mark="{ at: 1, type: 'strike-through', color: '#fc8a22' }">Putting the domain model on the wire</span>
     </div>
     <div v-click="1" class="text-2xl text-joist font-semibold italic">
-      Cloning Ent
+      Cloning Ent in TypeScript
     </div>
   </div>
   <div class="text-lg opacity-70 mt-5">
     Stephen Haberman · GraphQL Conf 2026
   </div>
 </div>
+
+<!--
+Hi, I'm Stephen Haberman, an engineer at Homebound, a VC-backed construction startup,
+where we don't sell SaaS, we actually build the homes; we have GC licenses in several
+states, and have built a GraphQL/TypeScript monolith to power our construction platform.
+
+We use GraphQL heavily in our stack, and really love it, which leads me to the talk
+today -- Making...
+
+..aka...aka...
+-->
 
 ---
 layout: default
@@ -42,12 +53,16 @@ layout: default
 # Clients love GraphQL ♥️
 
 - **Relay** + **Apollo** set the bar for client-side DX
-- GraphQL "fat shapes" are super-easy to render
+- GraphQL "fat shapes" subgraphs are super-easy to render
 - Even REST wants to *look* like GraphQL now
 
 <div v-click class="mt-12 text-joist text-2xl">
 GraphQL's client story is amazing
 </div>
+
+<!--
+No denying that frontends love GraphQL...
+-->
 
 ---
 
@@ -56,7 +71,6 @@ GraphQL's client story is amazing
 - **N+1** s by default
 - **DataLoader** boilerplate
 - **Validation** scattered across every mutation
-- **Derived fields** recomputed by hand
 - "Resolver spaghetti" business logic
 - **Auth** 🙈
 
@@ -64,20 +78,28 @@ GraphQL's client story is amazing
 Frontends drove GraphQL's peak hype, the backend DX killed it
 </div>
 
+<!--
+Which is curious, what about Facebook?
+-->
+
 ---
 layout: two-cols-header
 ---
 
 # How did Facebook do this? 🤔
 
-- **Ent** — a rich entity/domain model in Hack.
+- **Ent** — a rich entity/domain model in Hack
 - **GraphQL** — a *wire format* for querying Ent
 - Probably few resolvers, graph-based auth, graph-based traversal, etc.
 - The domain model came first
 
 <div v-click class="mt-10 text-2xl">
-  <span class="text-joist font-bold">Joist</span> = Ent-style domain model in TypeScript
+  <span class="text-joist font-bold">Joist</span> = entity-based ORM for TypeScript/Postgres
 </div>
+
+<!--
+I haven't worked at Facebook, but my understanding is that Ent already existed.
+-->
 
 ---
 
@@ -256,7 +278,7 @@ layout: two-cols-header
 
 # 3. Dataloaders for Free
 
-<div class="text-lg -mt-1">No N+1s, in user code or validation rules</div>
+<div class="text-lg -mt-1">No N+1s</div>
 
 ::left::
 
@@ -268,10 +290,12 @@ const authors = await em.loadAll(Author, ids);
 
 // per-author book load, in parallel
 const allBooks = await Promise.all(
+  // Risks an N+1 of per-Author
+  // SELECT * FROM books WHERE author_id = ?
   authors.map(a => a.books.load())
 );
 
-// 1 SQL query for all 100 authors:
+// But really 1 SQL query for all 100 authors:
 // SELECT * FROM books WHERE author_id IN (...)
 ```
 
@@ -280,14 +304,22 @@ const allBooks = await Promise.all(
 **Emergent batching** — no restructuring needed
 
 ```ts
-// Author.ts
-config.addRule({ books: "title" }, (a) => {
-  if (a.books.get.some(b => /draft/.test(b.title)))
-    return "no draft titles";
-});
+// Some big gnarly function
+async function someComplicatedLogic(authors: Author[]) {
+  // ...do some stuff...
+  await authors.asyncForEach(async (a) => {
+    // lots of lines
+    await helerMethod(a);
+  });
+}
+
 
 // em.flush() invokes the rule for each dirty author,
 // and all authors' books are still loaded in 1 SQL call
+async function someHelperMethod(a: Author) {
+  const books = await a.books.load();
+  return books.map(b => b.title).join(", ");
+}
 ```
 
 ---
@@ -435,7 +467,8 @@ layout: two-cols-header
 
 # 7. Graph-based Auth
 
-<div class="text-lg -mt-1">Tenant scoping at the graph layer, not in every query</div>
+<div class="text-lg -mt-1">Bring your own query AST plugin</div>
+
 
 ::left::
 
@@ -515,3 +548,5 @@ Thanks!
 <div class="mt-2 text-lg opacity-75">
 Stephen Haberman
 </div>
+
+<!-- Because of the robust domain models, we can put entities on the wire ... and it's fun. -->

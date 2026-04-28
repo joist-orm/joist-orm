@@ -2,7 +2,7 @@ import { groupBy, isPlainObject } from "joist-utils";
 import { getAliasMgmt, getMaybeCtiAlias, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
-import { EntityMetadata, getBaseMeta } from "./EntityMetadata";
+import { getBaseMeta, type EntityMetadata } from "./EntityMetadata";
 import { pruneUnusedJoins } from "./QueryParser.pruning";
 import { visitConditions } from "./QueryVisitor";
 import { getMetadataForTable } from "./configure";
@@ -25,7 +25,7 @@ export interface ParsedExpressionFilter {
 }
 
 /** A condition or nested condition in a `ParsedExpressionFilter`. */
-export type ParsedExpressionCondition = ParsedExpressionFilter | ColumnCondition | RawCondition;
+export type ParsedExpressionCondition = ParsedExpressionFilter | ColumnCondition | RawCondition | ExistsCondition;
 
 export interface ColumnCondition {
   kind: "column";
@@ -53,6 +53,21 @@ export interface RawCondition {
   pruneable: boolean;
 }
 
+/** An EXISTS or NOT EXISTS subquery condition. */
+export interface ExistsCondition {
+  kind: "exists";
+  /** When true, renders as NOT EXISTS. */
+  negate: boolean;
+  /** The outer-to-inner predicate that correlates the subquery with its parent query. */
+  correlation: RawCondition;
+  /** The join columns to use if this EXISTS must be unwrapped back into an outer join. */
+  joinColumns: { col1: string; col2: string };
+  /** The subquery: SELECT 1 FROM child WHERE correlation AND filter. */
+  subquery: ParsedFindQuery;
+  /** Outer aliases referenced by the correlation predicate, for join pruning. */
+  outerAliases: string[];
+}
+
 /** A marker condition for alias methods to indicate they should be skipped/pruned. */
 export const skipCondition: ColumnCondition = {
   kind: "column",
@@ -75,6 +90,35 @@ export interface JoinTable {
   col1: string;
   col2: string;
   distinct?: boolean;
+  /**
+   * Metadata used by `optimizeCollectionJoins` to rewrite collection joins into EXISTS.
+   *
+   * I.e. for `Author.books.reviews`:
+   * ```sql
+   * authors a
+   * LEFT JOIN books b ON a.id = b.author_id
+   * LEFT JOIN book_reviews br ON b.id = br.book_id
+   * ```
+   * `books b` has `parentAlias: "a"` and `rootAlias: "b"`, while `book_reviews br` has
+   * `parentAlias: "b"` and `rootAlias: "br"`.
+   *
+   * I.e. for `Author.tags`, the m2m join table is the collection root:
+   * ```sql
+   * authors a
+   * LEFT JOIN authors_to_tags att ON a.id = att.author_id
+   * LEFT JOIN tags t ON att.tag_id = t.id
+   * ```
+   * `authors_to_tags att` has `alias: "att"` and `rootAlias: "att"`, while `tags t` has `alias: "t"`
+   * but still has `rootAlias: "att"` because it belongs to the m2m subtree rooted at the join table.
+   */
+  collection?: {
+    /** The collection relation type, i.e. `o2m` for `Author.books`, or `m2m` for `Author.tags`. */
+    kind: "o2m" | "m2m";
+    /** The alias that owns this collection path, i.e. `a` for `Author.books`, or `att` for `Author.tags -> tags`. */
+    parentAlias: string;
+    /** The top-level alias in this collection subtree, i.e. `b` for `Author.books.reviews`, or `att` for `Author.tags`. */
+    rootAlias: string;
+  };
 }
 
 /**
@@ -152,7 +196,7 @@ export interface ParsedGroupBy {
   column: string;
 }
 
-type ParsedSelect = string | ParsedSelectWithBindings;
+export type ParsedSelect = string | ParsedSelectWithBindings;
 type ParsedSelectWithBindings = { sql: string; bindings: any[]; aliases: string[] };
 
 /** The result of parsing an `em.find` filter. */
@@ -160,8 +204,6 @@ export interface ParsedFindQuery {
   selects: ParsedSelect[];
   /** The primary table plus any joins. */
   tables: ParsedTable[];
-  /** Any cross lateral joins, where the `joins: string[]` has the full join as raw SQL; currently only for preloading. */
-  lateralJoins?: { joins: string[]; bindings: any[] };
   /** The query's conditions. */
   condition?: ParsedExpressionFilter;
   /** Extremely optional group bys; we generally don't support adhoc/aggregate queries, but the auto-batching infra uses these. */
@@ -172,7 +214,12 @@ export interface ParsedFindQuery {
   ctes?: ParsedCteClause[];
 }
 
-/** Parses an `em.find` filter into a `ParsedFindQuery` AST for simpler execution. */
+/**
+ * Parses an `em.find` filter into a logical `ParsedFindQuery` AST, leaving optimization/pruning to callers.
+ *
+ * The main execution flow is:
+ * parseFindQuery -> beforeFind plugins -> optimizeCollectionJoins -> pruneUnusedJoins -> execute SQL.
+ */
 export function parseFindQuery(
   meta: EntityMetadata,
   filter: any,
@@ -182,17 +229,18 @@ export function parseFindQuery(
     pruneJoins?: boolean;
     keepAliases?: string[];
     softDeletes?: "include" | "exclude";
+    allowMultipleLeftJoins?: boolean;
   } = {},
 ): ParsedFindQuery {
   const selects: string[] = [];
   const tables: ParsedTable[] = [];
   const orderBys: ParsedOrderBy[] = [];
-  const query = { selects, tables, orderBys };
+  const query: ParsedFindQuery = { selects, tables, orderBys };
   const {
     orderBy = undefined,
     conditions: optsExpression = undefined,
     softDeletes = "exclude",
-    pruneJoins = true,
+    pruneJoins = false,
     keepAliases = [],
   } = opts;
   const cb = new ConditionBuilder();
@@ -205,7 +253,7 @@ export function parseFindQuery(
     return i === 0 ? abbrev : `${abbrev}${i}`;
   }
 
-  function maybeAddNotSoftDeleted(meta: EntityMetadata, alias: string): void {
+  function addSoftDeleteCondition(meta: EntityMetadata, alias: string): void {
     if (filterSoftDeletes(meta, softDeletes)) {
       const column = meta.allFields[getBaseMeta(meta).timestampFields!.deletedAt!].serde?.columns[0]!;
       cb.addSimpleCondition({
@@ -236,7 +284,7 @@ export function parseFindQuery(
 
     if (join === "primary") {
       tables.push({ alias, table: meta.tableName, join });
-      addTablePerClassJoinsAndClassTag(query, meta, alias, true);
+      addTablePerClassJoinsAndClassTag({ selects, tables, orderBys }, meta, alias, true);
     } else if (meta.inheritanceType === "cti" && fieldName && !(fieldName in meta.fields)) {
       // For cti, our meta might be a subtype while the FK is actually on the base table.  This should only be the case
       // when the fk is on another table (e.g. o2o/o2m).  In these cases, we'll be passed a field name and can verify if
@@ -265,14 +313,14 @@ export function parseFindQuery(
     } else {
       tables.push({ alias, table: meta.tableName, join, col1, col2 });
       // Maybe only do this if we're the primary, or have a field that needs it?
-      addTablePerClassJoinsAndClassTag(query, meta, alias, false);
+      addTablePerClassJoinsAndClassTag({ selects, tables, orderBys }, meta, alias, false);
     }
 
     if (needsStiDiscriminator(meta)) {
       addStiSubtypeFilter(cb, meta, alias);
     }
 
-    maybeAddNotSoftDeleted(meta, alias);
+    addSoftDeleteCondition(meta, alias);
 
     // The user's locally declared aliases, i.e. `const [a, b] = aliases(Author, Book)`,
     // aren't guaranteed to line up with the aliases we've assigned internally, like `a`
@@ -409,19 +457,20 @@ export function parseFindQuery(
             field.otherFieldName,
           );
         } else if (field.kind === "o2m") {
-          const a = getAlias(field.otherMetadata().tableName);
-          const otherField = field.otherMetadata().allFields[field.otherFieldName];
+          const otherMeta = field.otherMetadata();
+          const otherField = otherMeta.allFields[field.otherFieldName];
           let otherColumn = otherField.serde!.columns[0].columnName;
-          // If the other field is a poly, we need to find the right column
           if (otherField.kind === "poly") {
-            // For a subcomponent that matches field's metadata
             const otherComponent =
               otherField.components.find((c) => c.otherMetadata() === meta) ??
               fail(`No poly component found for ${otherField.fieldName}`);
             otherColumn = otherComponent.columnName;
           }
+          const isCtiBaseFk =
+            otherMeta.inheritanceType === "cti" && field.otherFieldName && !(field.otherFieldName in otherMeta.fields);
+          const a = getAlias(otherMeta.tableName);
           addTable(
-            field.otherMetadata(),
+            otherMeta,
             a,
             "outer",
             kqDot(alias, "id"),
@@ -429,55 +478,50 @@ export function parseFindQuery(
             (ef.subFilter as any)[key],
             field.otherFieldName,
           );
+          if (!isCtiBaseFk) {
+            const table = tables.find((t) => t.alias === a);
+            if (table && (table.join === "inner" || table.join === "outer")) {
+              table.collection = { parentAlias: alias, rootAlias: a, kind: "o2m" };
+            }
+          }
         } else if (field.kind === "m2m") {
-          // Always join into the m2m table
+          const sub = (ef.subFilter as any)[key];
+          const f = parseEntityFilter(field.otherMetadata(), sub);
+          if (!f && !isAlias(sub)) return;
+
           const ja = getAlias(field.joinTableName);
           tables.push({
-            alias: ja,
             join: "outer",
+            alias: ja,
             table: field.joinTableName,
             col1: kqDot(alias, "id"),
             col2: kqDot(ja, field.columnNames[0]),
+            collection: { parentAlias: alias, rootAlias: ja, kind: "m2m" },
           });
-          // But conditionally join into the alias table
-          const sub = (ef.subFilter as any)[key];
-          if (isAlias(sub)) {
+
+          if (isAlias(sub) || f?.kind === "join" || filterSoftDeletes(field.otherMetadata(), softDeletes)) {
             const a = getAlias(field.otherMetadata().tableName);
             addTable(field.otherMetadata(), a, "outer", kqDot(ja, field.columnNames[1]), kqDot(a, "id"), sub);
-          }
-          const f = parseEntityFilter(field.otherMetadata(), sub);
-          // Probe the filter and see if it's just an id, if so we can avoid the join
-          if (!f) {
-            // skip
-          } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata(), softDeletes)) {
-            const a = getAlias(field.otherMetadata().tableName);
-            addTable(
-              field.otherMetadata(),
-              a,
-              "outer",
-              kqDot(ja, field.columnNames[1]),
-              kqDot(a, "id"),
-              (ef.subFilter as any)[key],
-            );
-          } else {
-            const meta = field.otherMetadata();
-            // We normally don't have `columns` for m2m fields, b/c they don't go through normal serde
-            // codepaths, so make one up to leverage the existing `mapToDb` function.
+            const table = tables.find((t) => t.alias === a);
+            if (table && (table.join === "inner" || table.join === "outer")) {
+              table.collection = { parentAlias: ja, rootAlias: ja, kind: "m2m" };
+            }
+          } else if (f) {
+            const otherMeta = field.otherMetadata();
             const column: any = {
               columnName: field.columnNames[1],
-              dbType: meta.idDbType,
+              dbType: otherMeta.idDbType,
               mapToDb(value: any) {
-                // Check for `typeof value === number` in case this is a new entity, and we've been given the nilIdValue
                 return value === null || isNilIdValue(value)
                   ? value
-                  : keyToNumber(meta, maybeResolveReferenceToId(value));
+                  : keyToNumber(otherMeta, maybeResolveReferenceToId(value));
               },
             };
             cb.addSimpleCondition({
               kind: "column",
               alias: ja,
               column: field.columnNames[1],
-              dbType: meta.idDbType,
+              dbType: otherMeta.idDbType,
               cond: mapToDb(column, f),
             });
           }
@@ -577,7 +621,7 @@ export function parseFindQuery(
  * to do an `OR` across two different children (which queries both children being
  * OUTER JOINs, and detecting that case seemed complicated).
  */
-function maybeAddIdNotNulls(query: ParsedFindQuery): void {
+export function maybeAddIdNotNulls(query: ParsedFindQuery): void {
   visitConditions(query, {
     visitCond(c: ColumnCondition) {
       // Check `c.prunable` to make sure we don't catch our injected `deleted_at is null` conditions

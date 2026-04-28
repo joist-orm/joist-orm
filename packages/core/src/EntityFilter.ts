@@ -12,6 +12,7 @@ export type FilterAndSettings<T extends Entity> = {
   limit?: number;
   offset?: number;
   softDeletes?: "exclude" | "include";
+  allowMultipleLeftJoins?: boolean;
 };
 
 export type OrderBy = "ASC" | "DESC";

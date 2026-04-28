@@ -32,7 +32,13 @@ interface PluginMethods {
     meta: EntityMetadata,
     operation: FindOperation,
     query: ParsedFindQuery,
-    settings: { limit?: number; offset?: number },
+    settings: {
+      limit?: number;
+      offset?: number;
+      allowMultipleLeftJoins?: boolean;
+      pruneJoins?: boolean;
+      keepAliases?: string[];
+    },
   ): void;
   /**
    * Called after a find operation has been executed with the raw database rows.
@@ -142,7 +148,13 @@ export class PluginManager implements Required<PluginMethods> {
     meta: EntityMetadata,
     operation: FindOperation,
     query: ParsedFindQuery,
-    settings: { limit?: number; offset?: number },
+    settings: {
+      limit?: number;
+      offset?: number;
+      allowMultipleLeftJoins?: boolean;
+      pruneJoins?: boolean;
+      keepAliases?: string[];
+    },
   ): void {}
   afterFind(meta: EntityMetadata, operation: FindOperation, rows: any[]) {}
   afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void {}

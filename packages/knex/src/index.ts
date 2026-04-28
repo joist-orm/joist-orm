@@ -1,4 +1,11 @@
-import { Entity, FilterAndSettings, getMetadata, MaybeAbstractEntityConstructor, parseFindQuery } from "joist-core";
+import {
+  Entity,
+  FilterAndSettings,
+  getMetadata,
+  MaybeAbstractEntityConstructor,
+  optimizeCollectionJoins,
+  parseFindQuery,
+} from "joist-core";
 import { knex as baseCreateKnex, Knex } from "knex";
 import pg from "pg";
 import { buildKnexQuery } from "./buildKnexQuery";
@@ -24,6 +31,8 @@ import { buildKnexQuery } from "./buildKnexQuery";
  *   against the `QueryBuilder` directly.
  * @param filter[pruneJoins] Disables removing any unused joins, i.e. because you plan on adding your
  *   own joins/conditions against the `QueryBuilder` directly.
+ * @param filter[allowMultipleLeftJoins] Allows multiple fanout LEFT JOINs when Joist cannot express
+ *   an alias condition as EXISTS.
  */
 export function buildQuery<T extends Entity>(
   knex: Knex,
@@ -31,6 +40,7 @@ export function buildQuery<T extends Entity>(
   filter: FilterAndSettings<T> & {
     pruneJoins?: boolean;
     keepAliases?: string[];
+    allowMultipleLeftJoins?: boolean;
   },
 ): Knex.QueryBuilder<{}, unknown[]> {
   const meta = getMetadata(type);
@@ -42,9 +52,16 @@ export function buildQuery<T extends Entity>(
     offset,
     pruneJoins = true,
     keepAliases = [],
+    allowMultipleLeftJoins = false,
     softDeletes = "exclude",
   } = filter;
-  const parsed = parseFindQuery(meta, where, { conditions, orderBy, pruneJoins, keepAliases, softDeletes });
+  const parsed = parseFindQuery(meta, where, {
+    conditions,
+    orderBy,
+    keepAliases,
+    softDeletes,
+  });
+  optimizeCollectionJoins(parsed, { allowMultipleLeftJoins, pruneJoins, keepAliases });
   return buildKnexQuery(knex, parsed, { limit, offset });
 }
 

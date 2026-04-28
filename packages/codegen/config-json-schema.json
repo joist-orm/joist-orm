@@ -6,9 +6,7 @@
       "properties": {
         "databaseUrl": { "type": "string" },
         "contextType": { "type": "string" },
-        "temporal": {
-          "anyOf": [{ "type": "boolean" }, { "type": "object", "properties": { "timeZone": { "type": "string" } } }]
-        },
+        "transactionType": { "type": "string" },
         "timestampColumns": {
           "type": "object",
           "properties": {
@@ -25,6 +23,17 @@
             "deletedAt": { "$ref": "#/definitions/mySchema/properties/timestampColumns/properties/createdAt" }
           },
           "additionalProperties": false
+        },
+        "temporal": {
+          "anyOf": [
+            { "type": "boolean" },
+            {
+              "type": "object",
+              "properties": { "timeZone": { "type": "string" } },
+              "required": ["timeZone"],
+              "additionalProperties": false
+            }
+          ]
         },
         "createFlushFunction": { "anyOf": [{ "type": "boolean" }, { "type": "array", "items": { "type": "string" } }] },
         "entitiesDirectory": { "type": "string", "default": "./src/entities" },
@@ -48,9 +57,9 @@
                     "zodSchema": { "type": "string" },
                     "type": { "type": "string" },
                     "serde": { "type": "string" },
-                    "stiType": { "type":  "string" },
+                    "stiDiscriminator": { "type": "object", "additionalProperties": { "type": "string" } },
+                    "stiType": { "type": "string" },
                     "notNull": { "type": "boolean" },
-                    "stiDiscriminator": { "type": "object" },
                     "hasDefault": { "type": "boolean" }
                   },
                   "additionalProperties": false
@@ -61,21 +70,28 @@
                 "additionalProperties": {
                   "type": "object",
                   "properties": {
-                    "derived": { "type": "string", "enum": ["async"] },
+                    "derived": { "type": "string", "const": "async" },
                     "polymorphic": { "type": ["string", "boolean"], "enum": ["notNull", true] },
                     "large": { "type": "boolean" },
                     "orderBy": { "type": "string" },
-                    "subType": { "type":  "string" },
-                    "stiType": { "type":  "string" },
-                    "notNull": { "type": "boolean" },
+                    "stiType": { "type": "string" },
+                    "subType": { "type": "string" },
                     "skipRecursiveRelations": { "type": "boolean" },
+                    "notNull": { "type": "boolean" },
                     "hasDefault": { "type": "boolean" }
                   },
                   "additionalProperties": false
                 }
               },
               "abstract": { "type": "boolean" },
-              "orderBy": { "type": "string" }
+              "orderBy": { "type": "string" },
+              "uniqueBy": {
+                "anyOf": [
+                  { "type": "string" },
+                  { "type": "array", "items": { "type": "string" } },
+                  { "type": "array", "items": { "type": "array", "items": { "type": "string" } } }
+                ]
+              }
             },
             "required": ["tag"],
             "additionalProperties": false
@@ -84,8 +100,13 @@
         },
         "ignoredTables": { "type": "array", "items": { "type": "string" } },
         "idType": { "type": "string", "enum": ["tagged-string", "untagged-string", "number"] },
-        "version": { "type":  "string" },
-        "transactionType": { "type": "string" }
+        "nonDeferredForeignKeys": { "type": "string", "enum": ["error", "warn", "ignore"] },
+        "esm": { "type": "boolean" },
+        "docs": { "type": "boolean" },
+        "outputDocs": { "type": "boolean" },
+        "allowImportingTsExtensions": { "type": "boolean" },
+        "codemodVersion": { "type": "integer", "minimum": 0, "default": 0 },
+        "schemas": { "type": "array", "items": { "type": "string" } }
       },
       "additionalProperties": false
     }

@@ -58,3 +58,58 @@ If you'd like to include soft-deleted rows in a `find` query, you can use the `s
 ```ts
 const allBooks = await em.find(Book, {}, { softDeletes: "include" });
 ```
+
+## Resurrection
+
+When Joist is about to create a new entity through `em.upsert` or `em.findOrCreate`, it will first check whether a matching soft-deleted row already exists. If it finds one, Joist will resurrect the row by clearing its `deleted_at` value and then apply the requested updates.
+
+For example, if an `Author` with `ssn = "123"` was previously soft-deleted, this will update that existing row instead of inserting a duplicate:
+
+```ts
+const author = await em.upsert(Author, { ssn: "123", firstName: "Jane" });
+```
+
+Resurrection is treated as an update, not a create. The entity keeps its existing id, `beforeUpdate` hooks run, and `beforeCreate` hooks do not run.
+
+For `findOrCreate`, Joist uses the provided `where` clause as the identity:
+
+```ts
+const author = await em.findOrCreate(Author, { ssn: "123" }, { firstName: "Jane" });
+```
+
+For `em.upsert`, Joist needs to know which fields identify an existing row. Joist infers single-column unique primitive fields, and you can also configure identities explicitly with `uniqueBy` in `joist-config.json`:
+
+```json
+{
+  "entities": {
+    "Author": {
+      "uniqueBy": "ssn"
+    },
+    "Book": {
+      "uniqueBy": ["author", "title"]
+    }
+  }
+}
+```
+
+`uniqueBy` accepts these equivalent forms:
+
+```json
+{
+  "uniqueBy": "ssn"
+}
+```
+
+```json
+{
+  "uniqueBy": ["author", "title"]
+}
+```
+
+```json
+{
+  "uniqueBy": [["email"], ["author", "title"]]
+}
+```
+
+Each identity must use fields that can be queried directly, such as primitives, enums, many-to-one references, and polymorphic references. Joist skips resurrection lookup when any identity value is `null` or `undefined`, and `id: null` in an upsert still means "force create a new row".

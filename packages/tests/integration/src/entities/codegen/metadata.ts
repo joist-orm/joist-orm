@@ -189,6 +189,7 @@ export const authorMeta: EntityMetadata<Author> = {
   factory: newAuthor,
   baseTypes: [],
   subTypes: [],
+  uniqueBy: [["ssn"], ["currentDraftBook"]],
 };
 
 (Author as any).metadata = authorMeta;
@@ -294,6 +295,7 @@ export const bookMeta: EntityMetadata<Book> = {
   factory: newBook,
   baseTypes: [],
   subTypes: [],
+  uniqueBy: [["author", "title"], ["prequel"]],
 };
 
 (Book as any).metadata = bookMeta;
@@ -533,6 +535,7 @@ export const criticColumnMeta: EntityMetadata<CriticColumn> = {
   factory: newCriticColumn,
   baseTypes: [],
   subTypes: [],
+  uniqueBy: [["critic"]],
 };
 
 (CriticColumn as any).metadata = criticColumnMeta;
@@ -562,6 +565,7 @@ export const imageMeta: EntityMetadata<Image> = {
   factory: newImage,
   baseTypes: [],
   subTypes: [],
+  uniqueBy: [["author"], ["book"]],
 };
 
 (Image as any).metadata = imageMeta;
@@ -923,6 +927,7 @@ export const userMeta: EntityMetadata<User> = {
   factory: newUser,
   baseTypes: [],
   subTypes: [],
+  uniqueBy: [["authorManyToOne"]],
 };
 
 (User as any).metadata = userMeta;

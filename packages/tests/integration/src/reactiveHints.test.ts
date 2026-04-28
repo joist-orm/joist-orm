@@ -244,6 +244,14 @@ describe("reactiveHints", () => {
     ]);
   });
 
+  it("skips read-only m2m children", () => {
+    expect(reverse(Book, Book, { tags_ro: "name:ro" })).toEqual([
+      { entity: "Book", fields: [], path: [] },
+      { entity: "Book", kind: "read-only", fields: ["tags"], path: [] },
+      { entity: "Tag", kind: "read-only", fields: ["name"], path: ["books"] },
+    ]);
+  });
+
   it("can do read-only string hint", () => {
     expect(reverse(Author, Author, "publisher:ro")).toEqual([
       { entity: "Author", fields: [], path: [] },

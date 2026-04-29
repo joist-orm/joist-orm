@@ -22,7 +22,10 @@ export class BatchLoader<K> {
 
   loadAll(keys: K[]): Promise<void> {
     this.#ensureBatch();
-    this.#pending!.push(...keys);
+    // Avoid `push(...keys)`: spread passes each key as a separate function argument, and V8 throws
+    // `RangeError: Maximum call stack size exceeded` once `keys.length` exceeds the argument-count
+    // limit (~65k). This trips on real-world m2m fan-outs (e.g. ~250k join rows).
+    for (const key of keys) this.#pending!.push(key);
     return this.#batchPromise!;
   }
 

@@ -145,6 +145,21 @@ describe("EntityManager.reactiveRules", () => {
       // And we only needed to do 1 recalc
       expect(em.getEntities(Author).length).toBe(1);
     });
+
+    it.withCtx("does not run m2m reactive rules for read-only hints", async ({ em }) => {
+      // Given a Book with one tag, and a rule that only reads tags as read-only.
+      const b = newBook(em, { tags: [1] });
+      const t2 = newTag(em, 2);
+      await em.flush();
+      expect(b.transientFields.readOnlyTagsRuleInvoked).toBe(1);
+
+      // When the tag collection changes.
+      b.tags.add(t2);
+      await em.flush();
+
+      // Then the read-only tags rule did not run again.
+      expect(b.transientFields.readOnlyTagsRuleInvoked).toBe(1);
+    });
   });
 
   it.withCtx("only runs explicitly triggered rules when updating", async ({ em }) => {
@@ -305,6 +320,8 @@ describe("EntityManager.reactiveRules", () => {
       },
       // The tags <= 3 rule
       { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["tags"], path: [], fn },
+      // Book's read-only tags rule only depends on title
+      { cstr: "Book", name: sm(/Book.ts:\d+/), fields: ["title"], path: [], fn },
       // Publisher's numberOfBooks2 "cannot have 13 books" rule
       {
         cstr: "Publisher",
@@ -464,7 +481,7 @@ describe("EntityManager.reactiveRules", () => {
     expect(bRfs[i++]).toEqual({
       kind: "reaction",
       cstr: "Book",
-      name: "Book.ts:123",
+      name: "Book.ts:129",
       fields: ["notes"],
       path: [],
       runOnce: false,

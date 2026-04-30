@@ -7,6 +7,7 @@ export class Book extends BookCodegen {
     firstNameRuleInvoked: 0,
     favoriteColorsRuleInvoked: 0,
     reviewsRuleInvoked: 0,
+    readOnlyTagsRuleInvoked: 0,
     numberOfBooks2RuleInvoked: 0,
     authorSetWhenDeleteRuns: undefined as boolean | undefined,
     afterCommitCheckTagsChanged: undefined as boolean | undefined,
@@ -117,6 +118,11 @@ config.beforeDelete("author", (b) => {
 // Test m2m reactivity on collection size
 config.addRule("tags", (b) => {
   return b.tags.get.length === 3 ? "Cannot have exactly three tags" : undefined;
+});
+
+// Test that m2m hints marked read-only do not make validation rules reactive.
+config.addRule(["title", "tags:ro"], (b) => {
+  b.transientFields.readOnlyTagsRuleInvoked++;
 });
 
 // For testing reactions observing fields set by defaults

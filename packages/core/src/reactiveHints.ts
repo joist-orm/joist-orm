@@ -261,7 +261,7 @@ function reverseSubHint(
         // table), for m2m reactivity we push the collection name into the reactive hint, because it's effectively
         // "the other/reverse side", and JoinRows will trigger `queueDownstreamReactables` explicitly, instead of
         // `setField` which handles regular/non-m2m mutations.
-        fields.push(field.fieldName);
+        _fields.push(field.fieldName);
         const otherFieldName = maybeAddTypeFilterSuffix(meta, field);
         return reverseReactiveHint(
           rootType,
@@ -390,7 +390,7 @@ function reverseSubHint(
       const { otherFieldName, m2mFieldName } = p;
       // When a join row changes (e.g. parents collection is mutated), notify both this entity
       // and its transitive children/parents via otherFieldName
-      fields.push(m2mFieldName);
+      _fields.push(m2mFieldName);
       maybeRecursive.push({
         kind: isReadOnly ? "read-only" : "update",
         entity: entityType,

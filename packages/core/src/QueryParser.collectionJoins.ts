@@ -43,10 +43,13 @@ export function optimizeCollectionJoins(
   }
   rewriteCollectionJoins(query);
 
-  // I.e. after rewriting `{ books: { title: "b1" }, comments: { text: "c1" } }`, there should be no fanout LEFT
-  // JOIN roots left. If an OR forced both joins to stay, require an explicit opt-in because rows can multiply.
-  const fanoutLeftJoinAliases = query.tables
-    .filter((t) => t.join === "outer" && t.collection?.rootAlias === t.alias)
+  // I.e. collection LEFT JOINs now fall into three buckets:
+  // 1. local real filters, like `{ books: { title: "b1" } }`, were rewritten to EXISTS above;
+  // 2. no local real filters, like `{ books: {}, comments: {} }`, are safe because pruning will remove them;
+  // 3. blocked real filters, like cross-scope ORs, must stay as LEFT JOINs and can multiply rows.
+  // Only the third bucket should trip the fanout guard.
+  const fanoutLeftJoinAliases = getTopLevelCollectionRoots(query)
+    .filter((t) => conditionBlocksExistsRewrite(query.condition, collectJoinSubtreeAliases(query, t.alias)))
     .map((t) => t.alias);
   if (!allowMultipleLeftJoins && fanoutLeftJoinAliases.length > 1) {
     throw new Error(
@@ -72,20 +75,7 @@ export function optimizeCollectionJoins(
  * I.e. for `authors a -> books b -> book_reviews br`, `b` is the collection root and `br` is part of its subtree.
  */
 function rewriteCollectionJoins(query: ParsedFindQuery): void {
-  // I.e. if `books b` is nested under another collection root, the parent pass should absorb it; don't rewrite it here.
-  const collectionAliases = new Set(
-    query.tables
-      .filter((t): t is JoinTable => t.join === "inner" || t.join === "outer")
-      .flatMap((t) => (t.collection ? [t.alias] : [])),
-  );
-  const roots = query.tables.filter(
-    (t) =>
-      (t.join === "inner" || t.join === "outer") &&
-      t.collection?.rootAlias === t.alias &&
-      !collectionAliases.has(t.collection.parentAlias),
-  ) as JoinTable[];
-
-  for (const root of roots) {
+  for (const root of getTopLevelCollectionRoots(query)) {
     // I.e. for root `b`, this gathers `b`, `br`, and any other joins whose `col1` depends on that subtree.
     const subtreeAliases = collectJoinSubtreeAliases(query, root.alias);
     // I.e. move `b.title = 'x'` and `(br.rating = 5 OR br.rating = 4)`, but not `b.title = 'x' OR a.first_name = 'x'`.
@@ -146,6 +136,33 @@ function rewriteCollectionJoins(query: ParsedFindQuery): void {
     query.tables = query.tables.filter((t) => !subtreeAliases.has(t.alias));
   }
   removeEmptyExpressions(query.condition);
+}
+
+/** Returns top-level collection roots, i.e. `books b` but not nested `book_reviews br`. */
+function getTopLevelCollectionRoots(query: ParsedFindQuery): JoinTable[] {
+  // I.e. if `books b` is nested under another collection root, the parent pass should absorb it; don't rewrite it here.
+  const collectionAliases = new Set(
+    query.tables
+      .filter((t): t is JoinTable => t.join === "inner" || t.join === "outer")
+      .flatMap((t) => (t.collection ? [t.alias] : [])),
+  );
+  return query.tables.filter(
+    (t) =>
+      (t.join === "inner" || t.join === "outer") &&
+      t.collection?.rootAlias === t.alias &&
+      !collectionAliases.has(t.collection.parentAlias),
+  ) as JoinTable[];
+}
+
+/** Returns true if a remaining real condition prevents this subtree from becoming EXISTS, i.e. a cross-scope OR. */
+function conditionBlocksExistsRewrite(condition: ParsedExpressionCondition | undefined, aliases: Set<string>): boolean {
+  if (!condition || !isRealCondition(condition)) return false;
+  if (condition.kind === "exp" && condition.op === "and") {
+    return condition.conditions.some((c) => conditionBlocksExistsRewrite(c, aliases));
+  }
+  const found = new Set<string>();
+  collectAllAliases(condition, found);
+  return [...found].some((alias) => aliases.has(alias));
 }
 
 /** Collects a collection root and all joins that depend on it, i.e. `b -> br -> c`. */

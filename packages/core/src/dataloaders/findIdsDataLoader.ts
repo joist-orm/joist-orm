@@ -46,7 +46,7 @@ export function findIdsDataLoader<T extends Entity>(
         query.selects = [`${kq(primary.alias)}.id as id`];
         query.orderBys = [{ alias: primary.alias, column: "id", order: "ASC" }];
         // explicitly pass limit: undefined to avoid executeFind applying the default entityLimit
-        const rows = await em["executeFind"](meta, findIdsOperation, query, { limit: undefined });
+        const rows = await em["executeFind"](meta, findIdsOperation, query, { ...options, limit: undefined });
         return [rows.map((row: any) => keyToTaggedId(meta, row.id)!)];
       }
 
@@ -83,7 +83,7 @@ export function findIdsDataLoader<T extends Entity>(
       };
 
       // explicitly pass limit: undefined to avoid executeFind applying the default entityLimit
-      const rows = await em["executeFind"](meta, findIdsOperation, query2, { limit: undefined });
+      const rows = await em["executeFind"](meta, findIdsOperation, query2, { ...options, limit: undefined });
 
       // Make an empty array for each batched query, per the dataloader contract
       const results: string[][] = queries.map(() => []);

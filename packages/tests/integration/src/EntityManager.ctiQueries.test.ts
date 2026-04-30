@@ -104,7 +104,7 @@ describe("EntityManager.ctiQueries", () => {
     const where = { publisherLargePublisher: { country: "US" } } satisfies AuthorFilter;
     const authors = await em.find(Author, where);
     expect(authors.length).toBe(1);
-    expect(parseFindQuery(am, where, { softDeletes: "include" })).toMatchObject({
+    expect(parseFindQuery(am, where, { softDeletes: "include", pruneJoins: true })).toMatchObject({
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },

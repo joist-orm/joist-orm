@@ -1,20 +1,35 @@
 import { opToFn } from "../EntityGraphQLFilter";
 import { isDefined } from "../EntityManager";
-import { ColumnCondition, ParsedExpressionFilter, RawCondition } from "../QueryParser";
+import {
+  type ColumnCondition,
+  type ExistsCondition,
+  type ParsedExpressionFilter,
+  type ParsedFindQuery,
+  type RawCondition,
+} from "../QueryParser";
 import { kqDot } from "../keywords";
-import { assertNever } from "../utils";
+import { assertNever, fail } from "../utils";
+
+/** Renders a ParsedFindQuery subquery to SQL — passed in to avoid circular imports with buildRawQuery. */
+export type SubqueryRenderer = (q: ParsedFindQuery) => { sql: string; bindings: readonly any[] };
 
 /** Returns a tuple of `["cond AND (cond OR cond)", bindings]`. */
-export function buildWhereClause(exp: ParsedExpressionFilter, topLevel = false): [string, any[]] | undefined {
+export function buildWhereClause(
+  exp: ParsedExpressionFilter,
+  topLevel = false,
+  renderSubquery?: SubqueryRenderer,
+): [string, any[]] | undefined {
   const tuples = exp.conditions
     .map((c) => {
       return c.kind === "exp"
-        ? buildWhereClause(c)
+        ? buildWhereClause(c, false, renderSubquery)
         : c.kind === "column"
           ? buildCondition(c)
           : c.kind === "raw"
             ? buildRawCondition(c)
-            : fail(`Invalid condition ${c}`);
+            : c.kind === "exists"
+              ? buildExistsCondition(c, renderSubquery)
+              : fail(`Invalid condition ${c}`);
     })
     .filter(isDefined);
   // If we don't have any conditions to combine, just return undefined;
@@ -74,4 +89,11 @@ function buildCondition(cc: ColumnCondition): [string, any[]] {
     default:
       assertNever(cond);
   }
+}
+
+function buildExistsCondition(c: ExistsCondition, renderSubquery?: SubqueryRenderer): [string, any[]] {
+  if (!renderSubquery) throw new Error("EXISTS condition requires a subquery renderer");
+  const { sql, bindings } = renderSubquery(c.subquery);
+  const prefix = c.negate ? "NOT EXISTS" : "EXISTS";
+  return [`${prefix} (${sql})`, [...bindings]];
 }

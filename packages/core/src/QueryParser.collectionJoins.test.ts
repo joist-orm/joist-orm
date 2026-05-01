@@ -216,6 +216,57 @@ describe("QueryParser.collectionJoins", () => {
     expect(JSON.stringify(query.condition).includes('"kind":"exists"')).toEqual(false);
   });
 
+  it("does not rewrite m2m target joins referenced by raw aggregate selects", () => {
+    const query: ParsedFindQuery = {
+      selects: ["a.id::text as id", { sql: "array_agg(t.name::text) as tag_names", bindings: [], aliases: [] }],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        {
+          alias: "att",
+          table: "authors_to_tags",
+          join: "outer",
+          col1: "a.id",
+          col2: "att.author_id",
+          collection: { parentAlias: "a", rootAlias: "att", kind: "m2m" },
+        },
+        {
+          alias: "t",
+          table: "tags",
+          join: "outer",
+          col1: "att.tag_id",
+          col2: "t.id",
+          collection: { parentAlias: "att", rootAlias: "att", kind: "m2m" },
+        },
+      ],
+      condition: {
+        kind: "exp",
+        op: "and",
+        conditions: [
+          {
+            kind: "column",
+            alias: "t",
+            column: "name",
+            dbType: "text",
+            cond: { kind: "not-null" },
+          },
+        ],
+      },
+      groupBys: [{ alias: "a", column: "id" }],
+      orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+    };
+
+    optimizeCollectionJoins(query);
+
+    // I.e. `t` is not the m2m collection root, but `array_agg(t.name)` still requires the `att -> t` join chain to
+    // stay in the outer query.
+    expect(query.tables).toMatchObject([
+      { alias: "a", table: "authors", join: "primary" },
+      { alias: "att", table: "authors_to_tags", join: "outer" },
+      { alias: "t", table: "tags", join: "outer" },
+    ]);
+    expect(JSON.stringify(query.condition).includes('"kind":"exists"')).toEqual(false);
+  });
+
   it("splits same-root anti-join ORs into NOT EXISTS OR EXISTS", () => {
     const query: ParsedFindQuery = {
       selects: ["a.*"],

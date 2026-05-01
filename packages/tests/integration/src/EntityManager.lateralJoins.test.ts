@@ -485,7 +485,7 @@ describe("EntityManager.lateralJoins", () => {
       ]);
     });
 
-    it("keeps anti-join ORs with positive nested collection filters as LEFT JOINs", async () => {
+    it("splits anti-join ORs with positive nested collection filters into EXISTS", async () => {
       await insertAuthor({ first_name: "no-books" });
       await insertAuthor({ first_name: "high-review" });
       await insertBook({ title: "b1", author_id: 2 });
@@ -506,10 +506,11 @@ describe("EntityManager.lateralJoins", () => {
       expect(authors).toMatchEntity([{ firstName: "no-books" }, { firstName: "high-review" }]);
       expect(queries).toEqual([
         [
-          `SELECT DISTINCT ON (a.id, a.id) a.*, a.id FROM authors AS a`,
-          ` LEFT OUTER JOIN books AS b ON a.id = b.author_id`,
-          ` LEFT OUTER JOIN book_reviews AS br ON b.id = br.book_id`,
-          ` WHERE (b.id IS NULL OR br.rating = $1)`,
+          `SELECT a.* FROM authors AS a`,
+          ` WHERE NOT EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id)`,
+          ` OR EXISTS (SELECT 1 FROM books AS b`,
+          ` WHERE a.id = b.author_id`,
+          ` AND EXISTS (SELECT 1 FROM book_reviews AS br WHERE b.id = br.book_id AND br.rating = $1))`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $2`,
         ].join(""),

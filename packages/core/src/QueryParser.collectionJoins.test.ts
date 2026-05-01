@@ -164,4 +164,153 @@ describe("QueryParser.collectionJoins", () => {
     ]);
     expect(JSON.stringify(query.condition).includes('"kind":"exists"')).toEqual(false);
   });
+
+  it("splits same-root anti-join ORs into NOT EXISTS OR EXISTS", () => {
+    const query: ParsedFindQuery = {
+      selects: ["a.*"],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        {
+          alias: "b",
+          table: "books",
+          join: "outer",
+          col1: "a.id",
+          col2: "b.author_id",
+          collection: { parentAlias: "a", rootAlias: "b", kind: "o2m" },
+        },
+        {
+          alias: "br",
+          table: "book_reviews",
+          join: "outer",
+          col1: "b.id",
+          col2: "br.book_id",
+          collection: { parentAlias: "b", rootAlias: "br", kind: "o2m" },
+        },
+      ],
+      condition: {
+        kind: "exp",
+        op: "or",
+        conditions: [
+          { kind: "column", alias: "b", column: "id", dbType: "int", cond: { kind: "is-null" } },
+          { kind: "column", alias: "br", column: "rating", dbType: "int", cond: { kind: "eq", value: 5 } },
+        ],
+      },
+      orderBys: [],
+    };
+
+    optimizeCollectionJoins(query);
+
+    // I.e. the anti-join branch must become `NOT EXISTS (books)`, while the positive review branch can become its
+    // own correlated `EXISTS`; keeping `b.id IS NULL` inside an `EXISTS (books ...)` would make it impossible.
+    expect(query.tables).toMatchObject([{ alias: "a", table: "authors", join: "primary" }]);
+    expect(query.condition).toMatchObject({
+      kind: "exp",
+      op: "or",
+      conditions: [
+        {
+          kind: "exists",
+          negate: true,
+          subquery: {
+            tables: [{ alias: "b", table: "books", join: "primary" }],
+            condition: { op: "and", conditions: [{ kind: "raw", condition: "a.id = b.author_id" }] },
+          },
+        },
+        {
+          kind: "exists",
+          negate: false,
+          subquery: {
+            tables: [{ alias: "b", table: "books", join: "primary" }],
+            condition: {
+              op: "and",
+              conditions: [
+                { kind: "raw", condition: "a.id = b.author_id" },
+                {
+                  kind: "exists",
+                  negate: false,
+                  subquery: { tables: [{ alias: "br", table: "book_reviews", join: "primary" }] },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+  });
+
+  it("does not split same-row positive branches into unrelated EXISTS clauses", () => {
+    const query: ParsedFindQuery = {
+      selects: ["a.*"],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        {
+          alias: "b",
+          table: "books",
+          join: "outer",
+          col1: "a.id",
+          col2: "b.author_id",
+          collection: { parentAlias: "a", rootAlias: "b", kind: "o2m" },
+        },
+        {
+          alias: "br",
+          table: "book_reviews",
+          join: "outer",
+          col1: "b.id",
+          col2: "br.book_id",
+          collection: { parentAlias: "b", rootAlias: "br", kind: "o2m" },
+        },
+      ],
+      condition: {
+        kind: "exp",
+        op: "or",
+        conditions: [
+          { kind: "column", alias: "b", column: "id", dbType: "int", cond: { kind: "is-null" } },
+          {
+            kind: "exp",
+            op: "and",
+            conditions: [
+              { kind: "column", alias: "b", column: "title", dbType: "text", cond: { kind: "eq", value: "b1" } },
+              { kind: "column", alias: "br", column: "rating", dbType: "int", cond: { kind: "eq", value: 5 } },
+            ],
+          },
+        ],
+      },
+      orderBys: [],
+    };
+
+    optimizeCollectionJoins(query);
+
+    // I.e. the positive branch must stay one `EXISTS (books WHERE b.title = ... AND EXISTS reviews ...)`, not split
+    // into independent `EXISTS (books title = ...) AND EXISTS (reviews rating = ...)` clauses that can match different rows.
+    expect(query.tables).toMatchObject([{ alias: "a", table: "authors", join: "primary" }]);
+    expect(query.condition).toMatchObject({
+      kind: "exp",
+      op: "or",
+      conditions: [
+        { kind: "exists", negate: true, subquery: { tables: [{ alias: "b", join: "primary" }] } },
+        {
+          kind: "exists",
+          negate: false,
+          subquery: {
+            tables: [{ alias: "b", table: "books", join: "primary" }],
+            condition: {
+              op: "and",
+              conditions: [
+                { kind: "raw", condition: "a.id = b.author_id" },
+                {
+                  kind: "exp",
+                  op: "and",
+                  conditions: [{ kind: "column", alias: "b", column: "title", cond: { kind: "eq", value: "b1" } }],
+                },
+                {
+                  kind: "exists",
+                  negate: false,
+                  subquery: { tables: [{ alias: "br", table: "book_reviews", join: "primary" }] },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+  });
 });

@@ -127,19 +127,24 @@ function rewriteSiblingOrExpressionChildren(
   const matches: { collectionRoot: CollectionRoot; condition: ParsedExpressionCondition }[] = [];
   const usedAliases = new Set<string>();
   const usedRoots = new Set<string>();
+  let hasAntiJoinBranch = false;
   for (const condition of exp.conditions) {
     if (!isRealCondition(condition)) return false;
     const match = roots.find((root) => conditionReferencesOnlyAliases(condition, root.aliases));
     if (!match) return false;
     matches.push({ collectionRoot: match, condition });
     usedRoots.add(match.table.alias);
+    hasAntiJoinBranch ||= isAliasIdNull(condition, match.table.alias);
     for (const alias of match.aliases) usedAliases.add(alias);
   }
-  // I.e. rewrite only true sibling collection ORs, like `b.id IS NOT NULL OR c.id IS NOT NULL`;
-  // skip single-root ORs, aliases also filtered elsewhere like `b.order = 1 AND (b.title = 'x' OR c.text = 'x')`,
-  // and aliases that must stay projected/sorted like `SELECT b.title` or `ORDER BY b.title`.
+  // I.e. rewrite true sibling collection ORs like `b.id IS NOT NULL OR c.id IS NOT NULL`, and same-root
+  // anti-join ORs like `b.id IS NULL OR br.rating = 5` that need `b.id IS NULL` to become `NOT EXISTS`.
+  // skip positive-only single-root ORs, i.e. ORs with no `b.id IS NULL` anti-join branch like
+  // `b.title = 'x' OR br.rating = 5`, aliases also filtered elsewhere like
+  // `b.order = 1 AND (b.title = 'x' OR c.text = 'x')`, and aliases that must stay projected/sorted like
+  // `SELECT b.title` or `ORDER BY b.title`.
   if (
-    usedRoots.size < 2 ||
+    (usedRoots.size < 2 && !hasAntiJoinBranch) ||
     conditionReferencesAliasesOutside(query.condition, exp, usedAliases) ||
     queryReferencesAliasesOutsideConditions(query, usedAliases, keepAliases)
   ) {
@@ -186,7 +191,7 @@ function createExistsCondition(
   const subquery: ParsedFindQuery = {
     selects: ["1"],
     tables: query.tables
-      .filter((t) => collectionRoot.aliases.has(t.alias))
+      .filter((t) => (hasOnlyAntiJoin ? t.alias === root.alias : collectionRoot.aliases.has(t.alias)))
       .map((t) => {
         // I.e. the collection root becomes the subquery's FROM table; children remain joins off that root.
         if (t.alias === root.alias) return { join: "primary", alias: t.alias, table: t.table } satisfies PrimaryTable;

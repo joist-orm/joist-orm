@@ -299,6 +299,41 @@ describe("EntityManager.lateralJoins", () => {
       ]);
     });
 
+    it("keeps sibling collection OR joins when a collection has filters outside the OR", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "match", author_id: 1, order: 2 });
+      await insertBook({ title: "other", author_id: 1, order: 1 });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "match", author_id: 2, order: 1 });
+
+      const em = newEntityManager();
+      const [a, b, c] = aliases(Author, Book, Comment);
+      resetQueryCount();
+      const authors = await em.find(
+        Author,
+        { as: a, books: b, comments: c },
+        {
+          ...opts,
+          allowMultipleLeftJoins: true,
+          // I.e. `b.order = 1` must apply to the same joined book row as `b.title = 'match'`, so the OR cannot
+          // become independent `EXISTS` clauses that could match different book rows.
+          conditions: { and: [b.order.eq(1), { or: [b.title.eq("match"), c.text.eq("match")] }] },
+        },
+      );
+
+      expect(authors).toMatchEntity([{ firstName: "a2" }]);
+      expect(queries).toEqual([
+        [
+          `SELECT DISTINCT ON (a.id, a.id) a.*, a.id FROM authors AS a`,
+          ` LEFT OUTER JOIN books AS b ON a.id = b.author_id`,
+          ` LEFT OUTER JOIN comments AS c ON a.id = c.parent_author_id`,
+          ` WHERE b."order" = $1 AND (b.title = $2 OR c.text = $3)`,
+          ` ORDER BY a.id ASC`,
+          ` LIMIT $4`,
+        ].join(""),
+      ]);
+    });
+
     it("rewrites single collection queries to EXISTS", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });

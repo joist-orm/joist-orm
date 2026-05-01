@@ -352,6 +352,25 @@ describe("EntityManager.lateralJoins", () => {
       ]);
     });
 
+    it("keeps collection joins when optimizeJoinsToExists is disabled", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+
+      const em = newEntityManager();
+      resetQueryCount();
+      const authors = await em.find(Author, { books: { title: "b1" } }, { ...opts, optimizeJoinsToExists: false });
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+      expect(queries).toEqual([
+        [
+          `SELECT DISTINCT ON (a.id, a.id) a.*, a.id FROM authors AS a`,
+          ` LEFT OUTER JOIN books AS b ON a.id = b.author_id`,
+          ` WHERE b.title = $1`,
+          ` ORDER BY a.id ASC`,
+          ` LIMIT $2`,
+        ].join(""),
+      ]);
+    });
+
     it("rewrites m2m + o2m collections", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertTag({ name: "t1" });

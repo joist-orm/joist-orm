@@ -41,15 +41,20 @@ interface CollectionRoot {
  */
 export function optimizeCollectionJoins(
   query: ParsedFindQuery,
-  opts: { allowMultipleLeftJoins?: boolean; pruneJoins?: boolean; keepAliases?: string[] } = {},
+  opts: {
+    allowMultipleLeftJoins?: boolean;
+    optimizeJoinsToExists?: boolean;
+    pruneJoins?: boolean;
+    keepAliases?: string[];
+  } = {},
 ): void {
-  const { allowMultipleLeftJoins = false, pruneJoins = true, keepAliases = [] } = opts;
+  const { allowMultipleLeftJoins = false, optimizeJoinsToExists = true, pruneJoins = true, keepAliases = [] } = opts;
   for (const table of query.tables) {
     // I.e. batched find/count queries wrap the real query in a LATERAL subquery; optimize that inner query too,
     // but let the outer query decide final pruning so it can keep the lateral alias itself.
     if (table.join === "lateral") optimizeCollectionJoins(table.query, { ...opts, pruneJoins: false });
   }
-  rewriteCollectionJoins(query, keepAliases);
+  if (optimizeJoinsToExists) rewriteCollectionJoins(query, keepAliases);
 
   // I.e. collection LEFT JOINs now fall into three buckets:
   // 1. local real filters, like `{ books: { title: "b1" } }`, were rewritten to EXISTS above;
@@ -59,7 +64,7 @@ export function optimizeCollectionJoins(
   const fanoutLeftJoinAliases = getCollectionRoots(query)
     .filter((root) => conditionBlocksExistsRewrite(query.condition, root.aliases))
     .map((root) => root.table.alias);
-  if (!allowMultipleLeftJoins && fanoutLeftJoinAliases.length > 1) {
+  if (optimizeJoinsToExists && !allowMultipleLeftJoins && fanoutLeftJoinAliases.length > 1) {
     throw new Error(
       `em.find would issue multiple LEFT JOINs across collection relations (${fanoutLeftJoinAliases.join(
         ", ",

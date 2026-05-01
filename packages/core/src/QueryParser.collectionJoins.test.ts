@@ -67,6 +67,40 @@ describe("QueryParser.collectionJoins", () => {
     expect(query.condition).toBeUndefined();
   });
 
+  it("skips join-to-exists optimization when disabled", () => {
+    const query: ParsedFindQuery = {
+      selects: ["a.*"],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        {
+          alias: "b",
+          table: "books",
+          join: "outer",
+          col1: "a.id",
+          col2: "b.author_id",
+          collection: { parentAlias: "a", rootAlias: "b", kind: "o2m" },
+        },
+      ],
+      condition: {
+        kind: "exp",
+        op: "and",
+        conditions: [{ kind: "column", alias: "b", column: "title", dbType: "text", cond: { kind: "eq", value: "b1" } }],
+      },
+      orderBys: [],
+    };
+
+    optimizeCollectionJoins(query, { optimizeJoinsToExists: false });
+
+    expect(query.tables).toMatchObject([
+      { alias: "a", table: "authors", join: "primary" },
+      { alias: "b", table: "books", join: "outer" },
+    ]);
+    expect(query.condition).toMatchObject({
+      op: "and",
+      conditions: [{ kind: "column", alias: "b", column: "title" }],
+    });
+  });
+
   it("does not rewrite sibling OR when an alias is selected outside the OR", () => {
     const query: ParsedFindQuery = {
       selects: ["a.*", "b.title as book_title"],

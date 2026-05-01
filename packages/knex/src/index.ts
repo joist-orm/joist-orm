@@ -33,6 +33,8 @@ import { buildKnexQuery } from "./buildKnexQuery";
  *   own joins/conditions against the `QueryBuilder` directly.
  * @param filter[allowMultipleLeftJoins] Allows multiple fanout LEFT JOINs when Joist cannot express
  *   an alias condition as EXISTS.
+ * @param filter[optimizeJoinsToExists] Disables rewriting collection joins into EXISTS, i.e. because
+ *   you plan on adding selects/grouping against collection aliases after Joist builds the query.
  */
 export function buildQuery<T extends Entity>(
   knex: Knex,
@@ -41,6 +43,7 @@ export function buildQuery<T extends Entity>(
     pruneJoins?: boolean;
     keepAliases?: string[];
     allowMultipleLeftJoins?: boolean;
+    optimizeJoinsToExists?: boolean;
   },
 ): Knex.QueryBuilder<{}, unknown[]> {
   const meta = getMetadata(type);
@@ -53,6 +56,7 @@ export function buildQuery<T extends Entity>(
     pruneJoins = true,
     keepAliases = [],
     allowMultipleLeftJoins = false,
+    optimizeJoinsToExists = true,
     softDeletes = "exclude",
   } = filter;
   const parsed = parseFindQuery(meta, where, {
@@ -61,7 +65,7 @@ export function buildQuery<T extends Entity>(
     keepAliases,
     softDeletes,
   });
-  optimizeCollectionJoins(parsed, { allowMultipleLeftJoins, pruneJoins, keepAliases });
+  optimizeCollectionJoins(parsed, { allowMultipleLeftJoins, optimizeJoinsToExists, pruneJoins, keepAliases });
   return buildKnexQuery(knex, parsed, { limit, offset });
 }
 

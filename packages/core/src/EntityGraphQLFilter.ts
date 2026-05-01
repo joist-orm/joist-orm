@@ -14,6 +14,7 @@ export type GraphQLFilterAndSettings<T extends Entity> = {
   offset?: number | null;
   softDeletes?: "exclude" | "include";
   allowMultipleLeftJoins?: boolean;
+  optimizeJoinsToExists?: boolean;
 };
 
 /**

@@ -10,7 +10,7 @@ import {
 } from "@src/entities/inserts";
 import { knex, newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import { aliases, getMetadata, ParsedExpressionCondition, ParsedFindQuery, parseFindQuery, Plugin } from "joist-orm";
-import { AdvanceStatus, Author, Book, Tag } from "./entities";
+import { AdvanceStatus, Author, Book, Comment, Tag } from "./entities";
 
 const am = getMetadata(Author);
 
@@ -264,6 +264,37 @@ describe("EntityManager.lateralJoins", () => {
           ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text = $2)`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $3`,
+        ].join(""),
+      ]);
+    });
+
+    it("rewrites OR across sibling collection aliases to sibling EXISTS", async () => {
+      await insertAuthor({ first_name: "a1", age: 1 });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertAuthor({ first_name: "a2", age: 1 });
+      await insertComment({ text: "c1", parent_author_id: 2 });
+      await insertAuthor({ first_name: "a3", age: 2 });
+      await insertBook({ title: "b3", author_id: 3 });
+
+      const em = newEntityManager();
+      const [a, b, c] = aliases(Author, Book, Comment);
+      resetQueryCount();
+      const authors = await em.find(
+        Author,
+        { as: a, books: b, comments: c },
+        { ...opts, conditions: { and: [a.age.eq(1), { or: [b.id.ne(null), c.id.ne(null)] }] } },
+      );
+
+      expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+      expect(queries).toEqual([
+        [
+          `SELECT a.* FROM authors AS a`,
+          ` WHERE a.age = $1`,
+          ` AND (EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.id IS NOT NULL)`,
+          ` OR EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.id IS NOT NULL)`,
+          `)`,
+          ` ORDER BY a.id ASC`,
+          ` LIMIT $2`,
         ].join(""),
       ]);
     });

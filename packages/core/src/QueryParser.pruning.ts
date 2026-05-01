@@ -1,6 +1,7 @@
 import {
   ColumnCondition,
   ExistsCondition,
+  JoinTable,
   ParsedExpressionFilter,
   ParsedFindQuery,
   RawCondition,
@@ -25,12 +26,10 @@ export function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[])
     } else if (t.join === "primary") {
       dt.markRequired(t.alias);
     } else if (parsed.ctes?.some((cte) => cte.alias === t.table)) {
+      dt.addAlias(t.alias, joinDependencies(t));
       dt.markRequired(t.alias);
     } else {
-      dt.addAlias(
-        t.alias,
-        [parseAlias(t.col1), parseAlias(t.col2)].filter((alias) => alias !== t.alias),
-      );
+      dt.addAlias(t.alias, joinDependencies(t));
     }
   }
 
@@ -84,6 +83,11 @@ export function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[])
   if (parsed.condition && parsed.condition.conditions.length === 0) {
     parsed.condition = undefined;
   }
+}
+
+/** Returns the aliases needed to evaluate a join's ON clause, excluding the joined alias itself. */
+function joinDependencies(t: JoinTable): string[] {
+  return [parseAlias(t.col1), parseAlias(t.col2)].filter((alias) => alias !== t.alias);
 }
 
 /** Marks aliases used by select strings, including generated CTI expressions like `COALESCE(st0.col, st1.col)`. */

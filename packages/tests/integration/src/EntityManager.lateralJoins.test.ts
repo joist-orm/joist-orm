@@ -610,6 +610,66 @@ describe("EntityManager.lateralJoins", () => {
         ].join(""),
       ]);
     });
+
+    it("keeps plugin-added aliases required transitively by a CTE join", async () => {
+      await insertPublisher({ id: 1, name: "p1" });
+      await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+      await insertComment({ text: "c1", parent_publisher_id: 1 });
+
+      const em = newEntityManager();
+      const plugin = new QueryMutatingPlugin((query) => {
+        const author = query.tables.find((table) => table.table === "authors") ?? failTest("No authors table");
+        query.ctes ??= [];
+        query.ctes.push({
+          alias: "_comment_ids",
+          columns: [
+            { columnName: "parent_publisher_id", dbType: "int" },
+            { columnName: "id", dbType: "int" },
+          ],
+          query: { kind: "raw", sql: "SELECT parent_publisher_id, id FROM comments", bindings: [] },
+        });
+        query.tables.push(
+          {
+            join: "inner",
+            alias: "p",
+            table: "publishers",
+            col1: `${author.alias}.publisher_id`,
+            col2: "p.id",
+          },
+          {
+            join: "inner",
+            alias: "ci",
+            table: "_comment_ids",
+            col1: "p.id",
+            col2: "ci.parent_publisher_id",
+          },
+        );
+        addCondition(query, {
+          kind: "raw",
+          aliases: ["ci"],
+          condition: "ci.id IS NOT NULL",
+          bindings: [],
+          pruneable: false,
+        });
+      });
+      em.addPlugin(plugin);
+
+      resetQueryCount();
+      const authors = await em.find(Author, {}, opts);
+
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+      expect(queries).toEqual([
+        [
+          `WITH _comment_ids (parent_publisher_id, id) AS (SELECT parent_publisher_id, id FROM comments) `,
+          `SELECT a.* FROM authors AS a`,
+          ` JOIN publishers AS p ON a.publisher_id = p.id`,
+          ` JOIN _comment_ids AS ci ON p.id = ci.parent_publisher_id`,
+          ` WHERE ci.id IS NOT NULL`,
+          ` ORDER BY a.id ASC`,
+          ` LIMIT $1`,
+        ].join(""),
+      ]);
+    });
   });
 
   describe("deep sibling auto-detection", () => {

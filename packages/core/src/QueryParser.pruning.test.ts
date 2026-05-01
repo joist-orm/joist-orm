@@ -1,6 +1,57 @@
-import { selectReferencesAlias } from "./QueryParser.pruning";
+import { type ParsedFindQuery } from "./QueryParser";
+import { pruneUnusedJoins, selectReferencesAlias } from "./QueryParser.pruning";
 
 describe("QueryParser.pruning", () => {
+  describe("pruneUnusedJoins", () => {
+    it("keeps intermediate aliases required by a dependent join's col1", () => {
+      const query: ParsedFindQuery = {
+        selects: ["a.*"],
+        tables: [
+          { join: "primary", alias: "a", table: "authors" },
+          { join: "inner", alias: "b", table: "books", col1: "a.id", col2: "b.author_id" },
+          { join: "inner", alias: "c", table: "comments", col1: "b.id", col2: "c.parent_book_id" },
+        ],
+        condition: {
+          kind: "exp",
+          op: "and",
+          conditions: [{ kind: "raw", aliases: ["c"], condition: "c.id IS NOT NULL", bindings: [], pruneable: false }],
+        },
+        orderBys: [],
+      };
+
+      pruneUnusedJoins(query, []);
+
+      expect(query.tables.map((table) => table.alias)).toEqual(["a", "b", "c"]);
+    });
+
+    it("keeps intermediate aliases required by a required CTE join", () => {
+      const query: ParsedFindQuery = {
+        selects: ["a.*"],
+        tables: [
+          { join: "primary", alias: "a", table: "authors" },
+          { join: "inner", alias: "b", table: "books", col1: "a.id", col2: "b.author_id" },
+          { join: "inner", alias: "c", table: "_comments", col1: "b.id", col2: "c.parent_book_id" },
+        ],
+        condition: undefined,
+        orderBys: [],
+        ctes: [
+          {
+            alias: "_comments",
+            columns: [
+              { columnName: "parent_book_id", dbType: "int" },
+              { columnName: "id", dbType: "int" },
+            ],
+            query: { kind: "raw", sql: "SELECT parent_book_id, id FROM comments", bindings: [] },
+          },
+        ],
+      };
+
+      pruneUnusedJoins(query, []);
+
+      expect(query.tables.map((table) => table.alias)).toEqual(["a", "b", "c"]);
+    });
+  });
+
   describe("selectReferencesAlias", () => {
     it("finds simple select references", () => {
       expect(selectReferencesAlias("a.*", "a")).toBe(true);

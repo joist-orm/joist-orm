@@ -129,6 +129,7 @@ export interface FindFilterOptions<T extends Entity> {
   orderBy?: OrderOf<T> | OrderOf<T>[];
   softDeletes?: "include" | "exclude";
   allowMultipleLeftJoins?: boolean;
+  optimizeJoinsToExists?: boolean;
 }
 
 /**
@@ -152,6 +153,7 @@ export interface FindCountFilterOptions<T extends Entity> {
   conditions?: ExpressionFilter;
   softDeletes?: "include" | "exclude";
   allowMultipleLeftJoins?: boolean;
+  optimizeJoinsToExists?: boolean;
 }
 
 /**
@@ -515,6 +517,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       offset?: number;
       checkLimit?: boolean;
       allowMultipleLeftJoins?: boolean;
+      optimizeJoinsToExists?: boolean;
       pruneJoins?: boolean;
       keepAliases?: string[];
     },

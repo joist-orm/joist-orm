@@ -36,6 +36,7 @@ interface PluginMethods {
       limit?: number;
       offset?: number;
       allowMultipleLeftJoins?: boolean;
+      optimizeJoinsToExists?: boolean;
       pruneJoins?: boolean;
       keepAliases?: string[];
     },
@@ -152,6 +153,7 @@ export class PluginManager implements Required<PluginMethods> {
       limit?: number;
       offset?: number;
       allowMultipleLeftJoins?: boolean;
+      optimizeJoinsToExists?: boolean;
       pruneJoins?: boolean;
       keepAliases?: string[];
     },

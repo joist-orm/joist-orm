@@ -226,6 +226,7 @@ export function parseFindQuery(
     keepAliases?: string[];
     softDeletes?: "include" | "exclude";
     allowMultipleLeftJoins?: boolean;
+    optimizeJoinsToExists?: boolean;
   } = {},
 ): ParsedFindQuery {
   const selects: string[] = [];

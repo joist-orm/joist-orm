@@ -75,67 +75,118 @@ export function optimizeCollectionJoins(
  * I.e. for `authors a -> books b -> book_reviews br`, `b` is the collection root and `br` is part of its subtree.
  */
 function rewriteCollectionJoins(query: ParsedFindQuery): void {
+  rewriteSiblingOrConditions(query);
   for (const root of getTopLevelCollectionRoots(query)) {
     // I.e. for root `b`, this gathers `b`, `br`, and any other joins whose `col1` depends on that subtree.
     const subtreeAliases = collectJoinSubtreeAliases(query, root.alias);
     // I.e. move `b.title = 'x'` and `(br.rating = 5 OR br.rating = 4)`, but not `b.title = 'x' OR a.first_name = 'x'`.
     const moved = query.condition ? removeLocallyScopedConditions(query.condition, subtreeAliases) : [];
-    const subqueryTables = query.tables.filter((t) => subtreeAliases.has(t.alias));
     const hasOnlyAntiJoin = moved.length === 1 && isAliasIdNull(moved[0], root.alias);
     if (moved.length === 0 && !hasOnlyAntiJoin) continue;
-    if (!hasOnlyAntiJoin && !moved.some(isRealCondition)) {
-      // I.e. only soft-delete/STI conditions moved; put them back so we don't create an EXISTS that changes nothing.
+    const exists = createExistsCondition(query, root, subtreeAliases, moved);
+    if (!exists) {
       query.condition ??= { kind: "exp", op: "and", conditions: [] };
       query.condition.conditions.push(...moved);
       continue;
     }
-    if (moved.length > 0 && moved.some((c) => isAliasIdNull(c, root.alias)) && !hasOnlyAntiJoin) {
-      // I.e. `b.id IS NULL AND b.title = 'x'` is not a pure anti-join; leave it as a LEFT JOIN for SQL semantics.
-      query.condition ??= { kind: "exp", op: "and", conditions: [] };
-      query.condition.conditions.push(...moved);
-      continue;
-    }
-
-    const correlation: RawCondition = {
-      kind: "raw",
-      aliases: [root.alias],
-      condition: `${root.col1} = ${root.col2}`,
-      bindings: [],
-      pruneable: false,
-    };
-    // I.e. a pure `b.id IS NULL` anti-join becomes `NOT EXISTS (SELECT 1 FROM books b WHERE a.id = b.author_id)`.
-    const conditions = hasOnlyAntiJoin ? [correlation] : [correlation, ...moved];
-    const subquery: ParsedFindQuery = {
-      selects: ["1"],
-      tables: subqueryTables.map((t) => {
-        // I.e. the collection root becomes the subquery's FROM table; children remain joins off that root.
-        if (t.alias === root.alias) return { join: "primary", alias: t.alias, table: t.table } satisfies PrimaryTable;
-        // I.e. by this point every moved condition is locally scoped and positive, like `br.rating = 5`; pure
-        // `br.id IS NULL` anti-joins are handled as NOT EXISTS at their own root, and mixed/null-sensitive cases stay
-        // as outer joins. So inside this EXISTS, child rows must exist to satisfy the moved filters, and INNER JOIN is
-        // equivalent to LEFT JOIN + WHERE child condition.
-        if (t.join === "inner" || t.join === "outer") return { ...t, join: "inner" as const };
-        return t;
-      }),
-      condition: { kind: "exp", op: "and", conditions },
-      orderBys: [],
-    };
-    // I.e. nested `books.reviews` first creates an EXISTS for books, then this recursive call creates EXISTS for reviews.
-    rewriteCollectionJoins(subquery);
-    const exists: ExistsCondition = {
-      kind: "exists",
-      negate: hasOnlyAntiJoin,
-      correlation,
-      joinColumns: { col1: root.col1, col2: root.col2 },
-      subquery,
-      outerAliases: [root.collection!.parentAlias],
-    };
     query.condition ??= { kind: "exp", op: "and", conditions: [] };
     query.condition.conditions.push(exists);
     // I.e. after adding EXISTS, remove `books b` and its children from the outer FROM list.
     query.tables = query.tables.filter((t) => !subtreeAliases.has(t.alias));
   }
   removeEmptyExpressions(query.condition);
+}
+
+/** Rewrites `b.id IS NOT NULL OR c.id IS NOT NULL` into sibling EXISTS clauses. */
+function rewriteSiblingOrConditions(query: ParsedFindQuery): void {
+  if (!query.condition) return;
+  rewriteSiblingOrExpression(query, query.condition);
+}
+
+/** Rewrites eligible sibling collection ORs while preserving outer/mixed-scope ORs as joins. */
+function rewriteSiblingOrExpression(query: ParsedFindQuery, condition: ParsedExpressionCondition): void {
+  if (condition.kind !== "exp") return;
+  if (condition.op === "or" && rewriteSiblingOrExpressionChildren(query, condition)) return;
+  if (condition.op === "and") {
+    for (const child of condition.conditions) rewriteSiblingOrExpression(query, child);
+  }
+}
+
+/** Returns true when every OR branch became an EXISTS for one collection subtree. */
+function rewriteSiblingOrExpressionChildren(query: ParsedFindQuery, exp: ParsedExpressionFilter): boolean {
+  const roots = getTopLevelCollectionRoots(query).map((root) => ({
+    root,
+    subtreeAliases: collectJoinSubtreeAliases(query, root.alias),
+  }));
+  const existsConditions: ExistsCondition[] = [];
+  const usedAliases = new Set<string>();
+  for (const condition of exp.conditions) {
+    if (!isRealCondition(condition)) return false;
+    const match = roots.find(({ subtreeAliases }) => conditionReferencesOnlyAliases(condition, subtreeAliases));
+    if (!match) return false;
+    const exists = createExistsCondition(query, match.root, match.subtreeAliases, [condition]);
+    if (!exists) return false;
+    existsConditions.push(exists);
+    for (const alias of match.subtreeAliases) usedAliases.add(alias);
+  }
+  if (new Set(existsConditions.map((exists) => exists.subquery.tables[0].alias)).size < 2) return false;
+  exp.conditions = existsConditions;
+  // I.e. after adding sibling EXISTS branches, remove those collection joins from the outer FROM list.
+  query.tables = query.tables.filter((t) => !usedAliases.has(t.alias));
+  return true;
+}
+
+/** Creates an EXISTS/NOT EXISTS condition for moved collection filters, or undefined when a LEFT JOIN must stay. */
+function createExistsCondition(
+  query: ParsedFindQuery,
+  root: JoinTable,
+  subtreeAliases: Set<string>,
+  moved: ParsedExpressionCondition[],
+): ExistsCondition | undefined {
+  const hasOnlyAntiJoin = moved.length === 1 && isAliasIdNull(moved[0], root.alias);
+  if (!hasOnlyAntiJoin && !moved.some(isRealCondition)) {
+    // I.e. only soft-delete/STI conditions moved; don't create an EXISTS that changes nothing.
+    return undefined;
+  }
+  if (moved.length > 0 && moved.some((c) => isAliasIdNull(c, root.alias)) && !hasOnlyAntiJoin) {
+    // I.e. `b.id IS NULL AND b.title = 'x'` is not a pure anti-join; leave it as a LEFT JOIN for SQL semantics.
+    return undefined;
+  }
+
+  const correlation: RawCondition = {
+    kind: "raw",
+    aliases: [root.alias],
+    condition: `${root.col1} = ${root.col2}`,
+    bindings: [],
+    pruneable: false,
+  };
+  // I.e. a pure `b.id IS NULL` anti-join becomes `NOT EXISTS (SELECT 1 FROM books b WHERE a.id = b.author_id)`.
+  const conditions = hasOnlyAntiJoin ? [correlation] : [correlation, ...moved];
+  const subquery: ParsedFindQuery = {
+    selects: ["1"],
+    tables: query.tables.filter((t) => subtreeAliases.has(t.alias)).map((t) => {
+      // I.e. the collection root becomes the subquery's FROM table; children remain joins off that root.
+      if (t.alias === root.alias) return { join: "primary", alias: t.alias, table: t.table } satisfies PrimaryTable;
+      // I.e. by this point every moved condition is locally scoped and positive, like `br.rating = 5`; pure
+      // `br.id IS NULL` anti-joins are handled as NOT EXISTS at their own root, and mixed/null-sensitive cases stay
+      // as outer joins. So inside this EXISTS, child rows must exist to satisfy the moved filters, and INNER JOIN is
+      // equivalent to LEFT JOIN + WHERE child condition.
+      if (t.join === "inner" || t.join === "outer") return { ...t, join: "inner" as const };
+      return t;
+    }),
+    condition: { kind: "exp", op: "and", conditions },
+    orderBys: [],
+  };
+  // I.e. nested `books.reviews` first creates an EXISTS for books, then this recursive call creates EXISTS for reviews.
+  rewriteCollectionJoins(subquery);
+  return {
+    kind: "exists",
+    negate: hasOnlyAntiJoin,
+    correlation,
+    joinColumns: { col1: root.col1, col2: root.col2 },
+    subquery,
+    outerAliases: [root.collection!.parentAlias],
+  };
 }
 
 /** Returns top-level collection roots, i.e. `books b` but not nested `book_reviews br`. */

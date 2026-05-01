@@ -3187,7 +3187,9 @@ describe("EntityManager.queries", () => {
 
     it("fails multiple collection left joins by default after optimization", async () => {
       const [a, b, c] = aliases(Author, Book, Comment);
-      const conditions = { or: [b.title.eq("b1"), c.text.eq("c1")] };
+      const conditions = {
+        and: [{ or: [b.title.eq("b1"), a.firstName.eq("a1")] }, { or: [c.text.eq("c1"), a.lastName.eq("a1")] }],
+      };
       expect(() => {
         const query = parseFindQuery(am, { as: a, books: { as: b }, comments: { as: c } }, { ...opts, conditions });
         optimizeCollectionJoins(query);
@@ -3197,7 +3199,9 @@ describe("EntityManager.queries", () => {
     it("fails em.find calls with multiple collection left joins by default", async () => {
       const em = newEntityManager();
       const [a, b, c] = aliases(Author, Book, Comment);
-      const conditions = { or: [b.title.eq("b1"), c.text.eq("c1")] };
+      const conditions = {
+        and: [{ or: [b.title.eq("b1"), a.firstName.eq("a1")] }, { or: [c.text.eq("c1"), a.lastName.eq("a1")] }],
+      };
       await expect(
         em.find(Author, { as: a, books: { as: b }, comments: { as: c } }, { ...opts, conditions }),
       ).rejects.toThrow("allowMultipleLeftJoins");
@@ -3205,7 +3209,9 @@ describe("EntityManager.queries", () => {
 
     it("allows multiple collection left joins with allowMultipleLeftJoins", async () => {
       const [a, b, c] = aliases(Author, Book, Comment);
-      const conditions = { or: [b.title.eq("b1"), c.text.eq("c1")] };
+      const conditions = {
+        and: [{ or: [b.title.eq("b1"), a.firstName.eq("a1")] }, { or: [c.text.eq("c1"), a.lastName.eq("a1")] }],
+      };
       expect(
         parseAndOptimizeFindQuery(
           am,
@@ -3221,10 +3227,24 @@ describe("EntityManager.queries", () => {
         ],
         condition: {
           kind: "exp",
-          op: "or",
+          op: "and",
           conditions: [
-            { kind: "column", alias: "b", column: "title", cond: { kind: "eq", value: "b1" } },
-            { kind: "column", alias: "c", column: "text", cond: { kind: "eq", value: "c1" } },
+            {
+              kind: "exp",
+              op: "or",
+              conditions: [
+                { kind: "column", alias: "b", column: "title", cond: { kind: "eq", value: "b1" } },
+                { kind: "column", alias: "a", column: "first_name", cond: { kind: "eq", value: "a1" } },
+              ],
+            },
+            {
+              kind: "exp",
+              op: "or",
+              conditions: [
+                { kind: "column", alias: "c", column: "text", cond: { kind: "eq", value: "c1" } },
+                { kind: "column", alias: "a", column: "last_name", cond: { kind: "eq", value: "a1" } },
+              ],
+            },
           ],
         },
       });

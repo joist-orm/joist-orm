@@ -169,8 +169,8 @@ function createExistsCondition(
     // I.e. only soft-delete/STI conditions moved; don't create an EXISTS that changes nothing.
     return undefined;
   }
-  if (!hasOnlyAntiJoin && moved.some((c) => isAliasIdNull(c, root.alias))) {
-    // I.e. `b.id IS NULL AND b.title = 'x'` is not a pure anti-join; leave it as a LEFT JOIN for SQL semantics.
+  if (!hasOnlyAntiJoin && moved.some((c) => conditionContainsAliasIdNull(c, root.alias))) {
+    // I.e. `b.id IS NULL OR br.rating = 5` is not a pure anti-join; leave it as a LEFT JOIN for SQL semantics.
     return undefined;
   }
 
@@ -368,6 +368,13 @@ function isAliasIdNull(condition: ParsedExpressionCondition, alias: string): boo
     condition.column === "id" &&
     condition.cond.kind === "is-null"
   );
+}
+
+/** Returns true when a condition tree contains `alias.id IS NULL`, i.e. an anti-join branch inside an OR. */
+function conditionContainsAliasIdNull(condition: ParsedExpressionCondition, alias: string): boolean {
+  if (isAliasIdNull(condition, alias)) return true;
+  if (condition.kind === "exp") return condition.conditions.some((c) => conditionContainsAliasIdNull(c, alias));
+  return false;
 }
 
 /** Removes empty expression wrappers left behind by condition movement, i.e. `AND []` after all children moved. */

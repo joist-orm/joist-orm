@@ -10,7 +10,7 @@ import {
 } from "@src/entities/inserts";
 import { knex, newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import { aliases, getMetadata, ParsedExpressionCondition, ParsedFindQuery, parseFindQuery, Plugin } from "joist-orm";
-import { AdvanceStatus, Author, Book, Comment, Tag } from "./entities";
+import { AdvanceStatus, Author, Book, BookReview, Comment, Tag } from "./entities";
 
 const am = getMetadata(Author);
 
@@ -479,6 +479,37 @@ describe("EntityManager.lateralJoins", () => {
           `SELECT a.* FROM authors AS a`,
           ` WHERE NOT EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id)`,
           ` AND EXISTS (SELECT 1 FROM comments AS c WHERE a.id = c.parent_author_id AND c.text = $1)`,
+          ` ORDER BY a.id ASC`,
+          ` LIMIT $2`,
+        ].join(""),
+      ]);
+    });
+
+    it("keeps anti-join ORs with positive nested collection filters as LEFT JOINs", async () => {
+      await insertAuthor({ first_name: "no-books" });
+      await insertAuthor({ first_name: "high-review" });
+      await insertBook({ title: "b1", author_id: 2 });
+      await insertBookReview({ book_id: 1, rating: 5 });
+      await insertAuthor({ first_name: "low-review" });
+      await insertBook({ title: "b2", author_id: 3 });
+      await insertBookReview({ book_id: 2, rating: 1 });
+
+      const em = newEntityManager();
+      const [a, b, br] = aliases(Author, Book, BookReview);
+      resetQueryCount();
+      const authors = await em.find(
+        Author,
+        { as: a, books: { as: b, reviews: br } },
+        { ...opts, conditions: { or: [b.id.eq(null), br.rating.eq(5)] } },
+      );
+
+      expect(authors).toMatchEntity([{ firstName: "no-books" }, { firstName: "high-review" }]);
+      expect(queries).toEqual([
+        [
+          `SELECT DISTINCT ON (a.id, a.id) a.*, a.id FROM authors AS a`,
+          ` LEFT OUTER JOIN books AS b ON a.id = b.author_id`,
+          ` LEFT OUTER JOIN book_reviews AS br ON b.id = br.book_id`,
+          ` WHERE (b.id IS NULL OR br.rating = $1)`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $2`,
         ].join(""),

@@ -326,7 +326,12 @@ function queryReferencesAliasesOutsideConditions(
   if (query.groupBys?.some((groupBy) => aliases.has(groupBy.alias))) return true;
   return query.selects.some((select) => {
     if (typeof select === "string") return [...aliases].some((alias) => selectReferencesAlias(select, alias));
-    if ("aliases" in select) return select.aliases.some((alias) => aliases.has(alias));
+    if ("aliases" in select) {
+      return (
+        select.aliases.some((alias) => aliases.has(alias)) ||
+        [...aliases].some((alias) => selectReferencesAlias(select.sql, alias))
+      );
+    }
     return false;
   });
 }

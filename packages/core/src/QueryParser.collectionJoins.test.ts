@@ -165,6 +165,57 @@ describe("QueryParser.collectionJoins", () => {
     expect(JSON.stringify(query.condition).includes('"kind":"exists"')).toEqual(false);
   });
 
+  it("does not rewrite nested collection joins referenced by raw aggregate selects", () => {
+    const query: ParsedFindQuery = {
+      selects: ["a.id::text as id", { sql: "array_agg(br.rating::text) as review_ratings", bindings: [], aliases: [] }],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        {
+          alias: "b",
+          table: "books",
+          join: "outer",
+          col1: "a.id",
+          col2: "b.author_id",
+          collection: { parentAlias: "a", rootAlias: "b", kind: "o2m" },
+        },
+        {
+          alias: "br",
+          table: "book_reviews",
+          join: "outer",
+          col1: "b.id",
+          col2: "br.book_id",
+          collection: { parentAlias: "b", rootAlias: "br", kind: "o2m" },
+        },
+      ],
+      condition: {
+        kind: "exp",
+        op: "and",
+        conditions: [
+          {
+            kind: "column",
+            alias: "br",
+            column: "rating",
+            dbType: "int",
+            cond: { kind: "not-null" },
+          },
+        ],
+      },
+      groupBys: [{ alias: "a", column: "id" }],
+      orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+    };
+
+    optimizeCollectionJoins(query);
+
+    // I.e. even if the raw select's `aliases` metadata is empty, `array_agg(br.rating)` keeps `br` in the
+    // outer query; moving `br` under EXISTS would leave the aggregate with a dangling FROM reference.
+    expect(query.tables).toMatchObject([
+      { alias: "a", table: "authors", join: "primary" },
+      { alias: "b", table: "books", join: "outer" },
+      { alias: "br", table: "book_reviews", join: "outer" },
+    ]);
+    expect(JSON.stringify(query.condition).includes('"kind":"exists"')).toEqual(false);
+  });
+
   it("splits same-root anti-join ORs into NOT EXISTS OR EXISTS", () => {
     const query: ParsedFindQuery = {
       selects: ["a.*"],

@@ -39,6 +39,7 @@ export function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[])
       markSelectAliases(dt, parsed, s);
     } else if ("aliases" in s) {
       for (const a of s.aliases) dt.markRequired(a);
+      markSelectAliases(dt, parsed, s.sql);
     }
   });
   parsed.orderBys.forEach((o) => dt.markRequired(o.alias));

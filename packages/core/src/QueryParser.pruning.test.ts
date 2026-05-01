@@ -50,6 +50,24 @@ describe("QueryParser.pruning", () => {
 
       expect(query.tables.map((table) => table.alias)).toEqual(["a", "b", "c"]);
     });
+
+    it("keeps aliases referenced by raw select SQL when alias metadata is empty", () => {
+      const query: ParsedFindQuery = {
+        selects: ["a.*", { sql: "array_agg(br.rating::text) as review_ratings", bindings: [], aliases: [] }],
+        tables: [
+          { join: "primary", alias: "a", table: "authors" },
+          { join: "outer", alias: "b", table: "books", col1: "a.id", col2: "b.author_id" },
+          { join: "outer", alias: "br", table: "book_reviews", col1: "b.id", col2: "br.book_id" },
+        ],
+        condition: undefined,
+        orderBys: [],
+      };
+
+      pruneUnusedJoins(query, []);
+
+      // I.e. raw aggregate selects can reference joined aliases even when the parsed `aliases` metadata is empty.
+      expect(query.tables.map((table) => table.alias)).toEqual(["a", "b", "br"]);
+    });
   });
 
   describe("selectReferencesAlias", () => {

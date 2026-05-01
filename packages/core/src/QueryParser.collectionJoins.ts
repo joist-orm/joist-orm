@@ -321,19 +321,56 @@ function queryReferencesAliasesOutsideConditions(
   aliases: Set<string>,
   keepAliases: string[],
 ): boolean {
-  if (keepAliases.some((alias) => aliases.has(alias))) return true;
-  if (query.orderBys.some((orderBy) => aliases.has(orderBy.alias))) return true;
-  if (query.groupBys?.some((groupBy) => aliases.has(groupBy.alias))) return true;
-  return query.selects.some((select) => {
-    if (typeof select === "string") return [...aliases].some((alias) => selectReferencesAlias(select, alias));
-    if ("aliases" in select) {
-      return (
-        select.aliases.some((alias) => aliases.has(alias)) ||
-        [...aliases].some((alias) => selectReferencesAlias(select.sql, alias))
-      );
+  const requiredAliases = queryRequiredAliasesOutsideConditions(query, keepAliases);
+  // I.e. if `array_agg(br.rating)` requires `br`, then `b` is required too because `br` joins through `b`; don't
+  // move `b` under EXISTS just because the select references only its child alias directly.
+  return hasAnyAlias(requiredAliases, aliases);
+}
+
+/**
+ * Returns aliases needed by SELECT/GROUP/ORDER plus their join dependencies.
+ *
+ * I.e. `array_agg(br.rating)` requires `br`, and then `br` requires `b` because it joins through `b`.
+ */
+function queryRequiredAliasesOutsideConditions(query: ParsedFindQuery, keepAliases: string[]): Set<string> {
+  const required = new Set<string>();
+  for (const alias of keepAliases) required.add(alias);
+  for (const orderBy of query.orderBys) required.add(orderBy.alias);
+  for (const groupBy of query.groupBys ?? []) required.add(groupBy.alias);
+  for (const select of query.selects) {
+    if (typeof select === "string") {
+      addSelectAliases(query, required, select);
+    } else if ("aliases" in select) {
+      for (const alias of select.aliases) required.add(alias);
+      addSelectAliases(query, required, select.sql);
     }
-    return false;
-  });
+  }
+
+  const todo = [...required];
+  while (todo.length > 0) {
+    const alias = todo.pop()!;
+    const table = query.tables.find((t) => t.alias === alias);
+    if (!table || !isJoinTable(table)) continue;
+    for (const dependency of joinDependencies(table)) {
+      if (!required.has(dependency)) {
+        required.add(dependency);
+        todo.push(dependency);
+      }
+    }
+  }
+  return required;
+}
+
+/** Adds aliases referenced by raw select SQL, i.e. `array_agg(br.rating)` requires `br`. */
+function addSelectAliases(query: ParsedFindQuery, required: Set<string>, select: string): void {
+  for (const table of query.tables) {
+    if (selectReferencesAlias(select, table.alias)) required.add(table.alias);
+  }
+}
+
+/** Returns the aliases needed to evaluate a join's ON clause, excluding the joined alias itself. */
+function joinDependencies(table: JoinTable): string[] {
+  return [parseAlias(table.col1), parseAlias(table.col2)].filter((alias) => alias !== table.alias);
 }
 
 /** Returns true when a condition references this subtree and another scope, i.e. `b.title = 'x' OR c.text = 'x'`. */
@@ -361,8 +398,7 @@ function isJoinTable(table: ParsedFindQuery["tables"][number]): table is JoinTab
 
 /** Returns true when a join's ON clause references any alias in `aliases`. */
 function joinReferencesAnyAlias(table: JoinTable, aliases: Set<string>): boolean {
-  const dependencies = [parseAlias(table.col1), parseAlias(table.col2)].filter((alias) => alias !== table.alias);
-  return dependencies.some((alias) => aliases.has(alias));
+  return joinDependencies(table).some((alias) => aliases.has(alias));
 }
 
 /** Returns true when two alias sets overlap. */

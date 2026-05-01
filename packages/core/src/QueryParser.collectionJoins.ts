@@ -12,6 +12,14 @@ import {
 import { pruneUnusedJoins, selectReferencesAlias } from "./QueryParser.pruning";
 import { assertNever } from "./utils";
 
+/** A collection root plus every join nested under it, i.e. `books b` with `book_reviews br`. */
+interface CollectionRoot {
+  /** The top-level collection join that becomes the EXISTS FROM table, i.e. `books b`. */
+  table: JoinTable;
+  /** Every alias in this collection subtree, i.e. `b` and `br` for `authors -> books -> reviews`. */
+  aliases: Set<string>;
+}
+
 /**
  * Rewrites eligible logical collection LEFT JOINs into EXISTS after plugins have mutated the AST.
  *
@@ -48,9 +56,9 @@ export function optimizeCollectionJoins(
   // 2. no local real filters, like `{ books: {}, comments: {} }`, are safe because pruning will remove them;
   // 3. blocked real filters, like cross-scope ORs, must stay as LEFT JOINs and can multiply rows.
   // Only the third bucket should trip the fanout guard.
-  const fanoutLeftJoinAliases = getTopLevelCollectionRoots(query)
-    .filter((t) => conditionBlocksExistsRewrite(query.condition, collectJoinSubtreeAliases(query, t.alias)))
-    .map((t) => t.alias);
+  const fanoutLeftJoinAliases = getCollectionRoots(query)
+    .filter((root) => conditionBlocksExistsRewrite(query.condition, root.aliases))
+    .map((root) => root.table.alias);
   if (!allowMultipleLeftJoins && fanoutLeftJoinAliases.length > 1) {
     throw new Error(
       `em.find would issue multiple LEFT JOINs across collection relations (${fanoutLeftJoinAliases.join(
@@ -75,41 +83,36 @@ export function optimizeCollectionJoins(
  * I.e. for `authors a -> books b -> book_reviews br`, `b` is the collection root and `br` is part of its subtree.
  */
 function rewriteCollectionJoins(query: ParsedFindQuery, keepAliases: string[] = []): void {
-  rewriteSiblingOrConditions(query, keepAliases);
-  for (const root of getTopLevelCollectionRoots(query)) {
-    // I.e. for root `b`, this gathers `b`, `br`, and any other joins whose `col1` depends on that subtree.
-    const subtreeAliases = collectJoinSubtreeAliases(query, root.alias);
-    if (conditionHasCrossScopeReference(query.condition, subtreeAliases)) continue;
+  const roots = getCollectionRoots(query);
+  if (query.condition) rewriteSiblingOrExpression(query, query.condition, roots, keepAliases);
+  for (const root of roots) {
+    if (conditionHasCrossScopeReference(query.condition, root.aliases)) continue;
     // I.e. move `b.title = 'x'` and `(br.rating = 5 OR br.rating = 4)`, but not `b.title = 'x' OR a.first_name = 'x'`.
-    const moved = query.condition ? removeLocallyScopedConditions(query.condition, subtreeAliases) : [];
-    const hasOnlyAntiJoin = moved.length === 1 && isAliasIdNull(moved[0], root.alias);
-    if (moved.length === 0 && !hasOnlyAntiJoin) continue;
-    const exists = createExistsCondition(query, root, subtreeAliases, moved);
+    const moved = query.condition ? removeLocallyScopedConditions(query.condition, root.aliases) : [];
+    if (moved.length === 0) continue;
+    const exists = createExistsCondition(query, root, moved);
     if (!exists) {
-      query.condition ??= { kind: "exp", op: "and", conditions: [] };
-      query.condition.conditions.push(...moved);
+      addConditions(query, moved);
       continue;
     }
-    query.condition ??= { kind: "exp", op: "and", conditions: [] };
-    query.condition.conditions.push(exists);
+    addConditions(query, [exists]);
     // I.e. after adding EXISTS, remove `books b` and its children from the outer FROM list.
-    query.tables = query.tables.filter((t) => !subtreeAliases.has(t.alias));
+    query.tables = query.tables.filter((t) => !root.aliases.has(t.alias));
   }
   removeEmptyExpressions(query.condition);
 }
 
-/** Rewrites `b.id IS NOT NULL OR c.id IS NOT NULL` into sibling EXISTS clauses. */
-function rewriteSiblingOrConditions(query: ParsedFindQuery, keepAliases: string[]): void {
-  if (!query.condition) return;
-  rewriteSiblingOrExpression(query, query.condition, keepAliases);
-}
-
 /** Rewrites eligible sibling collection ORs while preserving outer/mixed-scope ORs as joins. */
-function rewriteSiblingOrExpression(query: ParsedFindQuery, condition: ParsedExpressionCondition, keepAliases: string[]): void {
+function rewriteSiblingOrExpression(
+  query: ParsedFindQuery,
+  condition: ParsedExpressionCondition,
+  roots: CollectionRoot[],
+  keepAliases: string[],
+): void {
   if (condition.kind !== "exp") return;
-  if (condition.op === "or" && rewriteSiblingOrExpressionChildren(query, condition, keepAliases)) return;
+  if (condition.op === "or" && rewriteSiblingOrExpressionChildren(query, condition, roots, keepAliases)) return;
   if (condition.op === "and") {
-    for (const child of condition.conditions) rewriteSiblingOrExpression(query, child, keepAliases);
+    for (const child of condition.conditions) rewriteSiblingOrExpression(query, child, roots, keepAliases);
   }
 }
 
@@ -117,22 +120,19 @@ function rewriteSiblingOrExpression(query: ParsedFindQuery, condition: ParsedExp
 function rewriteSiblingOrExpressionChildren(
   query: ParsedFindQuery,
   exp: ParsedExpressionFilter,
+  roots: CollectionRoot[],
   keepAliases: string[],
 ): boolean {
-  const roots = getTopLevelCollectionRoots(query).map((root) => ({
-    root,
-    subtreeAliases: collectJoinSubtreeAliases(query, root.alias),
-  }));
-  const matches: { root: JoinTable; subtreeAliases: Set<string>; condition: ParsedExpressionCondition }[] = [];
+  const matches: { collectionRoot: CollectionRoot; condition: ParsedExpressionCondition }[] = [];
   const usedAliases = new Set<string>();
   const usedRoots = new Set<string>();
   for (const condition of exp.conditions) {
     if (!isRealCondition(condition)) return false;
-    const match = roots.find(({ subtreeAliases }) => conditionReferencesOnlyAliases(condition, subtreeAliases));
+    const match = roots.find((root) => conditionReferencesOnlyAliases(condition, root.aliases));
     if (!match) return false;
-    matches.push({ ...match, condition });
-    usedRoots.add(match.root.alias);
-    for (const alias of match.subtreeAliases) usedAliases.add(alias);
+    matches.push({ collectionRoot: match, condition });
+    usedRoots.add(match.table.alias);
+    for (const alias of match.aliases) usedAliases.add(alias);
   }
   // I.e. rewrite only true sibling collection ORs, like `b.id IS NOT NULL OR c.id IS NOT NULL`;
   // skip single-root ORs, aliases also filtered elsewhere like `b.order = 1 AND (b.title = 'x' OR c.text = 'x')`,
@@ -147,7 +147,7 @@ function rewriteSiblingOrExpressionChildren(
 
   const existsConditions: ExistsCondition[] = [];
   for (const match of matches) {
-    const exists = createExistsCondition(query, match.root, match.subtreeAliases, [match.condition]);
+    const exists = createExistsCondition(query, match.collectionRoot, [match.condition]);
     if (!exists) return false;
     existsConditions.push(exists);
   }
@@ -159,16 +159,16 @@ function rewriteSiblingOrExpressionChildren(
 /** Creates an EXISTS/NOT EXISTS condition for moved collection filters, or undefined when a LEFT JOIN must stay. */
 function createExistsCondition(
   query: ParsedFindQuery,
-  root: JoinTable,
-  subtreeAliases: Set<string>,
+  collectionRoot: CollectionRoot,
   moved: ParsedExpressionCondition[],
 ): ExistsCondition | undefined {
+  const root = collectionRoot.table;
   const hasOnlyAntiJoin = moved.length === 1 && isAliasIdNull(moved[0], root.alias);
   if (!hasOnlyAntiJoin && !moved.some(isRealCondition)) {
     // I.e. only soft-delete/STI conditions moved; don't create an EXISTS that changes nothing.
     return undefined;
   }
-  if (moved.length > 0 && moved.some((c) => isAliasIdNull(c, root.alias)) && !hasOnlyAntiJoin) {
+  if (!hasOnlyAntiJoin && moved.some((c) => isAliasIdNull(c, root.alias))) {
     // I.e. `b.id IS NULL AND b.title = 'x'` is not a pure anti-join; leave it as a LEFT JOIN for SQL semantics.
     return undefined;
   }
@@ -184,16 +184,18 @@ function createExistsCondition(
   const conditions = hasOnlyAntiJoin ? [correlation] : [correlation, ...moved];
   const subquery: ParsedFindQuery = {
     selects: ["1"],
-    tables: query.tables.filter((t) => subtreeAliases.has(t.alias)).map((t) => {
-      // I.e. the collection root becomes the subquery's FROM table; children remain joins off that root.
-      if (t.alias === root.alias) return { join: "primary", alias: t.alias, table: t.table } satisfies PrimaryTable;
-      // I.e. by this point every moved condition is locally scoped and positive, like `br.rating = 5`; pure
-      // `br.id IS NULL` anti-joins are handled as NOT EXISTS at their own root, and mixed/null-sensitive cases stay
-      // as outer joins. So inside this EXISTS, child rows must exist to satisfy the moved filters, and INNER JOIN is
-      // equivalent to LEFT JOIN + WHERE child condition.
-      if (t.join === "inner" || t.join === "outer") return { ...t, join: "inner" as const };
-      return t;
-    }),
+    tables: query.tables
+      .filter((t) => collectionRoot.aliases.has(t.alias))
+      .map((t) => {
+        // I.e. the collection root becomes the subquery's FROM table; children remain joins off that root.
+        if (t.alias === root.alias) return { join: "primary", alias: t.alias, table: t.table } satisfies PrimaryTable;
+        // I.e. by this point every moved condition is locally scoped and positive, like `br.rating = 5`; pure
+        // `br.id IS NULL` anti-joins are handled as NOT EXISTS at their own root, and mixed/null-sensitive cases stay
+        // as outer joins. So inside this EXISTS, child rows must exist to satisfy the moved filters, and INNER JOIN is
+        // equivalent to LEFT JOIN + WHERE child condition.
+        if (t.join === "inner" || t.join === "outer") return { ...t, join: "inner" as const };
+        return t;
+      }),
     condition: { kind: "exp", op: "and", conditions },
     orderBys: [],
   };
@@ -202,27 +204,33 @@ function createExistsCondition(
   return {
     kind: "exists",
     negate: hasOnlyAntiJoin,
-    correlation,
-    joinColumns: { col1: root.col1, col2: root.col2 },
     subquery,
     outerAliases: [root.collection!.parentAlias],
   };
 }
 
+/** Appends conditions to the top-level expression, creating an AND wrapper when needed. */
+function addConditions(query: ParsedFindQuery, conditions: ParsedExpressionCondition[]): void {
+  query.condition ??= { kind: "exp", op: "and", conditions: [] };
+  query.condition.conditions.push(...conditions);
+}
+
+/** Returns top-level collection roots with their full join subtrees. */
+function getCollectionRoots(query: ParsedFindQuery): CollectionRoot[] {
+  return getTopLevelCollectionRoots(query).map((table) => ({
+    table,
+    aliases: collectJoinSubtreeAliases(query, table.alias),
+  }));
+}
+
 /** Returns top-level collection roots, i.e. `books b` but not nested `book_reviews br`. */
 function getTopLevelCollectionRoots(query: ParsedFindQuery): JoinTable[] {
   // I.e. if `books b` is nested under another collection root, the parent pass should absorb it; don't rewrite it here.
-  const collectionAliases = new Set(
-    query.tables
-      .filter((t): t is JoinTable => t.join === "inner" || t.join === "outer")
-      .flatMap((t) => (t.collection ? [t.alias] : [])),
+  const joinTables = query.tables.filter(isJoinTable);
+  const collectionAliases = new Set(joinTables.flatMap((t) => (t.collection ? [t.alias] : [])));
+  return joinTables.filter(
+    (t) => t.collection?.rootAlias === t.alias && !collectionAliases.has(t.collection.parentAlias),
   );
-  return query.tables.filter(
-    (t) =>
-      (t.join === "inner" || t.join === "outer") &&
-      t.collection?.rootAlias === t.alias &&
-      !collectionAliases.has(t.collection.parentAlias),
-  ) as JoinTable[];
 }
 
 /** Returns true if a remaining real condition prevents this subtree from becoming EXISTS, i.e. a cross-scope OR. */
@@ -231,9 +239,7 @@ function conditionBlocksExistsRewrite(condition: ParsedExpressionCondition | und
   if (condition.kind === "exp" && condition.op === "and") {
     return condition.conditions.some((c) => conditionBlocksExistsRewrite(c, aliases));
   }
-  const found = new Set<string>();
-  collectAllAliases(condition, found);
-  return [...found].some((alias) => aliases.has(alias));
+  return conditionReferencesAnyAlias(condition, aliases);
 }
 
 /** Collects a collection root and all joins that depend on it, i.e. `b -> br -> c`. */
@@ -243,9 +249,9 @@ function collectJoinSubtreeAliases(query: ParsedFindQuery, rootAlias: string): S
   while (changed) {
     changed = false;
     for (const table of query.tables) {
-      if (table.join !== "inner" && table.join !== "outer") continue;
+      if (!isJoinTable(table)) continue;
       // I.e. `book_reviews br ON b.id = br.book_id` depends on `b`, so `br` belongs in the `b` subtree.
-      if (!aliases.has(table.alias) && aliases.has(parseAlias(table.col1))) {
+      if (!aliases.has(table.alias) && joinReferencesAnyAlias(table, aliases)) {
         aliases.add(table.alias);
         changed = true;
       }
@@ -286,8 +292,7 @@ function removeLocallyScopedConditions(exp: ParsedExpressionFilter, aliases: Set
 
 /** Returns true when a condition references at least one alias and all aliases are in `aliases`, i.e. only `b`/`br`. */
 function conditionReferencesOnlyAliases(condition: ParsedExpressionCondition, aliases: Set<string>): boolean {
-  const found = new Set<string>();
-  collectAllAliases(condition, found);
+  const found = conditionAliases(condition);
   return found.size > 0 && [...found].every((alias) => aliases.has(alias));
 }
 
@@ -321,18 +326,36 @@ function queryReferencesAliasesOutsideConditions(
 }
 
 /** Returns true when a condition references this subtree and another scope, i.e. `b.title = 'x' OR c.text = 'x'`. */
-function conditionHasCrossScopeReference(condition: ParsedExpressionCondition | undefined, aliases: Set<string>): boolean {
+function conditionHasCrossScopeReference(
+  condition: ParsedExpressionCondition | undefined,
+  aliases: Set<string>,
+): boolean {
   if (!condition || !isRealCondition(condition)) return false;
   if (condition.kind === "exp" && condition.op === "and") {
     return condition.conditions.some((child) => conditionHasCrossScopeReference(child, aliases));
   }
-  return conditionReferencesAnyAlias(condition, aliases) && !conditionReferencesOnlyAliases(condition, aliases);
+  const found = conditionAliases(condition);
+  return hasAnyAlias(found, aliases) && ![...found].every((alias) => aliases.has(alias));
 }
 
 /** Returns true when a condition references any alias in `aliases`, i.e. `b` in `b.title = c.text`. */
 function conditionReferencesAnyAlias(condition: ParsedExpressionCondition, aliases: Set<string>): boolean {
-  const found = new Set<string>();
-  collectAllAliases(condition, found);
+  return hasAnyAlias(conditionAliases(condition), aliases);
+}
+
+/** Returns true when `table` is an ordinary SQL join. */
+function isJoinTable(table: ParsedFindQuery["tables"][number]): table is JoinTable {
+  return table.join === "inner" || table.join === "outer";
+}
+
+/** Returns true when a join's ON clause references any alias in `aliases`. */
+function joinReferencesAnyAlias(table: JoinTable, aliases: Set<string>): boolean {
+  const dependencies = [parseAlias(table.col1), parseAlias(table.col2)].filter((alias) => alias !== table.alias);
+  return dependencies.some((alias) => aliases.has(alias));
+}
+
+/** Returns true when two alias sets overlap. */
+function hasAnyAlias(found: Set<string>, aliases: Set<string>): boolean {
   return [...found].some((alias) => aliases.has(alias));
 }
 
@@ -369,6 +392,13 @@ function isRealCondition(condition: ParsedExpressionCondition): boolean {
   } else {
     assertNever(condition);
   }
+}
+
+/** Returns all aliases referenced by a condition, i.e. `b` and `a` in an OR. */
+function conditionAliases(condition: ParsedExpressionCondition): Set<string> {
+  const aliases = new Set<string>();
+  collectAllAliases(condition, aliases);
+  return aliases;
 }
 
 /** Collects all aliases referenced by a condition, including inside nested expressions, i.e. `b` and `a` in an OR. */

@@ -58,10 +58,6 @@ export interface ExistsCondition {
   kind: "exists";
   /** When true, renders as NOT EXISTS. */
   negate: boolean;
-  /** The outer-to-inner predicate that correlates the subquery with its parent query. */
-  correlation: RawCondition;
-  /** The join columns to use if this EXISTS must be unwrapped back into an outer join. */
-  joinColumns: { col1: string; col2: string };
   /** The subquery: SELECT 1 FROM child WHERE correlation AND filter. */
   subquery: ParsedFindQuery;
   /** Outer aliases referenced by the correlation predicate, for join pruning. */

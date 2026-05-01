@@ -86,6 +86,7 @@ function rewriteCollectionJoins(query: ParsedFindQuery, keepAliases: string[] = 
   const roots = getCollectionRoots(query);
   if (query.condition) rewriteSiblingOrExpression(query, query.condition, roots, keepAliases);
   for (const root of roots) {
+    if (queryReferencesAliasesOutsideConditions(query, root.aliases, keepAliases)) continue;
     if (conditionHasCrossScopeReference(query.condition, root.aliases)) continue;
     // I.e. move `b.title = 'x'` and `(br.rating = 5 OR br.rating = 4)`, but not `b.title = 'x' OR a.first_name = 'x'`.
     const moved = query.condition ? removeLocallyScopedConditions(query.condition, root.aliases) : [];

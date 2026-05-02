@@ -200,11 +200,9 @@ function createExistsCondition(
       .map((t) => {
         // I.e. the collection root becomes the subquery's FROM table; children remain joins off that root.
         if (t.alias === root.alias) return { join: "primary", alias: t.alias, table: t.table } satisfies PrimaryTable;
-        // I.e. by this point every moved condition is locally scoped and positive, like `br.rating = 5`; pure
-        // `br.id IS NULL` anti-joins are handled as NOT EXISTS at their own root, and mixed/null-sensitive cases stay
-        // as outer joins. So inside this EXISTS, child rows must exist to satisfy the moved filters, and INNER JOIN is
-        // equivalent to LEFT JOIN + WHERE child condition.
-        if (t.join === "inner" || t.join === "outer") return { ...t, join: "inner" as const };
+        // I.e. preserve nullable paths like `LEFT JOIN p ... LEFT JOIN sp ... WHERE p.id = 1 OR sp.id = 1`; forcing
+        // children to INNER JOIN would require every optional branch to exist before the OR can match any branch.
+        if (t.join === "outer") return { ...t, distinct: false };
         return t;
       }),
     condition: { kind: "exp", op: "and", conditions },

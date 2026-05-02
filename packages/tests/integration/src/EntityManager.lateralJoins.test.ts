@@ -538,6 +538,73 @@ describe("EntityManager.lateralJoins", () => {
       ]);
     });
 
+    it("splits collection id IS NULL OR id IN list into NOT EXISTS OR EXISTS", async () => {
+      await insertAuthor({ first_name: "no-books" });
+      await insertAuthor({ first_name: "book-1" });
+      await insertBook({ title: "b1", author_id: 2 });
+      await insertAuthor({ first_name: "book-2" });
+      await insertBook({ title: "b2", author_id: 3 });
+      await insertAuthor({ first_name: "book-3" });
+      await insertBook({ title: "b3", author_id: 4 });
+
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      resetQueryCount();
+      const authors = await em.find(
+        Author,
+        { as: a, books: b },
+        { ...opts, conditions: { or: [b.id.eq(null), b.id.in(["b:1", "b:2"])] } },
+      );
+
+      expect(authors).toMatchEntity([{ firstName: "no-books" }, { firstName: "book-1" }, { firstName: "book-2" }]);
+      expect(queries).toEqual([
+        [
+          `SELECT a.* FROM authors AS a`,
+          // I.e. the null option branch must mean no books at all, not `b.id IS NULL` inside a books EXISTS.
+          ` WHERE NOT EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id)`,
+          // I.e. non-null option ids remain a positive branch over matching book rows.
+          ` OR EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.id = ANY($1))`,
+          ` ORDER BY a.id ASC`,
+          ` LIMIT $2`,
+        ].join(""),
+      ]);
+    });
+
+    it("splits m2m target id IS NULL OR id IN list into NOT EXISTS OR EXISTS", async () => {
+      await insertAuthor({ first_name: "no-tags" });
+      await insertAuthor({ first_name: "tag-1" });
+      await insertTag({ name: "t1" });
+      await insertAuthorToTag({ author_id: 2, tag_id: 1 });
+      await insertAuthor({ first_name: "tag-2" });
+      await insertTag({ name: "t2" });
+      await insertAuthorToTag({ author_id: 3, tag_id: 2 });
+      await insertAuthor({ first_name: "tag-3" });
+      await insertTag({ name: "t3" });
+      await insertAuthorToTag({ author_id: 4, tag_id: 3 });
+
+      const em = newEntityManager();
+      const [a, t] = aliases(Author, Tag);
+      resetQueryCount();
+      const authors = await em.find(
+        Author,
+        { as: a, tags: t },
+        { ...opts, conditions: { or: [t.id.eq(null), t.id.in(["t:1", "t:2"])] } },
+      );
+
+      expect(authors).toMatchEntity([{ firstName: "no-tags" }, { firstName: "tag-1" }, { firstName: "tag-2" }]);
+      expect(queries).toEqual([
+        [
+          `SELECT a.* FROM authors AS a`,
+          // I.e. m2m target `t.id IS NULL` must become no junction rows, not impossible NULL target ids in EXISTS.
+          ` WHERE NOT EXISTS (SELECT 1 FROM authors_to_tags AS att WHERE a.id = att.author_id)`,
+          ` OR EXISTS (SELECT 1 FROM authors_to_tags AS att`,
+          ` LEFT OUTER JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.id = ANY($1))`,
+          ` ORDER BY a.id ASC`,
+          ` LIMIT $2`,
+        ].join(""),
+      ]);
+    });
+
     it("returns empty results when no parent matches all collections", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });
@@ -567,6 +634,241 @@ describe("EntityManager.lateralJoins", () => {
       const em = newEntityManager();
       const authors = await em.find(Author, { books: { title: "b1" }, tags: { name: "t1" } }, opts);
       expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+    });
+  });
+
+  describe("semantic parity", () => {
+    it("matches join-mode semantics for independent collection AND predicates", async () => {
+      await insertAuthor({ first_name: "both" });
+      await insertBook({ title: "book-match", author_id: 1 });
+      await insertComment({ text: "comment-match", parent_author_id: 1 });
+      await insertAuthor({ first_name: "book-only" });
+      await insertBook({ title: "book-match", author_id: 2 });
+      await insertComment({ text: "other", parent_author_id: 2 });
+      await insertAuthor({ first_name: "comment-only" });
+      await insertBook({ title: "other", author_id: 3 });
+      await insertComment({ text: "comment-match", parent_author_id: 3 });
+
+      const optimized = await newEntityManager().find(
+        Author,
+        { books: { title: "book-match" }, comments: { text: "comment-match" } },
+        opts,
+      );
+      const joinMode = await newEntityManager().find(
+        Author,
+        { books: { title: "book-match" }, comments: { text: "comment-match" } },
+        { ...opts, optimizeJoinsToExists: false },
+      );
+
+      expect(optimized).toMatchEntity([{ firstName: "both" }]);
+      expect(joinMode).toMatchEntity([{ firstName: "both" }]);
+    });
+
+    it("matches join-mode semantics for same-collection same-row AND predicates", async () => {
+      await insertAuthor({ first_name: "split-rows" });
+      await insertBook({ title: "match", author_id: 1, order: 2 });
+      await insertBook({ title: "other", author_id: 1, order: 1 });
+      await insertAuthor({ first_name: "same-row" });
+      await insertBook({ title: "match", author_id: 2, order: 1 });
+
+      const optimized = await newEntityManager().find(Author, { books: { title: "match", order: 1 } }, opts);
+      const joinMode = await newEntityManager().find(
+        Author,
+        { books: { title: "match", order: 1 } },
+        { ...opts, optimizeJoinsToExists: false },
+      );
+
+      expect(optimized).toMatchEntity([{ firstName: "same-row" }]);
+      expect(joinMode).toMatchEntity([{ firstName: "same-row" }]);
+    });
+
+    it("matches join-mode semantics for sibling collection OR predicates", async () => {
+      await insertAuthor({ first_name: "book-match" });
+      await insertBook({ title: "match", author_id: 1 });
+      await insertAuthor({ first_name: "comment-match" });
+      await insertComment({ text: "match", parent_author_id: 2 });
+      await insertAuthor({ first_name: "no-match" });
+      await insertBook({ title: "other", author_id: 3 });
+
+      const [b, c] = aliases(Book, Comment);
+      const optimized = await newEntityManager().find(
+        Author,
+        { books: b, comments: c },
+        { ...opts, conditions: { or: [b.title.eq("match"), c.text.eq("match")] } },
+      );
+      const joinMode = await newEntityManager().find(
+        Author,
+        { books: b, comments: c },
+        { ...opts, optimizeJoinsToExists: false, conditions: { or: [b.title.eq("match"), c.text.eq("match")] } },
+      );
+
+      expect(optimized).toMatchEntity([{ firstName: "book-match" }, { firstName: "comment-match" }]);
+      expect(joinMode).toMatchEntity([{ firstName: "book-match" }, { firstName: "comment-match" }]);
+    });
+
+    it("matches join-mode semantics for anti-join OR predicates", async () => {
+      await insertAuthor({ first_name: "no-books" });
+      await insertAuthor({ first_name: "high-review" });
+      await insertBook({ title: "b1", author_id: 2 });
+      await insertBookReview({ book_id: 1, rating: 5 });
+      await insertAuthor({ first_name: "low-review" });
+      await insertBook({ title: "b2", author_id: 3 });
+      await insertBookReview({ book_id: 2, rating: 1 });
+
+      const [b, br] = aliases(Book, BookReview);
+      const optimized = await newEntityManager().find(
+        Author,
+        { books: { as: b, reviews: br } },
+        { ...opts, conditions: { or: [b.id.eq(null), br.rating.eq(5)] } },
+      );
+      const joinMode = await newEntityManager().find(
+        Author,
+        { books: { as: b, reviews: br } },
+        { ...opts, optimizeJoinsToExists: false, conditions: { or: [b.id.eq(null), br.rating.eq(5)] } },
+      );
+
+      expect(optimized).toMatchEntity([{ firstName: "no-books" }, { firstName: "high-review" }]);
+      expect(joinMode).toMatchEntity([{ firstName: "no-books" }, { firstName: "high-review" }]);
+    });
+
+    it("matches join-mode semantics for collection id IS NULL OR id IN list predicates", async () => {
+      await insertAuthor({ first_name: "no-books" });
+      await insertAuthor({ first_name: "book-1" });
+      await insertBook({ title: "b1", author_id: 2 });
+      await insertAuthor({ first_name: "book-2" });
+      await insertBook({ title: "b2", author_id: 3 });
+      await insertAuthor({ first_name: "book-3" });
+      await insertBook({ title: "b3", author_id: 4 });
+
+      const [b] = aliases(Book);
+      const optimized = await newEntityManager().find(
+        Author,
+        { books: b },
+        { ...opts, conditions: { or: [b.id.eq(null), b.id.in(["b:1", "b:2"])] } },
+      );
+      const joinMode = await newEntityManager().find(
+        Author,
+        { books: b },
+        {
+          ...opts,
+          optimizeJoinsToExists: false,
+          conditions: { or: [b.id.eq(null), b.id.in(["b:1", "b:2"])] },
+        },
+      );
+
+      expect(optimized).toMatchEntity([{ firstName: "no-books" }, { firstName: "book-1" }, { firstName: "book-2" }]);
+      expect(joinMode).toMatchEntity([{ firstName: "no-books" }, { firstName: "book-1" }, { firstName: "book-2" }]);
+    });
+
+    it("matches join-mode semantics for m2m target id IS NULL OR id IN list predicates", async () => {
+      await insertAuthor({ first_name: "no-tags" });
+      await insertAuthor({ first_name: "tag-1" });
+      await insertTag({ name: "t1" });
+      await insertAuthorToTag({ author_id: 2, tag_id: 1 });
+      await insertAuthor({ first_name: "tag-2" });
+      await insertTag({ name: "t2" });
+      await insertAuthorToTag({ author_id: 3, tag_id: 2 });
+      await insertAuthor({ first_name: "tag-3" });
+      await insertTag({ name: "t3" });
+      await insertAuthorToTag({ author_id: 4, tag_id: 3 });
+
+      const [t] = aliases(Tag);
+      const optimized = await newEntityManager().find(
+        Author,
+        { tags: t },
+        { ...opts, conditions: { or: [t.id.eq(null), t.id.in(["t:1", "t:2"])] } },
+      );
+      const joinMode = await newEntityManager().find(
+        Author,
+        { tags: t },
+        {
+          ...opts,
+          optimizeJoinsToExists: false,
+          conditions: { or: [t.id.eq(null), t.id.in(["t:1", "t:2"])] },
+        },
+      );
+
+      expect(optimized).toMatchEntity([{ firstName: "no-tags" }, { firstName: "tag-1" }, { firstName: "tag-2" }]);
+      expect(joinMode).toMatchEntity([{ firstName: "no-tags" }, { firstName: "tag-1" }, { firstName: "tag-2" }]);
+    });
+
+    it("matches join-mode semantics for m2m collection predicates", async () => {
+      await insertAuthor({ first_name: "tag-match" });
+      await insertTag({ name: "match" });
+      await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+      await insertAuthor({ first_name: "no-tag" });
+      await insertAuthor({ first_name: "other-tag" });
+      await insertTag({ name: "other" });
+      await insertAuthorToTag({ author_id: 3, tag_id: 2 });
+
+      const optimized = await newEntityManager().find(Author, { tags: { name: "match" } }, opts);
+      const joinMode = await newEntityManager().find(
+        Author,
+        { tags: { name: "match" } },
+        { ...opts, optimizeJoinsToExists: false },
+      );
+
+      expect(optimized).toMatchEntity([{ firstName: "tag-match" }]);
+      expect(joinMode).toMatchEntity([{ firstName: "tag-match" }]);
+    });
+
+    it("matches join-mode semantics for cross-scope OR predicates that cannot stay as EXISTS", async () => {
+      await insertAuthor({ first_name: "book-branch" });
+      await insertBook({ title: "match", author_id: 1 });
+      await insertAuthor({ first_name: "author-branch" });
+      await insertBook({ title: "other", author_id: 2 });
+      await insertAuthor({ first_name: "no-match" });
+      await insertBook({ title: "other", author_id: 3 });
+
+      const [a, b] = aliases(Author, Book);
+      const optimized = await newEntityManager().find(
+        Author,
+        { as: a, books: b },
+        { ...opts, conditions: { or: [b.title.eq("match"), a.firstName.eq("author-branch")] } },
+      );
+      const joinMode = await newEntityManager().find(
+        Author,
+        { as: a, books: b },
+        {
+          ...opts,
+          optimizeJoinsToExists: false,
+          conditions: { or: [b.title.eq("match"), a.firstName.eq("author-branch")] },
+        },
+      );
+
+      expect(optimized).toMatchEntity([{ firstName: "book-branch" }, { firstName: "author-branch" }]);
+      expect(joinMode).toMatchEntity([{ firstName: "book-branch" }, { firstName: "author-branch" }]);
+    });
+
+    it("matches join-mode semantics for nullable descendant OR predicates under a collection", async () => {
+      await insertAuthor({ first_name: "comment-branch" });
+      await insertComment({ text: "match" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await update("books", { id: 1, random_comment_id: 1 });
+      await insertAuthor({ first_name: "prequel-branch" });
+      await insertBook({ title: "prequel-match", author_id: 2 });
+      await insertBook({ title: "b2", author_id: 2, prequel_id: 2 });
+      await insertAuthor({ first_name: "no-match" });
+      await insertBook({ title: "b3", author_id: 3 });
+
+      const [b, p, c] = aliases(Book, Book, Comment);
+      const optimized = await newEntityManager().find(
+        Author,
+        { books: { as: b, prequel: p, randomComment: c } },
+        { ...opts, conditions: { or: [p.title.eq("prequel-match"), c.text.eq("match")] } },
+      );
+      const joinMode = await newEntityManager().find(
+        Author,
+        { books: { as: b, prequel: p, randomComment: c } },
+        {
+          ...opts,
+          optimizeJoinsToExists: false,
+          conditions: { or: [p.title.eq("prequel-match"), c.text.eq("match")] },
+        },
+      );
+
+      expect(optimized).toMatchEntity([{ firstName: "comment-branch" }, { firstName: "prequel-branch" }]);
+      expect(joinMode).toMatchEntity([{ firstName: "comment-branch" }, { firstName: "prequel-branch" }]);
     });
   });
 

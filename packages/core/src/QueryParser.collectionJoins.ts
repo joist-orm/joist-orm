@@ -18,6 +18,8 @@ interface CollectionRoot {
   table: JoinTable;
   /** Every alias in this collection subtree, i.e. `b` and `br` for `authors -> books -> reviews`. */
   aliases: Set<string>;
+  /** Every join table in this collection subtree, i.e. `att` and `t` for an m2m tag filter. */
+  joinTables: JoinTable[];
 }
 
 /**
@@ -139,7 +141,7 @@ function rewriteSiblingOrExpressionChildren(
     if (!match) return false;
     matches.push({ collectionRoot: match, condition });
     usedRoots.add(match.table.alias);
-    hasAntiJoinBranch ||= isAliasIdNull(condition, match.table.alias);
+    hasAntiJoinBranch ||= isCollectionAntiJoin(condition, match);
     for (const alias of match.aliases) usedAliases.add(alias);
   }
   // I.e. rewrite true sibling collection ORs like `b.id IS NOT NULL OR c.id IS NOT NULL`, and same-root
@@ -174,12 +176,12 @@ function createExistsCondition(
   moved: ParsedExpressionCondition[],
 ): ExistsCondition | undefined {
   const root = collectionRoot.table;
-  const hasOnlyAntiJoin = moved.length === 1 && isAliasIdNull(moved[0], root.alias);
+  const hasOnlyAntiJoin = moved.length === 1 && isCollectionAntiJoin(moved[0], collectionRoot);
   if (!hasOnlyAntiJoin && !moved.some(isRealCondition)) {
     // I.e. only soft-delete/STI conditions moved; don't create an EXISTS that changes nothing.
     return undefined;
   }
-  if (!hasOnlyAntiJoin && moved.some((c) => conditionContainsAliasIdNull(c, root.alias))) {
+  if (!hasOnlyAntiJoin && moved.some((c) => conditionContainsCollectionAntiJoin(c, collectionRoot))) {
     // I.e. `b.id IS NULL OR br.rating = 5` is not a pure anti-join; leave it as a LEFT JOIN for SQL semantics.
     return undefined;
   }
@@ -226,10 +228,14 @@ function addConditions(query: ParsedFindQuery, conditions: ParsedExpressionCondi
 
 /** Returns top-level collection roots with their full join subtrees. */
 function getCollectionRoots(query: ParsedFindQuery): CollectionRoot[] {
-  return getTopLevelCollectionRoots(query).map((table) => ({
-    table,
-    aliases: collectJoinSubtreeAliases(query, table.alias),
-  }));
+  return getTopLevelCollectionRoots(query).map((table) => {
+    const aliases = collectJoinSubtreeAliases(query, table.alias);
+    return {
+      table,
+      aliases,
+      joinTables: query.tables.filter((t): t is JoinTable => isJoinTable(t) && aliases.has(t.alias)),
+    };
+  });
 }
 
 /** Returns top-level collection roots, i.e. `books b` but not nested `book_reviews br`. */
@@ -409,6 +415,26 @@ function hasAnyAlias(found: Set<string>, aliases: Set<string>): boolean {
   return [...found].some((alias) => aliases.has(alias));
 }
 
+/** Returns true for collection anti-joins, i.e. `b.id IS NULL` or m2m target `t.id IS NULL` for root `att`. */
+function isCollectionAntiJoin(condition: ParsedExpressionCondition, root: CollectionRoot): boolean {
+  return collectionAntiJoinAliases(root).some((alias) => isAliasIdNull(condition, alias));
+}
+
+/** Returns aliases whose `id IS NULL` means the collection root has no matching row. */
+function collectionAntiJoinAliases(root: CollectionRoot): string[] {
+  return [...root.aliases].filter((alias) => {
+    if (alias === root.table.alias) return true;
+    const table = rootTable(root, alias);
+    // I.e. for m2m `authors -> authors_to_tags att -> tags t`, `t.id IS NULL` means no tag membership.
+    return table?.collection?.rootAlias === root.table.alias;
+  });
+}
+
+/** Returns a join table from a collection subtree by alias. */
+function rootTable(root: CollectionRoot, alias: string): JoinTable | undefined {
+  return root.joinTables.find((table) => table.alias === alias);
+}
+
 /** Returns true for `alias.id IS NULL`, i.e. the parse shape for `{ books: { id: null } }`. */
 function isAliasIdNull(condition: ParsedExpressionCondition, alias: string): boolean {
   return (
@@ -419,10 +445,10 @@ function isAliasIdNull(condition: ParsedExpressionCondition, alias: string): boo
   );
 }
 
-/** Returns true when a condition tree contains `alias.id IS NULL`, i.e. an anti-join branch inside an OR. */
-function conditionContainsAliasIdNull(condition: ParsedExpressionCondition, alias: string): boolean {
-  if (isAliasIdNull(condition, alias)) return true;
-  if (condition.kind === "exp") return condition.conditions.some((c) => conditionContainsAliasIdNull(c, alias));
+/** Returns true when a condition tree contains a collection anti-join branch inside an OR. */
+function conditionContainsCollectionAntiJoin(condition: ParsedExpressionCondition, root: CollectionRoot): boolean {
+  if (isCollectionAntiJoin(condition, root)) return true;
+  if (condition.kind === "exp") return condition.conditions.some((c) => conditionContainsCollectionAntiJoin(c, root));
   return false;
 }
 

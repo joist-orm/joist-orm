@@ -449,6 +449,136 @@ describe("QueryParser.collectionJoins", () => {
     });
   });
 
+  it("splits same-root id IS NULL OR id IN list into NOT EXISTS OR EXISTS", () => {
+    const query: ParsedFindQuery = {
+      selects: ["a.*"],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        {
+          alias: "b",
+          table: "books",
+          join: "outer",
+          col1: "a.id",
+          col2: "b.author_id",
+          collection: { parentAlias: "a", rootAlias: "b", kind: "o2m" },
+        },
+      ],
+      condition: {
+        kind: "exp",
+        op: "or",
+        conditions: [
+          { kind: "column", alias: "b", column: "id", dbType: "int", cond: { kind: "is-null" } },
+          { kind: "column", alias: "b", column: "id", dbType: "int", cond: { kind: "in", value: [1, 2] } },
+        ],
+      },
+      orderBys: [],
+    };
+
+    optimizeCollectionJoins(query);
+
+    // I.e. `b.id IS NULL OR b.id IN (...)` means "no books OR one of these books"; the null branch must not be
+    // evaluated inside an `EXISTS (books ...)`, where `b.id IS NULL` can never match a real child row.
+    expect(query.tables).toMatchObject([{ alias: "a", table: "authors", join: "primary" }]);
+    expect(query.condition).toMatchObject({
+      kind: "exp",
+      op: "or",
+      conditions: [
+        {
+          kind: "exists",
+          negate: true,
+          subquery: {
+            tables: [{ alias: "b", table: "books", join: "primary" }],
+            condition: { op: "and", conditions: [{ kind: "raw", condition: "a.id = b.author_id" }] },
+          },
+        },
+        {
+          kind: "exists",
+          negate: false,
+          subquery: {
+            tables: [{ alias: "b", table: "books", join: "primary" }],
+            condition: {
+              op: "and",
+              conditions: [
+                { kind: "raw", condition: "a.id = b.author_id" },
+                { kind: "column", alias: "b", column: "id", cond: { kind: "in", value: [1, 2] } },
+              ],
+            },
+          },
+        },
+      ],
+    });
+  });
+
+  it("splits m2m target id IS NULL OR id IN list into NOT EXISTS OR EXISTS", () => {
+    const query: ParsedFindQuery = {
+      selects: ["a.*"],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        {
+          alias: "att",
+          table: "authors_to_tags",
+          join: "outer",
+          col1: "a.id",
+          col2: "att.author_id",
+          collection: { parentAlias: "a", rootAlias: "att", kind: "m2m" },
+        },
+        {
+          alias: "t",
+          table: "tags",
+          join: "outer",
+          col1: "att.tag_id",
+          col2: "t.id",
+          collection: { parentAlias: "att", rootAlias: "att", kind: "m2m" },
+        },
+      ],
+      condition: {
+        kind: "exp",
+        op: "or",
+        conditions: [
+          { kind: "column", alias: "t", column: "id", dbType: "int", cond: { kind: "is-null" } },
+          { kind: "column", alias: "t", column: "id", dbType: "int", cond: { kind: "in", value: [1, 2] } },
+        ],
+      },
+      orderBys: [],
+    };
+
+    optimizeCollectionJoins(query);
+
+    // I.e. m2m target `t.id IS NULL` means no matching membership row, so it must split against root `att`.
+    expect(query.tables).toMatchObject([{ alias: "a", table: "authors", join: "primary" }]);
+    expect(query.condition).toMatchObject({
+      kind: "exp",
+      op: "or",
+      conditions: [
+        {
+          kind: "exists",
+          negate: true,
+          subquery: {
+            tables: [{ alias: "att", table: "authors_to_tags", join: "primary" }],
+            condition: { op: "and", conditions: [{ kind: "raw", condition: "a.id = att.author_id" }] },
+          },
+        },
+        {
+          kind: "exists",
+          negate: false,
+          subquery: {
+            tables: [
+              { alias: "att", table: "authors_to_tags", join: "primary" },
+              { alias: "t", table: "tags", join: "outer", distinct: false },
+            ],
+            condition: {
+              op: "and",
+              conditions: [
+                { kind: "raw", condition: "a.id = att.author_id" },
+                { kind: "column", alias: "t", column: "id", cond: { kind: "in", value: [1, 2] } },
+              ],
+            },
+          },
+        },
+      ],
+    });
+  });
+
   it("does not split same-row positive branches into unrelated EXISTS clauses", () => {
     const query: ParsedFindQuery = {
       selects: ["a.*"],

@@ -186,9 +186,12 @@ function createExistsCondition(
     return undefined;
   }
 
+  // I.e. `rpm` may correlate through `_pp_version.id = rpm.ready_plan_version_id`, so pruning must keep
+  // `_pp_version` even when the collection metadata's parent alias is only `pp`.
+  const correlationAliases = joinDependencies(root);
   const correlation: RawCondition = {
     kind: "raw",
-    aliases: [root.alias],
+    aliases: [root.alias, ...correlationAliases],
     condition: `${root.col1} = ${root.col2}`,
     bindings: [],
     pruneable: false,
@@ -216,7 +219,7 @@ function createExistsCondition(
     kind: "exists",
     negate: hasOnlyAntiJoin,
     subquery,
-    outerAliases: [root.collection!.parentAlias],
+    outerAliases: correlationAliases,
   };
 }
 

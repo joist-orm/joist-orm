@@ -301,6 +301,83 @@ describe("QueryParser.collectionJoins", () => {
     expect(JSON.stringify(query.condition).includes('"kind":"exists"')).toEqual(false);
   });
 
+  it("keeps non-parent correlation aliases required by collection EXISTS", () => {
+    const query: ParsedFindQuery = {
+      selects: ["pp.*"],
+      tables: [
+        { alias: "pp", table: "plan_packages", join: "primary" },
+        {
+          alias: "pp_b0",
+          table: "ready_plans",
+          join: "outer",
+          col1: "pp.id",
+          col2: "pp_b0.id",
+          distinct: false,
+        },
+        {
+          alias: "_pp_b0_version",
+          table: "ready_plan_versions",
+          join: "outer",
+          col1: "pp_b0.id",
+          col2: "_pp_b0_version.identity_id",
+        },
+        {
+          alias: "_pp_version",
+          table: "plan_package_versions",
+          join: "outer",
+          col1: "_pp_b0_version.id",
+          col2: "_pp_version.id",
+        },
+        {
+          alias: "rpm",
+          table: "ready_plan_version_to_markets",
+          join: "outer",
+          col1: "_pp_version.id",
+          col2: "rpm.ready_plan_version_id",
+          collection: { parentAlias: "pp", rootAlias: "rpm", kind: "m2m" },
+        },
+      ],
+      condition: {
+        kind: "exp",
+        op: "and",
+        conditions: [{ kind: "column", alias: "rpm", column: "market_id", dbType: "int", cond: { kind: "in", value: [2] } }],
+      },
+      orderBys: [{ alias: "pp", column: "id", order: "ASC" }],
+    };
+
+    optimizeCollectionJoins(query);
+
+    // I.e. the collection metadata points at parent `pp`, but the actual EXISTS correlation uses `_pp_version`.
+    // Pruning must keep the whole `pp_b0 -> _pp_b0_version -> _pp_version` dependency chain in the outer query.
+    expect(query.tables).toMatchObject([
+      { alias: "pp", table: "plan_packages", join: "primary" },
+      { alias: "pp_b0", table: "ready_plans", join: "outer" },
+      { alias: "_pp_b0_version", table: "ready_plan_versions", join: "outer" },
+      { alias: "_pp_version", table: "plan_package_versions", join: "outer" },
+    ]);
+    expect(query.condition).toMatchObject({
+      kind: "exp",
+      op: "and",
+      conditions: [
+        {
+          kind: "exists",
+          outerAliases: ["_pp_version"],
+          subquery: {
+            tables: [{ alias: "rpm", table: "ready_plan_version_to_markets", join: "primary" }],
+            condition: {
+              op: "and",
+              conditions: [
+                // I.e. `_pp_version` must be tracked as the outer alias, not just the declared collection parent `pp`.
+                { kind: "raw", aliases: ["rpm", "_pp_version"], condition: "_pp_version.id = rpm.ready_plan_version_id" },
+                { kind: "column", alias: "rpm", column: "market_id", cond: { kind: "in", value: [2] } },
+              ],
+            },
+          },
+        },
+      ],
+    });
+  });
+
   it("preserves optional joins under collection EXISTS for nullable OR branches", () => {
     const query: ParsedFindQuery = {
       selects: ["a.*"],

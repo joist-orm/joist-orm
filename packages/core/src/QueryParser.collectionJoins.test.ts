@@ -378,6 +378,83 @@ describe("QueryParser.collectionJoins", () => {
     });
   });
 
+  it("rewrites collection branches inside mixed ordinary and collection ORs", () => {
+    const query: ParsedFindQuery = {
+      selects: ["a.*"],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id" },
+        {
+          alias: "b",
+          table: "books",
+          join: "outer",
+          col1: "a.id",
+          col2: "b.author_id",
+          collection: { parentAlias: "a", rootAlias: "b", kind: "o2m" },
+        },
+        {
+          alias: "c",
+          table: "comments",
+          join: "outer",
+          col1: "a.id",
+          col2: "c.parent_author_id",
+          collection: { parentAlias: "a", rootAlias: "c", kind: "o2m" },
+        },
+      ],
+      condition: {
+        kind: "exp",
+        op: "or",
+        conditions: [
+          { kind: "column", alias: "p", column: "name", dbType: "text", cond: { kind: "ilike", value: "%foo%" } },
+          { kind: "column", alias: "b", column: "title", dbType: "text", cond: { kind: "ilike", value: "%foo%" } },
+          { kind: "column", alias: "c", column: "text", dbType: "text", cond: { kind: "ilike", value: "%foo%" } },
+        ],
+      },
+      orderBys: [{ alias: "a", column: "id", order: "ASC" }],
+    };
+
+    optimizeCollectionJoins(query);
+
+    // I.e. the ordinary `p` branch stays joined, while independent collection branches become scoped EXISTS clauses.
+    expect(query.tables).toMatchObject([
+      { alias: "a", table: "authors", join: "primary" },
+      { alias: "p", table: "publishers", join: "outer" },
+    ]);
+    expect(query.condition).toMatchObject({
+      kind: "exp",
+      op: "or",
+      conditions: [
+        { kind: "column", alias: "p", column: "name", cond: { kind: "ilike", value: "%foo%" } },
+        {
+          kind: "exists",
+          subquery: {
+            tables: [{ alias: "b", table: "books", join: "primary" }],
+            condition: {
+              op: "and",
+              conditions: [
+                { kind: "raw", condition: "a.id = b.author_id" },
+                { kind: "column", alias: "b", column: "title", cond: { kind: "ilike", value: "%foo%" } },
+              ],
+            },
+          },
+        },
+        {
+          kind: "exists",
+          subquery: {
+            tables: [{ alias: "c", table: "comments", join: "primary" }],
+            condition: {
+              op: "and",
+              conditions: [
+                { kind: "raw", condition: "a.id = c.parent_author_id" },
+                { kind: "column", alias: "c", column: "text", cond: { kind: "ilike", value: "%foo%" } },
+              ],
+            },
+          },
+        },
+      ],
+    });
+  });
+
   it("preserves optional joins under collection EXISTS for nullable OR branches", () => {
     const query: ParsedFindQuery = {
       selects: ["a.*"],

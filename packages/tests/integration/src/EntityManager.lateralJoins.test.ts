@@ -7,6 +7,7 @@ import {
   insertComment,
   insertPublisher,
   insertTag,
+  update,
 } from "@src/entities/inserts";
 import { knex, newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import { aliases, getMetadata, ParsedExpressionCondition, ParsedFindQuery, parseFindQuery, Plugin } from "joist-orm";
@@ -389,7 +390,8 @@ describe("EntityManager.lateralJoins", () => {
       expect(queries).toEqual([
         [
           `SELECT a.* FROM authors AS a`,
-          ` WHERE EXISTS (SELECT 1 FROM authors_to_tags AS att JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.name = $1)`,
+          ` WHERE EXISTS (SELECT 1 FROM authors_to_tags AS att`,
+          ` LEFT OUTER JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.name = $1)`,
           ` AND EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $2)`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $3`,
@@ -662,6 +664,44 @@ describe("EntityManager.lateralJoins", () => {
       expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "match" }]);
       expect(queries[0].includes("LEFT OUTER JOIN books")).toEqual(true);
       expect(queries[0].includes("EXISTS")).toEqual(false);
+    });
+
+    it("preserves optional joins under EXISTS for nullable OR branches", async () => {
+      await insertAuthor({ first_name: "comment-match" });
+      await insertComment({ text: "match" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await update("books", { id: 1, random_comment_id: 1 });
+      await insertAuthor({ first_name: "review-match" });
+      await insertBook({ title: "prequel-match", author_id: 2 });
+      await insertBook({ title: "b2", author_id: 2, prequel_id: 2 });
+      await insertAuthor({ first_name: "no-match" });
+      await insertBook({ title: "b3", author_id: 3 });
+
+      const em = newEntityManager();
+      const [b, p, c] = aliases(Book, Book, Comment);
+
+      resetQueryCount();
+      const authors = await em.find(
+        Author,
+        { books: { as: b, prequel: p, randomComment: c } },
+        { ...opts, conditions: { or: [p.title.eq("prequel-match"), c.text.eq("match")] } },
+      );
+
+      expect(authors).toMatchEntity([{ firstName: "comment-match" }, { firstName: "review-match" }]);
+      expect(queries).toEqual([
+        [
+          `SELECT a.* FROM authors AS a`,
+          // I.e. the EXISTS should be a plain `SELECT 1`; DISTINCT is unnecessary for existence checks.
+          ` WHERE EXISTS (SELECT 1 FROM books AS b`,
+          // I.e. optional descendants under `books` must stay LEFT JOINs so either OR branch can match independently.
+          ` LEFT OUTER JOIN books AS b1 ON b.prequel_id = b1.id`,
+          ` LEFT OUTER JOIN comments AS c ON b.random_comment_id = c.id`,
+          // I.e. both nullable branch predicates must stay grouped under the LEFT JOINs.
+          ` WHERE a.id = b.author_id AND (b1.title = $1 OR c.text = $2))`,
+          ` ORDER BY a.id ASC`,
+          ` LIMIT $3`,
+        ].join(""),
+      ]);
     });
 
     it("optimizes plugin-added alias id IS NULL conditions to NOT EXISTS", async () => {
@@ -1033,7 +1073,8 @@ describe("EntityManager.lateralJoins", () => {
         [
           `SELECT a.* FROM authors AS a`,
           ` WHERE a.first_name = $1`,
-          ` AND EXISTS (SELECT 1 FROM authors_to_tags AS att JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.name = $2)`,
+          ` AND EXISTS (SELECT 1 FROM authors_to_tags AS att`,
+          ` LEFT OUTER JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.name = $2)`,
           ` ORDER BY a.id ASC`,
           ` LIMIT $3`,
         ].join(""),

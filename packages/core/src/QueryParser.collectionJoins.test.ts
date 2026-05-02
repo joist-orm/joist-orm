@@ -301,6 +301,82 @@ describe("QueryParser.collectionJoins", () => {
     expect(JSON.stringify(query.condition).includes('"kind":"exists"')).toEqual(false);
   });
 
+  it("preserves optional joins under collection EXISTS for nullable OR branches", () => {
+    const query: ParsedFindQuery = {
+      selects: ["a.*"],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        {
+          alias: "b",
+          table: "books",
+          join: "outer",
+          col1: "a.id",
+          col2: "b.author_id",
+          collection: { parentAlias: "a", rootAlias: "b", kind: "o2m" },
+        },
+        { alias: "br", table: "book_reviews", join: "outer", col1: "b.id", col2: "br.book_id" },
+        { alias: "c", table: "comments", join: "outer", col1: "b.id", col2: "c.parent_book_id" },
+      ],
+      condition: {
+        kind: "exp",
+        op: "and",
+        conditions: [
+          {
+            kind: "exp",
+            op: "or",
+            conditions: [
+              { kind: "column", alias: "br", column: "rating", dbType: "int", cond: { kind: "eq", value: 5 } },
+              { kind: "column", alias: "c", column: "text", dbType: "text", cond: { kind: "eq", value: "match" } },
+            ],
+          },
+        ],
+      },
+      orderBys: [],
+    };
+
+    optimizeCollectionJoins(query);
+
+    // I.e. an OR across optional descendants must be evaluated after LEFT JOINs, not after INNER JOINs that require
+    // every nullable branch to exist before any branch can match.
+    // I.e. only the parent table remains in the outer query; `b`/`br`/`c` moved under EXISTS.
+    expect(query.tables).toMatchObject([{ alias: "a", table: "authors", join: "primary" }]);
+    expect(query.condition).toMatchObject({
+      kind: "exp",
+      op: "and",
+      conditions: [
+        {
+          kind: "exists",
+          subquery: {
+            tables: [
+              // I.e. `b` is the collection root and becomes the EXISTS subquery's FROM table.
+              { alias: "b", table: "books", join: "primary" },
+              // I.e. `br` must stay nullable so the `c.text = match` OR branch can match without a review row.
+              { alias: "br", table: "book_reviews", join: "outer", distinct: false },
+              // I.e. `c` must stay nullable so the `br.rating = 5` OR branch can match without a comment row.
+              { alias: "c", table: "comments", join: "outer", distinct: false },
+            ],
+            condition: {
+              op: "and",
+              conditions: [
+                // I.e. this correlation is required after moving `b` out of the outer query.
+                { kind: "raw", condition: "a.id = b.author_id" },
+                {
+                  kind: "exp",
+                  op: "or",
+                  conditions: [
+                    // I.e. these branch aliases must remain in one OR under the LEFT JOINs, not become required joins.
+                    { kind: "column", alias: "br", column: "rating", cond: { kind: "eq", value: 5 } },
+                    { kind: "column", alias: "c", column: "text", cond: { kind: "eq", value: "match" } },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      ],
+    });
+  });
+
   it("splits same-root anti-join ORs into NOT EXISTS OR EXISTS", () => {
     const query: ParsedFindQuery = {
       selects: ["a.*"],

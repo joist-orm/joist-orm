@@ -2260,7 +2260,9 @@ describe("EntityManager.queries", () => {
             subquery: {
               tables: [
                 { alias: "att", table: "authors_to_tags", join: "primary" },
-                { alias: "t", table: "tags", join: "inner", col1: "att.tag_id", col2: "t.id" },
+                // I.e. moved child joins preserve their original nullable shape; the `t.name` predicate still filters
+                // matches, while `distinct: false` keeps the EXISTS as plain `SELECT 1`.
+                { alias: "t", table: "tags", join: "outer", col1: "att.tag_id", col2: "t.id", distinct: false },
               ],
               condition: {
                 op: "and",
@@ -2956,7 +2958,8 @@ describe("EntityManager.queries", () => {
               subquery: {
                 tables: [
                   { alias: "att", table: "authors_to_tags", join: "primary" },
-                  { alias: "t", table: "tags", join: "inner", col1: "att.tag_id", col2: "t.id" },
+                  // I.e. preserving the moved child join as outer avoids changing nullable branch semantics.
+                  { alias: "t", table: "tags", join: "outer", col1: "att.tag_id", col2: "t.id", distinct: false },
                 ],
                 condition: {
                   op: "and",

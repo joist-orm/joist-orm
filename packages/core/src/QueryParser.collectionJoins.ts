@@ -124,7 +124,7 @@ function rewriteSiblingOrExpression(
   }
 }
 
-/** Returns true when every OR branch became an EXISTS for one collection subtree. */
+/** Returns true when OR branches that are scoped to collection subtrees became EXISTS conditions. */
 function rewriteSiblingOrExpressionChildren(
   query: ParsedFindQuery,
   exp: ParsedExpressionFilter,
@@ -138,33 +138,41 @@ function rewriteSiblingOrExpressionChildren(
   for (const condition of exp.conditions) {
     if (!isRealCondition(condition)) return false;
     const match = roots.find((root) => conditionReferencesOnlyAliases(condition, root.aliases));
-    if (!match) return false;
+    if (!match) {
+      const found = conditionAliases(condition);
+      // I.e. `a.first_name = 'x'` can stay in the OR while `b.title = 'x'` becomes EXISTS, but
+      // `a.first_name = 'x' AND b.title = 'x'` must stay joined because one branch spans both scopes.
+      if (roots.some((root) => hasAnyAlias(found, root.aliases))) return false;
+      continue;
+    }
     matches.push({ collectionRoot: match, condition });
     usedRoots.add(match.table.alias);
     hasAntiJoinBranch ||= isCollectionAntiJoin(condition, match);
     for (const alias of match.aliases) usedAliases.add(alias);
   }
+  if (matches.length === 0) return false;
   // I.e. rewrite true sibling collection ORs like `b.id IS NOT NULL OR c.id IS NOT NULL`, and same-root
   // anti-join ORs like `b.id IS NULL OR br.rating = 5` that need `b.id IS NULL` to become `NOT EXISTS`.
   // skip positive-only single-root ORs, i.e. ORs with no `b.id IS NULL` anti-join branch like
-  // `b.title = 'x' OR br.rating = 5`, aliases also filtered elsewhere like
+  // `b.title = 'x' OR br.rating = 5`; mixed ordinary/collection ORs like `a.first_name = 'x' OR b.title = 'x'`
+  // are safe because only the collection branch is replaced. Aliases are also filtered elsewhere like
   // `b.order = 1 AND (b.title = 'x' OR c.text = 'x')`, and aliases that must stay projected/sorted like
   // `SELECT b.title` or `ORDER BY b.title`.
   if (
-    (usedRoots.size < 2 && !hasAntiJoinBranch) ||
+    (matches.length === exp.conditions.length && usedRoots.size < 2 && !hasAntiJoinBranch) ||
     conditionReferencesAliasesOutside(query.condition, exp, usedAliases) ||
     queryReferencesAliasesOutsideConditions(query, usedAliases, keepAliases)
   ) {
     return false;
   }
 
-  const existsConditions: ExistsCondition[] = [];
+  const existsConditions = new Map<ParsedExpressionCondition, ExistsCondition>();
   for (const match of matches) {
     const exists = createExistsCondition(query, match.collectionRoot, [match.condition]);
     if (!exists) return false;
-    existsConditions.push(exists);
+    existsConditions.set(match.condition, exists);
   }
-  exp.conditions = existsConditions;
+  exp.conditions = exp.conditions.map((condition) => existsConditions.get(condition) ?? condition);
   // I.e. leave the collection joins in place for now; pruning removes them after all rewrites.
   return true;
 }

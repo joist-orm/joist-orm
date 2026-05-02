@@ -706,6 +706,44 @@ describe("EntityManager.lateralJoins", () => {
       expect(joinMode).toMatchEntity([{ firstName: "book-match" }, { firstName: "comment-match" }]);
     });
 
+    it("matches join-mode semantics for mixed ordinary and collection OR predicates", async () => {
+      await insertAuthor({ first_name: "author-branch" });
+      await insertAuthor({ first_name: "book-branch" });
+      await insertBook({ title: "match", author_id: 2 });
+      await insertAuthor({ first_name: "comment-branch" });
+      await insertComment({ text: "match", parent_author_id: 3 });
+      await insertAuthor({ first_name: "no-match" });
+      await insertBook({ title: "other", author_id: 4 });
+      await insertComment({ text: "other", parent_author_id: 4 });
+
+      const [a, b, c] = aliases(Author, Book, Comment);
+      const optimized = await newEntityManager().find(
+        Author,
+        { as: a, books: b, comments: c },
+        { ...opts, conditions: { or: [a.firstName.eq("author-branch"), b.title.eq("match"), c.text.eq("match")] } },
+      );
+      const joinMode = await newEntityManager().find(
+        Author,
+        { as: a, books: b, comments: c },
+        {
+          ...opts,
+          optimizeJoinsToExists: false,
+          conditions: { or: [a.firstName.eq("author-branch"), b.title.eq("match"), c.text.eq("match")] },
+        },
+      );
+
+      expect(optimized).toMatchEntity([
+        { firstName: "author-branch" },
+        { firstName: "book-branch" },
+        { firstName: "comment-branch" },
+      ]);
+      expect(joinMode).toMatchEntity([
+        { firstName: "author-branch" },
+        { firstName: "book-branch" },
+        { firstName: "comment-branch" },
+      ]);
+    });
+
     it("matches join-mode semantics for anti-join OR predicates", async () => {
       await insertAuthor({ first_name: "no-books" });
       await insertAuthor({ first_name: "high-review" });
@@ -927,7 +965,7 @@ describe("EntityManager.lateralJoins", () => {
       ]);
     });
 
-    it("keeps plugin-added mixed-scope OR conditions as LEFT OUTER JOINs", async () => {
+    it("rewrites plugin-added mixed-scope OR collection branches to EXISTS", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "match", author_id: 1 });
       await insertAuthor({ first_name: "match" });
@@ -964,8 +1002,15 @@ describe("EntityManager.lateralJoins", () => {
       const authors = await em.find(Author, { books: b }, opts);
 
       expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "match" }]);
-      expect(queries[0].includes("LEFT OUTER JOIN books")).toEqual(true);
-      expect(queries[0].includes("EXISTS")).toEqual(false);
+      expect(queries).toEqual([
+        [
+          `SELECT a.* FROM authors AS a`,
+          ` WHERE (EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1)`,
+          ` OR a.first_name = $2)`,
+          ` ORDER BY a.id ASC`,
+          ` LIMIT $3`,
+        ].join(""),
+      ]);
     });
 
     it("preserves optional joins under EXISTS for nullable OR branches", async () => {
@@ -1254,10 +1299,8 @@ describe("EntityManager.lateralJoins", () => {
     });
 
     // ---- Simple OR: o2m alias + outer alias ----
-    // The OR references `b` (inside books EXISTS) and `a` (outer Author).
-    // Since OR requires both aliases in the same scope, the books EXISTS is
-    // unwrapped to a LEFT OUTER JOIN, and DISTINCT ON is added.
-    it("OR with o2m alias + outer alias unwraps EXISTS to JOIN", async () => {
+    // The OR references `b` (inside books EXISTS) and `a` (outer Author), and the collection branch can stay scoped.
+    it("OR with o2m alias + outer alias rewrites collection branch to EXISTS", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "match", author_id: 1 });
       await insertAuthor({ first_name: "match" });
@@ -1275,9 +1318,15 @@ describe("EntityManager.lateralJoins", () => {
       );
       // a1 matches via b.title, a2 matches via a.firstName
       expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "match" }]);
-      // The EXISTS for books was unwrapped to a JOIN — look for LEFT OUTER JOIN + DISTINCT ON
-      expect(queries).toEqual([expect.stringContaining("DISTINCT ON")]);
-      expect(queries).toEqual([expect.stringContaining("LEFT OUTER JOIN books")]);
+      expect(queries).toEqual([
+        [
+          `SELECT a.* FROM authors AS a`,
+          ` WHERE EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $1)`,
+          ` OR a.first_name = $2`,
+          ` ORDER BY a.id ASC`,
+          ` LIMIT $3`,
+        ].join(""),
+      ]);
     });
 
     // ---- Simple AND: o2m alias + outer alias ----
@@ -1317,9 +1366,7 @@ describe("EntityManager.lateralJoins", () => {
     // ---- Nested: cross-scope OR inside an AND ----
     // The outer AND has `a.age > 20` (outer) plus an inner OR that mixes
     // `b.title` (inside books EXISTS) with `a.firstName` (outer).
-    // The OR forces the books EXISTS to unwrap, but the outer `a.age` condition
-    // stays as a regular WHERE clause.
-    it("OR inside AND: cross-scope OR forces unwrap even within outer AND", async () => {
+    it("OR inside AND: mixed OR rewrites collection branch to EXISTS", async () => {
       await insertAuthor({ first_name: "match", age: 30 });
       await insertBook({ title: "other", author_id: 1 });
       await insertAuthor({ first_name: "a2", age: 30 });
@@ -1345,8 +1392,16 @@ describe("EntityManager.lateralJoins", () => {
       // a2: age=30 ✓, book title="match" ✓ (via OR) → matches
       // a3: age=10 ✗ → excluded by AND
       expect(authors).toMatchEntity([{ firstName: "match" }, { firstName: "a2" }]);
-      // The OR forced unwrap — should have LEFT OUTER JOIN + DISTINCT ON
-      expect(queries).toEqual([expect.stringContaining("DISTINCT ON")]);
+      expect(queries).toEqual([
+        [
+          `SELECT a.* FROM authors AS a`,
+          ` WHERE a.age > $1`,
+          ` AND (EXISTS (SELECT 1 FROM books AS b WHERE a.id = b.author_id AND b.title = $2)`,
+          ` OR a.first_name = $3)`,
+          ` ORDER BY a.id ASC`,
+          ` LIMIT $4`,
+        ].join(""),
+      ]);
     });
 
     // ---- AND with m2m alias + outer alias ----
@@ -1384,8 +1439,7 @@ describe("EntityManager.lateralJoins", () => {
     });
 
     // ---- OR with m2m alias + outer alias ----
-    // The OR forces the m2m EXISTS to unwrap to regular JOINs.
-    it("OR with m2m alias + outer alias unwraps EXISTS to JOIN", async () => {
+    it("OR with m2m alias + outer alias rewrites collection branch to EXISTS", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertTag({ name: "match" });
       await insertAuthorToTag({ author_id: 1, tag_id: 1 });
@@ -1404,8 +1458,16 @@ describe("EntityManager.lateralJoins", () => {
       );
       // a1 matches via t.name, a2 matches via a.firstName
       expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "match" }]);
-      // m2m EXISTS unwrapped to JOINs
-      expect(queries).toEqual([expect.stringContaining("DISTINCT ON")]);
+      expect(queries).toEqual([
+        [
+          `SELECT a.* FROM authors AS a`,
+          ` WHERE EXISTS (SELECT 1 FROM authors_to_tags AS att`,
+          ` LEFT OUTER JOIN tags AS t ON att.tag_id = t.id WHERE a.id = att.author_id AND t.name = $1)`,
+          ` OR a.first_name = $2`,
+          ` ORDER BY a.id ASC`,
+          ` LIMIT $3`,
+        ].join(""),
+      ]);
     });
 
     // ---- Verify the parseFindQuery AST is stable before optimization ----

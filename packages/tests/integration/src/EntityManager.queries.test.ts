@@ -3161,20 +3161,24 @@ describe("EntityManager.queries", () => {
       });
     });
 
-    it("unwraps collection alias id IS NULL conditions inside OR to left joins", async () => {
+    it("rewrites collection alias id IS NULL conditions inside OR to NOT EXISTS", async () => {
       const [a, b] = aliases(Author, Book);
       const conditions = { or: [b.id.eq(null as never), a.firstName.eq("a1")] };
       expect(parseAndOptimizeFindQuery(am, { as: a, books: { as: b } }, { ...opts, conditions })).toMatchObject({
         selects: [`a.*`],
-        tables: [
-          { alias: "a", table: "authors", join: "primary" },
-          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-        ],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
         condition: {
           kind: "exp",
           op: "or",
           conditions: [
-            { kind: "column", alias: "b", column: "id", dbType: "int", cond: { kind: "is-null" } },
+            {
+              kind: "exists",
+              negate: true,
+              subquery: {
+                tables: [{ alias: "b", table: "books", join: "primary" }],
+                condition: { conditions: [{ kind: "raw", condition: "a.id = b.author_id" }] },
+              },
+            },
             {
               kind: "column",
               alias: "a",
@@ -3188,10 +3192,48 @@ describe("EntityManager.queries", () => {
       });
     });
 
-    it("fails multiple collection left joins by default after optimization", async () => {
+    it("rewrites multiple mixed OR collection branches by default after optimization", async () => {
       const [a, b, c] = aliases(Author, Book, Comment);
       const conditions = {
         and: [{ or: [b.title.eq("b1"), a.firstName.eq("a1")] }, { or: [c.text.eq("c1"), a.lastName.eq("a1")] }],
+      };
+      const query = parseFindQuery(am, { as: a, books: { as: b }, comments: { as: c } }, { ...opts, conditions });
+      optimizeCollectionJoins(query);
+      expect(query).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          kind: "exp",
+          op: "and",
+          conditions: [
+            {
+              kind: "exp",
+              op: "or",
+              conditions: [
+                { kind: "exists", subquery: { tables: [{ alias: "b", table: "books", join: "primary" }] } },
+                { kind: "column", alias: "a", column: "first_name", cond: { kind: "eq", value: "a1" } },
+              ],
+            },
+            {
+              kind: "exp",
+              op: "or",
+              conditions: [
+                { kind: "exists", subquery: { tables: [{ alias: "c", table: "comments", join: "primary" }] } },
+                { kind: "column", alias: "a", column: "last_name", cond: { kind: "eq", value: "a1" } },
+              ],
+            },
+          ],
+        },
+      });
+    });
+
+    it("fails multiple collection left joins when OR branches mix ordinary and collection aliases", async () => {
+      const [a, b, c] = aliases(Author, Book, Comment);
+      const conditions = {
+        and: [
+          { or: [{ and: [b.title.eq("b1"), a.firstName.eq("a1")] }, a.age.eq(1)] },
+          { or: [{ and: [c.text.eq("c1"), a.lastName.eq("a1")] }, a.age.eq(2)] },
+        ],
       };
       expect(() => {
         const query = parseFindQuery(am, { as: a, books: { as: b }, comments: { as: c } }, { ...opts, conditions });
@@ -3199,18 +3241,17 @@ describe("EntityManager.queries", () => {
       }).toThrow("allowMultipleLeftJoins");
     });
 
-    it("fails em.find calls with multiple collection left joins by default", async () => {
+    it("allows em.find calls with multiple mixed OR collection branches by default", async () => {
       const em = newEntityManager();
       const [a, b, c] = aliases(Author, Book, Comment);
       const conditions = {
         and: [{ or: [b.title.eq("b1"), a.firstName.eq("a1")] }, { or: [c.text.eq("c1"), a.lastName.eq("a1")] }],
       };
-      await expect(
-        em.find(Author, { as: a, books: { as: b }, comments: { as: c } }, { ...opts, conditions }),
-      ).rejects.toThrow("allowMultipleLeftJoins");
+      const authors = await em.find(Author, { as: a, books: { as: b }, comments: { as: c } }, { ...opts, conditions });
+      expect(authors).toEqual([]);
     });
 
-    it("allows multiple collection left joins with allowMultipleLeftJoins", async () => {
+    it("rewrites multiple mixed OR collection branches with allowMultipleLeftJoins", async () => {
       const [a, b, c] = aliases(Author, Book, Comment);
       const conditions = {
         and: [{ or: [b.title.eq("b1"), a.firstName.eq("a1")] }, { or: [c.text.eq("c1"), a.lastName.eq("a1")] }],
@@ -3223,11 +3264,7 @@ describe("EntityManager.queries", () => {
         ),
       ).toMatchObject({
         selects: [`a.*`],
-        tables: [
-          { alias: "a", table: "authors", join: "primary" },
-          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
-          { alias: "c", table: "comments", join: "outer", col1: "a.id", col2: "c.parent_author_id" },
-        ],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
         condition: {
           kind: "exp",
           op: "and",
@@ -3236,7 +3273,7 @@ describe("EntityManager.queries", () => {
               kind: "exp",
               op: "or",
               conditions: [
-                { kind: "column", alias: "b", column: "title", cond: { kind: "eq", value: "b1" } },
+                { kind: "exists", subquery: { tables: [{ alias: "b", table: "books", join: "primary" }] } },
                 { kind: "column", alias: "a", column: "first_name", cond: { kind: "eq", value: "a1" } },
               ],
             },
@@ -3244,7 +3281,7 @@ describe("EntityManager.queries", () => {
               kind: "exp",
               op: "or",
               conditions: [
-                { kind: "column", alias: "c", column: "text", cond: { kind: "eq", value: "c1" } },
+                { kind: "exists", subquery: { tables: [{ alias: "c", table: "comments", join: "primary" }] } },
                 { kind: "column", alias: "a", column: "last_name", cond: { kind: "eq", value: "a1" } },
               ],
             },

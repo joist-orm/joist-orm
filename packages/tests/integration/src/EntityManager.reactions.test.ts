@@ -4,7 +4,11 @@ import {
   LargePublisher,
   newAuthor,
   newBook,
+  newParentGroup,
+  newParentItem,
   newPublisher,
+  ParentGroup,
+  ParentItem,
   Publisher,
   SmallPublisher,
   Tag,
@@ -108,6 +112,19 @@ describe("EntityManager.reactions", () => {
         isReadOnly: false,
         name: "m2m",
         fn,
+      },
+    ]);
+    expect(getReactions(ParentItem).filter((r) => r.cstr === ParentGroup)).toMatchObject([
+      {
+        kind: "reaction",
+        cstr: ParentGroup,
+        fields: ["parentGroup", "updatedAt"],
+        path: ["parentGroup"],
+        source: ParentItem,
+        isReadOnly: false,
+        name: expect.stringMatching(/^ParentGroup.ts:\d+$/),
+        fn,
+        runOnce: false,
       },
     ]);
     expect(getReactions(Author)).toMatchObject([
@@ -533,6 +550,36 @@ describe("EntityManager.reactions", () => {
       expect(a1.transientFields.reactions.o2m).toBe(1);
       expect(a2.transientFields.reactions.o2m).toBe(0);
       expect(a3.transientFields.reactions.o2m).toBe(0);
+    });
+  });
+
+  describe("o2m updatedAt reactions", () => {
+    it.withCtx("run when updatedAt is bumped by a child update", async (ctx) => {
+      const { em } = ctx;
+      // Given a ParentGroup with a ParentItem
+      const pg = newParentGroup(em);
+      const pi = newParentItem(em, { parentGroup: pg });
+      await em.flush();
+      pg.transientFields.reactions.parentItemsUpdatedAt = 0;
+      // When we change the child so its updatedAt is bumped by flush
+      pi.name = "pi2";
+      await em.flush();
+      // Then the parent reaction watching parentItems.updatedAt runs
+      expect(pg.transientFields.reactions.parentItemsUpdatedAt).toBe(1);
+    });
+
+    it.withCtx("run when updatedAt is bumped by touch", async (ctx) => {
+      const { em } = ctx;
+      // Given a ParentGroup with a ParentItem
+      const pg = newParentGroup(em);
+      const pi = newParentItem(em, { parentGroup: pg });
+      await em.flush();
+      pg.transientFields.reactions.parentItemsUpdatedAt = 0;
+      // When we touch the child so its updatedAt is bumped by flush
+      em.touch(pi);
+      await em.flush();
+      // Then the parent reaction watching parentItems.updatedAt runs
+      expect(pg.transientFields.reactions.parentItemsUpdatedAt).toBe(1);
     });
   });
 

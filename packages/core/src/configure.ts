@@ -8,7 +8,7 @@ import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { reverseReactiveHint } from "./reactiveHints";
 import { ReactiveManyToManyImpl, ReactiveReferenceImpl, Reference } from "./relations";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
-import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
+import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField";
 import { isCannotBeUpdatedRule } from "./rules";
 import { KeySerde } from "./serde";
 import { fail } from "./utils";
@@ -256,7 +256,7 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
     for (const field of reactiveRelations) {
       const ap = (getProperties(meta) as any)[field.fieldName] as
         | ReactiveFieldImpl<any, any, any>
-        | ReactiveQueryFieldImpl<any, any, any, any>
+        | AsyncReactiveFieldImpl<any, any, any, any>
         | ReactiveReferenceImpl<any, any, any, any>
         | ReactiveManyToManyImpl<any, any, any>
         | undefined;
@@ -267,7 +267,7 @@ function reverseIndexReactivity(metas: EntityMetadata[]): void {
         const reversals = reverseReactiveHint(meta.cstr, meta.cstr, ap.reactiveHint);
         for (const { kind, entity, path, fields } of reversals) {
           getMetadata(entity).config.__data.reactables.push({
-            kind: ap instanceof ReactiveQueryFieldImpl ? "query" : "populate",
+            kind: ap instanceof AsyncReactiveFieldImpl ? "query" : "populate",
             cstr: meta.cstr,
             isReadOnly: kind === "read-only",
             name: field.fieldName,

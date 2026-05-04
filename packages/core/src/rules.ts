@@ -3,7 +3,7 @@ import { Entity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
 import { getField } from "./fields";
 import { ReactiveHint } from "./reactiveHints";
-import { isLoadedReference, isReactiveQueryField, ManyToOneReferenceImpl } from "./relations";
+import { isAsyncReactiveField, isLoadedReference, ManyToOneReferenceImpl } from "./relations";
 import { FieldsOf } from "./typeMap";
 import { groupBy, MaybePromise, maybePromiseThen } from "./utils";
 
@@ -103,12 +103,12 @@ export function newRequiredRule<T extends Entity>(
   return ruleWithOpts(opts, (entity) => {
     // Use getField so that we peer through relations
     if (getField(entity, key) === undefined) {
-      // Sanity check for ReactiveQueryFields--this should be cheap to just always do; alternatively we could
+      // Sanity check for AsyncReactiveFields--this should be cheap to just always do; alternatively we could
       // have a RQF-specific `rqfRequiredRule` so that other `newRequiredRule` users don't pay the cost of these
       // two `if` checks`.
-      if (entity.isNewEntity && isReactiveQueryField((entity as any)[key])) {
+      if (entity.isNewEntity && isAsyncReactiveField((entity as any)[key])) {
         throw new Error(
-          `ReactiveQueryField ${entity.constructor.name}.${key} must have a default value, either in the database or with config.setDefault (see the 4th step in https://joist-orm.io/modeling/reactive-fields/#reactive-query-fields.`,
+          `AsyncReactiveField ${entity.constructor.name}.${key} must have a default value, either in the database or with config.setDefault (see the 4th step in https://joist-orm.io/modeling/reactive-fields/#async-reactive-fields.`,
         );
       }
       return { field: key, code: ValidationCode.required, message: `${key} is required` };

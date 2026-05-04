@@ -16,13 +16,13 @@ export class InstanceData {
   data: Record<string, any>;
   /** A bag to keep the original values, lazily populated as fields are mutated. */
   originalData: Record<any, any> = {};
-  /** A bag to keep the flushed-to-database values, only for ReactiveQueryField reactivity. */
+  /** A bag to keep the flushed-to-database values, only for AsyncReactiveField reactivity. */
   flushedData: Record<any, any> | undefined;
   /**
    * Whether our entity has been deleted or not.
    *
    * - `pending` means we've been marked for deletion via `em.delete` but not issued a `DELETE`
-   * - `flushed` means we've flushed a `DELETE` but `em.flush` hasn't fully completed yet, likely due to ReactiveQueryField calcs
+   * - `flushed` means we've flushed a `DELETE` but `em.flush` hasn't fully completed yet, likely due to AsyncReactiveField calcs
    * - `deleted` means we've been flushed and `em.flush` has completed
    */
   #deleted?: Operation;

@@ -211,7 +211,7 @@ bench("pipeline Promise.all", async () => {
 });
 ```
 
-This is particularly important for Joist, because even within a single `em.flush()` call, we'll execute a single `BEGIN`/`COMMIT` database transaction, but potentially might have to make several "waves" of SQL updates (technically only when `ReactiveQueryField`s are involved), and so can't always return a single `string[]` of SQL statements to execute.
+This is particularly important for Joist, because even within a single `em.flush()` call, we'll execute a single `BEGIN`/`COMMIT` database transaction, but potentially might have to make several "waves" of SQL updates (technically only when `AsyncReactiveField`s are involved), and so can't always return a single `string[]` of SQL statements to execute.
 
 We expect this to be fast as well.
 
@@ -336,4 +336,3 @@ The code for this post is in [pipeline.ts](https://github.com/joist-orm/joist-be
 After running `docker compose up -d`, invoking `yarn pipeline` should run the benchmark.
 
 :::
-

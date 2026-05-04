@@ -317,15 +317,15 @@ class BookReview extends PublisherCodegen {
 }
 ```
 
-### hasAsyncQueryProperty
+### hasAsyncProperty
 
-`hasAsyncQueryProperty` creates a derived value calculated from a SQL query, rather than from in-memory graph data. This is useful when pulling all the related data into memory would be too expensive, and you'd rather let the database do the work.
+`hasAsyncProperty` creates a derived value calculated from a SQL query, rather than from in-memory graph data. This is useful when pulling all the related data into memory would be too expensive, and you'd rather let the database do the work.
 
 Unlike `hasProperty`, there is no load hint or reactive hint — the lambda receives the entity directly and is expected to perform its own queries:
 
 ```typescript
 export class Publisher extends PublisherCodegen {
-  readonly numberOfAuthors: AsyncQueryProperty<Publisher, number> = hasAsyncQueryProperty((p) =>
+  readonly numberOfAuthors: Property<Publisher, number> = hasAsyncProperty((p) =>
     p.em.findCount(Author, { publisher: p.id }),
   );
 }

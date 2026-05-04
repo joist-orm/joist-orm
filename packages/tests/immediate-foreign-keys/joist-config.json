@@ -1,6 +1,6 @@
 {
   "codegenPlugins": [],
-  "codemodVersion": 1,
+  "codemodVersion": 2,
   "contextType": "Context@src/context",
   "entities": {
     "T1Author": { "tag": "ta" },

@@ -1,6 +1,6 @@
 {
   "codegenPlugins": [],
-  "codemodVersion": 1,
+  "codemodVersion": 2,
   "contextType": "Context@../../context.js",
   "databaseUrl": "postgres://joist:local@localhost:5435/bun",
   "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },

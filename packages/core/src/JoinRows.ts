@@ -239,7 +239,7 @@ export interface JoinRow {
    * Whether our relation has been processed or not.
    *
    * - `pending` means we've not flushed it to the Database
-   * - `flushed` means we've flushed but `em.flush` hasn't fully completed yet, likely due to ReactiveQueryField calcs
+   * - `flushed` means we've flushed but `em.flush` hasn't fully completed yet, likely due to AsyncReactiveField calcs
    * - `completed` means we've been flushed and `em.flush` has completed
    */
   op: JoinRowOperation;

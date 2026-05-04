@@ -9,7 +9,7 @@ import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
 import { PropertyT } from "./hasProperty";
 
 /**
- * A `ReactiveQueryField` is a value that is derived from a SQL query, similar to
+ * An `AsyncReactiveField` is a value that is derived from a SQL query, similar to
  * a `ReactiveField`, but when the value needs to be calculated from SQL because
  * it would be too expensive to calculate in-memory.
  *
@@ -17,18 +17,18 @@ import { PropertyT } from "./hasProperty";
  * `dbHint` reactive hints have changed, but only the `paramHint`'s data will be pulled
  * into memory.
  */
-export function hasReactiveQueryField<
+export function hasAsyncReactiveField<
   T extends Entity,
   const H1 extends ReactiveHint<T>,
   const H2 extends ReactiveHint<T>,
   V,
 >(paramHint: H1, dbHint: H2, fn: (entity: Reacted<T, H1>) => Promise<V>): ReactiveField<T, V> {
   return lazyField((entity: T, fieldName) => {
-    return new ReactiveQueryFieldImpl(entity, fieldName as keyof T & string, paramHint, dbHint, fn);
+    return new AsyncReactiveFieldImpl(entity, fieldName as keyof T & string, paramHint, dbHint, fn);
   });
 }
 
-export class ReactiveQueryFieldImpl<T extends Entity, H1 extends ReactiveHint<T>, H2 extends ReactiveHint<T>, V>
+export class AsyncReactiveFieldImpl<T extends Entity, H1 extends ReactiveHint<T>, H2 extends ReactiveHint<T>, V>
   extends AbstractPropertyImpl<T>
   implements ReactiveField<T, V>
 {
@@ -87,7 +87,7 @@ export class ReactiveQueryFieldImpl<T extends Entity, H1 extends ReactiveHint<T>
   /** Returns the previously-calculated value. */
   get get(): V {
     // Regular ReactiveFields repeatedly call their `fn` lambda to calculate the value, to ensure
-    // they always return the latest/correct value, but because ReactiveQueryFields are fundamentally
+    // they always return the latest/correct value, but because AsyncReactiveFields are fundamentally
     // calculated from DB queries, we can only return the previously-calculated value, if set.
     if (this.isSet) {
       return this.fieldValue;
@@ -126,12 +126,12 @@ export class ReactiveQueryFieldImpl<T extends Entity, H1 extends ReactiveHint<T>
   [PropertyT] = undefined as any as T;
 }
 
-/** Type guard utility for determining if an entity field is an ReactiveQueryField. */
-export function isReactiveQueryField(maybe: any): maybe is ReactiveField<any, any> {
-  return maybe instanceof ReactiveQueryFieldImpl;
+/** Type guard utility for determining if an entity field is an AsyncReactiveField. */
+export function isAsyncReactiveField(maybe: any): maybe is ReactiveField<any, any> {
+  return maybe instanceof AsyncReactiveFieldImpl;
 }
 
-/** Type guard utility for determining if an entity field is a loaded ReactiveQueryField. */
-export function isLoadedReactiveQueryField(maybe: any): maybe is ReactiveField<any, any> {
-  return isReactiveQueryField(maybe) && maybe.isLoaded;
+/** Type guard utility for determining if an entity field is a loaded AsyncReactiveField. */
+export function isLoadedAsyncReactiveField(maybe: any): maybe is ReactiveField<any, any> {
+  return isAsyncReactiveField(maybe) && maybe.isLoaded;
 }

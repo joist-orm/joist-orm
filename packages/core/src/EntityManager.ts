@@ -1609,7 +1609,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // each time, so that for an INSERT-then-UPDATE the triggers don't think the
         // UPDATE forgot to self-bump updatedAt, and then "helpfully" bump it for us.
         if (alreadyRanHooks.size > 0) {
-          maybeBumpUpdatedAt(createTodos([...alreadyRanHooks]), now);
+          maybeBumpUpdatedAt(this.#rm, createTodos([...alreadyRanHooks]), now);
         }
 
         // Run hooks in a series of loops until things "settle down"
@@ -1618,7 +1618,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             let todos = createTodos([...pendingHooks]);
 
             await setAsyncDefaults(suppressedDefaultTypeErrors, this.ctx, Todo.groupInsertsByTypeAndSubType(todos));
-            maybeBumpUpdatedAt(todos, now);
+            maybeBumpUpdatedAt(this.#rm, todos, now);
 
             // Run our hooks
             for (const group of maybeSetupHookOrdering(todos)) {
@@ -2911,7 +2911,7 @@ function isCustomRelation(r: AbstractRelationImpl<any, any>): boolean {
   return r instanceof CustomCollection || r instanceof CustomReference || r instanceof ReactiveReferenceImpl;
 }
 
-function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Date): void {
+function maybeBumpUpdatedAt(rm: ReactionsManager, todos: Record<string, Todo>, now: Date): void {
   for (const todo of Object.values(todos)) {
     const { updatedAt } = todo.metadata.timestampFields ?? {};
     if (updatedAt) {
@@ -2924,6 +2924,7 @@ function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Date): void {
         orm.originalData[updatedAt] = getField(e, updatedAt);
         const serde = todo.metadata.fields[updatedAt].serde as TimestampSerde<unknown>;
         orm.data[updatedAt] = serde.mapFromNow(now);
+        rm.queueDownstreamReactables(e, updatedAt);
       }
     }
   }

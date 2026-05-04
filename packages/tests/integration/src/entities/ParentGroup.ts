@@ -2,7 +2,15 @@ import { ParentGroupCodegen } from "./entities";
 
 import { parentGroupConfig as config } from "./entities";
 
-export class ParentGroup extends ParentGroupCodegen {}
+export class ParentGroup extends ParentGroupCodegen {
+  public transientFields = {
+    reactions: {
+      parentItemsUpdatedAt: 0,
+    },
+  };
+}
 
-// remove once you have actual rules/hooks
-config.placeholder();
+// Testing reacting to updatedAt changes
+config.addReaction({ parentItems: "updatedAt" }, (pg) => {
+  pg.transientFields.reactions.parentItemsUpdatedAt += 1;
+});

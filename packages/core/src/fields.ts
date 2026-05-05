@@ -75,7 +75,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
     newValue = cleanStringValue(newValue);
   }
 
-  // If a `set` occurs during the ReactiveQueryField-loop, copy the last-flushed value to flushedData.
+  // If a `set` occurs during the AsyncReactiveField-loop, copy the last-flushed value to flushedData.
   // Then our `pendingOperation` logic can tell "do we need another micro-flush?" separately
   // from our public-facing changed fields logic.
   if (flushedData) {

@@ -132,17 +132,17 @@ As described above, Joist will automatically call this lambda when:
 1. The `Author` is initially created
 2. Any `Book` is added/removed to the `books` collection
 
-## Reactive Query Fields
+## Async Reactive Fields
 
 Regular Reactive Fields load all the data declared by their reactive hint into memory. This is very similar to Joist's `em.populate` hints, and make it very easy to calculate values synchronously in regular TypeScript code.
 
 However, a downside is if the hint references a lot of data, it may become too much to load into memory, for the lambda to loop over and calculate.
 
-In these situations, you can use a `ReactiveQueryField`, which calculates its value using a SQL query.
+In these situations, you can use an `AsyncReactiveField`, which calculates its value using a SQL query.
 
 ```typescript
 class Publisher {
-  readonly numberOfBookReviews: ReactiveField<Publisher, number> = hasReactiveQueryField(
+  readonly numberOfBookReviews: ReactiveField<Publisher, number> = hasAsyncReactiveField(
     // this hint will recalc + be available on `p`
     "id",
     // this hint will recalc + not be available on `p`
@@ -153,7 +153,7 @@ class Publisher {
 }
 ```
 
-The `hasReactiveQueryField` takes four arguments:
+The `hasAsyncReactiveField` takes four arguments:
 
 - `fieldName` the name of the field in the entity and `joist-config.json`.
 - `paramHint` a reactive hint of data that will be loaded into memory, similar to a regular `ReactiveField`.
@@ -162,7 +162,7 @@ The `hasReactiveQueryField` takes four arguments:
 
   This function will have access to the data in `paramHint`, and then should issue a database query that summarizes/queries against the fields in the `dbHint`.
 
-A special aspect of `ReactiveQueryField`s is that Joist will defer running their query until any other WIP changes in the `EntityManager` have been flushed to the database. This ensures that the SQL query sees the latest data, and doesn't mistakenly calculate a stale value.
+A special aspect of `AsyncReactiveField`s is that Joist will defer running their query until any other WIP changes in the `EntityManager` have been flushed to the database. This ensures that the SQL query sees the latest data, and doesn't mistakenly calculate a stale value.
 
 For example, a flow for the `numberOfBookReviews` above might be:
 
@@ -183,6 +183,6 @@ Note that this "issue a `SELECT` with a transaction open" is not normally how Jo
 
 :::tip[Tip]
 
-Currently, the `ReactiveQueryField`'s query is not limited (i.e. either by type-checking or runtime verification) to querying against **only** data described in the `dbHint`, but you should ensure that it does, as otherwise field value may drift from the value calculated by the query.
+Currently, the `AsyncReactiveField`'s query is not limited (i.e. either by type-checking or runtime verification) to querying against **only** data described in the `dbHint`, but you should ensure that it does, as otherwise field value may drift from the value calculated by the query.
 
 :::

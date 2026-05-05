@@ -92,7 +92,7 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } 
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
-import { AsyncQueryPropertyImpl } from "./relations/hasAsyncQueryProperty";
+import { AsyncPropertyImpl } from "./relations/AsyncProperty";
 import { RecursiveCycleError } from "./relations/RecursiveCollection";
 import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
@@ -1580,12 +1580,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const createdThenDeleted: Set<Entity> = new Set();
       // We'll only invoke hooks once/entity (the 1st time that entity goes through runHooksOnPendingEntities)
       const hooksInvoked: Set<Entity> = new Set();
-      // Make sure two ReactiveQueryFields don't ping-pong each other forever
+      // Make sure two AsyncReactiveFields don't ping-pong each other forever
       let hookLoops = 0;
       let now = getNow();
       const suppressedDefaultTypeErrors: Error[] = [];
 
-      // Make a lambda that we can invoke multiple times, if we loop for ReactiveQueryFields
+      // Make a lambda that we can invoke multiple times, if we loop for AsyncReactiveFields
       const runHooksOnPendingEntities = async (): Promise<Entity[]> => {
         if (hookLoops++ >= 10) throw new Error("runHooksOnPendingEntities has ran 10 iterations, aborting");
 
@@ -1605,7 +1605,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
         findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
 
-        // If we're re-looping for ReactiveQueryField, make sure to bump updatedAt
+        // If we're re-looping for AsyncReactiveField, make sure to bump updatedAt
         // each time, so that for an INSERT-then-UPDATE the triggers don't think the
         // UPDATE forgot to self-bump updatedAt, and then "helpfully" bump it for us.
         if (alreadyRanHooks.size > 0) {
@@ -1717,7 +1717,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               // Actually do the recalc
               await this.#fl.allowWrites(async () => {
                 await this.#rm.recalcPendingReactables("reactiveQueries");
-                // If any ReactiveFields depended on ReactiveQueryFields, go ahead and calc those now
+                // If any ReactiveFields depended on AsyncReactiveFields, go ahead and calc those now
                 await this.#rm.recalcPendingReactables("reactables");
               });
               // Advance `now` so that our triggers don't think our UPDATEs are forgetting to self-bump
@@ -1753,7 +1753,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           getInstanceData(e).resetAfterFlushed();
           // Reset AsyncQueryProperties since DB state may have changed
           for (const rel of Object.values(getInstanceData(e).relations)) {
-            if (rel instanceof AsyncQueryPropertyImpl) rel.resetAfterFlush();
+            if (rel instanceof AsyncPropertyImpl) rel.resetAfterFlush();
           }
         }
         // Update the joinRows refs to reflect the new state
@@ -2030,7 +2030,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     );
 
     // `.load()` recalculated the immediate relations, go ahead and recalc any downstream reactables.
-    // We'll still defer ReactiveQueryFields to the em.flush loop.
+    // We'll still defer AsyncReactiveFields to the em.flush loop.
     await this.#rm.recalcPendingReactables("reactables");
   }
 

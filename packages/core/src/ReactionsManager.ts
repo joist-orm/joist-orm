@@ -138,8 +138,8 @@ export class ReactionsManager {
     let loops = 0;
     while (this.needsRecalc(kind)) {
       // ...we probably should only loop for `kind=reactables` Reactables, and `kind=reactiveQueries`
-      // ReactiveQueryFields should probably only have a single loop, after which we return and
-      // let `em.flush` push the latest values to the db, so our 2nd-order ReactiveQueryFields
+      // AsyncReactiveFields should probably only have a single loop, after which we return and
+      // let `em.flush` push the latest values to the db, so our 2nd-order AsyncReactiveFields
       // will see the latest value.
       if (kind === "reactables") {
         this.#needsRecalc.populate = false;

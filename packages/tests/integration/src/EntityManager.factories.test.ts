@@ -1091,7 +1091,7 @@ describe("EntityManager.factories", () => {
     expect(a2.numberOfBooks.get).toBe(10);
   });
 
-  it("can set ReactiveQueryFields", async () => {
+  it("can set AsyncReactiveFields", async () => {
     const em = newEntityManager();
     const p = newPublisher(em, { withNumberOfBookReviews: 10, authors: [{}] });
     await em.flush();

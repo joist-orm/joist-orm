@@ -1,7 +1,7 @@
 import { Author, SmallPublisher } from "@src/entities";
 import { newEntityManager } from "@src/testEm";
 
-describe("AsyncQueryProperty", () => {
+describe("AsyncProperty", () => {
   it("throws when loading a new entity", async () => {
     const em = newEntityManager();
     const p = em.create(SmallPublisher, { name: "p1", city: "c1" });
@@ -37,7 +37,7 @@ describe("AsyncQueryProperty", () => {
     const em = newEntityManager();
     const p = em.create(SmallPublisher, { name: "p1", city: "c1" });
     await em.flush();
-    expect(() => p.numberOfAuthors.get).toThrow("AsyncQueryProperty has not been loaded yet");
+    expect(() => p.numberOfAuthors.get).toThrow("AsyncProperty has not been loaded yet");
   });
 
   it("can be loaded via populate hint", async () => {

@@ -29,10 +29,10 @@ export function setSyncDefaults(entity: Entity): void {
       (field.kind === "primitive" || field.kind === "enum") &&
       (field as PrimitiveField | EnumField).derived === "async"
     ) {
-      // If this is a ReactiveQueryField, we want to push in a default, but setOpts is called
-      // from the codegen constructor, so the user-defined `hasReactiveQueryField` fields will
+      // If this is an AsyncReactiveField, we want to push in a default, but setOpts is called
+      // from the codegen constructor, so the user-defined `hasAsyncReactiveField` fields will
       // not have been initialized yet (i.e. `entity[field]` will be undefined and not yet an
-      // `instanceof ReactiveQueryField`). Thankfully we can just use setField.
+      // `instanceof AsyncReactiveField`). Thankfully we can just use setField.
       const value = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
       setField(entity, fieldName, value);
     } else if (!isRelation(field)) {

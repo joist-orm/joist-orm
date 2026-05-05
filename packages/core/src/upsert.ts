@@ -1,16 +1,17 @@
 import { isPlainObject } from "joist-utils";
 import { setSyncDefaults } from "./defaults";
 import { Entity, isEntity } from "./Entity";
-import { EntityManager, IdOf, MaybeAbstractEntityConstructor, isKey } from "./EntityManager";
-import { ManyToManyField, ManyToOneField, OneToManyField, OneToOneField, getMetadata } from "./EntityMetadata";
+import { EntityManager, IdOf, isKey, MaybeAbstractEntityConstructor } from "./EntityManager";
+import { getMetadata, ManyToManyField, ManyToOneField, OneToManyField, OneToOneField } from "./EntityMetadata";
 import {
-  PartialOrNull,
-  TimestampSerde,
   asConcreteCstr,
   getConstructorFromTaggedId,
   getProperties,
+  PartialOrNull,
   setOpt,
+  TimestampSerde,
 } from "./index";
+import { findExistingIfUniqueBy, resurrectIfSoftDeleted } from "./resurrection";
 import { OptIdsOf, OptsOf } from "./typeMap";
 import { NullOrDefinedOr, toArray } from "./utils";
 
@@ -180,7 +181,7 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
             values.map(async (value: any) => {
               const [, , op] = getCollectionMarkers(field, value);
               if (op === "delete") {
-                const other = await upsert(em, otherMeta.cstr, value);
+                const other = await upsert(em, otherMeta.cstr, withOwnerField(field, value, entity));
                 // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
                 if (maybeSoftDelete) {
                   const serde = otherMeta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
@@ -190,10 +191,10 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
                   entity.em.delete(other);
                 }
               } else if (op === "remove") {
-                const other = await upsert(em, otherMeta.cstr, value);
+                const other = await upsert(em, otherMeta.cstr, withOwnerField(field, value, entity));
                 current.remove(other);
               } else if (op === "include") {
-                const other = await upsert(em, otherMeta.cstr, value);
+                const other = await upsert(em, otherMeta.cstr, withOwnerField(field, value, entity));
                 current.add(other);
               } else if (op === "incremental") {
                 // This is a marker entry, just ignore it
@@ -220,7 +221,7 @@ export async function updatePartial<T extends Entity>(entity: T, input: DeepPart
             } else {
               // Look for `delete: true/false` and `remove: true/false` markers
               const [deleteMarker, removeMarker] = getCollectionMarkers(field, value);
-              const other = await upsert(em, field.otherMetadata().cstr, value as any);
+              const other = await upsert(em, field.otherMetadata().cstr, withOwnerField(field, value, entity));
               if (deleteMarker) {
                 // if (maybeSoftDelete) {
                 //   const serde = meta.fields[maybeSoftDelete].serde as TimestampSerde<unknown>;
@@ -263,17 +264,33 @@ export async function upsert<T extends Entity>(
   input: DeepPartialOrNull<T>,
 ): Promise<T> {
   const { id, ...rest } = input;
-  const isNew = id === null || id === undefined;
-  const entity = isNew
-    ? // asConcreteCstr is not actually safe but for now we rely on our cstr runtime check to catch this
-      em.createPartial(asConcreteCstr(constructor), {})
-    : await em.load(constructor, id);
+  const entity =
+    id !== null && id !== undefined
+      ? await em.load(constructor, id)
+      : // Look for an existing entity we could resurrect
+        ((id === undefined ? await findExistingIfUniqueBy(em, constructor, rest) : undefined) ??
+        em.createPartial(asConcreteCstr(constructor), {}));
   await updatePartial(entity, rest as any);
   // Do this manually since we're not going through setOpts anymore
-  if (isNew) {
+  if (entity.isNewEntity) {
     setSyncDefaults(entity);
+  } else {
+    resurrectIfSoftDeleted(entity);
   }
   return entity;
+}
+
+/**
+ * Adds the o2m owner field so child resurrection can find rows whose `uniqueBy` includes their parent.
+ * I.e. upserting `Author.books: [{ title: "b1" }]` should lookup `Book.uniqueBy = [["author", "title"]]`.
+ */
+function withOwnerField(field: OneToManyField | ManyToManyField, value: any, owner: Entity): any {
+  if (field.kind !== "o2m" || !isPlainObject(value)) return value;
+  const ownerField = field.otherFieldName;
+  const ownerFieldId = field.otherMetadata().allFields[ownerField]?.fieldIdName;
+  if (Object.hasOwn(value, ownerField) || (ownerFieldId && Object.hasOwn(value, ownerFieldId))) return value;
+  if (ownerFieldId && !owner.isNewEntity) return { ...value, [ownerFieldId]: owner.id };
+  return { ...value, [ownerField]: owner };
 }
 
 function getCollectionMarkers(field: OneToManyField | ManyToManyField, value: any): [any, any, any] {

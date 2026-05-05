@@ -60,6 +60,10 @@ const relationConfig = z
 
 export type RelationConfig = z.infer<typeof relationConfig>;
 
+const uniqueByConfig = z
+  .union([z.string(), z.array(z.string()), z.array(z.array(z.string()))])
+  .transform(normalizeUniqueByConfig);
+
 const entityConfig = z
   .object({
     tag: z.string(),
@@ -69,6 +73,7 @@ const entityConfig = z
     /** Whether this entity should be abstract, e.g. for inheritance a subtype must be instantiated instead of this type. */
     abstract: z.optional(z.boolean()),
     orderBy: z.optional(z.string()),
+    uniqueBy: z.optional(uniqueByConfig),
   })
   .strict();
 
@@ -225,6 +230,26 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
 
       if (!relation) logger.warn(`Found config for non-existent relation ${entityName}.${name}`);
     }
+
+    const uniqueFields = [
+      ...entity.primitives,
+      ...entity.enums,
+      ...entity.pgEnums,
+      ...entity.manyToOnes,
+      ...entity.polymorphics,
+    ];
+    for (const uniqueBy of entityConfig.uniqueBy || []) {
+      for (const name of uniqueBy) {
+        const field = uniqueFields.find((f) => f.fieldName === name);
+        if (!field) {
+          logger.warn(`Found uniqueBy for non-existent or non-queryable field ${entityName}.${name}`);
+        } else if (field.kind === "primitive" && (field.derived || field.isArray || field.customSerde)) {
+          logger.warn(`Found uniqueBy for unsupported primitive field ${entityName}.${name}`);
+        } else if (field.kind === "enum" && (field.derived || field.isArray)) {
+          logger.warn(`Found uniqueBy for unsupported enum field ${entityName}.${name}`);
+        }
+      }
+    }
   }
 }
 
@@ -376,6 +401,13 @@ function projectIsUsingEsmWithImports(): boolean {
     return false;
   }
   return configFile.config?.compilerOptions?.allowImportingTsExtensions === true;
+}
+
+/** Normalizes `uniqueBy` config sugar into runtime identity candidates. */
+function normalizeUniqueByConfig(uniqueBy: string | string[] | string[][]): string[][] {
+  if (typeof uniqueBy === "string") return [[uniqueBy]];
+  if (uniqueBy.every((field) => typeof field === "string")) return [uniqueBy];
+  return uniqueBy;
 }
 
 function stripLegacyConfigKeys(raw: unknown): unknown {

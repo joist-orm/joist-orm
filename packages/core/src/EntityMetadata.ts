@@ -52,6 +52,8 @@ export interface EntityMetadata<T extends Entity = any> {
   // Using `any` to avoid type errors between BaseType.metadata & SubType.metadata static fields
   config: ConfigApi<any, any>;
   orderBy: string | undefined;
+  /** Flat field names that can be used to find existing rows before creating. I.e. [["email"], ["author", "title"]]. */
+  uniqueBy?: string[][];
   timestampFields: TimestampFields | undefined;
   // Ideally this would be the application-specific EntityManager (to avoid anys), but it doesn't really matter
   factory: (em: EntityManager<any, any, any>, opts?: any) => DeepNew<T>;

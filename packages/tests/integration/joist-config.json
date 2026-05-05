@@ -35,11 +35,17 @@
         "menteesClosure": { "derived": "async" },
         "rootMentor": { "derived": "async" }
       },
-      "tag": "a"
+      "tag": "a",
+      "uniqueBy": [["ssn"]]
     },
     "AuthorSchedule": { "tag": "authorSchedule" },
     "AuthorStat": { "tag": "as" },
-    "Book": { "fields": { "search": { "derived": "async" } }, "orderBy": "title", "tag": "b" },
+    "Book": {
+      "fields": { "search": { "derived": "async" } },
+      "orderBy": "title",
+      "tag": "b",
+      "uniqueBy": [["author", "title"]]
+    },
     "BookAdvance": { "tag": "ba" },
     "BookReview": {
       "fields": {

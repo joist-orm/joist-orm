@@ -11,9 +11,11 @@ import {
   insertImage,
   insertTag,
   select,
+  update,
 } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 import { Author, Book, Comment, ImageType, LargePublisher, newAuthor } from "./entities";
+import { jan1 } from "./testDates";
 
 describe("EntityManager.upsert", () => {
   it("can create new entity with valid data", async () => {
@@ -33,6 +35,44 @@ describe("EntityManager.upsert", () => {
     const em = newEntityManager();
     const a1 = await em.upsert(Author, { id: "1", firstName: "a2" });
     expect(a1.firstName).toEqual("a2");
+  });
+
+  it("resurrects soft-deleted rows by unique identity", async () => {
+    await insertAuthor({ first_name: "a1", ssn: "123", deleted_at: jan1 });
+    const em = newEntityManager();
+
+    const a1 = await em.upsert(Author, { ssn: "123", firstName: "a2" });
+    expect(a1).toMatchEntity({ id: "a:1", firstName: "a2", deletedAt: undefined });
+    await em.flush();
+
+    const rows = await select("authors");
+    expect(rows).toMatchObject([{ id: 1, first_name: "a2", ssn: "123", deleted_at: null }]);
+  });
+
+  it("resurrects soft-deleted rows by db-inferred unique identity", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertAuthor({ first_name: "a2", deleted_at: jan1 });
+    await update("authors", { id: 2, current_draft_book_id: 1 });
+    const em = newEntityManager();
+
+    const a2 = await em.upsert(Author, { currentDraftBookId: "b:1", firstName: "a3" });
+    expect(a2).toMatchEntity({ id: "a:2", firstName: "a3", deletedAt: undefined });
+    await em.flush();
+
+    const rows = await select("authors");
+    expect(rows).toMatchObject([
+      { id: 1, first_name: "a1", deleted_at: null },
+      { id: 2, first_name: "a3", current_draft_book_id: 1, deleted_at: null },
+    ]);
+  });
+
+  it("does not resurrect when id is explicitly null", async () => {
+    await insertAuthor({ first_name: "a1", ssn: "123", deleted_at: jan1 });
+    const em = newEntityManager();
+
+    const a1 = await em.upsert(Author, { id: null, ssn: "123", firstName: "a2" });
+    expect(a1.isNewEntity).toBe(true);
   });
 
   it("fails to update an entity with valid data", async () => {
@@ -301,6 +341,33 @@ describe("EntityManager.upsert", () => {
       const em = newEntityManager();
       const a1 = await em.upsert(Author, { id: "a:1", firstName: "a2", bookIds: ["1"] });
       expect((await a1.books.load())[0].title).toEqual("b1");
+    });
+
+    it("collections resurrect soft-deleted children by parent identity", async () => {
+      // Given an existing parent with a soft-deleted child.
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1, deleted_at: jan1 });
+      const em = newEntityManager();
+      // When the parent is upserted with a child missing its parent field.
+      const a1 = await em.upsert(Author, { id: "a:1", firstName: "a2", books: [{ title: "b1" }] });
+      // Then the child is resurrected by its parent-based identity instead of recreated.
+      expect(await a1.books.load()).toMatchEntity([{ id: "b:1", title: "b1", deletedAt: undefined }]);
+      await em.flush();
+      const rows = await select("books");
+      expect(rows).toMatchObject([{ id: 1, author_id: 1, title: "b1", deleted_at: null }]);
+    });
+
+    it("resurrects soft-deleted rows by unique identity using id suffix keys", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1, deleted_at: jan1 });
+      const em = newEntityManager();
+
+      const b1 = await em.upsert(Book, { authorId: "a:1", title: "b1" });
+      expect(b1).toMatchEntity({ id: "b:1", title: "b1", deletedAt: undefined });
+      await em.flush();
+
+      const rows = await select("books");
+      expect(rows).toMatchObject([{ id: 1, author_id: 1, title: "b1", deleted_at: null }]);
     });
 
     it("collections can refer to null", async () => {

@@ -50,16 +50,21 @@ interface PluginMethods {
    */
   afterFind?(meta: EntityMetadata, operation: FindOperation, rows: any[]): void;
 
+  beforeValidate?(entities: readonly Entity[]): Promise<void> | void;
+
+  afterValidate?(entities: readonly Entity[]): Promise<void> | void;
+
   afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void;
 }
 
-const pluginMethods = [
+const syncPluginMethods = [
   "beforeGetField",
   "beforeSetField",
   "beforeFind",
   "afterFind",
   "afterWrite",
-] as (keyof PluginMethods)[];
+] as const satisfies readonly (keyof PluginMethods)[];
+const asyncPluginMethods = ["beforeValidate", "afterValidate"] as const satisfies readonly (keyof PluginMethods)[];
 const emsSymbol = Symbol("ems");
 /**
  * Base class for plugins that hook into entity lifecycle events.
@@ -111,7 +116,7 @@ export class PluginManager implements Required<PluginMethods> {
     if (this.#plugins.has(plugin)) return; // if we're already added, then we can just early exit
     this.#plugins.add(plugin);
     plugin[emsSymbol].push(new WeakRef(this.em));
-    for (const method of pluginMethods) {
+    for (const method of syncPluginMethods) {
       if (method in plugin) {
         (this.#pluginsByCallback[method] ??= []).push(plugin);
         // As a performance optimization, we only create the actual implementation for each method on the plugin manager
@@ -121,6 +126,19 @@ export class PluginManager implements Required<PluginMethods> {
           this[method] = function (this: PluginManager, ...args: any[]) {
             for (const plugin of this.#pluginsByCallback[method]!) {
               (plugin[method] as (...args: any[]) => unknown)(...args);
+            }
+          };
+        }
+      }
+    }
+    for (const method of asyncPluginMethods) {
+      if (method in plugin) {
+        (this.#pluginsByCallback[method] ??= []).push(plugin);
+        // Validate-phase plugin hooks are intentionally awaited without making hot-path hooks async.
+        if (!Object.hasOwn(this, method)) {
+          this[method] = async function (this: PluginManager, ...args: any[]) {
+            for (const plugin of this.#pluginsByCallback[method]!) {
+              await (plugin[method] as (...args: any[]) => Promise<void> | void)(...args);
             }
           };
         }
@@ -159,5 +177,7 @@ export class PluginManager implements Required<PluginMethods> {
     },
   ): void {}
   afterFind(meta: EntityMetadata, operation: FindOperation, rows: any[]) {}
+  beforeValidate(entities: readonly Entity[]): Promise<void> | void {}
+  afterValidate(entities: readonly Entity[]): Promise<void> | void {}
   afterWrite(entityTodos: Record<string, Todo>, joinRowTodos: Record<string, JoinRowTodo>): void {}
 }

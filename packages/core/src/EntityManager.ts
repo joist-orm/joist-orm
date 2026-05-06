@@ -1664,22 +1664,33 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         });
       };
 
-      const runValidation = async (entityTodos: Record<string, Todo>, joinRowTodos: any) => {
+      const { pluginManager } = getEmInternalApi(this);
+
+      const runValidation = async (
+        entityTodos: Record<string, Todo>,
+        joinRowTodos: Record<string, JoinRowTodo>,
+        validate: boolean,
+      ) => {
+        const changedEntities = entitiesFromTodos(entityTodos, joinRowTodos);
         try {
           this.#isValidating = true;
-          // Run simple rules first b/c it includes not-null/required rules, so that then when we run
-          // `validateReactiveRules` next, the app's lambdas won't see fundamentally invalid entities & NPE.
-          await validateSimpleRules(entityTodos);
-          // After we've let any "author is not set" simple rules fail before prematurely throwing
-          // the "of course that caused an NPE" `TypeError`s, if all the authors *were* valid/set,
-          // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
-          // that the user should see.
-          if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
-          await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
+          await pluginManager.beforeValidate(changedEntities);
+          if (validate) {
+            // Run simple rules first b/c it includes not-null/required rules, so that then when we run
+            // `validateReactiveRules` next, the app's lambdas won't see fundamentally invalid entities & NPE.
+            await validateSimpleRules(entityTodos);
+            // After we've let any "author is not set" simple rules fail before prematurely throwing
+            // the "of course that caused an NPE" `TypeError`s, if all the authors *were* valid/set,
+            // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
+            // that the user should see.
+            if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
+            await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
+            await afterValidation(this.ctx, entityTodos);
+          }
+          await pluginManager.afterValidate(changedEntities);
         } finally {
           this.#isValidating = false;
         }
-        await afterValidation(this.ctx, entityTodos);
       };
 
       // Run hooks (in iterative loops if hooks mutate new entities) on pending entities
@@ -1691,13 +1702,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       let entityTodos = createTodos(entitiesToFlush);
       let joinRowTodos = combineJoinRows(this.#joinRows);
 
-      if (!skipValidation) {
-        await runValidation(entityTodos, joinRowTodos);
-      }
+      await runValidation(entityTodos, joinRowTodos, !skipValidation);
       this.#rm.throwIfAnySuppressedTypeErrors();
       if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
 
-      const { pluginManager } = getEmInternalApi(this);
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
@@ -1729,7 +1737,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               // Recreate `entityTodos` against the only-the-just-changed entities
               entityTodos = createTodos(entitiesToFlush);
               joinRowTodos = combineJoinRows(this.#joinRows);
-              await runValidation(entityTodos, joinRowTodos);
+              await runValidation(entityTodos, joinRowTodos, true);
               this.#rm.throwIfAnySuppressedTypeErrors();
             } else {
               // Exit the loop
@@ -2768,6 +2776,23 @@ function beforeUpdate(ctx: unknown, todos: Record<string, Todo>): Promise<unknow
 
 function afterValidation(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
   return runHookOnTodos(ctx, "afterValidation", todos, ["inserts", "updates"]);
+}
+
+/** Collects changed entities from flush todos, i.e. m2m endpoint entities. */
+function entitiesFromTodos(
+  entityTodos: Record<string, Todo>,
+  joinRowTodos: Record<string, JoinRowTodo>,
+): readonly Entity[] {
+  const entities = new Set<Entity>();
+  for (const todo of Object.values(entityTodos)) {
+    [...todo.inserts, ...todo.updates, ...todo.deletes].forEach((entity) => entities.add(entity));
+  }
+  for (const todo of Object.values(joinRowTodos)) {
+    [...todo.newRows, ...todo.deletedRows].forEach((row) => {
+      Object.values(row.columns).forEach((entity) => entities.add(entity));
+    });
+  }
+  return [...entities];
 }
 
 function beforeCommit(ctx: unknown, entities: Set<EntityW>): Promise<unknown> {

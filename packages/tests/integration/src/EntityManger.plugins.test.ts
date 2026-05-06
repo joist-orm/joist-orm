@@ -1,6 +1,6 @@
-import { getMetadata, ImmutableEntitiesPlugin, isInTrustedContext, Plugin } from "joist-orm";
-import { Author, Book, Image, newAuthor, newBook, newImage } from "src/entities";
-import { insertAuthor, insertBook } from "src/entities/inserts";
+import { type Entity, getMetadata, ImmutableEntitiesPlugin, isInTrustedContext, Plugin } from "joist-orm";
+import { Author, Book, BookReview, Image, Publisher, Tag, newAuthor, newBook, newImage } from "src/entities";
+import { insertAuthor, insertBook, insertPublisher, insertTag, select } from "src/entities/inserts";
 import { isPreloadingEnabled, newEntityManager } from "src/testEm";
 import { twoOf } from "src/utils";
 
@@ -185,6 +185,165 @@ describe("EntityManger.plugins", () => {
       expect(plugin.calls).toHaveLength(0);
       await em.find(Author, {});
       expect(plugin.calls).toEqual([[getMetadata(Author), "find", [expect.objectContaining({})]]]);
+    });
+  });
+
+  describe("beforeValidate/afterValidate", () => {
+    class ValidatePlugin extends Plugin {
+      beforeValidateCalls: Parameters<Required<Plugin>["beforeValidate"]>[] = [];
+      afterValidateCalls: Parameters<Required<Plugin>["afterValidate"]>[] = [];
+      beforeValidateAfterValidationRan: boolean[] = [];
+      afterValidateAfterValidationRan: boolean[] = [];
+      beforeValidateGraduated: (Date | undefined)[] = [];
+      beforeValidateBookTitles: string[] = [];
+      beforeValidateError?: Error;
+      afterValidateError?: Error;
+      authorToObserve?: Author;
+      bookToObserve?: Book;
+      authorToMutateInBeforeValidate?: Author;
+      authorToMutateInAfterValidate?: Author;
+      beforeValidateMutationMessage?: string;
+      afterValidateMutationMessage?: string;
+
+      async beforeValidate(...args: Parameters<Required<Plugin>["beforeValidate"]>) {
+        await Promise.resolve();
+        this.beforeValidateCalls.push(args);
+        if (this.authorToObserve) {
+          this.beforeValidateAfterValidationRan.push(this.authorToObserve.transientFields.afterValidationRan);
+          this.beforeValidateGraduated.push(this.authorToObserve.graduated);
+        }
+        if (this.bookToObserve) {
+          this.beforeValidateBookTitles.push(this.bookToObserve.title);
+        }
+        if (this.authorToMutateInBeforeValidate) {
+          try {
+            this.authorToMutateInBeforeValidate.firstName = "beforeValidate mutation";
+          } catch (error) {
+            this.beforeValidateMutationMessage = error instanceof Error ? error.message : String(error);
+          }
+        }
+        if (this.beforeValidateError) throw this.beforeValidateError;
+      }
+
+      async afterValidate(...args: Parameters<Required<Plugin>["afterValidate"]>) {
+        await Promise.resolve();
+        this.afterValidateCalls.push(args);
+        if (this.authorToObserve) {
+          this.afterValidateAfterValidationRan.push(this.authorToObserve.transientFields.afterValidationRan);
+        }
+        if (this.authorToMutateInAfterValidate) {
+          try {
+            this.authorToMutateInAfterValidate.firstName = "afterValidate mutation";
+          } catch (error) {
+            this.afterValidateMutationMessage = error instanceof Error ? error.message : String(error);
+          }
+        }
+        if (this.afterValidateError) throw this.afterValidateError;
+      }
+    }
+
+    it.withCtx("runs before validation with post-hook entities and aborts before persistence", async (ctx) => {
+      await insertAuthor({ first_name: "existing" });
+      await insertBook({ title: "To be changed by hook", author_id: 1 });
+      await insertTag({ name: "tag1" });
+      const { em } = ctx;
+      const plugin = new ValidatePlugin();
+      em.addPlugin(plugin);
+      const author = newAuthor(em);
+      author.transientFields.setGraduatedInFlush = true;
+      const book = await em.load(Book, "b:1", "tags");
+      const tag = await em.load(Tag, "t:1");
+      plugin.authorToObserve = author;
+      plugin.bookToObserve = book;
+      plugin.beforeValidateError = new Error("blocked by beforeValidate");
+      book.tags.add(tag);
+
+      await expect(em.flush()).rejects.toThrow("blocked by beforeValidate");
+
+      expect(plugin.beforeValidateCalls).toHaveLength(1);
+      expect(plugin.afterValidateCalls).toHaveLength(0);
+      const entities = new Set<Entity>(plugin.beforeValidateCalls[0][0]);
+      expect(entities.has(author)).toBe(true);
+      expect(entities.has(book)).toBe(true);
+      expect(entities.has(tag)).toBe(true);
+      expect(plugin.beforeValidateAfterValidationRan).toEqual([false]);
+      expect(plugin.beforeValidateGraduated[0]).toBeInstanceOf(Date);
+      expect(plugin.beforeValidateBookTitles).toEqual(["Tags Changed"]);
+      expect(author.transientFields.afterValidationRan).toBe(false);
+      expect(await select("authors")).toMatchObject([{ id: 1, first_name: "existing" }]);
+      expect(await select("books")).toMatchObject([{ id: 1, title: "To be changed by hook" }]);
+      expect(await select("books_to_tags")).toEqual([]);
+    });
+
+    it.withCtx("runs after validation and aborts before persistence", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new ValidatePlugin();
+      em.addPlugin(plugin);
+      const author = newAuthor(em);
+      plugin.authorToObserve = author;
+      plugin.afterValidateError = new Error("blocked by afterValidate");
+
+      await expect(em.flush()).rejects.toThrow("blocked by afterValidate");
+
+      expect(plugin.beforeValidateCalls).toHaveLength(1);
+      expect(plugin.afterValidateCalls).toHaveLength(1);
+      expect(plugin.afterValidateAfterValidationRan).toEqual([true]);
+      expect(author.transientFields.afterValidationRan).toBe(true);
+      expect(await select("authors")).toEqual([]);
+    });
+
+    it.withCtx("prevents entity mutations from validate hooks", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new ValidatePlugin();
+      em.addPlugin(plugin);
+      const author = newAuthor(em, { firstName: "original" });
+      plugin.authorToMutateInBeforeValidate = author;
+      plugin.authorToMutateInAfterValidate = author;
+
+      await em.flush();
+
+      expect(plugin.beforeValidateMutationMessage).toBe(
+        "Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit",
+      );
+      expect(plugin.afterValidateMutationMessage).toBe(
+        "Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit",
+      );
+      expect(author.firstName).toBe("original");
+    });
+
+    it.withCtx("runs when validation is skipped", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new ValidatePlugin();
+      em.addPlugin(plugin);
+      const author = newAuthor(em, { firstName: "same", lastName: "same" });
+      plugin.authorToObserve = author;
+
+      await em.flush({ skipValidation: true });
+
+      expect(plugin.beforeValidateCalls.some((args) => args[0].some((entity) => entity === author))).toBe(true);
+      expect(plugin.afterValidateCalls.length).toBe(plugin.beforeValidateCalls.length);
+      expect(plugin.afterValidateAfterValidationRan.every((ran) => ran === false)).toBe(true);
+      expect(author.transientFields.afterValidationRan).toBe(false);
+    });
+
+    it.withCtx("runs for reactive-query micro-flush passes", async (ctx) => {
+      await insertPublisher({ name: "p1" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertBook({ title: "b1", author_id: 1 });
+      const { em } = ctx;
+      const plugin = new ValidatePlugin();
+      em.addPlugin(plugin);
+      const book = await em.load(Book, "b:1");
+      const review = em.create(BookReview, { book, rating: 1 });
+
+      await em.flush();
+
+      expect(plugin.beforeValidateCalls.length).toBeGreaterThan(1);
+      expect(plugin.beforeValidateCalls[0][0].some((entity) => entity === review)).toBe(true);
+      expect(
+        plugin.beforeValidateCalls.slice(1).some((args) => args[0].some((entity) => entity instanceof Publisher)),
+      ).toBe(true);
+      expect(plugin.afterValidateCalls.length).toBe(plugin.beforeValidateCalls.length);
     });
   });
 

@@ -1,0 +1,15 @@
+{
+  "name": "circular-imports-d",
+  "private": true,
+  "version": "0.0.0",
+  "description": "ESM version of the internal-module fix. Same classes as c/, plus internal.ts.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "run-repro": "tsc -p tsconfig.json && node dist/index.js"
+  },
+  "devDependencies": {
+    "typescript": "5.9.2"
+  }
+}

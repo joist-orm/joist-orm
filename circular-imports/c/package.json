@@ -1,0 +1,15 @@
+{
+  "name": "circular-imports-c",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Reproduces the circular-dependency runtime error in ESM. Same source shape as circular-imports/a but with `type: module` and NodeNext resolution.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "run-repro": "tsc -p tsconfig.json && node dist/index.js"
+  },
+  "devDependencies": {
+    "typescript": "5.9.2"
+  }
+}

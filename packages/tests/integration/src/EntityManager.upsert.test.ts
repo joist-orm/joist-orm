@@ -61,6 +61,16 @@ describe("EntityManager.upsert", () => {
     expect(rows).toMatchObject([{ id: 1, first_name: "a2", ssn: "123", deleted_at: null }]);
   });
 
+  it("does not reuse undeleted rows by unique identity", async () => {
+    await insertAuthor({ first_name: "a1", ssn: "123" });
+    const em = newEntityManager();
+
+    const a2 = await em.upsert(Author, { ssn: "123", firstName: "a2" });
+    expect(a2.isNewEntity).toBe(true);
+    expect(a2).toMatchEntity({ firstName: "a2", ssn: "123" });
+    await expect(em.flush()).rejects.toThrow("duplicate key value violates unique constraint");
+  });
+
   it("does not resurrect soft-deleted rows by id", async () => {
     await insertAuthor({ first_name: "a1", deleted_at: jan1 });
     const em = newEntityManager();

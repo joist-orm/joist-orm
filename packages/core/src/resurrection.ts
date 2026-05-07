@@ -27,6 +27,7 @@ export async function findExistingIfUniqueBy<T extends Entity>(
     if (inMemory.length > 1) {
       throw new TooManyError(`Found more than one existing ${meta.type} with ${whereAsString(where)}`);
     } else if (inMemory.length === 1) {
+      resurrectIfSoftDeleted(inMemory[0]);
       return inMemory[0];
     }
 
@@ -40,6 +41,7 @@ export async function findExistingIfUniqueBy<T extends Entity>(
     if (entities.length > 1) {
       throw new TooManyError(`Found more than one existing ${meta.type} with ${whereAsString(where)}`);
     } else if (entities.length === 1) {
+      resurrectIfSoftDeleted(entities[0]);
       return entities[0];
     }
   }

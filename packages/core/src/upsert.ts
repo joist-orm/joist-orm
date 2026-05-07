@@ -11,7 +11,7 @@ import {
   setOpt,
   TimestampSerde,
 } from "./index";
-import { findExistingIfUniqueBy, resurrectIfSoftDeleted } from "./resurrection";
+import { findExistingIfUniqueBy } from "./resurrection";
 import { OptIdsOf, OptsOf } from "./typeMap";
 import { NullOrDefinedOr, toArray } from "./utils";
 
@@ -274,8 +274,6 @@ export async function upsert<T extends Entity>(
   // Do this manually since we're not going through setOpts anymore
   if (entity.isNewEntity) {
     setSyncDefaults(entity);
-  } else {
-    resurrectIfSoftDeleted(entity);
   }
   return entity;
 }

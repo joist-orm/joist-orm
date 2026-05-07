@@ -37,6 +37,18 @@ describe("EntityManager.upsert", () => {
     expect(a1.firstName).toEqual("a2");
   });
 
+  it("can set deletedAt when updating an entity", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+
+    const a1 = await em.upsert(Author, { id: "a:1", deletedAt: jan1 });
+    expect(a1).toMatchEntity({ id: "a:1", deletedAt: jan1 });
+    await em.flush();
+
+    const rows = await select("authors");
+    expect(rows).toMatchObject([{ id: 1, first_name: "a1", deleted_at: jan1 }]);
+  });
+
   it("resurrects soft-deleted rows by unique identity", async () => {
     await insertAuthor({ first_name: "a1", ssn: "123", deleted_at: jan1 });
     const em = newEntityManager();
@@ -47,6 +59,18 @@ describe("EntityManager.upsert", () => {
 
     const rows = await select("authors");
     expect(rows).toMatchObject([{ id: 1, first_name: "a2", ssn: "123", deleted_at: null }]);
+  });
+
+  it("does not resurrect soft-deleted rows by id", async () => {
+    await insertAuthor({ first_name: "a1", deleted_at: jan1 });
+    const em = newEntityManager();
+
+    const a1 = await em.upsert(Author, { id: "a:1", firstName: "a2" });
+    expect(a1).toMatchEntity({ id: "a:1", firstName: "a2", deletedAt: jan1 });
+    await em.flush();
+
+    const rows = await select("authors");
+    expect(rows).toMatchObject([{ id: 1, first_name: "a2", deleted_at: jan1 }]);
   });
 
   it("resurrects soft-deleted rows by db-inferred unique identity", async () => {

@@ -42,9 +42,9 @@ export function up(b: MigrationBuilder): void {
   // Used for PublisherGroup.publishers to test table-per-class o2ms
   createEntityTable(b, "publisher_groups", {
     name: "text",
-    // For testing ReactiveFields that depend on ReactiveQueryFields
+    // For testing ReactiveFields that depend on AsyncReactiveFields
     number_of_book_reviews: { type: "int", notNull: true },
-    // For testing ReactiveQueryFields that are text
+    // For testing AsyncReactiveFields that are text
     number_of_book_reviews_formatted: { type: "varchar(100)", notNull: true },
   });
 

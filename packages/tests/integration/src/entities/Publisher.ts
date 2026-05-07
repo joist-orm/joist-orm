@@ -1,12 +1,11 @@
 import {
-  AsyncQueryProperty,
   cannotBeUpdated,
   Collection,
-  hasAsyncQueryProperty,
+  hasAsyncProperty,
   hasCustomCollection,
   hasReactiveField,
   hasReactiveProperty,
-  hasReactiveQueryField,
+  hasAsyncReactiveField,
   hasReactiveReference,
   isLoaded,
   Loaded,
@@ -46,7 +45,7 @@ export abstract class Publisher extends PublisherCodegen {
    * Example of a reactive query.
    * @generated Publisher.md
    */
-  readonly numberOfBookReviews: ReactiveField<Publisher, number> = hasReactiveQueryField(
+  readonly numberOfBookReviews: ReactiveField<Publisher, number> = hasAsyncReactiveField(
     // this hint will recalc + be available on `p`
     "id",
     // this hint will recalc + not be available on `p`
@@ -159,10 +158,10 @@ export abstract class Publisher extends PublisherCodegen {
   });
 
   /**
-   * Example of a hasAsyncQueryProperty that counts authors via SQL.
+   * Example of a hasAsyncProperty that counts authors via SQL.
    * @generated Publisher.md
    */
-  readonly numberOfAuthors: AsyncQueryProperty<Publisher, number> = hasAsyncQueryProperty((p) =>
+  readonly numberOfAuthors: Property<Publisher, number> = hasAsyncProperty((p) =>
     p.em.findCount(Author, { publisher: p.id }),
   );
 
@@ -220,7 +219,7 @@ config.addRule({ authors: "numberOfBooks" }, (p) => {
   }
 });
 
-// Example of a reactive rule being fired by a ReactiveQueryField
+// Example of a reactive rule being fired by an AsyncReactiveField
 config.addRule(["name", "numberOfBookReviews"], (p) => {
   p.transientFields.numberOfBookReviewEvals++;
   if (p.name === "four" && p.numberOfBookReviews.get === 4) {

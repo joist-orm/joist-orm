@@ -7,7 +7,7 @@ import { AsyncMethod, Collection, Property, ReactiveGetter, Reference } from "./
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { ReactiveGetterImpl } from "./relations/ReactiveGetter";
-import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
+import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField";
 import { PropertyImpl } from "./relations/hasProperty";
 
 /**
@@ -207,7 +207,7 @@ async function copyToPayload(payload: Record<string, {}>, entity: any, hint: obj
         value instanceof AbstractRelationImpl ||
         value instanceof ReactiveFieldImpl ||
         value instanceof ReactiveGetterImpl ||
-        value instanceof ReactiveQueryFieldImpl ||
+        value instanceof AsyncReactiveFieldImpl ||
         value instanceof PropertyImpl
       ) {
         await copyToPayloadValue(payload, payloadKey, value.get, nextHint);

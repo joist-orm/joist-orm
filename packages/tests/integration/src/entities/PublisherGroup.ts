@@ -1,6 +1,6 @@
 import { BookReview, PublisherGroupCodegen, smallPublisherBeforeFlushRan } from "./entities";
 
-import { hasReactiveField, hasReactiveQueryField, ReactiveField } from "joist-orm";
+import { hasAsyncReactiveField, hasReactiveField, ReactiveField } from "joist-orm";
 import { publisherGroupConfig as config } from "./entities";
 
 export class PublisherGroup extends PublisherGroupCodegen {
@@ -11,7 +11,7 @@ export class PublisherGroup extends PublisherGroupCodegen {
     (p) => p.publishers.get.map((p) => p.numberOfBookReviews.get).reduce((a, b) => a + b, 0),
   );
 
-  readonly numberOfBookReviewsFormatted: ReactiveField<PublisherGroup, string> = hasReactiveQueryField(
+  readonly numberOfBookReviewsFormatted: ReactiveField<PublisherGroup, string> = hasAsyncReactiveField(
     {},
     { publishers: { authors: { books: "reviews" } } },
     async (pg) => {
@@ -28,7 +28,7 @@ config.beforeFlush((b) => {
   b.transientFields.smallPublisherBeforeFlushRan = smallPublisherBeforeFlushRan.value;
 });
 
-// For testing sync defaults on ReactiveQueryFields
+// For testing sync defaults on AsyncReactiveFields
 config.setDefault("numberOfBookReviewsFormatted", () => {
   // Using a random value to simulate a field with unique constraints but it's not actually important to this test
   return new Date().toString();

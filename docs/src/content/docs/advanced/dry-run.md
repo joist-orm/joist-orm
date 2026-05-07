@@ -34,7 +34,7 @@ When `em.flush` is called in `in-memory-writes` mode, Joist will:
 
 * Still open a transaction
 * Apply the same `INSERT`, `UPDATE`, `DELETE` statements as normal
-* Recalc any `ReactiveQueryField`s if necessary (these are SQL queries that need to see the data applied in the previous step to recalc themselves)
+* Recalc any `AsyncReactiveField`s if necessary (these are SQL queries that need to see the data applied in the previous step to recalc themselves)
 * Run validation rules as normal
 * Abort the transaction
 
@@ -43,4 +43,3 @@ This implementation is actually really simple--Joist just does "everything as no
 This is both good for simplicity, but also means it's very robust in terms of matching the regular / "not dry mode" behavior.
 
 And it's also extremely easy for your app to use--none of your code needs to change, apart from the one-liner of setting `mode`.
-

@@ -12,12 +12,12 @@ export {
   isProperty,
 } from "./hasProperty";
 export {
-  AsyncQueryProperty,
-  AsyncQueryPropertyImpl,
-  hasAsyncQueryProperty,
-  isAsyncQueryProperty,
-  isLoadedAsyncQueryProperty,
-} from "./hasAsyncQueryProperty";
+  AsyncProperty,
+  AsyncPropertyImpl,
+  hasAsyncProperty,
+  isAsyncProperty,
+  isLoadedAsyncProperty,
+} from "./AsyncProperty";
 export { hasManyDerived } from "./hasManyDerived";
 export { hasManyThrough } from "./hasManyThrough";
 export { hasOneDerived } from "./hasOneDerived";
@@ -55,7 +55,7 @@ export {
   hasReactiveManyToManyOtherSide,
   isReactiveManyToManyOtherSide,
 } from "./ReactiveManyToManyOtherSide";
-export { hasReactiveQueryField, isReactiveQueryField } from "./ReactiveQueryField";
+export { hasAsyncReactiveField, isAsyncReactiveField } from "./AsyncReactiveField";
 export {
   ReactiveReference,
   ReactiveReferenceImpl,

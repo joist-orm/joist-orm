@@ -9,7 +9,7 @@ import {
 import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import { Book, BookReview, newBookReview, newLargePublisher, Publisher, SmallPublisherGroup } from "../entities";
 
-describe("ReactiveQueryField", () => {
+describe("AsyncReactiveField", () => {
   it("skips UPDATE after INSERT if value hasn't changed", async () => {
     const em = newEntityManager();
     newLargePublisher(em, { authors: [{}] });

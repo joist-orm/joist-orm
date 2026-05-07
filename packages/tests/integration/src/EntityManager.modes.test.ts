@@ -43,7 +43,7 @@ describe("EntityManager.modes", () => {
     expect(a1.transientFields.afterCommitRan).toBe(false);
   });
 
-  it("recalculates ReactiveQueryFields", async () => {
+  it("recalculates AsyncReactiveFields", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });

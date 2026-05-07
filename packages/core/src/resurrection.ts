@@ -23,7 +23,7 @@ export async function findExistingIfUniqueBy<T extends Entity>(
   const meta = getMetadata(constructor);
   const candidates = getUniqueByCandidates(meta, input);
   for (const where of candidates) {
-    const inMemory = em.filterEntities(constructor as any, where as any) as T[];
+    const inMemory = onlySoftDeleted(em.filterEntities(constructor as any, where as any) as T[]);
     if (inMemory.length > 1) {
       throw new TooManyError(`Found more than one existing ${meta.type} with ${whereAsString(where)}`);
     } else if (inMemory.length === 1) {
@@ -35,9 +35,7 @@ export async function findExistingIfUniqueBy<T extends Entity>(
     const hasNewEntityParam = Object.values(where).some((value) => isEntity(value) && value.isNewEntity);
     if (hasNewEntityParam) continue;
 
-    const entities = (await (em as any).find(constructor, where, { softDeletes: "include" })).filter(
-      (entity: Entity) => !entity.isDeletedEntity,
-    ) as T[];
+    const entities = onlySoftDeleted(await (em as any).find(constructor, where, { softDeletes: "include" })) as T[];
     if (entities.length > 1) {
       throw new TooManyError(`Found more than one existing ${meta.type} with ${whereAsString(where)}`);
     } else if (entities.length === 1) {
@@ -46,6 +44,13 @@ export async function findExistingIfUniqueBy<T extends Entity>(
     }
   }
   return undefined;
+}
+
+/** Returns soft-deleted entities that are safe for upsert to resurrect. */
+function onlySoftDeleted<T extends Entity>(entities: T[]): T[] {
+  return entities.filter(
+    (entity) => !entity.isDeletedEntity && (entity as T & { isSoftDeletedEntity?: boolean }).isSoftDeletedEntity,
+  );
 }
 
 /** Builds pushdown-safe where clauses from configured identity fields. */

@@ -68,6 +68,22 @@ describe("QueryParser.pruning", () => {
       // I.e. raw aggregate selects can reference joined aliases even when the parsed `aliases` metadata is empty.
       expect(query.tables.map((table) => table.alias)).toEqual(["a", "b", "br"]);
     });
+
+    it("keeps aliases referenced as whole rows by raw select SQL when alias metadata is empty", () => {
+      const query: ParsedFindQuery = {
+        selects: ["a.*", { sql: 'array_agg(row_to_json("ap")) as _permissions', bindings: [], aliases: [] }],
+        tables: [
+          { join: "primary", alias: "a", table: "authors" },
+          { join: "outer", alias: "ap", table: "auth_permissions", col1: "a.id", col2: "ap.author_id" },
+        ],
+        condition: undefined,
+        orderBys: [],
+      };
+
+      pruneUnusedJoins(query, []);
+
+      expect(query.tables.map((table) => table.alias)).toEqual(["a", "ap"]);
+    });
   });
 
   describe("selectReferencesAlias", () => {
@@ -79,6 +95,12 @@ describe("QueryParser.pruning", () => {
     it("finds quoted select references", () => {
       expect(selectReferencesAlias('"a".*', "a")).toBe(true);
       expect(selectReferencesAlias('"book".id as __source_id', "book")).toBe(true);
+    });
+
+    it("finds whole-row select references", () => {
+      expect(selectReferencesAlias("ap", "ap")).toBe(true);
+      expect(selectReferencesAlias('array_agg(row_to_json("ap")) as _permissions', "ap")).toBe(true);
+      expect(selectReferencesAlias("array_agg(row_to_json(ap)) as _permissions", "ap")).toBe(true);
     });
 
     it("finds aliases inside generated CTI expressions", () => {
@@ -98,6 +120,7 @@ describe("QueryParser.pruning", () => {
     it("does not match aliases inside longer identifiers", () => {
       expect(selectReferencesAlias("foo.a.id", "a")).toBe(false);
       expect(selectReferencesAlias('foo_"a".id', "a")).toBe(false);
+      expect(selectReferencesAlias("book_m2m", "book")).toBe(false);
     });
   });
 });

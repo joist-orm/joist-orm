@@ -101,32 +101,53 @@ function markSelectAliases(dt: DependencyTracker, parsed: ParsedFindQuery, selec
   }
 }
 
-/** Returns true if a raw select expression references `alias.column`. */
+/** Returns true if a raw select expression references `alias.column` or the whole-row `alias`. */
 export function selectReferencesAlias(select: string, alias: string): boolean {
   // Most selects are simple `a.*`, but CTI adds expressions like
   // `COALESCE(p_s0.shared_column, p_s1.shared_column) as shared_column`.
   // Those expressions must keep the subtype joins, but `parseAlias` only sees
   // the leading function name. Instead of parsing SQL, scan for the only alias
-  // forms Joist generates in selects: `alias.column` and `"alias".column`.
-  return selectReferencesCandidate(select, `${alias}.`) || selectReferencesCandidate(select, `"${alias}".`);
+  // forms Joist generates in selects: `alias.column`, `"alias".column`, and whole-row aliases.
+  return (
+    selectReferencesCandidate(select, `${alias}.`) ||
+    selectReferencesCandidate(select, `"${alias}".`) ||
+    selectReferencesCandidate(select, alias) ||
+    selectReferencesCandidate(select, `"${alias}"`)
+  );
 }
 
-/** Returns true when `candidate` is present at a SQL identifier boundary. */
+/**
+ * Returns true when `candidate` is present at a SQL identifier boundary.
+ *
+ * Scans the select string for literal candidate matches, then verifies the characters before/after the match are not
+ * part of a larger identifier or dotted path. I.e. `row_to_json("ap")` matches, but `foo_"ap"` and `foo.ap` do not.
+ */
 function selectReferencesCandidate(select: string, candidate: string): boolean {
   let index = select.indexOf(candidate);
+  const quoted = candidate.startsWith('"');
   while (index !== -1) {
+    // Each loop inspects one literal occurrence of `candidate`, then either accepts it as a real alias reference or
+    // advances to the next occurrence if the surrounding characters show it is part of a larger token.
     // Avoid treating `foo.a.id` as a reference to `a`; Joist-generated aliases
     // appear at the start of an expression or after punctuation/whitespace.
     const previous = select[index - 1];
-    if (index === 0 || (previous !== "." && !isSqlIdentifierChar(previous))) return true;
+    const next = select[index + candidate.length];
+    if (
+      (index === 0 || (previous !== "." && !isSqlIdentifierChar(previous))) &&
+      !isSqlIdentifierChar(next) &&
+      (quoted || (previous !== '"' && next !== '"'))
+    ) {
+      return true;
+    }
+    // Continue scanning after the current occurrence; `indexOf` returns -1 once there are no more candidates.
     index = select.indexOf(candidate, index + candidate.length);
   }
   return false;
 }
 
 /** Returns true for characters that can be part of an unquoted SQL identifier. */
-function isSqlIdentifierChar(char: string): boolean {
-  return /[A-Za-z0-9_]/.test(char);
+function isSqlIdentifierChar(char: string | undefined): boolean {
+  return char !== undefined && /[A-Za-z0-9_]/.test(char);
 }
 
 /** Pulls out a flat list of all `ColumnCondition`s from a `ParsedExpressionFilter` tree. */

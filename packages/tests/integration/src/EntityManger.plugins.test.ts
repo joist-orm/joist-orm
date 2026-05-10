@@ -1,5 +1,5 @@
 import { type Entity, getMetadata, ImmutableEntitiesPlugin, isInTrustedContext, Plugin } from "joist-orm";
-import { Author, Book, BookReview, Image, Publisher, Tag, newAuthor, newBook, newImage } from "src/entities";
+import { Author, Book, BookReview, Image, newAuthor, newBook, newImage, Publisher, Tag, User } from "src/entities";
 import { insertAuthor, insertBook, insertPublisher, insertTag, select } from "src/entities/inserts";
 import { isPreloadingEnabled, newEntityManager } from "src/testEm";
 import { twoOf } from "src/utils";
@@ -377,6 +377,54 @@ describe("EntityManger.plugins", () => {
       // And one setField call
       const setFileNameCalls = plugin.setFieldCalls.filter((c) => c.field === "fileName");
       expect(setFileNameCalls).toMatchObject([{ value: "external_test", trusted: false }]);
+    });
+
+    it.withCtx("passes trusted=false for create opts and trusted=true for sync defaults", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new InternalTrackingPlugin();
+      em.addPlugin(plugin);
+
+      const user = em.create(User, { name: "user input", email: "user@example.com" });
+
+      expect(plugin.setFieldCalls.filter((call) => call.field === "name")).toMatchObject([
+        { entity: user.toTaggedString(), value: "user input", trusted: false },
+      ]);
+      expect(plugin.setFieldCalls.filter((call) => call.field === "email")).toMatchObject([
+        { entity: user.toTaggedString(), value: "user@example.com", trusted: false },
+      ]);
+      expect(plugin.setFieldCalls.filter((call) => call.field === "originalEmail")).toMatchObject([
+        { entity: user.toTaggedString(), value: "user@example.com", trusted: true },
+      ]);
+    });
+
+    it.withCtx("passes trusted=false for upsert input and trusted=true for sync defaults", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new InternalTrackingPlugin();
+      em.addPlugin(plugin);
+
+      const user = await em.upsert(User, { name: "upsert input", email: "upsert@example.com" });
+
+      expect(plugin.setFieldCalls.filter((call) => call.field === "name")).toMatchObject([
+        { entity: user.toTaggedString(), value: "upsert input", trusted: false },
+      ]);
+      expect(plugin.setFieldCalls.filter((call) => call.field === "email")).toMatchObject([
+        { entity: user.toTaggedString(), value: "upsert@example.com", trusted: false },
+      ]);
+      expect(plugin.setFieldCalls.filter((call) => call.field === "originalEmail")).toMatchObject([
+        { entity: user.toTaggedString(), value: "upsert@example.com", trusted: true },
+      ]);
+    });
+
+    it.withCtx("passes trusted=true for synchronous async-default application", async (ctx) => {
+      const { em } = ctx;
+      const plugin = new InternalTrackingPlugin();
+      em.addPlugin(plugin);
+
+      const author = newAuthor(em, { firstName: "factory input" });
+
+      expect(plugin.setFieldCalls.filter((call) => call.field === "nickNames")).toMatchObject([
+        { entity: author.toTaggedString(), value: ["factory input"], trusted: true },
+      ]);
     });
 
     it.withCtx("passes trusted=true for setField from lifecycle hooks", async (ctx) => {

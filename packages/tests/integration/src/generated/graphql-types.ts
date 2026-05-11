@@ -2,25 +2,38 @@
 // but here we're just hand-coding it for proof-of-concept/diff-based verification.
 import { Context } from "@src/context";
 import {
+  AdminUser,
   AdvanceStatus,
   Author,
+  AuthorSchedule,
   AuthorStat,
   Book,
   BookAdvance,
   BookRange,
   BookReview,
+  Child,
+  ChildGroup,
+  ChildItem,
   Color,
   Comment,
   Critic,
+  CriticColumn,
   Image,
   ImageType,
   LargePublisher,
+  ParentGroup,
+  ParentItem,
   Publisher,
   PublisherGroup,
   PublisherSize,
   PublisherType,
   SmallPublisher,
+  SmallPublisherGroup,
   Tag,
+  Task,
+  TaskItem,
+  TaskNew,
+  TaskOld,
   TaskType,
   User,
 } from "@src/entities";
@@ -31,55 +44,220 @@ export type Resolver<R, A, T> = (root: R, args: A, ctx: Context, info: any) => M
 export type AuthorResolvers = {
   firstName: Resolver<Author, any, string>;
   lastName: Resolver<Author, any, string | undefined>;
-  graphqlOnlyField: Resolver<Author, number, number>;
+  graphqlOnlyField?: Resolver<Author, number, number>;
+  ssn: Resolver<Author, any, any>;
+  initials: Resolver<Author, any, any>;
+  numberOfBooks: Resolver<Author, any, any>;
+  bookComments: Resolver<Author, any, any>;
+  isPopular: Resolver<Author, any, any>;
+  age: Resolver<Author, any, any>;
+  graduated: Resolver<Author, any, any>;
+  nickNames: Resolver<Author, any, any>;
+  nickNamesUpper: Resolver<Author, any, any>;
+  wasEverPopular: Resolver<Author, any, any>;
+  isFunny: Resolver<Author, any, any>;
+  mentorNames: Resolver<Author, any, any>;
+  address: Resolver<Author, any, any>;
+  businessAddress: Resolver<Author, any, any>;
+  quotes: Resolver<Author, any, any>;
+  numberOfAtoms: Resolver<Author, any, any>;
+  deletedAt: Resolver<Author, any, any>;
+  numberOfPublicReviews: Resolver<Author, any, any>;
+  numberOfPublicReviews2: Resolver<Author, any, any>;
+  tagsOfAllBooks: Resolver<Author, any, any>;
+  search: Resolver<Author, any, any>;
+  certificate: Resolver<Author, any, any>;
+  createdAt: Resolver<Author, any, any>;
+  updatedAt: Resolver<Author, any, any>;
 };
 export type AuthorStatResolvers = {
   smallint: Resolver<AuthorStat, any, number>;
+  integer: Resolver<AuthorStat, any, any>;
+  nullableInteger: Resolver<AuthorStat, any, any>;
+  bigint: Resolver<AuthorStat, any, any>;
+  decimal: Resolver<AuthorStat, any, any>;
+  real: Resolver<AuthorStat, any, any>;
+  smallserial: Resolver<AuthorStat, any, any>;
+  serial: Resolver<AuthorStat, any, any>;
+  bigserial: Resolver<AuthorStat, any, any>;
+  doublePrecision: Resolver<AuthorStat, any, any>;
+  nullableText: Resolver<AuthorStat, any, any>;
+  json: Resolver<AuthorStat, any, any>;
+  createdAt: Resolver<AuthorStat, any, any>;
+  updatedAt: Resolver<AuthorStat, any, any>;
+};
+export type AuthorScheduleResolvers = {
+  overview: Resolver<AuthorSchedule, any, any>;
+  createdAt: Resolver<AuthorSchedule, any, any>;
+  updatedAt: Resolver<AuthorSchedule, any, any>;
 };
 export type BookResolvers = {
   title: Resolver<Book, any, string>;
+  order: Resolver<Book, any, any>;
+  notes: Resolver<Book, any, any>;
+  acknowledgements: Resolver<Book, any, any>;
+  authorsNickNames: Resolver<Book, any, any>;
+  search: Resolver<Book, any, any>;
+  deletedAt: Resolver<Book, any, any>;
+  createdAt: Resolver<Book, any, any>;
+  updatedAt: Resolver<Book, any, any>;
 };
 export type BookAdvanceResolvers = {
   status: Resolver<BookAdvance, any, AdvanceStatus>;
+  createdAt: Resolver<BookAdvance, any, any>;
+  updatedAt: Resolver<BookAdvance, any, any>;
 };
 export type BookReviewResolvers = {
   rating: Resolver<BookReview, any, number>;
+  isPublic: Resolver<BookReview, any, any>;
+  isTest: Resolver<BookReview, any, any>;
+  isTestChain: Resolver<BookReview, any, any>;
+  createdAt: Resolver<BookReview, any, any>;
+  updatedAt: Resolver<BookReview, any, any>;
 };
 export type CommentResolvers = {
   text: Resolver<Comment, any, string | undefined | null>;
+  parentTaggedId: Resolver<Comment, any, any>;
+  parentTags: Resolver<Comment, any, any>;
+  createdAt: Resolver<Comment, any, any>;
+  updatedAt: Resolver<Comment, any, any>;
 };
 export type ImageResolvers = {
   fileName: Resolver<Image, any, string>;
+  createdAt: Resolver<Image, any, any>;
+  updatedAt: Resolver<Image, any, any>;
 };
 export type PublisherResolvers = {
   name: Resolver<Publisher, any, string>;
+  latitude: Resolver<Publisher, any, any>;
+  longitude: Resolver<Publisher, any, any>;
+  hugeNumber: Resolver<Publisher, any, any>;
+  numberOfBookReviews: Resolver<Publisher, any, any>;
+  deletedAt: Resolver<Publisher, any, any>;
+  titlesOfFavoriteBooks: Resolver<Publisher, any, any>;
+  bookAdvanceTitlesSnapshot: Resolver<Publisher, any, any>;
+  numberOfBookAdvancesSnapshot: Resolver<Publisher, any, any>;
+  baseSyncDefault: Resolver<Publisher, any, any>;
+  baseAsyncDefault: Resolver<Publisher, any, any>;
+  createdAt: Resolver<Publisher, any, any>;
+  updatedAt: Resolver<Publisher, any, any>;
+  favoriteAuthorName: Resolver<Publisher, any, any>;
+  rating: Resolver<Publisher, any, any>;
 };
 export type LargePublisherResolvers = {
   name: Resolver<LargePublisher, any, string>;
   country: Resolver<LargePublisher, any, string | undefined>;
+  sharedColumn: Resolver<LargePublisher, any, any>;
+  rating: Resolver<LargePublisher, any, any>;
 };
 export type SmallPublisherResolvers = {
   name: Resolver<SmallPublisher, any, string>;
   city: Resolver<SmallPublisher, any, string>;
   group: Resolver<SmallPublisher, any, PublisherGroup>;
   authors: Resolver<SmallPublisher, any, Author[]>;
+  sharedColumn: Resolver<SmallPublisher, any, any>;
+  allAuthorNames: Resolver<SmallPublisher, any, any>;
 };
 export type PublisherGroupResolvers = {
   name: Resolver<PublisherGroup, any, string | undefined>;
+  numberOfBookReviews: Resolver<PublisherGroup, any, any>;
+  numberOfBookReviewsFormatted: Resolver<PublisherGroup, any, any>;
+  createdAt: Resolver<PublisherGroup, any, any>;
+  updatedAt: Resolver<PublisherGroup, any, any>;
 };
 export type TagResolvers = {
   name: Resolver<Tag, any, string>;
+  createdAt: Resolver<Tag, any, any>;
+  updatedAt: Resolver<Tag, any, any>;
 };
 export type CriticResolvers = {
   name: Resolver<Critic, any, string>;
+  createdAt: Resolver<Critic, any, any>;
+  updatedAt: Resolver<Critic, any, any>;
+};
+export type CriticColumnResolvers = {
+  name: Resolver<CriticColumn, any, any>;
+  createdAt: Resolver<CriticColumn, any, any>;
+  updatedAt: Resolver<CriticColumn, any, any>;
+};
+export type ChildResolvers = {
+  name: Resolver<Child, any, any>;
+  createdAt: Resolver<Child, any, any>;
+  updatedAt: Resolver<Child, any, any>;
+};
+export type ChildGroupResolvers = {
+  name: Resolver<ChildGroup, any, any>;
+  createdAt: Resolver<ChildGroup, any, any>;
+  updatedAt: Resolver<ChildGroup, any, any>;
+};
+export type ChildItemResolvers = {
+  name: Resolver<ChildItem, any, any>;
+  createdAt: Resolver<ChildItem, any, any>;
+  updatedAt: Resolver<ChildItem, any, any>;
+};
+export type ParentGroupResolvers = {
+  name: Resolver<ParentGroup, any, any>;
+  createdAt: Resolver<ParentGroup, any, any>;
+  updatedAt: Resolver<ParentGroup, any, any>;
+};
+export type ParentItemResolvers = {
+  name: Resolver<ParentItem, any, any>;
+  createdAt: Resolver<ParentItem, any, any>;
+  updatedAt: Resolver<ParentItem, any, any>;
+};
+export type SmallPublisherGroupResolvers = {
+  smallName: Resolver<SmallPublisherGroup, any, any>;
 };
 
 export type UserResolvers = {
   name: Resolver<User, any, string>;
   email: Resolver<User, any, string>;
+  ipAddress: Resolver<User, any, any>;
+  password: Resolver<User, any, any>;
+  bio: Resolver<User, any, any>;
+  originalEmail: Resolver<User, any, any>;
+  trialPeriod: Resolver<User, any, any>;
+  createdAt: Resolver<User, any, any>;
+  updatedAt: Resolver<User, any, any>;
+};
+
+export type AdminUserResolvers = {
+  name: Resolver<AdminUser, any, any>;
+  email: Resolver<AdminUser, any, any>;
+  role: Resolver<AdminUser, any, any>;
+};
+
+export type TaskResolvers = {
+  id: Resolver<Task, any, any>;
+  durationInDays: Resolver<Task, any, any>;
+  deletedAt: Resolver<Task, any, any>;
+  syncDefault: Resolver<Task, any, any>;
+  asyncDefault_1: Resolver<Task, any, any>;
+  asyncDefault_2: Resolver<Task, any, any>;
+  syncDerived: Resolver<Task, any, any>;
+  asyncDerived: Resolver<Task, any, any>;
+  createdAt: Resolver<Task, any, any>;
+  updatedAt: Resolver<Task, any, any>;
+};
+
+export type TaskItemResolvers = {
+  id: Resolver<TaskItem, any, any>;
+  createdAt: Resolver<TaskItem, any, any>;
+  updatedAt: Resolver<TaskItem, any, any>;
+};
+
+export type TaskNewResolvers = {
+  id: Resolver<TaskNew, any, any>;
+  specialNewField: Resolver<TaskNew, any, any>;
+};
+
+export type TaskOldResolvers = {
+  id: Resolver<TaskOld, any, any>;
+  specialOldField: Resolver<TaskOld, any, any>;
 };
 
 export type SaveAuthorInput = {};
+export type SaveAuthorScheduleInput = {};
 export type SaveBookInput = {};
 export type SaveAuthorStatInput = {};
 export type SaveBookAdvanceInput = {};
@@ -90,25 +268,50 @@ export type SavePublisherInput = {};
 export type SaveSmallPublisherInput = {};
 export type SaveLargePublisherInput = {};
 export type SavePublisherGroupInput = {};
+export type SaveSmallPublisherGroupInput = {};
 export type SaveTagInput = {};
 export type SaveCriticInput = {};
+export type SaveCriticColumnInput = {};
+export type SaveChildInput = {};
+export type SaveChildGroupInput = {};
+export type SaveChildItemInput = {};
+export type SaveParentGroupInput = {};
+export type SaveParentItemInput = {};
 export type SaveUserInput = {};
+export type SaveAdminUserInput = {};
+export type SaveTaskInput = {};
+export type SaveTaskItemInput = {};
+export type SaveTaskNewInput = {};
+export type SaveTaskOldInput = {};
 
 export type MutationResolvers = {
   saveAuthor(root: any, args: any, ctx: Context, info: any): any;
+  saveAuthorSchedule(root: any, args: any, ctx: Context, info: any): any;
   saveAuthorStat(root: any, args: any, ctx: Context, info: any): any;
   saveBook(root: any, args: { input: SaveBookInput }, ctx: Context, info: any): any;
   saveBookAdvance(root: any, args: any, ctx: Context, info: any): any;
   saveBookReview(root: any, args: any, ctx: Context, info: any): any;
+  saveChild(root: any, args: any, ctx: Context, info: any): any;
+  saveChildGroup(root: any, args: any, ctx: Context, info: any): any;
+  saveChildItem(root: any, args: any, ctx: Context, info: any): any;
   saveComment(root: any, args: any, ctx: Context, info: any): any;
   saveImage(root: any, args: any, ctx: Context, info: any): any;
   savePublisher(root: any, args: any, ctx: Context, info: any): any;
   saveLargePublisher(root: any, args: any, ctx: Context, info: any): any;
   saveSmallPublisher(root: any, args: any, ctx: Context, info: any): any;
   savePublisherGroup(root: any, args: any, ctx: Context, info: any): any;
+  saveSmallPublisherGroup(root: any, args: any, ctx: Context, info: any): any;
   saveTag(root: any, args: any, ctx: Context, info: any): any;
   saveCritic(root: any, args: any, ctx: Context, info: any): any;
+  saveCriticColumn(root: any, args: any, ctx: Context, info: any): any;
+  saveParentGroup(root: any, args: any, ctx: Context, info: any): any;
+  saveParentItem(root: any, args: any, ctx: Context, info: any): any;
   saveUser(root: any, args: any, ctx: Context, info: any): any;
+  saveAdminUser(root: any, args: any, ctx: Context, info: any): any;
+  saveTask(root: any, args: any, ctx: Context, info: any): any;
+  saveTaskItem(root: any, args: any, ctx: Context, info: any): any;
+  saveTaskNew(root: any, args: any, ctx: Context, info: any): any;
+  saveTaskOld(root: any, args: any, ctx: Context, info: any): any;
 };
 
 export type Resolvers = {

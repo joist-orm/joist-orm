@@ -21,14 +21,14 @@
     "node-pg-migrate": "^8.0.4"
   },
   "devDependencies": {
-    "@types/node": "^24.6.0",
-    "jest": "30.2.0",
+    "@types/node": "^24.12.4",
+    "jest": "30.4.2",
     "joist-codegen": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
-    "prettier": "^3.6.2",
+    "prettier": "^3.8.3",
     "prettier-plugin-organize-imports": "^4.3.0",
-    "typescript": "5.9.2"
+    "typescript": "5.9.3"
   },
   "imports": {
     "src/": "src/*"

@@ -1,10 +1,10 @@
 import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
+import { readFileSync } from "fs";
+import { glob } from "glob";
 import starlightBlog from "starlight-blog";
-import starlightLlmsTxt from 'starlight-llms-txt'
-import { readFileSync } from 'fs';
-import { glob } from 'glob';
+import starlightLlmsTxt from "starlight-llms-txt";
 
 // https://astro.build/config
 const config = defineConfig({
@@ -27,14 +27,14 @@ const config = defineConfig({
         { icon: "discord", label: "Discord", href: "https://discord.gg/ky9VTQugqu" },
       ],
       sidebar: [
-        { label: "Getting Started", autogenerate: { directory: "getting-started" } },
-        { label: "Goals", autogenerate: { directory: "goals" } },
-        { label: "Domain Modeling", autogenerate: { directory: "modeling" } },
-        { label: "Features", autogenerate: { directory: "features" } },
-        { label: "Advanced Features", autogenerate: { directory: "advanced" } },
-        { label: "Logging", autogenerate: { directory: "logging" } },
-        { label: "Testing", autogenerate: { directory: "testing" } },
-        { label: "Comparisons", autogenerate: { directory: "comparisons" } },
+        { label: "Getting Started", items: [{ autogenerate: { directory: "getting-started" } }] },
+        { label: "Goals", items: [{ autogenerate: { directory: "goals" } }] },
+        { label: "Domain Modeling", items: [{ autogenerate: { directory: "modeling" } }] },
+        { label: "Features", items: [{ autogenerate: { directory: "features" } }] },
+        { label: "Advanced Features", items: [{ autogenerate: { directory: "advanced" } }] },
+        { label: "Logging", items: [{ autogenerate: { directory: "logging" } }] },
+        { label: "Testing", items: [{ autogenerate: { directory: "testing" } }] },
+        { label: "Comparisons", items: [{ autogenerate: { directory: "comparisons" } }] },
         { label: "FAQ", link: "/faq/" },
         { label: "Blog", link: "/blog" },
       ],
@@ -63,38 +63,33 @@ function getLlmConfig(): StarlightLllmsTextOptions {
 
   return {
     projectName: "Joist ORM",
-    description: "An opinionated TypeScript ORM for Node.js and PostgreSQL focused on domain modeling, featuring schema-driven code generation, guaranteed N+1 prevention via DataLoader, reactive validation rules, and strong type safety for building robust backend applications.",
-    details: `The Joist ORM ecosystem is made up of the following NPM packages:\n\n${publicJoistPackages.map(pkg => `- ${pkg}`).join('\n')}\n\nAll of these packages are described in these documentation sets.`,
+    description:
+      "An opinionated TypeScript ORM for Node.js and PostgreSQL focused on domain modeling, featuring schema-driven code generation, guaranteed N+1 prevention via DataLoader, reactive validation rules, and strong type safety for building robust backend applications.",
+    details: `The Joist ORM ecosystem is made up of the following NPM packages:\n\n${publicJoistPackages.map((pkg) => `- ${pkg}`).join("\n")}\n\nAll of these packages are described in these documentation sets.`,
     customSets: [
       {
         label: "Configuration and Setup",
-        paths: ["getting-started/**"]
+        paths: ["getting-started/**"],
       },
       {
         label: "Code Generation (codegen)",
-        paths: ["goals/code-generation"]
+        paths: ["goals/code-generation"],
       },
       {
         label: "Domain Modeling",
-        paths: ["modeling/**"]
+        paths: ["modeling/**"],
       },
       {
         label: "Usage",
-        paths: ["features/**"]
+        paths: ["features/**"],
       },
       {
         label: "Testing",
-        paths: ["testing/**"]
-      }
+        paths: ["testing/**"],
+      },
     ],
-    promote: [
-      "goals/**",
-      "modeling/**",
-      "features/**",
-    ],
-    demote: [
-      "comparisons/**"
-    ],
+    promote: ["goals/**", "modeling/**", "features/**"],
+    demote: ["comparisons/**"],
     exclude: [
       "blog/**", // this is mostly marketing content, not helpful for LLMs
 
@@ -102,16 +97,16 @@ function getLlmConfig(): StarlightLllmsTextOptions {
       "why-joist",
       "advanced/transform-properties",
     ],
-  }
+  };
 }
 
 function getPublicJoistPackages(): string[] {
-  const packageJsonFiles = glob.sync('../packages/*/package.json');
+  const packageJsonFiles = glob.sync("../packages/*/package.json");
   const publicPackages: string[] = [];
 
   for (const filePath of packageJsonFiles) {
     try {
-      const packageJson = JSON.parse(readFileSync(filePath, 'utf-8'));
+      const packageJson = JSON.parse(readFileSync(filePath, "utf-8"));
 
       // Skip if private: true
       if (packageJson.private === true) {

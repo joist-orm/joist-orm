@@ -1,8 +1,7 @@
-import { Author, Book, BookReview, newAuthor, newPublisher, newSmallPublisher } from "@src/entities";
+import { Author, Book, BookReview, Publisher, newAuthor, newPublisher, newSmallPublisher } from "@src/entities";
 import { insertAuthor, insertBook, insertBookReview, insertPublisher, select, update } from "@src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
-import ansiRegex from "ansi-regex";
-import { ReactionLogger, setReactionLogging } from "joist-orm";
+import { getEmInternalApi, getInstanceData, ReactionLogger, setReactionLogging } from "joist-orm";
 
 let reactionOutput: string[] = [];
 
@@ -100,6 +99,28 @@ describe("ReactiveReference", () => {
     expect(a1.favoriteBook.get!.title).toBe("b2");
   });
 
+  it("queued recalcs recalculate already-cached references", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 2 });
+    await insertBook({ title: "b2", author_id: 1 });
+    await insertBookReview({ book_id: 2, rating: 1 });
+    await update("authors", { id: 1, favorite_book_id: 1 });
+    const em = newEntityManager();
+    const [a1, br2] = await Promise.all([em.load(Author, "a:1"), em.load(BookReview, "br:2")]);
+    await a1.favoriteBook.load({ forceReload: true });
+    expect(a1.favoriteBook.idTaggedMaybe).toEqual("b:1");
+    expect(a1.transientFields.favoriteBookCalcInvoked).toEqual(1);
+
+    // Simulate a delete/create-all-fields queue that did not also come through setField cache invalidation.
+    getInstanceData(br2).data.rating = 3;
+    getEmInternalApi(em).rm.queueDownstreamReactables(br2, "rating");
+    await getEmInternalApi(em).rm.recalcPendingReactables("reactables");
+
+    expect(a1.favoriteBook.idTaggedMaybe).toEqual("b:2");
+    expect(a1.transientFields.favoriteBookCalcInvoked).toEqual(2);
+  });
+
   it("load does not issue a query if empty", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
@@ -133,6 +154,71 @@ describe("ReactiveReference", () => {
     em.delete(b);
     // Then the `Book.favoriteAuthor` o2o does not blow up by setting `Author.favoriteBook` to null
     await em.flush();
+  });
+
+  it("em.delete recalculates references watching the deleted entity through a m2o", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2", mentor_id: 1, root_mentor_id: 1 });
+    const em = newEntityManager();
+    // Given a2.rootMentor has cached a1 from the recursive mentor m2o chain
+    const [a1, a2] = await em.loadAll(Author, ["a:1", "a:2"], "rootMentor");
+    expect(a2.rootMentor.get).toMatchEntity(a1);
+    // When the watched m2o target is deleted
+    em.delete(a1);
+    await em.flush();
+    // Then rootMentor is recalculated away from the deleted entity
+    expect(a2.rootMentor.get).toBeUndefined();
+    expect(await select("authors")).toMatchObject([{ id: 2, mentor_id: null, root_mentor_id: null }]);
+  });
+
+  it("beforeFlush self-delete recalculates references watching the deleted entity through a m2o", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2", mentor_id: 1, root_mentor_id: 1 });
+    const em = newEntityManager();
+    // Given a2.rootMentor has cached a1 from the recursive mentor m2o chain
+    const [a1, a2] = await em.loadAll(Author, ["a:1", "a:2"], "rootMentor");
+    expect(a2.rootMentor.get).toMatchEntity(a1);
+    // When the watched m2o target deletes itself from beforeFlush
+    a1.transientFields.deleteDuringFlush = true;
+    em.touch(a1);
+    await em.flush();
+    // Then rootMentor is recalculated away from the deleted entity
+    expect(a2.rootMentor.get).toBeUndefined();
+    expect(await select("authors")).toMatchObject([{ id: 2, mentor_id: null, root_mentor_id: null }]);
+  });
+
+  it("beforeFlush self-delete recalculates references cached earlier in the flush", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em, { firstName: "a1" });
+    const a2 = newAuthor(em, { firstName: "a2", mentor: a1 });
+    const a3 = newAuthor(em, { firstName: "a3", mentor: a2 });
+    a1.transientFields.deleteDuringFlush = true;
+
+    await em.flush();
+
+    expect(a2.rootMentor.get).toBeUndefined();
+    expect(a3.rootMentor.get).toMatchEntity(a2);
+    expect(await select("authors")).toMatchObject([
+      { first_name: "a2", mentor_id: null, root_mentor_id: null },
+      { first_name: "a3", mentor_id: parseInt(a2.idUntagged), root_mentor_id: parseInt(a2.idUntagged) },
+    ]);
+  });
+
+  it("em.delete recalculates parent references after unhooking the deleted entity", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 1 });
+    await update("publishers", { id: 1, favorite_author_id: 1 });
+    const em = newEntityManager();
+    const [p1, a1] = await Promise.all([em.load(Publisher, "p:1", "favoriteAuthor"), em.load(Author, "a:1")]);
+    expect(p1.favoriteAuthor.get).toMatchEntity(a1);
+
+    em.delete(a1);
+    await em.flush();
+
+    expect(p1.favoriteAuthor.get).toMatchEntity({ firstName: "a2" });
+    expect(await select("publishers")).toMatchObject([{ id: 1, favorite_author_id: 2 }]);
   });
 
   it("works on CTI base types", async () => {
@@ -249,11 +335,16 @@ beforeEach(() => {
 class StubReactionLogger extends ReactionLogger {
   constructor() {
     super((line: string) => {
-      reactionOutput.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
+      reactionOutput.push(stripAnsi(line).replace("\n", "↩"));
     });
   }
   // Ensure deterministic output
   now = () => 0;
+}
+
+/** Removes ANSI color codes from reaction logs. */
+function stripAnsi(value: string): string {
+  return value.replace(/\u001B\[[0-?]*[ -/]*[@-~]/g, "");
 }
 
 afterAll(() => {

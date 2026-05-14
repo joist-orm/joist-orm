@@ -1,6 +1,9 @@
 import { expect } from "@jest/globals";
 import {
   Author,
+  Book,
+  Image,
+  ImageType,
   LargePublisher,
   newAuthor,
   newBook,
@@ -17,13 +20,15 @@ import {
 import {
   insertAuthor,
   insertAuthorToTag,
+  insertBook,
   insertLargePublisher,
   insertPublisher,
   insertSmallPublisher,
   insertTag,
   insertUser,
+  select,
 } from "@src/entities/inserts";
-import { getMetadata, MaybeAbstractEntityConstructor } from "joist-orm";
+import { getInstanceData, getMetadata, type MaybeAbstractEntityConstructor } from "joist-orm";
 
 describe("EntityManager.reactions", () => {
   it.withCtx("creates the right internal reactions", async () => {
@@ -753,6 +758,51 @@ describe("EntityManager.reactions", () => {
       await em.flush();
       // Then the reaction runs
       expect(a.transientFields.reactions.rf).toBe(1);
+    });
+
+    it.withCtx("runs when an o2o target is deleted", async ({ em }) => {
+      // Given an author with an image whose filename has been captured by a ReactiveField
+      await insertAuthor({ first_name: "a1", image_file_name: "i1" });
+      const author = await em.load(Author, "a:1");
+      const image = em.create(Image, { type: ImageType.AuthorImage, author, fileName: "i1" });
+      // And we briefly see the filename
+      expect(await author.imageFileName.load()).toBe("i1");
+      // When the FK-owning side of the o2o is deleted
+      em.delete(image);
+      await em.flush();
+      // Then the ReactiveField should be recalculated from the old Image.author path
+      expect(await select("authors")).toMatchObject([{ id: 1, image_file_name: null }]);
+      expect(await select("images")).toEqual([]);
+    });
+
+    it.withCtx("runs for an intermediate m2o value observed by a ReactiveField", async ({ em }) => {
+      // Given a book assigned to a1 and two other possible authors
+      await insertAuthor({ first_name: "a1", search: "a:1 a1 b1" });
+      await insertAuthor({ first_name: "a2", search: "a:2 a2" });
+      await insertAuthor({ first_name: "a3", search: "a:3 a3" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const [a1, a2, a3] = await em.find(Author, {}, { orderBy: { id: "ASC" } });
+      const b1 = await em.load(Book, "b:1");
+
+      // When a2 observes the transient book assignment before the book moves to a3
+      b1.author.set(a2);
+      expect(await a2.search.load()).toBe("a:2 a2 b1");
+      b1.author.set(a3);
+      expect(getInstanceData(b1).getReferenceHistory("author")).toEqual(["a:1", "a:2"]);
+      await em.flush();
+
+      // Then every owner that has observed the book gets recalculated
+      expect(await select("authors")).toMatchObject([
+        { id: 1, search: "a:1 a1" },
+        // Before fixing the bug, this would be the stale value fo `a:2 a2 b1` from the
+        // `a2.search.load()` line above, b/c we would only walk [a1,a3] during flush,
+        // and not the transiently-observed a2.
+        { id: 2, search: "a:2 a2" },
+        { id: 3, search: "a:3 a3 b1" },
+      ]);
+      expect(a1.search.get).toBe("a:1 a1");
+      expect(a2.search.get).toBe("a:2 a2");
+      expect(a3.search.get).toBe("a:3 a3 b1");
     });
   });
 

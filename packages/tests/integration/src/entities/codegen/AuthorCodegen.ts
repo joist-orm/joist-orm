@@ -124,6 +124,7 @@ export interface AuthorFields {
   numberOfPublicReviews2: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: true };
   tagsOfAllBooks: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   search: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  imageFileName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
   certificate: { kind: "primitive"; type: Uint8Array; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
@@ -223,6 +224,7 @@ export interface AuthorFilter {
   numberOfPublicReviews2?: ValueFilter<number, null>;
   tagsOfAllBooks?: ValueFilter<string, null>;
   search?: ValueFilter<string, null>;
+  imageFileName?: ValueFilter<string, null>;
   certificate?: ValueFilter<Uint8Array, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
@@ -289,6 +291,7 @@ export interface AuthorGraphQLFilter {
   numberOfPublicReviews2?: ValueGraphQLFilter<number>;
   tagsOfAllBooks?: ValueGraphQLFilter<string>;
   search?: ValueGraphQLFilter<string>;
+  imageFileName?: ValueGraphQLFilter<string>;
   certificate?: ValueGraphQLFilter<Uint8Array>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
@@ -365,6 +368,7 @@ export interface AuthorOrder {
   numberOfPublicReviews2?: OrderBy;
   tagsOfAllBooks?: OrderBy;
   search?: OrderBy;
+  imageFileName?: OrderBy;
   certificate?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
@@ -388,6 +392,7 @@ export interface AuthorFactoryExtras {
   withNumberOfPublicReviews2?: number | null;
   withTagsOfAllBooks?: string | null;
   withSearch?: string | null;
+  withImageFileName?: string | null;
   withRangeOfBooks?: BookRange | null;
 }
 
@@ -602,6 +607,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   abstract readonly tagsOfAllBooks: ReactiveField<Author, string | undefined>;
 
   abstract readonly search: ReactiveField<Author, string | undefined>;
+
+  abstract readonly imageFileName: ReactiveField<Author, string | undefined>;
 
   get certificate(): Uint8Array | undefined {
     return getField(this, "certificate");

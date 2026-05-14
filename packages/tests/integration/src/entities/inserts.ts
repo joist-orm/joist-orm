@@ -35,12 +35,14 @@ export function insertAuthor(row: {
   address?: object;
   business_address?: object;
   quotes?: string;
+  search?: string;
   graduated?: any;
   number_of_atoms?: string;
   number_of_public_reviews?: number;
   updated_at?: any;
   deleted_at?: any;
   certificate?: any;
+  image_file_name?: string | null;
   range_of_books?: number;
   root_mentor_id?: number;
 }) {

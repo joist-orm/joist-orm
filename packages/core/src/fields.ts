@@ -67,7 +67,8 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   // Tell any `#isLoaded` or `#value` caches that they might be stale
   isLoadedCache.resetIsLoaded(entity, fieldName);
 
-  const { data, originalData, flushedData } = getInstanceData(entity);
+  const instanceData = getInstanceData(entity);
+  const { data, originalData, flushedData } = instanceData;
 
   // Do string sanitization
   const field = getMetadata(entity).allFields[fieldName];
@@ -75,12 +76,17 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
     newValue = cleanStringValue(newValue);
   }
 
+  const currentValue = getField(entity, fieldName);
+  const isReference = field.kind === "m2o" || field.kind === "poly";
+  // Remember every prior reference value so `followReverseHint` can rewalk both original and transient owners.
+  if (isReference && !equalOrSameEntity(currentValue, newValue)) {
+    instanceData.rememberReferenceValue(fieldName, currentValue);
+  }
+
   // If a `set` occurs during the AsyncReactiveField-loop, copy the last-flushed value to flushedData.
   // Then our `pendingOperation` logic can tell "do we need another micro-flush?" separately
   // from our public-facing changed fields logic.
   if (flushedData) {
-    // Get the currentValue, which is what we should have flushed to the db
-    const currentValue = getField(entity, fieldName);
     if (fieldName in flushedData) {
       // We've already copied the last-micro-flush value into flushedData,
       // are we changing back to that? If so, we won't need another micro-flush.
@@ -100,20 +106,25 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   // "Un-dirty" our originalData if newValue is reverting to originalData
   if (fieldName in originalData) {
     if (equalOrSameEntity(originalData[fieldName], newValue)) {
-      const currentValue = getField(entity, fieldName);
       indexManager.maybeUpdateFieldIndex(entity, fieldName, currentValue, newValue);
 
       pluginManager.beforeSetField(entity, fieldName, newValue);
       data[fieldName] = newValue;
       delete originalData[fieldName];
+
       fieldLogger?.logSet(entity, fieldName, newValue);
-      rm.dequeueDownstreamReactables(entity, fieldName);
+      if (isReference && instanceData.getReferenceHistory(fieldName).length > 0) {
+        rm.queueDownstreamReactables(entity, fieldName);
+      } else {
+        // For normal reverts, the field is clean again, so any pending downstream work can be removed.
+        rm.dequeueDownstreamReactables(entity, fieldName);
+      }
+
       return true;
     }
   }
 
   // Push this logic into a field serde type abstraction?
-  const currentValue = getField(entity, fieldName);
   if (equalOrSameEntity(currentValue, newValue)) {
     // If we're doing `entity.field = undefined`, we'll be equal, but mark ourselves as "set"
     // so that defaults know to respect the intent of keeping this field undefined.

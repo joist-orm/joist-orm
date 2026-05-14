@@ -24,6 +24,7 @@ export const docs = {
       isPopular: "Implements a public API for controlling access to a protected field (`wasEverPopular`).",
       hasBooks: "Example of an async boolean that can be navigated via a lens.",
       reviews: "All reviews across all of this author's books.",
+      imageFileName: "Example of a ReactiveField that watches through an o2o relation.",
     },
     operations: undefined,
   },

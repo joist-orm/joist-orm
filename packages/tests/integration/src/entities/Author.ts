@@ -104,6 +104,15 @@ export class Author extends AuthorCodegen {
     return [a.id, a.firstName, ...books.map((b) => b.title)].filter(isDefined).join(" ");
   });
 
+  /**
+   * Example of a ReactiveField that watches through an o2o relation.
+   * @generated Author.md
+   */
+  readonly imageFileName: ReactiveField<Author, string | undefined> = hasReactiveField(
+    { image: "fileName" },
+    (a) => a.image.get?.fileName,
+  );
+
   readonly nickNamesUpper: ReactiveField<Author, string[]> = hasReactiveField("nickNames", (a) =>
     (a.nickNames ?? []).map((n) => n.toUpperCase()),
   );

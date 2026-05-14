@@ -147,7 +147,6 @@ export class ReactiveReferenceImpl<
       // full load hint if we need recalculated.
       const maybeDirty = opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
       if (maybeDirty) {
-        this.#isCached = false;
         return (this.#loadPromise ??= em
           .populate(this.entity, { hint: loadHint, ...opts })
           .then(() => {
@@ -155,6 +154,7 @@ export class ReactiveReferenceImpl<
             this.#isLoaded = true;
             getEmInternalApi(this.entity.em).isLoadedCache.add(this);
             // Go through `this.get` so that `setField` is called to set our latest value
+            this.#isCached = false;
             return this.doGet(opts);
           })
           .finally(() => {
@@ -184,6 +184,10 @@ export class ReactiveReferenceImpl<
         }
       }
     }
+    // The ReactiveField.load() always sets `#isCached = false`, but our assertion is that our
+    // IsLoadedCache/resetIsLoaded infra is good enough to "see all invalidating mutations",
+    // so we don't need this explicit reset.
+    // this.#isCached = false;
     return this.doGet(opts);
   }
 
@@ -420,9 +424,7 @@ export class ReactiveReferenceImpl<
       }
     }
     const { idTaggedMaybe } = this;
-    return (
-      (idTaggedMaybe !== undefined ? (this.entity.em.getEntity(idTaggedMaybe) as U | N) : (undefined as N))
-    );
+    return idTaggedMaybe !== undefined ? (this.entity.em.getEntity(idTaggedMaybe) as U | N) : (undefined as N);
   }
 
   [RelationT]: T = null!;

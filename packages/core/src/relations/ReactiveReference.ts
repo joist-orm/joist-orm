@@ -147,7 +147,6 @@ export class ReactiveReferenceImpl<
       // full load hint if we need recalculated.
       const maybeDirty = opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
       if (maybeDirty) {
-        this.#isCached = false;
         return (this.#loadPromise ??= em
           .populate(this.entity, { hint: loadHint, ...opts })
           .then(() => {
@@ -155,6 +154,7 @@ export class ReactiveReferenceImpl<
             this.#isLoaded = true;
             getEmInternalApi(this.entity.em).isLoadedCache.add(this);
             // Go through `this.get` so that `setField` is called to set our latest value
+            this.#isCached = false;
             return this.doGet(opts);
           })
           .finally(() => {

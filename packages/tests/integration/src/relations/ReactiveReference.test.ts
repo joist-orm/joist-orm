@@ -1,7 +1,8 @@
 import { Author, Book, BookReview, newAuthor, newPublisher, newSmallPublisher } from "@src/entities";
 import { insertAuthor, insertBook, insertBookReview, insertPublisher, select, update } from "@src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
-import { getInstanceData, ReactionLogger, setReactionLogging } from "joist-orm";
+import { getEmInternalApi } from "joist-core";
+import { ReactionLogger, setReactionLogging } from "joist-orm";
 
 let reactionOutput: string[] = [];
 
@@ -99,7 +100,8 @@ describe("ReactiveReference", () => {
     expect(a1.favoriteBook.get!.title).toBe("b2");
   });
 
-  it("load recalculates already-cached references", async () => {
+  it("load recalculates already-cached references on em.delete", async () => {
+    // Given the favoriteBook is initially b1 with rating=2
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     await insertBookReview({ book_id: 1, rating: 2 });
@@ -108,14 +110,50 @@ describe("ReactiveReference", () => {
     await update("authors", { id: 1, favorite_book_id: 1 });
     const em = newEntityManager();
     const [a1, br2] = await Promise.all([em.load(Author, "a:1"), em.load(BookReview, "br:2")]);
+    // And we've already calculated favoriteBook so RR has it loaded/cached
     await a1.favoriteBook.load({ forceReload: true });
     expect(a1.favoriteBook.idTaggedMaybe).toEqual("b:1");
     expect(a1.transientFields.favoriteBookCalcInvoked).toEqual(1);
-
-    // Bypass setters so this specifically proves `.load()` invalidates its own cached calculation.
-    getInstanceData(br2).data.rating = 3;
+    // When we delete br2
+    em.delete(br2);
+    // Then the RM knows `favoriteBook` is dirty
+    expect(getEmInternalApi(em).rm.isMaybePendingRecalc(a1, "favoriteBook")).toBe(true);
+    expect(a1.transientFields.favoriteBookCalcInvoked).toEqual(1);
+    // But calling `.get` still returns the cached value
+    expect((a1.favoriteBook as any).get?.id).toEqual("b:1");
+    // And when we explicitly load
     const favoriteBook = await a1.favoriteBook.load();
+    // Then the value is changed
+    // expect(favoriteBook?.idTaggedMaybe).toEqual("b:2");
+    // expect(a1.favoriteBook.idTaggedMaybe).toEqual("b:2");
+    expect(a1.transientFields.favoriteBookCalcInvoked).toEqual(2);
+  });
 
+  it("load recalculates already-cached references on setField", async () => {
+    // Given the favoriteBook is initially b1 with rating=2
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 2 });
+    await insertBook({ title: "b2", author_id: 1 });
+    await insertBookReview({ book_id: 2, rating: 1 });
+    await update("authors", { id: 1, favorite_book_id: 1 });
+    const em = newEntityManager();
+    const [a1, br2] = await Promise.all([em.load(Author, "a:1"), em.load(BookReview, "br:2")]);
+    // And we've already calculated favoriteBook so RR has it loaded/cached
+    await a1.favoriteBook.load({ forceReload: true });
+    expect(a1.favoriteBook.idTaggedMaybe).toEqual("b:1");
+    expect(a1.transientFields.favoriteBookCalcInvoked).toEqual(1);
+    // When we change b2's only review rating
+    br2.rating = 3;
+    // Then the RM does not know `favoriteBook` is dirty
+    expect(getEmInternalApi(em).rm.isMaybePendingRecalc(a1, "favoriteBook")).toBe(true);
+    expect(a1.transientFields.favoriteBookCalcInvoked).toEqual(1);
+    // And calling `.get` returns the latest value
+    expect((a1.favoriteBook as any).get?.id).toEqual("b:2");
+    expect(a1.transientFields.favoriteBookCalcInvoked).toEqual(2);
+    // And when we explicitly load
+    const favoriteBook = await a1.favoriteBook.load();
+    // Then the value is changed
     expect(favoriteBook?.idTaggedMaybe).toEqual("b:2");
     expect(a1.favoriteBook.idTaggedMaybe).toEqual("b:2");
     expect(a1.transientFields.favoriteBookCalcInvoked).toEqual(2);
@@ -251,7 +289,7 @@ describe("ReactiveReference", () => {
        "Validating from 3 changed entities... (em.entities=3)↩",
        "  Walked 1 Book.(self) paths, found 1 Book.addRule(Book.ts:124) to validate↩",
        "    [ b:1 ] -> [ b:1 ]↩",
-       "  Walked 1 Book.author paths, found 1 Author.addRule(Author.ts:438) to validate↩",
+       "  Walked 1 Book.author paths, found 1 Author.addRule(Author.ts:447) to validate↩",
        "    [ b:1 ] -> [ a:1 ]↩",
        "  Walked 1 Book.author.books paths, found 1 Book.addRule(Book.ts:76) to validate↩",
        "    [ b:1 ] -> [ b:1 ]↩",

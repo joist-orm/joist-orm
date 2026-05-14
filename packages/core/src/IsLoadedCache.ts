@@ -49,7 +49,7 @@ export class IsLoadedCache {
     this.#naiveCache.add(target);
   }
 
-  /** Resets any isLoaded caches that depend on `entity.fieldName`. */
+  /** Resets any in-memory #isLoaded/#isCached caches that depend on `entity.fieldName`. */
   resetIsLoaded(entity: Entity, fieldName: string): void {
     if (this.#dirtySets === 0) return;
     // Reset caches that we can deterministically find by walking the reactivity hints
@@ -72,6 +72,11 @@ export class IsLoadedCache {
     }
   }
 
+  /**
+   * Given a `meta+field`, statically find all downstream Reactables, and if any of those
+   * Reactables are a) in-memory already, and b) registered themselves as cached,
+   * tell them to reset.
+   */
   #resetDownstreamReactables(meta: EntityMetadata, fieldName: string): void {
     // These are reactables in other entities that are watching/reacting to this entity/fieldName
     const reactables = getReactablesIncludingReadOnly(meta);

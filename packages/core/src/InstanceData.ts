@@ -117,13 +117,22 @@ export class InstanceData {
   /** Called by `em.delete`, returns true if this is new information. */
   markDeleted(entity: Entity): boolean {
     if (this.#deleted === undefined) {
-      // Let any OneToManyCollection.get caches know that they should recalc (i.e. their filterDeleted logic)
-      // by asserting the `deleteBook.author` field is changing.
-      //
-      // Technically, the o2m caches use the "naive" cache, so we don't really need to pass along the field.
+      // Let any OneToManyCollection/ReactiveField/ReactiveReference.get caches know that they should recalc
+      // (i.e. their filterDeleted logic) by asserting the `deleteBook.author` field is changing.
       for (const field of Object.values(this.metadata.allFields)) {
-        if (field.kind === "m2o") {
+        // We only do reference/collection fields and skip the primitives, b/c we assume something like
+        // `{ books: "title" }` doesn't need `resetIsLoaded(..., "title")` b/c the same hint will also
+        // be watching "did books change", and so get reset that way.
+        if (field.kind === "m2o" || field.kind === "poly" || field.kind === "m2m") {
           getEmInternalApi(this.em).isLoadedCache.resetIsLoaded(entity, field.fieldName);
+        } else if (field.kind === "primitive" || field.kind === "enum" || field.kind === "primaryKey") {
+          // Any reactable watching these fields will also be watching reference/collection
+        } else if (field.kind === "o2m" || field.kind === "o2o") {
+          // Any reactable watching these actually gets triggered by the primary m2o/poly side changing
+        } else if (field.kind === "lo2m") {
+          // Doesn't support reactivity
+        } else {
+          throw new Error(`Unhandled field kind ${field}`);
         }
       }
       this.#deleted = Operation.Pending;

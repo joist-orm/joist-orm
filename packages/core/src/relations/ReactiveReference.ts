@@ -184,8 +184,10 @@ export class ReactiveReferenceImpl<
         }
       }
     }
-    // Match ReactiveField.load(): explicit `.load()` calls should recalculate when we have the graph loaded.
-    this.#isCached = false;
+    // The ReactiveField.load() always sets `#isCached = false`, but our assertion is that our
+    // IsLoadedCache/resetIsLoaded infra is good enough to "see all invalidating mutations",
+    // so we don't need this explicit reset.
+    // this.#isCached = false;
     return this.doGet(opts);
   }
 
@@ -422,9 +424,7 @@ export class ReactiveReferenceImpl<
       }
     }
     const { idTaggedMaybe } = this;
-    return (
-      (idTaggedMaybe !== undefined ? (this.entity.em.getEntity(idTaggedMaybe) as U | N) : (undefined as N))
-    );
+    return idTaggedMaybe !== undefined ? (this.entity.em.getEntity(idTaggedMaybe) as U | N) : (undefined as N);
   }
 
   [RelationT]: T = null!;

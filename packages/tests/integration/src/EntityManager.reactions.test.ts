@@ -765,11 +765,11 @@ describe("EntityManager.reactions", () => {
       await insertAuthor({ first_name: "a1", image_file_name: "i1" });
       const author = await em.load(Author, "a:1");
       const image = em.create(Image, { type: ImageType.AuthorImage, author, fileName: "i1" });
-
+      // And we briefly see the filename
+      expect(await author.imageFileName.load()).toBe("i1");
       // When the FK-owning side of the o2o is deleted
       em.delete(image);
       await em.flush();
-
       // Then the ReactiveField should be recalculated from the old Image.author path
       expect(await select("authors")).toMatchObject([{ id: 1, image_file_name: null }]);
       expect(await select("images")).toEqual([]);

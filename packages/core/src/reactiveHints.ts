@@ -11,8 +11,7 @@ import {
   OneToOneField,
   PolymorphicFieldComponent,
 } from "./EntityMetadata";
-import { Changes, FieldStatus, ManyToOneFieldStatus } from "./changes";
-import { isChangeableField } from "./fields";
+import { Changes } from "./changes";
 import { getProperties } from "./getProperties";
 import { Loadable, Loaded, LoadHint } from "./loadHints";
 import { NormalizeHint, normalizeHint, suffixRe, SuffixSeperator } from "./normalizeHints";
@@ -435,7 +434,7 @@ function maybeAddTypeFilterSuffix(
  * I.e. given `[book1, book2]` and `["author", 'publisher"]`, will return all the books' authors' publishers.
  *
  * Note that for references (and only references), we walk both through "the current value"
- * and "the original value". This is fundamentally because references are the true "owner"
+ * and prior values remembered in `referenceHistory`. This is fundamentally because references are the true "owner"
  * of the relation, while collections are derived.
  *
  * For example, with reversals walking through collections:
@@ -450,18 +449,18 @@ function maybeAddTypeFilterSuffix(
  *
  * - Given a hint `author: { books: "title" }`
  * - Which reverses to `book[title] -> author`
- * - When we traverse through `b1.author`, we use both the current value and original value, so that both
- *   "our prior author" and "our new author" see their latest `author.books` collection values.
+ * - When we traverse through `b1.author`, we use both the current value and remembered values, so that both
+ *   "our prior authors" and "our new author" see their latest `author.books` collection values.
  *
  * Delete cleanup runs before reverse hints are walked, so the current relation value may already be unset by the
  * time we get here. For persisted entities, `cleanupOnEntityDeleted` clears the owning FK via `setField`, which
- * leaves the prior FK in `originalData`; this lets `changes.author.originalEntity` still find the old owner. For
- * collection reversals this is enough because collections are derived from the owning FK: removing `b1` from
- * `a1.books` is represented by `b1.author` changing, not by an independent "old books" snapshot.
+ * remembers the prior FK in `referenceHistory`; this lets us still find the old owner. For collection reversals
+ * this is enough because collections are derived from the owning FK: removing `b1` from `a1.books` is represented
+ * by `b1.author` changing, not by an independent "old books" snapshot.
  *
  * References can also have transient values during a unit of work, i.e. a ReactiveField might observe `b1.author=a2`
- * before the final flush changes it to `a3`. Those values are neither the original nor current value, so `setField`
- * remembers them separately from `originalData` and we walk them in addition to `changes.author.originalEntity`.
+ * before the final flush changes it to `a3`. `setField` remembers both original and transient reference values
+ * separately from `originalData`, and we walk them in addition to the current value.
  */
 export async function followReverseHint(
   reactionName: string,
@@ -500,12 +499,8 @@ export async function followReverseHint(
       const fieldKind = getMetadata(c).fields[fieldName]?.kind;
       const isReference = fieldKind === "m2o" || fieldKind === "poly";
       const isManyToMany = fieldKind === "m2m";
-      const changed = isChangeableField(c, fieldName) ? (c.changes[fieldName] as FieldStatus<any>) : undefined;
       // See jsdoc comment about why this is only necessary for references...
       if (isReference) {
-        if (changed && changed.hasUpdated && changed.originalValue !== undefined) {
-          promises.push(maybeApplyTypeFilter((changed as ManyToOneFieldStatus<any>).originalEntity, viaType));
-        }
         for (const value of getInstanceData(c).getReferenceHistory(fieldName)) {
           promises.push(maybeApplyTypeFilter(loadReferenceHistoryValue(c, value), viaType));
         }
@@ -519,11 +514,11 @@ export async function followReverseHint(
       // Walk up the old parents
       if (relation instanceof RecursiveParentsCollectionImpl) {
         const { m2oFieldName } = relation;
-        const changed = isChangeableField(c, m2oFieldName) ? (c.changes[m2oFieldName] as FieldStatus<any>) : undefined;
-        if (changed && changed.hasUpdated && changed.originalValue) {
+        for (const value of getInstanceData(c).getReferenceHistory(m2oFieldName)) {
           promises.push(
-            // First load the original parent itself
-            (changed as ManyToOneFieldStatus<any>).originalEntity.then((oldParent) => {
+            // First load the old parent itself
+            loadReferenceHistoryValue(c, value).then((oldParent) => {
+              if (!oldParent) return undefined;
               // And then resolve its fieldName=parentsRecursive
               const oldParentRecursiveParents = (oldParent as any)[fieldName];
               return oldParentRecursiveParents.load().then((parents: any) => {

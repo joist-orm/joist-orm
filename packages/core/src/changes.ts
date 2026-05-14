@@ -94,10 +94,8 @@ class ManyToOneFieldStatusImpl<T extends Entity>
 
   /** Returns the original entity instance, which may not be loaded into memory yet, or undefined. */
   get originalEntity(): Promise<T | undefined> {
-    const originalValue = super.originalValue;
-    if (isEntity(originalValue)) {
-      return Promise.resolve(originalValue as T);
-    } else if (isId(originalValue)) {
+    const originalValue = this.originalValue;
+    if (isId(originalValue)) {
       return this.entity.em.load(originalValue) as Promise<T>;
     } else {
       return Promise.resolve(undefined);

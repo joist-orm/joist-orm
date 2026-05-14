@@ -35,6 +35,7 @@ export function insertAuthor(row: {
   address?: object;
   business_address?: object;
   quotes?: string;
+  search?: string;
   graduated?: any;
   number_of_atoms?: string;
   number_of_public_reviews?: number;

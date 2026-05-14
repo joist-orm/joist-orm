@@ -16,6 +16,8 @@ export class InstanceData {
   data: Record<string, any>;
   /** A bag to keep the original values, lazily populated as fields are mutated. */
   originalData: Record<any, any> = {};
+  /** Reference values that were set through during this unit of work and may need reverse-walking. */
+  readonly referenceHistory: Record<string, any[]> = {};
   /** A bag to keep the flushed-to-database values, only for AsyncReactiveField reactivity. */
   flushedData: Record<any, any> | undefined;
   /**
@@ -58,6 +60,7 @@ export class InstanceData {
 
   resetAfterFlushed() {
     this.originalData = {};
+    for (const fieldName of Object.keys(this.referenceHistory)) delete this.referenceHistory[fieldName];
     this.flushedData = undefined;
     this.isTouched = false;
     if (this.#new === Operation.Pending || this.#new === Operation.Flushed) {
@@ -144,6 +147,20 @@ export class InstanceData {
   fixupCreatedThenDeleted(): void {
     // Ideally we could do this via `resetAfterFlushed`?
     this.#deleted = Operation.Complete;
+  }
+
+  /** Remembers a reference value that may need to be reverse-walked later. */
+  rememberReferenceValue(fieldName: string, value: any): void {
+    if (value === undefined) return;
+    const values = (this.referenceHistory[fieldName] ??= []);
+    if (!values.some((existingValue) => existingValue === value)) {
+      values.push(value);
+    }
+  }
+
+  /** Returns reference values that may need to be reverse-walked later. */
+  getReferenceHistory(fieldName: string): readonly any[] {
+    return this.referenceHistory[fieldName] ?? [];
   }
 
   get isDeletedAndFlushed(): boolean {

@@ -1,6 +1,6 @@
 import { getInstanceData } from "./BaseEntity";
-import { Entity } from "./Entity";
-import { getEmInternalApi, MaybeAbstractEntityConstructor } from "./EntityManager";
+import { Entity, isEntity } from "./Entity";
+import { getEmInternalApi, isId, MaybeAbstractEntityConstructor } from "./EntityManager";
 import {
   EntityMetadata,
   getBaseAndSelfMetas,
@@ -457,9 +457,11 @@ function maybeAddTypeFilterSuffix(
  * time we get here. For persisted entities, `cleanupOnEntityDeleted` clears the owning FK via `setField`, which
  * leaves the prior FK in `originalData`; this lets `changes.author.originalEntity` still find the old owner. For
  * collection reversals this is enough because collections are derived from the owning FK: removing `b1` from
- * `a1.books` is represented by `b1.author` changing, not by an independent "old books" snapshot. Created-then-deleted
- * entities are similar, except they have no database original value; `setField` preserves the last in-memory owner in
- * `originalData` so deleted-new references can still be followed back to the entity whose collection/o2o needs to recalc.
+ * `a1.books` is represented by `b1.author` changing, not by an independent "old books" snapshot.
+ *
+ * References can also have transient values during a unit of work, i.e. a ReactiveField might observe `b1.author=a2`
+ * before the final flush changes it to `a3`. Those values are neither the original nor current value, so `setField`
+ * remembers them separately from `originalData` and we walk them in addition to `changes.author.originalEntity`.
  */
 export async function followReverseHint(
   reactionName: string,
@@ -500,8 +502,13 @@ export async function followReverseHint(
       const isManyToMany = fieldKind === "m2m";
       const changed = isChangeableField(c, fieldName) ? (c.changes[fieldName] as FieldStatus<any>) : undefined;
       // See jsdoc comment about why this is only necessary for references...
-      if (isReference && changed && shouldFollowOriginalReference(c, fieldName, changed)) {
-        promises.push(maybeApplyTypeFilter((changed as ManyToOneFieldStatus<any>).originalEntity, viaType));
+      if (isReference) {
+        if (changed && changed.hasUpdated && changed.originalValue !== undefined) {
+          promises.push(maybeApplyTypeFilter((changed as ManyToOneFieldStatus<any>).originalEntity, viaType));
+        }
+        for (const value of getInstanceData(c).getReferenceHistory(fieldName)) {
+          promises.push(maybeApplyTypeFilter(loadReferenceHistoryValue(c, value), viaType));
+        }
       }
       if (isManyToMany) {
         const m2m = c[fieldName] as ManyToManyCollection<any, any>;
@@ -618,7 +625,7 @@ export interface ReactiveTarget {
   path: string[];
 }
 
-function maybeApplyTypeFilter(loadPromise: Promise<Entity | Entity[]>, viaType: string | undefined) {
+function maybeApplyTypeFilter(loadPromise: Promise<Entity | Entity[] | undefined>, viaType: string | undefined) {
   if (viaType) {
     return loadPromise.then((loaded) => {
       if (Array.isArray(loaded)) {
@@ -633,12 +640,11 @@ function maybeApplyTypeFilter(loadPromise: Promise<Entity | Entity[]>, viaType: 
   return loadPromise;
 }
 
-/** Returns whether a reference's prior owner is needed to walk reverse hints. */
-function shouldFollowOriginalReference(entity: Entity, fieldName: string, changed: FieldStatus<any>): boolean {
-  return (
-    (changed.hasUpdated && changed.originalValue !== undefined) ||
-    (entity.isDeletedEntity && entity.isNewEntity && fieldName in getInstanceData(entity).originalData)
-  );
+/** Loads a remembered reference value so reverse-hint walking can revisit it. */
+function loadReferenceHistoryValue(entity: Entity, value: any): Promise<Entity | undefined> {
+  if (isEntity(value)) return Promise.resolve(value);
+  if (isId(value)) return entity.em.load(value) as Promise<Entity>;
+  return Promise.resolve(undefined);
 }
 
 /** Returns true if `entity` is exactly `typeName` or a subtype of `typeName`.

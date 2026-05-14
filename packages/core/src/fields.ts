@@ -1,7 +1,7 @@
 import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
-import { type Field, getMetadata } from "./EntityMetadata";
+import { getMetadata } from "./EntityMetadata";
 import { cleanStringValue, ensureNotDeleted, maybeResolveReferenceToId } from "./index";
 import { maybeRequireTemporal } from "./temporal";
 import { fail } from "./utils";
@@ -67,7 +67,8 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   // Tell any `#isLoaded` or `#value` caches that they might be stale
   isLoadedCache.resetIsLoaded(entity, fieldName);
 
-  const { data, originalData, flushedData } = getInstanceData(entity);
+  const instanceData = getInstanceData(entity);
+  const { data, originalData, flushedData } = instanceData;
 
   // Do string sanitization
   const field = getMetadata(entity).allFields[fieldName];
@@ -75,12 +76,16 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
     newValue = cleanStringValue(newValue);
   }
 
+  const currentValue = getField(entity, fieldName);
+  const isReference = field.kind === "m2o" || field.kind === "poly";
+  if (isReference && !equalOrSameEntity(currentValue, newValue)) {
+    instanceData.rememberReferenceValue(fieldName, currentValue);
+  }
+
   // If a `set` occurs during the AsyncReactiveField-loop, copy the last-flushed value to flushedData.
   // Then our `pendingOperation` logic can tell "do we need another micro-flush?" separately
   // from our public-facing changed fields logic.
   if (flushedData) {
-    // Get the currentValue, which is what we should have flushed to the db
-    const currentValue = getField(entity, fieldName);
     if (fieldName in flushedData) {
       // We've already copied the last-micro-flush value into flushedData,
       // are we changing back to that? If so, we won't need another micro-flush.
@@ -100,29 +105,14 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   // "Un-dirty" our originalData if newValue is reverting to originalData
   if (fieldName in originalData) {
     if (equalOrSameEntity(originalData[fieldName], newValue)) {
-      const currentValue = getField(entity, fieldName);
-      // Created-then-deleted entities don't have a true `originalEntity` for their m2o/poly values,
-      // but RFs/RRs might have already been calculated with the while-created entity, so when it becomes
-      // created-then-deleted, we need to keep it has a "technically original value", so that `followReverseHint`
-      // can walk it and tell the RF/RR about the now-gone entity.
-      const preserveOriginal =
-        !equalOrSameEntity(currentValue, newValue) && isCreatedThenDeletedEntityReference(entity, field);
-
       indexManager.maybeUpdateFieldIndex(entity, fieldName, currentValue, newValue);
 
       pluginManager.beforeSetField(entity, fieldName, newValue);
       data[fieldName] = newValue;
-
-      // Usually we `delete originalData` b/c we're not dirty anymore, but created-then-deleted entities
-      // keep their "true original"
-      if (preserveOriginal) {
-        originalData[fieldName] = currentValue;
-      } else {
-        delete originalData[fieldName];
-      }
+      delete originalData[fieldName];
 
       fieldLogger?.logSet(entity, fieldName, newValue);
-      if (preserveOriginal) {
+      if (isReference && instanceData.getReferenceHistory(fieldName).length > 0) {
         rm.queueDownstreamReactables(entity, fieldName);
       } else {
         // For normal reverts, the field is clean again, so any pending downstream work can be removed.
@@ -134,7 +124,6 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   }
 
   // Push this logic into a field serde type abstraction?
-  const currentValue = getField(entity, fieldName);
   if (equalOrSameEntity(currentValue, newValue)) {
     // If we're doing `entity.field = undefined`, we'll be equal, but mark ourselves as "set"
     // so that defaults know to respect the intent of keeping this field undefined.
@@ -154,11 +143,6 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   pluginManager.beforeSetField(entity, fieldName, newValue);
   data[fieldName] = newValue;
   return true;
-}
-
-/** Returns true when reverse hints need a deleted-new reference's last in-memory owner. */
-function isCreatedThenDeletedEntityReference(entity: Entity, field: Field): boolean {
-  return entity.isDeletedEntity && entity.isNewEntity && (field.kind === "m2o" || field.kind === "poly");
 }
 
 function equalOrSameEntity(a: any, b: any): boolean {

@@ -1,6 +1,7 @@
 import { expect } from "@jest/globals";
 import {
   Author,
+  Book,
   Image,
   ImageType,
   LargePublisher,
@@ -19,6 +20,7 @@ import {
 import {
   insertAuthor,
   insertAuthorToTag,
+  insertBook,
   insertLargePublisher,
   insertPublisher,
   insertSmallPublisher,
@@ -771,6 +773,35 @@ describe("EntityManager.reactions", () => {
       // Then the ReactiveField should be recalculated from the old Image.author path
       expect(await select("authors")).toMatchObject([{ id: 1, image_file_name: null }]);
       expect(await select("images")).toEqual([]);
+    });
+
+    it.withCtx("runs for an intermediate m2o value observed by a ReactiveField", async ({ em }) => {
+      // Given a book assigned to a1 and two other possible authors
+      await insertAuthor({ first_name: "a1", search: "a:1 a1 b1" });
+      await insertAuthor({ first_name: "a2", search: "a:2 a2" });
+      await insertAuthor({ first_name: "a3", search: "a:3 a3" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const [a1, a2, a3] = await em.find(Author, {}, { orderBy: { id: "ASC" } });
+      const b1 = await em.load(Book, "b:1");
+
+      // When a2 observes the transient book assignment before the book moves to a3
+      b1.author.set(a2);
+      expect(await a2.search.load()).toBe("a:2 a2 b1");
+      b1.author.set(a3);
+      await em.flush();
+
+      // Then every owner that has observed the book gets recalculated
+      expect(await select("authors")).toMatchObject([
+        { id: 1, search: "a:1 a1" },
+        // Before fixing the bug, this would be the stale value fo `a:2 a2 b1` from the
+        // `a2.search.load()` line above, b/c we would only walk [a1,a3] during flush,
+        // and not the transiently-observed a2.
+        { id: 2, search: "a:2 a2" },
+        { id: 3, search: "a:3 a3 b1" },
+      ]);
+      expect(a1.search.get).toBe("a:1 a1");
+      expect(a2.search.get).toBe("a:2 a2");
+      expect(a3.search.get).toBe("a:3 a3 b1");
     });
   });
 

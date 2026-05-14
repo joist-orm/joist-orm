@@ -78,7 +78,8 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
   const currentValue = getField(entity, fieldName);
   const isReference = field.kind === "m2o" || field.kind === "poly";
-  if (isReference && !equalOrSameEntity(currentValue, newValue)) {
+  // Only remember later reference hops; the first/original value is already walked via `changes.originalEntity`.
+  if (isReference && fieldName in originalData && !equalOrSameEntity(currentValue, newValue)) {
     instanceData.rememberReferenceValue(fieldName, currentValue);
   }
 

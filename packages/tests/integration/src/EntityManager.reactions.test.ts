@@ -28,7 +28,7 @@ import {
   insertUser,
   select,
 } from "@src/entities/inserts";
-import { getMetadata, MaybeAbstractEntityConstructor } from "joist-orm";
+import { getInstanceData, getMetadata, type MaybeAbstractEntityConstructor } from "joist-orm";
 
 describe("EntityManager.reactions", () => {
   it.withCtx("creates the right internal reactions", async () => {
@@ -788,6 +788,7 @@ describe("EntityManager.reactions", () => {
       b1.author.set(a2);
       expect(await a2.search.load()).toBe("a:2 a2 b1");
       b1.author.set(a3);
+      expect(getInstanceData(b1).getReferenceHistory("author")).toEqual(["a:2"]);
       await em.flush();
 
       // Then every owner that has observed the book gets recalculated

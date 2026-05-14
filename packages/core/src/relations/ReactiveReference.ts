@@ -184,6 +184,8 @@ export class ReactiveReferenceImpl<
         }
       }
     }
+    // Match ReactiveField.load(): explicit `.load()` calls should recalculate when we have the graph loaded.
+    this.#isCached = false;
     return this.doGet(opts);
   }
 

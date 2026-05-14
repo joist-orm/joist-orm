@@ -8,7 +8,6 @@ import { followReverseHint } from "./reactiveHints";
 import { runInTrustedContext } from "./trusted";
 
 export type ReactiveAction = { key: string; r: Reactable; entity: Entity };
-type LoadableReactable = { load: () => unknown; resetIsLoaded?: () => void };
 /**
  * Manages the reactivity of tracking which source fields have changed and finding/recalculating
  * their downstream derived fields.
@@ -291,10 +290,7 @@ export class ReactionsManager {
 
   #doAction(action: ReactiveAction) {
     const { r, entity } = action;
-    if (r.kind === "reaction") return r.fn(entity, this.em.ctx);
-    const reactable = (entity as unknown as Record<string, LoadableReactable>)[r.name];
-    reactable.resetIsLoaded?.();
-    return reactable.load();
+    return r.kind === "reaction" ? r.fn(entity, this.em.ctx) : (entity as any)[r.name].load();
   }
 
   needsRecalc(kind: "reactables" | "reactiveQueries"): boolean {

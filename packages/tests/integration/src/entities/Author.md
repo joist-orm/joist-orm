@@ -90,6 +90,10 @@ Example of an async boolean that can be navigated via a lens.
 
 All reviews across all of this author's books.
 
+### imageFileName
+
+Example of a ReactiveField that watches through an o2o relation.
+
 ## Notes
 
 Some additional notes the user might add here, with a code block:

@@ -41,6 +41,7 @@ export function insertAuthor(row: {
   updated_at?: any;
   deleted_at?: any;
   certificate?: any;
+  image_file_name?: string | null;
   range_of_books?: number;
   root_mentor_id?: number;
 }) {

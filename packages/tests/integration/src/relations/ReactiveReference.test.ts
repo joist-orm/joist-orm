@@ -109,23 +109,24 @@ describe("ReactiveReference", () => {
     await insertBookReview({ book_id: 2, rating: 1 });
     await update("authors", { id: 1, favorite_book_id: 1 });
     const em = newEntityManager();
-    const [a1, br2] = await Promise.all([em.load(Author, "a:1"), em.load(BookReview, "br:2")]);
+    const [a1, br1] = await Promise.all([em.load(Author, "a:1"), em.load(BookReview, "br:1")]);
     // And we've already calculated favoriteBook so RR has it loaded/cached
     await a1.favoriteBook.load({ forceReload: true });
     expect(a1.favoriteBook.idTaggedMaybe).toEqual("b:1");
     expect(a1.transientFields.favoriteBookCalcInvoked).toEqual(1);
     // When we delete br2
-    em.delete(br2);
+    em.delete(br1);
     // Then the RM knows `favoriteBook` is dirty
     expect(getEmInternalApi(em).rm.isMaybePendingRecalc(a1, "favoriteBook")).toBe(true);
     expect(a1.transientFields.favoriteBookCalcInvoked).toEqual(1);
-    // But calling `.get` still returns the cached value
-    expect((a1.favoriteBook as any).get?.id).toEqual("b:1");
+    // And calling `.get` recalculates the value
+    expect((a1.favoriteBook as any).get?.id).toEqual("b:2");
+    expect(a1.transientFields.favoriteBookCalcInvoked).toEqual(2);
     // And when we explicitly load
     const favoriteBook = await a1.favoriteBook.load();
     // Then the value is changed
-    // expect(favoriteBook?.idTaggedMaybe).toEqual("b:2");
-    // expect(a1.favoriteBook.idTaggedMaybe).toEqual("b:2");
+    expect(favoriteBook?.idTaggedMaybe).toEqual("b:2");
+    expect(a1.favoriteBook.idTaggedMaybe).toEqual("b:2");
     expect(a1.transientFields.favoriteBookCalcInvoked).toEqual(2);
   });
 

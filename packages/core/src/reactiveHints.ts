@@ -1,3 +1,4 @@
+import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { getEmInternalApi, MaybeAbstractEntityConstructor } from "./EntityManager";
 import {
@@ -451,6 +452,14 @@ function maybeAddTypeFilterSuffix(
  * - Which reverses to `book[title] -> author`
  * - When we traverse through `b1.author`, we use both the current value and original value, so that both
  *   "our prior author" and "our new author" see their latest `author.books` collection values.
+ *
+ * Delete cleanup runs before reverse hints are walked, so the current relation value may already be unset by the
+ * time we get here. For persisted entities, `cleanupOnEntityDeleted` clears the owning FK via `setField`, which
+ * leaves the prior FK in `originalData`; this lets `changes.author.originalEntity` still find the old owner. For
+ * collection reversals this is enough because collections are derived from the owning FK: removing `b1` from
+ * `a1.books` is represented by `b1.author` changing, not by an independent "old books" snapshot. Created-then-deleted
+ * entities are similar, except they have no database original value; `setField` preserves the last in-memory owner in
+ * `originalData` so deleted-new references can still be followed back to the entity whose collection/o2o needs to recalc.
  */
 export async function followReverseHint(
   reactionName: string,
@@ -491,7 +500,7 @@ export async function followReverseHint(
       const isManyToMany = fieldKind === "m2m";
       const changed = isChangeableField(c, fieldName) ? (c.changes[fieldName] as FieldStatus<any>) : undefined;
       // See jsdoc comment about why this is only necessary for references...
-      if (isReference && changed && changed.hasUpdated && changed.originalValue) {
+      if (isReference && changed && shouldFollowOriginalReference(c, fieldName, changed)) {
         promises.push(maybeApplyTypeFilter((changed as ManyToOneFieldStatus<any>).originalEntity, viaType));
       }
       if (isManyToMany) {
@@ -622,6 +631,14 @@ function maybeApplyTypeFilter(loadPromise: Promise<Entity | Entity[]>, viaType: 
     });
   }
   return loadPromise;
+}
+
+/** Returns whether a reference's prior owner is needed to walk reverse hints. */
+function shouldFollowOriginalReference(entity: Entity, fieldName: string, changed: FieldStatus<any>): boolean {
+  return (
+    (changed.hasUpdated && changed.originalValue !== undefined) ||
+    (entity.isDeletedEntity && entity.isNewEntity && fieldName in getInstanceData(entity).originalData)
+  );
 }
 
 /** Returns true if `entity` is exactly `typeName` or a subtype of `typeName`.

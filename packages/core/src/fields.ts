@@ -1,7 +1,7 @@
 import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
-import { getMetadata } from "./EntityMetadata";
+import { type Field, getMetadata } from "./EntityMetadata";
 import { cleanStringValue, ensureNotDeleted, maybeResolveReferenceToId } from "./index";
 import { maybeRequireTemporal } from "./temporal";
 import { fail } from "./utils";
@@ -101,13 +101,34 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   if (fieldName in originalData) {
     if (equalOrSameEntity(originalData[fieldName], newValue)) {
       const currentValue = getField(entity, fieldName);
+      // Created-then-deleted entities don't have a true `originalEntity` for their m2o/poly values,
+      // but RFs/RRs might have already been calculated with the while-created entity, so when it becomes
+      // created-then-deleted, we need to keep it has a "technically original value", so that `followReverseHint`
+      // can walk it and tell the RF/RR about the now-gone entity.
+      const preserveOriginal =
+        !equalOrSameEntity(currentValue, newValue) && isCreatedThenDeletedEntityReference(entity, field);
+
       indexManager.maybeUpdateFieldIndex(entity, fieldName, currentValue, newValue);
 
       pluginManager.beforeSetField(entity, fieldName, newValue);
       data[fieldName] = newValue;
-      delete originalData[fieldName];
+
+      // Usually we `delete originalData` b/c we're not dirty anymore, but created-then-deleted entities
+      // keep their "true original"
+      if (preserveOriginal) {
+        originalData[fieldName] = currentValue;
+      } else {
+        delete originalData[fieldName];
+      }
+
       fieldLogger?.logSet(entity, fieldName, newValue);
-      rm.dequeueDownstreamReactables(entity, fieldName);
+      if (preserveOriginal) {
+        rm.queueDownstreamReactables(entity, fieldName);
+      } else {
+        // For normal reverts, the field is clean again, so any pending downstream work can be removed.
+        rm.dequeueDownstreamReactables(entity, fieldName);
+      }
+
       return true;
     }
   }
@@ -133,6 +154,11 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   pluginManager.beforeSetField(entity, fieldName, newValue);
   data[fieldName] = newValue;
   return true;
+}
+
+/** Returns true when reverse hints need a deleted-new reference's last in-memory owner. */
+function isCreatedThenDeletedEntityReference(entity: Entity, field: Field): boolean {
+  return entity.isDeletedEntity && entity.isNewEntity && (field.kind === "m2o" || field.kind === "poly");
 }
 
 function equalOrSameEntity(a: any, b: any): boolean {

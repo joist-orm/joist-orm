@@ -169,6 +169,8 @@ export function up(b: MigrationBuilder): void {
     tags_of_all_books: { type: "varchar", notNull: false },
     // for testing full-text-search fields that want to use `id`
     search: { type: "text", notNull: false },
+    // for testing ReactiveFields through o2o relations
+    image_file_name: { type: "text", notNull: false },
     // for testing bytea fields
     certificate: { type: "bytea", notNull: false },
   });

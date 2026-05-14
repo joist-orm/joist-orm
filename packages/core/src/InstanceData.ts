@@ -153,9 +153,7 @@ export class InstanceData {
   rememberReferenceValue(fieldName: string, value: any): void {
     if (value === undefined) return;
     const values = (this.referenceHistory[fieldName] ??= []);
-    if (!values.some((existingValue) => existingValue === value)) {
-      values.push(value);
-    }
+    if (!values.includes(value)) values.push(value);
   }
 
   /** Returns reference values that may need to be reverse-walked later. */

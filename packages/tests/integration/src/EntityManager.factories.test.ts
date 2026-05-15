@@ -29,7 +29,6 @@ import {
   SmallPublisher,
 } from "@src/entities";
 import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
-import ansiRegex from "ansi-regex";
 import {
   factories,
   isFactoryCreation,
@@ -40,6 +39,7 @@ import {
   setFactoryWriter,
   testIndex,
 } from "joist-orm";
+import { stripAnsi } from "joist-utils";
 
 let factoryOutput: string[] = [];
 
@@ -230,7 +230,7 @@ describe("EntityManager.factories", () => {
     expect(b.author.get).toMatchEntity(a2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book at jestAdapterInit.js:1557↩",
+       "Creating new Book at jestAdapterInit.js:1561↩",
        "  ...adding Author#2 opt to scope↩",
        "  author = Author#2 from scope↩",
        "  reviewer = Author#2 from scope↩",
@@ -258,7 +258,7 @@ describe("EntityManager.factories", () => {
     expect(b.randomComment.get).toMatchEntity(c2);
     expect(factoryOutput).toMatchInlineSnapshot(`
      [
-       "Creating new Book at jestAdapterInit.js:1557↩",
+       "Creating new Book at jestAdapterInit.js:1561↩",
        "  ...adding Comment#2 opt to scope↩",
        "  author = Author#1 from em↩",
        "  reviewer = Author#1 from em↩",
@@ -699,7 +699,7 @@ describe("EntityManager.factories", () => {
       expect(ft1.parent.get).toEqual(b1.author.get);
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new Comment at jestAdapterInit.js:1557↩",
+         "Creating new Comment at jestAdapterInit.js:1561↩",
          "  parent = Author#1 from em↩",
          "  created Comment#1 added to scope↩",
        ]
@@ -716,7 +716,7 @@ describe("EntityManager.factories", () => {
       expect(ft1.parent.get).toEqual(p1);
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new Comment at jestAdapterInit.js:1557↩",
+         "Creating new Comment at jestAdapterInit.js:1561↩",
          "  parent = LargePublisher#1 from em↩",
          "  created Comment#1 added to scope↩",
        ]
@@ -734,7 +734,7 @@ describe("EntityManager.factories", () => {
       expect(ft1.parent.get).toEqual(p1);
       expect(factoryOutput).toMatchInlineSnapshot(`
        [
-         "Creating new Comment at jestAdapterInit.js:1557↩",
+         "Creating new Comment at jestAdapterInit.js:1561↩",
          "  parent = LargePublisher#1 from em↩",
          "  created Comment#1 added to scope↩",
        ]
@@ -1114,7 +1114,7 @@ describe("EntityManager.factories", () => {
 
 beforeEach(() => {
   setFactoryWriter((line: string) => {
-    factoryOutput.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
+    factoryOutput.push(stripAnsi(line).replace("\n", "↩"));
   });
 });
 

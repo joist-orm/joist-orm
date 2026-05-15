@@ -1,5 +1,5 @@
-import ansiRegex from "ansi-regex";
 import { FieldLogger, FieldLoggerWatch } from "joist-orm";
+import { stripAnsi } from "joist-utils";
 import { Author, Publisher, newAuthor, newBook, newComment, newLargePublisher, newSmallPublisher } from "src/entities";
 import { insertAuthor, insertPublisher } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
@@ -198,7 +198,7 @@ class StubFieldLogger extends FieldLogger {
     // uncomment to see colorized output
     // super();
     super(watching, (line: string) => {
-      fieldOutput.push(line.replace(ansiRegex(), ""));
+      fieldOutput.push(stripAnsi(line));
     });
   }
 }

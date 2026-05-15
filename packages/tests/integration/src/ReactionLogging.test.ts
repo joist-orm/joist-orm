@@ -1,5 +1,5 @@
-import ansiRegex from "ansi-regex";
 import { ReactionLogger, setReactionLogging } from "joist-orm";
+import { stripAnsi } from "joist-utils";
 import { newAuthor } from "src/entities";
 import { newEntityManager } from "src/testEm";
 
@@ -239,7 +239,7 @@ beforeEach(() => {
 class StubReactionLogger extends ReactionLogger {
   constructor() {
     super((line: string) => {
-      output.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
+      output.push(stripAnsi(line).replace("\n", "↩"));
     });
   }
   // Ensure deterministic output

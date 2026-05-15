@@ -29,7 +29,6 @@ import {
   SmallPublisher,
 } from "@src/entities";
 import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
-import ansiRegex from "ansi-regex";
 import {
   factories,
   isFactoryCreation,
@@ -40,6 +39,7 @@ import {
   setFactoryWriter,
   testIndex,
 } from "joist-orm";
+import { stripAnsi } from "joist-utils";
 
 let factoryOutput: string[] = [];
 
@@ -1114,7 +1114,7 @@ describe("EntityManager.factories", () => {
 
 beforeEach(() => {
   setFactoryWriter((line: string) => {
-    factoryOutput.push(line.replace(ansiRegex(), "").replace("\n", "↩"));
+    factoryOutput.push(stripAnsi(line).replace("\n", "↩"));
   });
 });
 

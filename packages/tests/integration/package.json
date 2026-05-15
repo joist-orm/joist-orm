@@ -21,7 +21,6 @@
     "docker:reset": "docker compose exec db ./reset.sh"
   },
   "dependencies": {
-    "ansi-regex": "^6.2.2",
     "joist-orm": "workspace:*",
     "knex": "3.2.10",
     "mitata": "^1.0.34"

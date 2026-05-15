@@ -9920,7 +9920,6 @@ __metadata:
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
     "@types/node": "npm:^24.12.4"
-    ansi-regex: "npm:^6.2.2"
     env-cmd: "npm:^11.0.0"
     jest: "npm:30.4.2"
     jest-junit: "npm:^17.0.0"

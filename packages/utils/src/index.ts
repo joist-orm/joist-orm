@@ -1,6 +1,7 @@
 export { ConnectionConfig, newPgConnectionConfig } from "./connection";
 export { Deferred } from "./Deferred";
 export { isPlainObject } from "./is-plain-object";
+export { stripAnsi } from "./stripAnsi";
 
 export function fail(message?: string): never {
   throw new Error(message || "Failed");

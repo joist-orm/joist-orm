@@ -3,6 +3,7 @@ import { insertAuthor, insertBook, insertBookReview, insertPublisher, select, up
 import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import { getEmInternalApi } from "joist-core";
 import { ReactionLogger, setReactionLogging } from "joist-orm";
+import { stripAnsi } from "joist-utils";
 
 let reactionOutput: string[] = [];
 
@@ -314,11 +315,6 @@ class StubReactionLogger extends ReactionLogger {
   }
   // Ensure deterministic output
   now = () => 0;
-}
-
-/** Removes ANSI color codes from reaction logs. */
-function stripAnsi(value: string): string {
-  return value.replace(/\u001B\[[0-?]*[ -/]*[@-~]/g, "");
 }
 
 afterAll(() => {

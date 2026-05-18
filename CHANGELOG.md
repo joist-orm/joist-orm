@@ -1,3 +1,53 @@
+# [2.2.0](https://github.com/joist-orm/joist-orm/compare/v2.1.0...v2.2.0) (2026-05-18)
+
+
+### Bug Fixes
+
+* Add more limit checks. ([#1775](https://github.com/joist-orm/joist-orm/issues/1775)) ([86ce0bb](https://github.com/joist-orm/joist-orm/commit/86ce0bb1492dfe3794b15508d9c7750068981a38))
+* Add optimizeJoinsToExists opt-out. ([#1813](https://github.com/joist-orm/joist-orm/issues/1813)) ([0305d3f](https://github.com/joist-orm/joist-orm/commit/0305d3f41a72add996f5ccda11b6823ab088255c))
+* avoid stack overflow in BatchLoader.loadAll on huge key arrays ([#1798](https://github.com/joist-orm/joist-orm/issues/1798)) ([46fe4b0](https://github.com/joist-orm/joist-orm/commit/46fe4b0f51d76323df268853849d48f24cbb08d6))
+* Code cleanup. ([#1807](https://github.com/joist-orm/joist-orm/issues/1807)) ([dd7aed3](https://github.com/joist-orm/joist-orm/commit/dd7aed3ffdb292e36f7991a019b430be78808ec0))
+* Do not use em.entityLimit for m2m rows. ([#1773](https://github.com/joist-orm/joist-orm/issues/1773)) ([467a448](https://github.com/joist-orm/joist-orm/commit/467a4485f65fd0a1d2680c50545e7caf8c511554))
+* Don't rewrite child.id.eq(null) into EXISTS. ([#1809](https://github.com/joist-orm/joist-orm/issues/1809)) ([0beced8](https://github.com/joist-orm/joist-orm/commit/0beced89df662096d39c0f62dcfdf190d0c9630a))
+* Don't rewrite to EXISTS if used by GROUP BY. ([#1808](https://github.com/joist-orm/joist-orm/issues/1808)) ([90be2a2](https://github.com/joist-orm/joist-orm/commit/90be2a2da0dbea1a75b76fa1c1ae4dd5f9a88896))
+* Find alias usages in aggregate selects. ([#1811](https://github.com/joist-orm/joist-orm/issues/1811)) ([817296a](https://github.com/joist-orm/joist-orm/commit/817296add2975eeb2ea81f604bc55429a930c0c3))
+* Fix another missing from. ([#1812](https://github.com/joist-orm/joist-orm/issues/1812)) ([404ef61](https://github.com/joist-orm/joist-orm/commit/404ef619cfaaa262c98044221310364169ff3433))
+* Fix bug in AsyncProperty rename codemod. ([#1794](https://github.com/joist-orm/joist-orm/issues/1794)) ([7b2d7d7](https://github.com/joist-orm/joist-orm/commit/7b2d7d7cbca76092c32b669fa1eecc2726d98f0e))
+* Fix deleted_at conditions throwing of fanout detection. ([#1803](https://github.com/joist-orm/joist-orm/issues/1803)) ([76e2bc7](https://github.com/joist-orm/joist-orm/commit/76e2bc71e67e67a70016edea526b0bb18a8abe87))
+* Fix lock file. ([#1778](https://github.com/joist-orm/joist-orm/issues/1778)) ([c0a8389](https://github.com/joist-orm/joist-orm/commit/c0a838941266fe95db75383c6b3af1611ca6fd97))
+* Fix OR anti-joins in m2m tables. ([#1815](https://github.com/joist-orm/joist-orm/issues/1815)) ([03494bb](https://github.com/joist-orm/joist-orm/commit/03494bb9c8876de6acea1f023e8ca475d53c56ea))
+* Fix reactions on updatedAt. ([#1818](https://github.com/joist-orm/joist-orm/issues/1818)) ([d96ff03](https://github.com/joist-orm/joist-orm/commit/d96ff030a3cf1251a3088918c127c4aa21034047))
+* Fix ReactiveReferences not being recalculated. ([#1830](https://github.com/joist-orm/joist-orm/issues/1830)) ([f79ae08](https://github.com/joist-orm/joist-orm/commit/f79ae08ae81052a7d1ee58bfc541eff476435f8a))
+* Fix readonly m2m rules still firing. ([#1800](https://github.com/joist-orm/joist-orm/issues/1800)) ([5cfffda](https://github.com/joist-orm/joist-orm/commit/5cfffda4242f64609bbe0ac921201f7f7dc8ac99))
+* Fix row_to_json(alias) getting pruned. ([#1824](https://github.com/joist-orm/joist-orm/issues/1824)) ([5502f5e](https://github.com/joist-orm/joist-orm/commit/5502f5e173db27b061b856c40c5c67014aab42aa))
+* Keep plugin-injected CTE joins. ([#1805](https://github.com/joist-orm/joist-orm/issues/1805)) ([1bfc119](https://github.com/joist-orm/joist-orm/commit/1bfc11950eba9a4be3d7d275a93631ea70d51e8a))
+* Less aggressive OR rewriting. ([#1806](https://github.com/joist-orm/joist-orm/issues/1806)) ([56aaf1c](https://github.com/joist-orm/joist-orm/commit/56aaf1c6be660c599776f99ba2888dd0bb678e77))
+* Let upsert duplicates still fail. ([#1822](https://github.com/joist-orm/joist-orm/issues/1822)) ([d14d749](https://github.com/joist-orm/joist-orm/commit/d14d74982e62bf4b4f2a0700e8e6338e56abe012))
+* load hints should only be used for the correct subtypes ([#1795](https://github.com/joist-orm/joist-orm/issues/1795)) ([78d422e](https://github.com/joist-orm/joist-orm/commit/78d422e07d84801bba1f286ed10232463ad2fa0b))
+* Maintain OUTER JOIN semantics with children. ([#1814](https://github.com/joist-orm/joist-orm/issues/1814)) ([d496ddc](https://github.com/joist-orm/joist-orm/commit/d496ddcf74fd218f08ff3e79fcbc69e3329d9fed))
+* Mark aliases used by the EXISTS correlation as used. ([#1816](https://github.com/joist-orm/joist-orm/issues/1816)) ([f20fc07](https://github.com/joist-orm/joist-orm/commit/f20fc07b646c7dd5bd2c07294b628553d019a7df))
+* Only resurrect inside findExistingIfUniqueBy. ([#1821](https://github.com/joist-orm/joist-orm/issues/1821)) ([a86c05d](https://github.com/joist-orm/joist-orm/commit/a86c05dd9a174f5c57fb0e55d94b6082e2534bac))
+* order m2m preload results by join-row id ([#1784](https://github.com/joist-orm/joist-orm/issues/1784)) ([29892c6](https://github.com/joist-orm/joist-orm/commit/29892c6eb02e453fbb695d860f26affec6fd614c))
+* Reactive hint subtype matching ([#1785](https://github.com/joist-orm/joist-orm/issues/1785)) ([f282ae5](https://github.com/joist-orm/joist-orm/commit/f282ae5898281f154c59c0a82f5de5ca84fa3281))
+* Refactor ReactiveReference to state machine. ([#1774](https://github.com/joist-orm/joist-orm/issues/1774)) ([77cbb1f](https://github.com/joist-orm/joist-orm/commit/77cbb1f92e4ed366a684635e77d72acae9ecb0c5))
+* Rewrite another joins. ([#1810](https://github.com/joist-orm/joist-orm/issues/1810)) ([ba3b99b](https://github.com/joist-orm/joist-orm/commit/ba3b99b4e8abd21c9ca85a6b62b1ecb680eb878b))
+* Rewrite ORs with mixed ordinary/collection aliases. ([#1817](https://github.com/joist-orm/joist-orm/issues/1817)) ([272ac7a](https://github.com/joist-orm/joist-orm/commit/272ac7a92742f703d7c3d771369e99f05f262def))
+* Rewrite sibling ORs into EXISTS. ([#1804](https://github.com/joist-orm/joist-orm/issues/1804)) ([679c089](https://github.com/joist-orm/joist-orm/commit/679c0890c1ce8f9840832973ca3ea6e3d8716975))
+* Run codemods against src/ by default. ([#1796](https://github.com/joist-orm/joist-orm/issues/1796)) ([3a96419](https://github.com/joist-orm/joist-orm/commit/3a96419c236e9578d754c901d5429a2b157fb084))
+* Run defaults in the trusted context. ([#1825](https://github.com/joist-orm/joist-orm/issues/1825)) ([2bec9e6](https://github.com/joist-orm/joist-orm/commit/2bec9e60957da7f0597005c1fbcd74b91f5a7faf))
+* Run docs md files through prettier. ([#1832](https://github.com/joist-orm/joist-orm/issues/1832)) ([fd012d6](https://github.com/joist-orm/joist-orm/commit/fd012d68348ea36a2aaf67721de5f5b0d370f935))
+* stable m2m collection order across processes ([#1786](https://github.com/joist-orm/joist-orm/issues/1786)) ([e1c4b5a](https://github.com/joist-orm/joist-orm/commit/e1c4b5aa8fbc2783ac769e9be8bd445aeb6b0e63))
+
+
+### Features
+
+* Add before/afterValidate hooks. ([#1820](https://github.com/joist-orm/joist-orm/issues/1820)) ([cf615e4](https://github.com/joist-orm/joist-orm/commit/cf615e4f7272372f02bebed5f8ca7d6b3ae33613))
+* Add hasAsyncQueryProperty for non-persisted queries. ([#1781](https://github.com/joist-orm/joist-orm/issues/1781)) ([8eb5e8b](https://github.com/joist-orm/joist-orm/commit/8eb5e8b3982de908b591cc649006e1a1b2114a3f))
+* Add soft-delete resurrection. ([#1802](https://github.com/joist-orm/joist-orm/issues/1802)) ([24e71c5](https://github.com/joist-orm/joist-orm/commit/24e71c57f495449deaf232e5bebeb83234602a8e))
+* Rename AsyncQueryProperty/ReactiveQueryField. ([#1819](https://github.com/joist-orm/joist-orm/issues/1819)) ([6b7279a](https://github.com/joist-orm/joist-orm/commit/6b7279a349f1ec47ea9bb1727fc0c95270f42697))
+* Switch to using codemod version numbers. ([#1791](https://github.com/joist-orm/joist-orm/issues/1791)) ([85b9c04](https://github.com/joist-orm/joist-orm/commit/85b9c042e82a9f68c50b1ff8499e5e2ad522c6f6))
+* Use EXISTS for multi-collection joins. ([#1743](https://github.com/joist-orm/joist-orm/issues/1743)) ([c7cd8ce](https://github.com/joist-orm/joist-orm/commit/c7cd8ce45f817b744421a83c32f6246f159e429e))
+
 # [2.1.0](https://github.com/joist-orm/joist-orm/compare/v2.0.3...v2.1.0) (2026-03-22)
 
 

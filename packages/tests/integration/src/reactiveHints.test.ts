@@ -1,4 +1,17 @@
-import { Author, Book, BookReview, Comment, Critic, Publisher, PublisherGroup, User } from "@src/entities";
+import {
+  Author,
+  Book,
+  BookReview,
+  Comment,
+  Critic,
+  newAuthor,
+  newLargePublisher,
+  newSmallPublisher,
+  Publisher,
+  PublisherGroup,
+  User,
+} from "@src/entities";
+import { newEntityManager } from "@src/testEm";
 import {
   Entity,
   LoadHint,
@@ -9,6 +22,7 @@ import {
   ReactiveTarget,
   convertToLoadHint,
   getMetadata,
+  isTypeOrSubType,
   reverseReactiveHint,
 } from "joist-orm";
 
@@ -230,6 +244,14 @@ describe("reactiveHints", () => {
     ]);
   });
 
+  it("skips read-only m2m children", () => {
+    expect(reverse(Book, Book, { tags_ro: "name:ro" })).toEqual([
+      { entity: "Book", fields: [], path: [] },
+      { entity: "Book", kind: "read-only", fields: ["tags"], path: [] },
+      { entity: "Tag", kind: "read-only", fields: ["name"], path: ["books"] },
+    ]);
+  });
+
   it("can do read-only string hint", () => {
     expect(reverse(Author, Author, "publisher:ro")).toEqual([
       { entity: "Author", fields: [], path: [] },
@@ -329,12 +351,12 @@ describe("reactiveHints", () => {
     });
 
     it("does not squash multiple expanded hints", () => {
-      // Given one Author hasReactiveAsyncProperty that goes through publisher -> comments
+      // Given one Author hasReactiveProperty that goes through publisher -> comments
       expect(convertToLoadHint(am, ["latestComment2"])).toEqual({
         publisher: { comments: {} },
         comments: {},
       });
-      // And another Author hasReactiveAsyncProperty that goes through publisher -> authors
+      // And another Author hasReactiveProperty that goes through publisher -> authors
       expect(convertToLoadHint(am, ["allPublisherAuthorNames"])).toEqual({
         publisher: { authors: {} },
       });
@@ -430,6 +452,34 @@ describe("reactiveHints", () => {
       // @ts-expect-error
       calcAuthor(a1);
     }
+  });
+
+  describe("isTypeOrSubType", () => {
+    it("matches same concrete type", () => {
+      const em = newEntityManager();
+      const sp = newSmallPublisher(em);
+      expect(isTypeOrSubType(sp, "SmallPublisher")).toBe(true);
+    });
+
+    it("matches a subtype against its base type", () => {
+      const em = newEntityManager();
+      const sp = newSmallPublisher(em);
+      const lp = newLargePublisher(em);
+      expect(isTypeOrSubType(sp, "Publisher")).toBe(true);
+      expect(isTypeOrSubType(lp, "Publisher")).toBe(true);
+    });
+
+    it("does not match a sibling subtype", () => {
+      const em = newEntityManager();
+      const sp = newSmallPublisher(em);
+      expect(isTypeOrSubType(sp, "LargePublisher")).toBe(false);
+    });
+
+    it("does not match an unrelated type", () => {
+      const em = newEntityManager();
+      const a = newAuthor(em);
+      expect(isTypeOrSubType(a, "Publisher")).toBe(false);
+    });
   });
 });
 

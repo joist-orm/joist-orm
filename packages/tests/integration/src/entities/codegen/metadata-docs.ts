@@ -24,6 +24,7 @@ export const docs = {
       isPopular: "Implements a public API for controlling access to a protected field (`wasEverPopular`).",
       hasBooks: "Example of an async boolean that can be navigated via a lens.",
       reviews: "All reviews across all of this author's books.",
+      imageFileName: "Example of a ReactiveField that watches through an o2o relation.",
     },
     operations: undefined,
   },
@@ -50,7 +51,14 @@ export const docs = {
   Critic: { comment: "", fields: {}, operations: undefined },
   CriticColumn: { comment: "", fields: {}, operations: undefined },
   Image: { comment: "", fields: {}, operations: undefined },
-  LargePublisher: { comment: "", fields: {}, operations: undefined },
+  LargePublisher: {
+    comment: "",
+    fields: {
+      commentParentInfo:
+        "Subtype-specific override of `commentParentInfo` whose hint mentions LP-only relations.\nUsed to catch CTI-subtype reactive-hint contamination in `addRule`/`addReaction`'s\nclosure-cached `loadHint`.",
+    },
+    operations: undefined,
+  },
   ParentGroup: { comment: "", fields: {}, operations: undefined },
   ParentItem: { comment: "", fields: {}, operations: undefined },
   Publisher: {
@@ -67,13 +75,18 @@ export const docs = {
       numberOfBookAdvancesSnapshot:
         "Example of a RF that uses solely a o2m read-only hints, it should recalc only when p.name itself changes.",
       commentParentInfo: "For testing reacting to poly CommentParent properties.",
+      numberOfAuthors: "Example of a hasAsyncProperty that counts authors via SQL.",
     },
     operations: undefined,
   },
   PublisherGroup: { comment: "", fields: {}, operations: undefined },
   SmallPublisher: {
     comment: "",
-    fields: { favoriteAuthor: "Example of a ReactiveReference in an entity with subtypes." },
+    fields: {
+      favoriteAuthor: "Example of a ReactiveReference in an entity with subtypes.",
+      commentParentInfo:
+        "Subtype-specific override of `commentParentInfo` whose hint mentions SP-only relations.\nUsed to catch CTI-subtype reactive-hint contamination in `addRule`/`addReaction`'s\nclosure-cached `loadHint`.",
+    },
     operations: undefined,
   },
   SmallPublisherGroup: { comment: "", fields: {}, operations: undefined },

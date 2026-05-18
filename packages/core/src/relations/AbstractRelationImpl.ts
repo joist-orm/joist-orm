@@ -30,8 +30,13 @@ export abstract class AbstractRelationImpl<T, U> extends AbstractPropertyImpl<T>
   abstract get get(): U | undefined;
 
   /**
-   * Called when our entity has been `EntityManager.delete`'d _and_ `EntityManager.flush` is being called,
-   * so we can unset any foreign keys to the being-deleted entity and clear out any pointers to it.
+   * Called when our entity has been `em.delete`-d and then `em.flush` is being called,
+   * so we can unset any foreign keys to the being-deleted entity and clear out any pointers
+   * to it. I.e.:
+   *
+   * - `em.delete(author)`
+   * - `em.flush` loads all `author.books`
+   * - Unsets their `book.author` to let their validation rules know
    */
   abstract cleanupOnEntityDeleted(): Promise<void>;
 

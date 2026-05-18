@@ -256,6 +256,7 @@ export class EntityDbMetadata {
   stiDiscriminatorValue?: number;
   abstract: boolean;
   nonDeferredFkOrder: number = -1;
+  uniqueConstraints?: string[][];
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
@@ -349,6 +350,7 @@ export class EntityDbMetadata {
     this.createdAt = this.primitives.find((f) => createdAtConf.names.includes(f.columnName));
     this.updatedAt = this.primitives.find((f) => updatedAtConf.names.includes(f.columnName));
     this.deletedAt = this.primitives.find((f) => deletedAtConf.names.includes(f.columnName));
+    this.uniqueConstraints = inferUniqueConstraints(this, table);
   }
 
   get name(): string {
@@ -386,6 +388,33 @@ function isOneToOneRelation(r: O2MRelation) {
 // If the unique index has only one column and is NOT a partial index, it's a one-to-one
 function isOneToOneIndex(i: Index) {
   return i.columns.length === 1 && !i.isPartial;
+}
+
+/** Infers field names from unique constraints, i.e. `(author_id, title)` becomes `author, title`. */
+function inferUniqueConstraints(meta: EntityDbMetadata, table: Table): string[][] {
+  return table.uniqueConstraints.flatMap((constraint) => {
+    if (constraint.index.isPartial) return [];
+    const fields = Array.from(constraint.columns).map((column) => fieldNameForColumn(meta, column.name));
+    if (fields.some((field) => field === undefined)) return [];
+    return [fields as string[]];
+  });
+}
+
+/** Returns the queryable field name for a unique constraint column. */
+function fieldNameForColumn(meta: EntityDbMetadata, columnName: string): string | undefined {
+  const primitive = meta.primitives.find((field) => field.columnName === columnName);
+  if (primitive && !primitive.derived && !primitive.isArray && !primitive.customSerde) return primitive.fieldName;
+
+  const enumField = meta.enums.find((field) => field.columnName === columnName);
+  if (enumField && !enumField.derived && !enumField.isArray) return enumField.fieldName;
+
+  const pgEnum = meta.pgEnums.find((field) => field.columnName === columnName);
+  if (pgEnum) return pgEnum.fieldName;
+
+  const manyToOne = meta.manyToOnes.find((field) => field.columnName === columnName);
+  if (manyToOne && !manyToOne.derived) return manyToOne.fieldName;
+
+  return undefined;
 }
 
 type PolymorphicRelation = { fieldName: string; notNull: boolean };

@@ -176,6 +176,39 @@ The aliases use method calls to create conditions (i.e. `.eq(1)`), which is a di
 - `gte(1)`
 - `gte(1)`
 
+## Collection Filters: `EXISTS` vs. `LEFT JOIN`
+
+For collection relations (`one-to-many` and `many-to-many`), Joist usually renders filters as `EXISTS` subqueries instead of `LEFT JOIN`s. This avoids row explosion when querying multiple collections:
+
+```ts
+await em.find(Author, {
+  books: { title: "b1" },
+  comments: { text: "c1" },
+});
+```
+
+```sql
+WHERE EXISTS (SELECT 1 FROM books b WHERE b.author_id = a.id AND b.title = 'b1')
+  AND EXISTS (SELECT 1 FROM comments c WHERE c.parent_author_id = a.id AND c.text = 'c1')
+```
+
+Some alias conditions, especially `OR`s that mix collection aliases with outer aliases, require all aliases to be in the same SQL scope. In those cases Joist falls back to `LEFT JOIN`s.
+
+Because multiple collection `LEFT JOIN`s can create large intermediate row fanouts, Joist rejects them by default before join pruning. If you have verified the query is intentional and safe, opt in with `allowMultipleLeftJoins`:
+
+```ts
+const [a, b, c] = aliases(Author, Book, Comment);
+
+await em.find(
+  Author,
+  { as: a, books: { as: b }, comments: { as: c } },
+  {
+    conditions: { or: [b.title.eq("b1"), c.text.eq("c1")] },
+    allowMultipleLeftJoins: true,
+  },
+);
+```
+
 ## Condition & Join Pruning
 
 Find queries have special treatment of `undefined`, to facilitate constructing complex queries:

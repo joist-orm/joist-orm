@@ -8,7 +8,7 @@ import {
   insertTag,
   select,
 } from "@src/entities/inserts";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
+import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
 import { Author, Book, Tag, newAuthor, newBook, newBookReview, newSmallPublisher, newTag, newUser } from "../entities";
 import { twoOf, zeroTo } from "../utils";
 
@@ -883,5 +883,103 @@ describe("ManyToManyCollection", () => {
       await em.flush();
       expect(sp.transientFields.beforeFlushRan).toBe(true);
     });
+  });
+
+  it("fails when m2m includes hits the entityLimit", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    await insertTag({ name: "t1" });
+    await insertTag({ name: "t2" });
+    await insertTag({ name: "t3" });
+    await insertTag({ name: "t4" });
+    await insertBookToTag({ book_id: 1, tag_id: 1 });
+    await insertBookToTag({ book_id: 1, tag_id: 2 });
+    await insertBookToTag({ book_id: 2, tag_id: 3 });
+    await insertBookToTag({ book_id: 2, tag_id: 4 });
+    const em = newEntityManager();
+    const [b1, b2] = await em.loadAll(Book, ["b:1", "b:2"]);
+    const [t1, t2, t3, t4] = await em.loadAll(Tag, ["t:1", "t:2", "t:3", "t:4"]);
+    // Set limit so the batched includes query (4 concurrent checks = 4 join rows) hits it
+    em.entityLimit = 4;
+    const result = Promise.all([
+      b1.tags.includes(t1),
+      b1.tags.includes(t2),
+      b2.tags.includes(t3),
+      b2.tags.includes(t4),
+    ]);
+    await expect(result).rejects.toThrow("Query returned more than 4 entityLimit rows");
+  });
+
+  it("m2m join table query does not use LIMIT", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertTag({ name: "t1" });
+    await insertTag({ name: "t2" });
+    await insertTag({ name: "t3" });
+    await insertBookToTag({ book_id: 1, tag_id: 1 });
+    await insertBookToTag({ book_id: 1, tag_id: 2 });
+    await insertBookToTag({ book_id: 1, tag_id: 3 });
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:1");
+    resetQueryCount();
+    const tags = await book.tags.load();
+    // The m2m join table query should not have a LIMIT clause
+    expect(queries[0]).toEqual(
+      `SELECT "btt".* FROM books_to_tags AS btt WHERE btt.book_id = ANY($1) ORDER BY btt.id ASC`,
+    );
+    expect(tags).toMatchEntity([{ name: "t1" }, { name: "t2" }, { name: "t3" }]);
+  });
+
+  it("returns m2m items in join-row-id order even when populated via the lazy (batch-loader) path", async () => {
+    // Given a book and three tags, with the join rows inserted in a different
+    // order than the tag ids — so "ORDER BY join-row.id" vs "ORDER BY tag.id"
+    // would produce visibly different orderings.
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ id: 1, title: "b1", author_id: 1 });
+    await insertTag({ id: 1, name: "t1" });
+    await insertTag({ id: 2, name: "t2" });
+    await insertTag({ id: 3, name: "t3" });
+    // Insert m2m rows in reverse tag order: btt:1 -> t3, btt:2 -> t1, btt:3 -> t2
+    await insertBookToTag({ id: 1, book_id: 1, tag_id: 3 });
+    await insertBookToTag({ id: 2, book_id: 1, tag_id: 1 });
+    await insertBookToTag({ id: 3, book_id: 1, tag_id: 2 });
+    // When we load the tags via the lazy (batch-loader) path
+    const em1 = newEntityManager();
+    const book1 = await em1.load(Book, "b:1");
+    const lazyTags = await book1.tags.load();
+    // And separately via the populate-hint (JSON-aggregate preloader) path
+    const em2 = newEntityManager();
+    const book2 = await em2.load(Book, "b:1", "tags");
+    const populatedTags = book2.tags.get;
+    // Then both paths agree on the ordering — join-row id order
+    const lazyNames = lazyTags.map((t) => t.name);
+    const populatedNames = populatedTags.map((t) => t.name);
+    expect(lazyNames).toEqual(["t3", "t1", "t2"]);
+    expect(populatedNames).toEqual(["t3", "t1", "t2"]);
+  });
+
+  it("returns m2m items in join-row-id order even when populated across multiple batches", async () => {
+    // Given a book with three tags
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ id: 1, title: "b1", author_id: 1 });
+    await insertTag({ id: 1, name: "t1" });
+    await insertTag({ id: 2, name: "t2" });
+    await insertTag({ id: 3, name: "t3" });
+    await insertBookToTag({ id: 1, book_id: 1, tag_id: 1 });
+    await insertBookToTag({ id: 2, book_id: 1, tag_id: 2 });
+    await insertBookToTag({ id: 3, book_id: 1, tag_id: 3 });
+    const em = newEntityManager();
+    const [book, tag3] = await Promise.all([em.load(Book, "b:1"), em.load(Tag, "t:3")]);
+    // When we first load from the *other side* (tag3.books) — this runs one m2m batch
+    // and inserts the (book:1, tag:3) row into JoinRows's shared index first.
+    await tag3.books.load();
+    // Then we load book.tags in a later tick — this runs a second batch that finds
+    // (book:1, tag:3) already in the index and only appends the other rows. Without
+    // a post-sort, Map iteration would reflect insertion order: [t3, t1, t2].
+    const tags = await book.tags.load();
+    // Instead, the collection should come back in join-row-id order, regardless of
+    // which batch contributed which rows.
+    expect(tags.map((t) => t.name)).toEqual(["t1", "t2", "t3"]);
   });
 });

@@ -1,5 +1,6 @@
 {
   "codegenPlugins": ["joist-graphql-codegen"],
+  "codemodVersion": 2,
   "contextType": "Context@src/context",
   "docs": true,
   "entities": {
@@ -13,6 +14,7 @@
         "ignoreEnumFkRequiredWithDefault": { "ignore": true },
         "ignoreUsedToBeUseful": { "ignore": true },
         "ignoreUsedToBeUsefulRequiredWithDefault": { "ignore": true },
+        "imageFileName": { "derived": "async" },
         "initials": { "derived": "sync" },
         "menteeNames": { "derived": "async" },
         "mentorNames": { "derived": "async" },
@@ -34,11 +36,17 @@
         "menteesClosure": { "derived": "async" },
         "rootMentor": { "derived": "async" }
       },
-      "tag": "a"
+      "tag": "a",
+      "uniqueBy": [["ssn"]]
     },
     "AuthorSchedule": { "tag": "authorSchedule" },
     "AuthorStat": { "tag": "as" },
-    "Book": { "fields": { "search": { "derived": "async" } }, "orderBy": "title", "tag": "b" },
+    "Book": {
+      "fields": { "search": { "derived": "async" } },
+      "orderBy": "title",
+      "tag": "b",
+      "uniqueBy": [["author", "title"]]
+    },
     "BookAdvance": { "tag": "ba" },
     "BookReview": {
       "fields": {
@@ -138,6 +146,5 @@
   },
   "entitiesDirectory": "./src/entities",
   "outputDocs": true,
-  "transactionType": "PoolClient@pg",
-  "version": "0.0.1"
+  "transactionType": "PoolClient@pg"
 }

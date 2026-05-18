@@ -42,9 +42,9 @@ export function up(b: MigrationBuilder): void {
   // Used for PublisherGroup.publishers to test table-per-class o2ms
   createEntityTable(b, "publisher_groups", {
     name: "text",
-    // For testing ReactiveFields that depend on ReactiveQueryFields
+    // For testing ReactiveFields that depend on AsyncReactiveFields
     number_of_book_reviews: { type: "int", notNull: true },
-    // For testing ReactiveQueryFields that are text
+    // For testing AsyncReactiveFields that are text
     number_of_book_reviews_formatted: { type: "varchar(100)", notNull: true },
   });
 
@@ -169,6 +169,8 @@ export function up(b: MigrationBuilder): void {
     tags_of_all_books: { type: "varchar", notNull: false },
     // for testing full-text-search fields that want to use `id`
     search: { type: "text", notNull: false },
+    // for testing ReactiveFields through o2o relations
+    image_file_name: { type: "text", notNull: false },
     // for testing bytea fields
     certificate: { type: "bytea", notNull: false },
   });

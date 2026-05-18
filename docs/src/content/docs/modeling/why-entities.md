@@ -63,12 +63,12 @@ Although not a true  "end-to-end framework" like Rails, Joist grew out of a Grap
 
 ### Examples for Reads
 
-An example of Joist's "rich domain model" features is derived properties, which are calculations on top of your raw database values. For example a `hasManyThrough` or `hasAsyncProperty`:
+An example of Joist's "rich domain model" features is derived properties, which are calculations on top of your raw database values. For example a `hasManyThrough` or `hasProperty`:
 
 ```typescript
 class Author extends AuthorCodegen {
   readonly reviews: Collection<Author, BookReview> = hasMany((a) => a.books.reviews);
-  readonly totalRatings: AsyncProperty<Author, number> = hasAsyncProperty(
+  readonly totalRatings: Property<Author, number> = hasProperty(
     { books: "reviews" },
     (a) => a.reviews.get.reduce((acc, r) => acc + r.rating, 0)
   );

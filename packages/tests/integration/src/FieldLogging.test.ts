@@ -1,5 +1,5 @@
-import ansiRegex from "ansi-regex";
 import { FieldLogger, FieldLoggerWatch } from "joist-orm";
+import { stripAnsi } from "joist-utils";
 import { Author, Publisher, newAuthor, newBook, newComment, newLargePublisher, newSmallPublisher } from "src/entities";
 import { insertAuthor, insertPublisher } from "src/entities/inserts";
 import { newEntityManager } from "src/testEm";
@@ -66,14 +66,14 @@ describe("FieldLogging", () => {
        "a#1 created at newAuthor.ts:13",
        "a#1.firstName = a1 at newAuthor.ts:13",
        "a#1.age = 40 at newAuthor.ts:13",
-       "a#1.isFunny = false at defaults.ts:46",
-       "a#1.nickNames = a1 at defaults.ts:189",
+       "a#1.isFunny = false at defaults.ts:48",
+       "a#1.nickNames = a1 at defaults.ts:196",
        "b#1 created at newBook.ts:9",
        "b#1.title = title at newBook.ts:9",
        "b#1.order = 1 at newBook.ts:9",
        "b#1.author = Author#1 at newBook.ts:9",
-       "b#1.notes = Notes for title at defaults.ts:46",
-       "b#1.authorsNickNames = a1 at defaults.ts:189",
+       "b#1.notes = Notes for title at defaults.ts:48",
+       "b#1.authorsNickNames = a1 at defaults.ts:196",
      ]
     `);
   });
@@ -94,8 +94,8 @@ describe("FieldLogging", () => {
        "a#1 created at newAuthor.ts:13",
        "a#1.firstName = a1 at newAuthor.ts:13",
        "a#1.age = 40 at newAuthor.ts:13",
-       "a#1.isFunny = false at defaults.ts:46",
-       "a#1.nickNames = a1 at defaults.ts:189",
+       "a#1.isFunny = false at defaults.ts:48",
+       "a#1.nickNames = a1 at defaults.ts:196",
      ]
     `);
   });
@@ -132,10 +132,10 @@ describe("FieldLogging", () => {
        "p#1 created at newLargePublisher.ts:6",
        "p#1.rating = 0 at newLargePublisher.ts:6",
        "p#1.name = lp1 at newLargePublisher.ts:6",
-       "p#1.numberOfBookReviews = 0 at defaults.ts:37",
-       "p#1.type = BIG at defaults.ts:46",
-       "p#1.baseSyncDefault = LPSyncDefault at defaults.ts:46",
-       "p#1.baseAsyncDefault = LPAsyncDefault at defaults.ts:189",
+       "p#1.numberOfBookReviews = 0 at defaults.ts:39",
+       "p#1.type = BIG at defaults.ts:48",
+       "p#1.baseSyncDefault = LPSyncDefault at defaults.ts:48",
+       "p#1.baseAsyncDefault = LPAsyncDefault at defaults.ts:196",
      ]
     `);
   });
@@ -198,7 +198,7 @@ class StubFieldLogger extends FieldLogger {
     // uncomment to see colorized output
     // super();
     super(watching, (line: string) => {
-      fieldOutput.push(line.replace(ansiRegex(), ""));
+      fieldOutput.push(stripAnsi(line));
     });
   }
 }

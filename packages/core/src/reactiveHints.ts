@@ -1,25 +1,21 @@
-import { Entity } from "./Entity";
-import { getEmInternalApi, MaybeAbstractEntityConstructor } from "./EntityManager";
+import { getInstanceData } from "./BaseEntity";
+import { Entity, isEntity } from "./Entity";
+import { getEmInternalApi, isId, MaybeAbstractEntityConstructor } from "./EntityManager";
 import {
   EntityMetadata,
   getBaseAndSelfMetas,
   getMetadata,
-  getSubMetas,
   ManyToManyField,
   ManyToOneField,
   OneToManyField,
   OneToOneField,
   PolymorphicFieldComponent,
 } from "./EntityMetadata";
-import { Changes, FieldStatus, ManyToOneFieldStatus } from "./changes";
-import { getMetadataForType } from "./configure";
-import { isChangeableField } from "./fields";
+import { Changes } from "./changes";
 import { getProperties } from "./getProperties";
 import { Loadable, Loaded, LoadHint } from "./loadHints";
 import { NormalizeHint, normalizeHint, suffixRe, SuffixSeperator } from "./normalizeHints";
 import {
-  AsyncProperty,
-  AsyncPropertyImpl,
   Collection,
   LoadedCollection,
   LoadedProperty,
@@ -28,6 +24,8 @@ import {
   ManyToManyCollection,
   OneToOneReference,
   PolymorphicReference,
+  Property,
+  PropertyImpl,
   ReactiveGetter,
   ReadOnlyCollection,
   Reference,
@@ -46,7 +44,7 @@ import { fail, flatAndUnique, mergeNormalizedHints } from "./utils";
 export type Reactable<T extends Entity> =
   // This will be primitives + enums + m2os
   FieldsOf<T> &
-    // We include `Loadable` so that we include hasReactiveAsyncProperties,
+    // We include `Loadable` so that we include hasReactiveProperties,
     // which are reversable but won't be in any of our codegen types.
     Loadable<T> &
     Gettable<T> &
@@ -104,7 +102,7 @@ export type Reacted<T extends Entity, H> = Entity & {
           ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
           : T[K] extends ReadOnlyCollection<any, infer U>
             ? LoadedReadOnlyCollection<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
-            : T[K] extends AsyncProperty<any, infer V>
+            : T[K] extends Property<any, infer V>
               ? LoadedProperty<any, V>
               : T[K];
 } & {
@@ -124,10 +122,10 @@ export type Reacted<T extends Entity, H> = Entity & {
 export type MaybeReactedEntity<V> = V extends Entity ? { fullNonReactiveAccess: V } : V;
 
 /**
- * Allow returning reacted entities from `hasReactiveAsyncProperty`.
+ * Allow returning reacted entities from `hasReactiveProperty`.
  *
  * The `MaybeReactedEntity` is used by `hasReactiveReference` which already has `undefined | never`
- * broken out as a separate generic; `hasReactiveAsyncProperty` does not, and so this type conditionally
+ * broken out as a separate generic; `hasReactiveProperty` does not, and so this type conditionally
  * pulls `undefined` out first, and then defers to `MaybeReactedEntity`.
  */
 export type MaybeReactedPropertyEntity<V> = V extends (infer V1 extends Entity) | undefined
@@ -263,7 +261,7 @@ function reverseSubHint(
         // table), for m2m reactivity we push the collection name into the reactive hint, because it's effectively
         // "the other/reverse side", and JoinRows will trigger `queueDownstreamReactables` explicitly, instead of
         // `setField` which handles regular/non-m2m mutations.
-        fields.push(field.fieldName);
+        _fields.push(field.fieldName);
         const otherFieldName = maybeAddTypeFilterSuffix(meta, field);
         return reverseReactiveHint(
           rootType,
@@ -305,22 +303,22 @@ function reverseSubHint(
         throw new Error(`Invalid hint in ${rootType.name}.ts hint ${JSON.stringify(hint)}`);
     }
   } else {
-    // We only need to look for ReactiveAsyncProperties here, because ReactiveFields & ReactiveReferences
+    // We only need to look for ReactiveProperties here, because ReactiveFields & ReactiveReferences
     // have underlying primitive fields that, when/if they change, will be handled in the ^ code.
     //
     // I.e. we specifically don't need to handle RFs & RRs ^, because the EntityManager.flush loop will
     // notice their primitive values changing, and kicking off any downstream reactive fields as necessary.
     const p = getProperties(meta)[key];
-    if (p instanceof AsyncPropertyImpl) {
+    if (p instanceof PropertyImpl) {
       // If the field is marked as readonly (i.e. using the `_ro` suffix), then we can assume that applies to its
       // entire hint as well and can simply omit it. This also allows us to use non-reactive async props as long as
       // they are readonly.
       if (isReadOnly) return [];
       if (!p.reactiveHint) {
         throw new Error(
-          `AsyncProperty ${key} cannot be used in reactive hints in ${rootType.name}.ts hint ${JSON.stringify(
+          `Property ${key} cannot be used in reactive hints in ${rootType.name}.ts hint ${JSON.stringify(
             hint,
-          )}, please use hasReactiveAsyncProperty instead`,
+          )}, please use hasReactiveProperty instead`,
         );
       }
       return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false, false);
@@ -392,7 +390,7 @@ function reverseSubHint(
       const { otherFieldName, m2mFieldName } = p;
       // When a join row changes (e.g. parents collection is mutated), notify both this entity
       // and its transitive children/parents via otherFieldName
-      fields.push(m2mFieldName);
+      _fields.push(m2mFieldName);
       maybeRecursive.push({
         kind: isReadOnly ? "read-only" : "update",
         entity: entityType,
@@ -436,7 +434,7 @@ function maybeAddTypeFilterSuffix(
  * I.e. given `[book1, book2]` and `["author", 'publisher"]`, will return all the books' authors' publishers.
  *
  * Note that for references (and only references), we walk both through "the current value"
- * and "the original value". This is fundamentally because references are the true "owner"
+ * and prior values remembered in `referenceHistory`. This is fundamentally because references are the true "owner"
  * of the relation, while collections are derived.
  *
  * For example, with reversals walking through collections:
@@ -451,8 +449,18 @@ function maybeAddTypeFilterSuffix(
  *
  * - Given a hint `author: { books: "title" }`
  * - Which reverses to `book[title] -> author`
- * - When we traverse through `b1.author`, we use both the current value and original value, so that both
- *   "our prior author" and "our new author" see their latest `author.books` collection values.
+ * - When we traverse through `b1.author`, we use both the current value and remembered values, so that both
+ *   "our prior authors" and "our new author" see their latest `author.books` collection values.
+ *
+ * Delete cleanup runs before reverse hints are walked, so the current relation value may already be unset by the
+ * time we get here. For persisted entities, `cleanupOnEntityDeleted` clears the owning FK via `setField`, which
+ * remembers the prior FK in `referenceHistory`; this lets us still find the old owner. For collection reversals
+ * this is enough because collections are derived from the owning FK: removing `b1` from `a1.books` is represented
+ * by `b1.author` changing, not by an independent "old books" snapshot.
+ *
+ * References can also have transient values during a unit of work, i.e. a ReactiveField might observe `b1.author=a2`
+ * before the final flush changes it to `a3`. `setField` remembers both original and transient reference values
+ * separately from `originalData`, and we walk them in addition to the current value.
  */
 export async function followReverseHint(
   reactionName: string,
@@ -491,10 +499,11 @@ export async function followReverseHint(
       const fieldKind = getMetadata(c).fields[fieldName]?.kind;
       const isReference = fieldKind === "m2o" || fieldKind === "poly";
       const isManyToMany = fieldKind === "m2m";
-      const changed = isChangeableField(c, fieldName) ? (c.changes[fieldName] as FieldStatus<any>) : undefined;
       // See jsdoc comment about why this is only necessary for references...
-      if (isReference && changed && changed.hasUpdated && changed.originalValue) {
-        promises.push(maybeApplyTypeFilter((changed as ManyToOneFieldStatus<any>).originalEntity, viaType));
+      if (isReference) {
+        for (const value of getInstanceData(c).getReferenceHistory(fieldName)) {
+          promises.push(maybeApplyTypeFilter(loadReferenceHistoryValue(c, value), viaType));
+        }
       }
       if (isManyToMany) {
         const m2m = c[fieldName] as ManyToManyCollection<any, any>;
@@ -505,11 +514,11 @@ export async function followReverseHint(
       // Walk up the old parents
       if (relation instanceof RecursiveParentsCollectionImpl) {
         const { m2oFieldName } = relation;
-        const changed = isChangeableField(c, m2oFieldName) ? (c.changes[m2oFieldName] as FieldStatus<any>) : undefined;
-        if (changed && changed.hasUpdated && changed.originalValue) {
+        for (const value of getInstanceData(c).getReferenceHistory(m2oFieldName)) {
           promises.push(
-            // First load the original parent itself
-            (changed as ManyToOneFieldStatus<any>).originalEntity.then((oldParent) => {
+            // First load the old parent itself
+            loadReferenceHistoryValue(c, value).then((oldParent) => {
+              if (!oldParent) return undefined;
               // And then resolve its fieldName=parentsRecursive
               const oldParentRecursiveParents = (oldParent as any)[fieldName];
               return oldParentRecursiveParents.load().then((parents: any) => {
@@ -611,7 +620,7 @@ export interface ReactiveTarget {
   path: string[];
 }
 
-function maybeApplyTypeFilter(loadPromise: Promise<Entity | Entity[]>, viaType: string | undefined) {
+function maybeApplyTypeFilter(loadPromise: Promise<Entity | Entity[] | undefined>, viaType: string | undefined) {
   if (viaType) {
     return loadPromise.then((loaded) => {
       if (Array.isArray(loaded)) {
@@ -626,17 +635,22 @@ function maybeApplyTypeFilter(loadPromise: Promise<Entity | Entity[]>, viaType: 
   return loadPromise;
 }
 
-/** Handle `viaType` filtering with subtype awareness. */
-function isTypeOrSubType(entity: Entity, typeName: string): boolean {
+/** Loads a remembered reference value so reverse-hint walking can revisit it. */
+function loadReferenceHistoryValue(entity: Entity, value: any): Promise<Entity | undefined> {
+  if (isEntity(value)) return Promise.resolve(value);
+  if (isId(value)) return entity.em.load(value) as Promise<Entity>;
+  return Promise.resolve(undefined);
+}
+
+/** Returns true if `entity` is exactly `typeName` or a subtype of `typeName`.
+ *
+ * Used to honor poly/type filters like `@Publisher` during reverse-hint walks:
+ * a `SmallPublisher` entity should pass an `@Publisher` filter because it is
+ * a Publisher via inheritance.
+ */
+export function isTypeOrSubType(entity: Entity, typeName: string): boolean {
   const meta = getMetadata(entity);
-  // Easy check for the name is the same
-  if (meta.type === typeName) return true;
-  // Otherwise see if the entity is a subtype of the typeName, i.e. if our poly/type
-  // filter is `@Publisher`, and we're a `SmallPublisher`, that's valid to traverse.
-  for (const other of getSubMetas(getMetadataForType(typeName))) {
-    if (other.type === typeName) return true;
-  }
-  return false;
+  return meta.type === typeName || meta.baseTypes.some((b) => b.type === typeName);
 }
 
 export function isPolyHint(key: string): boolean {

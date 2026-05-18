@@ -2,6 +2,7 @@ import { insertAuthor, insertBook, insertComment, insertPublisher, insertTag } f
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 import { zeroTo } from "src/utils";
 import { Author, Book, Comment, Publisher, Tag, newAuthor, newBook, newPublisher, newTag } from "./entities";
+import { jan1 } from "./testDates";
 
 describe("EntityManager.findOrCreate", () => {
   it("can find with findOrCreate", async () => {
@@ -113,6 +114,18 @@ describe("EntityManager.findOrCreate", () => {
     expect(a.id).toEqual("a:1");
     expect(a.lastName).toEqual("l");
     expect(a.age).toBeUndefined();
+  });
+
+  it("resurrects soft-deleted rows with findOrCreate", async () => {
+    await insertAuthor({ first_name: "a1", ssn: "123", deleted_at: jan1 });
+    const em = newEntityManager();
+
+    const a = await em.findOrCreate(Author, { ssn: "123" }, {}, { firstName: "a2" });
+    expect(a).toMatchEntity({ id: "a:1", firstName: "a2" });
+    await em.flush();
+
+    const rows = await em.find(Author, { ssn: "123" }, { softDeletes: "include" });
+    expect(rows).toMatchEntity([{ id: "a:1", deletedAt: undefined }]);
   });
 
   it("findOrCreate doesn't compile if required field is missing", async () => {

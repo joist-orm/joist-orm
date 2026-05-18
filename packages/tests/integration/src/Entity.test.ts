@@ -135,7 +135,7 @@ describe("Entity", () => {
       const a1 = em.create(Author, { firstName: "a1" });
       expect(() => {
         a1.set({ latestComments: [] } as any);
-      }).toThrow("Invalid argument, cannot set over latestComments AsyncPropertyImpl");
+      }).toThrow("Invalid argument, cannot set over latestComments PropertyImpl");
     });
 
     it("cannot set over an hasOneDerived relation", async () => {

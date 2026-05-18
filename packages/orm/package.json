@@ -114,11 +114,11 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^24.6.0",
-    "@types/pg": "^8.15.5",
-    "prettier": "^3.6.2",
+    "@types/node": "^24.12.4",
+    "@types/pg": "^8.20.0",
+    "prettier": "^3.8.3",
     "prettier-plugin-organize-imports": "^4.3.0",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "5.9.2"
+    "typescript": "5.9.3"
   }
 }

@@ -1,4 +1,12 @@
-import { ColumnCondition, ParsedExpressionFilter, ParsedFindQuery, RawCondition, parseAlias } from "./QueryParser";
+import {
+  ColumnCondition,
+  ExistsCondition,
+  JoinTable,
+  ParsedExpressionFilter,
+  ParsedFindQuery,
+  RawCondition,
+  parseAlias,
+} from "./QueryParser";
 import { assertNever } from "./utils";
 
 // Remove any joins that are not used in the select or conditions
@@ -14,36 +22,47 @@ export function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[])
       // Recurse into lateral joins...
       todo.push(...t.query.tables);
     } else if (t.join === "cross") {
-      // Doesn't have any conditions
-    } else if (t.join !== "primary") {
-      dt.addAlias(t.alias, [parseAlias(t.col1)]);
+      dt.markRequired(t.alias);
+    } else if (t.join === "primary") {
+      dt.markRequired(t.alias);
+    } else if (parsed.ctes?.some((cte) => cte.alias === t.table)) {
+      dt.addAlias(t.alias, joinDependencies(t));
+      dt.markRequired(t.alias);
+    } else {
+      dt.addAlias(t.alias, joinDependencies(t));
     }
   }
 
   // Mark all terminal usages
   parsed.selects.forEach((s) => {
     if (typeof s === "string") {
-      if (!s.includes("count(")) dt.markRequired(parseAlias(s));
-    } else {
+      markSelectAliases(dt, parsed, s);
+    } else if ("aliases" in s) {
       for (const a of s.aliases) dt.markRequired(a);
+      markSelectAliases(dt, parsed, s.sql);
     }
   });
   parsed.orderBys.forEach((o) => dt.markRequired(o.alias));
+  parsed.groupBys?.forEach((g) => dt.markRequired(g.alias));
   keepAliases.forEach((a) => dt.markRequired(a));
   // Look recursively into CTE & lateral join conditions
-  const todo2 = [parsed];
+  const todo2 = [{ query: parsed, filterPruneable: true }];
   while (todo2.length > 0) {
-    const query = todo2.pop()!;
-    deepFindConditions(query.condition, true).forEach((c) => {
+    const { query, filterPruneable } = todo2.pop()!;
+    deepFindConditions(query.condition, filterPruneable).forEach((c) => {
       if (c.kind === "column") {
         dt.markRequired(c.alias);
       } else if (c.kind === "raw") {
         for (const alias of c.aliases) dt.markRequired(alias);
+      } else if (c.kind === "exists") {
+        for (const alias of c.outerAliases) dt.markRequired(alias);
       } else {
         assertNever(c);
       }
     });
-    todo2.push(...query.tables.filter((t) => t.join === "lateral").map((t) => t.query));
+    todo2.push(
+      ...query.tables.filter((t) => t.join === "lateral").map((t) => ({ query: t.query, filterPruneable: false })),
+    );
   }
 
   // Now remove any unused joins
@@ -68,13 +87,76 @@ export function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[])
   }
 }
 
+/** Returns the aliases needed to evaluate a join's ON clause, excluding the joined alias itself. */
+function joinDependencies(t: JoinTable): string[] {
+  return [parseAlias(t.col1), parseAlias(t.col2)].filter((alias) => alias !== t.alias);
+}
+
+/** Marks aliases used by select strings, including generated CTI expressions like `COALESCE(st0.col, st1.col)`. */
+function markSelectAliases(dt: DependencyTracker, parsed: ParsedFindQuery, select: string): void {
+  for (const table of parsed.tables) {
+    if (selectReferencesAlias(select, table.alias)) {
+      dt.markRequired(table.alias);
+    }
+  }
+}
+
+/** Returns true if a raw select expression references `alias.column` or the whole-row `alias`. */
+export function selectReferencesAlias(select: string, alias: string): boolean {
+  // Most selects are simple `a.*`, but CTI adds expressions like
+  // `COALESCE(p_s0.shared_column, p_s1.shared_column) as shared_column`.
+  // Those expressions must keep the subtype joins, but `parseAlias` only sees
+  // the leading function name. Instead of parsing SQL, scan for the only alias
+  // forms Joist generates in selects: `alias.column`, `"alias".column`, and whole-row aliases.
+  return (
+    selectReferencesCandidate(select, `${alias}.`) ||
+    selectReferencesCandidate(select, `"${alias}".`) ||
+    selectReferencesCandidate(select, alias) ||
+    selectReferencesCandidate(select, `"${alias}"`)
+  );
+}
+
+/**
+ * Returns true when `candidate` is present at a SQL identifier boundary.
+ *
+ * Scans the select string for literal candidate matches, then verifies the characters before/after the match are not
+ * part of a larger identifier or dotted path. I.e. `row_to_json("ap")` matches, but `foo_"ap"` and `foo.ap` do not.
+ */
+function selectReferencesCandidate(select: string, candidate: string): boolean {
+  let index = select.indexOf(candidate);
+  const quoted = candidate.startsWith('"');
+  while (index !== -1) {
+    // Each loop inspects one literal occurrence of `candidate`, then either accepts it as a real alias reference or
+    // advances to the next occurrence if the surrounding characters show it is part of a larger token.
+    // Avoid treating `foo.a.id` as a reference to `a`; Joist-generated aliases
+    // appear at the start of an expression or after punctuation/whitespace.
+    const previous = select[index - 1];
+    const next = select[index + candidate.length];
+    if (
+      (index === 0 || (previous !== "." && !isSqlIdentifierChar(previous))) &&
+      !isSqlIdentifierChar(next) &&
+      (quoted || (previous !== '"' && next !== '"'))
+    ) {
+      return true;
+    }
+    // Continue scanning after the current occurrence; `indexOf` returns -1 once there are no more candidates.
+    index = select.indexOf(candidate, index + candidate.length);
+  }
+  return false;
+}
+
+/** Returns true for characters that can be part of an unquoted SQL identifier. */
+function isSqlIdentifierChar(char: string | undefined): boolean {
+  return char !== undefined && /[A-Za-z0-9_]/.test(char);
+}
+
 /** Pulls out a flat list of all `ColumnCondition`s from a `ParsedExpressionFilter` tree. */
 export function deepFindConditions(
   condition: ParsedExpressionFilter | undefined,
   filterPruneable: boolean,
-): (ColumnCondition | RawCondition)[] {
+): (ColumnCondition | RawCondition | ExistsCondition)[] {
   const todo = condition ? [condition] : [];
-  const result: (ColumnCondition | RawCondition)[] = [];
+  const result: (ColumnCondition | RawCondition | ExistsCondition)[] = [];
   while (todo.length !== 0) {
     const cc = todo.pop()!;
     for (const c of cc.conditions) {
@@ -82,6 +164,8 @@ export function deepFindConditions(
         todo.push(c);
       } else if (c.kind === "column" || c.kind === "raw") {
         if (!filterPruneable || !c.pruneable) result.push(c);
+      } else if (c.kind === "exists") {
+        result.push(c);
       } else {
         assertNever(c);
       }

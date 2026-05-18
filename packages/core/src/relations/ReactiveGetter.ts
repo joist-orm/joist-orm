@@ -1,12 +1,12 @@
 import { Entity } from "../Entity";
 import { lazyField } from "../newEntity";
 import { Reacted, ShallowReactiveHint } from "../reactiveHints";
-import { AsyncPropertyT } from "./hasAsyncProperty";
+import { PropertyT } from "./hasProperty";
 
 /**
  * A `ReactiveGetter` is a getter that declares what primitive fields it depends on.
  *
- * This is very similar to a `ReactiveAsyncProperty`, except because it's limited to
+ * This is very similar to a `ReactiveProperty`, except because it's limited to
  * only immediate fields on the entity, it can always have `.get` called, and doesn't
  * need to be loaded.
  *
@@ -15,7 +15,7 @@ import { AsyncPropertyT } from "./hasAsyncProperty";
  * to access getter, and risk missing reactivity.
  */
 export interface ReactiveGetter<T extends Entity, V> {
-  [AsyncPropertyT]: T;
+  [PropertyT]: T;
   get: V;
 }
 
@@ -54,10 +54,10 @@ export class ReactiveGetterImpl<T extends Entity, const H extends ShallowReactiv
     return this.#hint;
   }
 
-  [AsyncPropertyT] = undefined as any as T;
+  [PropertyT] = undefined as any as T;
 }
 
-/** Type guard utility for determining if an entity field is an AsyncProperty. */
+/** Type guard utility for determining if an entity field is a ReactiveGetter. */
 export function isReactiveGetter(maybeReactiveGetter: any): maybeReactiveGetter is ReactiveGetter<any, any> {
   return maybeReactiveGetter instanceof ReactiveGetterImpl;
 }

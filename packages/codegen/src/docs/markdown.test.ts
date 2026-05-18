@@ -1,4 +1,7 @@
-import { parseMarkdownContent, testing } from "./markdown";
+import { promises as fs } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
+import { parseMarkdownContent, testing, writeMarkdownDoc } from "./markdown";
 const { mergeMarkdownContent } = testing;
 
 describe("markdown", () => {
@@ -261,6 +264,47 @@ describe("markdown", () => {
       );
       const result = mergeMarkdownContent(existing, undefined, {});
       expect(result).toBe(existing);
+    });
+  });
+
+  describe("writeMarkdownDoc", () => {
+    it("formats generated markdown", async () => {
+      const testDir = await fs.mkdtemp(join(tmpdir(), "joist-markdown-test-"));
+      try {
+        const filePath = join(testDir, "Author.md");
+
+        await writeMarkdownDoc(filePath, "The Author entity.", {
+          status: [
+            "The current status. Possible values:",
+            "",
+            "| Value | Meaning |",
+            "|-------|---------|",
+            "| ACTIVE | Currently active |",
+          ].join("\n"),
+        });
+
+        const result = await fs.readFile(filePath, "utf-8");
+        expect(result).toBe(
+          [
+            "## Overview",
+            "",
+            "The Author entity.",
+            "",
+            "## Fields",
+            "",
+            "### status",
+            "",
+            "The current status. Possible values:",
+            "",
+            "| Value  | Meaning          |",
+            "| ------ | ---------------- |",
+            "| ACTIVE | Currently active |",
+            "",
+          ].join("\n"),
+        );
+      } finally {
+        await fs.rm(testDir, { recursive: true, force: true });
+      }
     });
   });
 });

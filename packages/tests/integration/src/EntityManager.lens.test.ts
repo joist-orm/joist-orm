@@ -343,6 +343,25 @@ describe("EntityManager.lens", () => {
       expect(em.entities.length).toBe(2);
     });
 
+    it("fails when sql lens load hits the entityLimit", async () => {
+      // Given one publisher with two authors, each with two books (4 books total)
+      await insertPublisher({ name: "p1" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertAuthor({ first_name: "a2", publisher_id: 1 });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1 });
+      await insertBook({ title: "b3", author_id: 2 });
+      await insertBook({ title: "b4", author_id: 2 });
+      const em = newEntityManager();
+      const p1 = await em.load(Publisher, "p:1");
+      // Pre-load all books so hydrate won't create new entities
+      await em.loadAll(Book, ["b:1", "b:2", "b:3", "b:4"]);
+      // Now lower the limit so the multi-step lens SQL query (4 rows) hits the LIMIT
+      em.entityLimit = 4;
+      const result = p1.load((p) => p.authors.books, { sql: true });
+      await expect(result).rejects.toThrow("Query returned more than 4 entityLimit rows");
+    });
+
     it("has isAllSql", () => {
       expect(isAllSqlPaths(getMetadata(Book), ["author"])).toBe(true);
       expect(isAllSqlPaths(getMetadata(Book), ["author", "publisher"])).toBe(true);

@@ -27,11 +27,27 @@ export function visitConditions(query: ParsedFindQuery, visitor: Visitor): void 
   while (todo.length > 0) {
     const query = todo.pop()!;
     if (query.condition) visitFilter(query.condition, visitor);
+    // Recurse into lateral subqueries (used by batching/preloading, not EXISTS rewrite)
     for (const table of query.tables) {
       if (table.join === "lateral") {
         todo.push(table.query);
       }
     }
+    // Recurse into EXISTS subqueries so batching visitors can rewrite conditions inside them
+    if (query.condition) {
+      visitExistsSubqueries(query.condition, todo);
+    }
+  }
+}
+
+/** Finds ExistsCondition nodes in a condition tree and pushes their subqueries onto the todo list. */
+function visitExistsSubqueries(condition: ParsedExpressionCondition, todo: ParsedFindQuery[]): void {
+  if (condition.kind === "exp") {
+    for (const c of condition.conditions) {
+      visitExistsSubqueries(c, todo);
+    }
+  } else if (condition.kind === "exists") {
+    todo.push(condition.subquery);
   }
 }
 
@@ -62,6 +78,8 @@ export function visitFilter(pc: ParsedExpressionCondition, visitor: Visitor) {
         } else if (result) {
           pc.conditions[i] = result;
         }
+      } else if (c.kind === "exists") {
+        // EXISTS conditions are visited via visitExistsSubqueries, not inline
       } else {
         assertNever(c);
       }
@@ -78,6 +96,8 @@ export function visitFilter(pc: ParsedExpressionCondition, visitor: Visitor) {
     if (result || result === null) {
       throw new Error("ParsedExpressionCondition overload not support mutating the condition");
     }
+  } else if (pc.kind === "exists") {
+    // EXISTS conditions are handled at the query level
   } else {
     assertNever(pc);
   }

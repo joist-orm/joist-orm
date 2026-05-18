@@ -157,6 +157,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "numberOfPublicReviews2": { kind: "primitive", fieldName: "numberOfPublicReviews2", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "number", serde: new PrimitiveSerde("numberOfPublicReviews2", "numberOfPublicReviews2", "int"), immutable: false },
     "tagsOfAllBooks": { kind: "primitive", fieldName: "tagsOfAllBooks", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("tagsOfAllBooks", "tags_of_all_books", "character varying"), immutable: false },
     "search": { kind: "primitive", fieldName: "search", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("search", "search", "text"), immutable: false },
+    "imageFileName": { kind: "primitive", fieldName: "imageFileName", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("imageFileName", "image_file_name", "text"), immutable: false },
     "certificate": { kind: "primitive", fieldName: "certificate", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Uint8Array", serde: new PrimitiveSerde("certificate", "certificate", "bytea"), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
@@ -189,6 +190,7 @@ export const authorMeta: EntityMetadata<Author> = {
   factory: newAuthor,
   baseTypes: [],
   subTypes: [],
+  uniqueBy: [["ssn"], ["currentDraftBook"]],
 };
 
 (Author as any).metadata = authorMeta;
@@ -294,6 +296,7 @@ export const bookMeta: EntityMetadata<Book> = {
   factory: newBook,
   baseTypes: [],
   subTypes: [],
+  uniqueBy: [["author", "title"], ["prequel"]],
 };
 
 (Book as any).metadata = bookMeta;
@@ -533,6 +536,7 @@ export const criticColumnMeta: EntityMetadata<CriticColumn> = {
   factory: newCriticColumn,
   baseTypes: [],
   subTypes: [],
+  uniqueBy: [["critic"]],
 };
 
 (CriticColumn as any).metadata = criticColumnMeta;
@@ -562,6 +566,7 @@ export const imageMeta: EntityMetadata<Image> = {
   factory: newImage,
   baseTypes: [],
   subTypes: [],
+  uniqueBy: [["author"], ["book"]],
 };
 
 (Image as any).metadata = imageMeta;
@@ -923,6 +928,7 @@ export const userMeta: EntityMetadata<User> = {
   factory: newUser,
   baseTypes: [],
   subTypes: [],
+  uniqueBy: [["authorManyToOne"]],
 };
 
 (User as any).metadata = userMeta;

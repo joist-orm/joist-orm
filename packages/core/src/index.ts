@@ -10,10 +10,10 @@ import { New } from "./loadHints";
 import { isAllSqlPaths } from "./loadLens";
 import { FactoryInitialValue } from "./newTestInstance";
 import { partitionHint } from "./preloading/partitionHint";
-import { isAsyncProperty, isReactiveField, isReactiveGetter, isReactiveQueryField } from "./relations";
+import { isAsyncProperty, isAsyncReactiveField, isProperty, isReactiveField, isReactiveGetter } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { ReactiveFieldImpl } from "./relations/ReactiveField";
-import { ReactiveQueryFieldImpl } from "./relations/ReactiveQueryField";
+import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField";
 import { OptsOf } from "./typeMap";
 import { fail } from "./utils";
 
@@ -37,6 +37,7 @@ export { JoinRow, JoinRowOperation, ManyToManyLike } from "./JoinRows";
 export * from "./PendingChanges";
 export { Plugin } from "./PluginManager";
 export * from "./QueryParser";
+export * from "./QueryParser.collectionJoins";
 export { visitConditions } from "./QueryVisitor";
 export { JoinRowTodo, Todo } from "./Todo";
 export * from "./changes";
@@ -97,6 +98,7 @@ export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlu
 export { JsonAggregatePreloader } from "./preloading/JsonAggregatePreloader";
 export {
   convertToLoadHint,
+  isTypeOrSubType,
   Reactable,
   Reacted,
   ReactiveHint,
@@ -219,13 +221,13 @@ export function setOpt<T extends Entity>(
     } else {
       current.set(value);
     }
-  } else if (isAsyncProperty(current) || isReactiveGetter(current)) {
+  } else if (isProperty(current) || isAsyncProperty(current) || isReactiveGetter(current)) {
     throw new Error(`Invalid argument, cannot set over ${key} ${current.constructor.name}`);
-  } else if (isReactiveField(current) || isReactiveQueryField(current)) {
+  } else if (isReactiveField(current) || isAsyncReactiveField(current)) {
     if (value instanceof FactoryInitialValue) {
       if (current instanceof ReactiveFieldImpl) {
         current.setFactoryValue(value.value);
-      } else if (current instanceof ReactiveQueryFieldImpl) {
+      } else if (current instanceof AsyncReactiveFieldImpl) {
         current.setFactoryValue(value.value);
       } else {
         throw new Error(`Unhandled case ${current.constructor.name}`);

@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import { join } from "path";
+import prettier, { resolveConfig } from "prettier";
 
 export interface ParsedDoc {
   overview: string;
@@ -88,7 +89,14 @@ export async function writeMarkdownDoc(
     }
   }
 
-  await fs.writeFile(filePath, parts.join("\n"), "utf-8");
+  const prettierConfig = await resolveConfig(filePath);
+  const content = await prettier.format(parts.join("\n"), {
+    ...prettierConfig,
+    parser: "markdown",
+    plugins: [],
+  });
+
+  await fs.writeFile(filePath, content, "utf-8");
 }
 
 /**

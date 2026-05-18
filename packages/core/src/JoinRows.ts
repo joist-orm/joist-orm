@@ -239,7 +239,7 @@ export interface JoinRow {
    * Whether our relation has been processed or not.
    *
    * - `pending` means we've not flushed it to the Database
-   * - `flushed` means we've flushed but `em.flush` hasn't fully completed yet, likely due to ReactiveQueryField calcs
+   * - `flushed` means we've flushed but `em.flush` hasn't fully completed yet, likely due to AsyncReactiveField calcs
    * - `completed` means we've been flushed and `em.flush` has completed
    */
   op: JoinRowOperation;
@@ -285,7 +285,11 @@ class ManyToManyIndex {
   getOthers(columnName: string, entity: Entity): JoinRow[] {
     // It's empty m2m collection won't have any other entities, and so no index entries
     const map = this.indexes[columnName].get(entity);
-    return map ? Array.from(map.values()) : [];
+    if (!map) return [];
+    // Sort by join-row id for a stable order regardless of how many batches contributed
+    // rows — the underlying Map preserves insertion order, which depends on DataLoader
+    // timing and is non-deterministic across processes. New rows (id === undefined) sort last.
+    return Array.from(map.values()).sort((a, b) => (a.id ?? Infinity) - (b.id ?? Infinity));
   }
 
   #doAdd(index: Map<Entity, Map<Entity, JoinRow>>, e1: Entity, e2: Entity, value: JoinRow): void {

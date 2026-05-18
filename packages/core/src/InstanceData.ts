@@ -16,13 +16,15 @@ export class InstanceData {
   data: Record<string, any>;
   /** A bag to keep the original values, lazily populated as fields are mutated. */
   originalData: Record<any, any> = {};
-  /** A bag to keep the flushed-to-database values, only for ReactiveQueryField reactivity. */
+  /** Reference values that were set through during this unit of work and may need reverse-walking. */
+  readonly referenceHistory: Record<string, any[]> = {};
+  /** A bag to keep the flushed-to-database values, only for AsyncReactiveField reactivity. */
   flushedData: Record<any, any> | undefined;
   /**
    * Whether our entity has been deleted or not.
    *
    * - `pending` means we've been marked for deletion via `em.delete` but not issued a `DELETE`
-   * - `flushed` means we've flushed a `DELETE` but `em.flush` hasn't fully completed yet, likely due to ReactiveQueryField calcs
+   * - `flushed` means we've flushed a `DELETE` but `em.flush` hasn't fully completed yet, likely due to AsyncReactiveField calcs
    * - `deleted` means we've been flushed and `em.flush` has completed
    */
   #deleted?: Operation;
@@ -58,6 +60,7 @@ export class InstanceData {
 
   resetAfterFlushed() {
     this.originalData = {};
+    for (const fieldName of Object.keys(this.referenceHistory)) delete this.referenceHistory[fieldName];
     this.flushedData = undefined;
     this.isTouched = false;
     if (this.#new === Operation.Pending || this.#new === Operation.Flushed) {
@@ -117,13 +120,22 @@ export class InstanceData {
   /** Called by `em.delete`, returns true if this is new information. */
   markDeleted(entity: Entity): boolean {
     if (this.#deleted === undefined) {
-      // Let any OneToManyCollection.get caches know that they should recalc (i.e. their filterDeleted logic)
-      // by asserting the `deleteBook.author` field is changing.
-      //
-      // Technically, the o2m caches use the "naive" cache, so we don't really need to pass along the field.
+      // Let any OneToManyCollection/ReactiveField/ReactiveReference.get caches know that they should recalc
+      // (i.e. their filterDeleted logic) by asserting the `deleteBook.author` field is changing.
       for (const field of Object.values(this.metadata.allFields)) {
-        if (field.kind === "m2o") {
+        // We only do reference/collection fields and skip the primitives, b/c we assume something like
+        // `{ books: "title" }` doesn't need `resetIsLoaded(..., "title")` b/c the same hint will also
+        // be watching "did books change", and so get reset that way.
+        if (field.kind === "m2o" || field.kind === "poly" || field.kind === "m2m") {
           getEmInternalApi(this.em).isLoadedCache.resetIsLoaded(entity, field.fieldName);
+        } else if (field.kind === "primitive" || field.kind === "enum" || field.kind === "primaryKey") {
+          // Any reactable watching these fields will also be watching reference/collection
+        } else if (field.kind === "o2m" || field.kind === "o2o") {
+          // Any reactable watching these actually gets triggered by the primary m2o/poly side changing
+        } else if (field.kind === "lo2m") {
+          // Doesn't support reactivity
+        } else {
+          throw new Error(`Unhandled field kind ${field}`);
         }
       }
       this.#deleted = Operation.Pending;
@@ -135,6 +147,18 @@ export class InstanceData {
   fixupCreatedThenDeleted(): void {
     // Ideally we could do this via `resetAfterFlushed`?
     this.#deleted = Operation.Complete;
+  }
+
+  /** Remembers a reference value that may need to be reverse-walked later. */
+  rememberReferenceValue(fieldName: string, value: any): void {
+    if (value === undefined) return;
+    const values = (this.referenceHistory[fieldName] ??= []);
+    if (!values.includes(value)) values.push(value);
+  }
+
+  /** Returns reference values that may need to be reverse-walked later. */
+  getReferenceHistory(fieldName: string): readonly any[] {
+    return this.referenceHistory[fieldName] ?? [];
   }
 
   get isDeletedAndFlushed(): boolean {

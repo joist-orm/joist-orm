@@ -1,7 +1,35 @@
-import { config, Config, FieldConfig, isFieldIgnored } from "./config";
+import { mkdtemp, readFile, rm, writeFile } from "fs/promises";
+import { tmpdir } from "os";
+import path from "path";
+import { config, type Config, type FieldConfig, isFieldIgnored, loadConfig, writeConfig } from "./config";
 import { makeEntity } from "./EntityDbMetadata";
 
 describe("config", () => {
+  it("defaults existing configs to codemod version 0", () => {
+    expect(config.parse({}).codemodVersion).toEqual(0);
+  });
+
+  it("loads and rewrites legacy configs without the deprecated version key", async () => {
+    const originalCwd = process.cwd();
+    const dir = await mkdtemp(path.join(tmpdir(), "joist-config-"));
+
+    try {
+      process.chdir(dir);
+      await writeFile("joist-config.json", JSON.stringify({ version: "2.0.3" }));
+
+      const loaded = await loadConfig();
+      expect(loaded.codemodVersion).toEqual(0);
+
+      await writeConfig(loaded);
+      const written = JSON.parse((await readFile("joist-config.json")).toString()) as Record<string, unknown>;
+      expect(written).toMatchObject({ codemodVersion: 0 });
+      expect("version" in written).toEqual(false);
+    } finally {
+      process.chdir(originalCwd);
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   describe("isFieldIgnored", () => {
     // A little hack to test the case of `ignore: false`, since it is actually defined as `ignore?: true`
     const falseAsTrue = false as boolean as true;

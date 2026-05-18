@@ -47,6 +47,8 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
     }
   `;
   const maybeInsertionOrder = meta.nonDeferredFkOrder !== 0 ? `nonDeferredFkOrder: ${meta.nonDeferredFkOrder},` : ``;
+  const uniqueBy = getUniqueBy(config, meta);
+  const maybeUniqueBy = uniqueBy.length > 0 ? code`uniqueBy: ${JSON.stringify(uniqueBy)},` : code``;
 
   return code`
     export const ${entity.metaName}: ${EntityMetadata}<${entity.name}> = {
@@ -64,12 +66,23 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       config: ${entity.configConst},
       factory: ${imp(`new${entity.name}@./entities.ts`)},
       baseTypes: [],
-      subTypes: [],
-      ${maybeInsertionOrder}
+      subTypes: [], ${maybeInsertionOrder} ${maybeUniqueBy}
     };
 
     (${entity.typeForMetadataFile} as any).metadata = ${entity.metaName};
   `;
+}
+
+/** Returns configured identities plus conservative database-backed unique identities. */
+function getUniqueBy(config: Config, meta: EntityDbMetadata): string[][] {
+  const uniqueBy = config.entities[meta.name]?.uniqueBy ?? [];
+  const seen = new Set<string>();
+  return [...uniqueBy, ...(meta.uniqueConstraints ?? [])].filter((fields) => {
+    const key = fields.join("\u0000");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<string, Code> {

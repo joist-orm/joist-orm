@@ -6,6 +6,7 @@ import { setField } from "./fields";
 import { normalizeHint } from "./normalizeHints";
 import { convertToLoadHint, ReactiveHint } from "./reactiveHints";
 import { isLoadedReference } from "./relations/index";
+import { runInTrustedContext } from "./trusted";
 import { fail, failIfAnyRejected } from "./utils";
 
 export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolean {
@@ -16,46 +17,48 @@ export function hasDefaultValue(meta: EntityMetadata, fieldName: string): boolea
 
 /** Run the sync defaults for `entity`. */
 export function setSyncDefaults(entity: Entity): void {
-  const meta = getMetadata(entity);
-  // Allow subtypes to override base setDefaults
-  const syncDefaults: Record<string, any> = getBaseAndSelfMetas(meta).reduce(
-    (acc, m) => ({ ...acc, ...m.config.__data.syncDefaults }),
-    {},
-  );
-  for (const [fieldName, maybeFn] of Object.entries(syncDefaults)) {
-    const field = meta.allFields[fieldName];
-    // Use allFields in case a subtype sets a default for one of its base fields
-    if (
-      (field.kind === "primitive" || field.kind === "enum") &&
-      (field as PrimitiveField | EnumField).derived === "async"
-    ) {
-      // If this is a ReactiveQueryField, we want to push in a default, but setOpts is called
-      // from the codegen constructor, so the user-defined `hasReactiveQueryField` fields will
-      // not have been initialized yet (i.e. `entity[field]` will be undefined and not yet an
-      // `instanceof ReactiveQueryField`). Thankfully we can just use setField.
-      const value = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
-      setField(entity, fieldName, value);
-    } else if (!isRelation(field)) {
-      const hasBeenSet = fieldName in getInstanceData(entity).data;
-      if (!hasBeenSet) {
+  return runInTrustedContext(() => {
+    const meta = getMetadata(entity);
+    // Allow subtypes to override base setDefaults
+    const syncDefaults: Record<string, any> = getBaseAndSelfMetas(meta).reduce(
+      (acc, m) => ({ ...acc, ...m.config.__data.syncDefaults }),
+      {},
+    );
+    for (const [fieldName, maybeFn] of Object.entries(syncDefaults)) {
+      const field = meta.allFields[fieldName];
+      // Use allFields in case a subtype sets a default for one of its base fields
+      if (
+        (field.kind === "primitive" || field.kind === "enum") &&
+        (field as PrimitiveField | EnumField).derived === "async"
+      ) {
+        // If this is an AsyncReactiveField, we want to push in a default, but setOpts is called
+        // from the codegen constructor, so the user-defined `hasAsyncReactiveField` fields will
+        // not have been initialized yet (i.e. `entity[field]` will be undefined and not yet an
+        // `instanceof AsyncReactiveField`). Thankfully we can just use setField.
         const value = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
-        // If the value is undefined, leave it unset, so that a default invoked during
-        // the constructor being called (before any other opts are set) can be called
-        // again during `em.flush` and get an opportunity to observe other fields.
-        if (value !== undefined) {
-          (entity as any)[fieldName] = value;
+        setField(entity, fieldName, value);
+      } else if (!isRelation(field)) {
+        const hasBeenSet = fieldName in getInstanceData(entity).data;
+        if (!hasBeenSet) {
+          const value = maybeFn instanceof Function ? maybeFn(entity) : maybeFn;
+          // If the value is undefined, leave it unset, so that a default invoked during
+          // the constructor being called (before any other opts are set) can be called
+          // again during `em.flush` and get an opportunity to observe other fields.
+          if (value !== undefined) {
+            (entity as any)[fieldName] = value;
+          }
+        }
+      } else {
+        const value = (entity as any)[fieldName];
+        if (isLoadedReference(value) && !value.isSet && !value.hasBeenSet) {
+          // A sync default usually would never be for a reference, because reference defaults usually
+          // require a field hint (so would be async) to get "the other entity". However, something like:
+          // `config.setDefault("original", (self) => self);` is technically valid.
+          value.set(maybeFn instanceof Function ? maybeFn(entity) : maybeFn);
         }
       }
-    } else {
-      const value = (entity as any)[fieldName];
-      if (isLoadedReference(value) && !value.isSet && !value.hasBeenSet) {
-        // A sync default usually would never be for a reference, because reference defaults usually
-        // require a field hint (so would be async) to get "the other entity". However, something like:
-        // `config.setDefault("original", (self) => self);` is technically valid.
-        value.set(maybeFn instanceof Function ? maybeFn(entity) : maybeFn);
-      }
     }
-  }
+  });
 }
 
 /** Runs the async defaults for all inserted entities in `todos`. */
@@ -67,24 +70,28 @@ export async function setAsyncDefaults(
   // as bulk calls.
   insertsBySubType: Map<EntityMetadata, Entity[]>,
 ): Promise<void> {
-  const dt = new DependencyTracker(insertsBySubType);
-  const results = await Promise.allSettled(
-    [...insertsBySubType.entries()].flatMap(([meta, inserts]) => {
-      // configure will have copy/pasted base defaults into our config, so we can loop over it directly
-      return Object.values(meta.config.__data.asyncDefaults).map((df) =>
-        df.setOnEntities(ctx, dt, suppressedTypeErrors, meta, inserts),
-      );
-    }),
-  );
-  failIfAnyRejected(results);
+  return runInTrustedContext(async () => {
+    const dt = new DependencyTracker(insertsBySubType);
+    const results = await Promise.allSettled(
+      [...insertsBySubType.entries()].flatMap(([meta, inserts]) => {
+        // configure will have copy/pasted base defaults into our config, so we can loop over it directly
+        return Object.values(meta.config.__data.asyncDefaults).map((df) =>
+          df.setOnEntities(ctx, dt, suppressedTypeErrors, meta, inserts),
+        );
+      }),
+    );
+    failIfAnyRejected(results);
+  });
 }
 
 /** Sets async defaults *synchronously*, only safe for factories with `DeepNew` entities. */
 export function setAsyncDefaultsSynchronously(ctx: unknown, entity: Entity): void {
-  // configure will have copy/pasted base defaults into our config, so we can loop over it directly
-  for (const df of Object.values(getMetadata(entity).config.__data.asyncDefaults)) {
-    df.setOnFactoryEntity(ctx, entity);
-  }
+  return runInTrustedContext(() => {
+    // configure will have copy/pasted base defaults into our config, so we can loop over it directly
+    for (const df of Object.values(getMetadata(entity).config.__data.asyncDefaults)) {
+      df.setOnFactoryEntity(ctx, entity);
+    }
+  });
 }
 
 /** Wraps the hint + lambda of an async `setDefault`. */

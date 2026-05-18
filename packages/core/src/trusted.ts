@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from "async_hooks";
 
 const trustedContext = new AsyncLocalStorage<boolean>();
 
-/** Returns true if we're inside a trusted context (reactive field recalculation or validation). */
+/** Returns true if we're inside a trusted context, i.e. hooks, reactions, validations, or defaults. */
 export function isInTrustedContext(): boolean {
   return trustedContext.getStore() === true;
 }

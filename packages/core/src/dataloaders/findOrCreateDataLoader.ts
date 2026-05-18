@@ -3,6 +3,7 @@ import { Entity, isEntity } from "../Entity";
 import { EntityConstructor, EntityManager, TooManyError, sameEntity } from "../EntityManager";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { ManyToOneReference, PolymorphicReference, isLoadedReference } from "../relations";
+import { resurrectIfSoftDeleted } from "../resurrection";
 import { OptsOf } from "../typeMap";
 import { cleanStringValue } from "../utils";
 import { whereFilterHash } from "./findDataLoader";
@@ -68,6 +69,7 @@ export function findOrCreateDataLoader<T extends Entity>(
         throw new TooManyError(`Found more than one existing ${type.name} with ${whereAsString(where)}`);
       } else if (inMemory.length === 1) {
         const entity = inMemory[0] as T;
+        resurrectIfSoftDeleted(entity);
         if (upsert) {
           entity.set(upsert);
         }
@@ -91,7 +93,8 @@ export function findOrCreateDataLoader<T extends Entity>(
           type,
           // Convert `publisher: undefined` --> `publisher: null`, and we need to make a copy anyway
           Object.fromEntries(Object.entries(where).map(([k, v]) => [k, v === undefined ? null : v])) as any,
-          { softDeletes },
+          // Always include soft-deleted rows so findOrCreate can resurrect them instead of creating duplicates.
+          { softDeletes: "include" },
         )
       ).filter((e) => !e.isDeletedEntity);
       let entity: T;
@@ -99,6 +102,7 @@ export function findOrCreateDataLoader<T extends Entity>(
         throw new TooManyError(`Found more than one existing ${type.name} with ${whereAsString(where)}`);
       } else if (entities.length === 1) {
         entity = entities[0];
+        resurrectIfSoftDeleted(entity);
       } else {
         entity = em.create(type, { ...where, ...(ifNew as object) } as OptsOf<T>);
       }

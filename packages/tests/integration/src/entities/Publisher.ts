@@ -1,14 +1,15 @@
 import {
-  AsyncProperty,
   cannotBeUpdated,
   Collection,
+  hasAsyncProperty,
   hasCustomCollection,
-  hasReactiveAsyncProperty,
   hasReactiveField,
-  hasReactiveQueryField,
+  hasReactiveProperty,
+  hasAsyncReactiveField,
   hasReactiveReference,
   isLoaded,
   Loaded,
+  Property,
   ReactiveField,
   ReactiveReference,
 } from "joist-orm";
@@ -44,7 +45,7 @@ export abstract class Publisher extends PublisherCodegen {
    * Example of a reactive query.
    * @generated Publisher.md
    */
-  readonly numberOfBookReviews: ReactiveField<Publisher, number> = hasReactiveQueryField(
+  readonly numberOfBookReviews: ReactiveField<Publisher, number> = hasAsyncReactiveField(
     // this hint will recalc + be available on `p`
     "id",
     // this hint will recalc + not be available on `p`
@@ -157,10 +158,18 @@ export abstract class Publisher extends PublisherCodegen {
   });
 
   /**
+   * Example of a hasAsyncProperty that counts authors via SQL.
+   * @generated Publisher.md
+   */
+  readonly numberOfAuthors: Property<Publisher, number> = hasAsyncProperty((p) =>
+    p.em.findCount(Author, { publisher: p.id }),
+  );
+
+  /**
    * For testing reacting to poly CommentParent properties.
    * @generated Publisher.md
    */
-  readonly commentParentInfo: AsyncProperty<Publisher, string> = hasReactiveAsyncProperty([], () => ``);
+  readonly commentParentInfo: Property<Publisher, string> = hasReactiveProperty([], () => ``);
 }
 
 config.afterMetadata((meta) => {
@@ -210,7 +219,7 @@ config.addRule({ authors: "numberOfBooks" }, (p) => {
   }
 });
 
-// Example of a reactive rule being fired by a ReactiveQueryField
+// Example of a reactive rule being fired by an AsyncReactiveField
 config.addRule(["name", "numberOfBookReviews"], (p) => {
   p.transientFields.numberOfBookReviewEvals++;
   if (p.name === "four" && p.numberOfBookReviews.get === 4) {
@@ -236,6 +245,12 @@ config.addRule({ authors_ro: { books_ro: { randomComment_ro: "text_ro" } }, name
     return "Publisher name cannot equal the comment text";
   }
 });
+
+// Reactive reaction on the CTI base whose `commentParentInfo_ro` hint recurses through a
+// subtype-overridden AsyncProperty whose own hint references subtype-only relations.
+// Used to verify `addRule`/`addReaction`'s wrappedFn does not leak a CTI subtype's load
+// hint into a sibling subtype's `em.populate` (issue: closure-cached `loadHint`).
+config.addReaction("ctiHintIsolation", { commentParentInfo_ro: {}, name: {} }, () => {});
 
 // For testing touchOnChange from base types
 config.touchOnChange("tags");

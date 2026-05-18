@@ -13,6 +13,8 @@ export type GraphQLFilterAndSettings<T extends Entity> = {
   limit?: number | null;
   offset?: number | null;
   softDeletes?: "exclude" | "include";
+  allowMultipleLeftJoins?: boolean;
+  optimizeJoinsToExists?: boolean;
 };
 
 /**

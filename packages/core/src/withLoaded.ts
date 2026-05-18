@@ -1,13 +1,13 @@
 import { Entity } from "./Entity";
 import { assertLoaded, Loaded, LoadHint } from "./loadHints";
 import {
-  isAsyncProperty,
-  isLoadedAsyncProperty,
   isLoadedCollection,
+  isLoadedProperty,
   isLoadedReference,
+  isProperty,
   isReactiveField,
   isReactiveGetter,
-  isReactiveQueryField,
+  isAsyncReactiveField,
   isRelation,
   LoadedCollection,
   LoadedProperty,
@@ -15,7 +15,7 @@ import {
   LoadedReference,
   PolymorphicReference,
 } from "./relations";
-import { isLoadedReactiveQueryField } from "./relations/ReactiveQueryField";
+import { isLoadedAsyncReactiveField } from "./relations/AsyncReactiveField";
 import { fail, MaybePromise, maybePromiseThen } from "./utils";
 
 // This type seems is overly complex for references, but it's necessary in order to ensure that potential
@@ -76,16 +76,16 @@ export function withLoaded<T extends Entity, H extends LoadHint<T>, L extends Lo
           const value: any = (target as any)[prop];
           if (
             isRelation(value) ||
-            isAsyncProperty(value) ||
+            isProperty(value) ||
             isReactiveField(value) ||
             isReactiveGetter(value) ||
-            isReactiveQueryField(value)
+            isAsyncReactiveField(value)
           ) {
             return isLoadedReference(value) ||
               isLoadedCollection(value) ||
-              isLoadedAsyncProperty(value) ||
+              isLoadedProperty(value) ||
               isReactiveField(value) ||
-              isLoadedReactiveQueryField(value) ||
+              isLoadedAsyncReactiveField(value) ||
               isReactiveGetter(value)
               ? value.get
               : fail(`${target}.${String(prop)} is not loaded`);

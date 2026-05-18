@@ -7,23 +7,23 @@ import { IsLoadedCachable } from "../IsLoadedCache";
 import { lazyField } from "../newEntity";
 import { convertToLoadHint, Reacted, ReactiveHint } from "../reactiveHints";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
-import { AsyncPropertyT } from "./hasAsyncProperty";
+import { PropertyT } from "./hasProperty";
 
 /**
  * A `ReactiveField` is a value that is derived from other entities/values,
- * similar to an `AsyncProperty`, but it is also persisted in the database.
+ * similar to a `Property`, but it is also persisted in the database.
  *
  * This allows callers (or SQL queries) to access the value without first calling
  * `await load()` on the property.
  *
- * So, unlike `AsyncProperty`, `.get` is always available; if the property is unloaded,
+ * So, unlike `Property`, `.get` is always available; if the property is unloaded,
  * then `.get` will return the last-calculated value, but if the property is loaded,
  * then it will go ahead and invoke function to calculate the latest value (i.e. so
  * that you can observe the latest & greatest value w/o waiting for `em.flush` to
  * re-calc the value while persisting to the database.
  */
 export interface ReactiveField<T extends Entity, V> {
-  [AsyncPropertyT]: T;
+  [PropertyT]: T;
   isLoaded: boolean;
   isSet: boolean;
 
@@ -193,7 +193,7 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
     this.#isCached = "factory-value";
   }
 
-  [AsyncPropertyT] = undefined as any as T;
+  [PropertyT] = undefined as any as T;
 
   private resetCacheUnlessFactoryPinned(): void {
     // If factories asked for a hard-coded value, don't reset the cached flag
@@ -202,12 +202,7 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   }
 }
 
-/** Type guard utility for determining if an entity field is an AsyncProperty. */
-export function isReactiveField(maybeAsyncProperty: any): maybeAsyncProperty is ReactiveField<any, any> {
-  return maybeAsyncProperty instanceof ReactiveFieldImpl;
-}
-
-/** Type guard utility for determining if an entity field is a loaded AsyncProperty. */
-export function isLoadedAsyncProperty(maybeAsyncProperty: any): maybeAsyncProperty is ReactiveField<any, any> {
-  return isReactiveField(maybeAsyncProperty) && maybeAsyncProperty.isLoaded;
+/** Type guard utility for determining if an entity field is a ReactiveField. */
+export function isReactiveField(maybeReactiveField: any): maybeReactiveField is ReactiveField<any, any> {
+  return maybeReactiveField instanceof ReactiveFieldImpl;
 }

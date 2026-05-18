@@ -1,15 +1,15 @@
 import fastglob from "fast-glob";
 import { run as jscodeshift } from "jscodeshift/src/Runner";
 import path from "path";
-import { Config } from "../config";
-import { Codemod } from "./Codemod";
+import { type Config } from "../config";
+import { type Codemod } from "./Codemod";
 
 export class JscodeshiftMod implements Codemod {
   constructor(
-    public version: string,
+    public codemodVersion: number,
     public name: string,
     public description: string,
-    private glob: (config: Config) => string,
+    private glob: (config: Config) => string = defaultGlob,
   ) {}
 
   async run(config: Config): Promise<void> {
@@ -23,4 +23,9 @@ export class JscodeshiftMod implements Codemod {
       parser: "ts",
     });
   }
+}
+
+/** Returns the default source tree for project-wide codemods. */
+function defaultGlob(config: Config): string {
+  return `${path.dirname(config.entitiesDirectory)}/**/*.ts`;
 }

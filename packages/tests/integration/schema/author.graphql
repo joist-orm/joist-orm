@@ -40,6 +40,7 @@ type Author {
   menteesClosure: [Author!]!
   mentorsClosure: [Author!]!
   menteeNames: String
+  imageFileName: String
 }
 
 input SaveAuthorInput {
@@ -68,6 +69,7 @@ input SaveAuthorInput {
   mentorNames: String
   isFunny: Boolean
   menteeNames: String
+  imageFileName: String
 }
 
 type SaveAuthorResult {

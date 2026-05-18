@@ -1,4 +1,4 @@
-import { AsyncProperty, hasReactiveAsyncProperty, hasReactiveField, ReactiveField } from "joist-orm";
+import { hasReactiveField, hasReactiveProperty, Property, ReactiveField } from "joist-orm";
 import { taskOldConfig as config, TaskOldCodegen } from "./entities";
 
 export class TaskOld extends TaskOldCodegen {
@@ -11,7 +11,7 @@ export class TaskOld extends TaskOldCodegen {
    * For testing reacting to poly CommentParent properties.
    * @generated TaskOld.md
    */
-  readonly commentParentInfo: AsyncProperty<TaskOld, string> = hasReactiveAsyncProperty(
+  readonly commentParentInfo: Property<TaskOld, string> = hasReactiveProperty(
     { parentOldTask: "id" },
     (t) => `parent=${t.parentOldTask.get?.id}`,
   );

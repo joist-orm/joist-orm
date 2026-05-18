@@ -1,4 +1,4 @@
-import { AsyncProperty, hasReactiveAsyncProperty, hasReactiveField, ReactiveField } from "joist-orm";
+import { hasReactiveField, hasReactiveProperty, Property, ReactiveField } from "joist-orm";
 import { Author, BookCodegen, bookReviewBeforeFlushRan, bookConfig as config } from "./entities";
 
 export class Book extends BookCodegen {
@@ -7,6 +7,7 @@ export class Book extends BookCodegen {
     firstNameRuleInvoked: 0,
     favoriteColorsRuleInvoked: 0,
     reviewsRuleInvoked: 0,
+    readOnlyTagsRuleInvoked: 0,
     numberOfBooks2RuleInvoked: 0,
     authorSetWhenDeleteRuns: undefined as boolean | undefined,
     afterCommitCheckTagsChanged: undefined as boolean | undefined,
@@ -19,7 +20,7 @@ export class Book extends BookCodegen {
    * For testing reacting to poly CommentParent properties.
    * @generated Book.md
    */
-  readonly commentParentInfo: AsyncProperty<Book, string> = hasReactiveAsyncProperty(
+  readonly commentParentInfo: Property<Book, string> = hasReactiveProperty(
     { reviews: "isPublic" },
     (b) => `reviews=${b.reviews.get.filter((r) => r.isPublic.get).length}`,
   );
@@ -117,6 +118,11 @@ config.beforeDelete("author", (b) => {
 // Test m2m reactivity on collection size
 config.addRule("tags", (b) => {
   return b.tags.get.length === 3 ? "Cannot have exactly three tags" : undefined;
+});
+
+// Test that m2m hints marked read-only do not make validation rules reactive.
+config.addRule(["title", "tags:ro"], (b) => {
+  b.transientFields.readOnlyTagsRuleInvoked++;
 });
 
 // For testing reactions observing fields set by defaults

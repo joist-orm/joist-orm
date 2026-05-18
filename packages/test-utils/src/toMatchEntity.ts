@@ -1,14 +1,14 @@
 import {
-  AsyncProperty,
   BaseEntity,
   Entity,
   EntityManager,
-  isAsyncProperty,
   isCollection,
   isDefined,
   isEntity,
+  isProperty,
   isReactiveField,
   isReference,
+  Property,
   ReadOnlyCollection,
   Reference,
 } from "joist-core";
@@ -90,7 +90,7 @@ export type MatchedEntity<T> =
               ? MatchedEntity<U> | U
               : T[K] extends ReadOnlyCollection<any, infer U>
                 ? Array<MatchedEntity<U> | U>
-                : T[K] extends AsyncProperty<any, infer V>
+                : T[K] extends Property<any, infer V>
                   ? V
                   : T[K] extends Entity | null | undefined
                     ? MatchedEntity<T[K]> | T[K] | null | undefined
@@ -148,7 +148,7 @@ function maybeGetRelation(actualValue: unknown): unknown {
   if (
     isReference(actualValue) ||
     isCollection(actualValue) ||
-    isAsyncProperty(actualValue) ||
+    isProperty(actualValue) ||
     isReactiveField(actualValue)
   ) {
     return getWithSoftDeleted(actualValue);

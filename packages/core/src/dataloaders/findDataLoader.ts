@@ -81,13 +81,29 @@ export function findDataLoader<T extends Entity>(
       // Build the list of 'arg1', 'arg2', ... strings
       const { where, ...options } = queries[0];
       const query = parseFindQuery(getMetadata(type), where, options);
+      const { preloader } = getEmInternalApi(em);
+      const preloadJoins = preloader && hint && preloader.getPreloadJoins(meta, buildHintTree(hint), query);
+
+      // Let plugins see the pre-batched query AST
+      const { checkLimit, driverSettings } = em["prepareFind"](meta, findOperation, query, { limit: em.entityLimit });
+
       const argsColumns = collectAndReplaceArgs(query);
       argsColumns.unshift({ columnName: "tag", dbType: "int" });
-
       query.selects.unshift("array_agg(_find.tag) as _tags");
       // Inject a cross join into the query
       query.tables.unshift({ join: "cross", table: "_find", alias: "_find" });
       query.ctes = [buildUnnestCte("_find", argsColumns, createColumnValues(meta, argsColumns, queries))];
+      if (preloadJoins) {
+        query.selects.push(
+          ...preloadJoins.flatMap((j) =>
+            // Because we 'group by primary.id' to collapse the "a1 matched multiple finds" into
+            // a single row, we also need to pick just the first value of each preload column
+            j.selects.map((s) => `(array_agg(${s.value}))[1] AS ${s.as}`),
+          ),
+        );
+        query.tables.push(...preloadJoins.map((j) => j.join));
+      }
+
       // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
       query.groupBys = query.selects
         .filter((s) => typeof s === "string")
@@ -106,20 +122,7 @@ export function findDataLoader<T extends Entity>(
         }
       }
 
-      const { preloader } = getEmInternalApi(em);
-      const preloadJoins = preloader && hint && preloader.getPreloadJoins(meta, buildHintTree(hint), query);
-      if (preloadJoins) {
-        query.selects.push(
-          ...preloadJoins.flatMap((j) =>
-            // Because we 'group by primary.id' to collapse the "a1 matched multiple finds" into
-            // a single row, we also need to pick just the first value of each preload column
-            j.selects.map((s) => `(array_agg(${s.value}))[1] AS ${s.as}`),
-          ),
-        );
-        query.tables.push(...preloadJoins.map((j) => j.join));
-      }
-
-      const rows = await em["executeFind"](meta, findOperation, query, { limit: em.entityLimit });
+      const rows = await em["executePreparedFind"](meta, findOperation, query, driverSettings, checkLimit);
 
       const entities = em.hydrate(type, rows);
       preloadJoins?.forEach((j) => j.hydrator(rows, entities));

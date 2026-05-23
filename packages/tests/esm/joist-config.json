@@ -1,6 +1,6 @@
 {
   "codegenPlugins": ["joist-graphql-codegen"],
-  "codemodVersion": 2,
+  "codemodVersion": 3,
   "contextType": "Context@../../context.js",
   "databaseUrl": "postgres://joist:local@localhost:5435/esm",
   "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },

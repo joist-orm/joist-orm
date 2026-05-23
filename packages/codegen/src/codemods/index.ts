@@ -2,8 +2,13 @@ import { type Config } from "../config";
 import { type Codemod } from "./Codemod";
 import { codemod_0001_rename_has_async_property } from "./codemod_0001-rename_has_async_property";
 import { codemod_0002_rename_async_query_fields } from "./codemod_0002-rename_async_query_fields";
+import { codemod_0003_rename_find_paginated } from "./codemod_0003-rename_find_paginated";
 
-const codemods: Codemod[] = [codemod_0001_rename_has_async_property, codemod_0002_rename_async_query_fields];
+const codemods: Codemod[] = [
+  codemod_0001_rename_has_async_property,
+  codemod_0002_rename_async_query_fields,
+  codemod_0003_rename_find_paginated,
+];
 
 /** Prompts for and runs pending codemods for the user's project. */
 export async function maybeRunTransforms(config: Config): Promise<void> {

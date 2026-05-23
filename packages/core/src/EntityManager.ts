@@ -22,7 +22,7 @@ import { findCountDataLoader, findCountOperation } from "./dataloaders/findCount
 import { findDataLoader, findOperation } from "./dataloaders/findDataLoader";
 import { findIdsDataLoader, findIdsOperation } from "./dataloaders/findIdsDataLoader";
 import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
-import { findPaginatedDataLoader, findPaginatedOperation } from "./dataloaders/findPaginatedDataLoader";
+import { findPaginatedDataLoader } from "./dataloaders/findPaginatedDataLoader";
 import { lensOperation } from "./dataloaders/lensDataLoader";
 import { manyToManyFindOperation } from "./dataloaders/manyToManyFindDataLoader";
 import { oneToManyFindOperation } from "./dataloaders/oneToManyFindDataLoader";
@@ -123,29 +123,20 @@ export interface EntityConstructor<T> {
   getInstanceData(entity: Entity): InstanceData;
 }
 
-/** Options for the auto-batchable `em.find` queries, i.e. limit & offset aren't allowed. */
+/** Options for the auto-batchable `em.find` queries. */
 export interface FindFilterOptions<T extends Entity> {
   conditions?: ExpressionFilter;
   orderBy?: OrderOf<T> | OrderOf<T>[];
+  limit?: number | undefined;
+  offset?: number | undefined;
   softDeletes?: "include" | "exclude";
   allowMultipleLeftJoins?: boolean;
   optimizeJoinsToExists?: boolean;
 }
 
-/**
- * Options for the non-batchable `em.findPaginated` queries, i.e. limit & offset are allowed.
- *
- * We allow `offset` to be optional, b/c sometimes queries will just want to do a `limit`, but we
- * require `limit` to ensure the caller is using `findPaginated` for its intended purpose.
- */
-export interface FindPaginatedFilterOptions<T extends Entity> extends FindFilterOptions<T> {
-  limit: number | undefined;
-  offset?: number;
-}
-
-export interface FindGqlPaginatedFilterOptions<T extends Entity> extends FindFilterOptions<T> {
-  limit?: number | null;
-  offset?: number | null;
+export interface FindGqlFilterOptions<T extends Entity> extends Omit<FindFilterOptions<T>, "limit" | "offset"> {
+  limit?: number | null | undefined;
+  offset?: number | null | undefined;
 }
 
 /** Options for the `findCount`. */
@@ -205,7 +196,6 @@ export type EntityManagerMode = "read-only" | "in-memory-writes" | "writes";
 
 export type FindOperation =
   | typeof findOperation
-  | typeof findPaginatedOperation
   | typeof findByUniqueOperation
   | typeof findCountOperation
   | typeof findIdsOperation
@@ -440,8 +430,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * For more complex conditions, use the `find` overload that has a `conditions` option.
    *
    * This method is batch-friendly, i.e. if called in a loop, it will be automatically batched
-   * to avoid N+1s. Because of this, it cannot be used with queries that want to use `LIMIT`
-   * or `OFFSET`; for those, see `findPaginated`.
+   * to avoid N+1s, including queries that use `LIMIT` or `OFFSET`.
    */
   public async find<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
@@ -459,48 +448,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ): Promise<T[]> {
     const { populate, ...rest } = options || {};
     const settings = { where, ...rest };
-    const result = await findDataLoader(this, type, settings, populate)
+    const loader = hasPaginationSettings(rest)
+      ? findPaginatedDataLoader(this, type, settings, populate)
+      : findDataLoader(this, type, settings, populate);
+    const result = await loader
       .load(settings)
       .catch(function find(err) {
-        throw appendStack(err, new Error());
-      });
-    if (populate) {
-      await this.populate(result, populate);
-    }
-    return result;
-  }
-
-  /**
-   * Finds entities of `type` with the `where` filter, with auto-batching, so this method
-   * will not cause N+1s if called in a loop.
-   *
-   * The `where` filter is one of Joist's "join literals", which can combine both joining into
-   * related entities and simple column conditions in a single literal. All conditions are ANDed.
-   * For more complex conditions, use the `find` overload that has a `conditions` option.
-   *
-   * This method is batch-friendly for calls with the same query structure, i.e. if called in a loop,
-   * it will be automatically batched to avoid N+1s.
-   */
-  public async findPaginated<T extends EntityW>(
-    type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
-    options: FindPaginatedFilterOptions<T>,
-  ): Promise<T[]>;
-  public async findPaginated<T extends EntityW, const H extends LoadHint<T>>(
-    type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
-    options: FindPaginatedFilterOptions<T> & { populate: H },
-  ): Promise<Loaded<T, H>[]>;
-  async findPaginated<T extends EntityW>(
-    type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
-    options: FindPaginatedFilterOptions<T> & { populate?: any },
-  ): Promise<T[]> {
-    const { populate, ...rest } = options || {};
-    const settings = { where, ...rest };
-    const result = await findPaginatedDataLoader(this, type, settings, populate)
-      .load(settings)
-      .catch(function findPaginated(err) {
         throw appendStack(err, new Error());
       });
     if (populate) {
@@ -598,37 +551,20 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   public async findGql<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterWithAlias<T>,
-    options?: FindFilterOptions<T> & { populate?: H },
+    options?: FindGqlFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H>[]>;
   async findGql<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterOf<T>,
-    options?: FindFilterOptions<T> & { populate?: any },
+    options?: FindGqlFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
-    return this.find(type, where as any, options);
-  }
-
-  /**
-   * Works exactly like `findPaginated` but accepts "less than greatly typed" GraphQL filters.
-   *
-   * I.e. filtering by `null` on fields that are non-`nullable`.
-   */
-  public async findGqlPaginated<T extends EntityW>(
-    type: MaybeAbstractEntityConstructor<T>,
-    where: GraphQLFilterWithAlias<T>,
-    options: FindGqlPaginatedFilterOptions<T>,
-  ): Promise<T[]>;
-  public async findGqlPaginated<T extends EntityW, const H extends LoadHint<T>>(
-    type: MaybeAbstractEntityConstructor<T>,
-    where: GraphQLFilterWithAlias<T>,
-    options: FindGqlPaginatedFilterOptions<T> & { populate: H },
-  ): Promise<Loaded<T, H>[]>;
-  async findGqlPaginated<T extends EntityW>(
-    type: MaybeAbstractEntityConstructor<T>,
-    where: GraphQLFilterWithAlias<T>,
-    options: FindGqlPaginatedFilterOptions<T> & { populate?: any },
-  ): Promise<T[]> {
-    return this.findPaginated(type, where as any, options as any);
+    if (!options) {
+      return this.find(type, where as any);
+    }
+    const normalized = { ...options };
+    if ("limit" in normalized) normalized.limit = normalized.limit ?? undefined;
+    if ("offset" in normalized) normalized.offset = normalized.offset ?? undefined;
+    return this.find(type, where as any, normalized as any);
   }
 
   public async findOne<T extends EntityW>(
@@ -3081,6 +3017,11 @@ function findPendingFlushEntities<Entity extends EntityW>(
       pendingFlush.add(e);
     }
   }
+}
+
+/** Returns true if the caller explicitly asked `find` to use SQL pagination. */
+function hasPaginationSettings(options: object): boolean {
+  return "limit" in options || "offset" in options;
 }
 
 /** An error we throw to get knex to `ROLLBACK`, but then catch. */

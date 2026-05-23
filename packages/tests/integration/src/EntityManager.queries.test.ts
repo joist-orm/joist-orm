@@ -1850,7 +1850,7 @@ describe("EntityManager.queries", () => {
     // Use a typical GQL input type with optional keys + nulls
     type GqlPage = { offset?: number | null; limit?: number | null };
     const page: GqlPage = { offset: 1, limit: 1 };
-    const authors = await em.findGqlPaginated(Author, gqlFilter, page);
+    const authors = await em.findGql(Author, gqlFilter, page);
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
   });
@@ -1861,12 +1861,12 @@ describe("EntityManager.queries", () => {
     await insertPublisher({ id: 3, name: "p3" });
     await insertPublisher({ id: 4, name: "p4" });
     const em = newEntityManager();
-    const p23 = await em.findPaginated(Publisher, {}, { orderBy: { name: "ASC" }, offset: 1, limit: 2 });
+    const p23 = await em.find(Publisher, {}, { orderBy: { name: "ASC" }, offset: 1, limit: 2 });
     expect(p23.length).toEqual(2);
     expect(p23[0].name).toEqual("p2");
     expect(p23[1].name).toEqual("p3");
 
-    const p43 = await em.findPaginated(Publisher, {}, { orderBy: { name: "DESC" }, offset: 2, limit: 2 });
+    const p43 = await em.find(Publisher, {}, { orderBy: { name: "DESC" }, offset: 2, limit: 2 });
     expect(p43.length).toEqual(2);
     expect(p43[0].name).toEqual("p2");
     expect(p43[1].name).toEqual("p1");
@@ -1876,7 +1876,7 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
     const em = newEntityManager();
-    const authors = await em.findGqlPaginated(Author, {}, { offset: undefined, limit: undefined });
+    const authors = await em.findGql(Author, {}, { offset: undefined, limit: undefined });
     expect(authors.length).toEqual(2);
   });
 

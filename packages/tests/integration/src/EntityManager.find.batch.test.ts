@@ -114,8 +114,8 @@ describe("EntityManager.find.batch", () => {
     const em = newEntityManager();
 
     const [q1, q2] = await Promise.all([
-      em.findPaginated(Author, { age: 10 }, { limit: 1, orderBy: { firstName: "ASC" } }),
-      em.findPaginated(Author, { age: 20 }, { limit: 1, orderBy: { firstName: "ASC" } }),
+      em.find(Author, { age: 10 }, { limit: 1, orderBy: { firstName: "ASC" } }),
+      em.find(Author, { age: 20 }, { limit: 1, orderBy: { firstName: "ASC" } }),
     ]);
 
     expect(numberOfQueries).toEqual(1);
@@ -142,8 +142,8 @@ describe("EntityManager.find.batch", () => {
     const em = newEntityManager();
 
     const [q1, q2] = await Promise.all([
-      em.findPaginated(Author, { age: 10 }, { limit: 1, orderBy: { firstName: "ASC" } }),
-      em.findPaginated(Author, { age: 20 }, { limit: 2, orderBy: { firstName: "ASC" } }),
+      em.find(Author, { age: 10 }, { limit: 1, orderBy: { firstName: "ASC" } }),
+      em.find(Author, { age: 20 }, { limit: 2, orderBy: { firstName: "ASC" } }),
     ]);
 
     expect(numberOfQueries).toEqual(2);
@@ -160,8 +160,8 @@ describe("EntityManager.find.batch", () => {
     const em = newEntityManager();
 
     const [q1, q2] = await Promise.all([
-      em.findPaginated(Author, { age: 10 }, { limit: 1, offset: 1, orderBy: { firstName: "ASC" } }),
-      em.findPaginated(Author, { age: 20 }, { limit: 1, offset: 1, orderBy: { firstName: "ASC" } }),
+      em.find(Author, { age: 10 }, { limit: 1, offset: 1, orderBy: { firstName: "ASC" } }),
+      em.find(Author, { age: 20 }, { limit: 1, offset: 1, orderBy: { firstName: "ASC" } }),
     ]);
 
     expect(numberOfQueries).toEqual(1);
@@ -174,7 +174,7 @@ describe("EntityManager.find.batch", () => {
     resetQueryCount();
     const em = newEntityManager();
 
-    const q1 = await em.findPaginated(Author, { age: 10 }, { limit: 0 });
+    const q1 = await em.find(Author, { age: 10 }, { limit: 0 });
 
     expect(numberOfQueries).toEqual(1);
     expect(queries).toEqual([
@@ -191,8 +191,8 @@ describe("EntityManager.find.batch", () => {
     const em = newEntityManager();
 
     const [q1, q2] = await Promise.all([
-      em.findPaginated(Author, { age: 10 }, { limit: undefined, orderBy: { firstName: "ASC" } }),
-      em.findPaginated(Author, { age: 20 }, { limit: undefined, orderBy: { firstName: "ASC" } }),
+      em.find(Author, { age: 10 }, { limit: undefined, orderBy: { firstName: "ASC" } }),
+      em.find(Author, { age: 20 }, { limit: undefined, orderBy: { firstName: "ASC" } }),
     ]);
 
     expect(numberOfQueries).toEqual(1);

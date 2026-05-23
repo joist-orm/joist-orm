@@ -229,6 +229,6 @@ This approach leverages the Common Table Expression (CTE) of inline values and e
 
 :::note
 
-Joist's `em.find` does not support `limit` or `offset` because they cannot be applied with the `JOIN` filtering approach. Instead, for `limit` and `offset`  you can use `em.findPaginated`, although note that `findPaginated` will not auto-batch, so you should avoid calling it in a loop.
+Joist's `em.find` supports `limit` and `offset`; those queries use a per-query lateral subquery shape internally so each batched query gets its own pagination.
 
 :::

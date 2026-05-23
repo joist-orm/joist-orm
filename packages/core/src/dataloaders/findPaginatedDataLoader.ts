@@ -11,10 +11,9 @@ import {
   collectAndReplaceArgs,
   createColumnValues,
   getBatchKeyFromGenericStructure,
+  findOperation,
   whereFilterHash,
 } from "./findDataLoader";
-
-export const findPaginatedOperation = "findPaginated";
 
 /** Returns a dataloader that batches paginated finds by applying pagination inside each lateral subquery. */
 export function findPaginatedDataLoader<T extends Entity>(
@@ -29,7 +28,7 @@ export function findPaginatedDataLoader<T extends Entity>(
   const batchKey = [getBatchKeyFromGenericStructure(meta, query), JSON.stringify(hint), limit, offset].join("-");
 
   return em.getLoader(
-    findPaginatedOperation,
+    findOperation,
     batchKey,
     async (queries) => {
       if (queries.length === 1) {
@@ -38,7 +37,7 @@ export function findPaginatedDataLoader<T extends Entity>(
         const query = parseFindQuery(meta, where, options);
         const { preloader } = getEmInternalApi(em);
         const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
-        const rows = await em["executeFind"](meta, findPaginatedOperation, query, {
+        const rows = await em["executeFind"](meta, findOperation, query, {
           ...options,
           limit,
           offset,
@@ -54,7 +53,7 @@ export function findPaginatedDataLoader<T extends Entity>(
       const query = parseFindQuery(meta, where, options);
       const { preloader } = getEmInternalApi(em);
       const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
-      em["prepareFind"](meta, findPaginatedOperation, query, { ...options, limit, offset, checkLimit: false });
+      em["prepareFind"](meta, findOperation, query, { ...options, limit, offset, checkLimit: false });
 
       // Now craft the actual batched query
       const argsColumns = collectAndReplaceArgs(query);
@@ -79,7 +78,7 @@ export function findPaginatedDataLoader<T extends Entity>(
 
       const rows = await em["executePreparedFind"](
         meta,
-        findPaginatedOperation,
+        findOperation,
         query2,
         { ...options, limit: undefined },
         false,

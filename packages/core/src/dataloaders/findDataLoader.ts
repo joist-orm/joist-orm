@@ -35,7 +35,7 @@ export function findDataLoader<T extends Entity>(
   hint: LoadHint<T> | undefined,
 ): DataLoader<FilterAndSettings<T>, T[]> {
   const { where, ...opts } = filter;
-  if (opts.limit || opts.offset) {
+  if ("limit" in opts || "offset" in opts) {
     throw new Error("Cannot use limit/offset with findDataLoader");
   }
 

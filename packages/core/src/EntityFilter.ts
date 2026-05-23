@@ -9,8 +9,8 @@ export type FilterAndSettings<T extends Entity> = {
   where: FilterWithAlias<T>;
   conditions?: ExpressionFilter;
   orderBy?: OrderOf<T> | OrderOf<T>[];
-  limit?: number;
-  offset?: number;
+  limit?: number | undefined;
+  offset?: number | undefined;
   softDeletes?: "exclude" | "include";
   allowMultipleLeftJoins?: boolean;
   optimizeJoinsToExists?: boolean;

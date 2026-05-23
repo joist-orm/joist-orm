@@ -1,6 +1,6 @@
 {
   "codegenPlugins": ["joist-graphql-codegen"],
-  "codemodVersion": 2,
+  "codemodVersion": 3,
   "contextType": "Context@src/context",
   "docs": true,
   "entities": {

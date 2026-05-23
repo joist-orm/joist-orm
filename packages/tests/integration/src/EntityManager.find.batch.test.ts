@@ -1,6 +1,6 @@
 import { insertAuthor, insertPublisher } from "@src/entities/inserts";
 import { zeroTo } from "@src/utils";
-import { aliases } from "joist-orm";
+import { aliases, type ParsedFindQuery, Plugin } from "joist-orm";
 import {
   AdvanceStatus,
   Author,
@@ -73,6 +73,36 @@ describe("EntityManager.find.batch", () => {
         ` LIMIT $4`,
       ].join(""),
     ]);
+  });
+
+  it("passes the unbatched query AST to beforeFind plugins", async () => {
+    class BeforeFindPlugin extends Plugin {
+      tables: string[][] = [];
+      beforeFind(_meta: unknown, operation: unknown, query: ParsedFindQuery): void {
+        // Capture the query.plugins at beforeFind-time
+        if (operation === "find") {
+          this.tables.push(query.tables.map((table) => table.alias));
+        }
+      }
+    }
+
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    await insertAuthor({ first_name: "a2", last_name: "l2" });
+    resetQueryCount();
+    const em = newEntityManager();
+    const plugin = new BeforeFindPlugin();
+    em.addPlugin(plugin);
+
+    // Given we batch two em.finds
+    await Promise.all([
+      em.find(Author, { firstName: "a1", lastName: "l1" }),
+      em.find(Author, { firstName: "a2", lastName: "l2" }),
+    ]);
+    // Then there was only 1 query issues
+    expect(numberOfQueries).toEqual(1);
+    // And the plugin only saw the pre-batched `authors a` table, and not
+    // our more complicated `_find` structure
+    expect(plugin.tables).toEqual([["a"]]);
   });
 
   it("batches paginated queries with matching limits", async () => {

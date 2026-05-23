@@ -22,6 +22,7 @@ import { findCountDataLoader, findCountOperation } from "./dataloaders/findCount
 import { findDataLoader, findOperation } from "./dataloaders/findDataLoader";
 import { findIdsDataLoader, findIdsOperation } from "./dataloaders/findIdsDataLoader";
 import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
+import { findPaginatedDataLoader, findPaginatedOperation } from "./dataloaders/findPaginatedDataLoader";
 import { lensOperation } from "./dataloaders/lensDataLoader";
 import { manyToManyFindOperation } from "./dataloaders/manyToManyFindDataLoader";
 import { oneToManyFindOperation } from "./dataloaders/oneToManyFindDataLoader";
@@ -60,7 +61,6 @@ import {
   OneToManyCollection,
   optimizeCollectionJoins,
   ParsedFindQuery,
-  parseFindQuery,
   PartialOrNull,
   Plugin,
   PolymorphicReferenceImpl,
@@ -90,9 +90,9 @@ import { ReactionsManager } from "./ReactionsManager";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, ReactiveReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
+import { AsyncPropertyImpl } from "./relations/AsyncProperty";
 import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
-import { AsyncPropertyImpl } from "./relations/AsyncProperty";
 import { RecursiveCycleError } from "./relations/RecursiveCollection";
 import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
@@ -205,7 +205,7 @@ export type EntityManagerMode = "read-only" | "in-memory-writes" | "writes";
 
 export type FindOperation =
   | typeof findOperation
-  | "findPaginated"
+  | typeof findPaginatedOperation
   | typeof findByUniqueOperation
   | typeof findCountOperation
   | typeof findIdsOperation
@@ -471,15 +471,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   /**
-   * Finds entities of `type` with the `where` filter, without auto-batching, so this method
-   * may call N+1s if called in a loop.
+   * Finds entities of `type` with the `where` filter, with auto-batching, so this method
+   * will not cause N+1s if called in a loop.
    *
    * The `where` filter is one of Joist's "join literals", which can combine both joining into
    * related entities and simple column conditions in a single literal. All conditions are ANDed.
    * For more complex conditions, use the `find` overload that has a `conditions` option.
    *
-   * This method is *NOT* batch-friendly, i.e. if called in a loop, it will cause N+1s. Because
-   * of this, you should prefer using `find`, unless you explicitly pagination support.
+   * This method is batch-friendly for calls with the same query structure, i.e. if called in a loop,
+   * it will be automatically batched to avoid N+1s.
    */
   public async findPaginated<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
@@ -496,11 +496,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     where: FilterWithAlias<T>,
     options: FindPaginatedFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
-    const { populate, limit, offset, ...rest } = options || {};
-    const meta = getMetadata(type);
-    const query = parseFindQuery(meta, where, rest);
-    const rows = await this.executeFind(meta, "findPaginated", query, { ...rest, limit, offset, checkLimit: false });
-    const result = this.hydrate(type, rows);
+    const { populate, ...rest } = options || {};
+    const settings = { where, ...rest };
+    const result = await findPaginatedDataLoader(this, type, settings, populate)
+      .load(settings)
+      .catch(function findPaginated(err) {
+        throw appendStack(err, new Error());
+      });
     if (populate) {
       await this.populate(result, populate);
     }
@@ -522,18 +524,66 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       keepAliases?: string[];
     },
   ) {
-    const { checkLimit, ...driverSettings } = settings;
+    const { checkLimit, driverSettings } = this.prepareFind(meta, operation, parsed, settings);
+    return this.executePreparedFind(meta, operation, parsed, driverSettings, checkLimit);
+  }
+
+  /** Executes a query that has already had find hooks and optimizations applied. */
+  private async executePreparedFind(
+    meta: EntityMetadata,
+    operation: FindOperation,
+    parsed: ParsedFindQuery,
+    driverSettings: {
+      limit?: number;
+      offset?: number;
+      allowMultipleLeftJoins?: boolean;
+      optimizeJoinsToExists?: boolean;
+      pruneJoins?: boolean;
+      keepAliases?: string[];
+    },
+    checkLimit: boolean | undefined,
+  ) {
     const { pluginManager } = getEmInternalApi(this);
-    pluginManager.beforeFind(meta, operation, parsed, driverSettings);
-    optimizeCollectionJoins(parsed, settings);
     const rows = await this.driver.executeFind(this, parsed, driverSettings);
     // Check by default unless explicitly disabled or the caller removed the LIMIT via `limit: undefined`
-    const shouldCheck = checkLimit ?? !("limit" in settings && settings.limit === undefined);
+    const shouldCheck = checkLimit ?? !("limit" in driverSettings && driverSettings.limit === undefined);
     if (shouldCheck && rows.length >= this.entityLimit) {
       throw new Error(`Query returned more than ${this.entityLimit} entityLimit rows`);
     }
     pluginManager.afterFind(meta, operation, rows);
     return rows;
+  }
+
+  /**
+   * Runs pre-SQL find hooks and optimizations against a parsed query.
+   *
+   * This allows plugins to see "pre-batched" / "logical" query ASTs, instead of our
+   * more complicated `_find` batched queries. The flow would be:
+   *
+   * - A loader calls `prepareFind(originalQuery)`
+   * - Plugins inspect/modify the query as/if needed
+   * - The loader crafts a new, more complicated query that embeds the originalQuery
+   * - The loader calls `executePreparedFind` with the 2nd query
+   */
+  private prepareFind(
+    meta: EntityMetadata,
+    operation: FindOperation,
+    parsed: ParsedFindQuery,
+    settings: {
+      limit?: number;
+      offset?: number;
+      checkLimit?: boolean;
+      allowMultipleLeftJoins?: boolean;
+      optimizeJoinsToExists?: boolean;
+      pruneJoins?: boolean;
+      keepAliases?: string[];
+    },
+  ) {
+    const { checkLimit, ...driverSettings } = settings;
+    const { pluginManager } = getEmInternalApi(this);
+    pluginManager.beforeFind(meta, operation, parsed, driverSettings);
+    optimizeCollectionJoins(parsed, settings);
+    return { checkLimit, driverSettings };
   }
 
   /**

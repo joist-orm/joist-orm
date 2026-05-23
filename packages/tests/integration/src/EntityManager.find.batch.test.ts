@@ -75,6 +75,101 @@ describe("EntityManager.find.batch", () => {
     ]);
   });
 
+  it("batches paginated queries with matching limits", async () => {
+    await insertAuthor({ first_name: "a1", age: 10 });
+    await insertAuthor({ first_name: "a2", age: 10 });
+    await insertAuthor({ first_name: "b1", age: 20 });
+    await insertAuthor({ first_name: "b2", age: 20 });
+    resetQueryCount();
+    const em = newEntityManager();
+
+    const [q1, q2] = await Promise.all([
+      em.findPaginated(Author, { age: 10 }, { limit: 1, orderBy: { firstName: "ASC" } }),
+      em.findPaginated(Author, { age: 20 }, { limit: 1, orderBy: { firstName: "ASC" } }),
+    ]);
+
+    expect(numberOfQueries).toEqual(1);
+    expect(queries).toEqual([
+      [
+        `WITH _find (tag, arg0) AS (SELECT unnest($1::int[]), unnest($2::int[]))`,
+        ` SELECT _find.tag as tag, _data.* FROM _find AS _find`,
+        ` CROSS JOIN LATERAL`,
+        ` (SELECT a.* FROM authors AS a`,
+        ` WHERE a.deleted_at IS NULL AND a.age = _find.arg0`,
+        ` ORDER BY a.first_name ASC, a.id ASC LIMIT $3) AS _data`,
+      ].join(""),
+    ]);
+    expect(q1.map((a) => a.firstName)).toEqual(["a1"]);
+    expect(q2.map((a) => a.firstName)).toEqual(["b1"]);
+  });
+
+  it("does not batch paginated queries with different limits", async () => {
+    await insertAuthor({ first_name: "a1", age: 10 });
+    await insertAuthor({ first_name: "a2", age: 10 });
+    await insertAuthor({ first_name: "b1", age: 20 });
+    await insertAuthor({ first_name: "b2", age: 20 });
+    resetQueryCount();
+    const em = newEntityManager();
+
+    const [q1, q2] = await Promise.all([
+      em.findPaginated(Author, { age: 10 }, { limit: 1, orderBy: { firstName: "ASC" } }),
+      em.findPaginated(Author, { age: 20 }, { limit: 2, orderBy: { firstName: "ASC" } }),
+    ]);
+
+    expect(numberOfQueries).toEqual(2);
+    expect(q1.map((a) => a.firstName)).toEqual(["a1"]);
+    expect(q2.map((a) => a.firstName)).toEqual(["b1", "b2"]);
+  });
+
+  it("batches paginated queries with matching offsets", async () => {
+    await insertAuthor({ first_name: "a1", age: 10 });
+    await insertAuthor({ first_name: "a2", age: 10 });
+    await insertAuthor({ first_name: "b1", age: 20 });
+    await insertAuthor({ first_name: "b2", age: 20 });
+    resetQueryCount();
+    const em = newEntityManager();
+
+    const [q1, q2] = await Promise.all([
+      em.findPaginated(Author, { age: 10 }, { limit: 1, offset: 1, orderBy: { firstName: "ASC" } }),
+      em.findPaginated(Author, { age: 20 }, { limit: 1, offset: 1, orderBy: { firstName: "ASC" } }),
+    ]);
+
+    expect(numberOfQueries).toEqual(1);
+    expect(q1.map((a) => a.firstName)).toEqual(["a2"]);
+    expect(q2.map((a) => a.firstName)).toEqual(["b2"]);
+  });
+
+  it("supports paginated limit zero", async () => {
+    await insertAuthor({ first_name: "a1", age: 10 });
+    resetQueryCount();
+    const em = newEntityManager();
+
+    const q1 = await em.findPaginated(Author, { age: 10 }, { limit: 0 });
+
+    expect(numberOfQueries).toEqual(1);
+    expect(queries).toEqual([
+      `SELECT a.* FROM authors AS a WHERE a.deleted_at IS NULL AND a.age = $1 ORDER BY a.id ASC LIMIT $2`,
+    ]);
+    expect(q1).toEqual([]);
+  });
+
+  it("batches paginated queries with undefined limits", async () => {
+    await insertAuthor({ first_name: "a1", age: 10 });
+    await insertAuthor({ first_name: "a2", age: 10 });
+    await insertAuthor({ first_name: "b1", age: 20 });
+    resetQueryCount();
+    const em = newEntityManager();
+
+    const [q1, q2] = await Promise.all([
+      em.findPaginated(Author, { age: 10 }, { limit: undefined, orderBy: { firstName: "ASC" } }),
+      em.findPaginated(Author, { age: 20 }, { limit: undefined, orderBy: { firstName: "ASC" } }),
+    ]);
+
+    expect(numberOfQueries).toEqual(1);
+    expect(q1.map((a) => a.firstName)).toEqual(["a1", "a2"]);
+    expect(q2.map((a) => a.firstName)).toEqual(["b1"]);
+  });
+
   it("batches queries with complex expressions", async () => {
     await insertAuthor({ first_name: "a1", last_name: "l1" });
     await insertAuthor({ first_name: "a2", last_name: "l2" });

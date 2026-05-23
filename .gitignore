@@ -5,6 +5,7 @@ node_modules/
 *.tsbuildinfo
 .clinic/
 .envrc
+*.log
 
 .yarn/*
 !.yarn/patches

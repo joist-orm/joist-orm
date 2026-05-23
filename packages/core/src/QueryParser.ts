@@ -177,6 +177,8 @@ export interface LateralJoinTable {
   table: string;
   /** The subquery that will look for/roll-up N children. */
   query: ParsedFindQuery;
+  /** Optional settings for the subquery, i.e. per-parent pagination. */
+  settings?: { limit?: number; offset?: number };
 }
 
 export type ParsedTable = PrimaryTable | JoinTable | CrossJoinTable | LateralJoinTable;

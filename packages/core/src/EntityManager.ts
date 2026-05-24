@@ -1201,34 +1201,56 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     hint?: any,
   ): Promise<T[]> {
     const meta = getMetadata(type);
-    const ids = _ids.map((id) => tagId(meta, id));
-    const idsToLoad = ids.filter((id) => !this.findExistingInstance(id));
-    if (idsToLoad.length > 0) {
+
+    // Use pre-allocated arrays/for loops instead of `.filter`s since this can be a hot spot
+    const ids = new Array<string>(_ids.length);
+    const entities = new Array<T | undefined>(_ids.length);
+    let idsToLoad: string[] | undefined;
+    let positionsToLoad: number[] | undefined;
+
+    for (let i = 0; i < _ids.length; i++) {
+      const id = tagId(meta, _ids[i]);
+      ids[i] = id;
+      const entity = this.findExistingInstance<T>(id);
+      if (entity) {
+        entities[i] = entity;
+      } else {
+        (idsToLoad ??= []).push(id);
+        (positionsToLoad ??= []).push(i);
+      }
+    }
+
+    if (idsToLoad && idsToLoad.length > 0) {
       await loadBatchLoader(this, meta)
         .loadAll(idsToLoad.map((id) => ({ taggedId: id, hint })))
         .catch(function loadAll(err) {
           throw appendStack(err, new Error());
         });
+      for (const i of positionsToLoad!) {
+        entities[i] = this.findExistingInstance<T>(ids[i]);
+      }
     }
-    const entities: T[] = [];
-    for (const id of ids) {
-      const entity = this.findExistingInstance(id);
-      if (entity) entities.push(entity as T);
+
+    let idsNotFound: string[] | undefined;
+    for (let i = 0; i < entities.length; i++) {
+      if (entities[i] === undefined) {
+        (idsNotFound ??= []).push(ids[i]);
+      }
     }
-    if (entities.length !== ids.length) {
-      const idsNotFound = ids.filter((_, i) => entities[i] === undefined);
+    if (idsNotFound) {
       throw new NotFoundError(`${idsNotFound.join(",")} were not found`);
     }
+    const loadedEntities = entities as T[];
     if (hint) {
-      await this.populate(entities as T[], hint);
+      await this.populate(loadedEntities, hint);
     }
     if (meta.inheritanceType === "sti" && meta.baseType) {
-      const wrongType = entities.filter((e) => !(e instanceof meta.cstr));
+      const wrongType = loadedEntities.filter((e) => !(e instanceof meta.cstr));
       if (wrongType.length > 0) {
         throw new Error(`${wrongType.join(", ")} were not of type ${meta.cstr.name}`);
       }
     }
-    return entities as T[];
+    return loadedEntities;
   }
 
   /**
@@ -1247,20 +1269,41 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     hint?: any,
   ): Promise<T[]> {
     const meta = getMetadata(type);
-    const ids = _ids.map((id) => tagId(meta, id));
-    const idsToLoad = ids.filter((id) => !this.findExistingInstance(id));
-    if (idsToLoad.length > 0) {
+
+    // Use pre-allocated arrays/for loops instead of `.filter`s since this can be a hot spot
+    const ids = new Array<string>(_ids.length);
+    const entities: T[] = [];
+    let idsToLoad: string[] | undefined;
+
+    // Ensure the ids are tagged, and find any not-yet-loaded
+    for (let i = 0; i < _ids.length; i++) {
+      const id = tagId(meta, _ids[i]);
+      ids[i] = id;
+      const entity = this.findExistingInstance<T>(id);
+      if (entity) {
+        entities.push(entity);
+      } else {
+        (idsToLoad ??= []).push(id);
+      }
+    }
+
+    if (idsToLoad && idsToLoad.length > 0) {
       await loadBatchLoader(this, meta)
         .loadAll(idsToLoad.map((id) => ({ taggedId: id, hint })))
         .catch(function loadAllIfExists(err) {
           throw appendStack(err, new Error());
         });
+      // Now that everything is loaded, recalc `entities`
+      entities.length = 0;
+      for (const id of ids) {
+        const entity = this.findExistingInstance<T>(id);
+        if (entity) entities.push(entity);
+      }
     }
-    const entities = ids.map((id) => this.findExistingInstance(id)).filter(Boolean);
     if (hint) {
-      await this.populate(entities as T[], hint);
+      await this.populate(entities, hint);
     }
-    return entities as T[];
+    return entities;
   }
 
   /**

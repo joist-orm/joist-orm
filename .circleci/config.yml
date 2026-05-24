@@ -95,7 +95,9 @@ jobs:
           steps:
             - run:
                 name: Publish Next Release
-                command: ./scripts/publish-next.sh
+                command: |
+                  export NPM_ID_TOKEN="$(circleci run oidc get --claims '{"aud":"npm:registry.npmjs.org"}')"
+                  ./scripts/publish-next.sh
       # Publish stable releases on every merge to release branch
       - when:
           condition:
@@ -105,4 +107,6 @@ jobs:
           steps:
             - run:
                 name: Release
-                command: yarn semantic-release
+                command: |
+                  export NPM_ID_TOKEN="$(circleci run oidc get --claims '{"aud":"npm:registry.npmjs.org"}')"
+                  yarn semantic-release

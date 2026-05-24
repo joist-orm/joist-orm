@@ -5,6 +5,7 @@
     "build": "tspc --build",
     "semantic-release": "semantic-release",
     "publish-next": "./scripts/publish-next.sh",
+    "trust-npm-circleci": "node ./scripts/trust-npm-circleci.mjs",
     "migrate": "yarn workspaces foreach --all run migrate",
     "codegen": "yarn workspaces foreach --all run codegen",
     "format": "yarn workspaces foreach --all run format",
@@ -59,5 +60,5 @@
   "resolutions": {
     "marked": "15.0.8"
   },
-  "packageManager": "yarn@4.10.3"
+  "packageManager": "yarn@4.15.0"
 }

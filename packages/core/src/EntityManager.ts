@@ -55,7 +55,6 @@ import {
   GraphQLFilterWithAlias,
   InstanceData,
   isLoadedReference,
-  keyToTaggedId,
   Lens,
   loadLens,
   OneToManyCollection,
@@ -448,12 +447,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ): Promise<T[]> {
     const { populate, ...rest } = options || {};
     const settings = { where, ...rest };
-    const result = await (hasPaginationSettings(rest)
-      ? findPaginatedDataLoader(this, type, settings, populate)
-      : findDataLoader(this, type, settings, populate))
-      .catch(function find(err) {
-        throw appendStack(err, new Error());
-      });
+    const result = await (
+      hasPaginationSettings(rest)
+        ? findPaginatedDataLoader(this, type, settings, populate)
+        : findDataLoader(this, type, settings, populate)
+    ).catch(function find(err) {
+      throw appendStack(err, new Error());
+    });
     if (populate) {
       await this.populate(result, populate);
     }
@@ -665,10 +665,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     options: FindCountFilterOptions<T> = {},
   ): Promise<number> {
     const settings = { where, ...options };
-    let count = await findCountDataLoader(this, type, settings)
-      .catch(function findCount(err) {
-        throw appendStack(err, new Error());
-      });
+    let count = await findCountDataLoader(this, type, settings).catch(function findCount(err) {
+      throw appendStack(err, new Error());
+    });
     // If the user is do "count all", we can adjust the number up/down based on
     // WIP creates/deletes. We can't do this if the WHERE clause is populated b/c
     // then we'd also have to eval each created/deleted entity against the WHERE
@@ -703,10 +702,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     options: FindCountFilterOptions<T> = {},
   ): Promise<string[]> {
     const settings = { where, ...options };
-    return findIdsDataLoader(this, type, settings)
-      .catch(function findIds(err) {
-        throw appendStack(err, new Error());
-      });
+    return findIdsDataLoader(this, type, settings).catch(function findIds(err) {
+      throw appendStack(err, new Error());
+    });
   }
 
   /**
@@ -1933,11 +1931,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     options?: { overwriteExisting?: boolean },
   ): T[] {
     const maybeBaseMeta = getMetadata(type);
+    const taggedIdPrefix = `${maybeBaseMeta.tagName}:`;
+    const overwriteExisting = options?.overwriteExisting === true;
 
     let i = 0;
     const entities = new Array(rows.length);
     for (const row of rows) {
-      const taggedId = keyToTaggedId(maybeBaseMeta, row["id"]) || fail("No id column was available");
+      const id = row["id"];
+      const taggedId = id === undefined || id === null ? fail("No id column was available") : `${taggedIdPrefix}${id}`;
       // See if this is already in our UoW
       let entity = this.findExistingInstance(taggedId) as T;
       if (!entity) {
@@ -1946,22 +1947,34 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // Pass id as a hint that we're in hydrate mode
         entity = newEntity(this, asConcreteCstr(meta.cstr), false) as T;
         getInstanceData(entity).row = row;
-        this.#doRegister(entity as any, taggedId);
-      } else if (options?.overwriteExisting === true) {
+        this.#doRegister(entity as any, taggedId, meta, true);
+      } else if (overwriteExisting) {
         // Usually if the entity already exists, we don't write over it, but in this case we assume that
         // `EntityManager.refresh` is telling us to explicitly load the latest data.
         // First swap out the old row with the new row
-        getInstanceData(entity).row = row;
+        const instanceData = getInstanceData(entity);
+        instanceData.row = row;
         // And then only refresh the data keys that have already been serde-d from rows
         // (this keeps us from deserializing data out of rows that we don't need).
-        const { data, originalData } = getInstanceData(entity);
-        const changedFields = (entity as any).changes.fieldsWithoutRelations;
-        for (const fieldName of Object.keys(data)) {
-          const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-          serde.setOnEntity(data, row);
-          // Make the field look not-dirty
-          if (changedFields.includes(fieldName)) {
-            delete originalData[fieldName];
+        const { data, originalData } = instanceData;
+        const dataKeys = Object.keys(data);
+        if (dataKeys.length > 0) {
+          const allFields = getMetadata(entity).allFields;
+          const changedFields = (entity as any).changes.fieldsWithoutRelations;
+          if (changedFields.length === 0) {
+            for (const fieldName of dataKeys) {
+              const serde = allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
+              serde.setOnEntity(data, row);
+            }
+          } else {
+            for (const fieldName of dataKeys) {
+              const serde = allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
+              serde.setOnEntity(data, row);
+              // Make the field look not-dirty
+              if (changedFields.includes(fieldName)) {
+                delete originalData[fieldName];
+              }
+            }
           }
         }
       }
@@ -2470,11 +2483,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   }
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by #doCreate and hydrate. */
-  #doRegister(entity: Entity, id?: string): void {
+  #doRegister(entity: Entity, id?: string, meta?: EntityMetadata, skipDuplicateCheck: boolean = false): void {
     // Keep our indexes up to date...
     const maybeId = id ?? entity.idTaggedMaybe;
     if (maybeId) {
-      if (this.findExistingInstance(maybeId) !== undefined) {
+      if (!skipDuplicateCheck && this.findExistingInstance(maybeId) !== undefined) {
         throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
       }
       this.#entitiesById.set(maybeId, entity);
@@ -2484,7 +2497,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     }
     this.#entitiesArray.push(entity);
 
-    const meta = getMetadata(entity);
+    meta ??= getMetadata(entity);
     const set = this.#entitiesByTag.get(meta.tagName) ?? [];
     if (set.length === 0) this.#entitiesByTag.set(meta.tagName, set);
     set.push(entity);
@@ -2970,15 +2983,12 @@ function findConcreteMeta(maybeBaseMeta: EntityMetadata, row: any): EntityMetada
       throw new Error(`${maybeBaseMeta.type} ${tagId(maybeBaseMeta, row.id)} must be instantiated via a subtype`);
     }
     // Look for the CTI __class from the driver telling us which subtype to instantiate
-    return maybeBaseMeta.subTypes.find((st) => st.type === row.__class) ?? maybeBaseMeta;
+    return maybeBaseMeta.subTypesByType!.get(row.__class) ?? maybeBaseMeta;
   } else if (maybeBaseMeta.inheritanceType === "sti") {
     // Look for the STI discriminator value
     const baseMeta = getBaseMeta(maybeBaseMeta);
-    const field = baseMeta.fields[baseMeta.stiDiscriminatorField!];
-    if (field.kind !== "enum") throw new Error("Discriminator field must be an enum");
-    const columnName = field.serde.columns[0].columnName;
-    const value = row[columnName];
-    return baseMeta.subTypes.find((st) => st.stiDiscriminatorValue === value) ?? baseMeta;
+    const value = row[baseMeta.stiDiscriminatorColumnName!];
+    return baseMeta.subTypesByStiValue!.get(value) ?? baseMeta;
   } else {
     throw new Error("Unknown inheritance type");
   }
@@ -2987,7 +2997,7 @@ function findConcreteMeta(maybeBaseMeta: EntityMetadata, row: any): EntityMetada
 /** Sets the `Animal.type` enum to the right subtype value. */
 function setStiDiscriminatorValue(baseMeta: EntityMetadata, entity: Entity): void {
   const typeName = entity.constructor.name;
-  const st = baseMeta.subTypes.find((st) => st.type === typeName);
+  const st = baseMeta.subTypesByType!.get(typeName);
   if (st) {
     const field = baseMeta.fields[baseMeta.stiDiscriminatorField!] as EnumField;
     const code = (field.enumDetailType.findById(st.stiDiscriminatorValue!) as any).code;

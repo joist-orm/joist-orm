@@ -42,6 +42,18 @@ export function getOrSet<T extends Record<keyof unknown, unknown>>(
   return record[key];
 }
 
+/** Defines a getter that replaces itself with its computed value on first access. */
+export function defineLazyGetter<T extends object, K extends keyof T>(obj: T, key: K, build: () => T[K]): void {
+  Object.defineProperty(obj, key, {
+    configurable: true,
+    get: function getLazyProperty() {
+      const value = build();
+      Object.defineProperty(obj, key, { configurable: true, value });
+      return value;
+    },
+  });
+}
+
 /**
  * A utility to ensure a Promise-returning method actually returns a promise and doesn't
  * early exit. Using `async function` guarantees these semantics, but sometimes we avoid

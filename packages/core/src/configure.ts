@@ -1,17 +1,23 @@
-import { Entity } from "./Entity";
-import { MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
-import { EntityMetadata, ManyToOneField, OneToManyField, getMetadata } from "./EntityMetadata";
+import { type Entity } from "./Entity";
+import { type MaybeAbstractEntityConstructor, type TaggedId } from "./EntityManager";
+import {
+  type EntityMetadata,
+  type EnumField,
+  type ManyToOneField,
+  type OneToManyField,
+  getMetadata,
+} from "./EntityMetadata";
 import { setAfterMetadataLocked, setBooted } from "./config";
 import { AsyncDefault } from "./defaults";
 import { getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { reverseReactiveHint } from "./reactiveHints";
 import { ReactiveManyToManyImpl, ReactiveReferenceImpl, Reference } from "./relations";
-import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { AsyncReactiveFieldImpl } from "./relations/AsyncReactiveField";
+import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { isCannotBeUpdatedRule } from "./rules";
 import { KeySerde } from "./serde";
-import { fail } from "./utils";
+import { defineLazyGetter, fail } from "./utils";
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
 const tableToMetaMap = new Map<string, EntityMetadata>();
@@ -30,6 +36,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
   try {
     populateConstructorMaps(metas);
     hookUpBaseTypeAndSubTypes(metas);
+    installMetadataGetters(metas);
     sortMetasByBaseType(metas);
     setImmutableFields(metas);
     populatePolyComponentFields(metas);
@@ -44,6 +51,24 @@ export function configureMetadata(metas: EntityMetadata[]): void {
   } catch (e) {
     previousBootError = e;
     throw e;
+  }
+}
+
+/** Installs lazy lookup getters for metadata-derived caches. */
+function installMetadataGetters(metas: EntityMetadata[]): void {
+  for (const meta of metas) {
+    defineLazyGetter(meta, "subTypesByType", function buildSubTypesByType() {
+      return new Map(meta.subTypes.map((st) => [st.type, st]));
+    });
+    defineLazyGetter(meta, "subTypesByStiValue", function buildSubTypesByStiValue() {
+      return new Map(meta.subTypes.map((st) => [st.stiDiscriminatorValue, st]));
+    });
+    defineLazyGetter(meta, "stiDiscriminatorColumnName", function buildStiDiscriminatorColumnName() {
+      const field = meta.fields[meta.stiDiscriminatorField!];
+      if (field === undefined) throw new Error(`${meta.type} does not have an STI discriminator field`);
+      if (field.kind !== "enum") throw new Error("Discriminator field must be an enum");
+      return (field as EnumField).serde.columns[0].columnName;
+    });
   }
 }
 

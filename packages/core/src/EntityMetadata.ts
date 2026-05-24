@@ -61,6 +61,12 @@ export interface EntityMetadata<T extends Entity = any> {
   baseTypes: EntityMetadata[];
   /** The list of subtypes for this base type, e.g. for Animal it'd be `[Mammal, Dog]`. */
   subTypes: EntityMetadata[];
+  /** The lazy lookup of subtypes by type name, i.e. `Animal.metadata.subTypesByType.get("Dog")`. */
+  subTypesByType?: ReadonlyMap<string, EntityMetadata>;
+  /** The lazy lookup of STI subtypes by discriminator value, i.e. `Task.metadata.subTypesByStiValue.get(1)`. */
+  subTypesByStiValue?: ReadonlyMap<unknown, EntityMetadata>;
+  /** The lazy STI discriminator column name, i.e. `Task.metadata.stiDiscriminatorColumnName`. */
+  stiDiscriminatorColumnName?: string;
   /** If the schema is lacking deferred FKs, this is our insertion order. */
   nonDeferredFkOrder?: number;
 }

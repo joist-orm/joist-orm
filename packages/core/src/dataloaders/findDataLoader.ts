@@ -1,6 +1,4 @@
-import hash from "object-hash";
-import { isAlias } from "../Aliases";
-import { Entity, isEntity } from "../Entity";
+import { Entity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
 import { opToFn } from "../EntityGraphQLFilter";
 import { EntityManager, MaybeAbstractEntityConstructor, getEmInternalApi } from "../EntityManager";
@@ -22,10 +20,9 @@ import { visitConditions } from "../QueryVisitor";
 import { OpColumn } from "../drivers/EntityWriter";
 import { kqDot } from "../keywords";
 import { LoadHint } from "../loadHints";
-import { maybeRequireTemporal } from "../temporal";
-import { plainDateMapper, plainDateTimeMapper, plainTimeMapper, zonedDateTimeMapper } from "../temporalMappers";
 import { buildUnnestCte } from "../unnest";
 import { assertNever } from "../utils";
+import { fastWhereFilterHash } from "./fastWhereFilterHash";
 
 export const findOperation = "find";
 
@@ -50,126 +47,109 @@ export function findDataLoader<T extends Entity>(
 
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
-  const { checkLimit, findSettings } = em["prepareFind"](meta, findOperation, query, { ...opts, limit: em.entityLimit });
+  const { checkLimit, findSettings } = em["prepareFind"](meta, findOperation, query, {
+    ...opts,
+    limit: em.entityLimit,
+  });
   const bindings: any[] = [];
   collectValues(bindings, query);
   const prepared = { filter, query, bindings, findSettings, checkLimit };
   const batchKey = getBatchKeyFromGenericStructure(meta, query);
 
-  return em.getLoader<PreparedFindEntry<T>, T[]>(
-    findOperation,
-    // It's unlikely we'll have simultaneous em.finds with the same WHERE clause structure
-    // but lots of different load hints, and it'd be complicated to implement the preloading
-    // in a way that doesn't naively over-fetch data (which our loadDataLoader does prevent,
-    // but it's simpler b/c it's given exact ids to load), so for now just include the load
-    // hint in the batch key.
-    `${batchKey}-${JSON.stringify(hint)}`,
-    async (entries) => {
-      // We're guaranteed that these queries all have the same structure
+  return em
+    .getLoader<PreparedFindEntry<T>, T[]>(
+      findOperation,
+      // It's unlikely we'll have simultaneous em.finds with the same WHERE clause structure
+      // but lots of different load hints, and it'd be complicated to implement the preloading
+      // in a way that doesn't naively over-fetch data (which our loadDataLoader does prevent,
+      // but it's simpler b/c it's given exact ids to load), so for now just include the load
+      // hint in the batch key.
+      `${batchKey}-${JSON.stringify(hint)}`,
+      async (entries) => {
+        // We're guaranteed that these queries all have the same structure
 
-      // Don't bother with the CTE if there's only 1 query (or each query has exactly the same filter values)
-      if (entries.length === 1) {
-        const { query, findSettings, checkLimit } = entries[0];
-        // Maybe add preload joins
-        const { preloader } = getEmInternalApi(em);
-        const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
-        const rows = await em["executePreparedFind"](meta, findOperation, query, findSettings, checkLimit);
-        const entities = em.hydrate(type, rows);
-        preloadHydrator?.(rows, entities);
-        return [entities];
-      }
-
-      // WITH _find (tag, arg1, arg2) AS (
-      //   SELECT unnest($0::int[]), unnest($0::varchar[]), unnest($0::varchar[])
-      // )
-      // SELECT a.*, array_agg(_find.tag) AS _tags
-      // FROM authors a
-      // CROSS JOIN _find AS _find
-      // WHERE a.first_name = _find.arg0 OR a.last_name = _find.arg1
-      // GROUP BY a.id
-
-      // Build the list of 'arg1', 'arg2', ... strings
-      const { query, findSettings, checkLimit } = entries[0];
-      const { preloader } = getEmInternalApi(em);
-      const preloadJoins = preloader && hint && preloader.getPreloadJoins(meta, buildHintTree(hint), query);
-
-      const argsColumns = collectAndReplaceArgs(query);
-      argsColumns.unshift({ columnName: "tag", dbType: "int" });
-      const columnValues = createColumnValuesFromPrepared(argsColumns, entries);
-      const query2: ParsedFindQuery = {
-        ...query,
-        selects: ["array_agg(_find.tag) as _tags", ...query.selects],
-        tables: [{ join: "cross", table: "_find", alias: "_find" }, ...query.tables],
-        ctes: [buildUnnestCte("_find", argsColumns, columnValues), ...(query.ctes ?? [])],
-      };
-      if (preloadJoins) {
-        query2.selects.push(
-          ...preloadJoins.flatMap((j) =>
-            // Because we 'group by primary.id' to collapse the "a1 matched multiple finds" into
-            // a single row, we also need to pick just the first value of each preload column
-            j.selects.map((s) => `(array_agg(${s.value}))[1] AS ${s.as}`),
-          ),
-        );
-        query2.tables.push(...preloadJoins.map((j) => j.join));
-      }
-
-      // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
-      query2.groupBys = buildGroupBys(query2.selects);
-
-      // Also because of our `array_agg` group by, add any order bys to the group by
-      const [primary] = getTables(query2);
-      for (const { alias, column } of query2.orderBys) {
-        if (alias !== primary.alias) {
-          query2.groupBys.push({ alias, column });
+        // Don't bother with the CTE if there's only 1 query (or each query has exactly the same filter values)
+        if (entries.length === 1) {
+          const { query, findSettings, checkLimit } = entries[0];
+          // Maybe add preload joins
+          const { preloader } = getEmInternalApi(em);
+          const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
+          const rows = await em["executePreparedFind"](meta, findOperation, query, findSettings, checkLimit);
+          const entities = em.hydrate(type, rows);
+          preloadHydrator?.(rows, entities);
+          return [entities];
         }
-      }
 
-      const rows = await em["executePreparedFind"](meta, findOperation, query2, findSettings, checkLimit);
+        // WITH _find (tag, arg1, arg2) AS (
+        //   SELECT unnest($0::int[]), unnest($0::varchar[]), unnest($0::varchar[])
+        // )
+        // SELECT a.*, array_agg(_find.tag) AS _tags
+        // FROM authors a
+        // CROSS JOIN _find AS _find
+        // WHERE a.first_name = _find.arg0 OR a.last_name = _find.arg1
+        // GROUP BY a.id
 
-      const entities = em.hydrate(type, rows);
-      preloadJoins?.forEach((j) => j.hydrator(rows, entities));
+        // Build the list of 'arg1', 'arg2', ... strings
+        const { query, findSettings, checkLimit } = entries[0];
+        const { preloader } = getEmInternalApi(em);
+        const preloadJoins = preloader && hint && preloader.getPreloadJoins(meta, buildHintTree(hint), query);
 
-      // Make an empty array for each batched query, per the dataloader contract
-      const results = entries.map(() => [] as T[]);
-      // Then put each row into the tagged query it matched
-      rows.forEach((row, i) => {
-        const entity = entities[i];
-        for (const tag of row._tags) results[tag].push(entity);
-        delete row._tags;
-      });
-      return results;
-    },
-    // Our filter/order tuple is a complex object, so object-hash it to ensure caching works
-    { cacheKeyFn: (entry) => whereFilterHash(entry.filter) },
-  ).load(prepared);
-}
+        const argsColumns = collectAndReplaceArgs(query);
+        argsColumns.unshift({ columnName: "tag", dbType: "int" });
+        const columnValues = createColumnValuesFromPrepared(argsColumns, entries);
+        const query2: ParsedFindQuery = {
+          ...query,
+          selects: ["array_agg(_find.tag) as _tags", ...query.selects],
+          tables: [{ join: "cross", table: "_find", alias: "_find" }, ...query.tables],
+          ctes: [buildUnnestCte("_find", argsColumns, columnValues), ...(query.ctes ?? [])],
+        };
+        if (preloadJoins) {
+          query2.selects.push(
+            ...preloadJoins.flatMap((j) =>
+              // Because we 'group by primary.id' to collapse the "a1 matched multiple finds" into
+              // a single row, we also need to pick just the first value of each preload column
+              j.selects.map((s) => `(array_agg(${s.value}))[1] AS ${s.as}`),
+            ),
+          );
+          query2.tables.push(...preloadJoins.map((j) => j.join));
+        }
 
-const Temporal = maybeRequireTemporal()?.Temporal;
+        // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
+        query2.groupBys = buildGroupBys(query2.selects);
 
-// If a where clause includes an entity, object-hash cannot hash it, so just use the id.
-function replacer(v: any) {
-  if (isEntity(v)) {
-    // Use toString() instead of id so that new entities are kept separate, i.e. `Author#2`
-    return v.toString();
-  } else if (isAlias(v)) {
-    // Strip out `{ as: ...alias proxy... }` from the `em.find` inline conditions
-    return "alias";
-  } else if (Temporal) {
-    if (v instanceof Temporal.ZonedDateTime) {
-      return zonedDateTimeMapper.toDb(v);
-    } else if (v instanceof Temporal.PlainDateTime) {
-      return plainDateTimeMapper.toDb(v);
-    } else if (v instanceof Temporal.PlainDate) {
-      return plainDateMapper.toDb(v);
-    } else if (v instanceof Temporal.PlainTime) {
-      return plainTimeMapper.toDb(v);
-    }
-  }
-  return v;
+        // Also because of our `array_agg` group by, add any order bys to the group by
+        const [primary] = getTables(query2);
+        for (const { alias, column } of query2.orderBys) {
+          if (alias !== primary.alias) {
+            query2.groupBys.push({ alias, column });
+          }
+        }
+
+        const rows = await em["executePreparedFind"](meta, findOperation, query2, findSettings, checkLimit);
+
+        const entities = em.hydrate(type, rows);
+        preloadJoins?.forEach((j) => j.hydrator(rows, entities));
+
+        // Make an empty array for each batched query, per the dataloader contract
+        const results = entries.map(() => [] as T[]);
+        // Then put each row into the tagged query it matched
+        rows.forEach((row, i) => {
+          const entity = entities[i];
+          for (const tag of row._tags) results[tag].push(entity);
+          delete row._tags;
+        });
+        return results;
+      },
+      // Our filter/order tuple is a complex object, so use a stable cache key to ensure caching works.
+      { cacheKeyFn: (entry) => whereFilterHash(entry.filter) },
+    )
+    .load(prepared);
 }
 
 export function whereFilterHash(where: FilterAndSettings<any>): any {
-  return hash(where, { replacer, algorithm: "md5" });
+  const key = fastWhereFilterHash(where);
+  if (key === undefined) throw new Error("fastWhereFilterHash could not serialize find filter");
+  return key;
 }
 
 class ArgCounter {
@@ -269,7 +249,9 @@ function isAggregateSelect(select: string): boolean {
 function buildGroupBys(selects: ParsedSelect[]): ParsedGroupBy[] {
   const sqlSelects = selects.map(selectSqlForGroupBy);
   const wholeRowAliases = new Set(
-    sqlSelects.filter((select) => !isAggregateSelect(select) && stripSelectAlias(select).endsWith(".*")).map(parseAlias),
+    sqlSelects
+      .filter((select) => !isAggregateSelect(select) && stripSelectAlias(select).endsWith(".*"))
+      .map(parseAlias),
   );
   return sqlSelects
     .filter((select) => !isAggregateSelect(select))

@@ -23,10 +23,8 @@
     "joist-utils": "workspace:*"
   },
   "dependencies": {
-    "@types/object-hash": "^3.0.6",
     "ansis": "^4.3.0",
-    "dataloader": "^2.2.3",
-    "object-hash": "^3.0.0"
+    "dataloader": "^2.2.3"
   },
   "devDependencies": {
     "@swc/core": "^1.15.33",

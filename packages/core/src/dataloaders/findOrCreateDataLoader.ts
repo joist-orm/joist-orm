@@ -111,7 +111,7 @@ export function findOrCreateDataLoader<T extends Entity>(
       }
       return keys.map(() => entity);
     },
-    // Our filter tuple is a complex object, so object-hash it to ensure caching works
+    // Our filter tuple is a complex object, so use a stable cache key to ensure caching works.
     { cacheKeyFn: whereFilterHash as any },
   );
 }

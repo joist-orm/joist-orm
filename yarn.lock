@@ -4520,13 +4520,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/object-hash@npm:^3.0.6":
-  version: 3.0.6
-  resolution: "@types/object-hash@npm:3.0.6"
-  checksum: 10/2c7979d4e540af817b99c09fb4c2fed1c0b0e14342df474d8dcde4165a82c440b038341fd66fe998d9f86acdd5cccc65ba8092315e39e7c2114f945fa70aaa56
-  languageName: node
-  linkType: hard
-
 "@types/pg@npm:^8.20.0":
   version: 8.20.0
   resolution: "@types/pg@npm:8.20.0"
@@ -9625,11 +9618,9 @@ __metadata:
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
     "@types/node": "npm:^24.12.4"
-    "@types/object-hash": "npm:^3.0.6"
     ansis: "npm:^4.3.0"
     dataloader: "npm:^2.2.3"
     jest: "npm:30.4.2"
-    object-hash: "npm:^3.0.0"
     prettier: "npm:^3.8.3"
     prettier-plugin-organize-imports: "npm:^4.3.0"
     temporal-polyfill: "npm:^0.3.2"
@@ -12526,13 +12517,6 @@ __metadata:
   version: 4.1.1
   resolution: "object-assign@npm:4.1.1"
   checksum: 10/fcc6e4ea8c7fe48abfbb552578b1c53e0d194086e2e6bbbf59e0a536381a292f39943c6e9628af05b5528aa5e3318bb30d6b2e53cadaf5b8fe9e12c4b69af23f
-  languageName: node
-  linkType: hard
-
-"object-hash@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "object-hash@npm:3.0.0"
-  checksum: 10/f498d456a20512ba7be500cef4cf7b3c183cc72c65372a549c9a0e6dd78ce26f375e9b1315c07592d3fde8f10d5019986eba35970570d477ed9a2a702514432a
   languageName: node
   linkType: hard
 

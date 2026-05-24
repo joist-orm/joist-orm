@@ -197,22 +197,69 @@ export function isLoaded<T extends Entity, H extends LoadHint<T>>(entity: T, hin
   if (typeof hint === "string") {
     return (entity as any)[hint].isLoaded;
   } else if (Array.isArray(hint)) {
-    return (hint as string[]).every((key) => (entity as any)[key].isLoaded);
+    for (const key of hint as string[]) {
+      if (!(entity as any)[key].isLoaded) return false;
+    }
+    return true;
   } else if (typeof hint === "object") {
-    return Object.entries(hint as object).every(([key, nestedHint]) => {
+    for (const entry of Object.entries(hint as object)) {
+      const [key, nestedHint] = entry;
       const relation = getRelationFromMaybePolyKey(entity, key);
-      if (!relation || typeof relation.load !== "function") return true;
+      if (!relation || typeof relation.load !== "function") continue;
       if (relation.isLoaded) {
         const result = relation.get;
-        return Array.isArray(result)
-          ? result.every((entity) => isLoaded(entity, nestedHint))
-          : result
-            ? isLoaded(result, nestedHint)
-            : true;
+        if (Array.isArray(result)) {
+          for (const entity of result) {
+            if (!isLoaded(entity, nestedHint)) return false;
+          }
+        } else if (result && !isLoaded(result, nestedHint)) {
+          return false;
+        }
       } else {
         return false;
       }
-    });
+    }
+    return true;
+  } else {
+    throw new Error(`Unexpected hint ${hint}`);
+  }
+}
+
+/**
+ * Recursively checks if a relation-only populate hint is loaded on an entity.
+ *
+ * Unlike `isLoaded`, this returns `false` for non-loadable/primitive leaves instead of ignoring them, because
+ * `ReactiveField.load` calls `em.populate` with load hints converted from reactive hints, i.e. `{ firstName: {} }`.
+ * Treating those primitive leaves as loaded would let `EntityManager.populate` skip the batchloader path and change
+ * reactive recalculation ordering, so the populate fast-path only applies to true relation populate hints.
+ */
+export function isLoadedForPopulate<T extends Entity, H extends LoadHint<T>>(
+  entity: T,
+  hint: H,
+): entity is Loaded<T, H> {
+  if (typeof hint === "string") {
+    const relation = getRelationFromMaybePolyKey(entity, hint);
+    return !!relation && typeof relation.load === "function" && relation.isLoaded;
+  } else if (Array.isArray(hint)) {
+    for (const key of hint as string[]) {
+      if (!isLoadedForPopulate(entity, key as H)) return false;
+    }
+    return true;
+  } else if (typeof hint === "object") {
+    for (const entry of Object.entries(hint as object)) {
+      const [key, nestedHint] = entry;
+      const relation = getRelationFromMaybePolyKey(entity, key);
+      if (!relation || typeof relation.load !== "function" || !relation.isLoaded) return false;
+      const result = relation.get;
+      if (Array.isArray(result)) {
+        for (const entity of result) {
+          if (!isLoadedForPopulate(entity, nestedHint as LoadHint<typeof entity>)) return false;
+        }
+      } else if (result && !isLoadedForPopulate(result, nestedHint as LoadHint<typeof result>)) {
+        return false;
+      }
+    }
+    return true;
   } else {
     throw new Error(`Unexpected hint ${hint}`);
   }

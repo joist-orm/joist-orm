@@ -2242,7 +2242,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       return entities.filter((e) => e instanceof cstr && !e.isDeletedEntity);
     }
     if (this.#indexManager.shouldIndexType(entities.length)) {
-      this.#indexManager.enableIndexingForType(meta, entities);
+      this.#indexManager.enableIndexingForType(meta, entities, where);
       return (
         this.#indexManager
           .findMatching(meta, where)

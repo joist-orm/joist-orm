@@ -6,6 +6,7 @@ import { groupBy } from "./utils";
 type FieldValue = any;
 type FieldName = string;
 type EntityTag = string;
+const emptySet = new Set<Entity>();
 
 // The test reproducing a n^2 with n=500 went from 100ms to 50ms if indexed
 export const indexThreshold = 500;
@@ -31,19 +32,25 @@ export class IndexManager {
     return this.#indexes.has(tagName);
   }
 
-  /** Enables indexing for an entity type and builds initial indexes. */
-  enableIndexingForType<T extends Entity>(meta: EntityMetadata<T>, entities: T[]): void {
+  /** Enables indexing for an entity type and builds indexes for the requested fields. */
+  enableIndexingForType<T extends Entity>(meta: EntityMetadata<T>, entities: T[], where: object): void {
     const { tagName } = meta;
-    if (this.#indexes.has(tagName)) return; // Already indexed
-    this.#indexes.set(tagName, new Map());
+    if (!this.#indexes.has(tagName)) {
+      this.#indexes.set(tagName, new Map());
+    }
+
+    const fieldNames = Object.keys(where);
+    const fieldIndexes = this.#indexes.get(tagName)!;
+    const missingFieldNames = fieldNames.filter((fieldName) => !fieldIndexes.has(fieldName));
+    if (missingFieldNames.length === 0) return;
 
     // If subtypes are involved, group by each subtype
     if (meta.baseType || meta.subTypes.length > 0) {
       [...groupBy(entities, (e) => getMetadata(e)).entries()].forEach(([meta, entities]) => {
-        this.addEntitiesToIndex(meta, entities);
+        this.addEntitiesToIndex(meta, entities, missingFieldNames);
       });
     } else {
-      this.addEntitiesToIndex(meta, entities);
+      this.addEntitiesToIndex(meta, entities, missingFieldNames);
     }
   }
 
@@ -51,7 +58,7 @@ export class IndexManager {
   maybeIndexEntity(entity: Entity): void {
     const meta = getMetadata(entity);
     if (this.#indexes.has(meta.tagName)) {
-      this.addEntitiesToIndex(meta, [entity]);
+      this.addEntitiesToIndex(meta, [entity], [...this.#indexes.get(meta.tagName)!.keys()]);
     }
   }
 
@@ -84,12 +91,11 @@ export class IndexManager {
     // Start with all entities of the 1st condition, then intersect (AND) each subsequent field in `where`
     let candidates: Set<Entity> | undefined;
     for (const [fieldName, value] of Object.entries(where)) {
-      const fieldIndex = fieldIndexes.get(fieldName) ?? new FieldIndex();
-      const fieldCandidates = fieldIndex.get(value) ?? new Set();
+      const fieldCandidates = fieldIndexes.get(fieldName)?.get(value);
       if (!candidates) {
-        candidates = fieldCandidates; // This is the 1st clause
+        candidates = fieldCandidates ?? emptySet; // This is the 1st clause
       } else {
-        candidates = intersectSets(candidates, fieldCandidates);
+        candidates = fieldCandidates ? intersectSets(candidates, fieldCandidates) : emptySet;
       }
       // Early exit if no candidates remain
       if (candidates.size === 0) break;
@@ -101,11 +107,12 @@ export class IndexManager {
   }
 
   // `entities` should all be of the exact same subtype
-  private addEntitiesToIndex(meta: EntityMetadata, entities: Entity[]): void {
+  private addEntitiesToIndex(meta: EntityMetadata, entities: Entity[], fieldNames: string[]): void {
     const { tagName } = meta;
     const indexes = this.#indexes.get(tagName)!;
     // Iterate over each field so we can do a shared fieldIndex lookup
-    for (const [fieldName, field] of Object.entries(meta.allFields)) {
+    for (const fieldName of fieldNames) {
+      if (!meta.allFields[fieldName]) continue;
       let fieldIndex = indexes.get(fieldName);
       if (!fieldIndex) {
         fieldIndex = new FieldIndex();

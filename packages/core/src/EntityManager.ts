@@ -237,6 +237,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   public txn: TX | undefined;
   public entityLimit: number = defaultEntityLimit;
   readonly #entitiesArray: Entity[] = [];
+  // Incrementally track dirty entities so we don't have to scan `#entityArray` during flush
+  readonly #maybePendingFlushEntities: Set<Entity> = new Set();
   // Indexes the currently loaded entities by their tagged ids and `toTaggedString` ids (i.e. `a#`). This fixes
   // real-world performance issues where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
   readonly #entitiesById: Map<string, Entity> = new Map();
@@ -313,6 +315,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       indexManager: this.#indexManager,
       isLoadedCache: this.#isLoadedCache,
       pluginManager,
+
+      markMaybePending(entity: EntityW): void {
+        em.#maybePendingFlushEntities.add(entity as Entity);
+      },
+
+      unmarkMaybePending(entity: EntityW): void {
+        em.#maybePendingFlushEntities.delete(entity as Entity);
+      },
 
       isMerging(entity: EntityW): boolean {
         return em.#merging?.has(entity) ?? false;
@@ -1519,7 +1529,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   delete(entityOrArray: Entity | Entity[]): void {
     for (const entity of toArray(entityOrArray)) {
       // Early return if already deleted.
-      const alreadyMarked = getInstanceData(entity).markDeleted(entity);
+      const alreadyMarked = getInstanceData(entity).markDeleted();
       if (!alreadyMarked) continue;
       // Any derived fields that read this entity will need recalc-d
       this.#rm.queueAllDownstreamFields(entity, "deleted");
@@ -1627,7 +1637,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // Subset of pendingFlush entities that had hooks invoked in a prior `runHooksOnPendingEntities`
         const alreadyRanHooks = new Set<Entity>();
 
-        findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
+        findPendingFlushEntities(
+          this.#maybePendingFlushEntities,
+          hooksInvoked,
+          pendingFlush,
+          pendingHooks,
+          alreadyRanHooks,
+        );
 
         // If we're re-looping for AsyncReactiveField, make sure to bump updatedAt
         // each time, so that for an INSERT-then-UPDATE the triggers don't think the
@@ -1671,7 +1687,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             for (const e of pendingHooks) hooksInvoked.add(e);
             pendingHooks.clear();
             // See if the hooks mutated any new, not-yet-hooksInvoked entities
-            findPendingFlushEntities(this.entities, hooksInvoked, pendingFlush, pendingHooks, alreadyRanHooks);
+            findPendingFlushEntities(
+              this.#maybePendingFlushEntities,
+              hooksInvoked,
+              pendingFlush,
+              pendingHooks,
+              alreadyRanHooks,
+            );
             // The final run of recalcPendingReactables could have left us with pending type errors and no entities in
             // pendingHooks.  If so, we need to re-run recalcPendingTypeErrors to get those errors to transition into
             // suppressed errors so that we will fail after simpleValidation.
@@ -1999,7 +2021,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         instanceData.row = row;
         // And then only refresh the data keys that have already been serde-d from rows
         // (this keeps us from deserializing data out of rows that we don't need).
-        const { data, originalData } = instanceData;
+        const { data } = instanceData;
         const dataKeys = Object.keys(data);
         if (dataKeys.length > 0) {
           const allFields = getMetadata(entity).allFields;
@@ -2015,7 +2037,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               serde.setOnEntity(data, row);
               // Make the field look not-dirty
               if (changedFields.includes(fieldName)) {
-                delete originalData[fieldName];
+                instanceData.markFieldClean(fieldName);
               }
             }
           }
@@ -2038,7 +2060,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   public touch(entity: EntityW): void;
   public touch(entities: EntityW[]): void;
   public touch(entityOrEntities: EntityW | EntityW[]): void {
-    for (const entity of toArray(entityOrEntities)) getInstanceData(entity).isTouched = true;
+    for (const entity of toArray(entityOrEntities)) {
+      getInstanceData(entity).markTouched();
+    }
   }
 
   /**
@@ -2319,14 +2343,15 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         if (!(oldInstanceData.isNewEntity || oldInstanceData.isDirtyEntity)) continue;
         const { originalData: oldOriginalData, data: oldData } = oldInstanceData;
         const newEntity = mapEntity(oldEntity);
-        const { originalData: newOriginalData, data: newData } = (newEntity as any).__data as InstanceData;
+        const newInstanceData = (newEntity as any).__data as InstanceData;
+        const { data: newData } = newInstanceData;
         // for new entities, anything in `data` is changed and should be copied across. for existing entities, we
         // only care about changed fields, which are enumerated by originalData
         const maybeEntity = (value: any) => (isEntity(value) ? mapEntity(value as Entity) : value);
         const fields = Object.keys(oldEntity.isNewEntity ? oldData : oldOriginalData);
         for (const field of fields) {
           // copy over originalData so .changes is consistent across ems
-          if (field in oldOriginalData) newOriginalData[field] = maybeEntity(oldOriginalData[field]);
+          if (field in oldOriginalData) newInstanceData.markFieldDirty(field, maybeEntity(oldOriginalData[field]));
           newData[field] = maybeEntity(oldData[field]);
         }
       }
@@ -2337,7 +2362,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const newEntity = mapEntity(oldEntity);
       if (oldEntity.isDeletedEntity) {
         // If the old entity was deleted, that should be persisted in the new em
-        ((newEntity as any).__data as InstanceData).markDeleted(newEntity);
+        ((newEntity as any).__data as InstanceData).markDeleted();
         // deleted entities will fail if you try to `get` their relations, so skip them since they should be cleared
         // out regardless
         continue;
@@ -2588,6 +2613,8 @@ export interface EntityManagerInternalApi {
   pluginManager: PluginManager;
   clearDataloaders(): void;
   clearPreloadedRelations(): void;
+  markMaybePending(entity: EntityW): void;
+  unmarkMaybePending(entity: EntityW): void;
   setIsRefreshing(isRefreshing: boolean): void;
 }
 
@@ -2985,7 +3012,7 @@ function maybeBumpUpdatedAt(rm: ReactionsManager, todos: Record<string, Todo>, n
         // it has changed. This is technically true, but this will break the oplock SQL generation,
         // so force the field to be dirty.
         const orm = getInstanceData(e);
-        orm.originalData[updatedAt] = getField(e, updatedAt);
+        orm.markFieldDirty(updatedAt, getField(e, updatedAt));
         const serde = todo.metadata.fields[updatedAt].serde as TimestampSerde<unknown>;
         orm.data[updatedAt] = serde.mapFromNow(now);
         rm.queueDownstreamReactables(e, updatedAt);
@@ -3051,21 +3078,23 @@ function setStiDiscriminatorValue(baseMeta: EntityMetadata, entity: Entity): voi
 }
 
 function findPendingFlushEntities<Entity extends EntityW>(
-  entities: readonly Entity[],
+  maybePendingFlushEntities: Set<Entity>,
   hooksInvoked: Set<Entity>,
   pendingFlush: Set<Entity>,
   pendingHooks: Set<Entity>,
   alreadyRanHooks: Set<Entity>,
 ): void {
-  for (const e of entities) {
-    if (getInstanceData(e).pendingOperation !== "none") {
-      if (!hooksInvoked.has(e)) {
-        pendingHooks.add(e);
-      } else {
-        alreadyRanHooks.add(e);
-      }
-      pendingFlush.add(e);
+  for (const e of maybePendingFlushEntities) {
+    if (getInstanceData(e).pendingOperation === "none") {
+      maybePendingFlushEntities.delete(e);
+      continue;
     }
+    if (!hooksInvoked.has(e)) {
+      pendingHooks.add(e);
+    } else {
+      alreadyRanHooks.add(e);
+    }
+    pendingFlush.add(e);
   }
 }
 

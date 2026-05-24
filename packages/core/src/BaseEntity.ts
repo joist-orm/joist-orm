@@ -159,7 +159,7 @@ function toStringWithPrefix(meta: EntityMetadata, entity: Entity, prefix: string
  * on its `Object.create`-d instances.
  */
 export function baseEntityCstr(em: EntityManager, entity: BaseEntity<any, any>, isNew: boolean): void {
-  const data = new InstanceData(em, (entity.constructor as any).metadata, isNew);
+  const data = new InstanceData(em, entity, (entity.constructor as any).metadata, isNew);
   // This makes it non-enumerable to avoid Jest/recursive things tripping over it
   Object.defineProperty(entity, "__data", { value: data, enumerable: false, writable: false, configurable: false });
 }

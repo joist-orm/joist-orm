@@ -110,7 +110,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
       pluginManager.beforeSetField(entity, fieldName, newValue);
       data[fieldName] = newValue;
-      delete originalData[fieldName];
+      instanceData.markFieldClean(fieldName);
 
       fieldLogger?.logSet(entity, fieldName, newValue);
       if (isReference && instanceData.getReferenceHistory(fieldName).length > 0) {
@@ -134,7 +134,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
   // Only save the currentValue on the 1st change of this field
   if (!(fieldName in originalData)) {
-    originalData[fieldName] = currentValue;
+    instanceData.markFieldDirty(fieldName, currentValue);
   }
   fieldLogger?.logSet(entity, fieldName, newValue);
   rm.queueDownstreamReactables(entity, fieldName);

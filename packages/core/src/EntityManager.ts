@@ -14,8 +14,7 @@ import { populateBatchLoader, populateOperation } from "./batchloaders/populateB
 import { recursiveChildrenOperation } from "./batchloaders/recursiveChildrenBatchLoader";
 import { recursiveM2mOperation } from "./batchloaders/recursiveM2mBatchLoader";
 import { recursiveParentsOperation } from "./batchloaders/recursiveParentsBatchLoader";
-import { getReactiveRules } from "./caches";
-import { constraintNameToValidationError, ReactiveRule } from "./config";
+import { constraintNameToValidationError, type ReactiveRule } from "./config";
 import { getConstructorFromTag, getMetadataForType } from "./configure";
 import { findByUniqueDataLoader, findByUniqueOperation } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader, findCountOperation } from "./dataloaders/findCountDataLoader";
@@ -2719,13 +2718,13 @@ async function validateReactiveRules(
   const p1 = Object.values(todos).flatMap((todo) => {
     const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
-    const rules = getReactiveRules(todo.metadata);
+    const rules = todo.metadata.reactiveRules!;
     return rules.map((rule) => {
       // Of all changed entities of this type, how many specifically trigger this rule?
       const triggered = entities.filter((e) => {
         // If the rule is for a different subtype, skip it
         if (!(e instanceof rule.source)) return false;
-        // Any new-or-deleted entity fires every rule (getReactiveRules has already filtered out read-only)
+        // Any new-or-deleted entity fires every rule (reactiveRules has already filtered out read-only)
         if (e.isNewEntity || e.isDeletedEntity) return true;
         // Otherwise see if the changed fields overlaps with the rule's fields
         const changedFields = (e as any).changes.fieldsWithoutRelations as string[];
@@ -2742,15 +2741,15 @@ async function validateReactiveRules(
   const p2 = Object.values(joinRowTodos).flatMap((todo) => {
     const entities = [...todo.newRows, ...todo.deletedRows].flatMap((jr) => Object.values(jr.columns));
     // Do the first side
-    const p1 = getReactiveRules(todo.m2m.meta)
-      .filter((rule) => rule.fields.includes(todo.m2m.fieldName))
+    const p1 = todo.m2m.meta
+      .reactiveRules!.filter((rule) => rule.fields.includes(todo.m2m.fieldName))
       .map((rule) => {
         const triggered = entities.filter((e) => e instanceof todo.m2m.meta.cstr);
         return followAndQueue(triggered, rule);
       });
     // And the second side
-    const p2 = getReactiveRules(todo.m2m.otherMeta)
-      .filter((rule) => rule.fields.includes(todo.m2m.otherFieldName))
+    const p2 = todo.m2m.otherMeta
+      .reactiveRules!.filter((rule) => rule.fields.includes(todo.m2m.otherFieldName))
       .map((rule) => {
         const triggered = entities.filter((e) => e instanceof todo.m2m.otherMeta.cstr);
         return followAndQueue(triggered, rule);

@@ -1,6 +1,5 @@
 import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { getReactablesIncludingReadOnly } from "./caches";
 
 /**
  * Interface for our relations that have dynamic & expensive `isLoaded` checks.
@@ -79,26 +78,24 @@ export class IsLoadedCache {
    */
   #resetDownstreamReactables(meta: EntityMetadata, fieldName: string): void {
     // These are reactables in other entities that are watching/reacting to this entity/fieldName
-    const reactables = getReactablesIncludingReadOnly(meta);
+    const reactables = meta.reactablesIncludingReadOnlyByField!.get(fieldName) ?? [];
     for (const r of reactables) {
       // I.e. we've written to Author.firstName, and this reactable in Book/otherMeta depends on it
-      if (r.fields.includes(fieldName)) {
-        const otherMeta = getMetadata(r.cstr);
-        // Find any cache entries for this cstr + name
-        const set = this.#smartCache[otherMeta.tagName]?.[r.name];
-        if (set?.size > 0) {
-          for (const target of set) {
-            target.resetIsLoaded();
-            // Is this target itself a RF/RR? If so, transitively reset its cache as well.
-            const otherMeta = getMetadata(target.entity);
-            const otherField = otherMeta.allFields[target.fieldName];
-            if ("derived" in otherField && otherField.derived) {
-              this.#resetDownstreamReactables(otherMeta, otherField.fieldName);
-            }
+      const otherMeta = getMetadata(r.cstr);
+      // Find any cache entries for this cstr + name
+      const set = this.#smartCache[otherMeta.tagName]?.[r.name];
+      if (set?.size > 0) {
+        for (const target of set) {
+          target.resetIsLoaded();
+          // Is this target itself a RF/RR? If so, transitively reset its cache as well.
+          const otherMeta = getMetadata(target.entity);
+          const otherField = otherMeta.allFields[target.fieldName];
+          if ("derived" in otherField && otherField.derived) {
+            this.#resetDownstreamReactables(otherMeta, otherField.fieldName);
           }
-          set.clear();
-          this.#dirtySets--;
         }
+        set.clear();
+        this.#dirtySets--;
       }
     }
   }

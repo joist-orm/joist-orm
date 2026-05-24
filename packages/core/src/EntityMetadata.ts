@@ -1,7 +1,7 @@
 import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { EntityManager, MaybeAbstractEntityConstructor, TimestampFields } from "./EntityManager";
-import { ConfigApi } from "./config";
+import { type ConfigApi, type Reactable, type ReactiveRule } from "./config";
 import { DeepNew } from "./loadHints";
 import { FieldSerde, PolymorphicKeySerde } from "./serde";
 
@@ -51,6 +51,16 @@ export interface EntityMetadata<T extends Entity = any> {
   polyComponentFields?: Record<string, Field & { aliasSuffix: string }>;
   // Using `any` to avoid type errors between BaseType.metadata & SubType.metadata static fields
   config: ConfigApi<any, any>;
+  /** The lazy list of non-read-only reactables for this metadata and its base types. */
+  reactables?: Reactable[];
+  /** The lazy lookup of non-read-only reactables by source field name. */
+  reactablesByField?: ReadonlyMap<string, Reactable[]>;
+  /** The lazy list of all reactables for this metadata and its base types. */
+  reactablesIncludingReadOnly?: Reactable[];
+  /** The lazy lookup of all reactables by source field name. */
+  reactablesIncludingReadOnlyByField?: ReadonlyMap<string, Reactable[]>;
+  /** The lazy list of reactive validation rules for this metadata and its subtypes. */
+  reactiveRules?: ReactiveRule[];
   orderBy: string | undefined;
   /** Flat field names that can be used to find existing rows before creating. I.e. [["email"], ["author", "title"]]. */
   uniqueBy?: string[][];

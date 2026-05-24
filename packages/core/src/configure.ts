@@ -1,13 +1,15 @@
 import { type Entity } from "./Entity";
 import { type MaybeAbstractEntityConstructor, type TaggedId } from "./EntityManager";
 import {
+  getBaseAndSelfMetas,
+  getBaseSelfAndSubMetas,
+  getMetadata,
   type EntityMetadata,
   type EnumField,
   type ManyToOneField,
   type OneToManyField,
-  getMetadata,
 } from "./EntityMetadata";
-import { setAfterMetadataLocked, setBooted } from "./config";
+import { setAfterMetadataLocked, setBooted, type Reactable } from "./config";
 import { AsyncDefault } from "./defaults";
 import { getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
@@ -47,6 +49,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
     // Do these after `fireAfterMetadatas`, in case afterMetadata callbacks added more defaults/rules
     copyAsyncDefaults(metas);
     reverseIndexReactivity(metas);
+    installReactiveMetadataGetters(metas);
     copyRunBeforeBooksToBaseType(metas);
   } catch (e) {
     previousBootError = e;
@@ -68,6 +71,34 @@ function installMetadataGetters(metas: EntityMetadata[]): void {
       if (field === undefined) throw new Error(`${meta.type} does not have an STI discriminator field`);
       if (field.kind !== "enum") throw new Error("Discriminator field must be an enum");
       return (field as EnumField).serde.columns[0].columnName;
+    });
+  }
+}
+
+/** Installs lazy getters for reactivity caches after reactivity has been reverse-indexed. */
+function installReactiveMetadataGetters(metas: EntityMetadata[]): void {
+  for (const meta of metas) {
+    defineLazyGetter(meta, "reactables", function buildReactables() {
+      return getBaseAndSelfMetas(meta)
+        .flatMap((m) => m.config.__data.reactables)
+        .filter((r) => !r.isReadOnly);
+    });
+    defineLazyGetter(meta, "reactablesByField", function buildReactablesByField() {
+      return indexReactablesByField(meta.reactables!);
+    });
+    defineLazyGetter(meta, "reactablesIncludingReadOnly", function buildReactablesIncludingReadOnly() {
+      return getBaseAndSelfMetas(meta).flatMap((m) => m.config.__data.reactables);
+    });
+    defineLazyGetter(meta, "reactablesIncludingReadOnlyByField", function buildReactablesIncludingReadOnlyByField() {
+      return indexReactablesByField(meta.reactablesIncludingReadOnly!);
+    });
+    defineLazyGetter(meta, "reactiveRules", function buildReactiveRules() {
+      // We use "AndSub" because `reactiveRules` is called with `todo.metadata`, which is always
+      // the root type, but ofc we don't want to skip subtype rules.
+      //
+      // I had considered filtering this list with `rr.fields.length > 0`, but even rules with 100%
+      // immutable fields (so all read-only, and so not "reactive") need to run on initial entity creation.
+      return getBaseSelfAndSubMetas(meta).flatMap((m) => m.config.__data.reactiveRules);
     });
   }
 }
@@ -374,4 +405,20 @@ function copyRunBeforeBooksToBaseType(meta: EntityMetadata[]): void {
       b.config.__data.runHooksBefore.push(...m.config.__data.runHooksBefore);
     }
   }
+}
+
+/** Indexes reactables once so field setters don't scan every reactable's fields. */
+function indexReactablesByField(reactables: readonly Reactable[]): Map<string, Reactable[]> {
+  const byField = new Map<string, Reactable[]>();
+  for (const reactable of reactables) {
+    for (const field of reactable.fields) {
+      let fields = byField.get(field);
+      if (fields === undefined) {
+        fields = [];
+        byField.set(field, fields);
+      }
+      if (!fields.includes(reactable)) fields.push(reactable);
+    }
+  }
+  return byField;
 }

@@ -64,8 +64,7 @@ export class IndexManager {
     const fieldIndexes = this.#indexes.get(meta.tagName);
     if (!fieldIndexes) return; // Type not indexed
 
-    const field = meta.allFields[fieldName] ?? fail(`Invalid field ${fieldName}`);
-    const fieldIndex = fieldIndexes.get(field.fieldName);
+    const fieldIndex = fieldIndexes.get(fieldName);
     if (!fieldIndex) return; // Field is not indexed
 
     fieldIndex.remove(oldValue, entity);

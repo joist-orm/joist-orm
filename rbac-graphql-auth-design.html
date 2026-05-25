@@ -1,0 +1,995 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dynamic Field Permissions in a Static GraphQL UI</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f4ee;
+      --paper: #fffdf8;
+      --ink: #24211d;
+      --muted: #6c665e;
+      --line: #d9d1c4;
+      --blue: #1d5b8f;
+      --blue-soft: #dbeaf7;
+      --green: #257351;
+      --green-soft: #ddf0e6;
+      --orange: #a75d1b;
+      --orange-soft: #f7e5d2;
+      --red: #9d342e;
+      --red-soft: #f1d8d5;
+      --purple: #654a9c;
+      --purple-soft: #e7def7;
+      --shadow: 0 18px 50px rgb(36 33 29 / 12%);
+      --radius: 18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.5;
+    }
+
+    body {
+      margin: 0;
+    }
+
+    main {
+      margin: 0 auto;
+      max-width: 1180px;
+      padding: 44px 24px 80px;
+    }
+
+    header.hero {
+      background: radial-gradient(circle at 12% 18%, #ffffff 0 0, transparent 240px), linear-gradient(135deg, #fffdf8, #ece5d8);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      padding: 44px;
+      position: relative;
+    }
+
+    .eyebrow {
+      color: var(--orange);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      margin: 0 0 10px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-family: var(--serif);
+      font-size: clamp(2.2rem, 5vw, 5rem);
+      letter-spacing: -0.05em;
+      line-height: 0.95;
+      margin: 0;
+      max-width: 820px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: clamp(1.02rem, 1.8vw, 1.25rem);
+      margin: 24px 0 0;
+      max-width: 780px;
+    }
+
+    .hero-grid {
+      display: grid;
+      gap: 22px;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      margin-top: 32px;
+    }
+
+    .callout,
+    section,
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 28px rgb(36 33 29 / 7%);
+    }
+
+    .callout {
+      padding: 22px;
+    }
+
+    .callout h2,
+    section h2,
+    .card h3 {
+      margin-top: 0;
+    }
+
+    .callout p:last-child,
+    section p:last-child,
+    .card p:last-child {
+      margin-bottom: 0;
+    }
+
+    .decision-box {
+      background: #24211d;
+      border-radius: var(--radius);
+      color: #fff8ec;
+      padding: 22px;
+    }
+
+    .decision-box h2 {
+      color: #fff8ec;
+      margin: 0 0 12px;
+    }
+
+    .decision-box ul {
+      margin-bottom: 0;
+      padding-left: 20px;
+    }
+
+    section {
+      margin-top: 28px;
+      padding: 30px;
+    }
+
+    h2 {
+      font-family: var(--serif);
+      font-size: clamp(1.7rem, 3vw, 2.6rem);
+      letter-spacing: -0.035em;
+      line-height: 1;
+    }
+
+    h3 {
+      font-size: 1rem;
+      letter-spacing: -0.01em;
+      margin-bottom: 8px;
+    }
+
+    p,
+    li {
+      color: var(--muted);
+    }
+
+    strong {
+      color: var(--ink);
+    }
+
+    .grid-2,
+    .grid-3 {
+      display: grid;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .card {
+      padding: 20px;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--ink);
+      display: inline-flex;
+      font-size: 0.83rem;
+      font-weight: 700;
+      padding: 5px 10px;
+    }
+
+    .pill.blue { background: var(--blue-soft); border-color: #b6d0e6; color: var(--blue); }
+    .pill.green { background: var(--green-soft); border-color: #aedbc3; color: var(--green); }
+    .pill.orange { background: var(--orange-soft); border-color: #e6c39d; color: var(--orange); }
+    .pill.red { background: var(--red-soft); border-color: #dfaaa5; color: var(--red); }
+    .pill.purple { background: var(--purple-soft); border-color: #cab9eb; color: var(--purple); }
+
+    pre {
+      background: #1f242b;
+      border-radius: 14px;
+      color: #edf3f8;
+      font-family: var(--mono);
+      font-size: 0.86rem;
+      line-height: 1.45;
+      margin: 12px 0 0;
+      overflow-x: auto;
+      padding: 16px;
+      tab-size: 2;
+      white-space: pre;
+    }
+
+    code {
+      font-family: var(--mono);
+    }
+
+    .diagram {
+      background: #fffaf1;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      margin: 18px 0;
+      overflow: hidden;
+      padding: 10px;
+    }
+
+    svg {
+      display: block;
+      height: auto;
+      max-width: 100%;
+    }
+
+    .pros-cons {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: 16px;
+    }
+
+    .pros,
+    .cons {
+      border-radius: 16px;
+      padding: 16px 18px;
+    }
+
+    .pros {
+      background: var(--green-soft);
+      border: 1px solid #b8dcc8;
+    }
+
+    .cons {
+      background: var(--red-soft);
+      border: 1px solid #e2b3af;
+    }
+
+    .pros h3,
+    .cons h3 {
+      margin-top: 0;
+    }
+
+    .pros ul,
+    .cons ul {
+      margin-bottom: 0;
+      padding-left: 20px;
+    }
+
+    .matrix {
+      border-collapse: collapse;
+      margin-top: 16px;
+      width: 100%;
+    }
+
+    .matrix th,
+    .matrix td {
+      border-bottom: 1px solid var(--line);
+      padding: 12px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .matrix th {
+      color: var(--ink);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .matrix td {
+      color: var(--muted);
+    }
+
+    .recommendation {
+      background: linear-gradient(135deg, #24364a, #1d2a36);
+      color: #f8fbff;
+    }
+
+    .recommendation h2,
+    .recommendation h3,
+    .recommendation strong {
+      color: #ffffff;
+    }
+
+    .recommendation p,
+    .recommendation li {
+      color: #d9e4ef;
+    }
+
+    .recommendation .card {
+      background: rgb(255 255 255 / 7%);
+      border-color: rgb(255 255 255 / 16%);
+      box-shadow: none;
+    }
+
+    footer {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 28px;
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      main {
+        padding: 22px 14px 48px;
+      }
+
+      header.hero,
+      section {
+        padding: 24px;
+      }
+
+      .hero-grid,
+      .grid-2,
+      .grid-3,
+      .pros-cons {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <p class="eyebrow">Our Webapp RBAC Design Doc</p>
+    <h1>Dynamic Field Permissions in a Mostly Static GraphQL UI</h1>
+    <p class="subtitle">
+      Our webapp wants static GraphQL queries, static navigation, and static form layouts, but auth is dynamic per user,
+      per page, per operation, and sometimes per field. This document compares three API shapes for making the UI adapt
+      without wrapping every field, button, table column, and call-to-action in handwritten permission checks.
+    </p>
+    <div class="hero-grid">
+      <div class="callout">
+        <h2>The Core Problem</h2>
+        <p>
+          Backend authorization enforces reads and writes. The frontend still needs enough permission metadata to make the
+          experience honest: hide fields the user cannot see, disable fields they cannot edit, disable saves they cannot perform,
+          and avoid GraphQL requests that fail because a static screen queried a denied field.
+        </p>
+      </div>
+      <div class="decision-box">
+        <h2>Questions the UI Must Answer</h2>
+        <ul>
+          <li>Can this user view <strong>Author.name</strong>?</li>
+          <li>Can this user edit <strong>Author.email</strong>?</li>
+          <li>Can this user see a private royalty field?</li>
+          <li>Can this user create a book?</li>
+          <li>Can this user click edit, save, promote, or archive?</li>
+        </ul>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <h2>Mental Model</h2>
+    <p>
+      The UI needs two permission categories. <strong>Field permissions</strong> decide whether a value is visible and editable.
+      <strong>Operation permissions</strong> decide whether a command is available, such as create, edit, save, promote, archive,
+      or delete.
+    </p>
+    <div class="diagram" aria-label="RBAC mental model diagram">
+      <svg viewBox="0 0 1080 360" role="img">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#6c665e" />
+          </marker>
+          <style>
+            .box { fill: #fffdf8; stroke: #d9d1c4; stroke-width: 2; }
+            .blue { fill: #dbeaf7; stroke: #8cb8d9; }
+            .green { fill: #ddf0e6; stroke: #8bc5a6; }
+            .orange { fill: #f7e5d2; stroke: #dba96f; }
+            .label { fill: #24211d; font: 700 20px system-ui, sans-serif; }
+            .small { fill: #6c665e; font: 15px system-ui, sans-serif; }
+            .line { stroke: #6c665e; stroke-width: 2.5; marker-end: url(#arrow); fill: none; }
+          </style>
+        </defs>
+        <rect class="box blue" x="36" y="58" width="240" height="230" rx="22" />
+        <text class="label" x="72" y="105">Frontend Screen</text>
+        <text class="small" x="72" y="142">AuthorEditPage</text>
+        <text class="small" x="72" y="172">AuthorForm</text>
+        <text class="small" x="72" y="202">SaveButton</text>
+        <text class="small" x="72" y="232">PrivateFieldsPanel</text>
+
+        <rect class="box" x="420" y="36" width="250" height="132" rx="22" />
+        <text class="label" x="455" y="84">Field Permissions</text>
+        <text class="small" x="455" y="120">canView</text>
+        <text class="small" x="535" y="120">canEdit</text>
+
+        <rect class="box" x="420" y="198" width="250" height="132" rx="22" />
+        <text class="label" x="455" y="246">Operation Permissions</text>
+        <text class="small" x="455" y="282">canCreate, canSave, canEdit</text>
+
+        <rect class="box green" x="806" y="58" width="240" height="230" rx="22" />
+        <text class="label" x="846" y="105">Backend Auth</text>
+        <text class="small" x="846" y="142">roles</text>
+        <text class="small" x="846" y="172">policies</text>
+        <text class="small" x="846" y="202">row scope</text>
+        <text class="small" x="846" y="232">field scope</text>
+
+        <path class="line" d="M 276 128 C 332 128 354 102 410 102" />
+        <path class="line" d="M 276 226 C 332 226 354 264 410 264" />
+        <path class="line" d="M 670 102 C 718 102 748 128 796 128" />
+        <path class="line" d="M 670 264 C 718 264 748 226 796 226" />
+      </svg>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <h3>View</h3>
+        <p>If denied, the value should not render and should not accidentally leak through form state, cache, or network payloads.</p>
+      </div>
+      <div class="card">
+        <h3>Edit</h3>
+        <p>If read-only, the value may render but input components should be disabled and save payloads should avoid sending changes.</p>
+      </div>
+      <div class="card">
+        <h3>Operate</h3>
+        <p>Page-level actions such as create, edit, save, promote, and archive need their own permission signals.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Approach 1: Low-Level Permission Calls</h2>
+    <p>
+      The frontend separately asks for raw permission names for an entity or page, then merges those permissions with the normal
+      data query. UI components directly check permission strings such as <code>Author.name.edit</code>.
+    </p>
+    <div class="diagram" aria-label="Low-level permission calls diagram">
+      <svg viewBox="0 0 1080 420" role="img">
+        <defs>
+          <marker id="arrow-a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#6c665e" />
+          </marker>
+          <style>
+            .a1-box { fill: #fffdf8; stroke: #d9d1c4; stroke-width: 2; }
+            .a1-blue { fill: #dbeaf7; stroke: #8cb8d9; }
+            .a1-purple { fill: #e7def7; stroke: #b7a1df; }
+            .a1-green { fill: #ddf0e6; stroke: #8bc5a6; }
+            .a1-label { fill: #24211d; font: 700 19px system-ui, sans-serif; }
+            .a1-small { fill: #6c665e; font: 14px system-ui, sans-serif; }
+            .a1-line { stroke: #6c665e; stroke-width: 2.5; marker-end: url(#arrow-a1); fill: none; }
+          </style>
+        </defs>
+        <rect class="a1-box a1-blue" x="40" y="126" width="250" height="168" rx="22" />
+        <text class="a1-label" x="82" y="174">AuthorEditPage</text>
+        <text class="a1-small" x="82" y="210">merges data + permissions</text>
+        <text class="a1-small" x="82" y="238">passes booleans to form</text>
+
+        <rect class="a1-box" x="412" y="42" width="250" height="126" rx="22" />
+        <text class="a1-label" x="452" y="88">author Query</text>
+        <text class="a1-small" x="452" y="122">name, email, books</text>
+
+        <rect class="a1-box a1-purple" x="412" y="252" width="250" height="126" rx="22" />
+        <text class="a1-label" x="452" y="298">permissions Query</text>
+        <text class="a1-small" x="452" y="332">raw permission strings</text>
+
+        <rect class="a1-box a1-green" x="794" y="126" width="250" height="168" rx="22" />
+        <text class="a1-label" x="850" y="174">GraphQL API</text>
+        <text class="a1-small" x="850" y="210">data resolvers</text>
+        <text class="a1-small" x="850" y="238">auth policy service</text>
+
+        <path class="a1-line" d="M 290 176 C 342 126 360 104 402 104" />
+        <path class="a1-line" d="M 290 244 C 342 294 360 316 402 316" />
+        <path class="a1-line" d="M 662 104 C 714 104 742 162 784 176" />
+        <path class="a1-line" d="M 662 316 C 714 316 742 258 784 244" />
+      </svg>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>GraphQL API Calls</h3>
+        <pre><code>query AuthorEditPage($id: ID!) {
+  author(id: $id) {
+    id
+    name
+    email
+    royaltyRate
+    books { id title }
+  }
+}
+
+query AuthorPermissions($id: ID!) {
+  permissions(entityId: $id) {
+    name
+    allowed
+  }
+}</code></pre>
+      </div>
+      <div class="card">
+        <h3>Example Response</h3>
+        <pre><code>{
+  "permissions": [
+    { "name": "Author.edit", "allowed": true },
+    { "name": "Book.create", "allowed": false },
+    { "name": "Author.name.view", "allowed": true },
+    { "name": "Author.name.edit", "allowed": true },
+    { "name": "Author.email.view", "allowed": true },
+    { "name": "Author.email.edit", "allowed": false },
+    { "name": "Author.royaltyRate.view", "allowed": false }
+  ]
+}</code></pre>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Frontend Component Shape</h3>
+      <pre><code>function AuthorEditPage(props) {
+  const author = useAuthorQuery({ id: props.id });
+  const permissions = useAuthorPermissionsQuery({ id: props.id });
+  const can = createPermissionLookup(permissions.data?.permissions ?? []);
+
+  return (
+    &lt;AuthorForm
+      author={author.data?.author}
+      canEditAuthor={can("Author.edit")}
+      canEditName={can("Author.name.edit")}
+      canViewRoyaltyRate={can("Author.royaltyRate.view")}
+    /&gt;
+  );
+}
+
+function AuthorForm(props) {
+  return (
+    &lt;Form&gt;
+      &lt;TextField name="name" disabled={!props.canEditName} /&gt;
+      {props.canViewRoyaltyRate ? &lt;RoyaltyRateField /&gt; : null}
+      &lt;SaveButton disabled={!props.canEditAuthor} /&gt;
+    &lt;/Form&gt;
+  );
+}</code></pre>
+    </div>
+    <div class="pros-cons">
+      <div class="pros">
+        <h3>Pros</h3>
+        <ul>
+          <li>Maximum frontend flexibility.</li>
+          <li>Raw permission names are visible for debugging and advanced UI decisions.</li>
+          <li>Can be introduced without reshaping every existing entity field.</li>
+        </ul>
+      </div>
+      <div class="cons">
+        <h3>Cons</h3>
+        <ul>
+          <li>Frontend becomes coupled to low-level backend permission names.</li>
+          <li>Requires separate data and permission queries that must be merged.</li>
+          <li>Does not solve denied static field queries by itself.</li>
+          <li>Permission checks can spread across many components.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Approach 2: Graph-Embedded Auth</h2>
+    <p>
+      The GraphQL schema exposes decorated field objects and operation objects. Instead of querying <code>name</code>, the page queries
+      <code>nameField { value canView canEdit }</code>. Reusable form components can understand a standard field permission fragment.
+    </p>
+    <div class="diagram" aria-label="Graph-embedded auth diagram">
+      <svg viewBox="0 0 1080 430" role="img">
+        <defs>
+          <marker id="arrow-a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#6c665e" />
+          </marker>
+          <style>
+            .a2-box { fill: #fffdf8; stroke: #d9d1c4; stroke-width: 2; }
+            .a2-blue { fill: #dbeaf7; stroke: #8cb8d9; }
+            .a2-green { fill: #ddf0e6; stroke: #8bc5a6; }
+            .a2-orange { fill: #f7e5d2; stroke: #dba96f; }
+            .a2-label { fill: #24211d; font: 700 19px system-ui, sans-serif; }
+            .a2-small { fill: #6c665e; font: 14px system-ui, sans-serif; }
+            .a2-line { stroke: #6c665e; stroke-width: 2.5; marker-end: url(#arrow-a2); fill: none; }
+          </style>
+        </defs>
+        <rect class="a2-box a2-blue" x="38" y="56" width="255" height="132" rx="22" />
+        <text class="a2-label" x="72" y="104">AuthorEditPage</text>
+        <text class="a2-small" x="72" y="138">one entity query</text>
+
+        <rect class="a2-box a2-blue" x="38" y="244" width="255" height="132" rx="22" />
+        <text class="a2-label" x="72" y="292">EditableField UI</text>
+        <text class="a2-small" x="72" y="326">renders by canView/canEdit</text>
+
+        <rect class="a2-box a2-orange" x="414" y="102" width="270" height="220" rx="22" />
+        <text class="a2-label" x="454" y="150">GraphQL Entity</text>
+        <text class="a2-small" x="454" y="188">nameField { value canEdit }</text>
+        <text class="a2-small" x="454" y="218">emailField { value canEdit }</text>
+        <text class="a2-small" x="454" y="248">canSave { allowed reason }</text>
+        <text class="a2-small" x="454" y="278">canEdit { allowed reason }</text>
+
+        <rect class="a2-box a2-green" x="806" y="102" width="240" height="220" rx="22" />
+        <text class="a2-label" x="854" y="150">Backend</text>
+        <text class="a2-small" x="854" y="188">resolves values</text>
+        <text class="a2-small" x="854" y="218">resolves permission flags</text>
+        <text class="a2-small" x="854" y="248">keeps policy names private</text>
+
+        <path class="a2-line" d="M 293 122 C 346 122 360 166 404 166" />
+        <path class="a2-line" d="M 293 310 C 348 310 360 258 404 258" />
+        <path class="a2-line" d="M 684 212 C 726 212 754 212 796 212" />
+      </svg>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>GraphQL API Call</h3>
+        <pre><code>fragment EditableStringField on EditableStringField {
+  value
+  canView
+  canEdit
+  deniedReason
+}
+
+fragment OperationPermission on OperationPermission {
+  allowed
+  deniedReason
+}
+
+query AuthorEditPage($id: ID!) {
+  author(id: $id) {
+    id
+    nameField { ...EditableStringField }
+    emailField { ...EditableStringField }
+    royaltyRateField { ...EditableStringField }
+    books { id titleField { ...EditableStringField } }
+    canEdit { ...OperationPermission }
+    canSave { ...OperationPermission }
+  }
+}</code></pre>
+      </div>
+      <div class="card">
+        <h3>Example Response</h3>
+        <pre><code>{
+  "author": {
+    "id": "a:1",
+    "nameField": {
+      "value": "Octavia Butler",
+      "canView": true,
+      "canEdit": true,
+      "deniedReason": null
+    },
+    "emailField": {
+      "value": "octavia@example.com",
+      "canView": true,
+      "canEdit": false,
+      "deniedReason": "Role cannot edit author email"
+    },
+    "royaltyRateField": {
+      "value": null,
+      "canView": false,
+      "canEdit": false,
+      "deniedReason": "Royalty fields are restricted"
+    },
+    "canEdit": { "allowed": true, "deniedReason": null },
+    "canSave": { "allowed": true, "deniedReason": null }
+  }
+}</code></pre>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Frontend Component Shape</h3>
+      <pre><code>function AuthorEditPage(props) {
+  const result = useAuthorEditPageQuery({ id: props.id });
+  const author = result.data?.author;
+
+  return author ? &lt;AuthorForm author={author} /&gt; : null;
+}
+
+function AuthorForm(props) {
+  return (
+    &lt;Form&gt;
+      &lt;EditableTextField label="Name" field={props.author.nameField} name="name" /&gt;
+      &lt;EditableTextField label="Email" field={props.author.emailField} name="email" /&gt;
+      &lt;EditableTextField label="Royalty rate" field={props.author.royaltyRateField} name="royaltyRate" /&gt;
+      &lt;SaveButton disabled={!props.author.canSave.allowed} /&gt;
+    &lt;/Form&gt;
+  );
+}
+
+function EditableTextField(props) {
+  if (!props.field.canView) return null;
+  return &lt;TextField name={props.name} value={props.field.value ?? ""} disabled={!props.field.canEdit} /&gt;;
+}</code></pre>
+    </div>
+    <div class="pros-cons">
+      <div class="pros">
+        <h3>Pros</h3>
+        <ul>
+          <li>No separate permission bookkeeping query.</li>
+          <li>Backend can hide low-level permission names behind semantic booleans.</li>
+          <li>Standard fragments enable reusable components like <code>EditableTextField</code>.</li>
+          <li>Denied values can safely resolve to <code>null</code> plus metadata instead of throwing.</li>
+        </ul>
+      </div>
+      <div class="cons">
+        <h3>Cons</h3>
+        <ul>
+          <li>Every screen and query must migrate from raw fields to decorated fields.</li>
+          <li>Form state maps from <code>nameField.value</code> to mutation input <code>name</code>, adding boilerplate.</li>
+          <li>If the UI needs raw policy details, the API must expose new semantic flags.</li>
+          <li>Schema surface area grows substantially.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Approach 3: Tagged Values</h2>
+    <p>
+      The client opts in to tagged scalar values. Existing fields can still be queried, but string values return with permission
+      prefixes such as <code>rw:Octavia Butler</code>, <code>r:octavia@example.com</code>, or <code>d:none</code>. Beam components learn how to interpret tags.
+    </p>
+    <div class="diagram" aria-label="Tagged values diagram">
+      <svg viewBox="0 0 1080 430" role="img">
+        <defs>
+          <marker id="arrow-a3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#6c665e" />
+          </marker>
+          <style>
+            .a3-box { fill: #fffdf8; stroke: #d9d1c4; stroke-width: 2; }
+            .a3-blue { fill: #dbeaf7; stroke: #8cb8d9; }
+            .a3-orange { fill: #f7e5d2; stroke: #dba96f; }
+            .a3-red { fill: #f1d8d5; stroke: #d79791; }
+            .a3-label { fill: #24211d; font: 700 19px system-ui, sans-serif; }
+            .a3-small { fill: #6c665e; font: 14px system-ui, sans-serif; }
+            .a3-line { stroke: #6c665e; stroke-width: 2.5; marker-end: url(#arrow-a3); fill: none; }
+          </style>
+        </defs>
+        <rect class="a3-box a3-blue" x="38" y="112" width="240" height="190" rx="22" />
+        <text class="a3-label" x="74" y="160">Existing Screen</text>
+        <text class="a3-small" x="74" y="198">queries title/name</text>
+        <text class="a3-small" x="74" y="228">minimal query changes</text>
+
+        <rect class="a3-box a3-orange" x="398" y="64" width="282" height="124" rx="22" />
+        <text class="a3-label" x="436" y="112">Tagged Response</text>
+        <text class="a3-small" x="436" y="146">rw:value, r:value, d:none</text>
+
+        <rect class="a3-box a3-orange" x="398" y="246" width="282" height="124" rx="22" />
+        <text class="a3-label" x="436" y="294">Beam Components</text>
+        <text class="a3-small" x="436" y="328">strip tags, disable fields</text>
+
+        <rect class="a3-box a3-red" x="800" y="112" width="242" height="190" rx="22" />
+        <text class="a3-label" x="840" y="160">Type Boundary</text>
+        <text class="a3-small" x="840" y="198">strings only work cleanly</text>
+        <text class="a3-small" x="840" y="228">numbers/dates/references break</text>
+
+        <path class="a3-line" d="M 278 176 C 328 136 350 126 388 126" />
+        <path class="a3-line" d="M 278 238 C 328 286 350 308 388 308" />
+        <path class="a3-line" d="M 680 126 C 728 126 754 176 790 176" />
+        <path class="a3-line" d="M 680 308 C 728 308 754 238 790 238" />
+      </svg>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>GraphQL API Call</h3>
+        <pre><code>query AuthorEditPage($id: ID!) {
+  author(id: $id) {
+    id
+    name
+    email
+    royaltyRate
+  }
+}</code></pre>
+        <div class="pill-row">
+          <span class="pill orange">Header: X-Tagged-Permission-Values: true</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Example Response</h3>
+        <pre><code>{
+  "author": {
+    "id": "a:1",
+    "name": "rw:Octavia Butler",
+    "email": "r:octavia@example.com",
+    "royaltyRate": "d:none"
+  }
+}</code></pre>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Frontend Component Shape</h3>
+      <pre><code>function AuthorForm(props) {
+  return (
+    &lt;Form&gt;
+      &lt;BeamTextField name="name" value={props.author.name} /&gt;
+      &lt;BeamTextField name="email" value={props.author.email} /&gt;
+      &lt;BeamTextField name="royaltyRate" value={props.author.royaltyRate} /&gt;
+    &lt;/Form&gt;
+  );
+}
+
+function BeamTextField(props) {
+  const tagged = parsePermissionTaggedString(props.value);
+  if (tagged.access === "denied") return null;
+
+  return (
+    &lt;TextField
+      name={props.name}
+      value={tagged.value}
+      disabled={tagged.access === "read"}
+    /&gt;
+  );
+}</code></pre>
+    </div>
+    <div class="pros-cons">
+      <div class="pros">
+        <h3>Pros</h3>
+        <ul>
+          <li>Least disruption to existing GraphQL query shapes.</li>
+          <li>Can reduce the risk of old screens failing on denied fields.</li>
+          <li>Centralized Beam components can interpret tags once.</li>
+        </ul>
+      </div>
+      <div class="cons">
+        <h3>Cons</h3>
+        <ul>
+          <li>Only works naturally for strings.</li>
+          <li>Numbers, dates, booleans, collections, and references need separate mechanisms.</li>
+          <li>Pollutes scalar values with transport metadata.</li>
+          <li>Easy to forget to strip or reapply tags in form state, validation, and mutations.</li>
+          <li>Does not model operation permissions like create, save, edit, or promote.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Comparison</h2>
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>Dimension</th>
+          <th>Low-Level Permission Calls</th>
+          <th>Graph-Embedded Auth</th>
+          <th>Tagged Values</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>API shape</strong></td>
+          <td>Separate data query and permission query.</td>
+          <td>Entity fields include value plus permission metadata.</td>
+          <td>Existing scalar fields return tagged values after opt-in.</td>
+        </tr>
+        <tr>
+          <td><strong>Frontend coupling</strong></td>
+          <td>High coupling to raw permission names.</td>
+          <td>Coupled to semantic field and operation objects.</td>
+          <td>Coupled to tag protocol in every scalar-consuming path.</td>
+        </tr>
+        <tr>
+          <td><strong>Migration cost</strong></td>
+          <td>Medium. Add permission query and merge logic per page.</td>
+          <td>High. Rewrite queries and form bindings from raw fields to decorated fields.</td>
+          <td>Low for strings, high once non-string types are included.</td>
+        </tr>
+        <tr>
+          <td><strong>Safety for denied fields</strong></td>
+          <td>Incomplete unless the data query also avoids denied fields.</td>
+          <td>Strong. Denied field can return null value with explicit canView false.</td>
+          <td>Mixed. Avoids hard failure, but metadata travels as data.</td>
+        </tr>
+        <tr>
+          <td><strong>Component reuse</strong></td>
+          <td>Requires helper lookups or prop plumbing.</td>
+          <td>Strong fit for reusable <code>EditableField</code> components.</td>
+          <td>Strong only for Beam components that consume supported scalar types.</td>
+        </tr>
+        <tr>
+          <td><strong>Operation permissions</strong></td>
+          <td>Good fit as raw permission strings.</td>
+          <td>Good fit as <code>canSave</code>, <code>canEdit</code>, <code>canCreate</code>.</td>
+          <td>Not addressed by scalar tags.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="recommendation">
+    <h2>Recommended Direction</h2>
+    <p>
+      The clean long-term model is <strong>Approach 2: Graph-Embedded Auth</strong>, optionally paired with a narrow compatibility
+      bridge inspired by Approach 1 for page-level operations and migration diagnostics. Tagged values are attractive as a migration
+      safety valve, but they appear too fragile as the primary model because our webapp fields are not only strings.
+    </p>
+    <div class="grid-3">
+      <div class="card">
+        <h3>1. Standardize Field Wrappers</h3>
+        <p>Introduce reusable GraphQL field types such as <code>EditableStringField</code>, <code>EditableMoneyField</code>, and <code>EditableDateField</code>.</p>
+      </div>
+      <div class="card">
+        <h3>2. Standardize Operations</h3>
+        <p>Expose page/entity operations as semantic objects: <code>canCreate</code>, <code>canEdit</code>, <code>canSave</code>, <code>canPromote</code>.</p>
+      </div>
+      <div class="card">
+        <h3>3. Hide Boilerplate in Components</h3>
+        <p>Build Beam equivalents of bound fields that accept <code>field</code> metadata and handle hide, disable, help text, and denied reasons.</p>
+      </div>
+    </div>
+    <div class="diagram" aria-label="Recommended architecture diagram">
+      <svg viewBox="0 0 1080 380" role="img">
+        <defs>
+          <marker id="arrow-rec" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#d9e4ef" />
+          </marker>
+          <style>
+            .r-box { fill: rgba(255,255,255,.08); stroke: rgba(255,255,255,.24); stroke-width: 2; }
+            .r-label { fill: #ffffff; font: 700 19px system-ui, sans-serif; }
+            .r-small { fill: #d9e4ef; font: 14px system-ui, sans-serif; }
+            .r-line { stroke: #d9e4ef; stroke-width: 2.5; marker-end: url(#arrow-rec); fill: none; }
+          </style>
+        </defs>
+        <rect class="r-box" x="36" y="76" width="220" height="210" rx="22" />
+        <text class="r-label" x="70" y="124">Static Page</text>
+        <text class="r-small" x="70" y="162">stable layout</text>
+        <text class="r-small" x="70" y="192">static fragments</text>
+        <text class="r-small" x="70" y="222">semantic fields</text>
+
+        <rect class="r-box" x="332" y="76" width="250" height="210" rx="22" />
+        <text class="r-label" x="370" y="124">Auth-Aware Beam</text>
+        <text class="r-small" x="370" y="162">EditableTextField</text>
+        <text class="r-small" x="370" y="192">EditableDateField</text>
+        <text class="r-small" x="370" y="222">PermissionButton</text>
+
+        <rect class="r-box" x="664" y="76" width="250" height="210" rx="22" />
+        <text class="r-label" x="702" y="124">GraphQL Entity</text>
+        <text class="r-small" x="702" y="162">field wrappers</text>
+        <text class="r-small" x="702" y="192">operation wrappers</text>
+        <text class="r-small" x="702" y="222">denied reasons</text>
+
+        <rect class="r-box" x="948" y="126" width="96" height="110" rx="20" />
+        <text class="r-label" x="970" y="172">RBAC</text>
+        <text class="r-small" x="970" y="202">policy</text>
+
+        <path class="r-line" d="M 256 181 C 286 181 302 181 322 181" />
+        <path class="r-line" d="M 582 181 C 612 181 634 181 654 181" />
+        <path class="r-line" d="M 914 181 C 924 181 932 181 938 181" />
+      </svg>
+    </div>
+  </section>
+
+  <section>
+    <h2>Open Decisions</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Schema Granularity</h3>
+        <p>Do we create one generic field wrapper interface, type-specific wrappers, or both?</p>
+        <div class="pill-row">
+          <span class="pill blue">String</span>
+          <span class="pill blue">Number</span>
+          <span class="pill blue">Date</span>
+          <span class="pill blue">Money</span>
+          <span class="pill blue">Reference</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Mutation Semantics</h3>
+        <p>Should disabled fields be omitted by the client, rejected by the server, or both? The safest answer is both.</p>
+      </div>
+      <div class="card">
+        <h3>Denied Reasons</h3>
+        <p>Should the API return human-readable reasons, machine-readable codes, or both?</p>
+      </div>
+      <div class="card">
+        <h3>Migration Strategy</h3>
+        <p>Which high-value screens move first, and do old screens fail closed, fail soft, or use a temporary compatibility mode?</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Single-file HTML/SVG design document for explaining our webapp's frontend authorization options.
+  </footer>
+</main>
+</body>
+</html>

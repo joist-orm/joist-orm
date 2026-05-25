@@ -53,12 +53,17 @@ export function findPaginatedDataLoader<T extends Entity>(
       const query = parseFindQuery(meta, where, options);
       const { preloader } = getEmInternalApi(em);
       const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
-      em["prepareFind"](meta, findOperation, query, { ...options, limit, offset, checkLimit: false });
+      const { findSettings } = em["prepareFind"](meta, findOperation, query, {
+        ...options,
+        limit,
+        offset,
+        checkLimit: false,
+      });
 
       // Now craft the actual batched query
       const argsColumns = collectAndReplaceArgs(query);
       argsColumns.unshift({ columnName: "tag", dbType: "int" });
-      const columnValues = createColumnValues(meta, argsColumns, queries);
+      const columnValues = createColumnValues(meta, argsColumns, queries, findSettings);
       const query2: ParsedFindQuery = {
         selects: ["_find.tag as tag", "_data.*"],
         tables: [
@@ -80,7 +85,7 @@ export function findPaginatedDataLoader<T extends Entity>(
         meta,
         findOperation,
         query2,
-        { ...options, limit: undefined },
+        { ...findSettings, limit: undefined, offset: undefined },
         false,
       );
       const entities = em.hydrate(type, rows);

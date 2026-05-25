@@ -105,6 +105,54 @@ describe("EntityManager.find.batch", () => {
     expect(plugin.tables).toEqual([["a"]]);
   });
 
+  it("preserves CTEs added by beforeFind plugins when batching", async () => {
+    class CtePlugin extends Plugin {
+      beforeFind(_meta: unknown, operation: unknown, query: ParsedFindQuery): void {
+        if (operation !== "find") return;
+        query.ctes = [
+          ...(query.ctes ?? []),
+          {
+            alias: "_plugin_author_ids",
+            query: { kind: "raw", sql: "SELECT 1::int AS author_id", bindings: [] },
+          },
+        ];
+        query.tables.push({
+          join: "inner",
+          table: "_plugin_author_ids",
+          alias: "_pai",
+          col1: "a.id",
+          col2: "_pai.author_id",
+        });
+      }
+    }
+
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    resetQueryCount();
+    const em = newEntityManager();
+    em.addPlugin(new CtePlugin());
+
+    const [q1, q2] = await Promise.all([em.find(Author, { id: "1" }), em.find(Author, { id: "2" })]);
+
+    expect(numberOfQueries).toEqual(1);
+    expect(queries).toEqual([
+      [
+        `WITH _find (tag, arg0) AS (SELECT unnest($1::int[]), unnest($2::int[])),`,
+        `  _plugin_author_ids AS (SELECT 1::int AS author_id)`,
+        ` SELECT array_agg(_find.tag) as _tags, a.*`,
+        ` FROM authors AS a`,
+        ` CROSS JOIN _find AS _find`,
+        ` JOIN _plugin_author_ids AS _pai ON a.id = _pai.author_id`,
+        ` WHERE a.deleted_at IS NULL AND a.id = _find.arg0`,
+        ` GROUP BY a.id`,
+        ` ORDER BY a.id ASC`,
+        ` LIMIT $3`,
+      ].join(""),
+    ]);
+    expect(q1.map((a) => a.firstName)).toEqual(["a1"]);
+    expect(q2).toEqual([]);
+  });
+
   it("batches paginated queries with matching limits", async () => {
     await insertAuthor({ first_name: "a1", age: 10 });
     await insertAuthor({ first_name: "a2", age: 10 });

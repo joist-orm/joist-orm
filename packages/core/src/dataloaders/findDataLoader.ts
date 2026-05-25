@@ -93,23 +93,28 @@ export function findDataLoader<T extends Entity>(
 
       const argsColumns = collectAndReplaceArgs(query);
       argsColumns.unshift({ columnName: "tag", dbType: "int" });
-      query.selects.unshift("array_agg(_find.tag) as _tags");
-      // Inject a cross join into the query
-      query.tables.unshift({ join: "cross", table: "_find", alias: "_find" });
-      query.ctes = [buildUnnestCte("_find", argsColumns, createColumnValues(meta, argsColumns, queries, findSettings))];
+      const query2: ParsedFindQuery = {
+        ...query,
+        selects: ["array_agg(_find.tag) as _tags", ...query.selects],
+        tables: [{ join: "cross", table: "_find", alias: "_find" }, ...query.tables],
+        ctes: [
+          buildUnnestCte("_find", argsColumns, createColumnValues(meta, argsColumns, queries, findSettings)),
+          ...(query.ctes ?? []),
+        ],
+      };
       if (preloadJoins) {
-        query.selects.push(
+        query2.selects.push(
           ...preloadJoins.flatMap((j) =>
             // Because we 'group by primary.id' to collapse the "a1 matched multiple finds" into
             // a single row, we also need to pick just the first value of each preload column
             j.selects.map((s) => `(array_agg(${s.value}))[1] AS ${s.as}`),
           ),
         );
-        query.tables.push(...preloadJoins.map((j) => j.join));
+        query2.tables.push(...preloadJoins.map((j) => j.join));
       }
 
       // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
-      query.groupBys = query.selects
+      query2.groupBys = query2.selects
         .filter((s) => typeof s === "string")
         .filter((s) => !s.includes("array_agg") && !s.includes("CASE") && !s.includes(" as "))
         .map((s) => {
@@ -119,14 +124,14 @@ export function findDataLoader<T extends Entity>(
         });
 
       // Also because of our `array_agg` group by, add any order bys to the group by
-      const [primary] = getTables(query);
-      for (const { alias, column } of query.orderBys) {
+      const [primary] = getTables(query2);
+      for (const { alias, column } of query2.orderBys) {
         if (alias !== primary.alias) {
-          query.groupBys.push({ alias, column });
+          query2.groupBys.push({ alias, column });
         }
       }
 
-      const rows = await em["executePreparedFind"](meta, findOperation, query, findSettings, checkLimit);
+      const rows = await em["executePreparedFind"](meta, findOperation, query2, findSettings, checkLimit);
 
       const entities = em.hydrate(type, rows);
       preloadJoins?.forEach((j) => j.hydrator(rows, entities));

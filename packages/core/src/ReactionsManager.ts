@@ -156,11 +156,10 @@ export class ReactionsManager {
           pending.todo.clear();
           for (const doing of todo) pending.done.add(doing);
           // Walk back from the source to any downstream entities
-          const entities = (await followReverseHint(r.name, todo, r.path))
-            .filter((entity) => !entity.isDeletedEntity)
-            .filter((e) => e instanceof r.cstr);
-          this.logger?.logWalked(todo, r, entities, "recalc");
-          entities.forEach((entity) => {
+          const entities = r.path.length === 0 ? todo : await followReverseHint(r.name, todo, r.path);
+          const actionableEntities = entities.filter((entity) => !entity.isDeletedEntity && entity instanceof r.cstr);
+          this.logger?.logWalked(todo, r, actionableEntities, "recalc");
+          actionableEntities.forEach((entity) => {
             const key = makeActionKey(entity, r);
             // We could arrive at the same reactable from multiple paths (eg, 2 dependent fields changed), so we need to
             // dedupe based on the entity and reactable to only run each action once for any given entity per loop

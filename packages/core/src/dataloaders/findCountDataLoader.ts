@@ -1,4 +1,3 @@
-import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
@@ -9,7 +8,8 @@ import { buildUnnestCte } from "../unnest";
 import { fail } from "../utils";
 import {
   collectAndReplaceArgs,
-  createColumnValues,
+  collectValues,
+  createColumnValuesFromPrepared,
   getBatchKeyFromGenericStructure,
   whereFilterHash,
 } from "./findDataLoader";
@@ -20,7 +20,7 @@ export function findCountDataLoader<T extends Entity>(
   em: EntityManager,
   type: MaybeAbstractEntityConstructor<T>,
   filter: FilterAndSettings<T>,
-): DataLoader<FilterAndSettings<T>, number> {
+): Promise<number> {
   const { where, ...opts } = filter;
   if (opts.limit || opts.offset) {
     throw new Error("Cannot use limit/offset with findCountDataLoader");
@@ -28,23 +28,25 @@ export function findCountDataLoader<T extends Entity>(
 
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
+  const { findSettings } = em["prepareFind"](meta, findCountOperation, query, { ...opts, checkLimit: false });
+  const bindings: any[] = [];
+  collectValues(bindings, query);
+  const prepared = { filter, query, bindings, findSettings };
   const batchKey = getBatchKeyFromGenericStructure(meta, query);
 
-  return em.getLoader(
+  return em.getLoader<typeof prepared, number>(
     findCountOperation,
     batchKey,
-    async (queries) => {
+    async (entries) => {
       // We're guaranteed that these queries all have the same structure
 
       // Don't bother with the CTE if there's only 1 query (or each query has exactly the same filter values)
-      if (queries.length === 1) {
-        const { where, ...options } = queries[0];
-        const meta = getMetadata(type);
-        const query = parseFindQuery(meta, where, options);
+      if (entries.length === 1) {
+        const { query, findSettings } = entries[0];
         const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");
         query.selects = [`count(distinct ${kq(primary.alias)}.id) as count`];
         query.orderBys = [];
-        const rows = await em["executeFind"](meta, findCountOperation, query, { ...options, checkLimit: false });
+        const rows = await em["executePreparedFind"](meta, findCountOperation, query, findSettings, false);
         return [Number(rows[0].count)];
       }
 
@@ -59,8 +61,7 @@ export function findCountDataLoader<T extends Entity>(
       // ) _data
 
       // Build the list of 'arg1', 'arg2', ... strings
-      const { where, ...options } = queries[0];
-      const query = parseFindQuery(getMetadata(type), where, options);
+      const { query, findSettings } = entries[0];
       const argsColumns = collectAndReplaceArgs(query);
       argsColumns.unshift({ columnName: "tag", dbType: "int" });
 
@@ -77,14 +78,14 @@ export function findCountDataLoader<T extends Entity>(
           { join: "lateral", query: query, table: meta.tableName, alias: "_data", fromAlias: "_f" },
         ],
         // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
-        ctes: [buildUnnestCte("_find", argsColumns, createColumnValues(meta, argsColumns, queries))],
+        ctes: [buildUnnestCte("_find", argsColumns, createColumnValuesFromPrepared(argsColumns, entries))],
         orderBys: [],
       };
 
-      const rows = await em["executeFind"](meta, findCountOperation, query2, { ...options, checkLimit: false });
+      const rows = await em["executePreparedFind"](meta, findCountOperation, query2, findSettings, false);
 
       // Make an empty array for each batched query, per the dataloader contract
-      const results = queries.map(() => 0);
+      const results = entries.map(() => 0);
       // Then put each row into the tagged query it matched
       for (const row of rows) {
         results[row.tag] = Number(row.count);
@@ -92,6 +93,6 @@ export function findCountDataLoader<T extends Entity>(
       return results;
     },
     // Our filter/order tuple is a complex object, so object-hash it to ensure caching works
-    { cacheKeyFn: whereFilterHash },
-  );
+    { cacheKeyFn: (entry) => whereFilterHash(entry.filter) },
+  ).load(prepared);
 }

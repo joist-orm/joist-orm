@@ -110,7 +110,11 @@ export function buildRawQuery(
   }
 
   if (parsed.groupBys && parsed.groupBys.length > 0) {
-    sql += " GROUP BY " + parsed.groupBys.map((ob) => kqDot(ob.alias, ob.column)).join(", ");
+    sql +=
+      " GROUP BY " +
+      parsed.groupBys
+        .map((gb) => ("expression" in gb ? gb.expression : kqDot(gb.alias, gb.column)))
+        .join(", ");
   }
 
   if (parsed.orderBys.length > 0) {

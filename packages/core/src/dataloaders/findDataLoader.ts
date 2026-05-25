@@ -1,4 +1,3 @@
-import DataLoader from "dataloader";
 import hash from "object-hash";
 import { isAlias } from "../Aliases";
 import { Entity, isEntity } from "../Entity";
@@ -11,13 +10,14 @@ import {
   ColumnCondition,
   ParsedCteClause,
   ParsedFindQuery,
+  ParsedGroupBy,
+  ParsedSelect,
   ParsedValueFilter,
   RawCondition,
   getTables,
   parseAlias,
   parseFindQuery,
 } from "../QueryParser";
-import { optimizeCollectionJoins } from "../QueryParser.collectionJoins";
 import { visitConditions } from "../QueryVisitor";
 import { OpColumn } from "../drivers/EntityWriter";
 import { kqDot } from "../keywords";
@@ -29,12 +29,20 @@ import { assertNever } from "../utils";
 
 export const findOperation = "find";
 
+interface PreparedFindEntry<T extends Entity> {
+  filter: FilterAndSettings<T>;
+  query: ParsedFindQuery;
+  bindings: any[];
+  findSettings: any;
+  checkLimit: boolean | undefined;
+}
+
 export function findDataLoader<T extends Entity>(
   em: EntityManager,
   type: MaybeAbstractEntityConstructor<T>,
   filter: FilterAndSettings<T>,
   hint: LoadHint<T> | undefined,
-): DataLoader<FilterAndSettings<T>, T[]> {
+): Promise<T[]> {
   const { where, ...opts } = filter;
   if ("limit" in opts || "offset" in opts) {
     throw new Error("Cannot use limit/offset with findDataLoader");
@@ -42,9 +50,13 @@ export function findDataLoader<T extends Entity>(
 
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
+  const { checkLimit, findSettings } = em["prepareFind"](meta, findOperation, query, { ...opts, limit: em.entityLimit });
+  const bindings: any[] = [];
+  collectValues(bindings, query);
+  const prepared = { filter, query, bindings, findSettings, checkLimit };
   const batchKey = getBatchKeyFromGenericStructure(meta, query);
 
-  return em.getLoader(
+  return em.getLoader<PreparedFindEntry<T>, T[]>(
     findOperation,
     // It's unlikely we'll have simultaneous em.finds with the same WHERE clause structure
     // but lots of different load hints, and it'd be complicated to implement the preloading
@@ -52,19 +64,16 @@ export function findDataLoader<T extends Entity>(
     // but it's simpler b/c it's given exact ids to load), so for now just include the load
     // hint in the batch key.
     `${batchKey}-${JSON.stringify(hint)}`,
-    async (queries) => {
+    async (entries) => {
       // We're guaranteed that these queries all have the same structure
 
       // Don't bother with the CTE if there's only 1 query (or each query has exactly the same filter values)
-      if (queries.length === 1) {
-        const { where, ...opts } = queries[0];
-        // We have to parseFindQuery queries[0], b/c our query variable may be captured from
-        // a prior invocation that instantiated our dataloader instance.
-        const query = parseFindQuery(meta, where, opts);
+      if (entries.length === 1) {
+        const { query, findSettings, checkLimit } = entries[0];
         // Maybe add preload joins
         const { preloader } = getEmInternalApi(em);
         const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
-        const rows = await em["executeFind"](meta, findOperation, query, opts);
+        const rows = await em["executePreparedFind"](meta, findOperation, query, findSettings, checkLimit);
         const entities = em.hydrate(type, rows);
         preloadHydrator?.(rows, entities);
         return [entities];
@@ -80,27 +89,18 @@ export function findDataLoader<T extends Entity>(
       // GROUP BY a.id
 
       // Build the list of 'arg1', 'arg2', ... strings
-      const { where, ...options } = queries[0];
-      const query = parseFindQuery(getMetadata(type), where, options);
+      const { query, findSettings, checkLimit } = entries[0];
       const { preloader } = getEmInternalApi(em);
       const preloadJoins = preloader && hint && preloader.getPreloadJoins(meta, buildHintTree(hint), query);
 
-      // Let plugins see the pre-batched query AST
-      const { checkLimit, findSettings } = em["prepareFind"](meta, findOperation, query, {
-        ...options,
-        limit: em.entityLimit,
-      });
-
       const argsColumns = collectAndReplaceArgs(query);
       argsColumns.unshift({ columnName: "tag", dbType: "int" });
+      const columnValues = createColumnValuesFromPrepared(argsColumns, entries);
       const query2: ParsedFindQuery = {
         ...query,
         selects: ["array_agg(_find.tag) as _tags", ...query.selects],
         tables: [{ join: "cross", table: "_find", alias: "_find" }, ...query.tables],
-        ctes: [
-          buildUnnestCte("_find", argsColumns, createColumnValues(meta, argsColumns, queries, findSettings)),
-          ...(query.ctes ?? []),
-        ],
+        ctes: [buildUnnestCte("_find", argsColumns, columnValues), ...(query.ctes ?? [])],
       };
       if (preloadJoins) {
         query2.selects.push(
@@ -114,14 +114,7 @@ export function findDataLoader<T extends Entity>(
       }
 
       // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
-      query2.groupBys = query2.selects
-        .filter((s) => typeof s === "string")
-        .filter((s) => !s.includes("array_agg") && !s.includes("CASE") && !s.includes(" as "))
-        .map((s) => {
-          // Make a liberal assumption that this is a `a.id` or `a_st0.id` string
-          const alias = parseAlias(s);
-          return { alias, column: "id" };
-        });
+      query2.groupBys = buildGroupBys(query2.selects);
 
       // Also because of our `array_agg` group by, add any order bys to the group by
       const [primary] = getTables(query2);
@@ -137,7 +130,7 @@ export function findDataLoader<T extends Entity>(
       preloadJoins?.forEach((j) => j.hydrator(rows, entities));
 
       // Make an empty array for each batched query, per the dataloader contract
-      const results = queries.map(() => [] as T[]);
+      const results = entries.map(() => [] as T[]);
       // Then put each row into the tagged query it matched
       rows.forEach((row, i) => {
         const entity = entities[i];
@@ -147,8 +140,8 @@ export function findDataLoader<T extends Entity>(
       return results;
     },
     // Our filter/order tuple is a complex object, so object-hash it to ensure caching works
-    { cacheKeyFn: whereFilterHash },
-  );
+    { cacheKeyFn: (entry) => whereFilterHash(entry.filter) },
+  ).load(prepared);
 }
 
 const Temporal = maybeRequireTemporal()?.Temporal;
@@ -237,33 +230,21 @@ function rewriteToRawCondition(c: ColumnCondition, argsIndex: ArgCounter): RawCo
   };
 }
 
-export function createColumnValues(
-  meta: EntityMetadata,
-  columns: OpColumn[],
-  queries: readonly FilterAndSettings<any>[],
-  optimizeOptions: Parameters<typeof optimizeCollectionJoins>[1] = {},
-): any[][] {
+/** Builds `_find` column values from already prepared queries. */
+export function createColumnValuesFromPrepared(columns: OpColumn[], entries: readonly { bindings: any[] }[]): any[][] {
   const columnValues: any[][] = Array(columns.length);
   for (let i = 0; i < columns.length; i++) columnValues[i] = [];
-  queries.forEach((filter, i) => {
-    const { where, ...opts } = filter;
-    // add this query's `tag` value
+  entries.forEach((entry, i) => {
     columnValues[0].push(i);
-    const bindings: any[] = [];
-    const parsed = parseFindQuery(meta, where, opts);
-    // Make sure to call `optimizeCollectionJoins` so that our arg order matches conditions
-    // that might have been moved into an EXISTS subquery.
-    optimizeCollectionJoins(parsed, optimizeOptions);
-    collectValues(bindings, parsed);
-    for (let j = 0; j < bindings.length; j++) {
-      columnValues[j + 1].push(bindings[j]);
+    for (let j = 0; j < entry.bindings.length; j++) {
+      columnValues[j + 1].push(entry.bindings[j]);
     }
   });
   return columnValues;
 }
 
 /** Pushes the arg values of a given query in the cross-query `bindings` array. */
-function collectValues(bindings: any[], query: ParsedFindQuery): void {
+export function collectValues(bindings: any[], query: ParsedFindQuery): void {
   visitConditions(query, {
     visitCond(c: ColumnCondition) {
       if ("value" in c.cond) {
@@ -277,6 +258,65 @@ function collectValues(bindings: any[], query: ParsedFindQuery): void {
       }
     },
   });
+}
+
+/** Returns true for select expressions that do not need to be represented in GROUP BY. */
+function isAggregateSelect(select: string): boolean {
+  return select.toLowerCase().includes("array_agg(");
+}
+
+/** Builds GROUP BYs for selected values, accounting for whole-row selects that are grouped by primary key. */
+function buildGroupBys(selects: ParsedSelect[]): ParsedGroupBy[] {
+  const sqlSelects = selects.map(selectSqlForGroupBy);
+  const wholeRowAliases = new Set(
+    sqlSelects.filter((select) => !isAggregateSelect(select) && stripSelectAlias(select).endsWith(".*")).map(parseAlias),
+  );
+  return sqlSelects
+    .filter((select) => !isAggregateSelect(select))
+    .filter((select) => !isCoveredByWholeRowGroupBy(select, wholeRowAliases))
+    .map((select) => groupBySelect(select));
+}
+
+/** Returns a SQL string for group-by analysis, until we support bindings in ParsedGroupBy. */
+function selectSqlForGroupBy(select: ParsedSelect): string {
+  if (typeof select === "string") {
+    return select;
+  }
+  throw new Error(`find batching does not support grouped selects with bindings: ${select.sql}`);
+}
+
+/** Builds a GROUP BY for a selected value so `array_agg(_find.tag)` can coexist with plugin-rewritten selects. */
+function groupBySelect(select: string): ParsedGroupBy {
+  const expression = stripSelectAlias(select);
+  if (expression.endsWith(".*")) {
+    return { alias: parseAlias(expression), column: "id" };
+  }
+  return { expression };
+}
+
+/** Removes a trailing SQL alias from a select expression, i.e. `(a.id) as id` -> `(a.id)`. */
+function stripSelectAlias(select: string): string {
+  const match = /^(.*)\s+as\s+[^\s]+$/i.exec(select);
+  return match?.[1] ?? select;
+}
+
+/** Returns true when an expression is functionally covered by an already-grouped whole-row alias. */
+function isCoveredByWholeRowGroupBy(select: string, wholeRowAliases: Set<string>): boolean {
+  const expression = stripSelectAlias(select);
+  if (expression.endsWith(".*")) {
+    return false;
+  }
+  const aliases = findSelectedAliases(expression);
+  return aliases.length > 0 && aliases.every((alias) => wholeRowAliases.has(alias));
+}
+
+/** Finds SQL aliases referenced as `alias.column` or `"alias".column`, i.e. `a.first_name` -> `a`. */
+function findSelectedAliases(expression: string): string[] {
+  const aliases = new Set<string>();
+  for (const match of expression.matchAll(/(?:"([^"]+)"|([a-zA-Z_][\w]*))\./g)) {
+    aliases.add(match[1] ?? match[2]);
+  }
+  return [...aliases];
 }
 
 /** Replaces all values with `*` so we can see the generic structure of the query. */

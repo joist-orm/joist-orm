@@ -448,11 +448,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ): Promise<T[]> {
     const { populate, ...rest } = options || {};
     const settings = { where, ...rest };
-    const loader = hasPaginationSettings(rest)
+    const result = await (hasPaginationSettings(rest)
       ? findPaginatedDataLoader(this, type, settings, populate)
-      : findDataLoader(this, type, settings, populate);
-    const result = await loader
-      .load(settings)
+      : findDataLoader(this, type, settings, populate))
       .catch(function find(err) {
         throw appendStack(err, new Error());
       });
@@ -668,7 +666,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ): Promise<number> {
     const settings = { where, ...options };
     let count = await findCountDataLoader(this, type, settings)
-      .load(settings)
       .catch(function findCount(err) {
         throw appendStack(err, new Error());
       });
@@ -707,7 +704,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   ): Promise<string[]> {
     const settings = { where, ...options };
     return findIdsDataLoader(this, type, settings)
-      .load(settings)
       .catch(function findIds(err) {
         throw appendStack(err, new Error());
       });

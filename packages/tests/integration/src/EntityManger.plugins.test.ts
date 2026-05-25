@@ -162,7 +162,7 @@ describe("EntityManger.plugins", () => {
       em.addPlugin(plugin);
       expect(plugin.calls).toHaveLength(0);
       await em.find(Author, {});
-      expect(plugin.calls).toEqual([[getMetadata(Author), "find", expect.objectContaining({}), {}]]);
+      expect(plugin.calls).toMatchObject([[getMetadata(Author), "find", {}, { limit: em.entityLimit }]]);
     });
 
     // TODO: do we want to test every operation here?

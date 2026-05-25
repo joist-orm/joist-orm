@@ -43,7 +43,13 @@ export function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[])
     }
   });
   parsed.orderBys.forEach((o) => dt.markRequired(o.alias));
-  parsed.groupBys?.forEach((g) => dt.markRequired(g.alias));
+  parsed.groupBys?.forEach((g) => {
+    if ("expression" in g) {
+      markSelectAliases(dt, parsed, g.expression);
+    } else {
+      dt.markRequired(g.alias);
+    }
+  });
   keepAliases.forEach((a) => dt.markRequired(a));
   // Look recursively into CTE & lateral join conditions
   const todo2 = [{ query: parsed, filterPruneable: true }];

@@ -189,10 +189,7 @@ export interface ParsedOrderBy {
   order: OrderBy;
 }
 
-export interface ParsedGroupBy {
-  alias: string;
-  column: string;
-}
+export type ParsedGroupBy = { alias: string; column: string } | { expression: string };
 
 export type ParsedSelect = string | ParsedSelectWithBindings;
 type ParsedSelectWithBindings = { sql: string; bindings: any[]; aliases: string[] };

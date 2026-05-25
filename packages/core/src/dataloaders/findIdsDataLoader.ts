@@ -1,4 +1,3 @@
-import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
@@ -10,7 +9,8 @@ import { buildUnnestCte } from "../unnest";
 import { fail } from "../utils";
 import {
   collectAndReplaceArgs,
-  createColumnValues,
+  collectValues,
+  createColumnValuesFromPrepared,
   getBatchKeyFromGenericStructure,
   whereFilterHash,
 } from "./findDataLoader";
@@ -21,7 +21,7 @@ export function findIdsDataLoader<T extends Entity>(
   em: EntityManager,
   type: MaybeAbstractEntityConstructor<T>,
   filter: FilterAndSettings<T>,
-): DataLoader<FilterAndSettings<T>, string[]> {
+): Promise<string[]> {
   const { where, ...opts } = filter;
   if (opts.limit || opts.offset) {
     throw new Error("Cannot use limit/offset with findIdsDataLoader");
@@ -29,24 +29,25 @@ export function findIdsDataLoader<T extends Entity>(
 
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
+  const { findSettings } = em["prepareFind"](meta, findIdsOperation, query, { ...opts, limit: undefined });
+  const bindings: any[] = [];
+  collectValues(bindings, query);
+  const prepared = { filter, query, bindings, findSettings };
   const batchKey = getBatchKeyFromGenericStructure(meta, query);
 
-  return em.getLoader(
+  return em.getLoader<typeof prepared, string[]>(
     findIdsOperation,
     batchKey,
-    async (queries) => {
+    async (entries) => {
       // We're guaranteed that these queries all have the same structure
 
       // Don't bother with the CTE if there's only 1 query (or each query has exactly the same filter values)
-      if (queries.length === 1) {
-        const { where, ...options } = queries[0];
-        const meta = getMetadata(type);
-        const query = parseFindQuery(meta, where, options);
+      if (entries.length === 1) {
+        const { query, findSettings } = entries[0];
         const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");
         query.selects = [`${kq(primary.alias)}.id as id`];
         query.orderBys = [{ alias: primary.alias, column: "id", order: "ASC" }];
-        // explicitly pass limit: undefined to avoid executeFind applying the default entityLimit
-        const rows = await em["executeFind"](meta, findIdsOperation, query, { ...options, limit: undefined });
+        const rows = await em["executePreparedFind"](meta, findIdsOperation, query, findSettings, false);
         return [rows.map((row: any) => keyToTaggedId(meta, row.id)!)];
       }
 
@@ -61,8 +62,7 @@ export function findIdsDataLoader<T extends Entity>(
       // ) _data
 
       // Build the list of 'arg1', 'arg2', ... strings
-      const { where, ...options } = queries[0];
-      const query = parseFindQuery(getMetadata(type), where, options);
+      const { query, findSettings } = entries[0];
       const argsColumns = collectAndReplaceArgs(query);
       argsColumns.unshift({ columnName: "tag", dbType: "int" });
 
@@ -78,15 +78,14 @@ export function findIdsDataLoader<T extends Entity>(
           { join: "lateral", query, table: meta.tableName, alias: "_data", fromAlias: "_f" },
         ],
         // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
-        ctes: [buildUnnestCte("_find", argsColumns, createColumnValues(meta, argsColumns, queries))],
+        ctes: [buildUnnestCte("_find", argsColumns, createColumnValuesFromPrepared(argsColumns, entries))],
         orderBys: [],
       };
 
-      // explicitly pass limit: undefined to avoid executeFind applying the default entityLimit
-      const rows = await em["executeFind"](meta, findIdsOperation, query2, { ...options, limit: undefined });
+      const rows = await em["executePreparedFind"](meta, findIdsOperation, query2, findSettings, false);
 
       // Make an empty array for each batched query, per the dataloader contract
-      const results: string[][] = queries.map(() => []);
+      const results: string[][] = entries.map(() => []);
       // Then put each row's ID into the tagged query it matched
       for (const row of rows) {
         results[row.tag].push(keyToTaggedId(meta, row.id)!);
@@ -94,6 +93,6 @@ export function findIdsDataLoader<T extends Entity>(
       return results;
     },
     // Our filter/order tuple is a complex object, so object-hash it to ensure caching works
-    { cacheKeyFn: whereFilterHash },
-  );
+    { cacheKeyFn: (entry) => whereFilterHash(entry.filter) },
+  ).load(prepared);
 }

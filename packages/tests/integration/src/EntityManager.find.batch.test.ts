@@ -100,9 +100,92 @@ describe("EntityManager.find.batch", () => {
     ]);
     // Then there was only 1 query issues
     expect(numberOfQueries).toEqual(1);
-    // And the plugin only saw the pre-batched `authors a` table, and not
+    // And the plugin only saw the pre-batched `authors a` table for each batched find, and not
     // our more complicated `_find` structure
-    expect(plugin.tables).toEqual([["a"]]);
+    expect(plugin.tables).toEqual([["a"], ["a"]]);
+  });
+
+  it("collects values from plugin-mutated queries when batching", async () => {
+    class ConditionPlugin extends Plugin {
+      beforeFind(_meta: unknown, operation: unknown, query: ParsedFindQuery): void {
+        if (operation !== "find") return;
+        const ageCondition = query.condition?.conditions.find(
+          (condition) => condition.kind === "column" && condition.column === "age",
+        );
+        if (!ageCondition || ageCondition.kind !== "column" || !("value" in ageCondition.cond)) return;
+        const firstName = ageCondition.cond.value === 10 ? "a1" : "a2";
+        query.condition?.conditions.push({
+          kind: "column",
+          alias: "a",
+          column: "first_name",
+          dbType: "character varying",
+          cond: { kind: "eq", value: firstName },
+        });
+      }
+    }
+
+    await insertAuthor({ first_name: "a1", age: 10 });
+    await insertAuthor({ first_name: "a2", age: 20 });
+    resetQueryCount();
+    const em = newEntityManager();
+    em.addPlugin(new ConditionPlugin());
+
+    const [q1, q2] = await Promise.all([em.find(Author, { age: 10 }), em.find(Author, { age: 20 })]);
+
+    expect(numberOfQueries).toEqual(1);
+    expect(queries).toEqual([
+      [
+        `WITH _find (tag, arg0, arg1) AS (SELECT`,
+        ` unnest($1::int[]), unnest($2::int[]), unnest($3::character varying[]))`,
+        ` SELECT array_agg(_find.tag) as _tags, a.*`,
+        ` FROM authors AS a`,
+        ` CROSS JOIN _find AS _find`,
+        ` WHERE a.deleted_at IS NULL AND a.age = _find.arg0 AND a.first_name = _find.arg1`,
+        ` GROUP BY a.id`,
+        ` ORDER BY a.id ASC`,
+        ` LIMIT $4`,
+      ].join(""),
+    ]);
+    expect(q1.map((a) => a.firstName)).toEqual(["a1"]);
+    expect(q2.map((a) => a.firstName)).toEqual(["a2"]);
+  });
+
+  it("groups plugin-rewritten selects when batching", async () => {
+    class SelectPlugin extends Plugin {
+      beforeFind(_meta: unknown, operation: unknown, query: ParsedFindQuery): void {
+        if (operation === "find") {
+          query.selects = ["(a.id) as id", "(a.first_name) as first_name"];
+        }
+      }
+    }
+
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    await insertAuthor({ first_name: "a2", last_name: "l2" });
+    resetQueryCount();
+    const em = newEntityManager();
+    em.addPlugin(new SelectPlugin());
+
+    const [q1, q2] = await Promise.all([
+      em.find(Author, { firstName: "a1", lastName: "l1" }),
+      em.find(Author, { firstName: "a2", lastName: "l2" }),
+    ]);
+
+    expect(numberOfQueries).toEqual(1);
+    expect(queries).toEqual([
+      [
+        `WITH _find (tag, arg0, arg1) AS (SELECT`,
+        ` unnest($1::int[]), unnest($2::character varying[]), unnest($3::character varying[]))`,
+        ` SELECT array_agg(_find.tag) as _tags, (a.id) as id, (a.first_name) as first_name`,
+        ` FROM authors AS a`,
+        ` CROSS JOIN _find AS _find`,
+        ` WHERE a.deleted_at IS NULL AND a.first_name = _find.arg0 AND a.last_name = _find.arg1`,
+        ` GROUP BY (a.id), (a.first_name)`,
+        ` ORDER BY a.id ASC`,
+        ` LIMIT $4`,
+      ].join(""),
+    ]);
+    expect(q1.map((a) => a.firstName)).toEqual(["a1"]);
+    expect(q2.map((a) => a.firstName)).toEqual(["a2"]);
   });
 
   it("preserves CTEs added by beforeFind plugins when batching", async () => {

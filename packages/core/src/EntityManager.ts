@@ -477,8 +477,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       keepAliases?: string[];
     },
   ) {
-    const { checkLimit, driverSettings } = this.prepareFind(meta, operation, parsed, settings);
-    return this.executePreparedFind(meta, operation, parsed, driverSettings, checkLimit);
+    const { checkLimit, findSettings } = this.prepareFind(meta, operation, parsed, settings);
+    return this.executePreparedFind(meta, operation, parsed, findSettings, checkLimit);
   }
 
   /** Executes a query that has already had find hooks and optimizations applied. */
@@ -486,7 +486,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     meta: EntityMetadata,
     operation: FindOperation,
     parsed: ParsedFindQuery,
-    driverSettings: {
+    findSettings: {
       limit?: number;
       offset?: number;
       allowMultipleLeftJoins?: boolean;
@@ -497,9 +497,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     checkLimit: boolean | undefined,
   ) {
     const { pluginManager } = getEmInternalApi(this);
-    const rows = await this.driver.executeFind(this, parsed, driverSettings);
+    const rows = await this.driver.executeFind(this, parsed, findSettings);
     // Check by default unless explicitly disabled or the caller removed the LIMIT via `limit: undefined`
-    const shouldCheck = checkLimit ?? !("limit" in driverSettings && driverSettings.limit === undefined);
+    const shouldCheck = checkLimit ?? !("limit" in findSettings && findSettings.limit === undefined);
     if (shouldCheck && rows.length >= this.entityLimit) {
       throw new Error(`Query returned more than ${this.entityLimit} entityLimit rows`);
     }
@@ -532,11 +532,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       keepAliases?: string[];
     },
   ) {
-    const { checkLimit, ...driverSettings } = settings;
+    const { checkLimit, ...findSettings } = settings;
     const { pluginManager } = getEmInternalApi(this);
-    pluginManager.beforeFind(meta, operation, parsed, driverSettings);
+    // Plugins may mutate the settings object, so return the post-hook version that loaders must reuse.
+    pluginManager.beforeFind(meta, operation, parsed, findSettings);
     optimizeCollectionJoins(parsed, settings);
-    return { checkLimit, driverSettings };
+    return { checkLimit, findSettings };
   }
 
   /**

@@ -315,6 +315,26 @@ describe("EntityManager.find.batch", () => {
     `);
   });
 
+  it("batches optimized collection queries with IN conditions", async () => {
+    const em = newEntityManager();
+    const [a1, a2] = aliases(Author, Author);
+
+    await Promise.all([
+      em.find(
+        Author,
+        { as: a1, books: { title: "b1" } },
+        { conditions: { or: [{ and: [a1.age.in([20, 30]), a1.firstName.eq("a1")] }, a1.lastName.eq("l1")] } },
+      ),
+      em.find(
+        Author,
+        { as: a2, books: { title: "b2" } },
+        { conditions: { or: [{ and: [a2.age.in([30, 40]), a2.firstName.eq("a2")] }, a2.lastName.eq("l2")] } },
+      ),
+    ]);
+
+    expect(numberOfQueries).toEqual(1);
+  });
+
   it("batches queries with NIN", async () => {
     await insertAuthor({ first_name: "a1", age: 20 });
     await insertAuthor({ first_name: "a2", age: 30 });

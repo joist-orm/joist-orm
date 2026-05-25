@@ -17,6 +17,7 @@ import {
   parseAlias,
   parseFindQuery,
 } from "../QueryParser";
+import { optimizeCollectionJoins } from "../QueryParser.collectionJoins";
 import { visitConditions } from "../QueryVisitor";
 import { OpColumn } from "../drivers/EntityWriter";
 import { kqDot } from "../keywords";
@@ -85,14 +86,17 @@ export function findDataLoader<T extends Entity>(
       const preloadJoins = preloader && hint && preloader.getPreloadJoins(meta, buildHintTree(hint), query);
 
       // Let plugins see the pre-batched query AST
-      const { checkLimit, driverSettings } = em["prepareFind"](meta, findOperation, query, { limit: em.entityLimit });
+      const { checkLimit, findSettings } = em["prepareFind"](meta, findOperation, query, {
+        ...options,
+        limit: em.entityLimit,
+      });
 
       const argsColumns = collectAndReplaceArgs(query);
       argsColumns.unshift({ columnName: "tag", dbType: "int" });
       query.selects.unshift("array_agg(_find.tag) as _tags");
       // Inject a cross join into the query
       query.tables.unshift({ join: "cross", table: "_find", alias: "_find" });
-      query.ctes = [buildUnnestCte("_find", argsColumns, createColumnValues(meta, argsColumns, queries))];
+      query.ctes = [buildUnnestCte("_find", argsColumns, createColumnValues(meta, argsColumns, queries, findSettings))];
       if (preloadJoins) {
         query.selects.push(
           ...preloadJoins.flatMap((j) =>
@@ -122,7 +126,7 @@ export function findDataLoader<T extends Entity>(
         }
       }
 
-      const rows = await em["executePreparedFind"](meta, findOperation, query, driverSettings, checkLimit);
+      const rows = await em["executePreparedFind"](meta, findOperation, query, findSettings, checkLimit);
 
       const entities = em.hydrate(type, rows);
       preloadJoins?.forEach((j) => j.hydrator(rows, entities));
@@ -232,15 +236,20 @@ export function createColumnValues(
   meta: EntityMetadata,
   columns: OpColumn[],
   queries: readonly FilterAndSettings<any>[],
+  optimizeOptions: Parameters<typeof optimizeCollectionJoins>[1] = {},
 ): any[][] {
   const columnValues: any[][] = Array(columns.length);
   for (let i = 0; i < columns.length; i++) columnValues[i] = [];
-  queries.forEach((query, i) => {
-    const { where, ...opts } = query;
+  queries.forEach((filter, i) => {
+    const { where, ...opts } = filter;
     // add this query's `tag` value
     columnValues[0].push(i);
     const bindings: any[] = [];
-    collectValues(bindings, parseFindQuery(meta, where, opts));
+    const parsed = parseFindQuery(meta, where, opts);
+    // Make sure to call `optimizeCollectionJoins` so that our arg order matches conditions
+    // that might have been moved into an EXISTS subquery.
+    optimizeCollectionJoins(parsed, optimizeOptions);
+    collectValues(bindings, parsed);
     for (let j = 0; j < bindings.length; j++) {
       columnValues[j + 1].push(bindings[j]);
     }

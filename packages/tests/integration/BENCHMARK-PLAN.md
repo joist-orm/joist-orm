@@ -286,3 +286,197 @@ Before changing production code for an area:
 - Re-run the same benchmark with at least 3 independent process runs.
 - Keep or add a regression benchmark scenario if the optimization is non-obvious.
 - Run the relevant integration test subset from `packages/tests/integration`.
+
+## Appendix A: Initial Commit Benchmark Verification
+
+Benchmarks were run on 2026-05-25 with Node `v25.9.0` and `--expose-gc`. Each phase was measured in isolated jj workspaces under `/tmp/opencode/joist-bench-workspaces` with local `node_modules` and freshly-built packages. For commits where the benchmark script was introduced by the same change, the before run restored only that benchmark script onto the parent revision before building and running.
+
+All percentages below use the benchmark-reported `mean_ms`; positive speedup means the commit was faster than its parent. Raw output artifacts are in `/tmp/opencode/joist-bench-results/`.
+
+### Phase 1: Hydration And Registration
+
+Commit: `vskstonzrotq` / `8f821e20d5a0` (`perf: Optimize entity hydration registration`)
+
+Artifact files: `p01-before-correct.txt`, `p01-after-correct.txt`
+
+| Scenario | Size | Before Mean (ms) | After Mean (ms) | Speedup | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `author_fresh_register` | 100000 | 53.919 | 44.809 | 16.9% | Confirmed |
+| `author_fresh_register_scalar_reads` | 100000 | 118.519 | 110.296 | 6.9% | Confirmed |
+| `author_existing_no_overwrite` | 100000 | 81.627 | 58.681 | 28.1% | Confirmed |
+| `author_existing_overwrite_cold_data` | 100000 | 98.738 | 69.156 | 30.0% | Confirmed |
+| `author_existing_overwrite_warm_data` | 100000 | 211.438 | 168.765 | 20.2% | Confirmed |
+| `task_sti_fresh_register` | 100000 | 64.434 | 54.031 | 16.1% | Confirmed |
+
+### Phase 2: Identity-Map LoadAll Paths
+
+Commit: `tullpyrwolpo` / `98f0b33b3f14` (`perf: Optimize identity-map loadAll paths`)
+
+Artifact files: `p02-before.txt`, `p02-after.txt`
+
+| Scenario | Size | Before Mean (ms) | After Mean (ms) | Speedup | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `load_all_hits_untagged` | 100000 | 23.766 | 18.754 | 21.1% | Confirmed |
+| `load_all_hits_tagged` | 100000 | 25.899 | 17.065 | 34.1% | Confirmed |
+| `load_all_if_exists_hits_untagged` | 100000 | 22.134 | 19.713 | 10.9% | Confirmed |
+| `load_all_if_exists_hits_tagged` | 100000 | 26.167 | 18.126 | 30.7% | Confirmed |
+
+### Phase 3: Sparse Flush Scanning
+
+Commit: `zuyzpvqppmsl` / `36d6a73bc10f` (`perf: Optimize sparse flush scanning`)
+
+Artifact files: `p03-before.txt`, `p03-after.txt`
+
+| Scenario | Size | Dirty | Before Mean (ms) | After Mean (ms) | Speedup | Result |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `flush_dirty_0_validation` | 100000 | 0 | 4.154 | 0.101 | 97.6% | Confirmed |
+| `flush_dirty_0_skip_validation` | 100000 | 0 | 3.658 | 0.069 | 98.1% | Confirmed |
+| `flush_dirty_1_validation` | 100000 | 1 | 7.139 | 0.946 | 86.7% | Confirmed |
+| `flush_dirty_1_skip_validation` | 100000 | 1 | 6.657 | 0.738 | 88.9% | Confirmed |
+| `flush_dirty_100_validation` | 100000 | 100 | 11.195 | 6.392 | 42.9% | Confirmed |
+| `flush_dirty_100_skip_validation` | 100000 | 100 | 9.450 | 4.773 | 49.5% | Confirmed |
+| `flush_dirty_10000_validation` | 100000 | 10000 | 576.799 | 576.927 | -0.0% | Neutral |
+| `flush_dirty_10000_skip_validation` | 100000 | 10000 | 404.339 | 371.057 | 8.2% | Confirmed |
+
+### Phase 4: Todo Creation And Grouping
+
+Commit: `rxowmzrlsuux` / `b551cdb4619c` (`perf: Add todo creation benchmarks`)
+
+Artifact files: `p04-before.txt`, `p04-after.txt`
+
+This commit only added the benchmark, so no production speedup was expected. The before/after changes are benchmark noise.
+
+| Scenario | Size | Before Mean (ms) | After Mean (ms) | Speedup | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `todo_author_inserts` | 100000 | 6.780 | 6.888 | -1.6% | Noise |
+| `todo_group_author_inserts` | 100000 | 6.750 | 6.675 | 1.1% | Noise |
+| `todo_mixed_author_ops` | 100000 | 7.505 | 7.589 | -1.1% | Noise |
+| `todo_sti_task_inserts` | 100000 | 7.113 | 7.176 | -0.9% | Noise |
+| `todo_group_sti_task_inserts` | 100000 | 11.250 | 10.961 | 2.6% | Noise |
+
+### Phase 5: SQL Operation Generation And Binding Collection
+
+Commit: `pkmnqklpyquk` / `5850dae96fc1` (`perf: Optimize entity writer binding collection`)
+
+Artifact files: `p05-before.txt`, `p05-after.txt`
+
+| Scenario | Size | Columns | Before Mean (ms) | After Mean (ms) | Speedup | Result |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| `writer_insert_ops` | 100000 | 5 | 11.089 | 5.874 | 47.0% | Confirmed |
+| `writer_update_same_field_ops` | 100000 | 5 | 9.170 | 7.359 | 19.8% | Confirmed, noisy |
+| `writer_update_distinct_fields_ops` | 100000 | 5 | 13.527 | 13.932 | -3.0% | Noisy regression |
+| `writer_insert_ops` | 100000 | 20 | 73.651 | 52.948 | 28.1% | Confirmed |
+| `writer_update_same_field_ops` | 100000 | 20 | 13.281 | 11.483 | 13.5% | Confirmed |
+| `writer_update_distinct_fields_ops` | 100000 | 20 | 101.203 | 67.222 | 33.6% | Confirmed |
+| `writer_insert_ops` | 100000 | 50 | 281.948 | 149.503 | 47.0% | Confirmed |
+| `writer_update_same_field_ops` | 100000 | 50 | 21.341 | 12.894 | 39.6% | Confirmed |
+| `writer_update_distinct_fields_ops` | 100000 | 50 | 267.971 | 187.025 | 30.2% | Confirmed |
+
+### Phase 6: Field Mutation Cost
+
+Commit: `wrmuzrknwkvu` / `1977fdc32d8e` (`perf: Optimize field mutation equality checks`)
+
+Artifact files: `p06-before.txt`, `p06-after.txt`
+
+| Scenario | Size | Before Mean (ms) | After Mean (ms) | Speedup | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `field_primitive_noop_set` | 100000 | 16.005 | 16.067 | -0.4% | Neutral |
+| `field_primitive_actual_change` | 100000 | 160.966 | 150.857 | 6.3% | Confirmed |
+| `field_primitive_revert_change` | 100000 | 125.869 | 120.949 | 3.9% | Confirmed |
+| `field_primitive_indexed_change` | 100000 | 344.070 | 352.150 | -2.3% | Noisy regression |
+| `field_m2o_entity_change` | 100000 | 379.953 | 372.604 | 1.9% | Small gain |
+| `field_m2o_id_change` | 100000 | 380.774 | 372.330 | 2.2% | Small gain |
+
+### Phase 7: In-Memory Find Indexing
+
+Commit: `wtzslymorkqt` / `1fdce8d358a3` (`perf: Lazily build find indexes`)
+
+Artifact files: `p07-before.txt`, `p07-after.txt`
+
+| Scenario | Size | Before Mean (ms) | After Mean (ms) | Speedup | Before Retained MB | After Retained MB | Result |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `find_index_single_field_first_build` | 100000 | 1517.409 | 23.668 | 98.4% | 713.615 | 17.999 | Confirmed |
+| `find_index_single_field_steady_state` | 100000 | 0.215 | 0.152 | 29.3% | -0.022 | 0.001 | Confirmed |
+| `find_index_two_field_steady_state` | 100000 | 0.329 | 0.178 | 45.9% | -0.023 | -0.000 | Confirmed |
+| `find_index_missing_value_steady_state` | 100000 | 0.180 | 0.090 | 50.0% | -0.023 | -0.000 | Confirmed |
+| `find_index_relation_value_steady_state` | 100000 | 23.182 | 11.393 | 50.9% | -0.024 | -0.023 | Confirmed |
+
+### Phase 8: Find Query Preparation And Batching
+
+Commit: `zzxyrovsvytp` / `575bb7e859b6` (`perf: Optimize find filter cache keys`)
+
+Artifact files: `p08-before.txt`, `p08-after.txt`
+
+| Scenario | Batched Queries | Before Mean (ms) | After Mean (ms) | Speedup | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `find_query_prep_one_field` | 1000 | 27.335 | 12.026 | 56.0% | Confirmed |
+| `find_query_prep_two_fields` | 1000 | 29.819 | 14.029 | 52.9% | Confirmed |
+| `find_query_prep_with_hint` | 1000 | 26.891 | 11.412 | 57.6% | Confirmed |
+
+### Phase 9: Populate Breadth-First Loading
+
+Commit: `znquoxpznkmk` / `c1247f20b70b` (`perf: Optimize already-loaded populate paths`)
+
+Artifact files: `p09-before.txt`, `p09-after.txt`
+
+| Scenario | Size | Before Mean (ms) | After Mean (ms) | Speedup | Query Count Before | Query Count After | Result |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `populate_books` | 10000 | 107.559 | 111.892 | -4.0% | 1.000 | 1.000 | DB variance / non-target path |
+| `populate_books_reviews` | 10000 | 331.788 | 352.467 | -6.2% | 1.000 | 1.000 | DB variance / non-target path |
+| `populate_books_already_loaded` | 10000 | 10.570 | 8.210 | 22.3% | 0.000 | 0.000 | Confirmed |
+| `populate_books_reviews_already_loaded` | 10000 | 24.526 | 16.538 | 32.6% | 0.000 | 0.000 | Confirmed |
+
+### Phase 10: Reactive Recalculation Queueing
+
+Commit: `yzyrpprzszll` / `f322f6bca433` (`perf: Optimize reactive queue lookups`)
+
+Artifact files: `p10-before.txt`, `p10-after.txt`
+
+| Scenario | Size | Before Mean (ms) | After Mean (ms) | Speedup | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `reactive_queue_no_reactables` | 100000 | 55.525 | 31.457 | 43.3% | Confirmed |
+| `reactive_queue_one_reaction` | 100000 | 77.470 | 48.119 | 37.9% | Confirmed |
+| `reactive_queue_multiple_downstream` | 100000 | 108.912 | 84.319 | 22.6% | Confirmed |
+| `reactive_queue_created_all_downstream` | 100000 | 1254.864 | 1243.532 | 0.9% | Small gain |
+| `reactive_queue_deleted_all_downstream` | 100000 | 1254.253 | 1216.862 | 3.0% | Small gain |
+| `reactive_recalc_one_reaction` | 100000 | 396.627 | 388.042 | 2.2% | Small gain |
+| `reactive_recalc_multiple_downstream` | 100000 | 826.557 | 782.872 | 5.3% | Confirmed |
+
+## Appendix B: Additional Optimizations
+
+After the per-commit verification pass, each phase was reviewed again with targeted profiling or reduced benchmark runs. The goal was to identify larger follow-up changes, not just validate the original commit stack. Raw rerun artifacts for implemented follow-ups are in `/tmp/opencode/joist-bench-results/additional-p*.txt`.
+
+### Implemented Follow-Ups
+
+Two low-risk follow-ups were kept because they produced a plausible benchmark improvement in the targeted scenario. One additional `loadAll` direct-map lookup experiment was measured and then dropped because the 100k `loadAll` benchmark was neutral to slightly slower than the phase-2 post-commit baseline.
+
+| Phase | Change | Benchmark | Baseline Mean (ms) | Follow-Up Mean (ms) | Delta | Result |
+| --- | --- | --- | ---: | ---: | ---: | --- |
+| 7 | Avoid union-set allocation in `FieldIndex.get` when one relation-value candidate set already contains the other. | `find_index_relation_value_steady_state` | 11.626 | 9.577 | 17.6% faster | Kept |
+| 7 | Same change, non-target scenarios. | `find_index_single_field_first_build` | 24.262 | 25.198 | 3.9% slower | Noise / non-target |
+| 7 | Same change, non-target scenarios. | `find_index_two_field_steady_state` | 0.190 | 0.326 | 71.6% slower | Sub-ms noise, high RSD |
+| 10 | Skip `followReverseHint` for empty reverse paths during reactive recalculation. | `reactive_recalc_one_reaction` | 388.042 | 380.867 | 1.8% faster | Kept |
+| 10 | Skip `followReverseHint` for empty reverse paths during reactive recalculation. | `reactive_recalc_multiple_downstream` | 782.872 | 722.132 | 7.8% faster | Kept |
+| 10 | Same change, queue-only/non-target scenario. | `reactive_queue_created_all_downstream` | 1243.532 | 1359.566 | 9.3% slower | Noise / non-target, RSD 11.2% |
+
+### Phase-by-Phase Findings
+
+| Phase | Hotspot Evidence | Larger Opportunity | Risk / Next Benchmark |
+| --- | --- | --- | --- |
+| 1. Hydration and registration | CPU samples still showed `findExistingInstance`, `hydrate`, `#doRegister`, `baseEntityCstr`, `getField`, and overwrite `changes` proxy creation. | Replace overwrite refresh's public `changes.fieldsWithoutRelations` path with direct internal `InstanceData.originalData` access; add a no-index fast path around registration indexing; consider non-inheritance metadata fast paths. | Medium for overwrite semantics; rerun all hydration scenarios, especially warm overwrite. |
+| 2. Identity-map `loadAll` | Direct `#entitiesById.get` did not outperform the existing post-commit code in the 100k all-hit benchmark. | The bigger remaining win is avoiding full normalized-id/result rebuild allocations in all-hit and `loadAllIfExists` miss paths. | Medium because duplicate ids, not-found ordering, STI checks, and partial misses must stay exact; add mixed hit/miss benchmarks before changing. |
+| 3. Sparse flush scanning | Clean-map scanning is already sub-ms; dirty 10k flush is dominated by per-dirty work such as validation, hooks, reactive recalculation, and dirty-field allocation. | Add sync-fast paths for validation/hook dispatch, avoid `changes` proxy allocation in reactive validation, and reduce `Object.keys(originalData)` churn by tracking dirty fields internally. | Medium; rerun dirty 100 and dirty 10000 validation/skip scenarios plus validation/hook integration tests. |
+| 4. Todo creation and grouping | Todo creation itself is small, but STI grouping and repeated metadata/pending-operation lookup remain visible in loop-only profiles. | Add no-inheritance fast paths in `groupInsertsByTypeAndSubType`, avoid generic `groupBy` allocation for STI grouping, and consider accepting `Iterable<Entity>` to avoid materializing pending sets before `createTodos`. | Medium; rerun todo grouping benchmarks and sparse flush benchmarks. |
+| 5. EntityWriter operation generation | Wide distinct-field updates remain much slower than same-field updates because the update op unions changed fields across all rows. | Group updates by changed-field signature so each SQL op only binds columns that rows actually changed; cache column lists by metadata/signature. | Medium-high; more SQL statements can hurt small batches and oplock/touched/updatedAt behavior needs coverage. Rerun 20/50-column distinct and same-field update scenarios. |
+| 6. Field mutation cost | M2O mutation is still roughly twice primitive mutation; indexed primitive changes allocate heavily for high-cardinality buckets. | Add an internal non-percolating reverse add path for m2o->o2m echo updates, cache indexed-field checks, and consider singleton buckets inside `FieldIndex`. | Medium due relation consistency and index representation; rerun m2o id/entity and indexed primitive benchmarks. |
+| 7. In-memory find indexing | Relation-value steady state was allocation-heavy because persisted relation lookups can merge id-keyed and instance-keyed sets. | The kept superset fast path reduces the common duplicate-set case. A larger version would canonicalize persisted relation index keys to tagged ids and return final filtered arrays in one pass. | Medium; rerun relation-value steady state and add relation first-build coverage. |
+| 8. Find query preparation | Profiles pointed at `structuredClone` / structural batch-key generation after the `fastWhereFilterHash` commit. | Replace `getBatchKeyFromGenericStructure`'s clone/mutate/stringify path with a non-mutating structural serializer or shape key, then consider deduplicating parse/prepare per same-shape batch. | Medium to high because incorrect batch keys can merge incompatible SQL; rerun 1k one-field/two-field/with-hint scenarios and plugin cases. |
+| 9. Populate breadth-first loading | Fresh DB-backed populate with JSON aggregate preloading was slower than direct breadth loading for simple o2m/o2m shapes in reduced runs; already-loaded paths are improved. | Add a cost/shape heuristic to bypass JSON preloading for simple existing-entity breadth populates, or batch hydrate JSON aggregate children instead of calling `hydrate` per child. | Medium to high; rerun default and `PLUGINS=` populate benchmarks at 5k/10k and nested fanout variants. |
+| 10. Reactive recalculation | Empty reverse paths were still paying `followReverseHint`; created/deleted queueing remains allocation-heavy. | The kept empty-path fast path targets recalculation. Larger wins are create/delete-specific reactable lists, reactable-major bulk queueing, avoiding string action keys for non-`runOnce` dedupe, and sync-fast paths around `Promise.allSettled`. | Medium; rerun reactive recalc and create/delete queue scenarios plus delete-reactivity tests. |
+
+### Verification Notes
+
+- `yarn build` passed before the final benchmark reruns.
+- Follow-up benchmark commands used the same integration harness shape as Appendix A, with `BENCH_SIZES=100000` and Node `v25.9.0`.
+- After resetting and migrating the integration DB, `PLUGINS= yarn jest --runInBand -- src/IndexManager.test.ts src/relations/ReactiveField.test.ts src/ReactionLogging.test.ts` passed.
+- The retained follow-ups intentionally avoid changing SQL shape, public API behavior, or reactive scheduling semantics.

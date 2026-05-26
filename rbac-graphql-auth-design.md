@@ -36,8 +36,8 @@ The UI needs enough backend-provided metadata to:
 ### Hero
 
 - Eyebrow: `Our Webapp RBAC Design Doc`
-- Title: `Dynamic Field Permissions in a Mostly Static GraphQL UI`
-- Summary: our webapp wants static GraphQL queries/navigation/forms, but auth is dynamic per user, page, operation, and field.
+- Title: `Dynamic Permissions in a GraphQL UI`
+- Summary: our webapp currently has static GraphQL queries, static navigation, and static form layouts, but proposed RBAC-based auth is dynamic per user, page, operation, and field. The three static items render as bullet points in the hero. Includes the example that a user could edit this author name, but not that author name.
 - Core problem callout: backend enforces reads/writes, frontend still needs metadata to render honest UX.
 - Questions callout uses Authors/Books:
   - Can this user view `Author.name`?
@@ -48,7 +48,7 @@ The UI needs enough backend-provided metadata to:
 
 ### Mental Model
 
-- Explains two permission categories:
+- Explains two permission categories as bullet points:
   - Field permissions: `canView`, `canEdit`
   - Operation permissions: `canCreate`, `canSave`, `canEdit`, etc.
 - SVG diagram currently shows:
@@ -69,17 +69,17 @@ The UI needs enough backend-provided metadata to:
 
 Concept:
 
-- Frontend separately queries entity data and raw permission strings.
-- Frontend merges normal data with permissions.
+- Frontend first queries raw permission strings in a blocking call.
+- Frontend dynamically constructs the entity data query from the permissions response.
 - UI checks permission strings like `Author.name.edit`.
 
 SVG labels:
 
 - `AuthorEditPage`
-- `author Query`
-- `name, email, books`
-- `permissions Query`
-- `raw permission strings`
+- `1. permissions Query`
+- `blocking raw permissions`
+- `2. author Query`
+- `allowed fields only`
 - `GraphQL API`
 - `data resolvers`
 - `auth policy service`
@@ -87,20 +87,19 @@ SVG labels:
 GraphQL examples:
 
 ```graphql
+query AuthorPermissions($id: ID!) {
+  permissions(entityId: $id) {
+    name
+    allowed
+  }
+}
+
 query AuthorEditPage($id: ID!) {
   author(id: $id) {
     id
     name
     email
-    royaltyRate
     books { id title }
-  }
-}
-
-query AuthorPermissions($id: ID!) {
-  permissions(entityId: $id) {
-    name
-    allowed
   }
 }
 ```
@@ -109,6 +108,7 @@ Example permissions response:
 
 ```json
 {
+  "entityId": "a:1",
   "permissions": [
     { "name": "Author.edit", "allowed": true },
     { "name": "Book.create", "allowed": false },
@@ -125,9 +125,12 @@ Frontend example shape:
 
 ```tsx
 function AuthorEditPage(props) {
-  const author = useAuthorQuery({ id: props.id });
   const permissions = useAuthorPermissionsQuery({ id: props.id });
   const can = createPermissionLookup(permissions.data?.permissions ?? []);
+  const author = useAuthorQuery({
+    id: props.id,
+    fields: can("Author.royaltyRate.view") ? ["name", "email", "royaltyRate"] : ["name", "email"],
+  });
 
   return (
     <AuthorForm

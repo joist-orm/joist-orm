@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dynamic Field Permissions in a Static GraphQL UI</title>
+  <title>Dynamic Permissions in a GraphQL UI</title>
   <style>
     :root {
       color-scheme: light;
@@ -17,7 +17,7 @@
       --green: #257351;
       --green-soft: #ddf0e6;
       --orange: #a75d1b;
-      --orange-soft: #f7e5d2;
+      --orange-soft: #f7e5d2;wants static GraphQL queries, static navigation, and static form layouts
       --red: #9d342e;
       --red-soft: #f1d8d5;
       --purple: #654a9c;
@@ -88,7 +88,7 @@
     .hero-grid {
       display: grid;
       gap: 22px;
-      grid-template-columns: minmax(0, 1fr) 360px;
+      grid-template-columns: minmax(0, 1fr);
       margin-top: 32px;
     }
 
@@ -132,6 +132,14 @@
     .decision-box ul {
       margin-bottom: 0;
       padding-left: 20px;
+    }
+
+    .decision-box li {
+      color: #efe7d8;
+    }
+
+    .decision-box strong {
+      color: #ffffff;
     }
 
     section {
@@ -347,12 +355,23 @@
 <main>
   <header class="hero">
     <p class="eyebrow">Our Webapp RBAC Design Doc</p>
-    <h1>Dynamic Field Permissions in a Mostly Static GraphQL UI</h1>
-    <p class="subtitle">
-      Our webapp wants static GraphQL queries, static navigation, and static form layouts, but auth is dynamic per user,
-      per page, per operation, and sometimes per field. This document compares three API shapes for making the UI adapt
-      without wrapping every field, button, table column, and call-to-action in handwritten permission checks.
-    </p>
+    <h1>Dynamic Permissions in a GraphQL UI</h1>
+    <div class="subtitle">
+      <p>Our webapp currently has:</p>
+      <ul>
+        <li>static GraphQL queries</li>
+        <li>static navigation</li>
+        <li>static form layouts</li>
+      </ul>
+      <p>
+        But our proposed RBAC-based auth will be dynamic per user, per page, per operation, and sometimes per field. I.e.
+        a user could be able to edit <em>this</em> author name, but not <em>that</em> author name.
+      </p>
+      <p>This document compares three API
+        shapes for making the UI adapt without wrapping every field, button, table column, and call-to-action in handwritten
+        permission checks.
+      </p>
+    </div>
     <div class="hero-grid">
       <div class="callout">
         <h2>The Core Problem</h2>
@@ -364,12 +383,15 @@
       </div>
       <div class="decision-box">
         <h2>Questions the UI Must Answer</h2>
+        <p>
+          For any given entity, such as <strong>Author id=1</strong>:
+        </p>
         <ul>
-          <li>Can this user view <strong>Author.name</strong>?</li>
-          <li>Can this user edit <strong>Author.email</strong>?</li>
-          <li>Can this user see a private royalty field?</li>
-          <li>Can this user create a book?</li>
-          <li>Can this user click edit, save, promote, or archive?</li>
+          <li>Can this user view <strong>author.name</strong>?</li>
+          <li>Can this user edit <strong>author.email</strong>?</li>
+          <li>Can this user see a private <strong>author.royalty</strong> field?</li>
+          <li>Can this user create a new <strong>Book</strong> for this <strong>author</strong>?</li>
+          <li>Can this user click edit, save, or archive?</li>
         </ul>
       </div>
     </div>
@@ -378,10 +400,12 @@
   <section>
     <h2>Mental Model</h2>
     <p>
-      The UI needs two permission categories. <strong>Field permissions</strong> decide whether a value is visible and editable.
-      <strong>Operation permissions</strong> decide whether a command is available, such as create, edit, save, promote, archive,
-      or delete.
+      The UI needs two permission categories:
     </p>
+    <ul>
+      <li><strong>Field permissions</strong> decide whether a value is visible and editable.</li>
+      <li><strong>Operation permissions</strong> decide whether a command is available, such as create, edit, save, promote, archive, or delete.</li>
+    </ul>
     <div class="diagram" aria-label="RBAC mental model diagram">
       <svg viewBox="0 0 1080 360" role="img">
         <defs>
@@ -446,8 +470,9 @@
   <section>
     <h2>Approach 1: Low-Level Permission Calls</h2>
     <p>
-      The frontend separately asks for raw permission names for an entity or page, then merges those permissions with the normal
-      data query. UI components directly check permission strings such as <code>Author.name.edit</code>.
+      The frontend first asks for raw permission names for an entity or page. That blocking response is then used to dynamically
+      construct the author data query so denied fields are not requested. UI components directly check permission strings such as
+      <code>Author.name.edit</code>.
     </p>
     <div class="diagram" aria-label="Low-level permission calls diagram">
       <svg viewBox="0 0 1080 420" role="img">
@@ -467,16 +492,16 @@
         </defs>
         <rect class="a1-box a1-blue" x="40" y="126" width="250" height="168" rx="22" />
         <text class="a1-label" x="82" y="174">AuthorEditPage</text>
-        <text class="a1-small" x="82" y="210">merges data + permissions</text>
-        <text class="a1-small" x="82" y="238">passes booleans to form</text>
+        <text class="a1-small" x="82" y="210">waits for permissions</text>
+        <text class="a1-small" x="82" y="238">builds data query</text>
 
-        <rect class="a1-box" x="412" y="42" width="250" height="126" rx="22" />
-        <text class="a1-label" x="452" y="88">author Query</text>
-        <text class="a1-small" x="452" y="122">name, email, books</text>
+        <rect class="a1-box a1-purple" x="412" y="42" width="250" height="126" rx="22" />
+        <text class="a1-label" x="452" y="88">1. permissions Query</text>
+        <text class="a1-small" x="452" y="122">blocking raw permissions</text>
 
-        <rect class="a1-box a1-purple" x="412" y="252" width="250" height="126" rx="22" />
-        <text class="a1-label" x="452" y="298">permissions Query</text>
-        <text class="a1-small" x="452" y="332">raw permission strings</text>
+        <rect class="a1-box" x="412" y="252" width="250" height="126" rx="22" />
+        <text class="a1-label" x="452" y="298">2. author Query</text>
+        <text class="a1-small" x="452" y="332">allowed fields only</text>
 
         <rect class="a1-box a1-green" x="794" y="126" width="250" height="168" rx="22" />
         <text class="a1-label" x="850" y="174">GraphQL API</text>
@@ -484,7 +509,8 @@
         <text class="a1-small" x="850" y="238">auth policy service</text>
 
         <path class="a1-line" d="M 290 176 C 342 126 360 104 402 104" />
-        <path class="a1-line" d="M 290 244 C 342 294 360 316 402 316" />
+        <path class="a1-line" d="M 537 168 C 537 206 537 214 537 242" />
+        <path class="a1-line" d="M 402 316 C 350 316 338 244 300 238" />
         <path class="a1-line" d="M 662 104 C 714 104 742 162 784 176" />
         <path class="a1-line" d="M 662 316 C 714 316 742 258 784 244" />
       </svg>
@@ -492,26 +518,26 @@
     <div class="grid-2">
       <div class="card">
         <h3>GraphQL API Calls</h3>
-        <pre><code>query AuthorEditPage($id: ID!) {
+        <pre><code>query AuthorPermissions($id: ID!) {
+  permissions(entityId: $id) {
+    name
+    allowed
+  }
+}
+
+query AuthorEditPage($id: ID!) {
   author(id: $id) {
     id
     name
     email
-    royaltyRate
     books { id title }
-  }
-}
-
-query AuthorPermissions($id: ID!) {
-  permissions(entityId: $id) {
-    name
-    allowed
   }
 }</code></pre>
       </div>
       <div class="card">
         <h3>Example Response</h3>
         <pre><code>{
+  "entityId": "a:1",
   "permissions": [
     { "name": "Author.edit", "allowed": true },
     { "name": "Book.create", "allowed": false },
@@ -527,9 +553,12 @@ query AuthorPermissions($id: ID!) {
     <div class="card">
       <h3>Frontend Component Shape</h3>
       <pre><code>function AuthorEditPage(props) {
-  const author = useAuthorQuery({ id: props.id });
   const permissions = useAuthorPermissionsQuery({ id: props.id });
   const can = createPermissionLookup(permissions.data?.permissions ?? []);
+  const author = useAuthorQuery({
+    id: props.id,
+    fields: can("Author.royaltyRate.view") ? ["name", "email", "royaltyRate"] : ["name", "email"],
+  });
 
   return (
     &lt;AuthorForm

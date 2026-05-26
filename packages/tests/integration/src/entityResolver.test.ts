@@ -1,11 +1,18 @@
 import { GraphQLFileLoader } from "@graphql-tools/graphql-file-loader";
 import { loadSchema } from "@graphql-tools/load";
-import { Author, BookRange } from "@src/entities";
+import { Author, BookRange, type Publisher } from "@src/entities";
 import { insertAuthor, insertBook, insertPublisher, update } from "@src/entities/inserts";
+import { type Resolver } from "@src/generated/graphql-types";
 import { newEntityManager } from "@src/testEm";
 import { entityResolver } from "joist-graphql-resolver-utils";
 
 describe("entityResolver", () => {
+  it("fails type-checking a required GraphQL field backed by a nullable m2o", () => {
+    // @ts-expect-error Author.publisher is nullable, so it cannot satisfy a required GraphQL Publisher field.
+    const resolvers: { publisher: Resolver<Author, {}, Publisher> } = entityResolver(Author);
+    expect(resolvers).toBeDefined();
+  });
+
   it("can load derived values without calculating them", async () => {
     // Given an author with a technically incorrect numberOfPublicReviews
     await insertAuthor({ first_name: "a1", number_of_public_reviews: 2 });
@@ -49,7 +56,7 @@ describe("entityResolver", () => {
     const p = await entityResolver(Author).publisher(a, {}, {}, info);
     // Then we didn't need to call populate
     expect(spy).toHaveBeenCalledWith(a, { publisher: { images: {} } });
-    expect(p.name).toBe("p1");
+    expect(p?.name).toBe("p1");
   });
 
   it("m2o does not populate if no selection set", async () => {
@@ -125,7 +132,7 @@ describe("entityResolver", () => {
     const b = await entityResolver(Author).favoriteBook(a, {}, {}, info);
     // Then we called populate
     expect(spy).toHaveBeenCalledWith(a, { favoriteBook: { reviews: {} } });
-    expect(b.reviews.isLoaded).toBe(true);
+    expect(b?.reviews.isLoaded).toBe(true);
   });
 
   it("can load recursive relations", async () => {

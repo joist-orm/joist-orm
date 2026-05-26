@@ -57,7 +57,7 @@ export type EntityResolver<T extends Entity> = {
         : T[P] extends ReadOnlyCollection<any, infer U>
           ? Resolver<T, Record<string, any>, U[]>
           : T[P] extends Reference<any, infer U, infer N>
-            ? Resolver<T, Record<string, any>, U>
+            ? Resolver<T, Record<string, any>, U | N>
             : T[P] extends Property<any, infer V>
               ? Resolver<T, Record<string, any>, V>
               : T[P] extends ReactiveGetter<any, infer V>

@@ -61,7 +61,7 @@ export type LargePublisherResolvers = {
 export type SmallPublisherResolvers = {
   name: Resolver<SmallPublisher, any, string>;
   city: Resolver<SmallPublisher, any, string>;
-  group: Resolver<SmallPublisher, any, PublisherGroup>;
+  group: Resolver<SmallPublisher, any, PublisherGroup | undefined>;
   authors: Resolver<SmallPublisher, any, Author[]>;
 };
 export type PublisherGroupResolvers = {

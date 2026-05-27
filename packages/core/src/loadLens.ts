@@ -92,7 +92,7 @@ export async function loadLens<T extends Entity, U, V>(
 }
 
 /** Loads a precomputed lens path, avoiding repeated lambda/proxy evaluation for long-lived relation declarations. */
-export async function loadLensPath<T extends Entity, V>(
+export function loadLensPath<T extends Entity, V>(
   start: T | readonly T[],
   paths: string[],
   opts: { forceReload?: boolean; sql?: boolean } = {},
@@ -102,13 +102,28 @@ export async function loadLensPath<T extends Entity, V>(
     ? isEntity(start[0]) && getMetadata(start[0])
     : isEntity(start) && getMetadata(start);
   // This should only happen for `start=[]`, which we know should return `[]`
-  if (!meta) return [] as V;
+  if (!meta) return [] as unknown as Promise<V>;
 
   // If we're already loaded, just return
   if (!opts.forceReload && isLensLoadedPath(start, paths)) {
-    return getLensPath(meta, start, paths);
+    // Keep this synchronous to avoid adding a promise turn; this preserves nuanced hook timing in production code.
+    return getLensPath(meta, start, paths) as Promise<V>;
   }
 
+  return loadLensPathAsync(meta, start, paths, opts);
+}
+
+/**
+ * Loads an unloaded lens path, keeping the already-loaded shortcut in `loadLensPath` synchronous.
+ *
+ * I.e. this avoids adding an extra promise turn for already-loaded paths during concurrent hooks.
+ */
+async function loadLensPathAsync<T extends Entity, V>(
+  meta: EntityMetadata,
+  start: T | readonly T[],
+  paths: string[],
+  opts: { forceReload?: boolean; sql?: boolean },
+): Promise<V> {
   // See if we can load this via SQL
   if (opts.sql) {
     // Are all paths SQL query-able?
@@ -170,7 +185,7 @@ export async function loadLensPath<T extends Entity, V>(
       // current is undefined; see if we should flip to a list ... which means we can early return
       if (field?.kind === "o2m" || field?.kind === "m2m") return [] as any;
     }
-    currentMeta = field && "otherMetadata" in field ? field.otherMetadata() : undefined;
+    currentMeta = nextMeta(current, field);
   }
   return current!;
 }
@@ -267,9 +282,16 @@ export function getLensPath<T, V>(startMeta: EntityMetadata, start: T | readonly
       // current is undefined; see if we should flip to a list ... which means we can early return
       if (field?.kind === "o2m" || field?.kind === "m2m") return [] as any;
     }
-    currentMeta = field && "otherMetadata" in field ? field.otherMetadata() : undefined;
+    currentMeta = nextMeta(current, field);
   }
   return current!;
+}
+
+/** Returns the next runtime metadata, preserving subtype-specific fields after base-typed traversals. */
+function nextMeta(current: unknown, field: Field | undefined): EntityMetadata | undefined {
+  const entity = Array.isArray(current) ? current[0] : current;
+  if (isEntity(entity)) return getMetadata(entity);
+  return field && "otherMetadata" in field ? field.otherMetadata() : undefined;
 }
 
 function maybeAdd(set: Set<any>, value: any) {
@@ -330,7 +352,7 @@ export function lensPathToLoadHint<T extends Entity>(paths: string[]): LoadHint<
 
 /** Accepts a lens like `a => a.books.reviews` and returns the paths like `[books, reviews]`. */
 export function lensToPath<T extends Entity, U, V>(fn: (lens: Lens<T>) => Lens<U, V>): string[] {
-  return collectPaths(fn);
+  return [...collectPaths(fn)];
 }
 
 function isNotLoaded(object: any, path: string): boolean {

@@ -25,7 +25,12 @@ export class BatchLoader<K> {
     // Avoid `push(...keys)`: spread passes each key as a separate function argument, exceeding the
     // JS engine's argument-count limit on large arrays and throwing `RangeError: Maximum call stack
     // size exceeded`. Trips on real-world m2m fan-outs (e.g. ~250k join rows).
-    this.#pending = this.#pending!.concat(keys);
+    const pending = this.#pending!;
+    const start = pending.length;
+    pending.length += keys.length;
+    for (let i = 0; i < keys.length; i++) {
+      pending[start + i] = keys[i];
+    }
     return this.#batchPromise!;
   }
 

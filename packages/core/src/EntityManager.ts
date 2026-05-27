@@ -2178,9 +2178,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // Run the beforeDelete hook before we unhook the entity
       const todos = createTodos(entities);
       await beforeDelete(this.ctx, todos);
-      // For all relations, unhook the entity from the other side
-      // (...we're using `concat` because `.push(...reallyBigArray)` with ~100k relations can blow the stack size
-      relationsToCleanup = relationsToCleanup.concat(entities.flatMap(getRelations));
+      // For all relations, unhook the entity from the other side; this append path is optimized for
+      // large deletes with ~100k relations by avoiding `flatMap` intermediates and `concat` copies.
+      for (const entity of entities) {
+        const relations = getRelations(entity);
+        const start = relationsToCleanup.length;
+        relationsToCleanup.length += relations.length;
+        for (let i = 0; i < relations.length; i++) {
+          relationsToCleanup[start + i] = relations[i];
+        }
+      }
       entities = this.#pendingDeletes;
       this.#pendingDeletes = [];
     }

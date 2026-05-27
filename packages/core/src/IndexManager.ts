@@ -6,7 +6,12 @@ import { groupBy } from "./utils";
 type FieldValue = any;
 type FieldName = string;
 type EntityTag = string;
-type FieldIndexEntry = { field: Field; index: FieldIndex };
+type FieldIndexEntry = {
+  field: Field;
+  index: FieldIndex;
+  /** Tracks how far into the EM's list-per-tag array this field index has been lazily populated. */
+  indexedCount: number;
+};
 const emptySet = new Set<Entity>();
 
 // The test reproducing a n^2 with n=500 went from 100ms to 50ms if indexed
@@ -55,19 +60,6 @@ export class IndexManager {
     }
   }
 
-  /** Adds an entity to all relevant indexes. */
-  maybeIndexEntity(entity: Entity): void {
-    if (this.#indexes.size === 0) return;
-
-    const meta = getMetadata(entity);
-    const fieldIndexes = this.#indexes.get(meta.tagName);
-    if (fieldIndexes) {
-      for (const [fieldName, { field, index }] of fieldIndexes) {
-        index.add(getFieldValue(entity, fieldName, field), entity);
-      }
-    }
-  }
-
   /** Updates indexes when a field value changes. */
   maybeUpdateFieldIndex(entity: Entity, fieldName: string, oldValue: any, newValue: any): void {
     // Fast return for the common case, which is no indexing
@@ -88,7 +80,7 @@ export class IndexManager {
    * Finds entities matching the given where clause using indexes.
    * Returns null if the type is not indexed (fallback to linear search).
    */
-  findMatching<T extends Entity>(meta: EntityMetadata<T>, where: any): T[] {
+  findMatching<T extends Entity>(meta: EntityMetadata<T>, entities: T[], where: any): T[] {
     const { tagName } = meta;
     if (!this.#indexes.has(tagName)) {
       throw new Error(`${meta.type} is not indexed`);
@@ -97,6 +89,7 @@ export class IndexManager {
     // Start with all entities of the 1st condition, then intersect (AND) each subsequent field in `where`
     let candidates: Set<Entity> | undefined;
     for (const [fieldName, value] of Object.entries(where)) {
+      this.indexUnindexedEntities(entities, fieldName);
       const fieldCandidates = fieldIndexes.get(fieldName)?.index.get(value);
       if (!candidates) {
         candidates = fieldCandidates ?? emptySet; // This is the 1st clause
@@ -122,14 +115,32 @@ export class IndexManager {
       if (!field) continue;
       let entry = indexes.get(fieldName);
       if (!entry) {
-        entry = { field, index: new FieldIndex() };
+        entry = { field, index: new FieldIndex(), indexedCount: 0 };
         indexes.set(fieldName, entry);
       }
       for (const entity of entities) {
         const value = getFieldValue(entity, fieldName, entry.field);
         entry.index.add(value, entity);
       }
+      entry.indexedCount = entities.length;
     }
+  }
+
+  /** Lazily indexes newly-registered entities only for fields that are queried. */
+  private indexUnindexedEntities<T extends Entity>(entities: T[], fieldName: string): void {
+    const first = entities[0];
+    if (first === undefined) return;
+
+    const meta = getMetadata(first);
+    const entry = this.#indexes.get(meta.tagName)?.get(fieldName);
+    if (entry === undefined || entry.indexedCount === entities.length) return;
+
+    for (let i = entry.indexedCount; i < entities.length; i++) {
+      const entity = entities[i];
+      const value = getFieldValue(entity, fieldName, entry.field);
+      entry.index.add(value, entity);
+    }
+    entry.indexedCount = entities.length;
   }
 }
 

@@ -2258,7 +2258,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       this.#indexManager.enableIndexingForType(meta, entities, where);
       return (
         this.#indexManager
-          .findMatching(meta, where)
+          .findMatching(meta, entities, where)
           // Still filter by `instanceof cstr` to handle subtyping
           .filter((e) => e instanceof cstr && !e.isDeletedEntity)
       );
@@ -2591,9 +2591,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         .join(", ");
       throw new Error(`More than ${this.entityLimit} entities have been instantiated (top entities: ${topTypes})`);
     }
-
-    // If indexing is enabled for this type, add it...
-    this.#indexManager.maybeIndexEntity(entity);
   }
 }
 

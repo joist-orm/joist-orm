@@ -20,6 +20,7 @@ import { visitConditions } from "../QueryVisitor";
 import { OpColumn } from "../drivers/EntityWriter";
 import { kqDot } from "../keywords";
 import { LoadHint } from "../loadHints";
+import { hintKey } from "../normalizeHints";
 import { buildUnnestCte } from "../unnest";
 import { assertNever } from "../utils";
 import { fastWhereFilterHash } from "./fastWhereFilterHash";
@@ -64,7 +65,7 @@ export function findDataLoader<T extends Entity>(
       // in a way that doesn't naively over-fetch data (which our loadDataLoader does prevent,
       // but it's simpler b/c it's given exact ids to load), so for now just include the load
       // hint in the batch key.
-      `${batchKey}-${JSON.stringify(hint)}`,
+      `${batchKey}-${hintKey(hint)}`,
       async (entries) => {
         // We're guaranteed that these queries all have the same structure
 

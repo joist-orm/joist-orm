@@ -12,6 +12,7 @@ import {
   kqDot,
 } from "../index";
 import { LoadHint } from "../loadHints";
+import { hintKey } from "../normalizeHints";
 import { getRelationFromMaybePolyKey, isPolyHint } from "../reactiveHints";
 import { ReactiveFieldImpl } from "../relations/ReactiveField";
 import { toArray } from "../utils";
@@ -45,7 +46,7 @@ export function populateBatchLoader(
   const batchKey =
     mode === "preload"
       ? `${meta.tagName}:${opts.forceReload}`
-      : `${meta.tagName}:${JSON.stringify(hint)}:${opts.forceReload}`;
+      : `${meta.tagName}:${hintKey(hint)}:${opts.forceReload}`;
   return em.getBatchLoader(populateOperation, batchKey, async (populates) => {
     async function populateLayer(layerMeta: EntityMetadata | undefined, layerNode: HintNode<Entity>): Promise<void> {
       // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list

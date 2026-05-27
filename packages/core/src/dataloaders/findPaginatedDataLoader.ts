@@ -4,6 +4,7 @@ import { EntityManager, MaybeAbstractEntityConstructor, getEmInternalApi } from 
 import { getMetadata } from "../EntityMetadata";
 import { buildHintTree } from "../HintTree";
 import { LoadHint } from "../loadHints";
+import { hintKey } from "../normalizeHints";
 import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
 import { buildUnnestCte } from "../unnest";
 import {
@@ -47,7 +48,7 @@ export function findPaginatedDataLoader<T extends Entity>(
   };
   const batchKey = [
     getBatchKeyFromGenericStructure(meta, query),
-    JSON.stringify(hint),
+    hintKey(hint),
     findSettings.limit,
     findSettings.offset,
   ].join("-");

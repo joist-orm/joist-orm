@@ -1837,7 +1837,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       for (const e of createdThenDeleted) getInstanceData(e).fixupCreatedThenDeleted();
       this.#merging?.clear();
 
-      return [...allFlushedEntities];
+      return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
     } catch (e) {
       if (e instanceof RecursiveCycleError) {
         const entity = e.entities[0];
@@ -1860,7 +1860,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           throw new ValidationErrors(message);
         }
       }
-      if (e instanceof InMemoryRollbackError) return [...allFlushedEntities];
+      if (e instanceof InMemoryRollbackError) {
+        return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
+      }
       throw e;
     } finally {
       this.#rm.clearSuppressedTypeErrors();
@@ -2576,6 +2578,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // Also register by the `a#1` style tagged string for new entities
       this.#entitiesById.set(entity.toTaggedString(), entity);
     }
+    getInstanceData(entity).entityIndex = this.#entitiesArray.length;
     this.#entitiesArray.push(entity);
 
     meta ??= getMetadata(entity);

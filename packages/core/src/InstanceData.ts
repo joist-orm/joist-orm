@@ -34,6 +34,8 @@ export class InstanceData {
   #new?: Operation;
   /** The `a#1`, `a#2` index if we're an em.create-d entity. We never unset this, to keep ids stable across flushes. */
   createId: string | undefined;
+  /** The zero-based order this entity was registered with its EntityManager. */
+  entityIndex: number = -1;
   /** Whether our entity should flush regardless of any other changes. */
   isTouched: boolean = false;
 

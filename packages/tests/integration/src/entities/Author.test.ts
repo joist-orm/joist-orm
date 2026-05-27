@@ -203,7 +203,7 @@ describe("Author", () => {
 
     // Then the author validation rule can be skipped
     const result = await em.flush({ skipValidation: true });
-    expect(result).toMatchEntity([b1, a1]);
+    expect(result).toMatchEntity([a1, b1]);
   });
 
   it("skips the afterValidation hook when skipValidation is true", async () => {

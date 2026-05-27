@@ -9,7 +9,7 @@ import {
   insertTag,
 } from "@src/entities/inserts";
 import { lastQuery, newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
-import { getLens, getMetadata, Lens, lensToPath, testing } from "joist-orm";
+import { getLens, getMetadata, Lens, lensToLoadHint, lensToPath, testing } from "joist-orm";
 import { Author, Book, Image, newAuthor, newBook, Publisher, Tag } from "./entities";
 
 const { isAllSqlPaths } = testing;
@@ -55,6 +55,12 @@ describe("EntityManager.lens", () => {
 
   it("can be converted to paths", async () => {
     const f1 = (b: Lens<Book>) => b.author.publisher;
+    expect(lensToPath(f1)).toEqual(["author", "publisher"]);
+  });
+
+  it("can be converted to paths after load hints", async () => {
+    const f1 = (b: Lens<Book>) => b.author.publisher;
+    expect(lensToLoadHint(f1)).toEqual({ author: { publisher: {} } });
     expect(lensToPath(f1)).toEqual(["author", "publisher"]);
   });
 

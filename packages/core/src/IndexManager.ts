@@ -1,11 +1,12 @@
 import { Entity, isEntity } from "./Entity";
-import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, type Field, getMetadata } from "./EntityMetadata";
 import { ManyToOneReference, PolymorphicReference, isLoadedReference } from "./relations";
 import { groupBy } from "./utils";
 
 type FieldValue = any;
 type FieldName = string;
 type EntityTag = string;
+type FieldIndexEntry = { field: Field; index: FieldIndex };
 const emptySet = new Set<Entity>();
 
 // The test reproducing a n^2 with n=500 went from 100ms to 50ms if indexed
@@ -20,7 +21,7 @@ export const indexThreshold = 500;
  * - Automatically maintains indexes when fields are updated via setField()
  */
 export class IndexManager {
-  readonly #indexes: Map<EntityTag, Map<FieldName, FieldIndex>> = new Map();
+  readonly #indexes: Map<EntityTag, Map<FieldName, FieldIndexEntry>> = new Map();
 
   /** @return if we should index entities of this type/count. */
   shouldIndexType(entityCount: number): boolean {
@@ -56,9 +57,14 @@ export class IndexManager {
 
   /** Adds an entity to all relevant indexes. */
   maybeIndexEntity(entity: Entity): void {
+    if (this.#indexes.size === 0) return;
+
     const meta = getMetadata(entity);
-    if (this.#indexes.has(meta.tagName)) {
-      this.addEntitiesToIndex(meta, [entity], [...this.#indexes.get(meta.tagName)!.keys()]);
+    const fieldIndexes = this.#indexes.get(meta.tagName);
+    if (fieldIndexes) {
+      for (const [fieldName, { field, index }] of fieldIndexes) {
+        index.add(getFieldValue(entity, fieldName, field), entity);
+      }
     }
   }
 
@@ -71,7 +77,7 @@ export class IndexManager {
     const fieldIndexes = this.#indexes.get(meta.tagName);
     if (!fieldIndexes) return; // Type not indexed
 
-    const fieldIndex = fieldIndexes.get(fieldName);
+    const fieldIndex = fieldIndexes.get(fieldName)?.index;
     if (!fieldIndex) return; // Field is not indexed
 
     fieldIndex.remove(oldValue, entity);
@@ -91,7 +97,7 @@ export class IndexManager {
     // Start with all entities of the 1st condition, then intersect (AND) each subsequent field in `where`
     let candidates: Set<Entity> | undefined;
     for (const [fieldName, value] of Object.entries(where)) {
-      const fieldCandidates = fieldIndexes.get(fieldName)?.get(value);
+      const fieldCandidates = fieldIndexes.get(fieldName)?.index.get(value);
       if (!candidates) {
         candidates = fieldCandidates ?? emptySet; // This is the 1st clause
       } else {
@@ -112,25 +118,23 @@ export class IndexManager {
     const indexes = this.#indexes.get(tagName)!;
     // Iterate over each field so we can do a shared fieldIndex lookup
     for (const fieldName of fieldNames) {
-      if (!meta.allFields[fieldName]) continue;
-      let fieldIndex = indexes.get(fieldName);
-      if (!fieldIndex) {
-        fieldIndex = new FieldIndex();
-        indexes.set(fieldName, fieldIndex);
+      const field = meta.allFields[fieldName];
+      if (!field) continue;
+      let entry = indexes.get(fieldName);
+      if (!entry) {
+        entry = { field, index: new FieldIndex() };
+        indexes.set(fieldName, entry);
       }
       for (const entity of entities) {
-        const value = getFieldValue(entity, fieldName);
-        fieldIndex.add(value, entity);
+        const value = getFieldValue(entity, fieldName, entry.field);
+        entry.index.add(value, entity);
       }
     }
   }
 }
 
 // Use the same field access pattern as entityMatches
-function getFieldValue(entity: Entity, fieldName: string): any {
-  const meta = getMetadata(entity);
-  const field = meta.allFields[fieldName] ?? fail();
-
+function getFieldValue(entity: Entity, fieldName: string, field: Field): any {
   const fn = fieldName as keyof Entity;
   switch (field.kind) {
     case "primaryKey":

@@ -1,0 +1,27 @@
+type ChildItem {
+  id: ID!
+  name: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  childGroup: ChildGroup
+  parentItem: ParentItem
+}
+
+extend type Query {
+  childItem(id: ID!): ChildItem!
+  childItems(filter: ChildItemFilter, limit: Int, offset: Int): ChildItemsPage!
+}
+
+type ChildItemsPage {
+  entities: [ChildItem!]!
+  pageInfo: PageInfo!
+}
+
+input ChildItemFilter {
+  id: ID
+  name: String
+  createdAt: DateTime
+  updatedAt: DateTime
+  childGroupId: ID
+  parentItemId: ID
+}

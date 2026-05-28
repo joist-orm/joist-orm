@@ -19,7 +19,6 @@ type Publisher {
   baseSyncDefault: String
   baseAsyncDefault: String!
   rating: Int
-  namesSnapshot: String
 }
 
 input SavePublisherInput {
@@ -45,4 +44,38 @@ type SavePublisherResult {
 
 extend type Mutation {
   savePublisher(input: SavePublisherInput!): SavePublisherResult!
+}
+
+extend type Query {
+  publisher(id: ID!): Publisher!
+  publishers(filter: PublisherFilter, limit: Int, offset: Int): PublishersPage!
+}
+
+type PublishersPage {
+  entities: [Publisher!]!
+  pageInfo: PageInfo!
+}
+
+input PublisherFilter {
+  id: ID
+  name: String
+  latitude: Int
+  longitude: Int
+  hugeNumber: Int
+  numberOfBookReviews: Int
+  deletedAt: DateTime
+  titlesOfFavoriteBooks: String
+  bookAdvanceTitlesSnapshot: String
+  numberOfBookAdvancesSnapshot: String
+  baseSyncDefault: String
+  baseAsyncDefault: String
+  createdAt: DateTime
+  updatedAt: DateTime
+  favoriteAuthorName: String
+  rating: Int
+  size: PublisherSize
+  type: PublisherType
+  favoriteAuthorId: ID
+  groupId: ID
+  spotlightAuthorId: ID
 }

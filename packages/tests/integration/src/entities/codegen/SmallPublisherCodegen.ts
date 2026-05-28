@@ -109,7 +109,9 @@ export interface SmallPublisherGraphQLFilter extends PublisherGraphQLFilter {
   sharedColumn?: ValueGraphQLFilter<string>;
   allAuthorNames?: ValueGraphQLFilter<string>;
   selfReferential?: EntityGraphQLFilter<SmallPublisher, SmallPublisherId, GraphQLFilterOf<SmallPublisher>, null>;
+  selfReferentialId?: ValueGraphQLFilter<SmallPublisherId>;
   group?: EntityGraphQLFilter<SmallPublisherGroup, SmallPublisherGroupId, GraphQLFilterOf<SmallPublisherGroup>, null>;
+  groupId?: ValueGraphQLFilter<SmallPublisherGroupId>;
   smallPublishers?: EntityGraphQLFilter<
     SmallPublisher,
     SmallPublisherId,

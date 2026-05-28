@@ -162,9 +162,13 @@ export interface BookGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   prequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
+  prequelId?: ValueGraphQLFilter<BookId>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  authorId?: ValueGraphQLFilter<AuthorId>;
   reviewer?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  reviewerId?: ValueGraphQLFilter<AuthorId>;
   randomComment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null>;
+  randomCommentId?: ValueGraphQLFilter<CommentId>;
   sequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   favoriteAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;

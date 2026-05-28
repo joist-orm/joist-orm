@@ -6,8 +6,6 @@ type BookReview {
   updatedAt: Date!
   book: Book!
   comment: Comment
-  parent: Comment
-  parentComment: Comment
   isTest: Boolean!
   tags: [Tag!]!
   isTestChain: Boolean!
@@ -28,4 +26,26 @@ type SaveBookReviewResult {
 
 extend type Mutation {
   saveBookReview(input: SaveBookReviewInput!): SaveBookReviewResult!
+}
+
+extend type Query {
+  bookReview(id: ID!): BookReview!
+  bookReviews(filter: BookReviewFilter, limit: Int, offset: Int): BookReviewsPage!
+}
+
+type BookReviewsPage {
+  entities: [BookReview!]!
+  pageInfo: PageInfo!
+}
+
+input BookReviewFilter {
+  id: ID
+  rating: Int
+  isPublic: Boolean
+  isTest: Boolean
+  isTestChain: Boolean
+  createdAt: DateTime
+  updatedAt: DateTime
+  bookId: ID
+  criticId: ID
 }

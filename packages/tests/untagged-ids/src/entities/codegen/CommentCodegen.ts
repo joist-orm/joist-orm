@@ -82,6 +82,7 @@ export interface CommentGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never, never>;
+  parentId?: ValueGraphQLFilter<IdOf<CommentParent>>;
   parentAuthor?: EntityGraphQLFilter<Author, IdOf<Author>, FilterOf<Author>, null>;
   parentBook?: EntityGraphQLFilter<Book, IdOf<Book>, FilterOf<Book>, null>;
 }

@@ -29,3 +29,24 @@ input SaveAuthorInput {
 type SaveAuthorResult {
   author: Author!
 }
+
+type AuthorsConnection {
+  edges: [AuthorsEdge!]!
+  nodes: [Author!]!
+  pageInfo: PageInfo!
+}
+
+type AuthorsEdge {
+  node: Author!
+  cursor: String!
+}
+
+input AuthorFilter {
+  id: ID
+  firstName: String
+  lastName: String
+  delete: Boolean
+  createdAt: DateTime
+  updatedAt: DateTime
+  favoriteColors: [Color!]
+}

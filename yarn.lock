@@ -1459,6 +1459,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@graphql-codegen/plugin-helpers@npm:^6.3.0":
+  version: 6.3.0
+  resolution: "@graphql-codegen/plugin-helpers@npm:6.3.0"
+  dependencies:
+    "@graphql-tools/utils": "npm:^11.0.0"
+    change-case-all: "npm:1.0.15"
+    common-tags: "npm:1.8.2"
+    import-from: "npm:4.0.0"
+    tslib: "npm:^2.8.0"
+  peerDependencies:
+    graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0
+  checksum: 10/85fb17dbc3e5540b9d03c2bc3d16cc573a32cc2fd9bbd206b58cf1adf23ed3e19461b2785df0b1ef07944932d12515d6254eeb07535dafd267f1d4a04408f7eb
+  languageName: node
+  linkType: hard
+
 "@graphql-codegen/plugin-helpers@npm:^7.0.0":
   version: 7.0.1
   resolution: "@graphql-codegen/plugin-helpers@npm:7.0.1"
@@ -1971,6 +1986,40 @@ __metadata:
   dependencies:
     temporal-polyfill: "npm:^0.3.0"
   checksum: 10/3491cf1cee52ce2c9218f851f9b98345e4a64091f41174922a86f72ce206e0578c27d7b4cda5509377a448f6e2a8217fcf4ef36132e0596160946d8f4ac16b69
+  languageName: node
+  linkType: hard
+
+"@homebound/graphql-typescript-possible-types@npm:^2.19.0":
+  version: 2.19.0
+  resolution: "@homebound/graphql-typescript-possible-types@npm:2.19.0"
+  dependencies:
+    "@graphql-codegen/plugin-helpers": "npm:^6.0.0"
+    change-case: "npm:^4.1.2"
+    ts-poet: "npm:^6.12.0"
+  checksum: 10/f48e0036b8cb143fa14f6a26f6c2f7eb8850d46da8cdb32bf1d9dcf44e8397a1e34fb4e7797a531db71ca2e3b20a78ba06caf84c4bf4457b6a337e96fcf220fb
+  languageName: node
+  linkType: hard
+
+"@homebound/graphql-typescript-resolver-scaffolding@npm:^2.49.0":
+  version: 2.49.0
+  resolution: "@homebound/graphql-typescript-resolver-scaffolding@npm:2.49.0"
+  dependencies:
+    "@graphql-codegen/plugin-helpers": "npm:^6.0.0"
+    "@graphql-codegen/visitor-plugin-common": "npm:^6.0.0"
+    change-case: "npm:^4.1.2"
+    ts-poet: "npm:^6.12.0"
+  checksum: 10/b6f19adfa2c675f253c2e54c3e0386f00dfd27a9346298d43e6c86cf2b2a225b81d39b61d23d028ffccf9181d7d9f83164dec1b7f02b295014919bd1614ea596
+  languageName: node
+  linkType: hard
+
+"@homebound/graphql-typescript-scalar-type-policies@npm:^2.12.0":
+  version: 2.14.0
+  resolution: "@homebound/graphql-typescript-scalar-type-policies@npm:2.14.0"
+  dependencies:
+    "@graphql-codegen/plugin-helpers": "npm:^6.3.0"
+    change-case: "npm:^4.1.2"
+    ts-poet: "npm:^6.12.0"
+  checksum: 10/394d0eb67cdcf73f217fa6bd43a05f9c26887f2e80faa9f5f3caf80e50c76a6262ffc427ee7278dd637710a499ae1d94a0e13a03b8e4cc7b8eb67196ab7a1493
   languageName: node
   linkType: hard
 
@@ -9905,13 +9954,19 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-tests-integration@workspace:packages/tests/integration"
   dependencies:
+    "@graphql-codegen/cli": "npm:^7.0.0"
     "@graphql-tools/graphql-file-loader": "npm:^8.1.14"
     "@graphql-tools/load": "npm:^8.1.10"
+    "@homebound/graphql-typescript-possible-types": "npm:^2.19.0"
+    "@homebound/graphql-typescript-resolver-scaffolding": "npm:^2.49.0"
+    "@homebound/graphql-typescript-scalar-type-policies": "npm:^2.12.0"
+    "@homebound/graphql-typescript-simple-resolvers": "npm:^1.58.0"
     "@swc/core": "npm:^1.15.33"
     "@swc/jest": "npm:^0.2.39"
     "@types/jest": "npm:^30.0.0"
     "@types/node": "npm:^24.12.4"
     env-cmd: "npm:^11.0.0"
+    graphql: "npm:^16.14.0"
     jest: "npm:30.4.2"
     jest-junit: "npm:^17.0.0"
     joist-orm: "workspace:*"

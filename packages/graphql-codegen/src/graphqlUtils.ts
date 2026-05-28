@@ -2,6 +2,7 @@ import {
   DocumentNode,
   InputObjectTypeDefinitionNode,
   ObjectTypeDefinitionNode,
+  ObjectTypeExtensionNode,
   parse,
   print,
   UnionTypeDefinitionNode,
@@ -125,32 +126,24 @@ function mergeDocs(existingDoc: DocumentNode, newDocs: [string, DocumentNode][])
               return !node.definitions.some(
                 (d) =>
                   (d.kind === "ObjectTypeDefinition" ||
+                    d.kind === "ObjectTypeExtension" ||
                     d.kind === "InputObjectTypeDefinition" ||
                     d.kind === "UnionTypeDefinition") &&
                   d.name.value === objectType,
               );
             })
-            .map(([, d]) => d.definitions),
-        ],
+            .flatMap(([, d]) => d.definitions),
+        ].sort(byOperationExtensionsFirst),
       };
     },
 
     // If fields don't exist yet, add them
     ObjectTypeDefinition(node) {
-      const found = newDocs.find(([objectType]) => node.name.value === objectType);
-      if (found) {
-        const [, newDoc] = found;
-        const existingFieldNames = (node.fields || []).map((f) => f.name.value);
-        const newObjectType = newDoc.definitions[0] as ObjectTypeDefinitionNode;
-        return {
-          ...node,
-          fields: [
-            ...(node.fields || []),
-            ...(newObjectType.fields || []).filter((f) => !existingFieldNames.includes(f.name.value)),
-          ],
-        };
-      }
-      return node;
+      return mergeObjectTypeFields(node, newDocs);
+    },
+
+    ObjectTypeExtension(node) {
+      return mergeObjectTypeFields(node, newDocs);
     },
 
     // If fields don't exist yet, add them
@@ -186,7 +179,43 @@ function mergeDocs(existingDoc: DocumentNode, newDocs: [string, DocumentNode][])
   });
 }
 
-export type GraphQLType = "Boolean" | "String" | "Int" | "Date" | "DateTime" | string;
+/** Merges generated fields into an existing `type` or `extend type`. */
+function mergeObjectTypeFields<T extends ObjectTypeDefinitionNode | ObjectTypeExtensionNode>(
+  node: T,
+  newDocs: [string, DocumentNode][],
+): T {
+  const found = newDocs.find(([objectType]) => node.name.value === objectType);
+  if (found) {
+    const [, newDoc] = found;
+    const existingFieldNames = (node.fields || []).map((f) => f.name.value);
+    const newObjectType = newDoc.definitions[0] as ObjectTypeDefinitionNode;
+    return {
+      ...node,
+      fields: [
+        ...(node.fields || []),
+        ...(newObjectType.fields || []).filter((f) => !existingFieldNames.includes(f.name.value)),
+      ],
+    };
+  }
+  return node;
+}
+
+/** Keeps the primary operation extensions at the top of generated schema files. */
+function byOperationExtensionsFirst(
+  a: DocumentNode["definitions"][number],
+  b: DocumentNode["definitions"][number],
+): number {
+  return operationExtensionRank(a) - operationExtensionRank(b);
+}
+
+/** Returns the priority for placing generated operation extensions before types/inputs. */
+function operationExtensionRank(definition: DocumentNode["definitions"][number]): number {
+  if (definition.kind === "ObjectTypeExtension" && definition.name.value === "Query") return 0;
+  if (definition.kind === "ObjectTypeExtension" && definition.name.value === "Mutation") return 1;
+  return 2;
+}
+
+export type GraphQLType = "BigInt" | "Boolean" | "String" | "Int" | "Date" | "DateTime" | string;
 
 export type SupportedTypescriptTypes = Exclude<PrimitiveTypescriptType, "Object" | Import>;
 
@@ -200,6 +229,8 @@ export function mapTypescriptTypeToGraphQLType(
     return "Boolean";
   } else if (type === "number") {
     return "Int";
+  } else if (type === "bigint") {
+    return "BigInt";
   } else if (type instanceof Code) {
     const rawType = type.toCodeString([]);
     if (rawType.startsWith("Date")) {

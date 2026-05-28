@@ -670,10 +670,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   async findCount<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FilterWithAlias<T> | GraphQLFilterWithAlias<T>,
     options: FindCountFilterOptions<T> = {},
   ): Promise<number> {
-    const settings = { where, ...options };
+    const settings = { where, ...options } as any;
     let count = await findCountDataLoader(this, type, settings).catch(function findCount(err) {
       throw appendStack(err, new Error());
     });

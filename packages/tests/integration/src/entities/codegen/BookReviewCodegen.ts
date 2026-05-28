@@ -119,7 +119,9 @@ export interface BookReviewGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
+  bookId?: ValueGraphQLFilter<BookId>;
   critic?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, null>;
+  criticId?: ValueGraphQLFilter<CriticId>;
   comment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
   bestReviewAuthors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;

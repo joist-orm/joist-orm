@@ -110,7 +110,9 @@ export interface TaskOldFilter extends TaskFilter {
 export interface TaskOldGraphQLFilter extends TaskGraphQLFilter {
   specialOldField?: ValueGraphQLFilter<number>;
   parentOldTask?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
+  parentOldTaskId?: ValueGraphQLFilter<TaskOldId>;
   copiedFrom?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
+  copiedFromId?: ValueGraphQLFilter<TaskOldId>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   oldTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
   tasks?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null | undefined>;

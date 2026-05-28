@@ -79,6 +79,7 @@ export interface CriticColumnGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   critic?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, never>;
+  criticId?: ValueGraphQLFilter<CriticId>;
 }
 
 export interface CriticColumnOrder {

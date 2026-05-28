@@ -10,13 +10,9 @@ type Book {
   tags: [Tag!]!
   image: Image
   comments: [Comment!]!
-  currentDraftBook: Author
-  book: Image
   currentDraftAuthor: Author
   deletedAt: DateTime
-  favoriteBookAuthors: [Author!]!
   notes: String
-  originalOrder: Int!
   acknowledgements: String
   search: String
   authorsNickNames: String
@@ -31,7 +27,6 @@ input SaveBookInput {
   authorId: ID
   deletedAt: DateTime
   notes: String
-  originalOrder: Int
   acknowledgements: String
   authorsNickNames: String
 }
@@ -42,4 +37,31 @@ type SaveBookResult {
 
 extend type Mutation {
   saveBook(input: SaveBookInput!): SaveBookResult!
+}
+
+extend type Query {
+  book(id: ID!): Book!
+  books(filter: BookFilter, limit: Int, offset: Int): BooksPage!
+}
+
+type BooksPage {
+  entities: [Book!]!
+  pageInfo: PageInfo!
+}
+
+input BookFilter {
+  id: ID
+  title: String
+  order: Int
+  notes: String
+  acknowledgements: String
+  authorsNickNames: String
+  search: String
+  deletedAt: DateTime
+  createdAt: DateTime
+  updatedAt: DateTime
+  prequelId: ID
+  authorId: ID
+  reviewerId: ID
+  randomCommentId: ID
 }

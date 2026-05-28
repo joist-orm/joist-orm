@@ -21,3 +21,22 @@ input SaveTaskItemInput {
 type SaveTaskItemResult {
   taskItem: TaskItem!
 }
+
+extend type Query {
+  taskItem(id: ID!): TaskItem!
+  taskItems(filter: TaskItemFilter, limit: Int, offset: Int): TaskItemsPage!
+}
+
+type TaskItemsPage {
+  entities: [TaskItem!]!
+  pageInfo: PageInfo!
+}
+
+input TaskItemFilter {
+  id: ID
+  createdAt: DateTime
+  updatedAt: DateTime
+  newTaskId: ID
+  oldTaskId: ID
+  taskId: ID
+}

@@ -5,6 +5,9 @@ import { generateEnumsGraphql } from "./generateEnumsGraphql";
 import { generateGraphqlCodegen } from "./generateGraphqlCodegen";
 import { generateGraphqlSchemaFiles } from "./generateGraphqlSchemaFiles";
 import { generateObjectResolvers } from "./generateObjectResolvers";
+import { generateQueryPageResolvers } from "./generateQueryPageResolvers";
+import { generateQueryResolvers } from "./generateQueryResolvers";
+import { generateResolverUtils } from "./generateResolverUtils";
 import { generateSaveResolvers } from "./generateSaveResolvers";
 import { loadHistory, writeHistory } from "./history";
 import { Fs, getImportExtension, newFsImpl } from "./utils";
@@ -13,15 +16,16 @@ export async function run(config: Config, dbMeta: DbMetadata): Promise<CodegenFi
   const fs = newFsImpl("./schema");
 
   // We upsert directly into schema files so we don't use the usual `CodeGenFile[]` return type;
-  await generateGraphqlSchemaFiles(fs, dbMeta);
+  await generateGraphqlSchemaFiles(config, fs, dbMeta);
 
   // We use the history file to ensure we only generate these once
   const { entities, enums } = dbMeta;
   const conditionalResolvers = [
     ...generateObjectResolvers(config, entities),
     ...generateSaveResolvers(config, dbMeta),
-    // Going to roll this out as a follow up
-    // ...generateQueryResolvers(dbMeta),
+    ...generateQueryResolvers(config, dbMeta),
+    ...generateQueryPageResolvers(config, dbMeta),
+    ...generateResolverUtils(config),
   ];
   const srcFs = newFsImpl("./src");
   await writeOnce(config, srcFs, conditionalResolvers);

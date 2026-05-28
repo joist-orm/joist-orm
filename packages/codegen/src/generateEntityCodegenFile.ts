@@ -642,6 +642,7 @@ function generateGraphQLFilterFields(metasByName: Record<string, EntityDbMetadat
       code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${
         otherEntity.type
       }>, ${nullOrNever(notNull)}>;`,
+      code`${fieldName}Id?: ${ValueGraphQLFilter}<${otherEntity.idType}>;`,
       ...otherMeta.subTypes.map((st) => {
         return code`${fieldName}${st.name}?: ${EntityGraphQLFilter}<${st.entity.type}, ${st.entity.idType}, ${GraphQLFilterOf}<${
           st.entity.type
@@ -669,6 +670,7 @@ function generateGraphQLFilterFields(metasByName: Record<string, EntityDbMetadat
   const polys = meta.polymorphics.flatMap(({ fieldName, fieldType, components, notNull }) => {
     return [
       code`${fieldName}?: ${EntityGraphQLFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, ${nullOrNever(notNull)}>;`,
+      code`${fieldName}Id?: ${ValueGraphQLFilter}<${IdOf}<${fieldType}>>;`,
       ...components.map((comp) => {
         const { type } = comp.otherEntity;
         return code`${fieldName}${type}?: ${EntityGraphQLFilter}<${type}, ${IdOf}<${type}>, ${FilterOf}<${type}>, null>;`;

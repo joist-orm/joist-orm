@@ -87,6 +87,7 @@ export interface BookGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  authorId?: ValueGraphQLFilter<AuthorId>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
 }
 

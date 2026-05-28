@@ -42,3 +42,30 @@ input SaveTaskOldInput {
 type SaveTaskOldResult {
   taskOld: TaskOld!
 }
+
+extend type Query {
+  taskOld(id: ID!): TaskOld!
+  taskOlds(filter: TaskOldFilter, limit: Int, offset: Int): TaskOldsPage!
+}
+
+type TaskOldsPage {
+  entities: [TaskOld!]!
+  pageInfo: PageInfo!
+}
+
+input TaskOldFilter {
+  id: ID
+  durationInDays: Int
+  deletedAt: DateTime
+  syncDefault: String
+  asyncDefault_1: String
+  asyncDefault_2: String
+  syncDerived: String
+  asyncDerived: String
+  createdAt: DateTime
+  updatedAt: DateTime
+  type: TaskType
+  copiedFromId: ID
+  specialOldField: Int
+  parentOldTaskId: ID
+}

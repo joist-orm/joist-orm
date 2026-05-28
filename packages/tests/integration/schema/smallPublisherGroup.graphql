@@ -5,3 +5,23 @@ type SmallPublisherGroup {
 input SaveSmallPublisherGroupInput {
   numberOfBookReviewsFormatted: String
 }
+
+extend type Query {
+  smallPublisherGroup(id: ID!): SmallPublisherGroup!
+  smallPublisherGroups(filter: SmallPublisherGroupFilter, limit: Int, offset: Int): SmallPublisherGroupsPage!
+}
+
+type SmallPublisherGroupsPage {
+  entities: [SmallPublisherGroup!]!
+  pageInfo: PageInfo!
+}
+
+input SmallPublisherGroupFilter {
+  id: ID
+  name: String
+  numberOfBookReviews: Int
+  numberOfBookReviewsFormatted: String
+  createdAt: DateTime
+  updatedAt: DateTime
+  smallName: String
+}

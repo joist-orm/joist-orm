@@ -29,7 +29,6 @@ type SmallPublisher {
   selfReferential: SmallPublisher
   smallPublishers: [SmallPublisher!]!
   rating: Int
-  namesSnapshot: String
 }
 
 input SaveSmallPublisherInput {
@@ -52,4 +51,42 @@ input SaveSmallPublisherInput {
 
 type SaveSmallPublisherResult {
   smallPublisher: SmallPublisher!
+}
+
+extend type Query {
+  smallPublisher(id: ID!): SmallPublisher!
+  smallPublishers(filter: SmallPublisherFilter, limit: Int, offset: Int): SmallPublishersPage!
+}
+
+type SmallPublishersPage {
+  entities: [SmallPublisher!]!
+  pageInfo: PageInfo!
+}
+
+input SmallPublisherFilter {
+  id: ID
+  name: String
+  latitude: Int
+  longitude: Int
+  hugeNumber: Int
+  numberOfBookReviews: Int
+  deletedAt: DateTime
+  titlesOfFavoriteBooks: String
+  bookAdvanceTitlesSnapshot: String
+  numberOfBookAdvancesSnapshot: String
+  baseSyncDefault: String
+  baseAsyncDefault: String
+  createdAt: DateTime
+  updatedAt: DateTime
+  favoriteAuthorName: String
+  rating: Int
+  size: PublisherSize
+  type: PublisherType
+  favoriteAuthorId: ID
+  groupId: ID
+  spotlightAuthorId: ID
+  city: String
+  sharedColumn: String
+  allAuthorNames: String
+  selfReferentialId: ID
 }

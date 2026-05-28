@@ -1,12 +1,22 @@
 {
   "files": [
+    "resolvers/author/authorQuery.test.ts",
+    "resolvers/author/authorQuery.ts",
     "resolvers/author/authorResolvers.test.ts",
     "resolvers/author/authorResolvers.ts",
+    "resolvers/author/authorsQuery.test.ts",
+    "resolvers/author/authorsQuery.ts",
     "resolvers/author/saveAuthorMutation.test.ts",
     "resolvers/author/saveAuthorMutation.ts",
+    "resolvers/book/bookQuery.test.ts",
+    "resolvers/book/bookQuery.ts",
     "resolvers/book/bookResolvers.test.ts",
     "resolvers/book/bookResolvers.ts",
+    "resolvers/book/booksQuery.test.ts",
+    "resolvers/book/booksQuery.ts",
     "resolvers/book/saveBookMutation.test.ts",
-    "resolvers/book/saveBookMutation.ts"
+    "resolvers/book/saveBookMutation.ts",
+    "resolvers/testUtils.ts",
+    "resolvers/utils.ts"
   ]
 }

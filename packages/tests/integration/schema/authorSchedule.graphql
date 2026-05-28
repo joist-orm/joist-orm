@@ -1,0 +1,25 @@
+type AuthorSchedule {
+  id: ID!
+  overview: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  author: Author!
+}
+
+extend type Query {
+  authorSchedule(id: ID!): AuthorSchedule!
+  authorSchedules(filter: AuthorScheduleFilter, limit: Int, offset: Int): AuthorSchedulesPage!
+}
+
+type AuthorSchedulesPage {
+  entities: [AuthorSchedule!]!
+  pageInfo: PageInfo!
+}
+
+input AuthorScheduleFilter {
+  id: ID
+  overview: String
+  createdAt: DateTime
+  updatedAt: DateTime
+  authorId: ID
+}

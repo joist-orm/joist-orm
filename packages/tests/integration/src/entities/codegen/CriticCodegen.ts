@@ -109,7 +109,9 @@ export interface CriticGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   favoriteLargePublisher?: EntityGraphQLFilter<LargePublisher, LargePublisherId, GraphQLFilterOf<LargePublisher>, null>;
+  favoriteLargePublisherId?: ValueGraphQLFilter<LargePublisherId>;
   group?: EntityGraphQLFilter<PublisherGroup, PublisherGroupId, GraphQLFilterOf<PublisherGroup>, null>;
+  groupId?: ValueGraphQLFilter<PublisherGroupId>;
   groupSmallPublisherGroup?: EntityGraphQLFilter<
     SmallPublisherGroup,
     SmallPublisherGroupId,

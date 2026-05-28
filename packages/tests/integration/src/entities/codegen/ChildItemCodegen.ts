@@ -86,7 +86,9 @@ export interface ChildItemGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   childGroup?: EntityGraphQLFilter<ChildGroup, ChildGroupId, GraphQLFilterOf<ChildGroup>, never>;
+  childGroupId?: ValueGraphQLFilter<ChildGroupId>;
   parentItem?: EntityGraphQLFilter<ParentItem, ParentItemId, GraphQLFilterOf<ParentItem>, never>;
+  parentItemId?: ValueGraphQLFilter<ParentItemId>;
 }
 
 export interface ChildItemOrder {

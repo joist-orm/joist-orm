@@ -24,6 +24,7 @@ export {
   ManyToOneField,
   OneToManyField,
   OneToOneField,
+  PolymorphicField,
   PrimitiveField,
   PrimitiveTypescriptType,
 } from "./EntityDbMetadata";

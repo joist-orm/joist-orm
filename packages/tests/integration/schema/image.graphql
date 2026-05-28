@@ -27,3 +27,24 @@ type SaveImageResult {
 extend type Mutation {
   saveImage(input: SaveImageInput!): SaveImageResult!
 }
+
+extend type Query {
+  image(id: ID!): Image!
+  images(filter: ImageFilter, limit: Int, offset: Int): ImagesPage!
+}
+
+type ImagesPage {
+  entities: [Image!]!
+  pageInfo: PageInfo!
+}
+
+input ImageFilter {
+  id: ID
+  fileName: String
+  createdAt: DateTime
+  updatedAt: DateTime
+  type: ImageType
+  authorId: ID
+  bookId: ID
+  publisherId: ID
+}

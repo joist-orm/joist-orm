@@ -23,3 +23,22 @@ input SavePublisherGroupInput {
 type SavePublisherGroupResult {
   publisherGroup: PublisherGroup!
 }
+
+extend type Query {
+  publisherGroup(id: ID!): PublisherGroup!
+  publisherGroups(filter: PublisherGroupFilter, limit: Int, offset: Int): PublisherGroupsPage!
+}
+
+type PublisherGroupsPage {
+  entities: [PublisherGroup!]!
+  pageInfo: PageInfo!
+}
+
+input PublisherGroupFilter {
+  id: ID
+  name: String
+  numberOfBookReviews: Int
+  numberOfBookReviewsFormatted: String
+  createdAt: DateTime
+  updatedAt: DateTime
+}

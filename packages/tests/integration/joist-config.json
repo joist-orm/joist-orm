@@ -146,5 +146,6 @@
   },
   "entitiesDirectory": "./src/entities",
   "outputDocs": true,
+  "paginationStyle": "limit",
   "transactionType": "PoolClient@pg"
 }

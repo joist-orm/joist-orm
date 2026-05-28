@@ -94,7 +94,9 @@ export interface ChildGroupGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   childGroup?: EntityGraphQLFilter<Child, ChildId, GraphQLFilterOf<Child>, never>;
+  childGroupId?: ValueGraphQLFilter<ChildId>;
   parentGroup?: EntityGraphQLFilter<ParentGroup, ParentGroupId, GraphQLFilterOf<ParentGroup>, never>;
+  parentGroupId?: ValueGraphQLFilter<ParentGroupId>;
   childItems?: EntityGraphQLFilter<ChildItem, ChildItemId, GraphQLFilterOf<ChildItem>, null | undefined>;
 }
 

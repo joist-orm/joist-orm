@@ -1,8 +1,15 @@
-import { DbMetadata, EntityDbMetadata } from "joist-codegen";
+import { Config, DbMetadata, EntityDbMetadata } from "joist-codegen";
 import { dateCode, plainDateCode, plainDateTimeCode, zonedDateTimeCode } from "joist-codegen/build/utils";
 import { keyBy } from "joist-utils";
 import { generateGraphqlSchemaFiles } from "./generateGraphqlSchemaFiles";
-import { newEntityMetadata, newEnumField, newFs, newManyToOneField, newPrimitiveField } from "./testUtils";
+import {
+  newEntityMetadata,
+  newEnumField,
+  newFs,
+  newManyToOneField,
+  newPolymorphicField,
+  newPrimitiveField,
+} from "./testUtils";
 import { Fs } from "./utils";
 
 describe("generateGraphqlSchemaFiles", () => {
@@ -15,22 +22,201 @@ describe("generateGraphqlSchemaFiles", () => {
     await generate(fs, entities);
     // We now have a graphql file
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-      "extend type Mutation {
-        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
-      }
-      
-      type Author {
-        id: ID!
-      }
+     "extend type Query {
+       author(id: ID!): Author!
+       authors(filter: AuthorFilter, first: Int, after: String, last: Int, before: String): AuthorsConnection!
+     }
 
-      input SaveAuthorInput {
-        id: ID
-      }
+     extend type Mutation {
+       saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
 
-      type SaveAuthorResult {
-        author: Author!
-      }
-      "
+     type AuthorsConnection {
+       edges: [AuthorsEdge!]!
+       nodes: [Author!]!
+       pageInfo: PageInfo!
+     }
+
+     type AuthorsEdge {
+       node: Author!
+       cursor: String!
+     }
+
+     type Author {
+       id: ID!
+     }
+
+     input AuthorFilter {
+       id: ID
+     }
+
+     input SaveAuthorInput {
+       id: ID
+     }
+
+     type SaveAuthorResult {
+       author: Author!
+     }
+     "
+    `);
+  });
+
+  it("generates cursor query fields by default", async () => {
+    const entities: EntityDbMetadata[] = [newEntityMetadata("Author")];
+    const fs = newFs({});
+    await generate(fs, entities);
+    expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
+     "extend type Query {
+       author(id: ID!): Author!
+       authors(filter: AuthorFilter, first: Int, after: String, last: Int, before: String): AuthorsConnection!
+     }
+
+     extend type Mutation {
+       saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
+
+     type AuthorsConnection {
+       edges: [AuthorsEdge!]!
+       nodes: [Author!]!
+       pageInfo: PageInfo!
+     }
+
+     type AuthorsEdge {
+       node: Author!
+       cursor: String!
+     }
+
+     type Author {
+       id: ID!
+     }
+
+     input AuthorFilter {
+       id: ID
+     }
+
+     input SaveAuthorInput {
+       id: ID
+     }
+
+     type SaveAuthorResult {
+       author: Author!
+     }
+     "
+    `);
+  });
+
+  it("generates limit query fields", async () => {
+    const entities: EntityDbMetadata[] = [newEntityMetadata("Author")];
+    const fs = newFs({});
+    await generate(fs, entities, { paginationStyle: "limit" });
+    expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
+     "extend type Query {
+       author(id: ID!): Author!
+       authors(filter: AuthorFilter, limit: Int, offset: Int): AuthorsPage!
+     }
+
+     extend type Mutation {
+       saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
+
+     type AuthorsPage {
+       entities: [Author!]!
+       pageInfo: PageInfo!
+     }
+
+     type Author {
+       id: ID!
+     }
+
+     input AuthorFilter {
+       id: ID
+     }
+
+     input SaveAuthorInput {
+       id: ID
+     }
+
+     type SaveAuthorResult {
+       author: Author!
+     }
+     "
+    `);
+  });
+
+  it("generates filter fields", async () => {
+    const entities: EntityDbMetadata[] = [
+      newEntityMetadata("Publisher"),
+      newEntityMetadata("Book"),
+      newEntityMetadata("Author", {
+        primitives: [
+          newPrimitiveField("firstName"),
+          newPrimitiveField("nickNames", { isArray: true }),
+          newPrimitiveField("numberOfAtoms", { columnType: "bigint", fieldType: "bigint", rawFieldType: "bigint" }),
+        ],
+        enums: [newEnumField("color")],
+        manyToOnes: [newManyToOneField("publisher", "Publisher")],
+        polymorphics: [newPolymorphicField("favorite", ["Book", "Publisher"])],
+      }),
+    ];
+    const fs = newFs({});
+    await generate(fs, entities);
+    expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
+     "extend type Query {
+       author(id: ID!): Author!
+       authors(filter: AuthorFilter, first: Int, after: String, last: Int, before: String): AuthorsConnection!
+     }
+
+     extend type Mutation {
+       saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
+
+     type AuthorsConnection {
+       edges: [AuthorsEdge!]!
+       nodes: [Author!]!
+       pageInfo: PageInfo!
+     }
+
+     type AuthorsEdge {
+       node: Author!
+       cursor: String!
+     }
+
+     type Author {
+       id: ID!
+       firstName: String!
+       nickNames: [String!]!
+       numberOfAtoms: BigInt!
+       color: ColorDetail!
+       publisher: Publisher!
+       favorite: FavoriteParent
+     }
+
+     input AuthorFilter {
+       id: ID
+       firstName: String
+       nickNames: [String!]
+       numberOfAtoms: BigInt
+       color: Color
+       publisherId: ID
+       favoriteId: ID
+     }
+
+     input SaveAuthorInput {
+       id: ID
+       firstName: String
+       nickNames: [String!]
+       numberOfAtoms: BigInt
+       color: Color
+       publisherId: ID
+       favoriteId: ID
+     }
+
+     type SaveAuthorResult {
+       author: Author!
+     }
+
+     union FavoriteParent = Book | Publisher
+     "
     `);
   });
 
@@ -51,43 +237,88 @@ describe("generateGraphqlSchemaFiles", () => {
     await generate(fs, entities);
     // Then we added the new field
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-      "type Author {
-        id: ID!
-        firstName: String!
-      }
+     "extend type Query {
+       author(id: ID!): Author!
+       authors(filter: AuthorFilter, first: Int, after: String, last: Int, before: String): AuthorsConnection!
+     }
 
-      input SaveAuthorInput {
-        id: ID
-        firstName: String
-      }
+     extend type Mutation {
+       saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
 
-      extend type Mutation {
-        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
-      }
+     type Author {
+       id: ID!
+       firstName: String!
+     }
 
-      type SaveAuthorResult {
-        author: Author!
-      }
-      "
+     input SaveAuthorInput {
+       id: ID
+       firstName: String
+     }
+
+     type AuthorsConnection {
+       edges: [AuthorsEdge!]!
+       nodes: [Author!]!
+       pageInfo: PageInfo!
+     }
+
+     type AuthorsEdge {
+       node: Author!
+       cursor: String!
+     }
+
+     input AuthorFilter {
+       id: ID
+       firstName: String
+     }
+
+     type SaveAuthorResult {
+       author: Author!
+     }
+     "
     `);
     // And saved it in the history
     expect(JSON.parse((await fs.load(".history.json")) || "")).toMatchInlineSnapshot(`
-      {
-        "Author": [
-          "firstName",
-          "id",
-        ],
-        "Mutation": [
-          "saveAuthor",
-        ],
-        "SaveAuthorInput": [
-          "firstName",
-          "id",
-        ],
-        "SaveAuthorResult": [
-          "author",
-        ],
-      }
+     {
+       "Author": [
+         "firstName",
+         "id",
+       ],
+       "AuthorFilter": [
+         "firstName",
+         "id",
+       ],
+       "AuthorsConnection": [
+         "edges",
+         "nodes",
+         "pageInfo",
+       ],
+       "AuthorsEdge": [
+         "cursor",
+         "node",
+       ],
+       "Mutation": [
+         "saveAuthor",
+       ],
+       "PageInfo": [
+         "endCursor",
+         "hasNextPage",
+         "hasPreviousPage",
+         "startCursor",
+         "totalCount",
+       ],
+       "Query": [
+         "author",
+         "authors",
+       ],
+       "SaveAuthorInput": [
+         "firstName",
+         "id",
+       ],
+       "SaveAuthorResult": [
+         "author",
+       ],
+     }
     `);
   });
 
@@ -107,26 +338,95 @@ describe("generateGraphqlSchemaFiles", () => {
     await generate(fs, entities);
     // We added the new field, but did not did the custom field
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-      "type Author {
-        id: ID!
-        customField: String
-        firstName: String!
-      }
+     "extend type Query {
+       author(id: ID!): Author!
+       authors(filter: AuthorFilter, first: Int, after: String, last: Int, before: String): AuthorsConnection!
+     }
 
-      input SaveAuthorInput {
-        id: ID
-        customField: String
-        firstName: String
-      }
+     extend type Mutation {
+       saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
 
-      extend type Mutation {
-        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
-      }
+     type Author {
+       id: ID!
+       customField: String
+       firstName: String!
+     }
 
-      type SaveAuthorResult {
-        author: Author!
-      }
-      "
+     input SaveAuthorInput {
+       id: ID
+       customField: String
+       firstName: String
+     }
+
+     type AuthorsConnection {
+       edges: [AuthorsEdge!]!
+       nodes: [Author!]!
+       pageInfo: PageInfo!
+     }
+
+     type AuthorsEdge {
+       node: Author!
+       cursor: String!
+     }
+
+     input AuthorFilter {
+       id: ID
+       firstName: String
+     }
+
+     type SaveAuthorResult {
+       author: Author!
+     }
+     "
+    `);
+  });
+
+  it("does not re-add fields from existing type extensions", async () => {
+    const entities: EntityDbMetadata[] = [newEntityMetadata("Author")];
+    const fs = newFs({
+      "author.graphql": "extend type Query { authors: [Author!]! author(id: ID!): Author } type Author { id: ID! }",
+    });
+
+    await generate(fs, entities);
+
+    expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
+     "extend type Query {
+       authors: [Author!]!
+       author(id: ID!): Author
+     }
+
+     extend type Mutation {
+       saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
+
+     type Author {
+       id: ID!
+     }
+
+     type AuthorsConnection {
+       edges: [AuthorsEdge!]!
+       nodes: [Author!]!
+       pageInfo: PageInfo!
+     }
+
+     type AuthorsEdge {
+       node: Author!
+       cursor: String!
+     }
+
+     input AuthorFilter {
+       id: ID
+     }
+
+     input SaveAuthorInput {
+       id: ID
+     }
+
+     type SaveAuthorResult {
+       author: Author!
+     }
+     "
     `);
   });
 
@@ -147,23 +447,44 @@ describe("generateGraphqlSchemaFiles", () => {
     await generate(fs, entities);
     // Then we did not re-add it as a new field
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-      "type Author {
-        id: ID!
-      }
+     "extend type Query {
+       author(id: ID!): Author!
+       authors(filter: AuthorFilter, first: Int, after: String, last: Int, before: String): AuthorsConnection!
+     }
 
-      extend type Mutation {
-        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
-      }
+     extend type Mutation {
+       saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
 
-      input SaveAuthorInput {
-        id: ID
-        firstName: String
-      }
+     type Author {
+       id: ID!
+     }
 
-      type SaveAuthorResult {
-        author: Author!
-      }
-      "
+     type AuthorsConnection {
+       edges: [AuthorsEdge!]!
+       nodes: [Author!]!
+       pageInfo: PageInfo!
+     }
+
+     type AuthorsEdge {
+       node: Author!
+       cursor: String!
+     }
+
+     input AuthorFilter {
+       id: ID
+       firstName: String
+     }
+
+     input SaveAuthorInput {
+       id: ID
+       firstName: String
+     }
+
+     type SaveAuthorResult {
+       author: Author!
+     }
+     "
     `);
   });
 
@@ -186,26 +507,47 @@ describe("generateGraphqlSchemaFiles", () => {
     await generate(fs, entities);
     // Then we added the new field
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-      "" The author. "
-      type Author {
-        " The id. "
-        id: ID!
-        firstName: String!
-      }
+     "extend type Query {
+       author(id: ID!): Author!
+       authors(filter: AuthorFilter, first: Int, after: String, last: Int, before: String): AuthorsConnection!
+     }
 
-      input SaveAuthorInput {
-        id: ID
-        firstName: String
-      }
+     extend type Mutation {
+       saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
 
-      extend type Mutation {
-        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
-      }
+     " The author. "
+     type Author {
+       " The id. "
+       id: ID!
+       firstName: String!
+     }
 
-      type SaveAuthorResult {
-        author: Author!
-      }
-      "
+     input SaveAuthorInput {
+       id: ID
+       firstName: String
+     }
+
+     type AuthorsConnection {
+       edges: [AuthorsEdge!]!
+       nodes: [Author!]!
+       pageInfo: PageInfo!
+     }
+
+     type AuthorsEdge {
+       node: Author!
+       cursor: String!
+     }
+
+     input AuthorFilter {
+       id: ID
+       firstName: String
+     }
+
+     type SaveAuthorResult {
+       author: Author!
+     }
+     "
     `);
   });
 
@@ -226,25 +568,47 @@ describe("generateGraphqlSchemaFiles", () => {
     await generate(fs, entities);
     // Then the input does not have the createdAt field
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-      "extend type Mutation {
-        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
-      }
+     "extend type Query {
+       author(id: ID!): Author!
+       authors(filter: AuthorFilter, first: Int, after: String, last: Int, before: String): AuthorsConnection!
+     }
 
-      type Author {
-        id: ID!
-        firstName: String!
-        createdAt: String!
-      }
+     extend type Mutation {
+       saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
 
-      input SaveAuthorInput {
-        id: ID
-        firstName: String
-      }
+     type AuthorsConnection {
+       edges: [AuthorsEdge!]!
+       nodes: [Author!]!
+       pageInfo: PageInfo!
+     }
 
-      type SaveAuthorResult {
-        author: Author!
-      }
-      "
+     type AuthorsEdge {
+       node: Author!
+       cursor: String!
+     }
+
+     type Author {
+       id: ID!
+       firstName: String!
+       createdAt: String!
+     }
+
+     input AuthorFilter {
+       id: ID
+       firstName: String
+       createdAt: String
+     }
+
+     input SaveAuthorInput {
+       id: ID
+       firstName: String
+     }
+
+     type SaveAuthorResult {
+       author: Author!
+     }
+     "
     `);
   });
 
@@ -269,30 +633,54 @@ describe("generateGraphqlSchemaFiles", () => {
     await generate(fs, entities);
     // Then the input has both types of fields as appropriate
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-      "extend type Mutation {
-        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
-      }
+     "extend type Query {
+       author(id: ID!): Author!
+       authors(filter: AuthorFilter, first: Int, after: String, last: Int, before: String): AuthorsConnection!
+     }
 
-      type Author {
-        id: ID!
-        firstName: String!
-        createdAt: DateTime!
-        startTime: DateTime!
-        startDate: Date!
-      }
+     extend type Mutation {
+       saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
 
-      input SaveAuthorInput {
-        id: ID
-        firstName: String
-        createdAt: DateTime
-        startTime: DateTime
-        startDate: Date
-      }
+     type AuthorsConnection {
+       edges: [AuthorsEdge!]!
+       nodes: [Author!]!
+       pageInfo: PageInfo!
+     }
 
-      type SaveAuthorResult {
-        author: Author!
-      }
-      "
+     type AuthorsEdge {
+       node: Author!
+       cursor: String!
+     }
+
+     type Author {
+       id: ID!
+       firstName: String!
+       createdAt: DateTime!
+       startTime: DateTime!
+       startDate: Date!
+     }
+
+     input AuthorFilter {
+       id: ID
+       firstName: String
+       createdAt: DateTime
+       startTime: DateTime
+       startDate: Date
+     }
+
+     input SaveAuthorInput {
+       id: ID
+       firstName: String
+       createdAt: DateTime
+       startTime: DateTime
+       startDate: Date
+     }
+
+     type SaveAuthorResult {
+       author: Author!
+     }
+     "
     `);
   });
 
@@ -315,28 +703,51 @@ describe("generateGraphqlSchemaFiles", () => {
     await generate(fs, entities);
     // Then the Author links to a PublisherLike
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-      "extend type Mutation {
-        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
-      }
+     "extend type Query {
+       author(id: ID!): Author!
+       authors(filter: AuthorFilter, first: Int, after: String, last: Int, before: String): AuthorsConnection!
+     }
 
-      type Author {
-        id: ID!
-        firstName: String!
-        createdAt: DateTime!
-        startDate: Date!
-      }
+     extend type Mutation {
+       saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
 
-      input SaveAuthorInput {
-        id: ID
-        firstName: String
-        createdAt: DateTime
-        startDate: Date
-      }
+     type AuthorsConnection {
+       edges: [AuthorsEdge!]!
+       nodes: [Author!]!
+       pageInfo: PageInfo!
+     }
 
-      type SaveAuthorResult {
-        author: Author!
-      }
-      "
+     type AuthorsEdge {
+       node: Author!
+       cursor: String!
+     }
+
+     type Author {
+       id: ID!
+       firstName: String!
+       createdAt: DateTime!
+       startDate: Date!
+     }
+
+     input AuthorFilter {
+       id: ID
+       firstName: String
+       createdAt: DateTime
+       startDate: Date
+     }
+
+     input SaveAuthorInput {
+       id: ID
+       firstName: String
+       createdAt: DateTime
+       startDate: Date
+     }
+
+     type SaveAuthorResult {
+       author: Author!
+     }
+     "
     `);
   });
 
@@ -353,24 +764,45 @@ describe("generateGraphqlSchemaFiles", () => {
     await generate(fs, entities);
     // Then the input has both types of fields as appropriate
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-      "extend type Mutation {
-        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
-      }
+     "extend type Query {
+       author(id: ID!): Author!
+       authors(filter: AuthorFilter, first: Int, after: String, last: Int, before: String): AuthorsConnection!
+     }
 
-      type Author {
-        id: ID!
-        color: ColorDetail!
-      }
+     extend type Mutation {
+       saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
 
-      input SaveAuthorInput {
-        id: ID
-        color: Color
-      }
+     type AuthorsConnection {
+       edges: [AuthorsEdge!]!
+       nodes: [Author!]!
+       pageInfo: PageInfo!
+     }
 
-      type SaveAuthorResult {
-        author: Author!
-      }
-      "
+     type AuthorsEdge {
+       node: Author!
+       cursor: String!
+     }
+
+     type Author {
+       id: ID!
+       color: ColorDetail!
+     }
+
+     input AuthorFilter {
+       id: ID
+       color: Color
+     }
+
+     input SaveAuthorInput {
+       id: ID
+       color: Color
+     }
+
+     type SaveAuthorResult {
+       author: Author!
+     }
+     "
     `);
   });
 
@@ -387,24 +819,45 @@ describe("generateGraphqlSchemaFiles", () => {
     await generate(fs, entities);
     // Then the input has both types of fields as appropriate
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-      "extend type Mutation {
-        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
-      }
+     "extend type Query {
+       author(id: ID!): Author!
+       authors(filter: AuthorFilter, first: Int, after: String, last: Int, before: String): AuthorsConnection!
+     }
 
-      type Author {
-        id: ID!
-        color: [Color!]!
-      }
+     extend type Mutation {
+       saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
 
-      input SaveAuthorInput {
-        id: ID
-        color: [Color!]
-      }
+     type AuthorsConnection {
+       edges: [AuthorsEdge!]!
+       nodes: [Author!]!
+       pageInfo: PageInfo!
+     }
 
-      type SaveAuthorResult {
-        author: Author!
-      }
-      "
+     type AuthorsEdge {
+       node: Author!
+       cursor: String!
+     }
+
+     type Author {
+       id: ID!
+       color: [Color!]!
+     }
+
+     input AuthorFilter {
+       id: ID
+       color: [Color!]
+     }
+
+     input SaveAuthorInput {
+       id: ID
+       color: [Color!]
+     }
+
+     type SaveAuthorResult {
+       author: Author!
+     }
+     "
     `);
   });
 
@@ -424,26 +877,54 @@ describe("generateGraphqlSchemaFiles", () => {
     await generate(fs, entities);
     // Then the input has both types of fields as appropriate
     expect(await fs.load("smallPublisher.graphql")).toMatchInlineSnapshot(`
-      "extend type Mutation {
-        saveSmallPublisher(input: SaveSmallPublisherInput!): SaveSmallPublisherResult!
-      }
+     "extend type Query {
+       smallPublisher(id: ID!): SmallPublisher!
+       smallPublishers(
+         filter: SmallPublisherFilter
+         first: Int
+         after: String
+         last: Int
+         before: String
+       ): SmallPublishersConnection!
+     }
 
-      type SmallPublisher {
-        id: ID!
-        name: String!
-        city: String!
-      }
+     extend type Mutation {
+       saveSmallPublisher(input: SaveSmallPublisherInput!): SaveSmallPublisherResult!
+     }
 
-      input SaveSmallPublisherInput {
-        id: ID
-        name: String
-        city: String
-      }
+     type SmallPublishersConnection {
+       edges: [SmallPublishersEdge!]!
+       nodes: [SmallPublisher!]!
+       pageInfo: PageInfo!
+     }
 
-      type SaveSmallPublisherResult {
-        smallPublisher: SmallPublisher!
-      }
-      "
+     type SmallPublishersEdge {
+       node: SmallPublisher!
+       cursor: String!
+     }
+
+     type SmallPublisher {
+       id: ID!
+       name: String!
+       city: String!
+     }
+
+     input SmallPublisherFilter {
+       id: ID
+       name: String
+       city: String
+     }
+
+     input SaveSmallPublisherInput {
+       id: ID
+       name: String
+       city: String
+     }
+
+     type SaveSmallPublisherResult {
+       smallPublisher: SmallPublisher!
+     }
+     "
     `);
   });
 
@@ -466,13 +947,34 @@ describe("generateGraphqlSchemaFiles", () => {
     await generate(fs, entities);
     // Then the input has both types of fields as appropriate
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-     "extend type Mutation {
+     "extend type Query {
+       author(id: ID!): Author!
+       authors(filter: AuthorFilter, first: Int, after: String, last: Int, before: String): AuthorsConnection!
+     }
+
+     extend type Mutation {
        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+     }
+
+     type AuthorsConnection {
+       edges: [AuthorsEdge!]!
+       nodes: [Author!]!
+       pageInfo: PageInfo!
+     }
+
+     type AuthorsEdge {
+       node: Author!
+       cursor: String!
      }
 
      type Author {
        id: ID!
        publisher: PublisherLike!
+     }
+
+     input AuthorFilter {
+       id: ID
+       publisherId: ID
      }
 
      input SaveAuthorInput {
@@ -488,7 +990,7 @@ describe("generateGraphqlSchemaFiles", () => {
   });
 });
 
-async function generate(fs: Fs, opt: EntityDbMetadata[] | Partial<DbMetadata>) {
+async function generate(fs: Fs, opt: EntityDbMetadata[] | Partial<DbMetadata>, config: Partial<Config> = {}) {
   const entities = Array.isArray(opt) ? opt : (opt.entities ?? []);
   const entitiesByName = keyBy(entities, "name");
 
@@ -510,5 +1012,5 @@ async function generate(fs: Fs, opt: EntityDbMetadata[] | Partial<DbMetadata>) {
     totalTables: 10,
     entitiesByName,
   } satisfies DbMetadata;
-  return generateGraphqlSchemaFiles(fs, dbMeta);
+  return generateGraphqlSchemaFiles(config as Config, fs, dbMeta);
 }

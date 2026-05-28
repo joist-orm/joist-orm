@@ -1,5 +1,6 @@
 import { Temporal } from "temporal-polyfill"
 import { type GraphQLResolveInfo, GraphQLScalarType } from "graphql";
+import { CursorPageInfo } from "joist-graphql-resolver-utils/index.js";
 import type { Context } from "src/context.js";
 import { Author, Book, Color } from "src/entities/index.js";
 
@@ -8,8 +9,13 @@ export interface Resolvers {
   Book: BookResolvers;
   ColorDetail: ColorDetailResolvers;
   Mutation: MutationResolvers;
+  PageInfo: PageInfoResolvers;
   Query: QueryResolvers;
   AllEnumDetails?: AllEnumDetailsResolvers;
+  AuthorsConnection?: AuthorsConnectionResolvers;
+  AuthorsEdge?: AuthorsEdgeResolvers;
+  BooksConnection?: BooksConnectionResolvers;
+  BooksEdge?: BooksEdgeResolvers;
   SaveAuthorResult?: SaveAuthorResultResolvers;
   SaveBookResult?: SaveBookResultResolvers;
   DateTime: GraphQLScalarType;
@@ -44,13 +50,45 @@ export interface MutationResolvers {
   saveBook: Resolver<{}, MutationSaveBookArgs, SaveBookResult>;
 }
 
+export interface PageInfoResolvers {
+  endCursor: Resolver<CursorPageInfo, {}, string | null | undefined>;
+  hasNextPage: Resolver<CursorPageInfo, {}, boolean>;
+  hasPreviousPage: Resolver<CursorPageInfo, {}, boolean>;
+  startCursor: Resolver<CursorPageInfo, {}, string | null | undefined>;
+  totalCount: Resolver<CursorPageInfo, {}, number>;
+}
+
 export interface QueryResolvers {
   author: Resolver<{}, QueryAuthorArgs, Author | null | undefined>;
   authors: Resolver<{}, {}, readonly Author[]>;
+  book: Resolver<{}, QueryBookArgs, Book>;
+  books: Resolver<{}, QueryBooksArgs, BooksConnection>;
 }
 
 export interface AllEnumDetailsResolvers {
   color: Resolver<AllEnumDetails, {}, readonly Color[]>;
+}
+
+export interface AuthorsConnectionResolvers {
+  edges: Resolver<AuthorsConnection, {}, readonly AuthorsEdge[]>;
+  nodes: Resolver<AuthorsConnection, {}, readonly Author[]>;
+  pageInfo: Resolver<AuthorsConnection, {}, CursorPageInfo>;
+}
+
+export interface AuthorsEdgeResolvers {
+  cursor: Resolver<AuthorsEdge, {}, string>;
+  node: Resolver<AuthorsEdge, {}, Author>;
+}
+
+export interface BooksConnectionResolvers {
+  edges: Resolver<BooksConnection, {}, readonly BooksEdge[]>;
+  nodes: Resolver<BooksConnection, {}, readonly Book[]>;
+  pageInfo: Resolver<BooksConnection, {}, CursorPageInfo>;
+}
+
+export interface BooksEdgeResolvers {
+  cursor: Resolver<BooksEdge, {}, string>;
+  node: Resolver<BooksEdge, {}, Book>;
 }
 
 export interface SaveAuthorResultResolvers {
@@ -83,8 +121,40 @@ export interface MutationSaveBookArgs {
 export interface QueryAuthorArgs {
   id: string;
 }
+export interface QueryBookArgs {
+  id: string;
+}
+export interface QueryBooksArgs {
+  after?: string | null | undefined;
+  before?: string | null | undefined;
+  filter?: BookFilter | null | undefined;
+  first?: number | null | undefined;
+  last?: number | null | undefined;
+}
 export interface AllEnumDetails {
   color: Color[];
+}
+
+export interface AuthorsConnection {
+  edges: AuthorsEdge[];
+  nodes: Author[];
+  pageInfo: CursorPageInfo;
+}
+
+export interface AuthorsEdge {
+  cursor: string;
+  node: Author;
+}
+
+export interface BooksConnection {
+  edges: BooksEdge[];
+  nodes: Book[];
+  pageInfo: CursorPageInfo;
+}
+
+export interface BooksEdge {
+  cursor: string;
+  node: Book;
 }
 
 export interface SaveAuthorResult {
@@ -93,6 +163,22 @@ export interface SaveAuthorResult {
 
 export interface SaveBookResult {
   book: Book;
+}
+
+export interface AuthorFilter {
+  createdAt?: Temporal.ZonedDateTime | null | undefined;
+  delete?: boolean | null | undefined;
+  favoriteColors?: Color[] | null | undefined;
+  firstName?: string | null | undefined;
+  id?: string | null | undefined;
+  lastName?: string | null | undefined;
+  updatedAt?: Temporal.ZonedDateTime | null | undefined;
+}
+
+export interface BookFilter {
+  authorId?: string | null | undefined;
+  id?: string | null | undefined;
+  title?: string | null | undefined;
 }
 
 export interface SaveAuthorInput {

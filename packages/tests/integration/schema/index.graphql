@@ -11,11 +11,3 @@ enum FavoriteShape {
   SQUARE
   TRIANGLE
 }
-
-type PageInfo {
-  hasNextPage: Boolean!
-  hasPreviousPage: Boolean!
-  totalCount: Int!
-  nextPage: Int
-  currentPage: Int
-}

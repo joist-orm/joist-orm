@@ -59,6 +59,16 @@ describe("generateGraphqlSchemaFiles", () => {
      }
      "
     `);
+    expect(await fs.load("pageInfo.graphql")).toMatchInlineSnapshot(`
+      "type PageInfo {
+        hasNextPage: Boolean!
+        hasPreviousPage: Boolean!
+        totalCount: Int!
+        startCursor: String
+        endCursor: String
+      }
+      "
+    `);
   });
 
   it("generates cursor query fields by default", async () => {
@@ -140,6 +150,16 @@ describe("generateGraphqlSchemaFiles", () => {
        author: Author!
      }
      "
+    `);
+    expect(await fs.load("pageInfo.graphql")).toMatchInlineSnapshot(`
+      "type PageInfo {
+        hasNextPage: Boolean!
+        hasPreviousPage: Boolean!
+        totalCount: Int!
+        nextPage: Int
+        currentPage: Int
+      }
+      "
     `);
   });
 

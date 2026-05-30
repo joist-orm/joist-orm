@@ -67,7 +67,7 @@ export async function generateGraphqlSchemaFiles(config: Config, fs: Fs, dbMeta:
 
 /** Makes the project's pagination metadata type. */
 function createPageInfoFields(config: Config): GqlField[] {
-  const common = { file: "index.graphql", objectType: "output" as const, objectName: "PageInfo" };
+  const common = { file: "pageInfo.graphql", objectType: "output" as const, objectName: "PageInfo" };
   const shared = [
     { ...common, fieldName: "hasNextPage", fieldType: "Boolean!" },
     { ...common, fieldName: "hasPreviousPage", fieldType: "Boolean!" },

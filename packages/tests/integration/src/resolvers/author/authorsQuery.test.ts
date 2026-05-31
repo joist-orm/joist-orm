@@ -23,7 +23,7 @@ describe("authors", () => {
     newAuthor(ctx.em, { firstName: "primitive query miss" });
     await ctx.em.flush();
 
-    const result = await run(ctx, { filter: { firstName: "primitive query match" }, limit: 10 });
+    const result = await run(ctx, { filter: { firstName: ["primitive query match"] }, limit: 10 });
 
     expect(result.entities.map((a) => a.firstName)).toEqual(["primitive query match"]);
     await expect(result.pageInfo.totalCount).resolves.toEqual(1);
@@ -35,10 +35,22 @@ describe("authors", () => {
     newAuthor(ctx.em, { firstName: "publisher query miss", publisher: {} });
     await ctx.em.flush();
 
-    const result = await run(ctx, { filter: { publisherId: publisher.id }, limit: 10 });
+    const result = await run(ctx, { filter: { publisherId: [publisher.id] }, limit: 10 });
 
     expect(result.entities.map((a) => a.firstName)).toEqual(["publisher query match"]);
     await expect(result.pageInfo.totalCount).resolves.toEqual(1);
+  });
+
+  it.withCtx("ors filter values", async (ctx) => {
+    newAuthor(ctx.em, { firstName: "or query a" });
+    newAuthor(ctx.em, { firstName: "or query b" });
+    newAuthor(ctx.em, { firstName: "or query miss" });
+    await ctx.em.flush();
+
+    const result = await run(ctx, { filter: { firstName: ["or query a", "or query b"] }, limit: 10 });
+
+    expect(result.entities.map((a) => a.firstName).sort()).toEqual(["or query a", "or query b"]);
+    await expect(result.pageInfo.totalCount).resolves.toEqual(2);
   });
 });
 

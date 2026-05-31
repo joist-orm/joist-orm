@@ -39,12 +39,12 @@ type ImagesPage {
 }
 
 input ImageFilter {
-  id: ID
-  fileName: String
-  createdAt: DateTime
-  updatedAt: DateTime
-  type: ImageType
-  authorId: ID
-  bookId: ID
-  publisherId: ID
+  id: [ID!]
+  fileName: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  type: [ImageType!]
+  authorId: [ID!]
+  bookId: [ID!]
+  publisherId: [ID!]
 }

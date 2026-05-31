@@ -49,18 +49,18 @@ type AuthorStatsPage {
 }
 
 input AuthorStatFilter {
-  id: ID
-  smallint: Int
-  integer: Int
-  nullableInteger: Int
-  decimal: Int
-  real: Int
-  smallserial: Int
-  serial: Int
-  doublePrecision: Int
-  nullableText: String
-  createdAt: DateTime
-  updatedAt: DateTime
-  bigint: BigInt
-  bigserial: BigInt
+  id: [ID!]
+  smallint: [Int!]
+  integer: [Int!]
+  nullableInteger: [Int!]
+  decimal: [Int!]
+  real: [Int!]
+  smallserial: [Int!]
+  serial: [Int!]
+  doublePrecision: [Int!]
+  nullableText: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  bigint: [BigInt!]
+  bigserial: [BigInt!]
 }

@@ -35,10 +35,10 @@ type PublisherGroupsPage {
 }
 
 input PublisherGroupFilter {
-  id: ID
-  name: String
-  numberOfBookReviews: Int
-  numberOfBookReviewsFormatted: String
-  createdAt: DateTime
-  updatedAt: DateTime
+  id: [ID!]
+  name: [String!]
+  numberOfBookReviews: [Int!]
+  numberOfBookReviewsFormatted: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
 }

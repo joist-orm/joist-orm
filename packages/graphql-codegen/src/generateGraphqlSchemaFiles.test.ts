@@ -47,7 +47,7 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input AuthorFilter {
-       id: ID
+       id: [ID!]
      }
 
      input SaveAuthorInput {
@@ -101,7 +101,7 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input AuthorFilter {
-       id: ID
+       id: [ID!]
      }
 
      input SaveAuthorInput {
@@ -139,7 +139,7 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input AuthorFilter {
-       id: ID
+       id: [ID!]
      }
 
      input SaveAuthorInput {
@@ -212,13 +212,13 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input AuthorFilter {
-       id: ID
-       firstName: String
-       nickNames: [String!]
-       numberOfAtoms: BigInt
-       color: Color
-       publisherId: ID
-       favoriteId: ID
+       id: [ID!]
+       firstName: [String!]
+       nickNames: [[String!]!]
+       numberOfAtoms: [BigInt!]
+       color: [Color!]
+       publisherId: [ID!]
+       favoriteId: [ID!]
      }
 
      input SaveAuthorInput {
@@ -288,8 +288,8 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input AuthorFilter {
-       id: ID
-       firstName: String
+       id: [ID!]
+       firstName: [String!]
      }
 
      type SaveAuthorResult {
@@ -391,8 +391,8 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input AuthorFilter {
-       id: ID
-       firstName: String
+       id: [ID!]
+       firstName: [String!]
      }
 
      type SaveAuthorResult {
@@ -436,7 +436,7 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input AuthorFilter {
-       id: ID
+       id: [ID!]
      }
 
      input SaveAuthorInput {
@@ -492,8 +492,8 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input AuthorFilter {
-       id: ID
-       firstName: String
+       id: [ID!]
+       firstName: [String!]
      }
 
      input SaveAuthorInput {
@@ -560,8 +560,8 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input AuthorFilter {
-       id: ID
-       firstName: String
+       id: [ID!]
+       firstName: [String!]
      }
 
      type SaveAuthorResult {
@@ -615,9 +615,9 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input AuthorFilter {
-       id: ID
-       firstName: String
-       createdAt: String
+       id: [ID!]
+       firstName: [String!]
+       createdAt: [String!]
      }
 
      input SaveAuthorInput {
@@ -682,11 +682,11 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input AuthorFilter {
-       id: ID
-       firstName: String
-       createdAt: DateTime
-       startTime: DateTime
-       startDate: Date
+       id: [ID!]
+       firstName: [String!]
+       createdAt: [DateTime!]
+       startTime: [DateTime!]
+       startDate: [Date!]
      }
 
      input SaveAuthorInput {
@@ -751,10 +751,10 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input AuthorFilter {
-       id: ID
-       firstName: String
-       createdAt: DateTime
-       startDate: Date
+       id: [ID!]
+       firstName: [String!]
+       createdAt: [DateTime!]
+       startDate: [Date!]
      }
 
      input SaveAuthorInput {
@@ -810,8 +810,8 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input AuthorFilter {
-       id: ID
-       color: Color
+       id: [ID!]
+       color: [Color!]
      }
 
      input SaveAuthorInput {
@@ -865,8 +865,8 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input AuthorFilter {
-       id: ID
-       color: [Color!]
+       id: [ID!]
+       color: [[Color!]!]
      }
 
      input SaveAuthorInput {
@@ -930,9 +930,9 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input SmallPublisherFilter {
-       id: ID
-       name: String
-       city: String
+       id: [ID!]
+       name: [String!]
+       city: [String!]
      }
 
      input SaveSmallPublisherInput {
@@ -993,8 +993,8 @@ describe("generateGraphqlSchemaFiles", () => {
      }
 
      input AuthorFilter {
-       id: ID
-       publisherId: ID
+       id: [ID!]
+       publisherId: [ID!]
      }
 
      input SaveAuthorInput {

@@ -166,19 +166,19 @@ export interface SaveBookResult {
 }
 
 export interface AuthorFilter {
-  createdAt?: Temporal.ZonedDateTime | null | undefined;
-  delete?: boolean | null | undefined;
-  favoriteColors?: Color[] | null | undefined;
-  firstName?: string | null | undefined;
-  id?: string | null | undefined;
-  lastName?: string | null | undefined;
-  updatedAt?: Temporal.ZonedDateTime | null | undefined;
+  createdAt?: Temporal.ZonedDateTime[] | null | undefined;
+  delete?: boolean[] | null | undefined;
+  favoriteColors?: Color[][] | null | undefined;
+  firstName?: string[] | null | undefined;
+  id?: string[] | null | undefined;
+  lastName?: string[] | null | undefined;
+  updatedAt?: Temporal.ZonedDateTime[] | null | undefined;
 }
 
 export interface BookFilter {
-  authorId?: string | null | undefined;
-  id?: string | null | undefined;
-  title?: string | null | undefined;
+  authorId?: string[] | null | undefined;
+  id?: string[] | null | undefined;
+  title?: string[] | null | undefined;
 }
 
 export interface SaveAuthorInput {

@@ -16,8 +16,8 @@ type ParentGroupsPage {
 }
 
 input ParentGroupFilter {
-  id: ID
-  name: String
-  createdAt: DateTime
-  updatedAt: DateTime
+  id: [ID!]
+  name: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
 }

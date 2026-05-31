@@ -14,16 +14,16 @@ type AdminUsersPage {
 }
 
 input AdminUserFilter {
-  id: ID
-  name: String
-  email: String
-  bio: String
-  originalEmail: String
-  trialPeriod: String
-  createdAt: DateTime
-  updatedAt: DateTime
-  managerId: ID
-  authorManyToOneId: ID
-  favoritePublisherId: ID
-  role: String
+  id: [ID!]
+  name: [String!]
+  email: [String!]
+  bio: [String!]
+  originalEmail: [String!]
+  trialPeriod: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  managerId: [ID!]
+  authorManyToOneId: [ID!]
+  favoritePublisherId: [ID!]
+  role: [String!]
 }

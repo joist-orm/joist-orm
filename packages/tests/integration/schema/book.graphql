@@ -50,18 +50,18 @@ type BooksPage {
 }
 
 input BookFilter {
-  id: ID
-  title: String
-  order: Int
-  notes: String
-  acknowledgements: String
-  authorsNickNames: String
-  search: String
-  deletedAt: DateTime
-  createdAt: DateTime
-  updatedAt: DateTime
-  prequelId: ID
-  authorId: ID
-  reviewerId: ID
-  randomCommentId: ID
+  id: [ID!]
+  title: [String!]
+  order: [Int!]
+  notes: [String!]
+  acknowledgements: [String!]
+  authorsNickNames: [String!]
+  search: [String!]
+  deletedAt: [DateTime!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  prequelId: [ID!]
+  authorId: [ID!]
+  reviewerId: [ID!]
+  randomCommentId: [ID!]
 }

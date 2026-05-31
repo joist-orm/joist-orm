@@ -16,8 +16,8 @@ type ChildrenPage {
 }
 
 input ChildFilter {
-  id: ID
-  name: String
-  createdAt: DateTime
-  updatedAt: DateTime
+  id: [ID!]
+  name: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
 }

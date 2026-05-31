@@ -36,8 +36,8 @@ type TagsPage {
 }
 
 input TagFilter {
-  id: ID
-  name: String
-  createdAt: DateTime
-  updatedAt: DateTime
+  id: [ID!]
+  name: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
 }

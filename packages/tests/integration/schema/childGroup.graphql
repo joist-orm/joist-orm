@@ -18,10 +18,10 @@ type ChildGroupsPage {
 }
 
 input ChildGroupFilter {
-  id: ID
-  name: String
-  createdAt: DateTime
-  updatedAt: DateTime
-  childGroupId: ID
-  parentGroupId: ID
+  id: [ID!]
+  name: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  childGroupId: [ID!]
+  parentGroupId: [ID!]
 }

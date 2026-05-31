@@ -17,9 +17,9 @@ type CriticColumnsPage {
 }
 
 input CriticColumnFilter {
-  id: ID
-  name: String
-  createdAt: DateTime
-  updatedAt: DateTime
-  criticId: ID
+  id: [ID!]
+  name: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  criticId: [ID!]
 }

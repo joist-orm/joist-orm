@@ -17,9 +17,9 @@ type AuthorSchedulesPage {
 }
 
 input AuthorScheduleFilter {
-  id: ID
-  overview: String
-  createdAt: DateTime
-  updatedAt: DateTime
-  authorId: ID
+  id: [ID!]
+  overview: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  authorId: [ID!]
 }

@@ -35,10 +35,10 @@ type CriticsPage {
 }
 
 input CriticFilter {
-  id: ID
-  name: String
-  createdAt: DateTime
-  updatedAt: DateTime
-  favoriteLargePublisherId: ID
-  groupId: ID
+  id: [ID!]
+  name: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  favoriteLargePublisherId: [ID!]
+  groupId: [ID!]
 }

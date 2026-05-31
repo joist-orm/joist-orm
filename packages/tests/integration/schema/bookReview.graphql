@@ -39,13 +39,13 @@ type BookReviewsPage {
 }
 
 input BookReviewFilter {
-  id: ID
-  rating: Int
-  isPublic: Boolean
-  isTest: Boolean
-  isTestChain: Boolean
-  createdAt: DateTime
-  updatedAt: DateTime
-  bookId: ID
-  criticId: ID
+  id: [ID!]
+  rating: [Int!]
+  isPublic: [Boolean!]
+  isTest: [Boolean!]
+  isTestChain: [Boolean!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  bookId: [ID!]
+  criticId: [ID!]
 }

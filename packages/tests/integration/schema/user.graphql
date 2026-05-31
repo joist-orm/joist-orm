@@ -45,15 +45,15 @@ type UsersPage {
 }
 
 input UserFilter {
-  id: ID
-  name: String
-  email: String
-  bio: String
-  originalEmail: String
-  trialPeriod: String
-  createdAt: DateTime
-  updatedAt: DateTime
-  managerId: ID
-  authorManyToOneId: ID
-  favoritePublisherId: ID
+  id: [ID!]
+  name: [String!]
+  email: [String!]
+  bio: [String!]
+  originalEmail: [String!]
+  trialPeriod: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  managerId: [ID!]
+  authorManyToOneId: [ID!]
+  favoritePublisherId: [ID!]
 }

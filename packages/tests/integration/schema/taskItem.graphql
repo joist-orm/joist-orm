@@ -33,10 +33,10 @@ type TaskItemsPage {
 }
 
 input TaskItemFilter {
-  id: ID
-  createdAt: DateTime
-  updatedAt: DateTime
-  newTaskId: ID
-  oldTaskId: ID
-  taskId: ID
+  id: [ID!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  newTaskId: [ID!]
+  oldTaskId: [ID!]
+  taskId: [ID!]
 }

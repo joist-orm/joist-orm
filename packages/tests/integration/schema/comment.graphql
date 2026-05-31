@@ -38,12 +38,12 @@ type CommentsPage {
 }
 
 input CommentFilter {
-  id: ID
-  parentTaggedId: String
-  parentTags: String
-  text: String
-  createdAt: DateTime
-  updatedAt: DateTime
-  userId: ID
-  parentId: ID
+  id: [ID!]
+  parentTaggedId: [String!]
+  parentTags: [String!]
+  text: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  userId: [ID!]
+  parentId: [ID!]
 }

@@ -1426,252 +1426,252 @@ export interface UsersPage {
 }
 
 export interface AdminUserFilter {
-  authorManyToOneId?: string | null | undefined;
-  bio?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  email?: string | null | undefined;
-  favoritePublisherId?: string | null | undefined;
-  id?: string | null | undefined;
-  managerId?: string | null | undefined;
-  name?: string | null | undefined;
-  originalEmail?: string | null | undefined;
-  role?: string | null | undefined;
-  trialPeriod?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
+  authorManyToOneId?: string[] | null | undefined;
+  bio?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  email?: string[] | null | undefined;
+  favoritePublisherId?: string[] | null | undefined;
+  id?: string[] | null | undefined;
+  managerId?: string[] | null | undefined;
+  name?: string[] | null | undefined;
+  originalEmail?: string[] | null | undefined;
+  role?: string[] | null | undefined;
+  trialPeriod?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface AuthorFilter {
-  age?: number | null | undefined;
-  bookComments?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  currentDraftBookId?: string | null | undefined;
-  deletedAt?: Date | null | undefined;
-  favoriteBookId?: string | null | undefined;
-  favoriteColors?: Color[] | null | undefined;
-  favoriteShape?: FavoriteShape | null | undefined;
-  firstName?: string | null | undefined;
-  graduated?: Date | null | undefined;
-  id?: string | null | undefined;
-  imageFileName?: string | null | undefined;
-  initials?: string | null | undefined;
-  isFunny?: boolean | null | undefined;
-  isPopular?: boolean | null | undefined;
-  lastName?: string | null | undefined;
-  menteeNames?: string | null | undefined;
-  mentorId?: string | null | undefined;
-  mentorNames?: string | null | undefined;
-  numberOfAtoms?: bigint | null | undefined;
-  numberOfBooks?: number | null | undefined;
-  numberOfPublicReviews?: number | null | undefined;
-  numberOfPublicReviews2?: number | null | undefined;
-  publisherId?: string | null | undefined;
-  rangeOfBooks?: BookRange | null | undefined;
-  rootMentorId?: string | null | undefined;
-  search?: string | null | undefined;
-  ssn?: string | null | undefined;
-  tagsOfAllBooks?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
-  wasEverPopular?: boolean | null | undefined;
+  age?: number[] | null | undefined;
+  bookComments?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  currentDraftBookId?: string[] | null | undefined;
+  deletedAt?: Date[] | null | undefined;
+  favoriteBookId?: string[] | null | undefined;
+  favoriteColors?: Color[][] | null | undefined;
+  favoriteShape?: FavoriteShape[] | null | undefined;
+  firstName?: string[] | null | undefined;
+  graduated?: Date[] | null | undefined;
+  id?: string[] | null | undefined;
+  imageFileName?: string[] | null | undefined;
+  initials?: string[] | null | undefined;
+  isFunny?: boolean[] | null | undefined;
+  isPopular?: boolean[] | null | undefined;
+  lastName?: string[] | null | undefined;
+  menteeNames?: string[] | null | undefined;
+  mentorId?: string[] | null | undefined;
+  mentorNames?: string[] | null | undefined;
+  numberOfAtoms?: bigint[] | null | undefined;
+  numberOfBooks?: number[] | null | undefined;
+  numberOfPublicReviews?: number[] | null | undefined;
+  numberOfPublicReviews2?: number[] | null | undefined;
+  publisherId?: string[] | null | undefined;
+  rangeOfBooks?: BookRange[] | null | undefined;
+  rootMentorId?: string[] | null | undefined;
+  search?: string[] | null | undefined;
+  ssn?: string[] | null | undefined;
+  tagsOfAllBooks?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
+  wasEverPopular?: boolean[] | null | undefined;
 }
 
 export interface AuthorScheduleFilter {
-  authorId?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  id?: string | null | undefined;
-  overview?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
+  authorId?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  id?: string[] | null | undefined;
+  overview?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface AuthorStatFilter {
-  bigint?: bigint | null | undefined;
-  bigserial?: bigint | null | undefined;
-  createdAt?: Date | null | undefined;
-  decimal?: number | null | undefined;
-  doublePrecision?: number | null | undefined;
-  id?: string | null | undefined;
-  integer?: number | null | undefined;
-  nullableInteger?: number | null | undefined;
-  nullableText?: string | null | undefined;
-  real?: number | null | undefined;
-  serial?: number | null | undefined;
-  smallint?: number | null | undefined;
-  smallserial?: number | null | undefined;
-  updatedAt?: Date | null | undefined;
+  bigint?: bigint[] | null | undefined;
+  bigserial?: bigint[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  decimal?: number[] | null | undefined;
+  doublePrecision?: number[] | null | undefined;
+  id?: string[] | null | undefined;
+  integer?: number[] | null | undefined;
+  nullableInteger?: number[] | null | undefined;
+  nullableText?: string[] | null | undefined;
+  real?: number[] | null | undefined;
+  serial?: number[] | null | undefined;
+  smallint?: number[] | null | undefined;
+  smallserial?: number[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface BookAdvanceFilter {
-  bookId?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  id?: string | null | undefined;
-  publisherId?: string | null | undefined;
-  status?: AdvanceStatus | null | undefined;
-  updatedAt?: Date | null | undefined;
+  bookId?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  id?: string[] | null | undefined;
+  publisherId?: string[] | null | undefined;
+  status?: AdvanceStatus[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface BookFilter {
-  acknowledgements?: string | null | undefined;
-  authorId?: string | null | undefined;
-  authorsNickNames?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  deletedAt?: Date | null | undefined;
-  id?: string | null | undefined;
-  notes?: string | null | undefined;
-  order?: number | null | undefined;
-  prequelId?: string | null | undefined;
-  randomCommentId?: string | null | undefined;
-  reviewerId?: string | null | undefined;
-  search?: string | null | undefined;
-  title?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
+  acknowledgements?: string[] | null | undefined;
+  authorId?: string[] | null | undefined;
+  authorsNickNames?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  deletedAt?: Date[] | null | undefined;
+  id?: string[] | null | undefined;
+  notes?: string[] | null | undefined;
+  order?: number[] | null | undefined;
+  prequelId?: string[] | null | undefined;
+  randomCommentId?: string[] | null | undefined;
+  reviewerId?: string[] | null | undefined;
+  search?: string[] | null | undefined;
+  title?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface BookReviewFilter {
-  bookId?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  criticId?: string | null | undefined;
-  id?: string | null | undefined;
-  isPublic?: boolean | null | undefined;
-  isTest?: boolean | null | undefined;
-  isTestChain?: boolean | null | undefined;
-  rating?: number | null | undefined;
-  updatedAt?: Date | null | undefined;
+  bookId?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  criticId?: string[] | null | undefined;
+  id?: string[] | null | undefined;
+  isPublic?: boolean[] | null | undefined;
+  isTest?: boolean[] | null | undefined;
+  isTestChain?: boolean[] | null | undefined;
+  rating?: number[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface ChildFilter {
-  createdAt?: Date | null | undefined;
-  id?: string | null | undefined;
-  name?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  id?: string[] | null | undefined;
+  name?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface ChildGroupFilter {
-  childGroupId?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  id?: string | null | undefined;
-  name?: string | null | undefined;
-  parentGroupId?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
+  childGroupId?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  id?: string[] | null | undefined;
+  name?: string[] | null | undefined;
+  parentGroupId?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface ChildItemFilter {
-  childGroupId?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  id?: string | null | undefined;
-  name?: string | null | undefined;
-  parentItemId?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
+  childGroupId?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  id?: string[] | null | undefined;
+  name?: string[] | null | undefined;
+  parentItemId?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface CommentFilter {
-  createdAt?: Date | null | undefined;
-  id?: string | null | undefined;
-  parentId?: string | null | undefined;
-  parentTaggedId?: string | null | undefined;
-  parentTags?: string | null | undefined;
-  text?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
-  userId?: string | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  id?: string[] | null | undefined;
+  parentId?: string[] | null | undefined;
+  parentTaggedId?: string[] | null | undefined;
+  parentTags?: string[] | null | undefined;
+  text?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
+  userId?: string[] | null | undefined;
 }
 
 export interface CriticColumnFilter {
-  createdAt?: Date | null | undefined;
-  criticId?: string | null | undefined;
-  id?: string | null | undefined;
-  name?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  criticId?: string[] | null | undefined;
+  id?: string[] | null | undefined;
+  name?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface CriticFilter {
-  createdAt?: Date | null | undefined;
-  favoriteLargePublisherId?: string | null | undefined;
-  groupId?: string | null | undefined;
-  id?: string | null | undefined;
-  name?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  favoriteLargePublisherId?: string[] | null | undefined;
+  groupId?: string[] | null | undefined;
+  id?: string[] | null | undefined;
+  name?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface ImageFilter {
-  authorId?: string | null | undefined;
-  bookId?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  fileName?: string | null | undefined;
-  id?: string | null | undefined;
-  publisherId?: string | null | undefined;
-  type?: ImageType | null | undefined;
-  updatedAt?: Date | null | undefined;
+  authorId?: string[] | null | undefined;
+  bookId?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  fileName?: string[] | null | undefined;
+  id?: string[] | null | undefined;
+  publisherId?: string[] | null | undefined;
+  type?: ImageType[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface LargePublisherFilter {
-  baseAsyncDefault?: string | null | undefined;
-  baseSyncDefault?: string | null | undefined;
-  bookAdvanceTitlesSnapshot?: string | null | undefined;
-  country?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  deletedAt?: Date | null | undefined;
-  favoriteAuthorId?: string | null | undefined;
-  favoriteAuthorName?: string | null | undefined;
-  groupId?: string | null | undefined;
-  hugeNumber?: number | null | undefined;
-  id?: string | null | undefined;
-  latitude?: number | null | undefined;
-  longitude?: number | null | undefined;
-  name?: string | null | undefined;
-  numberOfBookAdvancesSnapshot?: string | null | undefined;
-  numberOfBookReviews?: number | null | undefined;
-  sharedColumn?: string | null | undefined;
-  size?: PublisherSize | null | undefined;
-  spotlightAuthorId?: string | null | undefined;
-  titlesOfFavoriteBooks?: string | null | undefined;
-  type?: PublisherType | null | undefined;
-  updatedAt?: Date | null | undefined;
+  baseAsyncDefault?: string[] | null | undefined;
+  baseSyncDefault?: string[] | null | undefined;
+  bookAdvanceTitlesSnapshot?: string[] | null | undefined;
+  country?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  deletedAt?: Date[] | null | undefined;
+  favoriteAuthorId?: string[] | null | undefined;
+  favoriteAuthorName?: string[] | null | undefined;
+  groupId?: string[] | null | undefined;
+  hugeNumber?: number[] | null | undefined;
+  id?: string[] | null | undefined;
+  latitude?: number[] | null | undefined;
+  longitude?: number[] | null | undefined;
+  name?: string[] | null | undefined;
+  numberOfBookAdvancesSnapshot?: string[] | null | undefined;
+  numberOfBookReviews?: number[] | null | undefined;
+  sharedColumn?: string[] | null | undefined;
+  size?: PublisherSize[] | null | undefined;
+  spotlightAuthorId?: string[] | null | undefined;
+  titlesOfFavoriteBooks?: string[] | null | undefined;
+  type?: PublisherType[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface ParentGroupFilter {
-  createdAt?: Date | null | undefined;
-  id?: string | null | undefined;
-  name?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  id?: string[] | null | undefined;
+  name?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface ParentItemFilter {
-  createdAt?: Date | null | undefined;
-  id?: string | null | undefined;
-  name?: string | null | undefined;
-  parentGroupId?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  id?: string[] | null | undefined;
+  name?: string[] | null | undefined;
+  parentGroupId?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface PublisherFilter {
-  baseAsyncDefault?: string | null | undefined;
-  baseSyncDefault?: string | null | undefined;
-  bookAdvanceTitlesSnapshot?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  deletedAt?: Date | null | undefined;
-  favoriteAuthorId?: string | null | undefined;
-  favoriteAuthorName?: string | null | undefined;
-  groupId?: string | null | undefined;
-  hugeNumber?: number | null | undefined;
-  id?: string | null | undefined;
-  latitude?: number | null | undefined;
-  longitude?: number | null | undefined;
-  name?: string | null | undefined;
-  numberOfBookAdvancesSnapshot?: string | null | undefined;
-  numberOfBookReviews?: number | null | undefined;
-  rating?: number | null | undefined;
-  size?: PublisherSize | null | undefined;
-  spotlightAuthorId?: string | null | undefined;
-  titlesOfFavoriteBooks?: string | null | undefined;
-  type?: PublisherType | null | undefined;
-  updatedAt?: Date | null | undefined;
+  baseAsyncDefault?: string[] | null | undefined;
+  baseSyncDefault?: string[] | null | undefined;
+  bookAdvanceTitlesSnapshot?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  deletedAt?: Date[] | null | undefined;
+  favoriteAuthorId?: string[] | null | undefined;
+  favoriteAuthorName?: string[] | null | undefined;
+  groupId?: string[] | null | undefined;
+  hugeNumber?: number[] | null | undefined;
+  id?: string[] | null | undefined;
+  latitude?: number[] | null | undefined;
+  longitude?: number[] | null | undefined;
+  name?: string[] | null | undefined;
+  numberOfBookAdvancesSnapshot?: string[] | null | undefined;
+  numberOfBookReviews?: number[] | null | undefined;
+  rating?: number[] | null | undefined;
+  size?: PublisherSize[] | null | undefined;
+  spotlightAuthorId?: string[] | null | undefined;
+  titlesOfFavoriteBooks?: string[] | null | undefined;
+  type?: PublisherType[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface PublisherGroupFilter {
-  createdAt?: Date | null | undefined;
-  id?: string | null | undefined;
-  name?: string | null | undefined;
-  numberOfBookReviews?: number | null | undefined;
-  numberOfBookReviewsFormatted?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  id?: string[] | null | undefined;
+  name?: string[] | null | undefined;
+  numberOfBookReviews?: number[] | null | undefined;
+  numberOfBookReviewsFormatted?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface SaveAuthorInput {
@@ -1917,121 +1917,121 @@ export interface SaveUserInput {
 }
 
 export interface SmallPublisherFilter {
-  allAuthorNames?: string | null | undefined;
-  baseAsyncDefault?: string | null | undefined;
-  baseSyncDefault?: string | null | undefined;
-  bookAdvanceTitlesSnapshot?: string | null | undefined;
-  city?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  deletedAt?: Date | null | undefined;
-  favoriteAuthorId?: string | null | undefined;
-  favoriteAuthorName?: string | null | undefined;
-  groupId?: string | null | undefined;
-  hugeNumber?: number | null | undefined;
-  id?: string | null | undefined;
-  latitude?: number | null | undefined;
-  longitude?: number | null | undefined;
-  name?: string | null | undefined;
-  numberOfBookAdvancesSnapshot?: string | null | undefined;
-  numberOfBookReviews?: number | null | undefined;
-  rating?: number | null | undefined;
-  selfReferentialId?: string | null | undefined;
-  sharedColumn?: string | null | undefined;
-  size?: PublisherSize | null | undefined;
-  spotlightAuthorId?: string | null | undefined;
-  titlesOfFavoriteBooks?: string | null | undefined;
-  type?: PublisherType | null | undefined;
-  updatedAt?: Date | null | undefined;
+  allAuthorNames?: string[] | null | undefined;
+  baseAsyncDefault?: string[] | null | undefined;
+  baseSyncDefault?: string[] | null | undefined;
+  bookAdvanceTitlesSnapshot?: string[] | null | undefined;
+  city?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  deletedAt?: Date[] | null | undefined;
+  favoriteAuthorId?: string[] | null | undefined;
+  favoriteAuthorName?: string[] | null | undefined;
+  groupId?: string[] | null | undefined;
+  hugeNumber?: number[] | null | undefined;
+  id?: string[] | null | undefined;
+  latitude?: number[] | null | undefined;
+  longitude?: number[] | null | undefined;
+  name?: string[] | null | undefined;
+  numberOfBookAdvancesSnapshot?: string[] | null | undefined;
+  numberOfBookReviews?: number[] | null | undefined;
+  rating?: number[] | null | undefined;
+  selfReferentialId?: string[] | null | undefined;
+  sharedColumn?: string[] | null | undefined;
+  size?: PublisherSize[] | null | undefined;
+  spotlightAuthorId?: string[] | null | undefined;
+  titlesOfFavoriteBooks?: string[] | null | undefined;
+  type?: PublisherType[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface SmallPublisherGroupFilter {
-  createdAt?: Date | null | undefined;
-  id?: string | null | undefined;
-  name?: string | null | undefined;
-  numberOfBookReviews?: number | null | undefined;
-  numberOfBookReviewsFormatted?: string | null | undefined;
-  smallName?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  id?: string[] | null | undefined;
+  name?: string[] | null | undefined;
+  numberOfBookReviews?: number[] | null | undefined;
+  numberOfBookReviewsFormatted?: string[] | null | undefined;
+  smallName?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface TagFilter {
-  createdAt?: Date | null | undefined;
-  id?: string | null | undefined;
-  name?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  id?: string[] | null | undefined;
+  name?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface TaskFilter {
-  asyncDefault_1?: string | null | undefined;
-  asyncDefault_2?: string | null | undefined;
-  asyncDerived?: string | null | undefined;
-  copiedFromId?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  deletedAt?: Date | null | undefined;
-  durationInDays?: number | null | undefined;
-  id?: string | null | undefined;
-  syncDefault?: string | null | undefined;
-  syncDerived?: string | null | undefined;
-  type?: TaskType | null | undefined;
-  updatedAt?: Date | null | undefined;
+  asyncDefault_1?: string[] | null | undefined;
+  asyncDefault_2?: string[] | null | undefined;
+  asyncDerived?: string[] | null | undefined;
+  copiedFromId?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  deletedAt?: Date[] | null | undefined;
+  durationInDays?: number[] | null | undefined;
+  id?: string[] | null | undefined;
+  syncDefault?: string[] | null | undefined;
+  syncDerived?: string[] | null | undefined;
+  type?: TaskType[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface TaskItemFilter {
-  createdAt?: Date | null | undefined;
-  id?: string | null | undefined;
-  newTaskId?: string | null | undefined;
-  oldTaskId?: string | null | undefined;
-  taskId?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  id?: string[] | null | undefined;
+  newTaskId?: string[] | null | undefined;
+  oldTaskId?: string[] | null | undefined;
+  taskId?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface TaskNewFilter {
-  asyncDefault_1?: string | null | undefined;
-  asyncDefault_2?: string | null | undefined;
-  asyncDerived?: string | null | undefined;
-  copiedFromId?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  deletedAt?: Date | null | undefined;
-  durationInDays?: number | null | undefined;
-  id?: string | null | undefined;
-  selfReferentialId?: string | null | undefined;
-  specialNewAuthorId?: string | null | undefined;
-  specialNewField?: number | null | undefined;
-  syncDefault?: string | null | undefined;
-  syncDerived?: string | null | undefined;
-  type?: TaskType | null | undefined;
-  updatedAt?: Date | null | undefined;
+  asyncDefault_1?: string[] | null | undefined;
+  asyncDefault_2?: string[] | null | undefined;
+  asyncDerived?: string[] | null | undefined;
+  copiedFromId?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  deletedAt?: Date[] | null | undefined;
+  durationInDays?: number[] | null | undefined;
+  id?: string[] | null | undefined;
+  selfReferentialId?: string[] | null | undefined;
+  specialNewAuthorId?: string[] | null | undefined;
+  specialNewField?: number[] | null | undefined;
+  syncDefault?: string[] | null | undefined;
+  syncDerived?: string[] | null | undefined;
+  type?: TaskType[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface TaskOldFilter {
-  asyncDefault_1?: string | null | undefined;
-  asyncDefault_2?: string | null | undefined;
-  asyncDerived?: string | null | undefined;
-  copiedFromId?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  deletedAt?: Date | null | undefined;
-  durationInDays?: number | null | undefined;
-  id?: string | null | undefined;
-  parentOldTaskId?: string | null | undefined;
-  specialOldField?: number | null | undefined;
-  syncDefault?: string | null | undefined;
-  syncDerived?: string | null | undefined;
-  type?: TaskType | null | undefined;
-  updatedAt?: Date | null | undefined;
+  asyncDefault_1?: string[] | null | undefined;
+  asyncDefault_2?: string[] | null | undefined;
+  asyncDerived?: string[] | null | undefined;
+  copiedFromId?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  deletedAt?: Date[] | null | undefined;
+  durationInDays?: number[] | null | undefined;
+  id?: string[] | null | undefined;
+  parentOldTaskId?: string[] | null | undefined;
+  specialOldField?: number[] | null | undefined;
+  syncDefault?: string[] | null | undefined;
+  syncDerived?: string[] | null | undefined;
+  type?: TaskType[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export interface UserFilter {
-  authorManyToOneId?: string | null | undefined;
-  bio?: string | null | undefined;
-  createdAt?: Date | null | undefined;
-  email?: string | null | undefined;
-  favoritePublisherId?: string | null | undefined;
-  id?: string | null | undefined;
-  managerId?: string | null | undefined;
-  name?: string | null | undefined;
-  originalEmail?: string | null | undefined;
-  trialPeriod?: string | null | undefined;
-  updatedAt?: Date | null | undefined;
+  authorManyToOneId?: string[] | null | undefined;
+  bio?: string[] | null | undefined;
+  createdAt?: Date[] | null | undefined;
+  email?: string[] | null | undefined;
+  favoritePublisherId?: string[] | null | undefined;
+  id?: string[] | null | undefined;
+  managerId?: string[] | null | undefined;
+  name?: string[] | null | undefined;
+  originalEmail?: string[] | null | undefined;
+  trialPeriod?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
 }
 
 export { AdvanceStatus } from "src/entities";

@@ -228,27 +228,28 @@ function createFilterFields(dbMeta: DbMetadata): GqlField[] {
     const objectName = `${e.entity.name}Filter`;
     const common = { file, objectType, objectName };
 
-    const id: GqlField = { ...common, fieldName: "id", fieldType: "ID" };
+    const id: GqlField = { ...common, fieldName: "id", fieldType: filterListType("ID") };
 
     const primitives = e.primitives.flatMap(({ fieldName, fieldType: tsType, isArray }) => {
       const fieldType = primitiveFieldType(fieldName, tsType, isArray);
       if (!fieldType) return [];
-      return [{ ...common, fieldName, fieldType }];
+      return [{ ...common, fieldName, fieldType: filterListType(fieldType) }];
     });
 
     const enums = e.enums.map(({ fieldName, enumType, isArray }) => {
-      return { ...common, fieldName, fieldType: isArray ? `[${enumType.symbol}!]` : enumType.symbol };
+      const fieldType = isArray ? `[${enumType.symbol}!]` : enumType.symbol;
+      return { ...common, fieldName, fieldType: filterListType(fieldType) };
     });
     const pgEnums = e.pgEnums.map(({ fieldName, enumType }) => {
-      return { ...common, fieldName, fieldType: enumType.symbol };
+      return { ...common, fieldName, fieldType: filterListType(enumType.symbol) };
     });
 
     const m2os = e.manyToOnes.map(({ fieldName }) => {
-      return { ...common, fieldName: `${fieldName}Id`, fieldType: "ID" };
+      return { ...common, fieldName: `${fieldName}Id`, fieldType: filterListType("ID") };
     });
 
     const polys = e.polymorphics.map(({ fieldName }) => {
-      return { ...common, fieldName: `${fieldName}Id`, fieldType: "ID" };
+      return { ...common, fieldName: `${fieldName}Id`, fieldType: filterListType("ID") };
     });
 
     const inherited = e.baseClassName
@@ -355,6 +356,11 @@ function primitiveFieldType(
   if (!gqlType) return undefined;
   const fieldType = isArray ? `[${gqlType}!]` : gqlType;
   return `${fieldType}${maybeRequired(notNull)}`;
+}
+
+/** Wraps filter fields in lists so GraphQL callers can pass one value or OR several values. */
+function filterListType(fieldType: string): string {
+  return `[${fieldType}!]`;
 }
 
 /** I.e. `Book` --> `books.graphql`. */

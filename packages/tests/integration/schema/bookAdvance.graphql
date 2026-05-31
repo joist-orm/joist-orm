@@ -35,10 +35,10 @@ type BookAdvancesPage {
 }
 
 input BookAdvanceFilter {
-  id: ID
-  createdAt: DateTime
-  updatedAt: DateTime
-  status: AdvanceStatus
-  bookId: ID
-  publisherId: ID
+  id: [ID!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  status: [AdvanceStatus!]
+  bookId: [ID!]
+  publisherId: [ID!]
 }

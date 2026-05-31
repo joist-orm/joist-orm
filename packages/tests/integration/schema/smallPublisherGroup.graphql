@@ -17,11 +17,11 @@ type SmallPublisherGroupsPage {
 }
 
 input SmallPublisherGroupFilter {
-  id: ID
-  name: String
-  numberOfBookReviews: Int
-  numberOfBookReviewsFormatted: String
-  createdAt: DateTime
-  updatedAt: DateTime
-  smallName: String
+  id: [ID!]
+  name: [String!]
+  numberOfBookReviews: [Int!]
+  numberOfBookReviewsFormatted: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  smallName: [String!]
 }

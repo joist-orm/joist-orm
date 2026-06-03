@@ -8,13 +8,13 @@ import {
   addTablePerClassJoinsAndClassTag,
   getEmInternalApi,
   indexBy,
-  isRelation,
   keyToNumber,
   kqDot,
 } from "../index";
 import { LoadHint } from "../loadHints";
 import { hintKey } from "../normalizeHints";
 import { getRelationFromMaybePolyKey, isPolyHint } from "../reactiveHints";
+import { AbstractRelationImpl } from "../relations/AbstractRelationImpl";
 import { ReactiveFieldImpl } from "../relations/ReactiveField";
 import { toArray } from "../utils";
 import { BatchLoader } from "./BatchLoader";
@@ -98,7 +98,7 @@ export function populateBatchLoader(
       // First pass: batch SQL relations directly, fall back to relation.load() for non-SQL
       const batchPromises = new Set<Promise<void>>();
       const relationsToPreload: { preload(): void }[] = [];
-      const fallbackRelationPromises: Promise<any>[] = [];
+      const fallbackRelationLoads: Array<() => Promise<any>> = [];
       const fallbackPropertyLoads: Array<() => Promise<any>> = [];
 
       for (const [key, tree] of Object.entries(layerNode.hints)) {
@@ -154,8 +154,8 @@ export function populateBatchLoader(
             }
           }
           const load = () => relation.load(opts) as Promise<any>;
-          if (isRelation(relation)) {
-            fallbackRelationPromises.push(load());
+          if (relation instanceof AbstractRelationImpl) {
+            fallbackRelationLoads.push(load);
           } else {
             fallbackPropertyLoads.push(load);
           }
@@ -168,8 +168,8 @@ export function populateBatchLoader(
       for (const relation of relationsToPreload) {
         relation.preload();
       }
-      if (fallbackRelationPromises.length > 0) {
-        await Promise.all(fallbackRelationPromises);
+      if (fallbackRelationLoads.length > 0) {
+        await Promise.all(fallbackRelationLoads.map((load) => load()));
       }
       for (const load of fallbackPropertyLoads) {
         await load();

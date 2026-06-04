@@ -14,7 +14,6 @@ import {
 import { LoadHint } from "../loadHints";
 import { hintKey } from "../normalizeHints";
 import { getRelationFromMaybePolyKey, isPolyHint } from "../reactiveHints";
-import { AbstractRelationImpl } from "../relations/AbstractRelationImpl";
 import { ReactiveFieldImpl } from "../relations/ReactiveField";
 import { toArray } from "../utils";
 import { BatchLoader } from "./BatchLoader";
@@ -45,9 +44,7 @@ export function populateBatchLoader(
   // hint, then use a batch key that includes the hint itself, which will make it unlikely
   // for non-sql relations to deadlock on each other/themselves.
   const batchKey =
-    mode === "preload"
-      ? `${meta.tagName}:${opts.forceReload}`
-      : `${meta.tagName}:${hintKey(hint)}:${opts.forceReload}`;
+    mode === "preload" ? `${meta.tagName}:${opts.forceReload}` : `${meta.tagName}:${hintKey(hint)}:${opts.forceReload}`;
   return em.getBatchLoader(populateOperation, batchKey, async (populates) => {
     async function populateLayer(layerMeta: EntityMetadata | undefined, layerNode: HintNode<Entity>): Promise<void> {
       // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
@@ -98,8 +95,7 @@ export function populateBatchLoader(
       // First pass: batch SQL relations directly, fall back to relation.load() for non-SQL
       const batchPromises = new Set<Promise<void>>();
       const relationsToPreload: { preload(): void }[] = [];
-      const fallbackRelations: AbstractRelationImpl<any, any>[] = [];
-      const fallbackProperties: Array<{ load(opts?: { forceReload?: boolean }): Promise<any> }> = [];
+      const fallbackPromises: (Promise<any> | undefined)[] = [];
 
       for (const [key, tree] of Object.entries(layerNode.hints)) {
         const field = layerMeta?.allFields[key];
@@ -153,25 +149,15 @@ export function populateBatchLoader(
               }
             }
           }
-          if (relation instanceof AbstractRelationImpl) {
-            fallbackRelations.push(relation);
-          } else {
-            fallbackProperties.push(relation);
-          }
+          fallbackPromises.push(relation.load(opts) as Promise<any>);
         }
       }
 
-      if (batchPromises.size > 0) {
-        await Promise.all([...batchPromises]);
+      if (batchPromises.size > 0 || fallbackPromises.length > 0) {
+        await Promise.all([Promise.all(batchPromises), Promise.all(fallbackPromises)]);
       }
       for (const relation of relationsToPreload) {
         relation.preload();
-      }
-      if (fallbackRelations.length > 0) {
-        await Promise.all(fallbackRelations.map((relation) => relation.load(opts)));
-      }
-      for (const property of fallbackProperties) {
-        await property.load(opts);
       }
 
       // 2nd breadth-width pass to do nested load hints, this will fan out at the sibling level.

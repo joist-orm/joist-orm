@@ -4,6 +4,7 @@ import { LoadHint, Loaded, isLoaded } from "../loadHints";
 import { lazyField } from "../newEntity";
 import { MaybeReactedPropertyEntity, Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 import { tryResolve } from "../utils";
+import { RecursiveCycleError } from "./RecursiveCycleError";
 
 export const PropertyT = Symbol();
 
@@ -30,8 +31,8 @@ export function hasProperty<T extends Entity, const H extends LoadHint<T>, V>(
   loadHint: H,
   fn: (entity: Loaded<T, H>) => V,
 ): Property<T, V> {
-  return lazyField((entity: T) => {
-    return new PropertyImpl(entity, loadHint, fn);
+  return lazyField((entity: T, fieldName) => {
+    return new PropertyImpl(entity, fieldName, loadHint, fn);
   });
 }
 
@@ -47,14 +48,15 @@ export function hasReactiveProperty<T extends Entity, const H extends ReactiveHi
   reactiveHint: H,
   fn: (entity: Reacted<T, H>) => MaybeReactedPropertyEntity<V>,
 ): Property<T, V> {
-  return lazyField((entity: T) => {
-    return new PropertyImpl(entity, reactiveHint as any, fn as any, { isReactive: true });
+  return lazyField((entity: T, fieldName) => {
+    return new PropertyImpl(entity, fieldName, reactiveHint as any, fn as any, { isReactive: true });
   });
 }
 
 export class PropertyImpl<T extends Entity, H extends LoadHint<T>, V> implements Property<T, V> {
   // We'll probe for loaded if undefined
   #loaded: boolean | undefined = undefined;
+  #isCheckingLoaded = false;
   #loadPromise: any;
 
   readonly #entity: T;
@@ -62,6 +64,7 @@ export class PropertyImpl<T extends Entity, H extends LoadHint<T>, V> implements
   #reactiveHint: ReactiveHint<T> | undefined;
   constructor(
     entity: T,
+    private fieldName: string,
     hint: H | ReactiveHint<T>,
     private fn: (entity: Loaded<T, H>) => V,
     private opts: { isReactive?: boolean } = {},
@@ -102,7 +105,13 @@ export class PropertyImpl<T extends Entity, H extends LoadHint<T>, V> implements
   get isLoaded() {
     // Probe the first time, which is useful for factories that are DeepNew
     if (this.#loaded === undefined) {
+      if (this.#isCheckingLoaded) {
+        this.#isCheckingLoaded = false;
+        throw new RecursiveCycleError({ entity: this.#entity, fieldName: this.fieldName }, [this.#entity]);
+      }
+      this.#isCheckingLoaded = true;
       this.#loaded = isLoaded(this.#entity, this.loadHint);
+      this.#isCheckingLoaded = false;
     }
     return !!this.#loaded;
   }

@@ -99,6 +99,14 @@ export function populateBatchLoader(
 
       for (const [key, tree] of Object.entries(layerNode.hints)) {
         const field = layerMeta?.allFields[key];
+        let oneToManyLoader: ReturnType<typeof oneToManyBatchLoader> | undefined;
+        let oneToManyPromise: Promise<void> | undefined;
+        let manyToManyLoader: ReturnType<typeof manyToManyBatchLoader> | undefined;
+        let manyToManyPromise: Promise<void> | undefined;
+        let oneToOneLoader: ReturnType<typeof oneToOneBatchLoader> | undefined;
+        let oneToOnePromise: Promise<void> | undefined;
+        let manyToOneLoader: ReturnType<typeof loadBatchLoader> | undefined;
+        let manyToOnePromise: Promise<void> | undefined;
         for (const entity of tree.entities) {
           const relation = getRelationFromMaybePolyKey(entity, key);
           // This happens to let through non-relation hints like 'name' on user, which wasn't intentional,
@@ -129,21 +137,26 @@ export function populateBatchLoader(
           // Skip new entities (no id) and derived relations (reactive m2m/m2o have extra logic in load).
           if (!entity.isNewEntity && field) {
             if (field.kind === "o2m") {
-              batchPromises.add(oneToManyBatchLoader(em, relation).load(entity.idTagged!));
+              oneToManyPromise = (oneToManyLoader ??= oneToManyBatchLoader(em, relation)).load(entity.idTagged!);
               relationsToPreload.push(relation);
               continue;
             } else if (field.kind === "m2m" && !field.derived) {
-              batchPromises.add(manyToManyBatchLoader(em, relation).load(`${relation.columnName}=${entity.id}`));
+              manyToManyPromise = (manyToManyLoader ??= manyToManyBatchLoader(em, relation)).load(
+                `${relation.columnName}=${entity.id}`,
+              );
               relationsToPreload.push(relation);
               continue;
             } else if (field.kind === "o2o") {
-              batchPromises.add(oneToOneBatchLoader(em, relation).load(entity.idTagged!));
+              oneToOnePromise = (oneToOneLoader ??= oneToOneBatchLoader(em, relation)).load(entity.idTagged!);
               relationsToPreload.push(relation);
               continue;
             } else if (field.kind === "m2o" && !field.derived) {
               const taggedId = relation.idTaggedMaybe;
               if (taggedId) {
-                batchPromises.add(loadBatchLoader(em, field.otherMetadata()).load({ taggedId, hint: undefined }));
+                manyToOnePromise = (manyToOneLoader ??= loadBatchLoader(em, field.otherMetadata())).load({
+                  taggedId,
+                  hint: undefined,
+                });
                 relationsToPreload.push(relation);
                 continue;
               }
@@ -151,6 +164,10 @@ export function populateBatchLoader(
           }
           fallbackPromises.push(relation.load(opts) as Promise<any>);
         }
+        if (oneToManyPromise) batchPromises.add(oneToManyPromise);
+        if (manyToManyPromise) batchPromises.add(manyToManyPromise);
+        if (oneToOnePromise) batchPromises.add(oneToOnePromise);
+        if (manyToOnePromise) batchPromises.add(manyToOnePromise);
       }
 
       if (batchPromises.size > 0 || fallbackPromises.length > 0) {

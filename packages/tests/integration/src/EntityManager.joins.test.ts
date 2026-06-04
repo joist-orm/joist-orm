@@ -42,7 +42,7 @@ describe("EntityManager.joins", () => {
     const hint = { books: { reviews: "comment" }, comments: {}, mentor: {} } as const;
     // When we call populate
     await em.populate([a1, a2], hint);
-    // Then we issued one query
+    // Then we issued the expected number of queries.
     expect(queries.length).toEqual(isPreloadingEnabled ? 1 : 5);
     // And we when populate the collections
     const loaded = await a1.populate(hint);
@@ -75,7 +75,7 @@ describe("EntityManager.joins", () => {
     const hint = { tags: {} } as const;
     // When we call populate
     await em.populate([b1, b2, b3], hint);
-    // Then we issued one query
+    // Then we issued the expected number of queries.
     expect(queries.length).toEqual(isPreloadingEnabled ? 1 : 2);
     // And we when populate the collections
     const [bl1, bl2, bl3] = await em.populate([b1, b2, b3], hint);
@@ -107,7 +107,7 @@ describe("EntityManager.joins", () => {
       em.populate(a1, { books: { reviews: "comment" } }),
       em.populate(a2, { books: { reviews: {} } }),
     ]);
-    // Then we issued one query
+    // Then we issued the expected number of queries.
     expect(queries.length).toEqual(isPreloadingEnabled ? 1 : 3);
     expect(a1).toMatchEntity({ books: [{ reviews: [{ comment: { text: "c1" } }] }] });
     expect(a2).toMatchEntity({ books: [{ reviews: [{}] }] });

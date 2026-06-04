@@ -1564,6 +1564,41 @@ describe("EntityManager.queries", () => {
     expect(publisher).toBeUndefined();
   });
 
+  it("does not find an entity that was loaded and then deleted", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    em.delete(author);
+
+    const authors = await em.find(Author, { firstName: "a1" });
+
+    expect(authors).toEqual([]);
+  });
+
+  it("does not find a paginated entity that was loaded and then deleted", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    em.delete(author);
+
+    const orderBy = { firstName: "ASC" } satisfies AuthorOrder;
+    const authors = await em.find(Author, {}, { limit: 2, orderBy });
+
+    expect(authors.map((author) => author.firstName)).toEqual(["a2"]);
+  });
+
+  it("does not findOne an entity that was loaded and then deleted", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    em.delete(author);
+
+    const foundAuthor = await em.findOne(Author, { firstName: "a1" });
+
+    expect(foundAuthor).toBeUndefined();
+  });
+
   it("can find by one or fail", async () => {
     await insertPublisher({ name: "p1", size_id: 1 });
     await insertPublisher({ id: 2, name: "p2", size_id: 2 });
@@ -2599,6 +2634,17 @@ describe("EntityManager.queries", () => {
     const f1 = { firstName: "a1" } satisfies UniqueFilter<Author>;
     // @ts-expect-error
     const f2 = { publisher: "p:1" } satisfies UniqueFilter<Author>;
+  });
+
+  it("does not findByUnique an entity that was loaded and then deleted", async () => {
+    await insertAuthor({ first_name: "a1", ssn: "12" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    em.delete(author);
+
+    const foundAuthor = await em.findByUnique(Author, { ssn: "12" });
+
+    expect(foundAuthor).toBeUndefined();
   });
 
   it("fails when findByUnique hits the entityLimit", async () => {

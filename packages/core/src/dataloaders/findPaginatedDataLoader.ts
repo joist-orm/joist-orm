@@ -11,8 +11,9 @@ import {
   collectAndReplaceArgs,
   collectValues,
   createColumnValuesFromPrepared,
-  getBatchKeyFromGenericStructure,
+  filterDeletedEntities,
   findOperation,
+  getBatchKeyFromGenericStructure,
   whereFilterHash,
 } from "./findDataLoader";
 
@@ -53,64 +54,69 @@ export function findPaginatedDataLoader<T extends Entity>(
     findSettings.offset,
   ].join("-");
 
-  return em.getLoader<PreparedPaginatedFindEntry<T>, T[]>(
-    findOperation,
-    batchKey,
-    async (entries) => {
-      if (entries.length === 1) {
-        // Skip batching & just execute the query as-is
-        const { query, findSettings } = entries[0];
+  return em
+    .getLoader<PreparedPaginatedFindEntry<T>, T[]>(
+      findOperation,
+      batchKey,
+      async (entries) => {
+        if (entries.length === 1) {
+          // Skip batching & just execute the query as-is
+          const { query, findSettings } = entries[0];
+          const { preloader } = getEmInternalApi(em);
+          const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
+          const rows = await em["executePreparedFind"](meta, findOperation, query, findSettings, false);
+          const entities = em.hydrate(type, rows);
+          preloadHydrator?.(rows, entities);
+          return [filterDeletedEntities(em, entities)];
+        }
+
+        const { query, findSettings, limit, offset } = entries[0];
         const { preloader } = getEmInternalApi(em);
         const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
-        const rows = await em["executePreparedFind"](meta, findOperation, query, findSettings, false);
+
+        // Now craft the actual batched query
+        const argsColumns = collectAndReplaceArgs(query);
+        argsColumns.unshift({ columnName: "tag", dbType: "int" });
+        const columnValues = createColumnValuesFromPrepared(argsColumns, entries);
+        const query2: ParsedFindQuery = {
+          selects: ["_find.tag as tag", "_data.*"],
+          tables: [
+            { join: "primary", table: "_find", alias: "_find" },
+            {
+              join: "lateral",
+              query,
+              table: meta.tableName,
+              alias: "_data",
+              fromAlias: "_find",
+              settings: { limit, offset },
+            },
+          ],
+          ctes: [buildUnnestCte("_find", argsColumns, columnValues)],
+          orderBys: [],
+        };
+
+        const rows = await em["executePreparedFind"](
+          meta,
+          findOperation,
+          query2,
+          { ...findSettings, limit: undefined, offset: undefined },
+          false,
+        );
         const entities = em.hydrate(type, rows);
         preloadHydrator?.(rows, entities);
-        return [entities];
-      }
 
-      const { query, findSettings, limit, offset } = entries[0];
-      const { preloader } = getEmInternalApi(em);
-      const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
-
-      // Now craft the actual batched query
-      const argsColumns = collectAndReplaceArgs(query);
-      argsColumns.unshift({ columnName: "tag", dbType: "int" });
-      const columnValues = createColumnValuesFromPrepared(argsColumns, entries);
-      const query2: ParsedFindQuery = {
-        selects: ["_find.tag as tag", "_data.*"],
-        tables: [
-          { join: "primary", table: "_find", alias: "_find" },
-          {
-            join: "lateral",
-            query,
-            table: meta.tableName,
-            alias: "_data",
-            fromAlias: "_find",
-            settings: { limit, offset },
-          },
-        ],
-        ctes: [buildUnnestCte("_find", argsColumns, columnValues)],
-        orderBys: [],
-      };
-
-      const rows = await em["executePreparedFind"](
-        meta,
-        findOperation,
-        query2,
-        { ...findSettings, limit: undefined, offset: undefined },
-        false,
-      );
-      const entities = em.hydrate(type, rows);
-      preloadHydrator?.(rows, entities);
-
-      const results = entries.map(() => [] as T[]);
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        results[row.tag].push(entities[i]);
-        delete row.tag;
-      }
-      return results;
-    },
-    { cacheKeyFn: (entry) => whereFilterHash(entry.filter) },
-  ).load(prepared);
+        const results = entries.map(() => [] as T[]);
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          const entity = entities[i];
+          if (!entity.isDeletedEntity) {
+            results[row.tag].push(entity);
+          }
+          delete row.tag;
+        }
+        return results;
+      },
+      { cacheKeyFn: (entry) => whereFilterHash(entry.filter) },
+    )
+    .load(prepared);
 }

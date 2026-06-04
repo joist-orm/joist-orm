@@ -269,6 +269,10 @@ export class Author extends AuthorCodegen {
     },
   );
 
+  readonly reputationScore: Property<Author, number> = hasProperty({ mentor: "reputationScore" }, (a) => {
+    return a.mentor.get?.reputationScore.get ?? 0;
+  });
+
   /**
    * Example of a derived async enum.
    * @generated Author.md

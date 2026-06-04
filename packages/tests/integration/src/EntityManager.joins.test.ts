@@ -18,30 +18,6 @@ import { Author, Book, Critic, LargePublisher, Publisher, newAuthor } from "./en
 
 const { partitionHint } = testing;
 
-function attachRecursiveScore(author: Author): void {
-  let isLoaded = false;
-  let loadPromise: Promise<number> | undefined;
-  const prop = {
-    load() {
-      if (!isLoaded) {
-        loadPromise ??= author.em.populate(author, { mentor: "reputationScore" } as any).then(() => {
-          isLoaded = true;
-          return prop.get;
-        });
-        return loadPromise;
-      }
-      return Promise.resolve(prop.get);
-    },
-    get get() {
-      return (((author as any).mentor.get as any)?.reputationScore.get ?? 0) as number;
-    },
-    get isLoaded() {
-      return isLoaded;
-    },
-  };
-  Object.defineProperty(author, "reputationScore", { value: prop, configurable: true });
-}
-
 describe("EntityManager.joins", () => {
   it("preloads o2m, m2o, and o2o relations", async () => {
     // Given a tree of Authors + Books + BookReviews + Comments
@@ -243,17 +219,17 @@ describe("EntityManager.joins", () => {
 
   it("doesn't deadlock on recursive properties", async () => {
     const em = newEntityManager();
-    const a1 = newAuthor(em, { firstName: "a1" }) as Author;
-    const a2 = newAuthor(em, { firstName: "a2", mentor: a1 }) as Author;
-    attachRecursiveScore(a1);
-    attachRecursiveScore(a2);
+    const a1 = newAuthor(em, { firstName: "a1" });
+    const a2 = newAuthor(em, { firstName: "a2", mentor: a1 });
     const result = await Promise.race([
-      em.populate([a1, a2], "reputationScore" as any).then(() => "done"),
+      em.populate([a1, a2], "reputationScore").then(([a1Loaded, a2Loaded]) => {
+        expect(a1Loaded.reputationScore.get).toBe(0);
+        expect(a2Loaded.reputationScore.get).toBe(0);
+        return "done";
+      }),
       new Promise((resolve) => setTimeout(() => resolve("timeout"), 1000)),
     ]);
     expect(result).toBe("done");
-    expect((a1 as any).reputationScore.get).toBe(0);
-    expect((a2 as any).reputationScore.get).toBe(0);
   });
 
   it("preloads em.find", async () => {

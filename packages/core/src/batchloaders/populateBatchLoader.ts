@@ -98,8 +98,8 @@ export function populateBatchLoader(
       // First pass: batch SQL relations directly, fall back to relation.load() for non-SQL
       const batchPromises = new Set<Promise<void>>();
       const relationsToPreload: { preload(): void }[] = [];
-      const fallbackRelationLoads: Array<() => Promise<any>> = [];
-      const fallbackPropertyLoads: Array<() => Promise<any>> = [];
+      const fallbackRelations: AbstractRelationImpl<any, any>[] = [];
+      const fallbackProperties: Array<{ load(opts?: { forceReload?: boolean }): Promise<any> }> = [];
 
       for (const [key, tree] of Object.entries(layerNode.hints)) {
         const field = layerMeta?.allFields[key];
@@ -153,11 +153,10 @@ export function populateBatchLoader(
               }
             }
           }
-          const load = () => relation.load(opts) as Promise<any>;
           if (relation instanceof AbstractRelationImpl) {
-            fallbackRelationLoads.push(load);
+            fallbackRelations.push(relation);
           } else {
-            fallbackPropertyLoads.push(load);
+            fallbackProperties.push(relation);
           }
         }
       }
@@ -168,11 +167,11 @@ export function populateBatchLoader(
       for (const relation of relationsToPreload) {
         relation.preload();
       }
-      if (fallbackRelationLoads.length > 0) {
-        await Promise.all(fallbackRelationLoads.map((load) => load()));
+      if (fallbackRelations.length > 0) {
+        await Promise.all(fallbackRelations.map((relation) => relation.load(opts)));
       }
-      for (const load of fallbackPropertyLoads) {
-        await load();
+      for (const property of fallbackProperties) {
+        await property.load(opts);
       }
 
       // 2nd breadth-width pass to do nested load hints, this will fan out at the sibling level.

@@ -14,6 +14,7 @@ import {
 import { LoadHint } from "../loadHints";
 import { hintKey } from "../normalizeHints";
 import { getRelationFromMaybePolyKey, isPolyHint } from "../reactiveHints";
+import { AbstractRelationImpl } from "../relations/AbstractRelationImpl";
 import { ReactiveFieldImpl } from "../relations/ReactiveField";
 import { toArray } from "../utils";
 import { BatchLoader } from "./BatchLoader";
@@ -97,7 +98,8 @@ export function populateBatchLoader(
       // First pass: batch SQL relations directly, fall back to relation.load() for non-SQL
       const batchPromises = new Set<Promise<void>>();
       const relationsToPreload: { preload(): void }[] = [];
-      const fallbackPromises: (Promise<any> | undefined)[] = [];
+      const fallbackRelations: AbstractRelationImpl<any, any>[] = [];
+      const fallbackProperties: Array<{ load(opts?: { forceReload?: boolean }): Promise<any> }> = [];
 
       for (const [key, tree] of Object.entries(layerNode.hints)) {
         const field = layerMeta?.allFields[key];
@@ -151,15 +153,25 @@ export function populateBatchLoader(
               }
             }
           }
-          fallbackPromises.push(relation.load(opts) as Promise<any>);
+          if (relation instanceof AbstractRelationImpl) {
+            fallbackRelations.push(relation);
+          } else {
+            fallbackProperties.push(relation);
+          }
         }
       }
 
-      if (batchPromises.size > 0 || fallbackPromises.length > 0) {
-        await Promise.all([...batchPromises, ...fallbackPromises]);
+      if (batchPromises.size > 0) {
+        await Promise.all([...batchPromises]);
       }
       for (const relation of relationsToPreload) {
         relation.preload();
+      }
+      if (fallbackRelations.length > 0) {
+        await Promise.all(fallbackRelations.map((relation) => relation.load(opts)));
+      }
+      for (const property of fallbackProperties) {
+        await property.load(opts);
       }
 
       // 2nd breadth-width pass to do nested load hints, this will fan out at the sibling level.

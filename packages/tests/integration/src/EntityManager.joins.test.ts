@@ -14,7 +14,7 @@ import {
 import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
 import { testing } from "joist-orm";
 import { jan1, jan2 } from "src/testDates";
-import { Author, Book, Critic, LargePublisher, Publisher } from "./entities";
+import { Author, Book, Critic, LargePublisher, Publisher, newAuthor } from "./entities";
 
 const { partitionHint } = testing;
 
@@ -215,6 +215,21 @@ describe("EntityManager.joins", () => {
       a1.favoriteBook.load(),
       em.populate(a1, "favoriteBook"),
     ]);
+  });
+
+  it("doesn't deadlock on recursive properties", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em, { firstName: "a1" });
+    const a2 = newAuthor(em, { firstName: "a2", mentor: a1 });
+    const result = await Promise.race([
+      em.populate([a1, a2], "reputationScore").then(([a1Loaded, a2Loaded]) => {
+        expect(a1Loaded.reputationScore.get).toBe(0);
+        expect(a2Loaded.reputationScore.get).toBe(0);
+        return "done";
+      }),
+      new Promise((resolve) => setTimeout(() => resolve("timeout"), 1000)),
+    ]);
+    expect(result).toBe("done");
   });
 
   it("preloads em.find", async () => {

@@ -256,6 +256,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * so that both see the most accurate state.
    */
   #pendingDeletes: Entity[] = [];
+  #hasAnyDeletes = false;
   #dataloaders: Record<string, LoaderCache> = {};
   #batchLoaders: Record<string, Record<string, BatchLoader<any>>> = {};
   readonly #joinRows: Record<string, JoinRows> = {};
@@ -321,6 +322,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       unmarkMaybePending(entity: EntityW): void {
         em.#maybePendingFlushEntities.delete(entity as Entity);
+      },
+
+      hasAnyDeletes(): boolean {
+        return em.#hasAnyDeletes;
       },
 
       isMerging(entity: EntityW): boolean {
@@ -653,6 +658,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       return undefined;
     } else {
       const [entity] = this.hydrate(type, [row]);
+      if (this.#hasAnyDeletes && entity.isDeletedEntity) {
+        return undefined;
+      }
       if (populate) {
         await this.populate(entity, populate);
       }
@@ -1537,6 +1545,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // Early return if already deleted.
       const alreadyMarked = getInstanceData(entity).markDeleted();
       if (!alreadyMarked) continue;
+      // This monotonic flag lets find hot paths skip scanning results until a delete has ever happened in this EM.
+      this.#hasAnyDeletes = true;
       // Any derived fields that read this entity will need recalc-d
       this.#rm.queueAllDownstreamFields(entity, "deleted");
       // Synchronously unhook the entity if the relations are loaded
@@ -2628,6 +2638,7 @@ export interface EntityManagerInternalApi {
   clearPreloadedRelations(): void;
   markMaybePending(entity: EntityW): void;
   unmarkMaybePending(entity: EntityW): void;
+  hasAnyDeletes(): boolean;
   setIsRefreshing(isRefreshing: boolean): void;
 }
 

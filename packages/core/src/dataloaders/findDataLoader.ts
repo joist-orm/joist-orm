@@ -78,7 +78,7 @@ export function findDataLoader<T extends Entity>(
           const rows = await em["executePreparedFind"](meta, findOperation, query, findSettings, checkLimit);
           const entities = em.hydrate(type, rows);
           preloadHydrator?.(rows, entities);
-          return [entities];
+          return [filterDeletedEntities(em, entities)];
         }
 
         // WITH _find (tag, arg1, arg2) AS (
@@ -136,7 +136,9 @@ export function findDataLoader<T extends Entity>(
         // Then put each row into the tagged query it matched
         rows.forEach((row, i) => {
           const entity = entities[i];
-          for (const tag of row._tags) results[tag].push(entity);
+          if (!entity.isDeletedEntity) {
+            for (const tag of row._tags) results[tag].push(entity);
+          }
           delete row._tags;
         });
         return results;
@@ -151,6 +153,25 @@ export function whereFilterHash(where: FilterAndSettings<any>): any {
   const key = fastWhereFilterHash(where);
   if (key === undefined) throw new Error("fastWhereFilterHash could not serialize find filter");
   return key;
+}
+
+/** Filters pending-delete entities in place to avoid allocating a replacement array for the common find path. */
+export function filterDeletedEntities<T extends Entity>(em: EntityManager, entities: T[]): T[] {
+  // Most EMs never delete entities, so skip even the findIndex scan until a delete has happened.
+  if (!getEmInternalApi(em).hasAnyDeletes()) return entities;
+
+  const firstDeleted = entities.findIndex((entity) => entity.isDeletedEntity);
+  if (firstDeleted === -1) return entities;
+
+  let writeIndex = firstDeleted;
+  for (let readIndex = firstDeleted + 1; readIndex < entities.length; readIndex++) {
+    const entity = entities[readIndex];
+    if (!entity.isDeletedEntity) {
+      entities[writeIndex++] = entity;
+    }
+  }
+  entities.length = writeIndex;
+  return entities;
 }
 
 class ArgCounter {

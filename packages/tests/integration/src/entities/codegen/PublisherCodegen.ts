@@ -196,7 +196,9 @@ export interface PublisherGraphQLFilter {
   size?: ValueGraphQLFilter<PublisherSize>;
   type?: ValueGraphQLFilter<PublisherType>;
   favoriteAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  favoriteAuthorId?: ValueGraphQLFilter<AuthorId>;
   group?: EntityGraphQLFilter<PublisherGroup, PublisherGroupId, GraphQLFilterOf<PublisherGroup>, null>;
+  groupId?: ValueGraphQLFilter<PublisherGroupId>;
   groupSmallPublisherGroup?: EntityGraphQLFilter<
     SmallPublisherGroup,
     SmallPublisherGroupId,
@@ -204,6 +206,7 @@ export interface PublisherGraphQLFilter {
     null
   >;
   spotlightAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  spotlightAuthorId?: ValueGraphQLFilter<AuthorId>;
   authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   bookAdvances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, GraphQLFilterOf<BookAdvance>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;

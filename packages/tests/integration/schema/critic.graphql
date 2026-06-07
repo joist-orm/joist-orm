@@ -23,3 +23,22 @@ input SaveCriticInput {
 type SaveCriticResult {
   critic: Critic!
 }
+
+extend type Query {
+  critic(id: ID!): Critic!
+  critics(filter: CriticFilter, limit: Int, offset: Int): CriticsPage!
+}
+
+type CriticsPage {
+  entities: [Critic!]!
+  pageInfo: PageInfo!
+}
+
+input CriticFilter {
+  id: [ID!]
+  name: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  favoriteLargePublisherId: [ID!]
+  groupId: [ID!]
+}

@@ -10,6 +10,10 @@
   "main": "build/index.js",
   "exports": {
     ".": "./build/index.js",
+    "./index.js": {
+      "types": "./build/index.d.ts",
+      "default": "./build/index.js"
+    },
     "./tests": "./build/tests.js"
   },
   "types": "build/index.d.ts",

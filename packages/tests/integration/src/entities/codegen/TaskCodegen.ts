@@ -138,6 +138,7 @@ export interface TaskGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   type?: ValueGraphQLFilter<TaskType>;
   copiedFrom?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null>;
+  copiedFromId?: ValueGraphQLFilter<TaskId>;
   copiedFromTaskNew?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   copiedFromTaskOld?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
   copiedTo?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null | undefined>;

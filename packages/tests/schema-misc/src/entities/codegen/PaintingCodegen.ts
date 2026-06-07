@@ -79,6 +79,7 @@ export interface PaintingGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   artist?: EntityGraphQLFilter<Artist, ArtistId, GraphQLFilterOf<Artist>, never>;
+  artistId?: ValueGraphQLFilter<ArtistId>;
 }
 
 export interface PaintingOrder {

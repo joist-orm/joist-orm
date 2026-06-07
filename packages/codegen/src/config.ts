@@ -141,6 +141,8 @@ export const config = z
     nonDeferredForeignKeys: z.optional(z.union([z.literal("error"), z.literal("warn"), z.literal("ignore")])),
     /** Enables esm output. */
     esm: z.optional(z.boolean()),
+    /** Controls the style of GraphQL pagination scaffolding. */
+    paginationStyle: z.optional(z.union([z.literal("cursor"), z.literal("limit")])).default("cursor"),
     /** Enables documentation syncing between .md files and JSDocs. */
     docs: z.optional(z.boolean()),
     /** Output a metadata-docs.ts file with entity/field documentation available at runtime. */
@@ -346,9 +348,12 @@ export async function loadConfig(): Promise<Config> {
  * such that no changes to the config show up as noops to the scm.
  */
 export async function writeConfig(config: Config): Promise<void> {
-  const sorted = sortKeys(config);
+  const sorted: Partial<Config> = sortKeys(config);
   delete sorted.__tableToEntityName;
   delete sorted.allowImportingTsExtensions;
+  if (sorted.paginationStyle === "cursor") {
+    delete sorted.paginationStyle;
+  }
   const input = JSON.stringify(sorted);
   const content = jsonFormatter.formatText("test.json", input);
   await fs.writeFile(configPath, content);

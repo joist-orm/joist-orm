@@ -73,6 +73,7 @@ export interface BookReviewGraphQLFilter {
   id?: ValueGraphQLFilter<BookReviewId>;
   rating?: ValueGraphQLFilter<number>;
   book?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  bookId?: ValueGraphQLFilter<AuthorId>;
 }
 
 export interface BookReviewOrder {

@@ -95,7 +95,9 @@ export interface BookAdvanceGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   status?: ValueGraphQLFilter<AdvanceStatus>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
+  bookId?: ValueGraphQLFilter<BookId>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, never>;
+  publisherId?: ValueGraphQLFilter<PublisherId>;
   publisherLargePublisher?: EntityGraphQLFilter<
     LargePublisher,
     LargePublisherId,

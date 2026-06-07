@@ -27,7 +27,6 @@ type LargePublisher {
   baseSyncDefault: String
   baseAsyncDefault: String!
   rating: Int!
-  namesSnapshot: String
 }
 
 input SaveLargePublisherInput {
@@ -49,4 +48,39 @@ input SaveLargePublisherInput {
 
 type SaveLargePublisherResult {
   largePublisher: LargePublisher!
+}
+
+extend type Query {
+  largePublisher(id: ID!): LargePublisher!
+  largePublishers(filter: LargePublisherFilter, limit: Int, offset: Int): LargePublishersPage!
+}
+
+type LargePublishersPage {
+  entities: [LargePublisher!]!
+  pageInfo: PageInfo!
+}
+
+input LargePublisherFilter {
+  id: [ID!]
+  name: [String!]
+  latitude: [Int!]
+  longitude: [Int!]
+  hugeNumber: [Int!]
+  numberOfBookReviews: [Int!]
+  deletedAt: [DateTime!]
+  titlesOfFavoriteBooks: [String!]
+  bookAdvanceTitlesSnapshot: [String!]
+  numberOfBookAdvancesSnapshot: [String!]
+  baseSyncDefault: [String!]
+  baseAsyncDefault: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  favoriteAuthorName: [String!]
+  size: [PublisherSize!]
+  type: [PublisherType!]
+  favoriteAuthorId: [ID!]
+  groupId: [ID!]
+  spotlightAuthorId: [ID!]
+  sharedColumn: [String!]
+  country: [String!]
 }

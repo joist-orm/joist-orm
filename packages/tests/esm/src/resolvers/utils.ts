@@ -1,1 +1,1 @@
-export { entityResolver, saveEntity } from "joist-graphql-resolver-utils";
+export { entityResolver, paginateCursor as paginate, saveEntity } from "joist-graphql-resolver-utils";

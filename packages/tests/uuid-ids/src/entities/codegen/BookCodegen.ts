@@ -86,6 +86,7 @@ export interface BookGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   status?: ValueGraphQLFilter<BookStatus>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  authorId?: ValueGraphQLFilter<AuthorId>;
 }
 
 export interface BookOrder {

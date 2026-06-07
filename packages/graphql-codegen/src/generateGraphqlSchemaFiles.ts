@@ -1,5 +1,5 @@
 import { camelCase } from "change-case";
-import { DbMetadata, EntityDbMetadata } from "joist-codegen";
+import { Config, DbMetadata, EntityDbMetadata } from "joist-codegen";
 import { groupBy } from "joist-utils";
 import pluralize from "pluralize";
 import { GqlField, GqlUnion, mapTypescriptTypeToGraphQLType, upsertIntoFile } from "./graphqlUtils";
@@ -14,14 +14,15 @@ import { Fs } from "./utils";
  * and will only do them once, which allows programmers to manually add/edit/remove fields
  * without this stomping over their changes.
  */
-export async function generateGraphqlSchemaFiles(fs: Fs, dbMeta: DbMetadata): Promise<void> {
+export async function generateGraphqlSchemaFiles(config: Config, fs: Fs, dbMeta: DbMetadata): Promise<void> {
   const { entities } = dbMeta;
   // Generate the "ideal" fields based solely on the domain model
   const fields = [
-    // Going to roll this out in a follow up PR...
-    // ...createQueryFields(entities),
+    ...createPageInfoFields(config),
+    ...createQueryFields(config, entities),
     ...createSaveMutation(entities),
     ...createEntityFields(dbMeta),
+    ...createFilterFields(dbMeta),
     ...createSaveEntityInputFields(dbMeta),
     ...createSaveEntityResultFields(entities),
   ];
@@ -64,6 +65,32 @@ export async function generateGraphqlSchemaFiles(fs: Fs, dbMeta: DbMetadata): Pr
   await writeHistory(fs, history);
 }
 
+/** Makes the project's pagination metadata type. */
+function createPageInfoFields(config: Config): GqlField[] {
+  const common = { file: "pageInfo.graphql", objectType: "output" as const, objectName: "PageInfo" };
+  const shared = [
+    { ...common, fieldName: "hasNextPage", fieldType: "Boolean!" },
+    { ...common, fieldName: "hasPreviousPage", fieldType: "Boolean!" },
+    { ...common, fieldName: "totalCount", fieldType: "Int!" },
+  ];
+
+  // Joist assumes each project uses either cursor or limit pagination, so the public GraphQL type is
+  // always named `PageInfo` but contains the fields for the configured pagination style.
+  if ((config.paginationStyle ?? "cursor") === "limit") {
+    return [
+      ...shared,
+      { ...common, fieldName: "nextPage", fieldType: "Int" },
+      { ...common, fieldName: "currentPage", fieldType: "Int" },
+    ];
+  }
+
+  return [
+    ...shared,
+    { ...common, fieldName: "startCursor", fieldType: "String" },
+    { ...common, fieldName: "endCursor", fieldType: "String" },
+  ];
+}
+
 /** Make all the fields for `type Author`, `type Book`, etc. */
 function createPolymorphicUnions(entities: EntityDbMetadata[]): GqlUnion[] {
   return entities.flatMap((e) => {
@@ -85,10 +112,9 @@ function createEntityFields(dbMeta: DbMetadata): GqlField[] {
 
     const id: GqlField = { ...common, fieldName: "id", fieldType: "ID!" };
 
-    const primitives = e.primitives.flatMap(({ fieldName, fieldType: tsType, notNull }) => {
-      const gqlType = mapTypescriptTypeToGraphQLType(fieldName, tsType);
-      if (!gqlType) return [];
-      const fieldType = `${gqlType}${maybeRequired(notNull)}`;
+    const primitives = e.primitives.flatMap(({ fieldName, fieldType: tsType, isArray, notNull }) => {
+      const fieldType = primitiveFieldType(fieldName, tsType, isArray, notNull);
+      if (!fieldType) return [];
       return [{ ...common, fieldName, fieldType }];
     });
 
@@ -156,16 +182,26 @@ function createSaveMutation(entities: EntityDbMetadata[]): GqlField[] {
 }
 
 /** Makes the `Query.${entity}` and `Query.${entity}s` placeholders. */
-function createQueryFields(entities: EntityDbMetadata[]): GqlField[] {
+function createQueryFields(config: Config, entities: EntityDbMetadata[]): GqlField[] {
   return entities.flatMap((e) => {
     const file = fileName(e);
+    const { name } = e.entity;
+    const pluralName = pluralize(name);
+    const camelName = camelCase(name);
+    const pluralCamelName = pluralize(camelName);
+    const collectionType =
+      (config.paginationStyle ?? "cursor") === "limit" ? `${pluralName}Page!` : `${pluralName}Connection!`;
+    const collectionArgs =
+      (config.paginationStyle ?? "cursor") === "limit"
+        ? `filter: ${name}Filter, limit: Int, offset: Int`
+        : `filter: ${name}Filter, first: Int, after: String, last: Int, before: String`;
     return [
       {
         file,
         objectType: "output",
         objectName: "Query",
-        fieldName: camelCase(e.entity.name),
-        fieldType: `${e.entity.name}!`,
+        fieldName: camelName,
+        fieldType: `${name}!`,
         argsString: `id: ID!`,
         extends: true,
       },
@@ -173,13 +209,77 @@ function createQueryFields(entities: EntityDbMetadata[]): GqlField[] {
         file,
         objectType: "output",
         objectName: "Query",
-        fieldName: pluralize(camelCase(e.entity.name)),
-        fieldType: `[${e.entity.name}!]!`,
-        argsString: `filter: ${e.entity.name}Filter!`,
+        fieldName: pluralCamelName,
+        fieldType: collectionType,
+        argsString: collectionArgs,
         extends: true,
       },
+      ...createPaginationTypes(config, file, e),
     ];
   });
+}
+
+/** Makes the `AuthorFilter`, `BookFilter`, etc. input types. */
+function createFilterFields(dbMeta: DbMetadata): GqlField[] {
+  const { entities } = dbMeta;
+  return entities.flatMap((e) => {
+    const file = fileName(e);
+    const objectType = "input" as const;
+    const objectName = `${e.entity.name}Filter`;
+    const common = { file, objectType, objectName };
+
+    const id: GqlField = { ...common, fieldName: "id", fieldType: filterListType("ID") };
+
+    const primitives = e.primitives.flatMap(({ fieldName, fieldType: tsType, isArray }) => {
+      const fieldType = primitiveFieldType(fieldName, tsType, isArray);
+      if (!fieldType) return [];
+      return [{ ...common, fieldName, fieldType: filterListType(fieldType) }];
+    });
+
+    const enums = e.enums.map(({ fieldName, enumType, isArray }) => {
+      const fieldType = isArray ? `[${enumType.symbol}!]` : enumType.symbol;
+      return { ...common, fieldName, fieldType: filterListType(fieldType) };
+    });
+    const pgEnums = e.pgEnums.map(({ fieldName, enumType }) => {
+      return { ...common, fieldName, fieldType: filterListType(enumType.symbol) };
+    });
+
+    const m2os = e.manyToOnes.map(({ fieldName }) => {
+      return { ...common, fieldName: `${fieldName}Id`, fieldType: filterListType("ID") };
+    });
+
+    const polys = e.polymorphics.map(({ fieldName }) => {
+      return { ...common, fieldName: `${fieldName}Id`, fieldType: filterListType("ID") };
+    });
+
+    const inherited = e.baseClassName
+      ? createFilterFields(findBaseEntity(dbMeta, e.baseClassName))
+          .map((f) => ({ ...f, ...common }))
+          .filter((f) => f.fieldName !== "id")
+      : [];
+
+    return [id, ...inherited, ...primitives, ...enums, ...pgEnums, ...m2os, ...polys];
+  });
+}
+
+/** Makes the page/connection types for `Query.authors`. */
+function createPaginationTypes(config: Config, file: string, e: EntityDbMetadata): GqlField[] {
+  const { name } = e.entity;
+  const pluralName = pluralize(name);
+  const objectType = "output" as const;
+  if ((config.paginationStyle ?? "cursor") === "limit") {
+    return [
+      { file, objectType, objectName: `${pluralName}Page`, fieldName: "entities", fieldType: `[${name}!]!` },
+      { file, objectType, objectName: `${pluralName}Page`, fieldName: "pageInfo", fieldType: "PageInfo!" },
+    ];
+  }
+  return [
+    { file, objectType, objectName: `${pluralName}Connection`, fieldName: "edges", fieldType: `[${pluralName}Edge!]!` },
+    { file, objectType, objectName: `${pluralName}Connection`, fieldName: "nodes", fieldType: `[${name}!]!` },
+    { file, objectType, objectName: `${pluralName}Connection`, fieldName: "pageInfo", fieldType: "PageInfo!" },
+    { file, objectType, objectName: `${pluralName}Edge`, fieldName: "node", fieldType: `${name}!` },
+    { file, objectType, objectName: `${pluralName}Edge`, fieldName: "cursor", fieldType: "String!" },
+  ];
 }
 
 /** Make all the fields for `type SaveAuthorInput`, `type SaveBookBook`, etc. */
@@ -195,10 +295,9 @@ function createSaveEntityInputFields(dbMeta: DbMetadata): GqlField[] {
 
     const primitives = e.primitives
       .filter((f) => f.derived === false)
-      .flatMap(({ fieldName, fieldType: tsType }) => {
-        const gqlType = mapTypescriptTypeToGraphQLType(fieldName, tsType);
-        if (!gqlType) return [];
-        const fieldType = `${gqlType}`;
+      .flatMap(({ fieldName, fieldType: tsType, isArray }) => {
+        const fieldType = primitiveFieldType(fieldName, tsType, isArray);
+        if (!fieldType) return [];
         return [{ ...common, fieldName, fieldType }];
       });
 
@@ -244,6 +343,24 @@ function createSaveEntityResultFields(entities: EntityDbMetadata[]): GqlField[] 
 
 function maybeRequired(notNull: boolean): string {
   return notNull ? "!" : "";
+}
+
+/** Returns the GraphQL type for primitive fields, including primitive arrays. */
+function primitiveFieldType(
+  fieldName: string,
+  tsType: Parameters<typeof mapTypescriptTypeToGraphQLType>[1],
+  isArray: boolean,
+  notNull = false,
+): string | undefined {
+  const gqlType = mapTypescriptTypeToGraphQLType(fieldName, tsType);
+  if (!gqlType) return undefined;
+  const fieldType = isArray ? `[${gqlType}!]` : gqlType;
+  return `${fieldType}${maybeRequired(notNull)}`;
+}
+
+/** Wraps filter fields in lists so GraphQL callers can pass one value or OR several values. */
+function filterListType(fieldType: string): string {
+  return `[${fieldType}!]`;
 }
 
 /** I.e. `Book` --> `books.graphql`. */

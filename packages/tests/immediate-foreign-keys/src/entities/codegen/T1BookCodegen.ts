@@ -73,6 +73,7 @@ export interface T1BookGraphQLFilter {
   id?: ValueGraphQLFilter<T1BookId>;
   title?: ValueGraphQLFilter<string>;
   author?: EntityGraphQLFilter<T1Author, T1AuthorId, GraphQLFilterOf<T1Author>, never>;
+  authorId?: ValueGraphQLFilter<T1AuthorId>;
 }
 
 export interface T1BookOrder {

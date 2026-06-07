@@ -8,12 +8,26 @@ describe("generateGraphqlCodegen", () => {
     const enums: EnumMetadata = {};
     const file = generateGraphqlCodegen({} as Config, entities, enums);
     expect((file.contents as Code).toString()).toMatchInlineSnapshot(`
-      "const mappers = {};
+     "const mappers = { PageInfo: "joist-graphql-resolver-utils#CursorPageInfo" };
 
-      const enumValues = {};
+     const enumValues = {};
 
-      module.exports = { mappers, enumValues };
-      "
+     module.exports = { mappers, enumValues };
+     "
+    `);
+  });
+
+  it("maps postgres enums to entity enums", async () => {
+    const entities = [{ entity: { name: "Author" }, pgEnums: [{ enumName: "FavoriteShape" }] }] as EntityDbMetadata[];
+    const enums: EnumMetadata = {};
+    const file = generateGraphqlCodegen({} as Config, entities, enums);
+    expect((file.contents as Code).toString()).toMatchInlineSnapshot(`
+     "const mappers = { Author: "src/entities#Author", PageInfo: "joist-graphql-resolver-utils#CursorPageInfo" };
+
+     const enumValues = { FavoriteShape: "src/entities#FavoriteShape" };
+
+     module.exports = { mappers, enumValues };
+     "
     `);
   });
 
@@ -23,10 +37,10 @@ describe("generateGraphqlCodegen", () => {
     const file = generateGraphqlCodegen({ esm: true } as Config, entities, enums);
     expect(file.name).toBe("../../graphql-codegen-joist.mjs");
     expect((file.contents as Code).toString()).toMatchInlineSnapshot(`
-      "export const mappers = {};
+     "export const mappers = { PageInfo: "joist-graphql-resolver-utils/index#CursorPageInfo" };
 
-      export const enumValues = {};
-      "
+     export const enumValues = {};
+     "
     `);
   });
 });

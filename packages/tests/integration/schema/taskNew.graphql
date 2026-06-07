@@ -45,3 +45,31 @@ input SaveTaskNewInput {
 type SaveTaskNewResult {
   taskNew: TaskNew!
 }
+
+extend type Query {
+  taskNew(id: ID!): TaskNew!
+  taskNews(filter: TaskNewFilter, limit: Int, offset: Int): TaskNewsPage!
+}
+
+type TaskNewsPage {
+  entities: [TaskNew!]!
+  pageInfo: PageInfo!
+}
+
+input TaskNewFilter {
+  id: [ID!]
+  durationInDays: [Int!]
+  deletedAt: [DateTime!]
+  syncDefault: [String!]
+  asyncDefault_1: [String!]
+  asyncDefault_2: [String!]
+  syncDerived: [String!]
+  asyncDerived: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  type: [TaskType!]
+  copiedFromId: [ID!]
+  specialNewField: [Int!]
+  selfReferentialId: [ID!]
+  specialNewAuthorId: [ID!]
+}

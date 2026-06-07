@@ -18,6 +18,7 @@ const mappers = {
   Image: "src/entities#Image",
   ImageTypeDetail: "src/entities#ImageType",
   LargePublisher: "src/entities#LargePublisher",
+  PageInfo: "joist-graphql-resolver-utils#LimitPageInfo",
   ParentGroup: "src/entities#ParentGroup",
   ParentItem: "src/entities#ParentItem",
   Publisher: "src/entities#Publisher",
@@ -43,6 +44,7 @@ const enumValues = {
   PublisherSize: "src/entities#PublisherSize",
   PublisherType: "src/entities#PublisherType",
   TaskType: "src/entities#TaskType",
+  FavoriteShape: "src/entities#FavoriteShape",
 };
 
 module.exports = { mappers, enumValues };

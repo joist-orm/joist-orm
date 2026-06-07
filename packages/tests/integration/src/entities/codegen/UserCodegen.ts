@@ -162,8 +162,10 @@ export interface UserGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   manager?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null>;
+  managerId?: ValueGraphQLFilter<UserId>;
   managerAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
   authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  authorManyToOneId?: ValueGraphQLFilter<AuthorId>;
   createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   directs?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   directsAdminUser?: EntityGraphQLFilter<AdminUser, AdminUserId, GraphQLFilterOf<AdminUser>, null>;
@@ -171,6 +173,7 @@ export interface UserGraphQLFilter {
   parents?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   children?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   favoritePublisher?: EntityGraphQLFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null>;
+  favoritePublisherId?: ValueGraphQLFilter<IdOf<UserFavoritePublisher>>;
   favoritePublisherLargePublisher?: EntityGraphQLFilter<
     LargePublisher,
     IdOf<LargePublisher>,

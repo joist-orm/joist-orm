@@ -170,6 +170,7 @@
     "updatedAt"
   ],
   "CriticColumn": ["createdAt", "critic", "id", "name", "updatedAt"],
+  "Employee": ["createdAt", "id", "manager", "managerOfClosure", "managersClosure", "name", "reports", "updatedAt"],
   "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "type", "updatedAt"],
   "LargePublisher": [
     "authors",
@@ -219,6 +220,7 @@
     "saveComment",
     "saveCritic",
     "saveCriticColumn",
+    "saveEmployee",
     "saveImage",
     "saveLargePublisher",
     "saveNewTask",
@@ -401,6 +403,8 @@
     "updatedAt"
   ],
   "SaveCriticResult": ["critic"],
+  "SaveEmployeeInput": ["id", "managerId", "name"],
+  "SaveEmployeeResult": ["employee"],
   "SaveImageInput": ["authorId", "bookId", "createdAt", "fileName", "id", "publisherId", "type", "updatedAt"],
   "SaveImageResult": ["image"],
   "SaveLargePublisherInput": [

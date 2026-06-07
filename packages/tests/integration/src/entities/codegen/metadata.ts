@@ -15,6 +15,7 @@ import { ChildItem } from "../ChildItem";
 import { Comment } from "../Comment";
 import { Critic } from "../Critic";
 import { CriticColumn } from "../CriticColumn";
+import { Employee } from "../Employee";
 import { Image } from "../Image";
 import { LargePublisher } from "../LargePublisher";
 import { ParentGroup } from "../ParentGroup";
@@ -46,6 +47,7 @@ import {
   commentConfig,
   criticColumnConfig,
   criticConfig,
+  employeeConfig,
   imageConfig,
   ImageTypes,
   largePublisherConfig,
@@ -62,6 +64,7 @@ import {
   newComment,
   newCritic,
   newCriticColumn,
+  newEmployee,
   newImage,
   newLargePublisher,
   newParentGroup,
@@ -541,6 +544,35 @@ export const criticColumnMeta: EntityMetadata<CriticColumn> = {
 
 (CriticColumn as any).metadata = criticColumnMeta;
 
+export const employeeMeta: EntityMetadata<Employee> = {
+  cstr: Employee,
+  type: "Employee",
+  baseType: undefined,
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "e",
+  tableName: "employees",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("e", "id", "id", "int"), immutable: true },
+    "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "character varying"), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: Date, serde: new DateSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
+    "manager": { kind: "m2o", fieldName: "manager", fieldIdName: "managerId", derived: false, required: false, otherMetadata: () => employeeMeta, otherFieldName: "reports", serde: new KeySerde("e", "manager", "manager_id", "int"), immutable: false },
+    "reports": { kind: "o2m", fieldName: "reports", fieldIdName: "reportIds", required: false, otherMetadata: () => employeeMeta, otherFieldName: "manager", otherColumnName: "manager_id", serde: undefined, immutable: false },
+    "managersClosure": { kind: "m2m", fieldName: "managersClosure", fieldIdName: "managersClosureIds", required: false, derived: "async", otherMetadata: () => employeeMeta, otherFieldName: "managerOfClosure", serde: undefined, immutable: false, joinTableName: "employee_to_managers_closure", columnNames: ["employee_id", "manager_id"] },
+    "managerOfClosure": { kind: "m2m", fieldName: "managerOfClosure", fieldIdName: "managerOfClosureIds", required: false, derived: "otherSide", otherMetadata: () => employeeMeta, otherFieldName: "managersClosure", serde: undefined, immutable: false, joinTableName: "employee_to_managers_closure", columnNames: ["manager_id", "employee_id"] },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
+  config: employeeConfig,
+  factory: newEmployee,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(Employee as any).metadata = employeeMeta;
+
 export const imageMeta: EntityMetadata<Image> = {
   cstr: Image,
   type: "Image",
@@ -1010,6 +1042,7 @@ export const allMetadata = [
   commentMeta,
   criticMeta,
   criticColumnMeta,
+  employeeMeta,
   imageMeta,
   largePublisherMeta,
   parentGroupMeta,

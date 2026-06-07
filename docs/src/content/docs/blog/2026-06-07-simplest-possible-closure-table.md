@@ -175,11 +175,23 @@ It starts to get complicated to make it "just work"--until we lean into Joist's 
 
 ## Joist Reactivity for the Win
 
-In the Recursive CTEs section, we showed that Joist can use recursive CTEs to "walk the tree".
+Let's look at the two updates we need for "Jan is a new layer of management":
 
-An important insight is that recursive CTEs allow Joist to walk either _up_ or _down_ the tree, which means we can effectively handle both "update the employees below Jan" as well as "update the managers above Jan" cases.
+1. All managers above Jan need Jan as a new report
+1. All employees below Jan need Jan as a new boss,
 
-So if we look at our `managersClosure` declaration again:
+The first important insight is to lean into our mental model of "closure tables are just fancy m2m collections", such that:
+
+1. All managers above Jan need Jan as a new report -->
+   * This is really saying set `jan.managersClosure=[jan, jill]`
+   * I.e. calcing the m2m for Jan herself will "update the managers above her"
+2. All employees below Jan need Jan as a new boss -->
+   * This is really saying recalc `[fred, bob].managersClosure=[..., jan]`
+   * I.e. re-calcing the m2m for "Jan's transitive reports""
+
+And the second insight is that "recalculating the m2m all of Jan's _downstream_ reports" is exactly what Joist's reactivity does when it sees a `employee.manager` relationship change--it knows `bob.manager` changed, hence `bob.managersRecursive` changed, hence anyone "watching `bob.managersRecursive`" which requires "looking _down_ instead of _up_" needs to be told about the change.  
+
+All of this is achieved by our `managersClosure` declaration:
 
 ```ts
 readonly managersClosure: ReactiveManyToMany<Employee, Employee> =
@@ -210,7 +222,7 @@ When the `jan.manager = jill` and `bob.manager = jan` graph mutation happens, Jo
    * The three mutated `managerClosures` m2m collections are diffed
    * We issue a single `INSERT INTO managers_closures` with the new rows
 
-This is admittedly a lot 😵, but it's all driven by Joist's internal infra keeping the `hasReactiveManyToMany` m2m up-to-date, by respecting the `managersRecusive` reactive hint we declared in the code.
+This is admittedly a lot 😵, but thankfully it's all driven by Joist's internal infra keeping the `hasReactiveManyToMany` m2m up-to-date, by respecting the `managersRecusive` reactive hint we declared in the code.
 
 And the key outcome is that the closure table was _completely updated for all affected employees_, and **we only issued 3 SQL calls**, 2 reads and 1 write:
 
@@ -226,13 +238,13 @@ A pretty amazing result for a 1-liner--can you imagine trying to achieve this wi
 
 As a disclaimer, our approach does issue two reads / `SELECT`s before knowing the `INSERT` to update.
 
-Some of the traditional, SQL-oriented posts like [the one we linked above](https://www.percona.com/blog/moving-subtrees-in-closure-table/) have examples of "jumping to the `INSERT`s / `DELETE`s writes", without any initial `SELECT`s, by sussing out the algorithm (i.e. non-trivial `WHERE` clauses) for keeping the m2m/closure table rows in sync across mutations.
+Most of the traditional, SQL-oriented posts like [the one we linked above](https://www.percona.com/blog/moving-subtrees-in-closure-table/) have examples of "jumping to the `INSERT`s / `DELETE`s writes", without any initial `SELECT`s, by sussing out the algorithm (i.e. non-trivial `WHERE` clauses) for keeping the m2m/closure table rows in sync across mutations.
 
-This "jump to writes" approach avoids our two up-front `SELECT`s, so we must concede that Joist's approach is not "the absolute minimum number of queries".
+This "jump to writes" approach avoids our two up-front `SELECT`s, so we must concede that Joist's approach is not "the absolute minimum number of queries", and we do pay the cost of pulling all `employees` in the path into memory.
 
 If you have extremely deep (1000+ level?) trees, this next level of optimization could be worth it, albeit it would come with the increased complexity.
 
-Our assertion is that Joist's performance of "3 fixed queries" will pragmattically be more performant than all but the most hand-optimized implementations, and it's low-cost/simplicity means the ROI will rarely justify needing the custom approach.
+Our assertion is that Joist's performance of "3 fixed queries" will pragmattically be more performant than all but the most hand-optimized implementations, and it's low-cost/simplicity means the ROI often wins over a custom approach.
 
 :::
 

@@ -11,7 +11,7 @@ Joist is a TypeScript ORM that lets you declaratively implement your business lo
 
 ```ts
 class Employee {
-  /** Create an employee -> all transitive managers closure table. */
+  /** Create an employee -> all transitive managers closure/m2m table. */
   readonly managersClosure: ReactiveManyToMany<Employee, Employee> =
     hasReactiveManyToMany(
       "managersRecursive",
@@ -24,14 +24,14 @@ Which we assert is the simplest possible implementation of closure tables. 💥
 
 It achieves this by combining two of Joist's primitives:
 
-* Recursive collections (the `reportsRecursive`) using recursive CTEs, and
+* Recursive collections (the `managersRecursive` relation), and
 * Reactive infrastructure like `hasReactiveManyToMany`
 
 We'll look at each of these, and also explain closure tables while we're at it.
 
 ## Closure Tables
 
-Closure tables are a niche but [well](https://www.percona.com/blog/moving-subtrees-in-closure-table/) [known](https://www.red-gate.com/simple-talk/) way to store hierarchical data (trees, or arbitrarily nested parent/child data) in a relational database that makes it easy to query "up & down the entire tree" with a single regular/fast join.
+Closure tables are a niche but [well](https://www.percona.com/blog/moving-subtrees-in-closure-table/) [known](https://www.red-gate.com/simple-talk/) way to store hierarchical data (trees, or arbitrarily nested parent/child data) in a relational database that makes it easy to query "up or down multiple levels of the tree" with a single regular/fast join.
 
 For example, if we have an `employees` table with a `manager_id` column, some employees might have "just one manager" (they report directly to the CEO), while other employees might have "their manager, their manager's manager, their manager's manager's manager", etc. up to the CEO.
 
@@ -67,7 +67,7 @@ Which is correct, but for me was hard to initially reason about.
 
 Instead, I think it's most intuitive to articulate the "extra table" (the "closure table") we're adding as "the employee has a m2m between themselves and all their managers"--because that's really what it is. 😅
 
-Now with this `managers_closure` table we can make the "find all managers" with a single "static" SQL query with a single `INNER JOIN`:
+Now with this `managers_closure` table we can "find all managers" with a regular/boring SQL query with a single `INNER JOIN`:
 
 ```sql
 SELECT e.*
@@ -90,7 +90,7 @@ Most readers will probably have pointed out that "PostgreSQL solved this" by add
 
 Which is true!
 
-In modern PostgresQL, we can often skip the `managers_closure` table with the following updated query, where the `WITH RECURSIVE` basically acts as "the missing `for` loop" to walk up a variable number of levels, using only the `manager_id` column:
+In modern PostgresQL, we can often skip the `managers_closure` table with the following updated query, where the `WITH RECURSIVE` syntax basically acts as "the missing `for` loop" for us to walk up a variable number of levels, using only the `manager_id` column:
 
 ```sql
 WITH RECURSIVE managers AS (
@@ -118,15 +118,17 @@ Joist already has first-class support for `RECURSIVE` CTEs, in that anytime `joi
 
 ```ts
 const fred = await em.load(Employee, "e:1");
-// outputs bob
+// the regular m2o relation returns bob
 console.log(await fred.manager.load());
-// outputs [bob, jill]
+// the recursive relation returns [bob, jill]
 console.log(await fred.managersRecusive.load());
 ````
 
-Where the `load()` method is issuing a SQL statement exactly like the `WITH RECURSIVE` CTE above, and getting us all managers resurively. 🎉 
+Where the `managersRecusive.load()` method will issue a SQL statement exactly like the `WITH RECURSIVE` CTE above, and get us all their transitive managers.
 
-Joist's built-in support puts the power of `RECURSIVE` CTEs at your finger-tips--just a `.load()` call away. 😀
+And in stereotypical "never N+1" fashion, Joist will auto-batch the SQL so that we could load 100 or 1000 employees' worth of `managesRecursive` and it would still be a single SQL query. 🎉 
+
+Joist's built-in support puts the power of `RECURSIVE` CTEs at your finger-tips--just a `load` / `populate` call away. 😀
 
 ## Why Still Use Cloure Tables?
 
@@ -134,15 +136,15 @@ So, with this great PostgreSQL feature, are closure tables still applicable?
 
 For us, the answer is usually no--unless there is a very high-performance query to optimize. 🚀
 
-For example, internally we're building an RBAC-based auth system where permission grants "inherit" down a stack of `AuthScope` buckets--like if Jill is the CEO, she can read the salary data of Bob and Fred, Bob can ready the salary data of Fred, etc.
+For example, internally we're prototyping an RBAC-based auth system where permission grants "inherit" down a stack of "permission buckets"--like if Jill is the CEO, she can read the salary data of Bob and Fred, Bob can ready the salary data of Fred, etc.
 
-In this setup, we'll issue "what are your transitive auth permissions?" queries basically all the time, and need these queries to be extremely fast, i.e. easy for the Postgres query planner to optimize & execute, which it is still better at doing for the "dumb/simple join" of closure table queries, over the still-new recursive CTE queries.
+In this setup, we'll issue "what are your transitive auth permissions?" queries basically all the time, and need these queries to be extremely fast, i.e. easy for the Postgres query planner to optimize & execute, which it is still better at doing for the "dumb/single join" of closure table queries, over the still-new recursive CTE queries.
 
-So, for this use case, we think it's worth the write-time cost of generating an old-school `auth_scope_closures` table, particularly if Joist can help us implement it.
+So, for this use case, we think it's worth the write-time cost of generating an old-school `permission_bucket_closures` table, particularly if Joist can help us implement it as easily as possible.
 
 ## Closure Table Maintanence 
 
-We have skipped over one of the biggest cons of closure tables--keeping them up to date.
+We skipped over one of the biggest cons of closure tables--keeping them up to date.
 
 If we have our same chain of `Fred` is managed by `Bob` is managed `Jill` (that resulted in the 6 `managers_closure` rows in the image above), but now we add `Jan` as a layer of management between `Bob` and `Jill`, we have a lot of bookkeeping to update.
 
@@ -179,34 +181,36 @@ readonly managersClosure: ReactiveManyToMany<Employee, Employee> =
 
 When the `jan.manager = jill` and `bob.manager = jan` graph mutation happens, Joist does roughly:
 
-1. The `jan.manager = jill` write triggers reactivity on "who is watching this write?"
-   * We see `managersClosure` is watching `jan.managersRecursive`, and "reverse the hint"
+1. Setting `jan.manager = jill` triggers reactivity on "who is watching this write?"
+   * We see `managersClosure` is watching `jan.managersRecursive`, and "reverse the hint" to find employee's _below_ Jan that need to know about this change
    * This queues `[jan, bob, fred]` to have their `managersClosure` recalc-d
-2. The `bob.manager = jan` write triggers reactivity on "who is watching this write?"
-   * We see `managersClosure` is watching `bob.managersRecusive`, and "reverse the hint"
+2. Setting `bob.manager = jan` also triggers "who is watching this write?"
+   * We again see `managersClosure` is watching `bob.managersRecusive`, and "reverse the hint" to find employee's _below_ Bob
    * The queues `[bob, fred]` to have their `manangersClosure` recalc-d
      * ...technically this is a noop b/c they're already queued
-3. We recalc `[jan, bob, fred].managersClosure` all at once
-   * Joist resolves `managersRecursive` for all three entities
-     * If any relations are already loaded, we use the cached results
+3. We recalc the `[jan, bob, fred].managersClosure` relations all at once
+   * Joist resolves the `managersRecursive` reactive hint for all three entities
+     * If any relations are already loaded, we use the in-memory results
      * If any relations are not loaded, we issue a single batched CTE query for their data
-   * Each `[jan, bob, fred].managersClosure` lambda is invoked
-   * We store `jan.manangersClosure = [jan, jill]`
-   * We store `bob.manangersClosure = [bob, jan, jill]`
-   * We store `fred.manangersClosure = [fred, bob, jan, jill]`
+   * When the batched SQL resolves, the `managersClosure` lambda is invoked for each of `[jan, bob, fred]`
+   * This sets `jan.manangersClosure = [jan, jill]`
+   * And sets `bob.manangersClosure = [bob, jan, jill]`
+   * And sets `fred.manangersClosure = [fred, bob, jan, jill]`
 4. We call `em.flush()`
-   * The three `managerClosures` m2m collections we mutated are diffed for new inserts
+   * The three mutated `managerClosures` m2m collections are diffed
    * We issue a single `INSERT INTO managers_closures` with the new rows
 
-This is admittedly a lot, all driven by Joist's internal infra keeping the `hasReactiveManyToMany` m2m up-to-date, using it's `managersRecusive` load hint.
+This is admittedly a lot 😵, but it's all driven by Joist's internal infra keeping the `hasReactiveManyToMany` m2m up-to-date, by respecting the `managersRecusive` reactive hint we declared in the code.
 
-But the key is that the closure table was updated with **only 3 total SQL calls**:
+And the key outcome is that the closure table was _completely updated for all affected employees_, and **we only issued 3 SQL calls**, 2 reads and 1 write:
 
-* A single "down the tree" recursive CTE to find the `[bob, fred]` employees to recalc
-* A single "up the tree" recursive CTE to find the `[jan, jill]` managers
+* A single "down the tree" `SELECT` to find the employees to recalc
+* A single "up the tree" `SELECT` to load the data for each lambda
 * A single `INSERT` the new m2m rows. 
 
 And because each of these operations is fundamentally batched, it will be the same 3 SQL calls _if we're changing 1 employee/manager relation or 100 employee/manager relationships_. 🤯 
+
+A pretty amazing result for a 1-liner--can you imagine trying to achieve this with an adhoc, hand-coded implementation? It's not something I would readily sign up for. 😬
 
 ## Closing Thoughts
 
@@ -214,6 +218,6 @@ That is our deep-dive of how two Joist primitives, recursive CTE support & react
 
 The neatest aspect, to us, is that when we started our internal RBAC auth system, we did not need to "build closure tables as a new feature of Joist"--instead the solution emerged elegantly as just a combination of our existing features.
 
-To be clear, we're not expecting readers of the post to rush out and implement closure tables in their application--it is still a niche pattern, and, as we've seen, Postgres's recursive CTEs provide a great modern alternative (which Joist's recursive relations also put at your fingertips).
+To be clear, we're not expecting readers to rush out and implement closure tables in their application--it is still a niche pattern, and, as we've seen, Postgres's recursive CTEs provide a great modern alternative (which Joist's recursive relations also put at your fingertips).
 
-Instead our purpose is illustrating the power of "declarative business logic" and "reactive calculations", and encourage readers to think about how these primitives could make their lives easier in their own work.
+Instead our purpose is illustrating the power of Joist's "declarative business logic" and "reactive calculations", and encourage readers to think about how these features could make their lives easier in their own work.

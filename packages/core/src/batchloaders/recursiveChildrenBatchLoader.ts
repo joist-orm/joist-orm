@@ -1,9 +1,9 @@
-import { getMetadataForType } from "../configure";
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import {
   addTablePerClassJoinsAndClassTag,
   getField,
+  getMetadataForField,
   isLoadedCollection,
   isLoadedOneToOneReference,
   kq,
@@ -25,9 +25,7 @@ export function recursiveChildrenBatchLoader<T extends Entity, U extends Entity>
   collection: RecursiveChildrenCollectionImpl<T, U>,
 ): BatchLoader<Entity> {
   let { meta, fieldName } = collection;
-  // This could be called from subtypes to get relations defined on the parent. So we need to make sure we are using the
-  // correct meta by walking the inheritance tree until we find the meta that actually has the root o2m field
-  while (!(collection.o2mFieldName in meta.fields) && meta.baseType) meta = getMetadataForType(meta.baseType);
+  meta = getMetadataForField(meta, collection.o2mFieldName);
   const batchKey = `${meta.tableName}-${fieldName}`;
   return em.getBatchLoader(recursiveChildrenOperation, batchKey, async (parents) => {
     const o2m = meta.allFields[collection.o2mFieldName] as OneToManyField | OneToOneField;

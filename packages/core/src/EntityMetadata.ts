@@ -20,7 +20,10 @@ export function getMetadata<T extends Entity>(
 
 /** Returns the metadata layer that declares `fieldName`, i.e. `Task.tags` for `TaskOld.tags`. */
 export function getMetadataForField(meta: EntityMetadata, fieldName: string): EntityMetadata {
-  while (!(fieldName in meta.fields) && meta.baseType) {
+  if (!meta.allFields[fieldName]) throw new Error(`Field '${fieldName}' not found on ${meta.type}`);
+  // I.e. `TaskOld.tags` is an STI-inherited `Task.tags` and should walk up, but `SmallPublisherGroup.publishers`
+  // is a CTI-specialized `PublisherGroup.publishers` and should stay on `SmallPublisherGroup`.
+  while (!(fieldName in meta.fields) && meta.allFields[fieldName]?.specialized !== true && meta.baseType) {
     meta = getMetadataForType(meta.baseType);
   }
   return meta;
@@ -55,7 +58,7 @@ export interface EntityMetadata<T extends Entity = any> {
   ctiAbstract?: boolean;
   tagName: string;
   fields: Record<string, Field>;
-  allFields: Record<string, Field & { aliasSuffix: string }>;
+  allFields: Record<string, Field & { aliasSuffix: string; specialized?: true }>;
   /** Usually polys are in `allFields`, but we pull the components out for comp-specific finds, like `parentBook`. */
   polyComponentFields?: Record<string, Field & { aliasSuffix: string }>;
   // Using `any` to avoid type errors between BaseType.metadata & SubType.metadata static fields

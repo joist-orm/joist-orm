@@ -226,6 +226,7 @@ function hookUpBaseTypeAndSubTypes(metas: EntityMetadata[]): void {
           // can be used to reverse validation rules/RFs.
           delete m.fields[name];
           m.allFields[name].aliasSuffix = aliasSuffix;
+          m.allFields[name].specialized = true;
         } else {
           m.allFields[name] = { ...field, aliasSuffix };
         }

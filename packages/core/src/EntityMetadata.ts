@@ -2,6 +2,7 @@ import { getInstanceData } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { EntityManager, MaybeAbstractEntityConstructor, TimestampFields } from "./EntityManager";
 import { type ConfigApi, type Reactable, type ReactiveRule } from "./config";
+import { getMetadataForType } from "./configure";
 import { DeepNew } from "./loadHints";
 import { FieldSerde, PolymorphicKeySerde } from "./serde";
 
@@ -15,6 +16,14 @@ export function getMetadata<T extends Entity>(
   return (
     typeof param === "function" ? (param as any).metadata : "cstr" in param ? param : getInstanceData(param).metadata
   ) as EntityMetadata;
+}
+
+/** Returns the metadata layer that declares `fieldName`, i.e. `Task.tags` for `TaskOld.tags`. */
+export function getMetadataForField(meta: EntityMetadata, fieldName: string): EntityMetadata {
+  while (!(fieldName in meta.fields) && meta.baseType) {
+    meta = getMetadataForType(meta.baseType);
+  }
+  return meta;
 }
 
 /**

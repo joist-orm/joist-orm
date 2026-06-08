@@ -1,6 +1,6 @@
 import { Entity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
-import { EntityMetadata, getBaseAndSelfMetas, getBaseMeta } from "./EntityMetadata";
+import { EntityMetadata, getBaseAndSelfMetas } from "./EntityMetadata";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo } from "./Todo";
 import { keyToTaggedId } from "./keys";
@@ -153,12 +153,8 @@ export class JoinRows {
       twoIds.push(keyToTaggedId(meta2, dbRow[column2])!);
     }
 
-    // Make sure we have entities in memory for all the joined-to tables. For STI, the subtypes
-    // share the base table, so load via the base meta to let a batch hold mixed subtypes without
-    // tripping the STI guard in `em.loadAll`
-    const baseMeta1 = meta1.inheritanceType === "sti" ? getBaseMeta(meta1) : meta1;
-    const baseMeta2 = meta2.inheritanceType === "sti" ? getBaseMeta(meta2) : meta2;
-    await Promise.all([em.loadAll(baseMeta1.cstr, oneIds), em.loadAll(baseMeta2.cstr, twoIds)]);
+    // Make sure we have entities in memory for all the joined-to tables.
+    await Promise.all([em.loadAll(meta1.cstr, oneIds), em.loadAll(meta2.cstr, twoIds)]);
 
     // If we're doing a em.refresh/reload, we need to watch for rows that are no longer here
     const existingRows = new Set<JoinRow>();

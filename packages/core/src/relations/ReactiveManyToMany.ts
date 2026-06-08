@@ -5,6 +5,7 @@ import {
   fail,
   getEmInternalApi,
   getInstanceData,
+  getMetadataForField,
   getMetadata,
   isLoaded,
   ManyToManyField,
@@ -195,7 +196,7 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
 
   // Properties needed for JoinRows/ManyToManyCollection compatibility
   get meta(): EntityMetadata {
-    return getMetadata(this.entity);
+    return getMetadataForField(getMetadata(this.entity), this.fieldName);
   }
 
   get fieldName(): string {

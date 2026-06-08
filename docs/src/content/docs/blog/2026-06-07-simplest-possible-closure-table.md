@@ -183,10 +183,10 @@ The first important insight is to lean into our mental model of "closure tables 
 
 1. All managers above Jan need Jan as a new report -->
    * This is really saying set `jan.managersClosure=[jan, jill]`
-   * I.e. calcing the m2m for Jan herself will "update the managers above her"
+   * I.e. calcing the m2m for Jan herself will "update the managers above her" because it is "Jan's m2m collection" that fundamentally controls "who are all of her transitive managers"?
 2. All employees below Jan need Jan as a new boss -->
    * This is really saying recalc `[fred, bob].managersClosure=[..., jan]`
-   * I.e. re-calcing the m2m for "Jan's transitive reports""
+   * I.e. re-calcing the m2m for "Jan's transitive reports" to let them see "now Jan is also a manager of me"
 
 And the second insight is that "recalculating the m2m all of Jan's _downstream_ reports" is exactly what Joist's reactivity does when it sees a `employee.manager` relationship change--it knows `bob.manager` changed, hence `bob.managersRecursive` changed, hence anyone "watching `bob.managersRecursive`" which requires "looking _down_ instead of _up_" needs to be told about the change.  
 

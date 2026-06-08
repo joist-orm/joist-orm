@@ -131,13 +131,13 @@ const fred = await em.load(Employee, "e:1");
 console.log(await fred.manager.load());
 // the recursive relation returns [bob, jill]
 console.log(await fred.managersRecursive.load());
-````
+```
 
-Where the `managersRecusive.load()` method will issue a SQL statement exactly like the `WITH RECURSIVE` CTE above, and get us all their transitive managers.
+Where the `managersRecursive.load()` method will issue a SQL statement exactly like the `WITH RECURSIVE` CTE above, and get us all their transitive managers.
 
 And in stereotypical "never N+1" fashion, Joist will auto-batch the SQL so that we could load 100 or 1000 employees' worth of `managesRecursive` and it would still be a single SQL query. 🎉 
 
-Joist's built-in support puts the power of `RECURSIVE` CTEs at your finger-tips--just a `load` / `populate` call away. 😀
+Joist's built-in support puts the power of `RECURSIVE` CTEs at your fingertips--just a `load` / `populate` call away. 😀
 
 ## Why Still Use Closure Tables?
 
@@ -145,7 +145,7 @@ So, with this great PostgreSQL feature, are closure tables still applicable?
 
 For us, the answer is usually no--unless there is a very high-performance query to optimize. 🚀
 
-For example, internally we're prototyping an RBAC-based auth system where permission grants "inherit" down a stack of "permission buckets"--like if Jill is the CEO, she can read the salary data of Bob and Fred, Bob can ready the salary data of Fred, etc.
+For example, internally we're prototyping an RBAC-based auth system where permission grants "inherit" down a stack of "permission buckets"--like if Jill is the CEO, she can read the salary data of Bob and Fred, Bob can read the salary data of Fred, etc.
 
 In this setup, we'll issue "what are your transitive auth permissions?" queries basically all the time, and need these queries to be extremely fast, i.e. easy for the Postgres query planner to optimize & execute, which it is still better at doing for the "dumb/single join" of closure table queries, over recursive CTE queries.
 
@@ -206,22 +206,22 @@ When the `jan.manager = jill` and `bob.manager = jan` graph mutation happens, Jo
    * We see `managersClosure` is watching `jan.managersRecursive`, and "reverse the hint" to find employee's _below_ Jan that need to know about this change
    * This queues `[jan, bob, fred]` to have their `managersClosure` recalc-d
 2. Setting `bob.manager = jan` also triggers "who is watching this write?"
-   * We again see `managersClosure` is watching `bob.managersRecusive`, and "reverse the hint" to find employee's _below_ Bob
-   * The queues `[bob, fred]` to have their `manangersClosure` recalc-d
+   * We again see `managersClosure` is watching `bob.managersRecursive`, and "reverse the hint" to find employee's _below_ Bob
+   * This queues `[bob, fred]` to have their `managersClosure` recalc-d
      * ...technically this is a noop b/c they're already queued
 3. We recalc the `[jan, bob, fred].managersClosure` relations all at once
    * Joist resolves the `managersRecursive` reactive hint for all three entities
      * If any relations are already loaded, we use the in-memory results
      * If any relations are not loaded, we issue a single batched CTE query for their data
    * When the batched SQL resolves, the `managersClosure` lambda is invoked for each of `[jan, bob, fred]`
-   * This sets `jan.manangersClosure = [jan, jill]`
-   * And sets `bob.manangersClosure = [bob, jan, jill]`
-   * And sets `fred.manangersClosure = [fred, bob, jan, jill]`
+   * This sets `jan.managersClosure = [jan, jill]`
+   * And sets `bob.managersClosure = [bob, jan, jill]`
+   * And sets `fred.managersClosure = [fred, bob, jan, jill]`
 4. We call `em.flush()`
    * The three mutated `managerClosures` m2m collections are diffed
-   * We issue a single `INSERT INTO managers_closures` with the new rows
+   * We issue a single `INSERT INTO managers_closure` with the new rows
 
-This is admittedly a lot 😵, but thankfully it's all driven by Joist's internal infra keeping the `hasReactiveManyToMany` m2m up-to-date, by respecting the `managersRecusive` reactive hint we declared in the code.
+This is admittedly a lot 😵, but thankfully it's all driven by Joist's internal infra keeping the `hasReactiveManyToMany` m2m up-to-date, by respecting the `managersRecursive` reactive hint we declared in the code.
 
 And the key outcome is that the closure table was _completely updated for all affected employees_, and **we only issued 3 SQL calls**, 2 reads and 1 write:
 
@@ -243,7 +243,7 @@ This "jump to writes" approach avoids our two up-front `SELECT`s, so we must con
 
 If you have extremely deep (1000+ level?) trees, this next level of optimization could be worth it, albeit it would come with the increased complexity.
 
-Our assertion is that Joist's performance of "3 fixed queries" will pragmattically be more performant than all but the most hand-optimized implementations, and it's low-cost/simplicity means the ROI often wins over a custom approach.
+Our assertion is that Joist's performance of "3 fixed queries" will pragmatically be more performant than all but the most hand-optimized implementations, and its low-cost/simplicity means the ROI often wins over a custom approach.
 
 :::
 

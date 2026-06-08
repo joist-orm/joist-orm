@@ -4,6 +4,7 @@ slug: blog/bringing-back-unnest
 date: 2026-01-11
 authors: shaberman
 tags: []
+excerpt: Joist uses the `unnest` function, and our own `unnest_arrays` function, for bulk updates.
 ---
 
 The latest Joist release brings back leveraging the Postgres `unnest` function (see [the PR](https://github.com/joist-orm/joist-orm/pull/1692)), for a nice 9% bump on our alpha latency-oriented [benchmarks](https://github.com/joist-orm/joist-benchmarks) (`joist_v2` is the merged PR):
@@ -207,4 +208,3 @@ Our solution has a few pros/cons:
   * For our domain modeling purposes, this is a fine/acceptable tradeoff, b/c we've always modeled `varchar[]` columns as `string[]` and not `Array<string | null>` -- we actively don't want `null`s in our `varchar[]` columns anyway
 
 So far these pros/cons are worth it 🚀; but, as always, we'll continue adjusting our approach as we learn more from real-world use cases & usage.
-

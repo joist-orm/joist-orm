@@ -278,6 +278,15 @@ export function insertAuthorToBestReview(row: { author_id: number; book_review_i
   return testDriver.insert("authors_to_best_reviews", row);
 }
 
+export function insertEmployee(row: { id?: number; name: string; manager_id?: number }) {
+  return testDriver.insert("employees", row);
+}
+
+/** Inserts a row into the blog-oriented employee managers closure table. */
+export function insertEmployeeToManagersClosure(row: { employee_id: number; manager_id: number }) {
+  return testDriver.insert("employee_to_managers_closure", row);
+}
+
 export function insertAuthorToMenteesClosure(row: { mentor_id: number; mentee_id: number }) {
   return testDriver.insert("author_to_mentees_closure", row);
 }

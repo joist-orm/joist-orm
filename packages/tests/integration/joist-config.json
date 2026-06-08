@@ -74,6 +74,7 @@
       "tag": "c"
     },
     "CriticColumn": { "tag": "cc" },
+    "Employee": { "relations": { "managersClosure": { "derived": "async" } }, "tag": "e" },
     "Image": { "tag": "i" },
     "LargePublisher": {
       "fields": { "rating": { "notNull": true } },

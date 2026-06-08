@@ -1,7 +1,7 @@
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
 import { Entity } from "../Entity";
 import { appendStack, IdOf } from "../EntityManager";
-import { EntityMetadata } from "../EntityMetadata";
+import { EntityMetadata, getMetadataForField } from "../EntityMetadata";
 import { ensureNotDeleted, getMetadata, ManyToManyCollection, toTaggedId } from "../index";
 import { lazyField, resolveOtherMeta } from "../newEntity";
 import { remove } from "../utils";
@@ -126,7 +126,7 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
   }
 
   public get meta(): EntityMetadata {
-    return getMetadata(this.entity);
+    return getMetadataForField(getMetadata(this.entity), this.fieldName);
   }
 
   public toString(): string {

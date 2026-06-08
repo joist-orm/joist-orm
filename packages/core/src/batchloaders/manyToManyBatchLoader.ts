@@ -1,6 +1,6 @@
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
-import { getMetadata, keyToNumber, ManyToManyLike, ParsedFindQuery } from "../index";
+import { keyToNumber, ManyToManyLike, ParsedFindQuery } from "../index";
 import { abbreviation, getOrSet } from "../utils";
 import { BatchLoader } from "./BatchLoader";
 
@@ -33,7 +33,7 @@ async function loadBatch<U extends Entity>(collection: ManyToManyLike, keys: str
       kind: "exp",
       op: "or",
       conditions: Object.entries(columns).map(([columnId, values]) => {
-        const meta = collection.columnName == columnId ? getMetadata(collection.entity) : collection.otherMeta;
+        const meta = collection.columnName == columnId ? collection.meta : collection.otherMeta;
         return {
           kind: "column",
           alias,

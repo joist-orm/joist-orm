@@ -2402,6 +2402,23 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("prunes o2m filters whose only condition is undefined", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+
+    const em = newEntityManager();
+    const where = { books: { title: undefined } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+    });
+  });
+
   it("can find through o2m matching on a primary key", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b10", author_id: 1 });

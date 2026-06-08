@@ -25,7 +25,6 @@ export const docs = {
       hasBooks: "Example of an async boolean that can be navigated via a lens.",
       reviews: "All reviews across all of this author's books.",
       imageFileName: "Example of a ReactiveField that watches through an o2o relation.",
-      managersClosure: "Example of a closure table that tracks self and all recursive mentors.",
     },
     operations: undefined,
   },
@@ -51,7 +50,11 @@ export const docs = {
   Comment: { comment: "", fields: {}, operations: undefined },
   Critic: { comment: "", fields: {}, operations: undefined },
   CriticColumn: { comment: "", fields: {}, operations: undefined },
-  Employee: { comment: "", fields: {}, operations: undefined },
+  Employee: {
+    comment: "",
+    fields: { managersClosure: "Tracks self and all recursive managers for the closure-table blog scenario." },
+    operations: undefined,
+  },
   Image: { comment: "", fields: {}, operations: undefined },
   LargePublisher: {
     comment: "",

@@ -100,7 +100,7 @@ Most readers will probably have pointed out that "PostgreSQL solved this" by add
 
 Which is true!
 
-In modern PostgresQL, we can often skip the `managers_closure` table with the following updated query, where the `WITH RECURSIVE` syntax basically acts as "the missing `for` loop" for us to walk up a variable number of levels, using only the `manager_id` column:
+In modern PostgreSQL, we can often skip the `managers_closure` table with the following updated query, where the `WITH RECURSIVE` syntax basically acts as "the missing `for` loop" for us to walk up a variable number of levels, using only the `manager_id` column:
 
 ```sql
 WITH RECURSIVE managers AS (
@@ -114,12 +114,11 @@ WITH RECURSIVE managers AS (
     -- recursive: step up to each manager's manager
     SELECT e.manager_id
     FROM employees e
-    JOIN managers m ON e.id = m.ancestor
+    JOIN managers m ON e.id = m.manager_id
 )
-SELECT ancestor
+SELECT manager_id
 FROM managers
-WHERE ancestor IS NOT NULL;
-
+WHERE manager_id IS NOT NULL;
 ```
 
 I'll defer to [other blog posts](https://medium.com/swlh/recursion-in-sql-explained-graphically-679f6a0f143b) to explain the syntax, but this is really great!
@@ -131,7 +130,7 @@ const fred = await em.load(Employee, "e:1");
 // the regular m2o relation returns bob
 console.log(await fred.manager.load());
 // the recursive relation returns [bob, jill]
-console.log(await fred.managersRecusive.load());
+console.log(await fred.managersRecursive.load());
 ````
 
 Where the `managersRecusive.load()` method will issue a SQL statement exactly like the `WITH RECURSIVE` CTE above, and get us all their transitive managers.
@@ -140,7 +139,7 @@ And in stereotypical "never N+1" fashion, Joist will auto-batch the SQL so that 
 
 Joist's built-in support puts the power of `RECURSIVE` CTEs at your finger-tips--just a `load` / `populate` call away. 😀
 
-## Why Still Use Cloure Tables?
+## Why Still Use Closure Tables?
 
 So, with this great PostgreSQL feature, are closure tables still applicable?
 
@@ -152,7 +151,7 @@ In this setup, we'll issue "what are your transitive auth permissions?" queries 
 
 So, for this use case, we think it's worth the write-time cost of generating an old-school `permission_bucket_closures` table, particularly if Joist can help us implement it as easily as possible.
 
-## Closure Table Maintanence 
+## Closure Table Maintenance 
 
 We skipped over one of the biggest cons of closure tables--keeping them up to date.
 

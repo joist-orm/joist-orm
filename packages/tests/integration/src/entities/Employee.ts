@@ -8,7 +8,7 @@ export class Employee extends EmployeeCodegen {
    */
   readonly managersClosure: ReactiveManyToMany<Employee, Employee> = hasReactiveManyToMany(
     "managersRecursive",
-    function managersClosure(employee) {
+    (employee) => {
       return [employee, ...employee.managersRecursive.get];
     },
   );

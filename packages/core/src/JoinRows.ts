@@ -1,6 +1,6 @@
 import { Entity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
-import { EntityMetadata, getBaseAndSelfMetas } from "./EntityMetadata";
+import { EntityMetadata, getBaseAndSelfMetas, getBaseMeta } from "./EntityMetadata";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo } from "./Todo";
 import { keyToTaggedId } from "./keys";
@@ -153,8 +153,9 @@ export class JoinRows {
       twoIds.push(keyToTaggedId(meta2, dbRow[column2])!);
     }
 
-    // Make sure we have entities in memory for all the joined-to tables
-    await Promise.all([em.loadAll(meta1.cstr, oneIds), em.loadAll(meta2.cstr, twoIds)]);
+    // Make sure we have entities in memory for all the joined-to tables. Load via the base
+    // meta so an STI base's join table can hold mixed subtypes without tripping the STI guard in `em.loadAll`
+    await Promise.all([em.loadAll(getBaseMeta(meta1).cstr, oneIds), em.loadAll(getBaseMeta(meta2).cstr, twoIds)]);
 
     // If we're doing a em.refresh/reload, we need to watch for rows that are no longer here
     const existingRows = new Set<JoinRow>();

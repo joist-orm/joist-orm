@@ -1,9 +1,9 @@
-import { getMetadataForType } from "../configure";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
 import {
   addTablePerClassJoinsAndClassTag,
   getField,
+  getMetadataForField,
   kq,
   ManyToOneField,
   ParsedFindQuery,
@@ -20,9 +20,7 @@ export function recursiveParentsBatchLoader<T extends Entity, U extends Entity>(
   collection: RecursiveParentsCollectionImpl<T, U>,
 ): BatchLoader<Entity> {
   let { meta, fieldName } = collection;
-  // This could be called from subtypes to get relations defined on the parent. So we need to make sure we are using the
-  // correct meta by walking the inheritance tree until we find the meta that actually has the root m2o field
-  while (!(collection.m2oFieldName in meta.fields) && meta.baseType) meta = getMetadataForType(meta.baseType);
+  meta = getMetadataForField(meta, collection.m2oFieldName);
   const batchKey = `${meta.tableName}-${fieldName}`;
   return em.getBatchLoader(recursiveParentsOperation, batchKey, async (children) => {
     const m2o = meta.allFields[collection.m2oFieldName] as ManyToOneField;

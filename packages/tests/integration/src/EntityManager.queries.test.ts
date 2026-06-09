@@ -1390,6 +1390,23 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("prunes ilike filters with false values", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const firstName: string | null | undefined = undefined;
+    const where = { firstName: { ilike: firstName && `${firstName}%` } } as AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+    });
+  });
+
   it("can find by nilike", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });

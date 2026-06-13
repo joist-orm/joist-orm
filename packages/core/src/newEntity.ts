@@ -33,7 +33,7 @@ export function newEntity<T extends Entity>(em: EntityManager, cstr: EntityConst
 }
 
 function moveRelationsToGetters(cstr: EntityConstructor<any>): void {
-  // Reuse getProperties's detect
+  let transientFieldsValue: any = {};
   for (const [fieldName, value] of getLazyFields(getMetadata(cstr))) {
     if (value instanceof LazyField) {
       Object.defineProperty(cstr.prototype, fieldName, {
@@ -42,21 +42,23 @@ function moveRelationsToGetters(cstr: EntityConstructor<any>): void {
         },
       });
     } else if (fieldName === "transientFields") {
-      Object.defineProperty(cstr.prototype, fieldName, {
-        get(this: any) {
-          // This prototype-level `get` will only ever be called once per instance, b/c when we're
-          // called for the first/only time, we set an instance-level `this.transientFields` that, for
-          // all future calls, will resolve to the instance's own copy of the fields.
-          //
-          // This has the pleasant upshot of making the instance-level `transientFields` lazy, and
-          // they will not be created on an instance until they're actually asked for.
-          const copy = structuredClone(value);
-          Object.defineProperty(this, "transientFields", { value: copy });
-          return copy;
-        },
-      });
+      // We'll define transientFields for all entities outside the loop
+      transientFieldsValue = value;
     }
   }
+  Object.defineProperty(cstr.prototype, "transientFields", {
+    get(this: any) {
+      // This prototype-level `get` will only ever be called once per instance, b/c when we're
+      // called for the first/only time, we set an instance-level `this.transientFields` that, for
+      // all future calls, will resolve to the instance's own copy of the fields.
+      //
+      // This has the pleasant upshot of making the instance-level `transientFields` lazy, and
+      // they will not be created on an instance until they're actually asked for.
+      const copy = structuredClone(transientFieldsValue);
+      Object.defineProperty(this, "transientFields", { value: copy });
+      return copy;
+    },
+  });
 }
 
 /**

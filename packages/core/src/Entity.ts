@@ -20,6 +20,7 @@ export interface Entity {
   readonly isNewEntity: boolean;
   readonly isDeletedEntity: boolean;
   readonly isDirtyEntity: boolean;
+  readonly transientFields: Record<string, unknown>;
   set(opts: unknown): void;
   setPartial(opts: unknown): void;
   setDeepPartial(opts: unknown): Promise<void>;

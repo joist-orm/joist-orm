@@ -133,6 +133,9 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   [Symbol.for("nodejs.util.inspect.custom")](): string {
     return this.toString();
   }
+
+  /** A bag of non-persisted state, typically for flags that control business logic behavior. */
+  declare readonly transientFields: Record<string, unknown>;
 }
 
 function toStringWithPrefix(meta: EntityMetadata, entity: Entity, prefix: string): string {

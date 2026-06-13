@@ -134,6 +134,9 @@ export class Author extends AuthorCodegen {
     afterCommitIsDeletedEntity: false,
     setGraduatedInFlush: false,
     setPublisherInFlush: undefined as Publisher | undefined,
+    setPublisherInM2oReaction: undefined as Publisher | undefined,
+    publisherHasChangedInM2oReaction: [] as boolean[],
+    publisherHasChangedInImmutableReaction: [] as boolean[],
     firstIsNotLastNameRuleInvoked: 0,
     mentorRuleInvoked: 0,
     ageRuleInvoked: 0,
@@ -501,8 +504,14 @@ config.addReaction("direct", "firstName", (a) => {
 
 // m2o reaction
 config.addReaction("m2o", { publisher: "name" }, (a) => {
+  a.transientFields.publisherHasChangedInM2oReaction.push(a.changes.publisher.hasChanged);
   a.transientFields.reactions.m2o += 1;
   a.transientFields.reactions.observedPublishers.push(a.publisher.get);
+  const publisher = a.transientFields.setPublisherInM2oReaction;
+  if (publisher) {
+    a.transientFields.setPublisherInM2oReaction = undefined;
+    a.publisher.set(publisher);
+  }
 });
 
 // o2m reaction
@@ -532,6 +541,7 @@ config.addReaction("setViaHook", "graduated", (a) => {
 
 // immutable field reaction
 config.addReaction("immutable", { publisher: "type" }, (a) => {
+  a.transientFields.publisherHasChangedInImmutableReaction.push(a.changes.publisher.hasChanged);
   a.transientFields.reactions.immutable += 1;
 });
 

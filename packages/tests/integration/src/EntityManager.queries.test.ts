@@ -16,17 +16,17 @@ import {
 } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
 import {
-  EntityFilter,
-  ExpressionFilter,
-  NotFoundError,
-  TooManyError,
-  UniqueFilter,
   alias,
   aliases,
+  EntityFilter,
+  ExpressionFilter,
   getAliasMetadata,
   getMetadata,
+  NotFoundError,
   optimizeCollectionJoins,
   parseFindQuery,
+  TooManyError,
+  UniqueFilter,
 } from "joist-orm";
 import { PasswordValue } from "src/entities/types";
 import { jan1, jan2, jan3 } from "src/testDates";
@@ -46,6 +46,9 @@ import {
   FavoriteShape,
   Image,
   ImageType,
+  newAuthor,
+  newBook,
+  newTag,
   Publisher,
   PublisherFilter,
   PublisherId,
@@ -59,9 +62,6 @@ import {
   TaskItemFilter,
   User,
   UserFilter,
-  newAuthor,
-  newBook,
-  newTag,
 } from "./entities";
 import { twoOf } from "./utils";
 
@@ -3943,6 +3943,20 @@ describe("EntityManager.queries", () => {
       expect(c2).toBe(1);
       // And we didn't make an extra query for it
       expect(numberOfQueries).toBe(1);
+    });
+
+    it("can count with filters and exclude deleted entities", async () => {
+      // Given we have two authors
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1");
+      // And initially findCount returns 1
+      expect(await em.findCount(Author, { firstName: "a1" }, opts)).toBe(1);
+      // When we delete the author
+      em.delete(a1);
+      // Then findCount returns 0
+      expect(await em.findCount(Author, { firstName: "a1" }, opts)).toBe(0);
     });
 
     it("can count with dates between", async () => {

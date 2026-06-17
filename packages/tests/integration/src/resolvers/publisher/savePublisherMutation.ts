@@ -1,10 +1,9 @@
-import { SmallPublisher } from "src/entities";
+import { Publisher } from "src/entities";
 import { MutationResolvers } from "src/generated/graphql-types";
-import { saveEntities } from "src/resolvers/mutations/utils";
+import { saveEntity } from "src/resolvers/utils";
 
 export const savePublisher: Pick<MutationResolvers, "savePublisher"> = {
-  async savePublisher(root, args, ctx) {
-    const [id] = await saveEntities(ctx, SmallPublisher, [args.input]);
-    return { publisher: id };
+  async savePublisher(_, args, ctx) {
+    return { publisher: await saveEntity(ctx, Publisher, args.input) };
   },
 };

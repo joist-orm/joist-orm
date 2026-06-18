@@ -6,7 +6,7 @@ describe("saveComment", () => {
   it.withCtx("can create", async (ctx) => {
     const { em } = ctx;
     const a = newAuthor(em);
-    const result = await runSave(ctx, () => ({ parent: a.id }));
+    const result = await runSave(ctx, () => ({ parentId: a.id }));
     expect(result).toBeDefined();
   });
 });

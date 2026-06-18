@@ -2,7 +2,7 @@ import { groupBy, isPlainObject } from "joist-utils";
 import { getAliasMgmt, getMaybeCtiAlias, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
-import { getBaseMeta, type EntityMetadata } from "./EntityMetadata";
+import { getBaseMeta, type EntityMetadata, type Field } from "./EntityMetadata";
 import { pruneUnusedJoins } from "./QueryParser.pruning";
 import { visitConditions } from "./QueryVisitor";
 import { getMetadataForTable } from "./configure";
@@ -333,10 +333,7 @@ export function parseFindQuery(
       Object.keys(ef.subFilter).forEach((key) => {
         // Skip the `{ as: ... }` alias binding
         if (key === "as") return;
-        const field =
-          meta.allFields[key] ??
-          meta.polyComponentFields?.[key] ??
-          fail(`Field '${key}' not found on ${meta.tableName}`);
+        const field = findFilterField(meta, key) ?? fail(`Field '${key}' not found on ${meta.tableName}`);
         const fa = `${alias}${field.aliasSuffix}`;
         if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
           const column = field.serde.columns[0];
@@ -761,6 +758,16 @@ function nilIdValue(meta: EntityMetadata): any {
 
 function isNilIdValue(value: any): boolean {
   return value === -1 || value === "00000000-0000-0000-0000-000000000000";
+}
+
+/** Finds a filter field by fieldName or generated fieldIdName. */
+function findFilterField(meta: EntityMetadata, key: string): (Field & { aliasSuffix: string }) | undefined {
+  return (
+    meta.allFields[key] ??
+    meta.polyComponentFields?.[key] ??
+    Object.values(meta.allFields).find((field) => field.fieldIdName === key) ??
+    Object.values(meta.polyComponentFields ?? {}).find((field) => field.fieldIdName === key)
+  );
 }
 
 /**

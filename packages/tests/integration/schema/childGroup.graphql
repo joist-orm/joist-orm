@@ -1,0 +1,27 @@
+type ChildGroup {
+  id: ID!
+  name: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  childGroup: ChildGroup
+  parentGroup: ParentGroup
+}
+
+extend type Query {
+  childGroup(id: ID!): ChildGroup!
+  childGroups(filter: ChildGroupFilter, limit: Int, offset: Int): ChildGroupsPage!
+}
+
+type ChildGroupsPage {
+  entities: [ChildGroup!]!
+  pageInfo: PageInfo!
+}
+
+input ChildGroupFilter {
+  id: [ID!]
+  name: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  childGroupId: [ID!]
+  parentGroupId: [ID!]
+}

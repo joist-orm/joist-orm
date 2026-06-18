@@ -5,13 +5,20 @@ import { getEntitiesImportPath } from "./utils";
 /** Generates a `graphql-codegen-joist.js` (or .mjs for ESM) with the auto-generated mapped type/enum value settings. */
 export function generateGraphqlCodegen(config: Config, entities: EntityDbMetadata[], enums: EnumMetadata): CodegenFile {
   const enumNames = Object.values(enums).map(({ name }) => name);
+  const pgEnumNames = Array.from(new Set(entities.flatMap(({ pgEnums }) => pgEnums.map(({ enumName }) => enumName))));
 
   // Combine the entity mapped types and enum detail mapped types
   const entitiesMapperImportPath = getEntitiesImportPath(config).replace(/\.ts$/, ""); // Keep compatibility with the expected mapper format (no file extension)
+  const pageInfoMapperPath = config.esm ? "joist-graphql-resolver-utils/index" : "joist-graphql-resolver-utils";
+  const pageInfoMapper =
+    (config.paginationStyle ?? "cursor") === "limit"
+      ? `${pageInfoMapperPath}#LimitPageInfo`
+      : `${pageInfoMapperPath}#CursorPageInfo`;
   const mappedTypes = sortObject(
     Object.fromEntries([
       ...entities.map(({ entity }) => [entity.name, `${entitiesMapperImportPath}#${entity.name}`]),
       ...enumNames.map((name) => [`${name}Detail`, `${entitiesMapperImportPath}#${name}`]),
+      ["PageInfo", pageInfoMapper],
     ]),
   );
 
@@ -23,6 +30,7 @@ export function generateGraphqlCodegen(config: Config, entities: EntityDbMetadat
 
         export const enumValues = {
           ${enumNames.map((name) => `${name}: "${entitiesMapperImportPath}#${name}",`)}
+          ${pgEnumNames.map((name) => `${name}: "${entitiesMapperImportPath}#${name}",`)}
         };
       `
     : code`
@@ -32,6 +40,7 @@ export function generateGraphqlCodegen(config: Config, entities: EntityDbMetadat
 
         const enumValues = {
           ${enumNames.map((name) => `${name}: "${entitiesMapperImportPath}#${name}",`)}
+          ${pgEnumNames.map((name) => `${name}: "${entitiesMapperImportPath}#${name}",`)}
         };
 
         module.exports = { mappers, enumValues };

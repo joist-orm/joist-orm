@@ -73,6 +73,7 @@ export interface T5BookReviewGraphQLFilter {
   id?: ValueGraphQLFilter<T5BookReviewId>;
   title?: ValueGraphQLFilter<string>;
   book?: EntityGraphQLFilter<T5Book, T5BookId, GraphQLFilterOf<T5Book>, null>;
+  bookId?: ValueGraphQLFilter<T5BookId>;
 }
 
 export interface T5BookReviewOrder {

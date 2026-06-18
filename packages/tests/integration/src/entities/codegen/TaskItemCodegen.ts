@@ -91,8 +91,11 @@ export interface TaskItemGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   newTask?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
+  newTaskId?: ValueGraphQLFilter<TaskNewId>;
   oldTask?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
+  oldTaskId?: ValueGraphQLFilter<TaskOldId>;
   task?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null>;
+  taskId?: ValueGraphQLFilter<TaskId>;
   taskTaskNew?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
   taskTaskOld?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
 }

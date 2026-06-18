@@ -1,0 +1,25 @@
+type CriticColumn {
+  id: ID!
+  name: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  critic: Critic
+}
+
+extend type Query {
+  criticColumn(id: ID!): CriticColumn!
+  criticColumns(filter: CriticColumnFilter, limit: Int, offset: Int): CriticColumnsPage!
+}
+
+type CriticColumnsPage {
+  entities: [CriticColumn!]!
+  pageInfo: PageInfo!
+}
+
+input CriticColumnFilter {
+  id: [ID!]
+  name: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  criticId: [ID!]
+}

@@ -2,3 +2,28 @@ type AdminUser {
   parents: [User!]!
   children: [User!]!
 }
+
+extend type Query {
+  adminUser(id: ID!): AdminUser!
+  adminUsers(filter: AdminUserFilter, limit: Int, offset: Int): AdminUsersPage!
+}
+
+type AdminUsersPage {
+  entities: [AdminUser!]!
+  pageInfo: PageInfo!
+}
+
+input AdminUserFilter {
+  id: [ID!]
+  name: [String!]
+  email: [String!]
+  bio: [String!]
+  originalEmail: [String!]
+  trialPeriod: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  managerId: [ID!]
+  authorManyToOneId: [ID!]
+  favoritePublisherId: [ID!]
+  role: [String!]
+}

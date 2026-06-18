@@ -1,4 +1,4 @@
-import { snakeCase } from "change-case";
+import { pascalCase, snakeCase } from "change-case";
 import {
   Config,
   DbMetadata,
@@ -6,6 +6,7 @@ import {
   EnumField,
   makeEntity,
   ManyToOneField,
+  PolymorphicField,
   PrimitiveField,
 } from "joist-codegen";
 import { keyBy } from "joist-utils";
@@ -147,6 +148,26 @@ export function newManyToOneField(
     onDelete: "NO ACTION" as any,
     ...opts,
   };
+}
+
+/** Creates a polymorphic field for tests. */
+export function newPolymorphicField(fieldName: string, components: string[], opts: Partial<PolymorphicField> = {}) {
+  return {
+    kind: "poly",
+    fieldName,
+    fieldType: `${pascalCase(fieldName)}Parent`,
+    notNull: true,
+    hasConfigDefault: false,
+    components: components.map((component) => ({
+      columnName: `${snakeCase(fieldName)}_${snakeCase(component)}_id`,
+      otherFieldName: fieldName,
+      otherEntity: makeEntity(component),
+      isDeferredAndDeferrable: true,
+      constraintName: "",
+      notNull: false as const,
+    })),
+    ...opts,
+  } satisfies PolymorphicField;
 }
 
 /**

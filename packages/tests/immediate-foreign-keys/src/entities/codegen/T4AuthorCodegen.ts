@@ -79,6 +79,7 @@ export interface T4AuthorGraphQLFilter {
   id?: ValueGraphQLFilter<T4AuthorId>;
   firstName?: ValueGraphQLFilter<string>;
   favoriteBook?: EntityGraphQLFilter<T4Book, T4BookId, GraphQLFilterOf<T4Book>, never>;
+  favoriteBookId?: ValueGraphQLFilter<T4BookId>;
   t4Books?: EntityGraphQLFilter<T4Book, T4BookId, GraphQLFilterOf<T4Book>, null | undefined>;
 }
 

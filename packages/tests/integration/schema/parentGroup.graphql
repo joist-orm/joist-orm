@@ -1,0 +1,23 @@
+type ParentGroup {
+  id: ID!
+  name: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+extend type Query {
+  parentGroup(id: ID!): ParentGroup!
+  parentGroups(filter: ParentGroupFilter, limit: Int, offset: Int): ParentGroupsPage!
+}
+
+type ParentGroupsPage {
+  entities: [ParentGroup!]!
+  pageInfo: PageInfo!
+}
+
+input ParentGroupFilter {
+  id: [ID!]
+  name: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+}

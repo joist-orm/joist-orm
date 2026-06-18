@@ -23,3 +23,22 @@ type SaveBookAdvanceResult {
 extend type Mutation {
   saveBookAdvance(input: SaveBookAdvanceInput!): SaveBookAdvanceResult!
 }
+
+extend type Query {
+  bookAdvance(id: ID!): BookAdvance!
+  bookAdvances(filter: BookAdvanceFilter, limit: Int, offset: Int): BookAdvancesPage!
+}
+
+type BookAdvancesPage {
+  entities: [BookAdvance!]!
+  pageInfo: PageInfo!
+}
+
+input BookAdvanceFilter {
+  id: [ID!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+  status: [AdvanceStatus!]
+  bookId: [ID!]
+  publisherId: [ID!]
+}

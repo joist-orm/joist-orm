@@ -17,3 +17,25 @@ input SaveBookInput {
 type SaveBookResult {
   book: Book!
 }
+
+extend type Query {
+  book(id: ID!): Book!
+  books(filter: BookFilter, first: Int, after: String, last: Int, before: String): BooksConnection!
+}
+
+type BooksConnection {
+  edges: [BooksEdge!]!
+  nodes: [Book!]!
+  pageInfo: PageInfo!
+}
+
+type BooksEdge {
+  node: Book!
+  cursor: String!
+}
+
+input BookFilter {
+  id: [ID!]
+  title: [String!]
+  authorId: [ID!]
+}

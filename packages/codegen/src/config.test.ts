@@ -24,6 +24,22 @@ describe("config", () => {
       const written = JSON.parse((await readFile("joist-config.json")).toString()) as Record<string, unknown>;
       expect(written).toMatchObject({ codemodVersion: 0 });
       expect("version" in written).toEqual(false);
+      expect("paginationStyle" in written).toEqual(false);
+    } finally {
+      process.chdir(originalCwd);
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("writes limit pagination as an explicit override", async () => {
+    const originalCwd = process.cwd();
+    const dir = await mkdtemp(path.join(tmpdir(), "joist-config-"));
+
+    try {
+      process.chdir(dir);
+      await writeConfig(config.parse({ paginationStyle: "limit" }));
+      const written = JSON.parse((await readFile("joist-config.json")).toString()) as Record<string, unknown>;
+      expect(written).toMatchObject({ paginationStyle: "limit" });
     } finally {
       process.chdir(originalCwd);
       await rm(dir, { recursive: true, force: true });

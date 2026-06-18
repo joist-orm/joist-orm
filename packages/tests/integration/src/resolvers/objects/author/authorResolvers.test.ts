@@ -17,7 +17,7 @@ describe("authorResolvers", () => {
     // Given an Author
     const a = newAuthor(em);
     // Then we can query it
-    const result = await runField(ctx, a, "graphqlOnlyField", 1);
+    const result = await runField(ctx, a, "graphqlOnlyField", { arg: 1 });
     expect(result).toBe(3);
   });
 });

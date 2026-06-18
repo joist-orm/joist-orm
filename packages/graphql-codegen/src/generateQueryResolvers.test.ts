@@ -7,24 +7,28 @@ describe("generateQueryResolvers", () => {
     {
       desc: "no extensions for non-ESM",
       config: { esm: false } as Config,
+      entitiesImport: "src/entities",
       graphqlTypesImport: "src/generated/graphql-types",
     },
     {
       desc: ".js extensions for ESM",
       config: { esm: true, allowImportingTsExtensions: false } as Config,
+      entitiesImport: "src/entities/index.js",
       graphqlTypesImport: "src/generated/graphql-types.js",
     },
     {
       desc: ".ts extensions for ESM with allowImportingTsExtensions",
       config: { esm: true, allowImportingTsExtensions: true } as Config,
+      entitiesImport: "src/entities/index.ts",
       graphqlTypesImport: "src/generated/graphql-types.ts",
     },
-  ])("generates file with $desc", async ({ config, graphqlTypesImport }) => {
+  ])("generates file with $desc", async ({ config, entitiesImport, graphqlTypesImport }) => {
     const entities: EntityDbMetadata[] = [newEntityMetadata("Author")];
     const [resolver] = await generate(config, entities);
     expect(resolver.name).toBe("resolvers/author/authorQuery.ts");
     expect(renderCodegenFile(resolver, config)).toMatchInlineSnapshot(`
-     "import type { QueryResolvers } from "${graphqlTypesImport}";
+     "import { Author } from "${entitiesImport}";
+     import type { QueryResolvers } from "${graphqlTypesImport}";
 
      export const author: Pick<QueryResolvers, "author"> = {
        async author(_, args, ctx) {

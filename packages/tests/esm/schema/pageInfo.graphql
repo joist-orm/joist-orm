@@ -1,0 +1,7 @@
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  totalCount: Int!
+  startCursor: String
+  endCursor: String
+}

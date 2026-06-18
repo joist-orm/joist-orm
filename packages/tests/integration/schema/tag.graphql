@@ -24,3 +24,20 @@ type SaveTagResult {
 extend type Mutation {
   saveTag(input: SaveTagInput!): SaveTagResult!
 }
+
+extend type Query {
+  tag(id: ID!): Tag!
+  tags(filter: TagFilter, limit: Int, offset: Int): TagsPage!
+}
+
+type TagsPage {
+  entities: [Tag!]!
+  pageInfo: PageInfo!
+}
+
+input TagFilter {
+  id: [ID!]
+  name: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+}

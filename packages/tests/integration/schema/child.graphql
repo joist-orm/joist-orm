@@ -1,0 +1,23 @@
+type Child {
+  id: ID!
+  name: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+extend type Query {
+  child(id: ID!): Child!
+  children(filter: ChildFilter, limit: Int, offset: Int): ChildrenPage!
+}
+
+type ChildrenPage {
+  entities: [Child!]!
+  pageInfo: PageInfo!
+}
+
+input ChildFilter {
+  id: [ID!]
+  name: [String!]
+  createdAt: [DateTime!]
+  updatedAt: [DateTime!]
+}

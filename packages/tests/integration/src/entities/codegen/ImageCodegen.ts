@@ -106,8 +106,11 @@ export interface ImageGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   type?: ValueGraphQLFilter<ImageType>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  authorId?: ValueGraphQLFilter<AuthorId>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
+  bookId?: ValueGraphQLFilter<BookId>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null>;
+  publisherId?: ValueGraphQLFilter<PublisherId>;
   publisherLargePublisher?: EntityGraphQLFilter<
     LargePublisher,
     LargePublisherId,

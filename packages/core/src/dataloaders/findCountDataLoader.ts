@@ -1,6 +1,6 @@
-import { Entity } from "../Entity";
+import { Entity, IdType } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
-import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
+import { EntityManager, getEmInternalApi, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { kq } from "../keywords";
 import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
@@ -28,10 +28,11 @@ export function findCountDataLoader<T extends Entity>(
 
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
+  const pendingDeletedIds = appendPendingDeletedIds(em, type, query, meta.idDbType, where, opts);
   const { findSettings } = em["prepareFind"](meta, findCountOperation, query, { ...opts, checkLimit: false });
   const bindings: any[] = [];
   collectValues(bindings, query);
-  const prepared = { filter, query, bindings, findSettings };
+  const prepared = { filter, pendingDeletedIds, query, bindings, findSettings };
   const batchKey = getBatchKeyFromGenericStructure(meta, query);
 
   return em
@@ -94,7 +95,45 @@ export function findCountDataLoader<T extends Entity>(
         return results;
       },
       // Our filter/order tuple is a complex object, so use a stable cache key to ensure caching works.
-      { cacheKeyFn: (entry) => whereFilterHash(entry.filter) },
+      {
+        cacheKeyFn: (entry) => {
+          // Include pendingDeletedIds so that each new em.delete => recalcs the count
+          return whereFilterHash({ ...entry.filter, pendingDeletedIds: entry.pendingDeletedIds });
+        },
+      },
     )
     .load(prepared);
+}
+
+/** Adds `id not in pendingDeletedIds` to the count query so pending deletes are excluded in SQL. */
+function appendPendingDeletedIds<T extends Entity>(
+  em: EntityManager,
+  type: MaybeAbstractEntityConstructor<T>,
+  query: ParsedFindQuery,
+  idDbType: "bigint" | "int" | "uuid" | "text",
+  where: FilterAndSettings<T>["where"],
+  opts: Omit<FilterAndSettings<T>, "where">,
+): readonly IdType[] {
+  const pendingDeletedIds =
+    Object.keys(where).length === 0 && opts.conditions === undefined ? [] : getEmInternalApi(em).pendingDeleteIds(type);
+  if (pendingDeletedIds.length === 0) return pendingDeletedIds;
+
+  const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");
+  const condition = {
+    kind: "column" as const,
+    alias: primary.alias,
+    column: "id",
+    dbType: idDbType,
+    cond: { kind: "nin" as const, value: pendingDeletedIds },
+    pruneable: true,
+  };
+
+  if (!query.condition) {
+    query.condition = { kind: "exp", op: "and", conditions: [condition] };
+  } else if (query.condition.op === "and") {
+    query.condition.conditions.push(condition);
+  } else {
+    query.condition = { kind: "exp", op: "and", conditions: [query.condition, condition] };
+  }
+  return pendingDeletedIds;
 }

@@ -54,6 +54,7 @@ import {
   GraphQLFilterWithAlias,
   InstanceData,
   isLoadedReference,
+  keyToNumber,
   Lens,
   loadLens,
   OneToManyCollection,
@@ -326,6 +327,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       hasAnyDeletes(): boolean {
         return em.#hasAnyDeletes;
+      },
+
+      pendingDeleteIds(type: MaybeAbstractEntityConstructor<Entity>): readonly IdType[] {
+        return em.#pendingDeletes
+          .filter((entity) => entity instanceof type && entity.idMaybe !== undefined)
+          .map((entity) => keyToNumber(getMetadata(entity), entity.id));
       },
 
       isMerging(entity: EntityW): boolean {
@@ -689,7 +696,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // WIP creates/deletes. We can't do this if the WHERE clause is populated b/c
     // then we'd also have to eval each created/deleted entity against the WHERE
     // clause before knowing if it should adjust teh amount.
-    const isSelectAll = Object.keys(where).length === 0;
+    const isSelectAll = Object.keys(where).length === 0 && options.conditions === undefined;
     if (isSelectAll) {
       const tagged = this.#entitiesByTag.get(getMetadata(type).tagName) ?? [];
       for (const entity of tagged) {
@@ -2639,6 +2646,7 @@ export interface EntityManagerInternalApi {
   markMaybePending(entity: EntityW): void;
   unmarkMaybePending(entity: EntityW): void;
   hasAnyDeletes(): boolean;
+  pendingDeleteIds(type: MaybeAbstractEntityConstructor<Entity>): readonly IdType[];
   setIsRefreshing(isRefreshing: boolean): void;
 }
 

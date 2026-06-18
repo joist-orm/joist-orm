@@ -54,7 +54,7 @@ export function findDataLoader<T extends Entity>(
   });
   const bindings: any[] = [];
   collectValues(bindings, query);
-  const prepared = { filter, query, bindings, findSettings, checkLimit };
+  const prepared = { filter, query, bindings, findSettings, checkLimit } satisfies PreparedFindEntry<T>;
   const batchKey = getBatchKeyFromGenericStructure(meta, query);
 
   return em
@@ -149,7 +149,7 @@ export function findDataLoader<T extends Entity>(
     .load(prepared);
 }
 
-export function whereFilterHash(where: FilterAndSettings<any>): any {
+export function whereFilterHash(where: object): any {
   const key = fastWhereFilterHash(where);
   if (key === undefined) throw new Error("fastWhereFilterHash could not serialize find filter");
   return key;

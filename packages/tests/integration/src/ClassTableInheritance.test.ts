@@ -1,4 +1,4 @@
-import { Changes, type FieldsOf, getProperties, type RelationsOf } from "joist-orm";
+import { Changes, type FieldsOf, getMetadataForField, getProperties, type RelationsOf } from "joist-orm";
 import {
   AdminUser,
   Author,
@@ -16,6 +16,7 @@ import {
   PublisherGroup,
   PublisherOpts,
   SmallPublisher,
+  SmallPublisherGroup,
   SmallPublisherOpts,
   Tag,
   User,
@@ -28,6 +29,7 @@ import {
   insertPublisherGroup,
   insertPublisherOnly,
   insertPublisherToTag,
+  insertSmallPublisher,
   insertSmallPublisherGroup,
   insertTag,
   insertUser,
@@ -585,6 +587,23 @@ describe("ClassTableInheritance", () => {
     const spg = newSmallPublisherGroup(em, { publishers: [{}] });
     // Then we know it's publishers are SmallPublishers
     expect(spg.publishers.get[0].city).toBe("default city");
+  });
+
+  it("can batch load specialized same-name o2ms", async () => {
+    await insertPublisherGroup({ id: 1, name: "pg1" });
+    await insertPublisher({ id: 1, name: "p1", group_id: 1 });
+    await insertSmallPublisherGroup({ id: 2, name: "spg2" });
+    await insertSmallPublisher({ id: 2, name: "sp2", group_id: 2, city: "Denver" });
+
+    const em = newEntityManager();
+    const pg = await em.load(PublisherGroup, "pg:1");
+    const spg = await em.load(SmallPublisherGroup, "pg:2");
+
+    expect(getMetadataForField(SmallPublisherGroup.metadata, "publishers").type).toBe("SmallPublisherGroup");
+    const [spgPublishers, pgPublishers] = await Promise.all([spg.publishers.load(), pg.publishers.load()]);
+
+    expect(pgPublishers).toMatchEntity([{ name: "p1" }]);
+    expect(spgPublishers).toMatchEntity([{ name: "sp2", city: "Denver" }]);
   });
 
   it("load throws on loading a small publisher as a large publisher", async () => {

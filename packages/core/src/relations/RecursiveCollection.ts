@@ -23,7 +23,10 @@ import { IsLoadedCachable } from "../IsLoadedCache";
 import { lazyField } from "../newEntity";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReadOnlyCollection } from "./ReadOnlyCollection";
+import { RecursiveCycleError } from "./RecursiveCycleError";
 import { RelationT, RelationU } from "./Relation";
+
+export { RecursiveCycleError };
 
 /**
  * An alias for creating `RecursiveParentsCollectionImpl`s.
@@ -509,14 +512,4 @@ function getLoadedCollection(relation: any): any {
         ? [relation.get]
         : []
       : fail(`${relation} was not loaded`);
-}
-
-export class RecursiveCycleError extends Error {
-  readonly fieldName: string;
-  entities: Entity[] = [];
-  constructor(relation: AbstractRecursiveCollectionImpl<any, any>, entities: Entity[]) {
-    super(`Cycle detected in ${relation.entity.toString()}.${relation.fieldName}`);
-    this.fieldName = relation.fieldName;
-    this.entities = entities;
-  }
 }

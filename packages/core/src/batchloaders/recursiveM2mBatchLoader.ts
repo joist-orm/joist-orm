@@ -1,8 +1,8 @@
-import { getMetadataForType } from "../configure";
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import {
   isLoadedCollection,
+  getMetadataForField,
   keyToTaggedId,
   kq,
   kqDot,
@@ -22,7 +22,7 @@ export function recursiveM2mBatchLoader<T extends Entity, U extends Entity>(
   collection: RecursiveM2mCollectionImpl<T, U>,
 ): BatchLoader<Entity> {
   let { meta, fieldName } = collection;
-  while (!(collection.m2mFieldName in meta.allFields) && meta.baseType) meta = getMetadataForType(meta.baseType);
+  meta = getMetadataForField(meta, collection.m2mFieldName);
   const batchKey = `${meta.tableName}-${fieldName}`;
   return em.getBatchLoader(recursiveM2mOperation, batchKey, async (entities) => {
     const m2mField = meta.allFields[collection.m2mFieldName] as ManyToManyField;

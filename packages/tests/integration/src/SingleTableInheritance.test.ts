@@ -10,7 +10,7 @@ import {
   TaskOld,
   TaskType,
 } from "src/entities";
-import { insertTask, insertTaskItem, select } from "src/entities/inserts";
+import { insertTag, insertTask, insertTaskItem, insertTaskToTag, select } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
 describe("SingleTableInheritance", () => {
@@ -85,6 +85,26 @@ describe("SingleTableInheritance", () => {
     const [t1, t2] = await em.find(Task, {});
     expect(t1).toBeInstanceOf(TaskNew);
     expect(t2).toBeInstanceOf(TaskOld);
+  });
+
+  it("can load a m2m on a batch of mixed STI subtypes", async () => {
+    // Given two different subtypes that each have a tag, sharing the `task_to_tags` m2m
+    // that is declared on the STI base `Task`
+    await insertTag({ id: 1, name: "t1" });
+    await insertTask({ id: 1, type: "OLD" });
+    await insertTask({ id: 2, type: "NEW" });
+    await insertTaskToTag({ id: 1, task_id: 1, tag_id: 1 });
+    await insertTaskToTag({ id: 2, task_id: 2, tag_id: 1 });
+    const em = newEntityManager();
+    const unloaded = await em.loadAll(Task, ["task:1", "task:2"]);
+    // When we populate `tags` for both subtypes, which share a single `task_to_tags` JoinRows
+    const tasks = await em.populate(unloaded, "tags");
+    // Then the rows load via the base `Task` meta instead of `em.loadAll(<one subtype>, <both ids>)`,
+    // so the STI guard does not fire and each task gets its tag
+    expect(tasks[0]).toBeInstanceOf(TaskOld);
+    expect(tasks[1]).toBeInstanceOf(TaskNew);
+    expect(tasks[0].tags.get).toMatchEntity([{ name: "t1" }]);
+    expect(tasks[1].tags.get).toMatchEntity([{ name: "t1" }]);
   });
 
   it("keeps subtype fields off of the base type", async () => {

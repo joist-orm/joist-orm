@@ -44,9 +44,7 @@ export function populateBatchLoader(
   // hint, then use a batch key that includes the hint itself, which will make it unlikely
   // for non-sql relations to deadlock on each other/themselves.
   const batchKey =
-    mode === "preload"
-      ? `${meta.tagName}:${opts.forceReload}`
-      : `${meta.tagName}:${hintKey(hint)}:${opts.forceReload}`;
+    mode === "preload" ? `${meta.tagName}:${opts.forceReload}` : `${meta.tagName}:${hintKey(hint)}:${opts.forceReload}`;
   return em.getBatchLoader(populateOperation, batchKey, async (populates) => {
     async function populateLayer(layerMeta: EntityMetadata | undefined, layerNode: HintNode<Entity>): Promise<void> {
       // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
@@ -101,6 +99,14 @@ export function populateBatchLoader(
 
       for (const [key, tree] of Object.entries(layerNode.hints)) {
         const field = layerMeta?.allFields[key];
+        let oneToManyLoader: ReturnType<typeof oneToManyBatchLoader> | undefined;
+        let oneToManyPromise: Promise<void> | undefined;
+        let manyToManyLoader: ReturnType<typeof manyToManyBatchLoader> | undefined;
+        let manyToManyPromise: Promise<void> | undefined;
+        let oneToOneLoader: ReturnType<typeof oneToOneBatchLoader> | undefined;
+        let oneToOnePromise: Promise<void> | undefined;
+        let manyToOneLoader: ReturnType<typeof loadBatchLoader> | undefined;
+        let manyToOnePromise: Promise<void> | undefined;
         for (const entity of tree.entities) {
           const relation = getRelationFromMaybePolyKey(entity, key);
           // This happens to let through non-relation hints like 'name' on user, which wasn't intentional,
@@ -131,21 +137,26 @@ export function populateBatchLoader(
           // Skip new entities (no id) and derived relations (reactive m2m/m2o have extra logic in load).
           if (!entity.isNewEntity && field) {
             if (field.kind === "o2m") {
-              batchPromises.add(oneToManyBatchLoader(em, relation).load(entity.idTagged!));
+              oneToManyPromise = (oneToManyLoader ??= oneToManyBatchLoader(em, relation)).load(entity.idTagged!);
               relationsToPreload.push(relation);
               continue;
             } else if (field.kind === "m2m" && !field.derived) {
-              batchPromises.add(manyToManyBatchLoader(em, relation).load(`${relation.columnName}=${entity.id}`));
+              manyToManyPromise = (manyToManyLoader ??= manyToManyBatchLoader(em, relation)).load(
+                `${relation.columnName}=${entity.id}`,
+              );
               relationsToPreload.push(relation);
               continue;
             } else if (field.kind === "o2o") {
-              batchPromises.add(oneToOneBatchLoader(em, relation).load(entity.idTagged!));
+              oneToOnePromise = (oneToOneLoader ??= oneToOneBatchLoader(em, relation)).load(entity.idTagged!);
               relationsToPreload.push(relation);
               continue;
             } else if (field.kind === "m2o" && !field.derived) {
               const taggedId = relation.idTaggedMaybe;
               if (taggedId) {
-                batchPromises.add(loadBatchLoader(em, field.otherMetadata()).load({ taggedId, hint: undefined }));
+                manyToOnePromise = (manyToOneLoader ??= loadBatchLoader(em, field.otherMetadata())).load({
+                  taggedId,
+                  hint: undefined,
+                });
                 relationsToPreload.push(relation);
                 continue;
               }
@@ -153,10 +164,14 @@ export function populateBatchLoader(
           }
           fallbackPromises.push(relation.load(opts) as Promise<any>);
         }
+        if (oneToManyPromise) batchPromises.add(oneToManyPromise);
+        if (manyToManyPromise) batchPromises.add(manyToManyPromise);
+        if (oneToOnePromise) batchPromises.add(oneToOnePromise);
+        if (manyToOnePromise) batchPromises.add(manyToOnePromise);
       }
 
       if (batchPromises.size > 0 || fallbackPromises.length > 0) {
-        await Promise.all([...batchPromises, ...fallbackPromises]);
+        await Promise.all([Promise.all(batchPromises), Promise.all(fallbackPromises)]);
       }
       for (const relation of relationsToPreload) {
         relation.preload();

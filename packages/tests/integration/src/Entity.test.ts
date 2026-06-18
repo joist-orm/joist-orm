@@ -1,4 +1,4 @@
-import { Author, newAuthor, newBook } from "@src/entities";
+import { Author, Comment, newAuthor, newBook } from "@src/entities";
 import { insertAuthor } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 import { getInstanceData } from "joist-orm";
@@ -209,6 +209,13 @@ describe("Entity", () => {
     const author = newAuthor(em);
     const result = author.thisTestProp.load();
     await expect(result).rejects.toThrow("Cannot use 'this' in a property callback");
+  });
+
+  it("always has a transientFields", async () => {
+    const em = newEntityManager();
+    const author = newAuthor(em);
+    const comment = em.create(Comment, { parent: author, text: "c1" });
+    expect(comment.transientFields).toEqual({});
   });
 });
 

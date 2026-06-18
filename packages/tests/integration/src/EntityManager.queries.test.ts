@@ -16,17 +16,17 @@ import {
 } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
 import {
-  EntityFilter,
-  ExpressionFilter,
-  NotFoundError,
-  TooManyError,
-  UniqueFilter,
   alias,
   aliases,
+  EntityFilter,
+  ExpressionFilter,
   getAliasMetadata,
   getMetadata,
+  NotFoundError,
   optimizeCollectionJoins,
   parseFindQuery,
+  TooManyError,
+  UniqueFilter,
 } from "joist-orm";
 import { PasswordValue } from "src/entities/types";
 import { jan1, jan2, jan3 } from "src/testDates";
@@ -46,6 +46,9 @@ import {
   FavoriteShape,
   Image,
   ImageType,
+  newAuthor,
+  newBook,
+  newTag,
   Publisher,
   PublisherFilter,
   PublisherId,
@@ -59,9 +62,6 @@ import {
   TaskItemFilter,
   User,
   UserFilter,
-  newAuthor,
-  newBook,
-  newTag,
 } from "./entities";
 import { twoOf } from "./utils";
 
@@ -1390,6 +1390,23 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("prunes ilike filters with false values", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const firstName: string | null | undefined = undefined;
+    const where = { firstName: { ilike: firstName && `${firstName}%` } } as AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+    });
+  });
+
   it("can find by nilike", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
@@ -1562,6 +1579,41 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const publisher = await em.findOne(Publisher, { name: "p2" });
     expect(publisher).toBeUndefined();
+  });
+
+  it("does not find an entity that was loaded and then deleted", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    em.delete(author);
+
+    const authors = await em.find(Author, { firstName: "a1" });
+
+    expect(authors).toEqual([]);
+  });
+
+  it("does not find a paginated entity that was loaded and then deleted", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    em.delete(author);
+
+    const orderBy = { firstName: "ASC" } satisfies AuthorOrder;
+    const authors = await em.find(Author, {}, { limit: 2, orderBy });
+
+    expect(authors.map((author) => author.firstName)).toEqual(["a2"]);
+  });
+
+  it("does not findOne an entity that was loaded and then deleted", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    em.delete(author);
+
+    const foundAuthor = await em.findOne(Author, { firstName: "a1" });
+
+    expect(foundAuthor).toBeUndefined();
   });
 
   it("can find by one or fail", async () => {
@@ -2367,6 +2419,23 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("prunes o2m filters whose only condition is undefined", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+
+    const em = newEntityManager();
+    const where = { books: { title: undefined } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+    });
+  });
+
   it("can find through o2m matching on a primary key", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b10", author_id: 1 });
@@ -2599,6 +2668,17 @@ describe("EntityManager.queries", () => {
     const f1 = { firstName: "a1" } satisfies UniqueFilter<Author>;
     // @ts-expect-error
     const f2 = { publisher: "p:1" } satisfies UniqueFilter<Author>;
+  });
+
+  it("does not findByUnique an entity that was loaded and then deleted", async () => {
+    await insertAuthor({ first_name: "a1", ssn: "12" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    em.delete(author);
+
+    const foundAuthor = await em.findByUnique(Author, { ssn: "12" });
+
+    expect(foundAuthor).toBeUndefined();
   });
 
   it("fails when findByUnique hits the entityLimit", async () => {
@@ -3863,6 +3943,20 @@ describe("EntityManager.queries", () => {
       expect(c2).toBe(1);
       // And we didn't make an extra query for it
       expect(numberOfQueries).toBe(1);
+    });
+
+    it("can count with filters and exclude deleted entities", async () => {
+      // Given we have two authors
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1");
+      // And initially findCount returns 1
+      expect(await em.findCount(Author, { firstName: "a1" }, opts)).toBe(1);
+      // When we delete the author
+      em.delete(a1);
+      // Then findCount returns 0
+      expect(await em.findCount(Author, { firstName: "a1" }, opts)).toBe(0);
     });
 
     it("can count with dates between", async () => {

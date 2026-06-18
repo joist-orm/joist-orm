@@ -448,16 +448,49 @@ After the per-commit verification pass, each phase was reviewed again with targe
 
 ### Implemented Follow-Ups
 
-Two low-risk follow-ups were kept because they produced a plausible benchmark improvement in the targeted scenario. One additional `loadAll` direct-map lookup experiment was measured and then dropped because the 100k `loadAll` benchmark was neutral to slightly slower than the phase-2 post-commit baseline.
+Low-risk follow-ups were kept when they produced a plausible benchmark improvement in the targeted scenario without changing query counts or public behavior. One additional `loadAll` direct-map lookup experiment was measured and then dropped because the 100k `loadAll` benchmark was neutral to slightly slower than the phase-2 post-commit baseline.
 
 | Phase | Change | Benchmark | Baseline Mean (ms) | Follow-Up Mean (ms) | Delta | Result |
 | --- | --- | --- | ---: | ---: | ---: | --- |
 | 7 | Avoid union-set allocation in `FieldIndex.get` when one relation-value candidate set already contains the other. | `find_index_relation_value_steady_state` | 11.626 | 9.577 | 17.6% faster | Kept |
 | 7 | Same change, non-target scenarios. | `find_index_single_field_first_build` | 24.262 | 25.198 | 3.9% slower | Noise / non-target |
 | 7 | Same change, non-target scenarios. | `find_index_two_field_steady_state` | 0.190 | 0.326 | 71.6% slower | Sub-ms noise, high RSD |
+| 9 | Cache each direct relation loader/promise once per field in `populateBatchLoader`'s direct-loader path. | `populate_books_reviews` (`PLUGINS=`) | 239.033 | 214.255 | 10.4% faster | Kept; queries unchanged at 2 |
+| 9 | Same change, deep direct-loader path. | `populate_deep_books_reviews_comments` (`PLUGINS=`) | 752.405 | 720.954 | 4.2% faster | Kept; queries unchanged at 4 |
+| 9 | Same change, simple direct-loader path. | `populate_books` (`PLUGINS=`) | 95.423 | 96.277 | 0.9% slower | Noise / simple path, queries unchanged |
+| 9 | Same change, default-plugin fresh breadth path. | `populate_books_reviews` | 251.194 | 267.197 | 6.4% slower | Noise / preloader-dominated path, queries unchanged |
 | 10 | Skip `followReverseHint` for empty reverse paths during reactive recalculation. | `reactive_recalc_one_reaction` | 388.042 | 380.867 | 1.8% faster | Kept |
 | 10 | Skip `followReverseHint` for empty reverse paths during reactive recalculation. | `reactive_recalc_multiple_downstream` | 782.872 | 722.132 | 7.8% faster | Kept |
 | 10 | Same change, queue-only/non-target scenario. | `reactive_queue_created_all_downstream` | 1243.532 | 1359.566 | 9.3% slower | Noise / non-target, RSD 11.2% |
+
+### Measured But Not Kept
+
+`benchmark-populate-deep.ts` was added on 2026-06-04 to isolate deeper breadth-first populate traversal across `Author.books`, `Book.reviews`, `BookReview.comment`, and sibling `Book.comments`. It reports the same CPU, wall time, heap delta, retained heap, and query-count metrics as `benchmark-populate-breadth.ts`, and includes a repeated already-loaded scenario to amplify skip/traversal overhead.
+
+The tested `populateBatchLoader` allocation cleanup replaced `Object.entries`/`Object.keys` loops with `for...in`, made promise/preload containers lazy, avoided one nested `Promise.all`, built preload entities/ids in one pass, skipped empty child arrays, and hoisted nested hint rewriting. The results were mixed, so the production changes were not kept.
+
+A JSON-preloader bypass for explicit `em.populate` was also measured. It improved local wall-clock time for simple direct-loader-covered shapes, but increased query counts for nested shapes, so it was not kept as a general-purpose optimization.
+
+Commands used:
+
+```bash
+PLUGINS= BENCH_SIZES=2000 BENCH_ITERATIONS=8 BENCH_WARMUPS=2 NODE_OPTIONS=--expose-gc yarn env-cmd tsx benchmark-populate-deep.ts
+PLUGINS= BENCH_SIZES=5000 BENCH_ITERATIONS=5 BENCH_WARMUPS=1 NODE_OPTIONS=--expose-gc yarn env-cmd tsx benchmark-populate-deep.ts
+PLUGINS= BENCH_SIZES=1000 BENCH_ITERATIONS=5 BENCH_WARMUPS=1 BENCH_REPEAT=100 NODE_OPTIONS=--expose-gc yarn env-cmd tsx benchmark-populate-deep.ts
+```
+
+| Scenario | Size | Baseline Mean (ms) | Optimized Mean (ms) | Delta | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `populate_deep_books_reviews_comments` | 2000 | 137.301 | 136.005 | 0.9% faster | Noise / neutral |
+| `populate_deep_books_reviews_comments_already_loaded` | 2000 | 9.444 | 9.649 | 2.2% slower | Noise / neutral |
+| `populate_deep_books_reviews_comments` | 5000 | 342.865 | 350.964 | 2.4% slower | Not kept |
+| `populate_deep_books_reviews_comments_already_loaded` | 5000 | 22.228 | 22.304 | 0.3% slower | Neutral |
+| `populate_deep_books_reviews_comments` | 1000 | 74.497 | 69.264 | 7.0% faster | Noisy / non-target |
+| `populate_deep_books_reviews_comments_already_loaded` | 1000 | 4.662 | 5.678 | 21.8% slower | Not kept |
+| `populate_deep_books_reviews_comments_already_loaded_repeat` | 1000 | 73.383 | 73.106 | 0.4% faster | Neutral |
+| `populate_deep_books_reviews_comments` | 5000 | 402.881 | 346.606 | 14.0% faster | Not kept; queries 1 -> 4 |
+| `populate_books` | 5000 | 57.740 | 46.367 | 19.7% faster | Not kept; query count unchanged but tied to bypass experiment |
+| `populate_books_reviews` | 5000 | 132.351 | 111.710 | 15.6% faster | Not kept; queries 1 -> 2 |
 
 ### Phase-by-Phase Findings
 

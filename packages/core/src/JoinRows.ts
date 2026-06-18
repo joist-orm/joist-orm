@@ -153,7 +153,7 @@ export class JoinRows {
       twoIds.push(keyToTaggedId(meta2, dbRow[column2])!);
     }
 
-    // Make sure we have entities in memory for all the joined-to tables
+    // Make sure we have entities in memory for all the joined-to tables.
     await Promise.all([em.loadAll(meta1.cstr, oneIds), em.loadAll(meta2.cstr, twoIds)]);
 
     // If we're doing a em.refresh/reload, we need to watch for rows that are no longer here

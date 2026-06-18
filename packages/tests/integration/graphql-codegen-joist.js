@@ -15,6 +15,7 @@ const mappers = {
   Comment: "src/entities#Comment",
   Critic: "src/entities#Critic",
   CriticColumn: "src/entities#CriticColumn",
+  Employee: "src/entities#Employee",
   Image: "src/entities#Image",
   ImageTypeDetail: "src/entities#ImageType",
   LargePublisher: "src/entities#LargePublisher",

@@ -825,7 +825,9 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
     } else if (keys.length === 2 && "op" in filter && "value" in filter) {
       // Probe for `findGql` op & value
       const { op, value } = filter;
-      if (value === null) {
+      if (shouldPruneValueFilter(op, value)) {
+        return [];
+      } else if (value === null) {
         return [{ kind: "is-null" }];
       } else {
         return [{ kind: op, value: value ?? null }];
@@ -837,7 +839,7 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
       return Object.entries(filter)
         .map(([key, value]) => {
           // Always do condition pruning on the value
-          if (value === undefined) {
+          if (shouldPruneValueFilter(key, value)) {
             return undefined;
           }
           switch (key) {
@@ -1118,4 +1120,10 @@ function addStiSubtypeFilter(cb: ConditionBuilder, subtypeMeta: EntityMetadata, 
 /** Converts a search term like `foo bar` into a SQL `like` pattern like `%foo%bar%`. */
 export function makeLike(search: any | undefined): any {
   return search ? `%${search.replace(/\s+/g, "%")}%` : undefined;
+}
+
+/** Returns true for values that should be treated like an omitted filter. */
+function shouldPruneValueFilter(key: unknown, value: unknown): boolean {
+  if (value === undefined) return true;
+  return value === false && key !== "eq" && key !== "ne";
 }

@@ -157,7 +157,7 @@ describe("ReactiveField", () => {
 
     // And when we flush, both entities were committed
     const entities = await em2.flush();
-    expect(entities).toMatchEntity([br2, a2]);
+    expect(entities).toMatchEntity([a2, br2]);
     // Then the author's hooks ran as expected
     expect(a2.transientFields.beforeFlushRan).toBe(true);
   });
@@ -198,7 +198,7 @@ describe("ReactiveField", () => {
 
     // And when we flush, both entities were committed
     const entities = await em2.flush();
-    expect(entities).toMatchEntity([br2, a2]);
+    expect(entities).toMatchEntity([a2, br2]);
     // Then the author's hooks ran as expected
     expect(a2.transientFields.beforeFlushRan).toBe(true);
 

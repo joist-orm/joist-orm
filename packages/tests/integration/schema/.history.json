@@ -281,6 +281,7 @@
   "CriticColumnsPage": ["entities", "pageInfo"],
   "CriticFilter": ["createdAt", "favoriteLargePublisherId", "groupId", "id", "name", "updatedAt"],
   "CriticsPage": ["entities", "pageInfo"],
+  "Employee": ["createdAt", "id", "manager", "managerOfClosure", "managersClosure", "name", "reports", "updatedAt"],
   "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "type", "updatedAt"],
   "ImageFilter": ["authorId", "bookId", "createdAt", "fileName", "id", "publisherId", "type", "updatedAt"],
   "ImagesPage": ["entities", "pageInfo"],
@@ -358,6 +359,7 @@
     "saveComment",
     "saveCritic",
     "saveCriticColumn",
+    "saveEmployee",
     "saveImage",
     "saveLargePublisher",
     "saveNewTask",
@@ -634,6 +636,8 @@
     "updatedAt"
   ],
   "SaveCriticResult": ["critic"],
+  "SaveEmployeeInput": ["id", "managerId", "name"],
+  "SaveEmployeeResult": ["employee"],
   "SaveImageInput": ["authorId", "bookId", "createdAt", "fileName", "id", "publisherId", "type", "updatedAt"],
   "SaveImageResult": ["image"],
   "SaveLargePublisherInput": [

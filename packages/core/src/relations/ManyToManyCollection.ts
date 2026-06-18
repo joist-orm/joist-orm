@@ -6,6 +6,7 @@ import {
   EntityMetadata,
   getEmInternalApi,
   getInstanceData,
+  getMetadataForField,
   getMetadata,
   IdOf,
   ManyToManyField,
@@ -210,11 +211,11 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   get meta(): EntityMetadata {
-    return getMetadata(this.entity);
+    return getMetadataForField(getMetadata(this.entity), this.fieldName);
   }
 
   get otherMeta(): EntityMetadata {
-    return (getMetadata(this.entity).allFields[this.fieldName] as ManyToManyField).otherMetadata();
+    return this.#field.otherMetadata();
   }
 
   get joinTableName(): string {

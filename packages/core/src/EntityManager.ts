@@ -54,6 +54,7 @@ import {
   GraphQLFilterWithAlias,
   InstanceData,
   isLoadedReference,
+  keyToNumber,
   Lens,
   loadLens,
   OneToManyCollection,
@@ -256,6 +257,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * so that both see the most accurate state.
    */
   #pendingDeletes: Entity[] = [];
+  #hasAnyDeletes = false;
   #dataloaders: Record<string, LoaderCache> = {};
   #batchLoaders: Record<string, Record<string, BatchLoader<any>>> = {};
   readonly #joinRows: Record<string, JoinRows> = {};
@@ -321,6 +323,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       unmarkMaybePending(entity: EntityW): void {
         em.#maybePendingFlushEntities.delete(entity as Entity);
+      },
+
+      hasAnyDeletes(): boolean {
+        return em.#hasAnyDeletes;
+      },
+
+      pendingDeleteIds(type: MaybeAbstractEntityConstructor<Entity>): readonly IdType[] {
+        return em.#pendingDeletes
+          .filter((entity) => entity instanceof type && entity.idMaybe !== undefined)
+          .map((entity) => keyToNumber(getMetadata(entity), entity.id));
       },
 
       isMerging(entity: EntityW): boolean {
@@ -653,6 +665,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       return undefined;
     } else {
       const [entity] = this.hydrate(type, [row]);
+      if (this.#hasAnyDeletes && entity.isDeletedEntity) {
+        return undefined;
+      }
       if (populate) {
         await this.populate(entity, populate);
       }
@@ -681,7 +696,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // WIP creates/deletes. We can't do this if the WHERE clause is populated b/c
     // then we'd also have to eval each created/deleted entity against the WHERE
     // clause before knowing if it should adjust teh amount.
-    const isSelectAll = Object.keys(where).length === 0;
+    const isSelectAll = Object.keys(where).length === 0 && options.conditions === undefined;
     if (isSelectAll) {
       const tagged = this.#entitiesByTag.get(getMetadata(type).tagName) ?? [];
       for (const entity of tagged) {
@@ -1537,6 +1552,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // Early return if already deleted.
       const alreadyMarked = getInstanceData(entity).markDeleted();
       if (!alreadyMarked) continue;
+      // This monotonic flag lets find hot paths skip scanning results until a delete has ever happened in this EM.
+      this.#hasAnyDeletes = true;
       // Any derived fields that read this entity will need recalc-d
       this.#rm.queueAllDownstreamFields(entity, "deleted");
       // Synchronously unhook the entity if the relations are loaded
@@ -1837,7 +1854,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       for (const e of createdThenDeleted) getInstanceData(e).fixupCreatedThenDeleted();
       this.#merging?.clear();
 
-      return [...allFlushedEntities];
+      return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
     } catch (e) {
       if (e instanceof RecursiveCycleError) {
         const entity = e.entities[0];
@@ -1860,7 +1877,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           throw new ValidationErrors(message);
         }
       }
-      if (e instanceof InMemoryRollbackError) return [...allFlushedEntities];
+      if (e instanceof InMemoryRollbackError) {
+        return [...allFlushedEntities].sort((a, b) => getInstanceData(a).entityIndex - getInstanceData(b).entityIndex);
+      }
       throw e;
     } finally {
       this.#rm.clearSuppressedTypeErrors();
@@ -2576,6 +2595,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // Also register by the `a#1` style tagged string for new entities
       this.#entitiesById.set(entity.toTaggedString(), entity);
     }
+    getInstanceData(entity).entityIndex = this.#entitiesArray.length;
     this.#entitiesArray.push(entity);
 
     meta ??= getMetadata(entity);
@@ -2625,6 +2645,8 @@ export interface EntityManagerInternalApi {
   clearPreloadedRelations(): void;
   markMaybePending(entity: EntityW): void;
   unmarkMaybePending(entity: EntityW): void;
+  hasAnyDeletes(): boolean;
+  pendingDeleteIds(type: MaybeAbstractEntityConstructor<Entity>): readonly IdType[];
   setIsRefreshing(isRefreshing: boolean): void;
 }
 

@@ -37,6 +37,7 @@ To run tests in this project:
 - Tests should be run from the `packages/tests/integration/` directory
 - The project uses Jest for testing
 - Do not use extraneous local variables
+- Avoid unnecessary allocations, particularly in hot spots or common code paths
 - Do not use boilerplate comments that describe "what" the code is doing, only use comments to explain "why" or rationale
 - Test assertions should use `toMatchEntity` as much as possible
 - Never use `expect.objectContaining`, `toContain`, or `not.toContain`; use `toMatchObject` instead

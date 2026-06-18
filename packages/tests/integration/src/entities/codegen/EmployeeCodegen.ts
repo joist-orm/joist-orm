@@ -86,6 +86,7 @@ export interface EmployeeGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   manager?: EntityGraphQLFilter<Employee, EmployeeId, GraphQLFilterOf<Employee>, null>;
+  managerId?: ValueGraphQLFilter<EmployeeId>;
   reports?: EntityGraphQLFilter<Employee, EmployeeId, GraphQLFilterOf<Employee>, null | undefined>;
   managersClosure?: EntityGraphQLFilter<Employee, EmployeeId, GraphQLFilterOf<Employee>, null | undefined>;
   managerOfClosure?: EntityGraphQLFilter<Employee, EmployeeId, GraphQLFilterOf<Employee>, null | undefined>;

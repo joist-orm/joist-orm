@@ -18,6 +18,7 @@ import {
   Comment,
   Critic,
   CriticColumn,
+  Employee,
   FavoriteShape,
   Image,
   ImageType,
@@ -56,6 +57,7 @@ export interface Resolvers {
   Comment: CommentResolvers;
   Critic: CriticResolvers;
   CriticColumn: CriticColumnResolvers;
+  Employee: EmployeeResolvers;
   Image: ImageResolvers;
   ImageTypeDetail: ImageTypeDetailResolvers;
   LargePublisher: LargePublisherResolvers;
@@ -91,6 +93,7 @@ export interface Resolvers {
   CommentsPage?: CommentsPageResolvers;
   CriticColumnsPage?: CriticColumnsPageResolvers;
   CriticsPage?: CriticsPageResolvers;
+  EmployeesPage?: EmployeesPageResolvers;
   ImagesPage?: ImagesPageResolvers;
   LargePublishersPage?: LargePublishersPageResolvers;
   NewTask?: NewTaskResolvers;
@@ -106,6 +109,7 @@ export interface Resolvers {
   SaveBookReviewResult?: SaveBookReviewResultResolvers;
   SaveCommentResult?: SaveCommentResultResolvers;
   SaveCriticResult?: SaveCriticResultResolvers;
+  SaveEmployeeResult?: SaveEmployeeResultResolvers;
   SaveImageResult?: SaveImageResultResolvers;
   SaveLargePublisherResult?: SaveLargePublisherResultResolvers;
   SaveNewTaskResult?: SaveNewTaskResultResolvers;
@@ -320,6 +324,17 @@ export interface CriticColumnResolvers {
   updatedAt: Resolver<CriticColumn, {}, Date>;
 }
 
+export interface EmployeeResolvers {
+  createdAt: Resolver<Employee, {}, Date>;
+  id: Resolver<Employee, {}, string>;
+  manager: Resolver<Employee, {}, Employee | null | undefined>;
+  managerOfClosure: Resolver<Employee, {}, readonly Employee[]>;
+  managersClosure: Resolver<Employee, {}, readonly Employee[]>;
+  name: Resolver<Employee, {}, string>;
+  reports: Resolver<Employee, {}, readonly Employee[]>;
+  updatedAt: Resolver<Employee, {}, Date>;
+}
+
 export interface ImageResolvers {
   author: Resolver<Image, {}, Author | null | undefined>;
   book: Resolver<Image, {}, Book | null | undefined>;
@@ -374,6 +389,7 @@ export interface MutationResolvers {
   saveBookReview: Resolver<{}, MutationSaveBookReviewArgs, SaveBookReviewResult>;
   saveComment: Resolver<{}, MutationSaveCommentArgs, SaveCommentResult>;
   saveCritic: Resolver<{}, MutationSaveCriticArgs, SaveCriticResult>;
+  saveEmployee: Resolver<{}, MutationSaveEmployeeArgs, SaveEmployeeResult>;
   saveImage: Resolver<{}, MutationSaveImageArgs, SaveImageResult>;
   saveLargePublisher: Resolver<{}, MutationSaveLargePublisherArgs, SaveLargePublisherResult>;
   saveNewTask: Resolver<{}, MutationSaveNewTaskArgs, SaveNewTaskResult>;
@@ -483,6 +499,8 @@ export interface QueryResolvers {
   criticColumn: Resolver<{}, QueryCriticColumnArgs, CriticColumn>;
   criticColumns: Resolver<{}, QueryCriticColumnsArgs, CriticColumnsPage>;
   critics: Resolver<{}, QueryCriticsArgs, CriticsPage>;
+  employee: Resolver<{}, QueryEmployeeArgs, Employee>;
+  employees: Resolver<{}, QueryEmployeesArgs, EmployeesPage>;
   image: Resolver<{}, QueryImageArgs, Image>;
   images: Resolver<{}, QueryImagesArgs, ImagesPage>;
   largePublisher: Resolver<{}, QueryLargePublisherArgs, LargePublisher>;
@@ -738,6 +756,11 @@ export interface CriticsPageResolvers {
   pageInfo: Resolver<CriticsPage, {}, LimitPageInfo>;
 }
 
+export interface EmployeesPageResolvers {
+  entities: Resolver<EmployeesPage, {}, readonly Employee[]>;
+  pageInfo: Resolver<EmployeesPage, {}, LimitPageInfo>;
+}
+
 export interface ImagesPageResolvers {
   entities: Resolver<ImagesPage, {}, readonly Image[]>;
   pageInfo: Resolver<ImagesPage, {}, LimitPageInfo>;
@@ -804,6 +827,10 @@ export interface SaveCommentResultResolvers {
 
 export interface SaveCriticResultResolvers {
   critic: Resolver<SaveCriticResult, {}, Critic>;
+}
+
+export interface SaveEmployeeResultResolvers {
+  employee: Resolver<SaveEmployeeResult, {}, Employee>;
 }
 
 export interface SaveImageResultResolvers {
@@ -934,6 +961,9 @@ export interface MutationSaveCommentArgs {
 }
 export interface MutationSaveCriticArgs {
   input: SaveCriticInput;
+}
+export interface MutationSaveEmployeeArgs {
+  input: SaveEmployeeInput;
 }
 export interface MutationSaveImageArgs {
   input: SaveImageInput;
@@ -1075,6 +1105,14 @@ export interface QueryCriticColumnsArgs {
 }
 export interface QueryCriticsArgs {
   filter?: CriticFilter | null | undefined;
+  limit?: number | null | undefined;
+  offset?: number | null | undefined;
+}
+export interface QueryEmployeeArgs {
+  id: string;
+}
+export interface QueryEmployeesArgs {
+  filter?: EmployeeFilter | null | undefined;
   limit?: number | null | undefined;
   offset?: number | null | undefined;
 }
@@ -1265,6 +1303,11 @@ export interface CriticsPage {
   pageInfo: LimitPageInfo;
 }
 
+export interface EmployeesPage {
+  entities: Employee[];
+  pageInfo: LimitPageInfo;
+}
+
 export interface ImagesPage {
   entities: Image[];
   pageInfo: LimitPageInfo;
@@ -1331,6 +1374,10 @@ export interface SaveCommentResult {
 
 export interface SaveCriticResult {
   critic: Critic;
+}
+
+export interface SaveEmployeeResult {
+  employee: Employee;
 }
 
 export interface SaveImageResult {
@@ -1590,6 +1637,14 @@ export interface CriticFilter {
   updatedAt?: Date[] | null | undefined;
 }
 
+export interface EmployeeFilter {
+  createdAt?: Date[] | null | undefined;
+  id?: string[] | null | undefined;
+  managerId?: string[] | null | undefined;
+  name?: string[] | null | undefined;
+  updatedAt?: Date[] | null | undefined;
+}
+
 export interface ImageFilter {
   authorId?: string[] | null | undefined;
   bookId?: string[] | null | undefined;
@@ -1764,6 +1819,12 @@ export interface SaveCriticInput {
   id?: string | null | undefined;
   name?: string | null | undefined;
   updatedAt?: Date | null | undefined;
+}
+
+export interface SaveEmployeeInput {
+  id?: string | null | undefined;
+  managerId?: string | null | undefined;
+  name?: string | null | undefined;
 }
 
 export interface SaveImageInput {

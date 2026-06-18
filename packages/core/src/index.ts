@@ -123,6 +123,7 @@ export {
 } from "./rules";
 export { getRuntimeConfig, setRuntimeConfig, type RuntimeConfig } from "./runtimeConfig";
 export * from "./serde";
+export { Temporal } from "./temporal";
 export * from "./temporalMappers";
 export { isInTrustedContext, runInTrustedContext } from "./trusted";
 export * from "./typeMap";

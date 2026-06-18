@@ -1,8 +1,18 @@
-import type { Intl, Temporal, toTemporalInstant } from "temporal-polyfill";
+import { type Intl, type Temporal as TemporalType, type toTemporalInstant } from "temporal-polyfill";
 import { fail } from "./utils";
 
-type RequireTemporal = { Temporal: typeof Temporal; toTemporalInstant: typeof toTemporalInstant; Intl: typeof Intl };
+type RequireTemporal = { Temporal: typeof TemporalType; toTemporalInstant: typeof toTemporalInstant; Intl: typeof Intl };
 let temporal: RequireTemporal | undefined | false;
+
+/** Lazily exposes Joist's native-first Temporal implementation. */
+export const Temporal = new Proxy(
+  {},
+  {
+    get(_target, property, receiver) {
+      return Reflect.get(requireTemporal().Temporal, property, receiver);
+    },
+  },
+) as typeof TemporalType;
 
 /**
  * Conditionally/dynamically requires `temporal-polyfill`.
@@ -16,11 +26,12 @@ export function maybeRequireTemporal(): RequireTemporal | undefined {
   // if we already required temporal, just return that
   if (temporal) return temporal;
   // use built in temporal if present
-  if ("Temporal" in global && "Intl" in global) {
+  const native = globalThis as { Temporal?: typeof TemporalType; Intl?: typeof Intl };
+  if (isTemporal(native.Temporal) && native.Intl) {
     temporal = {
-      Temporal: global.Temporal as typeof Temporal,
-      toTemporalInstant: (Date.prototype as any).toTemporalInstant,
-      Intl: global.Intl as typeof Intl,
+      Temporal: native.Temporal,
+      toTemporalInstant: getNativeToTemporalInstant(native.Temporal),
+      Intl: native.Intl,
     };
     return temporal;
   }
@@ -41,4 +52,25 @@ export function maybeRequireTemporal(): RequireTemporal | undefined {
 
 export function requireTemporal(): RequireTemporal {
   return maybeRequireTemporal() ?? fail("Unable to find a Temporal implementation");
+}
+
+/** Returns true if `temporal` has the constructors Joist uses. */
+function isTemporal(temporal: typeof TemporalType | undefined): temporal is typeof TemporalType {
+  return (
+    !!temporal?.Instant &&
+    !!temporal.PlainDate &&
+    !!temporal.PlainDateTime &&
+    !!temporal.PlainTime &&
+    !!temporal.ZonedDateTime
+  );
+}
+
+/** Returns native `Date#toTemporalInstant`, or a native-Temporal equivalent. */
+function getNativeToTemporalInstant(nativeTemporal: typeof TemporalType): typeof toTemporalInstant {
+  return (
+    (Date.prototype as Date & { toTemporalInstant?: typeof toTemporalInstant }).toTemporalInstant ??
+    function toTemporalInstantFromDate(this: Date) {
+      return nativeTemporal.Instant.fromEpochMilliseconds(this.getTime());
+    }
+  );
 }

@@ -15,8 +15,12 @@
     "declarationMap": true,
     "outDir": "./build",
     "rootDir": "./",
-    "baseUrl": "./"
+    "paths": {
+      "*": ["./*"],
+      "src/*": ["./src/*"]
+    }
   },
+  "include": ["./src"],
   "references": [
     { "path": "../../codegen" },
     { "path": "../../graphql-codegen" },

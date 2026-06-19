@@ -8,11 +8,7 @@
     "sourceMap": true,
     "declaration": true,
     "declarationMap": true,
-    "incremental": true,
-    "plugins": [
-      { "transform": "typescript-transform-paths" },
-      { "transform": "typescript-transform-paths", "afterDeclarations": true }
-    ]
+    "incremental": true
   },
   "exclude": ["**/node_modules"]
 }

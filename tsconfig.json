@@ -18,11 +18,5 @@
     { "path": "./packages/test-utils" },
     { "path": "./packages/utils" }
   ],
-  "files": [],
-  "compilerOptions": {
-    "plugins": [
-      { "transform": "typescript-transform-paths" },
-      { "transform": "typescript-transform-paths", "afterDeclarations": true }
-    ]
-  }
+  "files": []
 }

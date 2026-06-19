@@ -3,11 +3,13 @@
   "compilerOptions": {
     "outDir": "./build",
     "rootDir": "./",
-    "baseUrl": "./",
     "paths": {
-      "@src/*": ["src/*"]
+      "*": ["./*"],
+      "@src/*": ["./src/*"],
+      "src/*": ["./src/*"]
     }
   },
+  "include": ["./src"],
   "references": [
     { "path": "../../codegen" },
     { "path": "../../graphql-codegen" },

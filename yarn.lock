@@ -5482,9 +5482,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"astro@npm:6.4.4":
-  version: 6.4.4
-  resolution: "astro@npm:6.4.4"
+"astro@npm:6.4.6":
+  version: 6.4.6
+  resolution: "astro@npm:6.4.6"
   dependencies:
     "@astrojs/compiler": "npm:^4.0.0"
     "@astrojs/internal-helpers": "npm:0.10.0"
@@ -5547,7 +5547,7 @@ __metadata:
       optional: true
   bin:
     astro: ./bin/astro.mjs
-  checksum: 10/08af1556862746609937806f347db2a53023d087a57224d99759ccdc6b3016415b5a490e6a32adeee5178138081f891d3eedd5a1df3c74f2983145659e593ccb
+  checksum: 10/dcccd88f1f88caae38e0d44b2b0c8028c2f832254797409b0ade0b71564c775aaaa6152e886f3ea92a289791a802165bc989df05e97b15911a6f82663739b1f1
   languageName: node
   linkType: hard
 
@@ -9867,7 +9867,7 @@ __metadata:
     "@astrojs/starlight": "npm:0.39.3"
     "@astrojs/starlight-tailwind": "npm:5.0.0"
     "@tailwindcss/vite": "npm:^4.3.0"
-    astro: "npm:6.4.4"
+    astro: "npm:6.4.6"
     sharp: "npm:^0.34.5"
     starlight-blog: "npm:^0.26.1"
     starlight-llms-txt: "npm:^0.9.0"

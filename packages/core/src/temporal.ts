@@ -1,8 +1,33 @@
-import type { Intl, Temporal, toTemporalInstant } from "temporal-polyfill";
+import { type Intl, type Temporal as TemporalType, type toTemporalInstant } from "temporal-polyfill";
 import { fail } from "./utils";
 
-type RequireTemporal = { Temporal: typeof Temporal; toTemporalInstant: typeof toTemporalInstant; Intl: typeof Intl };
+type RequireTemporal = {
+  Temporal: typeof TemporalType;
+  toTemporalInstant: typeof toTemporalInstant;
+  Intl: typeof Intl;
+};
 let temporal: RequireTemporal | undefined | false;
+
+/**
+ * Lazily exposes Joist's native-first / polyfill-fallback Temporal detection.
+ *
+ * This is useful while the joist-orm repo itself has both pre-Node 26, and post-Node 26
+ * test coverage, b/c our CI test suite needs the same a) codegen output and b) test suites
+ * to "just work" with either Node 24/25 or Node 26, which means they can't have an explicit
+ * import to either `temporal-polyfill` or the `Temporal` global.
+ *
+ * This is exactly what Joist's internal temporal resolution was already working around, so
+ * this just exposes an `import { Temporal } from joist-orm` that lets the codegen & tests
+ * reuse the same abstraction.
+ */
+export const Temporal = new Proxy(
+  {},
+  {
+    get(_target, property, receiver) {
+      return Reflect.get(requireTemporal().Temporal, property, receiver);
+    },
+  },
+) as typeof TemporalType;
 
 /**
  * Conditionally/dynamically requires `temporal-polyfill`.

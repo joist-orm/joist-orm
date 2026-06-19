@@ -60,5 +60,5 @@
   "resolutions": {
     "marked": "15.0.8"
   },
-  "packageManager": "yarn@4.15.0"
+  "packageManager": "yarn@4.17.0"
 }

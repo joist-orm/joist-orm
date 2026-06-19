@@ -1,7 +1,7 @@
 import { knex, newEntityManager } from "@src/setupDbTests";
 import { jan1at10am, jan1DateTime, jan2DateTime, jan3DateTime } from "@src/utils";
 import { alias, getMetadata, PrimitiveField } from "joist-orm";
-import { Temporal } from "temporal-polyfill";
+import { Temporal } from "joist-orm";
 import { Author, Book, BookFilter, newBook } from "./entities";
 
 describe("zonedDateTime", () => {

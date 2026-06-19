@@ -13,7 +13,8 @@ workflows:
               node-version:
                 - "22" # EOL 30 Apr 2027
                 - "24" # EOL 30 Apr 2028
-                - "25" # Current
+                - "25" # EOL 01 Jun 2026
+                - "26" # Current
                 - "bun"
 
 jobs:

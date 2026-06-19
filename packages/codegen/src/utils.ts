@@ -94,10 +94,10 @@ export function tableToEntityName(config: Config, table: Table): string {
 }
 
 export const dateCode = code`Date`;
-export const plainDateCode = code`${imp("Temporal@temporal-polyfill")}.PlainDate`;
-export const plainTimeCode = code`${imp("Temporal@temporal-polyfill")}.PlainTime`;
-export const plainDateTimeCode = code`${imp("Temporal@temporal-polyfill")}.PlainDateTime`;
-export const zonedDateTimeCode = code`${imp("Temporal@temporal-polyfill")}.ZonedDateTime`;
+export const plainDateCode = code`${imp("Temporal@joist-orm")}.PlainDate`;
+export const plainTimeCode = code`${imp("Temporal@joist-orm")}.PlainTime`;
+export const plainDateTimeCode = code`${imp("Temporal@joist-orm")}.PlainDateTime`;
+export const zonedDateTimeCode = code`${imp("Temporal@joist-orm")}.ZonedDateTime`;
 
 /** Maps db types, i.e. `int`, to JS types, i.e. `number`. */
 export function mapSimpleDbTypeToTypescriptType(config: Config, dbType: DatabaseColumnType): PrimitiveTypescriptType {

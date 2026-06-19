@@ -1,5 +1,5 @@
+import { Temporal } from "temporal-polyfill"
 import { type GraphQLResolveInfo, GraphQLScalarType } from "graphql";
-import { Temporal } from "joist-orm";
 import { CursorPageInfo } from "joist-graphql-resolver-utils/index.js";
 import type { Context } from "src/context.js";
 import { Author, Book, Color } from "src/entities/index.js";

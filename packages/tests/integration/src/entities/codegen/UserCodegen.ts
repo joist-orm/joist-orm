@@ -30,12 +30,14 @@ import {
   type MaybeAbstractEntityConstructor,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type PolymorphicReference,
   type ReadOnlyCollection,
   type RelationsOf,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -206,7 +208,14 @@ export interface UserOrder {
 export interface UserFactoryExtras {
 }
 
+export interface UserScopes {
+}
+
+export type UserScope = Scope<User, UserScopes>;
+
 export const userConfig = new ConfigApi<User, Context>();
+
+export const userScope = newScopeFn<User, UserScope>("User");
 
 userConfig.addRule(newRequiredRule("name"));
 userConfig.addRule(newRequiredRule("email"));

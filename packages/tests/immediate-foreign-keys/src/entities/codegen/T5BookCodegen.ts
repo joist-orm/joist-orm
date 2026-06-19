@@ -23,9 +23,11 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -94,7 +96,14 @@ export interface T5BookOrder {
 export interface T5BookFactoryExtras {
 }
 
+export interface T5BookScopes {
+}
+
+export type T5BookScope = Scope<T5Book, T5BookScopes>;
+
 export const t5BookConfig = new ConfigApi<T5Book, Context>();
+
+export const t5BookScope = newScopeFn<T5Book, T5BookScope>("T5Book");
 
 t5BookConfig.addRule(newRequiredRule("title"));
 t5BookConfig.addRule(newRequiredRule("author"));

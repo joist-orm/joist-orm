@@ -21,9 +21,11 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -118,7 +120,14 @@ export interface TagOrder {
 export interface TagFactoryExtras {
 }
 
+export interface TagScopes {
+}
+
+export type TagScope = Scope<Tag, TagScopes>;
+
 export const tagConfig = new ConfigApi<Tag, Context>();
+
+export const tagScope = newScopeFn<Tag, TagScope>("Tag");
 
 tagConfig.addRule(newRequiredRule("name"));
 tagConfig.addRule(newRequiredRule("createdAt"));

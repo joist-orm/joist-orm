@@ -21,9 +21,11 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -85,7 +87,14 @@ export interface BookReviewOrder {
 export interface BookReviewFactoryExtras {
 }
 
+export interface BookReviewScopes {
+}
+
+export type BookReviewScope = Scope<BookReview, BookReviewScopes>;
+
 export const bookReviewConfig = new ConfigApi<BookReview, Context>();
+
+export const bookReviewScope = newScopeFn<BookReview, BookReviewScope>("BookReview");
 
 bookReviewConfig.addRule(newRequiredRule("rating"));
 bookReviewConfig.addRule(newRequiredRule("book"));

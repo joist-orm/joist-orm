@@ -27,12 +27,14 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
   type ReadOnlyCollection,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -200,7 +202,15 @@ export interface BookFactoryExtras {
   withSearch?: string | null;
 }
 
+export interface BookScopes {
+  fromLargePubs: BookScope;
+}
+
+export type BookScope = Scope<Book, BookScopes>;
+
 export const bookConfig = new ConfigApi<Book, Context>();
+
+export const bookScope = newScopeFn<Book, BookScope>("Book");
 
 bookConfig.addRule(newRequiredRule("title"));
 bookConfig.addRule(newRequiredRule("order"));

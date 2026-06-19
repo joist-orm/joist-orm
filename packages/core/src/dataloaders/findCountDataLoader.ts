@@ -4,6 +4,7 @@ import { EntityManager, getEmInternalApi, MaybeAbstractEntityConstructor } from 
 import { getMetadata } from "../EntityMetadata";
 import { kq } from "../keywords";
 import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
+import { isSelectAllFilter } from "../scopes";
 import { buildUnnestCte } from "../unnest";
 import { fail } from "../utils";
 import {
@@ -11,7 +12,7 @@ import {
   collectValues,
   createColumnValuesFromPrepared,
   getBatchKeyFromGenericStructure,
-  whereFilterHash,
+  queryFilterHash,
 } from "./findDataLoader";
 
 export const findCountOperation = "find-count";
@@ -95,12 +96,7 @@ export function findCountDataLoader<T extends Entity>(
         return results;
       },
       // Our filter/order tuple is a complex object, so use a stable cache key to ensure caching works.
-      {
-        cacheKeyFn: (entry) => {
-          // Include pendingDeletedIds so that each new em.delete => recalcs the count
-          return whereFilterHash({ ...entry.filter, pendingDeletedIds: entry.pendingDeletedIds });
-        },
-      },
+      { cacheKeyFn: (entry) => queryFilterHash(entry) },
     )
     .load(prepared);
 }
@@ -114,8 +110,9 @@ function appendPendingDeletedIds<T extends Entity>(
   where: FilterAndSettings<T>["where"],
   opts: Omit<FilterAndSettings<T>, "where">,
 ): readonly IdType[] {
-  const pendingDeletedIds =
-    Object.keys(where).length === 0 && opts.conditions === undefined ? [] : getEmInternalApi(em).pendingDeleteIds(type);
+  const pendingDeletedIds = isSelectAllFilter(where, opts.conditions)
+    ? []
+    : getEmInternalApi(em).pendingDeleteIds(type);
   if (pendingDeletedIds.length === 0) return pendingDeletedIds;
 
   const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");

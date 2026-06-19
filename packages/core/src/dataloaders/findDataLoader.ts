@@ -144,9 +144,20 @@ export function findDataLoader<T extends Entity>(
         return results;
       },
       // Our filter/order tuple is a complex object, so use a stable cache key to ensure caching works.
-      { cacheKeyFn: (entry) => whereFilterHash(entry.filter) },
+      { cacheKeyFn: queryFilterHash },
     )
     .load(prepared);
+}
+
+/**
+ * Returns a stable cache key from the already-parsed query rather than the raw `where`.
+ *
+ * A scope `where` is an opaque proxy that `fastWhereFilterHash` can't serialize — but it doesn't need
+ * to: by this point the scope's structure and values are already worked into the `ParsedFindQuery`, so
+ * hashing that distinguishes e.g. `Author.adult` (age>=18) from `Author.senior` (age>=65) correctly.
+ */
+export function queryFilterHash(entry: { query: ParsedFindQuery; findSettings: object }): any {
+  return whereFilterHash({ query: entry.query, findSettings: entry.findSettings });
 }
 
 export function whereFilterHash(where: object): any {

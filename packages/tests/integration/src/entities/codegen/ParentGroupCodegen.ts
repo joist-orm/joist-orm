@@ -21,9 +21,11 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -97,7 +99,14 @@ export interface ParentGroupOrder {
 export interface ParentGroupFactoryExtras {
 }
 
+export interface ParentGroupScopes {
+}
+
+export type ParentGroupScope = Scope<ParentGroup, ParentGroupScopes>;
+
 export const parentGroupConfig = new ConfigApi<ParentGroup, Context>();
+
+export const parentGroupScope = newScopeFn<ParentGroup, ParentGroupScope>("ParentGroup");
 
 parentGroupConfig.addRule(newRequiredRule("createdAt"));
 parentGroupConfig.addRule(newRequiredRule("updatedAt"));

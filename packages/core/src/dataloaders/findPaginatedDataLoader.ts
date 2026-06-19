@@ -14,7 +14,7 @@ import {
   filterDeletedEntities,
   findOperation,
   getBatchKeyFromGenericStructure,
-  whereFilterHash,
+  queryFilterHash,
 } from "./findDataLoader";
 
 interface PreparedPaginatedFindEntry<T extends Entity> {
@@ -116,7 +116,7 @@ export function findPaginatedDataLoader<T extends Entity>(
         }
         return results;
       },
-      { cacheKeyFn: (entry) => whereFilterHash(entry.filter) },
+      { cacheKeyFn: queryFilterHash },
     )
     .load(prepared);
 }

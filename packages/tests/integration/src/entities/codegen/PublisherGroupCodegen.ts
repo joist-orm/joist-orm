@@ -24,11 +24,13 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
   type RelationsOf,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -126,7 +128,14 @@ export interface PublisherGroupFactoryExtras {
   withNumberOfBookReviewsFormatted?: string;
 }
 
+export interface PublisherGroupScopes {
+}
+
+export type PublisherGroupScope = Scope<PublisherGroup, PublisherGroupScopes>;
+
 export const publisherGroupConfig = new ConfigApi<PublisherGroup, Context>();
+
+export const publisherGroupScope = newScopeFn<PublisherGroup, PublisherGroupScope>("PublisherGroup");
 
 publisherGroupConfig.addRule("numberOfBookReviews", newRequiredRule("numberOfBookReviews"));
 publisherGroupConfig.addRule("numberOfBookReviewsFormatted", newRequiredRule("numberOfBookReviewsFormatted"));

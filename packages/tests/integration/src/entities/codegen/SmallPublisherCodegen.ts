@@ -23,10 +23,12 @@ import {
   mustBeSubType,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -134,7 +136,14 @@ export interface SmallPublisherFactoryExtras {
   withAllAuthorNames?: string | null;
 }
 
+export interface SmallPublisherScopes {
+}
+
+export type SmallPublisherScope = Scope<SmallPublisher, SmallPublisherScopes>;
+
 export const smallPublisherConfig = new ConfigApi<SmallPublisher, Context>();
+
+export const smallPublisherScope = newScopeFn<SmallPublisher, SmallPublisherScope>("SmallPublisher");
 
 smallPublisherConfig.addRule(newRequiredRule("city"));
 smallPublisherConfig.addRule("group", mustBeSubType("group"));

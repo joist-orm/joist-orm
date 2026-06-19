@@ -27,7 +27,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  Temporal,
   toIdOf,
   toJSON,
   type ToJsonHint,
@@ -36,6 +35,7 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
+import { Temporal } from "temporal-polyfill";
 import { type Author, authorMeta, type Book, type BookId, type Entity, EntityManager, newAuthor } from "../entities";
 
 export type AuthorId = Flavor<string, "Author">;

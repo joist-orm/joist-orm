@@ -143,7 +143,7 @@ The alternate design's `scope` overloads use:
 export function scope<C extends MaybeAbstractEntityConstructor<any>>(...)
 ```
 
-But Joist's `MaybeAbstractEntityConstructor<T>` is only an abstract constructor signature and does not expose static `metadata`, `tagName`, or `getInstanceData`. The runtime implementation needs metadata. The type-level implementation needs `keyof C` over the actual static class. Constraining to `MaybeAbstractEntityConstructor<any>` may erase or fail to require the statics the implementation depends on.
+But Joist's `MaybeAbstractEntityConstructor<T>` is only an abstract constructor signature and does not expose static `metadata`, `tagName`, or `getInstanceData`. The runtime implementation needs metadata. The type-level implementation needs `keyof C` over the actual static class. Constraining to ~~~~`MaybeAbstractEntityConstructor<any>` may erase or fail to require the statics the implementation depends on.
 
 Recommendation:
 

@@ -1,5 +1,6 @@
-import { configureMetadata, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PlainDateSerde, PlainDateTimeSerde, PlainTimeSerde, PrimitiveSerde, setRuntimeConfig, Temporal, ZonedDateTimeSerde } from "joist-orm";
+import { configureMetadata, type Entity as Entity2, EntityManager as EntityManager1, type EntityMetadata, KeySerde, PlainDateSerde, PlainDateTimeSerde, PlainTimeSerde, PrimitiveSerde, setRuntimeConfig, ZonedDateTimeSerde } from "joist-orm";
 import type { Context } from "src/context";
+import { Temporal } from "temporal-polyfill";
 import { Author } from "../Author";
 import { Book } from "../Book";
 import { authorConfig, bookConfig, newAuthor, newBook } from "../entities";

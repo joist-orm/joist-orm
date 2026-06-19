@@ -1,10 +1,25 @@
 import { type Intl, type Temporal as TemporalType, type toTemporalInstant } from "temporal-polyfill";
 import { fail } from "./utils";
 
-type RequireTemporal = { Temporal: typeof TemporalType; toTemporalInstant: typeof toTemporalInstant; Intl: typeof Intl };
+type RequireTemporal = {
+  Temporal: typeof TemporalType;
+  toTemporalInstant: typeof toTemporalInstant;
+  Intl: typeof Intl;
+};
 let temporal: RequireTemporal | undefined | false;
 
-/** Lazily exposes Joist's native-first Temporal implementation. */
+/**
+ * Lazily exposes Joist's native-first / polyfill-fallback Temporal detection.
+ *
+ * This is useful while the joist-orm repo itself has both pre-Node 26, and post-Node 26
+ * test coverage, b/c our CI test suite needs the same a) codegen output and b) test suites
+ * to "just work" with either Node 24/25 or Node 26, which means they can't have an explicit
+ * import to either `temporal-polyfill` or the `Temporal` global.
+ *
+ * This is exactly what Joist's internal temporal resolution was already working around, so
+ * this just exposes an `import { Temporal } from joist-orm` that lets the codegen & tests
+ * reuse the same abstraction.
+ */
 export const Temporal = new Proxy(
   {},
   {
@@ -26,12 +41,11 @@ export function maybeRequireTemporal(): RequireTemporal | undefined {
   // if we already required temporal, just return that
   if (temporal) return temporal;
   // use built in temporal if present
-  const native = globalThis as { Temporal?: typeof TemporalType; Intl?: typeof Intl };
-  if (isTemporal(native.Temporal) && native.Intl) {
+  if ("Temporal" in global && "Intl" in global) {
     temporal = {
-      Temporal: native.Temporal,
-      toTemporalInstant: getNativeToTemporalInstant(native.Temporal),
-      Intl: native.Intl,
+      Temporal: global.Temporal as typeof Temporal,
+      toTemporalInstant: (Date.prototype as any).toTemporalInstant,
+      Intl: global.Intl as typeof Intl,
     };
     return temporal;
   }
@@ -52,25 +66,4 @@ export function maybeRequireTemporal(): RequireTemporal | undefined {
 
 export function requireTemporal(): RequireTemporal {
   return maybeRequireTemporal() ?? fail("Unable to find a Temporal implementation");
-}
-
-/** Returns true if `temporal` has the constructors Joist uses. */
-function isTemporal(temporal: typeof TemporalType | undefined): temporal is typeof TemporalType {
-  return (
-    !!temporal?.Instant &&
-    !!temporal.PlainDate &&
-    !!temporal.PlainDateTime &&
-    !!temporal.PlainTime &&
-    !!temporal.ZonedDateTime
-  );
-}
-
-/** Returns native `Date#toTemporalInstant`, or a native-Temporal equivalent. */
-function getNativeToTemporalInstant(nativeTemporal: typeof TemporalType): typeof toTemporalInstant {
-  return (
-    (Date.prototype as Date & { toTemporalInstant?: typeof toTemporalInstant }).toTemporalInstant ??
-    function toTemporalInstantFromDate(this: Date) {
-      return nativeTemporal.Instant.fromEpochMilliseconds(this.getTime());
-    }
-  );
 }

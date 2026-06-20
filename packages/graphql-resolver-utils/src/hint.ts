@@ -38,6 +38,8 @@ export function selectionSetToObject(
   const result: Record<string, any> = {};
   for (const selection of selectionSet.selections) {
     if (selection.kind === "Field") {
+      // If there are arguments, defer to the field resolver to apply them.
+      if (selection.arguments && selection.arguments.length > 0) continue;
       const fieldName = selection.name.value;
       const field = gqlType.getFields()[fieldName];
       // This might be __typename, which is a meta field

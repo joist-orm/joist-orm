@@ -20,9 +20,12 @@ original design and section numbers referenced below.
 
 ### 1.1 Forward/mutual cross-scope refs in *definitions* don't work
 
+**Implemented:** named accessors are lazy during static initialization, and `compile()`'s cycle guard
+is now load-bearing defensive code.
+
 **Contradicts design §8**, which claims "forward/mutual references work." They don't.
 
-`makeScope`'s Proxy getter eagerly reads `cstr[prop]` to decide plain-vs-parameterized:
+Previously, `makeScope`'s Proxy getter eagerly read `cstr[prop]` to decide plain-vs-parameterized:
 
 ```ts
 const sibling = cstr[prop];
@@ -31,27 +34,25 @@ if (typeof sibling === "function") return (...args) => next({ kind: "ref", name,
 return next({ kind: "ref", name: prop });
 ```
 
-Static fields initialize top-to-bottom, so a scope defined in terms of a sibling only resolves
-if that sibling is declared **above** it:
+Static fields initialize top-to-bottom, and direct initializer-time composition runs before entity
+metadata is registered. The proxy now records unknown named-scope refs before metadata exists and
+resolves them later at compile/terminal time:
 
 ```ts
-static senior: AuthorScope = scope({ age: { gte: 65 } });
-static recentSeniors: AuthorScope = scope(...).senior;   // OK: senior already assigned
-static x: AuthorScope = scope(...).y;                     // BROKEN if y is declared below
-                                                          // (y is undefined → chain collapses to undefined)
-```
+static popular: AuthorScope = scope((a) => a.isPopular.eq(true));
+static adult: AuthorScope = scope({ age: { gte: 18 } });
+static popularAdult: AuthorScope = Author.popular.adult;
+~~~~```
 
-Mutual refs (`a → b`, `b → a`) always break — one side is necessarily a forward ref.
+`packages/tests/integration/src/entities/Author.ts` has `popularAdult` declared after `adult` and
+`popular` as the positive example of this pattern.
 
-**Consequence:** the `compile()` cycle guard (`seen`) is correct but **can never fire** for real
-definitions, because cycles can't be constructed in the first place.
+Mutual refs (`a → b`, `b → a`) can now be constructed, so the `compile()` cycle guard is no longer
+dead code.
 
-**Options**
-- (a) *Document the constraint* ("a composed scope may only reference scopes declared above it"),
-  keep the cycle guard as defensive code. Cheapest; recommended for now.
-- (b) *Make the accessor lazy* — return a hybrid that is both callable (parameterized case) and
-  carries the scope builder/accessor surface (plain case), deferring the plain-vs-fn decision to
-  compile time. Unlocks true forward/mutual refs and makes the cycle guard load-bearing.
+**Remaining caveat:** direct `Author.someScope` refs still obey JS static field order. If a composed
+scope needs to reference a sibling declared below it, use the scope accessor form so the ref is
+recorded lazily, i.e. `scope({}).laterScope`.
 
 ### 1.2 Codegen only detects bare `scope(...)` / `scope.fn(...)`
 

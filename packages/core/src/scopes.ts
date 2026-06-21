@@ -1,5 +1,5 @@
 import { alias, type Alias } from "./Aliases";
-import { getMetadataForType } from "./configure";
+import { maybeGetMetadataForType } from "./configure";
 import type { Entity } from "./Entity";
 import type { ExpressionCondition, FilterAndSettings } from "./EntityFilter";
 import type { FindFilterOptions, MaybeAbstractEntityConstructor } from "./EntityManager";
@@ -52,7 +52,11 @@ export interface ScopeFactory<T extends Entity> {
 }
 
 type AnyScope<T extends Entity> = Scope<T, any>;
-type ScopeConstructorResolver<T extends Entity> = () => MaybeAbstractEntityConstructor<T>;
+interface EntityCstrResolver<T extends Entity> {
+  entityType: string;
+  /** Returns undefined while entity static fields run, before `configureMetadata` has populated the type map. */
+  maybeGet(): MaybeAbstractEntityConstructor<T> | undefined;
+}
 type FindOptionsWithPopulate<T extends Entity> = FindFilterOptions<T> & { populate?: LoadHint<T> };
 
 type ScopeOp<T extends Entity> =
@@ -63,24 +67,26 @@ type ScopeOp<T extends Entity> =
   | { kind: "offset"; offset: number }
   | { kind: "softDeletes"; value: "include" | "exclude" }
   | { kind: "ref"; name: string; args?: unknown[] };
+type ScopeRefOp<T extends Entity> = Extract<ScopeOp<T>, { kind: "ref" }>;
 
 const kOps = Symbol("scopeOps");
 
 /** Creates a per-entity, pre-typed scope factory. */
 export function newScopeFactory<T extends Entity>(entityType: string): ScopeFactory<T> {
-  function getCstr(): MaybeAbstractEntityConstructor<T> {
-    return getMetadataForType(entityType).cstr;
-  }
+  const resolver: EntityCstrResolver<T> = {
+    entityType,
+    maybeGet: () => maybeGetMetadataForType<T>(entityType)?.cstr,
+  };
 
   function createScope(arg: FilterOf<T> | ScopeCondition<T>): AnyScope<T> {
-    return makeScope(getCstr, [toOp(arg)]);
+    return makeScope(resolver, [toOp(arg)]);
   }
 
   createScope.fn = function scopeFn<A extends unknown[], R extends Scope<T> = AnyScope<T>>(
     fn: (...args: A) => ScopeCondition<T>,
   ): (...args: A) => R {
     return function createParameterizedScope(...args: A): R {
-      return makeScope(getCstr, [{ kind: "cond", fn: fn(...args) }]) as R;
+      return makeScope(resolver, [{ kind: "cond", fn: fn(...args) }]) as R;
     };
   };
 
@@ -88,9 +94,9 @@ export function newScopeFactory<T extends Entity>(entityType: string): ScopeFact
 }
 
 /** Creates an immutable scope proxy with `ops` as its current scope fragments. */
-function makeScope<T extends Entity>(getCstr: ScopeConstructorResolver<T>, ops: ScopeOp<T>[]): AnyScope<T> {
+function makeScope<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp<T>[]): AnyScope<T> {
   function next(op: ScopeOp<T>): AnyScope<T> {
-    return makeScope(getCstr, [...ops, op]);
+    return makeScope(resolver, [...ops, op]);
   }
 
   const self = {
@@ -111,36 +117,40 @@ function makeScope<T extends Entity>(getCstr: ScopeConstructorResolver<T>, ops: 
       return next({ kind: "softDeletes", value });
     },
     toFindArgs() {
-      return compile(getCstr, ops);
+      return compile(resolver, ops);
     },
     find(em: EntityManager, opts?: FindOptionsWithPopulate<T>) {
-      const args = compile(getCstr, ops);
-      return em.find(resolveCstr(getCstr), args.where, { ...toFindOptions(args), ...opts });
+      const args = compile(resolver, ops);
+      return em.find(resolveCstr(resolver), args.where, { ...toFindOptions(args), ...opts });
     },
     findOne(em: EntityManager, opts?: FindOptionsWithPopulate<T>) {
-      const args = compile(getCstr, ops);
-      return em.findOne(resolveCstr(getCstr), args.where, { ...toFindOptions(args), ...opts });
+      const args = compile(resolver, ops);
+      return em.findOne(resolveCstr(resolver), args.where, { ...toFindOptions(args), ...opts });
     },
     findOneOrFail(em: EntityManager, opts?: FindOptionsWithPopulate<T>) {
-      const args = compile(getCstr, ops);
-      return em.findOneOrFail(resolveCstr(getCstr), args.where, { ...toFindOptions(args), ...opts });
+      const args = compile(resolver, ops);
+      return em.findOneOrFail(resolveCstr(resolver), args.where, { ...toFindOptions(args), ...opts });
     },
     findCount(em: EntityManager) {
-      const args = compile(getCstr, ops);
-      return em.findCount(resolveCstr(getCstr), args.where, toCountOptions(args));
+      const args = compile(resolver, ops);
+      return em.findCount(resolveCstr(resolver), args.where, toCountOptions(args));
     },
     findIds(em: EntityManager) {
-      const args = compile(getCstr, ops);
-      return em.findIds(resolveCstr(getCstr), args.where, toCountOptions(args));
+      const args = compile(resolver, ops);
+      return em.findIds(resolveCstr(resolver), args.where, toCountOptions(args));
     },
   };
 
   return new Proxy(self, {
     get(target, prop, receiver) {
       if (typeof prop === "symbol" || prop in target) return Reflect.get(target, prop, receiver);
-      const sibling = (resolveCstr(getCstr) as MaybeAbstractEntityConstructor<T> & Record<string, unknown>)[prop];
-      if (sibling === undefined) return undefined;
-      if (typeof sibling === "function") {
+      const cstr = resolver.maybeGet();
+      // During entity static initialization, metadata is not registered yet, so defer creating the scope ref.
+      if (cstr === undefined) return makePendingScopeRef(resolver, ops, prop);
+      // A sibling is another static scope on this entity, I.e. `Author.popular` when resolving `.popular`.
+      const sibling = (cstr as MaybeAbstractEntityConstructor<T> & Record<string, unknown>)[prop];
+      if (sibling === undefined) throw new Error(`Invalid scope ${resolver.entityType}.${prop}`);
+      if (typeof sibling === "function" && !hasScopeOps(sibling)) {
         return function createParameterizedRef(...args: unknown[]): AnyScope<T> {
           return next({ kind: "ref", name: prop, args });
         };
@@ -151,8 +161,8 @@ function makeScope<T extends Entity>(getCstr: ScopeConstructorResolver<T>, ops: 
 }
 
 /** Compiles the ordered scope ops into Joist's existing find args shape. */
-function compile<T extends Entity>(getCstr: ScopeConstructorResolver<T>, ops: ScopeOp<T>[]): FilterAndSettings<T> {
-  const a = alias(resolveCstr(getCstr));
+function compile<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp<T>[]): FilterAndSettings<T> {
+  const a = alias(resolveCstr(resolver));
   const conditions: ExpressionCondition[] = [];
   const wheres: FilterOf<T>[] = [];
   const orderBys: OrderOf<T>[] = [];
@@ -188,9 +198,7 @@ function compile<T extends Entity>(getCstr: ScopeConstructorResolver<T>, ops: Sc
           const key = op.name + (op.args ? JSON.stringify(op.args) : "");
           if (seen.has(key)) break;
           seen.add(key);
-          const cstr = resolveCstr(getCstr) as MaybeAbstractEntityConstructor<T> & Record<string, unknown>;
-          const sibling = op.args ? (cstr[op.name] as (...args: unknown[]) => ScopeInternals<T>)(...op.args) : cstr[op.name];
-          expand((sibling as ScopeInternals<T>)[kOps], seen);
+          expand(scopeOpsForRef(resolver, op), seen);
           break;
         }
       }
@@ -213,9 +221,67 @@ interface ScopeInternals<T extends Entity> {
   [kOps]: ScopeOp<T>[];
 }
 
+/**
+ * Creates a callable placeholder for refs captured before metadata maps are populated.
+ *
+ * This is not a one-time conversion: the proxy keeps the recorded ref ops, and every post-boot
+ * `compile` resolves those refs through the now-populated entity constructor map.
+ */
+function makePendingScopeRef<T extends Entity>(
+  resolver: EntityCstrResolver<T>,
+  ops: ScopeOp<T>[],
+  name: string,
+): AnyScope<T> {
+  const plainOps: ScopeOp<T>[] = [...ops, { kind: "ref", name }];
+  const plainScope = makeScope(resolver, plainOps);
+  function createParameterizedRef(...args: unknown[]): AnyScope<T> {
+    return makeScope(resolver, [...ops, { kind: "ref", name, args }]);
+  }
+  Object.defineProperty(createParameterizedRef, kOps, { value: plainOps });
+  return new Proxy(createParameterizedRef, {
+    get(_target, prop, receiver) {
+      if (prop === kOps) return plainOps;
+      return Reflect.get(plainScope as object, prop, receiver);
+    },
+    apply(_target, _thisArg, args: unknown[]) {
+      return makeScope(resolver, [...ops, { kind: "ref", name, args }]);
+    },
+  }) as AnyScope<T>;
+}
+
+/** Resolves a recorded named-scope ref to its underlying ops. */
+function scopeOpsForRef<T extends Entity>(resolver: EntityCstrResolver<T>, op: ScopeRefOp<T>): ScopeOp<T>[] {
+  const cstr = resolveCstr(resolver) as MaybeAbstractEntityConstructor<T> & Record<string, unknown>;
+  const sibling = cstr[op.name];
+  if (op.args) {
+    if (typeof sibling !== "function") throw new Error(`Scope ${resolver.entityType}.${op.name} is not parameterized`);
+    return scopeOpsFromValue(resolver, op.name, (sibling as (...args: unknown[]) => unknown)(...op.args));
+  }
+  return scopeOpsFromValue(resolver, op.name, sibling);
+}
+
+/** Extracts scope internals from a resolved static field. */
+function scopeOpsFromValue<T extends Entity>(
+  resolver: EntityCstrResolver<T>,
+  name: string,
+  value: unknown,
+): ScopeOp<T>[] {
+  if (hasScopeOps<T>(value)) return value[kOps];
+  if (value === undefined) throw new Error(`Invalid scope ${resolver.entityType}.${name}`);
+  if (typeof value === "function") throw new Error(`Scope ${resolver.entityType}.${name} requires arguments`);
+  throw new Error(`${resolver.entityType}.${name} is not a scope`);
+}
+
+/** Returns true if `value` is one of our scope proxies. */
+function hasScopeOps<T extends Entity>(value: unknown): value is ScopeInternals<T> {
+  return (typeof value === "object" || typeof value === "function") && value !== null && kOps in value;
+}
+
 /** Resolves the lazy entity constructor. */
-function resolveCstr<T extends Entity>(getCstr: ScopeConstructorResolver<T>): MaybeAbstractEntityConstructor<T> {
-  return getCstr();
+function resolveCstr<T extends Entity>(resolver: EntityCstrResolver<T>): MaybeAbstractEntityConstructor<T> {
+  const cstr = resolver.maybeGet();
+  if (cstr === undefined) throw new Error(`Unknown type ${resolver.entityType}`);
+  return cstr;
 }
 
 /** Converts a scope declaration argument into a recorded op. */

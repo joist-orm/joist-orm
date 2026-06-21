@@ -145,6 +145,11 @@ export function getMetadataForType(typeName: string): EntityMetadata {
   return typeToMetaMap.get(typeName) ?? fail(`Unknown type ${typeName}`);
 }
 
+/** Returns metadata for `typeName`, if `configureMetadata` has populated the type map. */
+export function maybeGetMetadataForType<T extends Entity = Entity>(typeName: string): EntityMetadata<T> | undefined {
+  return typeToMetaMap.get(typeName) as EntityMetadata<T> | undefined;
+}
+
 export function maybeGetConstructorFromReference(
   value: string | Entity | Reference<any, any, any> | undefined,
 ): MaybeAbstractEntityConstructor<any> | undefined {

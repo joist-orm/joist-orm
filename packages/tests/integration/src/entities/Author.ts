@@ -44,6 +44,7 @@ export class Author extends AuthorCodegen {
   static adult: AuthorScope = scope({ age: { gte: 18 } });
   static active: AuthorScope = scope({ deletedAt: null });
   static popular: AuthorScope = scope((a) => a.isPopular.eq(true));
+  static popularAdult: AuthorScope = Author.popular.adult;
   static senior: AuthorScope = scope({ age: { gte: 65 } });
   static named: (prefix: string) => AuthorScope = scope.fn((prefix) => (a) => a.firstName.like(`${prefix}%`));
 

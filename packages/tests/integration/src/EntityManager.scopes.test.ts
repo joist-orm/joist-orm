@@ -13,6 +13,7 @@ export function _scopeTypeChecks(em: EntityManager): void {
   // --- positive: typed named-scope chaining (the key use case) ---
   void Author.adult.popular; // plain + plain
   void Author.adult.popular.senior; // 3 deep
+  void Author.popularAdult; // inline-composed from earlier static scopes
   void Author.named("a").adult.popular; // parameterized, then chained
   void Author.adult.popular.where((a) => a.age.lte(65)).find(em); // chain + ad-hoc where + terminal
 
@@ -84,6 +85,15 @@ describe("EntityManager.scopes", () => {
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
     });
 
+    it("supports inline-composed static scopes that reference earlier declarations", async () => {
+      await insertAuthor({ first_name: "a1", age: 70, is_popular: true });
+      await insertAuthor({ first_name: "a2", age: 70, is_popular: false });
+      await insertAuthor({ first_name: "a3", age: 10, is_popular: true });
+      const em = newEntityManager();
+      const authors = await Author.popularAdult.find(em);
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
     it("ANDs a parameterized scope with a named scope", async () => {
       await insertAuthor({ first_name: "alice", age: 70, is_popular: true });
       await insertAuthor({ first_name: "amy", age: 10, is_popular: true });
@@ -116,6 +126,10 @@ describe("EntityManager.scopes", () => {
       // `.adult.adult` should match exactly what `.adult` matches (ANDing age>=18 with itself is a no-op).
       const authors = await Author.adult.adult.find(em);
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
+    it("throws on unknown runtime scope names", () => {
+      expect(() => (Author.adult as unknown as Record<string, unknown>).bogus).toThrow("Invalid scope Author.bogus");
     });
 
     it("lets same-field object-where scopes last-win (documented limitation)", async () => {

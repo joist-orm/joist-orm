@@ -27,6 +27,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -102,6 +103,11 @@ export interface ParentItemOrder {
 
 export interface ParentItemFactoryExtras {
 }
+
+export interface ParentItemScopes {
+}
+
+export type ParentItemScope = Scope<ParentItem, ParentItemScopes>;
 
 export const parentItemConfig = new ConfigApi<ParentItem, Context>();
 

@@ -25,6 +25,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -95,6 +96,11 @@ export interface ArtistOrder {
 
 export interface ArtistFactoryExtras {
 }
+
+export interface ArtistScopes {
+}
+
+export type ArtistScope = Scope<Artist, ArtistScopes>;
 
 export const artistConfig = new ConfigApi<Artist, Context>();
 

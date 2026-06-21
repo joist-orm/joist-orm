@@ -37,6 +37,7 @@ import {
   type PolymorphicReference,
   type ReadOnlyCollection,
   type RelationsOf,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -206,6 +207,11 @@ export interface UserOrder {
 
 export interface UserFactoryExtras {
 }
+
+export interface UserScopes {
+}
+
+export type UserScope = Scope<User, UserScopes>;
 
 export const userConfig = new ConfigApi<User, Context>();
 

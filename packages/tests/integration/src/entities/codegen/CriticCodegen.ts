@@ -29,6 +29,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -134,6 +135,11 @@ export interface CriticOrder {
 
 export interface CriticFactoryExtras {
 }
+
+export interface CriticScopes {
+}
+
+export type CriticScope = Scope<Critic, CriticScopes>;
 
 export const criticConfig = new ConfigApi<Critic, Context>();
 

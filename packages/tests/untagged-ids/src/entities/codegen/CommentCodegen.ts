@@ -27,6 +27,7 @@ import {
   type OrderBy,
   type PartialOrNull,
   type PolymorphicReference,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -97,6 +98,11 @@ export interface CommentOrder {
 
 export interface CommentFactoryExtras {
 }
+
+export interface CommentScopes {
+}
+
+export type CommentScope = Scope<Comment, CommentScopes>;
 
 export const commentConfig = new ConfigApi<Comment, Context>();
 

@@ -25,6 +25,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -82,6 +83,11 @@ export interface T5AuthorOrder {
 
 export interface T5AuthorFactoryExtras {
 }
+
+export interface T5AuthorScopes {
+}
+
+export type T5AuthorScope = Scope<T5Author, T5AuthorScopes>;
 
 export const t5AuthorConfig = new ConfigApi<T5Author, Context>();
 

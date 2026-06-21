@@ -35,6 +35,7 @@ import {
   type ReactiveField,
   type ReadOnlyCollection,
   type RelationsOf,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -167,6 +168,11 @@ export interface TaskOrder {
 export interface TaskFactoryExtras {
   withAsyncDerived?: string | null;
 }
+
+export interface TaskScopes {
+}
+
+export type TaskScope = Scope<Task, TaskScopes>;
 
 export const taskConfig = new ConfigApi<Task, Context>();
 

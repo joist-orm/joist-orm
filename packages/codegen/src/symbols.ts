@@ -5,6 +5,7 @@ export const EntityManager = imp("EntityManager@./entities.ts");
 
 export const ConfigApi = imp("ConfigApi@joist-orm");
 export const newScopeFactory = imp("newScopeFactory@joist-orm");
+export const Scope = imp("t:Scope@joist-orm");
 export const FieldStatus = imp("t:FieldStatus@joist-orm");
 export const Entity = imp("t:Entity@joist-orm");
 export const BaseEntity = imp("BaseEntity@joist-orm");

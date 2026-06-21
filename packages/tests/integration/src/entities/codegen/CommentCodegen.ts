@@ -34,6 +34,7 @@ import {
   type PartialOrNull,
   type PolymorphicReference,
   type ReactiveField,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -156,6 +157,11 @@ export interface CommentFactoryExtras {
   withParentTaggedId?: string | null;
   withParentTags?: string;
 }
+
+export interface CommentScopes {
+}
+
+export type CommentScope = Scope<Comment, CommentScopes>;
 
 export const commentConfig = new ConfigApi<Comment, Context>();
 

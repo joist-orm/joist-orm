@@ -30,6 +30,7 @@ import {
   type PartialOrNull,
   type ReactiveField,
   type RelationsOf,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -126,6 +127,11 @@ export interface PublisherGroupFactoryExtras {
   withNumberOfBookReviews?: number;
   withNumberOfBookReviewsFormatted?: string;
 }
+
+export interface PublisherGroupScopes {
+}
+
+export type PublisherGroupScope = Scope<PublisherGroup, PublisherGroupScopes>;
 
 export const publisherGroupConfig = new ConfigApi<PublisherGroup, Context>();
 

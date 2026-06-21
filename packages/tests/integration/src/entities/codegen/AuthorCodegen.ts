@@ -40,6 +40,7 @@ import {
   type ReactiveManyToManyOtherSide,
   type ReactiveReference,
   type ReadOnlyCollection,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -401,6 +402,16 @@ export interface AuthorFactoryExtras {
   withImageFileName?: string | null;
   withRangeOfBooks?: BookRange | null;
 }
+
+export interface AuthorScopes {
+  adult: AuthorScope;
+  active: AuthorScope;
+  popular: AuthorScope;
+  senior: AuthorScope;
+  named: (prefix: string) => AuthorScope;
+}
+
+export type AuthorScope = Scope<Author, AuthorScopes>;
 
 export const authorConfig = new ConfigApi<Author, Context>();
 

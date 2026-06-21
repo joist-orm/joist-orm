@@ -25,6 +25,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -85,6 +86,11 @@ export interface BookReviewOrder {
 
 export interface BookReviewFactoryExtras {
 }
+
+export interface BookReviewScopes {
+}
+
+export type BookReviewScope = Scope<BookReview, BookReviewScopes>;
 
 export const bookReviewConfig = new ConfigApi<BookReview, Context>();
 

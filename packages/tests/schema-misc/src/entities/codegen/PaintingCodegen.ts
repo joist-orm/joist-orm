@@ -25,6 +25,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -93,6 +94,11 @@ export interface PaintingOrder {
 
 export interface PaintingFactoryExtras {
 }
+
+export interface PaintingScopes {
+}
+
+export type PaintingScope = Scope<Painting, PaintingScopes>;
 
 export const paintingConfig = new ConfigApi<Painting, Context>();
 

@@ -29,6 +29,7 @@ import {
   type OrderBy,
   type PartialOrNull,
   type ReadOnlyCollection,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -123,6 +124,11 @@ export interface TaskNewOrder extends TaskOrder {
 
 export interface TaskNewFactoryExtras {
 }
+
+export interface TaskNewScopes {
+}
+
+export type TaskNewScope = Scope<TaskNew, TaskNewScopes>;
 
 export const taskNewConfig = new ConfigApi<TaskNew, Context>();
 

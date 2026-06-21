@@ -27,6 +27,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -112,6 +113,11 @@ export interface ChildGroupOrder {
 
 export interface ChildGroupFactoryExtras {
 }
+
+export interface ChildGroupScopes {
+}
+
+export type ChildGroupScope = Scope<ChildGroup, ChildGroupScopes>;
 
 export const childGroupConfig = new ConfigApi<ChildGroup, Context>();
 

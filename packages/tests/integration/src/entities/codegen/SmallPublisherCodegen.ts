@@ -28,6 +28,7 @@ import {
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -134,6 +135,11 @@ export interface SmallPublisherOrder extends PublisherOrder {
 export interface SmallPublisherFactoryExtras {
   withAllAuthorNames?: string | null;
 }
+
+export interface SmallPublisherScopes {
+}
+
+export type SmallPublisherScope = Scope<SmallPublisher, SmallPublisherScopes>;
 
 export const smallPublisherConfig = new ConfigApi<SmallPublisher, Context>();
 

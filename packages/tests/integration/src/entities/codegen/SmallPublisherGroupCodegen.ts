@@ -23,6 +23,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -83,6 +84,11 @@ export interface SmallPublisherGroupOrder extends PublisherGroupOrder {
 
 export interface SmallPublisherGroupFactoryExtras {
 }
+
+export interface SmallPublisherGroupScopes {
+}
+
+export type SmallPublisherGroupScope = Scope<SmallPublisherGroup, SmallPublisherGroupScopes>;
 
 export const smallPublisherGroupConfig = new ConfigApi<SmallPublisherGroup, Context>();
 

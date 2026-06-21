@@ -32,6 +32,7 @@ import {
   type ReactiveField,
   type ReactiveReference,
   type RelationsOf,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -247,6 +248,11 @@ export interface PublisherFactoryExtras {
   withNumberOfBookAdvancesSnapshot?: string | null;
   withFavoriteAuthorName?: string | null;
 }
+
+export interface PublisherScopes {
+}
+
+export type PublisherScope = Scope<Publisher, PublisherScopes>;
 
 export const publisherConfig = new ConfigApi<Publisher, Context>();
 

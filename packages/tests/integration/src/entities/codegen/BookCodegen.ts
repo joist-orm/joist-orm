@@ -34,6 +34,7 @@ import {
   type PartialOrNull,
   type ReactiveField,
   type ReadOnlyCollection,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -200,6 +201,11 @@ export interface BookOrder {
 export interface BookFactoryExtras {
   withSearch?: string | null;
 }
+
+export interface BookScopes {
+}
+
+export type BookScope = Scope<Book, BookScopes>;
 
 export const bookConfig = new ConfigApi<Book, Context>();
 

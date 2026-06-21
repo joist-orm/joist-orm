@@ -34,6 +34,7 @@ import {
   type PartialOrNull,
   type ReactiveField,
   type ReactiveManyToManyOtherSide,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -145,6 +146,11 @@ export interface BookReviewFactoryExtras {
   withIsTest?: boolean;
   withIsTestChain?: boolean;
 }
+
+export interface BookReviewScopes {
+}
+
+export type BookReviewScope = Scope<BookReview, BookReviewScopes>;
 
 export const bookReviewConfig = new ConfigApi<BookReview, Context>();
 

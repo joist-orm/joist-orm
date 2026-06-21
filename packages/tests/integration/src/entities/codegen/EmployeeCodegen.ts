@@ -33,6 +33,7 @@ import {
   type ReactiveManyToMany,
   type ReactiveManyToManyOtherSide,
   type ReadOnlyCollection,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -103,6 +104,11 @@ export interface EmployeeOrder {
 
 export interface EmployeeFactoryExtras {
 }
+
+export interface EmployeeScopes {
+}
+
+export type EmployeeScope = Scope<Employee, EmployeeScopes>;
 
 export const employeeConfig = new ConfigApi<Employee, Context>();
 

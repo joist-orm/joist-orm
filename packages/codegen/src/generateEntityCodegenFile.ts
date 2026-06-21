@@ -12,7 +12,8 @@ import {
   PrimitiveField,
   PrimitiveTypescriptType,
 } from "./EntityDbMetadata";
-import { Config } from "./config";
+import { type Config } from "./config";
+import { findEntityScopes } from "./findEntityScopes";
 import { getStiEntities } from "./inheritance";
 import { keywords } from "./keywords";
 import {
@@ -51,6 +52,7 @@ import {
   ReactiveReference,
   ReadOnlyCollection,
   RelationsOf,
+  Scope,
   SSAssert,
   TaggedId,
   ToJsonHint,
@@ -116,7 +118,10 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const relations = createRelations(config, meta, entity);
 
   const configName = `${camelCase(entityName)}Config`;
-  const scopeName = `${camelCase(entityName)}Scope`;
+  const scopeFactoryName = `${camelCase(entityName)}Scope`;
+  const scopeTypeName = `${entityName}Scope`;
+  const scopesTypeName = `${entityName}Scopes`;
+  const scopeMembers = findEntityScopes(config, entityName, scopeTypeName);
   const metadata = imp(`${camelCase(entityName)}Meta@./entities.ts`);
 
   const contextType = config.contextType ? imp(`t:${config.contextType}`) : "{}";
@@ -222,9 +227,15 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       ${generateFactoryExtrasType(meta)}
     }
 
+    export interface ${scopesTypeName} {
+      ${scopeMembers.map((member) => code`${member.name}: ${member.type};`)}
+    }
+
+    export type ${scopeTypeName} = ${Scope}<${entity.type}, ${scopesTypeName}>;
+
     export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
 
-    export const ${scopeName} = ${newScopeFactory}<${entity.type}>("${entityName}");
+    export const ${scopeFactoryName} = ${newScopeFactory}<${entity.type}>("${entityName}");
 
     ${generateDefaultValidationRules(dbMeta, meta, configName)}
     ${generateDefaultValues(config, meta, configName)};

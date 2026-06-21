@@ -25,6 +25,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -90,6 +91,11 @@ export interface ChildOrder {
 
 export interface ChildFactoryExtras {
 }
+
+export interface ChildScopes {
+}
+
+export type ChildScope = Scope<Child, ChildScopes>;
 
 export const childConfig = new ConfigApi<Child, Context>();
 

@@ -25,6 +25,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -139,6 +140,11 @@ export interface ImageOrder {
 
 export interface ImageFactoryExtras {
 }
+
+export interface ImageScopes {
+}
+
+export type ImageScope = Scope<Image, ImageScopes>;
 
 export const imageConfig = new ConfigApi<Image, Context>();
 

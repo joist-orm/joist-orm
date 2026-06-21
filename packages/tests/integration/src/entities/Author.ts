@@ -20,11 +20,11 @@ import {
   hasReactiveProperty,
   hasReactiveReference,
   isDefined,
-  type Scope,
   withLoaded,
 } from "joist-orm";
 import {
   AuthorCodegen,
+  type AuthorScope,
   Book,
   BookRange,
   BookReview,
@@ -34,22 +34,6 @@ import {
   authorScope as scope,
 } from "./entities";
 
-// --- WIP scopes prototype (see joist-core/src/scopes.ts) ---
-// Typed chaining (`Author.adult.popular`) requires the sibling names to live in a standalone
-// type. The `typeof Author` form can't work (TS2615/TS2502), so this interface is mandatory —
-// it's exactly what codegen would generate. Call sites stay clean: `scope(…)`, no generics.
-/** The named scopes available on `Author`. */
-export interface AuthorScopes {
-  adult: AuthorScope;
-  active: AuthorScope;
-  popular: AuthorScope;
-  senior: AuthorScope;
-  named(prefix: string): AuthorScope;
-}
-
-/** `Author`'s scope type: the fluent builder surface plus its named (chainable) scopes. */
-export type AuthorScope = Scope<Author, AuthorScopes>;
-
 /**
  * The Author entity represents a writer who can publish books.
  *
@@ -57,9 +41,6 @@ export type AuthorScope = Scope<Author, AuthorScopes>;
  * @generated Author.md
  */
 export class Author extends AuthorCodegen {
-  // --- WIP scopes prototype (see joist-core/src/scopes.ts) ---
-  // `AuthorScope` (= `Scope<Author, AuthorScopes>`) enables typed chaining: `Author.adult.popular`.
-  // Call sites need no generics; the annotation supplies the type.
   static adult: AuthorScope = scope({ age: { gte: 18 } });
   static active: AuthorScope = scope({ deletedAt: null });
   static popular: AuthorScope = scope((a) => a.isPopular.eq(true));

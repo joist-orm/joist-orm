@@ -20,6 +20,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -75,6 +76,11 @@ export interface AdminUserOrder extends UserOrder {
 
 export interface AdminUserFactoryExtras {
 }
+
+export interface AdminUserScopes {
+}
+
+export type AdminUserScope = Scope<AdminUser, AdminUserScopes>;
 
 export const adminUserConfig = new ConfigApi<AdminUser, Context>();
 

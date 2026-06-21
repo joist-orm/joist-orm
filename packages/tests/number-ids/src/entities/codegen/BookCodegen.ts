@@ -24,6 +24,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -94,6 +95,8 @@ export interface BookFactoryExtras {
 }
 
 export const bookConfig = new ConfigApi<Book, Context>();
+
+export const bookScope = scope<Book>("Book");
 
 bookConfig.addRule(newRequiredRule("title"));
 bookConfig.addRule(newRequiredRule("createdAt"));

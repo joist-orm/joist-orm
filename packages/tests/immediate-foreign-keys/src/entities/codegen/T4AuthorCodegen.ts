@@ -26,6 +26,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -93,6 +94,8 @@ export interface T4AuthorFactoryExtras {
 }
 
 export const t4AuthorConfig = new ConfigApi<T4Author, Context>();
+
+export const t4AuthorScope = scope<T4Author>("T4Author");
 
 t4AuthorConfig.addRule(newRequiredRule("firstName"));
 t4AuthorConfig.addRule(newRequiredRule("favoriteBook"));

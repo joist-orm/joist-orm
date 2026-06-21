@@ -77,6 +77,7 @@ import {
   mustBeSubType,
   newChangesProxy,
   newRequiredRule,
+  scope,
   setField,
   setOpts,
   toIdOf,
@@ -115,6 +116,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const relations = createRelations(config, meta, entity);
 
   const configName = `${camelCase(entityName)}Config`;
+  const scopeName = `${camelCase(entityName)}Scope`;
   const metadata = imp(`${camelCase(entityName)}Meta@./entities.ts`);
 
   const contextType = config.contextType ? imp(`t:${config.contextType}`) : "{}";
@@ -221,6 +223,8 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     }
 
     export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
+
+    export const ${scopeName} = ${scope}<${entity.type}>("${entityName}");
 
     ${generateDefaultValidationRules(dbMeta, meta, configName)}
     ${generateDefaultValues(config, meta, configName)};

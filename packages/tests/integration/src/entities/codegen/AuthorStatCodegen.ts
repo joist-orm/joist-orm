@@ -18,6 +18,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -127,6 +128,8 @@ export interface AuthorStatFactoryExtras {
 }
 
 export const authorStatConfig = new ConfigApi<AuthorStat, Context>();
+
+export const authorStatScope = scope<AuthorStat>("AuthorStat");
 
 authorStatConfig.addRule(newRequiredRule("smallint"));
 authorStatConfig.addRule(newRequiredRule("integer"));

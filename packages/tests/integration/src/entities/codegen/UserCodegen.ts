@@ -36,6 +36,7 @@ import {
   type PolymorphicReference,
   type ReadOnlyCollection,
   type RelationsOf,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -207,6 +208,8 @@ export interface UserFactoryExtras {
 }
 
 export const userConfig = new ConfigApi<User, Context>();
+
+export const userScope = scope<User>("User");
 
 userConfig.addRule(newRequiredRule("name"));
 userConfig.addRule(newRequiredRule("email"));

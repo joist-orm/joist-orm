@@ -31,6 +31,7 @@ import {
   type ReactiveField,
   type ReactiveReference,
   type RelationsOf,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -248,6 +249,8 @@ export interface PublisherFactoryExtras {
 }
 
 export const publisherConfig = new ConfigApi<Publisher, Context>();
+
+export const publisherScope = scope<Publisher>("Publisher");
 
 publisherConfig.addRule(newRequiredRule("name"));
 publisherConfig.addRule("numberOfBookReviews", newRequiredRule("numberOfBookReviews"));

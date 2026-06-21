@@ -22,6 +22,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -84,6 +85,8 @@ export interface SmallPublisherGroupFactoryExtras {
 }
 
 export const smallPublisherGroupConfig = new ConfigApi<SmallPublisherGroup, Context>();
+
+export const smallPublisherGroupScope = scope<SmallPublisherGroup>("SmallPublisherGroup");
 
 declare module "joist-core" {
   interface TypeMap {

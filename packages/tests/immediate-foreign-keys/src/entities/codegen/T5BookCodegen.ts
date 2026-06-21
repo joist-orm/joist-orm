@@ -26,6 +26,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -95,6 +96,8 @@ export interface T5BookFactoryExtras {
 }
 
 export const t5BookConfig = new ConfigApi<T5Book, Context>();
+
+export const t5BookScope = scope<T5Book>("T5Book");
 
 t5BookConfig.addRule(newRequiredRule("title"));
 t5BookConfig.addRule(newRequiredRule("author"));

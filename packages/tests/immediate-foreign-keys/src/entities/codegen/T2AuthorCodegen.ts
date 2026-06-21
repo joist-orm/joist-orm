@@ -26,6 +26,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -93,6 +94,8 @@ export interface T2AuthorFactoryExtras {
 }
 
 export const t2AuthorConfig = new ConfigApi<T2Author, Context>();
+
+export const t2AuthorScope = scope<T2Author>("T2Author");
 
 t2AuthorConfig.addRule(newRequiredRule("firstName"));
 

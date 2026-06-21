@@ -24,6 +24,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -125,6 +126,8 @@ export interface BookAdvanceFactoryExtras {
 }
 
 export const bookAdvanceConfig = new ConfigApi<BookAdvance, Context>();
+
+export const bookAdvanceScope = scope<BookAdvance>("BookAdvance");
 
 bookAdvanceConfig.addRule(newRequiredRule("createdAt"));
 bookAdvanceConfig.addRule(newRequiredRule("updatedAt"));

@@ -24,9 +24,11 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
+  Temporal,
   toIdOf,
   toJSON,
   type ToJsonHint,
@@ -35,7 +37,6 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { Temporal } from "temporal-polyfill";
 import {
   type Author,
   type AuthorId,
@@ -116,6 +117,8 @@ export interface BookFactoryExtras {
 }
 
 export const bookConfig = new ConfigApi<Book, Context>();
+
+export const bookScope = scope<Book>("Book");
 
 bookConfig.addRule(newRequiredRule("title"));
 bookConfig.addRule(newRequiredRule("publishedAt"));

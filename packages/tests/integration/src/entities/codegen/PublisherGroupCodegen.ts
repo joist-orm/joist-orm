@@ -29,6 +29,7 @@ import {
   type PartialOrNull,
   type ReactiveField,
   type RelationsOf,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -127,6 +128,8 @@ export interface PublisherGroupFactoryExtras {
 }
 
 export const publisherGroupConfig = new ConfigApi<PublisherGroup, Context>();
+
+export const publisherGroupScope = scope<PublisherGroup>("PublisherGroup");
 
 publisherGroupConfig.addRule("numberOfBookReviews", newRequiredRule("numberOfBookReviews"));
 publisherGroupConfig.addRule("numberOfBookReviewsFormatted", newRequiredRule("numberOfBookReviewsFormatted"));

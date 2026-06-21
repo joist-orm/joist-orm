@@ -24,6 +24,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -86,6 +87,8 @@ export interface BookReviewFactoryExtras {
 }
 
 export const bookReviewConfig = new ConfigApi<BookReview, Context>();
+
+export const bookReviewScope = scope<BookReview>("BookReview");
 
 bookReviewConfig.addRule(newRequiredRule("rating"));
 bookReviewConfig.addRule(newRequiredRule("book"));

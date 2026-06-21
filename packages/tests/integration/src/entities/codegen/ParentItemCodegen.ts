@@ -26,6 +26,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -103,6 +104,8 @@ export interface ParentItemFactoryExtras {
 }
 
 export const parentItemConfig = new ConfigApi<ParentItem, Context>();
+
+export const parentItemScope = scope<ParentItem>("ParentItem");
 
 parentItemConfig.addRule(newRequiredRule("createdAt"));
 parentItemConfig.addRule(newRequiredRule("updatedAt"));

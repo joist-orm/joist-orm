@@ -19,6 +19,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -76,6 +77,8 @@ export interface AdminUserFactoryExtras {
 }
 
 export const adminUserConfig = new ConfigApi<AdminUser, Context>();
+
+export const adminUserScope = scope<AdminUser>("AdminUser");
 
 adminUserConfig.addRule(newRequiredRule("role"));
 

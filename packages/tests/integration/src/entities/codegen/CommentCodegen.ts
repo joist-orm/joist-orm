@@ -33,6 +33,7 @@ import {
   type PartialOrNull,
   type PolymorphicReference,
   type ReactiveField,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -157,6 +158,8 @@ export interface CommentFactoryExtras {
 }
 
 export const commentConfig = new ConfigApi<Comment, Context>();
+
+export const commentScope = scope<Comment>("Comment");
 
 commentConfig.addRule("parentTags", newRequiredRule("parentTags"));
 commentConfig.addRule(newRequiredRule("createdAt"));

@@ -26,6 +26,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -93,6 +94,8 @@ export interface T3BookFactoryExtras {
 }
 
 export const t3BookConfig = new ConfigApi<T3Book, Context>();
+
+export const t3BookScope = scope<T3Book>("T3Book");
 
 t3BookConfig.addRule(newRequiredRule("title"));
 t3BookConfig.addRule(newRequiredRule("author"));

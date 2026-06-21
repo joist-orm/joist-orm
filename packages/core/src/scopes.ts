@@ -41,7 +41,6 @@ export interface ScopeFactory<T extends Entity> {
 
 type AnyScope<T extends Entity> = Scope<T, any>;
 type ScopeConstructorResolver<T extends Entity> = () => MaybeAbstractEntityConstructor<T>;
-type ScopeConstructorInput<T extends Entity> = string | MaybeAbstractEntityConstructor<T> | ScopeConstructorResolver<T>;
 type FindOptionsWithPopulate<T extends Entity> = FindFilterOptions<T> & { populate?: LoadHint<T> };
 
 type ScopeOp<T extends Entity> =
@@ -56,8 +55,10 @@ type ScopeOp<T extends Entity> =
 const kOps = Symbol("scopeOps");
 
 /** Creates a per-entity, pre-typed scope factory. */
-export function scope<T extends Entity>(cstr: ScopeConstructorInput<T>): ScopeFactory<T> {
-  const getCstr = toResolver(cstr);
+export function scope<T extends Entity>(entityType: string): ScopeFactory<T> {
+  function getCstr(): MaybeAbstractEntityConstructor<T> {
+    return getMetadataForType(entityType).cstr;
+  }
 
   function createScope(arg: FilterOf<NoInfer<T>> | ScopeCondition<NoInfer<T>>): AnyScope<T> {
     return makeScope(getCstr, [toOp(arg)]);
@@ -190,22 +191,6 @@ function compile<T extends Entity>(getCstr: ScopeConstructorResolver<T>, ops: Sc
 
 interface ScopeInternals<T extends Entity> {
   [kOps]: ScopeOp<T>[];
-}
-
-/** Normalizes a scope constructor or lazy constructor into a thunk. */
-function toResolver<T extends Entity>(cstr: ScopeConstructorInput<T>): ScopeConstructorResolver<T> {
-  if (typeof cstr === "string") {
-    return function resolveConstructorFromType(): MaybeAbstractEntityConstructor<T> {
-      return getMetadataForType(cstr).cstr;
-    };
-  }
-  const maybeConstructor = cstr as MaybeAbstractEntityConstructor<T> & { prototype?: unknown };
-  if (maybeConstructor.prototype !== undefined) {
-    return function resolveConstructor(): MaybeAbstractEntityConstructor<T> {
-      return maybeConstructor;
-    };
-  }
-  return cstr as ScopeConstructorResolver<T>;
 }
 
 /** Resolves the lazy entity constructor. */

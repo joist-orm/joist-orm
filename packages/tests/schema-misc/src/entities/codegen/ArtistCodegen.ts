@@ -24,6 +24,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -96,6 +97,8 @@ export interface ArtistFactoryExtras {
 }
 
 export const artistConfig = new ConfigApi<Artist, Context>();
+
+export const artistScope = scope<Artist>("Artist");
 
 artistConfig.addRule(newRequiredRule("firstName"));
 artistConfig.addRule(newRequiredRule("lastName"));

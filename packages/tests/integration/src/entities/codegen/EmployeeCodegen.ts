@@ -32,6 +32,7 @@ import {
   type ReactiveManyToMany,
   type ReactiveManyToManyOtherSide,
   type ReadOnlyCollection,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -104,6 +105,8 @@ export interface EmployeeFactoryExtras {
 }
 
 export const employeeConfig = new ConfigApi<Employee, Context>();
+
+export const employeeScope = scope<Employee>("Employee");
 
 employeeConfig.addRule(newRequiredRule("name"));
 employeeConfig.addRule(newRequiredRule("createdAt"));

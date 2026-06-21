@@ -27,6 +27,7 @@ import {
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -135,6 +136,8 @@ export interface SmallPublisherFactoryExtras {
 }
 
 export const smallPublisherConfig = new ConfigApi<SmallPublisher, Context>();
+
+export const smallPublisherScope = scope<SmallPublisher>("SmallPublisher");
 
 smallPublisherConfig.addRule(newRequiredRule("city"));
 smallPublisherConfig.addRule("group", mustBeSubType("group"));

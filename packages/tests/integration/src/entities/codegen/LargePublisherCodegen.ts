@@ -25,6 +25,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -123,6 +124,8 @@ export interface LargePublisherFactoryExtras {
 }
 
 export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
+
+export const largePublisherScope = scope<LargePublisher>("LargePublisher");
 
 largePublisherConfig.addRule(newRequiredRule("rating"));
 largePublisherConfig.addRule(newRequiredRule("spotlightAuthor"));

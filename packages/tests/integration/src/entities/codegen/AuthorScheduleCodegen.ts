@@ -24,6 +24,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -94,6 +95,8 @@ export interface AuthorScheduleFactoryExtras {
 }
 
 export const authorScheduleConfig = new ConfigApi<AuthorSchedule, Context>();
+
+export const authorScheduleScope = scope<AuthorSchedule>("AuthorSchedule");
 
 authorScheduleConfig.addRule(newRequiredRule("createdAt"));
 authorScheduleConfig.addRule(newRequiredRule("updatedAt"));

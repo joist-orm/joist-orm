@@ -24,6 +24,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -75,6 +76,8 @@ export interface TagFactoryExtras {
 }
 
 export const tagConfig = new ConfigApi<Tag, Context>();
+
+export const tagScope = scope<Tag>("Tag");
 
 tagConfig.addRule(newRequiredRule("title"));
 

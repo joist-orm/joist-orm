@@ -24,6 +24,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -140,6 +141,8 @@ export interface ImageFactoryExtras {
 }
 
 export const imageConfig = new ConfigApi<Image, Context>();
+
+export const imageScope = scope<Image>("Image");
 
 imageConfig.addRule(newRequiredRule("fileName"));
 imageConfig.addRule(newRequiredRule("createdAt"));

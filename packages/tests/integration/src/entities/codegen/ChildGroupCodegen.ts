@@ -26,6 +26,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -113,6 +114,8 @@ export interface ChildGroupFactoryExtras {
 }
 
 export const childGroupConfig = new ConfigApi<ChildGroup, Context>();
+
+export const childGroupScope = scope<ChildGroup>("ChildGroup");
 
 childGroupConfig.addRule(newRequiredRule("createdAt"));
 childGroupConfig.addRule(newRequiredRule("updatedAt"));

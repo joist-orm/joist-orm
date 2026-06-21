@@ -27,6 +27,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -111,6 +112,8 @@ export interface AuthorFactoryExtras {
 }
 
 export const authorConfig = new ConfigApi<Author, Context>();
+
+export const authorScope = scope<Author>("Author");
 
 authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("createdAt"));

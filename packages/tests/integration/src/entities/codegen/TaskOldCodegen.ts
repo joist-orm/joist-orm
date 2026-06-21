@@ -30,6 +30,7 @@ import {
   type OrderBy,
   type PartialOrNull,
   type ReadOnlyCollection,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -130,6 +131,8 @@ export interface TaskOldFactoryExtras {
 }
 
 export const taskOldConfig = new ConfigApi<TaskOld, Context>();
+
+export const taskOldScope = scope<TaskOld>("TaskOld");
 
 taskOldConfig.addRule(newRequiredRule("specialOldField"));
 taskOldConfig.addRule("parentOldTask", mustBeSubType("parentOldTask"));

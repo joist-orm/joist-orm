@@ -18,6 +18,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -64,6 +65,8 @@ export interface DatabaseOwnerFactoryExtras {
 }
 
 export const databaseOwnerConfig = new ConfigApi<DatabaseOwner, Context>();
+
+export const databaseOwnerScope = scope<DatabaseOwner>("DatabaseOwner");
 
 databaseOwnerConfig.addRule(newRequiredRule("name"));
 

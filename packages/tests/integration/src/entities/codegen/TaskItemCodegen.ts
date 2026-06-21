@@ -25,6 +25,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setOpts,
   type TaggedId,
   toIdOf,
@@ -113,6 +114,8 @@ export interface TaskItemFactoryExtras {
 }
 
 export const taskItemConfig = new ConfigApi<TaskItem, Context>();
+
+export const taskItemScope = scope<TaskItem>("TaskItem");
 
 taskItemConfig.addRule(newRequiredRule("createdAt"));
 taskItemConfig.addRule(newRequiredRule("updatedAt"));

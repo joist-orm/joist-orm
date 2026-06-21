@@ -24,6 +24,7 @@ import {
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -94,6 +95,8 @@ export interface CriticColumnFactoryExtras {
 }
 
 export const criticColumnConfig = new ConfigApi<CriticColumn, Context>();
+
+export const criticColumnScope = scope<CriticColumn>("CriticColumn");
 
 criticColumnConfig.addRule(newRequiredRule("name"));
 criticColumnConfig.addRule(newRequiredRule("createdAt"));

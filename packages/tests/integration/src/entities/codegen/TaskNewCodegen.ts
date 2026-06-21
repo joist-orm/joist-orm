@@ -28,6 +28,7 @@ import {
   type OrderBy,
   type PartialOrNull,
   type ReadOnlyCollection,
+  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -124,6 +125,8 @@ export interface TaskNewFactoryExtras {
 }
 
 export const taskNewConfig = new ConfigApi<TaskNew, Context>();
+
+export const taskNewScope = scope<TaskNew>("TaskNew");
 
 taskNewConfig.addRule("selfReferential", mustBeSubType("selfReferential"));
 taskNewConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));

@@ -22,10 +22,20 @@ export interface ScopeQuery<T extends Entity> {
   find(em: EntityManager): Promise<T[]>;
   find<const H extends LoadHint<T>>(
     em: EntityManager,
-    opts: FindFilterOptions<T> & { populate: H },
+    opts?: FindFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H>[]>;
   findOne(em: EntityManager): Promise<T | undefined>;
+  findOne<const H extends LoadHint<T>>(
+    em: EntityManager,
+    opts?: FindFilterOptions<T> & { populate?: H },
+  ): Promise<Loaded<T, H> | undefined>;
+  findOneOrFail(em: EntityManager): Promise<T>;
+  findOneOrFail<const H extends LoadHint<T>>(
+    em: EntityManager,
+    opts?: FindFilterOptions<T> & { populate?: H },
+  ): Promise<Loaded<T, H>>;
   findCount(em: EntityManager): Promise<number>;
+  findIds(em: EntityManager): Promise<string[]>;
 
   toFindArgs(): FilterAndSettings<T>;
 }
@@ -107,13 +117,21 @@ function makeScope<T extends Entity>(getCstr: ScopeConstructorResolver<T>, ops: 
       const args = compile(getCstr, ops);
       return em.find(resolveCstr(getCstr), args.where, { ...toFindOptions(args), ...opts });
     },
-    findOne(em: EntityManager) {
+    findOne(em: EntityManager, opts?: FindOptionsWithPopulate<T>) {
       const args = compile(getCstr, ops);
-      return em.findOne(resolveCstr(getCstr), args.where, toFindOptions(args));
+      return em.findOne(resolveCstr(getCstr), args.where, { ...toFindOptions(args), ...opts });
+    },
+    findOneOrFail(em: EntityManager, opts?: FindOptionsWithPopulate<T>) {
+      const args = compile(getCstr, ops);
+      return em.findOneOrFail(resolveCstr(getCstr), args.where, { ...toFindOptions(args), ...opts });
     },
     findCount(em: EntityManager) {
       const args = compile(getCstr, ops);
-      return em.findCount(resolveCstr(getCstr), args.where, toFindOptions(args));
+      return em.findCount(resolveCstr(getCstr), args.where, toCountOptions(args));
+    },
+    findIds(em: EntityManager) {
+      const args = compile(getCstr, ops);
+      return em.findIds(resolveCstr(getCstr), args.where, toCountOptions(args));
     },
   };
 
@@ -216,4 +234,9 @@ function toFindOptions<T extends Entity>(args: FilterAndSettings<T>): FindFilter
     offset: args.offset,
     softDeletes: args.softDeletes,
   };
+}
+
+/** Like `toFindOptions`, but drops the `orderBy`/`limit`/`offset` that `findCount`/`findIds` ignore. */
+function toCountOptions<T extends Entity>(args: FilterAndSettings<T>): FindFilterOptions<T> {
+  return { conditions: args.conditions, softDeletes: args.softDeletes };
 }

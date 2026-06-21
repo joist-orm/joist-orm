@@ -1,5 +1,35 @@
 // organize-imports-ignore
 
+import { scope, type ScopeFactory } from "joist-orm";
+import { type AdminUser } from "./AdminUser";
+import { type Author } from "./Author";
+import { type AuthorSchedule } from "./AuthorSchedule";
+import { type AuthorStat } from "./AuthorStat";
+import { type Book } from "./Book";
+import { type BookAdvance } from "./BookAdvance";
+import { type BookReview } from "./BookReview";
+import { type Child } from "./Child";
+import { type ChildGroup } from "./ChildGroup";
+import { type ChildItem } from "./ChildItem";
+import { type Comment } from "./Comment";
+import { type Critic } from "./Critic";
+import { type CriticColumn } from "./CriticColumn";
+import { type Employee } from "./Employee";
+import { type Image } from "./Image";
+import { type LargePublisher } from "./LargePublisher";
+import { type ParentGroup } from "./ParentGroup";
+import { type ParentItem } from "./ParentItem";
+import { type Publisher } from "./Publisher";
+import { type PublisherGroup } from "./PublisherGroup";
+import { type SmallPublisher } from "./SmallPublisher";
+import { type SmallPublisherGroup } from "./SmallPublisherGroup";
+import { type Tag } from "./Tag";
+import { type Task } from "./Task";
+import { type TaskItem } from "./TaskItem";
+import { type TaskNew } from "./TaskNew";
+import { type TaskOld } from "./TaskOld";
+import { type User } from "./User";
+
 // This file drives our import order to avoid undefined errors
 // when the subclasses extend the base classes, see:
 // https://medium.com/visual-development/how-to-fix-nasty-circular-dependency-issues-once-and-for-all-in-javascript-typescript-a04c987cf0de
@@ -33,6 +63,80 @@ export * from "./codegen/TagCodegen";
 export * from "./codegen/TaskCodegen";
 export * from "./codegen/TaskItemCodegen";
 export * from "./codegen/UserCodegen";
+export function authorScope(arg: Parameters<ScopeFactory<Author>>[0]): ReturnType<ScopeFactory<Author>> {
+  return scope<Author>("Author")(arg);
+}
+export function authorScheduleScope(
+  arg: Parameters<ScopeFactory<AuthorSchedule>>[0],
+): ReturnType<ScopeFactory<AuthorSchedule>> {
+  return scope<AuthorSchedule>("AuthorSchedule")(arg);
+}
+export function authorStatScope(arg: Parameters<ScopeFactory<AuthorStat>>[0]): ReturnType<ScopeFactory<AuthorStat>> {
+  return scope<AuthorStat>("AuthorStat")(arg);
+}
+export function bookScope(arg: Parameters<ScopeFactory<Book>>[0]): ReturnType<ScopeFactory<Book>> {
+  return scope<Book>("Book")(arg);
+}
+export function bookAdvanceScope(arg: Parameters<ScopeFactory<BookAdvance>>[0]): ReturnType<ScopeFactory<BookAdvance>> {
+  return scope<BookAdvance>("BookAdvance")(arg);
+}
+export function bookReviewScope(arg: Parameters<ScopeFactory<BookReview>>[0]): ReturnType<ScopeFactory<BookReview>> {
+  return scope<BookReview>("BookReview")(arg);
+}
+export function childScope(arg: Parameters<ScopeFactory<Child>>[0]): ReturnType<ScopeFactory<Child>> {
+  return scope<Child>("Child")(arg);
+}
+export function childGroupScope(arg: Parameters<ScopeFactory<ChildGroup>>[0]): ReturnType<ScopeFactory<ChildGroup>> {
+  return scope<ChildGroup>("ChildGroup")(arg);
+}
+export function childItemScope(arg: Parameters<ScopeFactory<ChildItem>>[0]): ReturnType<ScopeFactory<ChildItem>> {
+  return scope<ChildItem>("ChildItem")(arg);
+}
+export function commentScope(arg: Parameters<ScopeFactory<Comment>>[0]): ReturnType<ScopeFactory<Comment>> {
+  return scope<Comment>("Comment")(arg);
+}
+export function criticScope(arg: Parameters<ScopeFactory<Critic>>[0]): ReturnType<ScopeFactory<Critic>> {
+  return scope<Critic>("Critic")(arg);
+}
+export function criticColumnScope(
+  arg: Parameters<ScopeFactory<CriticColumn>>[0],
+): ReturnType<ScopeFactory<CriticColumn>> {
+  return scope<CriticColumn>("CriticColumn")(arg);
+}
+export function employeeScope(arg: Parameters<ScopeFactory<Employee>>[0]): ReturnType<ScopeFactory<Employee>> {
+  return scope<Employee>("Employee")(arg);
+}
+export function imageScope(arg: Parameters<ScopeFactory<Image>>[0]): ReturnType<ScopeFactory<Image>> {
+  return scope<Image>("Image")(arg);
+}
+export function parentGroupScope(
+  arg: Parameters<ScopeFactory<ParentGroup>>[0],
+): ReturnType<ScopeFactory<ParentGroup>> {
+  return scope<ParentGroup>("ParentGroup")(arg);
+}
+export function parentItemScope(arg: Parameters<ScopeFactory<ParentItem>>[0]): ReturnType<ScopeFactory<ParentItem>> {
+  return scope<ParentItem>("ParentItem")(arg);
+}
+export function publisherScope(arg: Parameters<ScopeFactory<Publisher>>[0]): ReturnType<ScopeFactory<Publisher>> {
+  return scope<Publisher>("Publisher")(arg);
+}
+export function publisherGroupScope(
+  arg: Parameters<ScopeFactory<PublisherGroup>>[0],
+): ReturnType<ScopeFactory<PublisherGroup>> {
+  return scope<PublisherGroup>("PublisherGroup")(arg);
+}
+export function tagScope(arg: Parameters<ScopeFactory<Tag>>[0]): ReturnType<ScopeFactory<Tag>> {
+  return scope<Tag>("Tag")(arg);
+}
+export function taskScope(arg: Parameters<ScopeFactory<Task>>[0]): ReturnType<ScopeFactory<Task>> {
+  return scope<Task>("Task")(arg);
+}
+export function taskItemScope(arg: Parameters<ScopeFactory<TaskItem>>[0]): ReturnType<ScopeFactory<TaskItem>> {
+  return scope<TaskItem>("TaskItem")(arg);
+}
+export function userScope(arg: Parameters<ScopeFactory<User>>[0]): ReturnType<ScopeFactory<User>> {
+  return scope<User>("User")(arg);
+}
 export * from "./Author";
 export * from "./AuthorSchedule";
 export * from "./AuthorStat";
@@ -61,6 +165,30 @@ export * from "./codegen/SmallPublisherCodegen";
 export * from "./codegen/SmallPublisherGroupCodegen";
 export * from "./codegen/TaskNewCodegen";
 export * from "./codegen/TaskOldCodegen";
+export function adminUserScope(arg: Parameters<ScopeFactory<AdminUser>>[0]): ReturnType<ScopeFactory<AdminUser>> {
+  return scope<AdminUser>("AdminUser")(arg);
+}
+export function largePublisherScope(
+  arg: Parameters<ScopeFactory<LargePublisher>>[0],
+): ReturnType<ScopeFactory<LargePublisher>> {
+  return scope<LargePublisher>("LargePublisher")(arg);
+}
+export function smallPublisherScope(
+  arg: Parameters<ScopeFactory<SmallPublisher>>[0],
+): ReturnType<ScopeFactory<SmallPublisher>> {
+  return scope<SmallPublisher>("SmallPublisher")(arg);
+}
+export function smallPublisherGroupScope(
+  arg: Parameters<ScopeFactory<SmallPublisherGroup>>[0],
+): ReturnType<ScopeFactory<SmallPublisherGroup>> {
+  return scope<SmallPublisherGroup>("SmallPublisherGroup")(arg);
+}
+export function taskNewScope(arg: Parameters<ScopeFactory<TaskNew>>[0]): ReturnType<ScopeFactory<TaskNew>> {
+  return scope<TaskNew>("TaskNew")(arg);
+}
+export function taskOldScope(arg: Parameters<ScopeFactory<TaskOld>>[0]): ReturnType<ScopeFactory<TaskOld>> {
+  return scope<TaskOld>("TaskOld")(arg);
+}
 export * from "./AdminUser";
 export * from "./LargePublisher";
 export * from "./SmallPublisher";

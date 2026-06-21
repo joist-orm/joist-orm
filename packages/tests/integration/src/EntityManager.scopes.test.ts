@@ -3,7 +3,7 @@ import { insertAuthor } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 import { Loaded } from "joist-orm";
 
-// WIP prototype tests — see ../scopes.ts. Uses the `AuthorScope` (= `Scope<Author, AuthorScopes>`)
+// WIP prototype tests — see joist-core/src/scopes.ts. Uses the `AuthorScope` (= `Scope<Author, AuthorScopes>`)
 // form, which supports typed named-scope chaining (`Author.adult.popular`). `_scopeTypeChecks` is
 // the type-level test (validated by `tsc`, never run); the `describe` block is the runtime test.
 

@@ -16,10 +16,10 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -78,7 +78,7 @@ export interface AdminUserFactoryExtras {
 
 export const adminUserConfig = new ConfigApi<AdminUser, Context>();
 
-export const adminUserScope = scope<AdminUser>("AdminUser");
+export const adminUserScope = newScopeFactory<AdminUser>("AdminUser");
 
 adminUserConfig.addRule(newRequiredRule("role"));
 

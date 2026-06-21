@@ -23,10 +23,10 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -95,7 +95,7 @@ export interface T3AuthorFactoryExtras {
 
 export const t3AuthorConfig = new ConfigApi<T3Author, Context>();
 
-export const t3AuthorScope = scope<T3Author>("T3Author");
+export const t3AuthorScope = newScopeFactory<T3Author>("T3Author");
 
 t3AuthorConfig.addRule(newRequiredRule("firstName"));
 t3AuthorConfig.addRule(newRequiredRule("favoriteBook"));

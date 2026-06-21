@@ -21,10 +21,10 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -77,7 +77,7 @@ export interface TagFactoryExtras {
 
 export const tagConfig = new ConfigApi<Tag, Context>();
 
-export const tagScope = scope<Tag>("Tag");
+export const tagScope = newScopeFactory<Tag>("Tag");
 
 tagConfig.addRule(newRequiredRule("title"));
 

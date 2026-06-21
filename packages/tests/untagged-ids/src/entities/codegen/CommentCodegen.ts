@@ -22,11 +22,11 @@ import {
   type MaybeAbstractEntityConstructor,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type PolymorphicReference,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -100,7 +100,7 @@ export interface CommentFactoryExtras {
 
 export const commentConfig = new ConfigApi<Comment, Context>();
 
-export const commentScope = scope<Comment>("Comment");
+export const commentScope = newScopeFactory<Comment>("Comment");
 
 commentConfig.addRule(newRequiredRule("text"));
 commentConfig.addRule(newRequiredRule("createdAt"));

@@ -77,7 +77,7 @@ import {
   mustBeSubType,
   newChangesProxy,
   newRequiredRule,
-  scope,
+  newScopeFactory,
   setField,
   setOpts,
   toIdOf,
@@ -224,7 +224,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
     export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
 
-    export const ${scopeName} = ${scope}<${entity.type}>("${entityName}");
+    export const ${scopeName} = ${newScopeFactory}<${entity.type}>("${entityName}");
 
     ${generateDefaultValidationRules(dbMeta, meta, configName)}
     ${generateDefaultValues(config, meta, configName)};

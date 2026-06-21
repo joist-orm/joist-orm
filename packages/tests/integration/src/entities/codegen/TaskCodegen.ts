@@ -28,13 +28,13 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
   type ReadOnlyCollection,
   type RelationsOf,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -170,7 +170,7 @@ export interface TaskFactoryExtras {
 
 export const taskConfig = new ConfigApi<Task, Context>();
 
-export const taskScope = scope<Task>("Task");
+export const taskScope = newScopeFactory<Task>("Task");
 
 taskConfig.addRule(newRequiredRule("durationInDays"));
 taskConfig.addRule(newRequiredRule("createdAt"));

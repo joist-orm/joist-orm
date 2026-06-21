@@ -23,10 +23,10 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -95,7 +95,7 @@ export interface T2BookFactoryExtras {
 
 export const t2BookConfig = new ConfigApi<T2Book, Context>();
 
-export const t2BookScope = scope<T2Book>("T2Book");
+export const t2BookScope = newScopeFactory<T2Book>("T2Book");
 
 t2BookConfig.addRule(newRequiredRule("title"));
 t2BookConfig.addRule(newRequiredRule("author"));

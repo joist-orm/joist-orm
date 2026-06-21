@@ -24,11 +24,11 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -137,7 +137,7 @@ export interface CriticFactoryExtras {
 
 export const criticConfig = new ConfigApi<Critic, Context>();
 
-export const criticScope = scope<Critic>("Critic");
+export const criticScope = newScopeFactory<Critic>("Critic");
 
 criticConfig.addRule(newRequiredRule("name"));
 criticConfig.addRule(newRequiredRule("createdAt"));

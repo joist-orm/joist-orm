@@ -21,10 +21,10 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -85,7 +85,7 @@ export interface T5AuthorFactoryExtras {
 
 export const t5AuthorConfig = new ConfigApi<T5Author, Context>();
 
-export const t5AuthorScope = scope<T5Author>("T5Author");
+export const t5AuthorScope = newScopeFactory<T5Author>("T5Author");
 
 t5AuthorConfig.addRule(newRequiredRule("firstName"));
 

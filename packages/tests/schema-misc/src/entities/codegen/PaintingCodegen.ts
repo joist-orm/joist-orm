@@ -21,10 +21,10 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -96,7 +96,7 @@ export interface PaintingFactoryExtras {
 
 export const paintingConfig = new ConfigApi<Painting, Context>();
 
-export const paintingScope = scope<Painting>("Painting");
+export const paintingScope = newScopeFactory<Painting>("Painting");
 
 paintingConfig.addRule(newRequiredRule("title"));
 paintingConfig.addRule(newRequiredRule("createdAt"));

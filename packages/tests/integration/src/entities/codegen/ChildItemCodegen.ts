@@ -21,10 +21,10 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -106,7 +106,7 @@ export interface ChildItemFactoryExtras {
 
 export const childItemConfig = new ConfigApi<ChildItem, Context>();
 
-export const childItemScope = scope<ChildItem>("ChildItem");
+export const childItemScope = newScopeFactory<ChildItem>("ChildItem");
 
 childItemConfig.addRule(newRequiredRule("createdAt"));
 childItemConfig.addRule(newRequiredRule("updatedAt"));

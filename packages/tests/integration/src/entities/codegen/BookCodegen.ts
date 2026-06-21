@@ -27,13 +27,13 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
   type ReadOnlyCollection,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -203,7 +203,7 @@ export interface BookFactoryExtras {
 
 export const bookConfig = new ConfigApi<Book, Context>();
 
-export const bookScope = scope<Book>("Book");
+export const bookScope = newScopeFactory<Book>("Book");
 
 bookConfig.addRule(newRequiredRule("title"));
 bookConfig.addRule(newRequiredRule("order"));

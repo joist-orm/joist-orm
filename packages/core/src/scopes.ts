@@ -57,7 +57,7 @@ type ScopeOp<T extends Entity> =
 const kOps = Symbol("scopeOps");
 
 /** Creates a per-entity, pre-typed scope factory. */
-export function scope<T extends Entity>(entityType: string): ScopeFactory<T> {
+export function newScopeFactory<T extends Entity>(entityType: string): ScopeFactory<T> {
   function getCstr(): MaybeAbstractEntityConstructor<T> {
     return getMetadataForType(entityType).cstr;
   }

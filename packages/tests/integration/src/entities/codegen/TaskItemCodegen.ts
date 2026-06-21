@@ -22,10 +22,10 @@ import {
   mustBeSubType,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
-  scope,
   setOpts,
   type TaggedId,
   toIdOf,
@@ -115,7 +115,7 @@ export interface TaskItemFactoryExtras {
 
 export const taskItemConfig = new ConfigApi<TaskItem, Context>();
 
-export const taskItemScope = scope<TaskItem>("TaskItem");
+export const taskItemScope = newScopeFactory<TaskItem>("TaskItem");
 
 taskItemConfig.addRule(newRequiredRule("createdAt"));
 taskItemConfig.addRule(newRequiredRule("updatedAt"));

@@ -21,10 +21,10 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -142,7 +142,7 @@ export interface ImageFactoryExtras {
 
 export const imageConfig = new ConfigApi<Image, Context>();
 
-export const imageScope = scope<Image>("Image");
+export const imageScope = newScopeFactory<Image>("Image");
 
 imageConfig.addRule(newRequiredRule("fileName"));
 imageConfig.addRule(newRequiredRule("createdAt"));

@@ -15,10 +15,10 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -129,7 +129,7 @@ export interface AuthorStatFactoryExtras {
 
 export const authorStatConfig = new ConfigApi<AuthorStat, Context>();
 
-export const authorStatScope = scope<AuthorStat>("AuthorStat");
+export const authorStatScope = newScopeFactory<AuthorStat>("AuthorStat");
 
 authorStatConfig.addRule(newRequiredRule("smallint"));
 authorStatConfig.addRule(newRequiredRule("integer"));

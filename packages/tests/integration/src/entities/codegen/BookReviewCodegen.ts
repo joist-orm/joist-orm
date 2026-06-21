@@ -27,13 +27,13 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
   type ReactiveManyToManyOtherSide,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -148,7 +148,7 @@ export interface BookReviewFactoryExtras {
 
 export const bookReviewConfig = new ConfigApi<BookReview, Context>();
 
-export const bookReviewScope = scope<BookReview>("BookReview");
+export const bookReviewScope = newScopeFactory<BookReview>("BookReview");
 
 bookReviewConfig.addRule(newRequiredRule("rating"));
 bookReviewConfig.addRule("isPublic", newRequiredRule("isPublic"));

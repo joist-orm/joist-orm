@@ -21,10 +21,10 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -112,7 +112,7 @@ export interface AuthorFactoryExtras {
 
 export const authorConfig = new ConfigApi<Author, Context>();
 
-export const authorScope = scope<Author>("Author");
+export const authorScope = newScopeFactory<Author>("Author");
 
 authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("createdAt"));

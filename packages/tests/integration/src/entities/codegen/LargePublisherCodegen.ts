@@ -22,10 +22,10 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFactory,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
-  scope,
   setField,
   setOpts,
   type TaggedId,
@@ -125,7 +125,7 @@ export interface LargePublisherFactoryExtras {
 
 export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
 
-export const largePublisherScope = scope<LargePublisher>("LargePublisher");
+export const largePublisherScope = newScopeFactory<LargePublisher>("LargePublisher");
 
 largePublisherConfig.addRule(newRequiredRule("rating"));
 largePublisherConfig.addRule(newRequiredRule("spotlightAuthor"));

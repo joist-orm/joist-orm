@@ -118,13 +118,10 @@ describe("EntityManager.scopes", () => {
       expect(() => (Author.adult as unknown as Record<string, unknown>).bogus).toThrow("Invalid scope Author.bogus");
     });
 
-    it("throws instead of guessing how to compose repeated relation filters", () => {
-      expect(() =>
-        Author.adult
-          .where({ publisher: { name: "p1" } })
-          .where({ publisher: { name: "p2" } })
-          .toFindArgs(),
-      ).toThrow("Cannot safely compose repeated scope filter Author.publisher");
+    it("throws instead of guessing how to compose relation filters that require joins", () => {
+      expect(() => Author.adult.where({ publisher: { name: "p1" } }).toFindArgs()).toThrow(
+        "Cannot safely compose scope filter Author.publisher because it requires a join",
+      );
     });
 
     it("ANDs same-field object-where scopes and builder wheres", async () => {
@@ -293,15 +290,32 @@ describe("EntityManager.scopes", () => {
 
   describe("toFindArgs", () => {
     it("compiles a chained scope to ANDed find args", () => {
-      // `adult` is an object-where; `popular` is an alias-condition. em.find ANDs the two.
+      // `adult` is a find filter; `popular` is an alias condition. em.find ANDs the two.
       const args = Author.adult.popular.toFindArgs();
-      expect(args).toMatchObject({ where: { age: { gte: 18 } }, conditions: { and: [{}] } });
+      expect(args).toMatchObject({
+        where: {},
+        conditions: {
+          and: [
+            {
+              kind: "column",
+              alias: "unset",
+              column: "is_popular",
+              dbType: "boolean",
+              cond: { kind: "eq", value: true },
+            },
+            { kind: "column", alias: "unset", column: "age", dbType: "int", cond: { kind: "gte", value: 18 } },
+          ],
+        },
+      });
     });
 
     it("captures orderBy, limit, and offset", () => {
       const args = Author.adult.orderBy({ age: "DESC" }).limit(5).offset(2).toFindArgs();
       expect(args).toMatchObject({
-        where: { age: { gte: 18 } },
+        where: {},
+        conditions: {
+          and: [{ kind: "column", alias: "unset", column: "age", dbType: "int", cond: { kind: "gte", value: 18 } }],
+        },
         orderBy: [{ age: "DESC" }],
         limit: 5,
         offset: 2,

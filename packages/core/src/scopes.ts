@@ -270,10 +270,11 @@ function compile<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp
   }
 
   expand(ops, new Set());
-  const remainingWheres = wheres.length > 1 ? splitWhereConditions(a, cstr, wheres, conditions, softDeletes) : wheres;
+  const meta = getMetadata(cstr);
+  for (const where of wheres) addWhereConditions(a, meta, where, conditions, softDeletes ?? "exclude");
 
   return {
-    where: remainingWheres.length ? Object.assign({ as: a }, ...remainingWheres) : { as: a },
+    where: { as: a } as FilterAndSettings<T>["where"],
     conditions: conditions.length ? { and: conditions } : undefined,
     orderBy: orderBys.length ? orderBys : undefined,
     limit,
@@ -383,94 +384,35 @@ function andConditions(
   return { and: [left, right] };
 }
 
-/** Moves root-field object filters into alias conditions so repeated keys AND instead of last-winning. */
-function splitWhereConditions<T extends Entity>(
-  a: Alias<T>,
-  cstr: MaybeAbstractEntityConstructor<T>,
-  wheres: FilterOf<T>[],
-  conditions: ExpressionCondition[],
-  softDeletes: "include" | "exclude" | undefined,
-): FilterOf<T>[] {
-  const repeatedKeys = findRepeatedWhereKeys(wheres);
-  if (repeatedKeys.size === 0) return wheres;
-
-  const meta = getMetadata(cstr);
-  const remainingWheres: FilterOf<T>[] = [];
-  for (const where of wheres) {
-    const remaining = splitWhereCondition(a, meta, where, repeatedKeys, conditions, softDeletes ?? "exclude");
-    if (remaining !== undefined) remainingWheres.push(remaining);
-  }
-  return remainingWheres;
-}
-
-/** Returns root-level find filter keys that would be overwritten by plain object spreading. */
-function findRepeatedWhereKeys<T extends Entity>(wheres: FilterOf<T>[]): Set<string> {
-  const seen = new Set<string>();
-  const repeated = new Set<string>();
-  for (const where of wheres) {
-    if (!isPlainObject(where)) continue;
-    for (const key of Object.keys(where as object)) {
-      if (key === "as") continue;
-      if (seen.has(key)) repeated.add(key);
-      else seen.add(key);
-    }
-  }
-  return repeated;
-}
-
-/** Splits repeated root find filters into parsed conditions and residual inline filters. */
-function splitWhereCondition<T extends Entity>(
+/** Converts root find filters into alias conditions so every scope where fragment is ANDed. */
+function addWhereConditions<T extends Entity>(
   a: Alias<T>,
   meta: EntityMetadata<T>,
   where: FilterOf<T>,
-  repeatedKeys: Set<string>,
   conditions: ExpressionCondition[],
   softDeletes: "include" | "exclude",
-): FilterOf<T> | undefined {
-  if (!isPlainObject(where)) return where;
+): void {
+  if (!isPlainObject(where)) throw new Error(`Scope find filters must be plain objects for ${meta.type}`);
 
-  const remaining: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(where as object as Record<string, unknown>)) {
-    if (!repeatedKeys.has(key)) {
-      remaining[key] = value;
-      continue;
+    if (key === "as") continue;
+
+    const field = findFilterField(meta, key);
+    if (field === undefined) throw new Error(`Cannot safely compose scope filter ${meta.type}.${key}`);
+
+    if (field.kind === "primaryKey" || field.kind === "primitive" || field.kind === "enum") {
+      conditions.push(filterAlias(a, field).filter(value));
+    } else if (field.kind === "m2o") {
+      const filter = parseEntityFilter(field.otherMetadata(), value);
+      if (filter === undefined) continue;
+      if (filter.kind === "join")
+        throw new Error(`Cannot safely compose scope filter ${meta.type}.${key} because it requires a join`);
+      if (filterSoftDeletes(field.otherMetadata(), softDeletes))
+        throw new Error(`Cannot safely compose scope filter ${meta.type}.${key} because the related entity has soft deletes`);
+      conditions.push(filterAlias(a, field).filter(value));
+    } else {
+      throw new Error(`Cannot safely compose scope filter ${meta.type}.${key} because ${field.kind} fields are not supported`);
     }
-
-    const fieldConditions = conditionsForFindField(a, meta, key, value, softDeletes);
-    if (fieldConditions === undefined)
-      throw new Error(`Cannot safely compose repeated scope filter ${meta.type}.${key}`);
-    conditions.push(...fieldConditions);
-  }
-  return Object.keys(remaining).length === 0 ? undefined : (remaining as FilterOf<T>);
-}
-
-/** Converts a repeated root find filter into public condition DSL nodes using QueryParser's filter parsing. */
-function conditionsForFindField<T extends Entity>(
-  a: Alias<T>,
-  meta: EntityMetadata<T>,
-  key: string,
-  value: unknown,
-  softDeletes: "include" | "exclude",
-): ExpressionCondition[] | undefined {
-  const field = findFilterField(meta, key);
-  if (field === undefined) return undefined;
-
-  if (field.kind === "primaryKey" || field.kind === "primitive" || field.kind === "enum") {
-    return [filterAlias(a, field).filter(value)];
-  } else if (field.kind === "m2o") {
-    const filter = parseEntityFilter(field.otherMetadata(), value);
-    if (filter === undefined) return [];
-    if (filter.kind === "join")
-      throw new Error(`Cannot safely compose repeated scope filter ${meta.type}.${key} because it requires a join`);
-    if (filterSoftDeletes(field.otherMetadata(), softDeletes))
-      throw new Error(
-        `Cannot safely compose repeated scope filter ${meta.type}.${key} because the related entity has soft deletes`,
-      );
-    return [filterAlias(a, field).filter(value)];
-  } else {
-    throw new Error(
-      `Cannot safely compose repeated scope filter ${meta.type}.${key} because ${field.kind} fields are not supported`,
-    );
   }
 }
 

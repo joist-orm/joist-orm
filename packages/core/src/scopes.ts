@@ -10,7 +10,14 @@ import type { FilterOf, OrderOf } from "./typeMap";
 /** A predicate expressed against a bound alias, i.e. `(a) => a.age.gte(18)`. */
 export type ScopeCondition<T extends Entity> = (a: Alias<T>) => ExpressionCondition | ExpressionCondition[];
 
-/** The fluent builder + terminal surface shared by every scope. */
+/**
+ * The fluent builder to either a) terminate/invoke or b) chain scope methods.
+ *
+ * I.e. `Author.adult` is a ScopeQuery that can either do `.find` or `.popular`.
+ *
+ * This `ScopeQuery` is just the terminal/invocation methods, the `.popular` methods
+ * are chained on via the `Scope` mapped type below.
+ */
 export interface ScopeQuery<T extends Entity> {
   where(where: FilterOf<T>): this;
   where(fn: ScopeCondition<T>): this;
@@ -43,9 +50,19 @@ export interface ScopeQuery<T extends Entity> {
 /** A scope for entity `T`, with chainable named accessors supplied by `S`. */
 export type Scope<T extends Entity, S = {}> = ScopeQuery<T> & S;
 
-/** A per-entity, pre-typed function for declaring scopes. */
+/**
+ * A per-entity, pre-typed function for declaring scopes.
+ *
+ * I.e. this is the type of the `import { authorScope as scope }` that entity files
+ * use to declare their scopes.
+ *
+ * Because of the `authorScope as scope` rename, we can bake into the API that this
+ * is the Author entity, and so simplify its usage.
+ */
 export interface ScopeFn<T extends Entity> {
+  /** Defines a scope based on a filter condition, i.e. `scope({ name: "John" })` or `scope(a => a.name.eq("John")`. */
   <R extends Scope<T> = AnyScope<T>>(arg: FilterOf<T> | ScopeCondition<T>): R;
+  /** Defines a parametrized filter, i.e. `scope(name => ({ name: { startsWith: name } }))`. */
   fn<A extends unknown[], R extends Scope<T> = AnyScope<T>>(fn: (...args: A) => ScopeCondition<T>): (...args: A) => R;
 }
 

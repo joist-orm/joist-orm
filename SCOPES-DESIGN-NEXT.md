@@ -57,11 +57,12 @@ recorded lazily, i.e. `scope({}).laterScope`.
 ### 1.2 Codegen only detects bare `scope(...)` / `scope.fn(...)`
 
 **Implemented:** `isScopeInitializer` in `packages/codegen/src/findEntityScopes.ts` now accepts a
-call/property chain whose root is the `scope` identifier. A **composed** named scope is registered
-into `AuthorScopes`:
+call/property chain whose root is the `scope` identifier or the current entity identifier. A
+**composed** named scope is registered into `AuthorScopes`:
 
 ```ts
 static recentAdults: AuthorScope = scope({ age: { gte: 18 } }).orderBy({ createdAt: "DESC" });
+static recentAdultsViaAdult: AuthorScope = Author.adult.orderBy({ createdAt: "DESC" });
 ```
 
 It works when called directly (`Author.recentAdults.find(em)` — it's a real static field), and is

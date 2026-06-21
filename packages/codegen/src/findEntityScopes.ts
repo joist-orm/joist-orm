@@ -31,7 +31,10 @@ async function findEntityScopes(config: Config, entityName: string): Promise<[st
   for (const statement of sourceFile.statements) {
     // i.e. `export class Author extends AuthorCodegen { ... }`.
     if (ts.isClassDeclaration(statement) && statement.name?.text === entityName) {
-      return [entityName, statement.members.flatMap((member) => maybeScopeMember(sourceFile, member, scopeTypeName))];
+      return [
+        entityName,
+        statement.members.flatMap((member) => maybeScopeMember(sourceFile, member, entityName, scopeTypeName)),
+      ];
     }
   }
   return [entityName, []];
@@ -53,12 +56,17 @@ function isNoSuchFileError(e: unknown): boolean {
 }
 
 /** Converts a static property declaration into a generated scope member. */
-function maybeScopeMember(sourceFile: ts.SourceFile, member: ts.ClassElement, scopeTypeName: string): ScopeMember[] {
+function maybeScopeMember(
+  sourceFile: ts.SourceFile,
+  member: ts.ClassElement,
+  entityName: string,
+  scopeTypeName: string,
+): ScopeMember[] {
   if (!ts.isPropertyDeclaration(member)) return [];
   if (!isStaticMember(member)) return [];
   // i.e. accept `static adult: AuthorScope = scope(...)`, but skip methods/getters/untyped fields.
   if (!member.type || !member.initializer || !ts.isIdentifier(member.name)) return [];
-  if (!isScopeType(member.type, scopeTypeName) || !isScopeInitializer(member.initializer)) return [];
+  if (!isScopeType(member.type, scopeTypeName) || !isScopeInitializer(member.initializer, entityName)) return [];
   return [{ name: member.name.text, type: member.type.getText(sourceFile) }];
 }
 
@@ -78,18 +86,18 @@ function isScopeType(type: ts.TypeNode, scopeTypeName: string): boolean {
   return false;
 }
 
-/** Returns true for scope initializers, I.e. `scope(...)`, `scope.fn(...)`, or `scope(...).orderBy(...)`. */
-function isScopeInitializer(initializer: ts.Expression): boolean {
+/** Returns true for scope initializers, I.e. `scope(...)`, `scope(...).orderBy(...)`, or `Author.adult...`. */
+function isScopeInitializer(initializer: ts.Expression, entityName: string): boolean {
   if (!ts.isCallExpression(initializer) && !ts.isPropertyAccessExpression(initializer)) return false;
-  return isScopeRootedExpression(initializer);
+  return isScopeRootedExpression(initializer, entityName);
 }
 
-/** Returns true for a call/property expression chain rooted at the `scope` identifier. */
-function isScopeRootedExpression(expression: ts.Expression): boolean {
+/** Returns true for a call/property expression chain rooted at `scope` or the current entity. */
+function isScopeRootedExpression(expression: ts.Expression, entityName: string): boolean {
   // i.e. `scope({ age: { gte: 18 } })`.
-  if (ts.isIdentifier(expression)) return expression.text === "scope";
-  if (ts.isCallExpression(expression)) return isScopeRootedExpression(expression.expression);
-  // i.e. `scope.fn((prefix) => (a) => a.firstName.like(`${prefix}%`))` or `scope(...).orderBy(...)`.
-  if (ts.isPropertyAccessExpression(expression)) return isScopeRootedExpression(expression.expression);
+  if (ts.isIdentifier(expression)) return expression.text === "scope" || expression.text === entityName;
+  if (ts.isCallExpression(expression)) return isScopeRootedExpression(expression.expression, entityName);
+  // i.e. `scope.fn((prefix) => (a) => a.firstName.like(`${prefix}%`))` or `Author.adult.orderBy(...)`.
+  if (ts.isPropertyAccessExpression(expression)) return isScopeRootedExpression(expression.expression, entityName);
   return false;
 }

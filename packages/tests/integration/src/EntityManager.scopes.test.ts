@@ -14,7 +14,9 @@ export function _scopeTypeChecks(em: EntityManager): void {
   void Author.adult.popular; // plain + plain
   void Author.adult.popular.senior; // 3 deep
   void Author.popularAdult; // inline-composed from earlier static scopes
+  void Author.adult.popularAdult; // same-entity static ref discovered by codegen
   void Author.adult.recentAdults; // builder-composed scope discovered by codegen
+  void Author.adult.recentAdultsViaAdult; // builder-composed from an existing static scope
   void Author.named("a").adult.popular; // parameterized, then chained
   void Author.adult.popular.where((a) => a.age.lte(65)).find(em); // chain + ad-hoc where + terminal
 
@@ -22,6 +24,7 @@ export function _scopeTypeChecks(em: EntityManager): void {
   void Author.adult; // object-form scope
   void Author.popular; // alias-form scope
   void Author.recentAdults; // scope plus builder chain
+  void Author.recentAdultsViaAdult; // existing static scope plus builder chain
   void Author.adult.where({ firstName: "a1" }); // builder: ad-hoc object where
   void Author.senior.orderBy({ age: "DESC" }).limit(5).popular; // builders preserve the named accessors
   void Author.named("a"); // parameterized scope
@@ -103,6 +106,9 @@ describe("EntityManager.scopes", () => {
       const em = newEntityManager();
       const authors = await Author.adult.recentAdults.find(em);
       expect(authors).toMatchEntity([{ firstName: "a3" }, { firstName: "a1" }]);
+
+      const viaAdult = await Author.adult.recentAdultsViaAdult.find(em);
+      expect(viaAdult).toMatchEntity([{ firstName: "a3" }, { firstName: "a1" }]);
     });
 
     it("ANDs a parameterized scope with a named scope", async () => {

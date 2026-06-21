@@ -5,7 +5,7 @@ sidebar:
   order: 3.5
 ---
 
-Scope queries let you name and compose common `em.find` filters directly on entity classes, i.e. after declaring them on the `Author` entity:
+Scope queries let you name and compose common `em.find` filters entity classes, i.e. after declaring them on the `Author` entity:
 
 ```ts
 export class Author extends AuthorCodegen {
@@ -40,12 +40,7 @@ For example, Joist's `EntityManager` is fundamental to its Unit of Work & Identi
 Scopes are created in an entity file like `Author.ts` by importing the corresponding `<entity>Scope` function from `./entities` and then, just for convention, renaming it to `scope`:
 
 ```ts
-import {
-  AuthorCodegen,
-  authorConfig as config,
-  authorScope as scope,
-  type AuthorScope,
-} from "./entities";
+import { AuthorCodegen, authorConfig as config, authorScope as scope, type AuthorScope } from "./entities";
 
 export class Author extends AuthorCodegen {
   // Now invoke `scope(...)` to create the static scope fields
@@ -55,7 +50,17 @@ export class Author extends AuthorCodegen {
 }
 ```
 
+And then **running joist-codegen** after each change to the scopes declarations.
+
 The `authorScope as scope` import is already pre-typed for the `Author`, so any filters to `scope(...)` will be type-checked to ensure they use the same fields and operators as `em.find(Author, ...)`.
+
+:::tip[Caution]
+
+After each scope change to `Author.ts`, you should re-run `joist-codegen` to have the generated `AuthorScopes` type updated.
+
+This "re-codegen after file change" workflow is not ideal, but it's necessary to achieve the recursive `Author.adult.active` ergonomics of Rails scopes, while still being type-safe.
+
+:::
 
 ## Filter Scopes
 
@@ -99,11 +104,12 @@ await Author.named("a").adult.find(em);
 
 ## Chaining
 
-Scopes can be chained together `AND` semantics:
+Scopes can be chained together and will use `AND` semantics:
 
 ```ts
 // Find both >18 _and_ popular authors
 await Author.adult.popular.find(em);
+// Find active _and_ firstName is a1
 await Author.active.where({ firstName: "a1" }).find(em);
 ```
 
@@ -129,17 +135,15 @@ await Author.adult.orderBy({ createdAt: "DESC" }).limit(10).find(em);
 await Author.adult.softDeletes("include").find(em);
 ```
 
-Repeated root-level object filters are ANDed instead of simply object-spread together:
+If a single field has multiple filters chained together, they are `AND`-d together, i.e. this query will have two `age` conditions (one from `senior`, one inline) `AND` together:
 
 ```ts
 await Author.senior.where({ age: { gte: 18 } }).find(em);
 ```
 
-For complex nested relation filters where repeated object keys would be ambiguous, prefer a single combined object filter for that relation.
-
 ## Invocation Methods
 
-Scopes execute through "terminal" invocation methods:
+Scopes are executed by invoking any of the "terminal" methods:
 
 ```ts
 const authors = await Author.adult.find(em);
@@ -156,9 +160,9 @@ const authors = await Author.adult.find(em, { populate: "books" });
 const author = await Author.adult.findOneOrFail(em, { populate: "books" });
 ```
 
-## Codegen
+## Codegen Details
 
-Joist generates a scope function and scope types in each `<Entity>Codegen.ts` file:
+To achieve the Rails-style fluent typing, Joist generates a scope function and scope types in each `<Entity>Codegen.ts` file:
 
 ```ts
 export interface AuthorScopes {
@@ -173,23 +177,9 @@ export type AuthorScope = Scope<Author, AuthorScopes>;
 export const authorScope = newScopeFn<Author>("Author");
 ```
 
-You should not edit this generated file directly. Add static scope properties to your user-owned `Author.ts`, then run codegen so Joist refreshes the generated `AuthorScopes` interface.
+You should not edit this generated file directly.
 
-Codegen discovers scope declarations with a syntax-only scan. To be discovered, a scope must be a static property with an explicit scope type:
-
-```ts
-static adult: AuthorScope = scope({ age: { gte: 18 } });
-static named: (prefix: string) => AuthorScope = scope.fn((prefix) => (a) => a.firstName.like(`${prefix}%`));
-```
-
-Static methods are not discovered:
-
-```ts
-// Not discovered by codegen
-static named(prefix: string): AuthorScope {
-  return scope((a) => a.firstName.like(`${prefix}%`));
-}
-```
+After adding `static` scope properties to your `Author.ts`, run `joist-codegen` so Joist refreshes the generated `AuthorScopes` interface.
 
 ## When To Use Scopes
 

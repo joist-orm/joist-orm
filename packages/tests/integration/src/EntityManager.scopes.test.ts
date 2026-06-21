@@ -2,7 +2,7 @@ import { Author, EntityManager } from "@src/entities";
 import { insertAuthor, insertBook } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 import { Loaded } from "joist-orm";
-import { jan1 } from "./testDates";
+import { jan1, jan2, jan3 } from "./testDates";
 
 // WIP prototype tests — see joist-core/src/scopes.ts. Uses the `AuthorScope` (= `Scope<Author, AuthorScopes>`)
 // form, which supports typed named-scope chaining (`Author.adult.popular`). `_scopeTypeChecks` is
@@ -14,12 +14,14 @@ export function _scopeTypeChecks(em: EntityManager): void {
   void Author.adult.popular; // plain + plain
   void Author.adult.popular.senior; // 3 deep
   void Author.popularAdult; // inline-composed from earlier static scopes
+  void Author.adult.recentAdults; // builder-composed scope discovered by codegen
   void Author.named("a").adult.popular; // parameterized, then chained
   void Author.adult.popular.where((a) => a.age.lte(65)).find(em); // chain + ad-hoc where + terminal
 
   // --- positive: declaration, builders, parameterized scopes ---
   void Author.adult; // object-form scope
   void Author.popular; // alias-form scope
+  void Author.recentAdults; // scope plus builder chain
   void Author.adult.where({ firstName: "a1" }); // builder: ad-hoc object where
   void Author.senior.orderBy({ age: "DESC" }).limit(5).popular; // builders preserve the named accessors
   void Author.named("a"); // parameterized scope
@@ -92,6 +94,15 @@ describe("EntityManager.scopes", () => {
       const em = newEntityManager();
       const authors = await Author.popularAdult.find(em);
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
+    it("supports builder-composed static scopes", async () => {
+      await insertAuthor({ first_name: "a1", age: 20, created_at: jan1 });
+      await insertAuthor({ first_name: "a2", age: 10, created_at: jan3 });
+      await insertAuthor({ first_name: "a3", age: 30, created_at: jan2 });
+      const em = newEntityManager();
+      const authors = await Author.adult.recentAdults.find(em);
+      expect(authors).toMatchEntity([{ firstName: "a3" }, { firstName: "a1" }]);
     });
 
     it("ANDs a parameterized scope with a named scope", async () => {

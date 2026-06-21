@@ -407,6 +407,7 @@ export interface AuthorScopes {
   adult: AuthorScope;
   active: AuthorScope;
   popular: AuthorScope;
+  recentAdults: AuthorScope;
   senior: AuthorScope;
   named: (prefix: string) => AuthorScope;
 }

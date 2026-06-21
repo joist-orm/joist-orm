@@ -42,7 +42,7 @@ resolves them later at compile/terminal time:
 static popular: AuthorScope = scope((a) => a.isPopular.eq(true));
 static adult: AuthorScope = scope({ age: { gte: 18 } });
 static popularAdult: AuthorScope = Author.popular.adult;
-~~~~```
+```
 
 `packages/tests/integration/src/entities/Author.ts` has `popularAdult` declared after `adult` and
 `popular` as the positive example of this pattern.
@@ -56,20 +56,17 @@ recorded lazily, i.e. `scope({}).laterScope`.
 
 ### 1.2 Codegen only detects bare `scope(...)` / `scope.fn(...)`
 
-`isScopeInitializer` in `packages/codegen/src/findEntityScopes.ts` matches only a `scope(...)`
-call or `scope.fn(...)` call. A **composed** named scope is not registered into `AuthorScopes`:
+**Implemented:** `isScopeInitializer` in `packages/codegen/src/findEntityScopes.ts` now accepts a
+call/property chain whose root is the `scope` identifier. A **composed** named scope is registered
+into `AuthorScopes`:
 
 ```ts
 static recentAdults: AuthorScope = scope({ age: { gte: 18 } }).orderBy({ createdAt: "DESC" });
 ```
 
-It works when called directly (`Author.recentAdults.find(em)` — it's a real static field), but is
-invisible as a chain accessor: `Author.adult.recentAdults` won't typecheck, because the name never
-makes it into the `AuthorScopes` interface.
-
-**Fix (if §8 composed scopes are a goal):** broaden `isScopeInitializer` to accept a call/property
-chain whose root is the `scope` identifier (walk `CallExpression`/`PropertyAccessExpression` down to
-the base). Pairs naturally with 1.1(b).
+It works when called directly (`Author.recentAdults.find(em)` — it's a real static field), and is
+visible as a chain accessor: `Author.adult.recentAdults` typechecks because codegen includes the
+name in the `AuthorScopes` interface.
 
 ### 1.3 Terminal `opts` can clobber compiled `conditions`
 

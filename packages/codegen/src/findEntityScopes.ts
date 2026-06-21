@@ -78,17 +78,18 @@ function isScopeType(type: ts.TypeNode, scopeTypeName: string): boolean {
   return false;
 }
 
-/** Returns true for `scope(...)` and `scope.fn(...)` calls. */
+/** Returns true for scope initializers, I.e. `scope(...)`, `scope.fn(...)`, or `scope(...).orderBy(...)`. */
 function isScopeInitializer(initializer: ts.Expression): boolean {
-  if (!ts.isCallExpression(initializer)) return false;
-  const expression = initializer.expression;
+  if (!ts.isCallExpression(initializer) && !ts.isPropertyAccessExpression(initializer)) return false;
+  return isScopeRootedExpression(initializer);
+}
+
+/** Returns true for a call/property expression chain rooted at the `scope` identifier. */
+function isScopeRootedExpression(expression: ts.Expression): boolean {
   // i.e. `scope({ age: { gte: 18 } })`.
   if (ts.isIdentifier(expression)) return expression.text === "scope";
-  // i.e. `scope.fn((prefix) => (a) => a.firstName.like(`${prefix}%`))`.
-  return (
-    ts.isPropertyAccessExpression(expression) &&
-    expression.name.text === "fn" &&
-    ts.isIdentifier(expression.expression) &&
-    expression.expression.text === "scope"
-  );
+  if (ts.isCallExpression(expression)) return isScopeRootedExpression(expression.expression);
+  // i.e. `scope.fn((prefix) => (a) => a.firstName.like(`${prefix}%`))` or `scope(...).orderBy(...)`.
+  if (ts.isPropertyAccessExpression(expression)) return isScopeRootedExpression(expression.expression);
+  return false;
 }

@@ -3,21 +3,22 @@ import { join } from "path";
 import ts from "typescript";
 import { type Config } from "./config";
 
+/** Each `static active = ...` scope in an entity. */
 export interface ScopeMember {
-  // i.e. "adult" from `static adult: AuthorScope = scope(...)`.
+  // I.e. "adult" from `static adult: AuthorScope = scope(...)`.
   name: string;
-  // i.e. "AuthorScope" or "(prefix: string) => AuthorScope".
+  // I.e. "AuthorScope" or "(prefix: string) => AuthorScope".
   type: string;
 }
 
 export type ScopeMembersByEntity = Record<string, ScopeMember[]>;
 
-/** Finds static scope declarations for all user-owned entity files. */
+/** Finds static scope declarations for all entity files. */
 export async function findAllEntityScopes(config: Config, entityNames: string[]): Promise<ScopeMembersByEntity> {
   return Object.fromEntries(await Promise.all(entityNames.map((entityName) => findEntityScopes(config, entityName))));
 }
 
-/** Finds static scope declarations in the user-owned entity file. */
+/** Finds static scope declarations a given entity file. */
 async function findEntityScopes(config: Config, entityName: string): Promise<[string, ScopeMember[]]> {
   const scopeTypeName = `${entityName}Scope`;
 
@@ -30,7 +31,7 @@ async function findEntityScopes(config: Config, entityName: string): Promise<[st
   for (const statement of sourceFile.statements) {
     // i.e. `export class Author extends AuthorCodegen { ... }`.
     if (ts.isClassDeclaration(statement) && statement.name?.text === entityName) {
-      return [entityName, statement.members.flatMap((member) => toScopeMember(sourceFile, member, scopeTypeName))];
+      return [entityName, statement.members.flatMap((member) => maybeScopeMember(sourceFile, member, scopeTypeName))];
     }
   }
   return [entityName, []];
@@ -52,7 +53,7 @@ function isNoSuchFileError(e: unknown): boolean {
 }
 
 /** Converts a static property declaration into a generated scope member. */
-function toScopeMember(sourceFile: ts.SourceFile, member: ts.ClassElement, scopeTypeName: string): ScopeMember[] {
+function maybeScopeMember(sourceFile: ts.SourceFile, member: ts.ClassElement, scopeTypeName: string): ScopeMember[] {
   if (!ts.isPropertyDeclaration(member)) return [];
   if (!isStaticMember(member)) return [];
   // i.e. accept `static adult: AuthorScope = scope(...)`, but skip methods/getters/untyped fields.
@@ -64,11 +65,7 @@ function toScopeMember(sourceFile: ts.SourceFile, member: ts.ClassElement, scope
 /** Returns true if the member has a static modifier. */
 function isStaticMember(member: ts.ClassElement): boolean {
   const modifiers = ts.canHaveModifiers(member) ? ts.getModifiers(member) : undefined;
-  return (
-    modifiers?.some(function isStatic(modifier: ts.ModifierLike) {
-      return modifier.kind === ts.SyntaxKind.StaticKeyword;
-    }) ?? false
-  );
+  return modifiers?.some((modifier: ts.ModifierLike) => modifier.kind === ts.SyntaxKind.StaticKeyword) ?? false;
 }
 
 /** Returns true for `EntityScope` and function types returning `EntityScope`. */

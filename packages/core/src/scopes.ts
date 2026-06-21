@@ -1,10 +1,18 @@
 import { isPlainObject } from "joist-utils";
-import { alias, type Alias } from "./Aliases";
+import { alias, type Alias, getAliasMgmt, getMaybeCtiAlias } from "./Aliases";
+import { ConditionBuilder } from "./ConditionBuilder";
 import { maybeGetMetadataForType } from "./configure";
 import type { Entity } from "./Entity";
 import type { ExpressionCondition, ExpressionFilter, FilterAndSettings } from "./EntityFilter";
 import type { EntityManager, FindFilterOptions, MaybeAbstractEntityConstructor } from "./EntityManager";
+import { type EntityMetadata, type Field, getBaseMeta, getMetadata } from "./EntityMetadata";
 import type { Loaded, LoadHint } from "./loadHints";
+import {
+  type ParsedExpressionCondition,
+  type ParsedExpressionFilter,
+  parseEntityFilter,
+  parseValueFilter,
+} from "./QueryParser";
 import type { FilterOf, OrderOf } from "./typeMap";
 
 /** A predicate expressed against a bound alias, i.e. `(a) => a.age.gte(18)`. */
@@ -83,7 +91,7 @@ type ScopeOp<T extends Entity> =
   | { kind: "softDeletes"; value: "include" | "exclude" }
   | { kind: "ref"; name: string; args?: unknown[] };
 type ScopeRefOp<T extends Entity> = Extract<ScopeOp<T>, { kind: "ref" }>;
-type ConditionField = Record<string, (...args: unknown[]) => ExpressionCondition>;
+type FilterField = Field & { aliasSuffix: string };
 
 // Use a symbol so stored scope fragments cannot collide with user-defined scope names.
 const kOps = Symbol("scopeOps");
@@ -175,7 +183,10 @@ class ScopeTerminals<T extends Entity> {
   }
 
   find(em: EntityManager): Promise<T[]>;
-  find<const H extends LoadHint<T>>(em: EntityManager, opts?: FindOptionsWithPopulate<T> & { populate?: H }): Promise<Loaded<T, H>[]>;
+  find<const H extends LoadHint<T>>(
+    em: EntityManager,
+    opts?: FindOptionsWithPopulate<T> & { populate?: H },
+  ): Promise<Loaded<T, H>[]>;
   find(em: EntityManager, opts?: FindOptionsWithPopulate<T>): Promise<T[]> {
     const args = compile(this.#resolver, this.#ops);
     return em.find(resolveCstr(this.#resolver), args.where, toFindOptions(args, opts));
@@ -219,7 +230,8 @@ class ScopeTerminals<T extends Entity> {
 
 /** Compiles the ordered scope ops into Joist's existing find args shape. */
 function compile<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp<T>[]): FilterAndSettings<T> {
-  const a = alias(resolveCstr(resolver));
+  const cstr = resolveCstr(resolver);
+  const a = alias(cstr);
   const conditions: ExpressionCondition[] = [];
   const wheres: FilterOf<T>[] = [];
   const orderBys: OrderOf<T>[] = [];
@@ -263,7 +275,7 @@ function compile<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp
   }
 
   expand(ops, new Set());
-  const remainingWheres = wheres.length > 1 ? splitWhereConditions(a, wheres, conditions) : wheres;
+  const remainingWheres = wheres.length > 1 ? splitWhereConditions(a, cstr, wheres, conditions, softDeletes) : wheres;
 
   return {
     where: remainingWheres.length ? Object.assign({ as: a }, ...remainingWheres) : { as: a },
@@ -379,101 +391,139 @@ function andConditions(
 /** Moves root-field object filters into alias conditions so repeated keys AND instead of last-winning. */
 function splitWhereConditions<T extends Entity>(
   a: Alias<T>,
+  cstr: MaybeAbstractEntityConstructor<T>,
   wheres: FilterOf<T>[],
   conditions: ExpressionCondition[],
+  softDeletes: "include" | "exclude" | undefined,
 ): FilterOf<T>[] {
+  const repeatedKeys = findRepeatedWhereKeys(wheres);
+  if (repeatedKeys.size === 0) return wheres;
+
+  const meta = getMetadata(cstr);
   const remainingWheres: FilterOf<T>[] = [];
   for (const where of wheres) {
-    const remaining = splitWhereCondition(a, where, conditions);
+    const remaining = splitWhereCondition(a, meta, where, repeatedKeys, conditions, softDeletes ?? "exclude");
     if (remaining !== undefined) remainingWheres.push(remaining);
   }
   return remainingWheres;
 }
 
-/** Splits a single object filter into alias-compatible conditions and residual inline filters. */
+/** Returns root-level find filter keys that would be overwritten by plain object spreading. */
+function findRepeatedWhereKeys<T extends Entity>(wheres: FilterOf<T>[]): Set<string> {
+  const seen = new Set<string>();
+  const repeated = new Set<string>();
+  for (const where of wheres) {
+    if (!isPlainObject(where)) continue;
+    for (const key of Object.keys(where as object)) {
+      if (key === "as") continue;
+      if (seen.has(key)) repeated.add(key);
+      else seen.add(key);
+    }
+  }
+  return repeated;
+}
+
+/** Splits repeated root find filters into parsed conditions and residual inline filters. */
 function splitWhereCondition<T extends Entity>(
   a: Alias<T>,
+  meta: EntityMetadata<T>,
   where: FilterOf<T>,
+  repeatedKeys: Set<string>,
   conditions: ExpressionCondition[],
+  softDeletes: "include" | "exclude",
 ): FilterOf<T> | undefined {
   if (!isPlainObject(where)) return where;
 
   const remaining: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(where as object as Record<string, unknown>)) {
-    const fieldConditions = conditionsForAliasField(a, key, value);
-    if (fieldConditions === undefined) {
+    if (!repeatedKeys.has(key)) {
       remaining[key] = value;
-    } else {
-      conditions.push(...fieldConditions);
+      continue;
     }
+
+    const fieldConditions = conditionsForFindField(a, meta, key, value, softDeletes);
+    if (fieldConditions === undefined)
+      throw new Error(`Cannot safely compose repeated scope filter ${meta.type}.${key}`);
+    conditions.push(...fieldConditions);
   }
   return Object.keys(remaining).length === 0 ? undefined : (remaining as FilterOf<T>);
 }
 
-/** Converts a root filter field into alias conditions, if the alias API supports that field. */
-function conditionsForAliasField<T extends Entity>(
+/** Converts a repeated root find filter into public condition DSL nodes using QueryParser's filter parsing. */
+function conditionsForFindField<T extends Entity>(
   a: Alias<T>,
+  meta: EntityMetadata<T>,
   key: string,
   value: unknown,
+  softDeletes: "include" | "exclude",
 ): ExpressionCondition[] | undefined {
-  try {
-    return conditionsForAliasValue((a as object as Record<string, unknown>)[key], value);
-  } catch {
-    return undefined;
+  const field = findFilterField(meta, key);
+  if (field === undefined) return undefined;
+
+  const cb = new ConditionBuilder();
+  const placeholder = `scope_${key}`;
+  if (field.kind === "primaryKey" || field.kind === "primitive" || field.kind === "enum") {
+    const column = field.serde.columns[0];
+    for (const filter of parseValueFilter(value as never)) cb.addValueFilter(placeholder, column, filter);
+  } else if (field.kind === "m2o") {
+    const filter = parseEntityFilter(field.otherMetadata(), value);
+    if (filter === undefined) return [];
+    if (filter.kind === "join")
+      throw new Error(`Cannot safely compose repeated scope filter ${meta.type}.${key} because it requires a join`);
+    if (filterSoftDeletes(field.otherMetadata(), softDeletes))
+      throw new Error(
+        `Cannot safely compose repeated scope filter ${meta.type}.${key} because the related entity has soft deletes`,
+      );
+    cb.addValueFilter(placeholder, field.serde.columns[0], filter);
+  } else {
+    throw new Error(
+      `Cannot safely compose repeated scope filter ${meta.type}.${key} because ${field.kind} fields are not supported`,
+    );
+  }
+
+  const parsed = cb.toExpressionFilter();
+  if (parsed === undefined) return [];
+  cb.bindColumnAlias(placeholder, (replaceAlias) =>
+    getAliasMgmt(a).onBind((newMeta, newAlias) => replaceAlias(getMaybeCtiAlias(meta, field, newMeta, newAlias))),
+  );
+  return [toExpressionFilter(parsed)];
+}
+
+/** Finds a filter field by fieldName or generated fieldIdName. */
+function findFilterField(meta: EntityMetadata, key: string): FilterField | undefined {
+  return (
+    meta.allFields[key] ??
+    meta.polyComponentFields?.[key] ??
+    Object.values(meta.allFields).find((field) => field.fieldIdName === key) ??
+    Object.values(meta.polyComponentFields ?? {}).find((field) => field.fieldIdName === key)
+  );
+}
+
+/** Converts ConditionBuilder's parsed expression tree back into the public conditions DSL. */
+function toExpressionFilter(parsed: ParsedExpressionFilter): ExpressionFilter {
+  return parsed.op === "and"
+    ? { and: parsed.conditions.map(toExpressionCondition) }
+    : { or: parsed.conditions.map(toExpressionCondition) };
+}
+
+/** Converts a parsed condition into the public condition shape. */
+function toExpressionCondition(condition: ParsedExpressionCondition): ExpressionCondition {
+  switch (condition.kind) {
+    case "exp":
+      return toExpressionFilter(condition);
+    case "column":
+    case "raw":
+      return condition;
+    case "exists":
+      throw new Error("Scope find filters cannot compose EXISTS conditions yet");
   }
 }
 
-/** Converts a single field's filter value into one or more alias conditions. */
-function conditionsForAliasValue(field: unknown, value: unknown): ExpressionCondition[] | undefined {
-  if (!isConditionField(field)) return undefined;
-  if (Array.isArray(value)) return callConditionMethod(field, "in", value);
-  if (isPlainObject(value)) return conditionsForAliasValueFilter(field, value as Record<string, unknown>);
-  return callConditionMethod(field, "eq", value);
-}
-
-/** Converts an object value filter, I.e. `{ gte: 18 }`, into alias conditions. */
-function conditionsForAliasValueFilter(
-  field: ConditionField,
-  filter: Record<string, unknown>,
-): ExpressionCondition[] | undefined {
-  const entries = Object.entries(filter);
-  if (entries.length === 0) return [];
-  if (entries.length === 2 && "op" in filter && "value" in filter) {
-    return typeof filter.op === "string" ? conditionsForAliasValueOp(field, filter.op, filter.value) : undefined;
-  }
-
-  const conditions: ExpressionCondition[] = [];
-  for (const [op, value] of entries) {
-    const opConditions = conditionsForAliasValueOp(field, op, value);
-    if (opConditions === undefined) return undefined;
-    conditions.push(...opConditions);
-  }
-  return conditions;
-}
-
-/** Converts a single value-filter operation into alias conditions. */
-function conditionsForAliasValueOp(
-  field: ConditionField,
-  op: string,
-  value: unknown,
-): ExpressionCondition[] | undefined {
-  if (op === "between") {
-    return Array.isArray(value) && value.length === 2 ? callConditionMethod(field, op, value[0], value[1]) : undefined;
-  }
-  return callConditionMethod(field, op, value);
-}
-
-/** Calls an alias condition method if it exists on this field. */
-function callConditionMethod(
-  field: ConditionField,
-  name: string,
-  ...args: unknown[]
-): ExpressionCondition[] | undefined {
-  const method = field[name];
-  return typeof method === "function" ? [method.apply(field, args)] : undefined;
-}
-
-/** Returns true if `value` looks like a field alias with condition methods. */
-function isConditionField(value: unknown): value is ConditionField {
-  return typeof value === "object" && value !== null;
+/** Returns true if normal find parsing would filter soft-deleted rows for this metadata. */
+function filterSoftDeletes(meta: EntityMetadata, softDeletes: "include" | "exclude"): boolean {
+  return (
+    softDeletes === "exclude" &&
+    !!getBaseMeta(meta).timestampFields?.deletedAt &&
+    (meta.inheritanceType !== "cti" || meta.baseTypes.length === 0)
+  );
 }

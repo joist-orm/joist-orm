@@ -118,6 +118,15 @@ describe("EntityManager.scopes", () => {
       expect(() => (Author.adult as unknown as Record<string, unknown>).bogus).toThrow("Invalid scope Author.bogus");
     });
 
+    it("throws instead of guessing how to compose repeated relation filters", () => {
+      expect(() =>
+        Author.adult
+          .where({ publisher: { name: "p1" } })
+          .where({ publisher: { name: "p2" } })
+          .toFindArgs(),
+      ).toThrow("Cannot safely compose repeated scope filter Author.publisher");
+    });
+
     it("ANDs same-field object-where scopes and builder wheres", async () => {
       await insertAuthor({ first_name: "a1", age: 70 });
       await insertAuthor({ first_name: "a2", age: 20 });

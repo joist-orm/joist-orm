@@ -35,8 +35,10 @@ export type Scope<T extends Entity, S = {}> = ScopeQuery<T> & S;
 
 /** A per-entity, pre-typed factory for declaring scopes. */
 export interface ScopeFactory<T extends Entity> {
-  (arg: FilterOf<NoInfer<T>> | ScopeCondition<NoInfer<T>>): AnyScope<T>;
-  fn<A extends unknown[]>(fn: (...args: A) => ScopeCondition<NoInfer<T>>): (...args: A) => AnyScope<T>;
+  <R extends Scope<T> = AnyScope<T>>(arg: FilterOf<NoInfer<T>> | ScopeCondition<NoInfer<T>>): R;
+  fn<A extends unknown[], R extends Scope<T> = AnyScope<T>>(
+    fn: (...args: A) => ScopeCondition<NoInfer<T>>,
+  ): (...args: A) => R;
 }
 
 type AnyScope<T extends Entity> = Scope<T, any>;
@@ -64,11 +66,11 @@ export function scope<T extends Entity>(entityType: string): ScopeFactory<T> {
     return makeScope(getCstr, [toOp(arg)]);
   }
 
-  createScope.fn = function scopeFn<A extends unknown[]>(
+  createScope.fn = function scopeFn<A extends unknown[], R extends Scope<T> = AnyScope<T>>(
     fn: (...args: A) => ScopeCondition<NoInfer<T>>,
-  ): (...args: A) => AnyScope<T> {
-    return function createParameterizedScope(...args: A): AnyScope<T> {
-      return makeScope(getCstr, [{ kind: "cond", fn: fn(...args) }]);
+  ): (...args: A) => R {
+    return function createParameterizedScope(...args: A): R {
+      return makeScope(getCstr, [{ kind: "cond", fn: fn(...args) }]) as R;
     };
   };
 

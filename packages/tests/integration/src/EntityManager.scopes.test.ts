@@ -220,6 +220,19 @@ describe("EntityManager.scopes", () => {
       await expect(Author.adult.findOneOrFail(em)).rejects.toThrow("Did not find Author for given query");
     });
 
+    it("ANDs terminal conditions with compiled scope conditions", async () => {
+      await insertAuthor({ first_name: "a1", age: 20, is_popular: true });
+      await insertAuthor({ first_name: "a2", age: 20, is_popular: false });
+      await insertAuthor({ first_name: "a3", age: 70, is_popular: true });
+      const em = newEntityManager();
+      const authors = await Author.popular.find(em, {
+        conditions: {
+          and: [{ kind: "raw", aliases: [], condition: "age <= ?", bindings: [65], pruneable: false }],
+        },
+      });
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
     it("findCount returns the number of matches", async () => {
       await insertAuthor({ first_name: "a1", age: 20 });
       await insertAuthor({ first_name: "a2", age: 30 });

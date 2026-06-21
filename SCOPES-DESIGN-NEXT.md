@@ -71,7 +71,10 @@ name in the `AuthorScopes` interface.
 
 ### 1.3 Terminal `opts` can clobber compiled `conditions`
 
-`find(em, opts)` spreads user opts over the scope's compiled options:
+**Implemented:** terminal `conditions` now AND with compiled scope conditions while preserving each
+condition tree's internal grouping. Other terminal options keep the existing override behavior.
+
+Previously, `find(em, opts)` spread user opts over the scope's compiled options:
 
 ```ts
 return em.find(cstr, args.where, { ...toFindOptions(args), ...opts });
@@ -79,9 +82,6 @@ return em.find(cstr, args.where, { ...toFindOptions(args), ...opts });
 
 So `find(em, { conditions })` **replaces** the scope's alias-conditions instead of ANDing them.
 Same for `findOne` / `findOneOrFail`.
-
-**Options:** merge `conditions` (AND user's into the scope's), or document that `.where(...)` is the
-supported way to add conditions and terminal `opts` is for `populate` / paging only.
 
 ---
 

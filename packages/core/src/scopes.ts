@@ -1,7 +1,7 @@
 import { alias, type Alias } from "./Aliases";
 import { maybeGetMetadataForType } from "./configure";
 import type { Entity } from "./Entity";
-import type { ExpressionCondition, FilterAndSettings } from "./EntityFilter";
+import type { ExpressionCondition, ExpressionFilter, FilterAndSettings } from "./EntityFilter";
 import type { FindFilterOptions, MaybeAbstractEntityConstructor } from "./EntityManager";
 import type { Loaded, LoadHint } from "./loadHints";
 import type { FilterOf, OrderOf } from "./typeMap";
@@ -121,15 +121,15 @@ function makeScope<T extends Entity>(resolver: EntityCstrResolver<T>, ops: Scope
     },
     find(em: EntityManager, opts?: FindOptionsWithPopulate<T>) {
       const args = compile(resolver, ops);
-      return em.find(resolveCstr(resolver), args.where, { ...toFindOptions(args), ...opts });
+      return em.find(resolveCstr(resolver), args.where, toFindOptions(args, opts));
     },
     findOne(em: EntityManager, opts?: FindOptionsWithPopulate<T>) {
       const args = compile(resolver, ops);
-      return em.findOne(resolveCstr(resolver), args.where, { ...toFindOptions(args), ...opts });
+      return em.findOne(resolveCstr(resolver), args.where, toFindOptions(args, opts));
     },
     findOneOrFail(em: EntityManager, opts?: FindOptionsWithPopulate<T>) {
       const args = compile(resolver, ops);
-      return em.findOneOrFail(resolveCstr(resolver), args.where, { ...toFindOptions(args), ...opts });
+      return em.findOneOrFail(resolveCstr(resolver), args.where, toFindOptions(args, opts));
     },
     findCount(em: EntityManager) {
       const args = compile(resolver, ops);
@@ -292,17 +292,29 @@ function toOp<T extends Entity>(arg: FilterOf<T> | ScopeCondition<T>): ScopeOp<T
 }
 
 /** Pulls the option half of `FilterAndSettings` back out for `em.find`. */
-function toFindOptions<T extends Entity>(args: FilterAndSettings<T>): FindFilterOptions<T> {
+function toFindOptions<T extends Entity>(
+  args: FilterAndSettings<T>,
+  opts?: FindOptionsWithPopulate<T>,
+): FindOptionsWithPopulate<T> {
+  const { conditions, ...rest } = opts ?? {};
   return {
-    conditions: args.conditions,
     orderBy: args.orderBy,
     limit: args.limit,
     offset: args.offset,
     softDeletes: args.softDeletes,
+    ...rest,
+    conditions: andConditions(args.conditions, conditions),
   };
 }
 
 /** Like `toFindOptions`, but drops the `orderBy`/`limit`/`offset` that `findCount`/`findIds` ignore. */
 function toCountOptions<T extends Entity>(args: FilterAndSettings<T>): FindFilterOptions<T> {
   return { conditions: args.conditions, softDeletes: args.softDeletes };
+}
+
+/** ANDs two optional condition trees while preserving each tree's internal grouping. */
+function andConditions(left: ExpressionFilter | undefined, right: ExpressionFilter | undefined): ExpressionFilter | undefined {
+  if (left === undefined) return right;
+  if (right === undefined) return left;
+  return { and: [left, right] };
 }

@@ -68,7 +68,6 @@ export interface ScopeFn<T extends Entity, R extends Scope<T>> {
   fn<A extends unknown[]>(fn: (...args: A) => AliasFn<T>): (...args: A) => R;
 }
 
-type AnyScope<T extends Entity> = Scope<T, any>;
 interface EntityCstrResolver<T extends Entity> {
   entityType: string;
   /** Returns undefined while entity static fields run, before `configureMetadata` has populated the type map. */
@@ -105,13 +104,13 @@ export function newScopeFn<T extends Entity, R extends Scope<T>>(entityType: str
   }
   // But then also add the `.fn(...)` for parameterized scopes
   scopeFn.fn = function scopeFn<A extends unknown[]>(fn: (...args: A) => AliasFn<T>): (...args: A) => R {
-    return (...args) => newScope(resolver, [{ kind: "alias", fn: fn(...args) }]);
+    return (...args) => newScope(resolver, [{ kind: "alias", fn: fn(...args) }]) as R;
   };
   return scopeFn;
 }
 
 /** Creates an immutable scope proxy with `ops` as its current scope fragments. */
-function newScope<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp<T>[]): AnyScope<T> {
+function newScope<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp<T>[]): Scope<T> {
   return new Proxy(new ScopeTerminals(resolver, ops), {
     get(target, prop, receiver) {
       if (typeof prop === "symbol" || prop in target) {
@@ -125,13 +124,13 @@ function newScope<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeO
       const sibling = (cstr as MaybeAbstractEntityConstructor<T> & Record<string, unknown>)[prop];
       if (sibling === undefined) throw new Error(`Invalid scope ${resolver.entityType}.${prop}`);
       if (typeof sibling === "function" && !hasScopeOps(sibling)) {
-        return function createParameterizedRef(...args: unknown[]): AnyScope<T> {
+        return function createParameterizedRef(...args: unknown[]): Scope<T> {
           return target[kWithScopeOp]({ kind: "ref", name: prop, args });
         };
       }
       return target[kWithScopeOp]({ kind: "ref", name: prop });
     },
-  }) as AnyScope<T>;
+  }) as unknown as Scope<T>;
 }
 
 /**
@@ -153,23 +152,23 @@ class ScopeTerminals<T extends Entity> {
     return this.#ops;
   }
 
-  where(arg: FilterOf<T> | AliasFn<T>): AnyScope<T> {
+  where(arg: FilterOf<T> | AliasFn<T>): Scope<T> {
     return this[kWithScopeOp](toOp(arg));
   }
 
-  orderBy(orderBy: OrderOf<T> | OrderOf<T>[]): AnyScope<T> {
+  orderBy(orderBy: OrderOf<T> | OrderOf<T>[]): Scope<T> {
     return this[kWithScopeOp]({ kind: "orderBy", orderBy });
   }
 
-  limit(limit: number): AnyScope<T> {
+  limit(limit: number): Scope<T> {
     return this[kWithScopeOp]({ kind: "limit", limit });
   }
 
-  offset(offset: number): AnyScope<T> {
+  offset(offset: number): Scope<T> {
     return this[kWithScopeOp]({ kind: "offset", offset });
   }
 
-  softDeletes(value: "include" | "exclude"): AnyScope<T> {
+  softDeletes(value: "include" | "exclude"): Scope<T> {
     return this[kWithScopeOp]({ kind: "softDeletes", value });
   }
 
@@ -218,7 +217,7 @@ class ScopeTerminals<T extends Entity> {
   }
 
   /** Returns a new scope with one more recorded operation. */
-  [kWithScopeOp](op: ScopeOp<T>): AnyScope<T> {
+  [kWithScopeOp](op: ScopeOp<T>): Scope<T> {
     return newScope(this.#resolver, [...this.#ops, op]);
   }
 }
@@ -293,10 +292,10 @@ function makePendingScopeRef<T extends Entity>(
   resolver: EntityCstrResolver<T>,
   ops: ScopeOp<T>[],
   name: string,
-): AnyScope<T> {
+): Scope<T> {
   const plainOps: ScopeOp<T>[] = [...ops, { kind: "ref", name }];
   const plainScope = newScope(resolver, plainOps);
-  function createParameterizedRef(...args: unknown[]): AnyScope<T> {
+  function createParameterizedRef(...args: unknown[]): Scope<T> {
     return newScope(resolver, [...ops, { kind: "ref", name, args }]);
   }
   Object.defineProperty(createParameterizedRef, kOps, { value: plainOps });
@@ -308,7 +307,7 @@ function makePendingScopeRef<T extends Entity>(
     apply(_target, _thisArg, args: unknown[]) {
       return newScope(resolver, [...ops, { kind: "ref", name, args }]);
     },
-  }) as AnyScope<T>;
+  }) as unknown as Scope<T>;
 }
 
 /** Resolves a recorded named-scope ref to its underlying ops. */

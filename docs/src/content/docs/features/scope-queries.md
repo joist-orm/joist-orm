@@ -5,9 +5,17 @@ sidebar:
   order: 3.5
 ---
 
-Scope queries let you name and compose common `em.find` filters directly on entity classes.
+Scope queries let you name and compose common `em.find` filters directly on entity classes, i.e. after declaring them on the `Author` entity:
 
-They are inspired by Rails scopes, but they still use Joist's explicit `EntityManager` model:
+```ts
+export class Author extends AuthorCodegen {
+  static adult = scope({ age: { gte: 18 } });
+  static active = scope({ deletedAt: null });
+  static popular = scope((a) => a.isPopular.eq(true));
+}
+```
+
+You can re-use them throughout your codebase:
 
 ```ts
 await Author.adult.find(em);
@@ -15,11 +23,21 @@ await Author.adult.popular.find(em);
 await Author.named("a").adult.find(em);
 ```
 
-Internally, scopes compile down to Joist's regular [find query](./queries-find) shape. They are a reusable, typed way to build `where`, `conditions`, `orderBy`, `limit`, `offset`, and `softDeletes` options.
+Scopes provide a typed API for build reusable snippets of `where`, `conditions`, `orderBy`, `limit`, `offset`, and `softDeletes`.
+
+Internally, scopes are basically syntax-sugar for Joist's regular [em.find](./queries-find), so they share the same semantics and filter syntax.
+
+:::tip[info]
+
+Joist's scopes are heavily inspired by Rails scopes, but are strongly-typed and adapted to fit into Joist's conventions.
+
+For example, Joist's `EntityManager` is fundamental to its Unit of Work & Identity Caching features, so Joist's scopes always require a `.find(em)` to know which `em` to use for loading/caching the entities.
+
+:::
 
 ## Declaring Scopes
 
-In your user-owned entity file, import the generated per-entity scope function and generated scope type from `./entities`:
+Scopes are created in an entity file like `Author.ts` by importing the corresponding `<entity>Scope` function from `./entities` and then, just for convention, renaming it to `scope`:
 
 ```ts
 import {
@@ -30,31 +48,24 @@ import {
 } from "./entities";
 
 export class Author extends AuthorCodegen {
-  static adult: AuthorScope = scope({ age: { gte: 18 } });
-  static active: AuthorScope = scope({ deletedAt: null });
-  static popular: AuthorScope = scope((a) => a.isPopular.eq(true));
+  // Now invoke `scope(...)` to create the static scope fields
+  static adult = scope({ age: { gte: 18 } });
+  static active = scope({ deletedAt: null });
+  static popular = scope((a) => a.isPopular.eq(true));
 }
-
-config.placeholder();
 ```
 
-The `authorScope as scope` import is already typed for `Author`, so the filter passed to `scope(...)` uses the same fields and operators as `em.find(Author, ...)`.
+The `authorScope as scope` import is already pre-typed for the `Author`, so any filters to `scope(...)` will be type-checked to ensure they use the same fields and operators as `em.find(Author, ...)`.
 
-## Object Scopes
+## Filter Scopes
 
 The simplest scope is just a find filter:
 
 ```ts
 export class Author extends AuthorCodegen {
-  static adult: AuthorScope = scope({ age: { gte: 18 } });
-  static active: AuthorScope = scope({ deletedAt: null });
+  static adult = scope({ age: { gte: 18 } });
+  static active = scope({ deletedAt: null });
 }
-```
-
-This is equivalent to reusing the same `em.find` filter each time:
-
-```ts
-await Author.adult.find(em);
 ```
 
 ## Alias-Condition Scopes
@@ -63,7 +74,7 @@ For filters that are easier to express with Joist aliases, pass a callback:
 
 ```ts
 export class Author extends AuthorCodegen {
-  static popular: AuthorScope = scope((a) => a.isPopular.eq(true));
+  static popular = scope((a) => a.isPopular.eq(true));
 }
 ```
 
@@ -75,7 +86,7 @@ Use `scope.fn` for scopes that take arguments:
 
 ```ts
 export class Author extends AuthorCodegen {
-  static named: (prefix: string) => AuthorScope = scope.fn((prefix) => (a) => a.firstName.like(`${prefix}%`));
+  static named = scope.fn((prefix) => (a) => a.firstName.like(`${prefix}%`));
 }
 ```
 
@@ -88,9 +99,10 @@ await Author.named("a").adult.find(em);
 
 ## Chaining
 
-Scopes are immutable and chain with AND semantics:
+Scopes can be chained together `AND` semantics:
 
 ```ts
+// Find both >18 _and_ popular authors
 await Author.adult.popular.find(em);
 await Author.active.where({ firstName: "a1" }).find(em);
 ```
@@ -99,16 +111,14 @@ You can also define a scope in terms of another scope:
 
 ```ts
 export class Author extends AuthorCodegen {
-  static adult: AuthorScope = scope({ age: { gte: 18 } });
-  static popular: AuthorScope = scope((a) => a.isPopular.eq(true));
-  static popularAdult: AuthorScope = Author.popular.adult;
-  static recentAdults: AuthorScope = Author.adult.orderBy({ createdAt: "DESC" });
+  static adult = scope({ age: { gte: 18 } });
+  static popular = scope((a) => a.isPopular.eq(true));
+  static popularAdult = Author.popular.adult;
+  static recentAdults = Author.adult.orderBy({ createdAt: "DESC" });
 }
 ```
 
-Because scopes are immutable, chaining from `Author.adult` does not mutate the base `adult` scope.
-
-## Builders
+## Additional Builders
 
 Every scope also has builder methods for ad-hoc additions:
 
@@ -127,9 +137,9 @@ await Author.senior.where({ age: { gte: 18 } }).find(em);
 
 For complex nested relation filters where repeated object keys would be ambiguous, prefer a single combined object filter for that relation.
 
-## Terminal Methods
+## Invocation Methods
 
-Scopes execute through terminal methods:
+Scopes execute through "terminal" invocation methods:
 
 ```ts
 const authors = await Author.adult.find(em);

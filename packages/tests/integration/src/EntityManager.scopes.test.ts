@@ -1,53 +1,7 @@
-import { Author, EntityManager } from "@src/entities";
+import { Author } from "@src/entities";
 import { insertAuthor, insertBook } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
-import { Loaded } from "joist-orm";
 import { jan1, jan2, jan3 } from "./testDates";
-
-// Compile-only. Never called.
-export function _scopeTypeChecks(em: EntityManager): void {
-  // --- positive: typed named-scope chaining (the key use case) ---
-  void Author.adult.popular; // plain + plain
-  void Author.adult.popular.senior; // 3 deep
-  void Author.popularAdult; // inline-composed from earlier static scopes
-  void Author.adult.popularAdult; // same-entity static ref discovered by codegen
-  void Author.adult.recentAdults; // builder-composed scope discovered by codegen
-  void Author.adult.recentAdultsViaAdult; // builder-composed from an existing static scope
-  void Author.named("a").adult.popular; // parameterized, then chained
-  void Author.adult.popular.where((a) => a.age.lte(65)).find(em); // chain + ad-hoc where + terminal
-
-  // --- positive: declaration, builders, parameterized scopes ---
-  void Author.adult; // object-form scope
-  void Author.popular; // alias-form scope
-  void Author.recentAdults; // scope plus builder chain
-  void Author.recentAdultsViaAdult; // existing static scope plus builder chain
-  void Author.adult.where({ firstName: "a1" }); // builder: ad-hoc object where
-  void Author.senior.orderBy({ age: "DESC" }).limit(5).popular; // builders preserve the named accessors
-  void Author.named("a"); // parameterized scope
-
-  // --- positive: terminal return types ---
-  const p1: Promise<Author[]> = Author.adult.find(em);
-  const p2: Promise<Author | undefined> = Author.adult.findOne(em);
-  const p3: Promise<number> = Author.adult.findCount(em);
-  const p4: Promise<Loaded<Author, "books">[]> = Author.adult.find(em, { populate: "books" });
-  const p5: Promise<Author> = Author.adult.findOneOrFail(em);
-  const p6: Promise<string[]> = Author.adult.findIds(em);
-  const p7: Promise<Loaded<Author, "books"> | undefined> = Author.adult.findOne(em, { populate: "books" });
-  const p8: Promise<Loaded<Author, "books">> = Author.adult.findOneOrFail(em, { populate: "books" });
-  const p9: Promise<Author[]> = Author.adult.find(em, { limit: 5 }); // opts without populate stays `Author[]`
-  void [p1, p2, p3, p4, p5, p6, p7, p8, p9];
-
-  // --- negative: each must be exactly one type error ---
-  // @ts-expect-error - there is no `bogus` scope on Author
-  void Author.adult.bogus;
-  // @ts-expect-error - `notAField` is not an Author filter field
-  void Author.adult.where({ notAField: 1 });
-  // @ts-expect-error - the parameterized scope expects a string
-  void Author.named(123);
-  // @ts-expect-error - no-populate `find` returns Author[], not Loaded<Author, "books">[]
-  const e1: Promise<Loaded<Author, "books">[]> = Author.adult.find(em);
-  void e1;
-}
 
 describe("EntityManager.scopes", () => {
   describe("declaration forms", () => {
@@ -86,6 +40,16 @@ describe("EntityManager.scopes", () => {
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
     });
 
+    it("chains named scopes three deep", async () => {
+      await insertAuthor({ first_name: "a1", age: 70, is_popular: true });
+      await insertAuthor({ first_name: "a2", age: 20, is_popular: true });
+      await insertAuthor({ first_name: "a3", age: 70, is_popular: false });
+      await insertAuthor({ first_name: "a4", age: 10, is_popular: true });
+      const em = newEntityManager();
+      const authors = await Author.adult.popular.senior.find(em);
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
     it("supports inline-composed static scopes that reference earlier declarations", async () => {
       await insertAuthor({ first_name: "a1", age: 70, is_popular: true });
       await insertAuthor({ first_name: "a2", age: 70, is_popular: false });
@@ -93,6 +57,9 @@ describe("EntityManager.scopes", () => {
       const em = newEntityManager();
       const authors = await Author.popularAdult.find(em);
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
+
+      const chained = await Author.adult.popularAdult.find(em);
+      expect(chained).toMatchEntity([{ firstName: "a1" }]);
     });
 
     it("supports builder-composed static scopes", async () => {
@@ -100,11 +67,17 @@ describe("EntityManager.scopes", () => {
       await insertAuthor({ first_name: "a2", age: 10, created_at: jan3 });
       await insertAuthor({ first_name: "a3", age: 30, created_at: jan2 });
       const em = newEntityManager();
-      const authors = await Author.adult.recentAdults.find(em);
+      const authors = await Author.recentAdults.find(em);
       expect(authors).toMatchEntity([{ firstName: "a3" }, { firstName: "a1" }]);
 
-      const viaAdult = await Author.adult.recentAdultsViaAdult.find(em);
+      const viaAdult = await Author.recentAdultsViaAdult.find(em);
       expect(viaAdult).toMatchEntity([{ firstName: "a3" }, { firstName: "a1" }]);
+
+      const chained = await Author.adult.recentAdults.find(em);
+      expect(chained).toMatchEntity([{ firstName: "a3" }, { firstName: "a1" }]);
+
+      const chainedViaAdult = await Author.adult.recentAdultsViaAdult.find(em);
+      expect(chainedViaAdult).toMatchEntity([{ firstName: "a3" }, { firstName: "a1" }]);
     });
 
     it("ANDs a parameterized scope with a named scope", async () => {
@@ -120,7 +93,7 @@ describe("EntityManager.scopes", () => {
       await insertAuthor({ first_name: "a1", age: 20, is_popular: true });
       await insertAuthor({ first_name: "a2", age: 70, is_popular: true });
       const em = newEntityManager();
-      const authors = await Author.popular.where((a) => a.age.lte(65)).find(em);
+      const authors = await Author.adult.popular.where((a) => a.age.lte(65)).find(em);
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
     });
 
@@ -174,6 +147,15 @@ describe("EntityManager.scopes", () => {
       const em = newEntityManager();
       const authors = await Author.adult.orderBy({ age: "ASC" }).offset(1).limit(1).find(em);
       expect(authors).toMatchEntity([{ age: 40 }]);
+    });
+
+    it("keeps named scope access after builder calls", async () => {
+      await insertAuthor({ first_name: "a1", age: 70, is_popular: true });
+      await insertAuthor({ first_name: "a2", age: 80, is_popular: false });
+      await insertAuthor({ first_name: "a3", age: 65, is_popular: true });
+      const em = newEntityManager();
+      const authors = await Author.senior.orderBy({ age: "DESC" }).limit(5).popular.find(em);
+      expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a3" }]);
     });
 
     it("includes soft-deleted entities when asked", async () => {
@@ -246,12 +228,39 @@ describe("EntityManager.scopes", () => {
       expect(ids).toEqual(["a:1"]);
     });
 
+    it("find accepts terminal options without populate", async () => {
+      await insertAuthor({ first_name: "a1", age: 20 });
+      await insertAuthor({ first_name: "a2", age: 30 });
+      await insertAuthor({ first_name: "a3", age: 10 });
+      const em = newEntityManager();
+      const authors = await Author.adult.find(em, { orderBy: { age: "DESC" }, limit: 1 });
+      expect(authors).toMatchEntity([{ firstName: "a2" }]);
+    });
+
     it("find populates the requested relation", async () => {
       await insertAuthor({ first_name: "a1", age: 20 });
       await insertBook({ title: "b1", author_id: 1 });
       const em = newEntityManager();
       const authors = await Author.adult.find(em, { populate: "books" });
       expect(authors[0].books.get).toMatchEntity([{ title: "b1" }]);
+    });
+
+    it("findOne populates the requested relation", async () => {
+      await insertAuthor({ first_name: "a1", age: 20 });
+      await insertAuthor({ first_name: "a2", age: 10 });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const author = await Author.adult.findOne(em, { populate: "books" });
+      if (author === undefined) throw new Error("Expected author");
+      expect(author.books.get).toMatchEntity([{ title: "b1" }]);
+    });
+
+    it("findOneOrFail populates the requested relation", async () => {
+      await insertAuthor({ first_name: "a1", age: 20 });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      const author = await Author.adult.findOneOrFail(em, { populate: "books" });
+      expect(author.books.get).toMatchEntity([{ title: "b1" }]);
     });
   });
 

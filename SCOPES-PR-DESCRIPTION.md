@@ -19,7 +19,7 @@ Scopes are static entity properties, but execution still requires an explicit `E
 - Supports object filters, alias-condition filters, parameterized scopes with `scope.fn`, named-scope chaining, and builder chaining with `.where`, `.orderBy`, `.limit`, `.offset`, and `.softDeletes`.
 - Preserves scope conditions when terminal `.find(em, opts)` calls pass additional `conditions`.
 - Avoids object-spread last-write-wins for repeated root-level filter fields by moving alias-compatible root filters into ANDed conditions.
-- Generates per-entity `authorScope` factory constants in each `<Entity>Codegen.ts`, mirroring existing `<entity>Config` constants.
+- Generates per-entity `authorScope` function constants in each `<Entity>Codegen.ts`, mirroring existing `<entity>Config` constants.
 - Generates `<Entity>Scopes` and `<Entity>Scope` types from a syntax-only codegen pre-scan of user-owned entity files.
 - Regenerates test fixture codegen so every entity has an empty or populated `<Entity>Scopes` interface and `<Entity>Scope` alias.
 

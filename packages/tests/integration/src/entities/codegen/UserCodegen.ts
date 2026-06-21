@@ -30,7 +30,7 @@ import {
   type MaybeAbstractEntityConstructor,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -215,7 +215,7 @@ export type UserScope = Scope<User, UserScopes>;
 
 export const userConfig = new ConfigApi<User, Context>();
 
-export const userScope = newScopeFactory<User>("User");
+export const userScope = newScopeFn<User>("User");
 
 userConfig.addRule(newRequiredRule("name"));
 userConfig.addRule(newRequiredRule("email"));

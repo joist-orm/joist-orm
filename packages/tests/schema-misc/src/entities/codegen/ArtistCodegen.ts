@@ -21,7 +21,7 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -104,7 +104,7 @@ export type ArtistScope = Scope<Artist, ArtistScopes>;
 
 export const artistConfig = new ConfigApi<Artist, Context>();
 
-export const artistScope = newScopeFactory<Artist>("Artist");
+export const artistScope = newScopeFn<Artist>("Artist");
 
 artistConfig.addRule(newRequiredRule("firstName"));
 artistConfig.addRule(newRequiredRule("lastName"));

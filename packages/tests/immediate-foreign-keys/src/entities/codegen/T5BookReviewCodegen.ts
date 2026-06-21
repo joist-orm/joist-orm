@@ -21,7 +21,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -94,7 +94,7 @@ export type T5BookReviewScope = Scope<T5BookReview, T5BookReviewScopes>;
 
 export const t5BookReviewConfig = new ConfigApi<T5BookReview, Context>();
 
-export const t5BookReviewScope = newScopeFactory<T5BookReview>("T5BookReview");
+export const t5BookReviewScope = newScopeFn<T5BookReview>("T5BookReview");
 
 t5BookReviewConfig.addRule(newRequiredRule("title"));
 

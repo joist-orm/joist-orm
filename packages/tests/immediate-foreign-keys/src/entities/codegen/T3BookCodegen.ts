@@ -23,7 +23,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -101,7 +101,7 @@ export type T3BookScope = Scope<T3Book, T3BookScopes>;
 
 export const t3BookConfig = new ConfigApi<T3Book, Context>();
 
-export const t3BookScope = newScopeFactory<T3Book>("T3Book");
+export const t3BookScope = newScopeFn<T3Book>("T3Book");
 
 t3BookConfig.addRule(newRequiredRule("title"));
 t3BookConfig.addRule(newRequiredRule("author"));

@@ -21,7 +21,7 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -106,7 +106,7 @@ export type ParentGroupScope = Scope<ParentGroup, ParentGroupScopes>;
 
 export const parentGroupConfig = new ConfigApi<ParentGroup, Context>();
 
-export const parentGroupScope = newScopeFactory<ParentGroup>("ParentGroup");
+export const parentGroupScope = newScopeFn<ParentGroup>("ParentGroup");
 
 parentGroupConfig.addRule(newRequiredRule("createdAt"));
 parentGroupConfig.addRule(newRequiredRule("updatedAt"));

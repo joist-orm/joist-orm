@@ -23,7 +23,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -101,7 +101,7 @@ export type T2AuthorScope = Scope<T2Author, T2AuthorScopes>;
 
 export const t2AuthorConfig = new ConfigApi<T2Author, Context>();
 
-export const t2AuthorScope = newScopeFactory<T2Author>("T2Author");
+export const t2AuthorScope = newScopeFn<T2Author>("T2Author");
 
 t2AuthorConfig.addRule(newRequiredRule("firstName"));
 

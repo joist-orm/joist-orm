@@ -25,7 +25,7 @@ await Author.named("a").orderBy({ age: "DESC" }).limit(5).find(em);  // paramete
 | Chaining `User.active.adult` | must | named accessors on the scope object |
 | `.where(...)` after a scope | must | `where`/`orderBy`/`limit`/… builders return `this` |
 | AND semantics when stacking | must | compile each fragment to an ANDed `conditions` term |
-| Parameterized `scope :named, ->(p){...}` | must | scope factory returns a function |
+| Parameterized `scope :named, ->(p){...}` | must | scope function returns a function |
 | Lazy (nothing runs until executed) | must | scope is an inert builder; `.find(em)` is the only trigger |
 | `default_scope` | nice | `config.defaultScope(...)` — prepend ops to every compile |
 | Association scopes `author.books.published` | explore | §9 — feasible, gets `em` for free |

@@ -16,7 +16,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -84,7 +84,7 @@ export type AdminUserScope = Scope<AdminUser, AdminUserScopes>;
 
 export const adminUserConfig = new ConfigApi<AdminUser, Context>();
 
-export const adminUserScope = newScopeFactory<AdminUser>("AdminUser");
+export const adminUserScope = newScopeFn<AdminUser>("AdminUser");
 
 adminUserConfig.addRule(newRequiredRule("role"));
 

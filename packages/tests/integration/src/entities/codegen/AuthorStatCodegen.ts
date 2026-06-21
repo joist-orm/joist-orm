@@ -15,7 +15,7 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -135,7 +135,7 @@ export type AuthorStatScope = Scope<AuthorStat, AuthorStatScopes>;
 
 export const authorStatConfig = new ConfigApi<AuthorStat, Context>();
 
-export const authorStatScope = newScopeFactory<AuthorStat>("AuthorStat");
+export const authorStatScope = newScopeFn<AuthorStat>("AuthorStat");
 
 authorStatConfig.addRule(newRequiredRule("smallint"));
 authorStatConfig.addRule(newRequiredRule("integer"));

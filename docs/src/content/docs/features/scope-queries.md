@@ -19,7 +19,7 @@ Internally, scopes compile down to Joist's regular [find query](./queries-find) 
 
 ## Declaring Scopes
 
-In your user-owned entity file, import the generated per-entity scope factory and generated scope type from `./entities`:
+In your user-owned entity file, import the generated per-entity scope function and generated scope type from `./entities`:
 
 ```ts
 import {
@@ -148,7 +148,7 @@ const author = await Author.adult.findOneOrFail(em, { populate: "books" });
 
 ## Codegen
 
-Joist generates a scope factory and scope types in each `<Entity>Codegen.ts` file:
+Joist generates a scope function and scope types in each `<Entity>Codegen.ts` file:
 
 ```ts
 export interface AuthorScopes {

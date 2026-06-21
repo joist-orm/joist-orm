@@ -26,7 +26,7 @@ import {
   mustBeSubType,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -138,7 +138,7 @@ export type TaskOldScope = Scope<TaskOld, TaskOldScopes>;
 
 export const taskOldConfig = new ConfigApi<TaskOld, Context>();
 
-export const taskOldScope = newScopeFactory<TaskOld>("TaskOld");
+export const taskOldScope = newScopeFn<TaskOld>("TaskOld");
 
 taskOldConfig.addRule(newRequiredRule("specialOldField"));
 taskOldConfig.addRule("parentOldTask", mustBeSubType("parentOldTask"));

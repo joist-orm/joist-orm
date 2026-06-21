@@ -19,7 +19,7 @@ import {
   type LoadHint,
   loadLens,
   newChangesProxy,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -92,7 +92,7 @@ export type SmallPublisherGroupScope = Scope<SmallPublisherGroup, SmallPublisher
 
 export const smallPublisherGroupConfig = new ConfigApi<SmallPublisherGroup, Context>();
 
-export const smallPublisherGroupScope = newScopeFactory<SmallPublisherGroup>("SmallPublisherGroup");
+export const smallPublisherGroupScope = newScopeFn<SmallPublisherGroup>("SmallPublisherGroup");
 
 declare module "joist-core" {
   interface TypeMap {

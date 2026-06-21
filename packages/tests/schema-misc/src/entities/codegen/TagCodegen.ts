@@ -21,7 +21,7 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -83,7 +83,7 @@ export type TagScope = Scope<Tag, TagScopes>;
 
 export const tagConfig = new ConfigApi<Tag, Context>();
 
-export const tagScope = newScopeFactory<Tag>("Tag");
+export const tagScope = newScopeFn<Tag>("Tag");
 
 tagConfig.addRule(newRequiredRule("title"));
 

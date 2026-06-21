@@ -28,7 +28,7 @@ import {
   type MaybeAbstractEntityConstructor,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -165,7 +165,7 @@ export type CommentScope = Scope<Comment, CommentScopes>;
 
 export const commentConfig = new ConfigApi<Comment, Context>();
 
-export const commentScope = newScopeFactory<Comment>("Comment");
+export const commentScope = newScopeFn<Comment>("Comment");
 
 commentConfig.addRule("parentTags", newRequiredRule("parentTags"));
 commentConfig.addRule(newRequiredRule("createdAt"));

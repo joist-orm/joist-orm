@@ -23,7 +23,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -121,7 +121,7 @@ export type ChildGroupScope = Scope<ChildGroup, ChildGroupScopes>;
 
 export const childGroupConfig = new ConfigApi<ChildGroup, Context>();
 
-export const childGroupScope = newScopeFactory<ChildGroup>("ChildGroup");
+export const childGroupScope = newScopeFn<ChildGroup>("ChildGroup");
 
 childGroupConfig.addRule(newRequiredRule("createdAt"));
 childGroupConfig.addRule(newRequiredRule("updatedAt"));

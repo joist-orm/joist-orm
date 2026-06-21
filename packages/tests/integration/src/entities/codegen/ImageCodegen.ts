@@ -21,7 +21,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -148,7 +148,7 @@ export type ImageScope = Scope<Image, ImageScopes>;
 
 export const imageConfig = new ConfigApi<Image, Context>();
 
-export const imageScope = newScopeFactory<Image>("Image");
+export const imageScope = newScopeFn<Image>("Image");
 
 imageConfig.addRule(newRequiredRule("fileName"));
 imageConfig.addRule(newRequiredRule("createdAt"));

@@ -21,7 +21,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -102,7 +102,7 @@ export type PaintingScope = Scope<Painting, PaintingScopes>;
 
 export const paintingConfig = new ConfigApi<Painting, Context>();
 
-export const paintingScope = newScopeFactory<Painting>("Painting");
+export const paintingScope = newScopeFn<Painting>("Painting");
 
 paintingConfig.addRule(newRequiredRule("title"));
 paintingConfig.addRule(newRequiredRule("createdAt"));

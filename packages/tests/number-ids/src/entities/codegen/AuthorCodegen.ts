@@ -21,7 +21,7 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -96,7 +96,7 @@ export type AuthorScope = Scope<Author, AuthorScopes>;
 
 export const authorConfig = new ConfigApi<Author, Context>();
 
-export const authorScope = newScopeFactory<Author>("Author");
+export const authorScope = newScopeFn<Author>("Author");
 
 authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("createdAt"));

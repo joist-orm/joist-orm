@@ -27,7 +27,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
@@ -209,7 +209,7 @@ export type BookScope = Scope<Book, BookScopes>;
 
 export const bookConfig = new ConfigApi<Book, Context>();
 
-export const bookScope = newScopeFactory<Book>("Book");
+export const bookScope = newScopeFn<Book>("Book");
 
 bookConfig.addRule(newRequiredRule("title"));
 bookConfig.addRule(newRequiredRule("order"));

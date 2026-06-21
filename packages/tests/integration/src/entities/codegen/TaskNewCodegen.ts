@@ -24,7 +24,7 @@ import {
   type ManyToOneReference,
   mustBeSubType,
   newChangesProxy,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -132,7 +132,7 @@ export type TaskNewScope = Scope<TaskNew, TaskNewScopes>;
 
 export const taskNewConfig = new ConfigApi<TaskNew, Context>();
 
-export const taskNewScope = newScopeFactory<TaskNew>("TaskNew");
+export const taskNewScope = newScopeFn<TaskNew>("TaskNew");
 
 taskNewConfig.addRule("selfReferential", mustBeSubType("selfReferential"));
 taskNewConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));

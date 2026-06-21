@@ -15,7 +15,7 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -72,7 +72,7 @@ export type DatabaseOwnerScope = Scope<DatabaseOwner, DatabaseOwnerScopes>;
 
 export const databaseOwnerConfig = new ConfigApi<DatabaseOwner, Context>();
 
-export const databaseOwnerScope = newScopeFactory<DatabaseOwner>("DatabaseOwner");
+export const databaseOwnerScope = newScopeFn<DatabaseOwner>("DatabaseOwner");
 
 databaseOwnerConfig.addRule(newRequiredRule("name"));
 

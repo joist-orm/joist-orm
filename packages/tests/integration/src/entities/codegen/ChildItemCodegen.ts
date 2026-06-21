@@ -21,7 +21,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -112,7 +112,7 @@ export type ChildItemScope = Scope<ChildItem, ChildItemScopes>;
 
 export const childItemConfig = new ConfigApi<ChildItem, Context>();
 
-export const childItemScope = newScopeFactory<ChildItem>("ChildItem");
+export const childItemScope = newScopeFn<ChildItem>("ChildItem");
 
 childItemConfig.addRule(newRequiredRule("createdAt"));
 childItemConfig.addRule(newRequiredRule("updatedAt"));

@@ -28,7 +28,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -176,7 +176,7 @@ export type TaskScope = Scope<Task, TaskScopes>;
 
 export const taskConfig = new ConfigApi<Task, Context>();
 
-export const taskScope = newScopeFactory<Task>("Task");
+export const taskScope = newScopeFn<Task>("Task");
 
 taskConfig.addRule(newRequiredRule("durationInDays"));
 taskConfig.addRule(newRequiredRule("createdAt"));

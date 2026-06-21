@@ -21,7 +21,7 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -91,7 +91,7 @@ export type T5AuthorScope = Scope<T5Author, T5AuthorScopes>;
 
 export const t5AuthorConfig = new ConfigApi<T5Author, Context>();
 
-export const t5AuthorScope = newScopeFactory<T5Author>("T5Author");
+export const t5AuthorScope = newScopeFn<T5Author>("T5Author");
 
 t5AuthorConfig.addRule(newRequiredRule("firstName"));
 

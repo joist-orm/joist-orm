@@ -21,7 +21,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -102,7 +102,7 @@ export type AuthorScheduleScope = Scope<AuthorSchedule, AuthorScheduleScopes>;
 
 export const authorScheduleConfig = new ConfigApi<AuthorSchedule, Context>();
 
-export const authorScheduleScope = newScopeFactory<AuthorSchedule>("AuthorSchedule");
+export const authorScheduleScope = newScopeFn<AuthorSchedule>("AuthorSchedule");
 
 authorScheduleConfig.addRule(newRequiredRule("createdAt"));
 authorScheduleConfig.addRule(newRequiredRule("updatedAt"));

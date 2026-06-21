@@ -21,7 +21,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -133,7 +133,7 @@ export type BookAdvanceScope = Scope<BookAdvance, BookAdvanceScopes>;
 
 export const bookAdvanceConfig = new ConfigApi<BookAdvance, Context>();
 
-export const bookAdvanceScope = newScopeFactory<BookAdvance>("BookAdvance");
+export const bookAdvanceScope = newScopeFn<BookAdvance>("BookAdvance");
 
 bookAdvanceConfig.addRule(newRequiredRule("createdAt"));
 bookAdvanceConfig.addRule(newRequiredRule("updatedAt"));

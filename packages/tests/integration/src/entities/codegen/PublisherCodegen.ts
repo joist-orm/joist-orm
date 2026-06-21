@@ -25,7 +25,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -256,7 +256,7 @@ export type PublisherScope = Scope<Publisher, PublisherScopes>;
 
 export const publisherConfig = new ConfigApi<Publisher, Context>();
 
-export const publisherScope = newScopeFactory<Publisher>("Publisher");
+export const publisherScope = newScopeFn<Publisher>("Publisher");
 
 publisherConfig.addRule(newRequiredRule("name"));
 publisherConfig.addRule("numberOfBookReviews", newRequiredRule("numberOfBookReviews"));

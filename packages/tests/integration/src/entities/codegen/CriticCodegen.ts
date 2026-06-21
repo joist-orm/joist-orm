@@ -24,7 +24,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
@@ -143,7 +143,7 @@ export type CriticScope = Scope<Critic, CriticScopes>;
 
 export const criticConfig = new ConfigApi<Critic, Context>();
 
-export const criticScope = newScopeFactory<Critic>("Critic");
+export const criticScope = newScopeFn<Critic>("Critic");
 
 criticConfig.addRule(newRequiredRule("name"));
 criticConfig.addRule(newRequiredRule("createdAt"));

@@ -27,7 +27,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
@@ -154,7 +154,7 @@ export type BookReviewScope = Scope<BookReview, BookReviewScopes>;
 
 export const bookReviewConfig = new ConfigApi<BookReview, Context>();
 
-export const bookReviewScope = newScopeFactory<BookReview>("BookReview");
+export const bookReviewScope = newScopeFn<BookReview>("BookReview");
 
 bookReviewConfig.addRule(newRequiredRule("rating"));
 bookReviewConfig.addRule("isPublic", newRequiredRule("isPublic"));

@@ -26,7 +26,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -112,7 +112,7 @@ export type EmployeeScope = Scope<Employee, EmployeeScopes>;
 
 export const employeeConfig = new ConfigApi<Employee, Context>();
 
-export const employeeScope = newScopeFactory<Employee>("Employee");
+export const employeeScope = newScopeFn<Employee>("Employee");
 
 employeeConfig.addRule(newRequiredRule("name"));
 employeeConfig.addRule(newRequiredRule("createdAt"));

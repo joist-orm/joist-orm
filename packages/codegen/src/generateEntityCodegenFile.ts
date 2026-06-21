@@ -79,7 +79,7 @@ import {
   mustBeSubType,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   setField,
   setOpts,
   toIdOf,
@@ -123,7 +123,7 @@ export function generateEntityCodegenFile(
   const relations = createRelations(config, meta, entity);
 
   const configName = `${camelCase(entityName)}Config`;
-  const scopeFactoryName = `${camelCase(entityName)}Scope`;
+  const scopeFnName = `${camelCase(entityName)}Scope`;
   const scopeTypeName = `${entityName}Scope`;
   const scopesTypeName = `${entityName}Scopes`;
   const metadata = imp(`${camelCase(entityName)}Meta@./entities.ts`);
@@ -239,7 +239,7 @@ export function generateEntityCodegenFile(
 
     export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
 
-    export const ${scopeFactoryName} = ${newScopeFactory}<${entity.type}>("${entityName}");
+    export const ${scopeFnName} = ${newScopeFn}<${entity.type}>("${entityName}");
 
     ${generateDefaultValidationRules(dbMeta, meta, configName)}
     ${generateDefaultValues(config, meta, configName)};

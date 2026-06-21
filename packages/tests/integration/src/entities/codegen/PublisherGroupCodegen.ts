@@ -24,7 +24,7 @@ import {
   loadLens,
   newChangesProxy,
   newRequiredRule,
-  newScopeFactory,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
@@ -135,7 +135,7 @@ export type PublisherGroupScope = Scope<PublisherGroup, PublisherGroupScopes>;
 
 export const publisherGroupConfig = new ConfigApi<PublisherGroup, Context>();
 
-export const publisherGroupScope = newScopeFactory<PublisherGroup>("PublisherGroup");
+export const publisherGroupScope = newScopeFn<PublisherGroup>("PublisherGroup");
 
 publisherGroupConfig.addRule("numberOfBookReviews", newRequiredRule("numberOfBookReviews"));
 publisherGroupConfig.addRule("numberOfBookReviewsFormatted", newRequiredRule("numberOfBookReviewsFormatted"));

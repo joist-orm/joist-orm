@@ -43,8 +43,8 @@ export interface ScopeQuery<T extends Entity> {
 /** A scope for entity `T`, with chainable named accessors supplied by `S`. */
 export type Scope<T extends Entity, S = {}> = ScopeQuery<T> & S;
 
-/** A per-entity, pre-typed factory for declaring scopes. */
-export interface ScopeFactory<T extends Entity> {
+/** A per-entity, pre-typed function for declaring scopes. */
+export interface ScopeFn<T extends Entity> {
   <R extends Scope<T> = AnyScope<T>>(arg: FilterOf<T> | ScopeCondition<T>): R;
   fn<A extends unknown[], R extends Scope<T> = AnyScope<T>>(fn: (...args: A) => ScopeCondition<T>): (...args: A) => R;
 }
@@ -70,8 +70,8 @@ type ConditionField = Record<string, (...args: unknown[]) => ExpressionCondition
 
 const kOps = Symbol("scopeOps");
 
-/** Creates a per-entity, pre-typed scope factory. */
-export function newScopeFactory<T extends Entity>(entityType: string): ScopeFactory<T> {
+/** Creates a per-entity, pre-typed scope function. */
+export function newScopeFn<T extends Entity>(entityType: string): ScopeFn<T> {
   const resolver: EntityCstrResolver<T> = {
     entityType,
     maybeGet: () => maybeGetMetadataForType<T>(entityType)?.cstr,

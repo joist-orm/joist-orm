@@ -90,46 +90,44 @@ const kOps = Symbol("scopeOps");
 
 /** Creates a per-entity, pre-typed scope function. */
 export function newScopeFn<T extends Entity, R extends Scope<T>>(entityType: string): ScopeFn<T, R> {
+  // We won't immediately have access to the EntityMetadata during static field assignment, so provide a lazy handle
   const resolver: EntityCstrResolver<T> = {
     entityType,
     maybeGet: () => maybeGetMetadataForType<T>(entityType)?.cstr,
   };
-
-  function createScope(arg: FilterOf<T> | ScopeCondition<T>): R {
-    return makeScope(resolver, [toOp(arg)]) as R;
+  // Create the scopeFn
+  function scopeFn(arg: FilterOf<T> | ScopeCondition<T>): R {
+    return newScope(resolver, [toOp(arg)]) as R;
   }
-
-  createScope.fn = function scopeFn<A extends unknown[]>(fn: (...args: A) => ScopeCondition<T>): (...args: A) => R {
-    return function createParameterizedScope(...args: A): R {
-      return makeScope(resolver, [{ kind: "cond", fn: fn(...args) }]) as R;
-    };
+  // But then also add the `.fn(...)` for parameterized scopes
+  scopeFn.fn = function scopeFn<A extends unknown[]>(fn: (...args: A) => ScopeCondition<T>): (...args: A) => R {
+    return (...args) => newScope(resolver, [{ kind: "cond", fn: fn(...args) }]);
   };
-
-  return createScope;
+  return scopeFn;
 }
 
 /** Creates an immutable scope proxy with `ops` as its current scope fragments. */
-function makeScope<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp<T>[]): AnyScope<T> {
-  function next(op: ScopeOp<T>): AnyScope<T> {
-    return makeScope(resolver, [...ops, op]);
+function newScope<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp<T>[]): AnyScope<T> {
+  function add(op: ScopeOp<T>): AnyScope<T> {
+    return newScope(resolver, [...ops, op]);
   }
 
   const self = {
     [kOps]: ops,
     where(arg: FilterOf<T> | ScopeCondition<T>) {
-      return next(toOp(arg));
+      return add(toOp(arg));
     },
     orderBy(orderBy: OrderOf<T> | OrderOf<T>[]) {
-      return next({ kind: "orderBy", orderBy });
+      return add({ kind: "orderBy", orderBy });
     },
     limit(limit: number) {
-      return next({ kind: "limit", limit });
+      return add({ kind: "limit", limit });
     },
     offset(offset: number) {
-      return next({ kind: "offset", offset });
+      return add({ kind: "offset", offset });
     },
     softDeletes(value: "include" | "exclude") {
-      return next({ kind: "softDeletes", value });
+      return add({ kind: "softDeletes", value });
     },
     toFindArgs() {
       return compile(resolver, ops);
@@ -167,10 +165,10 @@ function makeScope<T extends Entity>(resolver: EntityCstrResolver<T>, ops: Scope
       if (sibling === undefined) throw new Error(`Invalid scope ${resolver.entityType}.${prop}`);
       if (typeof sibling === "function" && !hasScopeOps(sibling)) {
         return function createParameterizedRef(...args: unknown[]): AnyScope<T> {
-          return next({ kind: "ref", name: prop, args });
+          return add({ kind: "ref", name: prop, args });
         };
       }
-      return next({ kind: "ref", name: prop });
+      return add({ kind: "ref", name: prop });
     },
   }) as AnyScope<T>;
 }
@@ -249,9 +247,9 @@ function makePendingScopeRef<T extends Entity>(
   name: string,
 ): AnyScope<T> {
   const plainOps: ScopeOp<T>[] = [...ops, { kind: "ref", name }];
-  const plainScope = makeScope(resolver, plainOps);
+  const plainScope = newScope(resolver, plainOps);
   function createParameterizedRef(...args: unknown[]): AnyScope<T> {
-    return makeScope(resolver, [...ops, { kind: "ref", name, args }]);
+    return newScope(resolver, [...ops, { kind: "ref", name, args }]);
   }
   Object.defineProperty(createParameterizedRef, kOps, { value: plainOps });
   return new Proxy(createParameterizedRef, {
@@ -260,7 +258,7 @@ function makePendingScopeRef<T extends Entity>(
       return Reflect.get(plainScope as object, prop, receiver);
     },
     apply(_target, _thisArg, args: unknown[]) {
-      return makeScope(resolver, [...ops, { kind: "ref", name, args }]);
+      return newScope(resolver, [...ops, { kind: "ref", name, args }]);
     },
   }) as AnyScope<T>;
 }

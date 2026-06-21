@@ -87,6 +87,7 @@ type ConditionField = Record<string, (...args: unknown[]) => ExpressionCondition
 
 // Use a symbol so stored scope fragments cannot collide with user-defined scope names.
 const kOps = Symbol("scopeOps");
+const kWithScopeOp = Symbol("scopeWithOp");
 
 /** Creates a per-entity, pre-typed scope function. */
 export function newScopeFn<T extends Entity, R extends Scope<T>>(entityType: string): ScopeFn<T, R> {
@@ -108,55 +109,12 @@ export function newScopeFn<T extends Entity, R extends Scope<T>>(entityType: str
 
 /** Creates an immutable scope proxy with `ops` as its current scope fragments. */
 function newScope<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp<T>[]): AnyScope<T> {
-  function add(op: ScopeOp<T>): AnyScope<T> {
-    return newScope(resolver, [...ops, op]);
-  }
-
-  const self = {
-    [kOps]: ops,
-    where(arg: FilterOf<T> | ScopeCondition<T>) {
-      return add(toOp(arg));
-    },
-    orderBy(orderBy: OrderOf<T> | OrderOf<T>[]) {
-      return add({ kind: "orderBy", orderBy });
-    },
-    limit(limit: number) {
-      return add({ kind: "limit", limit });
-    },
-    offset(offset: number) {
-      return add({ kind: "offset", offset });
-    },
-    softDeletes(value: "include" | "exclude") {
-      return add({ kind: "softDeletes", value });
-    },
-    toFindArgs() {
-      return compile(resolver, ops);
-    },
-    find(em: EntityManager, opts?: FindOptionsWithPopulate<T>) {
-      const args = compile(resolver, ops);
-      return em.find(resolveCstr(resolver), args.where, toFindOptions(args, opts));
-    },
-    findOne(em: EntityManager, opts?: FindOptionsWithPopulate<T>) {
-      const args = compile(resolver, ops);
-      return em.findOne(resolveCstr(resolver), args.where, toFindOptions(args, opts));
-    },
-    findOneOrFail(em: EntityManager, opts?: FindOptionsWithPopulate<T>) {
-      const args = compile(resolver, ops);
-      return em.findOneOrFail(resolveCstr(resolver), args.where, toFindOptions(args, opts));
-    },
-    findCount(em: EntityManager) {
-      const args = compile(resolver, ops);
-      return em.findCount(resolveCstr(resolver), args.where, toCountOptions(args));
-    },
-    findIds(em: EntityManager) {
-      const args = compile(resolver, ops);
-      return em.findIds(resolveCstr(resolver), args.where, toCountOptions(args));
-    },
-  };
-
-  return new Proxy(self, {
+  return new Proxy(new ScopeTerminals(resolver, ops), {
     get(target, prop, receiver) {
-      if (typeof prop === "symbol" || prop in target) return Reflect.get(target, prop, receiver);
+      if (typeof prop === "symbol" || prop in target) {
+        const value = Reflect.get(target, prop, target);
+        return typeof value === "function" ? value.bind(target) : value;
+      }
       const cstr = resolver.maybeGet();
       // During entity static initialization, metadata is not registered yet, so defer creating the scope ref.
       if (cstr === undefined) return makePendingScopeRef(resolver, ops, prop);
@@ -165,12 +123,98 @@ function newScope<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeO
       if (sibling === undefined) throw new Error(`Invalid scope ${resolver.entityType}.${prop}`);
       if (typeof sibling === "function" && !hasScopeOps(sibling)) {
         return function createParameterizedRef(...args: unknown[]): AnyScope<T> {
-          return add({ kind: "ref", name: prop, args });
+          return target[kWithScopeOp]({ kind: "ref", name: prop, args });
         };
       }
-      return add({ kind: "ref", name: prop });
+      return target[kWithScopeOp]({ kind: "ref", name: prop });
     },
   }) as AnyScope<T>;
+}
+
+/**
+ * Concrete builder/terminal methods for a scope proxy.
+ *
+ * The outer proxy handles dynamic named-scope access like `.popular`; this class handles
+ * fixed methods like `.where`, `.find`, and `.toFindArgs`.
+ */
+class ScopeTerminals<T extends Entity> {
+  readonly #ops: ScopeOp<T>[];
+  readonly #resolver: EntityCstrResolver<T>;
+
+  constructor(resolver: EntityCstrResolver<T>, ops: ScopeOp<T>[]) {
+    this.#resolver = resolver;
+    this.#ops = ops;
+  }
+
+  get [kOps](): ScopeOp<T>[] {
+    return this.#ops;
+  }
+
+  where(arg: FilterOf<T> | ScopeCondition<T>): AnyScope<T> {
+    return this[kWithScopeOp](toOp(arg));
+  }
+
+  orderBy(orderBy: OrderOf<T> | OrderOf<T>[]): AnyScope<T> {
+    return this[kWithScopeOp]({ kind: "orderBy", orderBy });
+  }
+
+  limit(limit: number): AnyScope<T> {
+    return this[kWithScopeOp]({ kind: "limit", limit });
+  }
+
+  offset(offset: number): AnyScope<T> {
+    return this[kWithScopeOp]({ kind: "offset", offset });
+  }
+
+  softDeletes(value: "include" | "exclude"): AnyScope<T> {
+    return this[kWithScopeOp]({ kind: "softDeletes", value });
+  }
+
+  toFindArgs(): FilterAndSettings<T> {
+    return compile(this.#resolver, this.#ops);
+  }
+
+  find(em: EntityManager): Promise<T[]>;
+  find<const H extends LoadHint<T>>(em: EntityManager, opts?: FindOptionsWithPopulate<T> & { populate?: H }): Promise<Loaded<T, H>[]>;
+  find(em: EntityManager, opts?: FindOptionsWithPopulate<T>): Promise<T[]> {
+    const args = compile(this.#resolver, this.#ops);
+    return em.find(resolveCstr(this.#resolver), args.where, toFindOptions(args, opts));
+  }
+
+  findOne(em: EntityManager): Promise<T | undefined>;
+  findOne<const H extends LoadHint<T>>(
+    em: EntityManager,
+    opts?: FindOptionsWithPopulate<T> & { populate?: H },
+  ): Promise<Loaded<T, H> | undefined>;
+  findOne(em: EntityManager, opts?: FindOptionsWithPopulate<T>): Promise<T | undefined> {
+    const args = compile(this.#resolver, this.#ops);
+    return em.findOne(resolveCstr(this.#resolver), args.where, toFindOptions(args, opts));
+  }
+
+  findOneOrFail(em: EntityManager): Promise<T>;
+  findOneOrFail<const H extends LoadHint<T>>(
+    em: EntityManager,
+    opts?: FindOptionsWithPopulate<T> & { populate?: H },
+  ): Promise<Loaded<T, H>>;
+  findOneOrFail(em: EntityManager, opts?: FindOptionsWithPopulate<T>): Promise<T> {
+    const args = compile(this.#resolver, this.#ops);
+    return em.findOneOrFail(resolveCstr(this.#resolver), args.where, toFindOptions(args, opts));
+  }
+
+  findCount(em: EntityManager): Promise<number> {
+    const args = compile(this.#resolver, this.#ops);
+    return em.findCount(resolveCstr(this.#resolver), args.where, toCountOptions(args));
+  }
+
+  findIds(em: EntityManager): Promise<string[]> {
+    const args = compile(this.#resolver, this.#ops);
+    return em.findIds(resolveCstr(this.#resolver), args.where, toCountOptions(args));
+  }
+
+  /** Returns a new scope with one more recorded operation. */
+  [kWithScopeOp](op: ScopeOp<T>): AnyScope<T> {
+    return newScope(this.#resolver, [...this.#ops, op]);
+  }
 }
 
 /** Compiles the ordered scope ops into Joist's existing find args shape. */
@@ -231,10 +275,6 @@ function compile<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp
   };
 }
 
-interface ScopeInternals<T extends Entity> {
-  [kOps]: ScopeOp<T>[];
-}
-
 /**
  * Creates a callable placeholder for refs captured before metadata maps are populated.
  *
@@ -274,7 +314,7 @@ function scopeOpsForRef<T extends Entity>(resolver: EntityCstrResolver<T>, op: S
   return scopeOpsFromValue(resolver, op.name, sibling);
 }
 
-/** Extracts scope internals from a resolved static field. */
+/** Extracts recorded scope ops from a resolved static field. */
 function scopeOpsFromValue<T extends Entity>(
   resolver: EntityCstrResolver<T>,
   name: string,
@@ -287,7 +327,7 @@ function scopeOpsFromValue<T extends Entity>(
 }
 
 /** Returns true if `value` is one of our scope proxies. */
-function hasScopeOps<T extends Entity>(value: unknown): value is ScopeInternals<T> {
+function hasScopeOps<T extends Entity>(value: unknown): value is { readonly [kOps]: ScopeOp<T>[] } {
   return (typeof value === "object" || typeof value === "function") && value !== null && kOps in value;
 }
 

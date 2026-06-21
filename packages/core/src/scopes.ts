@@ -83,6 +83,7 @@ type ScopeOp<T extends Entity> =
   | { kind: "offset"; offset: number }
   | { kind: "softDeletes"; value: "include" | "exclude" }
   | { kind: "ref"; name: string; args?: unknown[] };
+/** A named-scope reference captured during chaining, i.e. `.popular` in `Author.adult.popular`. */
 type ScopeRefOp<T extends Entity> = Extract<ScopeOp<T>, { kind: "ref" }>;
 type FilterField = Field & { aliasSuffix: string };
 type FilterAlias = { filter(value: unknown): ExpressionCondition };
@@ -400,7 +401,7 @@ function addWhereCondition<T extends Entity>(
     if (field === undefined) throw new Error(`Cannot safely compose scope filter ${meta.type}.${key}`);
 
     if (field.kind === "primaryKey" || field.kind === "primitive" || field.kind === "enum") {
-      conditions.push(filterAlias(a, field).filter(value));
+      conditions.push(getFieldAlias(a, field).filter(value));
     } else if (field.kind === "m2o") {
       const filter = parseEntityFilter(field.otherMetadata(), value);
       if (filter === undefined) continue;
@@ -410,7 +411,7 @@ function addWhereCondition<T extends Entity>(
         throw new Error(
           `Cannot safely compose scope filter ${meta.type}.${key} because the related entity has soft deletes`,
         );
-      conditions.push(filterAlias(a, field).filter(value));
+      conditions.push(getFieldAlias(a, field).filter(value));
     } else {
       throw new Error(
         `Cannot safely compose scope filter ${meta.type}.${key} because ${field.kind} fields are not supported`,
@@ -430,8 +431,8 @@ function findFilterField(meta: EntityMetadata, key: string): FilterField | undef
 }
 
 /** Returns the alias field object that can turn find filters into bound conditions. */
-function filterAlias<T extends Entity>(a: Alias<T>, field: FilterField): FilterAlias {
-  return (a as unknown as Record<string, FilterAlias>)[field.fieldName];
+function getFieldAlias<T extends Entity>(a: Alias<T>, field: FilterField): FilterAlias {
+  return (a as any)[field.fieldName];
 }
 
 /** Returns true if normal find parsing would filter soft-deleted rows for this metadata. */

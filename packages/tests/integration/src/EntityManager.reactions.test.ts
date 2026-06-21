@@ -462,6 +462,23 @@ describe("EntityManager.reactions", () => {
       expect(a.transientFields.reactions.observedPublishers).toMatchEntity([p2, p1]);
     });
 
+    it.withCtx("do not preserve hasChanged when another reaction restores an m2o", async ({ em }) => {
+      // Given an Author with publisher p1
+      await insertPublisher({ name: "p1" });
+      await insertPublisher({ id: 2, name: "p2" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      const [p1, p2] = await em.loadAll(Publisher, ["p:1", "p:2"]);
+      const a = await em.load(Author, "a:1");
+      // When the m2o reaction observes p2 and restores the original publisher
+      a.publisher.set(p2);
+      a.transientFields.setPublisherInM2oReaction = p1;
+      await em.flush();
+      // Then ReactionsManager reruns the publisher reactions, but hasChanged has returned to false
+      expect(a.transientFields.reactions.observedPublishers).toMatchEntity([p2, p1]);
+      expect(a.transientFields.publisherHasChangedInM2oReaction).toEqual([true, false]);
+      expect(a.transientFields.publisherHasChangedInImmutableReaction).toEqual([false, false]);
+    });
+
     it.withCtx("run on delete", async ({ em }) => {
       // Given an Author with a publisher
       await insertPublisher({ name: "p1" });

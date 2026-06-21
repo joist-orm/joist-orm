@@ -7,19 +7,20 @@ tags: []
 excerpt: "Joist now auto-batches paginated em.find calls, so GraphQL fields like reviews(first: 5) can be nested deep in a query without causing N+1s."
 ---
 
-Joist has always been pretty aggressive about avoiding N+1s.
+Joist has always been aggressive about preventing N+1s--baking dataloader-style batching "into the data layer" was the original reason we started the Joist project back in ~2020.
 
-If you write code like this:
+This auto-batching means that if you write code like:
 
 ```ts
-for (const author of authors) {
+// Loop over 100 authors
+await Promise.all(authors.map(async (author) => {
   await author.books.load();
-}
+}));
 ```
 
-Joist sees the repeated `books.load()` calls, batches them together, and issues one `SELECT` for all of the authors' books.
+Joist sees the repeated `books.load()` calls (_before_ they go on the wire), batches them together, and issues one `SELECT` for all the authors' books.
 
-Similarly, `em.find` is batch-friendly, so if you have several semantically-similar finds in flight at the same time:
+Similarly, Joist's `em.find` is batch-friendly, so if you have several semantically-similar `em.find`s in flight at the same time:
 
 ```ts
 await Promise.all([
@@ -29,13 +30,15 @@ await Promise.all([
 ]);
 ```
 
-Joist turns that into one batched query instead of three.
+Joist turns that into one batched SQL query instead of three.
 
-But until recently, this broke down for paginated `find`s--i.e. `em.find(..., { limit, offset })`--which was particularly painful in GraphQL.
+One wrinkle was that, historically, this auto-batching did not work _paginated_ `find`s--i.e. `em.find(..., { limit, offset })`--until now! 🎉
 
-## The GraphQL Shape
+## The GraphQL Use Case
 
-Imagine a typical author/book/review schema:
+Joist is not a "GraphQL-only" ORM, but we're definitely "GraphQL-informed", so let's look at a GraphQL schema where "lack of paginated finds" is problematic.
+
+Given a typical Author/Book/Review schema:
 
 ```graphql
 type Author {
@@ -43,11 +46,26 @@ type Author {
 }
 
 type Book {
+  " Allow fetching a subset of the reviews. "
   reviews(first: Int): [BookReview!]!
 }
 ```
 
-And a `Book.reviews` resolver that implements `first` with Joist's `limit` option:
+The `first` argument on `reviews` allows a client to "limit the book reviews" they retrieve:
+
+```graphql
+query {
+  author(id: 1) {
+    books {
+      reviews(first: 5) {
+        rating
+      }
+    }
+  }
+}
+```
+
+Normally Joist's `entityResolver` can "put the entity on the wire" without any boilerplate, but because `reviews` has this custom `first` argument, we would implement it with `em.find`:
 
 ```ts
 export const bookResolvers: BookResolvers = {
@@ -63,31 +81,21 @@ export const bookResolvers: BookResolvers = {
 };
 ```
 
-Then a client can ask for:
+However, b/c the GraphQL runtime ends up invoking `reviews` function "in a loop", an _unbatched_ implementation of this `em.find` would cause an N+1, as the query evaluation becomes:
 
-```graphql
-query {
-  author(id: 1) {
-    books {
-      reviews(first: 5) {
-        rating
-      }
-    }
-  }
-}
-```
+1. Load author `a:1` (good, 1 SQL call)
+1. Load all the author's books (good, 1 SQL call, returns 100 books)
+1. For each book, load the first five reviews (eh, 100 SQL calls?).
 
-Conceptually, this says:
+That last line is the scary one. 😬
 
-1. Load author `1`.
-1. Load all of the author's books.
-1. For each book, load the first five reviews.
+If the author has 100 books, our initial resolver implementation will issue 100 `SELECT ... FROM book_reviews WHERE book_id = ? LIMIT 5` queries--we've created an N+1.
 
-That last line is the scary one. If the author has 20 books, a naive resolver implementation will issue 20 `SELECT ... FROM book_reviews WHERE book_id = ? LIMIT 5` queries. Classic N+1.
+## Why Pagination is Different
 
-## Why Pagination Makes This Hard
+If Joist is so great at auto-batching, why were these paginated `em.find` not batched?
 
-For non-paginated one-to-many loading, batching is straightforward:
+For Joist's _non-paginated_ one-to-many loading, batching is really straightforward: we use pretty much the same `SELECT * FROM book_reviews` that a non-batched `SELECT` would do, but with a parameter of "an array for all requested book ids" instead of a single book id:
 
 ```sql
 SELECT br.*
@@ -96,13 +104,12 @@ WHERE br.book_id = ANY($1)
 ORDER BY br.id ASC
 ```
 
-The database returns all reviews for all books, and Joist groups them back by `book_id`.
+The database returns all reviews for all books, and Joist groups them back by `book_id`, so we can populate each `book`s `reviews` collection.
 
-But `reviews(first: 5)` does **not** mean "load any five reviews across all books". It means "load five reviews per book".
-
-This SQL would be wrong:
+But `reviews(first: 5)` does **not** mean "load any five reviews across all books". It means "load five reviews per book", i.e. this SQL would be wrong:
 
 ```sql
+-- Wrong SQL
 SELECT br.*
 FROM book_reviews br
 WHERE br.book_id = ANY($1)
@@ -110,38 +117,17 @@ ORDER BY br.id ASC
 LIMIT 5
 ```
 
-Because the `LIMIT 5` applies to the whole result set. If the first book has five reviews, books two through twenty get nothing.
+The `LIMIT 5` applies to the whole result set, so if the first book has five reviews, books two through twenty get nothing.
 
-So historically Joist had a choice:
+Given this wrinkle, i.e. it's not immediately obvious "how to auto-batch paginated queries", we'd so far pragmatically decided to just not even try. 😅
 
-1. Avoid batching paginated finds, and preserve correctness by issuing one query per parent.
-1. Batch incorrectly, and return the wrong rows.
+Historically, Joist didn't allow `em.find` to accept pagination parameters, and instead we had a dedicated `em.findPaginated` that was _specifically not batched_, but did accept `limit` & `offset` parameters, which callers just had to know to "not call it in a loop".
 
-Obviously correctness won, but it meant GraphQL fields like `reviews(first: 5)` could still cause N+1s.
+## The New Pagination SQL
 
-## The New SQL Shape
+Until now! The latest Joist `next` release now batches paginated `em.find` calls.
 
-Joist now batches matching paginated `em.find` calls with `CROSS JOIN LATERAL`.
-
-For the GraphQL query above, the full request is three SQL queries:
-
-```sql
-SELECT "a".*
-FROM authors AS a
-WHERE a.id = ANY($1)
-ORDER BY a.id ASC
-LIMIT $2
-```
-
-```sql
-SELECT "b".*
-FROM books AS b
-WHERE b.author_id = ANY($1)
-ORDER BY b.id ASC
-LIMIT $2
-```
-
-And then, critically, **one** query for all of the per-book paginated reviews:
+We achieve this by moving the `LIMIT` parameter from "a top-level `LIMIT`" to a "per book `LIMIT`" using a `CROSS JOIN LATERAL` statement, which looks somewhat cryptically like this:
 
 ```sql
 WITH _find (tag, arg0) AS (
@@ -160,17 +146,20 @@ CROSS JOIN LATERAL (
 
 The important pieces are:
 
-- `_find` is Joist's small in-memory lookup table of the batched calls.
-- `tag` lets Joist map returned rows back to the original resolver call.
-- `arg0` is the per-call `book_id`.
-- `CROSS JOIN LATERAL` runs the inner query once per `_find` row.
+- The `_find` CTE lets pass us a small in-memory "lookup table" into Postgres, with one row for each of the batched calls
+  - `tag` is just a counter of "batch 0", "batch 1", "batch 2"
+  - `arg0` is the per-call `book_id`, i.e. `book_id=10`, `book_id=20`, `book_id=30` if we're loading review for books `[10, 20, 30]`
+- `CROSS JOIN LATERAL` runs the inner query once _per_ `_find` row.
+  - This means that "each book" gets its own `SELECT ... FROM book_reviews ... LIMIT` 
 - The `LIMIT $3` lives inside the lateral subquery, so it applies per book, not globally.
 
-So if GraphQL asks for `reviews(first: 5)` for 20 books, Postgres still receives one review query, but each book gets its own `ORDER BY ... LIMIT 5` semantics.
+Tying this back to our GraphQL use case, if a GraphQL query asks for `reviews(first: 5)` across 20 books, Postgres still receives one review query, and each book gets its own `ORDER BY ... LIMIT 5` semantics.
 
-## Regular `em.find` Gets This Too
+## Removing `findPaginated`
 
-This is not GraphQL-specific. The batching happens at `em.find`:
+Because we've solved the restriction of "we cannot batch paginated finds", the reason for separate `em.find` vs. `em.findPaginated` methods has gone away, so we've also just removed `findPaginated`. 🔪
+
+Now any `em.find` can use limit/offset parameters, and still get Joist's robust auto-batching support:
 
 ```ts
 const [aReviews, bReviews] = await Promise.all([
@@ -179,43 +168,9 @@ const [aReviews, bReviews] = await Promise.all([
 ]);
 ```
 
-As long as the paginated finds have compatible shapes--same entity, same options like `limit` / `offset` / `orderBy`, and the same logical filter shape--Joist can batch them.
+As long as the paginated finds have compatible shapes--same entity, same options like `limit` / `offset` / `orderBy`, and the same logical filter shape--Joist will batch them.
 
-That means this also helps service-layer code that loops over entities and asks for "the first N children" per entity, even if no GraphQL layer is involved.
-
-## GraphQL Hints and Arguments
-
-One subtle GraphQL wrinkle is load hints.
-
-Joist's GraphQL resolver utilities can turn a selection like:
-
-```graphql
-author(id: 1) {
-  books {
-    reviews {
-      rating
-    }
-  }
-}
-```
-
-Into a Joist populate hint like:
-
-```ts
-{ books: "reviews" }
-```
-
-Which is great for non-argument fields.
-
-But once the query says `reviews(first: 5)`, the field is no longer just "load the `reviews` relation". It is "run this argument-aware resolver that applies `limit: 5`".
-
-So Joist's GraphQL hint conversion now skips selections that have arguments, allowing your resolver to run:
-
-```ts
-ctx.em.find(BookReview, { book }, { limit: args.first ?? undefined });
-```
-
-And then rely on `em.find`'s new paginated batching to avoid N+1s.
+This first-class `em.find` support also means _any_ service-layer / business-logic code that loops over entities and asks for "the first `N` children" per entity will get an auto-batched query, even if no GraphQL is involved.
 
 ## Why This Matters
 

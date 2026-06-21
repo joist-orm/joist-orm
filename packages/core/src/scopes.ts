@@ -1,18 +1,12 @@
 import { isPlainObject } from "joist-utils";
-import { alias, type Alias, getAliasMgmt, getMaybeCtiAlias } from "./Aliases";
-import { ConditionBuilder } from "./ConditionBuilder";
+import { alias, type Alias } from "./Aliases";
 import { maybeGetMetadataForType } from "./configure";
 import type { Entity } from "./Entity";
 import type { ExpressionCondition, ExpressionFilter, FilterAndSettings } from "./EntityFilter";
 import type { EntityManager, FindFilterOptions, MaybeAbstractEntityConstructor } from "./EntityManager";
 import { type EntityMetadata, type Field, getBaseMeta, getMetadata } from "./EntityMetadata";
 import type { Loaded, LoadHint } from "./loadHints";
-import {
-  type ParsedExpressionCondition,
-  type ParsedExpressionFilter,
-  parseEntityFilter,
-  parseValueFilter,
-} from "./QueryParser";
+import { parseEntityFilter } from "./QueryParser";
 import type { FilterOf, OrderOf } from "./typeMap";
 
 /** A predicate expressed against a bound alias, i.e. `(a) => a.age.gte(18)`. */
@@ -92,6 +86,7 @@ type ScopeOp<T extends Entity> =
   | { kind: "ref"; name: string; args?: unknown[] };
 type ScopeRefOp<T extends Entity> = Extract<ScopeOp<T>, { kind: "ref" }>;
 type FilterField = Field & { aliasSuffix: string };
+type FilterAlias = { filter(value: unknown): ExpressionCondition };
 
 // Use a symbol so stored scope fragments cannot collide with user-defined scope names.
 const kOps = Symbol("scopeOps");
@@ -460,11 +455,8 @@ function conditionsForFindField<T extends Entity>(
   const field = findFilterField(meta, key);
   if (field === undefined) return undefined;
 
-  const cb = new ConditionBuilder();
-  const placeholder = `scope_${key}`;
   if (field.kind === "primaryKey" || field.kind === "primitive" || field.kind === "enum") {
-    const column = field.serde.columns[0];
-    for (const filter of parseValueFilter(value as never)) cb.addValueFilter(placeholder, column, filter);
+    return [filterAlias(a, field).filter(value)];
   } else if (field.kind === "m2o") {
     const filter = parseEntityFilter(field.otherMetadata(), value);
     if (filter === undefined) return [];
@@ -474,19 +466,12 @@ function conditionsForFindField<T extends Entity>(
       throw new Error(
         `Cannot safely compose repeated scope filter ${meta.type}.${key} because the related entity has soft deletes`,
       );
-    cb.addValueFilter(placeholder, field.serde.columns[0], filter);
+    return [filterAlias(a, field).filter(value)];
   } else {
     throw new Error(
       `Cannot safely compose repeated scope filter ${meta.type}.${key} because ${field.kind} fields are not supported`,
     );
   }
-
-  const parsed = cb.toExpressionFilter();
-  if (parsed === undefined) return [];
-  cb.bindColumnAlias(placeholder, (replaceAlias) =>
-    getAliasMgmt(a).onBind((newMeta, newAlias) => replaceAlias(getMaybeCtiAlias(meta, field, newMeta, newAlias))),
-  );
-  return [toExpressionFilter(parsed)];
 }
 
 /** Finds a filter field by fieldName or generated fieldIdName. */
@@ -499,24 +484,9 @@ function findFilterField(meta: EntityMetadata, key: string): FilterField | undef
   );
 }
 
-/** Converts ConditionBuilder's parsed expression tree back into the public conditions DSL. */
-function toExpressionFilter(parsed: ParsedExpressionFilter): ExpressionFilter {
-  return parsed.op === "and"
-    ? { and: parsed.conditions.map(toExpressionCondition) }
-    : { or: parsed.conditions.map(toExpressionCondition) };
-}
-
-/** Converts a parsed condition into the public condition shape. */
-function toExpressionCondition(condition: ParsedExpressionCondition): ExpressionCondition {
-  switch (condition.kind) {
-    case "exp":
-      return toExpressionFilter(condition);
-    case "column":
-    case "raw":
-      return condition;
-    case "exists":
-      throw new Error("Scope find filters cannot compose EXISTS conditions yet");
-  }
+/** Returns the alias field object that can turn find filters into bound conditions. */
+function filterAlias<T extends Entity>(a: Alias<T>, field: FilterField): FilterAlias {
+  return (a as unknown as Record<string, FilterAlias>)[field.fieldName];
 }
 
 /** Returns true if normal find parsing would filter soft-deleted rows for this metadata. */

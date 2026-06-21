@@ -87,14 +87,6 @@ export class ConditionBuilder {
     }
   }
 
-  /** Rewrites synthetic aliases, i.e. `scope_age`, once the owning alias is bound to a SQL alias. */
-  bindColumnAlias(placeholder: string, bind: (replaceAlias: (alias: string) => void) => void): void {
-    bind((alias) => {
-      for (const condition of this.conditions) rewriteColumnAlias(condition, placeholder, alias);
-      for (const expression of this.expressions) rewriteColumnAlias(expression, placeholder, alias);
-    });
-  }
-
   /** Combines our collected `conditions` and `expressions` into a single `ParsedExpressionFilter`. */
   toExpressionFilter(): ParsedExpressionFilter | undefined {
     const { expressions, conditions } = this;
@@ -110,15 +102,6 @@ export class ConditionBuilder {
       return { kind: "exp", op: "and", conditions: [...allSimple, ...expressions] };
     }
     return undefined;
-  }
-}
-
-/** Rewrites parsed column conditions that were emitted against a synthetic alias. */
-function rewriteColumnAlias(condition: ParsedExpressionCondition, placeholder: string, alias: string): void {
-  if (condition.kind === "exp") {
-    for (const child of condition.conditions) rewriteColumnAlias(child, placeholder, alias);
-  } else if (condition.kind === "column" && condition.alias === placeholder) {
-    condition.alias = alias;
   }
 }
 

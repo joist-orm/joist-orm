@@ -149,15 +149,15 @@ describe("EntityManager.scopes", () => {
       expect(() => (Author.adult as unknown as Record<string, unknown>).bogus).toThrow("Invalid scope Author.bogus");
     });
 
-    it("lets same-field object-where scopes last-win (documented limitation)", async () => {
+    it("ANDs same-field object-where scopes and builder wheres", async () => {
       await insertAuthor({ first_name: "a1", age: 70 });
       await insertAuthor({ first_name: "a2", age: 20 });
       const em = newEntityManager();
-      // Both `senior` (age>=65) and `adult` (age>=18) are object-form scopes on `age`, so they
-      // collapse via Object.assign — the *last* one wins (age>=18), rather than ANDing to age>=65.
-      // Steer same-field composition to the `(a) => ...` alias form when you need a true AND.
       const authors = await Author.senior.adult.find(em);
-      expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+
+      const withBuilder = await Author.senior.where({ age: { gte: 18 } }).find(em);
+      expect(withBuilder).toMatchEntity([{ firstName: "a1" }]);
     });
   });
 

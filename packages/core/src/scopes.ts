@@ -1,11 +1,11 @@
+import { isPlainObject } from "joist-utils";
 import { alias, type Alias } from "./Aliases";
 import { maybeGetMetadataForType } from "./configure";
 import type { Entity } from "./Entity";
 import type { ExpressionCondition, ExpressionFilter, FilterAndSettings } from "./EntityFilter";
-import type { FindFilterOptions, MaybeAbstractEntityConstructor } from "./EntityManager";
+import type { EntityManager, FindFilterOptions, MaybeAbstractEntityConstructor } from "./EntityManager";
 import type { Loaded, LoadHint } from "./loadHints";
 import type { FilterOf, OrderOf } from "./typeMap";
-import type { EntityManager } from "./EntityManager";
 
 /** A predicate expressed against a bound alias, i.e. `(a) => a.age.gte(18)`. */
 export type ScopeCondition<T extends Entity> = (a: Alias<T>) => ExpressionCondition | ExpressionCondition[];
@@ -46,9 +46,7 @@ export type Scope<T extends Entity, S = {}> = ScopeQuery<T> & S;
 /** A per-entity, pre-typed factory for declaring scopes. */
 export interface ScopeFactory<T extends Entity> {
   <R extends Scope<T> = AnyScope<T>>(arg: FilterOf<T> | ScopeCondition<T>): R;
-  fn<A extends unknown[], R extends Scope<T> = AnyScope<T>>(
-    fn: (...args: A) => ScopeCondition<T>,
-  ): (...args: A) => R;
+  fn<A extends unknown[], R extends Scope<T> = AnyScope<T>>(fn: (...args: A) => ScopeCondition<T>): (...args: A) => R;
 }
 
 type AnyScope<T extends Entity> = Scope<T, any>;
@@ -68,6 +66,7 @@ type ScopeOp<T extends Entity> =
   | { kind: "softDeletes"; value: "include" | "exclude" }
   | { kind: "ref"; name: string; args?: unknown[] };
 type ScopeRefOp<T extends Entity> = Extract<ScopeOp<T>, { kind: "ref" }>;
+type ConditionField = Record<string, (...args: unknown[]) => ExpressionCondition>;
 
 const kOps = Symbol("scopeOps");
 
@@ -206,9 +205,10 @@ function compile<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp
   }
 
   expand(ops, new Set());
+  const remainingWheres = wheres.length > 1 ? splitWhereConditions(a, wheres, conditions) : wheres;
 
   return {
-    where: wheres.length ? Object.assign({ as: a }, ...wheres) : { as: a },
+    where: remainingWheres.length ? Object.assign({ as: a }, ...remainingWheres) : { as: a },
     conditions: conditions.length ? { and: conditions } : undefined,
     orderBy: orderBys.length ? orderBys : undefined,
     limit,
@@ -313,8 +313,113 @@ function toCountOptions<T extends Entity>(args: FilterAndSettings<T>): FindFilte
 }
 
 /** ANDs two optional condition trees while preserving each tree's internal grouping. */
-function andConditions(left: ExpressionFilter | undefined, right: ExpressionFilter | undefined): ExpressionFilter | undefined {
+function andConditions(
+  left: ExpressionFilter | undefined,
+  right: ExpressionFilter | undefined,
+): ExpressionFilter | undefined {
   if (left === undefined) return right;
   if (right === undefined) return left;
   return { and: [left, right] };
+}
+
+/** Moves root-field object filters into alias conditions so repeated keys AND instead of last-winning. */
+function splitWhereConditions<T extends Entity>(
+  a: Alias<T>,
+  wheres: FilterOf<T>[],
+  conditions: ExpressionCondition[],
+): FilterOf<T>[] {
+  const remainingWheres: FilterOf<T>[] = [];
+  for (const where of wheres) {
+    const remaining = splitWhereCondition(a, where, conditions);
+    if (remaining !== undefined) remainingWheres.push(remaining);
+  }
+  return remainingWheres;
+}
+
+/** Splits a single object filter into alias-compatible conditions and residual inline filters. */
+function splitWhereCondition<T extends Entity>(
+  a: Alias<T>,
+  where: FilterOf<T>,
+  conditions: ExpressionCondition[],
+): FilterOf<T> | undefined {
+  if (!isPlainObject(where)) return where;
+
+  const remaining: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(where as object as Record<string, unknown>)) {
+    const fieldConditions = conditionsForAliasField(a, key, value);
+    if (fieldConditions === undefined) {
+      remaining[key] = value;
+    } else {
+      conditions.push(...fieldConditions);
+    }
+  }
+  return Object.keys(remaining).length === 0 ? undefined : (remaining as FilterOf<T>);
+}
+
+/** Converts a root filter field into alias conditions, if the alias API supports that field. */
+function conditionsForAliasField<T extends Entity>(
+  a: Alias<T>,
+  key: string,
+  value: unknown,
+): ExpressionCondition[] | undefined {
+  try {
+    return conditionsForAliasValue((a as object as Record<string, unknown>)[key], value);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Converts a single field's filter value into one or more alias conditions. */
+function conditionsForAliasValue(field: unknown, value: unknown): ExpressionCondition[] | undefined {
+  if (!isConditionField(field)) return undefined;
+  if (Array.isArray(value)) return callConditionMethod(field, "in", value);
+  if (isPlainObject(value)) return conditionsForAliasValueFilter(field, value as Record<string, unknown>);
+  return callConditionMethod(field, "eq", value);
+}
+
+/** Converts an object value filter, I.e. `{ gte: 18 }`, into alias conditions. */
+function conditionsForAliasValueFilter(
+  field: ConditionField,
+  filter: Record<string, unknown>,
+): ExpressionCondition[] | undefined {
+  const entries = Object.entries(filter);
+  if (entries.length === 0) return [];
+  if (entries.length === 2 && "op" in filter && "value" in filter) {
+    return typeof filter.op === "string" ? conditionsForAliasValueOp(field, filter.op, filter.value) : undefined;
+  }
+
+  const conditions: ExpressionCondition[] = [];
+  for (const [op, value] of entries) {
+    const opConditions = conditionsForAliasValueOp(field, op, value);
+    if (opConditions === undefined) return undefined;
+    conditions.push(...opConditions);
+  }
+  return conditions;
+}
+
+/** Converts a single value-filter operation into alias conditions. */
+function conditionsForAliasValueOp(
+  field: ConditionField,
+  op: string,
+  value: unknown,
+): ExpressionCondition[] | undefined {
+  if (op === "between") {
+    return Array.isArray(value) && value.length === 2 ? callConditionMethod(field, op, value[0], value[1]) : undefined;
+  }
+  return callConditionMethod(field, op, value);
+}
+
+/** Calls an alias condition method if it exists on this field. */
+function callConditionMethod(
+  field: ConditionField,
+  name: string,
+  ...args: unknown[]
+): ExpressionCondition[] | undefined {
+  const method = field[name];
+  return typeof method === "function" ? [method.apply(field, args)] : undefined;
+}
+
+/** Returns true if `value` looks like a field alias with condition methods. */
+function isConditionField(value: unknown): value is ConditionField {
+  return typeof value === "object" && value !== null;
 }

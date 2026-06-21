@@ -89,16 +89,25 @@ Same for `findOne` / `findOneOrFail`.
 
 ### 2.1 Same-field object-`where` stacking (design open Q3)
 
-Two object-form scopes on the same field collapse via `Object.assign` (last wins), they do **not**
-AND:
+**Implemented:** object-form scope fragments are preserved and ANDed instead of being collapsed with
+`Object.assign`. This follows Rails' chained-`where` behavior; replacement should be explicit, like
+Rails' `rewhere` / merge-style semantics.
+
+Previously, two object-form scopes on the same field collapsed via `Object.assign` (last wins):
 
 ```ts
-Author.senior.adult.find(em)   // age >= 18 wins (NOT age >= 65)
+Author.senior.adult.find(em); // age >= 18 used to win (NOT age >= 65)
 ```
 
-Pinned as a documented-behavior test (`"lets same-field object-where scopes last-win"`). Decide:
-keep silent last-wins + steer users to the `(a) => ...` alias form, or detect key collisions and
-reroute to ANDed `ColumnCondition`s.
+Now, when multiple object-form scope wheres are stacked, scope compilation translates alias-supported
+root-field filters into expression `conditions: { and: [...] }`, so they are applied as intersection
+conditions without adding new inline-join syntax to `QueryParser`:
+
+```ts
+Author.senior.adult.find(em); // age >= 65 AND age >= 18
+```
+
+Nested/relation object-filter ANDs remain a future `QueryParser` design item.
 
 ### 2.2 Close design open Q2 (memoize base scope)
 

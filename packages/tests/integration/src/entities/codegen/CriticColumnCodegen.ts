@@ -102,7 +102,7 @@ export type CriticColumnScope = Scope<CriticColumn, CriticColumnScopes>;
 
 export const criticColumnConfig = new ConfigApi<CriticColumn, Context>();
 
-export const criticColumnScope = newScopeFn<CriticColumn>("CriticColumn");
+export const criticColumnScope = newScopeFn<CriticColumn, CriticColumnScope>("CriticColumn");
 
 criticColumnConfig.addRule(newRequiredRule("name"));
 criticColumnConfig.addRule(newRequiredRule("createdAt"));

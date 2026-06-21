@@ -121,7 +121,7 @@ export type ChildGroupScope = Scope<ChildGroup, ChildGroupScopes>;
 
 export const childGroupConfig = new ConfigApi<ChildGroup, Context>();
 
-export const childGroupScope = newScopeFn<ChildGroup>("ChildGroup");
+export const childGroupScope = newScopeFn<ChildGroup, ChildGroupScope>("ChildGroup");
 
 childGroupConfig.addRule(newRequiredRule("createdAt"));
 childGroupConfig.addRule(newRequiredRule("updatedAt"));

@@ -84,7 +84,7 @@ export type AdminUserScope = Scope<AdminUser, AdminUserScopes>;
 
 export const adminUserConfig = new ConfigApi<AdminUser, Context>();
 
-export const adminUserScope = newScopeFn<AdminUser>("AdminUser");
+export const adminUserScope = newScopeFn<AdminUser, AdminUserScope>("AdminUser");
 
 adminUserConfig.addRule(newRequiredRule("role"));
 

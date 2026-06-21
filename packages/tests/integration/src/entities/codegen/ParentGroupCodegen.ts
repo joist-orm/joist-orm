@@ -106,7 +106,7 @@ export type ParentGroupScope = Scope<ParentGroup, ParentGroupScopes>;
 
 export const parentGroupConfig = new ConfigApi<ParentGroup, Context>();
 
-export const parentGroupScope = newScopeFn<ParentGroup>("ParentGroup");
+export const parentGroupScope = newScopeFn<ParentGroup, ParentGroupScope>("ParentGroup");
 
 parentGroupConfig.addRule(newRequiredRule("createdAt"));
 parentGroupConfig.addRule(newRequiredRule("updatedAt"));

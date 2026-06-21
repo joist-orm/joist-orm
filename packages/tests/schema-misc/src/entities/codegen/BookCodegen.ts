@@ -94,7 +94,7 @@ export type BookScope = Scope<Book, BookScopes>;
 
 export const bookConfig = new ConfigApi<Book, Context>();
 
-export const bookScope = newScopeFn<Book>("Book");
+export const bookScope = newScopeFn<Book, BookScope>("Book");
 
 bookConfig.addRule(newRequiredRule("title"));
 bookConfig.addRule(newRequiredRule("author"));

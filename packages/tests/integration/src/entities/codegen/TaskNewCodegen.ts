@@ -132,7 +132,7 @@ export type TaskNewScope = Scope<TaskNew, TaskNewScopes>;
 
 export const taskNewConfig = new ConfigApi<TaskNew, Context>();
 
-export const taskNewScope = newScopeFn<TaskNew>("TaskNew");
+export const taskNewScope = newScopeFn<TaskNew, TaskNewScope>("TaskNew");
 
 taskNewConfig.addRule("selfReferential", mustBeSubType("selfReferential"));
 taskNewConfig.addRule("copiedFrom", mustBeSubType("copiedFrom"));

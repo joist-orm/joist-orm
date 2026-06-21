@@ -143,7 +143,7 @@ export type SmallPublisherScope = Scope<SmallPublisher, SmallPublisherScopes>;
 
 export const smallPublisherConfig = new ConfigApi<SmallPublisher, Context>();
 
-export const smallPublisherScope = newScopeFn<SmallPublisher>("SmallPublisher");
+export const smallPublisherScope = newScopeFn<SmallPublisher, SmallPublisherScope>("SmallPublisher");
 
 smallPublisherConfig.addRule(newRequiredRule("city"));
 smallPublisherConfig.addRule("group", mustBeSubType("group"));

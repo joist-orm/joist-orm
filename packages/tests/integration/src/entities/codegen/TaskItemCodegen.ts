@@ -121,7 +121,7 @@ export type TaskItemScope = Scope<TaskItem, TaskItemScopes>;
 
 export const taskItemConfig = new ConfigApi<TaskItem, Context>();
 
-export const taskItemScope = newScopeFn<TaskItem>("TaskItem");
+export const taskItemScope = newScopeFn<TaskItem, TaskItemScope>("TaskItem");
 
 taskItemConfig.addRule(newRequiredRule("createdAt"));
 taskItemConfig.addRule(newRequiredRule("updatedAt"));

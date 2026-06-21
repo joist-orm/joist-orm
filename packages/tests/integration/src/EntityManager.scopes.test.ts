@@ -4,10 +4,6 @@ import { newEntityManager } from "@src/testEm";
 import { Loaded } from "joist-orm";
 import { jan1, jan2, jan3 } from "./testDates";
 
-// WIP prototype tests — see joist-core/src/scopes.ts. Uses the `AuthorScope` (= `Scope<Author, AuthorScopes>`)
-// form, which supports typed named-scope chaining (`Author.adult.popular`). `_scopeTypeChecks` is
-// the type-level test (validated by `tsc`, never run); the `describe` block is the runtime test.
-
 // Compile-only. Never called.
 export function _scopeTypeChecks(em: EntityManager): void {
   // --- positive: typed named-scope chaining (the key use case) ---

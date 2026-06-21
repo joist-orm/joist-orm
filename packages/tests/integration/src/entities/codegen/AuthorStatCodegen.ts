@@ -135,7 +135,7 @@ export type AuthorStatScope = Scope<AuthorStat, AuthorStatScopes>;
 
 export const authorStatConfig = new ConfigApi<AuthorStat, Context>();
 
-export const authorStatScope = newScopeFn<AuthorStat>("AuthorStat");
+export const authorStatScope = newScopeFn<AuthorStat, AuthorStatScope>("AuthorStat");
 
 authorStatConfig.addRule(newRequiredRule("smallint"));
 authorStatConfig.addRule(newRequiredRule("integer"));

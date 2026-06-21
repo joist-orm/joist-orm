@@ -92,7 +92,9 @@ export type SmallPublisherGroupScope = Scope<SmallPublisherGroup, SmallPublisher
 
 export const smallPublisherGroupConfig = new ConfigApi<SmallPublisherGroup, Context>();
 
-export const smallPublisherGroupScope = newScopeFn<SmallPublisherGroup>("SmallPublisherGroup");
+export const smallPublisherGroupScope = newScopeFn<SmallPublisherGroup, SmallPublisherGroupScope>(
+  "SmallPublisherGroup",
+);
 
 declare module "joist-core" {
   interface TypeMap {

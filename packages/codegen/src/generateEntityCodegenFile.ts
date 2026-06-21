@@ -239,7 +239,7 @@ export function generateEntityCodegenFile(
 
     export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
 
-    export const ${scopeFnName} = ${newScopeFn}<${entity.type}>("${entityName}");
+    export const ${scopeFnName} = ${newScopeFn}<${entity.type}, ${scopeTypeName}>("${entityName}");
 
     ${generateDefaultValidationRules(dbMeta, meta, configName)}
     ${generateDefaultValues(config, meta, configName)};

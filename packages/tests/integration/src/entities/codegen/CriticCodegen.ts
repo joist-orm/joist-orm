@@ -143,7 +143,7 @@ export type CriticScope = Scope<Critic, CriticScopes>;
 
 export const criticConfig = new ConfigApi<Critic, Context>();
 
-export const criticScope = newScopeFn<Critic>("Critic");
+export const criticScope = newScopeFn<Critic, CriticScope>("Critic");
 
 criticConfig.addRule(newRequiredRule("name"));
 criticConfig.addRule(newRequiredRule("createdAt"));

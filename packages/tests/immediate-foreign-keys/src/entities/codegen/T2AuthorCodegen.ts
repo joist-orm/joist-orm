@@ -101,7 +101,7 @@ export type T2AuthorScope = Scope<T2Author, T2AuthorScopes>;
 
 export const t2AuthorConfig = new ConfigApi<T2Author, Context>();
 
-export const t2AuthorScope = newScopeFn<T2Author>("T2Author");
+export const t2AuthorScope = newScopeFn<T2Author, T2AuthorScope>("T2Author");
 
 t2AuthorConfig.addRule(newRequiredRule("firstName"));
 

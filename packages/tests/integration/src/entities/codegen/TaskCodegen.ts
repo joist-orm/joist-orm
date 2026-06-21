@@ -176,7 +176,7 @@ export type TaskScope = Scope<Task, TaskScopes>;
 
 export const taskConfig = new ConfigApi<Task, Context>();
 
-export const taskScope = newScopeFn<Task>("Task");
+export const taskScope = newScopeFn<Task, TaskScope>("Task");
 
 taskConfig.addRule(newRequiredRule("durationInDays"));
 taskConfig.addRule(newRequiredRule("createdAt"));

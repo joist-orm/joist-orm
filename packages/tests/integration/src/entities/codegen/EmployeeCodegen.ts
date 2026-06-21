@@ -112,7 +112,7 @@ export type EmployeeScope = Scope<Employee, EmployeeScopes>;
 
 export const employeeConfig = new ConfigApi<Employee, Context>();
 
-export const employeeScope = newScopeFn<Employee>("Employee");
+export const employeeScope = newScopeFn<Employee, EmployeeScope>("Employee");
 
 employeeConfig.addRule(newRequiredRule("name"));
 employeeConfig.addRule(newRequiredRule("createdAt"));

@@ -138,7 +138,7 @@ export type TaskOldScope = Scope<TaskOld, TaskOldScopes>;
 
 export const taskOldConfig = new ConfigApi<TaskOld, Context>();
 
-export const taskOldScope = newScopeFn<TaskOld>("TaskOld");
+export const taskOldScope = newScopeFn<TaskOld, TaskOldScope>("TaskOld");
 
 taskOldConfig.addRule(newRequiredRule("specialOldField"));
 taskOldConfig.addRule("parentOldTask", mustBeSubType("parentOldTask"));

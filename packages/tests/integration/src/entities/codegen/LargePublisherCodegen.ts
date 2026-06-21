@@ -131,7 +131,7 @@ export type LargePublisherScope = Scope<LargePublisher, LargePublisherScopes>;
 
 export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
 
-export const largePublisherScope = newScopeFn<LargePublisher>("LargePublisher");
+export const largePublisherScope = newScopeFn<LargePublisher, LargePublisherScope>("LargePublisher");
 
 largePublisherConfig.addRule(newRequiredRule("rating"));
 largePublisherConfig.addRule(newRequiredRule("spotlightAuthor"));

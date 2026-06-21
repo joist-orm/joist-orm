@@ -256,7 +256,7 @@ export type PublisherScope = Scope<Publisher, PublisherScopes>;
 
 export const publisherConfig = new ConfigApi<Publisher, Context>();
 
-export const publisherScope = newScopeFn<Publisher>("Publisher");
+export const publisherScope = newScopeFn<Publisher, PublisherScope>("Publisher");
 
 publisherConfig.addRule(newRequiredRule("name"));
 publisherConfig.addRule("numberOfBookReviews", newRequiredRule("numberOfBookReviews"));

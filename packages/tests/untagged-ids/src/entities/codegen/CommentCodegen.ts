@@ -106,7 +106,7 @@ export type CommentScope = Scope<Comment, CommentScopes>;
 
 export const commentConfig = new ConfigApi<Comment, Context>();
 
-export const commentScope = newScopeFn<Comment>("Comment");
+export const commentScope = newScopeFn<Comment, CommentScope>("Comment");
 
 commentConfig.addRule(newRequiredRule("text"));
 commentConfig.addRule(newRequiredRule("createdAt"));

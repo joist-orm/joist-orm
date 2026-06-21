@@ -102,7 +102,7 @@ export type AuthorScheduleScope = Scope<AuthorSchedule, AuthorScheduleScopes>;
 
 export const authorScheduleConfig = new ConfigApi<AuthorSchedule, Context>();
 
-export const authorScheduleScope = newScopeFn<AuthorSchedule>("AuthorSchedule");
+export const authorScheduleScope = newScopeFn<AuthorSchedule, AuthorScheduleScope>("AuthorSchedule");
 
 authorScheduleConfig.addRule(newRequiredRule("createdAt"));
 authorScheduleConfig.addRule(newRequiredRule("updatedAt"));

@@ -24,7 +24,6 @@ import {
 } from "joist-orm";
 import {
   AuthorCodegen,
-  type AuthorScope,
   Book,
   BookRange,
   BookReview,
@@ -41,14 +40,14 @@ import {
  * @generated Author.md
  */
 export class Author extends AuthorCodegen {
-  static adult: AuthorScope = scope({ age: { gte: 18 } });
-  static active: AuthorScope = scope({ deletedAt: null });
-  static popular: AuthorScope = scope((a) => a.isPopular.eq(true));
-  static popularAdult: AuthorScope = Author.popular.adult;
-  static recentAdults: AuthorScope = scope({ age: { gte: 18 } }).orderBy({ createdAt: "DESC" });
-  static recentAdultsViaAdult: AuthorScope = Author.adult.orderBy({ createdAt: "DESC" });
-  static senior: AuthorScope = scope({ age: { gte: 65 } });
-  static named: (prefix: string) => AuthorScope = scope.fn((prefix) => (a) => a.firstName.like(`${prefix}%`));
+  static adult = scope({ age: { gte: 18 } });
+  static active = scope({ deletedAt: null });
+  static popular = scope((a) => a.isPopular.eq(true));
+  static popularAdult = Author.popular.adult;
+  static recentAdults = scope({ age: { gte: 18 } }).orderBy({ createdAt: "DESC" });
+  static recentAdultsViaAdult = Author.adult.orderBy({ createdAt: "DESC" });
+  static senior = scope({ age: { gte: 65 } });
+  static named = scope.fn((prefix: string) => (a) => a.firstName.like(`${prefix}%`));
 
   /**
    * All reviews across all of this author's books.

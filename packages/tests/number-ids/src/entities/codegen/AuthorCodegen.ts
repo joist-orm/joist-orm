@@ -96,7 +96,7 @@ export type AuthorScope = Scope<Author, AuthorScopes>;
 
 export const authorConfig = new ConfigApi<Author, Context>();
 
-export const authorScope = newScopeFn<Author>("Author");
+export const authorScope = newScopeFn<Author, AuthorScope>("Author");
 
 authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("createdAt"));

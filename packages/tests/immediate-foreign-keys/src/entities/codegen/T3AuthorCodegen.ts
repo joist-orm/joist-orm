@@ -101,7 +101,7 @@ export type T3AuthorScope = Scope<T3Author, T3AuthorScopes>;
 
 export const t3AuthorConfig = new ConfigApi<T3Author, Context>();
 
-export const t3AuthorScope = newScopeFn<T3Author>("T3Author");
+export const t3AuthorScope = newScopeFn<T3Author, T3AuthorScope>("T3Author");
 
 t3AuthorConfig.addRule(newRequiredRule("firstName"));
 t3AuthorConfig.addRule(newRequiredRule("favoriteBook"));

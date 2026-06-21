@@ -215,7 +215,7 @@ export type UserScope = Scope<User, UserScopes>;
 
 export const userConfig = new ConfigApi<User, Context>();
 
-export const userScope = newScopeFn<User>("User");
+export const userScope = newScopeFn<User, UserScope>("User");
 
 userConfig.addRule(newRequiredRule("name"));
 userConfig.addRule(newRequiredRule("email"));

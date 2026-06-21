@@ -127,7 +127,7 @@ export type TagScope = Scope<Tag, TagScopes>;
 
 export const tagConfig = new ConfigApi<Tag, Context>();
 
-export const tagScope = newScopeFn<Tag>("Tag");
+export const tagScope = newScopeFn<Tag, TagScope>("Tag");
 
 tagConfig.addRule(newRequiredRule("name"));
 tagConfig.addRule(newRequiredRule("createdAt"));

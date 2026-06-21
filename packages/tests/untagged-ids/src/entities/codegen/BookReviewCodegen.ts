@@ -94,7 +94,7 @@ export type BookReviewScope = Scope<BookReview, BookReviewScopes>;
 
 export const bookReviewConfig = new ConfigApi<BookReview, Context>();
 
-export const bookReviewScope = newScopeFn<BookReview>("BookReview");
+export const bookReviewScope = newScopeFn<BookReview, BookReviewScope>("BookReview");
 
 bookReviewConfig.addRule(newRequiredRule("rating"));
 bookReviewConfig.addRule(newRequiredRule("book"));

@@ -64,10 +64,55 @@ function maybeScopeMember(
 ): ScopeMember[] {
   if (!ts.isPropertyDeclaration(member)) return [];
   if (!isStaticMember(member)) return [];
-  // i.e. accept `static adult: AuthorScope = scope(...)`, but skip methods/getters/untyped fields.
-  if (!member.type || !member.initializer || !ts.isIdentifier(member.name)) return [];
-  if (!isScopeType(member.type, scopeTypeName) || !isScopeInitializer(member.initializer, entityName)) return [];
-  return [{ name: member.name.text, type: member.type.getText(sourceFile) }];
+  // i.e. accept `static adult = scope(...)`, but skip methods/getters/unsupported fields.
+  if (!member.initializer || !ts.isIdentifier(member.name)) return [];
+  if (!isScopeInitializer(member.initializer, entityName)) return [];
+  if (member.type) {
+    if (!isScopeType(member.type, scopeTypeName)) return [];
+    return [{ name: member.name.text, type: member.type.getText(sourceFile) }];
+  }
+  const type = inferScopeType(sourceFile, member.initializer, scopeTypeName);
+  return type ? [{ name: member.name.text, type }] : [];
+}
+
+/** Infers a generated scope member type from an untyped static scope initializer. */
+function inferScopeType(sourceFile: ts.SourceFile, initializer: ts.Expression, scopeTypeName: string): string | undefined {
+  return isParameterizedScopeInitializer(initializer)
+    ? maybeParameterizedScope(sourceFile, initializer, scopeTypeName)
+    : scopeTypeName;
+}
+
+/** Returns true for `scope.fn(...)` initializers. */
+function isParameterizedScopeInitializer(initializer: ts.Expression): boolean {
+  return (
+    ts.isCallExpression(initializer) &&
+    ts.isPropertyAccessExpression(initializer.expression) &&
+    initializer.expression.name.text === "fn"
+  );
+}
+
+/** Returns a function type for `scope.fn((prefix: string) => ...)` initializers. */
+function maybeParameterizedScope(
+  sourceFile: ts.SourceFile,
+  initializer: ts.Expression,
+  scopeTypeName: string,
+): string | undefined {
+  if (!ts.isCallExpression(initializer)) return undefined;
+  if (!ts.isPropertyAccessExpression(initializer.expression)) return undefined;
+  if (initializer.expression.name.text !== "fn") return undefined;
+  const fn = initializer.arguments[0];
+  if (!fn || (!ts.isArrowFunction(fn) && !ts.isFunctionExpression(fn))) return undefined;
+  const params = fn.parameters.map((param) => parameterType(sourceFile, param));
+  if (params.some((param) => param === undefined)) return undefined;
+  return `(${params.join(", ")}) => ${scopeTypeName}`;
+}
+
+/** Returns a function-type parameter, i.e. `prefix: string`, when syntax-only inference is safe. */
+function parameterType(sourceFile: ts.SourceFile, param: ts.ParameterDeclaration): string | undefined {
+  if (!ts.isIdentifier(param.name) || !param.type || param.initializer) return undefined;
+  const rest = param.dotDotDotToken ? "..." : "";
+  const optional = param.questionToken ? "?" : "";
+  return `${rest}${param.name.text}${optional}: ${param.type.getText(sourceFile)}`;
 }
 
 /** Returns true if the member has a static modifier. */

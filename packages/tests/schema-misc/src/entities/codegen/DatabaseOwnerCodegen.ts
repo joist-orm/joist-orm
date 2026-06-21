@@ -72,7 +72,7 @@ export type DatabaseOwnerScope = Scope<DatabaseOwner, DatabaseOwnerScopes>;
 
 export const databaseOwnerConfig = new ConfigApi<DatabaseOwner, Context>();
 
-export const databaseOwnerScope = newScopeFn<DatabaseOwner>("DatabaseOwner");
+export const databaseOwnerScope = newScopeFn<DatabaseOwner, DatabaseOwnerScope>("DatabaseOwner");
 
 databaseOwnerConfig.addRule(newRequiredRule("name"));
 

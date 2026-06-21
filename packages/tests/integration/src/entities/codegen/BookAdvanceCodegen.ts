@@ -133,7 +133,7 @@ export type BookAdvanceScope = Scope<BookAdvance, BookAdvanceScopes>;
 
 export const bookAdvanceConfig = new ConfigApi<BookAdvance, Context>();
 
-export const bookAdvanceScope = newScopeFn<BookAdvance>("BookAdvance");
+export const bookAdvanceScope = newScopeFn<BookAdvance, BookAdvanceScope>("BookAdvance");
 
 bookAdvanceConfig.addRule(newRequiredRule("createdAt"));
 bookAdvanceConfig.addRule(newRequiredRule("updatedAt"));

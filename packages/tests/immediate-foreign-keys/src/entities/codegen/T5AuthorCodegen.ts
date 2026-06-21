@@ -91,7 +91,7 @@ export type T5AuthorScope = Scope<T5Author, T5AuthorScopes>;
 
 export const t5AuthorConfig = new ConfigApi<T5Author, Context>();
 
-export const t5AuthorScope = newScopeFn<T5Author>("T5Author");
+export const t5AuthorScope = newScopeFn<T5Author, T5AuthorScope>("T5Author");
 
 t5AuthorConfig.addRule(newRequiredRule("firstName"));
 

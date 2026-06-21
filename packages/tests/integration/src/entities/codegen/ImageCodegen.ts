@@ -148,7 +148,7 @@ export type ImageScope = Scope<Image, ImageScopes>;
 
 export const imageConfig = new ConfigApi<Image, Context>();
 
-export const imageScope = newScopeFn<Image>("Image");
+export const imageScope = newScopeFn<Image, ImageScope>("Image");
 
 imageConfig.addRule(newRequiredRule("fileName"));
 imageConfig.addRule(newRequiredRule("createdAt"));

@@ -99,7 +99,7 @@ export type ChildScope = Scope<Child, ChildScopes>;
 
 export const childConfig = new ConfigApi<Child, Context>();
 
-export const childScope = newScopeFn<Child>("Child");
+export const childScope = newScopeFn<Child, ChildScope>("Child");
 
 childConfig.addRule(newRequiredRule("createdAt"));
 childConfig.addRule(newRequiredRule("updatedAt"));

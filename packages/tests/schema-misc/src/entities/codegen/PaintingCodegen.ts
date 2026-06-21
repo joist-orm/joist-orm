@@ -102,7 +102,7 @@ export type PaintingScope = Scope<Painting, PaintingScopes>;
 
 export const paintingConfig = new ConfigApi<Painting, Context>();
 
-export const paintingScope = newScopeFn<Painting>("Painting");
+export const paintingScope = newScopeFn<Painting, PaintingScope>("Painting");
 
 paintingConfig.addRule(newRequiredRule("title"));
 paintingConfig.addRule(newRequiredRule("createdAt"));

@@ -59,11 +59,11 @@ export type Scope<T extends Entity, S = {}> = ScopeQuery<T> & S;
  * Because of the `authorScope as scope` rename, we can bake into the API that this
  * is the Author entity, and so simplify its usage.
  */
-export interface ScopeFn<T extends Entity> {
+export interface ScopeFn<T extends Entity, R extends Scope<T>> {
   /** Defines a scope based on a filter condition, i.e. `scope({ name: "John" })` or `scope(a => a.name.eq("John")`. */
-  <R extends Scope<T> = AnyScope<T>>(arg: FilterOf<T> | ScopeCondition<T>): R;
+  (arg: FilterOf<T> | ScopeCondition<T>): R;
   /** Defines a parametrized filter, i.e. `scope(name => ({ name: { startsWith: name } }))`. */
-  fn<A extends unknown[], R extends Scope<T> = AnyScope<T>>(fn: (...args: A) => ScopeCondition<T>): (...args: A) => R;
+  fn<A extends unknown[]>(fn: (...args: A) => ScopeCondition<T>): (...args: A) => R;
 }
 
 type AnyScope<T extends Entity> = Scope<T, any>;
@@ -88,19 +88,17 @@ type ConditionField = Record<string, (...args: unknown[]) => ExpressionCondition
 const kOps = Symbol("scopeOps");
 
 /** Creates a per-entity, pre-typed scope function. */
-export function newScopeFn<T extends Entity>(entityType: string): ScopeFn<T> {
+export function newScopeFn<T extends Entity, R extends Scope<T>>(entityType: string): ScopeFn<T, R> {
   const resolver: EntityCstrResolver<T> = {
     entityType,
     maybeGet: () => maybeGetMetadataForType<T>(entityType)?.cstr,
   };
 
-  function createScope(arg: FilterOf<T> | ScopeCondition<T>): AnyScope<T> {
-    return makeScope(resolver, [toOp(arg)]);
+  function createScope(arg: FilterOf<T> | ScopeCondition<T>): R {
+    return makeScope(resolver, [toOp(arg)]) as R;
   }
 
-  createScope.fn = function scopeFn<A extends unknown[], R extends Scope<T> = AnyScope<T>>(
-    fn: (...args: A) => ScopeCondition<T>,
-  ): (...args: A) => R {
+  createScope.fn = function scopeFn<A extends unknown[]>(fn: (...args: A) => ScopeCondition<T>): (...args: A) => R {
     return function createParameterizedScope(...args: A): R {
       return makeScope(resolver, [{ kind: "cond", fn: fn(...args) }]) as R;
     };

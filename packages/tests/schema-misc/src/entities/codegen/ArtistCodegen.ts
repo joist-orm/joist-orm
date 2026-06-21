@@ -104,7 +104,7 @@ export type ArtistScope = Scope<Artist, ArtistScopes>;
 
 export const artistConfig = new ConfigApi<Artist, Context>();
 
-export const artistScope = newScopeFn<Artist>("Artist");
+export const artistScope = newScopeFn<Artist, ArtistScope>("Artist");
 
 artistConfig.addRule(newRequiredRule("firstName"));
 artistConfig.addRule(newRequiredRule("lastName"));

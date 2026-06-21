@@ -85,6 +85,7 @@ type ScopeOp<T extends Entity> =
 type ScopeRefOp<T extends Entity> = Extract<ScopeOp<T>, { kind: "ref" }>;
 type ConditionField = Record<string, (...args: unknown[]) => ExpressionCondition>;
 
+// Use a symbol so stored scope fragments cannot collide with user-defined scope names.
 const kOps = Symbol("scopeOps");
 
 /** Creates a per-entity, pre-typed scope function. */

@@ -10,7 +10,7 @@ import { parseEntityFilter } from "./QueryParser";
 import type { FilterOf, OrderOf } from "./typeMap";
 
 /** A predicate expressed against a bound alias, i.e. `(a) => a.age.gte(18)`. */
-export type ScopeCondition<T extends Entity> = (a: Alias<T>) => ExpressionCondition | ExpressionCondition[];
+export type AliasFn<T extends Entity> = (a: Alias<T>) => ExpressionCondition | ExpressionCondition[];
 
 /**
  * The fluent builder to either a) terminate/invoke or b) chain scope methods.
@@ -22,7 +22,7 @@ export type ScopeCondition<T extends Entity> = (a: Alias<T>) => ExpressionCondit
  */
 export interface ScopeQuery<T extends Entity> {
   where(where: FilterOf<T>): this;
-  where(fn: ScopeCondition<T>): this;
+  where(fn: AliasFn<T>): this;
   orderBy(orderBy: OrderOf<T> | OrderOf<T>[]): this;
   limit(limit: number): this;
   offset(offset: number): this;
@@ -63,9 +63,9 @@ export type Scope<T extends Entity, S = {}> = ScopeQuery<T> & S;
  */
 export interface ScopeFn<T extends Entity, R extends Scope<T>> {
   /** Defines a scope based on a filter condition, i.e. `scope({ name: "John" })` or `scope(a => a.name.eq("John")`. */
-  (arg: FilterOf<T> | ScopeCondition<T>): R;
+  (arg: FilterOf<T> | AliasFn<T>): R;
   /** Defines a parametrized filter, i.e. `scope(name => ({ name: { startsWith: name } }))`. */
-  fn<A extends unknown[]>(fn: (...args: A) => ScopeCondition<T>): (...args: A) => R;
+  fn<A extends unknown[]>(fn: (...args: A) => AliasFn<T>): (...args: A) => R;
 }
 
 type AnyScope<T extends Entity> = Scope<T, any>;
@@ -77,8 +77,8 @@ interface EntityCstrResolver<T extends Entity> {
 type FindOptionsWithPopulate<T extends Entity> = FindFilterOptions<T> & { populate?: LoadHint<T> };
 
 type ScopeOp<T extends Entity> =
-  | { kind: "cond"; fn: ScopeCondition<T> }
-  | { kind: "where"; where: FilterOf<T> }
+  | { kind: "alias"; fn: AliasFn<T> }
+  | { kind: "filter"; filter: FilterOf<T> }
   | { kind: "orderBy"; orderBy: OrderOf<T> | OrderOf<T>[] }
   | { kind: "limit"; limit: number }
   | { kind: "offset"; offset: number }
@@ -100,12 +100,12 @@ export function newScopeFn<T extends Entity, R extends Scope<T>>(entityType: str
     maybeGet: () => maybeGetMetadataForType<T>(entityType)?.cstr,
   };
   // Create the scopeFn
-  function scopeFn(arg: FilterOf<T> | ScopeCondition<T>): R {
+  function scopeFn(arg: FilterOf<T> | AliasFn<T>): R {
     return newScope(resolver, [toOp(arg)]) as R;
   }
   // But then also add the `.fn(...)` for parameterized scopes
-  scopeFn.fn = function scopeFn<A extends unknown[]>(fn: (...args: A) => ScopeCondition<T>): (...args: A) => R {
-    return (...args) => newScope(resolver, [{ kind: "cond", fn: fn(...args) }]);
+  scopeFn.fn = function scopeFn<A extends unknown[]>(fn: (...args: A) => AliasFn<T>): (...args: A) => R {
+    return (...args) => newScope(resolver, [{ kind: "alias", fn: fn(...args) }]);
   };
   return scopeFn;
 }
@@ -153,7 +153,7 @@ class ScopeTerminals<T extends Entity> {
     return this.#ops;
   }
 
-  where(arg: FilterOf<T> | ScopeCondition<T>): AnyScope<T> {
+  where(arg: FilterOf<T> | AliasFn<T>): AnyScope<T> {
     return this[kWithScopeOp](toOp(arg));
   }
 
@@ -228,7 +228,7 @@ function compile<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp
   const cstr = resolveCstr(resolver);
   const a = alias(cstr);
   const conditions: ExpressionCondition[] = [];
-  const wheres: FilterOf<T>[] = [];
+  const filters: FilterOf<T>[] = [];
   const orderBys: OrderOf<T>[] = [];
   let limit: number | undefined;
   let offset: number | undefined;
@@ -237,13 +237,13 @@ function compile<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp
   function expand(currentOps: ScopeOp<T>[], seen: Set<string>): void {
     for (const op of currentOps) {
       switch (op.kind) {
-        case "cond": {
+        case "alias": {
           const result = op.fn(a);
           conditions.push(...(Array.isArray(result) ? result : [result]));
           break;
         }
-        case "where":
-          wheres.push(op.where);
+        case "filter":
+          filters.push(op.filter);
           break;
         case "orderBy":
           if (Array.isArray(op.orderBy)) orderBys.push(...op.orderBy);
@@ -271,7 +271,7 @@ function compile<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp
 
   expand(ops, new Set());
   const meta = getMetadata(cstr);
-  for (const where of wheres) addWhereConditions(a, meta, where, conditions, softDeletes ?? "exclude");
+  for (const filter of filters) addWhereCondition(a, meta, conditions, filter, softDeletes ?? "exclude");
 
   return {
     where: { as: a } as FilterAndSettings<T>["where"],
@@ -347,10 +347,10 @@ function resolveCstr<T extends Entity>(resolver: EntityCstrResolver<T>): MaybeAb
 }
 
 /** Converts a scope declaration argument into a recorded op. */
-function toOp<T extends Entity>(arg: FilterOf<T> | ScopeCondition<T>): ScopeOp<T> {
+function toOp<T extends Entity>(arg: FilterOf<T> | AliasFn<T>): ScopeOp<T> {
   return typeof arg === "function"
-    ? { kind: "cond", fn: arg as ScopeCondition<T> }
-    : { kind: "where", where: arg as FilterOf<T> };
+    ? { kind: "alias", fn: arg as AliasFn<T> }
+    : { kind: "filter", filter: arg as FilterOf<T> };
 }
 
 /** Pulls the option half of `FilterAndSettings` back out for `em.find`. */
@@ -385,11 +385,11 @@ function andConditions(
 }
 
 /** Converts root find filters into alias conditions so every scope where fragment is ANDed. */
-function addWhereConditions<T extends Entity>(
+function addWhereCondition<T extends Entity>(
   a: Alias<T>,
   meta: EntityMetadata<T>,
-  where: FilterOf<T>,
   conditions: ExpressionCondition[],
+  where: FilterOf<T>,
   softDeletes: "include" | "exclude",
 ): void {
   if (!isPlainObject(where)) throw new Error(`Scope find filters must be plain objects for ${meta.type}`);
@@ -408,10 +408,14 @@ function addWhereConditions<T extends Entity>(
       if (filter.kind === "join")
         throw new Error(`Cannot safely compose scope filter ${meta.type}.${key} because it requires a join`);
       if (filterSoftDeletes(field.otherMetadata(), softDeletes))
-        throw new Error(`Cannot safely compose scope filter ${meta.type}.${key} because the related entity has soft deletes`);
+        throw new Error(
+          `Cannot safely compose scope filter ${meta.type}.${key} because the related entity has soft deletes`,
+        );
       conditions.push(filterAlias(a, field).filter(value));
     } else {
-      throw new Error(`Cannot safely compose scope filter ${meta.type}.${key} because ${field.kind} fields are not supported`);
+      throw new Error(
+        `Cannot safely compose scope filter ${meta.type}.${key} because ${field.kind} fields are not supported`,
+      );
     }
   }
 }

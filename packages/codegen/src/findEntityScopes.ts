@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "fs";
+import { readFile } from "fs/promises";
 import { join } from "path";
 import ts from "typescript";
 import { type Config } from "./config";
@@ -10,15 +10,32 @@ export interface ScopeMember {
   type: string;
 }
 
+export type ScopeMembersByEntity = Record<string, ScopeMember[]>;
+
+/** Finds static scope declarations for all user-owned entity files. */
+export async function findAllEntityScopes(config: Config, entityNames: string[]): Promise<ScopeMembersByEntity> {
+  const entries = await Promise.all(
+    entityNames.map(function findScopes(entityName) {
+      return findEntityScopes(config, entityName, `${entityName}Scope`);
+    }),
+  );
+  return Object.fromEntries(entries);
+}
+
 /** Finds static scope declarations in the user-owned entity file. */
-export function findEntityScopes(config: Config, entityName: string, scopeTypeName: string): ScopeMember[] {
+async function findEntityScopes(
+  config: Config,
+  entityName: string,
+  scopeTypeName: string,
+): Promise<[string, ScopeMember[]]> {
   // i.e. `packages/tests/integration/src/entities/Author.ts` when `entityName` is "Author".
   const fileName = join(config.entitiesDirectory, `${entityName}.ts`);
-  if (!existsSync(fileName)) return [];
+  const contents = await readEntityFile(fileName);
+  if (contents === undefined) return [entityName, []];
 
   const sourceFile = ts.createSourceFile(
     fileName,
-    readFileSync(fileName, "utf8"),
+    contents,
     ts.ScriptTarget.Latest,
     false,
     ts.ScriptKind.TS,
@@ -26,12 +43,28 @@ export function findEntityScopes(config: Config, entityName: string, scopeTypeNa
   for (const statement of sourceFile.statements) {
     // i.e. `export class Author extends AuthorCodegen { ... }`.
     if (ts.isClassDeclaration(statement) && statement.name?.text === entityName) {
-      return statement.members.flatMap(function maybeScopeMember(member) {
+      const scopeMembers = statement.members.flatMap(function maybeScopeMember(member) {
         return toScopeMember(sourceFile, member, scopeTypeName);
       });
+      return [entityName, scopeMembers];
     }
   }
-  return [];
+  return [entityName, []];
+}
+
+/** Reads an entity file if it already exists. */
+async function readEntityFile(fileName: string): Promise<string | undefined> {
+  try {
+    return await readFile(fileName, "utf8");
+  } catch (e) {
+    if (isNoSuchFileError(e)) return undefined;
+    throw e;
+  }
+}
+
+/** Returns true for a missing user-owned entity file. */
+function isNoSuchFileError(e: unknown): boolean {
+  return typeof e === "object" && e !== null && "code" in e && e.code === "ENOENT";
 }
 
 /** Converts a static property declaration into a generated scope member. */

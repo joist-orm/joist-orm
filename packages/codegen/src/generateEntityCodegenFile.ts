@@ -13,7 +13,7 @@ import {
   PrimitiveTypescriptType,
 } from "./EntityDbMetadata";
 import { type Config } from "./config";
-import { findEntityScopes } from "./findEntityScopes";
+import { type ScopeMember } from "./findEntityScopes";
 import { getStiEntities } from "./inheritance";
 import { keywords } from "./keywords";
 import {
@@ -103,7 +103,12 @@ type Relation =
   | { kind: "super"; fieldName: string; decl: Code; comment?: string };
 
 /** Creates the base class with the boilerplate annotations. */
-export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
+export function generateEntityCodegenFile(
+  config: Config,
+  dbMeta: DbMetadata,
+  meta: EntityDbMetadata,
+  scopeMembers: ScopeMember[] = [],
+): Code {
   const { entitiesByName: metasByName } = dbMeta;
   const { entity, tagName } = meta;
   const entityName = entity.name;
@@ -121,7 +126,6 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const scopeFactoryName = `${camelCase(entityName)}Scope`;
   const scopeTypeName = `${entityName}Scope`;
   const scopesTypeName = `${entityName}Scopes`;
-  const scopeMembers = findEntityScopes(config, entityName, scopeTypeName);
   const metadata = imp(`${camelCase(entityName)}Meta@./entities.ts`);
 
   const contextType = config.contextType ? imp(`t:${config.contextType}`) : "{}";

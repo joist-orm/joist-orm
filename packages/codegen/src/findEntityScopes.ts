@@ -14,39 +14,23 @@ export type ScopeMembersByEntity = Record<string, ScopeMember[]>;
 
 /** Finds static scope declarations for all user-owned entity files. */
 export async function findAllEntityScopes(config: Config, entityNames: string[]): Promise<ScopeMembersByEntity> {
-  const entries = await Promise.all(
-    entityNames.map(function findScopes(entityName) {
-      return findEntityScopes(config, entityName, `${entityName}Scope`);
-    }),
-  );
-  return Object.fromEntries(entries);
+  return Object.fromEntries(await Promise.all(entityNames.map((entityName) => findEntityScopes(config, entityName))));
 }
 
 /** Finds static scope declarations in the user-owned entity file. */
-async function findEntityScopes(
-  config: Config,
-  entityName: string,
-  scopeTypeName: string,
-): Promise<[string, ScopeMember[]]> {
+async function findEntityScopes(config: Config, entityName: string): Promise<[string, ScopeMember[]]> {
+  const scopeTypeName = `${entityName}Scope`;
+
   // i.e. `packages/tests/integration/src/entities/Author.ts` when `entityName` is "Author".
   const fileName = join(config.entitiesDirectory, `${entityName}.ts`);
   const contents = await readEntityFile(fileName);
   if (contents === undefined) return [entityName, []];
 
-  const sourceFile = ts.createSourceFile(
-    fileName,
-    contents,
-    ts.ScriptTarget.Latest,
-    false,
-    ts.ScriptKind.TS,
-  );
+  const sourceFile = ts.createSourceFile(fileName, contents, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
   for (const statement of sourceFile.statements) {
     // i.e. `export class Author extends AuthorCodegen { ... }`.
     if (ts.isClassDeclaration(statement) && statement.name?.text === entityName) {
-      const scopeMembers = statement.members.flatMap(function maybeScopeMember(member) {
-        return toScopeMember(sourceFile, member, scopeTypeName);
-      });
-      return [entityName, scopeMembers];
+      return [entityName, statement.members.flatMap((member) => toScopeMember(sourceFile, member, scopeTypeName))];
     }
   }
   return [entityName, []];
@@ -80,9 +64,11 @@ function toScopeMember(sourceFile: ts.SourceFile, member: ts.ClassElement, scope
 /** Returns true if the member has a static modifier. */
 function isStaticMember(member: ts.ClassElement): boolean {
   const modifiers = ts.canHaveModifiers(member) ? ts.getModifiers(member) : undefined;
-  return modifiers?.some(function isStatic(modifier: ts.ModifierLike) {
-    return modifier.kind === ts.SyntaxKind.StaticKeyword;
-  }) ?? false;
+  return (
+    modifiers?.some(function isStatic(modifier: ts.ModifierLike) {
+      return modifier.kind === ts.SyntaxKind.StaticKeyword;
+    }) ?? false
+  );
 }
 
 /** Returns true for `EntityScope` and function types returning `EntityScope`. */

@@ -35,9 +35,9 @@ export type Scope<T extends Entity, S = {}> = ScopeQuery<T> & S;
 
 /** A per-entity, pre-typed factory for declaring scopes. */
 export interface ScopeFactory<T extends Entity> {
-  <R extends Scope<T> = AnyScope<T>>(arg: FilterOf<NoInfer<T>> | ScopeCondition<NoInfer<T>>): R;
+  <R extends Scope<T> = AnyScope<T>>(arg: FilterOf<T> | ScopeCondition<T>): R;
   fn<A extends unknown[], R extends Scope<T> = AnyScope<T>>(
-    fn: (...args: A) => ScopeCondition<NoInfer<T>>,
+    fn: (...args: A) => ScopeCondition<T>,
   ): (...args: A) => R;
 }
 
@@ -62,12 +62,12 @@ export function scope<T extends Entity>(entityType: string): ScopeFactory<T> {
     return getMetadataForType(entityType).cstr;
   }
 
-  function createScope(arg: FilterOf<NoInfer<T>> | ScopeCondition<NoInfer<T>>): AnyScope<T> {
+  function createScope(arg: FilterOf<T> | ScopeCondition<T>): AnyScope<T> {
     return makeScope(getCstr, [toOp(arg)]);
   }
 
   createScope.fn = function scopeFn<A extends unknown[], R extends Scope<T> = AnyScope<T>>(
-    fn: (...args: A) => ScopeCondition<NoInfer<T>>,
+    fn: (...args: A) => ScopeCondition<T>,
   ): (...args: A) => R {
     return function createParameterizedScope(...args: A): R {
       return makeScope(getCstr, [{ kind: "cond", fn: fn(...args) }]) as R;
@@ -201,7 +201,7 @@ function resolveCstr<T extends Entity>(getCstr: ScopeConstructorResolver<T>): Ma
 }
 
 /** Converts a scope declaration argument into a recorded op. */
-function toOp<T extends Entity>(arg: FilterOf<NoInfer<T>> | ScopeCondition<NoInfer<T>>): ScopeOp<T> {
+function toOp<T extends Entity>(arg: FilterOf<T> | ScopeCondition<T>): ScopeOp<T> {
   return typeof arg === "function"
     ? { kind: "cond", fn: arg as ScopeCondition<T> }
     : { kind: "where", where: arg as FilterOf<T> };

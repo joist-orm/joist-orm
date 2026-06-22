@@ -22,7 +22,16 @@ import {
   isDefined,
   withLoaded,
 } from "joist-orm";
-import { AuthorCodegen, Book, BookRange, BookReview, Comment, Publisher, authorConfig as config } from "./entities";
+import {
+  AuthorCodegen,
+  Book,
+  BookRange,
+  BookReview,
+  Comment,
+  Publisher,
+  Tag,
+  authorConfig as config,
+} from "./entities";
 
 /**
  * The Author entity represents a writer who can publish books.
@@ -134,6 +143,7 @@ export class Author extends AuthorCodegen {
     afterCommitIsDeletedEntity: false,
     setGraduatedInFlush: false,
     setPublisherInFlush: undefined as Publisher | undefined,
+    deleteTagDuringReaction: undefined as Tag | undefined,
     firstIsNotLastNameRuleInvoked: 0,
     mentorRuleInvoked: 0,
     ageRuleInvoked: 0,
@@ -528,6 +538,14 @@ config.addReaction("rr", "rootMentor", (a) => {
 // set-via-hook reaction
 config.addReaction("setViaHook", "graduated", (a) => {
   a.transientFields.reactions.setViaHook += 1;
+});
+
+// Tests em.delete-ing an entity (particularly a newly-created entity) from a reaction
+config.addReaction("deleteTag", "graduated", (a) => {
+  const tag = a.transientFields.deleteTagDuringReaction;
+  if (!tag) return;
+  a.transientFields.deleteTagDuringReaction = undefined;
+  a.em.delete(tag);
 });
 
 // immutable field reaction

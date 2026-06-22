@@ -404,6 +404,14 @@ export interface AuthorFactoryExtras {
 }
 
 export interface AuthorScopes {
+  adult: AuthorScope;
+  active: AuthorScope;
+  popular: AuthorScope;
+  popularAdult: AuthorScope;
+  recentAdults: AuthorScope;
+  recentAdultsViaAdult: AuthorScope;
+  senior: AuthorScope;
+  named: (prefix: string) => AuthorScope;
 }
 
 export type AuthorScope = Scope<Author, AuthorScopes>;

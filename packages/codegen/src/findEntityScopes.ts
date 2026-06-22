@@ -26,6 +26,7 @@ async function findEntityScopes(config: Config, entityName: string): Promise<[st
   const fileName = join(config.entitiesDirectory, `${entityName}.ts`);
   const contents = await readEntityFile(fileName);
   if (contents === undefined) return [entityName, []];
+  if (contents.indexOf(scopeTypeName) === -1) return [entityName, []];
 
   const sourceFile = ts.createSourceFile(fileName, contents, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
   for (const statement of sourceFile.statements) {

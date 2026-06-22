@@ -21,31 +21,102 @@ export type AliasFn<T extends Entity> = (a: Alias<T>) => ExpressionCondition | E
  * are chained on via the `Scope` mapped type below.
  */
 export interface ScopeQuery<T extends Entity> {
+  /**
+   * ANDs an ad-hoc filter onto the scope, i.e. `Author.adult.where({ firstName: "a1" })`.
+   *
+   * Accepts either a plain find filter (`{ field: value }`) or an alias callback
+   * (`(a) => a.field.eq(value)`) and appends it to the recorded ops — multiple
+   * `.where(...)` calls on the same field AND together rather than override.
+   */
   where(where: FilterOf<T>): this;
   where(fn: AliasFn<T>): this;
+
+  /**
+   * Appends an `orderBy` to the scope, i.e. `Author.adult.orderBy({ age: "DESC" })`.
+   *
+   * Chained `.orderBy(...)` calls **accumulate** (the resulting query has every recorded
+   * orderBy in declaration order), unlike `.limit`/`.offset`/`.softDeletes` which are
+   * last-wins. To replace an existing scope's ordering, pass `orderBy` to the terminal
+   * `.find(em, { orderBy: ... })` instead — terminal options override the scope's.
+   */
   orderBy(orderBy: OrderOf<T> | OrderOf<T>[]): this;
+
+  /**
+   * Sets the row limit on the scope, i.e. `Author.adult.limit(10)`.
+   *
+   * Chained `.limit(...)` calls are last-wins — only the most recent value survives compile.
+   */
   limit(limit: number): this;
+
+  /**
+   * Sets the row offset on the scope, i.e. `Author.adult.offset(10)`.
+   *
+   * Chained `.offset(...)` calls are last-wins — only the most recent value survives compile.
+   */
   offset(offset: number): this;
+
+  /**
+   * Overrides Joist's default soft-delete handling for this query, i.e.
+   * `Author.adult.softDeletes("include")` to see soft-deleted rows.
+   *
+   * Chained `.softDeletes(...)` calls are last-wins. The effective value also gates
+   * how `.where({ relation: ... })` filters that touch soft-delete-aware entities are
+   * composed at compile time.
+   */
   softDeletes(softDeletes: "include" | "exclude"): this;
 
+  /**
+   * Runs the scope against `em`, returning all matching rows.
+   *
+   * Terminal options (`orderBy`, `limit`, `offset`, `softDeletes`) passed here
+   * **override** anything the scope recorded via `.orderBy(...)`, `.limit(...)`, etc.;
+   * `conditions` passed here are ANDed with the scope's compiled conditions rather than
+   * replacing them. To extend the scope's ordering instead of replacing it, chain
+   * `.orderBy(...)` before `.find(em)`.
+   */
   find(em: EntityManager): Promise<T[]>;
   find<const H extends LoadHint<T>>(
     em: EntityManager,
     opts?: FindFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H>[]>;
+
+  /** Like {@link find} but returns a single match or `undefined`. Same options precedence as `find`. */
   findOne(em: EntityManager): Promise<T | undefined>;
   findOne<const H extends LoadHint<T>>(
     em: EntityManager,
     opts?: FindFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H> | undefined>;
+
+  /** Like {@link findOne} but throws if no row matches. Same options precedence as `find`. */
   findOneOrFail(em: EntityManager): Promise<T>;
   findOneOrFail<const H extends LoadHint<T>>(
     em: EntityManager,
     opts?: FindFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H>>;
+
+  /**
+   * Returns the count of rows matching the scope.
+   *
+   * Recorded `orderBy`/`limit`/`offset` ops are dropped (they're meaningless for a count);
+   * `softDeletes` and conditions still apply.
+   */
   findCount(em: EntityManager): Promise<number>;
+
+  /**
+   * Returns the tagged ids of rows matching the scope.
+   *
+   * Like {@link findCount}, recorded `orderBy`/`limit`/`offset` ops are dropped.
+   */
   findIds(em: EntityManager): Promise<string[]>;
 
+  /**
+   * Compiles the scope into Joist's `FilterAndSettings` shape for passing to other APIs
+   * or for inspection in tests.
+   *
+   * Useful primarily for debugging — the returned shape captures whatever the terminal
+   * `find` methods would have sent to `em.find`, before terminal-options precedence is
+   * applied.
+   */
   toFindArgs(): FilterAndSettings<T>;
 }
 

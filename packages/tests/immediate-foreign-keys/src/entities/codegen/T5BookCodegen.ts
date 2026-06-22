@@ -81,7 +81,6 @@ export interface T5BookGraphQLFilter {
   id?: ValueGraphQLFilter<T5BookId>;
   title?: ValueGraphQLFilter<string>;
   author?: EntityGraphQLFilter<T5Author, T5AuthorId, GraphQLFilterOf<T5Author>, never>;
-  authorId?: ValueGraphQLFilter<T5AuthorId>;
   reviews?: EntityGraphQLFilter<T5BookReview, T5BookReviewId, GraphQLFilterOf<T5BookReview>, null | undefined>;
 }
 

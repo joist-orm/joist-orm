@@ -29,7 +29,6 @@ import {
   setField,
   setOpts,
   type TaggedId,
-  Temporal,
   toIdOf,
   toJSON,
   type ToJsonHint,
@@ -37,6 +36,7 @@ import {
   type ValueFilter,
   type ValueGraphQLFilter,
 } from "joist-orm";
+import { Temporal } from "temporal-polyfill";
 import type { Context } from "../../context.js";
 import {
   type Author,

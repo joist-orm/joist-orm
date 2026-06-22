@@ -1,6 +1,5 @@
 import { Temporal } from "temporal-polyfill"
 import { type GraphQLResolveInfo, GraphQLScalarType } from "graphql";
-import { CursorPageInfo } from "joist-graphql-resolver-utils/index.js";
 import type { Context } from "src/context.js";
 import { Author, Book, Color } from "src/entities/index.js";
 
@@ -9,13 +8,13 @@ export interface Resolvers {
   Book: BookResolvers;
   ColorDetail: ColorDetailResolvers;
   Mutation: MutationResolvers;
-  PageInfo: PageInfoResolvers;
   Query: QueryResolvers;
   AllEnumDetails?: AllEnumDetailsResolvers;
   AuthorsConnection?: AuthorsConnectionResolvers;
   AuthorsEdge?: AuthorsEdgeResolvers;
   BooksConnection?: BooksConnectionResolvers;
   BooksEdge?: BooksEdgeResolvers;
+  PageInfo?: PageInfoResolvers;
   SaveAuthorResult?: SaveAuthorResultResolvers;
   SaveBookResult?: SaveBookResultResolvers;
   DateTime: GraphQLScalarType;
@@ -50,14 +49,6 @@ export interface MutationResolvers {
   saveBook: Resolver<{}, MutationSaveBookArgs, SaveBookResult>;
 }
 
-export interface PageInfoResolvers {
-  endCursor: Resolver<CursorPageInfo, {}, string | null | undefined>;
-  hasNextPage: Resolver<CursorPageInfo, {}, boolean>;
-  hasPreviousPage: Resolver<CursorPageInfo, {}, boolean>;
-  startCursor: Resolver<CursorPageInfo, {}, string | null | undefined>;
-  totalCount: Resolver<CursorPageInfo, {}, number>;
-}
-
 export interface QueryResolvers {
   author: Resolver<{}, QueryAuthorArgs, Author | null | undefined>;
   authors: Resolver<{}, {}, readonly Author[]>;
@@ -72,7 +63,7 @@ export interface AllEnumDetailsResolvers {
 export interface AuthorsConnectionResolvers {
   edges: Resolver<AuthorsConnection, {}, readonly AuthorsEdge[]>;
   nodes: Resolver<AuthorsConnection, {}, readonly Author[]>;
-  pageInfo: Resolver<AuthorsConnection, {}, CursorPageInfo>;
+  pageInfo: Resolver<AuthorsConnection, {}, PageInfo>;
 }
 
 export interface AuthorsEdgeResolvers {
@@ -83,12 +74,20 @@ export interface AuthorsEdgeResolvers {
 export interface BooksConnectionResolvers {
   edges: Resolver<BooksConnection, {}, readonly BooksEdge[]>;
   nodes: Resolver<BooksConnection, {}, readonly Book[]>;
-  pageInfo: Resolver<BooksConnection, {}, CursorPageInfo>;
+  pageInfo: Resolver<BooksConnection, {}, PageInfo>;
 }
 
 export interface BooksEdgeResolvers {
   cursor: Resolver<BooksEdge, {}, string>;
   node: Resolver<BooksEdge, {}, Book>;
+}
+
+export interface PageInfoResolvers {
+  endCursor: Resolver<PageInfo, {}, string | null | undefined>;
+  hasNextPage: Resolver<PageInfo, {}, boolean>;
+  hasPreviousPage: Resolver<PageInfo, {}, boolean>;
+  startCursor: Resolver<PageInfo, {}, string | null | undefined>;
+  totalCount: Resolver<PageInfo, {}, number>;
 }
 
 export interface SaveAuthorResultResolvers {
@@ -138,7 +137,7 @@ export interface AllEnumDetails {
 export interface AuthorsConnection {
   edges: AuthorsEdge[];
   nodes: Author[];
-  pageInfo: CursorPageInfo;
+  pageInfo: PageInfo;
 }
 
 export interface AuthorsEdge {
@@ -149,12 +148,20 @@ export interface AuthorsEdge {
 export interface BooksConnection {
   edges: BooksEdge[];
   nodes: Book[];
-  pageInfo: CursorPageInfo;
+  pageInfo: PageInfo;
 }
 
 export interface BooksEdge {
   cursor: string;
   node: Book;
+}
+
+export interface PageInfo {
+  endCursor: string | null | undefined;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  startCursor: string | null | undefined;
+  totalCount: number;
 }
 
 export interface SaveAuthorResult {

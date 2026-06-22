@@ -85,7 +85,7 @@ type ScopeOp<T extends Entity> =
   | { kind: "ref"; name: string; args?: unknown[] };
 /** A named-scope reference captured during chaining, i.e. `.popular` in `Author.adult.popular`. */
 type ScopeRefOp<T extends Entity> = Extract<ScopeOp<T>, { kind: "ref" }>;
-type FilterField = Field & { aliasSuffix: string };
+type FilterField = Field;
 type FilterAlias = { filter(value: unknown): ExpressionCondition };
 
 // Use a symbol so stored scope fragments cannot collide with user-defined scope names.

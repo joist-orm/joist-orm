@@ -1,3 +1,4 @@
+import { camelCase } from "change-case";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import ts from "typescript";
@@ -21,12 +22,14 @@ export async function findAllEntityScopes(config: Config, entityNames: string[])
 /** Finds static scope declarations a given entity file. */
 async function findEntityScopes(config: Config, entityName: string): Promise<[string, ScopeMember[]]> {
   const scopeTypeName = `${entityName}Scope`;
+  // i.e. `authorScope`, the conventional renamed-to-`scope` import users put in their entity files.
+  const scopeFnName = `${camelCase(entityName)}Scope`;
 
   // i.e. `packages/tests/integration/src/entities/Author.ts` when `entityName` is "Author".
   const fileName = join(config.entitiesDirectory, `${entityName}.ts`);
   const contents = await readEntityFile(fileName);
   if (contents === undefined) return [entityName, []];
-  if (contents.indexOf(scopeTypeName) === -1) return [entityName, []];
+  if (contents.indexOf(scopeFnName) === -1) return [entityName, []];
 
   const sourceFile = ts.createSourceFile(fileName, contents, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
   for (const statement of sourceFile.statements) {

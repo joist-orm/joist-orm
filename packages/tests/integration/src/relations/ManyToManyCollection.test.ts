@@ -982,4 +982,22 @@ describe("ManyToManyCollection", () => {
     // which batch contributed which rows.
     expect(tags.map((t) => t.name)).toEqual(["t1", "t2", "t3"]);
   });
+
+  it("does not insert m2m rows for an entity deleted during a reaction", async () => {
+    const em = newEntityManager();
+    // Given an existing author and book review
+    const author = newAuthor(em);
+    const review = newBookReview(em);
+    await em.flush();
+    // And a brand-new (never-flushed) tag linked into the review's `tags` m2m
+    const tag = newTag(em, { name: "noop", bookReviews: [review] });
+    // And a beforeFlush hook causes triggers a reaction (graduated is set, triggering a deletion of tag)
+    author.transientFields.setGraduatedInFlush = true;
+    author.transientFields.deleteTagDuringReaction = tag;
+    author.firstName = "other change";
+    // Then the flush succeeds: the pending join row to the deleted-never-flushed tag must be pruned, not inserted
+    await em.flush();
+    // And no join row was written
+    expect(await select("book_reviews_to_tags")).toMatchObject([]);
+  });
 });

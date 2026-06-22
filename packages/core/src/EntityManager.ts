@@ -1696,9 +1696,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             recalcSynchronousDerivedFields(todos);
 
             // The hooks could have deleted this-loop or prior-loop entities, so re-cascade again.
-            await this.flushDeletes();
-            // The hooks could have changed fields, so recalc again.
-            await this.#rm.recalcPendingReactables("reactables");
+            // Reactions (the recalc below) can themselves `em.delete` entities, so keep draining
+            // until both deletes and recalcs have settled.
+            do {
+              await this.flushDeletes();
+              // The hooks could have changed fields, so recalc again.
+              await this.#rm.recalcPendingReactables("reactables");
+            } while (this.#pendingDeletes.length > 0);
             // We may have reactables that failed earlier, but will succeed now that hooks have been run and cascade
             // deletes have been processed
             if (this.#rm.hasPendingTypeErrors) {

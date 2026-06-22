@@ -115,7 +115,8 @@ describe("EntityManager.scopes", () => {
     });
 
     it("throws on unknown runtime scope names", () => {
-      expect(() => (Author.adult as unknown as Record<string, unknown>).bogus).toThrow("Invalid scope Author.bogus");
+      // Unknown names are recorded as refs and validated when the scope is compiled.
+      expect(() => (Author.adult as any).bogus.toFindArgs()).toThrow("Invalid scope Author.bogus");
     });
 
     it("throws instead of guessing how to compose relation filters that require joins", () => {

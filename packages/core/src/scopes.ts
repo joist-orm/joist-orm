@@ -110,26 +110,33 @@ export function newScopeFn<T extends Entity, R extends Scope<T>>(entityType: str
   return scopeFn;
 }
 
-/** Creates an immutable scope proxy with `ops` as its current scope fragments. */
+/**
+ * Creates an immutable scope proxy with `ops` as its current scope fragments.
+ *
+ * The proxy target is a function so the proxy is callable (for parameterized refs
+ * like `Author.adult.named("a")`); unknown property accesses always record a `ref`
+ * op, with validation against the entity constructor deferred until `compile` runs.
+ */
 function newScope<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp<T>[]): Scope<T> {
-  return new Proxy(new ScopeTerminals(resolver, ops), {
-    get(target, prop, receiver) {
-      if (typeof prop === "symbol" || prop in target) {
-        const value = Reflect.get(target, prop, target);
-        return typeof value === "function" ? value.bind(target) : value;
+  const terminals = new ScopeTerminals(resolver, ops);
+  function callable() {}
+  Object.defineProperty(callable, kOps, { value: ops });
+  return new Proxy(callable, {
+    get(_target, prop) {
+      if (typeof prop === "symbol" || prop in terminals) {
+        const value = Reflect.get(terminals, prop, terminals);
+        return typeof value === "function" ? value.bind(terminals) : value;
       }
-      const cstr = resolver.maybeGet();
-      // During entity static initialization, metadata is not registered yet, so defer creating the scope ref.
-      if (cstr === undefined) return makePendingScopeRef(resolver, ops, prop);
-      // A sibling is another static scope on this entity, I.e. `Author.popular` when resolving `.popular`.
-      const sibling = (cstr as MaybeAbstractEntityConstructor<T> & Record<string, unknown>)[prop];
-      if (sibling === undefined) throw new Error(`Invalid scope ${resolver.entityType}.${prop}`);
-      if (typeof sibling === "function" && !hasScopeOps(sibling)) {
-        return function createParameterizedRef(...args: unknown[]): Scope<T> {
-          return target[kWithScopeOp]({ kind: "ref", name: prop, args });
-        };
-      }
-      return target[kWithScopeOp]({ kind: "ref", name: prop });
+      // `await scope` probes `.then`; returning undefined lets await resolve to the scope itself
+      // instead of treating the proxy as a thenable.
+      if (prop === "then") return undefined;
+      return newScope(resolver, [...ops, { kind: "ref", name: prop }]);
+    },
+    apply(_target, _thisArg, args: unknown[]) {
+      // Invoked for chained parameterized refs, i.e. the `("a")` in `Author.adult.named("a")`.
+      const lastOp = ops[ops.length - 1];
+      if (lastOp?.kind !== "ref") throw new Error(`Scope is not parameterized`);
+      return newScope(resolver, [...ops.slice(0, -1), { ...lastOp, args }]);
     },
   }) as unknown as Scope<T>;
 }
@@ -283,40 +290,15 @@ function compile<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp
   };
 }
 
-/**
- * Creates a callable placeholder for refs captured before metadata maps are populated.
- *
- * This is not a one-time conversion: the proxy keeps the recorded ref ops, and every post-boot
- * `compile` resolves those refs through the now-populated entity constructor map.
- */
-function makePendingScopeRef<T extends Entity>(
-  resolver: EntityCstrResolver<T>,
-  ops: ScopeOp<T>[],
-  name: string,
-): Scope<T> {
-  const plainOps: ScopeOp<T>[] = [...ops, { kind: "ref", name }];
-  const plainScope = newScope(resolver, plainOps);
-  function createParameterizedRef(...args: unknown[]): Scope<T> {
-    return newScope(resolver, [...ops, { kind: "ref", name, args }]);
-  }
-  Object.defineProperty(createParameterizedRef, kOps, { value: plainOps });
-  return new Proxy(createParameterizedRef, {
-    get(_target, prop, receiver) {
-      if (prop === kOps) return plainOps;
-      return Reflect.get(plainScope as object, prop, receiver);
-    },
-    apply(_target, _thisArg, args: unknown[]) {
-      return newScope(resolver, [...ops, { kind: "ref", name, args }]);
-    },
-  }) as unknown as Scope<T>;
-}
-
 /** Resolves a recorded named-scope ref to its underlying ops. */
 function scopeOpsForRef<T extends Entity>(resolver: EntityCstrResolver<T>, op: ScopeRefOp<T>): ScopeOp<T>[] {
   const cstr = resolveCstr(resolver) as MaybeAbstractEntityConstructor<T> & Record<string, unknown>;
   const sibling = cstr[op.name];
   if (op.args) {
-    if (typeof sibling !== "function") throw new Error(`Scope ${resolver.entityType}.${op.name} is not parameterized`);
+    // Scope proxies are also `typeof === "function"`, so explicitly reject them via `hasScopeOps`.
+    if (typeof sibling !== "function" || hasScopeOps(sibling)) {
+      throw new Error(`Scope ${resolver.entityType}.${op.name} is not parameterized`);
+    }
     return scopeOpsFromValue(resolver, op.name, (sibling as (...args: unknown[]) => unknown)(...op.args));
   }
   return scopeOpsFromValue(resolver, op.name, sibling);

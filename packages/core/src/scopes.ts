@@ -4,9 +4,9 @@ import { maybeGetMetadataForType } from "./configure";
 import type { Entity } from "./Entity";
 import type { ExpressionCondition, ExpressionFilter, FilterAndSettings } from "./EntityFilter";
 import type { EntityManager, FindFilterOptions, MaybeAbstractEntityConstructor } from "./EntityManager";
-import { type EntityMetadata, type Field, getBaseMeta, getMetadata } from "./EntityMetadata";
+import { type EntityMetadata, getMetadata } from "./EntityMetadata";
 import type { Loaded, LoadHint } from "./loadHints";
-import { parseEntityFilter } from "./QueryParser";
+import { filterSoftDeletes, findFilterField, parseEntityFilter } from "./QueryParser";
 import type { FilterOf, OrderOf } from "./typeMap";
 
 /** A predicate expressed against a bound alias, i.e. `(a) => a.age.gte(18)`. */
@@ -83,10 +83,9 @@ type ScopeOp<T extends Entity> =
   | { kind: "offset"; offset: number }
   | { kind: "softDeletes"; value: "include" | "exclude" }
   | { kind: "ref"; name: string; args?: unknown[] };
+
 /** A named-scope reference captured during chaining, i.e. `.popular` in `Author.adult.popular`. */
 type ScopeRefOp<T extends Entity> = Extract<ScopeOp<T>, { kind: "ref" }>;
-type FilterField = Field;
-type FilterAlias = { filter(value: unknown): ExpressionCondition };
 
 // Use a symbol so stored scope fragments cannot collide with user-defined scope names.
 const kOps = Symbol("scopeOps");
@@ -402,26 +401,12 @@ function addWhereCondition<T extends Entity>(
   }
 }
 
-/** Finds a filter field by fieldName or generated fieldIdName. */
-function findFilterField(meta: EntityMetadata, key: string): FilterField | undefined {
-  return (
-    meta.allFields[key] ??
-    meta.polyComponentFields?.[key] ??
-    Object.values(meta.allFields).find((field) => field.fieldIdName === key) ??
-    Object.values(meta.polyComponentFields ?? {}).find((field) => field.fieldIdName === key)
-  );
-}
-
 /** Returns the alias field object that can turn find filters into bound conditions. */
-function getFieldAlias<T extends Entity>(a: Alias<T>, field: FilterField): FilterAlias {
+function getFieldAlias<T extends Entity>(
+  a: Alias<T>,
+  field: NonNullable<ReturnType<typeof findFilterField>>,
+): {
+  filter(value: unknown): ExpressionCondition;
+} {
   return (a as any)[field.fieldName];
-}
-
-/** Returns true if normal find parsing would filter soft-deleted rows for this metadata. */
-function filterSoftDeletes(meta: EntityMetadata, softDeletes: "include" | "exclude"): boolean {
-  return (
-    softDeletes === "exclude" &&
-    !!getBaseMeta(meta).timestampFields?.deletedAt &&
-    (meta.inheritanceType !== "cti" || meta.baseTypes.length === 0)
-  );
 }

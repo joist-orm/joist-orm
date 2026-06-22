@@ -761,7 +761,7 @@ function isNilIdValue(value: any): boolean {
 }
 
 /** Finds a filter field by fieldName or generated fieldIdName. */
-function findFilterField(meta: EntityMetadata, key: string): (Field & { aliasSuffix: string }) | undefined {
+export function findFilterField(meta: EntityMetadata, key: string): (Field & { aliasSuffix: string }) | undefined {
   return (
     meta.allFields[key] ??
     meta.polyComponentFields?.[key] ??
@@ -1068,7 +1068,7 @@ export function maybeAddNotSoftDeleted(
   }
 }
 
-function filterSoftDeletes(meta: EntityMetadata, softDeletes: "include" | "exclude"): boolean {
+export function filterSoftDeletes(meta: EntityMetadata, softDeletes: "include" | "exclude"): boolean {
   return (
     softDeletes === "exclude" &&
     !!getBaseMeta(meta).timestampFields?.deletedAt &&

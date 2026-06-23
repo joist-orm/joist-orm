@@ -79,6 +79,7 @@ export function insertBook(row: {
   id?: number;
   title: string;
   author_id: number | null;
+  reviewer_id?: number | null;
   prequel_id?: number | null;
   deleted_at?: Date;
   order?: number;
@@ -195,6 +196,7 @@ export async function insertLargePublisher(row: {
   base_async_default?: string;
   spotlight_author_id?: number;
   rating?: number;
+  type_id?: number;
 }) {
   const { country = "country", shared_column, ...others } = row;
   await testDriver.insert("publishers", {

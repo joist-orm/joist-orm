@@ -1,13 +1,10 @@
-import { isPlainObject } from "joist-utils";
-import { alias, type Alias } from "./Aliases";
+import { type Alias } from "./Aliases";
 import { maybeGetMetadataForType } from "./configure";
 import type { Entity } from "./Entity";
-import type { ExpressionCondition, ExpressionFilter, FilterAndSettings } from "./EntityFilter";
+import type { ExpressionCondition, ExpressionFilter, FilterAndSettings, FilterWithAlias } from "./EntityFilter";
 import type { EntityManager, FindFilterOptions, MaybeAbstractEntityConstructor } from "./EntityManager";
-import { type EntityMetadata, getMetadata } from "./EntityMetadata";
 import type { Loaded, LoadHint } from "./loadHints";
-import { filterSoftDeletes, findFilterField, parseEntityFilter } from "./QueryParser";
-import type { FilterOf, OrderOf } from "./typeMap";
+import type { OrderOf } from "./typeMap";
 
 /** A predicate expressed against a bound alias, i.e. `(a) => a.age.gte(18)`. */
 export type AliasFn<T extends Entity> = (a: Alias<T>) => ExpressionCondition | ExpressionCondition[];
@@ -28,7 +25,7 @@ export interface ScopeQuery<T extends Entity> {
    * (`(a) => a.field.eq(value)`) and appends it to the recorded ops — multiple
    * `.where(...)` calls on the same field AND together rather than override.
    */
-  where(where: FilterOf<T>): this;
+  where(where: FilterWithAlias<T>): this;
   where(fn: AliasFn<T>): this;
 
   /**
@@ -134,9 +131,23 @@ export type Scope<T extends Entity, S = {}> = ScopeQuery<T> & S;
  */
 export interface ScopeFn<T extends Entity, R extends Scope<T>> {
   /** Defines a scope based on a filter condition, i.e. `scope({ name: "John" })` or `scope(a => a.name.eq("John")`. */
-  (arg: FilterOf<T> | AliasFn<T>): R;
+  (arg: FilterWithAlias<T> | AliasFn<T>): R;
   /** Defines a parametrized filter, i.e. `scope(name => ({ name: { startsWith: name } }))`. */
-  fn<A extends unknown[]>(fn: (...args: A) => AliasFn<T>): (...args: A) => R;
+  fn<A extends unknown[]>(fn: (...args: A) => FilterWithAlias<T> | AliasFn<T>): (...args: A) => R;
+}
+
+/** A scope fragment that can be expanded against any current query alias. */
+export type ScopeFilterFragment<T extends Entity> =
+  | { kind: "alias"; fn: AliasFn<T> }
+  | { kind: "filter"; filter: FilterWithAlias<T> };
+
+/** Fully-expanded scope contents, with named refs resolved and settings collapsed. */
+export interface ResolvedScope<T extends Entity> {
+  fragments: ScopeFilterFragment<T>[];
+  orderBys: OrderOf<T>[];
+  limit: number | undefined;
+  offset: number | undefined;
+  softDeletes: "include" | "exclude" | undefined;
 }
 
 interface EntityCstrResolver<T extends Entity> {
@@ -147,8 +158,7 @@ interface EntityCstrResolver<T extends Entity> {
 type FindOptionsWithPopulate<T extends Entity> = FindFilterOptions<T> & { populate?: LoadHint<T> };
 
 type ScopeOp<T extends Entity> =
-  | { kind: "alias"; fn: AliasFn<T> }
-  | { kind: "filter"; filter: FilterOf<T> }
+  | ScopeFilterFragment<T>
   | { kind: "orderBy"; orderBy: OrderOf<T> | OrderOf<T>[] }
   | { kind: "limit"; limit: number }
   | { kind: "offset"; offset: number }
@@ -160,7 +170,13 @@ type ScopeRefOp<T extends Entity> = Extract<ScopeOp<T>, { kind: "ref" }>;
 
 // Use a symbol so stored scope fragments cannot collide with user-defined scope names.
 const kOps = Symbol("scopeOps");
+const kResolver = Symbol("scopeResolver");
 const kWithScopeOp = Symbol("scopeWithOp");
+
+type ScopeState<T extends Entity> = Scope<T> & {
+  readonly [kOps]: ScopeOp<T>[];
+  readonly [kResolver]: EntityCstrResolver<T>;
+};
 
 /** Creates a per-entity, pre-typed scope function. */
 export function newScopeFn<T extends Entity, R extends Scope<T>>(entityType: string): ScopeFn<T, R> {
@@ -170,14 +186,25 @@ export function newScopeFn<T extends Entity, R extends Scope<T>>(entityType: str
     maybeGet: () => maybeGetMetadataForType<T>(entityType)?.cstr,
   };
   // Create the scopeFn
-  function scopeFn(arg: FilterOf<T> | AliasFn<T>): R {
+  function scopeFn(arg: FilterWithAlias<T> | AliasFn<T>): R {
     return newScope(resolver, [toOp(arg)]) as R;
   }
   // But then also add the `.fn(...)` for parameterized scopes
-  scopeFn.fn = function scopeFn<A extends unknown[]>(fn: (...args: A) => AliasFn<T>): (...args: A) => R {
-    return (...args) => newScope(resolver, [{ kind: "alias", fn: fn(...args) }]) as R;
+  scopeFn.fn = function scopeFn<A extends unknown[]>(fn: (...args: A) => FilterWithAlias<T> | AliasFn<T>): (...args: A) => R {
+    return (...args) => newScope(resolver, [toOp(fn(...args))]) as R;
   };
   return scopeFn;
+}
+
+/** Returns true if `value` is one of our scope proxies. */
+export function isScope<T extends Entity>(value: unknown): value is Scope<T> {
+  return hasScopeState<T>(value);
+}
+
+/** Resolves a scope proxy into ordered filter fragments plus collapsed settings. */
+export function resolveScope<T extends Entity>(scope: Scope<T>): ResolvedScope<T> {
+  const state = getScopeState(scope);
+  return resolveScopeOps(state[kResolver], state[kOps]);
 }
 
 /**
@@ -191,8 +218,10 @@ function newScope<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeO
   const terminals = new ScopeTerminals(resolver, ops);
   function callable() {}
   Object.defineProperty(callable, kOps, { value: ops });
+  Object.defineProperty(callable, kResolver, { value: resolver });
   return new Proxy(callable, {
-    get(_target, prop) {
+    get(target, prop) {
+      if (prop === kOps || prop === kResolver) return Reflect.get(target, prop);
       if (typeof prop === "symbol" || prop in terminals) {
         const value = Reflect.get(terminals, prop, terminals);
         return typeof value === "function" ? value.bind(terminals) : value;
@@ -230,7 +259,7 @@ class ScopeTerminals<T extends Entity> {
     return this.#ops;
   }
 
-  where(arg: FilterOf<T> | AliasFn<T>): Scope<T> {
+  where(arg: FilterWithAlias<T> | AliasFn<T>): Scope<T> {
     return this[kWithScopeOp](toOp(arg));
   }
 
@@ -302,11 +331,23 @@ class ScopeTerminals<T extends Entity> {
 
 /** Compiles the ordered scope ops into Joist's existing find args shape. */
 function compile<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp<T>[]): FilterAndSettings<T> {
-  const cstr = resolveCstr(resolver);
-  const a = alias(cstr);
-  const conditions: ExpressionCondition[] = [];
-  const filters: FilterOf<T>[] = [];
+  const resolved = resolveScopeOps(resolver, ops);
+
+  return {
+    where: newScope(resolver, resolved.fragments) as unknown as FilterAndSettings<T>["where"],
+    orderBy: resolved.orderBys.length ? resolved.orderBys : undefined,
+    limit: resolved.limit,
+    offset: resolved.offset,
+    softDeletes: resolved.softDeletes,
+  };
+}
+
+/** Resolves ordered scope ops into filter fragments and root-only settings. */
+function resolveScopeOps<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp<T>[]): ResolvedScope<T> {
+  const fragments: ScopeFilterFragment<T>[] = [];
   const orderBys: OrderOf<T>[] = [];
+  const refArgKeys = new WeakMap<object, number>();
+  const nextRefArgKey = { value: 0 };
   let limit: number | undefined;
   let offset: number | undefined;
   let softDeletes: "include" | "exclude" | undefined;
@@ -314,13 +355,9 @@ function compile<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp
   function expand(currentOps: ScopeOp<T>[], seen: Set<string>): void {
     for (const op of currentOps) {
       switch (op.kind) {
-        case "alias": {
-          const result = op.fn(a);
-          conditions.push(...(Array.isArray(result) ? result : [result]));
-          break;
-        }
+        case "alias":
         case "filter":
-          filters.push(op.filter);
+          fragments.push(op);
           break;
         case "orderBy":
           if (Array.isArray(op.orderBy)) orderBys.push(...op.orderBy);
@@ -336,7 +373,7 @@ function compile<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp
           softDeletes = op.value;
           break;
         case "ref": {
-          const key = op.name + (op.args ? JSON.stringify(op.args) : "");
+          const key = scopeRefKey(op, refArgKeys, nextRefArgKey);
           if (seen.has(key)) break;
           seen.add(key);
           expand(scopeOpsForRef(resolver, op), seen);
@@ -347,17 +384,7 @@ function compile<T extends Entity>(resolver: EntityCstrResolver<T>, ops: ScopeOp
   }
 
   expand(ops, new Set());
-  const meta = getMetadata(cstr);
-  for (const filter of filters) addWhereCondition(a, meta, conditions, filter, softDeletes ?? "exclude");
-
-  return {
-    where: { as: a } as FilterAndSettings<T>["where"],
-    conditions: conditions.length ? { and: conditions } : undefined,
-    orderBy: orderBys.length ? orderBys : undefined,
-    limit,
-    offset,
-    softDeletes,
-  };
+  return { fragments, orderBys, limit, offset, softDeletes };
 }
 
 /** Resolves a recorded named-scope ref to its underlying ops. */
@@ -365,8 +392,8 @@ function scopeOpsForRef<T extends Entity>(resolver: EntityCstrResolver<T>, op: S
   const cstr = resolveCstr(resolver) as MaybeAbstractEntityConstructor<T> & Record<string, unknown>;
   const sibling = cstr[op.name];
   if (op.args) {
-    // Scope proxies are also `typeof === "function"`, so explicitly reject them via `hasScopeOps`.
-    if (typeof sibling !== "function" || hasScopeOps(sibling)) {
+    // Scope proxies are also `typeof === "function"`, so explicitly reject them via `isScope`.
+    if (typeof sibling !== "function" || isScope(sibling)) {
       throw new Error(`Scope ${resolver.entityType}.${op.name} is not parameterized`);
     }
     return scopeOpsFromValue(resolver, op.name, (sibling as (...args: unknown[]) => unknown)(...op.args));
@@ -380,15 +407,48 @@ function scopeOpsFromValue<T extends Entity>(
   name: string,
   value: unknown,
 ): ScopeOp<T>[] {
-  if (hasScopeOps<T>(value)) return value[kOps];
+  if (isScope<T>(value)) return getScopeState(value)[kOps];
   if (value === undefined) throw new Error(`Invalid scope ${resolver.entityType}.${name}`);
   if (typeof value === "function") throw new Error(`Scope ${resolver.entityType}.${name} requires arguments`);
   throw new Error(`${resolver.entityType}.${name} is not a scope`);
 }
 
-/** Returns true if `value` is one of our scope proxies. */
-function hasScopeOps<T extends Entity>(value: unknown): value is { readonly [kOps]: ScopeOp<T>[] } {
-  return (typeof value === "object" || typeof value === "function") && value !== null && kOps in value;
+/** Creates a cycle key for named-scope refs without serializing arbitrary entities/functions. */
+function scopeRefKey<T extends Entity>(
+  op: ScopeRefOp<T>,
+  refArgKeys: WeakMap<object, number>,
+  nextRefArgKey: { value: number },
+): string {
+  return op.args
+    ? `${op.name}(${op.args.map((arg) => scopeRefArgKey(arg, refArgKeys, nextRefArgKey)).join(",")})`
+    : op.name;
+}
+
+/** Creates a stable per-resolution key for one named-scope argument. */
+function scopeRefArgKey(arg: unknown, refArgKeys: WeakMap<object, number>, nextRefArgKey: { value: number }): string {
+  if ((typeof arg === "object" && arg !== null) || typeof arg === "function") {
+    let key = refArgKeys.get(arg);
+    if (key === undefined) {
+      key = nextRefArgKey.value;
+      nextRefArgKey.value += 1;
+      refArgKeys.set(arg, key);
+    }
+    return `${typeof arg}:${key}`;
+  }
+  return `${typeof arg}:${JSON.stringify(String(arg))}`;
+}
+
+/** Extracts scope state from a scope proxy. */
+function getScopeState<T extends Entity>(value: Scope<T>): ScopeState<T> {
+  if (!hasScopeState<T>(value)) throw new Error("Invalid scope");
+  return value;
+}
+
+/** Returns true if `value` has the private scope state. */
+function hasScopeState<T extends Entity>(value: unknown): value is ScopeState<T> {
+  return (
+    (typeof value === "object" || typeof value === "function") && value !== null && kOps in value && kResolver in value
+  );
 }
 
 /** Resolves the lazy entity constructor. */
@@ -399,10 +459,10 @@ function resolveCstr<T extends Entity>(resolver: EntityCstrResolver<T>): MaybeAb
 }
 
 /** Converts a scope declaration argument into a recorded op. */
-function toOp<T extends Entity>(arg: FilterOf<T> | AliasFn<T>): ScopeOp<T> {
+function toOp<T extends Entity>(arg: FilterWithAlias<T> | AliasFn<T>): ScopeOp<T> {
   return typeof arg === "function"
     ? { kind: "alias", fn: arg as AliasFn<T> }
-    : { kind: "filter", filter: arg as FilterOf<T> };
+    : { kind: "filter", filter: arg as FilterWithAlias<T> };
 }
 
 /** Pulls the option half of `FilterAndSettings` back out for `em.find`. */
@@ -434,50 +494,4 @@ function andConditions(
   if (left === undefined) return right;
   if (right === undefined) return left;
   return { and: [left, right] };
-}
-
-/** Converts root find filters into alias conditions so every scope where fragment is ANDed. */
-function addWhereCondition<T extends Entity>(
-  a: Alias<T>,
-  meta: EntityMetadata<T>,
-  conditions: ExpressionCondition[],
-  where: FilterOf<T>,
-  softDeletes: "include" | "exclude",
-): void {
-  if (!isPlainObject(where)) throw new Error(`Scope find filters must be plain objects for ${meta.type}`);
-
-  for (const [key, value] of Object.entries(where as object as Record<string, unknown>)) {
-    if (key === "as") continue;
-
-    const field = findFilterField(meta, key);
-    if (field === undefined) throw new Error(`Cannot safely compose scope filter ${meta.type}.${key}`);
-
-    if (field.kind === "primaryKey" || field.kind === "primitive" || field.kind === "enum") {
-      conditions.push(getFieldAlias(a, field).filter(value));
-    } else if (field.kind === "m2o") {
-      const filter = parseEntityFilter(field.otherMetadata(), value);
-      if (filter === undefined) continue;
-      if (filter.kind === "join")
-        throw new Error(`Cannot safely compose scope filter ${meta.type}.${key} because it requires a join`);
-      if (filterSoftDeletes(field.otherMetadata(), softDeletes))
-        throw new Error(
-          `Cannot safely compose scope filter ${meta.type}.${key} because the related entity has soft deletes`,
-        );
-      conditions.push(getFieldAlias(a, field).filter(value));
-    } else {
-      throw new Error(
-        `Cannot safely compose scope filter ${meta.type}.${key} because ${field.kind} fields are not supported`,
-      );
-    }
-  }
-}
-
-/** Returns the alias field object that can turn find filters into bound conditions. */
-function getFieldAlias<T extends Entity>(
-  a: Alias<T>,
-  field: NonNullable<ReturnType<typeof findFilterField>>,
-): {
-  filter(value: unknown): ExpressionCondition;
-} {
-  return (a as any)[field.fieldName];
 }

@@ -412,6 +412,9 @@ export interface AuthorScopes {
   recentAdultsViaAdult: AuthorScope;
   senior: AuthorScope;
   named: (prefix: string) => AuthorScope;
+  named2: (prefix: string) => AuthorScope;
+  hasBooks: AuthorScope;
+  booksReviewedBy: (reviewer: Author) => AuthorScope;
 }
 
 export type AuthorScope = Scope<Author, AuthorScopes>;

@@ -203,6 +203,7 @@ export interface BookFactoryExtras {
 }
 
 export interface BookScopes {
+  fromLargePubs: BookScope;
 }
 
 export type BookScope = Scope<Book, BookScopes>;

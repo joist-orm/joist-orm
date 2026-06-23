@@ -1,6 +1,7 @@
-import { Author } from "@src/entities";
-import { insertAuthor, insertBook } from "@src/entities/inserts";
+import { Author, Book } from "@src/entities";
+import { insertAuthor, insertBook, insertLargePublisher } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
+import { isScope, resolveScope } from "joist-orm";
 import { jan1, jan2, jan3 } from "./testDates";
 
 describe("EntityManager.scopes", () => {
@@ -27,6 +28,23 @@ describe("EntityManager.scopes", () => {
       const em = newEntityManager();
       const authors = await Author.named("a").find(em);
       expect(authors).toMatchEntity([{ firstName: "alice" }]);
+    });
+
+    it("supports parameterized filter-returning scopes", async () => {
+      await insertAuthor({ first_name: "alice", age: 20 });
+      await insertAuthor({ first_name: "bob", age: 20 });
+      const em = newEntityManager();
+      const authors = await Author.named2("a").find(em);
+      expect(authors).toMatchEntity([{ firstName: "alice" }]);
+    });
+
+    it("applies a scope declared with a top-level or", async () => {
+      await insertAuthor({ first_name: "a1", age: 20, is_popular: true });
+      await insertAuthor({ first_name: "a2", age: 70, is_popular: false });
+      await insertAuthor({ first_name: "a3", age: 20, is_popular: false });
+      const em = newEntityManager();
+      const authors = await Author.popularOrSenior.find(em);
+      expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
     });
   });
 
@@ -105,6 +123,16 @@ describe("EntityManager.scopes", () => {
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
     });
 
+    it("ANDs a scope with an ad-hoc top-level or where", async () => {
+      await insertAuthor({ first_name: "a1", age: 20 });
+      await insertAuthor({ first_name: "a2", age: 20 });
+      await insertAuthor({ first_name: "a3", age: 10 });
+      const em = newEntityManager();
+      // `adult` ANDed with `(firstName = a1 OR firstName = a3)`; a3 is excluded by `adult`.
+      const authors = await Author.adult.where({ or: [{ firstName: "a1" }, { firstName: "a3" }] }).find(em);
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
     it("re-applies the same named scope idempotently", async () => {
       await insertAuthor({ first_name: "a1", age: 20 });
       await insertAuthor({ first_name: "a2", age: 10 });
@@ -119,10 +147,14 @@ describe("EntityManager.scopes", () => {
       expect(() => (Author.adult as any).bogus.toFindArgs()).toThrow("Invalid scope Author.bogus");
     });
 
-    it("throws instead of guessing how to compose relation filters that require joins", () => {
-      expect(() => Author.adult.where({ publisher: { name: "p1" } }).toFindArgs()).toThrow(
-        "Cannot safely compose scope filter Author.publisher because it requires a join",
-      );
+    it("composes relation filters that require joins", async () => {
+      await insertLargePublisher({ id: 1, name: "p1", type_id: 2 });
+      await insertLargePublisher({ id: 2, name: "p2", type_id: 2 });
+      await insertAuthor({ first_name: "a1", age: 20, publisher_id: 1 });
+      await insertAuthor({ first_name: "a2", age: 20, publisher_id: 2 });
+      const em = newEntityManager();
+      const authors = await Author.adult.where({ publisher: { name: "p1" } }).find(em);
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
     });
 
     it("ANDs same-field object-where scopes and builder wheres", async () => {
@@ -173,6 +205,90 @@ describe("EntityManager.scopes", () => {
       expect(excluded).toMatchEntity([{ firstName: "a1" }]);
       const included = await Author.adult.softDeletes("include").find(em);
       expect(included).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+    });
+  });
+
+  describe("em.find integration", () => {
+    it("accepts a root scope and honors root settings", async () => {
+      await insertAuthor({ first_name: "a1", age: 20 });
+      await insertAuthor({ first_name: "a2", age: 30 });
+      await insertAuthor({ first_name: "a3", age: 10 });
+      const em = newEntityManager();
+      const authors = await em.find(Author, Author.adult.orderBy({ age: "DESC" }).limit(1));
+      expect(authors).toMatchEntity([{ firstName: "a2" }]);
+    });
+
+    it("accepts a scope in a many-to-one relation filter", async () => {
+      await insertAuthor({ id: 1, first_name: "adult", age: 20 });
+      await insertAuthor({ id: 2, first_name: "child", age: 10 });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+      const em = newEntityManager();
+      const books = await em.find(Book, { author: Author.adult });
+      expect(books).toMatchEntity([{ title: "b1" }]);
+    });
+
+    it("accepts logical scope composition in a nested relation filter", async () => {
+      await insertAuthor({ id: 1, first_name: "a1", age: 20 });
+      await insertAuthor({ id: 2, first_name: "a1", age: 10 });
+      await insertAuthor({ id: 3, first_name: "a2", age: 20 });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+      await insertBook({ title: "b3", author_id: 3 });
+      const em = newEntityManager();
+      const books = await em.find(Book, { author: { firstName: "a1", and: Author.adult } });
+      expect(books).toMatchEntity([{ title: "b1" }]);
+    });
+  });
+
+  describe("relation scope fragments", () => {
+    it("supports one-to-many filters in scopes", async () => {
+      await insertAuthor({ id: 1, first_name: "a1", age: 20 });
+      await insertAuthor({ id: 2, first_name: "a2", age: 20 });
+      await insertBook({ title: "b1", author_id: 2 });
+      const em = newEntityManager();
+      const authors = await Author.hasBooks.find(em);
+      expect(authors).toMatchEntity([{ firstName: "a2" }]);
+    });
+
+    it("supports parameterized scopes with nested relation filters", async () => {
+      await insertAuthor({ id: 1, first_name: "reviewer", age: 20 });
+      await insertAuthor({ id: 2, first_name: "a1", age: 20 });
+      await insertAuthor({ id: 3, first_name: "a2", age: 20 });
+      await insertBook({ title: "b1", author_id: 2, reviewer_id: 1 });
+      await insertBook({ title: "b2", author_id: 3, reviewer_id: 3 });
+      const em = newEntityManager();
+      const reviewer = await em.load(Author, "a:1");
+      const authors = await Author.booksReviewedBy(reviewer).find(em);
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
+    it("supports many-to-one chains inside scopes", async () => {
+      await insertLargePublisher({ id: 1, name: "p1", type_id: 2 });
+      await insertLargePublisher({ id: 2, name: "p2", type_id: 1 });
+      await insertAuthor({ id: 1, first_name: "a1", age: 20, publisher_id: 1 });
+      await insertAuthor({ id: 2, first_name: "a2", age: 20, publisher_id: 2 });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+      const em = newEntityManager();
+      const books = await Book.fromLargePubs.find(em);
+      expect(books).toMatchEntity([{ title: "b1" }]);
+    });
+
+    it("keeps separate collection scope fragments as independent predicates", async () => {
+      await insertAuthor({ id: 1, first_name: "only-a", age: 20 });
+      await insertBook({ title: "A", author_id: 1 });
+      await insertAuthor({ id: 2, first_name: "only-b", age: 20 });
+      await insertBook({ title: "B", author_id: 2 });
+      await insertAuthor({ id: 3, first_name: "both", age: 20 });
+      await insertBook({ title: "A", author_id: 3 });
+      await insertBook({ title: "B", author_id: 3 });
+      const em = newEntityManager();
+      const authors = await Author.adult
+        .where({ books: { title: "A" } })
+        .where({ books: { title: "B" } })
+        .find(em);
+      expect(authors).toMatchEntity([{ firstName: "both" }]);
     });
   });
 
@@ -291,32 +407,21 @@ describe("EntityManager.scopes", () => {
 
   describe("toFindArgs", () => {
     it("compiles a chained scope to ANDed find args", () => {
-      // `adult` is a find filter; `popular` is an alias condition. em.find ANDs the two.
       const args = Author.adult.popular.toFindArgs();
-      expect(args).toMatchObject({
-        where: {},
-        conditions: {
-          and: [
-            {
-              kind: "column",
-              alias: "unset",
-              column: "is_popular",
-              dbType: "boolean",
-              cond: { kind: "eq", value: true },
-            },
-            { kind: "column", alias: "unset", column: "age", dbType: "int", cond: { kind: "gte", value: 18 } },
-          ],
-        },
-      });
+      expect(isScope(args.where)).toBe(true);
+      if (!isScope(args.where)) throw new Error("Expected scope where");
+      expect(resolveScope(args.where).fragments).toMatchObject([
+        { kind: "filter", filter: { age: { gte: 18 } } },
+        { kind: "alias" },
+      ]);
     });
 
     it("captures orderBy, limit, and offset", () => {
       const args = Author.adult.orderBy({ age: "DESC" }).limit(5).offset(2).toFindArgs();
+      expect(isScope(args.where)).toBe(true);
+      if (!isScope(args.where)) throw new Error("Expected scope where");
+      expect(resolveScope(args.where).fragments).toMatchObject([{ kind: "filter", filter: { age: { gte: 18 } } }]);
       expect(args).toMatchObject({
-        where: {},
-        conditions: {
-          and: [{ kind: "column", alias: "unset", column: "age", dbType: "int", cond: { kind: "gte", value: 18 } }],
-        },
         orderBy: [{ age: "DESC" }],
         limit: 5,
         offset: 2,

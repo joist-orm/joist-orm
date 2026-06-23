@@ -144,9 +144,14 @@ export function findDataLoader<T extends Entity>(
         return results;
       },
       // Our filter/order tuple is a complex object, so use a stable cache key to ensure caching works.
-      { cacheKeyFn: (entry) => whereFilterHash(entry.filter) },
+      { cacheKeyFn: queryFilterHash },
     )
     .load(prepared);
+}
+
+/** Returns a stable key for already-parsed find queries, avoiding raw scope function filters. */
+export function queryFilterHash(entry: { query: ParsedFindQuery; findSettings: object }): any {
+  return whereFilterHash({ query: entry.query, findSettings: entry.findSettings });
 }
 
 export function whereFilterHash(where: object): any {

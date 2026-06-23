@@ -48,6 +48,10 @@ export class Author extends AuthorCodegen {
   static recentAdultsViaAdult = Author.adult.orderBy({ createdAt: "DESC" });
   static senior = scope({ age: { gte: 65 } });
   static named = scope.fn((prefix: string) => (a) => a.firstName.like(`${prefix}%`));
+  static named2 = scope.fn((prefix: string) => ({ firstName: { startsWith: prefix }});
+  // use m2o relations
+  static hasBooks = scope({ books: { id: { ne: null } } });
+  static booksReviewedBy = scope.fn((reviewer: Author) => ({ books: { reviewer: { eq: reviewer } } }));
 
   /**
    * All reviews across all of this author's books.

@@ -465,7 +465,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
     const { populate, ...rest } = options || {};
-    const normalized = normalizeScopeFindOptions(where, rest);
+    const normalized = mergeFindOptions(where, rest);
     const settings = { where: normalized.where, ...normalized.options };
     const result = await (
       hasPaginationSettings(normalized.options)
@@ -687,7 +687,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     where: FindFilter<T> | GraphQLFilterWithAlias<T>,
     options: FindCountFilterOptions<T> = {},
   ): Promise<number> {
-    const normalized = normalizeScopeCountOptions(where, options);
+    const normalized = mergeCountOptions(where, options);
     const settings = { where: normalized.where, ...normalized.options } as any;
     let count = await findCountDataLoader(this, type, settings).catch(function findCount(err) {
       throw appendStack(err, new Error());
@@ -725,7 +725,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     where: FindFilter<T>,
     options: FindCountFilterOptions<T> = {},
   ): Promise<string[]> {
-    const normalized = normalizeScopeCountOptions(where, options);
+    const normalized = mergeCountOptions(where, options);
     const settings = { where: normalized.where, ...normalized.options };
     return findIdsDataLoader(this, type, settings).catch(function findIds(err) {
       throw appendStack(err, new Error());
@@ -3137,7 +3137,7 @@ function hasPaginationSettings(options: object): boolean {
 }
 
 /** Merges root-scope find settings with caller options, letting caller options win. */
-function normalizeScopeFindOptions<T extends EntityW>(
+function mergeFindOptions<T extends EntityW>(
   where: FindFilter<T>,
   options: FindFilterOptions<T>,
 ): { where: FindFilter<T>; options: FindFilterOptions<T> } {
@@ -3153,15 +3153,15 @@ function normalizeScopeFindOptions<T extends EntityW>(
 }
 
 /** Merges root-scope count/id settings with caller options, dropping pagination-only settings. */
-function normalizeScopeCountOptions<T extends EntityW>(
+function mergeCountOptions<T extends EntityW>(
   where: FindFilter<T>,
   options: FindCountFilterOptions<T>,
 ): { where: FindFilter<T>; options: FindCountFilterOptions<T> };
-function normalizeScopeCountOptions<T extends EntityW>(
+function mergeCountOptions<T extends EntityW>(
   where: FindFilter<T> | GraphQLFilterWithAlias<T>,
   options: FindCountFilterOptions<T>,
 ): { where: FindFilter<T> | GraphQLFilterWithAlias<T>; options: FindCountFilterOptions<T> };
-function normalizeScopeCountOptions<T extends EntityW>(
+function mergeCountOptions<T extends EntityW>(
   where: FindFilter<T> | GraphQLFilterWithAlias<T>,
   options: FindCountFilterOptions<T>,
 ): { where: FindFilter<T> | GraphQLFilterWithAlias<T>; options: FindCountFilterOptions<T> } {

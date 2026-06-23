@@ -57,6 +57,15 @@ export type EntityFilterObject<T extends Entity, I = IdOf<T>, F = FilterOf<T>, N
 
 export type BooleanFilter<N> = true | false | N;
 
+/**
+ * The root `em.find` `where` shape: an `EntityFilterObject` with `I`/`F`/`N` defaulted.
+ *
+ * Intentionally a thin alias rather than the source of truth: `as`/`and`/`or` are defined once on
+ * `EntityFilterObject<T, I, F, N>` so the parameterized nested-relation arm of `EntityFilter` and this
+ * root can't drift. That arm needs the `F`/`N` params — GraphQL filter shapes (`F`) and relation
+ * nullability (`N`) flow through `and`/`or` recursion — which a `FilterOf<T>`-hardcoded root can't
+ * supply, so the shape lives on `EntityFilterObject` and this just specializes it.
+ */
 export type FilterWithAlias<T extends Entity> = EntityFilterObject<T>;
 
 /** Allows `em.find` to accept either a `{ ... }` EntityFilter or a Scope like `Adult.parent` */

@@ -762,6 +762,12 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
     // We're just binding an alias to this position in the join tree
     return undefined;
   } else if (isScope(filter)) {
+    // A scope on a relation (e.g. `{ author: Author.adult }`) always implies conditions on the
+    // related entity, so signal "needs a join" via the existing `join` discriminant rather than
+    // adding a dedicated `kind: "scope"` that every relation branch would have to learn. The empty
+    // `subFilter` is intentionally never read: the m2o/m2m branches only check `kind === "join"` to
+    // decide whether to join, then re-dispatch the original scope value back through `addTable`,
+    // where `isScope(...)` routes it to `addScopeFilterAt` to apply the scope's actual fragments.
     return { kind: "join", subFilter: {} };
   } else if (filter === null) {
     return { kind: "is-null" };

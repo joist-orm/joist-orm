@@ -141,7 +141,20 @@ export type ScopeFilterFragment<T extends Entity> =
   | { kind: "alias"; fn: AliasFn<T> }
   | { kind: "filter"; filter: FilterWithAlias<T> };
 
-/** Fully-expanded scope contents, with named refs resolved and settings collapsed. */
+/**
+ * Fully-expanded scope contents, with named refs resolved and settings collapsed.
+ *
+ * Deliberately *not* a `ParsedFindQuery`, even though they look adjacent: this is the pre-parse,
+ * alias-free *input* we feed into `parseFindQuery`, not its alias-committed AST output. The gap is
+ * load-bearing:
+ * - `fragments` are un-parsed DSL — filter objects plus un-invoked `AliasFn` closures — so the same
+ *   scope can be re-rooted onto the query's primary alias (`Author.adult.find(em)`) or onto a joined
+ *   relation alias (`em.find(Book, { author: Author.adult })`). A `ParsedFindQuery` has already baked
+ *   in concrete aliases like `a`/`b1` and could only be reused via alias-rewrite surgery.
+ * - keeping `fragments` as a *list* (rather than one merged condition tree) preserves independent-EXISTS
+ *   semantics: `.where({ books: ... }).where({ books: ... })` must stay two predicates — one EXISTS each —
+ *   which a collapsed `ParsedFindQuery.condition` can no longer be split back into.
+ */
 export interface ResolvedScope<T extends Entity> {
   fragments: ScopeFilterFragment<T>[];
   orderBys: OrderOf<T>[];

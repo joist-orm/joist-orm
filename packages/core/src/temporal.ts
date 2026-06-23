@@ -30,6 +30,24 @@ export const Temporal = new Proxy(
 ) as typeof TemporalType;
 
 /**
+ * A type-only `Temporal` namespace that merges with the `const Temporal` above.
+ *
+ * The `const` is only a value, so using `Temporal.PlainDate` / `Temporal.ZonedDateTime` as a
+ * type needs a namespace to resolve against. Node 26 has that as a global, but older Node
+ * versions don't, so we add it here by pointing the names at `temporal-polyfill`'s types.
+ */
+export declare namespace Temporal {
+  export type Instant = TemporalType.Instant;
+  export type ZonedDateTime = TemporalType.ZonedDateTime;
+  export type PlainDate = TemporalType.PlainDate;
+  export type PlainTime = TemporalType.PlainTime;
+  export type PlainDateTime = TemporalType.PlainDateTime;
+  export type PlainYearMonth = TemporalType.PlainYearMonth;
+  export type PlainMonthDay = TemporalType.PlainMonthDay;
+  export type Duration = TemporalType.Duration;
+}
+
+/**
  * Conditionally/dynamically requires `temporal-polyfill`.
  *
  * We want to avoid directly importing/requiring `temporal-polyfill` because

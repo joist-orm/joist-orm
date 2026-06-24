@@ -17,7 +17,7 @@ import { recursiveParentsOperation } from "./batchloaders/recursiveParentsBatchL
 import { constraintNameToValidationError, type ReactiveRule } from "./config";
 import { getConstructorFromTag, getMetadataForType } from "./configure";
 import { findByUniqueDataLoader, findByUniqueOperation } from "./dataloaders/findByUniqueDataLoader";
-import { findCountDataLoader, findCountOperation } from "./dataloaders/findCountDataLoader";
+import { findCountDataLoader, findCountOperation, mergeCountOptions } from "./dataloaders/findCountDataLoader";
 import { findDataLoader, findOperation } from "./dataloaders/findDataLoader";
 import { findIdsDataLoader, findIdsOperation } from "./dataloaders/findIdsDataLoader";
 import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
@@ -57,6 +57,7 @@ import {
   keyToNumber,
   Lens,
   loadLens,
+  mergeFindOptions,
   OneToManyCollection,
   optimizeCollectionJoins,
   ParsedFindQuery,
@@ -93,7 +94,7 @@ import { AsyncPropertyImpl } from "./relations/AsyncProperty";
 import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { RecursiveCycleError } from "./relations/RecursiveCollection";
-import { isScope, isSelectAllFilter, resolveScope } from "./scopes";
+import { isSelectAllFilter } from "./scopes";
 import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
 import { OptsOf, OrderOf } from "./typeMap";
@@ -3138,43 +3139,6 @@ function findPendingFlushEntities<Entity extends EntityW>(
 /** Returns true if the caller explicitly asked `find` to use SQL pagination. */
 function hasPaginationSettings(options: object): boolean {
   return "limit" in options || "offset" in options;
-}
-
-/** Merges root-scope find settings with caller options, letting caller options win. */
-function mergeFindOptions<T extends EntityW>(
-  where: FindFilter<T>,
-  options: FindFilterOptions<T>,
-): { where: FindFilter<T>; options: FindFilterOptions<T> } {
-  if (!isScope<T>(where)) return { where, options };
-
-  const resolved = resolveScope(where);
-  const scopeOptions: FindFilterOptions<T> = {};
-  if (resolved.orderBys.length > 0) scopeOptions.orderBy = resolved.orderBys;
-  if (resolved.limit !== undefined) scopeOptions.limit = resolved.limit;
-  if (resolved.offset !== undefined) scopeOptions.offset = resolved.offset;
-  if (resolved.softDeletes !== undefined) scopeOptions.softDeletes = resolved.softDeletes;
-  return { where, options: { ...scopeOptions, ...options } };
-}
-
-/** Merges root-scope count/id settings with caller options, dropping pagination-only settings. */
-function mergeCountOptions<T extends EntityW>(
-  where: FindFilter<T>,
-  options: FindCountFilterOptions<T>,
-): { where: FindFilter<T>; options: FindCountFilterOptions<T> };
-function mergeCountOptions<T extends EntityW>(
-  where: FindFilter<T> | GraphQLFilterWithAlias<T>,
-  options: FindCountFilterOptions<T>,
-): { where: FindFilter<T> | GraphQLFilterWithAlias<T>; options: FindCountFilterOptions<T> };
-function mergeCountOptions<T extends EntityW>(
-  where: FindFilter<T> | GraphQLFilterWithAlias<T>,
-  options: FindCountFilterOptions<T>,
-): { where: FindFilter<T> | GraphQLFilterWithAlias<T>; options: FindCountFilterOptions<T> } {
-  if (!isScope<T>(where)) return { where, options };
-
-  const resolved = resolveScope(where);
-  const scopeOptions: FindCountFilterOptions<T> = {};
-  if (resolved.softDeletes !== undefined) scopeOptions.softDeletes = resolved.softDeletes;
-  return { where, options: { ...scopeOptions, ...options } };
 }
 
 /** An error we throw to get knex to `ROLLBACK`, but then catch. */

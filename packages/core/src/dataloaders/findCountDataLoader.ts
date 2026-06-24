@@ -1,10 +1,16 @@
 import { Entity, IdType } from "../Entity";
-import { FilterAndSettings } from "../EntityFilter";
-import { EntityManager, getEmInternalApi, MaybeAbstractEntityConstructor } from "../EntityManager";
+import { FilterAndSettings, FindFilter } from "../EntityFilter";
+import { GraphQLFilterWithAlias } from "../EntityGraphQLFilter";
+import {
+  EntityManager,
+  FindCountFilterOptions,
+  getEmInternalApi,
+  MaybeAbstractEntityConstructor,
+} from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { kq } from "../keywords";
 import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
-import { isSelectAllFilter } from "../scopes";
+import { isScope, isSelectAllFilter, resolveScope } from "../scopes";
 import { buildUnnestCte } from "../unnest";
 import { fail } from "../utils";
 import {
@@ -99,6 +105,27 @@ export function findCountDataLoader<T extends Entity>(
       { cacheKeyFn: (entry) => queryFilterHash(entry) },
     )
     .load(prepared);
+}
+
+/** Merges root-scope count/id settings with caller options, dropping pagination-only settings. */
+export function mergeCountOptions<T extends Entity>(
+  where: FindFilter<T>,
+  options: FindCountFilterOptions<T>,
+): { where: FindFilter<T>; options: FindCountFilterOptions<T> };
+export function mergeCountOptions<T extends Entity>(
+  where: FindFilter<T> | GraphQLFilterWithAlias<T>,
+  options: FindCountFilterOptions<T>,
+): { where: FindFilter<T> | GraphQLFilterWithAlias<T>; options: FindCountFilterOptions<T> };
+export function mergeCountOptions<T extends Entity>(
+  where: FindFilter<T> | GraphQLFilterWithAlias<T>,
+  options: FindCountFilterOptions<T>,
+): { where: FindFilter<T> | GraphQLFilterWithAlias<T>; options: FindCountFilterOptions<T> } {
+  if (!isScope<T>(where)) return { where, options };
+
+  const resolved = resolveScope(where);
+  const scopeOptions: FindCountFilterOptions<T> = {};
+  if (resolved.softDeletes !== undefined) scopeOptions.softDeletes = resolved.softDeletes;
+  return { where, options: { ...scopeOptions, ...options } };
 }
 
 /** Adds `id not in pendingDeletedIds` to the count query so pending deletes are excluded in SQL. */

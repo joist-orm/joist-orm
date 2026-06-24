@@ -1,8 +1,8 @@
 import { Alias } from "./Aliases";
 import { Entity } from "./Entity";
-import { IdOf } from "./EntityManager";
+import { FindFilterOptions, IdOf } from "./EntityManager";
 import { ColumnCondition, RawCondition } from "./QueryParser";
-import type { Scope } from "./scopes";
+import { isScope, resolveScope, type Scope } from "./scopes";
 import { FieldsOf, FilterOf, OrderOf } from "./typeMap";
 
 /** Combines a `where` filter with optional `orderBy`, `limit`, and `offset` settings. */
@@ -127,3 +127,19 @@ export type ExpressionFilter = (
 
 /** A user-facing filter for maybe-nested/maybe-simple conditions. */
 export type ExpressionCondition = ExpressionFilter | ColumnCondition | RawCondition;
+
+/** Merges root-scope find settings with caller options, letting caller options win. */
+export function mergeFindOptions<T extends Entity>(
+  where: FindFilter<T>,
+  options: FindFilterOptions<T>,
+): { where: FindFilter<T>; options: FindFilterOptions<T> } {
+  if (!isScope<T>(where)) return { where, options };
+
+  const resolved = resolveScope(where);
+  const scopeOptions: FindFilterOptions<T> = {};
+  if (resolved.orderBys.length > 0) scopeOptions.orderBy = resolved.orderBys;
+  if (resolved.limit !== undefined) scopeOptions.limit = resolved.limit;
+  if (resolved.offset !== undefined) scopeOptions.offset = resolved.offset;
+  if (resolved.softDeletes !== undefined) scopeOptions.softDeletes = resolved.softDeletes;
+  return { where, options: { ...scopeOptions, ...options } };
+}

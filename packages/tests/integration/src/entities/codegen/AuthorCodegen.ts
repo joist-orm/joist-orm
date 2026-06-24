@@ -411,6 +411,7 @@ export interface AuthorScopes {
   recentAdults: AuthorScope;
   recentAdultsViaAdult: AuthorScope;
   senior: AuthorScope;
+  popularOrSenior: AuthorScope;
   named: (prefix: string) => AuthorScope;
   named2: (prefix: string) => AuthorScope;
   hasBooks: AuthorScope;

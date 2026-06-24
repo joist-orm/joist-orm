@@ -52,6 +52,10 @@ export class Author extends AuthorCodegen {
   static named = scope.fn((prefix: string) => (a) => a.firstName.like(`${prefix}%`));
   static named2 = scope.fn((prefix: string) => ({ firstName: { like: `${prefix}%` } }));
   // use relation filters
+  /**
+   * Example of an async boolean that can be navigated via a lens.
+   * @generated Author.md
+   */
   static hasBooks = scope({ books: true });
   static booksReviewedBy = scope.fn((reviewer: Author) => ({ books: { reviewer } }));
 

@@ -16,8 +16,10 @@ To run tests in this project:
 
 3. To run a specific test file:
    ```bash
-   yarn jest -- [test-file-pattern]
+   yarn jest --runInBand -- [test-file-pattern]
    ```
+
+4. DB-backed integration tests share the same test database, so never run multiple Jest processes in parallel. Run one `jest --runInBand` command with all target files, or run commands sequentially with `&&`.
 
 ## Project Structure
 

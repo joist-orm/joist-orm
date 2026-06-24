@@ -13,8 +13,43 @@ import type { EntityManager, FindFilterOptions, MaybeAbstractEntityConstructor }
 import type { Loaded, LoadHint } from "./loadHints";
 import type { OrderOf } from "./typeMap";
 
+/**
+ * A scope fragment that introduces its own join aliases: a join tree plus conditions
+ * that reference the aliases it binds.
+ *
+ * Lets a scope express predicates a plain nested filter can't, e.g. a top-level `OR`
+ * spanning two different joined tables. Both halves are required — the `where` tree binds
+ * the aliases (via `as:`) that `conditions` reference, so neither is meaningful alone.
+ */
+export interface ScopeJoinFilter<T extends Entity> {
+  where: FilterWithAlias<T>;
+  conditions: ExpressionFilter;
+}
+
 /** A predicate expressed against a bound alias, i.e. `(a) => a.age.gte(18)`. */
-export type AliasFn<T extends Entity> = (a: Alias<T>) => ExpressionCondition | ExpressionCondition[];
+export type AliasFn<T extends Entity> = (
+  a: Alias<T>,
+) => ExpressionCondition | ExpressionCondition[] | ScopeJoinFilter<T>;
+
+/**
+ * Discriminates an {@link AliasFn} result that is a {@link ScopeJoinFilter} from a bare
+ * condition / condition array.
+ *
+ * A `ScopeJoinFilter` is the only `AliasFn` return that carries both `where` and `conditions`
+ * keys; `ExpressionFilter` (`and`/`or`), `ColumnCondition`/`RawCondition` (`kind`), and arrays
+ * have neither, so the two-key check is unambiguous.
+ */
+export function isScopeJoinFilter<T extends Entity>(
+  result: ExpressionCondition | ExpressionCondition[] | ScopeJoinFilter<T>,
+): result is ScopeJoinFilter<T> {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    !Array.isArray(result) &&
+    "where" in result &&
+    "conditions" in result
+  );
+}
 
 /**
  * The fluent builder to either a) terminate/invoke or b) chain scope methods.
@@ -215,7 +250,9 @@ export function newScopeFn<T extends Entity, R extends Scope<T>>(entityType: str
     return newScope(resolver, [toOp(arg)]) as R;
   }
   // But then also add the `.fn(...)` for parameterized scopes
-  scopeFn.fn = function scopeFn<A extends unknown[]>(fn: (...args: A) => FilterWithAlias<T> | AliasFn<T>): (...args: A) => R {
+  scopeFn.fn = function scopeFn<A extends unknown[]>(
+    fn: (...args: A) => FilterWithAlias<T> | AliasFn<T>,
+  ): (...args: A) => R {
     return (...args) => newScope(resolver, [toOp(fn(...args))]) as R;
   };
   return scopeFn;

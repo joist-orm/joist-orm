@@ -15,7 +15,7 @@ import {
   maybeResolveReferenceToId,
 } from "./index";
 import { kq, kqDot } from "./keywords";
-import { isScope, resolveScope, type Scope } from "./scopes";
+import { isScope, isScopeJoinFilter, resolveScope, type Scope } from "./scopes";
 import { abbreviation, assertNever, fail } from "./utils";
 
 /** A tree of ANDs/ORs with conditions or nested conditions. */
@@ -365,9 +365,16 @@ export function parseFindQuery(
       } else {
         const a = newAlias(meta.cstr);
         const result = fragment.fn(a);
-        const conditions = Array.isArray(result) ? result : [result];
         getAliasMgmt(a).setAlias(meta, tableAlias);
-        if (conditions.length > 0) targetCb.maybeAddExpression({ and: conditions });
+        if (isScopeJoinFilter(result)) {
+          // Parse the join tree first so its `as:` bindings re-root the aliases that
+          // `conditions` reference, then add the conditions against the now-bound aliases.
+          addFilterAt(meta, tableAlias, result.where, targetCb, undefined, parentJoin);
+          targetCb.maybeAddExpression(result.conditions);
+        } else {
+          const conditions = Array.isArray(result) ? result : [result];
+          if (conditions.length > 0) targetCb.maybeAddExpression({ and: conditions });
+        }
       }
     }
   }

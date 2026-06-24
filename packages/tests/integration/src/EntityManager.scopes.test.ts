@@ -1,5 +1,5 @@
 import { Author, Book } from "@src/entities";
-import { insertAuthor, insertBook, insertLargePublisher } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookReview, insertLargePublisher } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 import { isScope, resolveScope } from "joist-orm";
 import { jan1, jan2, jan3 } from "./testDates";
@@ -275,6 +275,22 @@ describe("EntityManager.scopes", () => {
       expect(books).toMatchEntity([{ title: "b1" }]);
     });
 
+    it("supports scopes that introduce their own join aliases and conditions", async () => {
+      await insertAuthor({ id: 1, first_name: "a1", age: 20 });
+      await insertBook({ id: 1, title: "b1", author_id: 1 }); // matches b.title, no reviews
+      await insertAuthor({ id: 2, first_name: "a2", age: 20 });
+      await insertBook({ id: 2, title: "other", author_id: 2 });
+      await insertBookReview({ id: 1, book_id: 2, rating: 3 }); // matches r.rating
+      await insertAuthor({ id: 3, first_name: "a3", age: 20 });
+      await insertBook({ id: 3, title: "nope", author_id: 3 }); // matches neither
+      const em = newEntityManager();
+      // `titleOrRated` introduces its own `b`/`r` aliases and ORs a `books` column against a
+      // nested `reviews` column — a cross-table OR that a plain nested filter (which ANDs joins)
+      // can't express.
+      const authors = await Author.titleOrRated.find(em);
+      expect(authors).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+    });
+
     it("keeps separate collection scope fragments as independent predicates", async () => {
       await insertAuthor({ id: 1, first_name: "only-a", age: 20 });
       await insertBook({ title: "A", author_id: 1 });
@@ -444,6 +460,27 @@ describe("EntityManager.scopes", () => {
       expect(numberOfQueries).toEqual(1);
       expect(adults).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
       expect(seniors).toMatchEntity([{ firstName: "a2" }]);
+    });
+
+    it("batches structurally identical join-introducing scopes into one query", async () => {
+      await insertAuthor({ id: 1, first_name: "a1", age: 20 });
+      await insertBook({ id: 1, title: "b1", author_id: 1 }); // matches b.title
+      await insertAuthor({ id: 2, first_name: "a2", age: 20 });
+      await insertBook({ id: 2, title: "other", author_id: 2 });
+      await insertBookReview({ id: 1, book_id: 2, rating: 3 }); // matches r.rating
+      await insertAuthor({ id: 3, first_name: "a3", age: 20 });
+      await insertBook({ id: 3, title: "nope", author_id: 3 }); // matches neither
+      resetQueryCount();
+      const em = newEntityManager();
+      // `titleOrRated` mints fresh `aliases()` on each parse, but both finds parse to the same
+      // join structure + conditions, so they hash to the same dataloader batch / single SQL query.
+      const [first, second] = await Promise.all([
+        em.find(Author, Author.titleOrRated),
+        em.find(Author, Author.titleOrRated),
+      ]);
+      expect(numberOfQueries).toEqual(1);
+      expect(first).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+      expect(second).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
     });
 
     it("issues separate queries for scopes with different structures", async () => {

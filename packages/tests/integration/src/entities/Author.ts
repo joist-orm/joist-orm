@@ -8,6 +8,7 @@ import {
   ReactiveManyToMany,
   ReactiveReference,
   Reference,
+  aliases,
   cannotBeUpdated,
   hasAsyncMethod,
   hasManyDerived,
@@ -52,6 +53,15 @@ export class Author extends AuthorCodegen {
   static popularOrSenior = scope({ or: [{ isPopular: true }, { age: { gte: 65 } }] });
   static named = scope.fn((prefix: string) => (a) => a.firstName.like(`${prefix}%`));
   static named2 = scope.fn((prefix: string) => ({ firstName: { like: `${prefix}%` } }));
+  // Introduces its own join aliases so the conditions can `or` across two joined tables,
+  // which a plain nested filter (joins AND together) cannot express.
+  static titleOrRated = scope((a) => {
+    const [b, r] = aliases(Book, BookReview);
+    return {
+      where: { books: { as: b, reviews: { as: r } } },
+      conditions: { or: [b.title.eq("b1"), r.rating.eq(3)] },
+    };
+  });
   // use relation filters
   /**
    * Example of an async boolean that can be navigated via a lens.

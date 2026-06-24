@@ -149,7 +149,13 @@ export function findDataLoader<T extends Entity>(
     .load(prepared);
 }
 
-/** Returns a stable key for already-parsed find queries, avoiding raw scope function filters. */
+/**
+ * Returns a stable cache key from the already-parsed query rather than the raw `where`.
+ *
+ * A scope `where` is an opaque proxy that `fastWhereFilterHash` can't serialize — but it doesn't need
+ * to: by this point the scope's structure and values are already worked into the `ParsedFindQuery`, so
+ * hashing that distinguishes e.g. `Author.adult` (age>=18) from `Author.senior` (age>=65) correctly.
+ */
 export function queryFilterHash(entry: { query: ParsedFindQuery; findSettings: object }): any {
   return whereFilterHash({ query: entry.query, findSettings: entry.findSettings });
 }

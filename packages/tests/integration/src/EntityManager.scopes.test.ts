@@ -1,6 +1,6 @@
 import { Author, Book } from "@src/entities";
 import { insertAuthor, insertBook, insertLargePublisher } from "@src/entities/inserts";
-import { newEntityManager } from "@src/testEm";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 import { isScope, resolveScope } from "joist-orm";
 import { jan1, jan2, jan3 } from "./testDates";
 
@@ -426,6 +426,40 @@ describe("EntityManager.scopes", () => {
         limit: 5,
         offset: 2,
       });
+    });
+  });
+
+  describe("batching", () => {
+    it("does not dedupe distinct scopes that share a query structure", async () => {
+      await insertAuthor({ first_name: "a1", age: 20 }); // adult, not senior
+      await insertAuthor({ first_name: "a2", age: 70 }); // adult and senior
+      await insertAuthor({ first_name: "a3", age: 10 }); // neither
+      resetQueryCount();
+      const em = newEntityManager();
+      // `adult` (age>=18) and `senior` (age>=65) compile to the same `age >= ?` structure, so they
+      // land in the same dataloader batch (one SQL). The cache key hashes the *parsed* query (incl. the
+      // 18 vs 65 values), not the opaque scope proxy, so they must stay distinct entries — if they
+      // deduped, both finds would return the same rows.
+      const [adults, seniors] = await Promise.all([em.find(Author, Author.adult), em.find(Author, Author.senior)]);
+      expect(numberOfQueries).toEqual(1);
+      expect(adults).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+      expect(seniors).toMatchEntity([{ firstName: "a2" }]);
+    });
+
+    it("issues separate queries for scopes with different structures", async () => {
+      await insertAuthor({ id: 1, first_name: "a1", age: 20 }); // adult, no books
+      await insertAuthor({ id: 2, first_name: "a2", age: 10 }); // not adult, has books
+      await insertAuthor({ id: 3, first_name: "a3", age: 20 }); // adult, has books
+      await insertBook({ title: "b1", author_id: 2 });
+      await insertBook({ title: "b2", author_id: 3 });
+      resetQueryCount();
+      const em = newEntityManager();
+      // `adult` is a plain `age >= ?` column condition; `hasBooks` is a `books` EXISTS subquery, so
+      // they have different structures, land in different batches, and issue two separate SQL queries.
+      const [adults, withBooks] = await Promise.all([em.find(Author, Author.adult), em.find(Author, Author.hasBooks)]);
+      expect(numberOfQueries).toEqual(2);
+      expect(adults).toMatchEntity([{ firstName: "a1" }, { firstName: "a3" }]);
+      expect(withBooks).toMatchEntity([{ firstName: "a2" }, { firstName: "a3" }]);
     });
   });
 });

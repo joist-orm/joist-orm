@@ -93,7 +93,7 @@ import { AsyncPropertyImpl } from "./relations/AsyncProperty";
 import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { RecursiveCycleError } from "./relations/RecursiveCollection";
-import { isScope, resolveScope } from "./scopes";
+import { isScope, isSelectAllFilter, resolveScope } from "./scopes";
 import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
 import { OptsOf, OrderOf } from "./typeMap";
@@ -3171,16 +3171,6 @@ function mergeCountOptions<T extends EntityW>(
   const scopeOptions: FindCountFilterOptions<T> = {};
   if (resolved.softDeletes !== undefined) scopeOptions.softDeletes = resolved.softDeletes;
   return { where, options: { ...scopeOptions, ...options } };
-}
-
-/** Returns true for filters that select every row of the entity type. */
-function isSelectAllFilter<T extends EntityW>(
-  where: FindFilter<T> | GraphQLFilterWithAlias<T>,
-  conditions: ExpressionFilter | undefined,
-): boolean {
-  if (conditions !== undefined) return false;
-  if (isScope<T>(where)) return resolveScope(where).fragments.length === 0;
-  return Object.keys(where).length === 0;
 }
 
 /** An error we throw to get knex to `ROLLBACK`, but then catch. */

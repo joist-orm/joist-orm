@@ -1,7 +1,14 @@
 import { type Alias } from "./Aliases";
 import { maybeGetMetadataForType } from "./configure";
 import type { Entity } from "./Entity";
-import type { ExpressionCondition, ExpressionFilter, FilterAndSettings, FilterWithAlias } from "./EntityFilter";
+import type {
+  ExpressionCondition,
+  ExpressionFilter,
+  FilterAndSettings,
+  FilterWithAlias,
+  FindFilter,
+} from "./EntityFilter";
+import type { GraphQLFilterWithAlias } from "./EntityGraphQLFilter";
 import type { EntityManager, FindFilterOptions, MaybeAbstractEntityConstructor } from "./EntityManager";
 import type { Loaded, LoadHint } from "./loadHints";
 import type { OrderOf } from "./typeMap";
@@ -145,8 +152,8 @@ export type ScopeFilterFragment<T extends Entity> =
  * Fully-expanded scope contents, with named refs resolved and settings collapsed.
  *
  * Deliberately *not* a `ParsedFindQuery`, even though they look adjacent: this is the pre-parse,
- * alias-free *input* we feed into `parseFindQuery`, not its alias-committed AST output. The gap is
- * load-bearing:
+ * alias-free *input* we feed into `parseFindQuery`, not its alias-committed AST output. Two reasons
+ * the distinction matters:
  * - `fragments` are un-parsed DSL — filter objects plus un-invoked `AliasFn` closures — so the same
  *   scope can be re-rooted onto the query's primary alias (`Author.adult.find(em)`) or onto a joined
  *   relation alias (`em.find(Book, { author: Author.adult })`). A `ParsedFindQuery` has already baked
@@ -185,10 +192,15 @@ type ScopeRefOp<T extends Entity> = Extract<ScopeOp<T>, { kind: "ref" }>;
 const kOps = Symbol("scopeOps");
 const kResolver = Symbol("scopeResolver");
 const kWithScopeOp = Symbol("scopeWithOp");
+// Symbol-keyed so it can't collide with a user's named scope (e.g. `Author.resolve`), which the
+// proxy would otherwise treat as a chained ref.
+const kResolve = Symbol("scopeResolve");
 
-type ScopeState<T extends Entity> = Scope<T> & {
+/** The internal-only view of a scope proxy: its symbol-keyed members, hidden from the public `Scope<T>`. */
+type ScopeInternalApi<T extends Entity> = Scope<T> & {
   readonly [kOps]: ScopeOp<T>[];
   readonly [kResolver]: EntityCstrResolver<T>;
+  [kResolve](): ResolvedScope<T>;
 };
 
 /** Creates a per-entity, pre-typed scope function. */
@@ -211,13 +223,28 @@ export function newScopeFn<T extends Entity, R extends Scope<T>>(entityType: str
 
 /** Returns true if `value` is one of our scope proxies. */
 export function isScope<T extends Entity>(value: unknown): value is Scope<T> {
-  return hasScopeState<T>(value);
+  return (typeof value === "object" || typeof value === "function") && value !== null && kOps in value && kResolver in value;
 }
 
 /** Resolves a scope proxy into ordered filter fragments plus collapsed settings. */
 export function resolveScope<T extends Entity>(scope: Scope<T>): ResolvedScope<T> {
-  const state = getScopeState(scope);
-  return resolveScopeOps(state[kResolver], state[kOps]);
+  return asScopeInternalApi(scope)[kResolve]();
+}
+
+/**
+ * Returns true for find filters that select every row of the entity type, i.e. an empty `{}` filter
+ * or a scope that resolved to no fragments.
+ *
+ * Used by `em.findCount` and the count dataloader to short-circuit in-memory delete adjustments, which
+ * are only safe when the query has no `where`/`conditions` to evaluate created/deleted entities against.
+ */
+export function isSelectAllFilter<T extends Entity>(
+  where: FindFilter<T> | GraphQLFilterWithAlias<T>,
+  conditions: ExpressionFilter | undefined,
+): boolean {
+  if (conditions !== undefined) return false;
+  if (isScope<T>(where)) return resolveScope(where).fragments.length === 0;
+  return Object.keys(where).length === 0;
 }
 
 /**
@@ -270,6 +297,11 @@ class ScopeTerminals<T extends Entity> {
 
   get [kOps](): ScopeOp<T>[] {
     return this.#ops;
+  }
+
+  /** Flattens our recorded ops (resolving named refs, collapsing settings) into a {@link ResolvedScope}. */
+  [kResolve](): ResolvedScope<T> {
+    return resolveScopeOps(this.#resolver, this.#ops);
   }
 
   where(arg: FilterWithAlias<T> | AliasFn<T>): Scope<T> {
@@ -420,7 +452,7 @@ function scopeOpsFromValue<T extends Entity>(
   name: string,
   value: unknown,
 ): ScopeOp<T>[] {
-  if (isScope<T>(value)) return getScopeState(value)[kOps];
+  if (isScope<T>(value)) return asScopeInternalApi(value)[kOps];
   if (value === undefined) throw new Error(`Invalid scope ${resolver.entityType}.${name}`);
   if (typeof value === "function") throw new Error(`Scope ${resolver.entityType}.${name} requires arguments`);
   throw new Error(`${resolver.entityType}.${name} is not a scope`);
@@ -451,17 +483,10 @@ function scopeRefArgKey(arg: unknown, refArgKeys: WeakMap<object, number>, nextR
   return `${typeof arg}:${JSON.stringify(String(arg))}`;
 }
 
-/** Extracts scope state from a scope proxy. */
-function getScopeState<T extends Entity>(value: Scope<T>): ScopeState<T> {
-  if (!hasScopeState<T>(value)) throw new Error("Invalid scope");
-  return value;
-}
-
-/** Returns true if `value` has the private scope state. */
-function hasScopeState<T extends Entity>(value: unknown): value is ScopeState<T> {
-  return (
-    (typeof value === "object" || typeof value === "function") && value !== null && kOps in value && kResolver in value
-  );
+/** Narrows a known scope proxy to its internal-only (symbol-keyed) API. */
+function asScopeInternalApi<T extends Entity>(scope: Scope<T>): ScopeInternalApi<T> {
+  if (!isScope(scope)) throw new Error("Invalid scope");
+  return scope as ScopeInternalApi<T>;
 }
 
 /** Resolves the lazy entity constructor. */

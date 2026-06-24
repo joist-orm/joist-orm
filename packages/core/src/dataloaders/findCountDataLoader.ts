@@ -4,7 +4,7 @@ import { EntityManager, getEmInternalApi, MaybeAbstractEntityConstructor } from 
 import { getMetadata } from "../EntityMetadata";
 import { kq } from "../keywords";
 import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
-import { isScope, resolveScope } from "../scopes";
+import { isSelectAllFilter } from "../scopes";
 import { buildUnnestCte } from "../unnest";
 import { fail } from "../utils";
 import {
@@ -133,14 +133,4 @@ function appendPendingDeletedIds<T extends Entity>(
     query.condition = { kind: "exp", op: "and", conditions: [query.condition, condition] };
   }
   return pendingDeletedIds;
-}
-
-/** Returns true for count filters where in-memory deletes are already handled by `EntityManager.findCount`. */
-function isSelectAllFilter<T extends Entity>(
-  where: FilterAndSettings<T>["where"],
-  conditions: FilterAndSettings<T>["conditions"],
-): boolean {
-  if (conditions !== undefined) return false;
-  if (isScope<T>(where)) return resolveScope(where).fragments.length === 0;
-  return Object.keys(where).length === 0;
 }

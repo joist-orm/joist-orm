@@ -414,6 +414,7 @@ export interface AuthorScopes {
   popularOrSenior: AuthorScope;
   named: (prefix: string) => AuthorScope;
   named2: (prefix: string) => AuthorScope;
+  titleOrRated: AuthorScope;
   hasBooks: AuthorScope;
   booksReviewedBy: (reviewer: Author) => AuthorScope;
 }

@@ -3661,16 +3661,6 @@ describe("EntityManager.queries", () => {
       });
     });
 
-    it("can filter primitive values", async () => {
-      const a = alias(Author);
-      expect(a.age.filter({ gt: 0, lt: 3 })).toEqual({
-        and: [
-          { kind: "column", alias: "unset", column: "age", dbType: "int", cond: { kind: "gt", value: 0 } },
-          { kind: "column", alias: "unset", column: "age", dbType: "int", cond: { kind: "lt", value: 3 } },
-        ],
-      });
-    });
-
     it("can eq a native enum", async () => {
       const a = alias(Author);
       expect(a.favoriteShape.ne(FavoriteShape.Square)).toEqual({
@@ -3701,17 +3691,6 @@ describe("EntityManager.queries", () => {
         column: "author_id",
         dbType: "int",
         cond: { kind: "eq", value: 1 },
-      });
-    });
-
-    it("can filter a foreign key", async () => {
-      const b = alias(Book);
-      expect(b.author.filter({ ne: "a:1" })).toEqual({
-        kind: "column",
-        alias: "unset",
-        column: "author_id",
-        dbType: "int",
-        cond: { kind: "ne", value: 1 },
       });
     });
 

@@ -5,13 +5,15 @@ sidebar:
   order: 3.5
 ---
 
-Scope queries let you name and compose common `em.find` filters entity classes, i.e. after declaring them on the `Author` entity:
+Scope queries let you name and compose common `em.find` filters for entity classes, i.e. after declaring them on the `Author` entity:
 
 ```ts
 export class Author extends AuthorCodegen {
   static adult = scope({ age: { gte: 18 } });
   static active = scope({ deletedAt: null });
   static popular = scope((a) => a.isPopular.eq(true));
+  static hasBooks = scope({ books: true });
+  static booksReviewedBy = scope.fn((reviewer: Author) => ({ books: { reviewer } }));
 }
 ```
 
@@ -21,9 +23,12 @@ You can re-use them throughout your codebase:
 await Author.adult.find(em);
 await Author.adult.popular.find(em);
 await Author.named("a").adult.find(em);
+await Author.hasBooks.find(em);
+await em.find(Author, Author.adult);
+await em.find(Book, { author: Author.adult });
 ```
 
-Scopes provide a typed API for build reusable snippets of `where`, `conditions`, `orderBy`, `limit`, `offset`, and `softDeletes`.
+Scopes provide a typed API for building reusable snippets of `where`, `conditions`, `orderBy`, `limit`, `offset`, and `softDeletes`.
 
 Internally, scopes are basically syntax-sugar for Joist's regular [em.find](./queries-find), so they share the same semantics and filter syntax.
 
@@ -47,6 +52,8 @@ export class Author extends AuthorCodegen {
   static adult = scope({ age: { gte: 18 } });
   static active = scope({ deletedAt: null });
   static popular = scope((a) => a.isPopular.eq(true));
+  static hasBooks = scope({ books: true });
+  static booksReviewedBy = scope.fn((reviewer: Author) => ({ books: { reviewer } }));
 }
 ```
 
@@ -102,6 +109,33 @@ await Author.named("a").find(em);
 await Author.named("a").adult.find(em);
 ```
 
+## Relation Filter Scopes
+
+Scopes can include the same relation filters as `em.find`, including collection relations:
+
+```ts
+export class Author extends AuthorCodegen {
+  // one-to-many: authors with at least one book
+  static hasBooks = scope({ books: true });
+
+  // one-to-many plus nested many-to-one: authors with a book reviewed by `reviewer`
+  static booksReviewedBy = scope.fn((reviewer: Author) => ({ books: { reviewer } }));
+
+  // many-to-many: authors with a tag named `tagName`
+  static taggedWith = scope.fn((tagName: string) => ({ tags: { name: tagName } }));
+}
+```
+
+The nested filter shape is identical to `em.find(Author, ...)`, so the same relation semantics apply to one-to-many, many-to-one, and many-to-many paths.
+
+```ts
+const reviewer = await em.load(Author, "a:1");
+
+await Author.hasBooks.find(em);
+await Author.booksReviewedBy(reviewer).find(em);
+await Author.taggedWith("fiction").find(em);
+```
+
 ## Chaining
 
 Scopes can be chained together and will use `AND` semantics:
@@ -141,6 +175,37 @@ If a single field has multiple filters chained together, they are `AND`-d togeth
 await Author.senior.where({ age: { gte: 18 } }).find(em);
 ```
 
+For collection relations, separate `.where` calls remain separate predicates. This finds authors that have a book titled `A` and also have a book titled `B`:
+
+```ts
+await Author.adult
+  .where({ books: { title: "A" } })
+  .where({ books: { title: "B" } })
+  .find(em);
+```
+
+The two predicates do not need to match the same book row.
+
+## Using Scopes With em.find
+
+Scopes can also be passed directly to `em.find` anywhere Joist expects a filter for that entity. Root scopes can be simple field filters, include builder settings, or traverse relations:
+
+```ts
+const adults = await em.find(Author, Author.adult);
+const recentAdults = await em.find(Author, Author.adult.orderBy({ createdAt: "DESC" }).limit(10));
+const authorsWithBooks = await em.find(Author, Author.hasBooks);
+const taggedAuthors = await em.find(Author, Author.taggedWith("fiction"));
+```
+
+They can also be used inside relation filters:
+
+```ts
+const booksByAdults = await em.find(Book, { author: Author.adult });
+const booksByNamedAdults = await em.find(Book, { author: { firstName: "alice", and: Author.adult } });
+```
+
+When a relation filter already has sibling fields, put the scope under `and` or `or` to make the composition explicit.
+
 ## Invocation Methods
 
 Scopes are executed by invoking any of the "terminal" methods:
@@ -169,6 +234,9 @@ export interface AuthorScopes {
   adult: AuthorScope;
   active: AuthorScope;
   popular: AuthorScope;
+  hasBooks: AuthorScope;
+  booksReviewedBy: (reviewer: Author) => AuthorScope;
+  taggedWith: (tagName: string) => AuthorScope;
   named: (prefix: string) => AuthorScope;
 }
 

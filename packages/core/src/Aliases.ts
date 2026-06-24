@@ -9,25 +9,9 @@ import {
   getBaseAndSelfMetas,
   getMetadata,
 } from "./EntityMetadata";
-import {
-  ColumnCondition,
-  ParsedValueFilter,
-  RawCondition,
-  makeLike,
-  mapToDb,
-  parseEntityFilter,
-  parseValueFilter,
-  skipCondition,
-} from "./QueryParser";
+import { ColumnCondition, ParsedValueFilter, RawCondition, makeLike, mapToDb, skipCondition } from "./QueryParser";
 import { getMetadataForTable } from "./configure";
-import {
-  getConstructorFromTaggedId,
-  maybeResolveReferenceToId,
-  type EntityFilter,
-  type ExpressionCondition,
-  type ExpressionFilter,
-  type ValueFilter,
-} from "./index";
+import { ExpressionCondition, ExpressionFilter, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
 import { Column } from "./serde";
 import { FieldsOf } from "./typeMap";
 import { fail } from "./utils";
@@ -49,7 +33,7 @@ export type Alias<T extends Entity> = {
     ? EntityAlias<T>
     : FieldsOf<T>[P] extends { kind: "primitive" | "enum"; type: infer V; nullable: infer N }
       ? PrimitiveAlias<V, N extends undefined ? null : never>
-      : FieldsOf<T>[P] extends { kind: "m2o"; type: infer U extends Entity }
+      : FieldsOf<T>[P] extends { kind: "m2o"; type: infer U }
         ? EntityAlias<U>
         : FieldsOf<T>[P] extends { kind: "poly"; type: infer U extends Entity }
           ? PolyReferenceAlias<U>
@@ -57,7 +41,6 @@ export type Alias<T extends Entity> = {
 };
 
 export interface PrimitiveAlias<V, N extends null | never> {
-  filter(value: ValueFilter<V, N>): ExpressionCondition;
   eq(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
   ne(value: V | N | undefined | PrimitiveAlias<V, any>): ExpressionCondition;
   in(values: (V | null)[] | undefined): ExpressionCondition;
@@ -108,8 +91,7 @@ export interface PrimitiveAlias<V, N extends null | never> {
   raw(exp: string, bindings: readonly any[] | undefined): ExpressionCondition;
 }
 
-export interface EntityAlias<T extends Entity> {
-  filter(value: EntityFilter<T, IdOf<T>, any, null>): ExpressionCondition;
+export interface EntityAlias<T> {
   eq(value: T | IdOf<T> | null | undefined): ExpressionCondition;
   ne(value: T | IdOf<T> | null | undefined): ExpressionCondition;
   // Adding `| null` for GraphQL support
@@ -133,8 +115,6 @@ export interface AliasMgmt {
   setAlias(meta: EntityMetadata, alias: string): void;
   onBind(callback: BindCallback): void;
 }
-
-type ConditionAndAlias = { cond: ColumnCondition; field: Field & { aliasSuffix: string } };
 
 /** Called when `em.find` binds a pre-created `alias(...)` to a concrete join-tree location. */
 type BindCallback = (newMeta: EntityMetadata, newAlias: string) => void;
@@ -216,26 +196,6 @@ class AbstractAliasColumn<V> {
     return cond;
   }
 
-  /** Converts the fuzzy `em.find` value-filter API into bound alias conditions. */
-  protected addValueFilters(filters: ParsedValueFilter<V>[]): ExpressionCondition {
-    const conditions = filters.map((filter) => this.addValueFilter(filter));
-    if (conditions.length === 0) return skipCondition;
-    return conditions.length === 1 ? conditions[0] : { and: conditions };
-  }
-
-  /** Adds a single value filter, splitting `in: [..., null]` into an OR like normal find parsing. */
-  protected addValueFilter(filter: ParsedValueFilter<V>): ExpressionCondition {
-    if (filter.kind === "in" && filter.value.includes(null as V)) {
-      return {
-        or: [
-          this.addCondition({ kind: "is-null" }),
-          this.addCondition({ kind: "in", value: filter.value.filter((value) => value !== null) as V[] }),
-        ],
-      };
-    }
-    return this.addCondition(filter);
-  }
-
   protected addRawCondition(exp: string, bindings: readonly any[]): RawCondition {
     const cond = {
       kind: "raw",
@@ -282,10 +242,6 @@ class AbstractAliasColumn<V> {
 }
 
 class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<V> implements PrimitiveAlias<V, N> {
-  filter(value: ValueFilter<V, N>): ExpressionCondition {
-    return this.addValueFilters(parseValueFilter(value));
-  }
-
   eq(value: V | N | PrimitiveAlias<V, any> | undefined): ColumnCondition | RawCondition {
     if (value === undefined) {
       return skipCondition;
@@ -421,16 +377,7 @@ class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<
   }
 }
 
-class EntityAliasImpl<T extends Entity> extends AbstractAliasColumn<IdType> implements EntityAlias<T> {
-  filter(value: EntityFilter<T, IdOf<T>, any, null>): ExpressionCondition {
-    if (this.field.kind !== "m2o") throw new Error(`Unsupported alias field kind ${this.field.kind}`);
-    const filter = parseEntityFilter(this.field.otherMetadata(), value);
-    if (filter === undefined) return skipCondition;
-    if (filter.kind === "join")
-      throw new Error(`Alias filter ${this.meta.type}.${this.field.fieldName} requires a join`);
-    return this.addValueFilter(filter);
-  }
-
+class EntityAliasImpl<T> extends AbstractAliasColumn<IdType> implements EntityAlias<T> {
   eq(value: T | IdOf<T> | null | undefined): ColumnCondition {
     if (value === undefined) {
       return skipCondition;

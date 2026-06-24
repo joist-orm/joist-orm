@@ -188,23 +188,31 @@ The two predicates do not need to match the same book row.
 
 ## Using Scopes With em.find
 
-Scopes can also be passed directly to `em.find` anywhere Joist expects a filter for that entity. Root scopes can be simple field filters, include builder settings, or traverse relations:
+Scopes can also be passed directly to `em.find` anywhere Joist expects a filter for that entity.
+
+When the scope is the **root** filter, its builder settings (`orderBy`/`limit`/`offset`/`softDeletes`) are honored:
 
 ```ts
 const adults = await em.find(Author, Author.adult);
-const recentAdults = await em.find(Author, Author.adult.orderBy({ createdAt: "DESC" }).limit(10));
+const recentAdults = await em.find(Author, Author.adult.orderBy({ age: "DESC" }).limit(1));
 const authorsWithBooks = await em.find(Author, Author.hasBooks);
 const taggedAuthors = await em.find(Author, Author.taggedWith("fiction"));
 ```
 
-They can also be used inside relation filters:
+They can also be used inside relation filters, i.e. for a many-to-one:
 
 ```ts
 const booksByAdults = await em.find(Book, { author: Author.adult });
-const booksByNamedAdults = await em.find(Book, { author: { firstName: "alice", and: Author.adult } });
 ```
 
-When a relation filter already has sibling fields, put the scope under `and` or `or` to make the composition explicit.
+When a relation filter already has sibling fields, put the scope under `and` or `or` to make the composition explicit:
+
+```ts
+const booksByNamedAdults = await em.find(Book, { author: { firstName: "a1", and: Author.adult } });
+```
+
+Note that when a scope is used as a nested relation filter, only its `where`/`conditions` fragments apply; its
+`orderBy`/`limit`/`offset`/`softDeletes` settings are dropped, since they're only meaningful for the root query.
 
 ## Invocation Methods
 

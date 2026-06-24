@@ -232,6 +232,39 @@ const ids = await Author.adult.findIds(em);
 const authors = await Author.adult.find(em, { populate: "books" });
 const author = await Author.adult.findOneOrFail(em, { populate: "books" });
 ```
+## Join-Alias Scopes
+
+Alias-condition callbacks usually return conditions against the root alias, but they can also introduce
+their own aliases for joined entities and return a `{ where, conditions }` pair, where:
+
+- `where` is a join tree that binds the new aliases via `as:`, and
+- `conditions` is an expression that references those bound aliases.
+
+This expresses predicates a plain nested filter can't — most notably a top-level `or` that spans
+columns from two different joined tables (nested filters only ever `AND` their joins together):
+
+```ts
+export class Author extends AuthorCodegen {
+  // Authors with a book that is either titled "b1" or has a 3-star review.
+  static titleOrRated = scope((a) => {
+    const [b, r] = aliases(Book, BookReview);
+    return {
+      where: { books: { as: b, reviews: { as: r } } },
+      conditions: { or: [b.title.eq("b1"), r.rating.eq(3)] },
+    };
+  });
+}
+```
+
+Both `where` and `conditions` are required: the `where` tree is what binds the aliases (via `as:`)
+that `conditions` reference, so neither half is meaningful on its own. This is the scope equivalent of
+calling `em.find(Author, { books: { as: b, reviews: { as: r } } }, { conditions: ... })`, just packaged
+as a single reusable value.
+
+Like every other scope fragment, a join-alias scope is re-rooted onto wherever it's applied, so it works
+as a root filter (`Author.titleOrRated.find(em)`) and inside a relation filter
+(`em.find(Book, { author: Author.titleOrRated })`) alike.
+
 
 ## Codegen Details
 

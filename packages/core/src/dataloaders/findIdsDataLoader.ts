@@ -12,7 +12,7 @@ import {
   collectValues,
   createColumnValuesFromPrepared,
   getBatchKeyFromGenericStructure,
-  whereFilterHash,
+  queryFilterHash,
 } from "./findDataLoader";
 
 export const findIdsOperation = "find-ids";
@@ -94,7 +94,7 @@ export function findIdsDataLoader<T extends Entity>(
         return results;
       },
       // Our filter/order tuple is a complex object, so use a stable cache key to ensure caching works.
-      { cacheKeyFn: (entry) => whereFilterHash(entry.filter) },
+      { cacheKeyFn: queryFilterHash },
     )
     .load(prepared);
 }

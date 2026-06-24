@@ -8,6 +8,7 @@ import {
   ReactiveManyToMany,
   ReactiveReference,
   Reference,
+  aliases,
   cannotBeUpdated,
   hasAsyncMethod,
   hasManyDerived,
@@ -31,6 +32,7 @@ import {
   Publisher,
   Tag,
   authorConfig as config,
+  authorScope as scope,
 } from "./entities";
 
 /**
@@ -40,6 +42,34 @@ import {
  * @generated Author.md
  */
 export class Author extends AuthorCodegen {
+  static adult = scope({ age: { gte: 18 } });
+  static active = scope({ deletedAt: null });
+  static popular = scope((a) => a.isPopular.eq(true));
+  static popularAdult = Author.popular.adult;
+  static recentAdults = scope({ age: { gte: 18 } }).orderBy({ createdAt: "DESC" });
+  static recentAdultsViaAdult = Author.adult.orderBy({ createdAt: "DESC" });
+  static senior = scope({ age: { gte: 65 } });
+  // Top-level `or` in a scope declaration, enabled by the `FilterWithAlias` arg type
+  static popularOrSenior = scope({ or: [{ isPopular: true }, { age: { gte: 65 } }] });
+  static named = scope.fn((prefix: string) => (a) => a.firstName.like(`${prefix}%`));
+  static named2 = scope.fn((prefix: string) => ({ firstName: { like: `${prefix}%` } }));
+  // Introduces its own join aliases so the conditions can `or` across two joined tables,
+  // which a plain nested filter (joins AND together) cannot express.
+  static titleOrRated = scope((a) => {
+    const [b, r] = aliases(Book, BookReview);
+    return {
+      where: { books: { as: b, reviews: { as: r } } },
+      conditions: { or: [b.title.eq("b1"), r.rating.eq(3)] },
+    };
+  });
+  // use relation filters
+  /**
+   * Example of an async boolean that can be navigated via a lens.
+   * @generated Author.md
+   */
+  static hasBooks = scope({ books: true });
+  static booksReviewedBy = scope.fn((reviewer: Author) => ({ books: { reviewer } }));
+
   /**
    * All reviews across all of this author's books.
    * @generated Author.md

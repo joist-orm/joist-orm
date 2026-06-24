@@ -1,9 +1,16 @@
 import { Entity, IdType } from "../Entity";
-import { FilterAndSettings } from "../EntityFilter";
-import { EntityManager, getEmInternalApi, MaybeAbstractEntityConstructor } from "../EntityManager";
+import { FilterAndSettings, FindFilter } from "../EntityFilter";
+import { GraphQLFilterWithAlias } from "../EntityGraphQLFilter";
+import {
+  EntityManager,
+  FindCountFilterOptions,
+  getEmInternalApi,
+  MaybeAbstractEntityConstructor,
+} from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { kq } from "../keywords";
 import { ParsedFindQuery, parseFindQuery } from "../QueryParser";
+import { isScope, isSelectAllFilter, resolveScope } from "../scopes";
 import { buildUnnestCte } from "../unnest";
 import { fail } from "../utils";
 import {
@@ -11,7 +18,7 @@ import {
   collectValues,
   createColumnValuesFromPrepared,
   getBatchKeyFromGenericStructure,
-  whereFilterHash,
+  queryFilterHash,
 } from "./findDataLoader";
 
 export const findCountOperation = "find-count";
@@ -95,14 +102,30 @@ export function findCountDataLoader<T extends Entity>(
         return results;
       },
       // Our filter/order tuple is a complex object, so use a stable cache key to ensure caching works.
-      {
-        cacheKeyFn: (entry) => {
-          // Include pendingDeletedIds so that each new em.delete => recalcs the count
-          return whereFilterHash({ ...entry.filter, pendingDeletedIds: entry.pendingDeletedIds });
-        },
-      },
+      { cacheKeyFn: (entry) => queryFilterHash(entry) },
     )
     .load(prepared);
+}
+
+/** Merges root-scope count/id settings with caller options, dropping pagination-only settings. */
+export function mergeCountOptions<T extends Entity>(
+  where: FindFilter<T>,
+  options: FindCountFilterOptions<T>,
+): { where: FindFilter<T>; options: FindCountFilterOptions<T> };
+export function mergeCountOptions<T extends Entity>(
+  where: FindFilter<T> | GraphQLFilterWithAlias<T>,
+  options: FindCountFilterOptions<T>,
+): { where: FindFilter<T> | GraphQLFilterWithAlias<T>; options: FindCountFilterOptions<T> };
+export function mergeCountOptions<T extends Entity>(
+  where: FindFilter<T> | GraphQLFilterWithAlias<T>,
+  options: FindCountFilterOptions<T>,
+): { where: FindFilter<T> | GraphQLFilterWithAlias<T>; options: FindCountFilterOptions<T> } {
+  if (!isScope<T>(where)) return { where, options };
+
+  const resolved = resolveScope(where);
+  const scopeOptions: FindCountFilterOptions<T> = {};
+  if (resolved.softDeletes !== undefined) scopeOptions.softDeletes = resolved.softDeletes;
+  return { where, options: { ...scopeOptions, ...options } };
 }
 
 /** Adds `id not in pendingDeletedIds` to the count query so pending deletes are excluded in SQL. */
@@ -114,8 +137,9 @@ function appendPendingDeletedIds<T extends Entity>(
   where: FilterAndSettings<T>["where"],
   opts: Omit<FilterAndSettings<T>, "where">,
 ): readonly IdType[] {
-  const pendingDeletedIds =
-    Object.keys(where).length === 0 && opts.conditions === undefined ? [] : getEmInternalApi(em).pendingDeleteIds(type);
+  const pendingDeletedIds = isSelectAllFilter(where, opts.conditions)
+    ? []
+    : getEmInternalApi(em).pendingDeleteIds(type);
   if (pendingDeletedIds.length === 0) return pendingDeletedIds;
 
   const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");

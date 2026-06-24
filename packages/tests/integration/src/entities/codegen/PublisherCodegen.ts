@@ -25,12 +25,14 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
   type ReactiveReference,
   type RelationsOf,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -247,7 +249,14 @@ export interface PublisherFactoryExtras {
   withFavoriteAuthorName?: string | null;
 }
 
+export interface PublisherScopes {
+}
+
+export type PublisherScope = Scope<Publisher, PublisherScopes>;
+
 export const publisherConfig = new ConfigApi<Publisher, Context>();
+
+export const publisherScope = newScopeFn<Publisher, PublisherScope>("Publisher");
 
 publisherConfig.addRule(newRequiredRule("name"));
 publisherConfig.addRule("numberOfBookReviews", newRequiredRule("numberOfBookReviews"));

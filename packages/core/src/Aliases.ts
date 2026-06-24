@@ -116,8 +116,6 @@ export interface AliasMgmt {
   onBind(callback: BindCallback): void;
 }
 
-type ConditionAndAlias = { cond: ColumnCondition; field: Field & { aliasSuffix: string } };
-
 /** Called when `em.find` binds a pre-created `alias(...)` to a concrete join-tree location. */
 type BindCallback = (newMeta: EntityMetadata, newAlias: string) => void;
 

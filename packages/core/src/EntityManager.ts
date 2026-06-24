@@ -17,7 +17,7 @@ import { recursiveParentsOperation } from "./batchloaders/recursiveParentsBatchL
 import { constraintNameToValidationError, type ReactiveRule } from "./config";
 import { getConstructorFromTag, getMetadataForType } from "./configure";
 import { findByUniqueDataLoader, findByUniqueOperation } from "./dataloaders/findByUniqueDataLoader";
-import { findCountDataLoader, findCountOperation } from "./dataloaders/findCountDataLoader";
+import { findCountDataLoader, findCountOperation, mergeCountOptions } from "./dataloaders/findCountDataLoader";
 import { findDataLoader, findOperation } from "./dataloaders/findDataLoader";
 import { findIdsDataLoader, findIdsOperation } from "./dataloaders/findIdsDataLoader";
 import { entityMatches, findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
@@ -43,7 +43,7 @@ import {
   Field,
   FieldLogger,
   FieldLoggerWatch,
-  FilterWithAlias,
+  FindFilter,
   getBaseAndSelfMetas,
   getBaseMeta,
   getConstructorFromTaggedId,
@@ -57,6 +57,7 @@ import {
   keyToNumber,
   Lens,
   loadLens,
+  mergeFindOptions,
   OneToManyCollection,
   optimizeCollectionJoins,
   ParsedFindQuery,
@@ -93,6 +94,7 @@ import { AsyncPropertyImpl } from "./relations/AsyncProperty";
 import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { RecursiveCycleError } from "./relations/RecursiveCollection";
+import { isSelectAllFilter } from "./scopes";
 import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
 import { OptsOf, OrderOf } from "./typeMap";
@@ -452,24 +454,22 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    * This method is batch-friendly, i.e. if called in a loop, it will be automatically batched
    * to avoid N+1s, including queries that use `LIMIT` or `OFFSET`.
    */
-  public async find<T extends EntityW>(
-    type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
-  ): Promise<T[]>;
+  public async find<T extends EntityW>(type: MaybeAbstractEntityConstructor<T>, where: FindFilter<T>): Promise<T[]>;
   public async find<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
     options?: FindFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H>[]>;
   async find<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
     options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
     const { populate, ...rest } = options || {};
-    const settings = { where, ...rest };
+    const normalized = mergeFindOptions(where, rest);
+    const settings = { where: normalized.where, ...normalized.options };
     const result = await (
-      hasPaginationSettings(rest)
+      hasPaginationSettings(normalized.options)
         ? findPaginatedDataLoader(this, type, settings, populate)
         : findDataLoader(this, type, settings, populate)
     ).catch(function find(err) {
@@ -589,16 +589,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
   public async findOne<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
   ): Promise<T | undefined>;
   public async findOne<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
     options?: FindFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H> | undefined>;
   async findOne<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
     options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T | undefined> {
     const list = await this.find(type, where, options);
@@ -614,16 +614,16 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   /** Executes a given query filter and returns exactly one result, otherwise throws `NotFoundError` or `TooManyError`. */
   public async findOneOrFail<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
   ): Promise<T>;
   public async findOneOrFail<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
     options: FindFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H>>;
   async findOneOrFail<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
     options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T> {
     const list = await this.find(type, where, options);
@@ -685,10 +685,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   async findCount<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T> | GraphQLFilterWithAlias<T>,
+    where: FindFilter<T> | GraphQLFilterWithAlias<T>,
     options: FindCountFilterOptions<T> = {},
   ): Promise<number> {
-    const settings = { where, ...options } as any;
+    const normalized = mergeCountOptions(where, options);
+    const settings = { where: normalized.where, ...normalized.options } as any;
     let count = await findCountDataLoader(this, type, settings).catch(function findCount(err) {
       throw appendStack(err, new Error());
     });
@@ -696,7 +697,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     // WIP creates/deletes. We can't do this if the WHERE clause is populated b/c
     // then we'd also have to eval each created/deleted entity against the WHERE
     // clause before knowing if it should adjust teh amount.
-    const isSelectAll = Object.keys(where).length === 0 && options.conditions === undefined;
+    const isSelectAll = isSelectAllFilter(where, options.conditions);
     if (isSelectAll) {
       const tagged = this.#entitiesByTag.get(getMetadata(type).tagName) ?? [];
       for (const entity of tagged) {
@@ -722,10 +723,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
    */
   async findIds<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: FindFilter<T>,
     options: FindCountFilterOptions<T> = {},
   ): Promise<string[]> {
-    const settings = { where, ...options };
+    const normalized = mergeCountOptions(where, options);
+    const settings = { where: normalized.where, ...normalized.options };
     return findIdsDataLoader(this, type, settings).catch(function findIds(err) {
       throw appendStack(err, new Error());
     });

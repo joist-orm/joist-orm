@@ -1,12 +1,14 @@
 import { Alias } from "./Aliases";
 import { Entity } from "./Entity";
-import { IdOf } from "./EntityManager";
+import { FindFilterOptions, IdOf } from "./EntityManager";
 import { ColumnCondition, RawCondition } from "./QueryParser";
+import { isScope, resolveScope, type Scope } from "./scopes";
 import { FieldsOf, FilterOf, OrderOf } from "./typeMap";
 
 /** Combines a `where` filter with optional `orderBy`, `limit`, and `offset` settings. */
 export type FilterAndSettings<T extends Entity> = {
-  where: FilterWithAlias<T>;
+  // Either a `{ ... }` EntityFilter or a Scope like `Adult.parent`
+  where: FindFilter<T>;
   conditions?: ExpressionFilter;
   orderBy?: OrderOf<T> | OrderOf<T>[];
   limit?: number | undefined;
@@ -34,8 +36,9 @@ export type EntityFilter<T extends Entity, I = IdOf<T>, F = FilterOf<T>, N = nev
   | readonly T[]
   | I
   | readonly I[]
+  | Scope<T>
   // Note that this is a weak type (all optional keys) but TS still enforces at least one overlap
-  | ({ as?: Alias<T> } & F)
+  | EntityFilterObject<T, I, F, N>
   // Always allow `undefined` for condition pruning
   | undefined
   // But only allow `null` for `nullable` relations
@@ -45,9 +48,28 @@ export type EntityFilter<T extends Entity, I = IdOf<T>, F = FilterOf<T>, N = nev
   | boolean
   | Alias<T>;
 
+/** A nested object filter, including logical composition at the current entity alias. */
+export type EntityFilterObject<T extends Entity, I = IdOf<T>, F = FilterOf<T>, N = never> = {
+  as?: Alias<T>;
+  and?: EntityFilter<T, I, F, N> | readonly EntityFilter<T, I, F, N>[];
+  or?: EntityFilter<T, I, F, N> | readonly EntityFilter<T, I, F, N>[];
+} & F;
+
 export type BooleanFilter<N> = true | false | N;
 
-export type FilterWithAlias<T extends Entity> = { as?: Alias<T> } & FilterOf<T>;
+/**
+ * The root `em.find` `where` shape: an `EntityFilterObject` with `I`/`F`/`N` defaulted.
+ *
+ * Intentionally a thin alias rather than the source of truth: `as`/`and`/`or` are defined once on
+ * `EntityFilterObject<T, I, F, N>` so the parameterized nested-relation arm of `EntityFilter` and this
+ * root can't drift. That arm needs the `F`/`N` params — GraphQL filter shapes (`F`) and relation
+ * nullability (`N`) flow through `and`/`or` recursion — which a `FilterOf<T>`-hardcoded root can't
+ * supply, so the shape lives on `EntityFilterObject` and this just specializes it.
+ */
+export type FilterWithAlias<T extends Entity> = EntityFilterObject<T>;
+
+/** Allows `em.find` to accept either a `{ ... }` EntityFilter or a Scope like `Adult.parent` */
+export type FindFilter<T extends Entity> = FilterWithAlias<T> | Scope<T>;
 
 export type UniqueFilter<T extends Entity> = {
   [K in keyof FieldsOf<T> & keyof FilterOf<T> as FieldsOf<T>[K] extends { unique: true } ? K : never]?: FilterOf<T>[K];
@@ -105,3 +127,19 @@ export type ExpressionFilter = (
 
 /** A user-facing filter for maybe-nested/maybe-simple conditions. */
 export type ExpressionCondition = ExpressionFilter | ColumnCondition | RawCondition;
+
+/** Merges root-scope find settings with caller options, letting caller options win. */
+export function mergeFindOptions<T extends Entity>(
+  where: FindFilter<T>,
+  options: FindFilterOptions<T>,
+): { where: FindFilter<T>; options: FindFilterOptions<T> } {
+  if (!isScope<T>(where)) return { where, options };
+
+  const resolved = resolveScope(where);
+  const scopeOptions: FindFilterOptions<T> = {};
+  if (resolved.orderBys.length > 0) scopeOptions.orderBy = resolved.orderBys;
+  if (resolved.limit !== undefined) scopeOptions.limit = resolved.limit;
+  if (resolved.offset !== undefined) scopeOptions.offset = resolved.offset;
+  if (resolved.softDeletes !== undefined) scopeOptions.softDeletes = resolved.softDeletes;
+  return { where, options: { ...scopeOptions, ...options } };
+}

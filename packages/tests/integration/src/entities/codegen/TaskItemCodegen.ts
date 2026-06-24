@@ -22,9 +22,11 @@ import {
   mustBeSubType,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
+  type Scope,
   setOpts,
   type TaggedId,
   toIdOf,
@@ -112,7 +114,14 @@ export interface TaskItemOrder {
 export interface TaskItemFactoryExtras {
 }
 
+export interface TaskItemScopes {
+}
+
+export type TaskItemScope = Scope<TaskItem, TaskItemScopes>;
+
 export const taskItemConfig = new ConfigApi<TaskItem, Context>();
+
+export const taskItemScope = newScopeFn<TaskItem, TaskItemScope>("TaskItem");
 
 taskItemConfig.addRule(newRequiredRule("createdAt"));
 taskItemConfig.addRule(newRequiredRule("updatedAt"));

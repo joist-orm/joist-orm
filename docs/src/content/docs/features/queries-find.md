@@ -278,7 +278,14 @@ await em.find(Book, {
 });
 ```
 
-Nonetheless, the type of `FilterWithAlias` allows you to incrementally create/pass arond snippets of filters for better reuse.
+Nonetheless, the type of `FilterWithAlias` allows you to incrementally create/pass around snippets of filters for better reuse.
+
+If a reusable filter becomes a named domain concept, use [Scope Queries](./scope-queries) to declare it on the entity class and compose it fluently:
+
+```ts
+await Author.adult.popular.find(em);
+await Author.named("a").adult.find(em);
+```
 
 ## Polymorphic Relations
 

@@ -26,10 +26,12 @@ import {
   mustBeSubType,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReadOnlyCollection,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -129,7 +131,14 @@ export interface TaskOldOrder extends TaskOrder {
 export interface TaskOldFactoryExtras {
 }
 
+export interface TaskOldScopes {
+}
+
+export type TaskOldScope = Scope<TaskOld, TaskOldScopes>;
+
 export const taskOldConfig = new ConfigApi<TaskOld, Context>();
+
+export const taskOldScope = newScopeFn<TaskOld, TaskOldScope>("TaskOld");
 
 taskOldConfig.addRule(newRequiredRule("specialOldField"));
 taskOldConfig.addRule("parentOldTask", mustBeSubType("parentOldTask"));

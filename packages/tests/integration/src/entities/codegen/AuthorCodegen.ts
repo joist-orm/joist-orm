@@ -30,6 +30,7 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
@@ -39,6 +40,7 @@ import {
   type ReactiveManyToManyOtherSide,
   type ReactiveReference,
   type ReadOnlyCollection,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -401,7 +403,27 @@ export interface AuthorFactoryExtras {
   withRangeOfBooks?: BookRange | null;
 }
 
+export interface AuthorScopes {
+  adult: AuthorScope;
+  active: AuthorScope;
+  popular: AuthorScope;
+  popularAdult: AuthorScope;
+  recentAdults: AuthorScope;
+  recentAdultsViaAdult: AuthorScope;
+  senior: AuthorScope;
+  popularOrSenior: AuthorScope;
+  named: (prefix: string) => AuthorScope;
+  named2: (prefix: string) => AuthorScope;
+  titleOrRated: AuthorScope;
+  hasBooks: AuthorScope;
+  booksReviewedBy: (reviewer: Author) => AuthorScope;
+}
+
+export type AuthorScope = Scope<Author, AuthorScopes>;
+
 export const authorConfig = new ConfigApi<Author, Context>();
+
+export const authorScope = newScopeFn<Author, AuthorScope>("Author");
 
 authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("initials"));

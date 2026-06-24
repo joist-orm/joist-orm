@@ -26,12 +26,14 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReactiveManyToMany,
   type ReactiveManyToManyOtherSide,
   type ReadOnlyCollection,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -103,7 +105,14 @@ export interface EmployeeOrder {
 export interface EmployeeFactoryExtras {
 }
 
+export interface EmployeeScopes {
+}
+
+export type EmployeeScope = Scope<Employee, EmployeeScopes>;
+
 export const employeeConfig = new ConfigApi<Employee, Context>();
+
+export const employeeScope = newScopeFn<Employee, EmployeeScope>("Employee");
 
 employeeConfig.addRule(newRequiredRule("name"));
 employeeConfig.addRule(newRequiredRule("createdAt"));

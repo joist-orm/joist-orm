@@ -27,12 +27,14 @@ import {
   type ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  newScopeFn,
   type OneToOneReference,
   type OptsOf,
   type OrderBy,
   type PartialOrNull,
   type ReactiveField,
   type ReactiveManyToManyOtherSide,
+  type Scope,
   setField,
   setOpts,
   type TaggedId,
@@ -145,7 +147,14 @@ export interface BookReviewFactoryExtras {
   withIsTestChain?: boolean;
 }
 
+export interface BookReviewScopes {
+}
+
+export type BookReviewScope = Scope<BookReview, BookReviewScopes>;
+
 export const bookReviewConfig = new ConfigApi<BookReview, Context>();
+
+export const bookReviewScope = newScopeFn<BookReview, BookReviewScope>("BookReview");
 
 bookReviewConfig.addRule(newRequiredRule("rating"));
 bookReviewConfig.addRule("isPublic", newRequiredRule("isPublic"));

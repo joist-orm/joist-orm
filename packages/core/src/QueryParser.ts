@@ -1,5 +1,5 @@
 import { groupBy, isPlainObject } from "joist-utils";
-import { getAliasMgmt, getMaybeCtiAlias, isAlias } from "./Aliases";
+import { getAliasMgmt, getMaybeCtiAlias, isAlias, alias as newAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { getBaseMeta, type EntityMetadata, type Field } from "./EntityMetadata";
@@ -15,6 +15,7 @@ import {
   maybeResolveReferenceToId,
 } from "./index";
 import { kq, kqDot } from "./keywords";
+import { isScope, isScopeJoinFilter, resolveScope, type Scope } from "./scopes";
 import { abbreviation, assertNever, fail } from "./utils";
 
 /** A tree of ANDs/ORs with conditions or nested conditions. */
@@ -249,10 +250,10 @@ export function parseFindQuery(
     return i === 0 ? abbrev : `${abbrev}${i}`;
   }
 
-  function addSoftDeleteCondition(meta: EntityMetadata, alias: string): void {
+  function addSoftDeleteCondition(meta: EntityMetadata, alias: string, targetCb: ConditionBuilder): void {
     if (filterSoftDeletes(meta, softDeletes)) {
       const column = meta.allFields[getBaseMeta(meta).timestampFields!.deletedAt!].serde?.columns[0]!;
-      cb.addSimpleCondition({
+      targetCb.addSimpleCondition({
         kind: "column",
         alias,
         column: column.columnName,
@@ -271,10 +272,12 @@ export function parseFindQuery(
     col2: string,
     filter: any,
     fieldName?: string,
+    targetCb: ConditionBuilder = cb,
   ): void {
     // look at filter, is it `{ book: "b2" }` or `{ book: { ... } }`
-    const ef = parseEntityFilter(meta, filter);
-    if (!ef && join !== "primary" && !isAlias(filter)) {
+    const scopeFilter = isScope(filter);
+    const ef = scopeFilter ? undefined : parseEntityFilter(meta, filter);
+    if (!scopeFilter && !ef && join !== "primary" && !isAlias(filter)) {
       return;
     }
 
@@ -313,10 +316,10 @@ export function parseFindQuery(
     }
 
     if (needsStiDiscriminator(meta)) {
-      addStiSubtypeFilter(cb, meta, alias);
+      addStiSubtypeFilter(targetCb, meta, alias);
     }
 
-    addSoftDeleteCondition(meta, alias);
+    addSoftDeleteCondition(meta, alias, targetCb);
 
     // The user's locally declared aliases, i.e. `const [a, b] = aliases(Author, Book)`,
     // aren't guaranteed to line up with the aliases we've assigned internally, like `a`
@@ -328,204 +331,304 @@ export function parseFindQuery(
       getAliasMgmt(filter).setAlias(meta, alias);
     }
 
-    if (ef && ef.kind === "join") {
-      // subFilter really means we're matching against the entity columns/further joins
-      Object.keys(ef.subFilter).forEach((key) => {
-        // Skip the `{ as: ... }` alias binding
-        if (key === "as") return;
-        const field = findFilterField(meta, key) ?? fail(`Field '${key}' not found on ${meta.tableName}`);
-        const fa = `${alias}${field.aliasSuffix}`;
-        if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
-          const column = field.serde.columns[0];
-          parseValueFilter((ef.subFilter as any)[key]).forEach((filter) => {
-            cb.addValueFilter(fa, column, filter);
-          });
-        } else if (field.kind === "m2o") {
-          const column = field.serde.columns[0];
-          const sub = (ef.subFilter as any)[key];
-          const joinKind = field.required && join !== "outer" ? "inner" : "outer";
-          if (isAlias(sub)) {
-            const a = getAlias(field.otherMetadata().tableName);
-            addTable(field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
-          }
-          const f = parseEntityFilter(field.otherMetadata(), sub);
-          // Probe the filter and see if it's just an id (...and not soft deleted), if so we can avoid the join
-          if (!f) {
-            // skip
-          } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata(), softDeletes)) {
-            const a = getAlias(field.otherMetadata().tableName);
-            addTable(field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
-          } else {
-            cb.addValueFilter(fa, column, f);
-          }
-        } else if (field.kind === "poly") {
-          const f = parseEntityFilter(meta, (ef.subFilter as any)[key]);
-          if (!f) {
-            // skip
-          } else if (f.kind === "join") {
-            throw new Error("Joins through polys are not supported");
-          } else {
-            // We're left with basically a ValueFilter against the ids
-            // For now only support eq/ne/in/is-null
-            if (f.kind === "eq" || f.kind === "ne") {
-              if (isNilIdValue(f.value)) return;
-              const comp = field.components.find((p) => {
-                const otherMeta = p.otherMetadata();
-                const cstr = getConstructorFromTaggedId(f.value as string);
-                // tagged ids from subclasses always map to the base class, so we should compare to the base class if we don't directly match
-                return otherMeta.cstr === cstr || otherMeta.baseType === cstr.name;
-              });
-              if (!comp) fail(`Invalid tagged id passed to ${meta.type}.${key}: ${f.value}`);
+    addFilterAt(meta, alias, filter, targetCb, ef, join);
+  }
+
+  function addFilterAt(
+    meta: EntityMetadata,
+    tableAlias: string,
+    filter: any,
+    targetCb: ConditionBuilder,
+    parsed: ParsedEntityFilter | undefined = parseEntityFilter(meta, filter),
+    parentJoin: ParsedTable["join"] = "primary",
+  ): void {
+    if (isScope(filter)) {
+      addScopeFilterAt(meta, tableAlias, filter, targetCb, parentJoin);
+    } else if (parsed && parsed.kind === "join") {
+      addSubFilter(meta, tableAlias, parsed.subFilter, targetCb, parentJoin);
+    } else if (parsed) {
+      const column = meta.fields["id"].serde!.columns[0];
+      targetCb.addValueFilter(tableAlias, column, parsed);
+    }
+  }
+
+  function addScopeFilterAt<T extends Entity>(
+    meta: EntityMetadata<T>,
+    tableAlias: string,
+    scope: Scope<T>,
+    targetCb: ConditionBuilder,
+    parentJoin: ParsedTable["join"],
+  ): void {
+    for (const fragment of resolveScope(scope).fragments) {
+      if (fragment.kind === "filter") {
+        addFilterAt(meta, tableAlias, fragment.filter, targetCb, undefined, parentJoin);
+      } else {
+        const a = newAlias(meta.cstr);
+        const result = fragment.fn(a);
+        getAliasMgmt(a).setAlias(meta, tableAlias);
+        if (isScopeJoinFilter(result)) {
+          // Parse the join tree first so its `as:` bindings re-root the aliases that
+          // `conditions` reference, then add the conditions against the now-bound aliases.
+          addFilterAt(meta, tableAlias, result.where, targetCb, undefined, parentJoin);
+          targetCb.maybeAddExpression(result.conditions);
+        } else {
+          const conditions = Array.isArray(result) ? result : [result];
+          if (conditions.length > 0) targetCb.maybeAddExpression({ and: conditions });
+        }
+      }
+    }
+  }
+
+  function addSubFilter(
+    meta: EntityMetadata,
+    tableAlias: string,
+    subFilter: object,
+    targetCb: ConditionBuilder,
+    parentJoin: ParsedTable["join"],
+  ): void {
+    // subFilter really means we're matching against the entity columns/further joins
+    Object.keys(subFilter).forEach((key) => {
+      // Skip the `{ as: ... }` alias binding
+      if (key === "as") return;
+      if (key === "and" || key === "or") {
+        addLogicalFilter(meta, tableAlias, key, (subFilter as any)[key], targetCb, parentJoin);
+        return;
+      }
+      const field = findFilterField(meta, key) ?? fail(`Field '${key}' not found on ${meta.tableName}`);
+      const fa = `${tableAlias}${field.aliasSuffix}`;
+      if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
+        const column = field.serde.columns[0];
+        parseValueFilter((subFilter as any)[key]).forEach((filter) => {
+          targetCb.addValueFilter(fa, column, filter);
+        });
+      } else if (field.kind === "m2o") {
+        const column = field.serde.columns[0];
+        const sub = (subFilter as any)[key];
+        const joinKind = field.required && parentJoin !== "outer" ? "inner" : "outer";
+        if (isAlias(sub)) {
+          const a = getAlias(field.otherMetadata().tableName);
+          addTable(
+            field.otherMetadata(),
+            a,
+            joinKind,
+            kqDot(fa, column.columnName),
+            kqDot(a, "id"),
+            sub,
+            undefined,
+            targetCb,
+          );
+        }
+        const f = parseEntityFilter(field.otherMetadata(), sub);
+        // Probe the filter and see if it's just an id (...and not soft deleted), if so we can avoid the join
+        if (!f) {
+          // skip
+        } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata(), softDeletes)) {
+          const a = getAlias(field.otherMetadata().tableName);
+          addTable(
+            field.otherMetadata(),
+            a,
+            joinKind,
+            kqDot(fa, column.columnName),
+            kqDot(a, "id"),
+            sub,
+            undefined,
+            targetCb,
+          );
+        } else {
+          targetCb.addValueFilter(fa, column, f);
+        }
+      } else if (field.kind === "poly") {
+        const f = parseEntityFilter(meta, (subFilter as any)[key]);
+        if (!f) {
+          // skip
+        } else if (f.kind === "join") {
+          throw new Error("Joins through polys are not supported");
+        } else {
+          // We're left with basically a ValueFilter against the ids
+          // For now only support eq/ne/in/is-null
+          if (f.kind === "eq" || f.kind === "ne") {
+            if (isNilIdValue(f.value)) return;
+            const comp = field.components.find((p) => {
+              const otherMeta = p.otherMetadata();
+              const cstr = getConstructorFromTaggedId(f.value as string);
+              // tagged ids from subclasses always map to the base class, so we should compare to the base class if we don't directly match
+              return otherMeta.cstr === cstr || otherMeta.baseType === cstr.name;
+            });
+            if (!comp) fail(`Invalid tagged id passed to ${meta.type}.${key}: ${f.value}`);
+            const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
+            targetCb.addValueFilter(fa, column, f);
+          } else if (f.kind === "is-null") {
+            // Add a condition for every component--these can be AND-d with the rest of the simple/inline conditions
+            field.components.forEach((comp) => {
               const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
-              cb.addValueFilter(fa, column, f);
-            } else if (f.kind === "is-null") {
-              // Add a condition for every component--these can be AND-d with the rest of the simple/inline conditions
-              field.components.forEach((comp) => {
-                const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
-                cb.addSimpleCondition({
-                  kind: "column",
-                  alias: fa,
-                  column: comp.columnName,
-                  dbType: column.dbType,
-                  cond: f,
-                });
+              targetCb.addSimpleCondition({
+                kind: "column",
+                alias: fa,
+                column: comp.columnName,
+                dbType: column.dbType,
+                cond: f,
               });
-            } else if (f.kind === "not-null") {
-              const conditions = field.components.map((comp) => {
-                const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
-                return {
-                  kind: "column",
-                  alias: fa,
-                  column: comp.columnName,
-                  dbType: column.dbType,
-                  cond: { kind: "not-null" },
-                };
-              }) satisfies ColumnCondition[];
-              cb.addParsedExpression({ kind: "exp", op: "or", conditions });
-            } else if (f.kind === "in") {
-              // Split up the ids by constructor
-              const idsByConstructor = groupBy(f.value, (id) => getConstructorFromTaggedId(id as string).name);
-              // Or together `parent_book_id in (1,2,3) OR parent_author_id IN (4,5,6)`
-              // ...if there is a `parent IN [b:1, b:2, a:1, null]` we'd need to pull the `null` out and do an `OR (all columns are null)`...
-              const conditions = Object.entries(idsByConstructor).map(([cstrName, ids]) => {
-                const column =
-                  field.serde.columns.find(
-                    // tagged ids from subclasses always map to the base class, so we should compare to the base class if we don't directly match
-                    (c) => c.otherMetadata().cstr.name === cstrName || c.otherMetadata().baseType === cstrName,
-                  ) ?? fail(`Invalid tagged ids passed to ${meta.type}.${key}: ${ids}`);
-                return {
-                  kind: "column",
-                  alias: fa,
-                  column: column.columnName,
-                  dbType: column.dbType,
-                  cond: mapToDb(column, { kind: "in", value: ids }),
-                } satisfies ColumnCondition;
-              });
-              if (conditions.length > 0) {
-                cb.addParsedExpression({ kind: "exp", op: "or", conditions });
-              }
-            } else {
-              throw new Error(`Filters on polys for ${f.kind} are not supported`);
+            });
+          } else if (f.kind === "not-null") {
+            const conditions = field.components.map((comp) => {
+              const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
+              return {
+                kind: "column",
+                alias: fa,
+                column: comp.columnName,
+                dbType: column.dbType,
+                cond: { kind: "not-null" },
+              };
+            }) satisfies ColumnCondition[];
+            targetCb.addParsedExpression({ kind: "exp", op: "or", conditions });
+          } else if (f.kind === "in") {
+            // Split up the ids by constructor
+            const idsByConstructor = groupBy(f.value, (id) => getConstructorFromTaggedId(id as string).name);
+            // Or together `parent_book_id in (1,2,3) OR parent_author_id IN (4,5,6)`
+            // ...if there is a `parent IN [b:1, b:2, a:1, null]` we'd need to pull the `null` out and do an `OR (all columns are null)`...
+            const conditions = Object.entries(idsByConstructor).map(([cstrName, ids]) => {
+              const column =
+                field.serde.columns.find(
+                  // tagged ids from subclasses always map to the base class, so we should compare to the base class if we don't directly match
+                  (c) => c.otherMetadata().cstr.name === cstrName || c.otherMetadata().baseType === cstrName,
+                ) ?? fail(`Invalid tagged ids passed to ${meta.type}.${key}: ${ids}`);
+              return {
+                kind: "column",
+                alias: fa,
+                column: column.columnName,
+                dbType: column.dbType,
+                cond: mapToDb(column, { kind: "in", value: ids }),
+              } satisfies ColumnCondition;
+            });
+            if (conditions.length > 0) {
+              targetCb.addParsedExpression({ kind: "exp", op: "or", conditions });
             }
+          } else {
+            throw new Error(`Filters on polys for ${f.kind} are not supported`);
           }
-        } else if (field.kind === "o2o") {
-          // We have to always join into o2os, i.e. we can't probe the filter like we do for m2os
-          const otherMeta = field.otherMetadata();
-          const a = getAlias(otherMeta.tableName);
-          const otherField = otherMeta.allFields[field.otherFieldName];
-          const otherColumn =
-            // if our other is a poly, we need to find a matching column rather than just picking the first
-            otherField.kind === "poly"
-              ? otherField.components.find(
-                  (c) => c.otherMetadata() === meta || c.otherMetadata() === getBaseMeta(meta),
-                )!.columnName
-              : otherField.serde!.columns[0].columnName;
+        }
+      } else if (field.kind === "o2o") {
+        // We have to always join into o2os, i.e. we can't probe the filter like we do for m2os
+        const otherMeta = field.otherMetadata();
+        const a = getAlias(otherMeta.tableName);
+        const otherField = otherMeta.allFields[field.otherFieldName];
+        const otherColumn =
+          // if our other is a poly, we need to find a matching column rather than just picking the first
+          otherField.kind === "poly"
+            ? otherField.components.find((c) => c.otherMetadata() === meta || c.otherMetadata() === getBaseMeta(meta))!
+                .columnName
+            : otherField.serde!.columns[0].columnName;
+        addTable(
+          field.otherMetadata(),
+          a,
+          "outer",
+          kqDot(tableAlias, "id"),
+          kqDot(a, otherColumn),
+          (subFilter as any)[key],
+          field.otherFieldName,
+          targetCb,
+        );
+      } else if (field.kind === "o2m") {
+        const otherMeta = field.otherMetadata();
+        const otherField = otherMeta.allFields[field.otherFieldName];
+        let otherColumn = otherField.serde!.columns[0].columnName;
+        if (otherField.kind === "poly") {
+          const otherComponent =
+            otherField.components.find((c) => c.otherMetadata() === meta) ??
+            fail(`No poly component found for ${otherField.fieldName}`);
+          otherColumn = otherComponent.columnName;
+        }
+        const isCtiBaseFk =
+          otherMeta.inheritanceType === "cti" && field.otherFieldName && !(field.otherFieldName in otherMeta.fields);
+        const a = getAlias(otherMeta.tableName);
+        addTable(
+          otherMeta,
+          a,
+          "outer",
+          kqDot(tableAlias, "id"),
+          kqDot(a, otherColumn),
+          (subFilter as any)[key],
+          field.otherFieldName,
+          targetCb,
+        );
+        if (!isCtiBaseFk) {
+          const table = tables.find((t) => t.alias === a);
+          if (table && (table.join === "inner" || table.join === "outer")) {
+            table.collection = { parentAlias: tableAlias, rootAlias: a, kind: "o2m" };
+          }
+        }
+      } else if (field.kind === "m2m") {
+        const sub = (subFilter as any)[key];
+        const f = parseEntityFilter(field.otherMetadata(), sub);
+        if (!f && !isAlias(sub)) return;
+
+        const ja = getAlias(field.joinTableName);
+        tables.push({
+          join: "outer",
+          alias: ja,
+          table: field.joinTableName,
+          col1: kqDot(tableAlias, "id"),
+          col2: kqDot(ja, field.columnNames[0]),
+          collection: { parentAlias: tableAlias, rootAlias: ja, kind: "m2m" },
+        });
+
+        if (isAlias(sub) || f?.kind === "join" || filterSoftDeletes(field.otherMetadata(), softDeletes)) {
+          const a = getAlias(field.otherMetadata().tableName);
           addTable(
             field.otherMetadata(),
             a,
             "outer",
-            kqDot(alias, "id"),
-            kqDot(a, otherColumn),
-            (ef.subFilter as any)[key],
-            field.otherFieldName,
+            kqDot(ja, field.columnNames[1]),
+            kqDot(a, "id"),
+            sub,
+            undefined,
+            targetCb,
           );
-        } else if (field.kind === "o2m") {
+          const table = tables.find((t) => t.alias === a);
+          if (table && (table.join === "inner" || table.join === "outer")) {
+            table.collection = { parentAlias: ja, rootAlias: ja, kind: "m2m" };
+          }
+        } else if (f) {
           const otherMeta = field.otherMetadata();
-          const otherField = otherMeta.allFields[field.otherFieldName];
-          let otherColumn = otherField.serde!.columns[0].columnName;
-          if (otherField.kind === "poly") {
-            const otherComponent =
-              otherField.components.find((c) => c.otherMetadata() === meta) ??
-              fail(`No poly component found for ${otherField.fieldName}`);
-            otherColumn = otherComponent.columnName;
-          }
-          const isCtiBaseFk =
-            otherMeta.inheritanceType === "cti" && field.otherFieldName && !(field.otherFieldName in otherMeta.fields);
-          const a = getAlias(otherMeta.tableName);
-          addTable(
-            otherMeta,
-            a,
-            "outer",
-            kqDot(alias, "id"),
-            kqDot(a, otherColumn),
-            (ef.subFilter as any)[key],
-            field.otherFieldName,
-          );
-          if (!isCtiBaseFk) {
-            const table = tables.find((t) => t.alias === a);
-            if (table && (table.join === "inner" || table.join === "outer")) {
-              table.collection = { parentAlias: alias, rootAlias: a, kind: "o2m" };
-            }
-          }
-        } else if (field.kind === "m2m") {
-          const sub = (ef.subFilter as any)[key];
-          const f = parseEntityFilter(field.otherMetadata(), sub);
-          if (!f && !isAlias(sub)) return;
-
-          const ja = getAlias(field.joinTableName);
-          tables.push({
-            join: "outer",
+          const column: any = {
+            columnName: field.columnNames[1],
+            dbType: otherMeta.idDbType,
+            mapToDb(value: any) {
+              return value === null || isNilIdValue(value)
+                ? value
+                : keyToNumber(otherMeta, maybeResolveReferenceToId(value));
+            },
+          };
+          targetCb.addSimpleCondition({
+            kind: "column",
             alias: ja,
-            table: field.joinTableName,
-            col1: kqDot(alias, "id"),
-            col2: kqDot(ja, field.columnNames[0]),
-            collection: { parentAlias: alias, rootAlias: ja, kind: "m2m" },
+            column: field.columnNames[1],
+            dbType: otherMeta.idDbType,
+            cond: mapToDb(column, f),
           });
-
-          if (isAlias(sub) || f?.kind === "join" || filterSoftDeletes(field.otherMetadata(), softDeletes)) {
-            const a = getAlias(field.otherMetadata().tableName);
-            addTable(field.otherMetadata(), a, "outer", kqDot(ja, field.columnNames[1]), kqDot(a, "id"), sub);
-            const table = tables.find((t) => t.alias === a);
-            if (table && (table.join === "inner" || table.join === "outer")) {
-              table.collection = { parentAlias: ja, rootAlias: ja, kind: "m2m" };
-            }
-          } else if (f) {
-            const otherMeta = field.otherMetadata();
-            const column: any = {
-              columnName: field.columnNames[1],
-              dbType: otherMeta.idDbType,
-              mapToDb(value: any) {
-                return value === null || isNilIdValue(value)
-                  ? value
-                  : keyToNumber(otherMeta, maybeResolveReferenceToId(value));
-              },
-            };
-            cb.addSimpleCondition({
-              kind: "column",
-              alias: ja,
-              column: field.columnNames[1],
-              dbType: otherMeta.idDbType,
-              cond: mapToDb(column, f),
-            });
-          }
-        } else {
-          throw new Error(`Unsupported field ${key}`);
         }
-      });
-    } else if (ef) {
-      const column = meta.fields["id"].serde!.columns[0];
-      cb.addValueFilter(alias, column, ef);
-    }
+      } else {
+        throw new Error(`Unsupported field ${key}`);
+      }
+    });
+  }
+
+  function addLogicalFilter(
+    meta: EntityMetadata,
+    tableAlias: string,
+    op: "and" | "or",
+    value: unknown,
+    targetCb: ConditionBuilder,
+    parentJoin: ParsedTable["join"],
+  ): void {
+    const filters = Array.isArray(value) ? value : [value];
+    const conditions = filters.flatMap((filter) => {
+      const branchCb = new ConditionBuilder();
+      addFilterAt(meta, tableAlias, filter, branchCb, undefined, parentJoin);
+      const condition = branchCb.toExpressionFilter();
+      return condition ? [condition] : [];
+    });
+    if (conditions.length > 0) targetCb.addParsedExpression({ kind: "exp", op, conditions });
   }
 
   function addOrderBy(meta: EntityMetadata, alias: string, orderBy: Record<string, any>): void {
@@ -665,6 +768,14 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
   } else if (isAlias(filter)) {
     // We're just binding an alias to this position in the join tree
     return undefined;
+  } else if (isScope(filter)) {
+    // A scope on a relation (e.g. `{ author: Author.adult }`) always implies conditions on the
+    // related entity, so signal "needs a join" via the existing `join` discriminant rather than
+    // adding a dedicated `kind: "scope"` that every relation branch would have to learn. The empty
+    // `subFilter` is intentionally never read: the m2o/m2m branches only check `kind === "join"` to
+    // decide whether to join, then re-dispatch the original scope value back through `addTable`,
+    // where `isScope(...)` routes it to `addScopeFilterAt` to apply the scope's actual fragments.
+    return { kind: "join", subFilter: {} };
   } else if (filter === null) {
     return { kind: "is-null" };
   } else if (typeof filter === "string" || typeof filter === "number") {
@@ -761,7 +872,7 @@ function isNilIdValue(value: any): boolean {
 }
 
 /** Finds a filter field by fieldName or generated fieldIdName. */
-function findFilterField(meta: EntityMetadata, key: string): (Field & { aliasSuffix: string }) | undefined {
+export function findFilterField(meta: EntityMetadata, key: string): (Field & { aliasSuffix: string }) | undefined {
   return (
     meta.allFields[key] ??
     meta.polyComponentFields?.[key] ??
@@ -1068,7 +1179,7 @@ export function maybeAddNotSoftDeleted(
   }
 }
 
-function filterSoftDeletes(meta: EntityMetadata, softDeletes: "include" | "exclude"): boolean {
+export function filterSoftDeletes(meta: EntityMetadata, softDeletes: "include" | "exclude"): boolean {
   return (
     softDeletes === "exclude" &&
     !!getBaseMeta(meta).timestampFields?.deletedAt &&

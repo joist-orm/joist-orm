@@ -1,7 +1,16 @@
 import { hasReactiveField, hasReactiveProperty, Property, ReactiveField } from "joist-orm";
-import { Author, BookCodegen, bookReviewBeforeFlushRan, bookConfig as config } from "./entities";
+import {
+  Author,
+  BookCodegen,
+  bookReviewBeforeFlushRan,
+  bookConfig as config,
+  PublisherType,
+  bookScope as scope,
+} from "./entities";
 
 export class Book extends BookCodegen {
+  static fromLargePubs = scope({ author: { publisher: { type: PublisherType.Big } } });
+
   transientFields = {
     rulesInvoked: 0,
     firstNameRuleInvoked: 0,

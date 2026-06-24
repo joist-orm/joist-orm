@@ -223,7 +223,9 @@ export function newScopeFn<T extends Entity, R extends Scope<T>>(entityType: str
 
 /** Returns true if `value` is one of our scope proxies. */
 export function isScope<T extends Entity>(value: unknown): value is Scope<T> {
-  return (typeof value === "object" || typeof value === "function") && value !== null && kOps in value && kResolver in value;
+  // A scope is a callable Proxy (so parameterized refs like `Author.adult.named("a")` work), so it's
+  // always `typeof === "function"`; that guard also keeps the `in` checks from throwing on primitives.
+  return typeof value === "function" && kOps in value && kResolver in value;
 }
 
 /** Resolves a scope proxy into ordered filter fragments plus collapsed settings. */

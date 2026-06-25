@@ -6,18 +6,25 @@ import { JsonAggregatePreloader } from "joist-orm";
 // just the composite of the two foreign keys, with no surrogate `id` column.
 describe("m2m without a join-table id", () => {
   it("inserts join rows without a surrogate id", async () => {
+    // Given a saved book and two tags
     const em = newEntityManager();
     const b = newBook(em);
     const t1 = newTag(em, { title: "t1" });
     const t2 = newTag(em, { title: "t2" });
+    await em.flush();
+    // When we add them to the id-less m2m and flush
     b.tags.add(t1);
     b.tags.add(t2);
     resetQueryCount();
     await em.flush();
-    // Then the insert keys off the FK pair, with no RETURNING id
-    const insert = queries.find((q) => q.includes("INSERT INTO book_to_tags"))!;
-    expect(insert).toMatch(/ON CONFLICT \(.*\) DO NOTHING/);
-    expect(insert).not.toMatch(/RETURNING/);
+    // Then the insert keys off the FK pair, with `ON CONFLICT DO NOTHING` and no `RETURNING id`
+    expect(queries).toMatchInlineSnapshot(`
+     [
+       "BEGIN;",
+       "WITH data AS (SELECT unnest($1::int[]) as "bookId", unnest($2::int[]) as "tagId") INSERT INTO book_to_tags ("bookId", "tagId") SELECT * FROM data ON CONFLICT ("bookId", "tagId") DO NOTHING;",
+       "COMMIT;",
+     ]
+    `);
     // And the rows are in the db
     const rows = await knex.select("*").from("book_to_tags").orderBy(["bookId", "tagId"]);
     expect(rows).toMatchObject([
@@ -57,9 +64,18 @@ describe("m2m without a join-table id", () => {
     b2.tags.remove(await em.load(Tag, "t:1"));
     resetQueryCount();
     await em.flush();
-    // Then the delete keys off the FK pair
-    const del = queries.find((q) => q.includes("DELETE FROM book_to_tags"))!;
-    expect(del).toMatch(/WHERE \(.*\) IN \(/);
+    // Then the delete keys off the FK pair (composite key), not an id
+    expect(queries).toMatchInlineSnapshot(`
+     [
+       "BEGIN;",
+       "
+             DELETE FROM book_to_tags
+             WHERE ("bookId", "tagId") IN (
+               SELECT (data->>0)::int, (data->>1)::int FROM jsonb_array_elements($1) data
+             )",
+       "COMMIT;",
+     ]
+    `);
     const rows = await knex.select("*").from("book_to_tags");
     expect(rows).toMatchObject([{ bookId: 1, tagId: 2 }]);
   });

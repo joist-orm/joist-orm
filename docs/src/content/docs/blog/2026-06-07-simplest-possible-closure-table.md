@@ -1,7 +1,7 @@
 ---
 title: Simplest Possible Closure Tables
 slug: blog/simplest-possible-closure-tables
-date: 2027-06-07
+date: 2026-06-07
 authors: shaberman
 tags: []
 excerpt: Joist-driven implementation of closure tables as an example of our declarative business logic.

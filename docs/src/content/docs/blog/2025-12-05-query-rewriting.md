@@ -4,6 +4,7 @@ slug: blog/query-rewriting-versioning
 date: 2025-12-05
 authors: shaberman
 tags: []
+excerpt: Joist's plugin infrastructure allowed shipping a non-trivial versioning as a "cross-cutting concern" with a minimum amount of boilerplate.
 ---
 
 Joist is an ORM primarily developed for [Homebound](https://homebound.com/)'s GraphQL majestic monolith, and we recently shipped a long-awaited Joist feature, **SQL query rewriting via an ORM plugin API**, to deliver a key component of our domain model: _aggregate level versioning_.

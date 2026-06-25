@@ -65,13 +65,14 @@ query {
 }
 ```
 
-Normally Joist's `entityResolver` can "put the entity on the wire" without any boilerplate, but because `reviews` has this custom `first` argument, we would implement it with `em.find`:
+Normally Joist's `entityResolver` can "put the entity on the wire" without any boilerplate, including relations like `reviews`, but because `reviews` has this custom `first` argument, we need implement it with `em.find`:
 
 ```ts
 export const bookResolvers: BookResolvers = {
   ...entityResolver(getMetadata(Book)),
 
   async reviews(book, args, ctx) {
+    // Normal/boring em.find query
     return ctx.em.find(
       BookReview,
       { book },
@@ -85,7 +86,7 @@ However, b/c the GraphQL runtime ends up invoking `reviews` function "in a loop"
 
 1. Load author `a:1` (good, 1 SQL call)
 1. Load all the author's books (good, 1 SQL call, returns 100 books)
-1. For each book, load the first five reviews (eh, 100 SQL calls?).
+1. For each book, load the first five reviews (eh, 100 SQL calls?)
 
 That last line is the scary one. 😬
 
@@ -93,7 +94,7 @@ If the author has 100 books, our initial resolver implementation will issue 100 
 
 ## Why Pagination is Different
 
-If Joist is so great at auto-batching, why were these paginated `em.find` not batched?
+If Joist is so great at auto-batching, why were these paginated `em.find` calls not batched already?
 
 For Joist's _non-paginated_ one-to-many loading, batching is really straightforward: we use pretty much the same `SELECT * FROM book_reviews` that a non-batched `SELECT` would do, but with a parameter of "an array for all requested book ids" instead of a single book id:
 
@@ -106,7 +107,7 @@ ORDER BY br.id ASC
 
 The database returns all reviews for all books, and Joist groups them back by `book_id`, so we can populate each `book`s `reviews` collection.
 
-But `reviews(first: 5)` does **not** mean "load any five reviews across all books". It means "load five reviews per book", i.e. this SQL would be wrong:
+But `reviews(first: 5)` does **not** mean "load any five reviews across all books". It means "load five reviews _per_ book", i.e. this SQL would be wrong:
 
 ```sql
 -- Wrong SQL
@@ -119,9 +120,9 @@ LIMIT 5
 
 The `LIMIT 5` applies to the whole result set, so if the first book has five reviews, books two through twenty get nothing.
 
-Given this wrinkle, i.e. it's not immediately obvious "how to auto-batch paginated queries", we'd so far pragmatically decided to just not even try. 😅
+Given this wrinkle, i.e. it had not been immediately obvious "how to auto-batch paginated queries", we'd so far pragmatically decided to just not even try. 😅
 
-Historically, Joist didn't allow `em.find` to accept pagination parameters, and instead we had a dedicated `em.findPaginated` that was _specifically not batched_, but did accept `limit` & `offset` parameters, which callers just had to know to "not call it in a loop".
+So, historically, Joist didn't allow `em.find` to accept pagination parameters (`limit` or `offset`), and instead we had a dedicated `em.findPaginated` that was _specifically not batched_, but did accept `limit` & `offset` parameters, which callers just had to know to "not call it in a loop".
 
 ## The New Pagination SQL
 
@@ -157,7 +158,7 @@ Tying this back to our GraphQL use case, if a GraphQL query asks for `reviews(fi
 
 ## Removing `findPaginated`
 
-Because we've solved the restriction of "we cannot batch paginated finds", the reason for separate `em.find` vs. `em.findPaginated` methods has gone away, so we've also just removed `findPaginated`. 🔪
+Because we've now solved the restriction of "we cannot batch paginated finds", the reason for separate `em.find` vs. `em.findPaginated` methods has gone away, so we've also just removed `findPaginated`. 🔪
 
 Now any `em.find` can use limit/offset parameters, and still get Joist's robust auto-batching support:
 
@@ -170,28 +171,16 @@ const [aReviews, bReviews] = await Promise.all([
 
 As long as the paginated finds have compatible shapes--same entity, same options like `limit` / `offset` / `orderBy`, and the same logical filter shape--Joist will batch them.
 
-This first-class `em.find` support also means _any_ service-layer / business-logic code that loops over entities and asks for "the first `N` children" per entity will get an auto-batched query, even if no GraphQL is involved.
+This first-class `em.find` support also means _any_ service-layer / business-logic code that loops over entities and asks for "the first `N` children" per entity will get an auto-batched query, even if no GraphQL is involved. 🎉
 
 ## Why This Matters
 
-This closes a gap that came up repeatedly in real GraphQL APIs.
+This feature finally unlocks a common GraphQL pattern: fetching "the first `N` children" for a list of parents, without having to write a custom dataloader/resolver or accept an N+1.
 
-Without this feature, teams had to choose between:
+Previously, applications using Joist had to choose between:
 
-- Avoiding nested `first` fields in GraphQL schemas.
-- Writing custom bulk resolvers by hand.
-- Accepting N+1s for "just a small first-five list" fields.
+- Avoiding nested `first` fields all together (honestly what we'd done 😅),
+- Writing custom dataloader resolvers by hand (👎️), or
+- Accepting N+1s for "just a small first-five list" fields (also 👎️)
 
-Now the straightforward resolver is also the efficient resolver.
-
-You can expose natural GraphQL fields like:
-
-```graphql
-books {
-  reviews(first: 5) {
-    rating
-  }
-}
-```
-
-And still get Joist's usual "never N+1" behavior, with SQL that preserves per-parent pagination semantics.
+Now the feature "just works", with a straightforward, boring implementation that leverages `em.find`, as we continue to deliver on Joist's "never N+1" mission. 🚀

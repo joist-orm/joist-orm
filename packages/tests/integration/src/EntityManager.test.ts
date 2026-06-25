@@ -1291,11 +1291,10 @@ describe("EntityManager", () => {
         JSON.stringify(
           [
             {
-              code: "invalid_type",
               expected: "string",
-              received: "undefined",
+              code: "invalid_type",
               path: ["street"],
-              message: "Required",
+              message: "Invalid input: expected string, received undefined",
             },
           ],
           undefined,
@@ -1314,11 +1313,10 @@ describe("EntityManager", () => {
         JSON.stringify(
           [
             {
-              code: "invalid_type",
               expected: "string",
-              received: "undefined",
+              code: "invalid_type",
               path: ["street"],
-              message: "Required",
+              message: "Invalid input: expected string, received undefined",
             },
           ],
           undefined,

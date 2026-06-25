@@ -1,7 +1,7 @@
 import { createFromBuffer } from "@dprint/formatter";
-import { getBuffer } from "@dprint/json";
+import { getPath } from "@dprint/json";
 import { DbMetadata, Entity, EntityDbMetadata } from "EntityDbMetadata";
-import { promises as fs } from "fs";
+import { promises as fs, readFileSync } from "fs";
 import { groupBy } from "joist-utils";
 import ts from "typescript";
 import { z } from "zod";
@@ -10,7 +10,7 @@ import { getStiEntities } from "./inheritance";
 import { logger } from "./logger";
 import { fail, sortKeys, trueIfResolved } from "./utils";
 
-const jsonFormatter = createFromBuffer(getBuffer());
+const jsonFormatter = createFromBuffer(readFileSync(getPath()));
 
 const fieldConfig = z
   .object({
@@ -68,8 +68,8 @@ const entityConfig = z
   .object({
     tag: z.string(),
     tableName: z.optional(z.string()),
-    fields: z.optional(z.record(fieldConfig)),
-    relations: z.optional(z.record(relationConfig)),
+    fields: z.optional(z.record(z.string(), fieldConfig)),
+    relations: z.optional(z.record(z.string(), relationConfig)),
     /** Whether this entity should be abstract, e.g. for inheritance a subtype must be instantiated instead of this type. */
     abstract: z.optional(z.boolean()),
     orderBy: z.optional(z.string()),
@@ -133,7 +133,7 @@ export const config = z
     createFlushFunction: z.optional(z.union([z.boolean(), z.array(z.string())])),
     entitiesDirectory: z.string().default("./src/entities"),
     codegenPlugins: z.optional(z.array(z.string())),
-    entities: z.record(entityConfig).default({}),
+    entities: z.record(z.string(), entityConfig).default({}),
     ignoredTables: z.optional(z.array(z.string())),
     /** The type of entity `id` fields; defaults to `tagged-string`. */
     idType: z.optional(z.union([z.literal("tagged-string"), z.literal("untagged-string"), z.literal("number")])),
@@ -327,7 +327,7 @@ export async function loadConfig(): Promise<Config> {
     const result = config.safeParse(stripLegacyConfigKeys(JSON.parse(content.toString())));
     if (!result.success) {
       throw new Error(
-        `Invalid joist-config.json: ${result.error.errors
+        `Invalid joist-config.json: ${result.error.issues
           .map((ze) => `${ze.path.map(String).join("/")} ${ze.message}`)
           .join("\n")}`,
       );
@@ -355,7 +355,7 @@ export async function writeConfig(config: Config): Promise<void> {
     delete sorted.paginationStyle;
   }
   const input = JSON.stringify(sorted);
-  const content = jsonFormatter.formatText("test.json", input);
+  const content = jsonFormatter.formatText({ filePath: "test.json", fileText: input });
   await fs.writeFile(configPath, content);
 }
 

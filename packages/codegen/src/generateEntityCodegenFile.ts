@@ -124,8 +124,6 @@ export function generateEntityCodegenFile(
 
   const configName = `${camelCase(entityName)}Config`;
   const scopeFnName = `${camelCase(entityName)}Scope`;
-  const scopeTypeName = `${entityName}Scope`;
-  const scopesTypeName = `${entityName}Scopes`;
   const metadata = imp(`${camelCase(entityName)}Meta@./entities.ts`);
 
   const contextType = config.contextType ? imp(`t:${config.contextType}`) : "{}";
@@ -231,15 +229,15 @@ export function generateEntityCodegenFile(
       ${generateFactoryExtrasType(meta)}
     }
 
-    export interface ${scopesTypeName} {
+    export interface ${entity.scopesName} {
       ${scopeMembers.map((member) => code`${member.name}: ${member.type};`)}
     }
 
-    export type ${scopeTypeName} = ${Scope}<${entity.type}, ${scopesTypeName}>;
+    export type ${entity.scopeName} = ${Scope}<${entity.type}, ${entity.scopesName}>;
 
     export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
 
-    export const ${scopeFnName} = ${newScopeFn}<${entity.type}, ${scopeTypeName}>("${entityName}");
+    export const ${scopeFnName} = ${newScopeFn}<${entity.type}, ${entity.scopeName}>("${entityName}");
 
     ${generateDefaultValidationRules(dbMeta, meta, configName)}
     ${generateDefaultValues(config, meta, configName)};

@@ -1,115 +1,144 @@
 {
-  "$ref": "#/definitions/mySchema",
-  "definitions": {
-    "mySchema": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "databaseUrl": { "type": "string" },
+    "contextType": { "type": "string" },
+    "transactionType": { "type": "string" },
+    "timestampColumns": {
       "type": "object",
       "properties": {
-        "databaseUrl": { "type": "string" },
-        "contextType": { "type": "string" },
-        "transactionType": { "type": "string" },
-        "timestampColumns": {
+        "createdAt": {
           "type": "object",
           "properties": {
-            "createdAt": {
-              "type": "object",
-              "properties": {
-                "names": { "type": "array", "items": { "type": "string" } },
-                "required": { "type": "boolean" }
-              },
-              "required": ["names"],
-              "additionalProperties": false
-            },
-            "updatedAt": { "$ref": "#/definitions/mySchema/properties/timestampColumns/properties/createdAt" },
-            "deletedAt": { "$ref": "#/definitions/mySchema/properties/timestampColumns/properties/createdAt" }
+            "names": { "type": "array", "items": { "type": "string" } },
+            "required": { "type": "boolean" }
           },
+          "required": ["names"],
           "additionalProperties": false
         },
-        "temporal": {
-          "anyOf": [
-            { "type": "boolean" },
-            {
+        "updatedAt": {
+          "type": "object",
+          "properties": {
+            "names": { "type": "array", "items": { "type": "string" } },
+            "required": { "type": "boolean" }
+          },
+          "required": ["names"],
+          "additionalProperties": false
+        },
+        "deletedAt": {
+          "type": "object",
+          "properties": {
+            "names": { "type": "array", "items": { "type": "string" } },
+            "required": { "type": "boolean" }
+          },
+          "required": ["names"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "temporal": {
+      "anyOf": [
+        { "type": "boolean" },
+        { "type": "object", "properties": { "timeZone": { "type": "string" } }, "required": ["timeZone"] }
+      ]
+    },
+    "createFlushFunction": { "anyOf": [{ "type": "boolean" }, { "type": "array", "items": { "type": "string" } }] },
+    "entitiesDirectory": { "default": "./src/entities", "type": "string" },
+    "codegenPlugins": { "type": "array", "items": { "type": "string" } },
+    "entities": {
+      "type": "object",
+      "propertyNames": { "type": "string" },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "tag": { "type": "string" },
+          "tableName": { "type": "string" },
+          "fields": {
+            "type": "object",
+            "propertyNames": { "type": "string" },
+            "additionalProperties": {
               "type": "object",
-              "properties": { "timeZone": { "type": "string" } },
-              "required": ["timeZone"],
+              "properties": {
+                "derived": { "anyOf": [{ "type": "string", "const": "sync" }, { "type": "string", "const": "async" }] },
+                "protected": { "type": "boolean" },
+                "ignore": { "type": "boolean" },
+                "superstruct": { "type": "string" },
+                "zodSchema": { "type": "string" },
+                "type": { "type": "string" },
+                "serde": { "type": "string" },
+                "stiDiscriminator": {
+                  "type": "object",
+                  "propertyNames": { "type": "string" },
+                  "additionalProperties": { "type": "string" }
+                },
+                "stiType": { "type": "string" },
+                "notNull": { "type": "boolean" },
+                "hasDefault": { "type": "boolean" }
+              },
               "additionalProperties": false
             }
-          ]
-        },
-        "createFlushFunction": { "anyOf": [{ "type": "boolean" }, { "type": "array", "items": { "type": "string" } }] },
-        "entitiesDirectory": { "type": "string", "default": "./src/entities" },
-        "codegenPlugins": { "type": "array", "items": { "type": "string" } },
-        "entities": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "object",
-            "properties": {
-              "tag": { "type": "string" },
-              "tableName": { "type": "string" },
-              "fields": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "derived": { "type": "string", "enum": ["sync", "async"] },
-                    "protected": { "type": "boolean" },
-                    "ignore": { "type": "boolean" },
-                    "superstruct": { "type": "string" },
-                    "zodSchema": { "type": "string" },
-                    "type": { "type": "string" },
-                    "serde": { "type": "string" },
-                    "stiDiscriminator": { "type": "object", "additionalProperties": { "type": "string" } },
-                    "stiType": { "type": "string" },
-                    "notNull": { "type": "boolean" },
-                    "hasDefault": { "type": "boolean" }
-                  },
-                  "additionalProperties": false
-                }
-              },
-              "relations": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "object",
-                  "properties": {
-                    "derived": { "type": "string", "const": "async" },
-                    "polymorphic": { "type": ["string", "boolean"], "enum": ["notNull", true] },
-                    "large": { "type": "boolean" },
-                    "orderBy": { "type": "string" },
-                    "stiType": { "type": "string" },
-                    "subType": { "type": "string" },
-                    "skipRecursiveRelations": { "type": "boolean" },
-                    "notNull": { "type": "boolean" },
-                    "hasDefault": { "type": "boolean" }
-                  },
-                  "additionalProperties": false
-                }
-              },
-              "abstract": { "type": "boolean" },
-              "orderBy": { "type": "string" },
-              "uniqueBy": {
-                "anyOf": [
-                  { "type": "string" },
-                  { "type": "array", "items": { "type": "string" } },
-                  { "type": "array", "items": { "type": "array", "items": { "type": "string" } } }
-                ]
-              }
-            },
-            "required": ["tag"],
-            "additionalProperties": false
           },
-          "default": {}
+          "relations": {
+            "type": "object",
+            "propertyNames": { "type": "string" },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "derived": { "type": "string", "const": "async" },
+                "polymorphic": {
+                  "anyOf": [{ "type": "string", "const": "notNull" }, { "type": "boolean", "const": true }]
+                },
+                "large": { "type": "boolean" },
+                "orderBy": { "type": "string" },
+                "stiType": { "type": "string" },
+                "subType": { "type": "string" },
+                "skipRecursiveRelations": { "type": "boolean" },
+                "notNull": { "type": "boolean" },
+                "hasDefault": { "type": "boolean" }
+              },
+              "additionalProperties": false
+            }
+          },
+          "abstract": { "type": "boolean" },
+          "orderBy": { "type": "string" },
+          "uniqueBy": {
+            "anyOf": [
+              { "type": "string" },
+              { "type": "array", "items": { "type": "string" } },
+              { "type": "array", "items": { "type": "array", "items": { "type": "string" } } }
+            ]
+          }
         },
-        "ignoredTables": { "type": "array", "items": { "type": "string" } },
-        "idType": { "type": "string", "enum": ["tagged-string", "untagged-string", "number"] },
-        "nonDeferredForeignKeys": { "type": "string", "enum": ["error", "warn", "ignore"] },
-        "esm": { "type": "boolean" },
-        "docs": { "type": "boolean" },
-        "outputDocs": { "type": "boolean" },
-        "allowImportingTsExtensions": { "type": "boolean" },
-        "codemodVersion": { "type": "integer", "minimum": 0, "default": 0 },
-        "schemas": { "type": "array", "items": { "type": "string" } }
-      },
-      "additionalProperties": false
-    }
+        "required": ["tag"],
+        "additionalProperties": false
+      }
+    },
+    "ignoredTables": { "type": "array", "items": { "type": "string" } },
+    "idType": {
+      "anyOf": [
+        { "type": "string", "const": "tagged-string" },
+        { "type": "string", "const": "untagged-string" },
+        { "type": "string", "const": "number" }
+      ]
+    },
+    "nonDeferredForeignKeys": {
+      "anyOf": [
+        { "type": "string", "const": "error" },
+        { "type": "string", "const": "warn" },
+        { "type": "string", "const": "ignore" }
+      ]
+    },
+    "esm": { "type": "boolean" },
+    "paginationStyle": {
+      "default": "cursor",
+      "anyOf": [{ "type": "string", "const": "cursor" }, { "type": "string", "const": "limit" }]
+    },
+    "docs": { "type": "boolean" },
+    "outputDocs": { "type": "boolean" },
+    "allowImportingTsExtensions": { "type": "boolean" },
+    "codemodVersion": { "default": 0, "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+    "schemas": { "type": "array", "items": { "type": "string" } }
   },
-  "$schema": "http://json-schema.org/draft-07/schema#"
+  "additionalProperties": false
 }

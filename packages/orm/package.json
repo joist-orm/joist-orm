@@ -95,7 +95,7 @@
   "peerDependencies": {
     "knex": "^3.1.0",
     "node-pg-migrate": "^8.0.4",
-    "pg": "^8.16.3",
+    "pg": "^8.22.0",
     "pg-types": "^4.1.0",
     "postgres-array": "^3.0.4"
   },
@@ -114,11 +114,11 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^24.12.4",
+    "@types/node": "^26.0.1",
     "@types/pg": "^8.20.0",
-    "prettier": "^3.8.3",
+    "prettier": "^3.8.4",
     "prettier-plugin-organize-imports": "^4.3.0",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "5.9.3"
+    "typescript": "6.0.3"
   }
 }

@@ -37,7 +37,19 @@ import {
   type ValueGraphQLFilter,
 } from "joist-orm";
 import type { Context } from "src/context";
-import { type Author, type AuthorId, type Entity, EntityManager, newTag, type Tag, tagMeta } from "../entities";
+import {
+  type Author,
+  type AuthorId,
+  type Book,
+  type BookId,
+  type DatabaseOwner,
+  type DatabaseOwnerId,
+  type Entity,
+  EntityManager,
+  newTag,
+  type Tag,
+  tagMeta,
+} from "../entities";
 
 export type TagId = Flavor<string, "Tag">;
 
@@ -45,27 +57,42 @@ export interface TagFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: never };
   title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   authors: { kind: "m2m"; type: Author };
+  books: { kind: "m2m"; type: Book };
+  databaseOwners: { kind: "m2m"; type: DatabaseOwner };
 }
 
 export interface TagOpts {
   title: string;
   authors?: Author[];
+  books?: Book[];
+  databaseOwners?: DatabaseOwner[];
 }
 
 export interface TagIdsOpts {
   authorIds?: AuthorId[] | null;
+  bookIds?: BookId[] | null;
+  databaseOwnerIds?: DatabaseOwnerId[] | null;
 }
 
 export interface TagFilter {
   id?: ValueFilter<TagId, never> | null;
   title?: ValueFilter<string, never>;
   authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
+  books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  databaseOwners?: EntityFilter<DatabaseOwner, DatabaseOwnerId, FilterOf<DatabaseOwner>, null | undefined>;
 }
 
 export interface TagGraphQLFilter {
   id?: ValueGraphQLFilter<TagId>;
   title?: ValueGraphQLFilter<string>;
   authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  databaseOwners?: EntityGraphQLFilter<
+    DatabaseOwner,
+    DatabaseOwnerId,
+    GraphQLFilterOf<DatabaseOwner>,
+    null | undefined
+  >;
 }
 
 export interface TagOrder {
@@ -110,6 +137,8 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   declare readonly __type: { 0: "Tag" };
 
   readonly authors: Collection<Tag, Author> = hasManyToMany(); // author_to_tags tagId authorId
+  readonly books: Collection<Tag, Book> = hasManyToMany(); // book_to_tags tagId bookId
+  readonly databaseOwners: Collection<Tag, DatabaseOwner> = hasManyToMany(); // database_owner_to_tags tagId databaseOwnerId
 
   get id(): TagId {
     return this.idMaybe || failNoIdYet("Tag");

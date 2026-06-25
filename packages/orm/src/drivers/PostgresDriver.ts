@@ -260,19 +260,38 @@ async function m2mBatchInsert(
   const meta2 = m2m.otherMeta;
   const col1Values = newRows.map((row) => keyToNumber(meta1, row.columns[m2m.columnName].idTagged));
   const col2Values = newRows.map((row) => keyToNumber(meta2, row.columns[m2m.otherColumnName].idTagged));
-  const sql = cleanSql(`
-    WITH data AS (SELECT unnest(?::int[]) as ${kq(m2m.columnName)}, unnest(?::int[]) as ${kq(m2m.otherColumnName)})
-    INSERT INTO ${kq(joinTableName)} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
-    SELECT * FROM data
-    ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO UPDATE SET id = ${kq(joinTableName)}.id
-    RETURNING id;
-  `);
-  const pgSql = toPgParams(sql);
-  onQuery?.(pgSql);
-  const { rows } = await client.query(pgSql, [col1Values, col2Values]);
-  for (let i = 0; i < rows.length; i++) {
-    newRows[i].id = rows[i].id;
-    newRows[i].op = JoinRowOperation.Flushed;
+  if (m2m.hasJoinTableId) {
+    const sql = cleanSql(`
+      WITH data AS (SELECT unnest(?::int[]) as ${kq(m2m.columnName)}, unnest(?::int[]) as ${kq(m2m.otherColumnName)})
+      INSERT INTO ${kq(joinTableName)} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
+      SELECT * FROM data
+      ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO UPDATE SET id = ${kq(joinTableName)}.id
+      RETURNING id;
+    `);
+    const pgSql = toPgParams(sql);
+    onQuery?.(pgSql);
+    const { rows } = await client.query(pgSql, [col1Values, col2Values]);
+    for (let i = 0; i < rows.length; i++) {
+      newRows[i].id = rows[i].id;
+      newRows[i].op = JoinRowOperation.Flushed;
+      newRows[i].persisted = true;
+    }
+  } else {
+    // Id-less join tables have no surrogate id to return; the FK pair is the PK, so just
+    // insert and let any duplicate be a no-op.
+    const sql = cleanSql(`
+      WITH data AS (SELECT unnest(?::int[]) as ${kq(m2m.columnName)}, unnest(?::int[]) as ${kq(m2m.otherColumnName)})
+      INSERT INTO ${kq(joinTableName)} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
+      SELECT * FROM data
+      ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO NOTHING;
+    `);
+    const pgSql = toPgParams(sql);
+    onQuery?.(pgSql);
+    await client.query(pgSql, [col1Values, col2Values]);
+    for (const row of newRows) {
+      row.op = JoinRowOperation.Flushed;
+      row.persisted = true;
+    }
   }
 }
 
@@ -284,8 +303,9 @@ async function m2mBatchDelete(
   onQuery: OnQuery,
 ) {
   if (deletedRows.length === 0) return;
-  // `remove`s that were done against unloaded ManyToManyCollections will not have row ids
-  const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== -1);
+  // Rows with a surrogate id are deleted by id; rows without one — id-less tables, or `remove`s
+  // done against an unloaded ManyToManyCollection — are deleted by their (col1, col2) composite.
+  const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== undefined);
   if (haveIds.length > 0) {
     const pgSql = toPgParams(`DELETE FROM ${kq(joinTableName)} WHERE id = ANY(?)`);
     onQuery?.(pgSql);
@@ -297,7 +317,7 @@ async function m2mBatchDelete(
       // as the deTagId will be undefined for those, as we're skipping adding them to the database.
       .filter((row) => {
         const e1 = row.columns[m2m.columnName];
-        const e2 = row.columns[m2m.columnName];
+        const e2 = row.columns[m2m.otherColumnName];
         return !e1.isNewEntity && !e2.isNewEntity;
       })
       .map(
@@ -319,6 +339,7 @@ async function m2mBatchDelete(
   }
   deletedRows.forEach((row) => {
     row.id = undefined;
+    row.persisted = false;
     row.op = JoinRowOperation.Flushed;
   });
 }

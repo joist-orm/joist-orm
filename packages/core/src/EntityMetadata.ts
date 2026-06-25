@@ -195,6 +195,8 @@ export type ManyToManyField = {
   immutable: false;
   joinTableName: string;
   columnNames: [string, string];
+  /** Whether the join table has a surrogate `id` PK; if false the FK pair is the composite PK. */
+  hasJoinTableId: boolean;
 };
 
 export type OneToOneField = {

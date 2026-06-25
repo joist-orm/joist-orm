@@ -3,7 +3,7 @@ import { getEmInternalApi } from "./EntityManager";
 import { EntityMetadata, getBaseAndSelfMetas } from "./EntityMetadata";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo } from "./Todo";
-import { keyToTaggedId } from "./keys";
+import { keyToNumber, keyToTaggedId } from "./keys";
 import { remove } from "./utils";
 
 /**
@@ -21,6 +21,8 @@ export type ManyToManyLike = {
   otherFieldName: string;
   meta: EntityMetadata;
   otherMeta: EntityMetadata;
+  /** Whether the join table has a surrogate `id` PK; if false the FK pair is the composite PK. */
+  hasJoinTableId: boolean;
 };
 
 /** A small holder around m2m join rows, which we treat as psuedo-entities. */
@@ -51,6 +53,7 @@ export class JoinRows {
       const row = {
         op: JoinRowOperation.Pending,
         id: undefined,
+        persisted: false,
         columns: { [m2m.columnName]: e1, [m2m.otherColumnName]: e2 },
       } satisfies JoinRow;
       this.rows.push(row);
@@ -73,7 +76,8 @@ export class JoinRows {
     const { em } = this.m2m.entity;
     const existing = this.index.get(m2m, e1, e2);
     if (existing) {
-      if (!existing.id) {
+      if (!existing.persisted) {
+        // It was only added in-memory and never persisted, so just drop it
         remove(this.rows, existing);
         this.index.remove(existing);
       } else {
@@ -81,10 +85,12 @@ export class JoinRows {
       }
       existing.op = JoinRowOperation.Pending;
     } else {
-      // Use -1 to force the sortJoinRows to notice us as dirty ("delete: true but id is set")
+      // We're removing against an unloaded collection, so assume the row exists in the database
+      // (persisted: true) and queue a delete; the delete keys off the (col1, col2) composite.
       const row = {
         op: JoinRowOperation.Pending,
-        id: -1,
+        id: undefined,
+        persisted: true,
         columns: { [m2m.columnName]: e1, [m2m.otherColumnName]: e2 },
         deleted: true,
       } satisfies JoinRow;
@@ -118,14 +124,14 @@ export class JoinRows {
       .getOthers(m2m.columnName, e1)
       .filter(
         (r) =>
-          ((r.id === undefined && r.op === JoinRowOperation.Pending) || r.op === JoinRowOperation.Flushed) &&
+          ((!r.persisted && r.op === JoinRowOperation.Pending) || r.op === JoinRowOperation.Flushed) &&
           r.deleted !== true,
       );
     return addedRows.map((r) => r.columns[otherColumnName]);
   }
 
   /** Adds an existing join row to this table. */
-  addPreloadedRow(m2m: ManyToManyLike, id: number, e1: Entity, e2: Entity): void {
+  addPreloadedRow(m2m: ManyToManyLike, id: number | undefined, e1: Entity, e2: Entity): void {
     const existing = this.index.get(m2m, e1, e2);
     if (existing) {
       // Treat any existing WIP change as source-of-truth, so leave it alone
@@ -133,6 +139,7 @@ export class JoinRows {
       const row = {
         op: JoinRowOperation.Pending,
         id,
+        persisted: true,
         columns: { [m2m.columnName]: e1, [m2m.otherColumnName]: e2 },
       } satisfies JoinRow;
       this.rows.push(row);
@@ -172,6 +179,7 @@ export class JoinRows {
         row = {
           op: JoinRowOperation.Completed,
           id: dbRow.id,
+          persisted: true,
           columns: { [column1]: e1, [column2]: e2 },
           created_at: dbRow.created_at,
         };
@@ -179,8 +187,9 @@ export class JoinRows {
         this.index.add(this.m2m, e1, e2, row);
       } else {
         // If a placeholder row was created while a ManyToManyCollection was unloaded, and we find it during
-        // a subsequent load/query, update its id to be what is in the database.
+        // a subsequent load/query, update its id to be what is in the database and mark it persisted.
         row.id = dbRow.id;
+        row.persisted = true;
         // Mark this row as still valid
         existingRows.delete(row);
       }
@@ -200,8 +209,8 @@ export class JoinRows {
 
   /** Scans our `rows` for newly-added/newly-deleted rows that need `INSERT`s/`UPDATE`s. */
   toTodo(): JoinRowTodo | undefined {
-    const newRows = this.rows.filter((r) => r.id === undefined && r.deleted !== true && r.op === "pending");
-    const deletedRows = this.rows.filter((r) => r.id !== undefined && r.deleted === true && r.op === "pending");
+    const newRows = this.rows.filter((r) => !r.persisted && r.deleted !== true && r.op === "pending");
+    const deletedRows = this.rows.filter((r) => r.persisted && r.deleted === true && r.op === "pending");
     if (newRows.length === 0 && deletedRows.length === 0) {
       return undefined;
     }
@@ -226,13 +235,14 @@ export class JoinRows {
 /**
  * A "psuedo-entity" for a join row.
  *
- * We treat this as a special entity, i.e. it has a primary key, `id`, two "relations" to each
- * entity for the current row, and an optional `created_at` column.
+ * We treat this as a special entity, i.e. it has two "relations" to each entity for the current
+ * row, an optional surrogate `id` primary key, and an optional `created_at` column.
  *
  * These rows are immutable, i.e. once created we don't change either FK, and instead make
  * collection changes only by inserting new rows and deleting old rows.
  *
- * This makes the column1+column2 combination a composite key.
+ * This makes the column1+column2 combination a composite key. For id-less join tables, that
+ * composite is the actual primary key and `id` is always undefined.
  */
 export interface JoinRow {
   /**
@@ -243,7 +253,28 @@ export interface JoinRow {
    * - `completed` means we've been flushed and `em.flush` has completed
    */
   op: JoinRowOperation;
+  /** The surrogate key for id-ful join tables; always undefined for id-less tables. */
   id: number | undefined;
+  /**
+   * Whether this row exists (or is assumed to exist) in the database.
+   *
+   * This is orthogonal to `op` (the flush lifecycle) and is what distinguishes a pending insert
+   * from a pending delete: a `pending` row that is `!persisted` is a pending INSERT (added in
+   * memory, not yet in the db), while a `pending` row that is `persisted` is a pending DELETE
+   * (in the db, marked `deleted`). `op` alone cannot tell these apart, because both inserts and
+   * deletes walk the same `pending -> flushed -> completed` progression.
+   *
+   * We track this as its own flag rather than inferring it from `id` being set/unset, because
+   * id-less join tables (whose PK is just the composite of the two FKs) never have an `id` — so
+   * `id === undefined` would be ambiguous. `persisted` is the id-agnostic generalization of the
+   * `id`-is-set check that id-ful tables historically relied on.
+   *
+   * It must survive add/remove/re-add sequences: e.g. loading a row (persisted), removing it
+   * (pending delete), then re-adding it (`deleted` flipped back to false, `op` back to `pending`)
+   * leaves a `pending && !deleted` row that looks identical to a fresh insert — but it is still in
+   * the db, so a subsequent remove must issue a DELETE, which only `persisted` can tell us.
+   */
+  persisted: boolean;
   columns: Record<string, Entity>;
   created_at?: Date;
   deleted?: boolean;
@@ -260,7 +291,7 @@ export enum JoinRowOperation {
 class ManyToManyIndex {
   private indexes: Record<string, Map<Entity, Map<Entity, JoinRow>>> = {};
 
-  constructor(m2m: ManyToManyLike) {
+  constructor(private readonly m2m: ManyToManyLike) {
     this.indexes[m2m.columnName] = new Map();
     this.indexes[m2m.otherColumnName] = new Map();
   }
@@ -286,10 +317,23 @@ class ManyToManyIndex {
     // It's empty m2m collection won't have any other entities, and so no index entries
     const map = this.indexes[columnName].get(entity);
     if (!map) return [];
-    // Sort by join-row id for a stable order regardless of how many batches contributed
-    // rows — the underlying Map preserves insertion order, which depends on DataLoader
-    // timing and is non-deterministic across processes. New rows (id === undefined) sort last.
-    return Array.from(map.values()).sort((a, b) => (a.id ?? Infinity) - (b.id ?? Infinity));
+    // Sort for a stable order regardless of how many batches contributed rows — the underlying
+    // Map preserves insertion order, which depends on DataLoader timing and is non-deterministic
+    // across processes. New rows (no key yet) sort last.
+    const rows = Array.from(map.values());
+    if (this.m2m.hasJoinTableId) {
+      // Sort by join-row id.
+      return rows.sort((a, b) => (a.id ?? Infinity) - (b.id ?? Infinity));
+    } else {
+      // Id-less tables have no surrogate id, so sort by the other entity's id.
+      const otherColumn = columnName === this.m2m.columnName ? this.m2m.otherColumnName : this.m2m.columnName;
+      const otherMeta = columnName === this.m2m.columnName ? this.m2m.otherMeta : this.m2m.meta;
+      const key = (r: JoinRow) => {
+        const other = r.columns[otherColumn];
+        return other.isNewEntity ? Infinity : keyToNumber(otherMeta, other.id)!;
+      };
+      return rows.sort((a, b) => key(a) - key(b));
+    }
   }
 
   #doAdd(index: Map<Entity, Map<Entity, JoinRow>>, e1: Entity, e2: Entity, value: JoinRow): void {

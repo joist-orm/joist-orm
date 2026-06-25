@@ -52,8 +52,8 @@ import {
   ReactiveReference,
   ReadOnlyCollection,
   RelationsOf,
-  Scope,
   SSAssert,
+  Scope,
   TaggedId,
   ToJsonHint,
   ValueFilter,
@@ -148,12 +148,16 @@ export function generateEntityCodegenFile(
   const baseEntity = dbMeta.entities.find((e) => e.name === meta.baseClassName);
   const subEntities = dbMeta.entities.filter((e) => e.baseClassName === meta.name);
   const base = baseEntity?.entity.typeSymbol ?? code`${BaseEntity}<${EntityManager}, ${idType}>`;
-  const maybeBaseFields = baseEntity ? code`extends ${imp("t:" + baseEntity.entity.fieldsName + "@./entities.ts")}` : "";
+  const maybeBaseFields = baseEntity
+    ? code`extends ${imp("t:" + baseEntity.entity.fieldsName + "@./entities.ts")}`
+    : "";
   const maybeBaseOpts = baseEntity ? code`extends ${baseEntity.entity.optsType}` : "";
   const maybeBaseIdOpts = baseEntity
     ? code`extends ${imp("t:" + baseEntity.entity.idsOptsName + "@./entities.ts")}`
     : "";
-  const maybeBaseFilter = baseEntity ? code`extends ${imp("t:" + baseEntity.entity.filterName + "@./entities.ts")}` : "";
+  const maybeBaseFilter = baseEntity
+    ? code`extends ${imp("t:" + baseEntity.entity.filterName + "@./entities.ts")}`
+    : "";
   const maybeBaseGqlFilter = baseEntity
     ? code`extends ${imp("t:" + baseEntity.entity.graphqlFilterName + "@./entities.ts")}`
     : "";
@@ -1110,6 +1114,7 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
         "${columnName}",
         "${otherFieldName}",
         "${otherColumnName}",
+        ${m2m.hasJoinTableId},
       );
     `;
     return { kind: "concrete", fieldName, decl, init };
@@ -1124,7 +1129,21 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     return { kind: "concrete", fieldName, decl, init };
   });
 
-  return [o2m, o2mBase, lo2m, m2o, m2oBase, m2oRecursive, m2mRecursive, o2o, o2oBase, m2m, m2mBase, lm2m, polymorphic].flat();
+  return [
+    o2m,
+    o2mBase,
+    lo2m,
+    m2o,
+    m2oBase,
+    m2oRecursive,
+    m2mRecursive,
+    o2o,
+    o2oBase,
+    m2m,
+    m2mBase,
+    lm2m,
+    polymorphic,
+  ].flat();
 }
 
 /** Makes the field required if there is a `NOT NULL` and no db-or-config default. */

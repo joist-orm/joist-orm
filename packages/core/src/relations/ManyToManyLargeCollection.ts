@@ -14,6 +14,7 @@ export function hasLargeManyToMany<T extends Entity, U extends Entity>(
   columnName: string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
+  hasJoinTableId: boolean,
 ): LargeCollection<T, U> {
   let otherMeta: EntityMetadata<U>;
   return lazyField((entity: T, fieldName) => {
@@ -26,6 +27,7 @@ export function hasLargeManyToMany<T extends Entity, U extends Entity>(
       otherMeta,
       otherFieldName,
       otherColumnName,
+      hasJoinTableId,
     );
   });
 }
@@ -49,6 +51,7 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
     public otherMeta: EntityMetadata,
     public otherFieldName: keyof U & string,
     public otherColumnName: string,
+    public hasJoinTableId: boolean = true,
   ) {}
 
   async find(id: IdOf<U>): Promise<U | undefined> {

@@ -495,18 +495,21 @@ describe("EntityManager.queries", () => {
 
     const em = newEntityManager();
     const where = { text: "comment", parent: [] } satisfies CommentFilter;
-    // Make sure the `parent: []` doesn't turn into an empty `()` condition
+    // `parent: []` means "parent is in the empty set", i.e. it should match nothing, just like
+    // a non-poly m2o `{ publisher: [] }` does, instead of being pruned and matching everything.
     const comments = await em.find(Comment, where);
-    expect(comments.length).toEqual(1);
-    expect(comments[0].text).toEqual("comment");
+    expect(comments.length).toEqual(0);
 
     expect(parseFindQuery(cm, where, opts)).toMatchObject({
       selects: [`c.*`],
       tables: [{ alias: "c", table: "comments", join: "primary" }],
       condition: {
         op: "and",
-        // And we prune the entire parent condition
-        conditions: [{ alias: "c", column: "text", dbType: "text", cond: { kind: "eq", value: "comment" } }],
+        // The empty `parent` becomes a single always-false `in: []` condition
+        conditions: [
+          { alias: "c", column: "text", dbType: "text", cond: { kind: "eq", value: "comment" } },
+          { alias: "c", column: "parent_author_id", dbType: "int", cond: { kind: "in", value: [] } },
+        ],
       },
       orderBys: [expect.anything()],
     });
@@ -537,6 +540,28 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const where = { publisher: { id: { in: [] } } } satisfies AuthorFilter;
     const authors = await em.findGql(Author, where);
+    expect(authors.length).toEqual(0);
+
+    expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      orderBys: [expect.anything()],
+      condition: {
+        op: "and",
+        conditions: [{ alias: "a", column: "publisher_id", dbType: "int", cond: { kind: "in", value: [] } }],
+      },
+    });
+  });
+
+  it("can find by foreign key in empty list", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    // `publisher: []` means "publisher is in the empty set", i.e. it matches nothing (not "any publisher")
+    const where = { publisher: [] } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
     expect(authors.length).toEqual(0);
 
     expect(parseAndOptimizeFindQuery(am, where, opts)).toMatchObject({

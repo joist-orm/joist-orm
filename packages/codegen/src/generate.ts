@@ -38,7 +38,10 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     await syncDocs(config.entitiesDirectory, entityNames);
   }
 
-  const scopeMembersByEntity = await findAllEntityScopes(config, entityNames);
+  const scopeMembersByEntity = await findAllEntityScopes(
+    config,
+    entities.map((meta) => meta.entity),
+  );
 
   const entityFiles = entities
     .map((meta) => {

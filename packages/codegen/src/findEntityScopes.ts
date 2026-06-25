@@ -3,6 +3,7 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import ts from "typescript";
 import { type Config } from "./config";
+import { type Entity } from "./EntityDbMetadata";
 
 /** Each `static active = ...` scope in an entity. */
 export interface ScopeMember {
@@ -15,13 +16,13 @@ export interface ScopeMember {
 export type ScopeMembersByEntity = Record<string, ScopeMember[]>;
 
 /** Finds static scope declarations for all entity files. */
-export async function findAllEntityScopes(config: Config, entityNames: string[]): Promise<ScopeMembersByEntity> {
-  return Object.fromEntries(await Promise.all(entityNames.map((entityName) => findEntityScopes(config, entityName))));
+export async function findAllEntityScopes(config: Config, entities: Entity[]): Promise<ScopeMembersByEntity> {
+  return Object.fromEntries(await Promise.all(entities.map((entity) => findEntityScopes(config, entity))));
 }
 
 /** Finds static scope declarations a given entity file. */
-async function findEntityScopes(config: Config, entityName: string): Promise<[string, ScopeMember[]]> {
-  const scopeTypeName = `${entityName}Scope`;
+async function findEntityScopes(config: Config, entity: Entity): Promise<[string, ScopeMember[]]> {
+  const { name: entityName, scopeName: scopeTypeName } = entity;
   // i.e. `authorScope`, the conventional renamed-to-`scope` import users put in their entity files.
   const scopeFnName = `${camelCase(entityName)}Scope`;
 

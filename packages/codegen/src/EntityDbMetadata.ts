@@ -65,6 +65,10 @@ export type Entity = {
   /** The symbol pointing to the entity's config const. */
   configConst: Import;
   optsType: Import;
+  /** The name of the entity's `Scope` type, i.e. `AuthorScope` (or `Author_Scope` on conflict). */
+  scopeName: string;
+  /** The name of the entity's `Scopes` type, i.e. `AuthorScopes` (or `Author_Scopes` on conflict). */
+  scopesName: string;
 };
 
 export type DatabaseColumnType =
@@ -881,7 +885,27 @@ export function makeEntity(entityName: string): Entity {
     configConst: imp(`${camelCase(entityName)}Config@./entities.ts`, {
       definedIn: `./codegen/${entityName}Codegen.ts`,
     }),
+    // The conventional names; `resolveScopeNameConflicts` rewrites these if they collide with an entity.
+    scopeName: `${entityName}Scope`,
+    scopesName: `${entityName}Scopes`,
   };
+}
+
+/**
+ * Rewrites scope type names that collide with an entity's own type name.
+ *
+ * `makeEntity` defaults `scopeName`/`scopesName` to `${name}Scope`/`${name}Scopes`, but if a separate
+ * entity is literally named e.g. `AuthorScope`, our generated `AuthorScope` scope type would collide
+ * with that entity's class, so we fall back to `Author_Scope` / `Author_Scopes`.
+ */
+export function resolveScopeNameConflicts(db: DbMetadata): void {
+  for (const meta of db.entities) {
+    const { name } = meta;
+    if (db.entitiesByName[`${name}Scope`] || db.entitiesByName[`${name}Scopes`]) {
+      meta.entity.scopeName = `${name}_Scope`;
+      meta.entity.scopesName = `${name}_Scopes`;
+    }
+  }
 }
 
 function metaName(entityName: string): string {

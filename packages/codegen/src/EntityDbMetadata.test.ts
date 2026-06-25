@@ -1,5 +1,5 @@
 import { config } from "./config";
-import { collectionName, makeEntity, oneToOneName, referenceName } from "./EntityDbMetadata";
+import { collectionName, makeEntity, oneToOneName, referenceName, resolveScopeNameConflicts } from "./EntityDbMetadata";
 import { tableToEntityName } from "./utils";
 
 const relationDummy: any = { type: "m2o", sourceTable: { m2oRelations: [] }, foreignKey: { columns: [{}] } };
@@ -93,6 +93,30 @@ describe("EntityDbMetadata", () => {
     });
   });
 
+  describe("resolveScopeNameConflicts", () => {
+    it("defaults to conventional scope names", () => {
+      expect(makeEntity("Author")).toMatchObject({ scopeName: "AuthorScope", scopesName: "AuthorScopes" });
+    });
+
+    it("leaves names alone when there is no conflict", () => {
+      const entities = [fakeMeta("Author"), fakeMeta("Book")];
+      resolveScopeNameConflicts(asDb(entities));
+      expect(entities[0].entity).toMatchObject({ scopeName: "AuthorScope", scopesName: "AuthorScopes" });
+    });
+
+    it("falls back to underscore names when an entity is named EntityScope", () => {
+      const entities = [fakeMeta("Author"), fakeMeta("AuthorScope")];
+      resolveScopeNameConflicts(asDb(entities));
+      expect(entities[0].entity).toMatchObject({ scopeName: "Author_Scope", scopesName: "Author_Scopes" });
+    });
+
+    it("falls back to underscore names when an entity is named EntityScopes", () => {
+      const entities = [fakeMeta("Author"), fakeMeta("AuthorScopes")];
+      resolveScopeNameConflicts(asDb(entities));
+      expect(entities[0].entity).toMatchObject({ scopeName: "Author_Scope", scopesName: "Author_Scopes" });
+    });
+  });
+
   describe("referenceName", () => {
     it("returns the camel case of the column name without an id prefix", () => {
       // For `image.book_id` create `Image.book`
@@ -126,3 +150,11 @@ describe("EntityDbMetadata", () => {
     });
   });
 });
+
+function fakeMeta(name: string): any {
+  return { name, entity: makeEntity(name) };
+}
+
+function asDb(entities: any[]): any {
+  return { entities, entitiesByName: Object.fromEntries(entities.map((e) => [e.name, e])) };
+}

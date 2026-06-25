@@ -57,7 +57,7 @@ export async function joistCodegen() {
   applyInheritanceUpdates(config, dbMetadata);
 
   // Now that all entities (incl. STI subtypes) are known, fix up any colliding scope type names
-  resolveScopeNameConflicts(dbMetadata);
+  resolveScopeNameConflicts(config, dbMetadata);
 
   // Assign any new tags and write them back to the config file
   assignTags(config, dbMetadata);

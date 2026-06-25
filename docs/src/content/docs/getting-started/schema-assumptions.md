@@ -25,7 +25,7 @@ Joist supports several types of `id` columns:
 * `uuid` with Joist's `RandomUuidAssigner`
 * `text` with an `IdAssigner` that manually assigns ids (i.e. [cuid](https://github.com/paralleldrive/cuid)s)
 
-We also currently require `id` columns for many-to-many tables, see [this issue](https://github.com/joist-orm/joist-orm/issues/1321).
+Many-to-many join tables may use either a surrogate `id` column or just the composite of their two foreign keys as the primary key; see [Many-to-Many Join Tables](#many-to-many-join-tables).
 
 :::
 
@@ -155,12 +155,17 @@ If you do not wish to use enums as tables, native enums can be used as well, and
 
 ## Many-to-Many Join Tables
 
-Joist expects join tables to have three or four columns:
+Joist expects join tables to have two to four columns:
 
-* `id` primary key/serial
 * One foreign key column for 1st side
 * One foreign key column for 2nd side
+* `id` primary key/serial (optional)
 * `created_at` `timestamptz` (optional)
+
+The `id` column is optional: if present, it is the primary key; if omitted, the composite of the
+two foreign keys is the primary key (i.e. the join table is just the pair of foreign keys). Either
+way the pair of foreign keys must be unique — which an id-less table's composite primary key
+enforces on its own, and an id-ful table should enforce with a unique constraint.
 
 (`updated_at` is not applicable to join tables.)
 

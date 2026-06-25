@@ -482,6 +482,13 @@ export function parseFindQuery(
             }) satisfies ColumnCondition[];
             targetCb.addParsedExpression({ kind: "exp", op: "or", conditions });
           } else if (f.kind === "in") {
+            // An empty `in` matches nothing, so emit a single always-false condition (consistent
+            // with a non-poly m2o `{ relation: [] }`); otherwise grouping by constructor would yield
+            // zero conditions and prune the filter entirely, incorrectly matching every row.
+            if (f.value.length === 0) {
+              targetCb.addValueFilter(fa, field.serde.columns[0], { kind: "in", value: [] });
+              return;
+            }
             // Split up the ids by constructor
             const idsByConstructor = groupBy(f.value, (id) => getConstructorFromTaggedId(id as string).name);
             // Or together `parent_book_id in (1,2,3) OR parent_author_id IN (4,5,6)`
@@ -500,9 +507,7 @@ export function parseFindQuery(
                 cond: mapToDb(column, { kind: "in", value: ids }),
               } satisfies ColumnCondition;
             });
-            if (conditions.length > 0) {
-              targetCb.addParsedExpression({ kind: "exp", op: "or", conditions });
-            }
+            targetCb.addParsedExpression({ kind: "exp", op: "or", conditions });
           } else {
             throw new Error(`Filters on polys for ${f.kind} are not supported`);
           }

@@ -2,6 +2,7 @@
 import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { EnumJoinRow, EnumJoinRows, EnumManyToManyLike } from "./EnumJoinRows";
 import { JoinRow, JoinRows, ManyToManyLike } from "./JoinRows";
 import { groupBy } from "./utils";
 
@@ -73,6 +74,23 @@ export interface JoinRowTodo {
 export function combineJoinRows(joinRows: Record<string, JoinRows>): Record<string, JoinRowTodo> {
   const todos: Record<string, JoinRowTodo> = {};
   for (const [joinTableName, rows] of Object.entries(joinRows)) {
+    const todo = rows.toTodo();
+    if (todo) todos[joinTableName] = todo;
+  }
+  return todos;
+}
+
+export interface EnumJoinRowTodo {
+  m2m: EnumManyToManyLike;
+  newRows: EnumJoinRow[];
+  deletedRows: EnumJoinRow[];
+  resetAfterFlushed: () => void;
+}
+
+/** Combines the per-table `EnumJoinRows` into `EnumJoinRowTodo`s for the driver to flush. */
+export function combineEnumJoinRows(enumJoinRows: Record<string, EnumJoinRows>): Record<string, EnumJoinRowTodo> {
+  const todos: Record<string, EnumJoinRowTodo> = {};
+  for (const [joinTableName, rows] of Object.entries(enumJoinRows)) {
     const todo = rows.toTodo();
     if (todo) todos[joinTableName] = todo;
   }

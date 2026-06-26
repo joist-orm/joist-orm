@@ -1,5 +1,6 @@
 export { Collection, LoadedCollection, isCollection, isLoadedCollection } from "./Collection";
 export { CustomCollection, hasCustomCollection } from "./CustomCollection";
+export { EnumCollection, EnumCollectionImpl, LoadedEnumCollection, hasEnumCollection } from "./EnumCollection";
 export { CustomReference, hasCustomReference } from "./CustomReference";
 export { AsyncMethod, LoadedMethod, hasAsyncMethod } from "./hasAsyncMethod";
 export {

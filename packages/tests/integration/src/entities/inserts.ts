@@ -277,6 +277,10 @@ export function insertPublisherToTag(row: { id?: number; publisher_id: number; t
   return testDriver.insert("publishers_to_tags", row);
 }
 
+export function insertPublisherLogoColor(row: { id?: number; publisher_id: number; logo_color_id: number }) {
+  return testDriver.insert("publisher_logo_colors", row);
+}
+
 export function insertAuthorToTag(row: { id?: number; author_id: number; tag_id: number }) {
   return testDriver.insert("authors_to_tags", row);
 }

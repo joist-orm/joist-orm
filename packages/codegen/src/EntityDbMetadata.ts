@@ -230,6 +230,23 @@ export type ManyToManyField = Field & {
   hasJoinTableId: boolean;
 };
 
+/** I.e. a `Publisher.logoColors` m2m to the `color` enum table, backed by `publisher_logo_colors`. */
+export type ManyToManyEnumField = Field & {
+  kind: "m2mEnum";
+  joinTableName: string;
+  /** The entity's FK column, e.g. `publisher_id`. */
+  columnName: string;
+  /** The enum's FK column, e.g. `logo_color_id`. */
+  otherColumnName: string;
+  enumName: string;
+  enumType: Import;
+  enumDetailType: Import;
+  enumDetailsType: Import;
+  enumRows: EnumRow[];
+  /** Whether the join table has a surrogate `id` PK; if false the FK pair is the composite PK. */
+  hasJoinTableId: boolean;
+};
+
 /** I.e. a `Comment.parent` reference that groups `comments.parent_book_id` and `comments.parent_book_review_id`. */
 export type PolymorphicField = Field & {
   kind: "poly";
@@ -266,6 +283,7 @@ export class EntityDbMetadata {
   oneToOnes: OneToOneField[];
   manyToManys: ManyToManyField[];
   largeManyToManys: ManyToManyField[];
+  manyToManyEnums: ManyToManyEnumField[];
   polymorphics: PolymorphicField[];
   tableName: string;
   tagName: string;
@@ -359,10 +377,20 @@ export class EntityDbMetadata {
       // by looking for only true join tables, i.e. tables with only id, fk1, and fk2.
       .filter((r) => isJoinTable(config, r.joinTable))
       .filter((r) => !isMultiColumnForeignKey(r))
+      // Join tables whose "other" side is an enum table become EnumCollections instead.
+      .filter((r) => !isEnumTable(config, r.targetTable))
       .map((r) => newManyToManyField(config, this.entity, r))
       .filter((f) => !f.ignore);
     this.manyToManys = allManyToManys.filter((f) => !f.isLargeCollection);
     this.largeManyToManys = allManyToManys.filter((f) => f.isLargeCollection);
+
+    // A join table between us and an enum table, i.e. `Publisher.logoColors`.
+    this.manyToManyEnums = table.m2mRelations
+      .filter((r) => isJoinTable(config, r.joinTable))
+      .filter((r) => !isMultiColumnForeignKey(r))
+      .filter((r) => isEnumTable(config, r.targetTable))
+      .map((r) => newManyToManyEnumField(config, this.entity, r, enums))
+      .filter((f) => !f.ignore);
 
     this.polymorphics = polymorphicRelations(config, table).map((rc) =>
       newPolymorphicField(config, table, this.entity, rc),
@@ -721,6 +749,32 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
   };
 }
 
+function newManyToManyEnumField(
+  config: Config,
+  entity: Entity,
+  r: M2MRelation,
+  enums: EnumMetadata,
+): ManyToManyEnumField {
+  const { foreignKey, targetForeignKey, targetTable } = r;
+  // For publisher_logo_colors.logo_color_id use the `logo_color_id` column i.e. `logoColors`
+  const fieldName = manyToManyName(targetForeignKey.columns[0]);
+  const enumName = tableToEntityName(config, targetTable);
+  return {
+    kind: "m2mEnum",
+    joinTableName: r.joinTable.name,
+    fieldName,
+    columnName: foreignKey.columns[0].name,
+    otherColumnName: targetForeignKey.columns[0].name,
+    enumName,
+    enumType: imp(`${enumName}@./entities.ts`),
+    enumDetailType: imp(`${plural(enumName)}@./entities.ts`),
+    enumDetailsType: imp(`${enumName}Details@./entities.ts`),
+    enumRows: enums[targetTable.name].rows,
+    ignore: isFieldIgnored(config, entity, fieldName),
+    hasJoinTableId: joinTableHasId(r.joinTable),
+  };
+}
+
 function newPolymorphicField(config: Config, table: Table, entity: Entity, pr: PolymorphicRelation) {
   const { fieldName, notNull } = pr;
   const components = table.m2oRelations
@@ -883,6 +937,7 @@ export function failIfOverlappingFieldNames(entity: EntityDbMetadata): void {
     ...entity.oneToOnes,
     ...entity.manyToManys,
     ...entity.largeManyToManys,
+    ...entity.manyToManyEnums,
     ...entity.polymorphics,
   ];
   Object.entries(groupBy(allFields, (f) => f.fieldName)).forEach(([fieldName, fields]) => {

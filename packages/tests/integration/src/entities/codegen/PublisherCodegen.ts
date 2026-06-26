@@ -7,12 +7,14 @@ import {
   type EntityFilter,
   type EntityGraphQLFilter,
   type EntityMetadata,
+  type EnumCollection,
   failNoIdYet,
   type FieldsOf,
   type FilterOf,
   type Flavor,
   getField,
   type GraphQLFilterOf,
+  hasEnumCollection,
   hasMany,
   hasManyToMany,
   hasOne,
@@ -50,6 +52,7 @@ import {
   type AuthorOrder,
   type BookAdvance,
   type BookAdvanceId,
+  Color,
   type Comment,
   type CommentId,
   type Entity,
@@ -104,6 +107,7 @@ export interface PublisherFields {
   spotlightAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
   tags: { kind: "m2m"; type: Tag };
   tasks: { kind: "m2m"; type: TaskOld };
+  logoColors: { kind: "enum"; type: Color[]; nullable: never };
   authors: { kind: "o2m"; type: Author };
   bookAdvances: { kind: "o2m"; type: BookAdvance };
   comments: { kind: "o2m"; type: Comment };
@@ -129,6 +133,7 @@ export interface PublisherOpts {
   images?: Image[];
   tags?: Tag[];
   tasks?: TaskOld[];
+  logoColors?: Color[];
 }
 
 export interface PublisherIdsOpts {
@@ -176,6 +181,7 @@ export interface PublisherFilter {
   images?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
   tasks?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null | undefined>;
+  logoColors?: ValueFilter<Color, null | undefined>;
 }
 
 export interface PublisherGraphQLFilter {
@@ -215,6 +221,7 @@ export interface PublisherGraphQLFilter {
   images?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
   tasks?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null | undefined>;
+  logoColors?: ValueGraphQLFilter<Color>;
 }
 
 export interface PublisherOrder {
@@ -299,6 +306,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   readonly spotlightAuthor: ManyToOneReference<Publisher, Author, undefined> = hasOne();
   readonly tags: Collection<Publisher, Tag> = hasManyToMany(); // publishers_to_tags publisher_id tag_id
   readonly tasks: Collection<Publisher, TaskOld> = hasManyToMany(); // tasks_to_publishers publisher_id task_id
+  readonly logoColors: EnumCollection<Publisher, Color> = hasEnumCollection(); // publisher_logo_colors publisher_id logo_color_id
 
   get id(): PublisherId {
     return this.idMaybe || failNoIdYet("Publisher");

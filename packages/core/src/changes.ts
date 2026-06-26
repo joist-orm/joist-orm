@@ -325,7 +325,7 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
         return new ManyToOneFieldStatusImpl(entity, p);
       } else if (kind === "enum" || kind === "primitive" || kind === "primaryKey") {
         return new PrimitiveFieldStatusImpl(entity, p);
-      } else if (kind === "lo2m" || kind === "o2o") {
+      } else if (kind === "lo2m" || kind === "o2o" || kind === "m2mEnum") {
         throw new Error(`changes are not supported for ${kind} ${p}`);
       } else {
         return assertNever(kind);
@@ -337,6 +337,7 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
 const addOriginalEntity: Record<Field["kind"], boolean> = {
   m2o: true,
   poly: true,
+  m2mEnum: false,
   enum: false,
   lo2m: false,
   m2m: false,

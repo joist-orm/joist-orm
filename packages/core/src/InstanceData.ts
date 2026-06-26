@@ -133,7 +133,7 @@ export class InstanceData {
         // We only do reference/collection fields and skip the primitives, b/c we assume something like
         // `{ books: "title" }` doesn't need `resetIsLoaded(..., "title")` b/c the same hint will also
         // be watching "did books change", and so get reset that way.
-        if (field.kind === "m2o" || field.kind === "poly" || field.kind === "m2m") {
+        if (field.kind === "m2o" || field.kind === "poly" || field.kind === "m2m" || field.kind === "m2mEnum") {
           getEmInternalApi(this.em).isLoadedCache.resetIsLoaded(this.entity, field.fieldName);
         } else if (field.kind === "primitive" || field.kind === "enum" || field.kind === "primaryKey") {
           // Any reactable watching these fields will also be watching reference/collection

@@ -1,6 +1,7 @@
 import {
   EntityMetadata,
   Field,
+  ManyToManyEnumField,
   ManyToManyField,
   ManyToOneField,
   OneToManyField,
@@ -10,7 +11,9 @@ import {
 export function canPreload(
   meta: EntityMetadata,
   field: Field,
-): field is OneToManyField | ManyToOneField | ManyToManyField | OneToOneField {
+): field is OneToManyField | ManyToOneField | ManyToManyField | ManyToManyEnumField | OneToOneField {
+  // Enum m2ms have no "other" entity table (the join target is an enum), so they're always preloadable.
+  if (field.kind === "m2mEnum") return true;
   if (field.kind === "o2m" || field.kind === "o2o" || field.kind === "m2o" || field.kind === "m2m") {
     const otherMeta = field.otherMetadata();
     // We don't support preloading tables with inheritance yet

@@ -2,6 +2,7 @@ import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { getInstanceData } from "./BaseEntity";
 import { BatchLoader } from "./batchloaders/BatchLoader";
 import { loadOperation } from "./batchloaders/loadBatchLoader";
+import { enumCollectionLoadOperation } from "./batchloaders/enumCollectionBatchLoader";
 import { manyToManyLoadOperation } from "./batchloaders/manyToManyBatchLoader";
 import { oneToManyLoadOperation } from "./batchloaders/oneToManyBatchLoader";
 import { oneToOneLoadOperation } from "./batchloaders/oneToOneBatchLoader";
@@ -78,6 +79,7 @@ import {
   ValidationRuleResult,
 } from "./index";
 import { IsLoadedCache } from "./IsLoadedCache";
+import { EnumJoinRows, EnumManyToManyLike } from "./EnumJoinRows";
 import { JoinRows, ManyToManyLike } from "./JoinRows";
 import { isLoadedForPopulate, Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { WriteFn } from "./logging/FactoryLogger";
@@ -95,7 +97,7 @@ import { Collection } from "./relations/Collection";
 import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { RecursiveCycleError } from "./relations/RecursiveCollection";
 import { isSelectAllFilter } from "./scopes";
-import { combineJoinRows, createTodos, JoinRowTodo, Todo } from "./Todo";
+import { combineEnumJoinRows, combineJoinRows, createTodos, EnumJoinRowTodo, JoinRowTodo, Todo } from "./Todo";
 import { runInTrustedContext } from "./trusted";
 import { OptsOf, OrderOf } from "./typeMap";
 import { upsert } from "./upsert";
@@ -204,6 +206,7 @@ export type FindOperation =
   | typeof loadOperation
   | typeof manyToManyLoadOperation
   | typeof manyToManyFindOperation
+  | typeof enumCollectionLoadOperation
   | typeof oneToManyLoadOperation
   | typeof oneToManyFindOperation
   | typeof oneToOneLoadOperation
@@ -263,6 +266,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
   #dataloaders: Record<string, LoaderCache> = {};
   #batchLoaders: Record<string, Record<string, BatchLoader<any>>> = {};
   readonly #joinRows: Record<string, JoinRows> = {};
+  readonly #enumJoinRows: Record<string, EnumJoinRows> = {};
   /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
   readonly #rm = new ReactionsManager(this);
   /** Ensures our `em.flush` method is not interrupted. */
@@ -343,6 +347,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 
       joinRows(m2m: ManyToManyLike): JoinRows {
         return getOrSet(em.#joinRows, m2m.joinTableName, () => new JoinRows(m2m, em.#rm));
+      },
+
+      enumJoinRows(m2m: EnumManyToManyLike): EnumJoinRows {
+        return getOrSet(em.#enumJoinRows, m2m.joinTableName, () => new EnumJoinRows(m2m, em.#rm));
       },
 
       /** Returns `a:1.books` if it's in our preload cache. */
@@ -1004,6 +1012,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               case "primaryKey":
               case "o2m":
               case "m2m":
+              case "m2mEnum":
               case "o2o":
               case "lo2m":
                 return undefined;
@@ -1141,6 +1150,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           kind === "primitive" ||
           kind === "primaryKey" ||
           kind === "enum" ||
+          kind === "m2mEnum" ||
           kind === "poly" ||
           kind === "m2o" ||
           kind === "lo2m"
@@ -1744,9 +1754,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       const runValidation = async (
         entityTodos: Record<string, Todo>,
         joinRowTodos: Record<string, JoinRowTodo>,
+        enumJoinRowTodos: Record<string, EnumJoinRowTodo>,
         validate: boolean,
       ) => {
-        const changedEntities = entitiesFromTodos(entityTodos, joinRowTodos);
+        const changedEntities = entitiesFromTodos(entityTodos, joinRowTodos, enumJoinRowTodos);
         try {
           this.#isValidating = true;
           await pluginManager.beforeValidate(changedEntities);
@@ -1759,7 +1770,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
             // and we still have TypeErrors (from derived valeus), they were real, unrelated errors
             // that the user should see.
             if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
-            await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos);
+            await validateReactiveRules(this, this.#rm.logger, entityTodos, joinRowTodos, enumJoinRowTodos);
             await afterValidation(this.ctx, entityTodos);
           }
           await pluginManager.afterValidate(changedEntities);
@@ -1776,17 +1787,26 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
       // the full set of entities that will be INSERT/UPDATE/DELETE-d in the database.
       let entityTodos = createTodos(entitiesToFlush);
       let joinRowTodos = combineJoinRows(this.#joinRows);
+      let enumJoinRowTodos = combineEnumJoinRows(this.#enumJoinRows);
 
-      await runValidation(entityTodos, joinRowTodos, !skipValidation);
+      await runValidation(entityTodos, joinRowTodos, enumJoinRowTodos, !skipValidation);
       this.#rm.throwIfAnySuppressedTypeErrors();
       if (suppressedDefaultTypeErrors.length > 0) throw suppressedDefaultTypeErrors[0];
 
-      if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
+      if (
+        Object.keys(entityTodos).length > 0 ||
+        Object.keys(joinRowTodos).length > 0 ||
+        Object.keys(enumJoinRowTodos).length > 0
+      ) {
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
           do {
-            if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos)) {
-              await this.driver.flush(this, entityTodos, joinRowTodos);
+            if (
+              Object.keys(entityTodos).length > 0 ||
+              Object.keys(joinRowTodos).length > 0 ||
+              Object.keys(enumJoinRowTodos).length > 0
+            ) {
+              await this.driver.flush(this, entityTodos, joinRowTodos, enumJoinRowTodos);
             }
             // Now that we've flushed, we can let plugins know what we've done.
             pluginManager.afterWrite(entityTodos, joinRowTodos);
@@ -1812,7 +1832,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               // Recreate `entityTodos` against the only-the-just-changed entities
               entityTodos = createTodos(entitiesToFlush);
               joinRowTodos = combineJoinRows(this.#joinRows);
-              await runValidation(entityTodos, joinRowTodos, true);
+              enumJoinRowTodos = combineEnumJoinRows(this.#enumJoinRows);
+              await runValidation(entityTodos, joinRowTodos, enumJoinRowTodos, true);
               this.#rm.throwIfAnySuppressedTypeErrors();
             } else {
               // Exit the loop
@@ -1842,6 +1863,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // Update the joinRows refs to reflect the new state
         for (const joinRow of Object.values(joinRowTodos)) {
           joinRow.resetAfterFlushed();
+        }
+        for (const enumJoinRow of Object.values(enumJoinRowTodos)) {
+          enumJoinRow.resetAfterFlushed();
         }
         const { mutatedCollections } = getEmInternalApi(this);
         for (const o2m of mutatedCollections.values()) {
@@ -2623,6 +2647,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
 /** Provides an internal API to the `EntityManager`. */
 export interface EntityManagerInternalApi {
   joinRows: (m2m: ManyToManyLike) => JoinRows;
+  enumJoinRows: (m2m: EnumManyToManyLike) => EnumJoinRows;
 
   /** Map of taggedId -> fieldName -> pending children, i.e. when `a1.books` later loads, add/remove b1. */
   pendingPercolate: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>>;
@@ -2722,6 +2747,7 @@ async function validateReactiveRules(
   logger: ReactionLogger | undefined,
   todos: Record<string, Todo>,
   joinRowTodos: Record<string, JoinRowTodo>,
+  enumJoinRowTodos: Record<string, EnumJoinRowTodo>,
 ): Promise<void> {
   logger?.logStartingValidate(em, todos);
 
@@ -2789,7 +2815,18 @@ async function validateReactiveRules(
     return [...p1, ...p2];
   });
 
-  failIfAnyRejected(await Promise.allSettled([...p1, ...p2]));
+  // Enum m2m membership changes only have an entity side (the enum has no reverse field).
+  const pEnum = Object.values(enumJoinRowTodos).flatMap((todo) => {
+    const entities = [...todo.newRows, ...todo.deletedRows].map((jr) => jr.entity);
+    return todo.m2m.meta
+      .reactiveRules!.filter((rule) => rule.fields.includes(todo.m2m.fieldName))
+      .map((rule) => {
+        const triggered = entities.filter((e) => e instanceof todo.m2m.meta.cstr);
+        return followAndQueue(triggered, rule);
+      });
+  });
+
+  failIfAnyRejected(await Promise.allSettled([...p1, ...p2, ...pEnum]));
 
   // Now that we've found the fn+entities to run, run them and collect any errors
   const p3 = [...fns.entries()].flatMap(([fn, entities]) =>
@@ -2886,6 +2923,7 @@ function afterValidation(ctx: unknown, todos: Record<string, Todo>): Promise<unk
 function entitiesFromTodos(
   entityTodos: Record<string, Todo>,
   joinRowTodos: Record<string, JoinRowTodo>,
+  enumJoinRowTodos: Record<string, EnumJoinRowTodo>,
 ): readonly Entity[] {
   const entities = new Set<Entity>();
   for (const todo of Object.values(entityTodos)) {
@@ -2895,6 +2933,9 @@ function entitiesFromTodos(
     [...todo.newRows, ...todo.deletedRows].forEach((row) => {
       Object.values(row.columns).forEach((entity) => entities.add(entity));
     });
+  }
+  for (const todo of Object.values(enumJoinRowTodos)) {
+    [...todo.newRows, ...todo.deletedRows].forEach((row) => entities.add(row.entity));
   }
   return [...entities];
 }

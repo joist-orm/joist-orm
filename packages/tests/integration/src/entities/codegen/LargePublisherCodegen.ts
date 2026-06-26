@@ -6,6 +6,7 @@ import {
   type EntityFilter,
   type EntityGraphQLFilter,
   type EntityMetadata,
+  type EnumCollection,
   failNoIdYet,
   type FilterOf,
   type Flavor,
@@ -45,6 +46,7 @@ import {
   type AuthorId,
   type AuthorOrder,
   type BookAdvance,
+  Color,
   type Comment,
   type Critic,
   type CriticId,
@@ -168,6 +170,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   declare readonly group: ManyToOneReference<LargePublisher, PublisherGroup, undefined>;
   declare readonly tags: Collection<LargePublisher, Tag>;
   declare readonly tasks: Collection<LargePublisher, TaskOld>;
+  declare readonly logoColors: EnumCollection<LargePublisher, Color>;
 
   get id(): LargePublisherId {
     return this.idMaybe || failNoIdYet("LargePublisher");

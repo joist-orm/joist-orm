@@ -2,7 +2,8 @@ import { AliasAssigner } from "../AliasAssigner";
 import { ConditionBuilder } from "../ConditionBuilder";
 import { Entity } from "../Entity";
 import { getEmInternalApi } from "../EntityManager";
-import { EntityMetadata } from "../EntityMetadata";
+import { EntityMetadata, getMetadata, getMetadataForField, ManyToManyEnumField } from "../EntityMetadata";
+import { EnumManyToManyLike } from "../EnumJoinRows";
 import { EntityOrId, HintNode } from "../HintTree";
 import { keyToNumber, keyToTaggedId } from "../keys";
 import { kq, kqDot } from "../keywords";
@@ -114,6 +115,11 @@ function calcLateralJoins<I extends EntityOrId>(
     const field = parentMeta.allFields[key];
     // AsyncProperties don't have fields, which is fine, skip for now...
     if (field && canPreload(parentMeta, field)) {
+      // Enum m2ms have no "other" entity to join/hydrate; just aggregate the join table's enum ids.
+      if (field.kind === "m2mEnum") {
+        results.push(calcEnumLateralJoin(assigner, root, subTree, parentAlias, field, key, pathPrefix));
+        return;
+      }
       const otherMeta = field.otherMetadata();
       const otherField = otherMeta.allFields[field.otherFieldName];
 
@@ -285,6 +291,87 @@ function calcLateralJoins<I extends EntityOrId>(
   });
 
   return results;
+}
+
+/**
+ * Builds the `CROSS JOIN LATERAL` that aggregates an enum-m2m join table (e.g. `publisher_logo_colors`)
+ * into a json array of enum ids, e.g. `[[1], [3]]` (or `[[1, id], [3, id]]` for id-ful join tables).
+ */
+function calcEnumLateralJoin<I extends EntityOrId>(
+  assigner: AliasAssigner,
+  root: { tree: HintNode<I>; alias: string; meta: EntityMetadata },
+  subTree: HintNode<I>,
+  parentAlias: string,
+  field: ManyToManyEnumField,
+  key: string,
+  pathPrefix: string,
+): AggregateJoinResult {
+  const [entityColumn, enumColumn] = field.columnNames;
+  const jtAlias = `_${assigner.getAlias(field.joinTableName)}`;
+  const relationAlias = `_${assigner.getLiteralAlias(`${pathPrefix}${key.toLowerCase()}`)}`;
+
+  const parts = [kqDot(jtAlias, enumColumn)];
+  if (field.hasJoinTableId) parts.push(kqDot(jtAlias, "id"));
+
+  const cb = new ConditionBuilder();
+  cb.addRawCondition({
+    aliases: [jtAlias, parentAlias],
+    condition: `${kqDot(jtAlias, entityColumn)} = ${kqDot(parentAlias, "id")}`,
+    pruneable: true,
+  });
+
+  const needsSubSelect = subTree.entities.size !== root.tree.entities.size;
+  if (needsSubSelect) {
+    cb.addRawCondition({
+      aliases: [root.alias],
+      condition: `${kqDot(root.alias, "id")} = ANY(?)`,
+      bindings: [
+        [...subTree.entities]
+          .filter((e) => typeof e === "string" || !e.isNewEntity)
+          .map((e) => keyToNumber(root.meta, typeof e === "string" ? e : e.id)),
+      ],
+      pruneable: true,
+    });
+  }
+
+  const orderBy = `${kq(jtAlias)}.${kq(field.hasJoinTableId ? "id" : enumColumn)}`;
+  const join: LateralJoinTable = {
+    join: "lateral",
+    alias: jtAlias,
+    fromAlias: "unset",
+    table: field.joinTableName,
+    query: {
+      selects: [`json_agg(json_build_array(${parts.join(", ")}) order by ${orderBy}) as _`],
+      tables: [{ join: "primary", table: field.joinTableName, alias: jtAlias }],
+      condition: cb.toExpressionFilter(),
+      orderBys: [],
+    },
+  };
+
+  const hydrator: AggregateJsonHydrator = (root, parent, arrays) => {
+    const { em } = root;
+    if (subTree.entitiesKind === "instances" && !subTree.entities.has(root as any)) return;
+    if (subTree.entitiesKind === "ids" && !subTree.entities.has(root.idTagged as any)) return;
+    const like: EnumManyToManyLike = {
+      entity: parent,
+      joinTableName: field.joinTableName,
+      columnName: entityColumn,
+      otherColumnName: enumColumn,
+      fieldName: key,
+      meta: getMetadataForField(getMetadata(parent), key),
+      enumDetailType: field.enumDetailType,
+      hasJoinTableId: field.hasJoinTableId,
+    };
+    const api = getEmInternalApi(em);
+    const joinRows = api.enumJoinRows(like);
+    for (const array of arrays) {
+      const enumId = array[0] as number;
+      joinRows.addPreloadedRow(parent, field.hasJoinTableId ? (array[1] as number) : undefined, enumId);
+    }
+    api.setPreloadedRelation(parent.idTagged, key, joinRows.getCodes(parent));
+  };
+
+  return { alias: jtAlias, relationAlias, join, hydrator };
 }
 
 /** A preload-loadable join for a given child, with potentially grand-child joins contained within it. */

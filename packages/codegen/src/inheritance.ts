@@ -163,6 +163,7 @@ function expandSingleTableInheritance(
           oneToOnes: entity.oneToOnes.filter((f) => subTypeFieldNames.includes(f.fieldName)),
           manyToManys: entity.manyToManys.filter((f) => subTypeFieldNames.includes(f.fieldName)),
           largeManyToManys: entity.largeManyToManys.filter((f) => subTypeFieldNames.includes(f.fieldName)),
+          manyToManyEnums: entity.manyToManyEnums.filter((f) => subTypeFieldNames.includes(f.fieldName)),
           polymorphics: entity.polymorphics.filter((f) => subTypeFieldNames.includes(f.fieldName)),
           tagName: entity.tagName,
           createdAt: undefined,
@@ -199,6 +200,7 @@ function expandSingleTableInheritance(
         entity.oneToOnes = entity.oneToOnes.filter((f) => !subTypeFieldNames.includes(f.fieldName));
         entity.manyToManys = entity.manyToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
         entity.largeManyToManys = entity.largeManyToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.manyToManyEnums = entity.manyToManyEnums.filter((f) => !subTypeFieldNames.includes(f.fieldName));
         entity.polymorphics = entity.polymorphics.filter((f) => !subTypeFieldNames.includes(f.fieldName));
         entity.subTypes.push(subEntity);
 

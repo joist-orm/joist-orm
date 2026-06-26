@@ -885,23 +885,27 @@ export function makeEntity(entityName: string): Entity {
     configConst: imp(`${camelCase(entityName)}Config@./entities.ts`, {
       definedIn: `./codegen/${entityName}Codegen.ts`,
     }),
-    // The conventional names; `resolveScopeNameConflicts` rewrites these if they collide with an entity.
+    // The conventional names; `resolveScopeNameConflicts` rewrites these if they collide with another name.
     scopeName: `${entityName}Scope`,
     scopesName: `${entityName}Scopes`,
   };
 }
 
 /**
- * Rewrites scope type names that collide with an entity's own type name.
+ * Rewrites scope type names that collide with another exported type name.
  *
  * `makeEntity` defaults `scopeName`/`scopesName` to `${name}Scope`/`${name}Scopes`, but if a separate
- * entity is literally named e.g. `AuthorScope`, our generated `AuthorScope` scope type would collide
- * with that entity's class, so we fall back to `Author_Scope` / `Author_Scopes`.
+ * entity or enum is literally named e.g. `AuthorScope`, our generated `AuthorScope` scope type would
+ * collide with it, so we fall back to `Author_Scope` / `Author_Scopes`.
  */
-export function resolveScopeNameConflicts(db: DbMetadata): void {
+export function resolveScopeNameConflicts(config: Config, db: DbMetadata): void {
+  // The names exported into `entities.ts` that a scope type could shadow: entities & (singularized) enums.
+  const names = new Set<string>(db.entities.map((meta) => meta.name));
+  for (const enumData of Object.values(db.enums)) names.add(tableToEntityName(config, enumData.table));
+  for (const pgEnum of Object.values(db.pgEnums)) names.add(pgEnum.name);
   for (const meta of db.entities) {
     const { name } = meta;
-    if (db.entitiesByName[`${name}Scope`] || db.entitiesByName[`${name}Scopes`]) {
+    if (names.has(`${name}Scope`) || names.has(`${name}Scopes`)) {
       meta.entity.scopeName = `${name}_Scope`;
       meta.entity.scopesName = `${name}_Scopes`;
     }

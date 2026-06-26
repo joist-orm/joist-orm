@@ -100,19 +100,34 @@ describe("EntityDbMetadata", () => {
 
     it("leaves names alone when there is no conflict", () => {
       const entities = [fakeMeta("Author"), fakeMeta("Book")];
-      resolveScopeNameConflicts(asDb(entities));
+      resolveScopeNameConflicts(defaultConfig, asDb(entities));
       expect(entities[0].entity).toMatchObject({ scopeName: "AuthorScope", scopesName: "AuthorScopes" });
     });
 
     it("falls back to underscore names when an entity is named EntityScope", () => {
       const entities = [fakeMeta("Author"), fakeMeta("AuthorScope")];
-      resolveScopeNameConflicts(asDb(entities));
+      resolveScopeNameConflicts(defaultConfig, asDb(entities));
       expect(entities[0].entity).toMatchObject({ scopeName: "Author_Scope", scopesName: "Author_Scopes" });
     });
 
     it("falls back to underscore names when an entity is named EntityScopes", () => {
       const entities = [fakeMeta("Author"), fakeMeta("AuthorScopes")];
-      resolveScopeNameConflicts(asDb(entities));
+      resolveScopeNameConflicts(defaultConfig, asDb(entities));
+      expect(entities[0].entity).toMatchObject({ scopeName: "Author_Scope", scopesName: "Author_Scopes" });
+    });
+
+    it("falls back to underscore names when an enum is named EntityScope", () => {
+      const entities = [fakeMeta("Author")];
+      // The `author_scopes` enum table is exported as the singularized `AuthorScope`
+      const enums = [{ table: { name: "author_scopes" } }];
+      resolveScopeNameConflicts(defaultConfig, asDb(entities, enums));
+      expect(entities[0].entity).toMatchObject({ scopeName: "Author_Scope", scopesName: "Author_Scopes" });
+    });
+
+    it("falls back to underscore names when a pg enum is named EntityScope", () => {
+      const entities = [fakeMeta("Author")];
+      const pgEnums = [{ name: "AuthorScope" }];
+      resolveScopeNameConflicts(defaultConfig, asDb(entities, [], pgEnums));
       expect(entities[0].entity).toMatchObject({ scopeName: "Author_Scope", scopesName: "Author_Scopes" });
     });
   });
@@ -155,6 +170,11 @@ function fakeMeta(name: string): any {
   return { name, entity: makeEntity(name) };
 }
 
-function asDb(entities: any[]): any {
-  return { entities, entitiesByName: Object.fromEntries(entities.map((e) => [e.name, e])) };
+function asDb(entities: any[], enums: any[] = [], pgEnums: any[] = []): any {
+  return {
+    entities,
+    entitiesByName: Object.fromEntries(entities.map((e) => [e.name, e])),
+    enums: Object.fromEntries(enums.map((e) => [e.table.name, e])),
+    pgEnums: Object.fromEntries(pgEnums.map((e) => [e.name, e])),
+  };
 }

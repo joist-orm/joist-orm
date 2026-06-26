@@ -5,7 +5,9 @@ sidebar:
   order: 3.5
 ---
 
-Scope queries let you name and compose common `em.find` filters for entity classes, i.e. after declaring them on the `Author` entity:
+Scope queries let you name and compose common `em.find` filters for entity classes.
+
+The scope is declared on an entity like `Author` using the `scope` function:
 
 ```ts
 export class Author extends AuthorCodegen {
@@ -17,7 +19,7 @@ export class Author extends AuthorCodegen {
 }
 ```
 
-You can re-use them throughout your codebase:
+And then you can re-use them throughout your codebase:
 
 ```ts
 await Author.adult.find(em);
@@ -28,24 +30,29 @@ await em.find(Author, Author.adult);
 await em.find(Book, { author: Author.adult });
 ```
 
-Scopes provide a typed API for building reusable snippets of `where`, `conditions`, `orderBy`, `limit`, `offset`, and `softDeletes`.
+Allowing you to create reusable, composable snippets of `where`, `conditions`, `orderBy`, `limit`, `offset`, and `softDeletes`.
 
-Internally, scopes are basically syntax-sugar for Joist's regular [em.find](./queries-find), so they share the same semantics and filter syntax.
+Internally, scopes are syntax-sugar for Joist's regular [em.find](./queries-find), so they share the same semantics and filter syntax.
 
 :::tip[info]
 
-Joist's scopes are heavily inspired by Rails scopes, but are strongly-typed and adapted to fit into Joist's conventions.
+Joist's scopes are heavily inspired by Rails scopes 🙏, but are strongly-typed and adapted to fit into Joist's conventions.
 
-For example, Joist's `EntityManager` is fundamental to its Unit of Work & Identity Caching features, so Joist's scopes always require a `.find(em)` to know which `em` to use for loading/caching the entities.
+For example, Joist's `EntityManager` is fundamental to its Unit of Work & Identity Caching features, so Joist's scopes always require a trialing invocation like `.find(em)` to know which `em` to use for loading/caching the entities.
 
 :::
 
 ## Declaring Scopes
 
-Scopes are created in an entity file like `Author.ts` by importing the corresponding `<entity>Scope` function from `./entities` and then, just for convention, renaming it to `scope`:
+Scopes are created in an entity file like `Author.ts` by importing the corresponding `<entity>Scope` function from the code-generated `./entities` file and then, just for convention, renaming it to `scope`:
 
 ```ts
-import { AuthorCodegen, authorConfig as config, authorScope as scope, type AuthorScope } from "./entities";
+import {
+  AuthorCodegen,
+  authorConfig as config,
+  // Import and rename
+  authorScope as scope,
+} from "./entities";
 
 export class Author extends AuthorCodegen {
   // Now invoke `scope(...)` to create the static scope fields
@@ -57,7 +64,7 @@ export class Author extends AuthorCodegen {
 }
 ```
 
-And then **running joist-codegen** after each change to the scopes declarations.
+And then **running joist-codegen** after each change to the `scope` declarations.
 
 The `authorScope as scope` import is already pre-typed for the `Author`, so any filters to `scope(...)` will be type-checked to ensure they use the same fields and operators as `em.find(Author, ...)`.
 
@@ -65,11 +72,13 @@ The `authorScope as scope` import is already pre-typed for the `Author`, so any 
 
 After each scope change to `Author.ts`, you should re-run `joist-codegen` to have the generated `AuthorScopes` type updated.
 
-This "re-codegen after file change" workflow is not ideal, but it's necessary to achieve the recursive `Author.adult.active` ergonomics of Rails scopes, while still being type-safe.
+This "re-codegen after file change" workflow is not ideal, but it's necessary to achieve the chained/recursive `Author.adult.active` ergonomics of Rails scopes, while still being type-safe.
 
 :::
 
-## Filter Scopes
+## Scope Examples
+
+### Filter Scopes
 
 The simplest scope is just a find filter:
 
@@ -80,7 +89,7 @@ export class Author extends AuthorCodegen {
 }
 ```
 
-## Alias-Condition Scopes
+### Alias-Condition Scopes
 
 For filters that are easier to express with Joist aliases, pass a callback:
 
@@ -92,7 +101,7 @@ export class Author extends AuthorCodegen {
 
 The callback receives a typed alias for the entity and returns one condition or an array of conditions.
 
-## Parameterized Scopes
+### Parameterized Scopes
 
 Use `scope.fn` for scopes that take arguments:
 
@@ -109,7 +118,7 @@ await Author.named("a").find(em);
 await Author.named("a").adult.find(em);
 ```
 
-## Relation Filter Scopes
+### Relation Filter Scopes
 
 Scopes can include the same relation filters as `em.find`, including collection relations:
 
@@ -136,7 +145,7 @@ await Author.booksReviewedBy(reviewer).find(em);
 await Author.taggedWith("fiction").find(em);
 ```
 
-## Chaining
+### Chaining
 
 Scopes can be chained together and will use `AND` semantics:
 
@@ -158,7 +167,7 @@ export class Author extends AuthorCodegen {
 }
 ```
 
-## Additional Builders
+### Additional Builders
 
 Every scope also has builder methods for ad-hoc additions:
 
@@ -186,7 +195,7 @@ await Author.adult
 
 The two predicates do not need to match the same book row.
 
-## Using Scopes With em.find
+### Using Scopes With em.find
 
 Scopes can also be passed directly to `em.find` anywhere Joist expects a filter for that entity.
 
@@ -214,24 +223,6 @@ const booksByNamedAdults = await em.find(Book, { author: { firstName: "a1", and:
 Note that when a scope is used as a nested relation filter, only its `where`/`conditions` fragments apply; its
 `orderBy`/`limit`/`offset`/`softDeletes` settings are dropped, since they're only meaningful for the root query.
 
-## Invocation Methods
-
-Scopes are executed by invoking any of the "terminal" methods:
-
-```ts
-const authors = await Author.adult.find(em);
-const author = await Author.adult.findOne(em);
-const required = await Author.adult.findOneOrFail(em);
-const count = await Author.adult.findCount(em);
-const ids = await Author.adult.findIds(em);
-```
-
-`find`, `findOne`, and `findOneOrFail` accept normal find options, including `populate`:
-
-```ts
-const authors = await Author.adult.find(em, { populate: "books" });
-const author = await Author.adult.findOneOrFail(em, { populate: "books" });
-```
 ## Join-Alias Scopes
 
 Alias-condition callbacks usually return conditions against the root alias, but they can also introduce
@@ -265,6 +256,43 @@ Like every other scope fragment, a join-alias scope is re-rooted onto wherever i
 as a root filter (`Author.titleOrRated.find(em)`) and inside a relation filter
 (`em.find(Book, { author: Author.titleOrRated })`) alike.
 
+## Invocation Methods
+
+Scopes are executed by invoking any of the "terminal" methods:
+
+```ts
+const authors = await Author.adult.find(em);
+const author = await Author.adult.findOne(em);
+const required = await Author.adult.findOneOrFail(em);
+const count = await Author.adult.findCount(em);
+const ids = await Author.adult.findIds(em);
+```
+
+`find`, `findOne`, and `findOneOrFail` accept normal find options, including `populate`:
+
+```ts
+const authors = await Author.adult.find(em, { populate: "books" });
+const author = await Author.adult.findOneOrFail(em, { populate: "books" });
+```
+
+## Find Semantics
+
+An important nuance of scopes is that they always compile to SQL and execute against the database.
+
+This is perhaps obvious, but it also means that if you have any work-in-progress changes staged in the `EntityManager`, the scope query will not "see" those changes, until an `em.flush` flushes them to the database.
+
+This is exactly how regular `em.find` queries work, but the ergonomics of scopes are so good, it can be easy to forget they might miss your WIP changes.
+
+In general, it can be safer to rely on relations (like `author.books.get` or `book.author.get`) because Joist ensures that relations' `get` methods always return the latest/WIP results.
+
+But a downside is that, to achieve this, the data for relations must all be in-memory.
+
+So it's a tradeoff:
+
+* Choose scopes for reads that need db-side filtering, and are fine with missing WIP changes, or
+  * For example read-only endpoints that do filtering/pagination of database results.
+* Choose relations for reads that that must always be accurate
+  * For example validation rules and reactions that are actively reacting to just-mutated state.
 
 ## Codegen Details
 

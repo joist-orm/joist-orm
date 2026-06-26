@@ -166,10 +166,11 @@ describe("EntityDbMetadata", () => {
 
     it("falls back when an enum is named EntityScope", () => {
       const entities = [fakeMeta("Author")];
-      // The `author_scopes` enum table is exported as the singularized `AuthorScope`
+      // The `author_scopes` enum table is exported as the singularized `AuthorScope`, and its pluralized
+      // metadata const `AuthorScopes` collides with the entity's `Scopes` type, so both are underscored.
       const enums = [{ table: { name: "author_scopes" } }];
       resolveNameConflicts(defaultConfig, asDb(entities, enums));
-      expect(entities[0].entity).toMatchObject({ scopeName: "Author_Scope" });
+      expect(entities[0].entity).toMatchObject({ scopeName: "Author_Scope", scopesName: "Author_Scopes" });
     });
 
     it("falls back when a pg enum is named EntityOrder", () => {

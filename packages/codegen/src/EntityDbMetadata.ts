@@ -953,9 +953,14 @@ export function canonicalizeOtherEntities(db: DbMetadata): void {
  * the `otherEntity` references that point at it (e.g. `Book.author: AuthorId` follows `Author`'s rename).
  */
 export function resolveNameConflicts(config: Config, db: DbMetadata): void {
-  // The names exported into `entities.ts` that a codegen'd type could shadow: entities & (singularized) enums.
+  // The names exported into `entities.ts` that a codegen'd type could shadow.
   const reserved = new Set<string>(db.entities.map((meta) => meta.name));
-  for (const enumData of Object.values(db.enums)) reserved.add(tableToEntityName(config, enumData.table));
+  for (const enumData of Object.values(db.enums)) {
+    // An enum table exports its (singularized) type, its `Details` type/const, and its pluralized const,
+    // i.e. `ChangeRequestAssetScope`, `ChangeRequestAssetScopeDetails`, and `ChangeRequestAssetScopes`.
+    const enumName = tableToEntityName(config, enumData.table);
+    reserved.add(enumName).add(`${enumName}Details`).add(plural(enumName));
+  }
   for (const pgEnum of Object.values(db.pgEnums)) reserved.add(pgEnum.name);
   for (const meta of db.entities) {
     if (hasNameConflict(meta.name, reserved)) applyEntityNames(meta.entity, reserved);

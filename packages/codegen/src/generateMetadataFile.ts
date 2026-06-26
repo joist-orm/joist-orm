@@ -256,6 +256,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         immutable: false,
         joinTableName: "${m2m.joinTableName}",
         columnNames: ["${m2m.columnName}", "${m2m.otherColumnName}"],
+        hasJoinTableId: ${m2m.hasJoinTableId},
       }
     `;
   });

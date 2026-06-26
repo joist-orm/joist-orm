@@ -173,8 +173,8 @@ function calcLateralJoins<I extends EntityOrId>(
         });
       } else if (otherField.kind === "m2m") {
         m2mAlias = assigner.getAlias(otherField.joinTableName);
-        // Get the m2m row's id to track in JoinRows
-        selects.unshift(kqDot(m2mAlias, "id"));
+        // Get the m2m row's id to track in JoinRows; id-less tables have no surrogate id.
+        if (otherField.hasJoinTableId) selects.unshift(kqDot(m2mAlias, "id"));
         m2mTable = {
           join: "inner",
           table: otherField.joinTableName,
@@ -205,6 +205,15 @@ function calcLateralJoins<I extends EntityOrId>(
         });
       }
 
+      // For m2m, order by the join-row's id so preloaded results match the order the lazy batch
+      // loader returns (which orders by join-row id). Id-less join tables have no surrogate id,
+      // so order by the other entity's FK column (matching the lazy loader & getOthers). Otherwise,
+      // order by the target entity's id.
+      const orderBy =
+        otherField.kind === "m2m" && !otherField.hasJoinTableId
+          ? `${kq(m2mAlias!)}.${kq(otherField.columnNames[0])}`
+          : `${kq(m2mAlias ?? otherAlias)}.id`;
+
       const join: LateralJoinTable = {
         join: "lateral",
         alias: otherAlias,
@@ -213,10 +222,7 @@ function calcLateralJoins<I extends EntityOrId>(
         fromAlias: "unset",
         table: otherMeta.tableName,
         query: {
-          // For m2m, order by the join-row's id so preloaded results match the
-          // order the lazy batch loader returns (which orders by join-row id).
-          // Otherwise, order by the target entity's id.
-          selects: [`json_agg(json_build_array(${selects.join(", ")}) order by ${kq(m2mAlias ?? otherAlias)}.id) as _`],
+          selects: [`json_agg(json_build_array(${selects.join(", ")}) order by ${orderBy}) as _`],
           tables: [
             { join: "primary", table: otherMeta.tableName, alias: otherAlias },
             ...(m2mTable ? [m2mTable] : []),
@@ -229,8 +235,8 @@ function calcLateralJoins<I extends EntityOrId>(
 
       // Pre-compute column names so we don't re-read them per entity
       const columnNames = columns.map((c) => c.columnName);
-      // If we've snuck the m2m row id into the json array, ignore it
-      const m2mOffset = field.kind === "m2m" ? 1 : 0;
+      // If we've snuck the m2m row id into the json array, ignore it (id-less tables have no id)
+      const m2mOffset = field.kind === "m2m" && field.hasJoinTableId ? 1 : 0;
 
       const hydrator: AggregateJsonHydrator = (root, parent, arrays) => {
         const { em } = root;
@@ -259,7 +265,7 @@ function calcLateralJoins<I extends EntityOrId>(
             const m2m = (parent as any)[key];
             getEmInternalApi(em)
               .joinRows(m2m)
-              .addPreloadedRow(m2m, array[0] as any, parent, entity);
+              .addPreloadedRow(m2m, field.hasJoinTableId ? (array[0] as any) : undefined, parent, entity);
           }
           // Within each child, look for grandchildren
           subJoins.forEach((sub, i) => {

@@ -44,5 +44,6 @@ To run tests in this project:
 - Test assertions should use `toMatchEntity` as much as possible
 - Never use `expect.objectContaining`, `toContain`, or `not.toContain`; use `toMatchObject` instead
 - For DB row assertions, use `toMatchObject` on the whole array instead of per-row `length` checks, e.g. `expect(rows).toMatchObject([{ publisher_id: null }, { publisher_id: 1 }])`
+- When asserting on emitted SQL, assert the full query string(s) via `expect(queries).toMatchInlineSnapshot(...)` (reset with `resetQueryCount()` and isolate the queries you care about); never partial-match with `toMatch`/regex fragments or `queries.find(...)`
 - Use tagged ids for `em.load`/`em.loadAll` calls, e.g. `em.load(Author, "a:1")` not `em.load(Author, "1")`
 - Put helper/private functions at the bottom of the file, exported/public functions at the top

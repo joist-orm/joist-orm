@@ -4,8 +4,8 @@ import {
   EntityMetadata,
   getEmInternalApi,
   getInstanceData,
-  getMetadataForField,
   getMetadata,
+  getMetadataForField,
   ManyToManyField,
   ReadOnlyCollection,
 } from "..";
@@ -127,6 +127,10 @@ export class ReactiveManyToManyOtherSideImpl<T extends Entity, U extends Entity>
 
   get otherColumnName(): string {
     return this.#field.columnNames[1];
+  }
+
+  get hasJoinTableId(): boolean {
+    return this.#field.hasJoinTableId;
   }
 
   get otherFieldName(): string {

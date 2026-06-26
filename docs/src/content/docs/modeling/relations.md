@@ -141,7 +141,7 @@ export abstract class BookCodegen {
 }
 ```
 
-These collections work similarly to a `hasMany` collection. When determining if a table is a "join table", joist checks if the table has a single primary key column, two foreign key columns, an optional `created_at` column, and no other columns. Joist also requires that the foreign keys are both `not null` and that the table has a unique constraint on the pair of foreign keys.
+These collections work similarly to a `hasMany` collection. When determining if a table is a "join table", joist checks if the table has two foreign key columns, an optional `created_at` column, and no other columns, with the primary key being either a single surrogate `id` column or the composite of the two foreign keys (an "id-less" join table). Joist also requires that the foreign keys are both `not null` and that the pair of foreign keys is unique — for id-less tables the composite primary key provides this, while id-ful tables need an explicit unique constraint on the pair.
 
 ## Polymorphic References
 

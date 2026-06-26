@@ -27,6 +27,7 @@ import {
   isEnumTable,
   isJoinTable,
   isSubClassTable,
+  joinTableHasId,
   mapSimpleDbTypeToTypescriptType,
   parseOrder,
   tableToEntityName,
@@ -225,6 +226,8 @@ export type ManyToManyField = Field & {
   isLargeCollection: boolean;
   isDeferredAndDeferrable: boolean;
   derived: "async" | "otherSide" | false;
+  /** Whether the join table has a surrogate `id` PK; if false the FK pair is the composite PK. */
+  hasJoinTableId: boolean;
 };
 
 /** I.e. a `Comment.parent` reference that groups `comments.parent_book_id` and `comments.parent_book_review_id`. */
@@ -714,6 +717,7 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
     isLargeCollection: isLargeCollection(config, entity, fieldName),
     isDeferredAndDeferrable,
     derived,
+    hasJoinTableId: joinTableHasId(r.joinTable),
   };
 }
 

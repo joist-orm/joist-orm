@@ -148,12 +148,14 @@ export function generateEntityCodegenFile(
   const baseEntity = dbMeta.entities.find((e) => e.name === meta.baseClassName);
   const subEntities = dbMeta.entities.filter((e) => e.baseClassName === meta.name);
   const base = baseEntity?.entity.typeSymbol ?? code`${BaseEntity}<${EntityManager}, ${idType}>`;
-  const maybeBaseFields = baseEntity ? code`extends ${imp("t:" + baseEntity.name + "Fields@./entities.ts")}` : "";
+  const maybeBaseFields = baseEntity ? code`extends ${imp("t:" + baseEntity.entity.fieldsName + "@./entities.ts")}` : "";
   const maybeBaseOpts = baseEntity ? code`extends ${baseEntity.entity.optsType}` : "";
-  const maybeBaseIdOpts = baseEntity ? code`extends ${imp("t:" + baseEntity.name + "IdsOpts@./entities.ts")}` : "";
-  const maybeBaseFilter = baseEntity ? code`extends ${imp("t:" + baseEntity.name + "Filter@./entities.ts")}` : "";
+  const maybeBaseIdOpts = baseEntity
+    ? code`extends ${imp("t:" + baseEntity.entity.idsOptsName + "@./entities.ts")}`
+    : "";
+  const maybeBaseFilter = baseEntity ? code`extends ${imp("t:" + baseEntity.entity.filterName + "@./entities.ts")}` : "";
   const maybeBaseGqlFilter = baseEntity
-    ? code`extends ${imp("t:" + baseEntity.name + "GraphQLFilter@./entities.ts")}`
+    ? code`extends ${imp("t:" + baseEntity.entity.graphqlFilterName + "@./entities.ts")}`
     : "";
   const maybeBaseOrder = baseEntity ? code`extends ${baseEntity.entity.orderType}` : "";
   const maybePreventBaseTypeInstantiation = meta.abstract
@@ -197,35 +199,35 @@ export function generateEntityCodegenFile(
   }
 
   return code`
-    export type ${entityName}Id = ${Flavor}<${idType}, "${baseEntity ? baseEntity.name : entityName}">;
+    export type ${entity.idName} = ${Flavor}<${idType}, "${baseEntity ? baseEntity.name : entityName}">;
 
     ${generatePolymorphicTypes(meta)}
-    
-    export interface ${entityName}Fields ${maybeBaseFields} {
+
+    export interface ${entity.fieldsName} ${maybeBaseFields} {
       ${generateFieldsType(meta, idType)}
     }
 
-    export interface ${entityName}Opts ${maybeBaseOpts} {
+    export interface ${entity.optsName} ${maybeBaseOpts} {
       ${generateOptsFields(meta)}
     }
 
-    export interface ${entityName}IdsOpts ${maybeBaseIdOpts} {
+    export interface ${entity.idsOptsName} ${maybeBaseIdOpts} {
       ${generateOptIdsFields(meta)}
     }
 
-    export interface ${entityName}Filter ${maybeBaseFilter} {
+    export interface ${entity.filterName} ${maybeBaseFilter} {
       ${generateFilterFields(metasByName, meta)}
     }
 
-    export interface ${entityName}GraphQLFilter ${maybeBaseGqlFilter} {
+    export interface ${entity.graphqlFilterName} ${maybeBaseGqlFilter} {
       ${generateGraphQLFilterFields(metasByName, meta)}
     }
 
-    export interface ${entityName}Order ${maybeBaseOrder} {
+    export interface ${entity.orderName} ${maybeBaseOrder} {
       ${generateOrderFields(meta)}
     }
-    
-    export interface ${entityName}FactoryExtras {
+
+    export interface ${entity.factoryExtrasName} {
       ${generateFactoryExtrasType(meta)}
     }
 
@@ -246,13 +248,13 @@ export function generateEntityCodegenFile(
       interface TypeMap {
         ${entityName}: {
           entityType: ${entityName};
-          filterType: ${entityName}Filter;
-          gqlFilterType: ${entityName}GraphQLFilter;
-          orderType: ${entityName}Order;
-          optsType: ${entityName}Opts;
-          fieldsType: ${entityName}Fields;
-          optIdsType: ${entityName}IdsOpts;
-          factoryExtrasType: ${entityName}FactoryExtras;
+          filterType: ${entity.filterName};
+          gqlFilterType: ${entity.graphqlFilterName};
+          orderType: ${entity.orderName};
+          optsType: ${entity.optsName};
+          fieldsType: ${entity.fieldsName};
+          optIdsType: ${entity.idsOptsName};
+          factoryExtrasType: ${entity.factoryExtrasName};
           factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
         };
       }
@@ -283,11 +285,11 @@ export function generateEntityCodegenFile(
           return code`declare readonly ${r.fieldName}: ${r.decl};${maybeComment(r.comment)}`;
         })}
 
-      get id(): ${entityName}Id {
+      get id(): ${entity.idName} {
         return this.idMaybe || ${failNoIdYet}("${entityName}");
       }
 
-      get idMaybe(): ${entityName}Id | undefined {
+      get idMaybe(): ${entity.idName} | undefined {
         ${idMaybeCode}
       }
 
@@ -302,12 +304,12 @@ export function generateEntityCodegenFile(
       ${primitives}    
 
       ${tsdocComments.entity.setPartial}
-      set(opts: Partial<${entityName}Opts>): void {
+      set(opts: Partial<${entity.optsName}>): void {
         ${setOpts}(this as any as ${entityName}, opts);
       }
-      
+
       ${tsdocComments.entity.setPartial}
-      setPartial(opts: ${PartialOrNull}<${entityName}Opts>): void {
+      setPartial(opts: ${PartialOrNull}<${entity.optsName}>): void {
         ${setOpts}(this as any as ${entityName}, opts as ${OptsOf}<${entityName}>, { partial: true });
       }
 
@@ -580,7 +582,7 @@ function generateOptIdsFields(meta: EntityDbMetadata): Code[] {
 
 function generateFilterFields(metasByName: Record<string, EntityDbMetadata>, meta: EntityDbMetadata): Code[] {
   // Always allow filtering on null to do "child.id is null" for detecting "has no children"
-  const maybeId = meta.baseClassName ? [] : [code`id?: ${ValueFilter}<${meta.entity.name}Id, never> | null;`];
+  const maybeId = meta.baseClassName ? [] : [code`id?: ${ValueFilter}<${meta.entity.idName}, never> | null;`];
   const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
     if (fieldType === "boolean") {
       return code`${fieldName}?: ${BooleanFilter}<${nullOrNever(notNull)}>;`;
@@ -638,7 +640,7 @@ function generateFilterFields(metasByName: Record<string, EntityDbMetadata>, met
 }
 
 function generateGraphQLFilterFields(metasByName: Record<string, EntityDbMetadata>, meta: EntityDbMetadata): Code[] {
-  const maybeId = meta.baseClassName ? [] : [code`id?: ${ValueGraphQLFilter}<${meta.entity.name}Id>;`];
+  const maybeId = meta.baseClassName ? [] : [code`id?: ${ValueGraphQLFilter}<${meta.entity.idName}>;`];
   const primitives = meta.primitives.map(({ fieldName, fieldType }) => {
     if (fieldType === "boolean") {
       return code`${fieldName}?: ${BooleanGraphQLFilter};`;

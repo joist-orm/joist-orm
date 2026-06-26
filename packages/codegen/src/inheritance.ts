@@ -1,4 +1,5 @@
 import {
+  canonicalizeOtherEntities,
   DbMetadata,
   EntityDbMetadata,
   makeEntity,
@@ -15,6 +16,8 @@ export function applyInheritanceUpdates(config: Config, db: DbMetadata): void {
   expandSingleTableInheritance(config, entitiesByName, entities);
   rewriteSingleTableForeignKeys(config, entities);
   setupSubTypeSpecialization(config, entities);
+  // Now that all relations (incl. specialized ones) exist, collapse the duplicate `otherEntity` objects
+  canonicalizeOtherEntities(db);
 }
 
 /**

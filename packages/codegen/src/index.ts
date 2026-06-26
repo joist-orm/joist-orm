@@ -3,7 +3,7 @@ import process from "node:process";
 import { Client } from "pg";
 import pgStructure from "pg-structure";
 import { saveFiles } from "ts-poet";
-import { DbMetadata, EntityDbMetadata, failIfOverlappingFieldNames, resolveScopeNameConflicts } from "./EntityDbMetadata";
+import { DbMetadata, EntityDbMetadata, failIfOverlappingFieldNames, resolveNameConflicts } from "./EntityDbMetadata";
 import { assignTags } from "./assignTags";
 import { maybeRunTransforms } from "./codemods";
 import { Config, loadConfig, stripStiPlaceholders, warnInvalidConfigEntries, writeConfig } from "./config";
@@ -56,8 +56,8 @@ export async function joistCodegen() {
   // Look for STI tables to synthesize separate metas
   applyInheritanceUpdates(config, dbMetadata);
 
-  // Now that all entities (incl. STI subtypes) are known, fix up any colliding scope type names
-  resolveScopeNameConflicts(config, dbMetadata);
+  // Now that all entities (incl. STI subtypes) are known, fix up any colliding codegen'd type names
+  resolveNameConflicts(config, dbMetadata);
 
   // Assign any new tags and write them back to the config file
   assignTags(config, dbMetadata);

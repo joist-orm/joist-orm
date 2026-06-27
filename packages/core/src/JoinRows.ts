@@ -38,6 +38,11 @@ export type ManyToManyLike = {
 /** The value of a join row's column: an `Entity`, or an enum's numeric id for `EnumCollection`s. */
 export type JoinColumnValue = Entity | number;
 
+/** Whether a join column points at a not-yet-inserted entity (enum ids are never "new"). */
+function isNewColumn(value: JoinColumnValue): boolean {
+  return typeof value !== "number" && value.isNewEntity;
+}
+
 /** A small holder around m2m join rows, which we treat as psuedo-entities. */
 export class JoinRows {
   // The in-memory rows for our m2m table.
@@ -239,11 +244,23 @@ export class JoinRows {
             row.op = JoinRowOperation.Completed;
         }
       },
+      // The driver flushes pure (int, int) FK pairs; resolve them here so it never has to know
+      // whether a column points at an entity (use its id) or an enum (its value is already the id).
+      dbValue: (row, columnName) => this.#dbValue(row, columnName),
+      isNew: (row, columnName) => isNewColumn(row.columns[columnName]),
     };
   }
 
   get hasChanges() {
     return this.rows.some(({ op }) => op === JoinRowOperation.Pending || op === JoinRowOperation.Flushed);
+  }
+
+  /** The db int value for `row`'s `columnName`: an entity's id, or (for enums) the enum's id itself. */
+  #dbValue(row: JoinRow, columnName: string): number {
+    const value = row.columns[columnName];
+    if (typeof value === "number") return value;
+    const meta = columnName === this.m2m.columnName ? this.m2m.meta : this.m2m.otherMeta!;
+    return keyToNumber(meta, value.idTagged)!;
   }
 
   /**

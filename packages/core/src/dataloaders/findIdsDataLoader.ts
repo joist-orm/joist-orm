@@ -64,8 +64,8 @@ export function findIdsDataLoader<T extends Entity>(
 
         // Build the list of 'arg1', 'arg2', ... strings
         const { query, findSettings } = entries[0];
-        const argsColumns = collectAndReplaceArgs(query);
-        argsColumns.unshift({ columnName: "tag", dbType: "int" });
+        const args = collectAndReplaceArgs(query, entries);
+        const argsColumns = [{ columnName: "tag", dbType: "int" }, ...args.map((a) => a.column)];
 
         // We're not returning the entities, just selecting their IDs
         const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");
@@ -79,7 +79,7 @@ export function findIdsDataLoader<T extends Entity>(
             { join: "lateral", query, table: meta.tableName, alias: "_data", fromAlias: "_f" },
           ],
           // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
-          ctes: [buildUnnestCte("_find", argsColumns, createColumnValuesFromPrepared(argsColumns, entries))],
+          ctes: [buildUnnestCte("_find", argsColumns, createColumnValuesFromPrepared(args, entries))],
           orderBys: [],
         };
 

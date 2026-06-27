@@ -248,13 +248,12 @@ export function collectAndReplaceArgs(query: ParsedFindQuery, entries: readonly 
           args.push({ column: { columnName: `arg${args.length}`, dbType: c.dbType }, bindingIndex: start });
           args.push({ column: { columnName: `arg${args.length}`, dbType: c.dbType }, bindingIndex: start + 1 });
         } else {
-          // `in`/`nin` compare against an array column; jsonPath needs `::jsonpath` (not `::jsonb`, which
-          // would be an invalid `jsonb @@ jsonb`); everything else uses the column's own dbType.
+          // Figure out the _find CTE's `unnest($n::${dbType})` so Postgres knows what we're sending in
           const dbType =
             kind === "in" || kind === "nin"
-              ? `${c.dbType}[]`
+              ? `${c.dbType}[]` // `in`/`nin` compare against an array column
               : kind === "jsonPathExists" || kind === "jsonPathPredicate"
-                ? "jsonpath"
+                ? "jsonpath" // jsonPath needs `::jsonpath` (not `::jsonb`, which would be an invalid `jsonb @@ jsonb`)
                 : c.dbType;
           args.push({ column: { columnName: `arg${args.length}`, dbType }, bindingIndex: start });
         }

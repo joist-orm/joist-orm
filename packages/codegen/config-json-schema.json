@@ -135,6 +135,7 @@
       "anyOf": [{ "type": "string", "const": "cursor" }, { "type": "string", "const": "limit" }]
     },
     "docs": { "type": "boolean" },
+    "skills": { "type": "boolean" },
     "outputDocs": { "type": "boolean" },
     "allowImportingTsExtensions": { "type": "boolean" },
     "codemodVersion": { "default": 0, "type": "integer", "minimum": 0, "maximum": 9007199254740991 },

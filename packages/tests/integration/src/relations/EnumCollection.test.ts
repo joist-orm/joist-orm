@@ -396,4 +396,41 @@ describe("EnumCollection", () => {
       expect(p.transientFields.logoColorsReactionInvoked).toBe(0);
     });
   });
+
+  describe("clone", () => {
+    it("is not copied by a shallow clone (same as other m2ms)", async () => {
+      await insertPublisher({ id: 1, name: "p1" });
+      await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+      const em = newEntityManager();
+      const p = await em.load(SmallPublisher, "p:1", "logoColors");
+      const p2 = await em.clone(p);
+      expect(await p2.logoColors.load()).toEqual([]);
+    });
+
+    it("cannot be deep-cloned (same as other m2ms)", async () => {
+      await insertPublisher({ id: 1, name: "p1" });
+      await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+      const em = newEntityManager();
+      const p = await em.load(SmallPublisher, "p:1", "logoColors");
+      await expect(em.clone(p, { deep: { logoColors: {} } })).rejects.toThrow("Uncloneable relation: logoColors");
+    });
+  });
+
+  describe("fork", () => {
+    it("carries the collection into the forked em without pending changes", async () => {
+      await insertPublisher({ id: 1, name: "p1" });
+      await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+      await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 3 });
+      const em = newEntityManager();
+      await em.load(SmallPublisher, "p:1", "logoColors");
+      const em2 = em.fork();
+      resetQueryCount();
+      const p2 = em2.getEntity("p:1") as SmallPublisher;
+      // The collection is carried in-memory (no db hit)...
+      expect((p2.logoColors as any).get).toEqual([Color.Red, Color.Blue]);
+      expect(numberOfQueries).toBe(0);
+      // ...and mirrored as already-persisted, so the fork sees no spurious inserts.
+      expect((p2 as any).changes.logoColors.hasChanged).toBe(false);
+    });
+  });
 });

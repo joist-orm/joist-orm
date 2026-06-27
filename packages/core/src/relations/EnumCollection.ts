@@ -179,10 +179,18 @@ export class EnumCollectionImpl<T extends Entity, E>
     for (const code of codes ?? []) this.add(code);
   }
 
-  /** Copies `other`'s codes into us, for `em.clone`. Enum codes have no entity identity to remap. */
+  /**
+   * Mirrors `other`'s codes into us for `em.fork`/`importEntity`.
+   *
+   * Enum codes have no entity identity to remap, and we copy them as already-persisted rows (not
+   * pending adds) so the receiving em doesn't think it has spurious inserts to flush.
+   */
   import(other: EnumCollectionImpl<T, E>): void {
+    if (!other.isLoaded) return;
     this.#loaded = true;
-    for (const code of other.get) this.add(code);
+    for (const code of other.get) {
+      this.#joinRows.addPreloadedRow(this, undefined, this.entity, this.#idOf(code));
+    }
   }
 
   maybeCascadeDelete(): void {

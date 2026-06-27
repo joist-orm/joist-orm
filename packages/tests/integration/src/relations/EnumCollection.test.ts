@@ -272,6 +272,19 @@ describe("EnumCollection", () => {
     expect(await select("publisher_logo_colors")).toEqual([]);
   });
 
+  it("drops pending changes when a loaded-and-mutated entity is deleted", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+    const em = newEntityManager();
+    const p = await em.load(SmallPublisher, "p:1", "logoColors");
+    p.logoColors.add(Color.Green);
+    p.logoColors.remove(Color.Red);
+    em.delete(p);
+    // Should not try to INSERT/DELETE join rows against the now-deleted publisher
+    await em.flush();
+    expect(await select("publisher_logo_colors")).toEqual([]);
+  });
+
   it("returns a matching entity only once when multiple colors match", async () => {
     await insertPublisher({ id: 1, name: "p1" });
     await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });

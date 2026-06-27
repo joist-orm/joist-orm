@@ -305,7 +305,7 @@ function reverseSubHint(
         return [];
       case "m2mEnum":
         // An enum m2m is a leaf of enum codes (no "other side" entity to recurse into); like a m2m,
-        // `EnumJoinRows` calls `queueDownstreamReactables` explicitly when its membership changes.
+        // `JoinRows` calls `queueDownstreamReactables` explicitly when its membership changes.
         _fields.push(key);
         return [];
       default:

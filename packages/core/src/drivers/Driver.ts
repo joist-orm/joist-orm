@@ -1,6 +1,6 @@
 import { EntityManager } from "../EntityManager";
 import { ParsedFindQuery } from "../QueryParser";
-import { EnumJoinRowTodo, JoinRowTodo, Todo } from "../Todo";
+import { JoinRowTodo, Todo } from "../Todo";
 import { PreloadPlugin } from "../plugins/PreloadPlugin";
 
 /**
@@ -23,12 +23,7 @@ export interface Driver<TX = unknown> {
 
   assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void>;
 
-  flush(
-    em: EntityManager,
-    todos: Record<string, Todo>,
-    joinRows: Record<string, JoinRowTodo>,
-    enumJoinRows: Record<string, EnumJoinRowTodo>,
-  ): Promise<void>;
+  flush(em: EntityManager, todos: Record<string, Todo>, joinRows: Record<string, JoinRowTodo>): Promise<void>;
 
   /** Allows the driver to opt `EntityManager`s into plugins it has enabled/supported by default. */
   defaultPlugins: { preloadPlugin?: PreloadPlugin };

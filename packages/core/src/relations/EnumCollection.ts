@@ -2,14 +2,16 @@ import {
   appendStack,
   ensureNotDeleted,
   Entity,
+  EntityMetadata,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
   getMetadataForField,
   ManyToManyEnumField,
+  ManyToManyLike,
 } from "../";
 import { enumCollectionBatchLoader } from "../batchloaders/enumCollectionBatchLoader";
-import { EnumManyToManyLike } from "../EnumJoinRows";
+import { EnumMetadata } from "../EnumMetadata";
 import { lazyField } from "../newEntity";
 import { remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
@@ -66,7 +68,7 @@ export function hasEnumCollection<T extends Entity, E>(): EnumCollection<T, E> {
 
 export class EnumCollectionImpl<T extends Entity, E>
   extends AbstractRelationImpl<T, E[]>
-  implements EnumCollection<T, E>, LoadedEnumCollection<T, E>, EnumManyToManyLike
+  implements EnumCollection<T, E>, LoadedEnumCollection<T, E>, ManyToManyLike
 {
   readonly #field: ManyToManyEnumField;
   #loaded: boolean;
@@ -114,7 +116,7 @@ export class EnumCollectionImpl<T extends Entity, E>
       return;
     }
     if (this.#loaded && this.get.includes(code)) return;
-    this.#joinRows.addNew(this.entity, this.#idOf(code));
+    this.#joinRows.addNew(this, this.entity, this.#idOf(code));
   }
 
   remove(code: E): void {
@@ -123,7 +125,7 @@ export class EnumCollectionImpl<T extends Entity, E>
       remove(this.#pendingSet, code);
       return;
     }
-    this.#joinRows.addRemove(this.entity, this.#idOf(code));
+    this.#joinRows.addRemove(this, this.entity, this.#idOf(code));
   }
 
   set(codes: readonly E[]): void {
@@ -157,7 +159,7 @@ export class EnumCollectionImpl<T extends Entity, E>
     if (!this.#loaded) {
       throw new Error(`${this.entity}.${this.fieldName}.get was called when not loaded`);
     }
-    return this.#joinRows.getCodes(this.entity) as E[];
+    return this.#codesFor(this.entity);
   }
 
   get isLoaded(): boolean {
@@ -189,7 +191,7 @@ export class EnumCollectionImpl<T extends Entity, E>
 
   async cleanupOnEntityDeleted(): Promise<void> {
     // The db cascade-deletes our join rows, so just drop any pending in-memory changes for us.
-    this.#joinRows.removeAllFor(this.entity);
+    this.#joinRows.removeAllFor(this.columnName, this.entity);
   }
 
   get fieldName(): string {
@@ -210,6 +212,13 @@ export class EnumCollectionImpl<T extends Entity, E>
     for (const code of codes) if (!current.includes(code)) this.add(code);
   }
 
+  /** The current (non-deleted) codes for `entity`, sorted by enum id for a stable order. */
+  #codesFor(entity: Entity): E[] {
+    return (this.#joinRows.getOthers(this.columnName, entity) as number[])
+      .sort((a, b) => a - b)
+      .map((id) => this.#field.enumDetailType.findById(id)!.code as E);
+  }
+
   #idOf(code: E): number {
     return this.#field.enumDetailType.getByCode(code).id;
   }
@@ -220,10 +229,11 @@ export class EnumCollectionImpl<T extends Entity, E>
   }
 
   get #joinRows() {
-    return getEmInternalApi(this.entity.em).enumJoinRows(this);
+    return getEmInternalApi(this.entity.em).joinRows(this);
   }
 
-  // The `EnumManyToManyLike` surface, so JoinRows/batch loaders can use us directly.
+  // The `ManyToManyLike` surface, so JoinRows/batch loaders can use us directly. There is no
+  // `otherMeta`/`otherFieldName` because the "other" side is an enum table, not an entity.
 
   get joinTableName(): string {
     return this.#field.joinTableName;
@@ -237,12 +247,20 @@ export class EnumCollectionImpl<T extends Entity, E>
     return this.#field.columnNames[1];
   }
 
-  get meta() {
+  get meta(): EntityMetadata {
     return getMetadataForField(getMetadata(this.entity), this.#field.fieldName);
   }
 
-  get enumDetailType() {
+  get otherEnum(): EnumMetadata<any, any, number> {
     return this.#field.enumDetailType;
+  }
+
+  get otherMeta(): undefined {
+    return undefined;
+  }
+
+  get otherFieldName(): undefined {
+    return undefined;
   }
 
   get hasJoinTableId(): boolean {

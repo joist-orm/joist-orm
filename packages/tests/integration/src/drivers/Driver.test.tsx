@@ -28,7 +28,6 @@ describe("Driver", () => {
             },
           },
           {},
-          {},
         );
         await client.query("COMMIT");
       } catch (e) {

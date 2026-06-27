@@ -1,21 +1,20 @@
 import { EntityManager, getEmInternalApi } from "../EntityManager";
-import { EnumManyToManyLike } from "../EnumJoinRows";
-import { keyToNumber, ParsedFindQuery } from "../index";
+import { keyToNumber, ManyToManyLike, ParsedFindQuery } from "../index";
 import { abbreviation } from "../utils";
 import { BatchLoader } from "./BatchLoader";
 
 export const enumCollectionLoadOperation = "enum-collection-load";
 
 /** Batches `EnumCollection.load` calls via BatchLoader; keys are the owning entities' tagged ids. */
-export function enumCollectionBatchLoader(em: EntityManager, collection: EnumManyToManyLike): BatchLoader<string> {
+export function enumCollectionBatchLoader(em: EntityManager, collection: ManyToManyLike): BatchLoader<string> {
   return em.getBatchLoader(enumCollectionLoadOperation, collection.joinTableName, (keys) =>
     loadBatch(em, collection, keys),
   );
 }
 
-async function loadBatch(em: EntityManager, collection: EnumManyToManyLike, keys: string[]): Promise<void> {
-  const { meta, columnName, otherColumnName, joinTableName, hasJoinTableId } = collection;
-  const joinRows = getEmInternalApi(em).enumJoinRows(collection);
+async function loadBatch(em: EntityManager, collection: ManyToManyLike, keys: string[]): Promise<void> {
+  const { meta, columnName, otherColumnName, joinTableName, hasJoinTableId, otherEnum, fieldName } = collection;
+  const joinRows = getEmInternalApi(em).joinRows(collection);
 
   const alias = abbreviation(joinTableName);
   const query: ParsedFindQuery = {
@@ -44,12 +43,18 @@ async function loadBatch(em: EntityManager, collection: EnumManyToManyLike, keys
   };
 
   const rows = await em["executeFind"](meta, enumCollectionLoadOperation, query, { limit: undefined });
-  await joinRows.loadRows(keys, rows);
+  await joinRows.loadRows(
+    keys.map((id) => [columnName, id]),
+    rows,
+  );
 
   const api = getEmInternalApi(em);
   for (const id of keys) {
     const entity = em.getEntity(id);
     if (!entity) continue;
-    api.setPreloadedRelation(entity.idTagged!, collection.fieldName, joinRows.getCodes(entity));
+    const codes = (joinRows.getOthers(columnName, entity) as number[])
+      .sort((a, b) => a - b)
+      .map((enumId) => otherEnum!.findById(enumId)!.code);
+    api.setPreloadedRelation(entity.idTagged!, fieldName, codes);
   }
 }

@@ -162,6 +162,8 @@ export class RunPlugin extends Plugin {
     const { em } = this;
     const api = getEmInternalApi(em);
     Object.entries(joinRowTodos).forEach(([joinTable, todo]) => {
+      // Enum m2ms (EnumCollections) aren't entity-to-entity, so there's nothing to mirror between ems.
+      if (todo.m2m.otherEnum) return;
       const preloads = new Set<ManyToManyCollection<Entity, Entity>>();
       processJoinRows(em, joinTable, todo.newRows, preloads, (oldEntity, entities) => entities.push(oldEntity));
       processJoinRows(em, joinTable, todo.deletedRows, preloads, (oldEntity, entities) =>
@@ -273,8 +275,9 @@ function processJoinRows(
 ) {
   const api = getEmInternalApi(em);
   rows.forEach((row) => {
-    // A join row's `columns` is always an object with two key/value pairs, one for each side of the m2m
-    const [[col1, e1], [col2, e2]] = Object.entries(row.columns);
+    // A join row's `columns` is always an object with two key/value pairs, one for each side of the m2m.
+    // This only runs for entity-to-entity m2ms (enum m2ms are skipped by the caller), so both are entities.
+    const [[col1, e1], [col2, e2]] = Object.entries(row.columns) as [[string, Entity], [string, Entity]];
     (
       [
         // Each join row needs to append/remove from both sides of the m2m. So we need to do the same operation once for

@@ -3,8 +3,8 @@ import { ConditionBuilder } from "../ConditionBuilder";
 import { Entity } from "../Entity";
 import { getEmInternalApi } from "../EntityManager";
 import { EntityMetadata, getMetadata, getMetadataForField, ManyToManyEnumField } from "../EntityMetadata";
-import { EnumManyToManyLike } from "../EnumJoinRows";
 import { EntityOrId, HintNode } from "../HintTree";
+import { ManyToManyLike } from "../JoinRows";
 import { keyToNumber, keyToTaggedId } from "../keys";
 import { kq, kqDot } from "../keywords";
 import { LoadHint, NestedLoadHint } from "../loadHints";
@@ -352,23 +352,25 @@ function calcEnumLateralJoin<I extends EntityOrId>(
     const { em } = root;
     if (subTree.entitiesKind === "instances" && !subTree.entities.has(root as any)) return;
     if (subTree.entitiesKind === "ids" && !subTree.entities.has(root.idTagged as any)) return;
-    const like: EnumManyToManyLike = {
+    const like: ManyToManyLike = {
       entity: parent,
       joinTableName: field.joinTableName,
       columnName: entityColumn,
       otherColumnName: enumColumn,
       fieldName: key,
       meta: getMetadataForField(getMetadata(parent), key),
-      enumDetailType: field.enumDetailType,
+      otherEnum: field.enumDetailType,
       hasJoinTableId: field.hasJoinTableId,
     };
     const api = getEmInternalApi(em);
-    const joinRows = api.enumJoinRows(like);
+    const joinRows = api.joinRows(like);
+    const codes: any[] = [];
     for (const array of arrays) {
       const enumId = array[0] as number;
-      joinRows.addPreloadedRow(parent, field.hasJoinTableId ? (array[1] as number) : undefined, enumId);
+      joinRows.addPreloadedRow(like, field.hasJoinTableId ? (array[1] as number) : undefined, parent, enumId);
+      codes.push(field.enumDetailType.findById(enumId)!.code);
     }
-    api.setPreloadedRelation(parent.idTagged, key, joinRows.getCodes(parent));
+    api.setPreloadedRelation(parent.idTagged, key, codes);
   };
 
   return { alias: jtAlias, relationAlias, join, hydrator };

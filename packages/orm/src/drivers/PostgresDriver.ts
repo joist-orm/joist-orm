@@ -9,15 +9,14 @@ import {
   driverBeforeCommit,
   ensureRectangularArraySizes,
   EntityManager,
-  EnumJoinRow,
-  EnumJoinRowTodo,
-  EnumManyToManyLike,
+  EntityMetadata,
   fail,
   generateOps,
   getMetadata,
   getRuntimeConfig,
   IdAssigner,
   InsertOp,
+  JoinColumnValue,
   JoinRow,
   JoinRowOperation,
   JoinRowTodo,
@@ -141,7 +140,6 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
     em: EntityManager,
     entityTodos: Record<string, Todo>,
     joinRows: Record<string, JoinRowTodo>,
-    enumJoinRows: Record<string, EnumJoinRowTodo>,
   ): Promise<void> {
     const client = (em.txn ?? fail("Expected EntityManager.txn to be set")) as pg.PoolClient;
     await this.#idAssigner.assignNewIds(entityTodos);
@@ -157,12 +155,6 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
         return [
           m2mBatchInsert(client, joinTableName, m2m, newRows, onQuery),
           m2mBatchDelete(client, joinTableName, m2m, deletedRows, onQuery),
-        ];
-      }),
-      ...Object.entries(enumJoinRows).flatMap(([joinTableName, { m2m, newRows, deletedRows }]) => {
-        return [
-          enumJoinBatchInsert(client, joinTableName, m2m, newRows, onQuery),
-          enumJoinBatchDelete(client, joinTableName, m2m, deletedRows, onQuery),
         ];
       }),
     ]);
@@ -258,6 +250,16 @@ function buildUnnestCte(tableName: string, columns: OpColumn[], columnValues: an
   return [sql, columnValues];
 }
 
+/** The numeric db value for a join column: an entity's id, or (for `EnumCollection`s) the enum id. */
+function toDbId(value: JoinColumnValue, meta: EntityMetadata): number {
+  return typeof value === "number" ? value : keyToNumber(meta, value.idTagged)!;
+}
+
+/** Whether a join column points at a not-yet-inserted entity (enum ids are never "new"). */
+function isNewColumn(value: JoinColumnValue): boolean {
+  return typeof value !== "number" && value.isNewEntity;
+}
+
 async function m2mBatchInsert(
   client: pg.PoolClient,
   joinTableName: string,
@@ -268,8 +270,8 @@ async function m2mBatchInsert(
   if (newRows.length === 0) return;
   const meta1 = getMetadata(m2m.entity);
   const meta2 = m2m.otherMeta;
-  const col1Values = newRows.map((row) => keyToNumber(meta1, row.columns[m2m.columnName].idTagged));
-  const col2Values = newRows.map((row) => keyToNumber(meta2, row.columns[m2m.otherColumnName].idTagged));
+  const col1Values = newRows.map((row) => toDbId(row.columns[m2m.columnName], meta1));
+  const col2Values = newRows.map((row) => toDbId(row.columns[m2m.otherColumnName], meta2!));
   if (m2m.hasJoinTableId) {
     const sql = cleanSql(`
       WITH data AS (SELECT unnest(?::int[]) as ${kq(m2m.columnName)}, unnest(?::int[]) as ${kq(m2m.otherColumnName)})
@@ -325,103 +327,14 @@ async function m2mBatchDelete(
     const data = noIds
       // Watch for m2m rows that got added-then-removed to entities that were themselves added-then-removed,
       // as the deTagId will be undefined for those, as we're skipping adding them to the database.
-      .filter((row) => {
-        const e1 = row.columns[m2m.columnName];
-        const e2 = row.columns[m2m.otherColumnName];
-        return !e1.isNewEntity && !e2.isNewEntity;
-      })
+      .filter((row) => !isNewColumn(row.columns[m2m.columnName]) && !isNewColumn(row.columns[m2m.otherColumnName]))
       .map(
-        (e) =>
+        (row) =>
           [
-            keyToNumber(m2m.meta, e.columns[m2m.columnName].idTagged),
-            keyToNumber(m2m.otherMeta, e.columns[m2m.otherColumnName].idTagged),
+            toDbId(row.columns[m2m.columnName], m2m.meta),
+            toDbId(row.columns[m2m.otherColumnName], m2m.otherMeta!),
           ] as any,
       );
-    if (data.length > 0) {
-      const pgSql = toPgParams(`
-        DELETE FROM ${kq(joinTableName)}
-        WHERE (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) IN (
-          SELECT (data->>0)::int, (data->>1)::int FROM jsonb_array_elements(?) data
-        )`);
-      onQuery?.(pgSql);
-      await client.query(pgSql, [JSON.stringify(data)]);
-    }
-  }
-  deletedRows.forEach((row) => {
-    row.id = undefined;
-    row.persisted = false;
-    row.op = JoinRowOperation.Flushed;
-  });
-}
-
-async function enumJoinBatchInsert(
-  client: pg.PoolClient,
-  joinTableName: string,
-  m2m: EnumManyToManyLike,
-  newRows: EnumJoinRow[],
-  onQuery: OnQuery,
-) {
-  if (newRows.length === 0) return;
-  const meta = m2m.meta;
-  // Skip rows whose entity was created-then-deleted, so we don't FK-violate against a missing row.
-  const rows = newRows.filter((row) => !row.entity.isDeletedEntity || !row.entity.isNewEntity);
-  if (rows.length === 0) return;
-  const col1Values = rows.map((row) => keyToNumber(meta, row.entity.idTagged));
-  const col2Values = rows.map((row) => row.enumId);
-  if (m2m.hasJoinTableId) {
-    const sql = cleanSql(`
-      WITH data AS (SELECT unnest(?::int[]) as ${kq(m2m.columnName)}, unnest(?::int[]) as ${kq(m2m.otherColumnName)})
-      INSERT INTO ${kq(joinTableName)} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
-      SELECT * FROM data
-      ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO UPDATE SET id = ${kq(joinTableName)}.id
-      RETURNING id;
-    `);
-    const pgSql = toPgParams(sql);
-    onQuery?.(pgSql);
-    const { rows: returned } = await client.query(pgSql, [col1Values, col2Values]);
-    for (let i = 0; i < returned.length; i++) {
-      rows[i].id = returned[i].id;
-      rows[i].op = JoinRowOperation.Flushed;
-      rows[i].persisted = true;
-    }
-  } else {
-    const sql = cleanSql(`
-      WITH data AS (SELECT unnest(?::int[]) as ${kq(m2m.columnName)}, unnest(?::int[]) as ${kq(m2m.otherColumnName)})
-      INSERT INTO ${kq(joinTableName)} (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)})
-      SELECT * FROM data
-      ON CONFLICT (${kq(m2m.columnName)}, ${kq(m2m.otherColumnName)}) DO NOTHING;
-    `);
-    const pgSql = toPgParams(sql);
-    onQuery?.(pgSql);
-    await client.query(pgSql, [col1Values, col2Values]);
-    for (const row of rows) {
-      row.op = JoinRowOperation.Flushed;
-      row.persisted = true;
-    }
-  }
-}
-
-async function enumJoinBatchDelete(
-  client: pg.PoolClient,
-  joinTableName: string,
-  m2m: EnumManyToManyLike,
-  deletedRows: EnumJoinRow[],
-  onQuery: OnQuery,
-) {
-  if (deletedRows.length === 0) return;
-  const meta = m2m.meta;
-  // Rows with a surrogate id are deleted by id; id-less rows (or removes against an unloaded
-  // collection) are deleted by their (entityId, enumId) composite.
-  const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== undefined);
-  if (haveIds.length > 0) {
-    const pgSql = toPgParams(`DELETE FROM ${kq(joinTableName)} WHERE id = ANY(?)`);
-    onQuery?.(pgSql);
-    await client.query(pgSql, [haveIds.map((r) => r.id!)]);
-  }
-  if (noIds.length > 0) {
-    const data = noIds
-      .filter((row) => !row.entity.isNewEntity)
-      .map((row) => [keyToNumber(meta, row.entity.idTagged), row.enumId] as any);
     if (data.length > 0) {
       const pgSql = toPgParams(`
         DELETE FROM ${kq(joinTableName)}

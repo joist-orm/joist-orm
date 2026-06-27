@@ -9,7 +9,6 @@ import {
   driverBeforeBegin,
   driverBeforeCommit,
   EntityManager,
-  EnumJoinRowTodo,
   fail,
   IdAssigner,
   JoinRowTodo,
@@ -72,12 +71,7 @@ export class BunPgDriver implements Driver<TransactionSQL> {
     throw new Error("Method not implemented.");
   }
 
-  async flush(
-    em: EntityManager,
-    todos: Record<string, Todo>,
-    joinRows: Record<string, JoinRowTodo>,
-    enumJoinRows: Record<string, EnumJoinRowTodo>,
-  ): Promise<void> {
+  async flush(em: EntityManager, todos: Record<string, Todo>, joinRows: Record<string, JoinRowTodo>): Promise<void> {
     const sql = (em.txn ?? fail("Expected EntityManager.txn to be set")) as TransactionSQL;
     await this.#idAssigner.assignNewIds(todos);
     const ops = generateOps(todos);

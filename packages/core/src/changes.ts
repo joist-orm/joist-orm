@@ -1,10 +1,8 @@
 import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { IdOf } from "./EntityManager";
-import { EnumJoinRows } from "./EnumJoinRows";
 import { getField, isChangeableField } from "./fields";
 import {
-  EnumCollection,
   Field,
   ManyToManyCollection,
   OneToManyCollection,
@@ -15,7 +13,7 @@ import {
   isEntity,
   isId,
 } from "./index";
-import { JoinRows } from "./JoinRows";
+import { JoinColumnValue, JoinRows } from "./JoinRows";
 import { EnumCollectionImpl } from "./relations/EnumCollection";
 import { FieldsOf, OptsOf } from "./typeMap";
 
@@ -192,21 +190,21 @@ export interface EnumCollectionFieldStatus<E> {
 class EnumCollectionFieldStatusImpl<T extends Entity, E> implements EnumCollectionFieldStatus<E> {
   readonly kind = "m2mEnum";
   readonly #entity: T;
-  readonly #collection: EnumCollection<T, E>;
-  readonly #joinRows: EnumJoinRows;
+  readonly #collection: EnumCollectionImpl<T, E>;
+  readonly #joinRows: JoinRows;
 
   constructor(entity: T, fieldName: keyof T) {
     this.#entity = entity;
-    this.#collection = entity[fieldName] as EnumCollection<T, E>;
-    this.#joinRows = getEmInternalApi(entity.em).enumJoinRows(this.#collection as EnumCollectionImpl<T, E>);
+    this.#collection = entity[fieldName] as EnumCollectionImpl<T, E>;
+    this.#joinRows = getEmInternalApi(entity.em).joinRows(this.#collection);
   }
 
   get added(): E[] {
-    return this.#joinRows.addedFor(this.#entity);
+    return this.#toCodes(this.#joinRows.addedFor(this.#collection, this.#entity));
   }
 
   get removed(): E[] {
-    return this.#joinRows.removedFor(this.#entity);
+    return this.#toCodes(this.#joinRows.removedFor(this.#collection, this.#entity));
   }
 
   get changed(): E[] {
@@ -222,8 +220,20 @@ class EnumCollectionFieldStatusImpl<T extends Entity, E> implements EnumCollecti
   }
 
   get originalValues(): Promise<readonly E[]> {
-    // `load()` ensures the persisted (db) rows are in memory; those are the original values.
-    return this.#collection.load().then(() => this.#joinRows.originalFor(this.#entity));
+    // `load()` ensures the persisted (db) rows are in memory, then diff out our pending changes.
+    return this.#collection.load().then((codes) => {
+      const added = new Set(this.added);
+      const enumDetail = this.#collection.otherEnum;
+      return [...codes.filter((c) => !added.has(c)), ...this.removed].sort(
+        (a, b) => enumDetail.getByCode(a).id - enumDetail.getByCode(b).id,
+      );
+    });
+  }
+
+  /** Maps the join rows' enum ids to codes, sorted by enum id for a stable order. */
+  #toCodes(ids: JoinColumnValue[]): E[] {
+    const enumDetail = this.#collection.otherEnum;
+    return (ids as number[]).sort((a, b) => a - b).map((id) => enumDetail.findById(id)!.code as E);
   }
 }
 

@@ -18,6 +18,7 @@ import {
 } from "../QueryParser";
 import { visitConditions } from "../QueryVisitor";
 import { OpColumn } from "../drivers/EntityWriter";
+import { equal, equalArrays } from "../fields";
 import { kqDot } from "../keywords";
 import { LoadHint } from "../loadHints";
 import { hintKey } from "../normalizeHints";
@@ -95,9 +96,9 @@ export function findDataLoader<T extends Entity>(
         const { preloader } = getEmInternalApi(em);
         const preloadJoins = preloader && hint && preloader.getPreloadJoins(meta, buildHintTree(hint), query);
 
-        const argsColumns = collectAndReplaceArgs(query);
-        argsColumns.unshift({ columnName: "tag", dbType: "int" });
-        const columnValues = createColumnValuesFromPrepared(argsColumns, entries);
+        const args = collectAndReplaceArgs(query, entries);
+        const argsColumns: OpColumn[] = [{ columnName: "tag", dbType: "int" }, ...args.map((a) => a.column)];
+        const columnValues = createColumnValuesFromPrepared(args, entries);
         const query2: ParsedFindQuery = {
           ...query,
           selects: ["array_agg(_find.tag) as _tags", ...query.selects],
@@ -193,35 +194,78 @@ class ArgCounter {
 }
 
 /**
- * Recursively finds args in `query` and replaces them with `_find.argX` placeholders.
- *
- * We also return the name/type of each found/rewritten arg so we can build the `_find` CTE table.
+ * A single batched arg: the `_find` CTE column to create, plus the index into each entry's `bindings`
+ * array that fills it. `bindingIndex` can differ from the column's position because inlined constants
+ * are skipped — see {@link collectAndReplaceArgs}.
  */
-export function collectAndReplaceArgs(query: ParsedFindQuery): { columnName: string; dbType: string }[] {
-  const args: { columnName: string; dbType: string }[] = [];
+export interface CteArg {
+  column: OpColumn;
+  bindingIndex: number;
+}
+
+/**
+ * Rewrites each batched arg in `query` into a `_find.argX` placeholder and returns, for each one, the
+ * CTE column to create plus the `bindings` slot that fills it.
+ *
+ * As an optimization, any condition whose value(s) are identical across every batched query is left
+ * inline (using `entries[0]`'s value) so it renders as `col = ?`, letting Postgres plan against the
+ * constant (e.g. use an index) instead of joining against an opaque `_find.argX` column. Only the
+ * genuinely-varying values flow through the CTE.
+ *
+ * The returned array is 1:1 with the CTE's non-`tag` columns — one {@link CteArg} per `_find.argX`.
+ * Because constants are skipped, an arg's column position is NOT its slot in `bindings`, so we return
+ * `bindingIndex` to bridge the two.
+ *
+ * @example
+ * // Batching `{ firstName: "a1", lastName: "l1" }` and `{ firstName: "a1", lastName: "l2" }`:
+ * //   each entry's `bindings` is ["a1", "l1"] / ["a1", "l2"] — slot 0 = firstName, slot 1 = lastName.
+ * //   firstName (slot 0) is constant, so it stays inline as `a.first_name = ?` and is skipped here.
+ * //   lastName (slot 1) varies, so it becomes CTE column `arg0`, fed from binding slot 1:
+ * collectAndReplaceArgs(query, entries);
+ * //=> [{ column: { columnName: "arg0", dbType: "character varying" }, bindingIndex: 1 }]
+ */
+export function collectAndReplaceArgs(query: ParsedFindQuery, entries: readonly { bindings: any[] }[]): CteArg[] {
+  const args: CteArg[] = [];
   const argsIndex = new ArgCounter();
+  // `bindings` were pushed in this same `visitConditions` order, so we can walk the conditions and
+  // each entry's `bindings` in lockstep, deciding per condition whether to inline or batch its value(s).
+  const constant = computeConstantBindings(entries);
+  let bindingIndex = 0;
   visitConditions(query, {
     visitCond(c: ColumnCondition) {
       if ("value" in c.cond) {
         const { kind } = c.cond;
-        if (kind === "in" || kind === "nin") {
-          args.push({ columnName: `arg${args.length}`, dbType: `${c.dbType}[]` });
-          return rewriteToRawCondition(c, argsIndex);
-        } else if (kind === "between") {
-          // between has two values
-          args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
-          args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
-          return rewriteToRawCondition(c, argsIndex);
-        } else if (kind === "jsonPathExists" || kind === "jsonPathPredicate") {
-          // The CTE needs to use `::jsonpath` instead of `::jsonb`, otherwise we'll get an invalid
-          // operator error for `jsonb @@ jsonb`. ...maybe the `ColumnCondition` should have a dbType
-          // baked into its ADT? Then we could avoid this special case handling.
-          args.push({ columnName: `arg${args.length}`, dbType: "jsonpath" });
-          return rewriteToRawCondition(c, argsIndex);
-        } else {
-          args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
-          return rewriteToRawCondition(c, argsIndex);
+        // `between` consumes two bindings, everything else (incl. array `in`/`nin`) consumes one.
+        const consumed = kind === "between" ? 2 : 1;
+        const start = bindingIndex;
+        bindingIndex += consumed;
+        // If every batched query shares this condition's value(s), leave it as a normal `col = ?`
+        // condition (rendered from `entries[0]`'s value) instead of threading it through the CTE.
+        let allConstant = true;
+        for (let k = 0; k < consumed; k++) {
+          if (!constant[start + k]) {
+            allConstant = false;
+            break;
+          }
         }
+        if (allConstant) return;
+        // `arg${args.length}` keeps the CTE column names in step with the `_find.argX` references that
+        // `rewriteToRawCondition` emits, since both only advance for the args we actually batch.
+        if (kind === "between") {
+          args.push({ column: { columnName: `arg${args.length}`, dbType: c.dbType }, bindingIndex: start });
+          args.push({ column: { columnName: `arg${args.length}`, dbType: c.dbType }, bindingIndex: start + 1 });
+        } else {
+          // `in`/`nin` compare against an array column; jsonPath needs `::jsonpath` (not `::jsonb`, which
+          // would be an invalid `jsonb @@ jsonb`); everything else uses the column's own dbType.
+          const dbType =
+            kind === "in" || kind === "nin"
+              ? `${c.dbType}[]`
+              : kind === "jsonPathExists" || kind === "jsonPathPredicate"
+                ? "jsonpath"
+                : c.dbType;
+          args.push({ column: { columnName: `arg${args.length}`, dbType }, bindingIndex: start });
+        }
+        return rewriteToRawCondition(c, argsIndex);
       } else if (c.cond.kind === "is-null" || c.cond.kind === "not-null") {
         // leave it alone
       } else {
@@ -243,14 +287,22 @@ function rewriteToRawCondition(c: ColumnCondition, argsIndex: ArgCounter): RawCo
   };
 }
 
-/** Builds `_find` column values from already prepared queries. */
-export function createColumnValuesFromPrepared(columns: OpColumn[], entries: readonly { bindings: any[] }[]): any[][] {
-  const columnValues: any[][] = Array(columns.length);
-  for (let i = 0; i < columns.length; i++) columnValues[i] = [];
+/**
+ * Builds the column-major values for the `_find` CTE.
+ *
+ * Column 0 is the per-entry `tag`; the remaining columns mirror `args` 1:1, each pulling its
+ * `bindingIndex` from every entry's `bindings` (so inlined constants are naturally skipped).
+ */
+export function createColumnValuesFromPrepared(
+  args: readonly CteArg[],
+  entries: readonly { bindings: any[] }[],
+): any[][] {
+  const columnValues: any[][] = new Array(args.length + 1);
+  for (let i = 0; i < columnValues.length; i++) columnValues[i] = [];
   entries.forEach((entry, i) => {
     columnValues[0].push(i);
-    for (let j = 0; j < entry.bindings.length; j++) {
-      columnValues[j + 1].push(entry.bindings[j]);
+    for (let k = 0; k < args.length; k++) {
+      columnValues[k + 1].push(entry.bindings[args[k].bindingIndex]);
     }
   });
   return columnValues;
@@ -418,6 +470,35 @@ export function buildValuesCte(
       bindings,
     },
   };
+}
+
+/** Returns, per binding slot, whether every batched query shares the same value. */
+function computeConstantBindings(entries: readonly { bindings: any[] }[]): boolean[] {
+  const length = entries[0].bindings.length;
+  const constant = new Array<boolean>(length);
+  for (let j = 0; j < length; j++) {
+    const first = entries[0].bindings[j];
+    let same = true;
+    for (let i = 1; i < entries.length; i++) {
+      if (!argsEqual(entries[i].bindings[j], first)) {
+        same = false;
+        break;
+      }
+    }
+    constant[j] = same;
+  }
+  return constant;
+}
+
+/**
+ * Deep-equals two find-arg values (scalars, Dates, Temporals, or arrays thereof), reusing the same
+ * scalar/array equality `setField` uses for change detection.
+ *
+ * Only used to decide whether a condition can be inlined, so false negatives are safe (we just fall
+ * back to the CTE); we only return true when the values are genuinely equal.
+ */
+function argsEqual(a: any, b: any): boolean {
+  return equal(a, b) || (Array.isArray(a) && Array.isArray(b) && equalArrays(a, b));
 }
 
 export function getBatchKeyFromGenericStructure(meta: EntityMetadata, query: ParsedFindQuery): string {

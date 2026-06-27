@@ -75,9 +75,9 @@ export function findPaginatedDataLoader<T extends Entity>(
         const preloadHydrator = preloader && hint && preloader.addPreloading(meta, buildHintTree(hint), query);
 
         // Now craft the actual batched query
-        const argsColumns = collectAndReplaceArgs(query);
-        argsColumns.unshift({ columnName: "tag", dbType: "int" });
-        const columnValues = createColumnValuesFromPrepared(argsColumns, entries);
+        const args = collectAndReplaceArgs(query, entries);
+        const argsColumns = [{ columnName: "tag", dbType: "int" }, ...args.map((a) => a.column)];
+        const columnValues = createColumnValuesFromPrepared(args, entries);
         const query2: ParsedFindQuery = {
           selects: ["_find.tag as tag", "_data.*"],
           tables: [

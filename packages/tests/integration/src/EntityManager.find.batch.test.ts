@@ -75,6 +75,36 @@ describe("EntityManager.find.batch", () => {
     ]);
   });
 
+  it("inlines conditions whose values are shared across the batch", async () => {
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    await insertAuthor({ first_name: "a1", last_name: "l2" });
+    resetQueryCount();
+    const em = newEntityManager();
+    // Given two queries that share the same firstName but differ on lastName
+    const q1p = em.find(Author, { firstName: "a1", lastName: "l1" });
+    const q2p = em.find(Author, { firstName: "a1", lastName: "l2" });
+    // When they are executed in the same event loop
+    const [q1, q2] = await Promise.all([q1p, q2p]);
+    // Then we issue a single SQL query
+    expect(numberOfQueries).toEqual(1);
+    // And the shared firstName is inlined as `= $3` while only the varying lastName flows through the CTE
+    expect(queries).toEqual([
+      [
+        `WITH _find (tag, arg0) AS (SELECT`,
+        ` unnest($1::int[]), unnest($2::character varying[]))`,
+        ` SELECT array_agg(_find.tag) as _tags, a.*`,
+        ` FROM authors AS a`,
+        ` CROSS JOIN _find AS _find`,
+        ` WHERE a.deleted_at IS NULL AND a.first_name = $3 AND a.last_name = _find.arg0`,
+        ` GROUP BY a.id`,
+        ` ORDER BY a.id ASC`,
+        ` LIMIT $4`,
+      ].join(""),
+    ]);
+    expect(q1).toMatchEntity([{ firstName: "a1", lastName: "l1" }]);
+    expect(q2).toMatchEntity([{ firstName: "a1", lastName: "l2" }]);
+  });
+
   it("passes the unbatched query AST to beforeFind plugins", async () => {
     class BeforeFindPlugin extends Plugin {
       tables: string[][] = [];
@@ -671,6 +701,27 @@ describe("EntityManager.find.batch", () => {
     ]);
     expect(q1).toEqual(0);
     expect(q2).toEqual(0);
+  });
+
+  it("inlines shared conditions when batching counts", async () => {
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    await insertAuthor({ first_name: "a1", last_name: "l2" });
+    resetQueryCount();
+    const em = newEntityManager();
+    // Given two counts that share firstName but differ on lastName
+    const [c1, c2] = await Promise.all([
+      em.findCount(Author, { firstName: "a1", lastName: "l1" }),
+      em.findCount(Author, { firstName: "a1", lastName: "l2" }),
+    ]);
+    expect(numberOfQueries).toEqual(1);
+    // Then the shared firstName is inlined and only lastName flows through the CTE
+    expect(queries).toMatchInlineSnapshot(`
+     [
+       "WITH _find (tag, arg0) AS (SELECT unnest($1::int[]), unnest($2::character varying[])) SELECT _find.tag as tag, _data.count as count FROM _find AS _find CROSS JOIN LATERAL (SELECT count(distinct a.id) as count FROM authors AS a WHERE a.deleted_at IS NULL AND a.first_name = $3 AND a.last_name = _find.arg0) AS _data LIMIT $4",
+     ]
+    `);
+    expect(c1).toEqual(1);
+    expect(c2).toEqual(1);
   });
 
   it("batches finds with multi-word hasPersistedAsyncProperty", async () => {

@@ -167,13 +167,13 @@ function equalOrSameEntity(a: any, b: any): boolean {
   );
 }
 
-function equalArrays(a: any[], b: any[]): boolean {
+export function equalArrays(a: any[], b: any[]): boolean {
   if (a.length !== b.length) return false;
   return a.every((_: any, i) => equal(a[i], b[i]));
 }
 
 const Temporal = maybeRequireTemporal()?.Temporal;
-function equal(a: any, b: any): boolean {
+export function equal(a: any, b: any): boolean {
   if (a === b) return true;
   if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
   if (Temporal) {

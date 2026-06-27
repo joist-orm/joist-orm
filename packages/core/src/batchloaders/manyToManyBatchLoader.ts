@@ -33,6 +33,8 @@ async function loadBatch<U extends Entity>(collection: ManyToManyLike, keys: str
       kind: "exp",
       op: "or",
       conditions: Object.entries(columns).map(([columnId, values]) => {
+        // `otherMeta` is only optional because of enum m2ms (EnumCollections), which use their own
+        // batch loader, so here it's always an entity-to-entity m2m and `otherMeta` is defined.
         const meta = collection.columnName == columnId ? collection.meta : collection.otherMeta!;
         return {
           kind: "column",

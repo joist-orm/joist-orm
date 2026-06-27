@@ -227,6 +227,15 @@ export class JoinRows {
     }
   }
 
+  /** Drops a single `(e1, e2)` row without queuing a flush, e.g. when mirroring another em's removal. */
+  removePreloadedRow(m2m: ManyToManyLike, e1: Entity, e2: JoinColumnValue): void {
+    const row = this.index.get(m2m, e1, e2);
+    if (row) {
+      remove(this.rows, row);
+      this.index.remove(row);
+    }
+  }
+
   /** Scans our `rows` for newly-added/newly-deleted rows that need `INSERT`s/`UPDATE`s. */
   toTodo(): JoinRowTodo | undefined {
     const newRows = this.rows.filter((r) => !r.persisted && r.deleted !== true && r.op === "pending");

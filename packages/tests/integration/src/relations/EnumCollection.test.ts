@@ -1,5 +1,6 @@
 import { insertPublisher, insertPublisherLogoColor, select } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
+import { run } from "joist-test-utils";
 import { Color, Publisher, SmallPublisher, newSmallPublisher } from "../entities";
 
 describe("EnumCollection", () => {
@@ -431,6 +432,55 @@ describe("EnumCollection", () => {
       expect(numberOfQueries).toBe(0);
       // ...and mirrored as already-persisted, so the fork sees no spurious inserts.
       expect((p2 as any).changes.logoColors.hasChanged).toBe(false);
+    });
+  });
+
+  describe("importEntity", () => {
+    // `em.importEntity` is the other caller (besides `em.fork`) of `EnumCollection.import`.
+    it("imports a loaded collection across ems without pending changes", async () => {
+      await insertPublisher({ id: 1, name: "p1" });
+      await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+      await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 3 });
+      const em1 = newEntityManager();
+      const p1 = await em1.load(SmallPublisher, "p:1", "logoColors");
+      const em2 = newEntityManager();
+      resetQueryCount();
+      const p2 = em2.importEntity(p1, "logoColors");
+      expect(p2.logoColors.isLoaded).toBe(true);
+      expect(p2.logoColors.get).toEqual([Color.Red, Color.Blue]);
+      expect(numberOfQueries).toBe(0);
+      // Mirrored as already-persisted, so the receiving em sees no spurious inserts.
+      expect(p2.changes.logoColors.hasChanged).toBe(false);
+    });
+  });
+
+  describe("run() / RunPlugin", () => {
+    it.withCtx("mirrors add/remove into the original em's loaded collection", async (ctx) => {
+      await insertPublisher({ id: 1, name: "p1" });
+      await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+      // The original em has the collection loaded...
+      const p = await ctx.em.load(SmallPublisher, "p:1", "logoColors");
+      expect(p.logoColors.get).toEqual([Color.Red]);
+      // ...a `run` block mutates it in its own em...
+      await run(ctx, async (innerCtx) => {
+        const ip = await innerCtx.em.load(SmallPublisher, "p:1", "logoColors");
+        ip.logoColors.add(Color.Blue);
+        ip.logoColors.remove(Color.Red);
+        await innerCtx.em.flush();
+      });
+      // ...and the original em's already-loaded collection reflects it, without re-querying.
+      resetQueryCount();
+      expect(p.logoColors.get).toEqual([Color.Blue]);
+      expect(numberOfQueries).toBe(0);
+    });
+
+    it.withCtx("mirrors a new entity's collection into the original em", async (ctx) => {
+      const p = await run(ctx, async (innerCtx) => {
+        const ip = newSmallPublisher(innerCtx.em, { name: "p1", logoColors: [Color.Green] });
+        await innerCtx.em.flush();
+        return ip;
+      });
+      expect(p.logoColors.get).toEqual([Color.Green]);
     });
   });
 });

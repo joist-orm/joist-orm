@@ -4,6 +4,7 @@ import {
   createRowFromEntityData,
   Entity,
   EntityManager,
+  EnumCollectionImpl,
   getEmInternalApi,
   getInstanceData,
   getMetadata,
@@ -50,6 +51,7 @@ export class RunPlugin extends Plugin {
     this.#syncEntityData(entityTodos);
     this.#syncReferences(entityTodos);
     this.#syncManyToManys(joinRowTodos);
+    this.#syncEnumCollections(joinRowTodos);
     this.#preloadUnloadedRelations(entityTodos);
   }
 
@@ -178,6 +180,48 @@ export class RunPlugin extends Plugin {
         api.setPreloadedRelation(id, r.fieldName, [...new Set(entities)]);
         r.preload();
       });
+    });
+  }
+
+  // Ensure enum m2m (EnumCollection) membership changes are propagated from the new em to the original em
+  #syncEnumCollections(joinRowTodos: Record<string, JoinRowTodo>) {
+    const { em } = this;
+    const api = getEmInternalApi(em);
+    const touched = new Set<EnumCollectionImpl<Entity, any>>();
+    Object.values(joinRowTodos).forEach((todo) => {
+      // Only enum m2ms; entity-to-entity m2ms are handled by `#syncManyToManys`.
+      if (!todo.m2m.otherEnum) return;
+      const { columnName, otherColumnName, fieldName } = todo.m2m;
+      const sync = (rows: JoinRow[], add: boolean) => {
+        rows.forEach((row) => {
+          const newEntity = row.columns[columnName] as Entity;
+          const enumId = row.columns[otherColumnName] as number;
+          const oldEntity = em.findExistingInstance(newEntity.idTagged);
+          if (!oldEntity || oldEntity.isDeletedEntity) return;
+          const oldCollection = (oldEntity as any)[fieldName] as EnumCollectionImpl<Entity, any>;
+          // Only mirror collections the original em has loaded (or new entities, whose rows are all
+          // adds); otherwise a later `.load()` will read the (same-txn) db and see the change itself.
+          if (!oldCollection.isLoaded && !newEntity.isNewEntity) return;
+          const joinRows = api.joinRows(oldCollection);
+          if (add) {
+            joinRows.addPreloadedRow(oldCollection, undefined, oldEntity, enumId);
+          } else {
+            joinRows.removePreloadedRow(oldCollection, oldEntity, enumId);
+          }
+          touched.add(oldCollection);
+        });
+      };
+      sync(todo.newRows, true);
+      sync(todo.deletedRows, false);
+    });
+    // Re-publish each touched collection's codes and mark it loaded.
+    touched.forEach((oldCollection) => {
+      const joinRows = api.joinRows(oldCollection);
+      const codes = (joinRows.getOthers(oldCollection.columnName, oldCollection.entity) as number[]).map(
+        (id) => oldCollection.otherEnum!.findById(id)!.code,
+      );
+      api.setPreloadedRelation(oldCollection.entity.idTagged, oldCollection.fieldName, codes);
+      oldCollection.preload();
     });
   }
 
@@ -356,6 +400,7 @@ function getCollections(entity: Entity) {
         r instanceof OneToManyCollection ||
         r instanceof OneToOneReferenceImpl ||
         r instanceof ReactiveManyToManyImpl ||
-        r instanceof ReactiveManyToManyOtherSideImpl,
+        r instanceof ReactiveManyToManyOtherSideImpl ||
+        r instanceof EnumCollectionImpl,
     );
 }

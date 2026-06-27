@@ -1,5 +1,5 @@
 import { insertPublisher, insertPublisherLogoColor, select } from "@src/entities/inserts";
-import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
+import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
 import { Color, Publisher, SmallPublisher, newSmallPublisher } from "../entities";
 
 describe("EnumCollection", () => {
@@ -135,5 +135,163 @@ describe("EnumCollection", () => {
     const ps = await em.find(Publisher, {}, { populate: "logoColors" });
     expect(ps[0].logoColors.get).toEqual([Color.Red, Color.Green]);
     expect(ps[1].logoColors.get).toEqual([Color.Blue]);
+  });
+
+  it("returns an empty array when there are no rows", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    const em = newEntityManager();
+    const p = await em.load(SmallPublisher, "p:1", "logoColors");
+    expect(p.logoColors.get).toEqual([]);
+  });
+
+  it("populates an empty collection as loaded-and-empty", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    const em = newEntityManager();
+    const [p] = await em.find(Publisher, {}, { populate: "logoColors" });
+    expect(p.logoColors.isLoaded).toBe(true);
+    expect(p.logoColors.get).toEqual([]);
+  });
+
+  it("saving with an empty array writes no rows", async () => {
+    const em = newEntityManager();
+    newSmallPublisher(em, { name: "p1", logoColors: [] });
+    await em.flush();
+    expect(await select("publisher_logo_colors")).toEqual([]);
+  });
+
+  it("orders codes by enum id regardless of insertion order", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 3 });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 2 });
+    const em = newEntityManager();
+    const p = await em.load(SmallPublisher, "p:1", "logoColors");
+    expect(p.logoColors.get).toEqual([Color.Red, Color.Green, Color.Blue]);
+  });
+
+  it("dedupes duplicate codes when saving", async () => {
+    const em = newEntityManager();
+    newSmallPublisher(em, { name: "p1", logoColors: [Color.Red, Color.Red, Color.Blue] });
+    await em.flush();
+    expect(await select("publisher_logo_colors")).toMatchObject([
+      { publisher_id: 1, logo_color_id: 1 },
+      { publisher_id: 1, logo_color_id: 3 },
+    ]);
+  });
+
+  it("ignores adding a color that is already present", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+    const em = newEntityManager();
+    const p = await em.load(SmallPublisher, "p:1", "logoColors");
+    p.logoColors.add(Color.Red);
+    expect(p.logoColors.get).toEqual([Color.Red]);
+    resetQueryCount();
+    await em.flush();
+    expect(numberOfQueries).toBe(0);
+    expect(await select("publisher_logo_colors")).toMatchObject([{ publisher_id: 1, logo_color_id: 1 }]);
+  });
+
+  it("adding then removing the same color before flush is a no-op", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    const em = newEntityManager();
+    const p = await em.load(SmallPublisher, "p:1", "logoColors");
+    p.logoColors.add(Color.Red);
+    p.logoColors.remove(Color.Red);
+    expect(p.logoColors.get).toEqual([]);
+    resetQueryCount();
+    await em.flush();
+    expect(numberOfQueries).toBe(0);
+    expect(await select("publisher_logo_colors")).toEqual([]);
+  });
+
+  it("removing then re-adding a persisted color is a no-op", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+    const em = newEntityManager();
+    const p = await em.load(SmallPublisher, "p:1", "logoColors");
+    p.logoColors.remove(Color.Red);
+    p.logoColors.add(Color.Red);
+    expect(p.logoColors.get).toEqual([Color.Red]);
+    resetQueryCount();
+    await em.flush();
+    expect(numberOfQueries).toBe(0);
+    expect(await select("publisher_logo_colors")).toMatchObject([{ publisher_id: 1, logo_color_id: 1 }]);
+  });
+
+  it("setting the same values issues no writes", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 3 });
+    const em = newEntityManager();
+    const p = await em.load(SmallPublisher, "p:1", "logoColors");
+    p.logoColors.set([Color.Red, Color.Blue]);
+    resetQueryCount();
+    await em.flush();
+    expect(numberOfQueries).toBe(0);
+  });
+
+  it("removeAll clears the collection", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 3 });
+    const em = newEntityManager();
+    const p = await em.load(SmallPublisher, "p:1", "logoColors");
+    p.logoColors.removeAll();
+    expect(p.logoColors.get).toEqual([]);
+    await em.flush();
+    expect(await select("publisher_logo_colors")).toEqual([]);
+  });
+
+  it("set([]) clears the collection", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+    const em = newEntityManager();
+    const p = await em.load(SmallPublisher, "p:1", "logoColors");
+    p.logoColors.set([]);
+    await em.flush();
+    expect(await select("publisher_logo_colors")).toEqual([]);
+  });
+
+  it("cascades the join rows when the entity is deleted", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 3 });
+    const em = newEntityManager();
+    const p = await em.load(SmallPublisher, "p:1");
+    em.delete(p);
+    await em.flush();
+    expect(await select("publisher_logo_colors")).toEqual([]);
+  });
+
+  it("does not insert join rows for a new entity that is deleted before flush", async () => {
+    const em = newEntityManager();
+    const p = newSmallPublisher(em, { name: "p1", logoColors: [Color.Red] });
+    em.delete(p);
+    await em.flush();
+    expect(await select("publisher_logo_colors")).toEqual([]);
+  });
+
+  it("returns a matching entity only once when multiple colors match", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 3 });
+    const em = newEntityManager();
+    const ps = await em.find(Publisher, { logoColors: [Color.Red, Color.Blue] });
+    expect(ps.map((p) => p.name)).toEqual(["p1"]);
+  });
+
+  it("batch loads multiple collections in a single query", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertPublisherLogoColor({ publisher_id: 2, logo_color_id: 3 });
+    const em = newEntityManager();
+    const [p1, p2] = await Promise.all([em.load(SmallPublisher, "p:1"), em.load(SmallPublisher, "p:2")]);
+    resetQueryCount();
+    const [c1, c2] = await Promise.all([p1.logoColors.load(), p2.logoColors.load()]);
+    expect(numberOfQueries).toBe(1);
+    expect(c1).toEqual([Color.Red]);
+    expect(c2).toEqual([Color.Blue]);
   });
 });

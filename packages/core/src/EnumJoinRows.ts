@@ -169,6 +169,42 @@ export class EnumJoinRows {
     return this.getIds(entity).map((id) => this.m2m.enumDetailType.findById(id)!.code);
   }
 
+  /** The codes added (pending insert, or flushed mid-em) for `entity`, for the `changes` API. */
+  addedFor(entity: Entity): any[] {
+    return this.#rowsFor(entity)
+      .filter(
+        (r) =>
+          ((!r.persisted && r.op === JoinRowOperation.Pending) || r.op === JoinRowOperation.Flushed) &&
+          r.deleted !== true,
+      )
+      .map((r) => r.enumId)
+      .sort((a, b) => a - b)
+      .map((id) => this.m2m.enumDetailType.findById(id)!.code);
+  }
+
+  /** The codes removed (marked deleted) for `entity`, for the `changes` API. */
+  removedFor(entity: Entity): any[] {
+    return this.#rowsFor(entity)
+      .filter((r) => r.deleted)
+      .map((r) => r.enumId)
+      .sort((a, b) => a - b)
+      .map((id) => this.m2m.enumDetailType.findById(id)!.code);
+  }
+
+  /** The codes that exist (or existed) in the db for `entity`, i.e. excluding pending inserts. */
+  originalFor(entity: Entity): any[] {
+    return this.#rowsFor(entity)
+      .filter((r) => r.persisted)
+      .map((r) => r.enumId)
+      .sort((a, b) => a - b)
+      .map((id) => this.m2m.enumDetailType.findById(id)!.code);
+  }
+
+  #rowsFor(entity: Entity): EnumJoinRow[] {
+    const map = this.index.get(entity);
+    return map ? Array.from(map.values()) : [];
+  }
+
   /** Scans our `rows` for newly-added/newly-deleted rows that need `INSERT`s/`DELETE`s. */
   toTodo(): EnumJoinRowTodo | undefined {
     const newRows = this.rows.filter((r) => !r.persisted && r.deleted !== true && r.op === "pending");

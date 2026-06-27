@@ -1,8 +1,10 @@
 import { getInstanceData } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { IdOf } from "./EntityManager";
+import { EnumJoinRows } from "./EnumJoinRows";
 import { getField, isChangeableField } from "./fields";
 import {
+  EnumCollection,
   Field,
   ManyToManyCollection,
   OneToManyCollection,
@@ -14,6 +16,7 @@ import {
   isId,
 } from "./index";
 import { JoinRows } from "./JoinRows";
+import { EnumCollectionImpl } from "./relations/EnumCollection";
 import { FieldsOf, OptsOf } from "./typeMap";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
@@ -175,6 +178,55 @@ class ManyToManyFieldStatusImpl<T extends Entity, U extends Entity> implements M
   }
 }
 
+/** Provides an enum m2m's added/removed/changed/original codes (e.g. `Publisher.logoColors`). */
+export interface EnumCollectionFieldStatus<E> {
+  kind: "m2mEnum";
+  added: E[];
+  removed: E[];
+  changed: E[];
+  hasChanged: boolean;
+  hasUpdated: boolean;
+  originalValues: Promise<readonly E[]>;
+}
+
+class EnumCollectionFieldStatusImpl<T extends Entity, E> implements EnumCollectionFieldStatus<E> {
+  readonly kind = "m2mEnum";
+  readonly #entity: T;
+  readonly #collection: EnumCollection<T, E>;
+  readonly #joinRows: EnumJoinRows;
+
+  constructor(entity: T, fieldName: keyof T) {
+    this.#entity = entity;
+    this.#collection = entity[fieldName] as EnumCollection<T, E>;
+    this.#joinRows = getEmInternalApi(entity.em).enumJoinRows(this.#collection as EnumCollectionImpl<T, E>);
+  }
+
+  get added(): E[] {
+    return this.#joinRows.addedFor(this.#entity);
+  }
+
+  get removed(): E[] {
+    return this.#joinRows.removedFor(this.#entity);
+  }
+
+  get changed(): E[] {
+    return [...this.added, ...this.removed];
+  }
+
+  get hasChanged(): boolean {
+    return this.added.length > 0 || this.removed.length > 0;
+  }
+
+  get hasUpdated(): boolean {
+    return !this.#entity.isNewEntity && this.hasChanged;
+  }
+
+  get originalValues(): Promise<readonly E[]> {
+    // `load()` ensures the persisted (db) rows are in memory; those are the original values.
+    return this.#collection.load().then(() => this.#joinRows.originalFor(this.#entity));
+  }
+}
+
 export interface OneToManyFieldStatus<U extends Entity> {
   kind: "o2m";
   added: U[];
@@ -272,13 +324,15 @@ export type Changes<T extends Entity, K = keyof (FieldsOf<T> & RelationsOf<T>), 
 } & {
   [P in keyof FieldsOf<T> & R]: FieldsOf<T>[P] extends { kind: "m2m"; type: infer U extends Entity }
     ? ManyToManyFieldStatus<U>
-    : FieldsOf<T>[P] extends { kind: "o2m"; type: infer U extends Entity }
-      ? OneToManyFieldStatus<U>
-      : FieldsOf<T>[P] extends { type: infer U | undefined }
-        ? U extends Entity
-          ? ManyToOneFieldStatus<U>
-          : PrimitiveFieldStatus<U>
-        : never;
+    : FieldsOf<T>[P] extends { kind: "m2mEnum"; type: infer E }
+      ? EnumCollectionFieldStatus<E>
+      : FieldsOf<T>[P] extends { kind: "o2m"; type: infer U extends Entity }
+        ? OneToManyFieldStatus<U>
+        : FieldsOf<T>[P] extends { type: infer U | undefined }
+          ? U extends Entity
+            ? ManyToOneFieldStatus<U>
+            : PrimitiveFieldStatus<U>
+          : never;
 };
 
 // type A1 = never extends string ? 1 : 2;
@@ -317,6 +371,8 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
       const kind = getMetadata(entity).allFields[p]?.kind;
       if (kind === "m2m") {
         return new ManyToManyFieldStatusImpl(entity, p as keyof T);
+      } else if (kind === "m2mEnum") {
+        return new EnumCollectionFieldStatusImpl(entity, p as keyof T);
       } else if (kind === "o2m") {
         return new OneToManyFieldStatusImpl(entity, p as keyof T);
       } else if (!isChangeableField(entity, p as any)) {
@@ -325,7 +381,7 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
         return new ManyToOneFieldStatusImpl(entity, p);
       } else if (kind === "enum" || kind === "primitive" || kind === "primaryKey") {
         return new PrimitiveFieldStatusImpl(entity, p);
-      } else if (kind === "lo2m" || kind === "o2o" || kind === "m2mEnum") {
+      } else if (kind === "lo2m" || kind === "o2o") {
         throw new Error(`changes are not supported for ${kind} ${p}`);
       } else {
         return assertNever(kind);
@@ -366,6 +422,11 @@ function getChangedFieldNames<T extends Entity>(entity: T, includeRelations: boo
         }
       } else if (field.kind === "o2m") {
         const status = new OneToManyFieldStatusImpl(entity, field.fieldName as keyof T);
+        if (status.hasChanged) {
+          fieldsChanged.push(field.fieldName);
+        }
+      } else if (field.kind === "m2mEnum") {
+        const status = new EnumCollectionFieldStatusImpl(entity, field.fieldName as keyof T);
         if (status.hasChanged) {
           fieldsChanged.push(field.fieldName);
         }

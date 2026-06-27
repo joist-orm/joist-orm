@@ -555,7 +555,7 @@ function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number")
     return code`${fieldName}: { kind: "m2m"; type: ${otherEntity.type} };`;
   });
   const m2mEnum = meta.manyToManyEnums.map(({ fieldName, enumType }) => {
-    return code`${fieldName}: { kind: "enum"; type: ${enumType}[]; nullable: never };`;
+    return code`${fieldName}: { kind: "m2mEnum"; type: ${enumType} };`;
   });
   const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}: { kind: "o2m"; type: ${otherEntity.type} };`;

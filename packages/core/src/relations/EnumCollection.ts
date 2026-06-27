@@ -66,7 +66,7 @@ export function hasEnumCollection<T extends Entity, E>(): EnumCollection<T, E> {
 
 export class EnumCollectionImpl<T extends Entity, E>
   extends AbstractRelationImpl<T, E[]>
-  implements EnumCollection<T, E>, LoadedEnumCollection<T, E>
+  implements EnumCollection<T, E>, LoadedEnumCollection<T, E>, EnumManyToManyLike
 {
   readonly #field: ManyToManyEnumField;
   #loaded: boolean;
@@ -87,7 +87,7 @@ export class EnumCollectionImpl<T extends Entity, E>
       if (this.#getPreloaded() !== undefined) {
         this.#loaded = true;
       } else {
-        await (this.#loadPromise ??= enumCollectionBatchLoader(this.entity.em, this.#like).load(this.entity.idTagged!))
+        await (this.#loadPromise ??= enumCollectionBatchLoader(this.entity.em, this).load(this.entity.idTagged!))
           .then(() => {
             this.#loaded = true;
           })
@@ -220,20 +220,33 @@ export class EnumCollectionImpl<T extends Entity, E>
   }
 
   get #joinRows() {
-    return getEmInternalApi(this.entity.em).enumJoinRows(this.#like);
+    return getEmInternalApi(this.entity.em).enumJoinRows(this);
   }
 
-  get #like(): EnumManyToManyLike {
-    return {
-      entity: this.entity,
-      joinTableName: this.#field.joinTableName,
-      columnName: this.#field.columnNames[0],
-      otherColumnName: this.#field.columnNames[1],
-      fieldName: this.#field.fieldName,
-      meta: getMetadataForField(getMetadata(this.entity), this.#field.fieldName),
-      enumDetailType: this.#field.enumDetailType,
-      hasJoinTableId: this.#field.hasJoinTableId,
-    };
+  // The `EnumManyToManyLike` surface, so JoinRows/batch loaders can use us directly.
+
+  get joinTableName(): string {
+    return this.#field.joinTableName;
+  }
+
+  get columnName(): string {
+    return this.#field.columnNames[0];
+  }
+
+  get otherColumnName(): string {
+    return this.#field.columnNames[1];
+  }
+
+  get meta() {
+    return getMetadataForField(getMetadata(this.entity), this.#field.fieldName);
+  }
+
+  get enumDetailType() {
+    return this.#field.enumDetailType;
+  }
+
+  get hasJoinTableId(): boolean {
+    return this.#field.hasJoinTableId;
   }
 
   declare [enumCollectionTag]: true;

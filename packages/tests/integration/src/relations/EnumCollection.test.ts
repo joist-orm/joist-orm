@@ -294,4 +294,93 @@ describe("EnumCollection", () => {
     expect(c1).toEqual([Color.Red]);
     expect(c2).toEqual([Color.Blue]);
   });
+
+  describe("changes", () => {
+    it("exposes added/removed/changed", async () => {
+      await insertPublisher({ id: 1, name: "p1" });
+      await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+      const em = newEntityManager();
+      const p = await em.load(SmallPublisher, "p:1", "logoColors");
+      p.logoColors.add(Color.Blue);
+      p.logoColors.remove(Color.Red);
+      expect(p.changes.logoColors.added).toEqual([Color.Blue]);
+      expect(p.changes.logoColors.removed).toEqual([Color.Red]);
+      expect(p.changes.logoColors.changed).toEqual([Color.Blue, Color.Red]);
+      expect(p.changes.logoColors.hasChanged).toBe(true);
+      expect(p.changes.logoColors.hasUpdated).toBe(true);
+      expect(p.changes.fields).toEqual(["logoColors"]);
+    });
+
+    it("exposes the original values", async () => {
+      await insertPublisher({ id: 1, name: "p1" });
+      await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+      await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 3 });
+      const em = newEntityManager();
+      const p = await em.load(SmallPublisher, "p:1", "logoColors");
+      p.logoColors.add(Color.Green);
+      p.logoColors.remove(Color.Red);
+      expect(await p.changes.logoColors.originalValues).toEqual([Color.Red, Color.Blue]);
+    });
+
+    it("is unchanged when not mutated", async () => {
+      await insertPublisher({ id: 1, name: "p1" });
+      await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+      const em = newEntityManager();
+      const p = await em.load(SmallPublisher, "p:1", "logoColors");
+      expect(p.changes.logoColors.hasChanged).toBe(false);
+      expect(p.changes.logoColors.hasUpdated).toBe(false);
+      expect(p.changes.fields).toEqual([]);
+    });
+
+    it("reports hasChanged but not hasUpdated for a new entity", async () => {
+      const em = newEntityManager();
+      const p = newSmallPublisher(em, { name: "p1", logoColors: [Color.Red] });
+      expect(p.changes.logoColors.added).toEqual([Color.Red]);
+      expect(p.changes.logoColors.removed).toEqual([]);
+      expect(p.changes.logoColors.hasChanged).toBe(true);
+      expect(p.changes.logoColors.hasUpdated).toBe(false);
+      expect(await p.changes.logoColors.originalValues).toEqual([]);
+    });
+  });
+
+  describe("reactions", () => {
+    it("fires when a color is added to an existing publisher", async () => {
+      await insertPublisher({ id: 1, name: "p1" });
+      const em = newEntityManager();
+      const p = await em.load(SmallPublisher, "p:1", "logoColors");
+      p.logoColors.add(Color.Red);
+      await em.flush();
+      expect(p.transientFields.logoColorsReactionInvoked).toBeGreaterThan(0);
+      expect(p.transientFields.observedLogoColors).toEqual([Color.Red]);
+    });
+
+    it("fires when a color is removed", async () => {
+      await insertPublisher({ id: 1, name: "p1" });
+      await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+      await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 3 });
+      const em = newEntityManager();
+      const p = await em.load(SmallPublisher, "p:1", "logoColors");
+      p.logoColors.remove(Color.Red);
+      await em.flush();
+      expect(p.transientFields.observedLogoColors).toEqual([Color.Blue]);
+    });
+
+    it("fires when creating a publisher with colors", async () => {
+      const em = newEntityManager();
+      const p = newSmallPublisher(em, { name: "p1", logoColors: [Color.Blue] });
+      await em.flush();
+      expect(p.transientFields.logoColorsReactionInvoked).toBeGreaterThan(0);
+      expect(p.transientFields.observedLogoColors).toEqual([Color.Blue]);
+    });
+
+    it("does not fire when an unrelated field changes", async () => {
+      await insertPublisher({ id: 1, name: "p1" });
+      await insertPublisherLogoColor({ publisher_id: 1, logo_color_id: 1 });
+      const em = newEntityManager();
+      const p = await em.load(SmallPublisher, "p:1");
+      p.name = "p1b";
+      await em.flush();
+      expect(p.transientFields.logoColorsReactionInvoked).toBe(0);
+    });
+  });
 });

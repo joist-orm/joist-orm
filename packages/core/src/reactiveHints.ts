@@ -17,7 +17,9 @@ import { Loadable, Loaded, LoadHint } from "./loadHints";
 import { NormalizeHint, normalizeHint, suffixRe, SuffixSeperator } from "./normalizeHints";
 import {
   Collection,
+  EnumCollection,
   LoadedCollection,
+  LoadedEnumCollection,
   LoadedProperty,
   LoadedReadOnlyCollection,
   LoadedReference,
@@ -98,13 +100,15 @@ export type Reacted<T extends Entity, H> = Entity & {
       ? PolymorphicReference<T, U, N> & LoadedReference<T, Entity & Reacted<U, NormalizeHint<H>[K]>, N>
       : T[K] extends Reference<any, infer U, infer N>
         ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<H>[K]>, N>
-        : T[K] extends Collection<any, infer U>
-          ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
-          : T[K] extends ReadOnlyCollection<any, infer U>
-            ? LoadedReadOnlyCollection<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
-            : T[K] extends Property<any, infer V>
-              ? LoadedProperty<any, V>
-              : T[K];
+        : T[K] extends EnumCollection<any, infer E>
+          ? LoadedEnumCollection<T, E>
+          : T[K] extends Collection<any, infer U>
+            ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
+            : T[K] extends ReadOnlyCollection<any, infer U>
+              ? LoadedReadOnlyCollection<T, Entity & Reacted<U, NormalizeHint<H>[K]>>
+              : T[K] extends Property<any, infer V>
+                ? LoadedProperty<any, V>
+                : T[K];
 } & {
   /**
    * Gives reactive rules & fields a way to get the full entity if they really need it.
@@ -297,6 +301,11 @@ function reverseSubHint(
       case "primaryKey":
       case "primitive":
       case "enum":
+        _fields.push(key);
+        return [];
+      case "m2mEnum":
+        // An enum m2m is a leaf of enum codes (no "other side" entity to recurse into); like a m2m,
+        // `EnumJoinRows` calls `queueDownstreamReactables` explicitly when its membership changes.
         _fields.push(key);
         return [];
       default:
@@ -586,6 +595,10 @@ export function convertToLoadHint<T extends Entity>(
             mergeNormalizedHints(loadHint, { [key]: {} });
           }
           continue;
+        case "m2mEnum":
+          // The enum codes are a leaf, but the collection itself must be loaded for the reaction to read it.
+          mergeNormalizedHints(loadHint, { [key]: {} });
+          break;
         case "primaryKey":
           continue;
         default:

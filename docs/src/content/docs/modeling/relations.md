@@ -143,6 +143,8 @@ export abstract class BookCodegen {
 
 These collections work similarly to a `hasMany` collection. When determining if a table is a "join table", joist checks if the table has two foreign key columns, an optional `created_at` column, and no other columns, with the primary key being either a single surrogate `id` column or the composite of the two foreign keys (an "id-less" join table). Joist also requires that the foreign keys are both `not null` and that the pair of foreign keys is unique — for id-less tables the composite primary key provides this, while id-ful tables need an explicit unique constraint on the pair.
 
+If one side of the join table points at an [enum table](/modeling/enum-tables/) instead of an entity, Joist generates an `EnumCollection` (which looks like "an array of enum values") on the entity side rather than a `hasManyToMany`; see [Enum Collections](/modeling/enum-tables/#enum-collections).
+
 ## Polymorphic References
 
 Polymorphic references model an entity (i.e. `Book`) that has a single logical field that can be set to multiple (i.e. poly) _types_ of other entities, but _only one such entity at a time_ (i.e. a reference b/c it points to only one other entity).

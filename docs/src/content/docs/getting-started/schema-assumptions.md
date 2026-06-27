@@ -169,3 +169,5 @@ enforces on its own, and an id-ful table should enforce with a unique constraint
 
 (`updated_at` is not applicable to join tables.)
 
+If one of the join table's two foreign keys points at an [enum table](#enum-tables) (rather than two entity tables), Joist treats it as an _enum collection_ instead of an entity-to-entity many-to-many: it generates a single `EnumCollection` on the entity side (the enum does not get a reverse relation). See [Enum Collections](/modeling/enum-tables/#enum-collections).
+

@@ -14,7 +14,8 @@
     "format": "prettier --ignore-path ../../.prettierignore --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
   },
   "files": [
-    "build"
+    "build",
+    "skills"
   ],
   "peerDependencies": {
     "joist-utils": "workspace:*",

@@ -204,25 +204,18 @@ export interface CteArg {
 }
 
 /**
- * Rewrites each batched arg in `query` into a `_find.argX` placeholder and returns, for each one, the
- * CTE column to create plus the `bindings` slot that fills it.
+ * Rewrites each batched arg in `query` into a `_find.argX` placeholder.
  *
- * As an optimization, any condition whose value(s) are identical across every batched query is left
- * inline (using `entries[0]`'s value) so it renders as `col = ?`, letting Postgres plan against the
- * constant (e.g. use an index) instead of joining against an opaque `_find.argX` column. Only the
- * genuinely-varying values flow through the CTE.
+ * Any condition whose value(s) are identical across every batched query is left inline (using
+ * query's condition as-is from entity0), so it renders as `col = ?` for better query planning.
  *
- * The returned array is 1:1 with the CTE's non-`tag` columns — one {@link CteArg} per `_find.argX`.
- * Because constants are skipped, an arg's column position is NOT its slot in `bindings`, so we return
- * `bindingIndex` to bridge the two.
+ * The returned array has the non-constant CTE columns, one {@link CteArg} per `_find.argX`.
  *
- * @example
- * // Batching `{ firstName: "a1", lastName: "l1" }` and `{ firstName: "a1", lastName: "l2" }`:
- * //   each entry's `bindings` is ["a1", "l1"] / ["a1", "l2"] — slot 0 = firstName, slot 1 = lastName.
- * //   firstName (slot 0) is constant, so it stays inline as `a.first_name = ?` and is skipped here.
- * //   lastName (slot 1) varies, so it becomes CTE column `arg0`, fed from binding slot 1:
- * collectAndReplaceArgs(query, entries);
- * //=> [{ column: { columnName: "arg0", dbType: "character varying" }, bindingIndex: 1 }]
+ * Because constants are skipped, the 1st CTE column (i.e. for last name) might actually have a
+ * binding index of `1` if we've skipped an early constant column (i.e. first name).
+ *
+ * @param query the initial query in the batch, that all other queries structurally match
+ * @param entries the values (bindings) for each query in the batch
  */
 export function collectAndReplaceArgs(query: ParsedFindQuery, entries: readonly { bindings: any[] }[]): CteArg[] {
   const args: CteArg[] = [];

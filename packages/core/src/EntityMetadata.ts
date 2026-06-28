@@ -3,6 +3,7 @@ import { Entity, isEntity } from "./Entity";
 import { EntityManager, MaybeAbstractEntityConstructor, TimestampFields } from "./EntityManager";
 import { type ConfigApi, type Reactable, type ReactiveRule } from "./config";
 import { getMetadataForType } from "./configure";
+import { EnumMetadata } from "./EnumMetadata";
 import { DeepNew } from "./loadHints";
 import { FieldSerde, PolymorphicKeySerde } from "./serde";
 
@@ -101,6 +102,7 @@ export type Field =
   | LargeOneToManyField
   | ManyToOneField
   | ManyToManyField
+  | ManyToManyEnumField
   | OneToOneField
   | PolymorphicField;
 
@@ -199,6 +201,30 @@ export type ManyToManyField = {
   hasJoinTableId: boolean;
 };
 
+/**
+ * A many-to-many between an entity and an enum "table", e.g. `Publisher.logoColors` backed by a
+ * `publisher_logo_colors` join table joining `publishers` to the `color` enum table.
+ *
+ * To the user this looks like an array of enum codes (`Color[]`), but unlike an enum-array column it
+ * is lazy (needs a load hint) because it lives in its own join table.
+ */
+export type ManyToManyEnumField = {
+  kind: "m2mEnum";
+  fieldName: string;
+  fieldIdName: undefined;
+  required: false;
+  derived: false;
+  /** The enum's metadata, used to map enum codes <-> their numeric ids. */
+  enumDetailType: EnumMetadata<any, any, number>;
+  serde: undefined;
+  immutable: false;
+  joinTableName: string;
+  /** `[entityColumn, enumColumn]`, e.g. `["publisher_id", "color_id"]`. */
+  columnNames: [string, string];
+  /** Whether the join table has a surrogate `id` PK; if false the FK pair is the composite PK. */
+  hasJoinTableId: boolean;
+};
+
 export type OneToOneField = {
   kind: "o2o";
   fieldName: string;
@@ -238,6 +264,10 @@ export function isManyToOneField(ormField: Field): ormField is ManyToOneField {
 
 export function isManyToManyField(ormField: Field): ormField is ManyToManyField {
   return ormField.kind === "m2m";
+}
+
+export function isManyToManyEnumField(ormField: Field): ormField is ManyToManyEnumField {
+  return ormField.kind === "m2mEnum";
 }
 
 export function isOneToOneField(ormField: Field): ormField is OneToOneField {

@@ -194,6 +194,7 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
       ...entity.manyToOnes,
       ...entity.oneToManys,
       ...entity.manyToManys,
+      ...entity.manyToManyEnums,
       ...entity.oneToOnes,
       ...entity.largeOneToManys,
       ...entity.largeManyToManys,

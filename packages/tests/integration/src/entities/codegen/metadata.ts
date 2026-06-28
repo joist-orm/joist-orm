@@ -724,6 +724,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     "images": { kind: "o2m", fieldName: "images", fieldIdName: "imageIds", required: false, otherMetadata: () => imageMeta, otherFieldName: "publisher", otherColumnName: "publisher_id", serde: undefined, immutable: false },
     "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, derived: false, otherMetadata: () => tagMeta, otherFieldName: "publishers", serde: undefined, immutable: false, joinTableName: "publishers_to_tags", columnNames: ["publisher_id", "tag_id"], hasJoinTableId: true },
     "tasks": { kind: "m2m", fieldName: "tasks", fieldIdName: "taskIds", required: false, derived: false, otherMetadata: () => taskOldMeta, otherFieldName: "publishers", serde: undefined, immutable: false, joinTableName: "tasks_to_publishers", columnNames: ["publisher_id", "task_id"], hasJoinTableId: true },
+    "logoColors": { kind: "m2mEnum", fieldName: "logoColors", fieldIdName: undefined, required: false, derived: false, enumDetailType: Colors, serde: undefined, immutable: false, joinTableName: "publisher_logo_colors", columnNames: ["publisher_id", "logo_color_id"], hasJoinTableId: true },
   },
   allFields: {},
   orderBy: undefined,

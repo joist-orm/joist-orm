@@ -67,6 +67,10 @@ export interface JoinRowTodo {
   newRows: JoinRow[];
   deletedRows: JoinRow[];
   resetAfterFlushed: () => void;
+  /** Resolves a join row's column to the int FK value to flush (an entity's id, or an enum's id). */
+  dbValue(row: JoinRow, columnName: string): number;
+  /** Whether a join row's column points at a not-yet-inserted entity (always false for enum columns). */
+  isNew(row: JoinRow, columnName: string): boolean;
 }
 
 /** Given a list of `JoinRow`s for a given table, combine them into a single logical `JoinRowTodo`. */

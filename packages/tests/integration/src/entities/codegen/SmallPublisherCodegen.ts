@@ -6,6 +6,7 @@ import {
   type EntityFilter,
   type EntityGraphQLFilter,
   type EntityMetadata,
+  type EnumCollection,
   failNoIdYet,
   type FilterOf,
   type Flavor,
@@ -45,6 +46,7 @@ import {
   type AdminUserId,
   type Author,
   type BookAdvance,
+  Color,
   type Comment,
   type Entity,
   type Image,
@@ -181,6 +183,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   declare readonly spotlightAuthor: ManyToOneReference<SmallPublisher, Author, undefined>;
   declare readonly tags: Collection<SmallPublisher, Tag>;
   declare readonly tasks: Collection<SmallPublisher, TaskOld>;
+  declare readonly logoColors: EnumCollection<SmallPublisher, Color>;
 
   get id(): SmallPublisherId {
     return this.idMaybe || failNoIdYet("SmallPublisher");

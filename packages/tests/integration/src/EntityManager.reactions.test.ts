@@ -83,6 +83,16 @@ describe("EntityManager.reactions", () => {
         name: "ctiHintIsolation",
         fn,
       },
+      {
+        kind: "reaction",
+        cstr: Publisher,
+        fields: ["logoColors"],
+        path: [],
+        source: Publisher,
+        isReadOnly: false,
+        name: "logoColorsReaction",
+        fn,
+      },
     ]);
     expect(getReactions(SmallPublisher)).toMatchObject([
       {

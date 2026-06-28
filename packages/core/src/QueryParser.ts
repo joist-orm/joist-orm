@@ -612,6 +612,28 @@ export function parseFindQuery(
             cond: mapToDb(column, f),
           });
         }
+      } else if (field.kind === "m2mEnum") {
+        // Membership filter, e.g. `{ logoColors: Color.Red }` / `{ logoColors: [Red, Green] }`: join the
+        // join table and filter its enum-id column, mapping enum codes -> their numeric ids.
+        const ja = getAlias(field.joinTableName);
+        tables.push({
+          join: "outer",
+          alias: ja,
+          table: field.joinTableName,
+          col1: kqDot(tableAlias, "id"),
+          col2: kqDot(ja, field.columnNames[0]),
+          collection: { parentAlias: tableAlias, rootAlias: ja, kind: "m2m" },
+        });
+        const column: any = {
+          columnName: field.columnNames[1],
+          dbType: "int",
+          mapToDb(value: any) {
+            return value === null || value === undefined ? value : field.enumDetailType.getByCode(value).id;
+          },
+        };
+        parseValueFilter((subFilter as any)[key]).forEach((filter) => {
+          targetCb.addValueFilter(ja, column, filter);
+        });
       } else {
         throw new Error(`Unsupported field ${key}`);
       }

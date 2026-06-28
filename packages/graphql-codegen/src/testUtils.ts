@@ -81,6 +81,7 @@ export function newEntityMetadata(name: string, opts: Partial<EntityDbMetadata> 
     largeOneToManys: [],
     manyToManys: [],
     largeManyToManys: [],
+    manyToManyEnums: [],
     oneToOnes: [],
     polymorphics: [],
     tableName: snakeCase(plural(name)),

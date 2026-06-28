@@ -158,6 +158,9 @@ export function newTestInstance<T extends Entity>(
           case "m2m":
             // We do these in the 2nd pass after `entity` exists (see additionalOpts)
             return [];
+          case "m2mEnum":
+            // Enum codes have no entity identity, so pass them straight through.
+            return [fieldName, optValue];
           case "lo2m":
             // If a child is passing themselves into a parent that is a large collection, just ignore it
             return [];

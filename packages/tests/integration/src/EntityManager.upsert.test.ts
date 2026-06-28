@@ -582,6 +582,37 @@ describe("EntityManager.upsert", () => {
       expect(await countOfBookToTags()).toEqual(1);
     });
 
+    it("collections create children with an undefined op", async () => {
+      const em = newEntityManager();
+      // When a child has `op: undefined`--the natural shape of an optional GraphQL field
+      const a1 = await em.upsert(Author, { firstName: "a1", books: [{ op: undefined, title: "b1" }] });
+      // Then the child is created instead of being silently dropped
+      expect(await a1.books.load()).toMatchEntity([{ title: "b1" }]);
+      await em.flush();
+      expect(await countOfBooks()).toEqual(1);
+    });
+
+    it("collections reject a mix of real and missing ops", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      // When one child has a real op but a sibling has `op: undefined`
+      await expect(
+        em.upsert(Author, { firstName: "a2", books: [{ op: "include", id: "b:1" }, { op: undefined, title: "b2" }] }),
+      ).rejects.toThrow("all children must have the `op` key");
+    });
+
+    it("collections allow the incremental marker alongside real ops", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      const em = newEntityManager();
+      // When we mix the `incremental` sentinel with a real `include` op
+      const a2 = await em.upsert(Author, { firstName: "a2", books: [{ op: "incremental" }, { op: "include", id: "b:1" }] });
+      await em.flush();
+      // Then the include is applied and the marker is ignored
+      expect(await a2.books.load()).toMatchEntity([{ id: "b:1" }]);
+    });
+
     it("collections can refer to entities", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertBook({ title: "b1", author_id: 1 });

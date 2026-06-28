@@ -10,6 +10,7 @@ import { Config, loadConfig, stripStiPlaceholders, warnInvalidConfigEntries, wri
 import { maybeSetForeignKeyOrdering } from "./foreignKeyOrdering";
 import { generateFiles } from "./generate";
 import { createFlushFunction } from "./generateFlushFunction";
+import { installSkills } from "./installSkills";
 import { applyInheritanceUpdates } from "./inheritance";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
 import { LOG_LEVELS, loggerMaxWarningLevelHit } from "./logger";
@@ -82,6 +83,9 @@ export async function joistCodegen() {
 
   // Finally actually generate the files (even if we found a fatal error)
   await generateAndSaveFiles(config, dbMetadata);
+
+  // Install our bundled Agent Skills so coding agents can find them
+  if (config.skills) await installSkills();
 
   stripStiPlaceholders(config, entities);
   await writeConfig(config);

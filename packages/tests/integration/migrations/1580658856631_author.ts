@@ -451,6 +451,8 @@ export function up(b: MigrationBuilder): void {
   createManyToManyTable(b, "task_to_tags", "tasks", "tags");
   // for testing table-per-class m2m
   createManyToManyTable(b, "publishers_to_tags", "publishers", "tags");
+  // for testing m2m between an entity and an enum table (an `EnumCollection`)
+  createManyToManyTable(b, "publisher_logo_colors", "publishers", { table: "color", column: "logo_color_id" });
   // for testing m2m renames and name inference
   createManyToManyTable(
     b,

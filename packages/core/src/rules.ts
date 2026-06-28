@@ -159,7 +159,7 @@ export function cannotBeChanged<T extends Entity, K extends keyof Changes<T> & s
 ): ValidationRule<T> {
   return ruleWithOpts(opts, (entity: T) => {
     const changes = (entity as any as EntityChanges<T>).changes[field];
-    if (changes.kind === "m2m" || changes.kind === "o2m") {
+    if (changes.kind === "m2m" || changes.kind === "o2m" || changes.kind === "m2mEnum") {
       throw new Error("cannotBeChanged is only supported on primitive & m2o fields");
     } else if (changes.hasUpdated) {
       const originalValue = changes.originalValue;

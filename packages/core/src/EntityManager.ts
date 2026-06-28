@@ -1,6 +1,7 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { getInstanceData } from "./BaseEntity";
 import { BatchLoader } from "./batchloaders/BatchLoader";
+import { enumCollectionLoadOperation } from "./batchloaders/enumCollectionBatchLoader";
 import { loadOperation } from "./batchloaders/loadBatchLoader";
 import { manyToManyLoadOperation } from "./batchloaders/manyToManyBatchLoader";
 import { oneToManyLoadOperation } from "./batchloaders/oneToManyBatchLoader";
@@ -204,6 +205,7 @@ export type FindOperation =
   | typeof loadOperation
   | typeof manyToManyLoadOperation
   | typeof manyToManyFindOperation
+  | typeof enumCollectionLoadOperation
   | typeof oneToManyLoadOperation
   | typeof oneToManyFindOperation
   | typeof oneToOneLoadOperation
@@ -412,7 +414,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
     }
     for (const joinRows of Object.values(this.#joinRows)) {
       const todo = joinRows.toTodo();
-      if (todo) {
+      // Enum m2ms (EnumCollections) aren't entity-to-entity, so skip them here.
+      if (todo && !todo.m2m.otherEnum) {
         for (const row of todo.newRows) {
           const entities = Object.values(row.columns) as [Entity, Entity];
           changes.push({ kind: "m2m", op: "add", joinTableName: todo.m2m.joinTableName, entities });
@@ -1004,6 +1007,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
               case "primaryKey":
               case "o2m":
               case "m2m":
+              case "m2mEnum":
               case "o2o":
               case "lo2m":
                 return undefined;
@@ -1141,6 +1145,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
           kind === "primitive" ||
           kind === "primaryKey" ||
           kind === "enum" ||
+          kind === "m2mEnum" ||
           kind === "poly" ||
           kind === "m2o" ||
           kind === "lo2m"
@@ -1785,7 +1790,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW, TX ext
         // The driver will handle the right thing if we're already in an existing transaction.
         await this.driver.transaction(this, async () => {
           do {
-            if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos)) {
+            if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
               await this.driver.flush(this, entityTodos, joinRowTodos);
             }
             // Now that we've flushed, we can let plugins know what we've done.
@@ -2771,22 +2776,26 @@ async function validateReactiveRules(
   });
 
   const p2 = Object.values(joinRowTodos).flatMap((todo) => {
-    const entities = [...todo.newRows, ...todo.deletedRows].flatMap((jr) => Object.values(jr.columns));
-    // Do the first side
-    const p1 = todo.m2m.meta
+    // For enum m2ms the columns include the enum's numeric id, so keep only the entity values.
+    const entities = [...todo.newRows, ...todo.deletedRows].flatMap((jr) => Object.values(jr.columns)).filter(isEntity);
+    // The owning-entity side (applies to both entity-to-entity and entity-to-enum m2ms).
+    const a = todo.m2m.meta
       .reactiveRules!.filter((rule) => rule.fields.includes(todo.m2m.fieldName))
       .map((rule) => {
         const triggered = entities.filter((e) => e instanceof todo.m2m.meta.cstr);
         return followAndQueue(triggered, rule);
       });
-    // And the second side
-    const p2 = todo.m2m.otherMeta
-      .reactiveRules!.filter((rule) => rule.fields.includes(todo.m2m.otherFieldName))
-      .map((rule) => {
-        const triggered = entities.filter((e) => e instanceof todo.m2m.otherMeta.cstr);
-        return followAndQueue(triggered, rule);
-      });
-    return [...p1, ...p2];
+    // The "other" side only exists for entity-to-entity m2ms; enums have no reverse field.
+    const { otherMeta, otherFieldName } = todo.m2m;
+    const b = otherMeta
+      ? otherMeta
+          .reactiveRules!.filter((rule) => rule.fields.includes(otherFieldName!))
+          .map((rule) => {
+            const triggered = entities.filter((e) => e instanceof otherMeta.cstr);
+            return followAndQueue(triggered, rule);
+          })
+      : [];
+    return [...a, ...b];
   });
 
   failIfAnyRejected(await Promise.allSettled([...p1, ...p2]));
@@ -2893,7 +2902,10 @@ function entitiesFromTodos(
   }
   for (const todo of Object.values(joinRowTodos)) {
     [...todo.newRows, ...todo.deletedRows].forEach((row) => {
-      Object.values(row.columns).forEach((entity) => entities.add(entity));
+      // For enum m2ms, a column value is the enum's numeric id rather than an entity.
+      Object.values(row.columns).forEach((value) => {
+        if (isEntity(value)) entities.add(value);
+      });
     });
   }
   return [...entities];

@@ -33,7 +33,9 @@ async function loadBatch<U extends Entity>(collection: ManyToManyLike, keys: str
       kind: "exp",
       op: "or",
       conditions: Object.entries(columns).map(([columnId, values]) => {
-        const meta = collection.columnName == columnId ? collection.meta : collection.otherMeta;
+        // `otherMeta` is only optional because of enum m2ms (EnumCollections), which use their own
+        // batch loader, so here it's always an entity-to-entity m2m and `otherMeta` is defined.
+        const meta = collection.columnName == columnId ? collection.meta : collection.otherMeta!;
         return {
           kind: "column",
           alias,
@@ -53,7 +55,7 @@ async function loadBatch<U extends Entity>(collection: ManyToManyLike, keys: str
   };
 
   const rows = await em["executeFind"](
-    collection.otherMeta,
+    collection.otherMeta!,
     manyToManyLoadOperation,
     query,
     // No LIMIT needed for join rows
@@ -67,7 +69,7 @@ async function loadBatch<U extends Entity>(collection: ManyToManyLike, keys: str
     if (!entity) continue;
     const others = joinRows.getOthers(column, entity) as U[];
     // Determine the field name from the column
-    const fieldName = column === collection.columnName ? collection.fieldName : collection.otherFieldName;
+    const fieldName = column === collection.columnName ? collection.fieldName : collection.otherFieldName!;
     api.setPreloadedRelation(entity.idTagged!, fieldName, others);
   }
 }

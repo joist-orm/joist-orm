@@ -28,6 +28,7 @@ import {
   EntityGraphQLFilter,
   EntityManager,
   EntityMetadata,
+  EnumCollection,
   FieldsOf,
   FilterOf,
   Flavor,
@@ -62,6 +63,7 @@ import {
   cannotBeUpdated,
   failNoIdYet,
   getField,
+  hasEnumCollection,
   hasLargeMany,
   hasLargeManyToMany,
   hasMany,
@@ -509,11 +511,14 @@ function generateOptsFields(meta: EntityDbMetadata): Code[] {
     .map(({ fieldName, otherEntity }) => {
       return code`${fieldName}?: ${otherEntity.type}[];`;
     });
+  const m2mEnum = meta.manyToManyEnums.map(({ fieldName, enumType }) => {
+    return code`${fieldName}?: ${enumType}[];`;
+  });
   const polys = meta.polymorphics.map((field) => {
     const { fieldName, notNull, fieldType } = field;
     return code`${fieldName}${maybeOptionalOrDefault(field)}: ${fieldType};`;
   });
-  return [...primitives, ...enums, ...pgEnums, ...m2o, ...polys, ...o2o, ...o2m, ...m2m];
+  return [...primitives, ...enums, ...pgEnums, ...m2o, ...polys, ...o2o, ...o2m, ...m2m, ...m2mEnum];
 }
 
 // Make our fields type
@@ -549,13 +554,16 @@ function generateFieldsType(meta: EntityDbMetadata, idType: "string" | "number")
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}: { kind: "m2m"; type: ${otherEntity.type} };`;
   });
+  const m2mEnum = meta.manyToManyEnums.map(({ fieldName, enumType }) => {
+    return code`${fieldName}: { kind: "m2mEnum"; type: ${enumType} };`;
+  });
   const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}: { kind: "o2m"; type: ${otherEntity.type} };`;
   });
   const lo2m = meta.largeOneToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}: { kind: "o2m"; type: ${otherEntity.type} };`;
   });
-  return [id, ...primitives, ...enums, ...pgEnums, ...m2o, ...polys, ...m2m, ...o2m, ...lo2m];
+  return [id, ...primitives, ...enums, ...pgEnums, ...m2o, ...polys, ...m2m, ...m2mEnum, ...o2m, ...lo2m];
 }
 
 // We know the OptIds types are only used in partials, so we make everything optional.
@@ -631,6 +639,10 @@ function generateFilterFields(metasByName: Record<string, EntityDbMetadata>, met
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
+  // Enum m2m filters are membership filters, e.g. `{ logoColors: Color.Red }` / `{ logoColors: [Red, Green] }`.
+  const m2mEnum = meta.manyToManyEnums.map(({ fieldName, enumType }) => {
+    return code`${fieldName}?: ${ValueFilter}<${enumType}, null | undefined>;`;
+  });
   const polys = meta.polymorphics.flatMap(({ fieldName, fieldType, components, notNull }) => {
     return [
       code`${fieldName}?: ${EntityFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, ${nullOrNever(notNull)}>;`,
@@ -640,7 +652,7 @@ function generateFilterFields(metasByName: Record<string, EntityDbMetadata>, met
       }),
     ];
   });
-  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...o2m, ...m2m, ...polys];
+  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...o2m, ...m2m, ...m2mEnum, ...polys];
 }
 
 function generateGraphQLFilterFields(metasByName: Record<string, EntityDbMetadata>, meta: EntityDbMetadata): Code[] {
@@ -690,6 +702,9 @@ function generateGraphQLFilterFields(metasByName: Record<string, EntityDbMetadat
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
+  const m2mEnum = meta.manyToManyEnums.map(({ fieldName, enumType }) => {
+    return code`${fieldName}?: ${ValueGraphQLFilter}<${enumType}>;`;
+  });
   const polys = meta.polymorphics.flatMap(({ fieldName, fieldType, components, notNull }) => {
     return [
       code`${fieldName}?: ${EntityGraphQLFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, ${nullOrNever(notNull)}>;`,
@@ -700,7 +715,7 @@ function generateGraphQLFilterFields(metasByName: Record<string, EntityDbMetadat
       }),
     ];
   });
-  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...o2m, ...m2m, ...polys];
+  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...o2m, ...m2m, ...m2mEnum, ...polys];
 }
 
 function generateOrderFields(meta: EntityDbMetadata): Code[] {
@@ -1104,6 +1119,21 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
         return { kind: "super", fieldName, decl };
       }) ?? [];
 
+  // Add enum-backed ManyToMany (i.e. `Publisher.logoColors`)
+  const m2mEnum: Relation[] = meta.manyToManyEnums.map((m2m) => {
+    const { fieldName, enumType } = m2m;
+    const comment = `// ${m2m.joinTableName} ${m2m.columnName} ${m2m.otherColumnName}`;
+    const decl = code`${EnumCollection}<${entity.type}, ${enumType}>`;
+    const init = code`${hasEnumCollection}()`;
+    return { kind: "concrete", fieldName, decl, init, comment };
+  });
+  const m2mEnumBase: Relation[] =
+    meta.baseType?.manyToManyEnums.map((m2m) => {
+      const { fieldName, enumType } = m2m;
+      const decl = code`${EnumCollection}<${entity.type}, ${enumType}>`;
+      return { kind: "super", fieldName, decl };
+    }) ?? [];
+
   // Add large ManyToMany
   const lm2m: Relation[] = meta.largeManyToManys.map((m2m) => {
     const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
@@ -1141,6 +1171,8 @@ function createRelations(config: Config, meta: EntityDbMetadata, entity: Entity)
     o2oBase,
     m2m,
     m2mBase,
+    m2mEnum,
+    m2mEnumBase,
     lm2m,
     polymorphic,
   ].flat();

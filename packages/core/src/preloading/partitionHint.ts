@@ -14,10 +14,15 @@ export function partitionHint(
   let non: NestedLoadHint<any> | undefined = undefined;
   for (const [key, subHint] of Object.entries(normalizeHint(hint))) {
     const field = meta?.allFields[key];
-    if (field && canPreload(meta, field)) {
-      const [_sql, _non] = partitionHint(field.otherMetadata(), subHint);
-      deepMerge(((sql ??= {})[key] ??= {}), _sql ?? {});
-      if (_non) deepMerge(((non ??= {})[key] ??= {}), _non);
+    if (field && canPreload(meta!, field)) {
+      if (field.kind === "m2mEnum") {
+        // Enum m2ms are a leaf relation (enum codes have no sub-hint to recurse into).
+        (sql ??= {})[key] ??= {};
+      } else {
+        const [_sql, _non] = partitionHint(field.otherMetadata(), subHint);
+        deepMerge(((sql ??= {})[key] ??= {}), _sql ?? {});
+        if (_non) deepMerge(((non ??= {})[key] ??= {}), _non);
+      }
     } else {
       // If this isn't a raw SQL relation, but it exposes a load-hint, inline that into our SQL.
       // This will get the non-SQL relation's underlying SQL data preloaded.

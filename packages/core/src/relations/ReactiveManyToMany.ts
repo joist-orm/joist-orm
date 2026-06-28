@@ -182,7 +182,7 @@ export class ReactiveManyToManyImpl<T extends Entity, U extends Entity, H extend
   maybeCascadeDelete(): void {
     if (this.#isCascadeDelete) {
       const jr = getEmInternalApi(this.entity.em).joinRows(this);
-      jr.getOthers(this.columnName, this.entity).forEach((e) => this.entity.em.delete(e));
+      (jr.getOthers(this.columnName, this.entity) as U[]).forEach((e) => this.entity.em.delete(e));
     }
   }
 

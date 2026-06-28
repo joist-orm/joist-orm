@@ -181,6 +181,61 @@ b.addColumns("authors", {
 });
 ```
 
+## Enum Collections
+
+Enum arrays (above) store multiple values in a single `int[]` column, which is convenient but, as mentioned, gives up foreign-key data integrity.
+
+If you instead want a true many-to-many between an entity and an enum, modeled as its own join table (with real foreign keys back to the enum table), Joist supports that as an `EnumCollection`.
+
+For example, to give `Publisher` a list of "logo colors", create a `publisher_logo_colors` join table between `publishers` and the `color` enum table:
+
+```typescript
+createManyToManyTable(b, "publisher_logo_colors", "publishers", { table: "color", column: "logo_color_id" });
+```
+
+```console
+joist=> \d publisher_logo_colors;
+              Table "public.publisher_logo_colors"
+    Column     |    Type     | Nullable |              Default
+---------------+-------------+----------+------------------------------------
+ id            | integer     | not null | nextval('..._id_seq'::regclass)
+ publisher_id  | integer     | not null |
+ logo_color_id | integer     | not null |
+ created_at    | timestamptz | not null | now()
+Foreign-key constraints:
+    ... FOREIGN KEY (logo_color_id) REFERENCES color(id) ON DELETE CASCADE
+    ... FOREIGN KEY (publisher_id) REFERENCES publishers(id) ON DELETE CASCADE
+```
+
+Joist recognizes that one side of the join table points at an enum table (`color`) and the other at an entity table (`publishers`), and so generates an `EnumCollection` on the entity side (only the entity side; the `Color` enum does not get a reverse relation):
+
+```typescript
+readonly logoColors: EnumCollection<Publisher, Color> = hasEnumCollection();
+```
+
+To the caller, an `EnumCollection` looks like "an array of `Color`s", but unlike an enum-array column it is **lazy** — it lives in its own table, so it needs a load hint just like any other relation:
+
+```typescript
+const publisher = await em.load(Publisher, "p:1", "logoColors");
+publisher.logoColors.get; // [Color.Red, Color.Blue]
+publisher.logoColors.add(Color.Green);
+publisher.logoColors.remove(Color.Red);
+publisher.logoColors.set([Color.Green, Color.Blue]);
+await publisher.logoColors.includes(Color.Blue); // can probe without loading
+```
+
+And it is integrated with the rest of Joist:
+
+- **Loading / preloading** via load hints, i.e. `em.populate(publisher, "logoColors")`.
+- **Filtering** by membership, i.e. `em.find(Publisher, { logoColors: Color.Red })` or `{ logoColors: [Color.Red, Color.Blue] }`.
+- **Changes**, i.e. `publisher.changes.logoColors` exposes `added` / `removed` / `changed` / `originalValues`.
+- **Reactivity**, i.e. rules & reactions can react to membership changes, like `config.addReaction("logoColors", (p) => ...)`.
+
+### Enum Array or Enum Collection?
+
+- Use an **enum array** (`int[]` column) for a simple, denormalized list that is always loaded with the entity, when you don't need foreign-key integrity.
+- Use an **enum collection** (join table) when you want database-enforced foreign keys to the enum, and are OK with the list being lazily loaded (it needs a load hint).
+
 ## When to Use Enums
 
 In general, you should only use enums when you have business logic that directly branches based on the values.

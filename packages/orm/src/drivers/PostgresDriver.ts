@@ -11,17 +11,13 @@ import {
   EntityManager,
   fail,
   generateOps,
-  getMetadata,
   getRuntimeConfig,
   IdAssigner,
   InsertOp,
-  JoinRow,
   JoinRowOperation,
   JoinRowTodo,
-  keyToNumber,
   kq,
   kqDot,
-  ManyToManyLike,
   OpColumn,
   ParsedFindQuery,
   partition,
@@ -149,10 +145,10 @@ export class PostgresDriver implements Driver<pg.PoolClient> {
       ...ops.inserts.map((op) => batchInsert(client, op, onQuery)),
       ...ops.updates.map((op) => batchUpdate(client, op, onQuery)),
       ...ops.deletes.map((op) => batchDelete(client, op, onQuery)),
-      ...Object.entries(joinRows).flatMap(([joinTableName, { m2m, newRows, deletedRows }]) => {
+      ...Object.entries(joinRows).flatMap(([joinTableName, todo]) => {
         return [
-          m2mBatchInsert(client, joinTableName, m2m, newRows, onQuery),
-          m2mBatchDelete(client, joinTableName, m2m, deletedRows, onQuery),
+          m2mBatchInsert(client, joinTableName, todo, onQuery),
+          m2mBatchDelete(client, joinTableName, todo, onQuery),
         ];
       }),
     ]);
@@ -248,18 +244,11 @@ function buildUnnestCte(tableName: string, columns: OpColumn[], columnValues: an
   return [sql, columnValues];
 }
 
-async function m2mBatchInsert(
-  client: pg.PoolClient,
-  joinTableName: string,
-  m2m: ManyToManyLike,
-  newRows: JoinRow[],
-  onQuery: OnQuery,
-) {
+async function m2mBatchInsert(client: pg.PoolClient, joinTableName: string, todo: JoinRowTodo, onQuery: OnQuery) {
+  const { m2m, newRows } = todo;
   if (newRows.length === 0) return;
-  const meta1 = getMetadata(m2m.entity);
-  const meta2 = m2m.otherMeta;
-  const col1Values = newRows.map((row) => keyToNumber(meta1, row.columns[m2m.columnName].idTagged));
-  const col2Values = newRows.map((row) => keyToNumber(meta2, row.columns[m2m.otherColumnName].idTagged));
+  const col1Values = newRows.map((row) => todo.dbValue(row, m2m.columnName));
+  const col2Values = newRows.map((row) => todo.dbValue(row, m2m.otherColumnName));
   if (m2m.hasJoinTableId) {
     const sql = cleanSql(`
       WITH data AS (SELECT unnest(?::int[]) as ${kq(m2m.columnName)}, unnest(?::int[]) as ${kq(m2m.otherColumnName)})
@@ -295,13 +284,8 @@ async function m2mBatchInsert(
   }
 }
 
-async function m2mBatchDelete(
-  client: pg.PoolClient,
-  joinTableName: string,
-  m2m: ManyToManyLike,
-  deletedRows: JoinRow[],
-  onQuery: OnQuery,
-) {
+async function m2mBatchDelete(client: pg.PoolClient, joinTableName: string, todo: JoinRowTodo, onQuery: OnQuery) {
+  const { m2m, deletedRows } = todo;
   if (deletedRows.length === 0) return;
   // Rows with a surrogate id are deleted by id; rows without one — id-less tables, or `remove`s
   // done against an unloaded ManyToManyCollection — are deleted by their (col1, col2) composite.
@@ -315,18 +299,8 @@ async function m2mBatchDelete(
     const data = noIds
       // Watch for m2m rows that got added-then-removed to entities that were themselves added-then-removed,
       // as the deTagId will be undefined for those, as we're skipping adding them to the database.
-      .filter((row) => {
-        const e1 = row.columns[m2m.columnName];
-        const e2 = row.columns[m2m.otherColumnName];
-        return !e1.isNewEntity && !e2.isNewEntity;
-      })
-      .map(
-        (e) =>
-          [
-            keyToNumber(m2m.meta, e.columns[m2m.columnName].idTagged),
-            keyToNumber(m2m.otherMeta, e.columns[m2m.otherColumnName].idTagged),
-          ] as any,
-      );
+      .filter((row) => !todo.isNew(row, m2m.columnName) && !todo.isNew(row, m2m.otherColumnName))
+      .map((row) => [todo.dbValue(row, m2m.columnName), todo.dbValue(row, m2m.otherColumnName)] as any);
     if (data.length > 0) {
       const pgSql = toPgParams(`
         DELETE FROM ${kq(joinTableName)}

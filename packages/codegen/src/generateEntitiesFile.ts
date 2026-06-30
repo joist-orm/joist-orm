@@ -1,4 +1,4 @@
-import { PgEnumData } from "index";
+import { PgEnumData } from "./index";
 import { Table } from "pg-structure";
 import { code, Code } from "ts-poet";
 import { Config } from "./config";

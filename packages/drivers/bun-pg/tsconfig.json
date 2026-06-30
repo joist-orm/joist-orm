@@ -3,7 +3,6 @@
   "compilerOptions": {
     "outDir": "./build",
     "rootDir": "./src",
-    "baseUrl": "./src",
     "types": ["bun-types"]
   },
   "include": ["./src"],

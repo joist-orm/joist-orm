@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "ignoreDeprecations": "6.0",
     "target": "es2022",
     "module": "NodeNext",
     "strict": true,
@@ -13,9 +12,9 @@
     "declarationMap": true,
     "outDir": "./build",
     "rootDir": "./",
-    "baseUrl": "./",
     "paths": {
-      "@src/*": ["src/*"]
+      "@src/*": ["./src/*"],
+      "src/*": ["./src/*"]
     }
   },
   "references": [

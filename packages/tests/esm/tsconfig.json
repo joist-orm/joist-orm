@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "ignoreDeprecations": "6.0",
     "target": "esnext",
     "module": "nodenext",
     "moduleResolution": "nodenext",
@@ -16,7 +15,10 @@
     "declarationMap": true,
     "outDir": "./build",
     "rootDir": "./",
-    "baseUrl": "./"
+    "paths": {
+      "@src/*": ["./src/*"],
+      "src/*": ["./src/*"]
+    }
   },
   "references": [
     { "path": "../../codegen" },

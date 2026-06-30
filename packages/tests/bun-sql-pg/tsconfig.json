@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "ignoreDeprecations": "6.0",
     "target": "es2022",
     "module": "ES2022",
     "moduleResolution": "bundler",
@@ -16,7 +15,10 @@
     "declarationMap": true,
     "outDir": "./build",
     "rootDir": "./",
-    "baseUrl": "./"
+    "paths": {
+      "@src/*": ["./src/*"],
+      "src/*": ["./src/*"]
+    }
   },
   "references": [
     { "path": "../../codegen" },
